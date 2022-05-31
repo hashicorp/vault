@@ -15,7 +15,8 @@ import { formatRFC3339 } from 'date-fns';
  */
 
 export const SELECTORS = {
-  activeTab: '.nav-tab-link.is-active',
+  currentMonthActiveTab: '.active[data-test-current-month]',
+  historyActiveTab: '.active[data-test-history]',
   emptyStateTitle: '[data-test-empty-state-title]',
   usageStats: '[data-test-usage-stats]',
   dateDisplay: '[data-test-date-display]',
@@ -25,6 +26,15 @@ export const SELECTORS = {
   monthDropdown: '[data-test-popup-menu-trigger="month"]',
   yearDropdown: '[data-test-popup-menu-trigger="year"]',
   dateDropdownSubmit: '[data-test-date-dropdown-submit]',
+};
+
+export const CHART_ELEMENTS = {
+  entityClientDataBars: '[data-test-group="entity_clients"]',
+  nonEntityDataBars: '[data-test-group="non_entity_clients"]',
+  yLabels: '[data-test-group="y-labels"]',
+  actionBars: '[data-test-group="action-bars"]',
+  labelActionBars: '[data-test-group="label-action-bars"]',
+  totalValues: '[data-test-group="total-values"]',
 };
 
 export function sendResponse(data, httpStatus = 200) {
@@ -60,7 +70,7 @@ function generateNamespaceBlock(idx = 0, skipMounts = false) {
   let mountCount = 1;
   const nsBlock = {
     namespace_id: `${idx}UUID`,
-    namespace_path: `my-namespace-${idx}/`,
+    namespace_path: `${idx}/namespace`,
     counts: {
       clients: mountCount * 15,
       entity_clients: mountCount * 5,
@@ -72,20 +82,18 @@ function generateNamespaceBlock(idx = 0, skipMounts = false) {
   if (!skipMounts) {
     mountCount = Math.floor((Math.random() + idx) * 20);
     let mounts = [];
-    if (!skipMounts) {
-      Array.from(Array(mountCount)).forEach((v, index) => {
-        mounts.push({
-          mount_path: `auth/authid${index}`,
-          counts: {
-            clients: 5,
-            entity_clients: 3,
-            non_entity_clients: 2,
-            distinct_entities: 3,
-            non_entity_tokens: 2,
-          },
-        });
+    Array.from(Array(mountCount)).forEach((v, index) => {
+      mounts.push({
+        mount_path: `auth/authid${index}`,
+        counts: {
+          clients: 5,
+          entity_clients: 3,
+          non_entity_clients: 2,
+          distinct_entities: 3,
+          non_entity_tokens: 2,
+        },
       });
-    }
+    });
     nsBlock.mounts = mounts;
   }
   return nsBlock;
@@ -114,7 +122,7 @@ export function generateActivityResponse(nsCount = 1, startDate, endDate) {
             },
           },
         ],
-        // months: [],
+        months: [],
       },
     };
   }
@@ -132,7 +140,7 @@ export function generateActivityResponse(nsCount = 1, startDate, endDate) {
         non_entity_clients: 333,
       },
       by_namespace: namespaces,
-      // months: [],
+      months: [],
     },
   };
 }
@@ -150,15 +158,23 @@ export function generateLicenseResponse(startDate, endDate) {
   };
 }
 
-export function generateCurrentMonthResponse(namespaceCount, skipMounts = false) {
+export function generateCurrentMonthResponse(namespaceCount, skipMounts = false, configEnabled = true) {
+  if (!configEnabled) {
+    return {
+      data: { id: 'no-data' },
+    };
+  }
   if (!namespaceCount) {
     return {
       request_id: 'monthly-response-id',
       data: {
         by_namespace: [],
         clients: 0,
+        distinct_entities: 0,
         entity_clients: 0,
         non_entity_clients: 0,
+        non_entity_tokens: 0,
+        months: [],
       },
     };
   }
@@ -181,6 +197,7 @@ export function generateCurrentMonthResponse(namespaceCount, skipMounts = false)
     data: {
       by_namespace,
       ...counts,
+      months: [],
     },
   };
 }

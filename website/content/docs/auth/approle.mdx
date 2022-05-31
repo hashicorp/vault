@@ -233,26 +233,26 @@ not require a credential, but still enforce constraints for login. For
 example, `secret_id_bound_cidrs` will only allow logins coming from IP addresses
 belonging to configured CIDR blocks on the AppRole.
 
-## Learn
+## Tutorial
 
 Refer to the [AppRole Pull
 Authentication](https://learn.hashicorp.com/vault/identity-access-management/iam-authentication)
-guide for a step-by-step tutorial.
+tutorial to learn how to use the AppRole method to generate tokens for machines or apps.
 
 ## API
 
 The AppRole auth method has a full HTTP API. Please see the
-[AppRole API](/api/auth/approle) for more
+[AppRole API](/api-docs/auth/approle) for more
 details.
 
 ## Code Example
 
-The following code snippet demonstrates AppRole authentication with response
+The following example demonstrates AppRole authentication with response
 wrapping.
 
-<CodeTabs heading="AppRole auth with response wrap">
+<CodeTabs>
 
-<CodeBlockConfig lineNumbers>
+<CodeBlockConfig>
 
 ```go
 package main
@@ -263,7 +263,7 @@ import (
 	"os"
 
 	vault "github.com/hashicorp/vault/api"
-	auth "github.com/hashicorp/vault/api/auth/approle"
+	auth "github.com/hashicorp/vault/api-docs/auth/approle"
 )
 
 // Fetches a key-value secret (kv-v2) after authenticating via AppRole.
@@ -331,7 +331,7 @@ func getSecretWithAppRole() (string, error) {
 
 </CodeBlockConfig>
 
-<CodeBlockConfig lineNumbers>
+<CodeBlockConfig>
 
 ```cs
 using System;

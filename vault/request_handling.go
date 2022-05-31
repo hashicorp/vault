@@ -320,6 +320,8 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		case logical.ErrUnsupportedPath:
 			// fail later via bad path to avoid confusing items in the log
 			checkExists = false
+		case logical.ErrRelativePath:
+			return nil, te, errutil.UserError{Err: err.Error()}
 		case nil:
 			if existsResp != nil && existsResp.IsError() {
 				return nil, te, existsResp.Error()
@@ -383,6 +385,10 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		RootPrivsRequired: rootPath,
 	})
 
+	auth.PolicyResults = &logical.PolicyResults{
+		Allowed: authResults.Allowed,
+	}
+
 	if !authResults.Allowed {
 		retErr := authResults.Error
 
@@ -406,6 +412,13 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		}
 		return auth, te, retErr
+	}
+
+	if authResults.ACLResults != nil && len(authResults.ACLResults.GrantingPolicies) > 0 {
+		auth.PolicyResults.GrantingPolicies = authResults.ACLResults.GrantingPolicies
+	}
+	if authResults.SentinelResults != nil && len(authResults.SentinelResults.GrantingPolicies) > 0 {
+		auth.PolicyResults.GrantingPolicies = append(auth.PolicyResults.GrantingPolicies, authResults.SentinelResults.GrantingPolicies...)
 	}
 
 	// If it is an authenticated ( i.e with vault token ) request, increment client count
@@ -475,7 +488,6 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 			req.Operation == logical.PatchOperation) {
 		return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
 	}
-
 	waitGroup, err := waitForReplicationState(ctx, c, req)
 	if err != nil {
 		return nil, err
@@ -825,6 +837,9 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 	// Validate the token
 	auth, te, ctErr := c.checkToken(ctx, req, false)
+	if ctErr == logical.ErrRelativePath {
+		return logical.ErrorResponse(ctErr.Error()), nil, ctErr
+	}
 	if ctErr == logical.ErrPerfStandbyPleaseForward {
 		return nil, nil, ctErr
 	}
@@ -1421,7 +1436,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			var err error
 			// Fetch the entity for the alias, or create an entity if one
 			// doesn't exist.
-			entity, err = c.identityStore.CreateOrFetchEntity(ctx, auth.Alias)
+			entity, entityCreated, err := c.identityStore.CreateOrFetchEntity(ctx, auth.Alias)
 			if err != nil {
 				switch auth.Alias.Local {
 				case true:
@@ -1430,8 +1445,12 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 						resp.AddWarning("primary cluster doesn't yet issue entities for local auth mounts; falling back to not issuing entities for local auth mounts")
 						goto CREATE_TOKEN
 					}
+					// If the entity creation via forwarding was successful, update the bool flag
+					if entity != nil && err == nil {
+						entityCreated = true
+					}
 				default:
-					entity, err = possiblyForwardAliasCreation(ctx, c, err, auth, entity)
+					entity, entityCreated, err = possiblyForwardAliasCreation(ctx, c, err, auth, entity)
 				}
 			}
 			if err != nil {
@@ -1446,6 +1465,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			}
 
 			auth.EntityID = entity.ID
+			auth.EntityCreated = entityCreated
 			validAliases, err := c.identityStore.refreshExternalGroupMembershipsByEntityID(ctx, auth.EntityID, auth.GroupAliases, req.MountAccessor)
 			if err != nil {
 				return nil, nil, err
@@ -1530,7 +1550,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 					TimeOfStorage:         time.Now(),
 					RequestID:             mfaRequestID,
 				}
-				err = c.SaveMFAResponseAuth(respAuth)
+				err = possiblyForwardSaveCachedAuthResponse(ctx, c, respAuth)
 				if err != nil {
 					return nil, nil, err
 				}

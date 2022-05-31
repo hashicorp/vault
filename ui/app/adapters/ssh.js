@@ -4,8 +4,6 @@ import ApplicationAdapter from './application';
 export default ApplicationAdapter.extend({
   namespace: 'v1',
 
-  defaultSerializer: 'ssh',
-
   url(/*role*/) {
     assert('Override the `url` method to extend the SSH adapter', false);
   },

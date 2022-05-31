@@ -6,20 +6,20 @@ module('Unit | Helpers | filter-wildcard', function () {
     let string = { id: 'foo*' };
     let array = ['foobar', 'foozar', 'boo', 'oof'];
     let result = filterWildcard([string, array]);
-    assert.equal(2, result);
+    assert.equal(result, 2);
   });
 
   test('it returns zero if no wildcard is string', function (assert) {
     let string = { id: 'foo#' };
     let array = ['foobar', 'foozar', 'boo', 'oof'];
     let result = filterWildcard([string, array]);
-    assert.equal(0, result);
+    assert.equal(result, 0);
   });
 
   test('it escapes function and does not error if no id is in string', function (assert) {
     let string = '*bar*';
     let array = ['foobar', 'foozar', 'boobarboo', 'oof'];
     let result = filterWildcard([string, array]);
-    assert.equal(2, result);
+    assert.equal(result, 2);
   });
 });

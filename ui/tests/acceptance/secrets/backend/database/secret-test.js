@@ -255,7 +255,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     );
     assert.dom('[data-test-component="empty-state"]').exists('Empty state exists');
     assert
-      .dom('.is-active[data-test-secret-list-tab="Connections"]')
+      .dom('.active[data-test-secret-list-tab="Connections"]')
       .exists('Has Connections tab which is active');
     await click('[data-test-tab="overview"]');
     assert.equal(currentURL(), `/vault/secrets/${backend}/overview`, 'Tab links to overview page');
@@ -264,6 +264,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
   });
 
   test('Connection create and edit form for each plugin', async function (assert) {
+    assert.expect(160);
     const backend = await mount();
     for (let testCase of connectionTests) {
       await connectionPage.visitCreate({ backend });

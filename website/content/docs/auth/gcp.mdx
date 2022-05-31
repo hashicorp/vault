@@ -144,15 +144,28 @@ https://www.googleapis.com/auth/cloud-platform
 
 ### Required GCP Permissions
 
+#### Enabled GCP APIs
+
+The GCP project must have the following APIs enabled:
+
+- [iam.googleapis.com](https://console.cloud.google.com/flows/enableapi?apiid=iam.googleapis.com)
+  for `iam` and `gce` type roles.
+- [compute.googleapis.com](https://console.cloud.google.com/flows/enableapi?apiid=compute.googleapis.com)
+  for `gce` type roles.
+- [cloudresourcemanager.googleapis.com](https://console.cloud.google.com/flows/enableapi?apiid=cloudresourcemanager.googleapis.com)
+  for `iam` and `gce` type roles that set [`add_group_aliases`](/api-docs/auth/gcp#add_group_aliases) to true.
+
 #### Vault Server Permissions
 
-**For `iam`-type Vault roles**, Vault can be given the following roles:
+**For `iam`-type Vault roles**, the service account [`credentials`](/api-docs/auth/gcp#credentials)
+given to Vault can have the following role:
 
 ```text
 roles/iam.serviceAccountKeyAdmin
 ```
 
-**For `gce`-type Vault roles**, Vault can be given the following roles:
+**For `gce`-type Vault roles**, the service account [`credentials`](/api-docs/auth/gcp#credentials)
+given to Vault can have the following role:
 
 ```text
 roles/compute.viewer
@@ -359,19 +372,19 @@ The GCP Auth Plugin has a full HTTP API. Please see the
 [signjwt-method]: https://cloud.google.com/iam/docs/reference/credentials/rest/v1/projects.serviceAccounts/signJwt
 [cloud-creds]: https://cloud.google.com/docs/authentication/production#providing_credentials_to_your_application
 [service-accounts]: https://cloud.google.com/compute/docs/access/service-accounts
-[api-docs]: /api/auth/gcp
-[identity-group-aliases]: /api/secret/identity/group-alias
+[api-docs]: /api-docs/auth/gcp
+[identity-group-aliases]: /api-docs/secret/identity/group-alias
 [instance-identity]: https://cloud.google.com/compute/docs/instances/verifying-instance-identity
 [repo]: https://github.com/hashicorp/vault-plugin-auth-gcp
 
 ## Code Example
 
-The following code snippet demonstrates the Google Cloud auth method to authenticate
+The following example demonstrates the Google Cloud auth method to authenticate
 with Vault.
 
-<CodeTabs heading="gcp auth example">
+<CodeTabs>
 
-<CodeBlockConfig lineNumbers>
+<CodeBlockConfig>
 
 ```go
 package main
@@ -451,7 +464,7 @@ func getSecretWithGCPAuthIAM() (string, error) {
 
 </CodeBlockConfig>
 
-<CodeBlockConfig lineNumbers>
+<CodeBlockConfig>
 
 ```cs
 using System;
@@ -471,7 +484,7 @@ using Data = Google.Apis.Iam.v1.Data;
 
 namespace Examples
 {
-    public class GCPAuthExample 
+    public class GCPAuthExample
     {
         /// <summary>
         /// Fetches a key-value secret (kv-v2) after authenticating to Vault via GCP IAM,
@@ -498,18 +511,18 @@ namespace Examples
             }
 
             var jwt = SignJWT();
- 
+
             IAuthMethodInfo authMethod = new GoogleCloudAuthMethodInfo(roleName, jwt);
             var vaultClientSettings = new VaultClientSettings(vaultAddr, authMethod);
 
-            IVaultClient vaultClient = new VaultClient(vaultClientSettings); 
+            IVaultClient vaultClient = new VaultClient(vaultClientSettings);
 
             // We can retrieve the secret after creating our VaultClient object
             Secret<SecretData> kv2Secret = null;
             kv2Secret = vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path: "/creds").Result;
-            
+
             var password = kv2Secret.Data.Data["password"];
-            
+
             return password.ToString();
         }
 
@@ -529,7 +542,7 @@ namespace Examples
             });
 
             string svcEmail = $"{svcAcctName}@{gcpProjName}.iam.gserviceaccount.com";
-            string name = $"projects/-/serviceAccounts/{svcEmail}";  
+            string name = $"projects/-/serviceAccounts/{svcEmail}";
 
             TimeSpan currentTime = (DateTime.UtcNow - new DateTime(1970, 1, 1));
             int expiration = (int)(currentTime.TotalSeconds) + 900;
@@ -545,7 +558,7 @@ namespace Examples
             ProjectsResource.ServiceAccountsResource.SignJwtRequest request = iamService.Projects.ServiceAccounts.SignJwt(requestBody, name);
 
             Data.SignJwtResponse response = request.Execute();
-            
+
             return JsonConvert.SerializeObject(response.SignedJwt).Replace("\"", "");
         }
 

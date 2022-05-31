@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	"github.com/hashicorp/vault/helper/mfa"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -28,8 +27,6 @@ func Backend() *backend {
 		Help: backendHelp,
 
 		PathsSpecial: &logical.Paths{
-			Root: mfa.MFARootPaths(),
-
 			Unauthenticated: []string{
 				"login/*",
 			},
@@ -39,15 +36,14 @@ func Backend() *backend {
 			},
 		},
 
-		Paths: append([]*framework.Path{
+		Paths: []*framework.Path{
 			pathConfig(&b),
 			pathGroups(&b),
 			pathGroupsList(&b),
 			pathUsers(&b),
 			pathUsersList(&b),
+			pathLogin(&b),
 		},
-			mfa.MFAPaths(b.Backend, pathLogin(&b))...,
-		),
 
 		AuthRenew:   b.pathLoginRenew,
 		BackendType: logical.TypeCredential,
@@ -60,7 +56,7 @@ type backend struct {
 	*framework.Backend
 }
 
-func (b *backend) Login(ctx context.Context, req *logical.Request, username string, password string) (string, []string, *logical.Response, []string, error) {
+func (b *backend) Login(ctx context.Context, req *logical.Request, username string, password string, usernameAsAlias bool) (string, []string, *logical.Response, []string, error) {
 	cfg, err := b.Config(ctx, req)
 	if err != nil {
 		return "", nil, nil, nil, err
@@ -198,6 +194,10 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	}
 	// Policies from each group may overlap
 	policies = strutil.RemoveDuplicates(policies, true)
+
+	if usernameAsAlias {
+		return username, policies, ldapResponse, allGroups, nil
+	}
 
 	entityAliasAttribute, err := ldapClient.GetUserAliasAttributeValue(cfg.ConfigEntry, c, username)
 	if err != nil {

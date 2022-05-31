@@ -13,13 +13,13 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-discover"
 	discoverk8s "github.com/hashicorp/go-discover/provider/k8s"
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -181,6 +181,7 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 		c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
 	}
 	disableAutopilot := c.disableAutopilot
+
 	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig, c.raftFollowerStates, disableAutopilot)
 
 	c.pendingRaftPeers = &sync.Map{}
@@ -346,7 +347,12 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 	}
 	for _, server := range raftConfig.Servers {
 		if server.NodeID != raftBackend.NodeID() {
-			followerStates.Update(server.NodeID, 0, 0, "voter")
+			followerStates.Update(&raft.EchoRequestUpdate{
+				NodeID:          server.NodeID,
+				AppliedIndex:    0,
+				Term:            0,
+				DesiredSuffrage: "voter",
+			})
 		}
 	}
 
@@ -473,38 +479,50 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 		return errors.New("no active raft TLS key found")
 	}
 
+	getNextRotationTime := func(next time.Time) time.Time {
+		now := time.Now()
+
+		// active key's CreatedTime + raftTLSRotationPeriod might be in
+		// the past (meaning it is ready to be rotated) which will cause
+		// NewTicker to panic when used with time.Until, prevent this by
+		// pushing out rotation time into very near future
+		if next.Before(now) {
+			return now.Add(1 * time.Minute)
+		}
+
+		// push out to ensure proposed time does not elapse
+		return next.Add(10 * time.Second)
+	}
+
 	// Start the process in a go routine
 	go func() {
-		nextRotationTime := activeKey.CreatedTime.Add(raftTLSRotationPeriod)
+		nextRotationTime := getNextRotationTime(activeKey.CreatedTime.Add(raftTLSRotationPeriod))
 
 		keyCheckInterval := time.NewTicker(1 * time.Minute)
 		defer keyCheckInterval.Stop()
 
-		var backoff bool
+		// ticker is used to prevent memory leak of using time.After in
+		// for - select pattern.
+		ticker := time.NewTicker(time.Until(nextRotationTime))
+		defer ticker.Stop()
 		for {
-			// If we encountered and error we should try to create the key
-			// again.
-			if backoff {
-				nextRotationTime = time.Now().Add(10 * time.Second)
-				backoff = false
-			}
-
 			select {
 			case <-keyCheckInterval.C:
 				err := checkCommitted()
 				if err != nil {
 					logger.Error("failed to activate TLS key", "error", err)
 				}
-			case <-time.After(time.Until(nextRotationTime)):
+			case <-ticker.C:
 				// It's time to rotate the keys
 				next, err := rotateKeyring()
 				if err != nil {
 					logger.Error("failed to rotate TLS key", "error", err)
-					backoff = true
-					continue
+					nextRotationTime = time.Now().Add(10 * time.Second)
+				} else {
+					nextRotationTime = getNextRotationTime(next)
 				}
 
-				nextRotationTime = next
+				ticker.Reset(time.Until(nextRotationTime))
 
 			case <-stopCh:
 				return
@@ -765,6 +783,8 @@ func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo) (*raftInformati
 	if err != nil {
 		return nil, fmt.Errorf("failed to create api client: %w", err)
 	}
+	// Clearing namespace, as this client should only ever be using the root namespace
+	apiClient.ClearNamespace()
 
 	// Attempt to join the leader by requesting for the bootstrap challenge
 	secret, err := apiClient.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
@@ -1004,7 +1024,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				if err == nil {
 					return
 				}
-				c.logger.Error("failed to retry join raft cluster", "retry", "2s")
+				c.logger.Error("failed to retry join raft cluster", "retry", "2s", "err", err)
 				time.Sleep(2 * time.Second)
 			}
 		}()

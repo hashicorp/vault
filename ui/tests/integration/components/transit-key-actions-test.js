@@ -215,6 +215,7 @@ module('Integration | Component | transit key actions', function (hooks) {
   });
 
   test('it does not carry ciphertext value over to decrypt', async function (assert) {
+    assert.expect(4);
     const plaintext = 'not so secret';
     await doEncrypt.call(this, assert, ['decrypt']);
 

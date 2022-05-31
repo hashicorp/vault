@@ -5,7 +5,7 @@ import { get } from '@ember/object';
 export default Component.extend({
   classNames: 'config-pki',
   flashMessages: service(),
-
+  errors: null,
   /*
    *
    * @param String
@@ -20,7 +20,7 @@ export default Component.extend({
    * @param DS.Model
    * @public
    *
-   * a `pki-config` model - passed in in the component useage
+   * a `pki-config` model - passed in in the component usage
    *
    */
   config: null,
@@ -55,8 +55,8 @@ export default Component.extend({
           }
           this.send('refresh');
         })
-        .catch(() => {
-          // handle promise rejection - error will be shown by message-error component
+        .catch((e) => {
+          this.set('errors', e.errors);
         })
         .finally(() => {
           this.set('loading', false);

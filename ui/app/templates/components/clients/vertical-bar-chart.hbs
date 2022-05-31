@@ -1,10 +1,17 @@
-<svg
-  data-test-vertical-bar-chart
-  class="chart has-grid"
-  {{on "mouseleave" this.removeTooltip}}
-  {{did-insert this.registerListener @dataset}}
->
-</svg>
+{{#if @dataset}}
+  <svg
+    data-test-vertical-bar-chart
+    class="chart has-grid"
+    {{on "mouseleave" this.removeTooltip}}
+    {{did-insert this.renderChart @dataset}}
+    {{did-update this.renderChart @dataset}}
+  >
+  </svg>
+{{else}}
+  <div class="chart-empty-state">
+    <EmptyState @title={{@noDataTitle}} @subTitle={{or @noDataMessage "No data to display"}} @bottomBorder={{true}} />
+  </div>
+{{/if}}
 
 {{! TOOLTIP }}
 
@@ -21,8 +28,8 @@
   }}
     <div class="chart-tooltip vertical-chart">
       <p>{{this.tooltipTotal}}</p>
-      <p>{{this.uniqueEntities}}</p>
-      <p>{{this.nonEntityTokens}}</p>
+      <p>{{this.entityClients}}</p>
+      <p>{{this.nonEntityClients}}</p>
     </div>
     <div class="chart-tooltip-arrow"></div>
   {{/modal-dialog}}

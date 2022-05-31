@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -32,6 +33,46 @@ func TestMonitor_Start(t *testing.T) {
 	select {
 	case l := <-logCh:
 		require.Contains(t, string(l), "[DEBUG] test log")
+		return
+	case <-time.After(5 * time.Second):
+		t.Fatal("Expected to receive from log channel")
+	}
+}
+
+func TestMonitor_JSONFormat(t *testing.T) {
+	t.Parallel()
+
+	logger := log.NewInterceptLogger(&log.LoggerOptions{
+		Level: log.Error,
+	})
+
+	m, _ := NewMonitor(512, logger, &log.LoggerOptions{
+		Level:      log.Debug,
+		JSONFormat: true,
+	})
+
+	type jsonlog struct {
+		Level     string `json:"@level"`
+		Message   string `json:"@message"`
+		TimeStamp string `json:"@timestamp"`
+	}
+	jsonLog := &jsonlog{}
+
+	logCh := m.Start()
+	defer m.Stop()
+
+	go func() {
+		logger.Debug("test json log")
+		time.Sleep(10 * time.Millisecond)
+	}()
+
+	select {
+	case l := <-logCh:
+		err := json.Unmarshal(l, jsonLog)
+		if err != nil {
+			t.Fatal("Expected JSON log from channel")
+		}
+		require.Contains(t, jsonLog.Message, "test json log")
 		return
 	case <-time.After(5 * time.Second):
 		t.Fatal("Expected to receive from log channel")

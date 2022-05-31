@@ -10,13 +10,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/physical"
-
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
-
-	"github.com/armon/go-metrics"
-	"github.com/lib/pq"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/physical"
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
 const (
@@ -99,7 +98,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	if !ok {
 		unquoted_table = "vault_kv_store"
 	}
-	quoted_table := pq.QuoteIdentifier(unquoted_table)
+	quoted_table := dbutil.QuoteIdentifier(unquoted_table)
 
 	maxParStr, ok := conf["max_parallel"]
 	var maxParInt int
@@ -129,7 +128,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	}
 
 	// Create PostgreSQL handle for the database.
-	db, err := sql.Open("postgres", connURL)
+	db, err := sql.Open("pgx", connURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to postgres: %w", err)
 	}
@@ -165,7 +164,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	if !ok {
 		unquoted_ha_table = "vault_ha_locks"
 	}
-	quoted_ha_table := pq.QuoteIdentifier(unquoted_ha_table)
+	quoted_ha_table := dbutil.QuoteIdentifier(unquoted_ha_table)
 
 	// Setup the backend.
 	m := &PostgreSQLBackend{

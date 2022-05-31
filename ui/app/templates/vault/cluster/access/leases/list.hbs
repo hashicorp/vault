@@ -105,6 +105,6 @@
     @page={{this.model.meta.currentPage}}
     @lastPage={{this.model.meta.lastPage}}
     @link={{concat "vault.cluster.access.leases.list" (unless this.baseKey.id "-root")}}
-    @model={{compact (array (if this.baseKey.id this.baseKey.id))}}
+    @models={{compact (array (if this.baseKey.id this.baseKey.id))}}
   />
 {{/if}}

@@ -10,10 +10,10 @@ project "vault" {
     repository = "vault"
     release_branches = [
       "main",
-      "release/1.7.x",
       "release/1.8.x",
       "release/1.9.x",
       "release/1.10.x",
+      "release/1.11.x",
     ]
   }
 }
@@ -192,6 +192,7 @@ event "promote-staging" {
     organization = "hashicorp"
     repository = "crt-workflows-common"
     workflow = "promote-staging"
+    config = "release-metadata.hcl"
   }
 
   notification {

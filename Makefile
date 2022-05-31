@@ -15,7 +15,7 @@ EXTERNAL_TOOLS=\
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
 
-GO_VERSION_MIN=1.17.7
+GO_VERSION_MIN=1.17.9
 GO_CMD?=go
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
@@ -214,6 +214,12 @@ fmtcheck:
 fmt:
 	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -w
 
+semgrep: 
+	semgrep --include '*.go' --exclude 'vendor' -a -f tools/semgrep .
+
+semgrep-ci: 
+	semgrep --error --include '*.go' --exclude 'vendor' -f tools/semgrep/ci .
+
 assetcheck:
 	@echo "==> Checking compiled UI assets..."
 	@sh -c "'$(CURDIR)/scripts/assetcheck.sh'"
@@ -253,7 +259,7 @@ ci-config:
 ci-verify:
 	@$(MAKE) -C .circleci ci-verify
 
-.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path check-browserstack-creds test-ui-browserstack packages build build-ci
+.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path check-browserstack-creds test-ui-browserstack packages build build-ci semgrep semgrep-ci
 
 .NOTPARALLEL: ember-dist ember-dist-dev
 
@@ -261,9 +267,14 @@ ci-verify:
 # This is used for release builds by .github/workflows/build.yml
 build:
 	@echo "--> Building Vault $(VAULT_VERSION)"
-	@go build -v -tags "$(GO_TAGS)" -ldflags " -X github.com/hashicorp/vault/sdk/version.Version=$(VAULT_VERSION) -X github.com/hashicorp/vault/sdk/version.GitCommit=$(VAULT_REVISION)" -o dist/
+	@go build -v -tags "$(GO_TAGS)" -ldflags " -X github.com/hashicorp/vault/sdk/version.Version=$(VAULT_VERSION) -X github.com/hashicorp/vault/sdk/version.GitCommit=$(VAULT_REVISION) -X github.com/hashicorp/vault/sdk/version.BuildDate=$(VAULT_BUILD_DATE)" -o dist/
 
 .PHONY: version
 # This is used for release builds by .github/workflows/build.yml
 version:
 	@$(CURDIR)/scripts/version.sh sdk/version/version_base.go
+
+.PHONY: build-date
+# This is used for release builds by .github/workflows/build.yml
+build-date:
+	@$(CURDIR)/scripts/build_date.sh

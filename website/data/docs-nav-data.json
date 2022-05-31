@@ -77,10 +77,6 @@
         "path": "internals/replication"
       },
       {
-        "title": "Plugins",
-        "path": "internals/plugins"
-      },
-      {
         "title": "Limits and Maximums",
         "path": "internals/limits"
       }
@@ -190,6 +186,10 @@
       {
         "title": "Transform",
         "path": "concepts/transform"
+      },
+      {
+        "title": "Mount Migration",
+        "path": "concepts/mount-migration"
       }
     ]
   },
@@ -898,10 +898,6 @@
         "path": "agent/template"
       },
       {
-        "title": "Template Config",
-        "path": "agent/template-config"
-      },
-      {
         "title": "Windows service",
         "path": "agent/winsvc"
       }
@@ -965,6 +961,10 @@
             "path": "secrets/databases/hanadb"
           },
           {
+            "title": "IBM Db2",
+            "path": "secrets/databases/db2"
+          },
+          {
             "title": "InfluxDB",
             "path": "secrets/databases/influxdb"
           },
@@ -1015,6 +1015,23 @@
         "path": "secrets/gcpkms"
       },
       {
+        "title": "Identity",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/identity"
+          },
+          {
+            "title": "Identity Tokens",
+            "path": "secrets/identity/identity-token"
+          },
+          {
+            "title": "OIDC Identity Provider",
+            "path": "secrets/identity/oidc-provider"
+          }
+        ]
+      },
+      {
         "title": "Key Management <sup>ENTERPRISE</sup>",
         "routes": [
           {
@@ -1036,10 +1053,6 @@
         ]
       },
       {
-        "title": "KMIP <sup>ENTERPRISE</sup>",
-        "path": "secrets/kmip"
-      },
-      {
         "title": "Key/Value",
         "routes": [
           {
@@ -1057,21 +1070,12 @@
         ]
       },
       {
-        "title": "Identity",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "secrets/identity"
-          },
-          {
-            "title": "Identity Tokens",
-            "path": "secrets/identity/identity-token"
-          },
-          {
-            "title": "OIDC Identity Provider",
-            "path": "secrets/identity/oidc-provider"
-          }
-        ]
+        "title": "KMIP <sup>ENTERPRISE</sup>",
+        "path": "secrets/kmip"
+      },
+      {
+        "title": "Kubernetes",
+        "path": "secrets/kubernetes"
       },
       {
         "title": "MongoDB Atlas",
@@ -1087,7 +1091,32 @@
       },
       {
         "title": "PKI (Certificates)",
-        "path": "secrets/pki"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/pki"
+          },
+          {
+            "title": "Setup and Usage",
+            "path": "secrets/pki/setup"
+          },
+          {
+            "title": "Quick Start - Root CA Setup",
+            "path": "secrets/pki/quick-start-root-ca"
+          },
+          {
+            "title": "Quick Start - Intermediate CA Setup",
+            "path": "secrets/pki/quick-start-intermediate-ca"
+          },
+          {
+            "title": "Considerations",
+            "path": "secrets/pki/considerations"
+          },
+          {
+            "title": "Rotation Primitives",
+            "path": "secrets/pki/rotation-primitives"
+          }
+        ]
       },
       {
         "title": "RabbitMQ",
@@ -1211,7 +1240,16 @@
       },
       {
         "title": "Login MFA",
-        "path": "auth/login-mfa"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "auth/login-mfa"
+          },
+          {
+            "title": "FAQ",
+            "path": "auth/login-mfa/faq"
+          }
+        ]
       },
       {
         "title": "Oracle Cloud Infrastructure",
@@ -1243,10 +1281,6 @@
       {
         "title": "App ID <sup>DEPRECATED</sup>",
         "path": "auth/app-id"
-      },
-      {
-        "title": "MFA <sup>LEGACY / UNSUPPORTED</sup>",
-        "path": "auth/mfa"
       }
     ]
   },
@@ -1272,14 +1306,30 @@
     ]
   },
   {
-    "title": "Plugin Backends",
-    "path": "plugin"
+    "title": "Plugins",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "plugins"
+      },
+      {
+        "title": "Plugin Architecture",
+        "path": "plugins/plugin-architecture"
+      },
+      {
+        "title": "Plugin Development",
+        "path": "plugins/plugin-development"
+      },
+      {
+        "title": "Plugin Management",
+        "path": "plugins/plugin-management"
+      },
+      {
+        "title": "Plugin Portal",
+        "path": "plugins/plugin-portal"
+      }
+    ]
   },
-  {
-    "title": "Plugin Portal",
-    "path": "plugin-portal"
-  },
-
   {
     "title": "Vault Integration Program",
     "path": "partnerships"
@@ -1305,6 +1355,11 @@
             "title": "Overview",
             "path": "platform/k8s"
           },
+          {
+            "title": "Agent Injector vs. Vault CSI Provider",
+            "path": "platform/k8s/injector-csi"
+          },
+
           {
             "title": "Helm Chart",
             "routes": [
@@ -1436,15 +1491,19 @@
         ]
       },
       {
-        "title": "AWS Marketplace",
+        "title": "AWS",
         "routes": [
           {
             "title": "Overview",
-            "path": "platform/aws-mp"
+            "path": "platform/aws"
+          },
+          {
+            "title": "Vault Lambda Extension",
+            "path": "platform/aws/lambda-extension"
           },
           {
             "title": "Running Vault",
-            "path": "platform/aws-mp/run"
+            "path": "platform/aws/run"
           }
         ]
       },
@@ -1501,6 +1560,10 @@
       {
         "title": "Upgrade Plugins",
         "path": "upgrading/plugins"
+      },
+      {
+        "title": "Upgrade to 1.11.x",
+        "path": "upgrading/upgrade-to-1.11.x"
       },
       {
         "title": "Upgrade to 1.10.x",
@@ -1735,6 +1798,10 @@
         "path": "release-notes"
       },
       {
+        "title": "1.10.0",
+        "path": "release-notes/1.10.0"
+      },
+      {
         "title": "1.9.0",
         "path": "release-notes/1.9.0"
       },
@@ -1769,6 +1836,38 @@
       {
         "title": "FAQ",
         "path": "deprecation/faq"
+      }
+    ]
+  },
+  {
+    "divider": true
+  },
+  {
+    "title": "FAQ",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "faq"
+      },
+      {
+        "title": "Feature Deprecation Notice and Plans",
+        "href": "https://www.vaultproject.io/docs/deprecation/faq"
+      },
+      {
+        "title": "License",
+        "href": "https://www.vaultproject.io/docs/enterprise/license/faq"
+      },
+      {
+        "title": "Client Count",
+        "href": "https://www.vaultproject.io/docs/concepts/client-count/faq"
+      },
+      {
+        "title": "Login MFA",
+        "href": "https://www.vaultproject.io/docs/auth/login-mfa/faq"
+      },
+      {
+        "title": "Server Side Consistent Token",
+        "path": "faq/ssct"
       }
     ]
   },
@@ -1842,7 +1941,24 @@
         "path": "enterprise/entropy-augmentation"
       },
       {
-        "title": "Seal Wrap / FIPS 140-2",
+        "title": "FIPS",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "enterprise/fips"
+          },
+          {
+            "title": "FIPS 140-2 Inside Vault",
+            "path": "enterprise/fips/fips1402"
+          },
+          {
+            "title": "Seal Wrap for FIPS 140-2",
+            "path": "enterprise/fips/sealwrap"
+          }
+        ]
+      },
+      {
+        "title": "Seal Wrap",
         "path": "enterprise/sealwrap"
       },
       {

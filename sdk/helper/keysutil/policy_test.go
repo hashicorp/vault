@@ -3,12 +3,18 @@ package keysutil
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"reflect"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
+
+	"golang.org/x/crypto/ed25519"
 
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -613,6 +619,113 @@ func Test_BadArchive(t *testing.T) {
 	if len(p.Keys) != 6 {
 		t.Fatalf("unexpected key length %d", len(p.Keys))
 	}
+}
+
+func Test_Import(t *testing.T) {
+	ctx := context.Background()
+	storage := &logical.InmemStorage{}
+	testKeys, err := generateTestKeys()
+	if err != nil {
+		t.Fatalf("error generating test keys: %s", err)
+	}
+
+	tests := map[string]struct {
+		policy      Policy
+		key         []byte
+		shouldError bool
+	}{
+		"import AES key": {
+			policy: Policy{
+				Name: "test-aes-key",
+				Type: KeyType_AES256_GCM96,
+			},
+			key:         testKeys[KeyType_AES256_GCM96],
+			shouldError: false,
+		},
+		"import RSA key": {
+			policy: Policy{
+				Name: "test-rsa-key",
+				Type: KeyType_RSA2048,
+			},
+			key:         testKeys[KeyType_RSA2048],
+			shouldError: false,
+		},
+		"import ECDSA key": {
+			policy: Policy{
+				Name: "test-ecdsa-key",
+				Type: KeyType_ECDSA_P256,
+			},
+			key:         testKeys[KeyType_ECDSA_P256],
+			shouldError: false,
+		},
+		"import ED25519 key": {
+			policy: Policy{
+				Name: "test-ed25519-key",
+				Type: KeyType_ED25519,
+			},
+			key:         testKeys[KeyType_ED25519],
+			shouldError: false,
+		},
+		"import incorrect key type": {
+			policy: Policy{
+				Name: "test-ed25519-key",
+				Type: KeyType_ED25519,
+			},
+			key:         testKeys[KeyType_AES256_GCM96],
+			shouldError: true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if err := test.policy.Import(ctx, storage, test.key, rand.Reader); (err != nil) != test.shouldError {
+				t.Fatalf("error importing key: %s", err)
+			}
+		})
+	}
+}
+
+func generateTestKeys() (map[KeyType][]byte, error) {
+	keyMap := make(map[KeyType][]byte)
+
+	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, err
+	}
+	rsaKeyBytes, err := x509.MarshalPKCS8PrivateKey(rsaKey)
+	if err != nil {
+		return nil, err
+	}
+	keyMap[KeyType_RSA2048] = rsaKeyBytes
+
+	ecdsaKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	ecdsaKeyBytes, err := x509.MarshalPKCS8PrivateKey(ecdsaKey)
+	if err != nil {
+		return nil, err
+	}
+	keyMap[KeyType_ECDSA_P256] = ecdsaKeyBytes
+
+	_, ed25519Key, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	ed25519KeyBytes, err := x509.MarshalPKCS8PrivateKey(ed25519Key)
+	if err != nil {
+		return nil, err
+	}
+	keyMap[KeyType_ED25519] = ed25519KeyBytes
+
+	aesKey := make([]byte, 32)
+	_, err = rand.Read(aesKey)
+	if err != nil {
+		return nil, err
+	}
+	keyMap[KeyType_AES256_GCM96] = aesKey
+
+	return keyMap, nil
 }
 
 func BenchmarkSymmetric(b *testing.B) {

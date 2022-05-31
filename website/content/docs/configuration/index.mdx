@@ -8,6 +8,9 @@ description: Vault server configuration reference.
 
 Outside of development mode, Vault servers are configured using a file.
 The format of this file is [HCL](https://github.com/hashicorp/hcl) or JSON.
+
+@include 'plugin-file-permissions-check.mdx'
+
 An example configuration is shown below:
 
 ```javascript
@@ -104,7 +107,7 @@ to specify where the configuration is.
 
   ~> Note: Since each plugin runs as a separate process, you need to do the same
   for each plugin in your [plugins
-  directory](/docs/internals/plugins#plugin-directory).
+  directory](/docs/plugins/plugin-architecture#plugin-directory).
 
   If you use a Linux distribution with a modern version of systemd, you can add
   the following directive to the "[Service]" configuration section:
@@ -116,6 +119,17 @@ to specify where the configuration is.
 - `plugin_directory` `(string: "")` – A directory from which plugins are
   allowed to be loaded. Vault must have permission to read files in this
   directory to successfully load plugins, and the value cannot be a symbolic link.
+
+  @include 'plugin-file-permissions-check.mdx'
+
+- `plugin_file_uid` `(integer: 0)` – Uid of the plugin directories and plugin binaries if they
+   are owned by an user other than the user running Vault. This only needs to be set if the 
+   file permissions check is enabled via the environment variable `VAULT_ENABLE_FILE_PERMISSIONS_CHECK`.
+
+- `plugin_file_permissions` `(string: "")` – Octal permission string of the plugin
+   directories and plugin binaries if they have write or execute permissions for group or others.
+   This only needs to be set if the file permissions check is enabled via the environment variable 
+   `VAULT_ENABLE_FILE_PERMISSIONS_CHECK`.
 
 - `telemetry` `([Telemetry][telemetry]: <none>)` – Specifies the telemetry
   reporting system.
@@ -205,7 +219,7 @@ The following parameters are used on backends that support [high availability][h
 The following parameters are only used with Vault Enterprise
 
 - `disable_sealwrap` `(bool: false)` – Disables using [seal wrapping][sealwrap]
-  for any value except the master key. If this value is toggled, the new
+  for any value except the root key. If this value is toggled, the new
   behavior will happen lazily (as values are read or written).
 
 - `disable_performance_standby` `(bool: false)` – Specifies whether performance

@@ -320,7 +320,6 @@ func testParseEntropy(t *testing.T, oss bool) {
 		case err != test.outErr:
 			t.Fatalf("error mismatch: expected %#v got %#v", err, test.outErr)
 		case err == nil && config.Entropy != nil && *config.Entropy != test.outEntropy:
-			fmt.Printf("\n config.Entropy: %#v", config.Entropy)
 			t.Fatalf("entropy config mismatch: expected %#v got %#v", test.outEntropy, *config.Entropy)
 		}
 	}
@@ -473,6 +472,16 @@ func testLoadConfigFile(t *testing.T) {
 	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
+	}
+}
+
+func testUnknownFieldValidationStorageAndListener(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/storage-listener-config.json")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if len(config.UnusedKeys) != 0 {
+		t.Fatalf("unused keys for valid config are %+v\n", config.UnusedKeys)
 	}
 }
 
@@ -694,6 +703,8 @@ func testConfig_Sanitized(t *testing.T) {
 		"disable_indexing":                    false,
 		"disable_mlock":                       true,
 		"disable_performance_standby":         false,
+		"plugin_file_uid":                     0,
+		"plugin_file_permissions":             0,
 		"disable_printable_check":             false,
 		"disable_sealwrap":                    true,
 		"raw_storage_endpoint":                true,
@@ -855,6 +866,7 @@ func testParseSockaddrTemplate(t *testing.T) {
 api_addr = <<EOF
 {{- GetAllInterfaces | include "flags" "loopback" | include "type" "ipv4" | attr "address" -}}
 EOF
+
 listener "tcp" {
 	address = <<EOF
 {{- GetAllInterfaces | include "flags" "loopback" | include "type" "ipv4" | attr "address" -}}:443

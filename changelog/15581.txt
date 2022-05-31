@@ -1,0 +1,3 @@
+```release-note:deprecation
+docs: Document removal of X.509 certificates with signatures who use SHA-1 in Vault 1.12
+```

@@ -1,0 +1,25 @@
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      Multi-factor Authentication
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<Mfa::Nav />
+
+<Toolbar>
+  <ToolbarActions>
+    <ToolbarLink @type="add" @params={{array "vault.cluster.access.mfa.methods.create"}} data-test-mfa-method-create>
+      New MFA method
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+
+{{#if (gt this.model.length 0)}}
+  {{#each this.model as |item|}}
+    <Mfa::MethodListItem @model={{item}} />
+  {{/each}}
+{{else}}
+  <EmptyState @title="No methods found." @message="Add a new one to get started." />
+{{/if}}

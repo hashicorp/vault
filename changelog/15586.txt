@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Add an export API for historical activity log data
+```
