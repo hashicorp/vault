@@ -3734,7 +3734,11 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		}
 
 		if isAuthed {
-			return hasMountAccess(ctx, acl, me.Namespace().Path+me.Path)
+			if me.Table == "auth" {
+				return hasMountAccess(ctx, acl, me.Namespace().Path+me.Table+"/"+me.Path)
+			} else {
+				return hasMountAccess(ctx, acl, me.Namespace().Path+me.Path)
+			}
 		}
 
 		return false
@@ -3844,10 +3848,18 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	}
 	resp.Data["path"] = me.Path
 
-	fullMountPath := ns.Path + me.Path
+	pathWithTable := ""
+
+	if me.Table == "auth" {
+		pathWithTable = me.Table + "/" + me.Path
+	} else {
+		pathWithTable = me.Path
+	}
+
+	fullMountPath := ns.Path + pathWithTable
 	if ns.ID != me.Namespace().ID {
-		resp.Data["path"] = me.Namespace().Path + me.Path
-		fullMountPath = ns.Path + me.Namespace().Path + me.Path
+		resp.Data["path"] = me.Namespace().Path + pathWithTable
+		fullMountPath = ns.Path + me.Namespace().Path + pathWithTable
 	}
 
 	if !hasMountAccess(ctx, acl, fullMountPath) {
