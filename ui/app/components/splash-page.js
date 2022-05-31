@@ -1,6 +1,6 @@
 /**
  * @module SplashPage
- * SplashPage component is used as a landing page with a box horizontally and centered align on the page. It's used as the login landing page.
+ * SplashPage component is used as a landing page with a box horizontally and center aligned on the page. It's used as the login landing page.
  *
  *
  * @example
@@ -10,7 +10,7 @@
  * </SplashPage
  * ```
  * @param {boolean} [hasAltContent] - boolean to bypass the UiWizard.
- * @param {boolean} [showTruncatedNavBar] - boolean to hide or show the navBar. By default this is true.
+ * @param {boolean} [showTruncatedNavBar = true] - boolean to hide or show the navBar. By default this is true.
  *
  */
 
@@ -24,11 +24,7 @@ export default class SplashPage extends Component {
 
   get showTruncatedNavBar() {
     // default is true unless showTruncatedNavBar is defined as false
-    if (this.args.showTruncatedNavBar === undefined) {
-      return true;
-    } else {
-      return false;
-    }
+    return this.args.showTruncatedNavBar === false ? false : true;
   }
 
   get activeCluster() {
