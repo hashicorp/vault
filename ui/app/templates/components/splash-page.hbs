@@ -1,15 +1,17 @@
-<NavHeader as |Nav|>
-  <Nav.home>
-    <HomeLink @class="navbar-item splash-page-logo has-text-white">
-      <LogoEdition />
-    </HomeLink>
-  </Nav.home>
-  <Nav.items>
-    <div class="navbar-item status-indicator-button" data-status={{if this.activeCluster.unsealed "good" "bad"}}>
-      <StatusMenu @label="Status" @onLinkClick={{action Nav.closeDrawer}} />
-    </div>
-  </Nav.items>
-</NavHeader>
+{{#if this.showTruncatedNavBar}}
+  <NavHeader as |Nav|>
+    <Nav.home>
+      <HomeLink @class="navbar-item splash-page-logo has-text-white">
+        <LogoEdition />
+      </HomeLink>
+    </Nav.home>
+    <Nav.items>
+      <div class="navbar-item status-indicator-button" data-status={{if this.activeCluster.unsealed "good" "bad"}}>
+        <StatusMenu @label="Status" @onLinkClick={{action Nav.closeDrawer}} />
+      </div>
+    </Nav.items>
+  </NavHeader>
+{{/if}}
 {{! bypass UiWizard and container styling }}
 {{#if this.hasAltContent}}
   {{yield (hash altContent=(component "splash-page/splash-content"))}}

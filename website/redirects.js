@@ -455,6 +455,11 @@ module.exports = [
     destination: '/docs/upgrading',
     permanent: true,
   },
+  {
+    source: '/docs/platform/aws/lambda-extension-cache',
+    destination: '/docs/platform/aws/lambda-extension',
+    permanent: true,
+  },
   // Guides and Intro redirects to Learn
   {
     source: '/guides',

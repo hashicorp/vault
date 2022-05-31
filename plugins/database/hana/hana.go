@@ -134,7 +134,7 @@ func (h *HANA) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (respon
 				"expiration": expirationStr,
 			}
 
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return dbplugin.NewUserResponse{}, err
 			}
 		}
@@ -223,7 +223,7 @@ func (h *HANA) updateUserPassword(ctx context.Context, tx *sql.Tx, username stri
 				"password": password,
 			}
 
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return fmt.Errorf("failed to execute query: %w", err)
 			}
 		}
@@ -259,7 +259,7 @@ func (h *HANA) updateUserExpiration(ctx context.Context, tx *sql.Tx, username st
 				"expiration": expirationStr,
 			}
 
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return fmt.Errorf("failed to execute query: %w", err)
 			}
 		}
@@ -302,7 +302,7 @@ func (h *HANA) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) (
 			m := map[string]string{
 				"name": req.Username,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return dbplugin.DeleteUserResponse{}, err
 			}
 		}

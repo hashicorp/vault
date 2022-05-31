@@ -1,0 +1,103 @@
+<PageHeader as |p|>
+  <p.levelLeft class="has-border-bottom-light">
+    <h1 class="title is-3">
+      {{#if this.method}}
+        Configure
+        {{this.method.name}}
+        MFA
+      {{else}}
+        Multi-factor authentication
+      {{/if}}
+    </h1>
+  </p.levelLeft>
+  <p.top>
+    <nav class="breadcrumb">
+      <ul>
+        <li>
+          <span class="sep">&#x0002f;</span>
+          <LinkTo @route="vault.cluster.access.mfa.methods.index">
+            Methods
+          </LinkTo>
+        </li>
+      </ul>
+    </nav>
+  </p.top>
+</PageHeader>
+<div class="has-border-top-light has-top-padding-l">
+  {{#if this.showForms}}
+    <h3 class="is-size-4 has-text-semibold">Settings</h3>
+    <p class="has-border-top-light has-top-padding-l">
+      {{this.description}}
+      <DocLink @path={{concat "/api-docs/secret/identity/mfa/" this.type}}>Learn more.</DocLink>
+    </p>
+    <Mfa::MethodForm @model={{this.method}} @validations={{this.methodErrors}} class="is-box-shadowless" />
+    <MfaLoginEnforcementHeader
+      @isInline={{true}}
+      @radioCardGroupValue={{this.enforcementPreference}}
+      @onRadioCardSelect={{this.onEnforcementPreferenceChange}}
+      @onEnforcementSelect={{fn (mut this.enforcement)}}
+    />
+    {{#if (eq this.enforcementPreference "new")}}
+      <MfaLoginEnforcementForm
+        @model={{this.enforcement}}
+        @isInline={{true}}
+        @modelErrors={{this.enforcementErrors}}
+        class="has-top-margin-l"
+      />
+    {{/if}}
+  {{else}}
+    <p>
+      Multi-factor authentication (MFA) allows you to set up another layer of security on top of existing authentication
+      methods. Vault has four available methods.
+      <DocLink @path="/api-docs/secret/identity/mfa">Learn more.</DocLink>
+    </p>
+    <div class="is-flex-row has-top-margin-xl">
+      {{#each this.methodNames as |methodName|}}
+        <RadioCard
+          @value={{lowercase methodName}}
+          @groupValue={{this.type}}
+          @onChange={{this.onTypeSelect}}
+          data-test-radio-card={{lowercase methodName}}
+        >
+          <div class="radio-card-row is-flex-v-centered">
+            <div>
+              <Icon
+                @name={{if (eq methodName "Okta") "okta-color" (lowercase methodName)}}
+                @size="24"
+                class={{if (eq methodName "TOTP") "has-text-grey"}}
+              />
+              <p class="has-text-semibold has-text-align-center {{if (eq methodName 'Okta') 'has-top-margin-xs'}}">
+                {{methodName}}
+              </p>
+            </div>
+          </div>
+        </RadioCard>
+      {{/each}}
+    </div>
+    {{#if this.type}}
+      <p class="has-top-margin-l">
+        {{this.description}}
+        <DocLink @path={{concat "/api-docs/secret/identity/mfa/" this.type}}>Learn more.</DocLink>
+      </p>
+      {{! in a future release cards may be displayed to choose from either template or custom config for TOTP }}
+      {{! if template is selected a user could choose a predefined config for common authenticators and the values would be populated on the model }}
+    {{/if}}
+  {{/if}}
+
+  <div class="has-top-margin-l has-border-top-light">
+    <div class="has-top-margin-l has-bottom-margin-l">
+      {{#if this.showForms}}
+        <button class="button is-primary" type="button" {{on "click" (perform this.save)}} data-test-mfa-create-save>
+          Continue
+        </button>
+        <button class="button has-left-margin-xs" type="button" {{on "click" this.cancel}}>
+          Cancel
+        </button>
+      {{else if this.type}}
+        <button class="button is-primary" type="button" {{on "click" this.createModels}} data-test-mfa-create-next>
+          Next
+        </button>
+      {{/if}}
+    </div>
+  </div>
+</div>

@@ -1,19 +1,23 @@
 {{#if this.shouldUseFallback}}
   {{component
     this.fallbackComponent
-    label=this.label
+    label=(or this.label this.subLabel)
+    subText=this.subText
     onChange=(action "onChange")
     inputValue=this.inputValue
     helpText=this.helpText
     placeHolder=this.placeHolder
+    id=this.id
   }}
 {{else}}
-  <label class={{if this.labelClass this.labelClass "title is-4"}} data-test-field-label>
-    {{this.label}}
-    {{#if this.helpText}}
-      <InfoTooltip>{{this.helpText}}</InfoTooltip>
-    {{/if}}
-  </label>
+  {{#if this.label}}
+    <label class={{if this.labelClass this.labelClass "title is-4"}} data-test-field-label>
+      {{this.label}}
+      {{#if this.helpText}}
+        <InfoTooltip>{{this.helpText}}</InfoTooltip>
+      {{/if}}
+    </label>
+  {{/if}}
   {{#if this.subLabel}}
     <p class="is-label">{{this.subLabel}}</p>
   {{/if}}

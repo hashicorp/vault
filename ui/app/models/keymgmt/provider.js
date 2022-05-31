@@ -2,6 +2,7 @@ import Model, { attr } from '@ember-data/model';
 import { tracked } from '@glimmer/tracking';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { withModelValidations } from 'vault/decorators/model-validations';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 const CRED_PROPS = {
   azurekeyvault: ['client_id', 'client_secret', 'tenant_id'],
@@ -44,7 +45,7 @@ export default class KeymgmtProviderModel extends Model {
     label: 'Type',
     subText: 'Choose the provider type.',
     possibleValues: ['azurekeyvault', 'awskms', 'gcpckms'],
-    defaultValue: 'azurekeyvault',
+    noDefault: true,
   })
   provider;
 
@@ -53,8 +54,6 @@ export default class KeymgmtProviderModel extends Model {
     subText: 'The name of a Key Vault instance must be supplied. This cannot be edited later.',
   })
   keyCollection;
-
-  @attr('date') created;
 
   idPrefix = 'provider/';
   type = 'provider';
@@ -77,21 +76,30 @@ export default class KeymgmtProviderModel extends Model {
     }[this.provider];
   }
   get showFields() {
-    const attrs = expandAttributeMeta(this, ['name', 'created', 'keyCollection']);
+    const attrs = expandAttributeMeta(this, ['name', 'keyCollection']);
     attrs.splice(1, 0, { hasBlock: true, label: 'Type', value: this.typeName, icon: this.icon });
     const l = this.keys.length;
-    const value = l ? `${l} ${l > 1 ? 'keys' : 'key'}` : 'None';
+    const value = l
+      ? `${l} ${l > 1 ? 'keys' : 'key'}`
+      : this.canListKeys
+      ? 'None'
+      : 'You do not have permission to list keys';
     attrs.push({ hasBlock: true, isLink: l, label: 'Keys', value });
     return attrs;
   }
   get credentialProps() {
+    if (!this.provider) return [];
     return CRED_PROPS[this.provider];
   }
   get credentialFields() {
     const [creds, fields] = this.credentialProps.reduce(
       ([creds, fields], prop) => {
         creds[prop] = null;
-        fields.push({ name: `credentials.${prop}`, type: 'string', options: { label: prop } });
+        let field = { name: `credentials.${prop}`, type: 'string', options: { label: prop } };
+        if (prop === 'service_account_file') {
+          field.options.subText = 'The path to a Google service account key file, not the file itself.';
+        }
+        fields.push(field);
         return [creds, fields];
       },
       [{}, []]
@@ -104,18 +112,49 @@ export default class KeymgmtProviderModel extends Model {
   }
 
   async fetchKeys(page) {
-    try {
-      this.keys = await this.store.lazyPaginatedQuery('keymgmt/key', {
-        backend: 'keymgmt',
-        provider: this.name,
-        responsePath: 'data.keys',
-        page,
-      });
-    } catch (error) {
+    if (this.canListKeys === false) {
       this.keys = [];
-      if (error.httpStatus !== 404) {
-        throw error;
+    } else {
+      // try unless capabilities returns false
+      try {
+        this.keys = await this.store.lazyPaginatedQuery('keymgmt/key', {
+          backend: 'keymgmt',
+          provider: this.name,
+          responsePath: 'data.keys',
+          page,
+        });
+      } catch (error) {
+        this.keys = [];
+        if (error.httpStatus !== 404) {
+          throw error;
+        }
       }
     }
+  }
+
+  @lazyCapabilities(apiPath`${'backend'}/kms/${'id'}`, 'backend', 'id') providerPath;
+  @lazyCapabilities(apiPath`${'backend'}/kms`, 'backend') providersPath;
+  @lazyCapabilities(apiPath`${'backend'}/kms/${'id'}/key`, 'backend', 'id') providerKeysPath;
+
+  get canCreate() {
+    return this.providerPath.get('canCreate');
+  }
+  get canDelete() {
+    return this.providerPath.get('canDelete');
+  }
+  get canEdit() {
+    return this.providerPath.get('canUpdate');
+  }
+  get canRead() {
+    return this.providerPath.get('canRead');
+  }
+  get canList() {
+    return this.providersPath.get('canList');
+  }
+  get canListKeys() {
+    return this.providerKeysPath.get('canList');
+  }
+  get canCreateKeys() {
+    return this.providerKeysPath.get('canCreate');
   }
 }

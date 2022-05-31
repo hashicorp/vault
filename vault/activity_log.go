@@ -2,9 +2,12 @@ package vault
 
 import (
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"sort"
 	"strconv"
@@ -20,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
+	"go.uber.org/atomic"
 )
 
 const (
@@ -160,6 +164,8 @@ type ActivityLog struct {
 
 	// partialMonthClientTracker tracks active clients this month.  Protected by fragmentLock.
 	partialMonthClientTracker map[string]*activity.EntityRecord
+
+	inprocessExport *atomic.Bool
 }
 
 // These non-persistent configuration options allow us to disable
@@ -207,6 +213,7 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 			clientSequenceNumber: 0,
 		},
 		standbyFragmentsReceived: make([]*activity.LogFragment, 0),
+		inprocessExport:          atomic.NewBool(false),
 	}
 
 	config, err := a.loadConfigOrDefault(core.activeContext)
@@ -483,6 +490,23 @@ func (a *ActivityLog) getMostRecentActivityLogSegment(ctx context.Context) ([]ti
 	return timeutil.GetMostRecentContiguousMonths(logTimes), nil
 }
 
+// getMostRecentActivityLogSegment gets the times (in UTC) associated with the most recent
+// contiguous set of activity logs, sorted in decreasing order (latest to earliest)
+func (a *ActivityLog) getMostRecentNonContiguousActivityLogSegments(ctx context.Context) ([]time.Time, error) {
+	logTimes, err := a.availableLogs(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(logTimes) <= 12 {
+		return logTimes, nil
+	}
+	contiguousMonths := timeutil.GetMostRecentContiguousMonths(logTimes)
+	if len(contiguousMonths) >= 12 {
+		return contiguousMonths, nil
+	}
+	return logTimes[:12], nil
+}
+
 // getLastEntitySegmentNumber returns the (non-negative) last segment number for the :startTime:, if it exists
 func (a *ActivityLog) getLastEntitySegmentNumber(ctx context.Context, startTime time.Time) (uint64, bool, error) {
 	p, err := a.view.List(ctx, activityEntityBasePath+fmt.Sprint(startTime.Unix())+"/")
@@ -508,9 +532,7 @@ func (a *ActivityLog) getLastEntitySegmentNumber(ctx context.Context, startTime 
 }
 
 // WalkEntitySegments loads each of the entity segments for a particular start time
-func (a *ActivityLog) WalkEntitySegments(ctx context.Context,
-	startTime time.Time,
-	walkFn func(*activity.EntityActivityLog, time.Time)) error {
+func (a *ActivityLog) WalkEntitySegments(ctx context.Context, startTime time.Time, walkFn func(*activity.EntityActivityLog, time.Time) error) error {
 	basePath := activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/"
 	pathList, err := a.view.List(ctx, basePath)
 	if err != nil {
@@ -532,7 +554,10 @@ func (a *ActivityLog) WalkEntitySegments(ctx context.Context,
 		if err != nil {
 			return fmt.Errorf("unable to parse segment %v%v: %w", basePath, path, err)
 		}
-		walkFn(out, startTime)
+		err = walkFn(out, startTime)
+		if err != nil {
+			return fmt.Errorf("unable to walk entities: %w", err)
+		}
 	}
 	return nil
 }
@@ -540,7 +565,8 @@ func (a *ActivityLog) WalkEntitySegments(ctx context.Context,
 // WalkTokenSegments loads each of the token segments (expected 1) for a particular start time
 func (a *ActivityLog) WalkTokenSegments(ctx context.Context,
 	startTime time.Time,
-	walkFn func(*activity.TokenCount)) error {
+	walkFn func(*activity.TokenCount),
+) error {
 	basePath := activityTokenBasePath + fmt.Sprint(startTime.Unix()) + "/"
 	pathList, err := a.view.List(ctx, basePath)
 	if err != nil {
@@ -1646,7 +1672,6 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 		monthResponse := &ResponseMonth{
 			Timestamp: time.Unix(monthsRecord.Timestamp, 0).UTC().Format(time.RFC3339),
 		}
-
 		if int(monthsRecord.Counts.EntityClients+monthsRecord.Counts.NonEntityClients) != 0 {
 			nsResponse, err := prepareNSResponse(monthsRecord.Namespaces)
 			if err != nil {
@@ -1663,9 +1688,17 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 		}
 	}
 
-	// Sort the months in the descending order of activity
+	// Sort the months in ascending order of timestamps
 	sort.Slice(months, func(i, j int) bool {
-		return months[i].Counts.Clients > months[j].Counts.Clients
+		firstTimestamp, errOne := time.Parse(time.RFC3339, months[i].Timestamp)
+		secondTimestamp, errTwo := time.Parse(time.RFC3339, months[j].Timestamp)
+		if errOne == nil && errTwo == nil {
+			return firstTimestamp.Before(secondTimestamp)
+		}
+		// Keep the nondeterministic ordering in storage
+		a.logger.Error("unable to parse activity log timestamps", "timestamp",
+			months[i].Timestamp, "error", errOne, "timestamp", months[j].Timestamp, "error", errTwo)
+		return i < j
 	})
 
 	// Within each month sort everything by descending order of activity
@@ -1690,10 +1723,38 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 			})
 		}
 	}
-
+	months = modifyResponseMonths(months, startTime, endTime)
 	responseData["months"] = months
 
 	return responseData, nil
+}
+
+// modifyResponseMonths fills out various parts of the query structure to help
+// activity log clients parse the returned query.
+func modifyResponseMonths(months []*ResponseMonth, start time.Time, end time.Time) []*ResponseMonth {
+	if len(months) == 0 {
+		return months
+	}
+	start = timeutil.StartOfMonth(start)
+	end = timeutil.EndOfMonth(end)
+	modifiedResponseMonths := make([]*ResponseMonth, 0)
+	firstMonth, err := time.Parse(time.RFC3339, months[0].Timestamp)
+	lastMonth, err2 := time.Parse(time.RFC3339, months[len(months)-1].Timestamp)
+	if err != nil || err2 != nil {
+		return months
+	}
+	for start.Before(firstMonth) {
+		monthPlaceholder := &ResponseMonth{Timestamp: start.UTC().Format(time.RFC3339)}
+		modifiedResponseMonths = append(modifiedResponseMonths, monthPlaceholder)
+		start = timeutil.StartOfMonth(start.AddDate(0, 1, 0))
+	}
+	modifiedResponseMonths = append(modifiedResponseMonths, months...)
+	for lastMonth.Before(end) {
+		lastMonth = timeutil.StartOfMonth(lastMonth.AddDate(0, 1, 0))
+		monthPlaceholder := &ResponseMonth{Timestamp: lastMonth.UTC().Format(time.RFC3339)}
+		modifiedResponseMonths = append(modifiedResponseMonths, monthPlaceholder)
+	}
+	return modifiedResponseMonths
 }
 
 type activityConfig struct {
@@ -1978,7 +2039,7 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 	lastMonth := intent.PreviousMonth
 	a.logger.Info("computing queries", "month", time.Unix(lastMonth, 0).UTC())
 
-	times, err := a.getMostRecentActivityLogSegment(ctx)
+	times, err := a.getMostRecentNonContiguousActivityLogSegments(ctx)
 	if err != nil {
 		a.logger.Warn("could not list recent segments", "error", err)
 		return err
@@ -2000,7 +2061,7 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 	byNamespace := make(map[string]*processByNamespace)
 	byMonth := make(map[int64]*processMonth)
 
-	walkEntities := func(l *activity.EntityActivityLog, startTime time.Time) {
+	walkEntities := func(l *activity.EntityActivityLog, startTime time.Time) error {
 		for _, e := range l.Clients {
 			processClientRecord(e, byNamespace, byMonth, startTime)
 
@@ -2048,6 +2109,8 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 				}
 			}
 		}
+
+		return nil
 	}
 
 	walkTokens := func(l *activity.TokenCount) {
@@ -2476,9 +2539,17 @@ func (a *ActivityLog) partialMonthClientCount(ctx context.Context) (map[string]i
 		}
 	}
 
-	// Sort the months in the descending order of activity
+	// Sort the months in ascending order of timestamps
 	sort.Slice(months, func(i, j int) bool {
-		return months[i].Counts.Clients > months[j].Counts.Clients
+		firstTimestamp, errOne := time.Parse(time.RFC3339, months[i].Timestamp)
+		secondTimestamp, errTwo := time.Parse(time.RFC3339, months[j].Timestamp)
+		if errOne == nil && errTwo == nil {
+			return firstTimestamp.Before(secondTimestamp)
+		}
+		// Keep the nondeterministic ordering in storage
+		a.logger.Error("unable to parse activity log timestamps for partial client count",
+			"timestamp", months[i].Timestamp, "error", errOne, "timestamp", months[j].Timestamp, "error", errTwo)
+		return i < j
 	})
 
 	// Within each month sort everything by descending order of activity
@@ -2506,4 +2577,164 @@ func (a *ActivityLog) partialMonthClientCount(ctx context.Context) (map[string]i
 	responseData["months"] = months
 
 	return responseData, nil
+}
+
+func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, format string, startTime, endTime time.Time) error {
+	// For capacity reasons only allow a single in-process export at a time.
+	// TODO do we really need to do this?
+	if !a.inprocessExport.CAS(false, true) {
+		return fmt.Errorf("existing export in progress")
+	}
+	defer a.inprocessExport.Store(false)
+
+	// Find the months with activity log data that are between the start and end
+	// months. We want to walk this in cronological order so the oldest instance of a
+	// client usage is recorded, not the most recent.
+	times, err := a.getMostRecentNonContiguousActivityLogSegments(ctx)
+	if err != nil {
+		a.logger.Warn("failed to list recent segments", "error", err)
+		return fmt.Errorf("failed to list recent segments: %w", err)
+	}
+	sort.Slice(times, func(i, j int) bool {
+		// sort in chronological order to produce the output we want showing what
+		// month an entity first had activity.
+		return times[i].Before(times[j])
+	})
+
+	// Filter over just the months we care about
+	filteredList := make([]time.Time, 0, len(times))
+	for _, t := range times {
+		if timeutil.InRange(t, startTime, endTime) {
+			filteredList = append(filteredList, t)
+		}
+	}
+	if len(filteredList) == 0 {
+		a.logger.Info("no data to export", "start_time", startTime, "end_time", endTime)
+		return fmt.Errorf("no data to export in provided time range")
+	}
+
+	actualStartTime := filteredList[len(filteredList)-1]
+	a.logger.Trace("choose start time for export", "actualStartTime", actualStartTime, "months_included", filteredList)
+
+	// Add headers here because we start to immediately write in the csv encoder
+	// constructor.
+	rw.Header().Add("Content-Disposition", fmt.Sprintf("attachment; filename=\"activity_export_%d_to_%d.%s\"", actualStartTime.Unix(), endTime.Unix(), format))
+	rw.Header().Add("Content-Type", fmt.Sprintf("application/%s", format))
+
+	var encoder encoder
+	switch format {
+	case "json":
+		encoder = newJSONEncoder(rw)
+	case "csv":
+		var err error
+		encoder, err = newCSVEncoder(rw)
+		if err != nil {
+			return fmt.Errorf("failed to create csv encoder: %w", err)
+		}
+	default:
+		return fmt.Errorf("invalid format: %s", format)
+	}
+
+	a.logger.Info("starting activity log export", "start_time", startTime, "end_time", endTime, "format", format)
+
+	dedupedIds := make(map[string]struct{})
+	walkEntities := func(l *activity.EntityActivityLog, startTime time.Time) error {
+		for _, e := range l.Clients {
+			if _, ok := dedupedIds[e.ClientID]; ok {
+				continue
+			}
+
+			dedupedIds[e.ClientID] = struct{}{}
+			err := encoder.Encode(e)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
+	// For each month in the filtered list walk all the log segments
+	for _, startTime := range filteredList {
+		err := a.WalkEntitySegments(ctx, startTime, walkEntities)
+		if err != nil {
+			a.logger.Error("failed to load segments for export", "error", err)
+			return fmt.Errorf("failed to load segments for export: %w", err)
+		}
+	}
+
+	// Flush and error check the encoder. This is neccessary for buffered
+	// encoders like csv.
+	encoder.Flush()
+	if err := encoder.Error(); err != nil {
+		a.logger.Error("failed to flush export encoding", "error", err)
+		return fmt.Errorf("failed to flush export encoding: %w", err)
+	}
+
+	return nil
+}
+
+type encoder interface {
+	Encode(*activity.EntityRecord) error
+	Flush()
+	Error() error
+}
+
+var _ encoder = (*jsonEncoder)(nil)
+
+type jsonEncoder struct {
+	e *json.Encoder
+}
+
+func newJSONEncoder(w io.Writer) *jsonEncoder {
+	return &jsonEncoder{
+		e: json.NewEncoder(w),
+	}
+}
+
+func (j *jsonEncoder) Encode(er *activity.EntityRecord) error {
+	return j.e.Encode(er)
+}
+
+// Flush is a no-op because json.Encoder doesn't buffer data
+func (j *jsonEncoder) Flush() {}
+
+// Error is a no-op because flushing is a no-op.
+func (j *jsonEncoder) Error() error { return nil }
+
+var _ encoder = (*csvEncoder)(nil)
+
+type csvEncoder struct {
+	*csv.Writer
+}
+
+func newCSVEncoder(w io.Writer) (*csvEncoder, error) {
+	writer := csv.NewWriter(w)
+
+	err := writer.Write([]string{
+		"client_id",
+		"namespace_id",
+		"timestamp",
+		"non_entity",
+		"mount_accessor",
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &csvEncoder{
+		Writer: writer,
+	}, nil
+}
+
+// Encode converts an export bundle into a set of strings and writes them to the
+// csv writer.
+func (c *csvEncoder) Encode(e *activity.EntityRecord) error {
+	return c.Writer.Write([]string{
+		e.ClientID,
+		e.NamespaceID,
+		fmt.Sprintf("%d", e.Timestamp),
+		fmt.Sprintf("%t", e.NonEntity),
+		e.MountAccessor,
+	})
 }

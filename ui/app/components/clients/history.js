@@ -2,9 +2,11 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { isSameMonth, isAfter } from 'date-fns';
+import { isSameMonth, isAfter, isBefore } from 'date-fns';
 import getStorage from 'vault/lib/token-storage';
 import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
+import { dateFormat } from 'core/helpers/date-format';
+import { parseAPITimestamp } from 'core/utils/date-formatters';
 
 const INPUTTED_START_DATE = 'vault:ui-inputted-start-date';
 
@@ -84,15 +86,78 @@ export default class History extends Component {
 
   get isDateRange() {
     return !isSameMonth(
-      new Date(this.getActivityResponse.startTime),
-      new Date(this.getActivityResponse.endTime)
+      parseAPITimestamp(this.getActivityResponse.startTime),
+      parseAPITimestamp(this.getActivityResponse.endTime)
     );
   }
 
-  get latestUpgradeData() {
-    // {id: '1.9.0', previousVersion: null, timestampInstalled: '2021-11-03T10:23:16Z'}
-    // version id is 1.9.0 or earliest upgrade post 1.9.0, timestamp is RFC3339
-    return this.args.model.versionHistory[0] || null;
+  get upgradeVersionHistory() {
+    const versionHistory = this.args.model.versionHistory;
+    if (!versionHistory || versionHistory.length === 0) {
+      return null;
+    }
+
+    // get upgrade data for initial upgrade to 1.9 and/or 1.10
+    let relevantUpgrades = [];
+    const importantUpgrades = ['1.9', '1.10'];
+    importantUpgrades.forEach((version) => {
+      let findUpgrade = versionHistory.find((versionData) => versionData.id.match(version));
+      if (findUpgrade) relevantUpgrades.push(findUpgrade);
+    });
+
+    // array of upgrade data objects for noteworthy upgrades
+    return relevantUpgrades;
+  }
+
+  get upgradeDuringActivity() {
+    if (!this.upgradeVersionHistory) {
+      return null;
+    }
+    const activityStart = new Date(this.getActivityResponse.startTime);
+    const activityEnd = new Date(this.getActivityResponse.endTime);
+    const upgradesWithinData = this.upgradeVersionHistory.filter((upgrade) => {
+      // TODO how do timezones affect this?
+      let upgradeDate = new Date(upgrade.timestampInstalled);
+      return isAfter(upgradeDate, activityStart) && isBefore(upgradeDate, activityEnd);
+    });
+    // return all upgrades that happened within date range of queried activity
+    return upgradesWithinData.length === 0 ? null : upgradesWithinData;
+  }
+
+  get upgradeVersionAndDate() {
+    if (!this.upgradeDuringActivity) {
+      return null;
+    }
+    if (this.upgradeDuringActivity.length === 2) {
+      let firstUpgrade = this.upgradeDuringActivity[0];
+      let secondUpgrade = this.upgradeDuringActivity[1];
+      let firstDate = dateFormat([firstUpgrade.timestampInstalled, 'MMM d, yyyy'], { isFormatted: true });
+      let secondDate = dateFormat([secondUpgrade.timestampInstalled, 'MMM d, yyyy'], { isFormatted: true });
+      return `Vault was upgraded to ${firstUpgrade.id} (${firstDate}) and ${secondUpgrade.id} (${secondDate}) during this time range.`;
+    } else {
+      let upgrade = this.upgradeDuringActivity[0];
+      return `Vault was upgraded to ${upgrade.id} on ${dateFormat(
+        [upgrade.timestampInstalled, 'MMM d, yyyy'],
+        { isFormatted: true }
+      )}.`;
+    }
+  }
+
+  get versionSpecificText() {
+    if (!this.upgradeDuringActivity) {
+      return null;
+    }
+    if (this.upgradeDuringActivity.length === 1) {
+      let version = this.upgradeDuringActivity[0].id;
+      if (version.match('1.9')) {
+        return ' How we count clients changed in 1.9, so keep that in mind when looking at the data below.';
+      }
+      if (version.match('1.10')) {
+        return ' We added monthly breakdowns and mount level attribution starting in 1.10, so keep that in mind when looking at the data below.';
+      }
+    }
+    // return combined explanation if spans multiple upgrades
+    return ' How we count clients changed in 1.9 and we added monthly breakdowns and mount level attribution starting in 1.10. Keep this in mind when looking at the data below.';
   }
 
   get startTimeDisplay() {
@@ -120,25 +185,57 @@ export default class History extends Component {
     return this.queriedActivityResponse || this.args.model.activity;
   }
 
+  get byMonthActivityData() {
+    if (this.selectedNamespace) {
+      return this.filteredActivityByMonth;
+    } else {
+      return this.getActivityResponse?.byMonth;
+    }
+  }
+
+  get byMonthNewClients() {
+    if (this.byMonthActivityData) {
+      return this.byMonthActivityData?.map((m) => m.new_clients);
+    }
+    return null;
+  }
+
   get hasAttributionData() {
     if (this.selectedAuthMethod) return false;
     if (this.selectedNamespace) {
       return this.authMethodOptions.length > 0;
     }
-    return !!this.totalClientsData && this.totalUsageCounts && this.totalUsageCounts.clients !== 0;
+    return !!this.totalClientAttribution && this.totalUsageCounts && this.totalUsageCounts.clients !== 0;
   }
 
-  // top level TOTAL client counts for given date range
+  // (object) top level TOTAL client counts for given date range
   get totalUsageCounts() {
-    return this.selectedNamespace ? this.filteredActivity : this.getActivityResponse.total;
+    return this.selectedNamespace ? this.filteredActivityByNamespace : this.getActivityResponse.total;
+  }
+
+  // (object) single month new client data with total counts + array of namespace breakdown
+  get newClientCounts() {
+    return this.isDateRange ? null : this.byMonthActivityData[0]?.new_clients;
   }
 
   // total client data for horizontal bar chart in attribution component
-  get totalClientsData() {
+  get totalClientAttribution() {
     if (this.selectedNamespace) {
-      return this.filteredActivity?.mounts || null;
+      return this.filteredActivityByNamespace?.mounts || null;
     } else {
-      return this.getActivityResponse?.byNamespace;
+      return this.getActivityResponse?.byNamespace || null;
+    }
+  }
+
+  // new client data for horizontal bar chart
+  get newClientAttribution() {
+    // new client attribution only available in a single, historical month (not a date range)
+    if (this.isDateRange) return null;
+
+    if (this.selectedNamespace) {
+      return this.newClientCounts?.mounts || null;
+    } else {
+      return this.newClientCounts?.namespaces || null;
     }
   }
 
@@ -146,25 +243,8 @@ export default class History extends Component {
     return this.getActivityResponse.responseTimestamp;
   }
 
-  get byMonthTotalClients() {
-    return this.getActivityResponse?.byMonth;
-  }
-
-  get byMonthNewClients() {
-    return this.byMonthTotalClients.map((m) => m.new_clients);
-  }
-
-  get countsIncludeOlderData() {
-    if (!this.latestUpgradeData) {
-      return false;
-    }
-    let versionDate = new Date(this.latestUpgradeData.timestampInstalled);
-    let startTimeFromResponse = new Date(this.getActivityResponse.startTime);
-    // compare against this start date returned from API to show message or not.
-    return isAfter(versionDate, startTimeFromResponse) ? versionDate : false;
-  }
-
-  get filteredActivity() {
+  // FILTERS
+  get filteredActivityByNamespace() {
     const namespace = this.selectedNamespace;
     const auth = this.selectedAuthMethod;
     if (!namespace && !auth) {
@@ -176,6 +256,24 @@ export default class History extends Component {
     return this.getActivityResponse.byNamespace
       .find((ns) => ns.label === namespace)
       .mounts?.find((mount) => mount.label === auth);
+  }
+
+  get filteredActivityByMonth() {
+    const namespace = this.selectedNamespace;
+    const auth = this.selectedAuthMethod;
+    if (!namespace && !auth) {
+      return this.getActivityResponse?.byMonth;
+    }
+    const namespaceData = this.getActivityResponse?.byMonth
+      .map((m) => m.namespaces_by_key[namespace])
+      .filter((d) => d !== undefined);
+    if (!auth) {
+      return namespaceData.length === 0 ? null : namespaceData;
+    }
+    const mountData = namespaceData
+      .map((namespace) => namespace.mounts_by_key[auth])
+      .filter((d) => d !== undefined);
+    return mountData.length === 0 ? null : mountData;
   }
 
   @action
@@ -241,6 +339,10 @@ export default class History extends Component {
     }
   }
 
+  get hasMultipleMonthsData() {
+    return this.byMonthActivityData && this.byMonthActivityData.length > 1;
+  }
+
   @action
   handleCurrentBillingPeriod() {
     this.handleClientActivityQuery(0, 0, 'reset');
@@ -256,7 +358,7 @@ export default class History extends Component {
       this.selectedAuthMethod = null;
     } else {
       // Side effect: set auth namespaces
-      const mounts = this.filteredActivity.mounts?.map((mount) => ({
+      const mounts = this.filteredActivityByNamespace.mounts?.map((mount) => ({
         id: mount.label,
         name: mount.label,
       }));

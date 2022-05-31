@@ -142,6 +142,30 @@ func (i *IdentityStore) paths() []*framework.Path {
 func mfaPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
+			Pattern: "mfa/method" + genericOptionalUUIDRegex("method_id"),
+			Fields: map[string]*framework.FieldSchema{
+				"method_id": {
+					Type:        framework.TypeString,
+					Description: `The unique identifier for this MFA method.`,
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.handleMFAMethodReadGlobal,
+					Summary:  "Read the current configuration for the given ID regardless of the MFA method type",
+				},
+			},
+		},
+		{
+			Pattern: "mfa/method/?$",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.handleMFAMethodListGlobal,
+					Summary:  "List MFA method configurations for all MFA methods",
+				},
+			},
+		},
+		{
 			Pattern: "mfa/method/totp" + genericOptionalUUIDRegex("method_id"),
 			Fields: map[string]*framework.FieldSchema{
 				"method_id": {
@@ -189,7 +213,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodRead,
+					Callback: i.handleMFAMethodTOTPRead,
 					Summary:  "Read the current configuration for the given MFA method",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
@@ -276,7 +300,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: `The unique identifier for this MFA method.`,
 				},
-				"username_template": {
+				"username_format": {
 					Type:        framework.TypeString,
 					Description: `A template string for mapping Identity names to MFA method names. Values to substitute should be placed in {{}}. For example, "{{entity.name}}@example.com". If blank, the Entity's name field will be used as-is.`,
 				},
@@ -303,7 +327,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodRead,
+					Callback: i.handleMFAMethodOKTARead,
 					Summary:  "Read the current configuration for the given MFA method",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
@@ -332,7 +356,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: `The unique identifier for this MFA method.`,
 				},
-				"username_template": {
+				"username_format": {
 					Type:        framework.TypeString,
 					Description: `A template string for mapping Identity names to MFA method names. Values to subtitute should be placed in {{}}. For example, "{{alias.name}}@example.com". Currently-supported mappings: alias.name: The name returned by the mount configured via the mount_accessor parameter If blank, the Alias's name field will be used as-is. `,
 				},
@@ -359,7 +383,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodRead,
+					Callback: i.handleMFAMethodDuoRead,
 					Summary:  "Read the current configuration for the given MFA method",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
@@ -388,7 +412,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: `The unique identifier for this MFA method.`,
 				},
-				"username_template": {
+				"username_format": {
 					Type:        framework.TypeString,
 					Description: `A template string for mapping Identity names to MFA method names. Values to subtitute should be placed in {{}}. For example, "{{alias.name}}@example.com". Currently-supported mappings: alias.name: The name returned by the mount configured via the mount_accessor parameter If blank, the Alias's name field will be used as-is. `,
 				},
@@ -399,7 +423,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodRead,
+					Callback: i.handleMFAMethodPingIDRead,
 					Summary:  "Read the current configuration for the given MFA method",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
@@ -1075,37 +1099,38 @@ func (i *IdentityStore) CreateEntity(ctx context.Context) (*identity.Entity, err
 
 // CreateOrFetchEntity creates a new entity. This is used by core to
 // associate each login attempt by an alias to a unified entity in Vault.
-func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.Alias) (*identity.Entity, error) {
+func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.Alias) (*identity.Entity, bool, error) {
 	defer metrics.MeasureSince([]string{"identity", "create_or_fetch_entity"}, time.Now())
 
 	var entity *identity.Entity
 	var err error
 	var update bool
+	var entityCreated bool
 
 	if alias == nil {
-		return nil, fmt.Errorf("alias is nil")
+		return nil, false, fmt.Errorf("alias is nil")
 	}
 
 	if alias.Name == "" {
-		return nil, fmt.Errorf("empty alias name")
+		return nil, false, fmt.Errorf("empty alias name")
 	}
 
 	mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor)
 	if mountValidationResp == nil {
-		return nil, fmt.Errorf("invalid mount accessor %q", alias.MountAccessor)
+		return nil, false, fmt.Errorf("invalid mount accessor %q", alias.MountAccessor)
 	}
 
 	if mountValidationResp.MountType != alias.MountType {
-		return nil, fmt.Errorf("mount accessor %q is not a mount of type %q", alias.MountAccessor, alias.MountType)
+		return nil, false, fmt.Errorf("mount accessor %q is not a mount of type %q", alias.MountAccessor, alias.MountType)
 	}
 
 	// Check if an entity already exists for the given alias
 	entity, err = i.entityByAliasFactors(alias.MountAccessor, alias.Name, true)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if entity != nil && changedAliasIndex(entity, alias) == -1 {
-		return entity, nil
+		return entity, false, nil
 	}
 
 	i.lock.Lock()
@@ -1118,12 +1143,12 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 	// Check if an entity was created before acquiring the lock
 	entity, err = i.entityByAliasFactorsInTxn(txn, alias.MountAccessor, alias.Name, true)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if entity != nil {
 		idx := changedAliasIndex(entity, alias)
 		if idx == -1 {
-			return entity, nil
+			return entity, false, nil
 		}
 		a := entity.Aliases[idx]
 		a.Metadata = alias.Metadata
@@ -1136,7 +1161,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 		entity = new(identity.Entity)
 		err = i.sanitizeEntity(ctx, entity)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 
 		// Create a new alias
@@ -1152,7 +1177,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 
 		err = i.sanitizeAlias(ctx, newAlias)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 
 		i.logger.Debug("creating a new entity", "alias", newAlias)
@@ -1178,16 +1203,18 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 				{"auth_method", newAlias.MountType},
 				{"mount_point", newAlias.MountPath},
 			})
+		entityCreated = true
 	}
 
 	// Update MemDB and persist entity object
 	err = i.upsertEntityInTxn(ctx, txn, entity, nil, true)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	txn.Commit()
-	return entity.Clone()
+	clonedEntity, err := entity.Clone()
+	return clonedEntity, entityCreated, err
 }
 
 // changedAliasIndex searches an entity for changed alias metadata.

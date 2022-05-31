@@ -95,8 +95,10 @@ func newUserReqToProto(req NewUserRequest) (*proto.NewUserRequest, error) {
 			DisplayName: req.UsernameConfig.DisplayName,
 			RoleName:    req.UsernameConfig.RoleName,
 		},
-		Password:   req.Password,
-		Expiration: expiration,
+		CredentialType: int32(req.CredentialType),
+		Password:       req.Password,
+		PublicKey:      req.PublicKey,
+		Expiration:     expiration,
 		Statements: &proto.Statements{
 			Commands: req.Statements.Commands,
 		},
@@ -138,6 +140,7 @@ func updateUserReqToProto(req UpdateUserRequest) (*proto.UpdateUserRequest, erro
 	}
 
 	if (req.Password == nil || req.Password.NewPassword == "") &&
+		(req.PublicKey == nil || len(req.PublicKey.NewPublicKey) == 0) &&
 		(req.Expiration == nil || req.Expiration.NewExpiration.IsZero()) {
 		return nil, fmt.Errorf("missing changes")
 	}
@@ -157,10 +160,22 @@ func updateUserReqToProto(req UpdateUserRequest) (*proto.UpdateUserRequest, erro
 		}
 	}
 
+	var publicKey *proto.ChangePublicKey
+	if req.PublicKey != nil && len(req.PublicKey.NewPublicKey) > 0 {
+		publicKey = &proto.ChangePublicKey{
+			NewPublicKey: req.PublicKey.NewPublicKey,
+			Statements: &proto.Statements{
+				Commands: req.PublicKey.Statements.Commands,
+			},
+		}
+	}
+
 	rpcReq := &proto.UpdateUserRequest{
-		Username:   req.Username,
-		Password:   password,
-		Expiration: expiration,
+		Username:       req.Username,
+		CredentialType: int32(req.CredentialType),
+		Password:       password,
+		PublicKey:      publicKey,
+		Expiration:     expiration,
 	}
 	return rpcReq, nil
 }

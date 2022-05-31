@@ -17,7 +17,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
       { label: 'non-entity clients', key: 'non_entity_clients' },
     ]);
     this.set('totalUsageCounts', { clients: 15, entity_clients: 10, non_entity_clients: 5 });
-    this.set('totalClientsData', [
+    this.set('totalClientAttribution', [
       { label: 'second', clients: 10, entity_clients: 7, non_entity_clients: 3 },
       { label: 'first', clients: 5, entity_clients: 3, non_entity_clients: 2 },
     ]);
@@ -46,7 +46,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
       <div id="modal-wormhole"></div>
       <Clients::Attribution 
         @chartLegend={{chartLegend}}
-        @totalClientsData={{totalClientsData}} 
+        @totalClientAttribution={{totalClientAttribution}} 
         @totalUsageCounts={{totalUsageCounts}} 
         @timestamp={{timestamp}} 
         @selectedNamespace={{selectedNamespace}}
@@ -77,7 +77,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
       <div id="modal-wormhole"></div>
       <Clients::Attribution 
         @chartLegend={{chartLegend}}
-        @totalClientsData={{totalClientsData}} 
+        @totalClientAttribution={{totalClientAttribution}} 
         @totalUsageCounts={{totalUsageCounts}} 
         @timestamp={{timestamp}} 
         @selectedNamespace={{selectedNamespace}}
@@ -130,7 +130,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
       <div id="modal-wormhole"></div>
       <Clients::Attribution 
         @chartLegend={{chartLegend}}
-        @totalClientsData={{namespaceMountsData}} 
+        @totalClientAttribution={{namespaceMountsData}} 
         @totalUsageCounts={{totalUsageCounts}} 
         @timestamp={{timestamp}} 
         @selectedNamespace={{selectedNamespace}}
@@ -160,7 +160,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
       <div id="modal-wormhole"></div>
       <Clients::Attribution 
         @chartLegend={{chartLegend}}
-        @totalClientsData={{namespaceMountsData}} 
+        @totalClientAttribution={{namespaceMountsData}} 
         @timestamp={{timestamp}} 
         @startTimeDisplay={{"January 2022"}}
         @endTimeDisplay={{"February 2022"}}

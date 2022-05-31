@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
+	"fmt"
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -81,24 +83,42 @@ func TestTransit_Random(t *testing.T) {
 		}
 	}
 
-	// Test defaults
-	doRequest(req, false, "base64", 32)
+	for _, source := range []string{"", "platform", "seal", "all"} {
+		req.Data["source"] = source
+		req.Data["bytes"] = 32
+		req.Data["format"] = "base64"
+		req.Path = "random"
+		// Test defaults
+		doRequest(req, false, "base64", 32)
 
-	// Test size selection in the path
-	req.Path = "random/24"
-	req.Data["format"] = "hex"
-	doRequest(req, false, "hex", 24)
+		// Test size selection in the path
+		req.Path = "random/24"
+		req.Data["format"] = "hex"
+		doRequest(req, false, "hex", 24)
 
-	// Test bad input/format
-	req.Path = "random"
-	req.Data["format"] = "base92"
-	doRequest(req, true, "", 0)
+		if source != "" {
+			// Test source selection in the path
+			req.Path = fmt.Sprintf("random/%s", source)
+			req.Data["format"] = "hex"
+			doRequest(req, false, "hex", 32)
 
-	req.Data["format"] = "hex"
-	req.Data["bytes"] = -1
-	doRequest(req, true, "", 0)
+			req.Path = fmt.Sprintf("random/%s/24", source)
+			req.Data["format"] = "hex"
+			doRequest(req, false, "hex", 24)
+		}
 
-	req.Data["format"] = "hex"
-	req.Data["bytes"] = maxBytes + 1
-	doRequest(req, true, "", 0)
+		// Test bad input/format
+		req.Path = "random"
+		req.Data["format"] = "base92"
+		doRequest(req, true, "", 0)
+
+		req.Data["format"] = "hex"
+		req.Data["bytes"] = -1
+		doRequest(req, true, "", 0)
+
+		req.Data["format"] = "hex"
+		req.Data["bytes"] = random.APIMaxBytes + 1
+
+		doRequest(req, true, "", 0)
+	}
 }

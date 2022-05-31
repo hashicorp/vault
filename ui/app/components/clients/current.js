@@ -2,42 +2,45 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { isAfter, startOfMonth } from 'date-fns';
 import { action } from '@ember/object';
+
 export default class Current extends Component {
   chartLegend = [
     { key: 'entity_clients', label: 'entity clients' },
     { key: 'non_entity_clients', label: 'non-entity clients' },
   ];
   @tracked selectedNamespace = null;
-  @tracked namespaceArray = this.byNamespaceTotalClients.map((namespace) => {
+  @tracked namespaceArray = this.byNamespace.map((namespace) => {
     return { name: namespace['label'], id: namespace['label'] };
   });
 
   @tracked selectedAuthMethod = null;
   @tracked authMethodOptions = [];
 
-  get latestUpgradeData() {
-    // e.g. {id: '1.9.0', previousVersion: null, timestampInstalled: '2021-11-03T10:23:16Z'}
-    // version id is 1.9.0 or earliest upgrade post 1.9.0, timestamp is RFC3339
-    return this.args.model.versionHistory[0] || null;
+  get upgradeVersionHistory() {
+    const versionHistory = this.args.model.versionHistory;
+    if (!versionHistory || versionHistory.length === 0) {
+      return null;
+    }
+
+    // get upgrade data for initial upgrade to 1.9 and/or 1.10
+    let relevantUpgrades = [];
+    const importantUpgrades = ['1.9', '1.10'];
+    importantUpgrades.forEach((version) => {
+      let findUpgrade = versionHistory.find((versionData) => versionData.id.match(version));
+      if (findUpgrade) relevantUpgrades.push(findUpgrade);
+    });
+    // array of upgrade data objects for noteworthy upgrades
+    return relevantUpgrades;
   }
 
-  // Response total client count data by namespace for current/partial month
-  get byNamespaceTotalClients() {
-    return this.args.model.monthly?.byNamespaceTotalClients || [];
-  }
-
-  // Response new client count data by namespace for current/partial month
-  get byNamespaceNewClients() {
-    return this.args.model.monthly?.byNamespaceNewClients || [];
+  // Response client count data by namespace for current/partial month
+  get byNamespace() {
+    return this.args.model.monthly?.byNamespace || [];
   }
 
   get isGatheringData() {
     // return true if tracking IS enabled but no data collected yet
-    return (
-      this.args.model.config?.enabled === 'On' &&
-      this.byNamespaceTotalClients.length === 0 &&
-      this.byNamespaceNewClients.length === 0
-    );
+    return this.args.model.config?.enabled === 'On' && this.byNamespace.length === 0;
   }
 
   get hasAttributionData() {
@@ -45,70 +48,77 @@ export default class Current extends Component {
     if (this.selectedNamespace) {
       return this.authMethodOptions.length > 0;
     }
-    return this.totalUsageCounts.clients !== 0 && !!this.totalClientsData;
+    return this.totalUsageCounts.clients !== 0 && !!this.totalClientAttribution;
   }
 
-  get filteredTotalData() {
+  get filteredCurrentData() {
     const namespace = this.selectedNamespace;
     const auth = this.selectedAuthMethod;
     if (!namespace && !auth) {
-      return this.byNamespaceTotalClients;
+      return this.byNamespace;
     }
     if (!auth) {
-      return this.byNamespaceTotalClients.find((ns) => ns.label === namespace);
+      return this.byNamespace.find((ns) => ns.label === namespace);
     }
-    return this.byNamespaceTotalClients
+    return this.byNamespace
       .find((ns) => ns.label === namespace)
       .mounts?.find((mount) => mount.label === auth);
   }
 
-  get filteredNewData() {
-    const namespace = this.selectedNamespace;
-    const auth = this.selectedAuthMethod;
-    if (!namespace && !auth) {
-      return this.byNamespaceNewClients;
+  get upgradeDuringCurrentMonth() {
+    if (!this.upgradeVersionHistory) {
+      return null;
     }
-    if (!auth) {
-      return this.byNamespaceNewClients.find((ns) => ns.label === namespace);
-    }
-    return this.byNamespaceNewClients
-      .find((ns) => ns.label === namespace)
-      .mounts?.find((mount) => mount.label === auth);
+    const upgradesWithinData = this.upgradeVersionHistory.filter((upgrade) => {
+      // TODO how do timezones affect this?
+      let upgradeDate = new Date(upgrade.timestampInstalled);
+      return isAfter(upgradeDate, startOfMonth(new Date()));
+    });
+    // return all upgrades that happened within date range of queried activity
+    return upgradesWithinData.length === 0 ? null : upgradesWithinData;
   }
 
-  get countsIncludeOlderData() {
-    if (!this.latestUpgradeData) {
-      return false;
+  get upgradeVersionAndDate() {
+    if (!this.upgradeDuringCurrentMonth) {
+      return null;
     }
-    let versionDate = new Date(this.latestUpgradeData.timestampInstalled);
-    // compare against this month and this year to show message or not.
-    return isAfter(versionDate, startOfMonth(new Date())) ? versionDate : false;
+    if (this.upgradeDuringCurrentMonth.length === 2) {
+      let versions = this.upgradeDuringCurrentMonth.map((upgrade) => upgrade.id).join(' and ');
+      return `Vault was upgraded to ${versions} during this month.`;
+    } else {
+      let version = this.upgradeDuringCurrentMonth[0];
+      return `Vault was upgraded to ${version.id} on this month.`;
+    }
+  }
+
+  get versionSpecificText() {
+    if (!this.upgradeDuringCurrentMonth) {
+      return null;
+    }
+    if (this.upgradeDuringCurrentMonth.length === 1) {
+      let version = this.upgradeDuringCurrentMonth[0].id;
+      if (version.match('1.9')) {
+        return ' How we count clients changed in 1.9, so keep that in mind when looking at the data below.';
+      }
+      if (version.match('1.10')) {
+        return ' We added mount level attribution starting in 1.10, so keep that in mind when looking at the data below.';
+      }
+    }
+    // return combined explanation if spans multiple upgrades
+    return ' How we count clients changed in 1.9 and we added mount level attribution starting in 1.10. Keep this in mind when looking at the data below.';
   }
 
   // top level TOTAL client counts for current/partial month
   get totalUsageCounts() {
-    return this.selectedNamespace ? this.filteredTotalData : this.args.model.monthly?.total;
+    return this.selectedNamespace ? this.filteredCurrentData : this.args.model.monthly?.total;
   }
 
-  get newUsageCounts() {
-    return this.selectedNamespace ? this.filteredNewData : this.args.model.monthly?.new;
-  }
-
-  // total client data for horizontal bar chart in attribution component
-  get totalClientsData() {
+  // total client attribution data for horizontal bar chart in attribution component
+  get totalClientAttribution() {
     if (this.selectedNamespace) {
-      return this.filteredTotalData?.mounts || null;
+      return this.filteredCurrentData?.mounts || null;
     } else {
-      return this.byNamespaceTotalClients;
-    }
-  }
-
-  // new client data for horizontal bar chart in attribution component
-  get newClientsData() {
-    if (this.selectedNamespace) {
-      return this.filteredNewData?.mounts || null;
-    } else {
-      return this.byNamespaceNewClients;
+      return this.byNamespace;
     }
   }
 
@@ -127,7 +137,7 @@ export default class Current extends Component {
       this.selectedAuthMethod = null;
     } else {
       // Side effect: set auth namespaces
-      const mounts = this.filteredTotalData.mounts?.map((mount) => ({
+      const mounts = this.filteredCurrentData.mounts?.map((mount) => ({
         id: mount.label,
         name: mount.label,
       }));

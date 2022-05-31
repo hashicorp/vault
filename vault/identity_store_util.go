@@ -667,7 +667,7 @@ func (i *IdentityStore) processLocalAlias(ctx context.Context, lAlias *logical.A
 		return nil, fmt.Errorf("mount accessor %q is not local", lAlias.MountAccessor)
 	}
 
-	alias, err := i.MemDBAliasByFactors(lAlias.MountAccessor, lAlias.Name, false, false)
+	alias, err := i.MemDBAliasByFactors(lAlias.MountAccessor, lAlias.Name, true, false)
 	if err != nil {
 		return nil, err
 	}
@@ -1482,6 +1482,9 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 			return fmt.Errorf("invalid entity ID %q", entityID)
 		}
 	}
+
+	// Remove duplicate policies
+	group.Policies = strutil.RemoveDuplicates(group.Policies, false)
 
 	txn := i.db.Txn(true)
 	defer txn.Abort()

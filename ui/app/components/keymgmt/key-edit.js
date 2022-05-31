@@ -2,6 +2,8 @@ import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
+import { task } from 'ember-concurrency';
+import { waitFor } from '@ember/test-waiters';
 
 /**
  * @module KeymgmtKeyEdit
@@ -32,61 +34,75 @@ export default class KeymgmtKeyEdit extends Component {
     return this.store.adapterFor('keymgmt/key');
   }
 
+  get isMutable() {
+    return ['create', 'edit'].includes(this.args.mode);
+  }
+
+  get isCreating() {
+    return this.args.mode === 'create';
+  }
+
   @action
   toggleModal(bool) {
     this.isDeleteModalOpen = bool;
   }
 
-  @action
-  createKey(evt) {
+  @task
+  @waitFor
+  *saveKey(evt) {
     evt.preventDefault();
-    this.args.model.save();
+    const { model } = this.args;
+    try {
+      yield model.save();
+      this.router.transitionTo(SHOW_ROUTE, model.name);
+    } catch (error) {
+      let errorMessage = error;
+      if (error.errors) {
+        // if errors come directly from API they will be in this shape
+        errorMessage = error.errors.join('. ');
+      }
+      this.flashMessages.danger(errorMessage);
+      if (!error.errors) {
+        // If error was custom from save, only partial fail
+        // so it's safe to show the key
+        this.router.transitionTo(SHOW_ROUTE, model.name);
+      }
+    }
   }
 
-  @action
-  updateKey(evt) {
-    evt.preventDefault();
-    const name = this.args.model.name;
-    this.args.model
-      .save()
-      .then(() => {
-        this.router.transitionTo(SHOW_ROUTE, name);
-      })
-      .catch((e) => {
-        this.flashMessages.danger(e.errors.join('. '));
-      });
-  }
-
-  @action
-  removeKey(id) {
-    // TODO: remove action
-    console.log('remove', id);
+  @task
+  @waitFor
+  *removeKey() {
+    try {
+      yield this.keyAdapter.removeFromProvider(this.args.model);
+      yield this.args.model.reload();
+      this.flashMessages.success('Key has been successfully removed from provider');
+    } catch (error) {
+      this.flashMessages.danger(error.errors?.join('. '));
+    }
   }
 
   @action
   deleteKey() {
     const secret = this.args.model;
     const backend = secret.backend;
-    console.log({ secret });
     secret
       .destroyRecord()
       .then(() => {
-        try {
-          this.router.transitionTo(LIST_ROOT_ROUTE, backend, { queryParams: { tab: 'key' } });
-        } catch (e) {
-          console.debug(e);
-        }
+        this.router.transitionTo(LIST_ROOT_ROUTE, backend);
       })
       .catch((e) => {
         this.flashMessages.danger(e.errors?.join('. '));
       });
   }
 
-  @action
-  rotateKey(id) {
-    const backend = this.args.model.get('backend');
+  @task
+  @waitFor
+  *rotateKey() {
+    const id = this.args.model.name;
+    const backend = this.args.model.backend;
     const adapter = this.keyAdapter;
-    adapter
+    yield adapter
       .rotateKey(backend, id)
       .then(() => {
         this.flashMessages.success(`Success: ${id} connection was rotated`);

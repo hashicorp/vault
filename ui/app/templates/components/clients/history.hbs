@@ -102,26 +102,21 @@
           </ToolbarFilters>
         </Toolbar>
       </div>
-      {{#if (or this.countsIncludeOlderData this.responseRangeDiffMessage)}}
+
+      {{#if (or this.upgradeDuringActivity this.responseRangeDiffMessage)}}
         <AlertBanner @type="warning" @title="Warning">
-          <ul class={{if (and this.countsIncludeOlderData this.responseRangeDiffMessage) "bullet"}}>
+          <ul class={{if (and this.versionUpdateText this.responseRangeDiffMessage) "bullet"}}>
             {{#if this.responseRangeDiffMessage}}
               <li>{{this.responseRangeDiffMessage}}</li>
             {{/if}}
-            {{! TODO this warning should only show if data spans an upgrade to 1.9 or 1.10 }}
-            {{#if this.countsIncludeOlderData}}
+            {{#if this.upgradeDuringActivity}}
               <li>
-                {{concat
-                  "You upgraded to Vault "
-                  this.latestUpgradeData.id
-                  " on "
-                  (date-format this.latestUpgradeData.timestampInstalled "MMMM d, yyyy.")
-                }}
-                How we count clients changed in 1.9, so please keep that in mind when looking at the data below, and you can
+                {{this.upgradeVersionAndDate}}
+                {{this.versionSpecificText}}
                 <DocLink
                   @path="/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"
                 >
-                  read more here.
+                  Learn more here.
                 </DocLink>
               </li>
             {{/if}}
@@ -132,24 +127,27 @@
         <LayoutLoading />
       {{else}}
         {{#if this.totalUsageCounts}}
-          {{#unless this.byMonthTotalClients}}
+          {{#unless this.byMonthActivityData}}
             <Clients::UsageStats @title="Total usage" @totalUsageCounts={{this.totalUsageCounts}} />
           {{/unless}}
-          {{#if this.byMonthTotalClients}}
+          {{#if this.byMonthActivityData}}
             <Clients::RunningTotal
               @chartLegend={{this.chartLegend}}
-              @lineChartData={{this.byMonthTotalClients}}
+              @selectedAuthMethod={{this.selectedAuthMethod}}
+              @lineChartData={{this.byMonthActivityData}}
               @barChartData={{this.byMonthNewClients}}
               @runningTotals={{this.totalUsageCounts}}
-              @upgradeData={{if this.countsIncludeOlderData this.latestUpgradeData}}
+              @upgradeData={{this.upgradeDuringActivity}}
               @timestamp={{this.responseTimestamp}}
             />
           {{/if}}
           {{#if this.hasAttributionData}}
             <Clients::Attribution
               @chartLegend={{this.chartLegend}}
-              @totalClientsData={{this.totalClientsData}}
               @totalUsageCounts={{this.totalUsageCounts}}
+              @newUsageCounts={{this.newClientCounts}}
+              @totalClientAttribution={{this.totalClientAttribution}}
+              @newClientAttribution={{this.newClientAttribution}}
               @selectedNamespace={{this.selectedNamespace}}
               @startTimeDisplay={{this.startTimeDisplay}}
               @endTimeDisplay={{this.endTimeDisplay}}
@@ -157,10 +155,10 @@
               @timestamp={{this.responseTimestamp}}
             />
           {{/if}}
-          {{#if this.byMonthTotalClients}}
+          {{#if this.hasMultipleMonthsData}}
             <Clients::MonthlyUsage
               @chartLegend={{this.chartLegend}}
-              @verticalBarChartData={{this.byMonthTotalClients}}
+              @verticalBarChartData={{this.byMonthActivityData}}
               @timestamp={{this.responseTimestamp}}
             />
           {{/if}}

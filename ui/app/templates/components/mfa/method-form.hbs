@@ -1,0 +1,36 @@
+<div class="box is-sideless is-fullwidth is-marginless" ...attributes>
+  {{#each @model.attrs as |attr|}}
+    <FormField @attr={{attr}} @model={{@model}} @modelValidations={{or @validations this.editValidations}} />
+  {{/each}}
+</div>
+{{#if @hasActions}}
+  <div class="field is-grouped-split box is-fullwidth is-bottomless">
+    <div class="control">
+      <button
+        type="button"
+        class="button is-primary {{if this.save.isRunning 'is-loading'}}"
+        disabled={{this.save.isRunning}}
+        onclick={{this.initSave}}
+        data-test-mfa-method-save
+      >
+        Save
+      </button>
+      <button type="button" class="button has-left-margin-s" disabled={{this.save.isRunning}} {{on "click" this.cancel}}>
+        Cancel
+      </button>
+    </div>
+  </div>
+{{/if}}
+
+<ConfirmationModal
+  @title="Edit {{@model.type}} configuration?"
+  @onClose={{action (mut this.isEditModalActive) false}}
+  @isActive={{this.isEditModalActive}}
+  @confirmText={{@model.type}}
+  @onConfirm={{perform this.save}}
+>
+  <p>
+    Editing this configuration will have an impact on all authentication types, methods, groups and entities which make use
+    of this MFA method. Please make sure you want to make these changes before doing so.
+  </p>
+</ConfirmationModal>

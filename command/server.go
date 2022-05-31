@@ -189,9 +189,9 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Target:     &c.flagLogLevel,
 		Default:    notSetValue,
 		EnvVar:     "VAULT_LOG_LEVEL",
-		Completion: complete.PredictSet("trace", "debug", "info", "warn", "err"),
+		Completion: complete.PredictSet("trace", "debug", "info", "warn", "error"),
 		Usage: "Log verbosity level. Supported values (in order of detail) are " +
-			"\"trace\", \"debug\", \"info\", \"warn\", and \"err\".",
+			"\"trace\", \"debug\", \"info\", \"warn\", and \"error\".",
 	})
 
 	f.StringVar(&StringVar{
@@ -1626,6 +1626,9 @@ func (c *ServerCommand) Run(args []string) int {
 			// Let the managedKeyRegistry react to configuration changes (i.e.
 			// changes in kms_libraries)
 			core.ReloadManagedKeyRegistryConfig()
+
+			// Notify systemd that the server has completed reloading config
+			c.notifySystemd(systemd.SdNotifyReady)
 
 		case <-c.SigUSR2Ch:
 			logWriter := c.logger.StandardWriter(&hclog.StandardLoggerOptions{})

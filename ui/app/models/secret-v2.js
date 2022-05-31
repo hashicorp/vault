@@ -8,7 +8,7 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 
 const validations = {
   maxVersions: [
-    { type: 'number', options: { asString: true }, message: 'Maximum versions must be a number.' },
+    { type: 'number', message: 'Maximum versions must be a number.' },
     { type: 'length', options: { min: 1, max: 16 }, message: 'You cannot go over 16 characters.' },
   ],
 };

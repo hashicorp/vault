@@ -4,6 +4,7 @@ import { task } from 'ember-concurrency';
 const API_PATHS = {
   access: {
     methods: 'sys/auth',
+    mfa: 'identity/mfa/method',
     entities: 'identity/entity/id',
     groups: 'identity/group/id',
     leases: 'sys/leases/lookup',
@@ -42,6 +43,7 @@ const API_PATHS_TO_ROUTE_PARAMS = {
   'sys/leases/lookup': { route: 'vault.cluster.access.leases', models: [] },
   'sys/namespaces': { route: 'vault.cluster.access.namespaces', models: [] },
   'sys/control-group/': { route: 'vault.cluster.access.control-groups', models: [] },
+  'identity/mfa/method': { route: 'vault.cluster.access.mfa', models: [] },
 };
 
 /*

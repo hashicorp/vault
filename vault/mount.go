@@ -267,6 +267,21 @@ func (t *MountTable) find(ctx context.Context, path string) (*MountEntry, error)
 	return nil, nil
 }
 
+func (t *MountTable) findByBackendUUID(ctx context.Context, backendUUID string) (*MountEntry, error) {
+	n := len(t.Entries)
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 0; i < n; i++ {
+		if entry := t.Entries[i]; entry.BackendAwareUUID == backendUUID && entry.Namespace().ID == ns.ID {
+			return entry, nil
+		}
+	}
+	return nil, nil
+}
+
 // sortEntriesByPath sorts the entries in the table by path and returns the
 // table; this is useful for tests
 func (t *MountTable) sortEntriesByPath() *MountTable {

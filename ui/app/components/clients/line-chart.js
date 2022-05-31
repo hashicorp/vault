@@ -47,28 +47,25 @@ export default class LineChart extends Component {
   }
 
   @action
-  renderChart(element, args) {
-    const dataset = args[0];
-    let upgradeMonth, currentVersion, previousVersion;
-    if (args[1]) {
-      upgradeMonth = parseAPITimestamp(args[1].timestampInstalled, 'M/yy');
-      currentVersion = args[1].id;
-      previousVersion = args[1].previousVersion;
+  renderChart(element, [chartData]) {
+    const dataset = chartData;
+    const upgradeData = [];
+    if (this.args.upgradeData) {
+      this.args.upgradeData.forEach((versionData) =>
+        upgradeData.push({ month: parseAPITimestamp(versionData.timestampInstalled, 'M/yy'), ...versionData })
+      );
     }
     const filteredData = dataset.filter((e) => Object.keys(e).includes(this.yKey)); // months with data will contain a 'clients' key (otherwise only a timestamp)
+    const domainMax = max(filteredData.map((d) => d[this.yKey]));
     const chartSvg = select(element);
     chartSvg.attr('viewBox', `-50 20 600 ${SVG_DIMENSIONS.height}`); // set svg dimensions
 
-    // DEFINE AXES SCALES
-    const yScale = scaleLinear()
-      .domain([0, max(filteredData.map((d) => d[this.yKey]))])
-      .range([0, 100])
-      .nice();
+    // clear out DOM before appending anything
+    chartSvg.selectAll('g').remove().exit().data(filteredData).enter();
 
-    const yAxisScale = scaleLinear()
-      .domain([0, max(filteredData.map((d) => d[this.yKey]))])
-      .range([SVG_DIMENSIONS.height, 0])
-      .nice();
+    // DEFINE AXES SCALES
+    const yScale = scaleLinear().domain([0, domainMax]).range([0, 100]).nice();
+    const yAxisScale = scaleLinear().domain([0, domainMax]).range([SVG_DIMENSIONS.height, 0]).nice();
 
     // use full dataset (instead of filteredData) so x-axis spans months with and without data
     const xScale = scalePoint()
@@ -90,6 +87,10 @@ export default class LineChart extends Component {
 
     chartSvg.selectAll('.domain').remove();
 
+    const findUpgradeData = (datum) => {
+      return upgradeData.find((upgrade) => upgrade[this.xKey] === datum[this.xKey]);
+    };
+
     // VERSION UPGRADE INDICATOR
     chartSvg
       .append('g')
@@ -99,7 +100,7 @@ export default class LineChart extends Component {
       .append('circle')
       .attr('class', 'upgrade-circle')
       .attr('fill', UPGRADE_WARNING)
-      .style('opacity', (d) => (d[this.xKey] === upgradeMonth ? '1' : '0'))
+      .style('opacity', (d) => (findUpgradeData(d) ? '1' : '0'))
       .attr('cy', (d) => `${100 - yScale(d[this.yKey])}%`)
       .attr('cx', (d) => xScale(d[this.xKey]))
       .attr('r', 10);
@@ -150,14 +151,18 @@ export default class LineChart extends Component {
 
     // MOUSE EVENT FOR TOOLTIP
     hoverCircles.on('mouseover', (data) => {
-      // TODO: how to genericize this?
+      // TODO: how to generalize this?
       this.tooltipMonth = formatChartDate(data[this.xKey]);
       this.tooltipTotal = data[this.yKey] + ' total clients';
-      this.tooltipNew = data?.new_clients[this.yKey] + ' new clients';
-      this.tooltipUpgradeText =
-        data[this.xKey] === upgradeMonth
-          ? `Vault was upgraded ${previousVersion ? 'from ' + previousVersion : ''} to ${currentVersion}`
-          : '';
+      this.tooltipNew = (data?.new_clients[this.yKey] || '0') + ' new clients';
+      this.tooltipUpgradeText = '';
+      let upgradeInfo = findUpgradeData(data);
+      if (upgradeInfo) {
+        let { id, previousVersion } = upgradeInfo;
+        this.tooltipUpgradeText = `Vault was upgraded 
+        ${previousVersion ? 'from ' + previousVersion : ''} to ${id}`;
+      }
+
       let node = hoverCircles.filter((plot) => plot[this.xKey] === data[this.xKey]).node();
       this.tooltipTarget = node;
     });
