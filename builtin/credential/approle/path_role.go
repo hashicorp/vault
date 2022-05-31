@@ -484,12 +484,12 @@ the role.`,
 				"num_uses": {
 					Type: framework.TypeInt,
 					Description: `Number of times this SecretID can be used, after which the SecretID expires.
-Overrides secret_id_num_uses role option when supplied.`,
+Overrides secret_id_num_uses role option when supplied. May not be higher than role's secret_id_num_uses.`,
 				},
 				"ttl": {
 					Type: framework.TypeDurationSecond,
 					Description: `Duration in seconds after which this SecretID expires. Defaults to 0, meaning no expiration.
-Overrides secret_id_ttl role option when supplied.`,
+Overrides secret_id_ttl role option when supplied. May not be shorter than role's secret_id_ttl.`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -604,12 +604,12 @@ IP addresses which can use the returned token. Should be a subset of the token C
 				"num_uses": {
 					Type: framework.TypeInt,
 					Description: `Number of times this SecretID can be used, after which the SecretID expires.
-Overrides secret_id_num_uses role option when supplied.`,
+Overrides secret_id_num_uses role option when supplied. May not be higher than role's secret_id_num_uses.`,
 				},
 				"ttl": {
 					Type: framework.TypeDurationSecond,
 					Description: `Duration in seconds after which this SecretID expires. Defaults to 0, meaning no expiration.
-Overrides secret_id_ttl role option when supplied.`,
+Overrides secret_id_ttl role option when supplied. May not be shorter than role's secret_id_ttl.`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -2564,14 +2564,16 @@ defined on the role, can access the role.`,
 		`If the SecretIDs are generated/assigned against the role using the
 'role/<role_name>/secret-id' or 'role/<role_name>/custom-secret-id' endpoints,
 then the number of times that SecretID can access the role is by default defined by this option.
-Can be overriden by the 'num_uses' field on either of the two endpoints.`,
+Can be overriden by the 'num_uses' field on either of the two endpoints,
+but is still the highest possible num_uses.`,
 	},
 	"role-secret-id-ttl": {
 		"Duration in seconds of the SecretID generated against the role.",
 		`If the SecretIDs are generated/assigned against the role using the
 'role/<role_name>/secret-id' or 'role/<role_name>/custom-secret-id' endpoints,
 then the lifetime of the SecretID is by default defined by this option.
-Can be overriden by the 'ttl' field on either of the two endpoints.`,
+Can be overriden by the 'ttl' field on either of the two endpoints,
+but is still the shortest possible ttl.`,
 	},
 	"role-secret-id-lookup": {
 		"Read the properties of an issued secret_id",
