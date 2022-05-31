@@ -2,8 +2,8 @@
 FROM alpine:3.15 as default
 
 ARG BIN_NAME
-# NAME and VERSION are the name of the software in releases.hashicorp.com
-# and the version to download. Example: NAME=vault VERSION=1.2.3.
+# NAME and PRODUCT_VERSION are the name of the software in releases.hashicorp.com
+# and the version to download. Example: NAME=vault PRODUCT_VERSION=1.2.3.
 ARG NAME=vault
 ARG PRODUCT_VERSION
 ARG PRODUCT_REVISION
