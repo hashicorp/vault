@@ -11,7 +11,7 @@ import { overrideResponse, SELECTORS } from '../helpers/clients';
 
 const searchSelect = create(ss);
 
-module('Acceptance | clients current', function (hooks) {
+module('Acceptance | clients current tab', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
