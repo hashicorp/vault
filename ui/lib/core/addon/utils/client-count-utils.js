@@ -127,7 +127,7 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
   });
   // SECOND: create a new object (namespace_by_key) in which each namespace label is a key
   let namespaces_by_key = {};
-  nestNewClientsWithinNamespace.forEach((namespaceObject) => {
+  nestNewClientsWithinNamespace?.forEach((namespaceObject) => {
     // THIRD: make another object within the namespace where each mount label is a key
     let mounts_by_key = {};
     namespaceObject.mounts.forEach((mountObject) => {
