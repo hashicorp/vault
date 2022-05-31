@@ -229,6 +229,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		return nil, err
 	}
 	resp.Data["issuer_id"] = myIssuer.ID
+	resp.Data["issuer_name"] = myIssuer.Name
 	resp.Data["key_id"] = myKey.ID
 
 	// Also store it as just the certificate identified by serial number, so it
