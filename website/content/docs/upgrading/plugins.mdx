@@ -44,6 +44,7 @@ replace or upgrade a Vault plugin binary:
     ```shell-session
     $ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
         database \                  # type
+        -command="my-db-plugin-new" \
         my-db-plugin
     ```
 
