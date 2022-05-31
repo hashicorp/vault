@@ -1,5 +1,5 @@
-By default, Vault expects the plugin directory and files to be owned by the
-user running Vault. It also expects no write or execute permissions for group or others.
+Enabling the file permissions check via the environment variable `VAULT_ENABLE_FILE_PERMISSIONS_CHECK` 
+allows Vault to check if the config directory and files are owned by the user running Vault. 
+It also checks if there are no write or execute permissions for group or others. 
 Vault allows operators to specify the user and permissions of the plugin directory and binaries 
-using parameters `plugin_file_uid` and `plugin_file_permissions` if an operator needs those to be different.  
-This check can be disabled via the environment variable `VAULT_DISABLE_FILE_PERMISSIONS_CHECK`.
+using parameters `plugin_file_uid` and `plugin_file_permissions` in config if an operator needs those to be different. This check is disabled by default.

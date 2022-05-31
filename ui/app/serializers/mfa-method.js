@@ -2,6 +2,7 @@ import ApplicationSerializer from './application';
 
 export default class KeymgmtKeySerializer extends ApplicationSerializer {
   normalizeItems(payload) {
+    if (!payload?.data) return payload;
     if (payload.data.keys && Array.isArray(payload.data.keys)) {
       let data = payload.data.keys.map((key) => {
         let model = payload.data.key_info[key];
