@@ -4,8 +4,9 @@ import { compareAsc } from 'date-fns';
 export const formatByMonths = (monthsArray) => {
   // the months array will always include a timestamp of the month and either new/total client data or counts = null
   if (!Array.isArray(monthsArray)) return monthsArray;
+
   const sortedPayload = sortMonthsByTimestamp(monthsArray);
-  return sortedPayload.map((m) => {
+  return sortedPayload?.map((m) => {
     const month = parseAPITimestamp(m.timestamp, 'M/yy');
     let totalClientsByNamespace = formatByNamespace(m.namespaces);
     let newClientsByNamespace = formatByNamespace(m.new_clients?.namespaces);
@@ -103,7 +104,7 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
     if (newNamespaceCounts) {
       let { label, clients, entity_clients, non_entity_clients } = newNamespaceCounts;
       let newClientsByMount = [...newNamespaceCounts?.mounts];
-      let nestNewClientsWithinMounts = ns.mounts.map((mount) => {
+      let nestNewClientsWithinMounts = ns.mounts?.map((mount) => {
         let new_clients = newClientsByMount?.find((m) => m.label === mount.label) || {};
         return {
           ...mount,
@@ -126,7 +127,6 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
       new_clients: {},
     };
   });
-
   // SECOND: create a new object (namespace_by_key) in which each namespace label is a key
   let namespaces_by_key = {};
   nestNewClientsWithinNamespace.forEach((namespaceObject) => {
