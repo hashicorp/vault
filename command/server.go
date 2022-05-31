@@ -1717,7 +1717,8 @@ func (c *ServerCommand) addPlugin(path, token string, core *vault.Core) error {
 
 // detectRedirect is used to attempt redirect address detection
 func (c *ServerCommand) detectRedirect(detect physical.RedirectDetect,
-	config *server.Config) (string, error) {
+	config *server.Config,
+) (string, error) {
 	// Get the hostname
 	host, err := detect.DetectHostAddr()
 	if err != nil {
@@ -2162,7 +2163,8 @@ func runUnseal(c *ServerCommand, core *vault.Core, ctx context.Context) {
 }
 
 func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.Backend, configSR sr.ServiceRegistration, barrierSeal, unwrapSeal vault.Seal,
-	metricsHelper *metricsutil.MetricsHelper, metricSink *metricsutil.ClusterMetricSink, secureRandomReader io.Reader) vault.CoreConfig {
+	metricsHelper *metricsutil.MetricsHelper, metricSink *metricsutil.ClusterMetricSink, secureRandomReader io.Reader,
+) vault.CoreConfig {
 	coreConfig := &vault.CoreConfig{
 		RawConfig:                      config,
 		Physical:                       backend,

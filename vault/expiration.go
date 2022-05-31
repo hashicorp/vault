@@ -1264,7 +1264,8 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 // RenewToken is used to renew a token which does not need to
 // invoke a logical backend.
 func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request, te *logical.TokenEntry,
-	increment time.Duration) (*logical.Response, error) {
+	increment time.Duration,
+) (*logical.Response, error) {
 	defer metrics.MeasureSince([]string{"expire", "renew-token"}, time.Now())
 
 	tokenNS, err := NamespaceByID(ctx, te.NamespaceID, m.core)
