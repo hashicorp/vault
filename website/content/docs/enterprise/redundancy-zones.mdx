@@ -13,8 +13,8 @@ configured to use Integrated Storage.
 Vault Enterprise Redundancy Zones provide both read scaling and resiliency benefits by enabling
 the deployment of non-voting nodes alongside voting nodes on a per availability zone basis.
 
-When using redundancy zones, if an operator chooses to deploy Vault across 3 availability zones,
-they could have 2 (or more) nodes (1 voting/1+ non-voting) in each zone. In the event that a
+When using redundancy zones, if an operator chooses to deploy Vault across three availability zones,
+they could have two (or more) nodes (one voting/one+ non-voting) in each zone. In the event that a
 voting node in an availability zone fails, the redundancy zone configuration automatically
 promotes the non-voting node to a voting node. In the event that an entire availability zone is
 lost, a non-voting node in one of the existing availability zones would be promoted to a voting

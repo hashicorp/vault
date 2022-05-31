@@ -7,10 +7,10 @@ description: |-
 
 # Automated Upgrades
 
-~> **Note**: Automated Upgrades requires [Vault Enterprise](https://www.hashicorp.com/products/vault/) to be 
+~> **Note**: Automated Upgrades requires [Vault Enterprise](https://www.hashicorp.com/products/vault/) to be
 configured to use Integrated Storage.
 
-Vault Enterprise Automated Upgrades allows operators to upgrade the Vault version currently running in a cluster automatically. 
+Vault Enterprise Automated Upgrades allows operators to upgrade the Vault version currently running in a cluster automatically.
  There are a few different ways to make this upgrade happen,
 and control which versions are being upgraded to. With no additional configuration,
 Vault will check the version of Vault that each node in the cluster is running. If a blue/green
@@ -23,13 +23,15 @@ The value for this key is a [SemVer](https://semver.org/) compatible version str
 When a version string is present, it will override the current version of Vault that is running to upgrade automatically.
 
 ## Mechanics
-Whether you choose to use Vault's built-in version, or a version of your own, the
-mechanics for performing an automated upgrade are the same. Once you have a Vault cluster running,
-start and join a number of new nodes to the cluster, running the updated version. Once the number of
-nodes running the new version equals or exceeds the number of nodes running the old version, the
-Autopilot subsystem within Vault will promote the new version nodes to become voters, demote the old
-version nodes to become non-voters, transfer leadership from the old leader to a randomly selected
-node running the new version, and wait for you to remove the old version nodes from the cluster.
+Whether you choose to use Vault's built-in version or a version of your own, the mechanics for performing
+automatic upgrades remain the same.
+
+When a Vault cluster is running and new nodes containing an updated Vault version join the cluster, the
+Autopilot subsystem within Vault will promote the new version nodes to voters when the number of nodes
+running the latest Vault version equals or exceeds the number of pre-existing nodes. Vault then demotes
+the previous version's nodes to non-voters. Finally, leadership transfers from the prior leader to a
+randomly selected node running the newest Vault version and waits for the user to remove the previous
+nodes from the cluster.
 
 Below is a flowchart depicting Autopilot's automated upgrade state machine.
 
@@ -40,8 +42,7 @@ The status of the automated upgrade can be monitored by consulting the [Autopilo
 ## Examples
 ### Using Vault's built-in version
 This is the easiest method to perform an automated upgrade; no configuration is needed, and automated upgrades
-are enabled by default. Following the procedure outlined above in the [Mechanics](#mechanics) section
-is enough to make this happen.
+are enabled by default.
 
 ### Using a blue/green style deploy
 Specify something like: `1.11.0-release.1` for the `autopilot_upgrade_version` configuration key in your
