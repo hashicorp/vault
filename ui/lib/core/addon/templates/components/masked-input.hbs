@@ -27,6 +27,7 @@
       onchange={{action "updateValue"}}
       onkeyup={{action (action "handleKeyUp" this.name) value="target.value"}}
       value={{this.value}}
+      spellcheck="false"
       data-test-textarea
     ></textarea>
   {{/if}}
