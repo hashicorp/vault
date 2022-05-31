@@ -65,9 +65,9 @@ export function overrideResponse(httpStatus, data) {
       JSON.stringify({ errors: ['permission denied'] })
     );
   }
+  // /activity endpoint returns 204 when no data, while
+  // /activity/monthly returns 200 with zero values on data
   if (httpStatus === 204) {
-    // /activity endpoint returns 204 when no data, while
-    // /activity/monthly returns 200 with zero values on data
     return new Response(204, { 'Content-Type': 'application/json' });
   }
   return new Response(200, { 'Content-Type': 'application/json' }, JSON.stringify(data));
