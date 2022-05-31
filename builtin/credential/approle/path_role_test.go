@@ -1141,7 +1141,6 @@ func TestAppRole_RoleSecretID(t *testing.T) {
 		"secret_id": "abcd123",
 	}
 	roleSecretIDReq.Data = roleCustomSecretIDData
-	roleSecretIDReq.Operation = logical.UpdateOperation
 	resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
@@ -1152,15 +1151,15 @@ func TestAppRole_RoleSecretID(t *testing.T) {
 	}
 }
 
-func TestAppRole_RoleSecretIDWithFields(t *testing.T) {
+func TestAppRole_RoleSecretIDWithValidFields(t *testing.T) {
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
 
 	roleData := map[string]interface{}{
 		"policies":           "p,q,r,s",
-		"secret_id_num_uses": 0,
-		"secret_id_ttl":      0,
+		"secret_id_num_uses": 5,
+		"secret_id_ttl":      5,
 		"token_ttl":          400,
 		"token_max_ttl":      500,
 	}
@@ -1206,7 +1205,6 @@ func TestAppRole_RoleSecretIDWithFields(t *testing.T) {
 	roleCustomSecretIDData["secret_id"] = "abcd123"
 
 	roleSecretIDReq.Data = roleCustomSecretIDData
-	roleSecretIDReq.Operation = logical.UpdateOperation
 	resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
@@ -1220,6 +1218,77 @@ func TestAppRole_RoleSecretIDWithFields(t *testing.T) {
 	}
 	if resp.Data["secret_id_num_uses"].(int) != 5 {
 		t.Fatalf("secret_id_num_uses has not been set by the 'num_uses' field")
+	}
+}
+
+func TestAppRole_ErrorsRoleSecretIDWithInvalidFields(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	roleData := map[string]interface{}{
+		"policies":           "p,q,r,s",
+		"secret_id_num_uses": 1,
+		"secret_id_ttl":      1,
+		"token_ttl":          400,
+		"token_max_ttl":      500,
+	}
+	roleReq := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "role/role1",
+		Storage:   storage,
+		Data:      roleData,
+	}
+
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	type testCase struct {
+		name     string
+		payload  map[string]interface{}
+		expected string
+	}
+
+	testCases := []testCase{
+		{
+			name:     "invalid 'ttl' field",
+			payload:  map[string]interface{}{"secret_id": "abcd123", "ttl": 0},
+			expected: "ttl cannot be shorter than the role's secret_id_ttl",
+		},
+		{
+			name:     "invalid 'num_uses' field",
+			payload:  map[string]interface{}{"secret_id": "abcd123", "num_uses": 2},
+			expected: "num_uses cannot be higher than the role's secret_id_num_uses",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			roleSecretIDReq := &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "role/role1/secret-id",
+				Storage:   storage,
+			}
+			roleSecretIDReq.Data = tc.payload
+			resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
+			if err != nil || (resp != nil && !resp.IsError()) {
+				t.Fatalf("err:%v resp:%#v", err, resp)
+			}
+			if resp.Data["error"].(string) != tc.expected {
+				t.Fatalf("expected: %q, got: %q", tc.expected, resp.Data["error"].(string))
+			}
+
+			roleSecretIDReq.Path = "role/role1/custom-secret-id"
+			resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
+			if err != nil || (resp != nil && !resp.IsError()) {
+				t.Fatalf("err:%v resp:%#v", err, resp)
+			}
+			if resp.Data["error"].(string) != tc.expected {
+				t.Fatalf("expected: %q, got: %q", tc.expected, resp.Data["error"].(string))
+			}
+		})
 	}
 }
 
