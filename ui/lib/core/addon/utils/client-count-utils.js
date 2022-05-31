@@ -86,8 +86,6 @@ export const flattenDataset = (object) => {
 };
 
 export const sortMonthsByTimestamp = (monthsArray) => {
-  // backend is working on a fix to sort months by date
-  // right now months are ordered in descending client count number
   const sortedPayload = [...monthsArray];
   return sortedPayload.sort((a, b) =>
     compareAsc(parseAPITimestamp(a.timestamp), parseAPITimestamp(b.timestamp))
@@ -99,7 +97,7 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
   // all 'new_client' data resides within a separate key of each month (see data structure below)
   // FIRST: iterate and nest respective 'new_clients' data within each namespace and mount object
   // note: this is happening within the month object
-  const nestNewClientsWithinNamespace = totalClientsByNamespace.map((ns) => {
+  const nestNewClientsWithinNamespace = totalClientsByNamespace?.map((ns) => {
     let newNamespaceCounts = newClientsByNamespace?.find((n) => n.label === ns.label);
     if (newNamespaceCounts) {
       let { label, clients, entity_clients, non_entity_clients } = newNamespaceCounts;
