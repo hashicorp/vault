@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -527,10 +528,16 @@ func (b *Backend) handleRootHelp(req *logical.Request) (*logical.Response, error
 	// the request, the type will be used as part of the request/response body
 	// names in the OAS document.
 	requestResponsePrefix := req.GetString("requestResponsePrefix")
+	dynamicPaths := fmt.Sprintf("%v",req.Data["dynamicPaths"])
+	dynmaic, err := strconv.ParseBool(dynamicPaths)
+
+	if err != nil {
+		b.Logger().Warn("Help")
+	}
 
 	// Build OpenAPI response for the entire backend
 	doc := NewOASDocument()
-	if err := documentPaths(b, requestResponsePrefix, doc); err != nil {
+	if err := documentPaths(b, requestResponsePrefix, dynmaic, doc); err != nil {
 		b.Logger().Warn("error generating OpenAPI", "error", err)
 	}
 

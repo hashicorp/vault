@@ -4026,7 +4026,7 @@ func (b *SystemBackend) pathInternalOpenApiDynamic(ctx context.Context, req *log
 			req := &logical.Request{
 				Operation: logical.HelpOperation,
 				Storage:   req.Storage,
-				Data:      map[string]interface{}{"requestResponsePrefix": pluginType},
+				Data:      map[string]interface{}{"requestResponsePrefix": pluginType, "dynamicPaths": true},
 			}
 
 			resp, err := backend.HandleRequest(ctx, req)
@@ -4080,7 +4080,11 @@ func (b *SystemBackend) pathInternalOpenApiDynamic(ctx context.Context, req *log
 					}
 				}
 
-				doc.Paths["/"+mountPrefix+mount+path] = obj
+				if mount != "sys/" && mount != "identity" {
+					doc.Paths["/"+mountPrefix+"{mountPath}/"+path] = obj
+				} else {
+					doc.Paths["/"+mountPrefix+"{mountPath}/"+path] = obj
+				}
 			}
 
 			// Merge backend schema components
@@ -4146,7 +4150,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 			req := &logical.Request{
 				Operation: logical.HelpOperation,
 				Storage:   req.Storage,
-				Data:      map[string]interface{}{"requestResponsePrefix": pluginType},
+				Data:      map[string]interface{}{"requestResponsePrefix": pluginType, "dynamicPaths": false},
 			}
 
 			resp, err := backend.HandleRequest(ctx, req)
