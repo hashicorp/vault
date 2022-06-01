@@ -78,7 +78,7 @@ func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.
 					c.UI.Warn("")
 
 					if c.flagDevQuickStart {
-						quickstartBanner(c, qsOptions, endpointURL)
+						qsBanner(c, qsOptions, endpointURL)
 					}
 
 					c.UI.Warn("You may need to set the following environment variable:")
@@ -495,73 +495,175 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 }
 
 type quickstartOptions struct {
-	idName       string
-	idPolicy     string
-	idPolicyName string
-	idEntity     string
+	identity struct {
+		name     string
+		entityID string
+		policies []string
+	}
 
-	appRoleRoleID     string
-	appRoleSecretID   string
-	appRolePolicy     string
-	appRolePolicyName string
-	appRoleRoleName   string
+	authAppRole struct {
+		roleName string
+		roleID   string
+		secretID string
+		policies []string
+	}
 
-	username string
-	password string
+	authUserpass struct {
+		username string
+		password string
+		policies []string
+	}
+
+	secrets []qsSecret
+
+	policyMap map[string]string
+}
+
+type qsSecret struct {
+	key            string
+	data           map[string]interface{}
+	customMetadata map[string]interface{}
 }
 
 func enableQuickstart(ctx context.Context, init *vault.InitResult, core *vault.Core) (*quickstartOptions, error) {
+	readOnlyPolicy := "path \"secret/*\" {capabilities = [\"read\"]}"
+	readOnlyPolicyName := "read-only"
+	crudPolicy := "path \"secret/*\" {capabilities = [\"create\", \"read\", \"update\", \"delete\"]}"
+	crudPolicyName := "developer"
+
+	policies := make(map[string]string)
+	policies[crudPolicyName] = crudPolicy
+	policies[readOnlyPolicyName] = readOnlyPolicy
+
 	options := &quickstartOptions{
-		idName:       "Lorem Ipsum",
-		idPolicyName: "developer",
-		idPolicy:     "path \"secret/*\" {capabilities = [\"create\", \"read\", \"update\", \"delete\"]}",
+		policyMap: policies,
 
-		appRoleRoleName:   "app-read-only",
-		appRolePolicyName: "read-only",
-		appRolePolicy:     "path \"secret/*\" {capabilities = [\"read\"]}",
+		identity: struct {
+			name     string
+			entityID string
+			policies []string
+		}{name: "demo-identity", policies: []string{crudPolicyName}},
 
-		username: "lipsom",
-		password: "superSecretDemo",
+		authAppRole: struct {
+			roleName string
+			roleID   string
+			secretID string
+			policies []string
+		}{roleName: "app-read-only", policies: []string{readOnlyPolicyName}},
+
+		authUserpass: struct {
+			username string
+			password string
+			policies []string
+		}{username: "demo-username", password: "superSecretDemo", policies: nil},
+
+		secrets: []qsSecret{{
+			key: "sample-secret",
+			data: map[string]interface{}{
+				"foo": "bar",
+				"zip": "zap",
+			},
+			customMetadata: map[string]interface{}{
+				"team": "demo",
+			},
+		}},
 	}
 
-	// app role policy
+	// add policies
+	for name, policy := range options.policyMap {
+		if err := devAddPolicy(ctx, init, core, name, policy); err != nil {
+			return nil, err
+		}
+	}
+
+	// userpass
+	err := qsEnableUserpass(ctx, init, core, options)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initalize quickstart userpass: %w", err)
+	}
+
+	// app role auth
+	err = qsEnableAppRole(ctx, init, core, options)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initalize quickstart approle: %w", err)
+	}
+
+	// identity
+	err = qsEnableIdentity(ctx, init, core, options)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initalize quickstart identity: %w", err)
+	}
+
+	// sample secret
+	for _, s := range options.secrets {
+		err = devAddSecret(ctx, init, core, s)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initalize quickstart seeded secret: %w", err)
+		}
+	}
+
+	return options, nil
+}
+
+func devAddSecret(ctx context.Context, init *vault.InitResult, core *vault.Core, secret qsSecret) error {
 	r := &logical.Request{
 		Operation:   logical.UpdateOperation,
 		ClientToken: init.RootToken,
-		Path:        fmt.Sprintf("sys/policy/%s", options.appRolePolicyName),
+		Path:        fmt.Sprintf("secret/data/%s", secret.key),
 		Data: map[string]interface{}{
-			"name":   options.appRolePolicyName,
-			"policy": options.appRolePolicy,
+			"data": secret.data,
 		},
 	}
 	resp, err := core.HandleRequest(ctx, r)
 	if err != nil {
-		return nil, fmt.Errorf("error creating policy: %w", err)
+		return fmt.Errorf("error writing sample secret: %w", err)
 	}
 	if resp.IsError() {
-		return nil, fmt.Errorf("failed to create policy: %w", resp.Error())
+		return fmt.Errorf("failed to write sample secret: %w", resp.Error())
 	}
 
-	// userpass policy
 	r = &logical.Request{
 		Operation:   logical.UpdateOperation,
 		ClientToken: init.RootToken,
-		Path:        fmt.Sprintf("sys/policy/%s", options.idPolicyName),
+		Path:        fmt.Sprintf("secret/data/%s", secret.key),
 		Data: map[string]interface{}{
-			"name":   options.idPolicyName,
-			"policy": options.idPolicy,
+			"custom_metadata": secret.customMetadata,
 		},
 	}
 	resp, err = core.HandleRequest(ctx, r)
 	if err != nil {
-		return nil, fmt.Errorf("error creating policy: %w", err)
+		return fmt.Errorf("error writing sample secret metadata: %w", err)
 	}
 	if resp.IsError() {
-		return nil, fmt.Errorf("failed to create policy: %w", resp.Error())
+		return fmt.Errorf("failed to write sample secret metadata: %w", resp.Error())
 	}
 
-	// userpass
-	r = &logical.Request{
+	return nil
+}
+
+func devAddPolicy(ctx context.Context, init *vault.InitResult, core *vault.Core, policyName, policy string) error {
+	r := &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: init.RootToken,
+		Path:        fmt.Sprintf("sys/policy/%s", policyName),
+		Data: map[string]interface{}{
+			"name":   policyName,
+			"policy": policy,
+		},
+	}
+	resp, err := core.HandleRequest(ctx, r)
+	if err != nil {
+		return fmt.Errorf("error creating %s policy: %w", policyName, err)
+	}
+	if resp.IsError() {
+		return fmt.Errorf("failed to create %s policy: %w", policyName, resp.Error())
+	}
+
+	return nil
+}
+
+func qsEnableUserpass(ctx context.Context, init *vault.InitResult, core *vault.Core, options *quickstartOptions) error {
+	r := &logical.Request{
 		Operation:   logical.UpdateOperation,
 		ClientToken: init.RootToken,
 		Path:        "sys/auth/userpass",
@@ -571,57 +673,59 @@ func enableQuickstart(ctx context.Context, init *vault.InitResult, core *vault.C
 			"description": "sample userpass method",
 		},
 	}
-	resp, err = core.HandleRequest(ctx, r)
+	resp, err := core.HandleRequest(ctx, r)
 	if err != nil {
-		return nil, fmt.Errorf("error creating userpass: %w", err)
+		return fmt.Errorf("error creating userpass: %w", err)
 	}
 	if resp.IsError() {
-		return nil, fmt.Errorf("failed to create userpass: %w", resp.Error())
+		return fmt.Errorf("failed to create userpass: %w", resp.Error())
 	}
 	r = &logical.Request{
 		Operation:   logical.UpdateOperation,
 		ClientToken: init.RootToken,
-		Path:        fmt.Sprintf("auth/userpass/users/%s", options.username),
+		Path:        fmt.Sprintf("auth/userpass/users/%s", options.authUserpass.username),
 		Data: map[string]interface{}{
-			"password":       options.password,
-			"token_policies": []string{"default"},
+			"password": options.authUserpass.password,
 		},
 	}
 	resp, err = core.HandleRequest(ctx, r)
 	if err != nil {
-		return nil, fmt.Errorf("error creating userpass user: %w", err)
+		return fmt.Errorf("error creating userpass user: %w", err)
 	}
 	if resp.IsError() {
-		return nil, fmt.Errorf("failed to create userpass user: %w", resp.Error())
+		return fmt.Errorf("failed to create userpass user: %w", resp.Error())
 	}
 
-	// identity
-	r = &logical.Request{
+	return nil
+}
+
+func qsEnableIdentity(ctx context.Context, init *vault.InitResult, core *vault.Core, options *quickstartOptions) error {
+	r := &logical.Request{
 		Operation:   logical.CreateOperation,
 		ClientToken: init.RootToken,
 		Path:        "identity/entity",
 		Data: map[string]interface{}{
-			"name": options.idName,
+			"name": options.authAppRole.roleName,
 			"metadata": map[string]string{
 				"organization": "ACME Inc.",
 				"team":         "Squad-2",
 			},
-			"policies": options.idPolicyName,
+			"policies": options.authAppRole.policies,
 		},
 	}
-	resp, err = core.HandleRequest(ctx, r)
+	resp, err := core.HandleRequest(ctx, r)
 	if err != nil {
-		return nil, fmt.Errorf("error creating entity: %w", err)
+		return fmt.Errorf("error creating entity: %w", err)
 	}
 	if resp.IsError() {
-		return nil, fmt.Errorf("failed to create entity: %w", resp.Error())
+		return fmt.Errorf("failed to create entity: %w", resp.Error())
 	}
 	id, ok := resp.Data["id"].(string)
 	if !ok {
-		return nil, fmt.Errorf("failed to read entity id")
+		return fmt.Errorf("failed to read entity id")
 	}
 
-	options.idEntity = id
+	options.identity.entityID = id
 
 	r = &logical.Request{
 		Operation:   logical.ReadOperation,
@@ -630,18 +734,18 @@ func enableQuickstart(ctx context.Context, init *vault.InitResult, core *vault.C
 	}
 	resp, err = core.HandleRequest(ctx, r)
 	if err != nil {
-		return nil, fmt.Errorf("error reading mount accessor: %w", err)
+		return fmt.Errorf("error reading mount accessor: %w", err)
 	}
 	if resp.IsError() {
-		return nil, fmt.Errorf("failed to read mount accessor: %w", resp.Error())
+		return fmt.Errorf("failed to read mount accessor: %w", resp.Error())
 	}
 	up, ok := resp.Data["userpass/"].(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("failed to read mount accessor")
+		return fmt.Errorf("failed to read mount accessor")
 	}
 	accessor, ok := up["accessor"].(string)
 	if !ok {
-		return nil, fmt.Errorf("failed to read mount accessor")
+		return fmt.Errorf("failed to read mount accessor")
 	}
 
 	r = &logical.Request{
@@ -649,7 +753,7 @@ func enableQuickstart(ctx context.Context, init *vault.InitResult, core *vault.C
 		ClientToken: init.RootToken,
 		Path:        "identity/entity-alias",
 		Data: map[string]interface{}{
-			"name":           options.username,
+			"name":           options.authUserpass.username,
 			"canonical_id":   id,
 			"mount_accessor": accessor,
 			"custom-metadata": map[string]string{
@@ -659,14 +763,17 @@ func enableQuickstart(ctx context.Context, init *vault.InitResult, core *vault.C
 	}
 	resp, err = core.HandleRequest(ctx, r)
 	if err != nil {
-		return nil, fmt.Errorf("error creating entity: %w", err)
+		return fmt.Errorf("error creating entity: %w", err)
 	}
 	if resp.IsError() {
-		return nil, fmt.Errorf("failed to create entity: %w", resp.Error())
+		return fmt.Errorf("failed to create entity: %w", resp.Error())
 	}
 
-	// app role auth
-	r = &logical.Request{
+	return nil
+}
+
+func qsEnableAppRole(ctx context.Context, init *vault.InitResult, core *vault.Core, options *quickstartOptions) error {
+	r := &logical.Request{
 		Operation:   logical.UpdateOperation,
 		ClientToken: init.RootToken,
 		Path:        "sys/auth/approle",
@@ -676,107 +783,74 @@ func enableQuickstart(ctx context.Context, init *vault.InitResult, core *vault.C
 			"description": "sample approle method",
 		},
 	}
-	resp, err = core.HandleRequest(ctx, r)
+	resp, err := core.HandleRequest(ctx, r)
 	if err != nil {
-		return nil, fmt.Errorf("error creating approle: %w", err)
+		return fmt.Errorf("error creating approle: %w", err)
 	}
 	if resp.IsError() {
-		return nil, fmt.Errorf("failed to create approle: %w", resp.Error())
+		return fmt.Errorf("failed to create approle: %w", resp.Error())
 	}
 
 	r = &logical.Request{
 		Operation:   logical.UpdateOperation,
 		ClientToken: init.RootToken,
-		Path:        fmt.Sprintf("auth/approle/role/%s", options.appRoleRoleName),
+		Path:        fmt.Sprintf("auth/approle/role/%s", options.authAppRole.roleName),
 		Data: map[string]interface{}{
-			"role_name":      options.appRoleRoleName,
-			"token_policies": []string{options.appRolePolicyName, "default"},
+			"role_name":      options.authAppRole.roleName,
+			"token_policies": options.authAppRole.policies,
 		},
 	}
 	resp, err = core.HandleRequest(ctx, r)
 	if err != nil {
-		return nil, fmt.Errorf("error creating approle role: %w", err)
+		return fmt.Errorf("error creating approle role: %w", err)
 	}
 	if resp.IsError() {
-		return nil, fmt.Errorf("failed to create approle role: %w", resp.Error())
+		return fmt.Errorf("failed to create approle role: %w", resp.Error())
 	}
 
 	r = &logical.Request{
 		Operation:   logical.ReadOperation,
 		ClientToken: init.RootToken,
-		Path:        fmt.Sprintf("auth/approle/role/%s/role-id", options.appRoleRoleName),
+		Path:        fmt.Sprintf("auth/approle/role/%s/role-id", options.authAppRole.roleName),
 	}
 	resp, err = core.HandleRequest(ctx, r)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving approle id: %w", err)
+		return fmt.Errorf("error retrieving approle id: %w", err)
 	}
 	if resp.IsError() {
-		return nil, fmt.Errorf("failed to retrieve approle id: %w", resp.Error())
+		return fmt.Errorf("failed to retrieve approle id: %w", resp.Error())
 	}
 
-	if roleID, ok := resp.Data["role_id"]; ok {
-		options.appRoleRoleID = roleID.(string)
+	roleID, ok := resp.Data["role_id"].(string)
+	if !ok {
+		return fmt.Errorf("failed to parse role id")
 	}
+	options.authAppRole.roleID = roleID
 
 	r = &logical.Request{
 		Operation:   logical.UpdateOperation,
 		ClientToken: init.RootToken,
-		Path:        fmt.Sprintf("auth/approle/role/%s/secret-id", options.appRoleRoleName),
+		Path:        fmt.Sprintf("auth/approle/role/%s/secret-id", options.authAppRole.roleID),
 	}
 	resp, err = core.HandleRequest(ctx, r)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving approle id: %w", err)
+		return fmt.Errorf("error retrieving approle id: %w", err)
 	}
 	if resp.IsError() {
-		return nil, fmt.Errorf("failed to retrieve approle id: %w", resp.Error())
+		return fmt.Errorf("failed to retrieve approle id: %w", resp.Error())
 	}
 
-	if secretID, ok := resp.Data["secret_id"]; ok {
-		options.appRoleSecretID = secretID.(string)
+	secretID, ok := resp.Data["secret_id"].(string)
+	if !ok {
+		return fmt.Errorf("failed to parse secret id")
 	}
 
-	// sample secret
-	r = &logical.Request{
-		Operation:   logical.UpdateOperation,
-		ClientToken: init.RootToken,
-		Path:        "secret/data/sample-secret",
-		Data: map[string]interface{}{
-			"data": map[string]interface{}{
-				"foo": "bar",
-				"zip": "zap",
-			},
-		},
-	}
-	resp, err = core.HandleRequest(ctx, r)
-	if err != nil {
-		return nil, fmt.Errorf("error writing sample secret: %w", err)
-	}
-	if resp.IsError() {
-		return nil, fmt.Errorf("failed to write sample secret: %w", resp.Error())
-	}
+	options.authAppRole.secretID = secretID
 
-	r = &logical.Request{
-		Operation:   logical.UpdateOperation,
-		ClientToken: init.RootToken,
-		Path:        "secret/metadata/sample-secret",
-		Data: map[string]interface{}{
-			"custom_metadata": map[string]interface{}{
-				"team": "demo",
-			},
-		},
-	}
-	resp, err = core.HandleRequest(ctx, r)
-	if err != nil {
-		return nil, fmt.Errorf("error writing sample secret metadata: %w", err)
-	}
-	if resp.IsError() {
-		return nil, fmt.Errorf("failed to write sample secret metadata: %w", resp.Error())
-	}
-
-	return options, nil
+	return nil
 }
 
-func quickstartBanner(c *ServerCommand, o *quickstartOptions, e string) {
+func qsBanner(c *ServerCommand, o *quickstartOptions, e string) {
 	if o == nil {
 		// no quickstart options seem to be set
 		return
@@ -792,34 +866,32 @@ func quickstartBanner(c *ServerCommand, o *quickstartOptions, e string) {
 	c.UI.Warn("Read More About Policies: https://www.vaultproject.io/docs/concepts/policies")
 	c.UI.Warn("")
 
-	c.UI.Warn(fmt.Sprintf("               Name: %s", o.idName))
-	c.UI.Warn(fmt.Sprintf("         Enitity ID: %s", o.idEntity))
-	c.UI.Warn(fmt.Sprintf("             Policy: %s", o.idPolicyName))
+	c.UI.Warn(fmt.Sprintf("               Name: %s", o.identity.name))
+	c.UI.Warn(fmt.Sprintf("         Enitity ID: %s", o.identity.entityID))
+	c.UI.Warn(fmt.Sprintf("           Policies: %s", o.identity.policies))
 	c.UI.Warn("Associated Userpass:")
-	c.UI.Warn(fmt.Sprintf("         - Username: %s", o.username))
-	c.UI.Warn(fmt.Sprintf("         - Password: %s", o.password))
+	c.UI.Warn(fmt.Sprintf("         - Username: %s", o.authUserpass.username))
+	c.UI.Warn(fmt.Sprintf("         - Password: %s", o.authUserpass.password))
 	c.UI.Warn("")
 
 	c.UI.Warn(wrapAtLength("Applications can login with the following AppRole credentials:"))
 	c.UI.Warn("Read More: https://www.vaultproject.io/docs/auth/approle")
 	c.UI.Warn("")
 	c.UI.Warn(fmt.Sprintf("Login Path: %s/v1/auth/approle/login", e))
-	c.UI.Warn(fmt.Sprintf(" Role Name: %s", o.appRoleRoleName))
-	c.UI.Warn(fmt.Sprintf("   Role ID: %s", o.appRoleRoleID))
-	c.UI.Warn(fmt.Sprintf(" Secret ID: %s", o.appRoleSecretID))
-	c.UI.Warn(fmt.Sprintf("    Policy: %s", o.appRolePolicyName))
+	c.UI.Warn(fmt.Sprintf(" Role Name: %s", o.authAppRole.roleName))
+	c.UI.Warn(fmt.Sprintf("   Role ID: %s", o.authAppRole.roleID))
+	c.UI.Warn(fmt.Sprintf(" Secret ID: %s", o.authAppRole.secretID))
+	c.UI.Warn(fmt.Sprintf("  Policies: %s", o.authAppRole.policies))
 	c.UI.Warn("")
 
 	c.UI.Warn(wrapAtLength("Polices have been created to enable the following permissions:"))
 	c.UI.Warn("")
-	c.UI.Warn(fmt.Sprintf("Policy Name: %s", o.idPolicyName))
-	c.UI.Warn(fmt.Sprintf("Policy Path: %s/v1/sys/policy/%s", e, o.idPolicyName))
-	c.UI.Warn(fmt.Sprintf("     Policy: %s", o.idPolicy))
-	c.UI.Warn("")
-	c.UI.Warn(fmt.Sprintf("Policy Name: %s", o.appRolePolicyName))
-	c.UI.Warn(fmt.Sprintf("Policy Path: %s/v1/sys/policy/%s", e, o.appRolePolicyName))
-	c.UI.Warn(fmt.Sprintf("     Policy: %s", o.appRolePolicy))
-	c.UI.Warn("")
+	for name, policy := range o.policyMap {
+		c.UI.Warn(fmt.Sprintf("Policy Name: %s", name))
+		c.UI.Warn(fmt.Sprintf("Policy Path: %s/v1/sys/policy/%s", e, name))
+		c.UI.Warn(fmt.Sprintf("     Policy: %s", policy))
+		c.UI.Warn("")
+	}
 
 	c.UI.Warn(wrapAtLength("A sample secret is available at:"))
 	c.UI.Warn("")
