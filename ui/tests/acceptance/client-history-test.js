@@ -157,8 +157,8 @@ module('Acceptance | clients history tab', function (hooks) {
       .hasText('1/22', 'x-axis labels start with updated billing start month');
     assert.equal(
       findAll('[data-test-line-chart="plot-point"]').length,
-      4,
-      `line chart plots 4 points to match query`
+      5,
+      `line chart plots 5 points to match query`
     );
 
     // query custom end month
