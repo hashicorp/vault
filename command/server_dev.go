@@ -514,12 +514,12 @@ type quickstartOptions struct {
 		policies []string
 	}
 
-	secrets []qsSecret
+	secrets []quickstartSecret
 
 	policyMap map[string]string
 }
 
-type qsSecret struct {
+type quickstartSecret struct {
 	key            string
 	data           map[string]interface{}
 	customMetadata map[string]interface{}
@@ -557,7 +557,7 @@ func enableQuickstart(ctx context.Context, init *vault.InitResult, core *vault.C
 			policies []string
 		}{username: "demo-username", password: "superSecretDemo", policies: nil},
 
-		secrets: []qsSecret{{
+		secrets: []quickstartSecret{{
 			key: "sample-secret",
 			data: map[string]interface{}{
 				"foo": "bar",
@@ -605,7 +605,7 @@ func enableQuickstart(ctx context.Context, init *vault.InitResult, core *vault.C
 	return options, nil
 }
 
-func devAddSecret(ctx context.Context, init *vault.InitResult, core *vault.Core, secret qsSecret) error {
+func devAddSecret(ctx context.Context, init *vault.InitResult, core *vault.Core, secret quickstartSecret) error {
 	r := &logical.Request{
 		Operation:   logical.UpdateOperation,
 		ClientToken: init.RootToken,
@@ -625,7 +625,7 @@ func devAddSecret(ctx context.Context, init *vault.InitResult, core *vault.Core,
 	r = &logical.Request{
 		Operation:   logical.UpdateOperation,
 		ClientToken: init.RootToken,
-		Path:        fmt.Sprintf("secret/data/%s", secret.key),
+		Path:        fmt.Sprintf("secret/metadata/%s", secret.key),
 		Data: map[string]interface{}{
 			"custom_metadata": secret.customMetadata,
 		},
@@ -705,12 +705,12 @@ func qsEnableIdentity(ctx context.Context, init *vault.InitResult, core *vault.C
 		ClientToken: init.RootToken,
 		Path:        "identity/entity",
 		Data: map[string]interface{}{
-			"name": options.authAppRole.roleName,
+			"name": options.identity.name,
 			"metadata": map[string]string{
 				"organization": "ACME Inc.",
 				"team":         "Squad-2",
 			},
-			"policies": options.authAppRole.policies,
+			"policies": options.identity.policies,
 		},
 	}
 	resp, err := core.HandleRequest(ctx, r)
@@ -830,7 +830,7 @@ func qsEnableAppRole(ctx context.Context, init *vault.InitResult, core *vault.Co
 	r = &logical.Request{
 		Operation:   logical.UpdateOperation,
 		ClientToken: init.RootToken,
-		Path:        fmt.Sprintf("auth/approle/role/%s/secret-id", options.authAppRole.roleID),
+		Path:        fmt.Sprintf("auth/approle/role/%s/secret-id", options.authAppRole.roleName),
 	}
 	resp, err = core.HandleRequest(ctx, r)
 	if err != nil {
