@@ -1,5 +1,3 @@
-import Component from '@ember/component';
-import { computed } from '@ember/object';
 /**
  * @module SelectableCard
  * SelectableCard components are card-like components that display a title, total, subtotal, and anything after the yield.
@@ -9,30 +7,34 @@ import { computed } from '@ember/object';
  * ```js
  * <SelectableCard @cardTitle="Tokens" @total={{totalHttpRequests}} @subText="Total"/>
  * ```
- * @param cardTitle=null {String} - cardTitle displays the card title
- * @param total=0 {Number} - the Total number displays like a title, it's the largest text in the component
- * @param subText=null {String} - subText describes the total
- * @param actionCard=false {Boolean} - false default selectable card container used in metrics, true a card that focus on actions as seen in database secret engine overview
- * @param actionText=null {String} - that action that happens in an actionCard
+ * @param {string} [cardTitle] - cardTitle displays the card title.
+ * @param {number} [total = 0] - the Total number displays like a title, it's the largest text in the component.
+ * @param {string} [subText] - subText describes the total.
+ * @param {boolean} [actionCard = false] - false default selectable card container used in metrics, true a card that focus on actions as seen in database secret engine overview.
+ * @param {string} [actionText] - that action that happens in an actionCard.
+ * @param {string} [actionTo] - route where link will take you.
+ * @param {string} [queryParam] - tab for the route the link will take you.
+ * @param {string} [type] - type used in the link type.
  */
 
-export default Component.extend({
-  cardTitle: '',
-  total: 0,
-  subText: '',
-  actionCard: false,
-  actionText: '',
-  gridContainer: false,
-  tagName: '', // do not wrap component with div
-  formattedCardTitle: computed('total', function () {
-    const { cardTitle, total } = this;
-
-    if (cardTitle === 'Tokens') {
-      return total !== 1 ? 'Tokens' : 'Token';
-    } else if (cardTitle === 'Entities') {
-      return total !== 1 ? 'Entities' : 'Entity';
+import Component from '@glimmer/component';
+export default class SelectableCard extends Component {
+  get actionCard() {
+    return this.args.actionCard || false;
+  }
+  get gridContainer() {
+    return this.args.gridContainer || false;
+  }
+  get total() {
+    return this.args.total || 0;
+  }
+  get formattedCardTitle() {
+    if (this.args.cardTitle === 'Tokens') {
+      return this.total !== 1 ? 'Tokens' : 'Token';
+    } else if (this.args.cardTitle === 'Entities') {
+      return this.total !== 1 ? 'Entities' : 'Entity';
+    } else {
+      return this.args.cardTitle;
     }
-
-    return cardTitle;
-  }),
-});
+  }
+}
