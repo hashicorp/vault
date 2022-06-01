@@ -137,19 +137,22 @@ export default class MfaMethod extends Model {
   qr_size;
   @attr('string', {
     label: 'Algorithm',
+    editType: 'radio',
     possibleValues: ['SHA1', 'SHA256', 'SHA512'],
     subText: 'The hashing algorithm used to generate the TOTP code.',
   })
   algorithm;
   @attr('number', {
     label: 'Digits',
-    possibleValues: [6, 8],
+    editType: 'radio',
+    possibleValues: ['6', '8'],
     subText: 'The number digits in the generated TOTP code.',
   })
   digits;
   @attr('number', {
     label: 'Skew',
-    possibleValues: [0, 1],
+    editType: 'radio',
+    possibleValues: ['0', '1'],
     subText: 'The number of delay periods allowed when validating a TOTP token.',
   })
   skew;
