@@ -1736,6 +1736,9 @@ func modifyResponseMonths(months []*ResponseMonth, start time.Time, end time.Tim
 		return months
 	}
 	start = timeutil.StartOfMonth(start)
+	if timeutil.IsCurrentMonth(end, time.Now().UTC()) {
+		end = timeutil.StartOfMonth(end).AddDate(0, -1, 0)
+	}
 	end = timeutil.EndOfMonth(end)
 	modifiedResponseMonths := make([]*ResponseMonth, 0)
 	firstMonth, err := time.Parse(time.RFC3339, months[0].Timestamp)
@@ -1753,6 +1756,10 @@ func modifyResponseMonths(months []*ResponseMonth, start time.Time, end time.Tim
 		lastMonth = timeutil.StartOfMonth(lastMonth.AddDate(0, 1, 0))
 		monthPlaceholder := &ResponseMonth{Timestamp: lastMonth.UTC().Format(time.RFC3339)}
 		modifiedResponseMonths = append(modifiedResponseMonths, monthPlaceholder)
+
+		// reset lastMonth to be the end of the month so we can make an apt comparison
+		// in the next loop iteration
+		lastMonth = timeutil.EndOfMonth(lastMonth)
 	}
 	return modifiedResponseMonths
 }
