@@ -1,6 +1,6 @@
 /**
  * @module PkiCertPopup
- * PkiCertPopup components
+ * PkiCertPopup component is the hotdog menu button that allows you to see details or revoke a certificate.
  *
  * @example
  * ```js
