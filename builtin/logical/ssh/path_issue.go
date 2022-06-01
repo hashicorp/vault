@@ -2,6 +2,7 @@ package ssh
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
 	"strconv"
 
@@ -38,6 +39,7 @@ func pathIssue(b *backend) *framework.Path {
 			"key_bits": {
 				Type:        framework.TypeInt,
 				Description: "Specifies the number of bits to use for the generated keys.",
+				Default:     0,
 			},
 			"ttl": {
 				Type: framework.TypeDurationSecond,
@@ -100,7 +102,7 @@ func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *fra
 }
 
 func (b *backend) pathIssueCertificate(ctx context.Context, req *logical.Request, data *framework.FieldData, role *sshRole, keySpecs *keySpecs) (*logical.Response, error) {
-	publicKey, privateKey, err := generateSSHKeyPair(b.Backend.GetRandomReader(), keySpecs.Type, keySpecs.Bits)
+	publicKey, privateKey, err := generateSSHKeyPair(rand.Reader, keySpecs.Type, keySpecs.Bits)
 	if err != nil {
 		return nil, err
 	}
@@ -135,6 +137,8 @@ func extractKeySpecs(role *sshRole, data *framework.FieldData) (*keySpecs, error
 		Bits: keyBits,
 	}
 
+	keyTypeToMapKey := createKeyTypeToMapKey(keyType, keyBits)
+
 	if len(role.AllowedUserKeyTypesLengths) != 0 {
 		var keyAllowed bool
 		var bitsAllowed bool
@@ -149,7 +153,6 @@ func extractKeySpecs(role *sshRole, data *framework.FieldData) (*keySpecs, error
 
 			for _, value := range allowedValues {
 				if value == keyBits {
-					// Have others checks?
 					bitsAllowed = true
 					break keyTypeAliasesLoop
 				}

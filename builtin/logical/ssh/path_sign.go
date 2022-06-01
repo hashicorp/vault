@@ -23,12 +23,17 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-var keyTypeToMapKey = map[string][]string{
-	"rsa":     {"rsa", ssh.KeyAlgoRSA},
-	"dsa":     {"dsa", ssh.KeyAlgoDSA},
-	"ecdsa":   {"ecdsa", "ec"},
-	"ed25519": {"ed25519", ssh.KeyAlgoED25519},
+var ecCurveBitsToAlgoName = map[int]string{
+	256: ssh.KeyAlgoECDSA256,
+	384: ssh.KeyAlgoECDSA384,
+	521: ssh.KeyAlgoECDSA521,
 }
+
+// If the algorithm is not found, it could be that we have a curve
+// that we haven't added a constant for yet. But they could allow it
+// (assuming x/crypto/ssh can parse it) via setting a ec: <keyBits>
+// mapping rather than using a named SSH key type, so erring out here
+// isn't advisable.
 
 type creationBundle struct {
 	KeyID           string
@@ -402,23 +407,7 @@ func (b *backend) validateSignedKeyRequirements(publickey ssh.PublicKey, role *s
 			return fmt.Errorf("pubkey not suitable for crypto (expected ssh.CryptoPublicKey but found %T)", k)
 		}
 
-		if keyType == "ecdsa" {
-			ecCurveBitsToAlgoName := map[int]string{
-				256: ssh.KeyAlgoECDSA256,
-				384: ssh.KeyAlgoECDSA384,
-				521: ssh.KeyAlgoECDSA521,
-			}
-
-			if algo, ok := ecCurveBitsToAlgoName[keyBits]; ok {
-				keyTypeToMapKey[keyType] = append(keyTypeToMapKey[keyType], algo)
-			}
-
-			// If the algorithm is not found, it could be that we have a curve
-			// that we haven't added a constant for yet. But they could allow it
-			// (assuming x/crypto/ssh can parse it) via setting a ec: <keyBits>
-			// mapping rather than using a named SSH key type, so erring out here
-			// isn't advisable.
-		}
+		keyTypeToMapKey := createKeyTypeToMapKey(keyType, keyBits)
 
 		var present bool
 		var pass bool
@@ -535,4 +524,21 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 	certificate.Signature = sig
 
 	return certificate, nil
+}
+
+func createKeyTypeToMapKey(keyType string, keyBits int) map[string][]string {
+	keyTypeToMapKey := map[string][]string{
+		"rsa":     {"rsa", ssh.KeyAlgoRSA},
+		"dsa":     {"dsa", ssh.KeyAlgoDSA},
+		"ecdsa":   {"ecdsa", "ec"},
+		"ed25519": {"ed25519", ssh.KeyAlgoED25519},
+	}
+
+	if keyType == "ecdsa" {
+		if algo, ok := ecCurveBitsToAlgoName[keyBits]; ok {
+			keyTypeToMapKey[keyType] = append(keyTypeToMapKey[keyType], algo)
+		}
+	}
+
+	return keyTypeToMapKey
 }

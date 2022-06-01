@@ -1793,18 +1793,9 @@ func TestSSHBackend_IssueSign(t *testing.T) {
 				"key_type":     "otp",
 				"default_user": "user",
 			}),
-			{
-				Operation: logical.UpdateOperation,
-				Path:      "issue/testing",
-				Data:      map[string]interface{}{},
-				ErrorOk:   true,
-				Check: func(resp *logical.Response) error {
-					if resp.Data["error"] != "role key type 'otp' not allowed to issue key pairs" {
-						return errors.New("non 'ca' 'key_type' role was allowed to issue key pairs")
-					}
-					return nil
-				},
-			},
+			// Key pair not issued with invalid role key type
+			issueSSHKeyPairStep("testing", "rsa", 0, true, "role key type 'otp' not allowed to issue key pairs"),
+
 			createRoleStep("testing", map[string]interface{}{
 				"key_type":                "ca",
 				"allow_user_key_ids":      false,
@@ -1812,40 +1803,17 @@ func TestSSHBackend_IssueSign(t *testing.T) {
 				"allowed_user_key_lengths": map[string]interface{}{
 					"ssh-rsa":             []int{2048, 3072, 4096},
 					"ecdsa-sha2-nistp521": 0,
+					"ed25519":             0,
 				},
 			}),
 			// Key_type not in allowed_user_key_types_lengths
-			{
-				Operation: logical.UpdateOperation,
-				Path:      "issue/testing",
-				Data: map[string]interface{}{
-					"key_type": "ec",
-					"key_bits": 256,
-				},
-				ErrorOk: true,
-				Check: func(resp *logical.Response) error {
-					if resp.Data["error"] != "key_type provided not in allowed_user_key_types" {
-						return errors.New("'key_type' not present in the existing 'allowed_user_key_used' was allowed")
-					}
-
-					return nil
-				},
-			},
+			issueSSHKeyPairStep("testing", "ec", 256, true, "key_type provided not in allowed_user_key_types"),
 			// Key_bits not in allowed_user_key_types_lengths for provided key_type
-			{
-				Operation: logical.UpdateOperation,
-				Path:      "issue/testing",
-				Data: map[string]interface{}{
-					"key_bits": 2560,
-				},
-				ErrorOk: true,
-				Check: func(resp *logical.Response) error {
-					if resp.Data["error"] != "key_bits not in list of allowed values for key_type provided" {
-						return errors.New("'key_bits' value not in values allowed for a 'key_type' was allowed")
-					}
-					return nil
-				},
-			},
+			issueSSHKeyPairStep("testing", "rsa", 2560, true, "key_bits not in list of allowed values for key_type provided"),
+			// key_type `rsa` and key_bits `2048` successfully created
+			issueSSHKeyPairStep("testing", "rsa", 2048, false, ""),
+			// key_type `ed22519` and key_bits `0` successfully created
+			issueSSHKeyPairStep("testing", "ed25519", 0, false, ""),
 		},
 	}
 
@@ -2027,6 +1995,40 @@ func signCertificateStep(
 			}
 
 			return validateSSHCertificate(parsedKey.(*ssh.Certificate), keyID, certType, validPrincipals, criticalOptionPermissions, extensionPermissions, ttl)
+		},
+	}
+}
+
+func issueSSHKeyPairStep(role, keyType string, keyBits int, expectError bool, errorMsg string) logicaltest.TestStep {
+
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "issue/" + role,
+		Data: map[string]interface{}{
+			"key_type": keyType,
+			"key_bits": keyBits,
+		},
+		ErrorOk: true,
+		// Returns like nil, err break this
+		Check: func(resp *logical.Response) error {
+			if expectError {
+				var err error
+				if resp.Data["error"] != errorMsg {
+					err = fmt.Errorf("actual error message \"%s\" different from expected error message \"%s\"", resp.Data["error"], errorMsg)
+				}
+
+				return err
+			}
+
+			if resp.Data["private_key_type"] != keyType {
+				return errors.New("private key type does not match provided key_type")
+			}
+
+			if resp.Data["signed_key"] == "" {
+				return errors.New("certificate/signed_key should not be empty")
+			}
+
+			return nil
 		},
 	}
 }
