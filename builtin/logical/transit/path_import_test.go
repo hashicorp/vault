@@ -45,6 +45,8 @@ var (
 	keys     = map[string]interface{}{}
 )
 
+const nssFormattedEd25519Key = "MGcCAQAwFAYHKoZIzj0CAQYJKwYBBAHaRw8BBEwwSgIBAQQgfJm5R+LK4FMwGzOpemTBXksimEVOVCE8QeC+XBBfNU+hIwMhADaif7IhYx46IHcRTy1z8LeyhABep+UB8Da6olMZGx0i"
+
 func generateKeys(t *testing.T) {
 	t.Helper()
 
@@ -76,6 +78,39 @@ func getKey(t *testing.T, keyType string) interface{} {
 	}
 
 	return key
+}
+
+func TestTransit_ImportNSSEd25519Key(t *testing.T) {
+	generateKeys(t)
+	b, s := createBackendWithStorage(t)
+
+	wrappingKey, err := b.getWrappingKey(context.Background(), s)
+	if err != nil || wrappingKey == nil {
+		t.Fatalf("failed to retrieve public wrapping key: %s", err)
+	}
+	privWrappingKey := wrappingKey.Keys[strconv.Itoa(wrappingKey.LatestVersion)].RSAKey
+	pubWrappingKey := &privWrappingKey.PublicKey
+
+	rawPKCS8, err := base64.StdEncoding.DecodeString(nssFormattedEd25519Key)
+	if err != nil {
+		t.Fatalf("failed to parse nss base64: %v", err)
+	}
+
+	blob := wrapTargetPKCS8ForImport(t, pubWrappingKey, rawPKCS8, "SHA256")
+	req := &logical.Request{
+		Storage:   s,
+		Operation: logical.UpdateOperation,
+		Path:      "keys/nss-ed25519/import",
+		Data: map[string]interface{}{
+			"ciphertext": blob,
+			"type":       "ed25519",
+		},
+	}
+
+	_, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("failed to import NSS-formatted Ed25519 key: %v", err)
+	}
 }
 
 func TestTransit_Import(t *testing.T) {
@@ -503,6 +538,29 @@ func TestTransit_ImportVersion(t *testing.T) {
 func wrapTargetKeyForImport(t *testing.T, wrappingKey *rsa.PublicKey, targetKey interface{}, targetKeyType string, hashFnName string) string {
 	t.Helper()
 
+	// Format target key for wrapping
+	var preppedTargetKey []byte
+	var ok bool
+	var err error
+	switch targetKeyType {
+	case "aes128-gcm96", "aes256-gcm96", "chacha20-poly1305":
+		preppedTargetKey, ok = targetKey.([]byte)
+		if !ok {
+			t.Fatal("failed to wrap target key for import: symmetric key not provided in byte format")
+		}
+	default:
+		preppedTargetKey, err = x509.MarshalPKCS8PrivateKey(targetKey)
+		if err != nil {
+			t.Fatalf("failed to wrap target key for import: %s", err)
+		}
+	}
+
+	return wrapTargetPKCS8ForImport(t, wrappingKey, preppedTargetKey, hashFnName)
+}
+
+func wrapTargetPKCS8ForImport(t *testing.T, wrappingKey *rsa.PublicKey, preppedTargetKey []byte, hashFnName string) string {
+	t.Helper()
+
 	// Generate an ephemeral AES-256 key
 	ephKey, err := uuid.GenerateRandomBytes(32)
 	if err != nil {
@@ -525,22 +583,6 @@ func wrapTargetKeyForImport(t *testing.T, wrappingKey *rsa.PublicKey, targetKey 
 	kwp, err := subtle.NewKWP(ephKey)
 	if err != nil {
 		t.Fatalf("failed to wrap target key for import: %s", err)
-	}
-
-	// Format target key for wrapping
-	var preppedTargetKey []byte
-	var ok bool
-	switch targetKeyType {
-	case "aes128-gcm96", "aes256-gcm96", "chacha20-poly1305":
-		preppedTargetKey, ok = targetKey.([]byte)
-		if !ok {
-			t.Fatal("failed to wrap target key for import: symmetric key not provided in byte format")
-		}
-	default:
-		preppedTargetKey, err = x509.MarshalPKCS8PrivateKey(targetKey)
-		if err != nil {
-			t.Fatalf("failed to wrap target key for import: %s", err)
-		}
 	}
 
 	// Wrap target key with KWP
