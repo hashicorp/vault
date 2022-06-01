@@ -109,7 +109,6 @@ export default class LineChart extends Component {
     chartSvg.selectAll('.domain').remove();
 
     const findUpgradeData = (datum) => {
-      console.log(this.upgradeData);
       return this.upgradeData
         ? this.upgradeData.find((upgrade) => upgrade[this.xKey] === datum[this.xKey])
         : null;

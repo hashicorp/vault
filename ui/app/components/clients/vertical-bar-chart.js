@@ -84,6 +84,7 @@ export default class VerticalBarChart extends Component {
       .append('rect')
       .attr('width', '7px')
       .attr('class', 'data-bar')
+      .attr('data-test-vertical-chart', 'data-bar')
       .attr('height', (stackedData) => `${yScale(stackedData[1] - stackedData[0])}%`)
       .attr('x', ({ data }) => xScale(data[this.xKey])) // uses destructuring because was data.data.month
       .attr('y', (data) => `${100 - yScale(data[1])}%`); // subtract higher than 100% to give space for x axis ticks
@@ -102,8 +103,13 @@ export default class VerticalBarChart extends Component {
 
     const xAxis = axisBottom(xScale).tickSize(0);
 
-    yAxis(chartSvg.append('g'));
-    xAxis(chartSvg.append('g').attr('transform', `translate(0, ${SVG_DIMENSIONS.height + 10})`));
+    yAxis(chartSvg.append('g').attr('data-test-vertical-chart', 'y-axis-labels'));
+    xAxis(
+      chartSvg
+        .append('g')
+        .attr('transform', `translate(0, ${SVG_DIMENSIONS.height + 10})`)
+        .attr('data-test-vertical-chart', 'x-axis-labels')
+    );
 
     chartSvg.selectAll('.domain').remove(); // remove domain lines
 
