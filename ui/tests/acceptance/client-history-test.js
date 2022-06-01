@@ -104,7 +104,7 @@ module('Acceptance | clients history tab', function (hooks) {
   });
 
   test('visiting history tab config on and data with mounts', async function (assert) {
-    assert.expect(14);
+    assert.expect(8);
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history');
 
@@ -216,7 +216,7 @@ module('Acceptance | clients history tab', function (hooks) {
   });
 
   test('filters correctly on history with full data', async function (assert) {
-    assert.expect(21);
+    assert.expect(19);
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
     assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
@@ -232,36 +232,36 @@ module('Acceptance | clients history tab', function (hooks) {
 
     await settled();
     assert.ok(true, 'Filter by first namespace');
-    assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('37,028');
-    assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('18,290');
-    assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('18,738');
     assert.dom('[data-test-top-attribution]').includesText('Top auth method');
+    assert.dom('[data-test-running-total-entity]').includesText('23,326', 'total entity clients is accurate');
     assert
-      .dom('[data-test-attribution-clients]')
-      .includesText('12,703', 'top auth method attribution clients accurate');
+      .dom('[data-test-running-total-nonentity]')
+      .includesText('17,826', 'total non-entity clients is accurate');
+    assert.dom('[data-test-attribution-clients]').includesText('10,142', 'top attribution clients accurate');
 
     // FILTER BY AUTH METHOD
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
     await settled();
     assert.ok(true, 'Filter by first auth method');
-    assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('12,703');
-    assert.dom('[data-test-stat-text="entity-clients"] .stat-value').hasText('6,403');
-    assert.dom('[data-test-stat-text="non-entity-clients"] .stat-value').hasText('6,300');
+    assert.dom('[data-test-running-total-entity]').includesText('6,508', 'total entity clients is accurate');
+    assert
+      .dom('[data-test-running-total-nonentity]')
+      .includesText('3,634', 'total non-entity clients is accurate');
     assert.dom(SELECTORS.attributionBlock).doesNotExist('Does not show attribution block');
 
     await click('#namespace-search-select [data-test-selected-list-button="delete"]');
     assert.ok(true, 'Remove namespace filter without first removing auth method filter');
-    assert
-      .dom('[data-test-running-total-entity]')
-      .includesText('37,389', 'total entity clients is back to unfiltered value');
-    assert
-      .dom('[data-test-running-total-nonentity]')
-      .includesText('36,519', 'total non-entity clients is back to unfiltered value');
     assert.dom('[data-test-top-attribution]').includesText('Top namespace');
     assert
       .dom('[data-test-attribution-clients]')
-      .includesText('37,028', 'top attribution clients back to unfiltered value');
+      .hasTextContaining('41,152', 'top attribution clients back to unfiltered value');
+    assert
+      .dom('[data-test-running-total-entity]')
+      .hasTextContaining('98,289', 'total entity clients is back to unfiltered value');
+    assert
+      .dom('[data-test-running-total-nonentity]')
+      .hasTextContaining('96,412', 'total non-entity clients is back to unfiltered value');
   });
 
   test('shows warning if upgrade happened within license period', async function (assert) {
@@ -296,7 +296,12 @@ module('Acceptance | clients history tab', function (hooks) {
     assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
     assert
       .dom('[data-test-alert-banner="alert"]')
-      .includesText(`Vault was upgraded to 1.10.1 on ${format(UPGRADE_DATE, 'MMM d, yyyy')} `);
+      .hasTextContaining(
+        `Warning Vault was upgraded to 1.10.1 on ${format(
+          UPGRADE_DATE,
+          'MMM d, yyyy'
+        )}. We added monthly breakdowns and mount level attribution starting in 1.10, so keep that in mind when looking at the data below. Learn more here.`
+      );
   });
 
   test('Shows empty if license start date is current month', async function (assert) {
