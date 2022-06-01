@@ -6,6 +6,8 @@ description: The cf auth method allows automated authentication of Cloud Foundry
 
 # Cloud Foundry (CF) Auth Method
 
+@include 'x509-sha1-deprecation.mdx'
+
 The `cf` auth method provides an automated mechanism to retrieve a Vault token
 for CF instances. It leverages CF's [App and Container Identity Assurance](https://content.pivotal.io/blog/new-in-pcf-2-1-app-container-identity-assurance-via-automatic-cert-rotation).
 At a high level, this works as follows:
