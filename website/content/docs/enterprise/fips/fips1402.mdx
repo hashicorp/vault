@@ -179,6 +179,6 @@ The following algorithms were certified as part of this release:
 
 What is the difference between Seal Wrap FIPS 140 compliance and the new FIPS Inside compliance?
 - Only the storage of sensitive entries (seal wrapped entries) is actually covered by FIPS crypto.
-- The TLS connection to Vault is not covered (it is in 1, 2, and 7, and 13 in the updated letter).
+- The TLS connection to Vault is not covered (it is in 1, 2, 7, and 13 in the updated letter).
 - The generation of key material (such as PKI certs -- 8 in the updated letter -- or SSH module -- 10 in the updated letter -- and others)  wasn't using FIPS-validated crypto in the seal-wrap version.
 - With Seal wrapping some entries were protected with FIPS crypto, but all crypto in vault wasn't FIPS certified. With FIPS 140-2 inside, by default (if the algorithm is certified), Vault will be using the certified crypto.
