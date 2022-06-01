@@ -28,7 +28,7 @@ func init() {
 // Copied from:
 //   curl https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/verify-pkcs7.html | pcregrep -M -o -e '(?s)-----BEGIN CERTIFICATE-----[^>]*-----END CERTIFICATE-----'
 // Last updated: 2022-05-31
-var pkcs7RawCerts = `-----BEGIN CERTIFICATE-----
+const pkcs7RawCerts = `-----BEGIN CERTIFICATE-----
 MIIC7TCCAq0CCQCWukjZ5V4aZzAJBgcqhkjOOAQDMFwxCzAJBgNVBAYTAlVTMRkw
 FwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYD
 VQQKExdBbWF6b24gV2ViIFNlcnZpY2VzIExMQzAeFw0xMjAxMDUxMjU2MTJaFw0z
@@ -180,7 +180,7 @@ vSeDCOUMYQR7R9LINYwouHIziqQYMAkGByqGSM44BAMDLwAwLAIUWXBlk40xTwSw
 // Copied from:
 // curl https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/verify-signature.html | pcregrep -M -o -e '(?s)-----BEGIN CERTIFICATE-----[^>]*-----END CERTIFICATE-----'
 // Last updated: 2022-05-31
-var signatureRawCerts = `-----BEGIN CERTIFICATE-----
+const signatureRawCerts = `-----BEGIN CERTIFICATE-----
 MIIDIjCCAougAwIBAgIJAKnL4UEDMN/FMA0GCSqGSIb3DQEBBQUAMGoxCzAJBgNV
 BAYTAlVTMRMwEQYDVQQIEwpXYXNoaW5ndG9uMRAwDgYDVQQHEwdTZWF0dGxlMRgw
 FgYDVQQKEw9BbWF6b24uY29tIEluYy4xGjAYBgNVBAMTEWVjMi5hbWF6b25hd3Mu
@@ -315,7 +315,7 @@ Rwi/S3BFXISixNx9cILu
 // Copied from:
 // curl https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/verify-rsa2048.html | pcregrep -M -o -e '(?s)-----BEGIN CERTIFICATE-----[^>]*-----END CERTIFICATE-----'
 // Last updated: 2022-05-31
-var rsa2048RawCerts = `-----BEGIN CERTIFICATE-----
+const rsa2048RawCerts = `-----BEGIN CERTIFICATE-----
 MIIEEjCCAvqgAwIBAgIJALFpzEAVWaQZMA0GCSqGSIb3DQEBCwUAMFwxCzAJBgNV
 BAYTAlVTMRkwFwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0
 dGxlMSAwHgYDVQQKExdBbWF6b24gV2ViIFNlcnZpY2VzIExMQzAgFw0xNTA4MTQw

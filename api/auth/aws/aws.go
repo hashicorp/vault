@@ -25,7 +25,7 @@ type AWSAuth struct {
 	mountPath string
 	// Can be "iam" or "ec2". Defaults to "iam".
 	authType string
-	// Can be "pkcs7" or "identity". Defaults to "pkcs7".
+	// Can be "pkcs7", "identity", or "rsa2048". Defaults to "pkcs7".
 	signatureType          string
 	region                 string
 	iamServerIDHeaderValue string
