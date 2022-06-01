@@ -82,8 +82,13 @@ export default class LineChart extends Component {
 
     const xAxis = axisBottom(xScale).tickSize(0);
 
-    yAxis(chartSvg.append('g'));
-    xAxis(chartSvg.append('g').attr('transform', `translate(0, ${SVG_DIMENSIONS.height + 10})`));
+    yAxis(chartSvg.append('g').attr('data-test-line-chart', 'y-axis-labels'));
+    xAxis(
+      chartSvg
+        .append('g')
+        .attr('transform', `translate(0, ${SVG_DIMENSIONS.height + 10})`)
+        .attr('data-test-line-chart', 'x-axis-labels')
+    );
 
     chartSvg.selectAll('.domain').remove();
 

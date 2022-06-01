@@ -714,32 +714,6 @@ const handleMockQuery = (queryStartTimestamp, queryEndTimestamp, monthlyData) =>
 };
 
 export default function (server) {
-  server.get('sys/version-history', function () {
-    return {
-      data: {
-        keys: ['1.9.0', '1.9.1', '1.9.2', '1.10.1'],
-        key_info: {
-          '1.9.0': {
-            previous_version: null,
-            timestamp_installed: formatRFC3339(subMonths(UPGRADE_DATE, 4)),
-          },
-          '1.9.1': {
-            previous_version: '1.9.0',
-            timestamp_installed: formatRFC3339(subMonths(UPGRADE_DATE, 3)),
-          },
-          '1.9.2': {
-            previous_version: '1.9.1',
-            timestamp_installed: formatRFC3339(subMonths(UPGRADE_DATE, 2)),
-          },
-          '1.10.1': {
-            previous_version: '1.9.2',
-            timestamp_installed: formatRFC3339(UPGRADE_DATE),
-          },
-        },
-      },
-    };
-  });
-
   server.get('sys/license/status', function () {
     return {
       request_id: 'my-license-request-id',
@@ -767,8 +741,7 @@ export default function (server) {
 
   server.get('/sys/internal/counters/activity', (schema, req) => {
     const { start_time, end_time } = req.queryParams;
-    // fake client counting start date so warning shows if user queries earlier start date
-    const counts_start = COUNTS_START;
+
     return {
       request_id: '25f55fbb-f253-9c46-c6f0-3cdd3ada91ab',
       lease_id: '',
@@ -885,7 +858,7 @@ export default function (server) {
         ],
         end_time: end_time || formatISO(endOfMonth(sub(NEW_DATE, { months: 1 }))),
         months: handleMockQuery(start_time, end_time, MOCK_MONTHLY_DATA),
-        start_time: isBefore(new Date(start_time), new Date(counts_start)) ? counts_start : start_time,
+        start_time: isBefore(new Date(start_time), COUNTS_START) ? formatRFC3339(COUNTS_START) : start_time,
         total: {
           distinct_entities: 37389,
           entity_clients: 37389,
