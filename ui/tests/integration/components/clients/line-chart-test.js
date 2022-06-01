@@ -1,12 +1,14 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { find, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-
+import { format, formatRFC3339, subMonths } from 'date-fns';
 module('Integration | Component | clients/line-chart', function (hooks) {
   setupRenderingTest(hooks);
-
+  const CURRENT_DATE = new Date();
   hooks.beforeEach(function () {
+    this.set('xKey', 'foo');
+    this.set('yKey', 'bar');
     this.set('dataset', [
       {
         foo: 1,
@@ -30,11 +32,94 @@ module('Integration | Component | clients/line-chart', function (hooks) {
   test('it renders', async function (assert) {
     await render(hbs`
     <div class="chart-container-wide">
-      <Clients::LineChart @dataset={{dataset}} @xKey="foo" @yKey="bar" />
+      <Clients::LineChart @dataset={{dataset}} @xKey={{xKey}} @yKey={{yKey}} />
       </div>
     `);
 
     assert.dom('[data-test-line-chart]').exists('Chart is rendered');
-    assert.dom('.hover-circle').exists({ count: 4 }, 'Renders dot for each data point');
+    assert
+      .dom('[data-test-line-chart="plot-point"]')
+      .exists({ count: this.dataset.length }, `renders ${this.dataset.length} plot points`);
+  });
+
+  test('it renders upgrade data', async function (assert) {
+    this.set('dataset', [
+      {
+        foo: format(subMonths(CURRENT_DATE, 4), 'M/yy'),
+        bar: 4,
+      },
+      {
+        foo: format(subMonths(CURRENT_DATE, 3), 'M/yy'),
+        bar: 8,
+      },
+      {
+        foo: format(subMonths(CURRENT_DATE, 2), 'M/yy'),
+        bar: 14,
+      },
+      {
+        foo: format(subMonths(CURRENT_DATE, 1), 'M/yy'),
+        bar: 10,
+      },
+    ]);
+    this.set('upgradeData', [
+      {
+        id: '1.10.1',
+        previousVersion: '1.9.2',
+        timestampInstalled: formatRFC3339(subMonths(CURRENT_DATE, 2)),
+      },
+    ]);
+    await render(hbs`
+    <div class="chart-container-wide">
+      <Clients::LineChart 
+        @dataset={{dataset}} 
+        @upgradeData={{upgradeData}} 
+        @xKey={{xKey}} 
+        @yKey={{yKey}} 
+      />
+    </div>
+    `);
+    assert.dom('[data-test-line-chart]').exists('Chart is rendered');
+    assert
+      .dom('[data-test-line-chart="plot-point"]')
+      .exists({ count: this.dataset.length }, `renders ${this.dataset.length} plot points`);
+    assert
+      .dom(find(`[data-test-line-chart="upgrade-${this.dataset[2][this.xKey]}"]`))
+      .hasStyle({ opacity: '1' }, `upgrade data point ${this.dataset[2][this.xKey]} has yellow highlight`);
+  });
+
+  test('it fails gracefully when upgradeData is an object', async function (assert) {
+    this.set('upgradeData', { some: 'object' });
+    await render(hbs`
+    <div class="chart-container-wide">
+    <Clients::LineChart 
+    @dataset={{dataset}} 
+    @upgradeData={{upgradeData}} 
+    @xKey={{xKey}} 
+    @yKey={{yKey}} 
+    />
+    </div>
+    `);
+
+    assert
+      .dom('[data-test-line-chart="plot-point"]')
+      .exists({ count: this.dataset.length }, 'chart still renders when upgradeData is not an array');
+  });
+
+  test('it fails gracefully when upgradeData has incorrect key names', async function (assert) {
+    this.set('upgradeData', [{ incorrect: 'key names' }]);
+    await render(hbs`
+    <div class="chart-container-wide">
+    <Clients::LineChart 
+    @dataset={{dataset}} 
+    @upgradeData={{upgradeData}} 
+    @xKey={{xKey}} 
+    @yKey={{yKey}} 
+    />
+    </div>
+    `);
+
+    assert
+      .dom('[data-test-line-chart="plot-point"]')
+      .exists({ count: this.dataset.length }, 'chart still renders when upgradeData has incorrect keys');
   });
 });

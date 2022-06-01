@@ -21,10 +21,11 @@ import { parseAPITimestamp, formatChartDate } from 'core/utils/date-formatters';
  *
  * @example
  * ```js
- * <LineChart @dataset={dataset} />
+ * <LineChart @dataset={{dataset}} @upgradeData=/>
  * ```
  * @param {string} xKey - string denoting key for x-axis data (data[xKey]) of dataset
  * @param {string} yKey - string denoting key for y-axis data (data[yKey]) of dataset
+ * @param {array} upgradeData - array of objects containing version history from the /version-history endpoint
  */
 
 export default class LineChart extends Component {
@@ -42,6 +43,27 @@ export default class LineChart extends Component {
     return this.args.xKey || 'month';
   }
 
+  get upgradeData() {
+    const { upgradeData } = this.args.upgradeData;
+    if (!upgradeData) return null;
+    if (!Array.isArray(upgradeData)) {
+      console.error('upgradeData must be an array of objects containing upgrade history');
+      return null;
+    } else if (!Object.keys(upgradeData[0]).includes('timestampInstalled')) {
+      console.error(
+        `upgrade must be an object with the following key names: ['id', 'previousVersion', 'timestampInstalled']`
+      );
+      return null;
+    } else {
+      return upgradeData?.map((versionData) => {
+        return {
+          [this.xKey]: parseAPITimestamp(versionData.timestampInstalled, 'M/yy'),
+          ...versionData,
+        };
+      });
+    }
+  }
+
   @action removeTooltip() {
     this.tooltipTarget = null;
   }
@@ -49,17 +71,10 @@ export default class LineChart extends Component {
   @action
   renderChart(element, [chartData]) {
     const dataset = chartData;
-    const upgradeData = [];
-    if (this.args.upgradeData) {
-      this.args.upgradeData.forEach((versionData) =>
-        upgradeData.push({ month: parseAPITimestamp(versionData.timestampInstalled, 'M/yy'), ...versionData })
-      );
-    }
     const filteredData = dataset.filter((e) => Object.keys(e).includes(this.yKey)); // months with data will contain a 'clients' key (otherwise only a timestamp)
     const domainMax = max(filteredData.map((d) => d[this.yKey]));
     const chartSvg = select(element);
     chartSvg.attr('viewBox', `-50 20 600 ${SVG_DIMENSIONS.height}`); // set svg dimensions
-
     // clear out DOM before appending anything
     chartSvg.selectAll('g').remove().exit().data(filteredData).enter();
 
@@ -93,7 +108,10 @@ export default class LineChart extends Component {
     chartSvg.selectAll('.domain').remove();
 
     const findUpgradeData = (datum) => {
-      return upgradeData.find((upgrade) => upgrade[this.xKey] === datum[this.xKey]);
+      console.log(this.upgradeData);
+      return this.upgradeData
+        ? this.upgradeData.find((upgrade) => upgrade[this.xKey] === datum[this.xKey])
+        : null;
     };
 
     // VERSION UPGRADE INDICATOR
@@ -104,6 +122,7 @@ export default class LineChart extends Component {
       .enter()
       .append('circle')
       .attr('class', 'upgrade-circle')
+      .attr('data-test-line-chart', (d) => `upgrade-${d[this.xKey]}`)
       .attr('fill', UPGRADE_WARNING)
       .style('opacity', (d) => (findUpgradeData(d) ? '1' : '0'))
       .attr('cy', (d) => `${100 - yScale(d[this.yKey])}%`)
