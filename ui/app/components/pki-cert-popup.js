@@ -1,17 +1,23 @@
-import Component from '@ember/component';
+/**
+ * @module PkiCertPopup
+ * PkiCertPopup components
+ *
+ * @example
+ * ```js
+ * <PkiCertPopup @item=/>
+ * ```
+ * @param {class} item - the PKI cert in question.
+ */
 
-export default Component.extend({
-  /*
-   * @public
-   * @param DS.Model
-   *
-   * the pki-certificate model
-   */
-  item: null,
+import Component from '@glimmer/component';
+import { action } from '@ember/object';
+export default class PkiCertPopup extends Component {
+  get item() {
+    return this.args.item || null;
+  }
 
-  actions: {
-    delete(item) {
-      item.save({ adapterOptions: { method: 'revoke' } });
-    },
-  },
-});
+  @action
+  delete(item) {
+    item.save({ adapterOptions: { method: 'revoke' } });
+  }
+}
