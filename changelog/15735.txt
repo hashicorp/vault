@@ -1,0 +1,3 @@
+```release-note:bug
+quotas/lease-count: Fix lease-count quotas on non-auth mounts not properly being enforced
+```
