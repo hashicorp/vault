@@ -26,6 +26,7 @@ import { parseAPITimestamp, formatChartDate } from 'core/utils/date-formatters';
  * @param {string} xKey - string denoting key for x-axis data (data[xKey]) of dataset
  * @param {string} yKey - string denoting key for y-axis data (data[yKey]) of dataset
  * @param {array} upgradeData - array of objects containing version history from the /version-history endpoint
+ * @param {string} [noDataMessage] - custom empty state message that displays when no dataset is passed to the chart
  */
 
 export default class LineChart extends Component {

@@ -22,6 +22,7 @@ import { tracked } from '@glimmer/tracking';
  * @param {string} labelKey - string of key name for label value in chart data
  * @param {string} xKey - string of key name for x value in chart data
  * @param {object} totalCounts - object to calculate percentage for tooltip
+ * @param {string} [noDataMessage] - custom empty state message that displays when no dataset is passed to the chart
  */
 
 // SIZING CONSTANTS
