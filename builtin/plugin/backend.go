@@ -76,7 +76,8 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*PluginBackend, 
 	paths := raw.SpecialPaths()
 	btype := raw.Type()
 
-	// HACK: Cast to BackendPluginClient
+	// If the plugin doesn't support AutoMTLS, we will kill the meta plugin so
+	// that it can be lazy loaded. This is done to avoid a setup-unwrap cycle.
 	if bpc, ok := raw.(*bplugin.BackendPluginClient); ok {
 		if !bpc.AutoMTLSSupported() {
 			// Cleanup meta plugin backend

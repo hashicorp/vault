@@ -64,7 +64,6 @@ func NewBackend(ctx context.Context, pluginName string, pluginType consts.Plugin
 			}
 		}
 	} else {
-		// create a backendPluginClient instance
 		config := pluginutil.PluginClientConfig{
 			Name:           pluginName,
 			PluginType:     pluginType,
@@ -110,10 +109,10 @@ func NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner,
 
 	var client *plugin.Client
 	var err error
-	if config.IsMetadataMode {
-		client, err = pluginRunner.RunMetadataMode(ctx, config.Wrapper, pluginSet, handshakeConfig, []string{}, config.Logger)
-	} else if config.AutoMTLS {
+	if config.AutoMTLS {
 		client, err = pluginRunner.RunAutoMTLS(ctx, config.Wrapper, pluginSet, handshakeConfig, []string{}, config.Logger)
+	} else if config.IsMetadataMode {
+		client, err = pluginRunner.RunMetadataMode(ctx, config.Wrapper, pluginSet, handshakeConfig, []string{}, config.Logger)
 	} else {
 		client, err = pluginRunner.Run(ctx, config.Wrapper, pluginSet, handshakeConfig, []string{}, config.Logger)
 	}
