@@ -28,13 +28,4 @@ export default class SelectableCard extends Component {
   get total() {
     return this.args.total || 0;
   }
-  get formattedCardTitle() {
-    if (this.args.cardTitle === 'Tokens') {
-      return this.total !== 1 ? 'Tokens' : 'Token';
-    } else if (this.args.cardTitle === 'Entities') {
-      return this.total !== 1 ? 'Entities' : 'Entity';
-    } else {
-      return this.args.cardTitle;
-    }
-  }
 }
