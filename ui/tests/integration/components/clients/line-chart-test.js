@@ -122,4 +122,20 @@ module('Integration | Component | clients/line-chart', function (hooks) {
       .dom('[data-test-line-chart="plot-point"]')
       .exists({ count: this.dataset.length }, 'chart still renders when upgradeData has incorrect keys');
   });
+
+  test('it renders empty state when no dataset', async function (assert) {
+    await render(hbs`
+    <div class="chart-container-wide">
+    <Clients::LineChart @noDataMessage="this is a custom message to explain why you're not seeing a line chart"/>
+    </div>
+    `);
+
+    assert.dom('[data-test-component="empty-state"]').exists('renders empty state when no data');
+    assert
+      .dom('[data-test-empty-state-subtext]')
+      .hasText(
+        `this is a custom message to explain why you're not seeing a line chart`,
+        'custom message renders'
+      );
+  });
 });
