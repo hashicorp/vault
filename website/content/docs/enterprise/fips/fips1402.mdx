@@ -173,3 +173,13 @@ The following algorithms were certified as part of this release:
  - HMAC+SHA-2 with 224, 256, 384, and 512-bit variants of SHA-2,
  - TLSv1.0/TLSv1.1 and TLSv1.2 KDFs,
  - AES-256 based CRT_DRBG CS-PRNG.
+
+### Leidos Compliance
+
+See the updated [Leidos Compliance Letter (V Entr v1.10.0+entrfips) for FIPS Inside](https://www.datocms-assets.com/2885/1653327036-boringcrypto_compliance_letter_signed.pdf) using the Boring Crypto Libraries for more details. All [past letters](https://www.hashicorp.com/vault-compliance) are also available for reference.
+
+What is the difference between Seal Wrap FIPS 140 compliance and the new FIPS Inside compliance?
+- Only the storage of sensitive entries (seal wrapped entries) is covered by FIPS-validated crypto when using Seal Wrapping.
+- The TLS connection to Vault by clients is not covered by FIPS-validated crypto when using Seal Wrapping (it is when using FIPS 140-2 Inside, per items 1, 2, 7, and 13 in the updated letter).
+- The generation of key material  wasn't using FIPS-validated crypto in the Seal Wrap version (for example, the PKI certificates: item 8 in the updated FIPS 140-2 Inside letter; or SSH module: item 10 in the updated FIPS 140-2 Inside letter).
+- With Seal Wrapping, some entries were protected with FIPS-validated crypto, but all crypto in Vault wasn't FIPS certified. With FIPS 140-2 Inside, by default (if the algorithm is certified), Vault will be using the certified crypto implementation.
