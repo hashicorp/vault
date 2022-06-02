@@ -181,6 +181,7 @@ BUG FIXES:
 
 CHANGES:
 
+* core (enterprise): requests with newly generated tokens to perf standbys which are lagging behind the active node return http 412 instead of 400/403/50x.
 * core: Changes the unit of `default_lease_ttl` and `max_lease_ttl` values returned by
 the `/sys/config/state/sanitized` endpoint from nanoseconds to seconds. [[GH-14206](https://github.com/hashicorp/vault/pull/14206)]
 * core: Bump Go version to 1.17.7. [[GH-14232](https://github.com/hashicorp/vault/pull/14232)]
