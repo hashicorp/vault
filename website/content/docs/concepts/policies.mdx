@@ -181,10 +181,10 @@ also match `"secret/foobar"`. Specifically, when there are potentially multiple
 matching policy paths, `P1` and `P2`, the following matching criteria is applied:
 
 1. If the first wildcard (`+`) or glob (`*`) occurs earlier in `P1`, `P1` is lower priority
-2. If `P1` ends in `*` and `P2` doesn't, `P1` is lower priority
-3. If `P1` has more `+` (wildcard) segments, `P1` is lower priority
-4. If `P1` is shorter, it is lower priority
-5. If `P1` is smaller lexicographically, it is lower priority
+1. If `P1` ends in `*` and `P2` doesn't, `P1` is lower priority
+1. If `P1` has more `+` (wildcard) segments, `P1` is lower priority
+1. If `P1` is shorter, it is lower priority
+1. If `P1` is smaller lexicographically, it is lower priority
 
 For example, given the two paths, `"secret/*"` and `"secret/+/+/foo/*"`, the first
 wildcard appears in the same place, both end in `*` and the latter has two wildcard
@@ -256,19 +256,19 @@ injected, and currently the `path` keys in policies allow injection.
 
 ### Parameters
 
-| Name                                                                             | Description                                                                            |
-| :------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- |
-| `identity.entity.id`                                                             | The entity's ID                                                                        |
-| `identity.entity.name`                                                           | The entity's name                                                                      |
-| `identity.entity.metadata.<metadata key>`                                        | Metadata associated with the entity for the given key                                  |
-| `identity.entity.aliases.<mount accessor>.id`                                    | Entity alias ID for the given mount                                                    |
-| `identity.entity.aliases.<mount accessor>.name`                                  | Entity alias name for the given mount                                                  |
-| `identity.entity.aliases.<mount accessor>.metadata.<metadata key>`               | Metadata associated with the alias for the given mount and metadata key                |
-| `identity.entity.aliases.<mount accessor>.custom_metadata.<custom_metadata key>` | Custom metadata associated with the alias for the given mount and custom metadata key  |
-| `identity.groups.ids.<group id>.name`                                            | The group name for the given group ID                                                  |
-| `identity.groups.names.<group name>.id`                                          | The group ID for the given group name                                                  |
-| `identity.groups.ids.<group id>.metadata.<metadata key>`                         | Metadata associated with the group for the given key                                   |
-| `identity.groups.names.<group name>.metadata.<metadata key>`                     | Metadata associated with the group for the given key                                   |
+| Name                                                                             | Description                                                                           |
+| :------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------ |
+| `identity.entity.id`                                                             | The entity's ID                                                                       |
+| `identity.entity.name`                                                           | The entity's name                                                                     |
+| `identity.entity.metadata.<metadata key>`                                        | Metadata associated with the entity for the given key                                 |
+| `identity.entity.aliases.<mount accessor>.id`                                    | Entity alias ID for the given mount                                                   |
+| `identity.entity.aliases.<mount accessor>.name`                                  | Entity alias name for the given mount                                                 |
+| `identity.entity.aliases.<mount accessor>.metadata.<metadata key>`               | Metadata associated with the alias for the given mount and metadata key               |
+| `identity.entity.aliases.<mount accessor>.custom_metadata.<custom_metadata key>` | Custom metadata associated with the alias for the given mount and custom metadata key |
+| `identity.groups.ids.<group id>.name`                                            | The group name for the given group ID                                                 |
+| `identity.groups.names.<group name>.id`                                          | The group ID for the given group name                                                 |
+| `identity.groups.ids.<group id>.metadata.<metadata key>`                         | Metadata associated with the group for the given key                                  |
+| `identity.groups.names.<group name>.metadata.<metadata key>`                     | Metadata associated with the group for the given key                                  |
 
 ### Examples
 
@@ -334,7 +334,7 @@ path take precedence over permissions on parameters.
 
 ### Parameter Constraints
 
--> **Note:**: The `allowed_parameters`, `denied_parameters`, and `required_parameters` fields are not supported for policies used with the version 2 kv store.
+\-> **Note:**: The `allowed_parameters`, `denied_parameters`, and `required_parameters` fields are not supported for policies used with the version 2 kv store.
 
 See the [API Specification](/api-docs/secret/kv/kv-v2) for more information.
 
@@ -596,8 +596,8 @@ $ curl \
 
 For more information, please read:
 
-- [Production Hardening](/guides/operations/production)
-- [Generating a Root Token](/guides/operations/generate-root)
+- [Production Hardening](https://learn.hashicorp.com/tutorials/vault/production-hardening)
+- [Generating a Root Token](https://learn.hashicorp.com/tutorials/vault/generate-root)
 
 ## Managing Policies
 
