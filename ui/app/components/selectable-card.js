@@ -1,3 +1,5 @@
+import Component from '@glimmer/component';
+
 /**
  * @module SelectableCard
  * SelectableCard components are card-like components that display a title, total, subtotal, and anything after the yield.
@@ -15,8 +17,6 @@
  * @param {string} [queryParam] - tab for the route the link will take you.
  * @param {string} [type] - type used in the link type.
  */
-
-import Component from '@glimmer/component';
 
 export default class SelectableCard extends Component {
   get gridContainer() {

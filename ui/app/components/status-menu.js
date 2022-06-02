@@ -1,3 +1,7 @@
+import Component from '@glimmer/component';
+import { action } from '@ember/object';
+import { inject as service } from '@ember/service';
+
 /**
  * @module StatusMenu
  * StatusMenu component is the drop down menu on the main navigation.
@@ -12,10 +16,6 @@
  * @param {function} [onLinkClick] - function to handle click on the nested links under content.
  *
  */
-
-import Component from '@glimmer/component';
-import { action } from '@ember/object';
-import { inject as service } from '@ember/service';
 
 export default class StatusMenu extends Component {
   @service currentCluster;
