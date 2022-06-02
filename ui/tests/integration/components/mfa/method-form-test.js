@@ -72,6 +72,6 @@ module('Integration | Component | mfa-method-form', function (hooks) {
     assert.dom('[data-test-input="issuer"]').hasValue('Vault', 'Issuer input is populated');
     assert.dom('[data-test-ttl-value="Period"]').hasValue('30', 'Period input ttl is populated');
     let SHA512radioBtn = this.element.querySelectorAll('input[name=algorithm]')[2];
-    assert.dom(SHA512radioBtn).hasValue('on', 'SHA512 radio input is selected');
+    assert.dom(SHA512radioBtn).hasValue('SHA512', 'SHA512 radio input is selected');
   });
 });
