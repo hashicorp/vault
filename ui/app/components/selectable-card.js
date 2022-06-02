@@ -17,6 +17,7 @@
  */
 
 import Component from '@glimmer/component';
+
 export default class SelectableCard extends Component {
   get gridContainer() {
     return this.args.gridContainer || false;
