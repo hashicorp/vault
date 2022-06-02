@@ -2,7 +2,6 @@
  * @module StatusMenu
  * StatusMenu component is the drop down menu on the main navigation.
  *
- *
  * @example
  * ```js
  * <StatusMenu @label='user' @onLinkClick={{action Nav.closeDrawer}}/>
