@@ -34,13 +34,13 @@ import { calculateAverageClients } from 'vault/utils/chart-helpers';
  */
 export default class MonthlyUsage extends Component {
   get averageTotalClients() {
-    return calculateAverageClients(this.args.verticalBarChartData, 'clients') || '0';
+    return calculateAverageClients(this.args?.verticalBarChartData, 'clients') || '0';
   }
 
   get averageNewClients() {
     return (
       calculateAverageClients(
-        this.args.verticalBarChartData.map((d) => d.new_clients),
+        this.args.verticalBarChartData?.map((d) => d.new_clients),
         'clients'
       ) || '0'
     );

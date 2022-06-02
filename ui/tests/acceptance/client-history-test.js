@@ -192,6 +192,7 @@ module('Acceptance | clients history tab', function (hooks) {
     assert
       .dom(SELECTORS.runningTotalMonthlyCharts)
       .doesNotExist('running total month over month charts do not show');
+    assert.dom(SELECTORS.monthlyUsageBlock).doesNotExist('Does not show monthly usage block');
     assert.dom(SELECTORS.attributionBlock).exists('attribution area shows');
     assert.dom('[data-test-chart-container="new-clients"]').exists('new client attribution chart shows');
     assert.dom('[data-test-chart-container="total-clients"]').exists('total client attribution chart shows');
