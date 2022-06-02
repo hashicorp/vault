@@ -472,6 +472,36 @@ func TestActivityLog_SaveEntitiesToStorage(t *testing.T) {
 	expectedEntityIDs(t, out, ids)
 }
 
+func TestModifyResponseMonthsNilAppend(t *testing.T) {
+	end := time.Now().UTC()
+	start := timeutil.StartOfMonth(end).AddDate(0, -5, 0)
+	responseMonthTimestamp := timeutil.StartOfMonth(end).AddDate(0, -3, 0).Format(time.RFC3339)
+	responseMonths := []*ResponseMonth{{Timestamp: responseMonthTimestamp}}
+	months := modifyResponseMonths(responseMonths, start, end)
+	if len(months) != 5 {
+		t.Fatal("wrong number of months padded")
+	}
+	for _, m := range months {
+		ts, err := time.Parse(time.RFC3339, m.Timestamp)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !ts.Equal(start) {
+			t.Fatalf("incorrect time in month sequence timestamps: expected %+v, got %+v", start, ts)
+		}
+		start = timeutil.StartOfMonth(start).AddDate(0, 1, 0)
+	}
+	// The following is a redundant check, but for posterity and readability I've
+	// made it explicit.
+	lastMonth, err := time.Parse(time.RFC3339, months[4].Timestamp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if timeutil.IsCurrentMonth(lastMonth, time.Now().UTC()) {
+		t.Fatalf("do not include current month timestamp in nil padding for months")
+	}
+}
+
 func TestActivityLog_ReceivedFragment(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
 	a := core.activityLog
