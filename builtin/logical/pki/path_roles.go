@@ -1131,9 +1131,12 @@ func getPolicyIdentifier(data *framework.FieldData, defaultIdentifiers *[]string
 	}
 	// Could Be A JSON Entry
 	policyIdentifierJsonEntry := data.Raw[policyIdentifiersParam]
-	policyIdentifiers, err := parsePolicyIdentifiersFromJson(policyIdentifierJsonEntry.(string))
-	if err == nil {
-		return policyIdentifiers
+	policyIdentifierJsonString, ok := policyIdentifierJsonEntry.(string)
+	if ok {
+		policyIdentifiers, err := parsePolicyIdentifiersFromJson(policyIdentifierJsonString)
+		if err == nil {
+			return policyIdentifiers
+		}
 	}
 	// Else could Just Be A List of OIDs
 	return policyIdentifierEntry.([]string)
