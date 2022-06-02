@@ -105,9 +105,9 @@ These metrics represent operational aspects of the running Vault instance.
 | `vault.core.step_down`                              | Duration of time taken by cluster leadership step downs. This should be monitored and alerted on for overall cluster leadership status.                                                                                                                                                                                                                                                                                                     | ms           | summary |
 | `vault.core.unseal`                                 | Duration of time taken by unseal operations                                                                                                                                                                                                                                                                                                                                                                                                 | ms           | summary |
 | `vault.core.unsealed`                               | Has value 1 when Vault is unsealed, and 0 when Vault is sealed.                                                                                                                                                                                                                                                                                                                                                                             | bool         | gauge   |
-| `vault.metrics.collection` (cluster,gauge)          | Time taken to collect usage gauges, labelled by gauge type.                                                                                                                                                                                                                                                                                                                                                                                 | summary      |
-| `vault.metrics.collection.interval` (cluster,gauge) | Current value of usage gauge collection interval.                                                                                                                                                                                                                                                                                                                                                                                           | summary      |
-| `vault.metrics.collection.error` (cluster,gauge)    | Errors while collection usage gauges, labeled by gauge type.                                                                                                                                                                                                                                                                                                                                                                                | counter      |
+| `vault.metrics.collection` (cluster,gauge)          | Time taken to collect usage gauges, labelled by gauge type.                                                                                                                                                                                                                                                                                                                                                                                 | summary      |         |
+| `vault.metrics.collection.interval` (cluster,gauge) | Current value of usage gauge collection interval.                                                                                                                                                                                                                                                                                                                                                                                           | summary      |         |
+| `vault.metrics.collection.error` (cluster,gauge)    | Errors while collection usage gauges, labeled by gauge type.                                                                                                                                                                                                                                                                                                                                                                                | counter      |         |
 | `vault.rollback.attempt.<mountpoint>`               | Time taken to perform a rollback operation on the given mount point. The mount point name has its forward slashes `/` replaced by `-`. For example, a rollback operation on the `auth/token` backend would be reportes as `vault.rollback.attempt.auth-token-`.                                                                                                                                                                             | ms           | summary |
 | `vault.route.create.<mountpoint>`                   | Time taken to dispatch a create operation to a backend, and for that backend to process it. The mount point name has its forward slashes `/` replaced by `-`. For example, a create operation to `ns1/secret/` would have corresponding metric `vault.route.create.ns1-secret-`. The number of samples of this metric, and the corresponding ones for other operations below, indicates how many operations were performed per mount point. | ms           | summary |
 | `vault.route.delete.<mountpoint>`                   | Time taken to dispatch a delete operation to a backend, and for that backend to process it.                                                                                                                                                                                                                                                                                                                                                 | ms           | summary |
@@ -497,7 +497,7 @@ indicate flapping leadership.
 
 ## Integrated Storage (Raft) Automated Snapshots
 
-These metrics related to the Enterprise feature [Raft Automated Snapshots](/docs/enterprise/automated-raft-snapshots).
+These metrics related to the Enterprise feature [Raft Automated Snapshots](/docs/enterprise/automated-integrated-storage-snapshots).
 
 | Metric                                      | Description                                                                                   | Unit       | Type    |
 | :------------------------------------------ | :-------------------------------------------------------------------------------------------- | :--------- | :------ |
@@ -527,25 +527,47 @@ These metrics related to the Enterprise feature [Raft Automated Snapshots](/docs
 | `snapshot_config_name` | For automated snapshots, the name of the configuration                                                                                                                                                                                                | `config1`               |
 
 [secrets-engines]: /docs/secrets
+
 [storage-backends]: /docs/configuration/storage
+
 [telemetry-stanza]: /docs/configuration/telemetry
+
 [cubbyhole-secrets-engine]: /docs/secrets/cubbyhole
+
 [kv-secrets-engine]: /docs/secrets/kv
+
 [ldap-auth-backend]: /docs/auth/ldap
+
 [token-auth-backend]: /docs/auth/token
+
 [azure-storage-backend]: /docs/configuration/storage/azure
+
 [cassandra-storage-backend]: /docs/configuration/storage/cassandra
+
 [cockroachdb-storage-backend]: /docs/configuration/storage/cockroachdb
+
 [consul-storage-backend]: /docs/configuration/storage/consul
+
 [couchdb-storage-backend]: /docs/configuration/storage/couchdb
+
 [dynamodb-storage-backend]: /docs/configuration/storage/dynamodb
+
 [etcd-storage-backend]: /docs/configuration/storage/etcd
+
 [gcs-storage-backend]: /docs/configuration/storage/google-cloud-storage
+
 [spanner-storage-backend]: /docs/configuration/storage/google-cloud-spanner
+
 [mssql-storage-backend]: /docs/configuration/storage/mssql
+
 [mysql-storage-backend]: /docs/configuration/storage/mysql
+
 [postgresql-storage-backend]: /docs/configuration/storage/postgresql
+
 [s3-storage-backend]: /docs/configuration/storage/s3
+
 [swift-storage-backend]: /docs/configuration/storage/swift
+
 [zookeeper-storage-backend]: /docs/configuration/storage/zookeeper
+
 [integrated-storage]: /docs/configuration/storage/raft
