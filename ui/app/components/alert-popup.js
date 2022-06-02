@@ -1,3 +1,5 @@
+import Component from '@glimmer/component';
+
 /**
  * @module AlertPopup
  * The `AlertPopup` is an implementation of the [ember-cli-flash](https://github.com/poteto/ember-cli-flash) `flashMessage`.
@@ -9,10 +11,9 @@
  * @param {string} type=null - The alert type. This comes from the message-types helper.
  * @param {string} [message=null] - The alert message.
  * @param {function} close=null - The close action which will close the alert.
+ * @param {boolean} isPreformatted - if true modifies class.
  *
  */
-
-import Component from '@glimmer/component';
 
 export default class AlertPopup extends Component {
   get type() {
