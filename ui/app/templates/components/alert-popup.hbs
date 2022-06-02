@@ -4,7 +4,7 @@
       <Icon aria-hidden="true" @name={{this.type.glyph}} />
     </div>
     <div class="column">
-      <button type="button" class="close-button" {{action this.close}}>
+      <button type="button" class="close-button" {{on "click" this.close}}>
         <Icon @name="x" aria-label="Close" />
       </button>
       <div class="message-title">
