@@ -301,7 +301,7 @@ func (kv *kvv2) Destroy(ctx context.Context, secretPath string, versions []int) 
 
 	_, err := kv.c.Logical().WriteWithContext(ctx, pathToDestroy, data)
 	if err != nil {
-		return fmt.Errorf("error undeleting secret metadata at %s: %w", pathToDestroy, err)
+		return fmt.Errorf("error destroying secret metadata at %s: %w", pathToDestroy, err)
 	}
 
 	return nil
@@ -318,7 +318,7 @@ func (kv *kvv2) Rollback(ctx context.Context, secretPath string, toVersion int) 
 	}
 
 	// Make sure a value already exists
-	if latest == nil || latest.Data == nil {
+	if latest == nil {
 		return nil, fmt.Errorf("no secret was found: %w", err)
 	}
 
@@ -335,7 +335,7 @@ func (kv *kvv2) Rollback(ctx context.Context, secretPath string, toVersion int) 
 
 	err = validateRollbackVersion(rollbackVersion)
 	if err != nil {
-		return nil, fmt.Errorf("invalid rollback version %d", toVersion)
+		return nil, fmt.Errorf("invalid rollback version %d: %w", toVersion, err)
 	}
 
 	casVersion := latest.VersionMetadata.Version
