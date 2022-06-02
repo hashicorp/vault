@@ -4,7 +4,7 @@
  *
  * @example
  * ```js
- * <PkiCertPopup @item=/>
+ * <PkiCertPopup @item={{@item}}/>
  * ```
  * @param {class} item - the PKI cert in question.
  */
