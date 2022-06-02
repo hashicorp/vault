@@ -82,33 +82,42 @@ func NewBackend(ctx context.Context, pluginName string, pluginType consts.Plugin
 	return backend, nil
 }
 
-func NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (logical.Backend, error) {
-	// pluginMap is the map of plugins we can dispense.
-	pluginSet := map[int]plugin.PluginSet{
+// pluginSet returns the go-plugin PluginSet that we can dispense. This ensures
+// that plugins that don't support AutoMTLS are run on the appropriate version.
+func pluginSet(autoMTLS, metadataMode bool) map[int]plugin.PluginSet {
+	if autoMTLS {
+		return map[int]plugin.PluginSet{
+			5: {
+				"backend": &GRPCBackendPlugin{
+					MetadataMode:      false,
+					AutoMTLSSupported: true,
+				},
+			},
+		}
+	}
+	return map[int]plugin.PluginSet{
 		// Version 3 used to supports both protocols. We want to keep it around
 		// since it's possible old plugins built against this version will still
 		// work with gRPC. There is currently no difference between version 3
 		// and version 4.
 		3: {
 			"backend": &GRPCBackendPlugin{
-				MetadataMode: config.IsMetadataMode,
+				MetadataMode: metadataMode,
 			},
 		},
 		4: {
 			"backend": &GRPCBackendPlugin{
-				MetadataMode: config.IsMetadataMode,
-			},
-		},
-		5: {
-			"backend": &GRPCBackendPlugin{
-				MetadataMode:      false,
-				AutoMTLSSupported: true,
+				MetadataMode: metadataMode,
 			},
 		},
 	}
+}
 
+func NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (logical.Backend, error) {
 	var client *plugin.Client
 	var err error
+	pluginSet := pluginSet(config.AutoMTLS, config.IsMetadataMode)
+
 	if config.AutoMTLS {
 		client, err = pluginRunner.RunAutoMTLS(ctx, config.Wrapper, pluginSet, handshakeConfig, []string{}, config.Logger)
 	} else if config.IsMetadataMode {

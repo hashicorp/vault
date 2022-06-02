@@ -31,6 +31,44 @@ const (
 	expectedEnvValue = "BAR"
 )
 
+func TestSystemBackend_Plugin_secret_v4(t *testing.T) {
+	cluster := testSystemBackendMockV4(t, 1, 1, logical.TypeLogical)
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0]
+
+	// Make a request to lazy load the plugin
+	req := logical.TestRequest(t, logical.ReadOperation, "mock-0/internal")
+	req.ClientToken = core.Client.Token()
+	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatalf("bad: response should not be nil")
+	}
+
+	// Seal the cluster
+	cluster.EnsureCoresSealed(t)
+
+	// Unseal the cluster
+	barrierKeys := cluster.BarrierKeys
+	for _, core := range cluster.Cores {
+		for _, key := range barrierKeys {
+			_, err := core.Unseal(vault.TestKeyCopy(key))
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		if core.Sealed() {
+			t.Fatal("should not be sealed")
+		}
+		// Wait for active so post-unseal takes place
+		// If it fails, it means unseal process failed
+		vault.TestWaitActive(t, core.Core)
+	}
+}
+
 func TestSystemBackend_Plugin_secret(t *testing.T) {
 	cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical)
 	defer cluster.Cleanup()
@@ -536,6 +574,79 @@ func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}
 	}
 }
 
+// testSystemBackendMockV4 returns a systemBackend with the desired number
+// of mounted mock plugin backends. numMounts alternates between different
+// ways of providing the plugin_name.
+//
+// The mounts are mounted at sys/mounts/mock-[numMounts] or sys/auth/mock-[numMounts]
+func testSystemBackendMockV4(t *testing.T, numCores, numMounts int, backendType logical.BackendType) *vault.TestCluster {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"plugin": plugin.Factory,
+		},
+		CredentialBackends: map[string]logical.Factory{
+			"plugin": plugin.Factory,
+		},
+	}
+
+	// Create a tempdir, cluster.Cleanup will clean up this directory
+	tempDir, err := ioutil.TempDir("", "vault-test-cluster")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc:        vaulthttp.Handler,
+		KeepStandbysSealed: true,
+		NumCores:           numCores,
+		TempDir:            tempDir,
+	})
+	cluster.Start()
+
+	core := cluster.Cores[0]
+	vault.TestWaitActive(t, core.Core)
+	client := core.Client
+
+	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
+
+	switch backendType {
+	case logical.TypeLogical:
+		vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "TestBackend_PluginMainLogicalV4", []string{}, tempDir)
+		for i := 0; i < numMounts; i++ {
+			// Alternate input styles for plugin_name on every other mount
+			options := map[string]interface{}{
+				"type": "mock-plugin",
+			}
+			resp, err := client.Logical().Write(fmt.Sprintf("sys/mounts/mock-%d", i), options)
+			if err != nil {
+				t.Fatalf("err: %v", err)
+			}
+			if resp != nil {
+				t.Fatalf("bad: %v", resp)
+			}
+		}
+	case logical.TypeCredential:
+		vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeCredential, "TestBackend_PluginMainCredentials", []string{}, tempDir)
+		for i := 0; i < numMounts; i++ {
+			// Alternate input styles for plugin_name on every other mount
+			options := map[string]interface{}{
+				"type": "mock-plugin",
+			}
+			resp, err := client.Logical().Write(fmt.Sprintf("sys/auth/mock-%d", i), options)
+			if err != nil {
+				t.Fatalf("err: %v", err)
+			}
+			if resp != nil {
+				t.Fatalf("bad: %v", resp)
+			}
+		}
+	default:
+		t.Fatal("unknown backend type provided")
+	}
+
+	return cluster
+}
+
 // testSystemBackendMock returns a systemBackend with the desired number
 // of mounted mock plugin backends. numMounts alternates between different
 // ways of providing the plugin_name.
@@ -657,6 +768,41 @@ func testSystemBackend_SingleCluster_Env(t *testing.T, env []string) *vault.Test
 	}
 
 	return cluster
+}
+
+func TestBackend_PluginMainLogicalV4(t *testing.T) {
+	args := []string{}
+	// don't run as a standalone unit test
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
+		return
+	}
+
+	// don't run as a V5 plugin
+	if os.Getenv(pluginutil.PluginAutoMTLSEnv) == "true" {
+		return
+	}
+
+	caPEM := os.Getenv(pluginutil.PluginCACertPEMEnv)
+	if caPEM == "" {
+		t.Fatal("CA cert not passed in")
+	}
+	args = append(args, fmt.Sprintf("--ca-cert=%s", caPEM))
+
+	apiClientMeta := &api.PluginAPIClientMeta{}
+	flags := apiClientMeta.FlagSet()
+	flags.Parse(args)
+	tlsConfig := apiClientMeta.GetTLSConfig()
+	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
+
+	factoryFunc := mock.FactoryType(logical.TypeLogical)
+
+	err := lplugin.Serve(&lplugin.ServeOpts{
+		BackendFactoryFunc: factoryFunc,
+		TLSProviderFunc:    tlsProviderFunc,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestBackend_PluginMainLogical(t *testing.T) {
