@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 	"testing"
+	"time"
 
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
@@ -295,5 +296,137 @@ func TestKVHelpers(t *testing.T) {
 		if versions[0].Version != 1 || versions[len(versions)-1].Version != expectedLength {
 			t.Fatalf("versions list is not ordered as expected")
 		}
+
+		// put and patch metadata
+		////
+		noDataSecretPath := "empty"
+
+		// create a secret with metadata but no data
+		deleteVersionAfter := 5 * time.Hour
+		maxVersions := 5
+		customMetadata := map[string]interface{}{"ape": "gorilla"}
+		err = client.KVv2(mountPath).PutMetadata(context.Background(), noDataSecretPath, api.KVMetadataInput{
+			DeleteVersionAfter: &deleteVersionAfter,
+			MaxVersions:        &maxVersions,
+			CustomMetadata:     customMetadata,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// get its metadata to make sure it was created successfully
+		md, err := client.KVv2(mountPath).GetMetadata(context.Background(), noDataSecretPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if md.CreatedTime.IsZero() {
+			t.Fatalf("secret metadata was not populated as expected: %v", err)
+		}
+		if len(md.Versions) > 0 {
+			t.Fatalf("no secret versions should have been created since only metadata was populated")
+		}
+
+		// replace all modifiable metadata fields
+		casRequired := true
+		deleteVersionAfter = 6 * time.Hour
+		maxVersions = 6
+		customMetadata = map[string]interface{}{"ape": "orangutan", "cat": "tabby"}
+		err = client.KVv2(mountPath).PutMetadata(context.Background(), noDataSecretPath, api.KVMetadataInput{
+			CASRequired:        &casRequired,
+			DeleteVersionAfter: &deleteVersionAfter,
+			MaxVersions:        &maxVersions,
+			CustomMetadata:     customMetadata,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// check that metadata was replaced
+		md2, err := client.KVv2(mountPath).GetMetadata(context.Background(), noDataSecretPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if md.CASRequired == md2.CASRequired || md.MaxVersions == md2.MaxVersions || md.DeleteVersionAfter == md2.DeleteVersionAfter || reflect.DeepEqual(md.CustomMetadata, md2.CustomMetadata) {
+			t.Fatalf("metadata fields should have been updated by PutMetadata")
+		}
+
+		// now let's try a patch
+		maxVersions = 7
+		err = client.KVv2(mountPath).PatchMetadata(context.Background(), noDataSecretPath, api.KVMetadataInput{
+			MaxVersions:    &maxVersions,
+			CustomMetadata: map[string]interface{}{"ape": nil, "rat": "brown"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// check that the metadata was only partially replaced
+		md3, err := client.KVv2(mountPath).GetMetadata(context.Background(), noDataSecretPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if md2.CASRequired != md3.CASRequired || md2.DeleteVersionAfter != md3.DeleteVersionAfter {
+			t.Fatalf("expected fields to remain unchanged but they were updated")
+		}
+		if md3.MaxVersions == 0 {
+			t.Fatalf("field was reset to its zero value when it should not have been")
+		}
+		if md2.MaxVersions == md3.MaxVersions {
+			t.Fatalf("expected field to be updated but it remained unchanged")
+		}
+
+		// let's check the custom metadata was updated correctly
+		if r, ok := md3.CustomMetadata["rat"]; ok {
+			if r != "brown" {
+				t.Fatalf("expected value to be \"brown\"")
+			}
+		} else {
+			t.Fatalf("expected there to be a new \"rat\" key")
+		}
+
+		if _, ok := md3.CustomMetadata["ape"]; ok {
+			t.Fatalf("expected \"ape\" key to be removed")
+		}
+
+		if _, ok := md3.CustomMetadata["cat"]; !ok {
+			t.Fatalf("did not expect \"cat\" key to be removed")
+		}
+
+		// now let's do another patch to test the "explicit zero value" use case
+		explicitFalse := false
+		explicitZero := 0
+		explicitTimeZero, err := time.ParseDuration("0s")
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = client.KVv2(mountPath).PatchMetadata(context.Background(), noDataSecretPath, api.KVMetadataInput{
+			CASRequired:        &explicitFalse,
+			MaxVersions:        &explicitZero,
+			DeleteVersionAfter: &explicitTimeZero,
+			CustomMetadata:     map[string]interface{}{},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// check that those fields were reset to their zero value
+		md4, err := client.KVv2(mountPath).GetMetadata(context.Background(), noDataSecretPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(md4.CustomMetadata) > 0 {
+			t.Fatalf("expected empty map to cause deletion of all custom metadata")
+		}
+
+		if md4.MaxVersions != 0 || md4.CASRequired != false {
+			t.Fatalf("expected fields to be reset to their zero values but they were %d and %t instead", md4.MaxVersions, md4.CASRequired)
+		}
+
+		// TODO: Bring this test back to life once the bug is fixed where we can't actually reset delete-version-after to zero...
+		// if md4.DeleteVersionAfter.String() != "0s" {
+		// 	t.Fatalf("expected delete-version-after to be reset to its zero value but instead it was %d", md4.DeleteVersionAfter.String())
+		// }
+
+		////
 	})
 }

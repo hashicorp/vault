@@ -30,6 +30,26 @@ type KVMetadata struct {
 	Raw      *Secret
 }
 
+// KVMetadataInput is the subset of metadata that can be manually modified for
+// a KV v2 secret. This can also be passed to the PutMetadata method to create
+// a secret without any data yet.
+//
+// The struct's fields are all pointers. When used with the PatchMetadata
+// method, a pointer to a field's zero value (e.g. false for *bool) implies
+// that field should be reset to its zero value after update, whereas a field
+// set to a null pointer (e.g. null for *bool) implies the field should remain
+// unchanged.
+//
+// Since maps are already pointers, use an empty map to remove all
+// custom metadata. To explicitly set the zero value for time.Duration,
+// you can use a pointer to time.ParseDuration("0s").
+type KVMetadataInput struct {
+	CASRequired        *bool
+	CustomMetadata     map[string]interface{}
+	DeleteVersionAfter *time.Duration
+	MaxVersions        *int
+}
+
 // KVVersionMetadata is a subset of metadata for a given version of a KV v2 secret.
 type KVVersionMetadata struct {
 	Version      int       `mapstructure:"version"`
@@ -238,6 +258,41 @@ func (kv *kvv2) Put(ctx context.Context, secretPath string, data map[string]inte
 	return kvSecret, nil
 }
 
+// PutMetadata can be used to fully replace a subset of metadata fields for a
+// given KV v2 secret.
+//
+// It can also be used to create a new secret with just metadata and no secret data yet.
+//
+// To partially replace the values of these metadata fields, use PatchMetadata.
+func (kv *kvv2) PutMetadata(ctx context.Context, secretPath string, metadata KVMetadataInput) error {
+	pathToWriteTo := fmt.Sprintf("%s/metadata/%s", kv.mountPath, secretPath)
+
+	// convert non-nil values to a map we can pass to Logical
+	md := make(map[string]interface{})
+	casRequiredKey := "cas_required"
+	deleteVersionAfterKey := "delete_version_after"
+	maxVersionsKey := "max_versions"
+	customMetadataKey := "custom_metadata"
+
+	md[customMetadataKey] = metadata.CustomMetadata
+	if metadata.MaxVersions != nil {
+		md[maxVersionsKey] = *(metadata.MaxVersions)
+	}
+	if metadata.DeleteVersionAfter != nil {
+		md[deleteVersionAfterKey] = (*metadata.DeleteVersionAfter).String()
+	}
+	if metadata.CASRequired != nil {
+		md[casRequiredKey] = *(metadata.CASRequired)
+	}
+
+	_, err := kv.c.Logical().WriteWithContext(ctx, pathToWriteTo, md)
+	if err != nil {
+		return fmt.Errorf("error writing secret metadata to %s: %w", pathToWriteTo, err)
+	}
+
+	return nil
+}
+
 // Patch additively updates the most recent version of a key-value secret,
 // differentiating it from Put which will fully overwrite the previous data.
 // Only the key-value pairs that are new or changing need to be provided.
@@ -283,6 +338,25 @@ func (kv *kvv2) Patch(ctx context.Context, secretPath string, newData map[string
 	}
 
 	return kvs, nil
+}
+
+// PatchMetadata can be used to replace just a subset of a secret's
+// metadata fields at a time, as opposed to PutMetadata which is used to
+// completely replace the previous metadata.
+func (kv *kvv2) PatchMetadata(ctx context.Context, secretPath string, metadata KVMetadataInput) error {
+	pathToWriteTo := fmt.Sprintf("%s/metadata/%s", kv.mountPath, secretPath)
+
+	md, err := setMetadataMap(metadata)
+	if err != nil {
+		return fmt.Errorf("unable to create map for JSON merge patch request: %w", err)
+	}
+
+	_, err = kv.c.Logical().JSONMergePatch(ctx, pathToWriteTo, md)
+	if err != nil {
+		return fmt.Errorf("error patching metadata at %s: %w", pathToWriteTo, err)
+	}
+
+	return nil
 }
 
 // Delete deletes the most recent version of a secret from the KV v2
@@ -550,4 +624,70 @@ func readThenWrite(ctx context.Context, client *Client, mountPath string, secret
 	}
 
 	return updatedSecret, nil
+}
+
+func setMetadataMap(metadata KVMetadataInput) (map[string]interface{}, error) {
+	md := make(map[string]interface{})
+	casRequiredKey := "cas_required"
+	deleteVersionAfterKey := "delete_version_after"
+	maxVersionsKey := "max_versions"
+	customMetadataKey := "custom_metadata"
+
+	// --[Explicit Zero Value For The User, Explicit Null On The Backend]--
+	// The KVMetadataInput struct is designed to have pointer fields so that
+	// the user can easily express the desire to explicitly set a field back to its zero
+	// value (e.g. false), as opposed to just having the field remain
+	// unchanged (e.g. nil).
+	// However, in the actual JSONMergePatch request performed by Logical,
+	// the meanings are reversed, where a null value means to delete the
+	// value at that field, and a zero value means to do nothing.
+	//
+	// While cognitively confusing for us on the dev side, this reversal is
+	// by design with users in mind, as we don't want users to accidentally
+	// reset fields just because they neglected to give those fields a value in
+	// the passed KVMetadataInput struct. This way, they only need to pass
+	// the fields they want to change.
+	//
+	// Thus, here we need to dereference our pointers and set any explicit zero values
+	// to null in the JSON so that JSONMergePatch understands to delete the values.
+	if metadata.MaxVersions != nil {
+		derefVal := *(metadata.MaxVersions)
+		if derefVal == 0 {
+			md[maxVersionsKey] = nil
+		} else {
+			md[maxVersionsKey] = derefVal
+		}
+	}
+	if metadata.CASRequired != nil {
+		derefVal := *(metadata.CASRequired)
+		if derefVal == false {
+			md[casRequiredKey] = nil
+		} else {
+			md[casRequiredKey] = derefVal
+		}
+	}
+	if metadata.CustomMetadata != nil {
+		if len(metadata.CustomMetadata) == 0 { // empty non-nil map means delete all the keys
+			md[customMetadataKey] = nil
+		} else {
+			md[customMetadataKey] = metadata.CustomMetadata
+		}
+	}
+	if metadata.DeleteVersionAfter != nil {
+		derefVal := *metadata.DeleteVersionAfter
+		strDuration := derefVal.String()
+		parsedVal, err := time.ParseDuration(strDuration)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse DeleteVersionAfter duration: %w", err)
+		}
+		if parsedVal == 0 {
+			// TODO: This doesn't work until a bug is fixed.. currently
+			// there seems to be no way to reset the delete_version_after field.
+			md[deleteVersionAfterKey] = nil
+		} else {
+			md[deleteVersionAfterKey] = strDuration
+		}
+	}
+
+	return md, nil
 }
