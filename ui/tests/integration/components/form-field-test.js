@@ -1,7 +1,6 @@
 import EmberObject from '@ember/object';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { dasherize } from '@ember/string';
 import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { create } from 'ember-cli-page-object';
@@ -138,7 +137,7 @@ module('Integration | Component | form field', function (hooks) {
     );
     assert.ok(component.hasRadio, 'renders radio buttons');
     const selectedValue = 'SHA256';
-    await component.selectRadioInput(dasherize(selectedValue));
+    await component.selectRadioInput(selectedValue);
     assert.equal(model.get('foo'), selectedValue);
     assert.ok(spy.calledWith('foo', selectedValue), 'onChange called with correct args');
   });

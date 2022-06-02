@@ -27,12 +27,13 @@
             <RadioButton
               class="radio"
               name={{@attr.name}}
-              id={{dasherize (or val.value val)}}
+              id={{or val.value val}}
+              value={{or val.value val}}
               @value={{or val.value val}}
               @onChange={{this.setAndBroadcast}}
               @groupValue={{(get @model this.valuePath)}}
             />
-            <label for={{dasherize (or val.value val)}} class="has-left-margin-xs">
+            <label for={{or val.value val}} class="has-left-margin-xs">
               {{or val.value val}}
             </label>
           </div>
