@@ -96,18 +96,18 @@ func TestAuditFile_fileModeExisting(t *testing.T) {
 func TestAuditFile_fileMode0000(t *testing.T) {
 	f, err := ioutil.TempFile("", "test")
 	if err != nil {
-		t.Fatalf("Failure to create test file.")
+		t.Fatalf("Failure to create test file. The error is %v",err)
 	}
 	defer os.Remove(f.Name())
 
 	err = os.Chmod(f.Name(), 0o777)
 	if err != nil {
-		t.Fatalf("Failure to chmod temp file for testing.")
+		t.Fatalf("Failure to chmod temp file for testing. The error is %v",err)
 	}
 
 	err = f.Close()
 	if err != nil {
-		t.Fatalf("Failure to close temp file for test.")
+		t.Fatalf("Failure to close temp file for test. The error is %v",err)
 	}
 
 	config := map[string]string{
@@ -126,7 +126,7 @@ func TestAuditFile_fileMode0000(t *testing.T) {
 
 	info, err := os.Stat(f.Name())
 	if err != nil {
-		t.Fatalf("cannot retrieve file mode from `Stat`")
+		t.Fatalf("cannot retrieve file mode from `Stat`. The error is %v",err)
 	}
 	if info.Mode() != os.FileMode(0o777) {
 		t.Fatalf("File mode does not match.")
