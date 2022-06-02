@@ -1149,7 +1149,7 @@ func parsePolicyIdentifiersFromJson(policyIdentifiers string) ([]string, error) 
 	if err != nil {
 		return policyIdentifierList, err
 	}
-	policyIdentifierList = make([]string, len(entries))
+	policyIdentifierList = make([]string, 0, len(entries))
 	for _, entry := range entries {
 		policyString, err := json.Marshal(entry)
 		if err != nil {
