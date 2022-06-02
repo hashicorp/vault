@@ -3,37 +3,29 @@
   <div class="selectable-card is-rounded is-grid-container">
     <div class="selectable-card-title">
       <h2 class="title-number">{{format-number this.total}}</h2>
-      <h3 class="title is-5" data-test-selectable-card-title={{this.formattedCardTitle}}>{{this.formattedCardTitle}}</h3>
-      <p class="has-text-grey is-size-8">{{this.subText}}</p>
+      <h3 class="title is-5" data-test-selectable-card-title={{@cardTitle}}>{{@cardTitle}}</h3>
+      <p class="has-text-grey is-size-8">{{@subText}}</p>
     </div>
     {{yield}}
   </div>
 {{else}}
-  <div class="selectable-card is-rounded {{if this.actionCard 'no-flex'}}">
-    {{#if this.actionCard}}
-      <div class="is-flex-between is-fullwidth card-details" data-test-selectable-card={{this.formattedCardTitle}}>
-        <h3 class="title is-5">{{this.formattedCardTitle}}</h3>
-        <LinkTo
-          @route={{this.actionTo}}
-          class="has-icon-right is-ghost is-no-underline has-text-semibold"
-          @query={{hash itemType=this.queryParam}}
-          data-test-action-text={{this.actionText}}
-        >
-          {{this.actionText}}
-          {{#if this.actionText}}
-            <Icon @name="chevron-right" />
-          {{/if}}
-        </LinkTo>
-      </div>
-      <p class="has-text-grey is-size-8">{{this.subText}}</p>
-      <h2 class="title-number">{{format-number this.total}}</h2>
-    {{else}}
-      <div>
-        <h2 class="title-number">{{format-number this.total}}</h2>
-        <h3 class="title is-5" data-test-selectable-card-title={{this.formattedCardTitle}}>{{this.formattedCardTitle}}</h3>
-        <p class="has-text-grey is-size-8">{{this.subText}}</p>
-      </div>
-    {{/if}}
+  <div class="selectable-card is-rounded no-flex">
+    <div class="is-flex-between is-fullwidth card-details" data-test-selectable-card={{@cardTitle}}>
+      <h3 class="title is-5">{{@cardTitle}}</h3>
+      <LinkTo
+        @route={{@actionTo}}
+        class="has-icon-right is-ghost is-no-underline has-text-semibold"
+        @query={{hash itemType=@queryParam}}
+        data-test-action-text={{@actionText}}
+      >
+        {{@actionText}}
+        {{#if @actionText}}
+          <Icon @name="chevron-right" />
+        {{/if}}
+      </LinkTo>
+    </div>
+    <p class="has-text-grey is-size-8">{{@subText}}</p>
+    <h2 class="title-number">{{format-number this.total}}</h2>
     {{yield}}
   </div>
 {{/if}}
