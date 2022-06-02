@@ -385,9 +385,14 @@ for "generate_lease".`,
 			},
 
 			"policy_identifiers": {
-				Type: framework.TypeCommaStringSlice,
-				Description: `A comma-separated string or list of policy OIDs, or a JSON list of qualified policy
-information, which must include an oid, and may include a notice and/or cps url, using the form 
+				Type:        framework.TypeCommaStringSlice,
+				Description: `A comma-separated string or list of policy OIDs`,
+			},
+
+			"policy_identifiers_json": {
+				Type: framework.TypeString,
+				Description: `This is an alternative way to pass in policy information (to policy_identifiers). It is a
+JSON list of qualified policies, which must include an oid, and may include a notice and/or cps url, using the form:
 [{"oid"="1.3.6.1.4.1.7.8","notice"="I am a user Notice"}, {"oid"="1.3.6.1.4.1.44947.1.2.4 ","cps"="https://example.com"}].`,
 			},
 
@@ -698,6 +703,12 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		}
 	} else {
 		*entry.GenerateLease = data.Get("generate_lease").(bool)
+	}
+
+	_, oidListSet := data.GetOk("policy_identifiers")
+	_, jsonListSet := data.GetOk("policy_identifiers_json")
+	if oidListSet && jsonListSet {
+		return logical.ErrorResponse("Policy Identifiers can be passed in using either a list of oids in policy_identifiers, or a json list in policy_identifiers_json, but not both"), nil
 	}
 
 	resp, err := validateRole(b, entry, ctx, req.Storage)
@@ -1118,25 +1129,28 @@ const pathRoleHelpSyn = `Manage the roles that can be created with this backend.
 
 const pathRoleHelpDesc = `This path lets you manage the roles that can be created with this backend.`
 
-const policyIdentifiersParam = "policy_identifiers"
-
 func getPolicyIdentifier(data *framework.FieldData, defaultIdentifiers *[]string) []string {
-	policyIdentifierEntry, ok := data.GetOk(policyIdentifiersParam)
-	if !ok {
-		// No Entry for policy_identifiers
+	policyIdentifierEntry, this_exists := data.GetOk("policy_identifiers")
+	if this_exists {
+		return policyIdentifierEntry.([]string) // Validation for Not Both Handled Separately
+	}
+	// Could Be In the JSON Entry field
+	policyIdentifierJsonEntry, that_exists := data.GetOk("policy_identifiers_json")
+	if !that_exists {
+		// No Entry for policy_identifiers in either field
 		if defaultIdentifiers != nil {
 			return *defaultIdentifiers
 		}
-		return data.Get(policyIdentifiersParam).([]string)
+		return data.Get("policy_identifiers").([]string) // Returns the field-default, currently an empty list
 	}
-	// Could Be A JSON Entry
-	policyIdentifierJsonEntry := data.Raw[policyIdentifiersParam]
 	policyIdentifiers, err := parsePolicyIdentifiersFromJson(policyIdentifierJsonEntry.(string))
-	if err == nil {
-		return policyIdentifiers
+	if err != nil {
+		// Not possible to error here; validation is handled later by validateRole, so give it a non-empty list of
+		// policy identifiers to work with
+		policyIdentifiers = make([]string, 1)
+		policyIdentifiers[0] = policyIdentifierJsonEntry.(string)
 	}
-	// Else could Just Be A List of OIDs
-	return policyIdentifierEntry.([]string)
+	return policyIdentifiers
 }
 
 func parsePolicyIdentifiersFromJson(policyIdentifiers string) ([]string, error) {
