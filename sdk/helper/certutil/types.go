@@ -947,6 +947,7 @@ type userNoticePolicyQualifier struct {
 	PolicyQualifierID asn1.ObjectIdentifier
 	Qualifier         userNotice
 }
+
 type userNotice struct {
 	ExplicitText string `asn1:"tag:optional,utf8"`
 }
