@@ -1,5 +1,4 @@
 <div class={{if this.alwaysShow "hover-copy-button-static" "hover-copy-button"}} data-test-hover-copy>
-  {{! ARG CONFIRM AGAINST MAIN TO SEE WHAT IS RIGHT HERE }}
   <ToolTip @onClose={{action (mut this.tooltipText) "Copy"}} as |T|>
     <T.Trigger data-test-tooltip-trigger tabindex="-1">
       <CopyButton

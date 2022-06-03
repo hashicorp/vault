@@ -15,7 +15,6 @@ module('Integration | Component | hover copy button', function (hooks) {
     <div class="has-copy-button" tabindex="-1">
       <HoverCopyButton @copyValue="foo" />
       </div>
-    
   `);
     await component.focusContainer();
     await settled();
