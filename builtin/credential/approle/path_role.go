@@ -489,7 +489,7 @@ Overrides secret_id_num_uses role option when supplied. May not be higher than r
 				"ttl": {
 					Type: framework.TypeDurationSecond,
 					Description: `Duration in seconds after which this SecretID expires. Defaults to 0, meaning no expiration.
-Overrides secret_id_ttl role option when supplied. May not be shorter than role's secret_id_ttl.`,
+Overrides secret_id_ttl role option when supplied. May not be longer than role's secret_id_ttl.`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -609,7 +609,7 @@ Overrides secret_id_num_uses role option when supplied. May not be higher than r
 				"ttl": {
 					Type: framework.TypeDurationSecond,
 					Description: `Duration in seconds after which this SecretID expires. Defaults to 0, meaning no expiration.
-Overrides secret_id_ttl role option when supplied. May not be shorter than role's secret_id_ttl.`,
+Overrides secret_id_ttl role option when supplied. May not be longer than role's secret_id_ttl.`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -2574,7 +2574,7 @@ but is still the highest possible num_uses.`,
 'role/<role_name>/secret-id' or 'role/<role_name>/custom-secret-id' endpoints,
 then the lifetime of the SecretID is by default defined by this option.
 Can be overriden by the 'ttl' field on either of the two endpoints,
-but is still the shortest possible ttl.`,
+but is still the longest possible ttl.`,
 	},
 	"role-secret-id-lookup": {
 		"Read the properties of an issued secret_id",

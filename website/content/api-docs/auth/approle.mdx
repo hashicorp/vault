@@ -73,7 +73,7 @@ enabled while creating or updating a role.
 - `secret_id_ttl` `(string: "")` - Duration in either an integer number of
   seconds (`3600`) or an integer time unit (`60m`) after which by default any SecretID
   expires.
-  Can be overriden by `ttl` request field when generating a SecretID, but is still the shortest possible ttl.
+  Can be overriden by `ttl` request field when generating a SecretID, but is still the longest possible ttl.
 - `local_secret_ids` `(bool: false)` - If set, the secret IDs generated
   using this role will be cluster local. This can only be set during role
   creation and once set, it can't be reset later.
@@ -281,7 +281,7 @@ itself, and also to delete the SecretID from the AppRole.
 - `ttl` `(string: "")` - Duration in seconds (`3600`) or an integer time unit (`60m`)
   after which this SecretID expires. Defaults to 0, meaning no expiration.
   Overrides secret_id_ttl role option when supplied.
-  May not be shorter than role's secret_id_ttl.
+  May not be longer than role's secret_id_ttl.
 
 ### Sample Payload
 
@@ -521,7 +521,7 @@ Assigns a "custom" SecretID against an existing AppRole. This is used in the
 - `ttl` `(string: "")` - Duration in seconds (`3600`) or an integer time unit (`60m`)
   after which this SecretID expires. Defaults to 0, meaning no expiration.
   Overrides secret_id_ttl role option when supplied.
-  May not be shorter than role's secret_id_ttl.
+  May not be longer than role's secret_id_ttl.
 
 ### Sample Payload
 
