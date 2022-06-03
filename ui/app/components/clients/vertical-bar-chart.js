@@ -14,6 +14,7 @@ import {
   TRANSLATE,
   formatNumbers,
 } from 'vault/utils/chart-helpers';
+import { formatNumber } from 'core/helpers/format-number';
 
 /**
  * @module VerticalBarChart
@@ -136,9 +137,9 @@ export default class VerticalBarChart extends Component {
     // MOUSE EVENT FOR TOOLTIP
     tooltipRect.on('mouseover', (data) => {
       let hoveredMonth = data[this.xKey];
-      this.tooltipTotal = `${data[this.yKey]} ${data.new_clients ? 'total' : 'new'} clients`;
-      this.entityClients = `${data.entity_clients} entity clients`;
-      this.nonEntityClients = `${data.non_entity_clients} non-entity clients`;
+      this.tooltipTotal = `${formatNumber([data[this.yKey]])} ${data.new_clients ? 'total' : 'new'} clients`;
+      this.entityClients = `${formatNumber([data.entity_clients])} entity clients`;
+      this.nonEntityClients = `${formatNumber([data.non_entity_clients])} non-entity clients`;
       let node = chartSvg
         .selectAll('rect.data-bar')
         // filter for the top data bar (so y-coord !== 0) with matching month

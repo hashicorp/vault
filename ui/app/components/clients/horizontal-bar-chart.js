@@ -8,6 +8,7 @@ import { axisLeft } from 'd3-axis';
 import { max, maxIndex } from 'd3-array';
 import { BAR_COLOR_HOVER, GREY, LIGHT_AND_DARK_BLUE, formatTooltipNumber } from 'vault/utils/chart-helpers';
 import { tracked } from '@glimmer/tracking';
+import { formatNumber } from 'core/helpers/format-number';
 
 /**
  * @module HorizontalBarChart
@@ -248,7 +249,7 @@ export default class HorizontalBarChart extends Component {
       .data(dataset)
       .enter()
       .append('text')
-      .text((d) => d[xKey])
+      .text((d) => formatNumber([d[xKey]]))
       .attr('fill', '#000')
       .attr('class', 'total-value')
       .style('font-size', '.8rem')

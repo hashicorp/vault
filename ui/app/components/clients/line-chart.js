@@ -14,6 +14,7 @@ import {
   formatNumbers,
 } from 'vault/utils/chart-helpers';
 import { parseAPITimestamp, formatChartDate } from 'core/utils/date-formatters';
+import { formatNumber } from 'core/helpers/format-number';
 
 /**
  * @module LineChart
@@ -177,8 +178,8 @@ export default class LineChart extends Component {
     hoverCircles.on('mouseover', (data) => {
       // TODO: how to generalize this?
       this.tooltipMonth = formatChartDate(data[this.xKey]);
-      this.tooltipTotal = data[this.yKey] + ' total clients';
-      this.tooltipNew = (data?.new_clients[this.yKey] || '0') + ' new clients';
+      this.tooltipTotal = formatNumber([data[this.yKey]]) + ' total clients';
+      this.tooltipNew = (formatNumber([data?.new_clients[this.yKey]]) || '0') + ' new clients';
       this.tooltipUpgradeText = '';
       let upgradeInfo = findUpgradeData(data);
       if (upgradeInfo) {
