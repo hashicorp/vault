@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	// PluginAutoMTLSEnv is used to ensure AutoMTLS is used. This will override
-	// setting a TLSProviderFunc for a plugin.
+	// PluginAutoMTLSEnv ensures AutoMTLS is used. This overrides setting a
+	// TLSProviderFunc for a plugin.
 	PluginAutoMTLSEnv = "VAULT_PLUGIN_AUTOMTLS"
 
 	// PluginMetadataModeEnv is an ENV name used to disable TLS communication

@@ -15,8 +15,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 )
 
-const BackendPluginAutoMTLSMinVersion int = 5
-
 // generateCert is used internally to create certificates for the plugin
 // client and server.
 func generateCert() ([]byte, *ecdsa.PrivateKey, error) {

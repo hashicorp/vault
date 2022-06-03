@@ -23,12 +23,6 @@ type BackendPluginClient struct {
 	logical.Backend
 }
 
-// AutoMTLSSupported inspects the go-plugin client's negotiated version. This
-// allows us to determine if a given client supports AutoMTLS
-func (b *BackendPluginClient) AutoMTLSSupported() bool {
-	return b.client.NegotiatedVersion() >= pluginutil.BackendPluginAutoMTLSMinVersion
-}
-
 // Cleanup calls the RPC client's Cleanup() func and also calls
 // the go-plugin's client Kill() func
 func (b *BackendPluginClient) Cleanup(ctx context.Context) {

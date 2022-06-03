@@ -71,23 +71,18 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*PluginBackend, 
 
 		return &b, nil
 	}
+
+	// Setup the backend so we can inspect the SpecialPaths and Type
 	err = raw.Setup(ctx, conf)
 	if err != nil {
 		raw.Cleanup(ctx)
 		return nil, err
 	}
-	// Get SpecialPaths and BackendType
 	paths := raw.SpecialPaths()
 	btype := raw.Type()
 
-	// If the plugin doesn't support AutoMTLS, we will kill the meta plugin so
-	// that it can be lazy loaded. This is done to avoid a setup-unwrap cycle.
-	if bpc, ok := raw.(*bplugin.BackendPluginClient); ok {
-		if !bpc.AutoMTLSSupported() {
-			// Cleanup meta plugin backend
-			raw.Cleanup(ctx)
-		}
-	}
+	// Cleanup meta plugin backend
+	raw.Cleanup(ctx)
 
 	// Initialize b.Backend with dummy backend since plugin
 	// backends will need to be lazy loaded.
