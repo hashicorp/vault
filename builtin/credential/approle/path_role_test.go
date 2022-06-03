@@ -1280,7 +1280,7 @@ func TestAppRole_ErrorsRoleSecretIDWithInvalidFields(t *testing.T) {
 		},
 	}
 
-	roleConfigurations := []roleTestCase{
+	roleTestCases := []roleTestCase{
 		{
 			name: "infinite role secret id ttl",
 			options: map[string]interface{}{
@@ -1331,7 +1331,7 @@ func TestAppRole_ErrorsRoleSecretIDWithInvalidFields(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
-	for i, rc := range roleConfigurations {
+	for i, rc := range roleTestCases {
 		roleData := map[string]interface{}{
 			"policies":      "p,q,r,s",
 			"token_ttl":     400,
