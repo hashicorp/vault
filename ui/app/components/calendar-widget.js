@@ -80,6 +80,15 @@ class CalendarWidget extends Component {
     element.classList.remove(classString);
   }
 
+  resetDisplayYear() {
+    try {
+      this.displayYear = parseInt(this.endTimeFromResponse[0]);
+    } catch (e) {
+      console.debug('Error resetting display year', e);
+      this.displayYear = this.currentYear;
+    }
+  }
+
   // ACTIONS (alphabetically) //
   @action
   addTooltip() {
@@ -121,6 +130,7 @@ class CalendarWidget extends Component {
   @action
   toggleShowCalendar() {
     this.showCalendar = !this.showCalendar;
+    this.resetDisplayYear();
   }
 }
 export default setComponentTemplate(layout, CalendarWidget);
