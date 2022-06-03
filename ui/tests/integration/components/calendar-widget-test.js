@@ -119,4 +119,22 @@ module('Integration | Component | calendar-widget', function (hooks) {
       'Passes the month as an index, year and date type to the parent'
     );
   });
+
+  test('it displays the year from endTimeDisplay when opened', async function (assert) {
+    this.set('endTimeFromResponse', [this.previousYear, 11]);
+    await render(hbs`
+    <CalendarWidget
+      @arrayOfMonths={{arrayOfMonths}}
+      @endTimeDisplay={{concat "December " previousYear}}
+      @endTimeFromResponse={{endTimeFromResponse}}
+      @handleClientActivityQuery={{handleClientActivityQuery}}
+      @handleCurrentBillingPeriod={{handleCurrentBillingPeriod}}
+      @startTimeDisplay={{"March 2020"}}
+    />
+  `);
+    await calendarDropdown.openCalendar();
+    assert
+      .dom('[data-test-display-year]')
+      .hasText(this.previousYear.toString(), 'Shows year from the end response');
+  });
 });
