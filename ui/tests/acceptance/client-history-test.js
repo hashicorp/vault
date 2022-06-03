@@ -9,6 +9,8 @@ import { SELECTORS, overrideResponse } from '../helpers/clients';
 import { create } from 'ember-cli-page-object';
 import ss from 'vault/tests/pages/components/search-select';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
+import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
+
 const searchSelect = create(ss);
 
 const NEW_DATE = new Date();
@@ -133,18 +135,47 @@ module('Acceptance | clients history tab', function (hooks) {
   });
 
   test('updates correctly when querying date ranges', async function (assert) {
-    assert.expect(17);
+    assert.expect(26);
     // TODO CMB: wire up dynamically generated activity to mirage clients handler
     // const activity = generateActivityResponse(5, LICENSE_START, LAST_MONTH);
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history');
 
-    // change billing start month
+    // query for single, historical month with no new counts
+    await click(SELECTORS.rangeDropdown);
+    await click('[data-test-show-calendar]');
+    if (parseInt(find('[data-test-display-year]').innerText) > LICENSE_START.getFullYear()) {
+      await click('[data-test-previous-year]');
+    }
+    await click(find(`[data-test-calendar-month=${ARRAY_OF_MONTHS[LICENSE_START.getMonth()]}]`));
+
+    assert.dom('[data-test-usage-stats]').exists('total usage stats show');
+    assert
+      .dom(SELECTORS.runningTotalMonthStats)
+      .doesNotExist('running total single month stat boxes do not show');
+    assert
+      .dom(SELECTORS.runningTotalMonthlyCharts)
+      .doesNotExist('running total month over month charts do not show');
+    assert.dom(SELECTORS.monthlyUsageBlock).doesNotExist('does not show monthly usage block');
+    assert.dom(SELECTORS.attributionBlock).exists('attribution area shows');
+    assert
+      .dom('[data-test-chart-container="new-clients"] [data-test-component="empty-state"]')
+      .exists('new client attribution has empty state');
+    assert
+      .dom('[data-test-empty-state-subtext]')
+      .hasText('There are no new clients for this namespace during this time period.    ');
+    assert.dom('[data-test-chart-container="total-clients"]').exists('total client attribution chart shows');
+
+    // reset to billing period
+    await click('[data-test-popup-menu-trigger]');
+    await click('[data-test-current-billing-period]');
+
+    // change billing start to month/year of first upgrade
     await click('[data-test-start-date-editor] button');
     await click(SELECTORS.monthDropdown);
-    await click(find('.menu-list button:not([disabled])'));
+    await click(find(`[data-test-date-modal-month="${ARRAY_OF_MONTHS[UPGRADE_DATE.getMonth()]}"]`));
     await click(SELECTORS.yearDropdown);
-    await click(find('.menu-list button:not([disabled])'));
+    await click(find(`[data-test-date-modal-year="${UPGRADE_DATE.getFullYear()}`));
     await click('[data-test-modal-save]');
 
     assert.dom(SELECTORS.attributionBlock).exists('Shows attribution area');
@@ -154,7 +185,7 @@ module('Acceptance | clients history tab', function (hooks) {
       .exists('Shows running totals with monthly breakdown charts');
     assert
       .dom(find('[data-test-line-chart="x-axis-labels"] g.tick text'))
-      .hasText('1/22', 'x-axis labels start with updated billing start month');
+      .hasText(`${format(UPGRADE_DATE, 'M/yy')}`, 'x-axis labels start with updated billing start month');
     assert.equal(
       findAll('[data-test-line-chart="plot-point"]').length,
       5,
@@ -164,9 +195,10 @@ module('Acceptance | clients history tab', function (hooks) {
     // query custom end month
     await click(SELECTORS.rangeDropdown);
     await click('[data-test-show-calendar]');
-    let readOnlyMonths = findAll('[data-test-calendar-month].is-readOnly');
-    let clickableMonths = findAll('[data-test-calendar-month]').filter((m) => !readOnlyMonths.includes(m));
-    await click(clickableMonths[1]);
+    if (parseInt(find('[data-test-display-year]').innerText) < NEW_DATE.getFullYear()) {
+      await click('[data-test-future-year]');
+    }
+    await click(find(`[data-test-calendar-month=${ARRAY_OF_MONTHS[LAST_MONTH.getMonth() - 2]}]`));
 
     assert.dom(SELECTORS.attributionBlock).exists('Shows attribution area');
     assert.dom(SELECTORS.monthlyUsageBlock).exists('Shows monthly usage block');
@@ -175,23 +207,27 @@ module('Acceptance | clients history tab', function (hooks) {
       .exists('Shows running totals with monthly breakdown charts');
     assert.equal(
       findAll('[data-test-line-chart="plot-point"]').length,
-      2,
-      `line chart plots 2 points to match query`
+      3,
+      `line chart plots 3 points to match query`
     );
+    let xAxisLabels = findAll('[data-test-line-chart="x-axis-labels"] g.tick text');
     assert
-      .dom(findAll('[data-test-line-chart="x-axis-labels"] g.tick text')[1])
-      .hasText('2/22', 'x-axis labels start with updated billing start month');
+      .dom(xAxisLabels[xAxisLabels.length - 1])
+      .hasText(`${format(subMonths(LAST_MONTH, 2), 'M/yy')}`, 'x-axis labels end with queried end month');
 
     // query for single, historical month
     await click(SELECTORS.rangeDropdown);
     await click('[data-test-show-calendar]');
-    readOnlyMonths = findAll('[data-test-calendar-month].is-readOnly');
-    clickableMonths = findAll('[data-test-calendar-month]').filter((m) => !readOnlyMonths.includes(m));
-    await click(clickableMonths[0]);
+    if (parseInt(find('[data-test-display-year]').innerText) < NEW_DATE.getFullYear()) {
+      await click('[data-test-future-year]');
+    }
+    await click(find(`[data-test-calendar-month=${ARRAY_OF_MONTHS[UPGRADE_DATE.getMonth()]}]`));
+
     assert.dom(SELECTORS.runningTotalMonthStats).exists('running total single month stat boxes show');
     assert
       .dom(SELECTORS.runningTotalMonthlyCharts)
       .doesNotExist('running total month over month charts do not show');
+    assert.dom(SELECTORS.monthlyUsageBlock).doesNotExist('Does not show monthly usage block');
     assert.dom(SELECTORS.attributionBlock).exists('attribution area shows');
     assert.dom('[data-test-chart-container="new-clients"]').exists('new client attribution chart shows');
     assert.dom('[data-test-chart-container="total-clients"]').exists('total client attribution chart shows');
@@ -203,8 +239,7 @@ module('Acceptance | clients history tab', function (hooks) {
     // query month older than count start date
     await click('[data-test-start-date-editor] button');
     await click(SELECTORS.yearDropdown);
-    let years = findAll('.menu-list button:not([disabled])');
-    await click(years[years.length - 1]);
+    await click(find(`[data-test-date-modal-year="${LICENSE_START.getFullYear() - 3}`));
     await click('[data-test-modal-save]');
 
     assert

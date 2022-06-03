@@ -24,7 +24,10 @@
 
   {{#if this.barChartTotalClients}}
     {{#if (or @isDateRange @isCurrentMonth)}}
-      <div class="chart-container-wide" data-test-chart-container="total-clients">
+      <div
+        class={{concat (unless this.barChartTotalClients "chart-empty-state ") "chart-container-wide"}}
+        data-test-chart-container="total-clients"
+      >
         <Clients::HorizontalBarChart
           @dataset={{this.barChartTotalClients}}
           @chartLegend={{@chartLegend}}
