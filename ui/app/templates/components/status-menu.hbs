@@ -4,23 +4,20 @@
     class={{if (eq this.type "replication") "" "button is-transparent"}}
   >
     <span class="status-indicator-color">
-      <Icon @name={{this.glyphName}} aria-label={{this.ariaLabel}} />
+      <Icon @name={{this.glyphName}} aria-label={{@ariaLabel}} />
     </span>
     <div class="status-menu-label">
-      {{this.label}}
+      {{@label}}
     </div>
     <Chevron @direction="down" class="has-text-white is-status-chevron" />
   </d.Trigger>
   <d.Content @defaultClass={{concat "status-menu-content status-menu-content-" this.type}}>
     {{#if (eq this.type "user")}}
-      {{#if (and this.cluster.name this.auth.currentToken)}}
-        <AuthInfo @activeClusterName={{this.cluster.name}} @onLinkClick={{action this.onLinkClick}} />
+      {{#if (and this.currentCluster.cluster.name this.auth.currentToken)}}
+        <AuthInfo @activeClusterName={{this.currentCluster.cluster.name}} @onLinkClick={{@onLinkClick}} />
       {{/if}}
     {{else}}
-      <ClusterInfo
-        @cluster={{this.cluster}}
-        @onLinkClick={{action (queue (action this.onLinkClick) (action d.actions.close))}}
-      />
+      <ClusterInfo @cluster={{this.currentCluster.cluster}} @onLinkClick={{fn this.handleClick d}} />
     {{/if}}
   </d.Content>
 </BasicDropdown>

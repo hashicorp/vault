@@ -150,6 +150,12 @@ func TestKVHelpers(t *testing.T) {
 			t.Fatalf("data still exists on the first version of the secret despite this version being deleted")
 		}
 
+		// undelete it
+		err = client.KVv2(mountPath).Undelete(context.Background(), secretPath, []int{1})
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		// check that KVOption works
 		////
 		// WithCheckAndSet
@@ -295,6 +301,41 @@ func TestKVHelpers(t *testing.T) {
 
 		if versions[0].Version != 1 || versions[len(versions)-1].Version != expectedLength {
 			t.Fatalf("versions list is not ordered as expected")
+		}
+
+		// roll back to version 1
+		rb, err := client.KVv2(mountPath).Rollback(context.Background(), secretPath, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if rb.VersionMetadata.Version != 9 {
+			t.Fatalf("expected returned secret's version %d to be the latest version, which should be 9", rb.VersionMetadata.Version)
+		}
+
+		// destroy version 1
+		err = client.KVv2(mountPath).Destroy(context.Background(), secretPath, []int{1})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// roll back but fail
+		_, err = client.KVv2(mountPath).Rollback(context.Background(), secretPath, 1)
+		if err == nil {
+			t.Fatalf("expected error from trying to rollback to destroyed version")
+		}
+
+		// create another secret
+		_, err = client.KVv2(mountPath).Put(context.Background(), "nested/my-other-secret", map[string]interface{}{
+			"color": "yellow",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// finally, delete it all
+		err = client.KVv2(mountPath).DeleteMetadata(context.Background(), secretPath)
+		if err != nil {
+			t.Fatal(err)
 		}
 
 		// put and patch metadata

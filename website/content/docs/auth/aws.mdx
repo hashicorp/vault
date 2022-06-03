@@ -6,6 +6,8 @@ description: The aws auth method allows automated authentication of AWS entities
 
 # AWS Auth Method
 
+@include 'x509-sha1-deprecation.mdx'
+
 The `aws` auth method provides an automated mechanism to retrieve a Vault token
 for IAM principals and AWS EC2 instances. Unlike most Vault auth methods, this
 method does not require manual first-deploying, or provisioning
