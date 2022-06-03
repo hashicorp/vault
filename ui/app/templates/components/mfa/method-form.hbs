@@ -7,6 +7,7 @@
   <div class="field is-grouped-split box is-fullwidth is-bottomless">
     <div class="control">
       <button
+        data-test-mfa-save
         type="button"
         class="button is-primary {{if this.save.isRunning 'is-loading'}}"
         disabled={{this.save.isRunning}}
@@ -28,6 +29,7 @@
   @isActive={{this.isEditModalActive}}
   @confirmText={{@model.type}}
   @onConfirm={{perform this.save}}
+  @testSelector="mfa"
 >
   <p>
     Editing this configuration will have an impact on all authentication types, methods, groups and entities which make use
