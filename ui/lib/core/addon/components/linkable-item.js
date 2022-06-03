@@ -1,3 +1,7 @@
+import Component from '@glimmer/component';
+import layout from '../templates/components/linkable-item';
+import { setComponentTemplate } from '@ember/component';
+
 /**
  * @module LinkableItem
  * LinkableItem components have two contextual components, a Content component used to show information on the left with a Menu component on the right, all aligned vertically centered. If passed a link, the block will be clickable.
@@ -13,9 +17,6 @@
  * @param {boolean} [disabled=false] - If no link then should be given a disabled attribute equal to true
  */
 
-import Component from '@glimmer/component';
-import layout from '../templates/components/linkable-item';
-import { setComponentTemplate } from '@ember/component';
 /* eslint ember/no-empty-glimmer-component-classes: 'warn' */
 class LinkableItemComponent extends Component {}
 
