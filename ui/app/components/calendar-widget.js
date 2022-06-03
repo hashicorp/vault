@@ -43,6 +43,33 @@ class CalendarWidget extends Component {
     let startYear = parseInt(this.args.startTimeDisplay.split(' ')[1]);
     return this.displayYear === startYear; // if on startYear then don't let them click back to the year prior
   }
+  get widgetMonths() {
+    const displayYear = this.displayYear;
+    const currentYear = this.currentYear;
+    const currentMonthIdx = this.currentMonth;
+    const [startMonth, startYear] = this.args.startTimeDisplay.split(' ');
+    const startMonthIdx = this.args.arrayOfMonths.indexOf(startMonth);
+    return this.args.arrayOfMonths.map((month, idx) => {
+      const monthId = `${idx}-${displayYear}`;
+      let readonly = false;
+
+      // if widget is showing billing start year, disable if month is before start month
+      if (parseInt(startYear) === displayYear && idx < startMonthIdx) {
+        readonly = true;
+      }
+
+      // if widget showing current year, disable if month is current or later
+      if (displayYear === currentYear && idx >= currentMonthIdx) {
+        readonly = true;
+      }
+      return {
+        id: monthId,
+        month,
+        readonly,
+        current: monthId === `${currentMonthIdx}-${currentYear}`,
+      };
+    });
+  }
 
   // HELPER FUNCTIONS (alphabetically) //
   addClass(element, classString) {
@@ -66,41 +93,6 @@ class CalendarWidget extends Component {
   @action
   addYear() {
     this.displayYear = this.displayYear + 1;
-    this.disableMonths();
-  }
-
-  @action
-  disableMonths() {
-    this.allMonthsNodeList = document.querySelectorAll('.is-month-list');
-    this.allMonthsNodeList.forEach((e) => {
-      // clear all is-readOnly classes and start over.
-      this.removeClass(e, 'is-readOnly');
-
-      let elementMonthId = parseInt(e.id.split('-')[0]); // dependent on the shape of the element id
-      // for current year
-
-      if (this.currentMonth <= elementMonthId) {
-        // only disable months when current year is selected
-        if (this.currentYear === this.displayYear) {
-          e.classList.add('is-readOnly');
-        }
-      }
-      // compare for startYear view
-      if (this.displayYear.toString() === this.args.startTimeDisplay.split(' ')[1]) {
-        // if they are on the view where the start year equals the display year, check which months should not show.
-        let startMonth = this.args.startTimeDisplay.split(' ')[0]; // returns month name e.g. January
-        // return the index of the startMonth
-        let startMonthIndex = this.args.arrayOfMonths.indexOf(startMonth);
-        // then add readOnly class to any month less than the startMonth index.
-        if (startMonthIndex > elementMonthId) {
-          e.classList.add('is-readOnly');
-        }
-      }
-      if (this.displayYear === this.currentYear && this.endMonth < elementMonthId) {
-        // add readOnly class to any month that is after current month
-        e.classList.add('is-readOnly');
-      }
-    });
   }
 
   @action removeTooltip() {
@@ -114,23 +106,21 @@ class CalendarWidget extends Component {
     D.actions.close(); // close the dropdown.
   }
   @action
-  selectEndMonth(month, year, D) {
+  selectEndMonth(monthId, D) {
+    const [monthIdx, year] = monthId.split('-');
     this.toggleShowCalendar();
-    this.args.handleClientActivityQuery(month, year, 'endTime');
+    this.args.handleClientActivityQuery(monthIdx, year, 'endTime');
     D.actions.close(); // close the dropdown.
   }
 
   @action
   subYear() {
     this.displayYear = this.displayYear - 1;
-    this.disableMonths();
   }
 
   @action
   toggleShowCalendar() {
     this.showCalendar = !this.showCalendar;
-    // reset year to current when toggled
-    this.displayYear = this.currentYear;
   }
 }
 export default setComponentTemplate(layout, CalendarWidget);
