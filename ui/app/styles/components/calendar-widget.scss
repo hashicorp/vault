@@ -82,7 +82,7 @@ $dark-gray: #535f73;
       color: lighten($dark-gray, 30%);
       pointer-events: none;
     }
-    &.is-end-month {
+    &.is-selected-month {
       background-color: lighten($dark-gray, 30%);
       color: white;
       text-align: center;

@@ -32,7 +32,8 @@ class CalendarWidget extends Component {
   @tracked tooltipTarget = null;
   @tracked tooltipText = null;
 
-  get currentMonthId() {
+  get selectedMonthId() {
+    if (!this.args.endTimeFromResponse) return '';
     const [year, monthIndex] = this.args.endTimeFromResponse;
     return `${monthIndex}-${year}`;
   }
@@ -81,12 +82,16 @@ class CalendarWidget extends Component {
   }
 
   resetDisplayYear() {
-    try {
-      this.displayYear = parseInt(this.endTimeFromResponse[0]);
-    } catch (e) {
-      console.debug('Error resetting display year', e);
-      this.displayYear = this.currentYear;
+    let setYear = this.currentYear;
+    if (this.args.endTimeDisplay) {
+      try {
+        const year = this.args.endTimeDisplay.split(' ')[1];
+        setYear = parseInt(year);
+      } catch (e) {
+        console.debug('Error resetting display year', e);
+      }
     }
+    this.displayYear = setYear;
   }
 
   // ACTIONS (alphabetically) //

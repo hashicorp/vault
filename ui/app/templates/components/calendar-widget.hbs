@@ -97,7 +97,7 @@
             <button
               data-test-calendar-month={{m.month}}
               type="button"
-              class="is-month-list {{if m.readonly 'is-readOnly'}} {{if (eq m.id this.currentMonthId) 'is-end-month'}}"
+              class="is-month-list {{if m.readonly 'is-readOnly'}} {{if (eq m.id this.selectedMonthId) 'is-selected-month'}}"
               id={{m.id}}
               {{on "click" (fn this.selectEndMonth m.id D)}}
             >
