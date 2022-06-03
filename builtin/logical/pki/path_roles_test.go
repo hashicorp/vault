@@ -7,14 +7,15 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/go-errors/errors"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 func TestPki_RoleGenerateLease(t *testing.T) {
@@ -1026,7 +1027,6 @@ func TestPki_RolePatch(t *testing.T) {
 }
 
 func TestPKI_RolePolicyInformation_Flat(t *testing.T) {
-
 	type TestCase struct {
 		Input   interface{}
 		ASN     interface{}
