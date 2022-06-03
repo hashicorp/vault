@@ -1247,7 +1247,6 @@ func TestAppRole_RoleSecretIDWithValidFields(t *testing.T) {
 }
 
 func TestAppRole_ErrorsRoleSecretIDWithInvalidFields(t *testing.T) {
-
 	type testCase struct {
 		name     string
 		payload  map[string]interface{}
