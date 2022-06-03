@@ -928,8 +928,8 @@ func TestPki_RolePatch(t *testing.T) {
 		},
 		{
 			Field:   "policy_identifiers",
-			Before:  []string{"1.2.3.4.5"},
-			Patched: []string{"5.4.3.2.1"},
+			Before:  []string{"1.3.6.1.4.1.1.1"},
+			Patched: []string{"1.3.6.1.4.1.1.2"},
 		},
 		{
 			Field:   "basic_constraints_valid_for_non_ca",
