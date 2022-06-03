@@ -1719,9 +1719,6 @@ func modifyResponseMonths(months []*ResponseMonth, start time.Time, end time.Tim
 		return months
 	}
 	start = timeutil.StartOfMonth(start)
-	if timeutil.IsCurrentMonth(end, time.Now().UTC()) {
-		end = timeutil.StartOfMonth(end).AddDate(0, -1, 0)
-	}
 	end = timeutil.EndOfMonth(end)
 	if timeutil.IsCurrentMonth(end, time.Now().UTC()) {
 		end = timeutil.EndOfMonth(timeutil.StartOfMonth(end).AddDate(0, -1, 0))
