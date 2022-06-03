@@ -6,6 +6,8 @@ description: This is the API documentation for the Vault Consul secrets engine.
 
 # Consul Secrets Engine (API)
 
+@include 'x509-sha1-deprecation.mdx'
+
 This is the API documentation for the Vault Consul secrets engine. For general
 information about the usage and operation of the Consul secrets engine, please
 see the [Vault Consul documentation](/docs/secrets/consul).
