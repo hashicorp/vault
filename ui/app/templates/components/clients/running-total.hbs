@@ -1,5 +1,5 @@
 {{#if this.showSingleMonth}}
-  <div class="chart-wrapper single-month-grid">
+  <div class="chart-wrapper single-month-grid" data-test-running-total="single-month-stats">
     <div class="chart-header has-bottom-margin-sm">
       <h2 class="chart-title">Vault client counts</h2>
       <p class="chart-description">
@@ -41,7 +41,7 @@
     </div>
   </div>
 {{else}}
-  <div class="chart-wrapper stacked-charts">
+  <div class="chart-wrapper stacked-charts" data-test-running-total="monthly-charts">
     <div class="single-chart-grid">
       <div class="chart-header has-bottom-margin-xl">
         <h2 class="chart-title">Vault client counts</h2>
@@ -59,14 +59,14 @@
         <h2 class="chart-title">Running client total</h2>
         <p class="chart-subtext">The number of clients which interacted with Vault during this date range. </p>
       </div>
-      <div class="data-details-top">
+      <div class="data-details-top" data-test-running-total-entity>
         <h3 class="data-details">Entity clients</h3>
         <p class="data-details">
           {{format-number this.entityClientData.runningTotal}}
         </p>
       </div>
 
-      <div class="data-details-bottom">
+      <div class="data-details-bottom" data-test-running-total-nonentity>
         <h3 class="data-details">Non-entity clients</h3>
         <p class="data-details">
           {{format-number this.nonEntityClientData.runningTotal}}
@@ -95,14 +95,14 @@
         </p>
       </div>
 
-      <div class="data-details-top">
+      <div class="data-details-top" data-test-running-new-entity>
         <h3 class="data-details">Average new entity clients per month</h3>
         <p class="data-details">
           {{format-number this.entityClientData.averageNewClients}}
         </p>
       </div>
 
-      <div class="data-details-bottom">
+      <div class="data-details-bottom" data-test-running-new-nonentity>
         <h3 class="data-details">Average new non-entity clients per month</h3>
         <p class="data-details">
           {{format-number this.nonEntityClientData.averageNewClients}}

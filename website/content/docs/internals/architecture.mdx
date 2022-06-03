@@ -37,11 +37,12 @@ When a Vault server is started, it starts in a _sealed_ state. Before any
 operation can be performed on the Vault, it must be _unsealed_. This is done by
 providing the unseal keys. When the Vault is initialized, it generates an
 encryption key which is used to protect all Vault data. This key is protected by
-a root key. By default, Vault uses [Shamir's Secret
+a root key. The root key is stored alongside all other Vault data, but is encrypted by yet another mechanism: the unseal key.
+By default, Vault uses [Shamir's Secret
 Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing) to split the
-root key into a configured number of shards (referred as key shares or unseal
-keys). A certain threshold of shards is required to reconstruct the root key,
-which is then used to decrypt the Vault's encryption key.
+unseal key into a configured number of shards (referred as key shares or unseal
+keys). A certain threshold of shards is required to reconstruct the unseal key,
+which is then used to decrypt the Vault's root key.
 
 ![Unseal keys](/img/vault-shamir-seal.png)
 

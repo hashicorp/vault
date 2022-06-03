@@ -187,6 +187,12 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 				t.Fatal("expected response id to match existing method id but it didn't")
 			}
 
+			// delete with invalid path should fail
+			_, err = client.Logical().Delete(invalidPath)
+			if err == nil {
+				t.Fatal("expected deleting an MFA method ID with invalid path to fail")
+			}
+
 			// delete it
 			_, err = client.Logical().Delete(myNewPath)
 			if err != nil {

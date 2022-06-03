@@ -190,7 +190,7 @@
       <div class="modal-radio-button">
         <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
           <D.Trigger
-            data-test-popup-menu-trigger="true"
+            data-test-popup-menu-trigger="month"
             class={{concat "toolbar-link" (if D.isOpen " is-active")}}
             @htmlTag="button"
           >
@@ -216,7 +216,7 @@
         </BasicDropdown>
         <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
           <D.Trigger
-            data-test-popup-menu-trigger="true"
+            data-test-popup-menu-trigger="year"
             class={{concat "toolbar-link" (if D.isOpen " is-active")}}
             @htmlTag="button"
           >
@@ -244,6 +244,7 @@
     </section>
     <footer class="modal-card-foot modal-card-foot-outlined">
       <button
+        data-test-modal-save
         type="button"
         class="button is-primary"
         disabled={{or (if (and this.startMonth this.startYear) false true)}}

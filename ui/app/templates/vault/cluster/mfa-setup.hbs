@@ -12,6 +12,7 @@
             @restartFlow={{this.restartFlow}}
             @saveUUIDandQrCode={{this.saveUUIDandQrCode}}
             @showWarning={{this.showWarning}}
+            data-test-step-one
           />
         {{/if}}
         {{#if (eq this.onStep 2)}}
@@ -21,6 +22,7 @@
             @qrCode={{this.qrCode}}
             @restartFlow={{this.restartFlow}}
             @warning={{this.warning}}
+            data-test-step-two
           />
         {{/if}}
       </div>

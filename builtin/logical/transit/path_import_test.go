@@ -551,7 +551,7 @@ func wrapTargetKeyForImport(t *testing.T, wrappingKey *rsa.PublicKey, targetKey 
 
 	// Combined wrapped keys into a single blob and base64 encode
 	wrappedKeys := append(ephKeyWrapped, targetKeyWrapped...)
-	return base64.RawURLEncoding.EncodeToString(wrappedKeys)
+	return base64.StdEncoding.EncodeToString(wrappedKeys)
 }
 
 func generateKey(keyType string) (interface{}, error) {
