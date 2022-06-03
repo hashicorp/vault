@@ -1,4 +1,4 @@
-<div class="chart-wrapper single-chart-grid">
+<div class="chart-wrapper single-chart-grid" data-test-monthly-usage>
   <div class="chart-header has-bottom-margin-xl">
     <h2 class="chart-title">Vault usage</h2>
     <p class="chart-description">
@@ -6,7 +6,7 @@
     </p>
   </div>
 
-  <div class="chart-container-wide">
+  <div class={{concat (unless @verticalBarChartData "chart-empty-state ") "chart-container-wide"}}>
     <Clients::VerticalBarChart @dataset={{@verticalBarChartData}} @chartLegend={{@chartLegend}} />
   </div>
 
@@ -17,30 +17,31 @@
     </p>
   </div>
 
-  <div class="data-details-top">
+  <div class="data-details-top" data-test-monthly-usage-average-total>
     <h3 class="data-details">Average total clients per month</h3>
     <p class="data-details">
       {{format-number this.averageTotalClients}}
     </p>
   </div>
 
-  <div class="data-details-bottom">
+  <div class="data-details-bottom" data-test-monthly-usage-average-new>
     <h3 class="data-details">Average new clients per month</h3>
     <p class="data-details">
       {{format-number this.averageNewClients}}
     </p>
   </div>
 
-  <div class="timestamp">
+  <div data-test-monthly-usage-timestamp class="timestamp">
     {{#if @timestamp}}
       Updated
       {{date-format @timestamp "MMM d yyyy, h:mm:ss aaa"}}
     {{/if}}
   </div>
 
-  <div class="legend-right">
-    <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
-    <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
-  </div>
-
+  {{#if @verticalBarChartData}}
+    <div data-test-monthly-usage-legend class="legend-right">
+      <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
+      <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
+    </div>
+  {{/if}}
 </div>
