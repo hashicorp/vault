@@ -116,8 +116,8 @@ func (m *MSSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) 
 // NewUser generates the username/password on the underlying MSSQL secret backend as instructed by
 // the statements provided.
 func (m *MSSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbplugin.NewUserResponse, error) {
-	m.Lock()
-	defer m.Unlock()
+	m.RLock()
+	defer m.RUnlock()
 
 	db, err := m.getConnection(ctx)
 	if err != nil {
@@ -175,6 +175,9 @@ func (m *MSSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbplu
 // then kill pending connections from that user, and finally drop the user and login from the
 // database instance.
 func (m *MSSQL) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) (dbplugin.DeleteUserResponse, error) {
+	m.RLock()
+	defer m.RUnlock()
+
 	if len(req.Statements.Commands) == 0 {
 		err := m.revokeUserDefault(ctx, req.Username)
 		return dbplugin.DeleteUserResponse{}, err
@@ -353,8 +356,8 @@ func (m *MSSQL) updateUserPass(ctx context.Context, username string, changePass 
 		return errors.New("must provide both username and password")
 	}
 
-	m.Lock()
-	defer m.Unlock()
+	m.RLock()
+	defer m.RUnlock()
 
 	db, err := m.getConnection(ctx)
 	if err != nil {

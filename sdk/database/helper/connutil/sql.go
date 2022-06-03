@@ -33,7 +33,7 @@ type SQLConnectionProducer struct {
 	maxConnectionLifetime time.Duration
 	Initialized           bool
 	db                    *sql.DB
-	sync.Mutex
+	sync.RWMutex
 }
 
 func (c *SQLConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {

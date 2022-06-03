@@ -248,7 +248,10 @@ func TestUpdateUser_password(t *testing.T) {
 	}
 
 	for name, test := range tests {
+		name := name
+		test := test
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
 			defer cleanup()
 
