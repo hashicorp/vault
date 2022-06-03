@@ -71,8 +71,8 @@ export default class RunningTotal extends Component {
   }
 
   get showSingleMonth() {
-    if (this.args.barChartData.length === 1) {
-      const monthData = this.args.lineChartData[0];
+    if (this.args.lineChartData?.length === 1) {
+      const monthData = this.args?.lineChartData[0];
       return {
         total: {
           total: monthData.clients,

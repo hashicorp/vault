@@ -5,7 +5,6 @@ import { hbs } from 'ember-cli-htmlbars';
 import { formatRFC3339 } from 'date-fns';
 import { findAll } from '@ember/test-helpers';
 import { calculateAverageClients } from 'vault/utils/chart-helpers';
-import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { formatNumber } from 'core/helpers/format-number';
 
 module('Integration | Component | clients/monthly-usage', function (hooks) {
@@ -1426,7 +1425,7 @@ module('Integration | Component | clients/monthly-usage', function (hooks) {
     `);
     assert.dom('[data-test-monthly-usage]').exists('monthly usage component renders');
     assert.dom('[data-test-component="empty-state"]').exists();
-    assert.dom('[data-test-empty-state-title]').hasText('No data found');
+    assert.dom('[data-test-empty-state-subtext]').hasText('No data to display');
     assert.dom('[data-test-monthly-usage-average-total] p.data-details').hasText('0', 'average total is 0');
     assert.dom('[data-test-monthly-usage-average-new] p.data-details').hasText('0', 'average new is 0');
     assert.dom('[data-test-vertical-bar-chart]').doesNotExist('vertical bar chart does not render');
@@ -1455,20 +1454,9 @@ module('Integration | Component | clients/monthly-usage', function (hooks) {
     assert.dom('[data-test-vertical-bar-chart]').exists('vertical bar chart displays');
     assert.dom('[data-test-monthly-usage-legend]').exists('renders vertical bar chart legend');
     assert.dom('[data-test-monthly-usage-timestamp]').exists('renders timestamp');
-    assert
-      .dom('[data-test-monthly-usage] p.chart-description')
-      .hasText(
-        'This data can be used to understand how many total clients are using Vault each month for this date range.',
-        'renders description'
-      );
 
-    findAll('[data-test-line-chart="x-axis-labels"] text').forEach((e, i) => {
-      assert
-        .dom(e)
-        .hasText(
-          `${parseAPITimestamp(DATASET[i].timestamp)}`,
-          `renders x-axis label: ${DATASET[i].timestamp}`
-        );
+    findAll('[data-test-vertical-chart="x-axis-labels"] text').forEach((e, i) => {
+      assert.dom(e).hasText(`${DATASET[i].month}`, `renders x-axis label: ${DATASET[i].month}`);
     });
     assert
       .dom('[data-test-vertical-chart="data-bar"]')

@@ -6,15 +6,10 @@
     </p>
   </div>
 
-  {{#if @verticalBarChartData}}
-    <div class="chart-container-wide">
-      <Clients::VerticalBarChart @dataset={{@verticalBarChartData}} @chartLegend={{@chartLegend}} />
-    </div>
-  {{else}}
-    <div class="chart-empty-state chart-container-wide">
-      <EmptyState @icon="skip" @title="No data found" @bottomBorder={{true}} />
-    </div>
-  {{/if}}
+  <div class={{concat (unless @verticalBarChartData "chart-empty-state ") "chart-container-wide"}}>
+    <Clients::VerticalBarChart @dataset={{@verticalBarChartData}} @chartLegend={{@chartLegend}} />
+  </div>
+
   <div class="chart-subTitle">
     <h2 class="chart-title">Total monthly clients</h2>
     <p class="chart-subtext">
