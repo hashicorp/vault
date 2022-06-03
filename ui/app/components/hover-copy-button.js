@@ -3,7 +3,7 @@ import { tracked } from '@glimmer/tracking';
 
 /**
  * @module HoverCopyButton
- * The `HoverCopyButton` is used on black backgrounds to show a copy button.
+ * The `HoverCopyButton` is used on dark backgrounds to show a copy button.
  *
  * @example ```js
  * <HoverCopyButton @copyValue={{stringify this.model.id}} @alwaysShow={{true}} />```
