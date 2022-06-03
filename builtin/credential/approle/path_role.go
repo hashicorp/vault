@@ -2384,7 +2384,7 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 		}
 
 		// If the role's secret_id_num_uses is lower than the specified num_uses, throw an error rather than implicitly overriding
-		if numUses > role.SecretIDNumUses {
+		if (numUses == 0 && role.SecretIDNumUses > 0) || (role.SecretIDNumUses > 0 && numUses > role.SecretIDNumUses) {
 			return logical.ErrorResponse("num_uses cannot be higher than the role's secret_id_num_uses"), nil
 		}
 	} else {
@@ -2395,9 +2395,10 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 	// Check whether or not ttl is defined, otherwise fallback to secret_id_ttl
 	if ttlRaw, ok := data.GetOk("ttl"); ok {
 		ttl = time.Second * time.Duration(ttlRaw.(int))
-		// If the ttl is less than the role's secret_id_ttl, throw an error rather than implicitly overriding
-		if ttl < role.SecretIDTTL {
-			return logical.ErrorResponse("ttl cannot be shorter than the role's secret_id_ttl"), nil
+
+		// If the ttl is more than the role's secret_id_ttl, throw an error rather than implicitly overriding
+		if (ttl == 0 && role.SecretIDNumUses > 0) || (role.SecretIDTTL > 0 && ttl > role.SecretIDTTL) {
+			return logical.ErrorResponse("ttl cannot be longer than the role's secret_id_ttl"), nil
 		}
 	} else {
 		ttl = role.SecretIDTTL
