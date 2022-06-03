@@ -109,7 +109,7 @@ class CalendarWidget extends Component {
   selectEndMonth(monthId, D) {
     const [monthIdx, year] = monthId.split('-');
     this.toggleShowCalendar();
-    this.args.handleClientActivityQuery(monthIdx, year, 'endTime');
+    this.args.handleClientActivityQuery(parseInt(monthIdx), parseInt(year), 'endTime');
     D.actions.close(); // close the dropdown.
   }
 
