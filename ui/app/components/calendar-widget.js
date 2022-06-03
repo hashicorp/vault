@@ -98,18 +98,8 @@ class CalendarWidget extends Component {
           e.classList.add('is-readOnly');
         }
       }
-      // Compare values so the user cannot select an endTime after the endTime returned from counters/activity response on page load.
-      let yearEndTimeFromResponse = Number(this.args.endTimeFromResponse[0]);
-      let endMonth = this.args.endTimeFromResponse[1];
-      if (this.displayYear === yearEndTimeFromResponse) {
-        // add readOnly class to any month that is older (higher) than the endMonth index. (e.g. if nov is the endMonth of the endTimeDisplay, then 11 and 12 should not be displayed 10 < 11 and 10 < 12.)
-        if (endMonth < elementMonthId) {
-          e.classList.add('is-readOnly');
-        }
-      }
-      // if the year display higher than the endTime e.g. you're looking at 2022 and the returned endTime is 2021, all months should be disabled.
-      if (this.displayYear > yearEndTimeFromResponse) {
-        // all months should be disabled.
+      if (this.displayYear === this.currentYear && this.endMonth < elementMonthId) {
+        // add readOnly class to any month that is after current month
         e.classList.add('is-readOnly');
       }
     });
