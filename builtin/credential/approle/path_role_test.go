@@ -1262,12 +1262,12 @@ func TestAppRole_ErrorsRoleSecretIDWithInvalidFields(t *testing.T) {
 	infiniteTestCases := []testCase{
 		{
 			name:     "infinite ttl",
-			payload:  map[string]interface{}{"secret_id": "abcd123", "ttl": 0},
+			payload:  map[string]interface{}{"secret_id": "abcd123", "num_uses": 1, "ttl": 0},
 			expected: "ttl cannot be longer than the role's secret_id_ttl",
 		},
 		{
 			name:     "infinite num_uses",
-			payload:  map[string]interface{}{"secret_id": "abcd123", "num_uses": 0},
+			payload:  map[string]interface{}{"secret_id": "abcd123", "num_uses": 0, "ttl": 1},
 			expected: "num_uses cannot be higher than the role's secret_id_num_uses",
 		},
 	}
@@ -1275,7 +1275,7 @@ func TestAppRole_ErrorsRoleSecretIDWithInvalidFields(t *testing.T) {
 	negativeTestCases := []testCase{
 		{
 			name:     "negative num_uses",
-			payload:  map[string]interface{}{"secret_id": "abcd123", "num_uses": -1},
+			payload:  map[string]interface{}{"secret_id": "abcd123", "num_uses": -1, "ttl": 0},
 			expected: "num_uses cannot be negative",
 		},
 	}
@@ -1304,7 +1304,7 @@ func TestAppRole_ErrorsRoleSecretIDWithInvalidFields(t *testing.T) {
 			cases: []testCase{
 				{
 					name:     "longer ttl",
-					payload:  map[string]interface{}{"secret_id": "abcd123", "ttl": 2},
+					payload:  map[string]interface{}{"secret_id": "abcd123", "ttl": 2, "num_uses": 0},
 					expected: "ttl cannot be longer than the role's secret_id_ttl",
 				},
 			},
@@ -1312,8 +1312,8 @@ func TestAppRole_ErrorsRoleSecretIDWithInvalidFields(t *testing.T) {
 		{
 			name: "finite role ttl and num_uses",
 			options: map[string]interface{}{
-				"secret_id_num_uses": 1,
-				"secret_id_ttl":      1,
+				"secret_id_num_uses": 2,
+				"secret_id_ttl":      2,
 			},
 			cases: infiniteTestCases,
 		},
