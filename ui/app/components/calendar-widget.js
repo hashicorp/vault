@@ -28,25 +28,25 @@ class CalendarWidget extends Component {
 
   @tracked allMonthsNodeList = [];
   @tracked displayYear = this.currentYear; // init to currentYear and then changes as a user clicks on the chevrons
-  @tracked disablePastYear = this.isObsoleteYear(); // if obsolete year, disable left chevron
-  @tracked disableFutureYear = this.isCurrentYear(); // if current year, disable right chevron
   @tracked showCalendar = false;
   @tracked tooltipTarget = null;
   @tracked tooltipText = null;
 
+  get currentMonthId() {
+    const [year, monthIndex] = this.args.endTimeFromResponse;
+    return `${monthIndex}-${year}`;
+  }
+  get disableFutureYear() {
+    return this.displayYear === this.currentYear;
+  }
+  get disablePastYear() {
+    let startYear = parseInt(this.args.startTimeDisplay.split(' ')[1]);
+    return this.displayYear === startYear; // if on startYear then don't let them click back to the year prior
+  }
+
   // HELPER FUNCTIONS (alphabetically) //
   addClass(element, classString) {
     element.classList.add(classString);
-  }
-
-  isCurrentYear() {
-    return this.currentYear === this.displayYear;
-  }
-
-  isObsoleteYear() {
-    // do not allow them to choose a year before the this.args.startTimeDisplay
-    let startYear = this.args.startTimeDisplay.split(' ')[1];
-    return this.displayYear.toString() === startYear; // if on startYear then don't let them click back to the year prior
   }
 
   removeClass(element, classString) {
@@ -56,7 +56,7 @@ class CalendarWidget extends Component {
   // ACTIONS (alphabetically) //
   @action
   addTooltip() {
-    if (this.isObsoleteYear()) {
+    if (this.disablePastYear) {
       let previousYear = Number(this.displayYear) - 1;
       this.tooltipText = `${previousYear} is unavailable because it is before your billing start month. Change your billing start month to a date in ${previousYear} to see data for this year.`; // set tooltip text
       this.tooltipTarget = '#previous-year';
@@ -67,8 +67,6 @@ class CalendarWidget extends Component {
   addYear() {
     this.displayYear = this.displayYear + 1;
     this.disableMonths();
-    this.disableFutureYear = this.isCurrentYear();
-    this.disablePastYear = this.isObsoleteYear();
   }
 
   @action
@@ -83,7 +81,7 @@ class CalendarWidget extends Component {
 
       if (this.currentMonth <= elementMonthId) {
         // only disable months when current year is selected
-        if (this.isCurrentYear()) {
+        if (this.currentYear === this.displayYear) {
           e.classList.add('is-readOnly');
         }
       }
@@ -126,13 +124,13 @@ class CalendarWidget extends Component {
   subYear() {
     this.displayYear = this.displayYear - 1;
     this.disableMonths();
-    this.disableFutureYear = this.isCurrentYear();
-    this.disablePastYear = this.isObsoleteYear();
   }
 
   @action
   toggleShowCalendar() {
     this.showCalendar = !this.showCalendar;
+    // reset year to current when toggled
+    this.displayYear = this.currentYear;
   }
 }
 export default setComponentTemplate(layout, CalendarWidget);
