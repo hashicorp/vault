@@ -1719,14 +1719,13 @@ func modifyResponseMonths(months []*ResponseMonth, start time.Time, end time.Tim
 		return months
 	}
 	start = timeutil.StartOfMonth(start)
-	if timeutil.IsCurrentMonth(end, time.Now().UTC()) {
-		end = timeutil.StartOfMonth(end).AddDate(0, -1, 0)
-	}
 	end = timeutil.EndOfMonth(end)
+	if timeutil.IsCurrentMonth(end, time.Now().UTC()) {
+		end = timeutil.EndOfMonth(timeutil.StartOfMonth(end).AddDate(0, -1, 0))
+	}
 	modifiedResponseMonths := make([]*ResponseMonth, 0)
 	firstMonth, err := time.Parse(time.RFC3339, months[0].Timestamp)
-	lastMonth, err2 := time.Parse(time.RFC3339, months[len(months)-1].Timestamp)
-	if err != nil || err2 != nil {
+	if err != nil {
 		return months
 	}
 	for start.Before(firstMonth) {
@@ -1735,8 +1734,13 @@ func modifyResponseMonths(months []*ResponseMonth, start time.Time, end time.Tim
 		start = timeutil.StartOfMonth(start.AddDate(0, 1, 0))
 	}
 	modifiedResponseMonths = append(modifiedResponseMonths, months...)
+	lastMonthStart, err := time.Parse(time.RFC3339, modifiedResponseMonths[len(modifiedResponseMonths)-1].Timestamp)
+	if err != nil {
+		return modifiedResponseMonths
+	}
+	lastMonth := timeutil.EndOfMonth(lastMonthStart)
 	for lastMonth.Before(end) {
-		lastMonth = timeutil.StartOfMonth(lastMonth.AddDate(0, 1, 0))
+		lastMonth = timeutil.StartOfMonth(lastMonth).AddDate(0, 1, 0)
 		monthPlaceholder := &ResponseMonth{Timestamp: lastMonth.UTC().Format(time.RFC3339)}
 		modifiedResponseMonths = append(modifiedResponseMonths, monthPlaceholder)
 
