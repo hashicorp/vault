@@ -237,6 +237,30 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 			response.AddWarning(msg)
 			b.Logger().Error(msg)
 		}
+
+		// If we imported multiple issuers with keys (or matched existing
+		// keys), and we set one of those as a default, warn the end-user we
+		// might have selected the wrong one.
+		if len(createdIssuers) > 1 {
+			numCreatedIssuersWithKeys := 0
+			defaultIssuerWasCreated := false
+			for _, issuerId := range createdIssuers {
+				if keyId, ok := issuerKeyMap[issuerId]; ok && len(keyId) != 0 {
+					numCreatedIssuersWithKeys++
+				}
+
+				if config.DefaultIssuerId.String() == issuerId {
+					defaultIssuerWasCreated = true
+				}
+			}
+
+			if numCreatedIssuersWithKeys > 1 && defaultIssuerWasCreated {
+				msg := "The imported bundle contained multiple certs matching keys, " +
+					"the default issuer that was selected should be verified and manually changed if incorrect."
+				response.AddWarning(msg)
+				b.Logger().Error(msg)
+			}
+		}
 	}
 
 	return response, nil

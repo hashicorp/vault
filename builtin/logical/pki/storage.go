@@ -313,6 +313,11 @@ func importKey(ctx context.Context, b *backend, s logical.Storage, keyValue stri
 		return nil, false, err
 	}
 
+	issuerDefaultSet, err := isDefaultIssuerSet(ctx, s)
+	if err != nil {
+		return nil, false, err
+	}
+
 	// Now, for each issuer, try and compute the issuer<->key link if missing.
 	for _, identifier := range knownIssuers {
 		existingIssuer, err := fetchIssuerById(ctx, s, identifier)
@@ -345,6 +350,16 @@ func importKey(ctx context.Context, b *backend, s logical.Storage, keyValue stri
 			existingIssuer.KeyID = result.ID
 			if err := writeIssuer(ctx, s, existingIssuer); err != nil {
 				return nil, false, err
+			}
+
+			// If there was no prior default value set and/or we had no known
+			// issuers when we started, set this issuer as default.
+			if !issuerDefaultSet {
+				err = updateDefaultIssuerId(ctx, s, existingIssuer.ID)
+				if err != nil {
+					return nil, false, err
+				}
+				issuerDefaultSet = true
 			}
 		}
 	}
@@ -641,7 +656,7 @@ func importIssuer(ctx context.Context, b *backend, s logical.Storage, certValue 
 	if err != nil {
 		return nil, false, err
 	}
-	if len(knownIssuers) == 0 || !issuerDefaultSet {
+	if (len(knownIssuers) == 0 || !issuerDefaultSet) && len(result.KeyID) != 0 {
 		if err = updateDefaultIssuerId(ctx, s, result.ID); err != nil {
 			return nil, false, err
 		}

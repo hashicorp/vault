@@ -490,23 +490,6 @@ func (a *ActivityLog) getMostRecentActivityLogSegment(ctx context.Context) ([]ti
 	return timeutil.GetMostRecentContiguousMonths(logTimes), nil
 }
 
-// getMostRecentActivityLogSegment gets the times (in UTC) associated with the most recent
-// contiguous set of activity logs, sorted in decreasing order (latest to earliest)
-func (a *ActivityLog) getMostRecentNonContiguousActivityLogSegments(ctx context.Context) ([]time.Time, error) {
-	logTimes, err := a.availableLogs(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if len(logTimes) <= 12 {
-		return logTimes, nil
-	}
-	contiguousMonths := timeutil.GetMostRecentContiguousMonths(logTimes)
-	if len(contiguousMonths) >= 12 {
-		return contiguousMonths, nil
-	}
-	return logTimes[:12], nil
-}
-
 // getLastEntitySegmentNumber returns the (non-negative) last segment number for the :startTime:, if it exists
 func (a *ActivityLog) getLastEntitySegmentNumber(ctx context.Context, startTime time.Time) (uint64, bool, error) {
 	p, err := a.view.List(ctx, activityEntityBasePath+fmt.Sprint(startTime.Unix())+"/")
@@ -1736,14 +1719,13 @@ func modifyResponseMonths(months []*ResponseMonth, start time.Time, end time.Tim
 		return months
 	}
 	start = timeutil.StartOfMonth(start)
-	if timeutil.IsCurrentMonth(end, time.Now().UTC()) {
-		end = timeutil.StartOfMonth(end).AddDate(0, -1, 0)
-	}
 	end = timeutil.EndOfMonth(end)
+	if timeutil.IsCurrentMonth(end, time.Now().UTC()) {
+		end = timeutil.EndOfMonth(timeutil.StartOfMonth(end).AddDate(0, -1, 0))
+	}
 	modifiedResponseMonths := make([]*ResponseMonth, 0)
 	firstMonth, err := time.Parse(time.RFC3339, months[0].Timestamp)
-	lastMonth, err2 := time.Parse(time.RFC3339, months[len(months)-1].Timestamp)
-	if err != nil || err2 != nil {
+	if err != nil {
 		return months
 	}
 	for start.Before(firstMonth) {
@@ -1752,8 +1734,13 @@ func modifyResponseMonths(months []*ResponseMonth, start time.Time, end time.Tim
 		start = timeutil.StartOfMonth(start.AddDate(0, 1, 0))
 	}
 	modifiedResponseMonths = append(modifiedResponseMonths, months...)
+	lastMonthStart, err := time.Parse(time.RFC3339, modifiedResponseMonths[len(modifiedResponseMonths)-1].Timestamp)
+	if err != nil {
+		return modifiedResponseMonths
+	}
+	lastMonth := timeutil.EndOfMonth(lastMonthStart)
 	for lastMonth.Before(end) {
-		lastMonth = timeutil.StartOfMonth(lastMonth.AddDate(0, 1, 0))
+		lastMonth = timeutil.StartOfMonth(lastMonth).AddDate(0, 1, 0)
 		monthPlaceholder := &ResponseMonth{Timestamp: lastMonth.UTC().Format(time.RFC3339)}
 		modifiedResponseMonths = append(modifiedResponseMonths, monthPlaceholder)
 
@@ -2046,9 +2033,9 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 	lastMonth := intent.PreviousMonth
 	a.logger.Info("computing queries", "month", time.Unix(lastMonth, 0).UTC())
 
-	times, err := a.getMostRecentNonContiguousActivityLogSegments(ctx)
+	times, err := a.availableLogs(ctx)
 	if err != nil {
-		a.logger.Warn("could not list recent segments", "error", err)
+		a.logger.Warn("could not list available logs", "error", err)
 		return err
 	}
 	if len(times) == 0 {
@@ -2597,10 +2584,10 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 	// Find the months with activity log data that are between the start and end
 	// months. We want to walk this in cronological order so the oldest instance of a
 	// client usage is recorded, not the most recent.
-	times, err := a.getMostRecentNonContiguousActivityLogSegments(ctx)
+	times, err := a.availableLogs(ctx)
 	if err != nil {
-		a.logger.Warn("failed to list recent segments", "error", err)
-		return fmt.Errorf("failed to list recent segments: %w", err)
+		a.logger.Warn("failed to list available log segments", "error", err)
+		return fmt.Errorf("failed to list available log segments: %w", err)
 	}
 	sort.Slice(times, func(i, j int) bool {
 		// sort in chronological order to produce the output we want showing what

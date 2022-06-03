@@ -493,6 +493,10 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
+	// MountPoint will not always be set at this point, so we ensure the req contains it
+	// as it is depended on by some functionality (e.g. quotas)
+	req.MountPoint = c.router.MatchingMount(ctx, req.Path)
+
 	// Decrement the wait group when our request is done
 	if waitGroup != nil {
 		defer waitGroup.Done()

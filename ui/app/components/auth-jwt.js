@@ -1,5 +1,6 @@
 import Ember from 'ember';
 import { inject as service } from '@ember/service';
+// ARG NOTE: Once you remove outer-html after glimmerizing you can remove the outer-html component
 import Component from './outer-html';
 import { later } from '@ember/runloop';
 import { task, timeout, waitForEvent } from 'ember-concurrency';

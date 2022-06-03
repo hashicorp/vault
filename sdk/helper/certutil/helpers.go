@@ -446,18 +446,30 @@ func ParsePublicKeyPEM(data []byte) (interface{}, error) {
 	return nil, errors.New("data does not contain any valid public keys")
 }
 
-// addPolicyIdentifiers adds certificate policies extension
-//
+// AddPolicyIdentifiers adds certificate policies extension, based on CreationBundle
 func AddPolicyIdentifiers(data *CreationBundle, certTemplate *x509.Certificate) {
-	for _, oidstr := range data.Params.PolicyIdentifiers {
-		oid, err := StringToOid(oidstr)
+	oidOnly := true
+	for _, oidStr := range data.Params.PolicyIdentifiers {
+		oid, err := StringToOid(oidStr)
 		if err == nil {
 			certTemplate.PolicyIdentifiers = append(certTemplate.PolicyIdentifiers, oid)
+		}
+		if err != nil {
+			oidOnly = false
+		}
+	}
+	if !oidOnly { // Because all policy information is held in the same extension, when we use an extra extension to
+		// add policy qualifier information, that overwrites any information in the PolicyIdentifiers field on the Cert
+		// Template, so we need to reparse all the policy identifiers here
+		extension, err := CreatePolicyInformationExtensionFromStorageStrings(data.Params.PolicyIdentifiers)
+		if err == nil {
+			// If this errors out, don't add it, rely on the OIDs parsed into PolicyIdentifiers above
+			certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, *extension)
 		}
 	}
 }
 
-// addExtKeyUsageOids adds custom extended key usage OIDs to certificate
+// AddExtKeyUsageOids adds custom extended key usage OIDs to certificate
 func AddExtKeyUsageOids(data *CreationBundle, certTemplate *x509.Certificate) {
 	for _, oidstr := range data.Params.ExtKeyUsageOIDs {
 		oid, err := StringToOid(oidstr)

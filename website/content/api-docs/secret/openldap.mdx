@@ -6,6 +6,8 @@ description: This is the API documentation for the Vault OpenLDAP secrets engine
 
 # OpenLDAP Secrets Engine (API)
 
+@include 'x509-sha1-deprecation.mdx'
+
 This is the API documentation for the Vault OpenLDAP secrets engine. For general
 information about the usage and operation of the OpenLDAP secrets engine,
 please see [these docs](/docs/secrets/openldap).

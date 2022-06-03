@@ -263,6 +263,11 @@ module('Acceptance | mfa-method', function (hooks) {
           .dom('[data-test-ttl-value="Period"]')
           .hasValue(model.period.toString(), 'Period form field is populated with model value');
         assert.dom('[data-test-select="ttl-unit"]').hasValue('s', 'Correct time unit is shown for period');
+      } else if (key === 'algorithm' || key === 'digits' || key === 'skew') {
+        let radioElem = this.element.querySelector(`input[name=${key}]:checked`);
+        assert
+          .dom(radioElem)
+          .hasValue(model[key].toString(), `${key} form field is populated with model value`);
       } else {
         assert
           .dom(`[data-test-input="${key}"]`)
@@ -271,14 +276,15 @@ module('Acceptance | mfa-method', function (hooks) {
     });
 
     await fillIn('[data-test-input="issuer"]', 'foo');
-    await fillIn('[data-test-input="algorithm"]', 'SHA512');
+    let SHA1radioBtn = this.element.querySelectorAll('input[name=algorithm]')[0];
+    await click(SHA1radioBtn);
     await fillIn('[data-test-input="max_validation_attempts"]', 10);
     await click('[data-test-mfa-method-save]');
     await fillIn('[data-test-confirmation-modal-input]', model.type);
     await click('[data-test-confirm-button]');
 
     assert.dom('[data-test-row-value="Issuer"]').hasText('foo', 'Issuer field is updated');
-    assert.dom('[data-test-row-value="Algorithm"]').hasText('SHA512', 'Algorithm field is updated');
+    assert.dom('[data-test-row-value="Algorithm"]').hasText('SHA1', 'Algorithm field is updated');
     assert
       .dom('[data-test-row-value="Max validation attempts"]')
       .hasText('10', 'Max validation attempts field is updated');
