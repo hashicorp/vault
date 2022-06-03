@@ -4,7 +4,7 @@ import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { formatRFC3339 } from 'date-fns';
 import { findAll } from '@ember/test-helpers';
-import { calculateAverageClients } from 'vault/utils/chart-helpers';
+import { calculateAverage } from 'vault/utils/chart-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 
 module('Integration | Component | clients/monthly-usage', function (hooks) {
@@ -1434,9 +1434,9 @@ module('Integration | Component | clients/monthly-usage', function (hooks) {
   });
 
   test('it renders with month over month activity data', async function (assert) {
-    const expectedTotal = formatNumber([calculateAverageClients(DATASET, 'clients')]);
+    const expectedTotal = formatNumber([calculateAverage(DATASET, 'clients')]);
     const expectedNew = formatNumber([
-      calculateAverageClients(
+      calculateAverage(
         DATASET?.map((d) => d.new_clients),
         'clients'
       ),

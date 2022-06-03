@@ -4,7 +4,7 @@ import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { formatRFC3339 } from 'date-fns';
 import { findAll } from '@ember/test-helpers';
-import { calculateAverageClients } from 'vault/utils/chart-helpers';
+import { calculateAverage } from 'vault/utils/chart-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 
 module('Integration | Component | clients/running-total', function (hooks) {
@@ -1428,8 +1428,8 @@ module('Integration | Component | clients/running-total', function (hooks) {
     this.set('totalUsageCounts', TOTAL_USAGE_COUNTS);
     const expectedTotalEntity = formatNumber([TOTAL_USAGE_COUNTS.entity_clients]);
     const expectedTotalNonEntity = formatNumber([TOTAL_USAGE_COUNTS.non_entity_clients]);
-    const expectedNewEntity = formatNumber([calculateAverageClients(NEW_ACTIVITY, 'entity_clients')]);
-    const expectedNewNonEntity = formatNumber([calculateAverageClients(NEW_ACTIVITY, 'non_entity_clients')]);
+    const expectedNewEntity = formatNumber([calculateAverage(NEW_ACTIVITY, 'entity_clients')]);
+    const expectedNewNonEntity = formatNumber([calculateAverage(NEW_ACTIVITY, 'non_entity_clients')]);
 
     await render(hbs`
       <div id="modal-wormhole"></div>

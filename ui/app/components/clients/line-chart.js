@@ -48,10 +48,10 @@ export default class LineChart extends Component {
     const upgradeData = this.args.upgradeData;
     if (!upgradeData) return null;
     if (!Array.isArray(upgradeData)) {
-      console.error('upgradeData must be an array of objects containing upgrade history');
+      console.debug('upgradeData must be an array of objects containing upgrade history');
       return null;
     } else if (!Object.keys(upgradeData[0]).includes('timestampInstalled')) {
-      console.error(
+      console.debug(
         `upgrade must be an object with the following key names: ['id', 'previousVersion', 'timestampInstalled']`
       );
       return null;

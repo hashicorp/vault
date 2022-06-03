@@ -1,5 +1,5 @@
 import Component from '@glimmer/component';
-import { calculateAverageClients } from 'vault/utils/chart-helpers';
+import { calculateAverage } from 'vault/utils/chart-helpers';
 
 /**
  * @module RunningTotal
@@ -45,14 +45,14 @@ export default class RunningTotal extends Component {
   get entityClientData() {
     return {
       runningTotal: this.args.runningTotals.entity_clients,
-      averageNewClients: calculateAverageClients(this.args.barChartData, 'entity_clients') || '0',
+      averageNewClients: calculateAverage(this.args.barChartData, 'entity_clients') || '0',
     };
   }
 
   get nonEntityClientData() {
     return {
       runningTotal: this.args.runningTotals.non_entity_clients,
-      averageNewClients: calculateAverageClients(this.args.barChartData, 'non_entity_clients') || '0',
+      averageNewClients: calculateAverage(this.args.barChartData, 'non_entity_clients') || '0',
     };
   }
 
