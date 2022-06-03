@@ -1,9 +1,5 @@
 [
   {
-    "title": "Overview",
-    "path": "index"
-  },
-  {
     "title": "Client Libraries",
     "path": "libraries"
   },
