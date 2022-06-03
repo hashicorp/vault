@@ -21,7 +21,7 @@ import { parseAPITimestamp, formatChartDate } from 'core/utils/date-formatters';
  *
  * @example
  * ```js
- * <LineChart @dataset={{dataset}} @upgradeData=/>
+ * <LineChart @dataset={{dataset}} @upgradeData={{this.versionHistory}}/>
  * ```
  * @param {string} xKey - string denoting key for x-axis data (data[xKey]) of dataset
  * @param {string} yKey - string denoting key for y-axis data (data[yKey]) of dataset
