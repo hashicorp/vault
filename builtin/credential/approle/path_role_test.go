@@ -1098,7 +1098,7 @@ func TestAppRole_RoleList(t *testing.T) {
 	}
 }
 
-func TestAppRole_RoleSecretID(t *testing.T) {
+func TestAppRole_RoleSecretIDWithoutFields(t *testing.T) {
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
@@ -1225,8 +1225,6 @@ func TestAppRole_RoleSecretIDWithValidFields(t *testing.T) {
 			}
 
 			roleSecretIDReq.Path = "role/role1/custom-secret-id"
-			roleCustomSecretIDData["secret_id"] = tc.payload["secret_id"]
-
 			roleSecretIDReq.Data = roleCustomSecretIDData
 			resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
 			if err != nil || (resp != nil && resp.IsError()) {
