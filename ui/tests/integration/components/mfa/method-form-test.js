@@ -15,6 +15,8 @@ module('Integration | Component | mfa-method-form', function (hooks) {
   });
 
   test('it should render correct fields', async function (assert) {
+    assert.expect(6);
+
     await render(hbs`
       <Mfa::MethodForm
         @model={{this.model}}
@@ -58,6 +60,8 @@ module('Integration | Component | mfa-method-form', function (hooks) {
   });
 
   test('it should populate form fields with model data', async function (assert) {
+    assert.expect(3);
+
     this.model.issuer = 'Vault';
     this.model.period = '30';
     this.model.algorithm = 'SHA512';
@@ -71,7 +75,7 @@ module('Integration | Component | mfa-method-form', function (hooks) {
     `);
     assert.dom('[data-test-input="issuer"]').hasValue('Vault', 'Issuer input is populated');
     assert.dom('[data-test-ttl-value="Period"]').hasValue('30', 'Period input ttl is populated');
-    let SHA512radioBtn = this.element.querySelectorAll('input[name=algorithm]')[2];
-    assert.dom(SHA512radioBtn).hasValue('SHA512', 'SHA512 radio input is selected');
+    let checkedAlgorithm = this.element.querySelector('input[name=algorithm]:checked');
+    assert.dom(checkedAlgorithm).hasValue('SHA512', 'SHA512 radio input is selected');
   });
 });
