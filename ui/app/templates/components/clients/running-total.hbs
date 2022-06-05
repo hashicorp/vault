@@ -7,7 +7,7 @@
         The total client count number is an important consideration for Vault billing.
       </p>
     </div>
-    <div class="single-month-stats">
+    <div class="single-month-stats" data-test-new>
       <div class="single-month-section-title">
         <StatText
           @label="New clients"
@@ -23,7 +23,7 @@
         <StatText @label="Non-entity clients" @value={{this.showSingleMonth.new.nonEntityClients}} @size="m" />
       </div>
     </div>
-    <div class="single-month-stats">
+    <div class="single-month-stats" data-test-total>
       <div class="single-month-section-title">
         <StatText
           @label="Total monthly clients"
@@ -51,7 +51,7 @@
         </p>
       </div>
 
-      <div class="chart-container-wide">
+      <div class={{concat (unless @lineChartData "chart-empty-state ") "chart-container-wide"}}>
         <Clients::LineChart @dataset={{@lineChartData}} @upgradeData={{@upgradeData}} />
       </div>
 
@@ -109,17 +109,19 @@
         </p>
       </div>
 
-      <div class="timestamp">
+      <div class="timestamp" data-test-running-total-timestamp>
         {{#if @timestamp}}
           Updated
           {{date-format @timestamp "MMM d yyyy, h:mm:ss aaa"}}
         {{/if}}
       </div>
 
-      <div class="legend-right">
-        <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
-        <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
-      </div>
+      {{#if this.hasAverageNewClients}}
+        <div class="legend-right" data-test-running-total-legend>
+          <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
+          <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
+        </div>
+      {{/if}}
     </div>
   </div>
 {{/if}}
