@@ -569,9 +569,8 @@ func TestKVHelpers(t *testing.T) {
 			t.Fatalf("expected fields to be reset to their zero values but they were %d and %t instead", md4.MaxVersions, md4.CASRequired)
 		}
 
-		// TODO: Bring this test back to life once the bug is fixed where we can't actually reset delete-version-after to zero...
-		// if md4.DeleteVersionAfter.String() != "0s" {
-		// 	t.Fatalf("expected delete-version-after to be reset to its zero value but instead it was %d", md4.DeleteVersionAfter.String())
-		// }
+		if md4.DeleteVersionAfter.String() != "0s" {
+			t.Fatalf("expected delete-version-after to be reset to its zero value but instead it was %s", md4.DeleteVersionAfter.String())
+		}
 	})
 }
