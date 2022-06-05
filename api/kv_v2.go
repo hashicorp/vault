@@ -37,12 +37,11 @@ type KVMetadata struct {
 // The struct's fields are all pointers. When used with the PatchMetadata
 // method, a pointer to a field's zero value (e.g. false for *bool) implies
 // that field should be reset to its zero value after update, whereas a field
-// set to a null pointer (e.g. null for *bool) implies the field should remain
+// left as a nil pointer (e.g. nil for *bool) implies the field should remain
 // unchanged.
 //
 // Since maps are already pointers, use an empty map to remove all
-// custom metadata. To explicitly set the zero value for time.Duration,
-// you can use a pointer to time.ParseDuration("0s").
+// custom metadata.
 type KVMetadataInput struct {
 	CASRequired        *bool
 	CustomMetadata     map[string]interface{}
@@ -66,6 +65,11 @@ const (
 	KVOptionMethod         = "method"
 	KVMergeMethodPatch     = "patch"
 	KVMergeMethodReadWrite = "rw"
+
+	casRequiredKey        = "cas_required"
+	deleteVersionAfterKey = "delete_version_after"
+	maxVersionsKey        = "max_versions"
+	customMetadataKey     = "custom_metadata"
 )
 
 // WithOption can optionally be passed to provide generic options for a
@@ -269,11 +273,6 @@ func (kv *kvv2) PutMetadata(ctx context.Context, secretPath string, metadata KVM
 
 	// convert non-nil values to a map we can pass to Logical
 	md := make(map[string]interface{})
-	casRequiredKey := "cas_required"
-	deleteVersionAfterKey := "delete_version_after"
-	maxVersionsKey := "max_versions"
-	customMetadataKey := "custom_metadata"
-
 	md[customMetadataKey] = metadata.CustomMetadata
 	if metadata.MaxVersions != nil {
 		md[maxVersionsKey] = *(metadata.MaxVersions)
@@ -346,7 +345,7 @@ func (kv *kvv2) Patch(ctx context.Context, secretPath string, newData map[string
 func (kv *kvv2) PatchMetadata(ctx context.Context, secretPath string, metadata KVMetadataInput) error {
 	pathToWriteTo := fmt.Sprintf("%s/metadata/%s", kv.mountPath, secretPath)
 
-	md, err := setMetadataMap(metadata)
+	md, err := toMetadataMap(metadata)
 	if err != nil {
 		return fmt.Errorf("unable to create map for JSON merge patch request: %w", err)
 	}
@@ -491,7 +490,7 @@ func (kv *kvv2) Rollback(ctx context.Context, secretPath string, toVersion int) 
 
 func extractCustomMetadata(secret *Secret) (map[string]interface{}, error) {
 	// Logical Writes return the metadata directly, Reads return it nested inside the "metadata" key
-	cmI, ok := secret.Data["custom_metadata"]
+	cmI, ok := secret.Data[customMetadataKey]
 	if !ok {
 		mI, ok := secret.Data["metadata"]
 		if !ok { // if that's not found, bail since it should have had one or the other
@@ -501,9 +500,9 @@ func extractCustomMetadata(secret *Secret) (map[string]interface{}, error) {
 		if !ok {
 			return nil, fmt.Errorf("unexpected type for 'metadata' element: %T (%#v)", mI, mI)
 		}
-		cmI, ok = mM["custom_metadata"]
+		cmI, ok = mM[customMetadataKey]
 		if !ok {
-			return nil, fmt.Errorf("metadata missing expected field \"custom_metadata\":%v", mM)
+			return nil, fmt.Errorf("metadata missing expected field \"%s\":%v", customMetadataKey, mM)
 		}
 	}
 
@@ -746,45 +745,19 @@ func readThenWrite(ctx context.Context, client *Client, mountPath string, secret
 	return updatedSecret, nil
 }
 
-func setMetadataMap(metadata KVMetadataInput) (map[string]interface{}, error) {
+func toMetadataMap(metadata KVMetadataInput) (map[string]interface{}, error) {
 	md := make(map[string]interface{})
-	casRequiredKey := "cas_required"
-	deleteVersionAfterKey := "delete_version_after"
-	maxVersionsKey := "max_versions"
-	customMetadataKey := "custom_metadata"
 
-	// --[Explicit Zero Value For The User, Explicit Null On The Backend]--
 	// The KVMetadataInput struct is designed to have pointer fields so that
-	// the user can easily express the desire to explicitly set a field back to its zero
-	// value (e.g. false), as opposed to just having the field remain
-	// unchanged (e.g. nil).
-	// However, in the actual JSONMergePatch request performed by Logical,
-	// the meanings are reversed, where a null value means to delete the
-	// value at that field, and a zero value means to do nothing.
-	//
-	// While cognitively confusing for us on the dev side, this reversal is
-	// by design with users in mind, as we don't want users to accidentally
-	// reset fields just because they neglected to give those fields a value in
-	// the passed KVMetadataInput struct. This way, they only need to pass
+	// the user can easily express the difference between explicitly setting a
+	// field back to its zero value (e.g. false), as opposed to just having
+	// the field remain unchanged (e.g. nil). This way, they only need to pass
 	// the fields they want to change.
-	//
-	// Thus, here we need to dereference our pointers and set any explicit zero values
-	// to null in the JSON so that JSONMergePatch understands to delete the values.
 	if metadata.MaxVersions != nil {
-		derefVal := *(metadata.MaxVersions)
-		if derefVal == 0 {
-			md[maxVersionsKey] = nil
-		} else {
-			md[maxVersionsKey] = derefVal
-		}
+		md[maxVersionsKey] = *(metadata.MaxVersions)
 	}
 	if metadata.CASRequired != nil {
-		derefVal := *(metadata.CASRequired)
-		if derefVal == false {
-			md[casRequiredKey] = nil
-		} else {
-			md[casRequiredKey] = derefVal
-		}
+		md[casRequiredKey] = *(metadata.CASRequired)
 	}
 	if metadata.CustomMetadata != nil {
 		if len(metadata.CustomMetadata) == 0 { // empty non-nil map means delete all the keys
@@ -796,17 +769,7 @@ func setMetadataMap(metadata KVMetadataInput) (map[string]interface{}, error) {
 	if metadata.DeleteVersionAfter != nil {
 		derefVal := *metadata.DeleteVersionAfter
 		strDuration := derefVal.String()
-		parsedVal, err := time.ParseDuration(strDuration)
-		if err != nil {
-			return nil, fmt.Errorf("unable to parse DeleteVersionAfter duration: %w", err)
-		}
-		if parsedVal == 0 {
-			// TODO: This doesn't work until a bug is fixed.. currently
-			// there seems to be no way to reset the delete_version_after field.
-			md[deleteVersionAfterKey] = nil
-		} else {
-			md[deleteVersionAfterKey] = strDuration
-		}
+		md[deleteVersionAfterKey] = strDuration
 	}
 
 	return md, nil
