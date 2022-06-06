@@ -11,7 +11,9 @@
   </D.Trigger>
   <D.Content @defaultClass={{concat "popup-menu-content calendar-content" (if this.showCalendar " calendar-open")}}>
     <nav class="box menu">
-      <div class="calendar-title is-subtitle-gray">DATE OPTIONS</div>
+      <div class="calendar-title is-subtitle-gray">
+        DATE OPTIONS
+      </div>
       <ul class="menu-list">
         <li class="action">
           <button
@@ -31,7 +33,9 @@
             {{on "click" this.toggleShowCalendar}}
           >
             <div class="level is-mobile">
-              <span class="level-left">Custom end month</span>
+              <span class="level-left">
+                Custom end month
+              </span>
               <Chevron class="has-text-grey-light level-right" />
             </div>
           </button>
@@ -57,7 +61,9 @@
               {{on "mouseleave" this.removeTooltip}}
             />
           </button>
-          <p data-test-display-year>{{this.displayYear}}</p>
+          <p data-test-display-year>
+            {{this.displayYear}}
+          </p>
           <button
             data-test-future-year
             type="button"
@@ -78,22 +84,24 @@
               offset="150px 0"
             }}
               <div class={{"calendar-tooltip"}}>
-                <p>{{this.tooltipText}}</p>
+                <p>
+                  {{this.tooltipText}}
+                </p>
               </div>
               <div class="chart-tooltip-arrow"></div>
             {{/modal-dialog}}
           {{/if}}
         </div>
-        <div {{did-insert this.disableMonths}} class="calendar-widget-grid calendar-widget">
-          {{#each @arrayOfMonths as |month index|}}
+        <div class="calendar-widget-grid calendar-widget">
+          {{#each this.widgetMonths as |m|}}
             <button
-              data-test-calendar-month={{month}}
+              data-test-calendar-month={{m.month}}
               type="button"
-              {{on "click" (fn this.selectEndMonth index this.displayYear D)}}
-              class="is-month-list"
-              id={{concat index "-" this.displayYear}}
+              class="is-month-list {{if m.readonly 'is-readOnly'}} {{if (eq m.id this.selectedMonthId) 'is-selected-month'}}"
+              id={{m.id}}
+              {{on "click" (fn this.selectEndMonth m.id D)}}
             >
-              {{month}}
+              {{m.month}}
             </button>
           {{/each}}
         </div>

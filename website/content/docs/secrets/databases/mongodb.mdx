@@ -9,6 +9,8 @@ description: |-
 
 # MongoDB Database Secrets Engine
 
+@include 'x509-sha1-deprecation.mdx'
+
 MongoDB is one of the supported plugins for the database secrets engine. This
 plugin generates database credentials dynamically based on configured roles for
 the MongoDB database and also supports

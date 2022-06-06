@@ -8,9 +8,7 @@
   >
   </svg>
 {{else}}
-  <div class="chart-empty-state">
-    <EmptyState @subTitle={{or @noDataMessage "No data to display"}} @bottomBorder={{true}} />
-  </div>
+  <EmptyState @subTitle={{or @noDataMessage "No data to display"}} @bottomBorder={{true}} />
 {{/if}}
 {{#if this.tooltipTarget}}
   {{! Required to set tag name = div https://github.com/yapplabs/ember-modal-dialog/issues/290 }}
