@@ -4,8 +4,21 @@ import { render, click } from '@ember/test-helpers';
 import sinon from 'sinon';
 import hbs from 'htmlbars-inline-precompile';
 import calendarDropdown from 'vault/tests/pages/components/calendar-widget';
-import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
 import { subYears } from 'date-fns';
+const ARRAY_OF_MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
 
 module('Integration | Component | calendar-widget', function (hooks) {
   setupRenderingTest(hooks);
