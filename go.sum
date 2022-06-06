@@ -993,8 +993,8 @@ github.com/hashicorp/vault-plugin-database-elasticsearch v0.11.0 h1:3L3/KB7323cB
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.11.0/go.mod h1:OMEQaNXsITksICGgkWW2y9/Nekv/cPKdqGOcMW5uUdI=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.7.0 h1:TAyYn8/rWn+OeeiYAqlACV4q7A5YYDv3vVqucHTJgxE=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.7.0/go.mod h1:e3HTaMD+aRWHBVctX/M39OaARQA8ux9TvdWDU0dJaoc=
-github.com/hashicorp/vault-plugin-database-snowflake v0.5.0 h1:/7Rdtscy+zzn1lL3chaBe/v6+qublD0qhlPyLm9rR+4=
-github.com/hashicorp/vault-plugin-database-snowflake v0.5.0/go.mod h1:OmWVT0/Ll1z0XHdr6QjdsB7/zvRBR5OIB5/hDs6Xh4A=
+github.com/hashicorp/vault-plugin-database-snowflake v0.5.1 h1:/arASm4g8nyZrL2DxDSWhhQ7RjTrveXHURL3dRIfHM0=
+github.com/hashicorp/vault-plugin-database-snowflake v0.5.1/go.mod h1:v7EvYChgjpg6Q9NVnoz+5NyUGUfrYsksWtuWeyHX4A8=
 github.com/hashicorp/vault-plugin-mock v0.16.1 h1:5QQvSUHxDjEEbrd2REOeacqyJnCLPD51IQzy71hx8P0=
 github.com/hashicorp/vault-plugin-mock v0.16.1/go.mod h1:83G4JKlOwUtxVourn5euQfze3ZWyXcUiLj2wqrKSDIM=
 github.com/hashicorp/vault-plugin-secrets-ad v0.13.0 h1:hULVZaireW8XXg7ZWbPp3Qk4nrCPnMfhlE7soiYBzHU=
