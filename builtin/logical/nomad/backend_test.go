@@ -184,6 +184,8 @@ func TestBackend_config_Bootstrap(t *testing.T) {
 	expected := map[string]interface{}{
 		"address":               connData["address"].(string),
 		"max_token_name_length": 0,
+		"ca_cert":               "",
+		"client_cert":           "",
 	}
 	if !reflect.DeepEqual(expected, resp.Data) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v\n", expected, resp.Data)
@@ -242,6 +244,8 @@ func TestBackend_config_access(t *testing.T) {
 	expected := map[string]interface{}{
 		"address":               connData["address"].(string),
 		"max_token_name_length": 0,
+		"ca_cert":               "",
+		"client_cert":           "",
 	}
 	if !reflect.DeepEqual(expected, resp.Data) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v\n", expected, resp.Data)
@@ -449,6 +453,8 @@ func TestBackend_max_token_name_length(t *testing.T) {
 			expected := map[string]interface{}{
 				"address":               svccfg.URL().String(),
 				"max_token_name_length": tc.tokenLength,
+				"ca_cert":               "",
+				"client_cert":           "",
 			}
 
 			expectedMaxTokenNameLength := maxTokenNameLength
