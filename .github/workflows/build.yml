@@ -1,6 +1,11 @@
 name: build
 
-on: [ workflow_dispatch, push ]
+on:
+  workflow_dispatch:
+  push:
+    branches-ignore:
+      - docs/**
+      - backport/docs/**
 
 env:
   PKG_NAME: "vault"
