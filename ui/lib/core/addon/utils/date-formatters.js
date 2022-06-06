@@ -34,7 +34,7 @@ export const parseRFC3339 = (timestamp) => {
   return date ? [`${date.getFullYear()}`, date.getMonth()] : null;
 };
 
-// convert MM/yy (format of dates in charts) to 'Month yyyy' (format in tooltip)
+// convert M/yy (format of dates in charts) to 'Month yyyy' (format in tooltip)
 export function formatChartDate(date) {
   let array = date.split('/');
   array.splice(1, 0, '01');

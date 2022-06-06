@@ -204,6 +204,7 @@
                   <button
                     type="button"
                     class="button link"
+                    data-test-date-modal-month={{month}}
                     disabled={{if (lt index this.allowedMonthMax) false true}}
                     {{on "click" (fn this.selectStartMonth month D.actions)}}
                   >
@@ -230,6 +231,7 @@
                   <button
                     type="button"
                     class="button link"
+                    data-test-date-modal-year={{year}}
                     disabled={{if (eq year this.disabledYear) true false}}
                     {{on "click" (fn this.selectStartYear year D.actions)}}
                   >
