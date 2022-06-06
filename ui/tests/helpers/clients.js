@@ -8,14 +8,29 @@ import { Response } from 'miragejs';
   Filtering (data with mounts)
   Filtering (data without mounts)
   Filtering (data without mounts)
+<<<<<<< HEAD
   * -- HISTORY ONLY --
   Filtering different date ranges (hist only)
   Upgrade warning 
+=======
+
+ * -- HISTORY ONLY --
+>>>>>>> release/1.11.x
   No permissions for license
   Version
   queries available
   queries unavailable
   License start date this month
+<<<<<<< HEAD
+=======
+ */
+
+// TODO
+/*
+Filtering different date ranges (hist only)
+Upgrade warning 
+
+>>>>>>> release/1.11.x
 */
 export const SELECTORS = {
   currentMonthActiveTab: '.active[data-test-current-month]',
