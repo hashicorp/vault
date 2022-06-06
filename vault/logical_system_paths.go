@@ -925,7 +925,6 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation: b.pathInternalOpenApiDynamic,
-				logical.UpdateOperation: b.pathInternalOpenApiDynamic,
 			},
 		},
 		{
