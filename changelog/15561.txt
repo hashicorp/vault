@@ -1,0 +1,3 @@
+```release-notes:feature
+ssh: Addition of an endpoint `ssh/issue/:role` to allow the creation of signed key pairs
+```
