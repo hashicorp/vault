@@ -1807,9 +1807,9 @@ func TestSSHBackend_IssueSign(t *testing.T) {
 				},
 			}),
 			// Key_type not in allowed_user_key_types_lengths
-			issueSSHKeyPairStep("testing", "ec", 256, true, "key_type provided not in allowed_user_key_types"),
+			issueSSHKeyPairStep("testing", "ec", 256, true, "provided key_type value not in allowed_user_key_types"),
 			// Key_bits not in allowed_user_key_types_lengths for provided key_type
-			issueSSHKeyPairStep("testing", "rsa", 2560, true, "key_bits not in list of allowed values for key_type provided"),
+			issueSSHKeyPairStep("testing", "rsa", 2560, true, "provided key_bits value not in list of role's allowed_user_key_types"),
 			// key_type `rsa` and key_bits `2048` successfully created
 			issueSSHKeyPairStep("testing", "rsa", 2048, false, ""),
 			// key_type `ed22519` and key_bits `0` successfully created
@@ -1891,7 +1891,8 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 }
 
 func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
-	expectedValidPrincipal string, testEntityMetadata map[string]string) {
+	expectedValidPrincipal string, testEntityMetadata map[string]string,
+) {
 	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
 	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
@@ -1970,7 +1971,8 @@ func signCertificateStep(
 	role, keyID string, certType int, validPrincipals []string,
 	criticalOptionPermissions, extensionPermissions map[string]string,
 	ttl time.Duration,
-	requestParameters map[string]interface{}) logicaltest.TestStep {
+	requestParameters map[string]interface{},
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "sign/" + role,
@@ -2000,7 +2002,6 @@ func signCertificateStep(
 }
 
 func issueSSHKeyPairStep(role, keyType string, keyBits int, expectError bool, errorMsg string) logicaltest.TestStep {
-
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "issue/" + role,

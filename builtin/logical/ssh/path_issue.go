@@ -3,6 +3,7 @@ package ssh
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -107,10 +108,6 @@ func (b *backend) pathIssueCertificate(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	if publicKey == "" || privateKey == "" {
-		return nil, fmt.Errorf("failed to generate or parse the keys")
-	}
-
 	// Sign key
 	userPublicKey, err := parsePublicSSHKey(publicKey)
 	if err != nil {
@@ -160,11 +157,11 @@ func extractKeySpecs(role *sshRole, data *framework.FieldData) (*keySpecs, error
 		}
 
 		if !keyAllowed {
-			return nil, fmt.Errorf("key_type provided not in allowed_user_key_types")
+			return nil, errors.New("provided key_type value not in allowed_user_key_types")
 		}
 
 		if !bitsAllowed {
-			return nil, fmt.Errorf("key_bits not in list of allowed values for key_type provided")
+			return nil, errors.New("provided key_bits value not in list of role's allowed_user_key_types")
 		}
 	}
 
@@ -217,7 +214,7 @@ func (b *backend) pathSignIssueCertificateHelper(ctx context.Context, req *logic
 		return nil, fmt.Errorf("failed to read CA private key: %w", err)
 	}
 	if privateKeyEntry == nil || privateKeyEntry.Key == "" {
-		return nil, fmt.Errorf("failed to read CA private key")
+		return nil, errors.New("failed to read CA private key")
 	}
 
 	signer, err := ssh.ParsePrivateKey([]byte(privateKeyEntry.Key))
@@ -244,7 +241,7 @@ func (b *backend) pathSignIssueCertificateHelper(ctx context.Context, req *logic
 
 	signedSSHCertificate := ssh.MarshalAuthorizedKey(certificate)
 	if len(signedSSHCertificate) == 0 {
-		return nil, fmt.Errorf("error marshaling signed certificate")
+		return nil, errors.New("error marshaling signed certificate")
 	}
 
 	response := &logical.Response{
