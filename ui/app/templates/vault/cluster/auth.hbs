@@ -99,7 +99,7 @@
   {{/unless}}
   <Page.content>
     {{#if this.mfaAuthData}}
-      <MfaForm
+      <Mfa::MfaForm
         @clusterId={{this.model.id}}
         @authData={{this.mfaAuthData}}
         @onSuccess={{action "onMfaSuccess"}}
