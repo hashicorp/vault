@@ -10,7 +10,7 @@ import { numberToWord } from 'vault/helpers/number-to-word';
  *
  * @example
  * ```js
- * <MfaForm @clusterId={this.model.id} @authData={this.authData} />
+ * <Mfa::MfaForm @clusterId={this.model.id} @authData={this.authData} />
  * ```
  * @param {string} clusterId - id of selected cluster
  * @param {object} authData - data from initial auth request -- { mfa_requirement, backend, data }

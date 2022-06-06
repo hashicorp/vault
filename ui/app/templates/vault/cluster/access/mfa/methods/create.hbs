@@ -31,14 +31,14 @@
       <DocLink @path={{concat "/api-docs/secret/identity/mfa/" this.type}}>Learn more.</DocLink>
     </p>
     <Mfa::MethodForm @model={{this.method}} @validations={{this.methodErrors}} class="is-box-shadowless" />
-    <MfaLoginEnforcementHeader
+    <Mfa::MfaLoginEnforcementHeader
       @isInline={{true}}
       @radioCardGroupValue={{this.enforcementPreference}}
       @onRadioCardSelect={{this.onEnforcementPreferenceChange}}
       @onEnforcementSelect={{fn (mut this.enforcement)}}
     />
     {{#if (eq this.enforcementPreference "new")}}
-      <MfaLoginEnforcementForm
+      <Mfa::MfaLoginEnforcementForm
         @model={{this.enforcement}}
         @isInline={{true}}
         @modelErrors={{this.enforcementErrors}}
