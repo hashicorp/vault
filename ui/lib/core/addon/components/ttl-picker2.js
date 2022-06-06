@@ -68,7 +68,7 @@ export default TtlForm.extend({
 
     let time = 30;
     let unit = 's';
-    let setEnable = this.enableTTL;
+    let setEnable = this.hideToggle || this.enableTTL;
     if (!!enable || typeOf(enable) === 'boolean') {
       // This allows non-boolean values passed in to be evaluated for truthiness
       setEnable = !!enable;
@@ -128,7 +128,7 @@ export default TtlForm.extend({
   handleChange() {
     let { time, unit, enableTTL, seconds } = this;
     const ttl = {
-      enabled: enableTTL,
+      enabled: this.hideToggle || enableTTL,
       seconds,
       timeString: time + unit,
       goSafeTimeString: goSafeConvertFromSeconds(seconds, unit),
