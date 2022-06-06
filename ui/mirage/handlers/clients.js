@@ -1684,6 +1684,7 @@ const MOCK_MONTHLY_DATA = [
     },
   },
   {
+    timestamp: formatISO(addMonths(UPGRADE_DATE, 3)),
     counts: {
       distinct_entities: 0,
       entity_clients: 10873,
@@ -2236,7 +2237,7 @@ const MOCK_MONTHLY_DATA = [
     },
   },
   {
-    timestamp: formatISO(addMonths(UPGRADE_DATE, 3)),
+    timestamp: formatISO(addMonths(UPGRADE_DATE, 4)),
     counts: {
       distinct_entities: 0,
       entity_clients: 10342,
