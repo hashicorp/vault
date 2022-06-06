@@ -5,12 +5,9 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"strconv"
 
-	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	"golang.org/x/crypto/ssh"
 )
 
 type keySpecs struct {
@@ -168,95 +165,16 @@ func extractKeySpecs(role *sshRole, data *framework.FieldData) (*keySpecs, error
 	return &keySpecs, nil
 }
 
-func (b *backend) pathSignIssueCertificateHelper(ctx context.Context, req *logical.Request, data *framework.FieldData, role *sshRole, publicKey ssh.PublicKey) (*logical.Response, error) {
-	// Note that these various functions always return "user errors" so we pass
-	// them as 4xx values
-	keyID, err := b.calculateKeyID(data, req, role, publicKey)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), err
-	}
-
-	certificateType, err := b.calculateCertificateType(data, role)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), err
-	}
-
-	var parsedPrincipals []string
-	if certificateType == ssh.HostCert {
-		parsedPrincipals, err = b.calculateValidPrincipals(data, req, role, "", role.AllowedDomains, validateValidPrincipalForHosts(role))
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), err
-		}
-	} else {
-		parsedPrincipals, err = b.calculateValidPrincipals(data, req, role, role.DefaultUser, role.AllowedUsers, strutil.StrListContains)
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), err
-		}
-	}
-
-	ttl, err := b.calculateTTL(data, role)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), err
-	}
-
-	criticalOptions, err := b.calculateCriticalOptions(data, role)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), err
-	}
-
-	extensions, err := b.calculateExtensions(data, req, role)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), err
-	}
-
-	privateKeyEntry, err := caKey(ctx, req.Storage, caPrivateKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read CA private key: %w", err)
-	}
-	if privateKeyEntry == nil || privateKeyEntry.Key == "" {
-		return nil, errors.New("failed to read CA private key")
-	}
-
-	signer, err := ssh.ParsePrivateKey([]byte(privateKeyEntry.Key))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse stored CA private key: %w", err)
-	}
-
-	cBundle := creationBundle{
-		KeyID:           keyID,
-		PublicKey:       publicKey,
-		Signer:          signer,
-		ValidPrincipals: parsedPrincipals,
-		TTL:             ttl,
-		CertificateType: certificateType,
-		Role:            role,
-		CriticalOptions: criticalOptions,
-		Extensions:      extensions,
-	}
-
-	certificate, err := cBundle.sign()
-	if err != nil {
-		return nil, err
-	}
-
-	signedSSHCertificate := ssh.MarshalAuthorizedKey(certificate)
-	if len(signedSSHCertificate) == 0 {
-		return nil, errors.New("error marshaling signed certificate")
-	}
-
-	response := &logical.Response{
-		Data: map[string]interface{}{
-			"serial_number": strconv.FormatUint(certificate.Serial, 16),
-			"signed_key":    string(signedSSHCertificate),
-		},
-	}
-
-	return response, nil
-}
-
 const pathIssueHelpSyn = `
-Request a signed key pair using a certain role with the provided details.
+Request a certificate using a certain role with the provided details.
 `
 
 const pathIssueHelpDesc = `
+This path allows requesting a certificate to be issued according to the
+policy of the given role. The certificate will only be issued if the
+requested details are allowed by the role policy.
+
+This path returns a certificate and a private key. If you want a workflow
+that does not expose a private key, generate a CSR locally and use the
+sign path instead.
 `
