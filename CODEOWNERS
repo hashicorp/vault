@@ -38,3 +38,7 @@
 # so stewards of the backend code are added below for notification.
 /ui/app/components/auth-jwt.js         @austingebauer
 /ui/app/routes/vault/cluster/oidc-*.js @austingebauer
+
+# Release config; service account is required for automation tooling.
+/.release/                              @hashicorp/release-engineering @hashicorp/github-secure-vault-core
+/.github/workflows/build.yml            @hashicorp/release-engineering @hashicorp/github-secure-vault-core
