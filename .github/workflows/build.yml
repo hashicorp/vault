@@ -5,6 +5,7 @@ on:
   push:
     branches-ignore:
       - docs/**
+      - backport/docs/**
 
 env:
   PKG_NAME: "vault"
