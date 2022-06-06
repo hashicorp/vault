@@ -39,6 +39,14 @@ the OTP generation to include an additional 2 characters before upgrading so tha
 OTP can be xor-ed with the encoded root token. This change was implemented as a result
 of the change in the prefix from hvs. to s. for service tokens.
 
+## New error response for login requests to perf standbys lagging behind active node
+
+The introduction of [Server Side Consistent Tokens](/docs/faq/ssct) means that
+when issuing a request to a perf standby right after having obtained a token (e.g.
+via login), if the token and its lease haven't yet been replicated to the perf
+standby, an HTTP 412 error will be returned.  Before 1.10.0 this typically would've
+resulted in a 400, 403, or 50x response.
+
 ## Token Format Change
 
 Token prefixes were updated to be more easily identifiable.
