@@ -144,15 +144,28 @@ https://www.googleapis.com/auth/cloud-platform
 
 ### Required GCP Permissions
 
+#### Enabled GCP APIs
+
+The GCP project must have the following APIs enabled:
+
+- [iam.googleapis.com](https://console.cloud.google.com/flows/enableapi?apiid=iam.googleapis.com)
+  for `iam` and `gce` type roles.
+- [compute.googleapis.com](https://console.cloud.google.com/flows/enableapi?apiid=compute.googleapis.com)
+  for `gce` type roles.
+- [cloudresourcemanager.googleapis.com](https://console.cloud.google.com/flows/enableapi?apiid=cloudresourcemanager.googleapis.com)
+  for `iam` and `gce` type roles that set [`add_group_aliases`](/api-docs/auth/gcp#add_group_aliases) to true.
+
 #### Vault Server Permissions
 
-**For `iam`-type Vault roles**, Vault can be given the following roles:
+**For `iam`-type Vault roles**, the service account [`credentials`](/api-docs/auth/gcp#credentials)
+given to Vault can have the following role:
 
 ```text
 roles/iam.serviceAccountKeyAdmin
 ```
 
-**For `gce`-type Vault roles**, Vault can be given the following roles:
+**For `gce`-type Vault roles**, the service account [`credentials`](/api-docs/auth/gcp#credentials)
+given to Vault can have the following role:
 
 ```text
 roles/compute.viewer

@@ -1,3 +1,7 @@
+import Component from '@glimmer/component';
+import layout from '../../templates/components/linkable-item/menu';
+import { setComponentTemplate } from '@ember/component';
+
 /**
  * @module Menu
  * Menu components are contextual components of LinkableItem, used to display a menu on the right side of a LinkableItem component.
@@ -12,9 +16,6 @@
  * ```
  */
 
-import Component from '@glimmer/component';
-import layout from '../../templates/components/linkable-item/menu';
-import { setComponentTemplate } from '@ember/component';
 /* eslint ember/no-empty-glimmer-component-classes: 'warn' */
 class MenuComponent extends Component {}
 
