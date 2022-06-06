@@ -529,15 +529,11 @@ func (b *Backend) handleRootHelp(req *logical.Request) (*logical.Response, error
 	// names in the OAS document.
 	requestResponsePrefix := req.GetString("requestResponsePrefix")
 	dynamicPaths := fmt.Sprintf("%v",req.Data["dynamicPaths"])
-	dynmaic, err := strconv.ParseBool(dynamicPaths)
-
-	if err != nil {
-		b.Logger().Warn("Help")
-	}
+	dynamic, _ := strconv.ParseBool(dynamicPaths)
 
 	// Build OpenAPI response for the entire backend
 	doc := NewOASDocument()
-	if err := documentPaths(b, requestResponsePrefix, dynmaic, doc); err != nil {
+	if err := documentPaths(b, requestResponsePrefix, dynamic, doc); err != nil {
 		b.Logger().Warn("error generating OpenAPI", "error", err)
 	}
 
