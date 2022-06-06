@@ -90,7 +90,8 @@ For example, enable the "foo" auth method will make it accessible at
     HMAC'd by audit devices in the response data object.
 
   - `listing_visibility` `(string: "")` - Specifies whether to show this mount
-    in the UI-specific listing endpoint.
+    in the UI-specific listing endpoint. Valid values are `"unauth"` or `"hidden"`,
+    with the default `""` being equivalent to `"hidden"`.
 
   - `passthrough_request_headers` `(array: [])` - List of headers to whitelist
     and pass from the request to the plugin.
@@ -294,7 +295,8 @@ can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
   that will not be HMAC'd by audit devices in the response data object.
 
 - `listing_visibility` `(string: "")` - Specifies whether to show this mount
-  in the UI-specific listing endpoint. Valid values are `"unauth"` or `""`.
+  in the UI-specific listing endpoint. Valid values are `"unauth"` or `"hidden"`,
+  with the default `""` being equivalent to `"hidden"`.
 
 - `passthrough_request_headers` `(array: [])` - List of headers to whitelist
   and pass from the request to the plugin.
