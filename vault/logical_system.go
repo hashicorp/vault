@@ -3236,6 +3236,14 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse("unknown log level"), nil
 	}
 
+	lf := data.Get("log_format").(string)
+	lowerLogFormat := strings.ToLower(lf)
+
+	validFormats := []string{"standard", "json"}
+	if !strutil.StrListContains(validFormats, lowerLogFormat) {
+		return logical.ErrorResponse("unknown log format"), nil
+	}
+
 	flusher, ok := w.ResponseWriter.(http.Flusher)
 	if !ok {
 		// http.ResponseWriter is wrapped in wrapGenericHandler, so let's
@@ -3250,7 +3258,7 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 		}
 	}
 
-	isJson := b.Core.LogFormat() == "json"
+	isJson := b.Core.LogFormat() == "json" || lf == "json"
 	logger := b.Core.Logger().(log.InterceptLogger)
 
 	mon, err := monitor.NewMonitor(512, logger, &log.LoggerOptions{
