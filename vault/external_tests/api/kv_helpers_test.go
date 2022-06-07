@@ -435,13 +435,10 @@ func TestKVHelpers(t *testing.T) {
 		noDataSecretPath := "empty"
 
 		// create a secret with metadata but no data
-		deleteVersionAfter := 5 * time.Hour
-		maxVersions := 5
-		customMetadata := map[string]interface{}{"ape": "gorilla"}
-		err = client.KVv2(v2MountPath).PutMetadata(context.Background(), noDataSecretPath, api.KVMetadataInput{
-			DeleteVersionAfter: &deleteVersionAfter,
-			MaxVersions:        &maxVersions,
-			CustomMetadata:     customMetadata,
+		err = client.KVv2(v2MountPath).PutMetadata(context.Background(), noDataSecretPath, api.KVMetadataPutInput{
+			DeleteVersionAfter: 5 * time.Hour,
+			MaxVersions:        5,
+			CustomMetadata:     map[string]interface{}{"ape": "gorilla"},
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -470,15 +467,11 @@ func TestKVHelpers(t *testing.T) {
 		}
 
 		// replace all modifiable metadata fields
-		casRequired := true
-		deleteVersionAfter := 6 * time.Hour
-		maxVersions := 6
-		customMetadata := map[string]interface{}{"foo": "fwah", "cat": "tabby"}
-		err = client.KVv2(v2MountPath).PutMetadata(context.Background(), secretPath, api.KVMetadataInput{
-			CASRequired:        &casRequired,
-			DeleteVersionAfter: &deleteVersionAfter,
-			MaxVersions:        &maxVersions,
-			CustomMetadata:     customMetadata,
+		err = client.KVv2(v2MountPath).PutMetadata(context.Background(), secretPath, api.KVMetadataPutInput{
+			CASRequired:        true,
+			DeleteVersionAfter: 6 * time.Hour,
+			MaxVersions:        6,
+			CustomMetadata:     map[string]interface{}{"foo": "fwah", "cat": "tabby"},
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -494,8 +487,8 @@ func TestKVHelpers(t *testing.T) {
 		}
 
 		// now let's try a patch
-		maxVersions = 7
-		err = client.KVv2(v2MountPath).PatchMetadata(context.Background(), secretPath, api.KVMetadataInput{
+		maxVersions := 7
+		err = client.KVv2(v2MountPath).PatchMetadata(context.Background(), secretPath, api.KVMetadataPatchInput{
 			MaxVersions:    &maxVersions,
 			CustomMetadata: map[string]interface{}{"foo": nil, "rat": "brown"},
 		})
@@ -546,7 +539,7 @@ func TestKVHelpers(t *testing.T) {
 			explicitZero     int
 			explicitTimeZero time.Duration
 		)
-		err = client.KVv2(v2MountPath).PatchMetadata(context.Background(), secretPath, api.KVMetadataInput{
+		err = client.KVv2(v2MountPath).PatchMetadata(context.Background(), secretPath, api.KVMetadataPatchInput{
 			CASRequired:        &explicitFalse,
 			MaxVersions:        &explicitZero,
 			DeleteVersionAfter: &explicitTimeZero,

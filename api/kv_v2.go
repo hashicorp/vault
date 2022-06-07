@@ -30,19 +30,29 @@ type KVMetadata struct {
 	Raw      *Secret
 }
 
-// KVMetadataInput is the subset of metadata that can be manually modified for
-// a KV v2 secret. This can also be passed to the PutMetadata method to create
-// a secret without any data yet.
+// KVMetadataPutInput is the subset of metadata that can be replaced for a
+// KV v2 secret using the PutMetadata method.
 //
-// The struct's fields are all pointers. When used with the PatchMetadata
-// method, a pointer to a field's zero value (e.g. false for *bool) implies
-// that field should be reset to its zero value after update, whereas a field
-// left as a nil pointer (e.g. nil for *bool) implies the field should remain
-// unchanged.
+// All fields should be explicitly provided, as any fields left unset in the
+// struct will be reset to their zero value.
+type KVMetadataPutInput struct {
+	CASRequired        bool
+	CustomMetadata     map[string]interface{}
+	DeleteVersionAfter time.Duration
+	MaxVersions        int
+}
+
+// KVMetadataPatchInput is the subset of metadata that can be manually modified for
+// a KV v2 secret using the PatchMetadata method.
+//
+// The struct's fields are all pointers. A pointer to a field's zero
+// value (e.g. false for *bool) implies that field should be reset to its
+// zero value after update, whereas a field left as a nil pointer
+// (e.g. nil for *bool) implies the field should remain unchanged.
 //
 // Since maps are already pointers, use an empty map to remove all
 // custom metadata.
-type KVMetadataInput struct {
+type KVMetadataPatchInput struct {
 	CASRequired        *bool
 	CustomMetadata     map[string]interface{}
 	DeleteVersionAfter *time.Duration
@@ -65,11 +75,6 @@ const (
 	KVOptionMethod         = "method"
 	KVMergeMethodPatch     = "patch"
 	KVMergeMethodReadWrite = "rw"
-
-	casRequiredKey        = "cas_required"
-	deleteVersionAfterKey = "delete_version_after"
-	maxVersionsKey        = "max_versions"
-	customMetadataKey     = "custom_metadata"
 )
 
 // WithOption can optionally be passed to provide generic options for a
@@ -269,34 +274,22 @@ func (kv *kvv2) Put(ctx context.Context, secretPath string, data map[string]inte
 // To only partially replace the values of these metadata fields, use PatchMetadata.
 //
 // This method can also be used to create a new secret with just metadata and no secret data yet.
-func (kv *kvv2) PutMetadata(ctx context.Context, secretPath string, metadata KVMetadataInput) error {
+func (kv *kvv2) PutMetadata(ctx context.Context, secretPath string, metadata KVMetadataPutInput) error {
 	pathToWriteTo := fmt.Sprintf("%s/metadata/%s", kv.mountPath, secretPath)
 
-	// convert values to a map we can pass to Logical,
-	// casting nils to the appropriate zero value
-	md := make(map[string]interface{})
-	if metadata.MaxVersions != nil {
-		md[maxVersionsKey] = *(metadata.MaxVersions)
-	} else {
-		md[maxVersionsKey] = 0
-	}
-	if metadata.DeleteVersionAfter != nil {
-		md[deleteVersionAfterKey] = (*metadata.DeleteVersionAfter).String()
-	} else {
-		md[deleteVersionAfterKey] = "0s"
-	}
-	if metadata.CASRequired != nil {
-		md[casRequiredKey] = *(metadata.CASRequired)
-	} else {
-		md[casRequiredKey] = false
-	}
-	if metadata.CustomMetadata != nil {
-		md[customMetadataKey] = metadata.CustomMetadata
-	} else {
-		md[customMetadataKey] = make(map[string]interface{})
-	}
+	casRequiredKey := "cas_required"
+	deleteVersionAfterKey := "delete_version_after"
+	maxVersionsKey := "max_versions"
+	customMetadataKey := "custom_metadata"
 
-	_, err := kv.c.Logical().WriteWithContext(ctx, pathToWriteTo, md)
+	// convert values to a map we can pass to Logical
+	metadataMap := make(map[string]interface{})
+	metadataMap[maxVersionsKey] = metadata.MaxVersions
+	metadataMap[deleteVersionAfterKey] = metadata.DeleteVersionAfter.String()
+	metadataMap[casRequiredKey] = metadata.CASRequired
+	metadataMap[customMetadataKey] = metadata.CustomMetadata
+
+	_, err := kv.c.Logical().WriteWithContext(ctx, pathToWriteTo, metadataMap)
 	if err != nil {
 		return fmt.Errorf("error writing secret metadata to %s: %w", pathToWriteTo, err)
 	}
@@ -354,7 +347,7 @@ func (kv *kvv2) Patch(ctx context.Context, secretPath string, newData map[string
 // PatchMetadata can be used to replace just a subset of a secret's
 // metadata fields at a time, as opposed to PutMetadata which is used to
 // completely replace all fields on the previous metadata.
-func (kv *kvv2) PatchMetadata(ctx context.Context, secretPath string, metadata KVMetadataInput) error {
+func (kv *kvv2) PatchMetadata(ctx context.Context, secretPath string, metadata KVMetadataPatchInput) error {
 	pathToWriteTo := fmt.Sprintf("%s/metadata/%s", kv.mountPath, secretPath)
 
 	md, err := toMetadataMap(metadata)
@@ -502,25 +495,25 @@ func (kv *kvv2) Rollback(ctx context.Context, secretPath string, toVersion int) 
 
 func extractCustomMetadata(secret *Secret) (map[string]interface{}, error) {
 	// Logical Writes return the metadata directly, Reads return it nested inside the "metadata" key
-	cmI, ok := secret.Data[customMetadataKey]
+	customMetadataInterface, ok := secret.Data["custom_metadata"]
 	if !ok {
-		mI, ok := secret.Data["metadata"]
+		metadataInterface, ok := secret.Data["metadata"]
 		if !ok { // if that's not found, bail since it should have had one or the other
 			return nil, fmt.Errorf("secret is missing expected fields")
 		}
-		mM, ok := mI.(map[string]interface{})
+		metadataMap, ok := metadataInterface.(map[string]interface{})
 		if !ok {
-			return nil, fmt.Errorf("unexpected type for 'metadata' element: %T (%#v)", mI, mI)
+			return nil, fmt.Errorf("unexpected type for 'metadata' element: %T (%#v)", metadataInterface, metadataInterface)
 		}
-		cmI, ok = mM[customMetadataKey]
+		customMetadataInterface, ok = metadataMap["custom_metadata"]
 		if !ok {
-			return nil, fmt.Errorf("metadata missing expected field \"%s\":%v", customMetadataKey, mM)
+			return nil, fmt.Errorf("metadata missing expected field \"custom_metadata\": %v", metadataMap)
 		}
 	}
 
-	cm, ok := cmI.(map[string]interface{})
-	if !ok && cmI != nil {
-		return nil, fmt.Errorf("unexpected type for 'metadata' element: %T (%#v)", cmI, cmI)
+	cm, ok := customMetadataInterface.(map[string]interface{})
+	if !ok && customMetadataInterface != nil {
+		return nil, fmt.Errorf("unexpected type for 'metadata' element: %T (%#v)", customMetadataInterface, customMetadataInterface)
 	}
 
 	return cm, nil
@@ -757,32 +750,35 @@ func readThenWrite(ctx context.Context, client *Client, mountPath string, secret
 	return updatedSecret, nil
 }
 
-func toMetadataMap(metadata KVMetadataInput) (map[string]interface{}, error) {
-	md := make(map[string]interface{})
+func toMetadataMap(patchInput KVMetadataPatchInput) (map[string]interface{}, error) {
+	metadataMap := make(map[string]interface{})
 
-	// The KVMetadataInput struct is designed to have pointer fields so that
+	casRequiredKey := "cas_required"
+	deleteVersionAfterKey := "delete_version_after"
+	maxVersionsKey := "max_versions"
+	customMetadataKey := "custom_metadata"
+
+	// The KVMetadataPatchInput struct is designed to have pointer fields so that
 	// the user can easily express the difference between explicitly setting a
 	// field back to its zero value (e.g. false), as opposed to just having
 	// the field remain unchanged (e.g. nil). This way, they only need to pass
 	// the fields they want to change.
-	if metadata.MaxVersions != nil {
-		md[maxVersionsKey] = *(metadata.MaxVersions)
+	if patchInput.MaxVersions != nil {
+		metadataMap[maxVersionsKey] = *(patchInput.MaxVersions)
 	}
-	if metadata.CASRequired != nil {
-		md[casRequiredKey] = *(metadata.CASRequired)
+	if patchInput.CASRequired != nil {
+		metadataMap[casRequiredKey] = *(patchInput.CASRequired)
 	}
-	if metadata.CustomMetadata != nil {
-		if len(metadata.CustomMetadata) == 0 { // empty non-nil map means delete all the keys
-			md[customMetadataKey] = nil
+	if patchInput.CustomMetadata != nil {
+		if len(patchInput.CustomMetadata) == 0 { // empty non-nil map means delete all the keys
+			metadataMap[customMetadataKey] = nil
 		} else {
-			md[customMetadataKey] = metadata.CustomMetadata
+			metadataMap[customMetadataKey] = patchInput.CustomMetadata
 		}
 	}
-	if metadata.DeleteVersionAfter != nil {
-		derefVal := *metadata.DeleteVersionAfter
-		strDuration := derefVal.String()
-		md[deleteVersionAfterKey] = strDuration
+	if patchInput.DeleteVersionAfter != nil {
+		metadataMap[deleteVersionAfterKey] = (*patchInput.DeleteVersionAfter).String()
 	}
 
-	return md, nil
+	return metadataMap, nil
 }
