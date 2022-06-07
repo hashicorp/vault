@@ -6,7 +6,6 @@ import { set } from '@ember/object';
 
 /**
  * @module StringList
- * StringList components xx.
  *
  * @example
  * ```js
