@@ -1,109 +1,70 @@
 import ArrayProxy from '@ember/array/proxy';
-import Component from '@ember/component';
-import { set, computed } from '@ember/object';
+import Component from '@glimmer/component';
 import autosize from 'autosize';
-import layout from '../templates/components/string-list';
+import { action } from '@ember/object';
+import { set } from '@ember/object';
 
-export default Component.extend({
-  layout,
-  'data-test-component': 'string-list',
-  attributeBindings: ['data-test-component', 'data-test-input'],
-  classNames: ['field', 'string-list', 'form-section'],
+/**
+ * @module StringList
+ * StringList components xx.
+ *
+ * @example
+ * ```js
+ * <StringList @label={label} @onChange={{this.setAndBroadcast}} @inputValue={{this.valuePath}}/>
+ * ```
+ * @param {string} label - Text displayed in the header above all the inputs.
+ * @param {function} onChange - Function called when any of the inputs change.
+ * @param {string} inputValue - A comma-separated string or an array of strings.
+ * @param {string} warning - Text displayed as a warning.
+ * @param {string} helpText - Text displayed as a tooltip.
+ * @param {string} type=array - Optional type for inputValue.
+ */
 
-  /*
-   * @public
-   * @param String
-   *
-   * Optional - Text displayed in the header above all of the inputs
-   *
-   */
-  label: null,
+export default class StringList extends Component {
+  constructor() {
+    super(...arguments);
+    // this.setType();
+    // this.toList();
+    // this.send('addInput');
+  }
 
-  /*
-   * @public
-   * @param Function
-   *
-   * Function called when any of the inputs change
-   * accepts a single param `value` that is the
-   * result of calling `toVal()`.
-   *
-   */
-  onChange: () => {},
-
-  /*
-   * @public
-   * @param String | Array
-   * A comma-separated string or an array of strings.
-   * Defaults to an empty array.
-   *
-   */
-  inputValue: computed(function () {
-    return [];
-  }),
-
-  /*
-   *
-   * @public
-   * @param String - ['array'|'string]
-   *
-   * Optional type for `inputValue` - defaults to `'array'`
-   * Needs to match type of `inputValue` because it is set by the component on init.
-   *
-   */
-  type: 'array',
-
-  /*
-   *
-   * @private
-   * @param Ember.ArrayProxy
-   *
-   * mutable array that contains objects in the form of
-   * {
-   *   value: 'somestring',
-   * }
-   *
-   * used to track the state of values bound to the various inputs
-   *
-   */
   /* eslint-disable ember/no-side-effects */
-  inputList: computed('content', function () {
+  get inputList() {
+    // ARG was content for watching
     return ArrayProxy.create({
-      content: [],
       // trim the `value` when accessing objects
+      content: [],
       objectAtContent: function (idx) {
         const obj = this.content.objectAt(idx);
         if (obj && obj.value) {
           set(obj, 'value', obj.value.trim());
         }
+        console.log('here');
         return obj;
       },
     });
-  }),
+  }
 
-  init() {
-    this._super(...arguments);
-    this.setType();
-    this.toList();
-    this.send('addInput');
-  },
-
-  didInsertElement() {
-    this._super(...arguments);
-    autosize(this.element.querySelector('textarea'));
-  },
-
-  didUpdate() {
-    this._super(...arguments);
-    autosize.update(this.element.querySelector('textarea'));
-  },
+  get type() {
+    return this.args.type || 'array';
+  }
 
   setType() {
     const list = this.inputList;
     if (!list) {
       return;
     }
-    this.set('type', typeof list);
-  },
+    this.type = typeof list;
+  }
+
+  toList() {
+    let input = this.args.inputValue || [];
+    const inputList = this.inputList;
+    if (typeof input === 'string') {
+      input = input.split(',');
+    }
+    inputList.addObjects(input.map((value) => ({ value })));
+  }
 
   toVal() {
     const inputs = this.inputList.filter((x) => x.value).mapBy('value');
@@ -111,37 +72,38 @@ export default Component.extend({
       return inputs.join(',');
     }
     return inputs;
-  },
+  }
 
-  toList() {
-    let input = this.inputValue || [];
+  @action
+  autoSize() {
+    autosize(document.querySelector('textarea'));
+  }
+  @action
+  autoSizeUpdate() {
+    autosize.update(document.querySelector('textarea'));
+  }
+
+  @action
+  inputChanged(idx, event) {
+    const inputObj = this.inputList.objectAt(idx);
+    const onChange = this.args.onChange;
+    set(inputObj, 'value', event.target.value);
+    onChange(this.toVal());
+  }
+
+  @action
+  addInput() {
     const inputList = this.inputList;
-    if (typeof input === 'string') {
-      input = input.split(',');
+    if (inputList.get('lastObject.value') !== '') {
+      inputList.pushObject({ value: '' });
     }
-    inputList.addObjects(input.map((value) => ({ value })));
-  },
+  }
 
-  actions: {
-    inputChanged(idx, event) {
-      const inputObj = this.inputList.objectAt(idx);
-      const onChange = this.onChange;
-      set(inputObj, 'value', event.target.value);
-      onChange(this.toVal());
-    },
-
-    addInput() {
-      const inputList = this.inputList;
-      if (inputList.get('lastObject.value') !== '') {
-        inputList.pushObject({ value: '' });
-      }
-    },
-
-    removeInput(idx) {
-      const onChange = this.onChange;
-      const inputs = this.inputList;
-      inputs.removeObject(inputs.objectAt(idx));
-      onChange(this.toVal());
-    },
-  },
-});
+  @action
+  removeInput(idx) {
+    const onChange = this.args.onChange;
+    const inputs = this.inputList;
+    inputs.removeObject(inputs.objectAt(idx));
+    onChange(this.toVal());
+  }
+}

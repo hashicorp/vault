@@ -17,6 +17,8 @@
     "ember-composable-helpers": "*",
     "ember-concurrency": "*",
     "ember-maybe-in-element": "*",
+    "ember-modifier": "*",
+    "ember/render-modifiers": "*",
     "ember-power-select": "*",
     "ember-router-helpers": "*",
     "ember-svg-jar": "*",
