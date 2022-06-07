@@ -559,7 +559,7 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     await logout.visit();
     await authPage.login(userToken);
     await settled();
-    await showPage.visit({ backend: enginePath, id: secretPath });
+    await visit(`/vault/secrets/${enginePath}/show/${secretPath}`);
     assert.dom('[data-test-empty-state-title]').hasText('You do not have permission to read this secret.');
     assert.dom('[data-test-secret-metadata-tab]').exists('Metadata tab exists');
     await editPage.metadataTab();
