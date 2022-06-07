@@ -195,26 +195,15 @@
       {{/if}}
     </Toggle>
   {{else if (eq @attr.options.editType "stringArray")}}
-    {{#if (eq @attr.name "tokenBoundCidrs")}}
-      {{! customize the tooltip for token_bound_cidrs }}
-      <StringList
-        data-test-input={{@attr.name}}
-        @label={{this.labelString}}
-        @warning={{@attr.options.warning}}
-        @helpText={{"Specifies the blocks of IP addresses which are allowed to use the generated token. One entry per row."}}
-        @inputValue={{get @model this.valuePath}}
-        @onChange={{this.setAndBroadcast}}
-      />
-    {{else}}
-      <StringList
-        data-test-input={{@attr.name}}
-        @label={{this.labelString}}
-        @warning={{@attr.options.warning}}
-        @helpText={{@attr.options.helpText}}
-        @inputValue={{get @model this.valuePath}}
-        @onChange={{this.setAndBroadcast}}
-      />
-    {{/if}}
+    <StringList
+      data-test-input={{@attr.name}}
+      @label={{this.labelString}}
+      @warning={{@attr.options.warning}}
+      @helpText={{@attr.options.helpText}}
+      @inputValue={{get @model this.valuePath}}
+      @onChange={{this.setAndBroadcast}}
+      @attrName={{@attr.name}}
+    />
   {{else if (eq @attr.options.sensitive true)}}
     {{! Masked Input }}
     <MaskedInput

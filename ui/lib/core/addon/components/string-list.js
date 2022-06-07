@@ -18,6 +18,7 @@ import { set } from '@ember/object';
  * @param {string} warning - Text displayed as a warning.
  * @param {string} helpText - Text displayed as a tooltip.
  * @param {string} type=array - Optional type for inputValue.
+ * @param {string} attrName - We use this to check the type so we can modify the tooltip content.
  */
 
 export default class StringList extends Component {
@@ -64,6 +65,14 @@ export default class StringList extends Component {
       return inputs.join(',');
     }
     return inputs;
+  }
+
+  get helpText() {
+    if (this.args.attrName === 'tokenBoundCidrs') {
+      return 'Specifies the blocks of IP addresses which are allowed to use the generated token. One entry per row.';
+    } else {
+      return this.args.helpText;
+    }
   }
 
   @action
