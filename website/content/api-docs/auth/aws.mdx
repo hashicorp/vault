@@ -1053,7 +1053,7 @@ for more information on the signature types.
 - `signature` `(string: <required-ec2>)` - Base64-encoded SHA256 RSA signature of
   the instance identity document, which can usually be obtained from the
   `http://169.254.169.254/latest/dynamic/instance-identity/document` endpoint.
-  Either both of this _AND_ `identity` must be set _OR_ `pkcs7` must be set
+  Either both this _AND_ `identity` must be set _OR_ `pkcs7` must be set
   when using the ec2 auth method.
 - `pkcs7` `(string: <required-ec2>)` - PKCS#7 signature of the identity document
   with all `\n` characters removed. This supports signatures from the AWS
