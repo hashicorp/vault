@@ -263,25 +263,37 @@ func (kv *kvv2) Put(ctx context.Context, secretPath string, data map[string]inte
 }
 
 // PutMetadata can be used to fully replace a subset of metadata fields for a
-// given KV v2 secret.
+// given KV v2 secret. All fields will replace the corresponding values on the Vault server.
+// Any fields left as nil will reset the field on the Vault server back to its zero value.
 //
-// It can also be used to create a new secret with just metadata and no secret data yet.
+// To only partially replace the values of these metadata fields, use PatchMetadata.
 //
-// To partially replace the values of these metadata fields, use PatchMetadata.
+// This method can also be used to create a new secret with just metadata and no secret data yet.
 func (kv *kvv2) PutMetadata(ctx context.Context, secretPath string, metadata KVMetadataInput) error {
 	pathToWriteTo := fmt.Sprintf("%s/metadata/%s", kv.mountPath, secretPath)
 
-	// convert non-nil values to a map we can pass to Logical
+	// convert values to a map we can pass to Logical,
+	// casting nils to the appropriate zero value
 	md := make(map[string]interface{})
-	md[customMetadataKey] = metadata.CustomMetadata
 	if metadata.MaxVersions != nil {
 		md[maxVersionsKey] = *(metadata.MaxVersions)
+	} else {
+		md[maxVersionsKey] = 0
 	}
 	if metadata.DeleteVersionAfter != nil {
 		md[deleteVersionAfterKey] = (*metadata.DeleteVersionAfter).String()
+	} else {
+		md[deleteVersionAfterKey] = "0s"
 	}
 	if metadata.CASRequired != nil {
 		md[casRequiredKey] = *(metadata.CASRequired)
+	} else {
+		md[casRequiredKey] = false
+	}
+	if metadata.CustomMetadata != nil {
+		md[customMetadataKey] = metadata.CustomMetadata
+	} else {
+		md[customMetadataKey] = make(map[string]interface{})
 	}
 
 	_, err := kv.c.Logical().WriteWithContext(ctx, pathToWriteTo, md)
@@ -341,7 +353,7 @@ func (kv *kvv2) Patch(ctx context.Context, secretPath string, newData map[string
 
 // PatchMetadata can be used to replace just a subset of a secret's
 // metadata fields at a time, as opposed to PutMetadata which is used to
-// completely replace the previous metadata.
+// completely replace all fields on the previous metadata.
 func (kv *kvv2) PatchMetadata(ctx context.Context, secretPath string, metadata KVMetadataInput) error {
 	pathToWriteTo := fmt.Sprintf("%s/metadata/%s", kv.mountPath, secretPath)
 
