@@ -528,7 +528,7 @@ func (b *Backend) handleRootHelp(req *logical.Request) (*logical.Response, error
 	// the request, the type will be used as part of the request/response body
 	// names in the OAS document.
 	requestResponsePrefix := req.GetString("requestResponsePrefix")
-	dynamicPaths := fmt.Sprintf("%v",req.Data["dynamicPaths"])
+	dynamicPaths := fmt.Sprintf("%v", req.Data["dynamicPaths"])
 	dynamic, _ := strconv.ParseBool(dynamicPaths)
 
 	// Build OpenAPI response for the entire backend
