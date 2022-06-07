@@ -1806,6 +1806,10 @@
         "path": "release-notes"
       },
       {
+        "title": "1.11.0",
+        "path": "release-notes/1.11.0"
+      },
+      {
         "title": "1.10.0",
         "path": "release-notes/1.10.0"
       },
