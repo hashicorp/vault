@@ -348,30 +348,30 @@ Read more on the
 
 GCE tokens **can only be generated from a GCE instance**.
 
-1.  As of version 1.11, Vault can automatically discover the identity token on a GCE/GKE instance. This simplifies
-  authenticating to Vault like so:
+1.  Vault can automatically discover the identity token on a GCE/GKE instance. This simplifies
+    authenticating to Vault like so:
 
-  ```shell-session
-  $ vault login \
-    -method=gcp \
-    role="my-vault-role"
-  ```
+    ```shell-session
+    $ vault login \
+      -method=gcp \
+      role="my-vault-role"
+    ```
 
 1.  The JWT token can also be obtained from the `"service-accounts/default/identity"` endpoint for a
-  instance's metadata server.
+    instance's metadata server.
 
-  #### curl Example
+    #### Curl example
 
-  ```shell-session
-  ROLE="my-gce-role"
+    ```shell-session
+    ROLE="my-gce-role"
 
-  $ curl \
-    --header "Metadata-Flavor: Google" \
-    --get \
-    --data-urlencode "audience=http://vault/${ROLE}" \
-    --data-urlencode "format=full" \
-    "http://metadata/computeMetadata/v1/instance/service-accounts/default/identity"
-  ```
+    $ curl \
+      --header "Metadata-Flavor: Google" \
+      --get \
+      --data-urlencode "audience=http://vault/${ROLE}" \
+      --data-urlencode "format=full" \
+      "http://metadata/computeMetadata/v1/instance/service-accounts/default/identity"
+    ```
 
 ## API
 
