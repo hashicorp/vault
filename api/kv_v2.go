@@ -277,10 +277,12 @@ func (kv *kvv2) Put(ctx context.Context, secretPath string, data map[string]inte
 func (kv *kvv2) PutMetadata(ctx context.Context, secretPath string, metadata KVMetadataPutInput) error {
 	pathToWriteTo := fmt.Sprintf("%s/metadata/%s", kv.mountPath, secretPath)
 
-	casRequiredKey := "cas_required"
-	deleteVersionAfterKey := "delete_version_after"
-	maxVersionsKey := "max_versions"
-	customMetadataKey := "custom_metadata"
+	const (
+		casRequiredKey        = "cas_required"
+		deleteVersionAfterKey = "delete_version_after"
+		maxVersionsKey        = "max_versions"
+		customMetadataKey     = "custom_metadata"
+	)
 
 	// convert values to a map we can pass to Logical
 	metadataMap := make(map[string]interface{})
@@ -753,10 +755,12 @@ func readThenWrite(ctx context.Context, client *Client, mountPath string, secret
 func toMetadataMap(patchInput KVMetadataPatchInput) (map[string]interface{}, error) {
 	metadataMap := make(map[string]interface{})
 
-	casRequiredKey := "cas_required"
-	deleteVersionAfterKey := "delete_version_after"
-	maxVersionsKey := "max_versions"
-	customMetadataKey := "custom_metadata"
+	const (
+		casRequiredKey        = "cas_required"
+		deleteVersionAfterKey = "delete_version_after"
+		maxVersionsKey        = "max_versions"
+		customMetadataKey     = "custom_metadata"
+	)
 
 	// The KVMetadataPatchInput struct is designed to have pointer fields so that
 	// the user can easily express the difference between explicitly setting a
@@ -777,7 +781,7 @@ func toMetadataMap(patchInput KVMetadataPatchInput) (map[string]interface{}, err
 		}
 	}
 	if patchInput.DeleteVersionAfter != nil {
-		metadataMap[deleteVersionAfterKey] = (*patchInput.DeleteVersionAfter).String()
+		metadataMap[deleteVersionAfterKey] = patchInput.DeleteVersionAfter.String()
 	}
 
 	return metadataMap, nil
