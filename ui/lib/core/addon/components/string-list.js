@@ -23,15 +23,8 @@ import { set } from '@ember/object';
 export default class StringList extends Component {
   constructor() {
     super(...arguments);
-    // this.setType();
-    // this.toList();
-    // this.send('addInput');
-  }
 
-  /* eslint-disable ember/no-side-effects */
-  get inputList() {
-    // ARG was content for watching
-    return ArrayProxy.create({
+    this.inputList = ArrayProxy.create({
       // trim the `value` when accessing objects
       content: [],
       objectAtContent: function (idx) {
@@ -39,14 +32,13 @@ export default class StringList extends Component {
         if (obj && obj.value) {
           set(obj, 'value', obj.value.trim());
         }
-        console.log('here');
         return obj;
       },
     });
-  }
-
-  get type() {
-    return this.args.type || 'array';
+    this.type = this.args.type || 'array';
+    this.setType();
+    this.toList();
+    this.addInput();
   }
 
   setType() {
@@ -75,8 +67,8 @@ export default class StringList extends Component {
   }
 
   @action
-  autoSize() {
-    autosize(document.querySelector('textarea'));
+  autoSize(element) {
+    autosize(element.querySelector('textarea'));
   }
   @action
   autoSizeUpdate() {
