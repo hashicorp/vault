@@ -1,0 +1,12 @@
+executor: node
+resource_class: xlarge
+steps:
+  - checkout
+  - restore_yarn_cache
+  - run:
+      name: Ember tests
+      command: mkdir -p /tmp/test-reports && cd ui && yarn test:oss
+  - store_test_results:
+      path: /tmp/test-reports
+  - store_artifacts:
+      path: /tmp/test-reports

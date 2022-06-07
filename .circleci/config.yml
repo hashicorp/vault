@@ -5,6 +5,24 @@
 # Orb 'circleci/slack@3.2.0' resolved to 'circleci/slack@3.2.0'
 version: 2
 jobs:
+  trigger-test-ui:
+    docker:
+    - image: docker.mirror.hashicorp.services/node:14-buster
+    shell: /usr/bin/env bash -euo pipefail -c
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
+    resource_class: xlarge
+    steps:
+    - checkout
+    - restore_cache:
+        key: yarn-lock-v7-{{ checksum "ui/yarn.lock" }}
+        name: Restore yarn cache
+    - run:
+        command: mkdir -p /tmp/test-reports && cd ui && yarn test:oss
+        name: Ember tests
+    - store_test_results:
+        path: /tmp/test-reports
+    - store_artifacts:
+        path: /tmp/test-reports
   install-ui-dependencies:
     docker:
     - image: docker.mirror.hashicorp.services/node:14-buster
@@ -1088,6 +1106,10 @@ workflows:
         requires:
         - pre-flight-checks
     - test-ui:
+        requires:
+        - install-ui-dependencies
+        - build-go-dev
+    - trigger-test-ui:
         requires:
         - install-ui-dependencies
         - build-go-dev
