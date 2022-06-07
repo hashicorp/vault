@@ -1,4 +1,11 @@
-<div class="field string-list form-section" data-test-component="string-list" data-test-input ...attributes>
+<div
+  class="field string-list form-section"
+  data-test-component="string-list"
+  {{did-insert this.autoSize}}
+  {{did-update this.autoSizeUpdate}}
+  data-test-input
+  ...attributes
+>
   {{#if @label}}
     <label class="title is-label" data-test-string-list-label="true">
       {{@label}}
@@ -21,8 +28,6 @@
           id={{concat this.elementId "-" index}}
           {{on "keyup" (action "inputChanged" index)}}
           {{on "change" (action "inputChanged" index)}}
-          {{did-insert this.autoSize}}
-          {{did-update this.autoSizeUpdate}}
         />
       </div>
       <div class="control">

@@ -70,9 +70,10 @@ export default class StringList extends Component {
   autoSize(element) {
     autosize(element.querySelector('textarea'));
   }
+
   @action
-  autoSizeUpdate() {
-    autosize.update(document.querySelector('textarea'));
+  autoSizeUpdate(element) {
+    autosize.update(element.querySelector('textarea'));
   }
 
   @action
