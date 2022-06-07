@@ -72,8 +72,7 @@ from the following sources:
 
 Hashicorp **does not** support in-place migrations from non-FIPS Inside
 versions of Vault to FIPS Inside versions of Vault, regardless of version.
-A fresh cluster installation is required to receive support. Any issues found
-during in-place migrations will not be addressed by Hashicorp.
+A fresh cluster installation is required to receive support.
 
 Entropy Augmentation **does not** work with FIPS 140-2 Inside. The internal
 BoringCrypto RNG is FIPS 140-2 certified and does not accept entropy from
