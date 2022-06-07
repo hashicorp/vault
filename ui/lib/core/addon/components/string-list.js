@@ -13,7 +13,7 @@ import { set } from '@ember/object';
  * ```
  * @param {string} label - Text displayed in the header above all the inputs.
  * @param {function} onChange - Function called when any of the inputs change.
- * @param {string} inputValue - A comma-separated string or an array of strings.
+ * @param {string} inputValue - A string or an array of strings.
  * @param {string} warning - Text displayed as a warning.
  * @param {string} helpText - Text displayed as a tooltip.
  * @param {string} type=array - Optional type for inputValue.
