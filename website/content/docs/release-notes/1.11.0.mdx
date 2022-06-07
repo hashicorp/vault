@@ -1,0 +1,148 @@
+---
+layout: docs
+page_title: 1.11.0
+description: |-
+  This page contains release notes for Vault 1.11.0
+---
+
+# Vault 1.11.0 Release notes
+
+**Software Release date:** June 21, 2022
+
+**Summary:** Vault Release 1.11 offers features and enhancements that improve the user experience while closing the loop on key issues previously encountered by our customers. We are providing a summary of these improvements in these release notes.
+
+We encourage you to upgrade to the latest release to take advantage of the new benefits that we are providing. With this latest release, we offer solutions to critical feature gaps that have been identified previously. For further information on product improvements, including a comprehensive list of bug fixes, please refer to the [Changelog](https://github.com/hashicorp/vault/blob/main/CHANGELOG.md) within the Vault 1.11 release.
+
+
+Some of these enhancements and changes in this release include:
+
+- PKI Secrets Engine added a new feature for CA rotation.
+- Vault Consul Secrets Engine provides a templating policy to allow node and service identities to be set on the Consult token creation.
+- Snowflake secrets engine added a key/pair based authentication.
+- Vault adds a Kubernetes secrets engine to allow creating dynamic k8s service accounts
+- ADP-Transform extends its functionality by adding a convergent tokenization mode and a tokenization lookup.
+- ADP-KM adds four new operations.
+- Transit Secrets engine adds an import feature.
+- Client Count improvements include the ability to display new clients that joined in a partial month, and historical client data and partial month client data will be combined into a new API.
+- Integration storage autopilot improvements include auto upgrade and redundancy zones.
+- Licensing changes include eliminating termination behavior for eval and non-eval licenses.
+- UI support for OIDC provider.
+
+## New Features
+
+This section describes the new features introduced as part of Vault 1.11.
+
+### Okta MFA authentication with number challenge
+
+TBD
+
+### Configure GCP auth to target non-public good API addresses
+
+TBD
+
+### Support for key/pair based authentication for Snowflake
+
+TBD
+
+### Dynamic Kubernetes service account secrets
+
+TBD
+
+### Secrets Management
+
+TBD
+### Support for node identity and service identity for Vault Consult secrets engine
+
+TBD
+
+### Autopilot ENT
+
+Support for Autopilot was added in Vault release 1.7 for Vault OSS customers. In this release, new Autopilot features are introduced for Vault Enterprise customers to perform seamless automatic upgrades and support redundancy zones for improved cluster resiliency. Please see [autopilot endpoint](/api-docs/system/storage/raftautopilot#sys-storage-raft-autopilot), [operator raft](/docs/commands/operator/raft), [Autopilot](/docs/concepts/integrated-storage/autopilot),  [Automated Upgrades](/docs/enterprise/automated-upgrades), and [Redundancy Zones](/docs/enterprise/redundancy-zones) documentation for more information.
+
+### HCP link registration
+
+TBD
+
+### Vault Insights
+
+TBD
+
+### Secrets Management UI enhancements
+
+TBD
+
+### Remediate Trail of Bits Findings
+
+TBD
+
+### Plug-in versioning
+
+TBD
+
+### Accessibility Audit
+
+TBD
+
+## Other Features and Enhancements
+
+This section describes other features and enhancements introduced as part of the Vault 1.11.0 release.
+
+### Import externally-generated keys into transit secrets engine
+
+TBD
+
+### Supported UI to configure Vault OIDC as identity provider
+
+TBD
+
+### Improved CA Rotation
+
+TBD
+
+### Client Count: Use combined partial + historic info API
+
+TBD
+
+### Client Count: Show client count changes month or month
+
+TBD
+
+### Client Count: Show new clients in a partial month
+
+TBD
+
+### MFA Enhancements
+
+In the previous release, we introduced Login MFA support for Vault OSS customers. In this release, we included additional enhancements to the Login MFA feature by introducing the ability to configure Login MFA via the UI. We also provided an enhanced TOTP configuration experience via the QR code scan.
+
+### Vault Agent: Support for using an existing valid certificate upon re-authentication
+
+Enhancements have been made to the Vault agent to support parsing of a certificate that's been fetched. A new certificate will only be fetched upon a re-authentication, if the lifetime of the certificate has expired. This enhancement greatly reduces the resource overhead that Vault agent users often experience due to over-fetching of certificates.
+
+
+### Namespace enhancements for Vault Terraform
+
+### ADP-Tranform enhancements
+- Tokenization search and convergent
+- Tokenization key auto rotation
+
+### KMIP support for import, query, encryption and decryption
+
+### Multiplexing of auth methods and secrets engines
+
+### Terraform Vault Provider feature parity
+
+
+## Breaking changes
+
+The following section details breaking changes introduced in Vault 1.11.0.
+
+### Licensing changes
+- License in storage
+- License termination behavior
+
+## Known issues
+
+## Feature Deprecations and EOL
+
+Please refer to the [Deprecation Plans and Notice](/docs/deprecation) page for up-to-date information on feature deprecations and plans. An [Feature Deprecation FAQ](/docs/deprecation/faq) page is also available to address questions concerning decisions made about Vault feature deprecations.
