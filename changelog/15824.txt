@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix issue where metadata tab is hidden even though policy grants access
+```
