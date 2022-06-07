@@ -1,0 +1,3 @@
+```release-note:bug
+api/sys/internal/specs/dynamic: Adding a new endpoint to support dynamic mountpath parameters in the openapi spec
+```
