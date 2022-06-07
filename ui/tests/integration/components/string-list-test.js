@@ -131,7 +131,7 @@ module('Integration | Component | string list', function (hooks) {
     assert.dom('[data-test-string-list-input="1"]').hasValue('');
   });
 
-  test('it replaces helpText if name is tokenBoundCidrs meep', async function (assert) {
+  test('it replaces helpText if name is tokenBoundCidrs', async function (assert) {
     assert.expect(1);
     await render(hbs`<StringList @label={{'blah'}} @helpText={{'blah'}} @attrName={{'tokenBoundCidrs'}} />`);
     let tooltipTrigger = document.querySelector('[data-test-tool-tip-trigger]');
