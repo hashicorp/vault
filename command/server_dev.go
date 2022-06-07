@@ -528,7 +528,7 @@ type quickstartSecret struct {
 func enableQuickstart(ctx context.Context, init *vault.InitResult, core *vault.Core) (*quickstartOptions, error) {
 	readOnlyPolicy := "path \"secret/*\" {capabilities = [\"read\"]}"
 	readOnlyPolicyName := "read-only"
-	crudPolicy := "path \"secret/*\" {capabilities = [\"create\", \"read\", \"update\", \"delete\"]}"
+	crudPolicy := "path \"secret/*\" {capabilities = [\"create\", \"read\", \"patch\", \"update\", \"delete\"]}"
 	crudPolicyName := "developer"
 
 	policies := make(map[string]string)
@@ -579,26 +579,26 @@ func enableQuickstart(ctx context.Context, init *vault.InitResult, core *vault.C
 	// userpass
 	err := qsEnableUserpass(ctx, init, core, options)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initalize quickstart userpass: %w", err)
+		return nil, fmt.Errorf("failed to initialize quickstart userpass: %w", err)
 	}
 
 	// app role auth
 	err = qsEnableAppRole(ctx, init, core, options)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initalize quickstart approle: %w", err)
+		return nil, fmt.Errorf("failed to initialize quickstart approle: %w", err)
 	}
 
 	// identity
 	err = qsEnableIdentity(ctx, init, core, options)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initalize quickstart identity: %w", err)
+		return nil, fmt.Errorf("failed to initialize quickstart identity: %w", err)
 	}
 
 	// sample secret
 	for _, s := range options.secrets {
 		err = devAddSecret(ctx, init, core, s)
 		if err != nil {
-			return nil, fmt.Errorf("failed to initalize quickstart seeded secret: %w", err)
+			return nil, fmt.Errorf("failed to initialize quickstart seeded secret: %w", err)
 		}
 	}
 
@@ -756,7 +756,7 @@ func qsEnableIdentity(ctx context.Context, init *vault.InitResult, core *vault.C
 			"name":           options.authUserpass.username,
 			"canonical_id":   id,
 			"mount_accessor": accessor,
-			"custom-metadata": map[string]string{
+			"custom_metadata": map[string]string{
 				"account": "demo",
 			},
 		},
