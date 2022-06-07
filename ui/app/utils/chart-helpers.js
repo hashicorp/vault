@@ -27,9 +27,11 @@ export function formatTooltipNumber(value) {
   return new Intl.NumberFormat().format(value);
 }
 
-export function calculateAverageClients(dataset, objectKey) {
-  // dataset is an array of objects (consumed by the chart components)
-  // objectKey is the key of the integer we want to calculate, ex: 'entity_clients', 'non_entity_clients', 'clients'
-  let getIntegers = dataset.map((d) => (d[objectKey] ? d[objectKey] : 0)); // if undefined no data, so return 0
-  return getIntegers.length !== 0 ? Math.round(mean(getIntegers)) : null;
+export function calculateAverage(dataset, objectKey) {
+  if (!Array.isArray(dataset) || dataset?.length === 0) return null;
+  // if an array of objects, objectKey of the integer we want to calculate, ex: 'entity_clients'
+  // if d[objectKey] is undefined there is no value, so return 0
+  const getIntegers = objectKey ? dataset?.map((d) => (d[objectKey] ? d[objectKey] : 0)) : dataset;
+  let checkIntegers = getIntegers.every((n) => Number.isInteger(n)); // decimals will be false
+  return checkIntegers ? Math.round(mean(getIntegers)) : null;
 }

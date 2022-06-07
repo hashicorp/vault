@@ -40,6 +40,10 @@ const generateHealthResponse = (state) => {
 module('Acceptance | Enterprise | License banner warnings', function (hooks) {
   setupApplicationTest(hooks);
 
+  hooks.afterEach(function () {
+    this.server.shutdown();
+  });
+
   test('it shows no license banner if license expires in > 30 days', async function (assert) {
     const healthResp = generateHealthResponse();
     this.server = new Pretender(function () {
