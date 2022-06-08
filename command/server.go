@@ -426,7 +426,7 @@ func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError,
 		}
 	}
 
-	if config.Entropy != nil && config.Entropy.Mode == configutil.EntropyAugmentation && constants.IsFIPS() {
+	if config != nil && config.Entropy != nil && config.Entropy.Mode == configutil.EntropyAugmentation && constants.IsFIPS() {
 		c.UI.Warn("WARNING: Entropy Augmentation is not supported in FIPS 140-2 Inside mode; disabling from server configuration!\n")
 		config.Entropy = nil
 	}
