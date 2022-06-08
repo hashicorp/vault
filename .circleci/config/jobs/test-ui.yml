@@ -1,8 +1,8 @@
 executor: node
 resource_class: xlarge
 steps:
-  - exit-if-branch-does-not-need-test-ui
   - checkout
+  - exit-if-changes-does-not-need-test-ui
   - restore_yarn_cache
   - attach_workspace:
       at: .

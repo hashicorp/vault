@@ -1,0 +1,19 @@
+description: >
+  Check if branch has modified only ui/, website/, and changelog/ and if so, exit.
+steps:
+  - run:
+      name: Check for relevant code changes
+      command: |
+        # We filter the list for a negative match against website/ or ui/. If
+        # there's a negative match, that means a non-website, non-ui change
+        # was made, returning 0. By inverting the conditional out front (!),
+        # we negate the return code, meaning we'll skip the CI halt and run
+        # all tests. Otherwise, if the change was limited, the negative match
+        # would return exit code 1, negating that would make the if conditional
+        # truthy and halt Circle CI's Go tests.
+        if ! git diff --name-only "{{ pipeline.git.base_revision }}...{{ pipeline.git.revision }}" | grep --invert-match -q '^\(website\|ui\|changelog\)/'; then
+          circleci-agent step halt
+        fi
+
+        # exit with success either way
+        exit 0

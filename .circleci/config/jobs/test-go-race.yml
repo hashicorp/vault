@@ -3,6 +3,7 @@ parallelism: 8
 steps:
   - exit-if-ui-or-docs-branch
   - checkout
+  - exit-if-only-ui-or-docs-changes
   - go_test:
       extra_flags: "-race"
       log_dir: "/tmp/testlogs"

@@ -1,0 +1,12 @@
+description: >
+  Check if branch has modified the ui/ folder and halt if not
+steps:
+  - run:
+      name: Check for relevant code changes
+      command: |
+        if ! git diff --name-only "{{ pipeline.git.base_revision }}...{{ pipeline.git.revision }}" | grep -q '^ui/'; then
+          circleci-agent step halt
+        fi
+
+        # exit with success either way
+        exit 0

@@ -2,6 +2,7 @@ executor: node
 resource_class: xlarge
 steps:
   - checkout
+  - exit-if-changes-does-not-need-test-ui
   - restore_yarn_cache
   - attach_workspace:
       at: .
