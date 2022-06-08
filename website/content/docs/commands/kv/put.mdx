@@ -60,7 +60,7 @@ included on all commands.
 ### Command Options
 
 - `-cas` `(int: 0)` - Specifies to use a Check-And-Set operation. If not set the
-  write will be allowed. In order for a write to be successful, `-cas` must be set to 
+  write will be allowed. In order for a write to be successful, `cas` must be set to 
   the current version of the secret. If set to 0 a write will only be allowed if 
   the key doesn’t exist as unset keys do not have any version information. Also 
   remember that soft deletes do not remove any underlying version data from storage.
