@@ -2021,8 +2021,12 @@ func issueSSHKeyPairStep(role, keyType string, keyBits int, expectError bool, er
 				return err
 			}
 
+			if resp.Error() != nil {
+				return fmt.Errorf("unexpected error response returned: %v", resp.Error())
+			}
+
 			if resp.Data["private_key_type"] != keyType {
-				return errors.New("private key type does not match provided key_type")
+				return fmt.Errorf("response private_key_type (%s) does not match the provided key_type (%s)", resp.Data["private_key_type"], keyType)
 			}
 
 			if resp.Data["signed_key"] == "" {

@@ -53,40 +53,40 @@ func (b *backend) pathSignIssueCertificateHelper(ctx context.Context, req *logic
 	// them as 4xx values
 	keyID, err := b.calculateKeyID(data, req, role, publicKey)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), err
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	certificateType, err := b.calculateCertificateType(data, role)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), err
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	var parsedPrincipals []string
 	if certificateType == ssh.HostCert {
 		parsedPrincipals, err = b.calculateValidPrincipals(data, req, role, "", role.AllowedDomains, validateValidPrincipalForHosts(role))
 		if err != nil {
-			return logical.ErrorResponse(err.Error()), err
+			return logical.ErrorResponse(err.Error()), nil
 		}
 	} else {
 		parsedPrincipals, err = b.calculateValidPrincipals(data, req, role, role.DefaultUser, role.AllowedUsers, strutil.StrListContains)
 		if err != nil {
-			return logical.ErrorResponse(err.Error()), err
+			return logical.ErrorResponse(err.Error()), nil
 		}
 	}
 
 	ttl, err := b.calculateTTL(data, role)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), err
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	criticalOptions, err := b.calculateCriticalOptions(data, role)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), err
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	extensions, err := b.calculateExtensions(data, req, role)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), err
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	privateKeyEntry, err := caKey(ctx, req.Storage, caPrivateKey)
