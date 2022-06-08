@@ -21,6 +21,9 @@ const appConfig = {
     sourceDirs: ['node_modules/@hashicorp/structure-icons/dist', 'public'],
     rootURL: '/ui/',
   },
+  fingerprint: {
+    exclude: ['images/'],
+  },
   assetLoader: {
     generateURI: function (filePath) {
       return `${config.rootURL.replace(/\/$/, '')}${filePath}`;
