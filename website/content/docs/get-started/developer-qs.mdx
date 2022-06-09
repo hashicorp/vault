@@ -253,13 +253,11 @@ We'll use the Vault client we just initialized to write a secret to Vault, like 
 
 ```go
 secretData := map[string]interface{}{
-    "data": map[string]interface{}{
-        "password": "Hashi123",
-    },
+    "password": "Hashi123",
 }
 
 
-_, err = client.Logical().Write("secret/data/my-secret-password", secretData)
+_, err = client.KVv2("secret").Put(context.Background(), "my-secret-password", secretData)
 if err != nil {
     log.Fatalf("unable to write secret: %v", err)
 }
@@ -342,20 +340,14 @@ Underneath the line where you wrote a secret to Vault, let's add a few more line
 <CodeBlockConfig lineNumbers>
 
 ```go
-secret, err := client.Logical().Read("secret/data/my-secret-password")
+secret, err := client.KVv2("secret").Get(context.Background(), "my-secret-password")
 if err != nil {
     log.Fatalf("unable to read secret: %v", err)
 }
 
-data, ok := secret.Data["data"].(map[string]interface{})
+value, ok := secret.Data["password"].(string)
 if !ok {
-    log.Fatalf("data type assertion failed: %T %#v", secret.Data["data"], secret.Data["data"])
-}
-
-key := "password"
-value, ok := data[key].(string)
-if !ok {
-    log.Fatalf("value type assertion failed: %T %#v", data[key], data[key])
+log.Fatalf("value type assertion failed: %T %#v", secret.Data["password"], secret.Data["password"])
 }
 ```
 
