@@ -1,3 +1,0 @@
-```release-note:improvement
-website/docs: removed IRC reference from architecture internals page.
-```
