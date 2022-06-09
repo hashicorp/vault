@@ -293,12 +293,12 @@ func (b *databaseBackend) addConnectionsCounter(dbw databaseVersionWrapper, amou
 	if err != nil {
 		b.Logger().Debug("Error getting database type", "err", err)
 		dbType = "unknown"
-	} 
-	version := 5
-	if dbw.isV4() {
-		version = 4
 	}
-	
+	version := "5"
+	if dbw.isV4() {
+		version = "4"
+	}
+
 	labels := []metrics.Label{{"type", dbType}, {"version", version}}
 	metrics.IncrCounterWithLabels([]string{"secrets", "database", "backend", "connections", "count"}, float32(amount), labels)
 }
