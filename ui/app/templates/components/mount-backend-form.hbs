@@ -38,14 +38,13 @@
         </h3>
         <div class="box-radio-container">
           {{#each (filter-by "category" category this.mountTypes) as |type|}}
-            {{! ARG TODO work on the onRadioChange }}
             <BoxRadio
               @displayName={{type.displayName}}
               @type={{type.type}}
               @glyph={{or type.glyph type.type}}
               @groupValue={{this.mountModel.type}}
               @groupName="mount-type"
-              @onRadioChange={{queue (action (mut this.mountModel.type)) (action "onTypeChange" "type")}}
+              @onRadioChange={{queue (fn (mut this.mountModel.type)) (fn this.onTypeChange "type")}}
               @disabled={{if type.requiredFeature (not (has-feature type.requiredFeature)) false}}
               @tooltipMessage={{if
                 (or (eq type.type "transform") (eq type.type "kmip") (eq type.type "keymgmt"))

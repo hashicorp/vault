@@ -1,4 +1,6 @@
 import Ember from 'ember';
+import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action, setProperties } from '@ember/object';
 import { task } from 'ember-concurrency';
@@ -6,12 +8,9 @@ import { methods } from 'vault/helpers/mountable-auth-methods';
 import { engines, KMIP, TRANSFORM, KEYMGMT } from 'vault/helpers/mountable-secret-engines';
 import { waitFor } from '@ember/test-waiters';
 
-import Component from '@glimmer/component';
-import { tracked } from '@glimmer/tracking';
-
 /**
  * @module MountBackendForm
- * The `MountBackendForm` is ARG TODO
+ * The `MountBackendForm` is used to mount either a secret or auth backend.
  *
  * @example ```js
  *   <MountBackendForm @mountType="secret" @onMountSuccess={{this.onMountSuccess}} />```
@@ -33,6 +32,7 @@ export default class MountBackendForm extends Component {
   get mountType() {
     return this.args.mountType || 'auth';
   }
+
   @tracked mountModel = null;
   @tracked showEnable = false;
 
