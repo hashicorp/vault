@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
@@ -280,8 +281,28 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 		id:       id,
 		name:     name,
 	}
+	b.addConnectionsCounter(dbw, 1)
 	b.connections[name] = dbi
 	return dbi, nil
+}
+
+// addConnectionsCounter is used to keep metrics on how many and what types of databases we have open
+func (b *databaseBackend) addConnectionsCounter(dbw databaseVersionWrapper, amount int) {
+	// keep track of what databases we open
+	labels := make([]metrics.Label, 0, 2)
+	dbType, err := dbw.Type()
+	if err == nil {
+		labels = append(labels, metrics.Label{Name: "type", Value: dbType})
+	} else {
+		b.Logger().Debug("Error getting database type", "err", err)
+		labels = append(labels, metrics.Label{Name: "type", Value: "unknown"})
+	}
+	if dbw.isV4() {
+		labels = append(labels, metrics.Label{Name: "version", Value: "4"})
+	} else {
+		labels = append(labels, metrics.Label{Name: "version", Value: "5"})
+	}
+	metrics.IncrCounterWithLabels([]string{"secrets", "database", "backend", "connections", "count"}, float32(amount), labels)
 }
 
 // invalidateQueue cancels any background queue loading and destroys the queue.
@@ -311,6 +332,7 @@ func (b *databaseBackend) clearConnection(name string) error {
 	if ok {
 		// Ignore error here since the database client is always killed
 		db.Close()
+		b.addConnectionsCounter(db.database, -1)
 		delete(b.connections, name)
 	}
 	return nil
@@ -331,6 +353,7 @@ func (b *databaseBackend) CloseIfShutdown(db *dbPluginInstance, err error) {
 			// Ensure we are deleting the correct connection
 			mapDB, ok := b.connections[db.name]
 			if ok && db.id == mapDB.id {
+				b.addConnectionsCounter(db.database, -1)
 				delete(b.connections, db.name)
 			}
 		}()
@@ -339,18 +362,26 @@ func (b *databaseBackend) CloseIfShutdown(db *dbPluginInstance, err error) {
 
 // clean closes all connections from all database types
 // and cancels any rotation queue loading operation.
+// It spawns goroutines to close the databases since these
+// are not guaranteed to finish quickly.
 func (b *databaseBackend) clean(ctx context.Context) {
-	// invalidateQueue acquires it's own lock on the backend, removes queue, and
+	// invalidateQueue acquires its own lock on the backend, removes queue, and
 	// terminates the background ticker
 	b.invalidateQueue()
 
 	b.Lock()
 	defer b.Unlock()
 
-	for _, db := range b.connections {
-		db.Close()
-	}
+	// copy all connections so we can close asynchronously
+	connectionsCopy := b.connections
 	b.connections = make(map[string]*dbPluginInstance)
+
+	for _, db := range connectionsCopy {
+		go func(db *dbPluginInstance) {
+			b.addConnectionsCounter(db.database, -1)
+			db.Close()
+		}(db)
+	}
 }
 
 const backendHelp = `

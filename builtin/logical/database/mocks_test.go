@@ -36,8 +36,7 @@ func (m *mockNewDatabase) DeleteUser(ctx context.Context, req v5.DeleteUserReque
 }
 
 func (m *mockNewDatabase) Type() (string, error) {
-	args := m.Called()
-	return args.String(0), args.Error(1)
+	return "mock", nil
 }
 
 func (m *mockNewDatabase) Close() error {
