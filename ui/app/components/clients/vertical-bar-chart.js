@@ -98,7 +98,6 @@ export default class VerticalBarChart extends Component {
       .data(filteredData)
       .enter()
       .append('circle')
-      .attr('data-test-vertical-chart', 'tool-tip-point')
       .attr('cy', (d) => `${100 - yScale(d[this.yKey])}%`)
       .attr('cx', (d) => xScale(d[this.xKey]));
 
