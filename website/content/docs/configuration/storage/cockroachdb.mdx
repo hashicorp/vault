@@ -33,8 +33,8 @@ uses that driver to interact with the database.
 
 - `connection_url` `(string: <required>)` – Specifies the connection string to
   use to authenticate and connect to CockroachDB. A full list of supported
-  parameters can be found in [the pgx library documentation][pgxlib]. For example
-  connection string URLs, see the examples section below.
+  parameters can be found in the [pgx library][pgxlib] and [PostgreSQL connection string][pg_conn_docs]
+  documentation. For example connection string URLs, see the examples section below.
 
 - `table` `(string: "vault_kv_store")` – Specifies the name of the table in
   which to write Vault data. If this table does not exist Vault will attempt to create it.
@@ -63,4 +63,5 @@ storage "cockroachdb" {
 ```
 
 [cockroachdb]: https://www.cockroachlabs.com/
-[pgxlib]: https://pkg.go.dev/github.com/jackc/pgx/v4#hdr-Establishing_a_Connection
+[pgxlib]: https://pkg.go.dev/github.com/jackc/pgx/stdlib
+[pg_conn_docs]: https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING
