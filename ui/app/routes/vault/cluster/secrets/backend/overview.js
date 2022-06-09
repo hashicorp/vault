@@ -54,7 +54,7 @@ export default Route.extend({
       roleCapabilities,
       staticRoleCapabilities,
       connectionCapabilities,
-      icon: backend,
+      icon: 'database',
     });
   },
   setupController(controller, model) {
