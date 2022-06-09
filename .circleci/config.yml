@@ -30,11 +30,11 @@ jobs:
           cd ui
           mkdir -p test-results/qunit
           yarn test:oss
-        name: export PATH
+        name: Export PATH & Run UI Tests
     - store_test_results:
-        path: /tmp/test-reports
+        path: ui/test-results
     - store_artifacts:
-        path: /tmp/test-reports
+        path: ui/test-results
   install-ui-dependencies:
     docker:
     - environment:

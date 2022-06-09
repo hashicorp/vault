@@ -11,8 +11,8 @@ go-machine:
   working_directory: /home/circleci/go/src/github.com/hashicorp/vault
 node:
   docker:
-    - image: docker.mirror.hashicorp.services/circleci/node:14-browsers # - image: docker.mirror.hashicorp.services/node:14-buster
-      environment: # CHROME_BIN: /usr/bin/google-chrome
+    - image: docker.mirror.hashicorp.services/circleci/node:14-browsers
+      environment:
         # See https://git.io/vdao3 for details.
         JOBS: 2
   shell: /usr/bin/env bash -euo pipefail -c

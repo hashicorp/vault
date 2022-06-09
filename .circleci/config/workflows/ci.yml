@@ -15,6 +15,7 @@ jobs:
         # We don't filter here however because test-ui is configured in github as
         # required so it must run, instead we short-circuit within test-ui.
   - trigger-test-ui:
+      # manually triggered by adding github action (ignorant of branch naming)
       requires:
         - install-ui-dependencies
         - build-go-dev
