@@ -4080,10 +4080,10 @@ func (b *SystemBackend) pathInternalOpenApiDynamic(ctx context.Context, req *log
 					}
 				}
 
-				if mount != "sys/" && mount != "identity" {
+				if mount != "sys/" && mount != "identity/" {
 					doc.Paths["/"+mountPrefix+"{mountPath}/"+path] = obj
 				} else {
-					doc.Paths["/"+mountPrefix+"{mountPath}/"+path] = obj
+					doc.Paths["/"+mountPrefix+mount+path] = obj
 				}
 			}
 
