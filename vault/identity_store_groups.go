@@ -255,7 +255,7 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 
 	err = i.sanitizeAndUpsertGroup(ctx, group, nil, memberGroupIDs)
 	if err != nil {
-		if errStr := err.Error(); strings.HasPrefix(err.Error(), errCycleDetectedPrefix) {
+		if errStr := err.Error(); strings.HasPrefix(errStr, errCycleDetectedPrefix) {
 			return logical.ErrorResponse(errStr), nil
 		}
 
