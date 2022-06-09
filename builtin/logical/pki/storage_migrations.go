@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -83,8 +84,12 @@ func migrateStorage(ctx context.Context, b *backend, s logical.Storage) error {
 	var issuerIdentifier issuerID
 	var keyIdentifier keyID
 	if migrationInfo.legacyBundle != nil {
+		// Generate a unique name for the migrated items in case things were to be re-migrated again
+		// for some weird reason in the future...
+		migrationName := fmt.Sprintf("current-%d", time.Now().Unix())
+
 		b.Logger().Info("performing PKI migration to new keys/issuers layout")
-		anIssuer, aKey, err := writeCaBundle(ctx, b, s, migrationInfo.legacyBundle, "current", "current")
+		anIssuer, aKey, err := writeCaBundle(ctx, b, s, migrationInfo.legacyBundle, migrationName, migrationName)
 		if err != nil {
 			return err
 		}
