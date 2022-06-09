@@ -7,7 +7,9 @@ version: 2
 jobs:
   trigger-test-ui:
     docker:
-    - image: docker.mirror.hashicorp.services/node:14-buster
+    - environment:
+        CHROME_BIN: /usr/bin/google-chrome
+      image: docker.mirror.hashicorp.services/node:14-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     resource_class: xlarge
@@ -25,7 +27,9 @@ jobs:
         path: /tmp/test-reports
   install-ui-dependencies:
     docker:
-    - image: docker.mirror.hashicorp.services/node:14-buster
+    - environment:
+        CHROME_BIN: /usr/bin/google-chrome
+      image: docker.mirror.hashicorp.services/node:14-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
@@ -46,7 +50,9 @@ jobs:
         - ui/node_modules
   test-ui:
     docker:
-    - image: docker.mirror.hashicorp.services/node:14-buster
+    - environment:
+        CHROME_BIN: /usr/bin/google-chrome
+      image: docker.mirror.hashicorp.services/node:14-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     resource_class: xlarge
@@ -99,7 +105,9 @@ jobs:
         path: ui/test-results
   test-ui-browserstack:
     docker:
-    - image: docker.mirror.hashicorp.services/node:14-buster
+    - environment:
+        CHROME_BIN: /usr/bin/google-chrome
+      image: docker.mirror.hashicorp.services/node:14-buster
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     resource_class: xlarge
