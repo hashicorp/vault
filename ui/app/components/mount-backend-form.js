@@ -78,7 +78,7 @@ export default class MountBackendForm extends Component {
     // change it here to match the new type
     let isUnchanged = list.findBy('type', currentPath);
     if (!currentPath || isUnchanged) {
-      mount.set('path', type);
+      mount.path = type;
     }
   }
 
