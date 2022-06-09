@@ -289,19 +289,17 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 // addConnectionsCounter is used to keep metrics on how many and what types of databases we have open
 func (b *databaseBackend) addConnectionsCounter(dbw databaseVersionWrapper, amount int) {
 	// keep track of what databases we open
-	labels := make([]metrics.Label, 0, 2)
 	dbType, err := dbw.Type()
-	if err == nil {
-		labels = append(labels, metrics.Label{Name: "type", Value: dbType})
-	} else {
+	if err != nil {
 		b.Logger().Debug("Error getting database type", "err", err)
-		labels = append(labels, metrics.Label{Name: "type", Value: "unknown"})
-	}
+		dbType = "unknown"
+	} 
+	version := 5
 	if dbw.isV4() {
-		labels = append(labels, metrics.Label{Name: "version", Value: "4"})
-	} else {
-		labels = append(labels, metrics.Label{Name: "version", Value: "5"})
+		version = 4
 	}
+	
+	labels := []metrics.Label{{"type", dbType}, {"version", version}}
 	metrics.IncrCounterWithLabels([]string{"secrets", "database", "backend", "connections", "count"}, float32(amount), labels)
 }
 
