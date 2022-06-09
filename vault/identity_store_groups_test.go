@@ -1253,7 +1253,7 @@ func TestIdentityStore_GroupHierarchyCases(t *testing.T) {
 	groupUpdateReq.Data = kubeGroupData
 	kubeGroupData["member_group_ids"] = []string{engGroupID}
 	resp, err = is.HandleRequest(ctx, groupUpdateReq)
-	if err == nil {
+	if err != nil || resp == nil || !resp.IsError() {
 		t.Fatalf("expected an error response")
 	}
 
