@@ -201,6 +201,10 @@
         "path": "configuration"
       },
       {
+        "title": "Time Format",
+        "path": "configuration/time-format"
+      },
+      {
         "title": "<code>listener</code>",
         "routes": [
           {
