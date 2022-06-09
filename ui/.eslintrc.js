@@ -32,10 +32,6 @@ module.exports = {
     'ember/no-actions-hash': 'off',
     'ember/require-tagless-components': 'off',
     'ember/no-component-lifecycle-hooks': 'off',
-    'compat/compat': [
-      'error',
-      'last 1 chrome version, last 1 firefox version, last 1 edge version, last 1 safari version',
-    ],
   },
   overrides: [
     // node files
