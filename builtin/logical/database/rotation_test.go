@@ -1379,6 +1379,7 @@ func setupMockDB(b *databaseBackend) *mockNewDatabase {
 	mockDB := &mockNewDatabase{}
 	mockDB.On("Initialize", mock.Anything, mock.Anything).Return(v5.InitializeResponse{}, nil)
 	mockDB.On("Close").Return(nil)
+	mockDB.On("Type").Return("mock", nil)
 	dbw := databaseVersionWrapper{
 		v5: mockDB,
 	}
