@@ -927,7 +927,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(sysHelp["internal-ui-feature-flags"][1]),
 		},
 		{
-			Pattern: "internal/ui/mounts",
+			Pattern: "mounts-all",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalUIMountsRead,
@@ -938,7 +938,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(sysHelp["internal-ui-mounts"][1]),
 		},
 		{
-			Pattern: "internal/ui/mounts/(?P<path>.+)",
+			Pattern: "mounts-all/(?P<path>.+)",
 			Fields: map[string]*framework.FieldSchema{
 				"path": {
 					Type:        framework.TypeString,
