@@ -245,7 +245,7 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 			"secret_key":     *tokenResp.Credentials.SecretAccessKey,
 			"security_token": *tokenResp.Credentials.SessionToken,
 			"arn":            *tokenResp.AssumedRoleUser.Arn,
-			"ttl":            tokenResp.Credentials.Expiration.Sub(time.Now()),
+			"ttl":            uint64(tokenResp.Credentials.Expiration.Sub(time.Now()).Seconds()),
 		},
 	}, nil
 }
