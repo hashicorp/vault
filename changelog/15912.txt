@@ -1,0 +1,3 @@
+```release-note:change
+identity: a request to `/identity/group` that includes `member_group_ids` that contains a cycle will now be responded to with a 400 rather than 500
+```
