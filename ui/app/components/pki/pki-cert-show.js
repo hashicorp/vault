@@ -1,4 +1,4 @@
-import RoleEdit from './role-edit';
+import RoleEdit from '../role-edit';
 
 export default RoleEdit.extend({
   actions: {
