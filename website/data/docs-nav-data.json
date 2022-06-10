@@ -245,7 +245,10 @@
             "path": "configuration/seal/ocikms"
           },
           {
-            "title": "HSM PKCS11 <sup>ENT</sup>",
+            "title": "HSM PKCS11",
+            "badge": {
+              "text": "ENT"
+            },
             "path": "configuration/seal/pkcs11"
           },
           {
@@ -389,11 +392,17 @@
         "path": "configuration/log-requests-level"
       },
       {
-        "title": "<code>Entropy Augmentation</code> <sup>ENT</sup>",
+        "title": "<code>Entropy Augmentation</code>",
+        "badge": {
+          "text": "ENT"
+        },
         "path": "configuration/entropy-augmentation"
       },
       {
-        "title": "<code>kms_library</code> <sup>ENT</sup>",
+        "title": "<code>kms_library</code>",
+        "badge": {
+          "text": "ENT"
+        },
         "path": "configuration/kms-library"
       }
     ]
@@ -1032,7 +1041,10 @@
         ]
       },
       {
-        "title": "Key Management <sup>ENTERPRISE</sup>",
+        "title": "Key Management",
+        "badge": {
+          "text": "ENTERPRISE"
+        },
         "routes": [
           {
             "title": "Overview",
@@ -1070,7 +1082,10 @@
         ]
       },
       {
-        "title": "KMIP <sup>ENTERPRISE</sup>",
+        "title": "KMIP",
+        "badge": {
+          "text": "ENTERPRISE"
+        },
         "path": "secrets/kmip"
       },
       {
@@ -1152,7 +1167,10 @@
         "path": "secrets/totp"
       },
       {
-        "title": "Transform <sup>ENTERPRISE</sup>",
+        "title": "Transform",
+        "badge": {
+          "text": "ENTERPRISE"
+        },
         "routes": [
           {
             "title": "Overview",
@@ -1163,7 +1181,10 @@
             "path": "secrets/transform/ff3-tweak-details"
           },
           {
-            "title": "Tokenization Transform <sup>ENTERPRISE</sup>",
+            "title": "Tokenization Transform",
+            "badge": {
+              "text": "ENTERPRISE"
+            },
             "path": "secrets/transform/tokenization"
           }
         ]
@@ -1279,7 +1300,10 @@
         "divider": true
       },
       {
-        "title": "App ID <sup>DEPRECATED</sup>",
+        "title": "App ID",
+        "badge": {
+          "text": "DEPRECATED"
+        },
         "path": "auth/app-id"
       }
     ]

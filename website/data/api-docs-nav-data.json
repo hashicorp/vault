@@ -182,7 +182,10 @@
         ]
       },
       {
-        "title": "Key Management <sup>ENTERPRISE</sup>",
+        "title": "Key Management",
+        "badge": {
+          "text": "ENTERPRISE"
+        },
         "routes": [
           {
             "title": "Overview",
@@ -220,7 +223,10 @@
         ]
       },
       {
-        "title": "KMIP <sup>ENTERPRISE</sup>",
+        "title": "KMIP",
+        "badge": {
+          "text": "ENTERPRISE"
+        },
         "path": "secret/kmip"
       },
       {
@@ -260,7 +266,10 @@
         "path": "secret/totp"
       },
       {
-        "title": "Transform <sup>ENTERPRISE</sup>",
+        "title": "Transform",
+        "badge": {
+          "text": "ENTERPRISE"
+        },
         "path": "secret/transform"
       },
       {
@@ -345,7 +354,10 @@
         "path": "auth/userpass"
       },
       {
-        "title": "App ID <sup>DEPRECATED</sup>",
+        "title": "App ID",
+        "badge": {
+          "text": "DEPRECATED"
+        },
         "path": "auth/app-id"
       }
     ]
@@ -479,7 +491,10 @@
         "path": "system/license"
       },
       {
-        "title": "<code>/sys/managed-keys <sup>ENT</sup></code>",
+        "title": "<code>/sys/managed-keys</code>",
+        "badge": {
+          "text": "ENT"
+        },
         "path": "system/managed-keys"
       },
       {
