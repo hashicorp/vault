@@ -642,14 +642,11 @@ func (b *databaseBackend) loadStaticWALs(ctx context.Context, s logical.Storage)
 // actually available. This is needed because both runTicker and initQueue
 // operate in go-routines, and could be accessing the queue concurrently
 func (b *databaseBackend) pushItem(item *queue.Item) error {
-	b.RLock()
-	unlockFunc := b.RUnlock
-	defer func() { unlockFunc() }()
-
-	if b.credRotationQueue != nil {
+	select {
+	case <-b.ctx.Done():
+	default:
 		return b.credRotationQueue.Push(item)
 	}
-
 	b.Logger().Warn("no queue found during push item")
 	return nil
 }
@@ -658,9 +655,9 @@ func (b *databaseBackend) pushItem(item *queue.Item) error {
 // actually available. This is needed because both runTicker and initQueue
 // operate in go-routines, and could be accessing the queue concurrently
 func (b *databaseBackend) popFromRotationQueue() (*queue.Item, error) {
-	b.RLock()
-	defer b.RUnlock()
-	if b.credRotationQueue != nil {
+	select {
+	case <-b.ctx.Done():
+	default:
 		return b.credRotationQueue.Pop()
 	}
 	return nil, queue.ErrEmpty
@@ -670,9 +667,9 @@ func (b *databaseBackend) popFromRotationQueue() (*queue.Item, error) {
 // actually available. This is needed because both runTicker and initQueue
 // operate in go-routines, and could be accessing the queue concurrently
 func (b *databaseBackend) popFromRotationQueueByKey(name string) (*queue.Item, error) {
-	b.RLock()
-	defer b.RUnlock()
-	if b.credRotationQueue != nil {
+	select {
+	case <-b.ctx.Done():
+	default:
 		item, err := b.credRotationQueue.PopByKey(name)
 		if err != nil {
 			return nil, err
