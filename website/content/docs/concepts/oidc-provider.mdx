@@ -80,8 +80,8 @@ The full list of template parameters are included in the following table:
 | `identity.entity.aliases.<mount accessor>.custom_metadata`                       | Custom metadata associated with the alias for the given mount                           |
 | `identity.entity.aliases.<mount accessor>.custom_metadata.<custom_metadata key>` | Custom metadata associated with the alias for the given mount and custom metadata key   |
 | `time.now`                                                                       | Current time as integral seconds since the Epoch                                        |
-| `time.now.plus.<duration>`                                                       | Current time plus a [duration format string](/concepts/duration-format)                 |
-| `time.now.minus.<duration>`                                                      | Current time minus a [duration format string](/concepts/duration-format)                |
+| `time.now.plus.<duration>`                                                       | Current time plus a [duration format string](/docs/concepts/duration-format)                 |
+| `time.now.minus.<duration>`                                                      | Current time minus a [duration format string](/docs/concepts/duration-format)                |
 
 
 Several named scopes can be made available on an individual provider. Note that the top-level keys in a JSON template may conflict with those in another scope. When scopes are made available on a provider, their templates are checked for top-level conflicts. A warning will be issued to the Vault operator if any conflicts are found. This may result in an error if the scopes are requested in an OIDC Authentication Request.
