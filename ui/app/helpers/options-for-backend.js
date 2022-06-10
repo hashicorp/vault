@@ -23,16 +23,25 @@ const SECRET_BACKENDS = {
   pki: {
     displayName: 'PKI',
     navigateTree: false,
-    listItemPartial: 'secret-list/pki-role-item',
+    listItemPartial: 'secret-list/pki-role-item', // ARG TODO?? instead of secret-list/item'
     tabs: [
+      {
+        name: 'overview',
+        label: 'Overview',
+        item: 'overview',
+        tab: 'overview',
+        editComponent: 'pki/overview',
+      },
       {
         name: 'roles',
         label: 'Roles',
         searchPlaceholder: 'Filter roles',
         item: 'role',
         create: 'Create role',
-        editComponent: 'role-pki-edit',
+        tab: 'role-pki',
+        editComponent: 'pki/role-pki-edit',
       },
+      // ARG TODO working on role-pki-edit first.
       {
         name: 'certs',
         modelPrefix: 'cert/',
