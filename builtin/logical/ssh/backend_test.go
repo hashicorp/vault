@@ -2010,7 +2010,6 @@ func issueSSHKeyPairStep(role, keyType string, keyBits int, expectError bool, er
 			"key_bits": keyBits,
 		},
 		ErrorOk: true,
-		// Returns like nil, err break this
 		Check: func(resp *logical.Response) error {
 			if expectError {
 				var err error
@@ -2021,7 +2020,7 @@ func issueSSHKeyPairStep(role, keyType string, keyBits int, expectError bool, er
 				return err
 			}
 
-			if resp.Error() != nil {
+			if resp.IsError() {
 				return fmt.Errorf("unexpected error response returned: %v", resp.Error())
 			}
 
