@@ -52,7 +52,7 @@ func addToGauge(dbType, version string, amount int32) {
 	if _, ok := gauges[gaugeName]; !ok {
 		createGauge(gaugeName)
 	}
-	val := atomic.AddInt32(gauges[gaugeName], int32(amount))
+	val := atomic.AddInt32(gauges[gaugeName], amount)
 	metrics.SetGaugeWithLabels(gaugeKey, float32(val), labels)
 }
 
