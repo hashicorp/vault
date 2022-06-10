@@ -1494,6 +1494,9 @@ func (h hangingPlugin) Close() error {
 var _ dbplugin.Database = (*hangingPlugin)(nil)
 
 func TestBackend_PluginMain_Hanging(t *testing.T) {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
+		return
+	}
 	v5.Serve(&hangingPlugin{})
 }
 
