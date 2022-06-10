@@ -64,6 +64,16 @@ through this function will be based on the certificate's expiration.
 {{ pkiCert "pki/issue/my-domain-dot-com" "common_name=foo.example.com" }}
 ```
 
+To fetch the issuing CA for this mount, use:
+
+```
+{{- with secret "pki/cert/ca" -}}
+{{ "" | or ( .Data.certificate ) }}
+{{- end -}}
+```
+
+Alternatively, `pki/cert/ca_chain` can be used to fetch the full CA chain.
+
 ## Global Configurations
 
 The top level `template_config` block has the following configuration entries that affect
