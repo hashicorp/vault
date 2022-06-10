@@ -25,10 +25,8 @@ the lease counters will be shared, regardless of which node in the Vault cluster
 receives lease generation requests. Lease quotas can be imposed across Vault's API,
 or scoped down to API pertaining to specific namespaces or specific mounts.
 
-Lease count quotas defined in a namespace will be inherited by all the child
-namespaces. By extension, this means that a quota that is defined in the `root`
-namespace is inherited by all namespaces and mounts, essentially to the entire
-Vault API.
+A quota that is defined in the `root` namespace is inherited by all namespaces
+and mounts, essentially to the entire Vault API.
 
 Lease count quotas defined on a namespace will take precedence over the inherited
 quotas. Lease count quotas defined for a mount will take precedence over inherited
