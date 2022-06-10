@@ -247,7 +247,9 @@
           {
             "title": "HSM PKCS11",
             "badge": {
-              "text": "ENT"
+              "text": "ENT",
+              "type": "outlined",
+              "color": "neutral"
             },
             "path": "configuration/seal/pkcs11"
           },
@@ -394,14 +396,18 @@
       {
         "title": "<code>Entropy Augmentation</code>",
         "badge": {
-          "text": "ENT"
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
         },
         "path": "configuration/entropy-augmentation"
       },
       {
         "title": "<code>kms_library</code>",
         "badge": {
-          "text": "ENT"
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
         },
         "path": "configuration/kms-library"
       }
@@ -1043,7 +1049,9 @@
       {
         "title": "Key Management",
         "badge": {
-          "text": "ENTERPRISE"
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
         },
         "routes": [
           {
@@ -1084,7 +1092,9 @@
       {
         "title": "KMIP",
         "badge": {
-          "text": "ENTERPRISE"
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
         },
         "path": "secrets/kmip"
       },
@@ -1169,7 +1179,9 @@
       {
         "title": "Transform",
         "badge": {
-          "text": "ENTERPRISE"
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
         },
         "routes": [
           {
@@ -1183,7 +1195,9 @@
           {
             "title": "Tokenization Transform",
             "badge": {
-              "text": "ENTERPRISE"
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "neutral"
             },
             "path": "secrets/transform/tokenization"
           }
@@ -1302,7 +1316,9 @@
       {
         "title": "App ID",
         "badge": {
-          "text": "DEPRECATED"
+          "text": "DEPRECATED",
+          "type": "outlined",
+          "color": "neutral"
         },
         "path": "auth/app-id"
       }

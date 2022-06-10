@@ -184,7 +184,9 @@
       {
         "title": "Key Management",
         "badge": {
-          "text": "ENTERPRISE"
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
         },
         "routes": [
           {
@@ -225,7 +227,9 @@
       {
         "title": "KMIP",
         "badge": {
-          "text": "ENTERPRISE"
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
         },
         "path": "secret/kmip"
       },
@@ -268,7 +272,9 @@
       {
         "title": "Transform",
         "badge": {
-          "text": "ENTERPRISE"
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
         },
         "path": "secret/transform"
       },
@@ -356,7 +362,9 @@
       {
         "title": "App ID",
         "badge": {
-          "text": "DEPRECATED"
+          "text": "DEPRECATED",
+          "type": "outlined",
+          "color": "neutral"
         },
         "path": "auth/app-id"
       }
@@ -493,7 +501,9 @@
       {
         "title": "<code>/sys/managed-keys</code>",
         "badge": {
-          "text": "ENT"
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
         },
         "path": "system/managed-keys"
       },
