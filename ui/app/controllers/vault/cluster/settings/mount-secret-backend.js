@@ -16,6 +16,10 @@ export default Controller.extend({
           transition = this.transitionToRoute('vault.cluster.secrets.backend.index', path, {
             queryParams: { tab: 'provider' },
           });
+        } else if (type === 'pki') {
+          transition = this.transitionToRoute('vault.cluster.secrets.backend.index', path, {
+            queryParams: { tab: 'overview' },
+          });
         } else {
           transition = this.transitionToRoute('vault.cluster.secrets.backend.index', path);
         }

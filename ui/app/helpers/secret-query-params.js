@@ -5,6 +5,7 @@ export function secretQueryParams([backendType, type = ''], { asQueryParams }) {
     transit: { tab: 'actions' },
     database: { type },
     keymgmt: { itemType: type || 'key' },
+    pki: { itemType: type || 'overview' },
   }[backendType];
   // format required when using LinkTo with positional params
   if (values && asQueryParams) {

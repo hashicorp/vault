@@ -81,6 +81,7 @@ export default Route.extend({
       transform: this.modelTypeForTransform(tab),
       aws: 'role-aws',
       pki: tab === 'certs' ? 'pki-certificate' : 'role-pki',
+      pkitwo: `pki/${tab || 'overview'}`,
       // secret or secret-v2
       cubbyhole: 'secret',
       kv: secretEngine.get('modelTypeForKV'),
