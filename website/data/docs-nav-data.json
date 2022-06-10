@@ -190,6 +190,10 @@
       {
         "title": "Mount Migration",
         "path": "concepts/mount-migration"
+      },
+      {
+        "title": "Duration Format",
+        "path": "concepts/duration-format"
       }
     ]
   },
@@ -199,10 +203,6 @@
       {
         "title": "Overview",
         "path": "configuration"
-      },
-      {
-        "title": "Time Format",
-        "path": "configuration/time-format"
       },
       {
         "title": "<code>listener</code>",
