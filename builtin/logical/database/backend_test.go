@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/vault/plugins/database/mongodb"
 	"github.com/hashicorp/vault/plugins/database/postgresql"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -1458,6 +1459,85 @@ func TestBackend_ConnectionURL_redacted(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+type hangingPlugin struct{}
+
+func (h hangingPlugin) Initialize(ctx context.Context, req v5.InitializeRequest) (v5.InitializeResponse, error) {
+	return v5.InitializeResponse{
+		Config: req.Config,
+	}, nil
+}
+
+func (h hangingPlugin) NewUser(ctx context.Context, req v5.NewUserRequest) (v5.NewUserResponse, error) {
+	return v5.NewUserResponse{}, nil
+}
+
+func (h hangingPlugin) UpdateUser(ctx context.Context, req v5.UpdateUserRequest) (v5.UpdateUserResponse, error) {
+	return v5.UpdateUserResponse{}, nil
+}
+
+func (h hangingPlugin) DeleteUser(ctx context.Context, req v5.DeleteUserRequest) (v5.DeleteUserResponse, error) {
+	return v5.DeleteUserResponse{}, nil
+}
+
+func (h hangingPlugin) Type() (string, error) {
+	return "hanging", nil
+}
+
+func (h hangingPlugin) Close() error {
+	time.Sleep(1000 * time.Second)
+	return nil
+}
+
+var _ dbplugin.Database = (*hangingPlugin)(nil)
+
+func TestBackend_PluginMain_Hanging(t *testing.T) {
+	v5.Serve(&hangingPlugin{})
+}
+
+func TestBackend_Closes_Cleanly_Even_If_Plugin_Hangs(t *testing.T) {
+	cleanupMaxWaitTime = 100 * time.Millisecond
+	cluster, sys := getCluster(t)
+	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "hanging-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Hanging", []string{}, "")
+	t.Cleanup(cluster.Cleanup)
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = sys
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Configure a connection
+	data := map[string]interface{}{
+		"connection_url": "doesn't matter",
+		"plugin_name":    "hanging-plugin",
+		"allowed_roles":  []string{"plugin-role-test"},
+	}
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/hang",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	_, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	timeout := time.NewTimer(750 * time.Millisecond)
+	done := make(chan bool)
+	go func() {
+		b.Cleanup(context.Background())
+		done <- true
+	}()
+	select {
+	case <-timeout.C:
+		t.Error("Hanging plugin caused Close() to time out")
+	case <-done:
 	}
 }
 

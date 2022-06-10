@@ -6,6 +6,7 @@ import (
 	"net/rpc"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -19,6 +20,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
+	"golang.org/x/sync/semaphore"
 )
 
 const (
@@ -27,6 +29,32 @@ const (
 	databaseStaticRolePath = "static-role/"
 	minRootCredRollbackAge = 1 * time.Minute
 )
+
+// mutable for tests only
+var cleanupMaxWaitTime = 500 * time.Millisecond
+
+// metrics collection
+var (
+	gaugeSync = sync.Mutex{}
+	gauges    = map[string]*int32{}
+	gaugeKey  = []string{"secrets", "database", "backend", "connections", "count"}
+)
+
+func createGauge(name string) {
+	gaugeSync.Lock()
+	defer gaugeSync.Unlock()
+	gauges[name] = new(int32)
+}
+
+func addToGauge(dbType, version string, amount int32) {
+	labels := []metrics.Label{{"type", dbType}, {"version", version}}
+	gaugeName := fmt.Sprintf("%s-%s", dbType, version)
+	if _, ok := gauges[gaugeName]; !ok {
+		createGauge(gaugeName)
+	}
+	val := atomic.AddInt32(gauges[gaugeName], int32(amount))
+	metrics.SetGaugeWithLabels(gaugeKey, float32(val), labels)
+}
 
 type dbPluginInstance struct {
 	sync.RWMutex
@@ -298,9 +326,7 @@ func (b *databaseBackend) addConnectionsCounter(dbw databaseVersionWrapper, amou
 	if dbw.isV4() {
 		version = "4"
 	}
-
-	labels := []metrics.Label{{"type", dbType}, {"version", version}}
-	metrics.IncrCounterWithLabels([]string{"secrets", "database", "backend", "connections", "count"}, float32(amount), labels)
+	addToGauge(dbType, version, int32(amount))
 }
 
 // invalidateQueue cancels any background queue loading and destroys the queue.
@@ -363,6 +389,9 @@ func (b *databaseBackend) CloseIfShutdown(db *dbPluginInstance, err error) {
 // It spawns goroutines to close the databases since these
 // are not guaranteed to finish quickly.
 func (b *databaseBackend) clean(ctx context.Context) {
+	cleanupCtx, cancel := context.WithDeadline(ctx, time.Now().Add(cleanupMaxWaitTime))
+	defer cancel()
+
 	// invalidateQueue acquires its own lock on the backend, removes queue, and
 	// terminates the background ticker
 	b.invalidateQueue()
@@ -374,11 +403,27 @@ func (b *databaseBackend) clean(ctx context.Context) {
 	connectionsCopy := b.connections
 	b.connections = make(map[string]*dbPluginInstance)
 
+	// we will try to wait for all the connections to close
+	// ... but not too long
+	sem := semaphore.NewWeighted(int64(len(connectionsCopy)))
+	err := sem.Acquire(cleanupCtx, int64(len(connectionsCopy)))
+	if err != nil {
+		b.Logger().Debug("Error acquiring semaphore; ignoring", "error", err)
+	}
+
 	for _, db := range connectionsCopy {
 		go func(db *dbPluginInstance) {
+			defer sem.Release(1)
 			b.addConnectionsCounter(db.database, -1)
-			db.Close()
+			err := db.Close()
+			if err != nil {
+				b.Logger().Debug("Error closing database while cleaning up plugin; ignoring", "error", err)
+			}
 		}(db)
+	}
+	err = sem.Acquire(cleanupCtx, int64(len(connectionsCopy)))
+	if err != nil {
+		b.Logger().Debug("Error in cleanup semaphore; ignoring", "error", err)
 	}
 }
 
