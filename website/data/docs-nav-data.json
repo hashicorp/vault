@@ -192,7 +192,7 @@
         "path": "concepts/mount-migration"
       },
       {
-        "title": "Duration Format",
+        "title": "Duration String Format",
         "path": "concepts/duration-format"
       }
     ]
