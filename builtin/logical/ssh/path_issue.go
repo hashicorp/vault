@@ -113,7 +113,10 @@ func (b *backend) pathIssueCertificate(ctx context.Context, req *logical.Request
 
 	response, err := b.pathSignIssueCertificateHelper(ctx, req, data, role, userPublicKey)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+		return nil, err
+	}
+	if response.IsError() {
+		return response, nil
 	}
 
 	// Additional to sign response
