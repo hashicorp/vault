@@ -36,6 +36,7 @@ add new issuers/keys to a mount instead of warning that an existing CA exists [[
 * secrets/pki: the signed CA certificate from the sign-intermediate api will now appear within the ca_chain
 response field along with the issuer's ca chain. [[GH-15524](https://github.com/hashicorp/vault/pull/15524)]
 * ui: Upgrade Ember to version 3.28 [[GH-14763](https://github.com/hashicorp/vault/pull/14763)]
+
 FEATURES:
 
 * **KeyMgmt UI**: Add UI support for managing the Key Management Secrets Engine [[GH-15523](https://github.com/hashicorp/vault/pull/15523)]
