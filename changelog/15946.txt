@@ -1,0 +1,3 @@
+```release-note:bug
+core/seal: write a temp file and encrypt it, then rename it to the target path file. This can avoid the orignal file crash if Vault restart.
+```
