@@ -216,7 +216,7 @@ rebuilt upon changes to the list of issuers. [[GH-15179](https://github.com/hash
 * ui: masked values no longer give away length or location of special characters [[GH-15025](https://github.com/hashicorp/vault/pull/15025)]
 
 ## 1.10.4
-### June 9, 2022
+### June 10, 2022
 
 CHANGES:
 
