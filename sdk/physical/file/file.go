@@ -242,8 +242,9 @@ func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) er
 
 	// JSON encode the entry and write it
 	fullPath := filepath.Join(path, key)
+	tempPath := fullPath + ".temp"
 	f, err := os.OpenFile(
-		fullPath,
+		tempPath,
 		os.O_CREATE|os.O_TRUNC|os.O_WRONLY,
 		0o600)
 	if err != nil {
@@ -262,6 +263,10 @@ func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) er
 	})
 	f.Close()
 	if encErr == nil {
+		err = os.Rename(tempPath, fullPath)
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 
@@ -270,7 +275,7 @@ func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) er
 	// See if we ended up with a zero-byte file and if so delete it, might be a
 	// case of disk being full but the file info is in metadata that is
 	// reserved.
-	fi, err := os.Stat(fullPath)
+	fi, err := os.Stat(tempPath)
 	if err != nil {
 		return encErr
 	}
@@ -278,7 +283,7 @@ func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) er
 		return encErr
 	}
 	if fi.Size() == 0 {
-		os.Remove(fullPath)
+		os.Remove(tempPath)
 	}
 	return encErr
 }
