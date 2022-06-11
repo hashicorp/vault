@@ -54,7 +54,7 @@ in place without affecting existing client configurations. [[GH-15277](https://g
 
 IMPROVEMENTS:
 
-* :core/managed-keys (enterprise): Allow configuring the number of parallel operations to PKCS#11 managed keys.
+* core/managed-keys (enterprise): Allow configuring the number of parallel operations to PKCS#11 managed keys.
 * activity: return nil response months in activity log API when no month data exists [[GH-15420](https://github.com/hashicorp/vault/pull/15420)]
 * agent/auto-auth: Add `min_backoff` to the method stanza for configuring initial backoff duration. [[GH-15204](https://github.com/hashicorp/vault/pull/15204)]
 * agent: Update consult-template to v0.29.0 [[GH-15293](https://github.com/hashicorp/vault/pull/15293)]
