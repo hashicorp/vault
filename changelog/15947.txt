@@ -1,0 +1,3 @@
+```release-note:security
+core: Update github.com/containerd/containerd to v1.6.6 to fix security issues
+```
