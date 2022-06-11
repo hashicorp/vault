@@ -941,7 +941,7 @@ of dirty pages in the merkle tree at time of checkpoint creation. [[GH-2093](htt
 * ui: updating database TTL picker help text. [[GH-12212](https://github.com/hashicorp/vault/pull/12212)]
 
 ## 1.8.12
-### June 9,2022
+### June 10, 2022
 
 BUG FIXES:
 
