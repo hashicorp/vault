@@ -542,7 +542,7 @@ operation for upgraded configurations with a `root_password_ttl` of zero. [[GH-1
 * ui: trigger token renewal if inactive and half of TTL has passed [[GH-13950](https://github.com/hashicorp/vault/pull/13950)]
 
 ## 1.9.7
-### June 9, 2022
+### June 10, 2022
 
 CHANGES:
 
