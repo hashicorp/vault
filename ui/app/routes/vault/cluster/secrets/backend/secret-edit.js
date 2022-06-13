@@ -101,7 +101,7 @@ export default Route.extend(UnloadModelRoute, {
       ssh: 'role-ssh',
       transform: this.modelTypeForTransform(secret),
       aws: 'role-aws',
-      pki: secret && secret.startsWith('cert/') ? 'pki/pki-certificate' : 'pki/role-pki',
+      pki: secret && secret.startsWith('cert/') ? 'pki/pki-certificate' : 'pki/pki-role',
       cubbyhole: 'secret',
       kv: backendModel.get('modelTypeForKV'),
       keymgmt: `keymgmt/${options.queryParams?.itemType || 'key'}`,
