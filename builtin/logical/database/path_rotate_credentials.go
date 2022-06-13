@@ -83,8 +83,9 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 		unlocked := false
 		defer func() {
 			if !unlocked {
-				dbi.Unlock()
+				// set to true before unlocking to avoid race condition
 				unlocked = true
+				dbi.Unlock()
 			}
 		}()
 		defer func() {
@@ -96,8 +97,9 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 			// Even on error, still remove the connection
 			// be careful with a deadlock here
 			if !unlocked {
-				dbi.Unlock()
+				// set to true before unlocking to avoid race condition
 				unlocked = true
+				dbi.Unlock()
 			}
 			b.ClearConnection(name)
 		}()
