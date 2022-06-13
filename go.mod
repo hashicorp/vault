@@ -104,7 +104,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-couchbase v0.7.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.11.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.7.0
-	github.com/hashicorp/vault-plugin-database-snowflake v0.5.0
+	github.com/hashicorp/vault-plugin-database-snowflake v0.5.1
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.13.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.12.0
@@ -117,10 +117,10 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.8.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.5.0
 	github.com/hashicorp/vault-testing-stepwise v0.1.2
-	github.com/hashicorp/vault/api v1.6.0
+	github.com/hashicorp/vault/api v1.7.2
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
-	github.com/hashicorp/vault/sdk v0.5.0
+	github.com/hashicorp/vault/sdk v0.5.1
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/jackc/pgx/v4 v4.15.0
 	github.com/jcmturner/gokrb5/v8 v8.4.2
@@ -133,7 +133,7 @@ require (
 	github.com/mattn/go-colorable v0.1.12
 	github.com/mattn/go-isatty v0.0.14
 	github.com/mholt/archiver/v3 v3.5.1
-	github.com/michaelklishin/rabbit-hole/v2 v2.11.0
+	github.com/michaelklishin/rabbit-hole/v2 v2.12.0
 	github.com/mikesmitty/edkey v0.0.0-20170222072505-3356ea4e686a
 	github.com/mitchellh/cli v1.1.2
 	github.com/mitchellh/copystructure v1.2.0

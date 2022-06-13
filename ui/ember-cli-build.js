@@ -7,7 +7,7 @@ const config = require('./config/environment')();
 const environment = EmberApp.env();
 const isProd = environment === 'production';
 const isTest = environment === 'test';
-const isCI = !!process.env.CI;
+// const isCI = !!process.env.CI;
 
 const appConfig = {
   'ember-service-worker': {
@@ -21,16 +21,16 @@ const appConfig = {
     sourceDirs: ['node_modules/@hashicorp/structure-icons/dist', 'public'],
     rootURL: '/ui/',
   },
+  fingerprint: {
+    exclude: ['images/'],
+  },
   assetLoader: {
     generateURI: function (filePath) {
       return `${config.rootURL.replace(/\/$/, '')}${filePath}`;
     },
   },
   babel: {
-    plugins: ['@babel/plugin-proposal-object-rest-spread', ['inline-json-import', {}]],
-  },
-  'ember-cli-babel': {
-    includePolyfill: isTest || isProd || isCI,
+    plugins: [['inline-json-import', {}]],
   },
   hinting: isTest,
   tests: isTest,

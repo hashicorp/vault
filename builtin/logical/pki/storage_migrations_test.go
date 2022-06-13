@@ -100,12 +100,14 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 	keyId := keyIds[0]
 	issuer, err := fetchIssuerById(ctx, s, issuerId)
 	require.NoError(t, err)
-	require.Equal(t, "current", issuer.Name) // RFC says we should import with Name=current
+	require.True(t, strings.HasPrefix(issuer.Name, "current-"),
+		"expected issuer name to start with current- was %s", issuer.Name)
 	require.Equal(t, certutil.ErrNotAfterBehavior, issuer.LeafNotAfterBehavior)
 
 	key, err := fetchKeyById(ctx, s, keyId)
 	require.NoError(t, err)
-	require.Equal(t, "current", key.Name) // RFC says we should import with Name=current
+	require.True(t, strings.HasPrefix(key.Name, "current-"),
+		"expected key name to start with current- was %s", key.Name)
 
 	require.Equal(t, issuerId, issuer.ID)
 	require.Equal(t, bundle.SerialNumber, issuer.SerialNumber)
@@ -145,6 +147,20 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 	require.Equal(t, logEntry.Hash, logEntry2.Hash)
 
 	require.False(t, b.useLegacyBundleCaStorage(), "post migration we are still told to use legacy storage")
+
+	// Make sure we can re-process a migration from scratch for whatever reason
+	err = s.Delete(ctx, legacyMigrationBundleLogKey)
+	require.NoError(t, err)
+
+	err = migrateStorage(ctx, b, s)
+	require.NoError(t, err)
+
+	logEntry3, err := getLegacyBundleMigrationLog(ctx, s)
+	require.NoError(t, err)
+	require.NotNil(t, logEntry3)
+
+	require.NotEqual(t, logEntry.Created, logEntry3.Created)
+	require.Equal(t, logEntry.Hash, logEntry3.Hash)
 }
 
 func TestExpectedOpsWork_PreMigration(t *testing.T) {

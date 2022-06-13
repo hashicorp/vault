@@ -6,7 +6,7 @@
     <div class="auth-form" data-test-mfa-form>
       <div class="box">
         {{#if (eq this.onStep 1)}}
-          <MfaSetupStepOne
+          <Mfa::MfaSetupStepOne
             @entityId={{this.entityId}}
             @isUUIDVerified={{this.isUUIDVerified}}
             @restartFlow={{this.restartFlow}}
@@ -16,7 +16,7 @@
           />
         {{/if}}
         {{#if (eq this.onStep 2)}}
-          <MfaSetupStepTwo
+          <Mfa::MfaSetupStepTwo
             @entityId={{this.entityId}}
             @uuid={{this.uuid}}
             @qrCode={{this.qrCode}}

@@ -5149,7 +5149,7 @@ This path responds to the following HTTP methods.
 		"This function can be used to generate high-entropy random bytes.",
 	},
 	"listing_visibility": {
-		"Determines the visibility of the mount in the UI-specific listing endpoint. Accepted value are 'unauth' and ''.",
+		"Determines the visibility of the mount in the UI-specific listing endpoint. Accepted value are 'unauth' and 'hidden', with the empty default ('') behaving like 'hidden'.",
 		"",
 	},
 	"passthrough_request_headers": {
