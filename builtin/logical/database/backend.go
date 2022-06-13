@@ -348,7 +348,9 @@ func (b *databaseBackend) CloseIfShutdown(db *dbPluginInstance, err error) {
 // and cancels any rotation queue loading operation.
 func (b *databaseBackend) clean(_ context.Context) {
 	// kill the queue and terminate the background ticker
-	b.cancelQueue()
+	if b.cancelQueue != nil {
+		b.cancelQueue()
+	}
 
 	connections := b.connClear()
 	for _, db := range connections {
