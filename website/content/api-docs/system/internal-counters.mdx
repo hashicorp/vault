@@ -94,11 +94,17 @@ period, which is represented by the `start_time` and `end_time` parameters.
 
 There are a few things to keep in mind while using this API.
 
-- The activity information only accounts for the activity of the latest
-contiguous months in the billing period. For example, if the billing period is
-from Jan 2022 to June 2022, and the activity subsystem in Vault was not
-capturing data for the months Jan to March, the response will only include
-information for May and June.
+- For Vault versions before 1.11, the activity information only accounts for 
+the activity of the latest contiguous months in the billing period. 
+For example, if the billing period is from Jan 2022 to June 2022, and the
+activity subsystem in Vault was not capturing data for the months Jan to March,
+the response will only include information for May and June. Note that if no 
+`start_time` and `end_time` parameters are specified, the billing period defaults 
+to 12 months, so the endpoint will return activity information from the end of the 
+previous month to the start of 12 months prior to that date. 
+
+- As of 1.11, this behavior has been modified to return all available data within 
+the specified billing period.
 
 - The response contains the total activity for the billing period and the
 attributions of the total activity against specific components in Vault. This

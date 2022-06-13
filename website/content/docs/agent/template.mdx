@@ -45,15 +45,23 @@ The following links contain additional resources for the templating language use
 
 ### Template Language Example
 
-Template with Vault Agent requires the use of the `secret` [function from Consul
-Template](https://github.com/hashicorp/consul-template/blob/master/docs/templating-language.md#secret).
+Template with Vault Agent requires the use of the `secret` [function](https://github.com/hashicorp/consul-template/blob/master/docs/templating-language.md#secret)
+or `pkiCert` [function](https://github.com/hashicorp/consul-template/blob/main/docs/templating-language.md#pkicert)
+from Consul Template.
+
 The following is an example of a template that retrieves a generic secret from Vault's
 KV store:
-
 ```
 {{ with secret "secret/my-secret" }}
 {{ .Data.data.foo }}
 {{ end }}
+```
+
+The following is an example of a template that retrieves a PKI certificate from
+Vault's PKI secrets engine. The fetching of a certificate from a PKI role
+through this function will be based on the certificate's expiration.
+```
+{{ pkiCert "pki/issue/my-domain-dot-com" "common_name=foo.example.com" }}
 ```
 
 ## Global Configurations
