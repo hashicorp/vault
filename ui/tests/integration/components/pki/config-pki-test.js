@@ -4,7 +4,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { create } from 'ember-cli-page-object';
-import configPki from '../../pages/components/pki/config-pki';
+import configPki from 'vault/tests/pages/components/pki/config-pki';
 
 const component = create(configPki);
 
@@ -47,7 +47,7 @@ module('Integration | Component | config pki', function (hooks) {
   const setupAndRender = async function (context, section = 'tidy') {
     context.set('config', config());
     context.set('section', section);
-    await context.render(hbs`{{config-pki section=section config=config}}`);
+    await context.render(hbs`<Pki::ConfigPki @section={{section}} @config={{config}} />`);
   };
 
   test('it renders tidy section', async function (assert) {
@@ -94,7 +94,7 @@ module('Integration | Component | config pki', function (hooks) {
       })
     );
     this.set('section', section);
-    await render(hbs`{{config-pki section=section config=config onRefresh=onRefresh}}`);
+    await render(hbs`<Pki::ConfigPki @section={{section}} @config={{config}} @onRefresh={{onRefresh}} />`);
 
     component.submit();
   });

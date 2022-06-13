@@ -6,7 +6,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { create } from 'ember-cli-page-object';
-import configPki from '../../pages/components/config-pki-ca';
+import configPki from 'vault/tests/pages/components/pki/config-pki-ca';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 
 const component = create(configPki);
@@ -51,7 +51,7 @@ module('Integration | Component | config pki ca', function (hooks) {
     const refreshFn = onRefresh || function () {};
     context.set('config', config());
     context.set('onRefresh', refreshFn);
-    await context.render(hbs`{{config-pki-ca onRefresh=onRefresh config=config}}`);
+    await context.render(hbs`<Pki::ConfigPkiCa @onRefresh={{onRefresh}} @config={{config}} />`);
   };
 
   test('it renders, no pem', async function (assert) {
@@ -72,7 +72,7 @@ module('Integration | Component | config pki ca', function (hooks) {
   test('it renders, with pem', async function (assert) {
     const c = config('pem');
     this.set('config', c);
-    await render(hbs`{{config-pki-ca config=config}}`);
+    await render(hbs`<Pki::ConfigPkiCa @config={{config}} />`);
     assert.notOk(component.hasTitle, 'no title in the default state');
     assert.equal(component.replaceCAText, 'Add CA');
     assert.equal(component.downloadLinks.length, 3, 'shows download links');
