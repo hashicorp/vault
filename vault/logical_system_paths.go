@@ -900,6 +900,11 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "Context string appended to every operationId",
 				},
+				"dynamic": {
+					Type:        framework.TypeBool,
+					Description: "Use dynamic mount paths",
+					Query:       true,
+				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ReadOperation:   b.pathInternalOpenAPI,
@@ -911,27 +916,6 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.pathInternalOpenAPI,
-					Summary:  "Generate an OpenAPI 3 document of all mounted paths.",
-				},
-			},
-		},
-		{
-			Pattern: "internal/specs/dynamic",
-			Fields: map[string]*framework.FieldSchema{
-				"context": {
-					Type:        framework.TypeString,
-					Description: "Context string appended to every operationId",
-				},
-			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation: b.pathInternalOpenApiDynamic,
-			},
-		},
-		{
-			Pattern: "internal/specs/dynamic",
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.pathInternalOpenApiDynamic,
 					Summary:  "Generate an OpenAPI 3 document of all mounted paths.",
 				},
 			},
