@@ -1,6 +1,7 @@
 executor: node
 resource_class: xlarge
 steps:
+  - exit-if-branch-does-not-need-test-ui
   - checkout
   - restore_yarn_cache
   - attach_workspace:
@@ -16,7 +17,7 @@ steps:
         cd ui
         mkdir -p test-results/qunit
         yarn test:oss
-  - store_test_results:
-      path: ui/test-results
   - store_artifacts:
+      path: ui/test-results
+  - store_test_results:
       path: ui/test-results

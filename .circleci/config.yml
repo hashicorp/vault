@@ -37,6 +37,20 @@ jobs:
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     resource_class: xlarge
     steps:
+    - run:
+        command: |
+          case "$CIRCLE_BRANCH" in
+          main|ui/*|backport/ui/*|release/*|merge*) ;;
+          *) # If the branch being tested doesn't match one of the above patterns,
+             # we don't need to run test-ui and can abort the job.
+             circleci-agent step halt
+             ;;
+          esac
+
+          # exit with success either way
+          exit 0
+        name: Check branch name
+        working_directory: ~/
     - checkout
     - restore_cache:
         key: yarn-lock-v7-{{ checksum "ui/yarn.lock" }}
@@ -54,9 +68,9 @@ jobs:
           mkdir -p test-results/qunit
           yarn test:oss
         name: Run UI Tests
-    - store_test_results:
-        path: ui/test-results
     - store_artifacts:
+        path: ui/test-results
+    - store_test_results:
         path: ui/test-results
   test-ui-browserstack:
     docker:
