@@ -186,11 +186,15 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			mountPath = strings.TrimPrefix(mountPath, ns.Path)
 		}
 
+		var pathSuffix string
 		if mountPath != "" {
 			match := b.Core.router.MatchingMount(namespace.ContextWithNamespace(ctx, ns), mountPath)
 			if match == "" {
 				return logical.ErrorResponse("invalid mount path %q", mountPath), nil
 			}
+
+			pathSuffix = strings.TrimPrefix(mountPath, match)
+			mountPath = match
 		}
 		// Disallow creation of new quota that has properties similar to an
 		// existing quota.
@@ -210,7 +214,7 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 
 		switch {
 		case quota == nil:
-			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, rate, interval, blockInterval)
+			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, pathSuffix, rate, interval, blockInterval)
 		default:
 			// Re-inserting the already indexed object in memdb might cause problems.
 			// So, clone the object. See https://github.com/hashicorp/go-memdb/issues/76.

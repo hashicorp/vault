@@ -478,8 +478,17 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 		return quotas[0], nil
 	}
 
+	// Fetch path suffix quota
+	quota, err := quotaFetchFunc(indexNamespaceMount, req.NamespacePath, req.Path)
+	if err != nil {
+		return nil, err
+	}
+	if quota != nil {
+		return quota, nil
+	}
+
 	// Fetch mount quota
-	quota, err := quotaFetchFunc(indexNamespaceMount, req.NamespacePath, req.MountPath)
+	quota, err = quotaFetchFunc(indexNamespaceMount, req.NamespacePath, req.MountPath)
 	if err != nil {
 		return nil, err
 	}

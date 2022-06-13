@@ -16,7 +16,7 @@ func TestQuotas_MountPathOverwrite(t *testing.T) {
 	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink())
 	require.NoError(t, err)
 
-	quota := NewRateLimitQuota("tq", "", "kv1/", 10, time.Second, 0)
+	quota := NewRateLimitQuota("tq", "", "kv1/", "", 10, time.Second, 0)
 	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, false))
 	quota = quota.Clone().(*RateLimitQuota)
 	quota.MountPath = "kv2/"
@@ -45,7 +45,7 @@ func TestQuotas_Precedence(t *testing.T) {
 
 	setQuotaFunc := func(t *testing.T, name, nsPath, mountPath string) Quota {
 		t.Helper()
-		quota := NewRateLimitQuota(name, nsPath, mountPath, 10, time.Second, 0)
+		quota := NewRateLimitQuota(name, nsPath, mountPath, "", 10, time.Second, 0)
 		require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, true))
 		return quota
 	}
