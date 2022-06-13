@@ -148,6 +148,17 @@ func (b *databaseBackend) connPop(name string) *dbPluginInstance {
 	return dbi
 }
 
+func (b *databaseBackend) connPopIfEqual(name, id string) *dbPluginInstance {
+	b.connLock.Lock()
+	defer b.connLock.Unlock()
+	dbi := b.connections[name]
+	if dbi.id == id {
+		delete(b.connections, name)
+		return dbi
+	}
+	return nil
+}
+
 func (b *databaseBackend) connPut(name string, newDbi *dbPluginInstance) *dbPluginInstance {
 	b.connLock.Lock()
 	defer b.connLock.Unlock()
@@ -329,17 +340,8 @@ func (b *databaseBackend) CloseIfShutdown(db *dbPluginInstance, err error) {
 		go func() {
 			db.Close()
 
-			// Ensure we are deleting the correct connection
-			mapDB := b.connPop(db.name)
-			if mapDB != nil && db.id != mapDB.id {
-				// oops, put it back
-				oldDbi := b.connPut(db.name, mapDB)
-				if oldDbi != nil {
-					// there is a small chance that something else was inserted in that slot during that time
-					// if so, clean it up
-					oldDbi.Close()
-				}
-			}
+			// Delete the connection if it is still active.
+			b.connPopIfEqual(db.name, db.id)
 		}()
 	}
 }
