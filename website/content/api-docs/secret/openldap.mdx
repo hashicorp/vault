@@ -147,9 +147,7 @@ The `static-role` endpoint configures Vault to manage the passwords of existing 
 - `dn` `(string: <required>)` - Distinguished name (DN) of entry Vault should manage.<br />
   **Example:** `cn=bob,ou=Users,dc=hashicorp,dc=com`
 - `rotation_period` `(string: <required>)` - How often Vault should rotate the password of the user entry. Accepts
-  time suffixed strings ("1h") or an integer number of seconds. The
-  [available units](https://golang.org/pkg/time/#ParseDuration) are: `ns`, `us` (or `µs`), `ms`, `s`, `m`, `h`. The
-  minimum rotation period is 5 seconds.<br />
+  [duration format strings](/docs/concepts/duration-format). The minimum rotation period is 5 seconds.<br />
   **Example:** "3600", "5s", "1h".
 - `username` `(string: <required>)` - The name of the user to be used when logging in. This is useful when `dn`
   isn't used for login purposes (such as SSH).<br />
@@ -323,14 +321,13 @@ v_{{.DisplayName}}_{{.RoleName}}_{{random 10}}_{{unix_time}}
 </details>
 </details>
 
-`default_ttl` `(string/int)` - Specifies the TTL for the leases associated with this role. Accepts time suffixed
-strings ("1h") or an integer number of seconds. Defaults to system/engine default TTL time. The
-[available units](https://golang.org/pkg/time/#ParseDuration) are: `ns`, `us` (or `µs`), `ms`, `s`, `m`, `h`.
+`default_ttl` `(string/int)` - Specifies the TTL for the leases associated with this role. Accepts
+[duration format strings](/docs/concepts/duration-format). Defaults to system/engine default TTL time.
 
-`max_ttl` `(string/int)` - Specifies the maximum TTL for the leases associated with this role. Accepts time suffixed
-strings ("1h") or an integer number of seconds. Defaults to system/mount default TTL time; this value is allowed to
-be less than the mount max TTL (or, if not set, the system max TTL), but it is not allowed to be longer. The
-[available units](https://golang.org/pkg/time/#ParseDuration) are: `ns`, `us` (or `µs`), `ms`, `s`, `m`, `h`.
+`max_ttl` `(string/int)` - Specifies the maximum TTL for the leases associated with this role. Accepts
+[duration format strings](/docs/concepts/duration-format). Defaults to system/mount default TTL time;
+this value is allowed to be less than the mount max TTL (or, if not set, the system max TTL),
+but it is not allowed to be longer.
 
 The `creation_ldif`, `deletion_ldif`, `rollback_ldif`, and `username_template` fields are all templated fields. See
 [Username Templating](/docs/concepts/username-templating) for details on how to use templating. Also see

@@ -496,8 +496,7 @@ Note: the only value that can be used with the `*` parameter is `[]`.
 These parameters can be used to set minimums/maximums on TTLs set by clients
 when requesting that a response be
 [wrapped](/docs/concepts/response-wrapping), with a granularity of a
-second. These can either be specified as a number of seconds or a string with a
-`s`, `m`, or `h` suffix indicating seconds, minutes, and hours respectively.
+second. These use [duration format strings](/docs/concepts/duration-format).
 
 In practice, setting a minimum TTL of one second effectively makes response
 wrapping mandatory for a particular path.

@@ -32,7 +32,7 @@ management tool.
     Vault can bootstrap the Consul ACL system automatically if it hasn't already been done. If you
     have already bootstrapped the ACL system, then you will need to provide Vault with a management
     token. This can either be the bootstrap token or another management token you've created
-    yourself.    
+    yourself.
 
     1.  Configuring Vault without previously bootstrapping the Consul ACL system:
 
@@ -46,7 +46,7 @@ management tool.
         it performs the automatic bootstrap; it will not be presented to the user. If you need
         another management token, you will need to generate one by writing a Vault role with the
         `global-management` policy and then reading new creds back from it.
-    
+
     1. Configuring Vault after manually bootstrapping the Consul ACL system:
 
         1.  For Consul 1.4 and above, use the command line to generate a token with the appropriate policy:
@@ -115,7 +115,7 @@ management tool.
             service_identities="myservice-2:dc1"
         Success! Data written to: consul/roles/my-role
         ```
-    
+
     1.  For Consul versions 1.4 and above, generate [a policy in Consul](https://www.consul.io/docs/guides/acl.html),
         and proceed to link it to the role:
 
@@ -123,7 +123,7 @@ management tool.
         $ vault write consul/roles/my-role consul_policies="readonly"
         Success! Data written to: consul/roles/my-role
         ```
-    
+
     1.  For Consul versions below 1.4, the policy must be base64-encoded. The policy language is
         [documented by Consul](https://www.consul.io/docs/security/acl/acl-legacy). Support for this method is
         deprecated as of Vault 1.11.
@@ -137,8 +137,7 @@ management tool.
 
         -> **Token lease duration:** If you do not specify a value for `ttl` (or `lease` for Consul versions below 1.4) the
         tokens created using Vault's Consul secrets engine are created with a Time To Live (TTL) of 30 days. You can change
-        the lease duration by passing `-ttl=<duration>` to the command above with "duration" being a string with a time
-        suffix like "30s" or "1h".
+        the lease duration by passing `-ttl=<duration>` to the command above where duration is a [duration format strings](/docs/concepts/duration-format).
 
 1.  You may further limit a role's access by adding the optional parameters `consul_namespace` and
     `partition`. Please refer to Consul's [namespace documentation](https://www.consul.io/docs/enterprise/namespaces) and
@@ -151,7 +150,7 @@ management tool.
         $ vault write consul/roles/my-role consul_roles="admin-management" partition="admin1"
         Success! Data written to: consul/roles/my-role
         ```
-    
+
     1.  For Consul versions 1.7 and above, link a Consul namespace to the role:
 
         ```shell-session
