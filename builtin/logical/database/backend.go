@@ -66,6 +66,8 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 
 func Backend(conf *logical.BackendConfig) *databaseBackend {
 	var b databaseBackend
+	// set this just in case, since we sometimes call this from tests without Factory
+	b.ctx, b.cancelQueue = context.WithCancel(context.Background())
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
 
