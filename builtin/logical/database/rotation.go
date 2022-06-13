@@ -645,7 +645,9 @@ func (b *databaseBackend) pushItem(item *queue.Item) error {
 	select {
 	case <-b.ctx.Done():
 	default:
-		return b.credRotationQueue.Push(item)
+		if b.credRotationQueue != nil {
+			return b.credRotationQueue.Push(item)
+		}
 	}
 	b.Logger().Warn("no queue found during push item")
 	return nil
