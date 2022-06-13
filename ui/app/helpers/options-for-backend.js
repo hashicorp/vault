@@ -31,7 +31,7 @@ const SECRET_BACKENDS = {
         searchPlaceholder: 'Filter roles',
         item: 'role',
         create: 'Create role',
-        editComponent: 'role-pki-edit',
+        editComponent: 'pki/role-pki-edit',
       },
       {
         name: 'certs',
