@@ -67,7 +67,7 @@ jobs:
           cd ui
           mkdir -p test-results/qunit
           yarn test:oss
-        name: Run UI Tests
+        name: Test UI
     - store_artifacts:
         path: ui/test-results
     - store_test_results:
