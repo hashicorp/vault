@@ -89,7 +89,8 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 				b.Logger().Error("error closing the database plugin connection", "err", err)
 			}
 			// Even on error, still remove the connection
-			b.ClearConnection(name)
+			// do it in a goroutine since it may also try to grab dbi.Lock()
+			go b.ClearConnection(name)
 		}()
 
 		generator, err := newPasswordGenerator(nil)
