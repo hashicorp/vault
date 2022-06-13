@@ -68,7 +68,7 @@ To fetch the issuing CA for this mount, use:
 
 ```
 {{- with secret "pki/cert/ca" -}}
-{{ "" | or ( .Data.certificate ) }}
+{{ .Data.certificate }}
 {{- end -}}
 ```
 
