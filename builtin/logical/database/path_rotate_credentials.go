@@ -80,8 +80,13 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 
 		// Take the write lock on the instance
 		dbi.Lock()
-		defer dbi.Unlock()
-
+		unlocked := false
+		defer func() {
+			if !unlocked {
+				dbi.Unlock()
+				unlocked = true
+			}
+		}()
 		defer func() {
 			// Close the plugin
 			dbi.closed = true
@@ -89,8 +94,12 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 				b.Logger().Error("error closing the database plugin connection", "err", err)
 			}
 			// Even on error, still remove the connection
-			// do it in a goroutine since it may also try to grab dbi.Lock()
-			go b.ClearConnection(name)
+			// be careful with a deadlock here
+			if !unlocked {
+				dbi.Unlock()
+				unlocked = true
+			}
+			b.ClearConnection(name)
 		}()
 
 		generator, err := newPasswordGenerator(nil)
