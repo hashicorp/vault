@@ -485,7 +485,8 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 	}
 
 	// Fetch path suffix quota
-	quota, err := quotaFetchFunc(indexNamespaceMountPath, req.NamespacePath, req.MountPath, strings.TrimSuffix(strings.TrimPrefix(req.Path, req.MountPath), "/"))
+	pathSuffix := strings.TrimSuffix(strings.TrimPrefix(strings.TrimPrefix(req.Path, req.NamespacePath), req.MountPath), "/")
+	quota, err := quotaFetchFunc(indexNamespaceMountPath, req.NamespacePath, req.MountPath, pathSuffix)
 	if err != nil {
 		return nil, err
 	}
