@@ -81,10 +81,11 @@ func (q Type) String() string {
 }
 
 const (
-	indexID             = "id"
-	indexName           = "name"
-	indexNamespace      = "ns"
-	indexNamespaceMount = "ns_mount"
+	indexID                 = "id"
+	indexName               = "name"
+	indexNamespace          = "ns"
+	indexNamespaceMount     = "ns_mount"
+	indexNamespaceMountPath = "ns_mount_path"
 )
 
 const (
@@ -391,7 +392,7 @@ func (m *Manager) QuotaByName(qType string, name string) (Quota, error) {
 }
 
 // QuotaByFactors returns the quota rule that matches the provided factors
-func (m *Manager) QuotaByFactors(ctx context.Context, qType, nsPath, mountPath string) (Quota, error) {
+func (m *Manager) QuotaByFactors(ctx context.Context, qType, nsPath, mountPath, pathSuffix string) (Quota, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
@@ -402,10 +403,15 @@ func (m *Manager) QuotaByFactors(ctx context.Context, qType, nsPath, mountPath s
 	}
 
 	idx := indexNamespace
-	args := []interface{}{nsPath, false}
+	args := []interface{}{nsPath, false, false}
 	if mountPath != "" {
-		idx = indexNamespaceMount
-		args = []interface{}{nsPath, mountPath}
+		if pathSuffix != "" {
+			idx = indexNamespaceMountPath
+			args = []interface{}{nsPath, mountPath, pathSuffix}
+		} else {
+			idx = indexNamespaceMount
+			args = []interface{}{nsPath, mountPath, false}
+		}
 	}
 
 	txn := m.db.Txn(false)
@@ -479,7 +485,7 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 	}
 
 	// Fetch path suffix quota
-	quota, err := quotaFetchFunc(indexNamespaceMount, req.NamespacePath, req.Path)
+	quota, err := quotaFetchFunc(indexNamespaceMountPath, req.NamespacePath, req.MountPath, strings.TrimSuffix(strings.TrimPrefix(req.Path, req.MountPath), "/"))
 	if err != nil {
 		return nil, err
 	}
@@ -488,7 +494,7 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 	}
 
 	// Fetch mount quota
-	quota, err = quotaFetchFunc(indexNamespaceMount, req.NamespacePath, req.MountPath)
+	quota, err = quotaFetchFunc(indexNamespaceMount, req.NamespacePath, req.MountPath, false)
 	if err != nil {
 		return nil, err
 	}
@@ -497,7 +503,7 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 	}
 
 	// Fetch ns quota. If NamespacePath is root, this will return the global quota.
-	quota, err = quotaFetchFunc(indexNamespace, req.NamespacePath, false)
+	quota, err = quotaFetchFunc(indexNamespace, req.NamespacePath, false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -514,7 +520,7 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 	}
 
 	// Fetch global quota
-	quota, err = quotaFetchFunc(indexNamespace, "root", false)
+	quota, err = quotaFetchFunc(indexNamespace, "root", false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -740,6 +746,11 @@ func dbSchema() *memdb.DBSchema {
 							&memdb.FieldSetIndex{
 								Field: "MountPath",
 							},
+							// By sending false as the query parameter, we can
+							// query just the namespace specific quota.
+							&memdb.FieldSetIndex{
+								Field: "PathSuffix",
+							},
 						},
 					},
 				},
@@ -753,6 +764,28 @@ func dbSchema() *memdb.DBSchema {
 							},
 							&memdb.StringFieldIndex{
 								Field: "MountPath",
+							},
+							// By sending false as the query parameter, we can
+							// query just the namespace specific quota.
+							&memdb.FieldSetIndex{
+								Field: "PathSuffix",
+							},
+						},
+					},
+				},
+				indexNamespaceMountPath: {
+					Name:         indexNamespaceMountPath,
+					AllowMissing: true,
+					Indexer: &memdb.CompoundMultiIndex{
+						Indexes: []memdb.Indexer{
+							&memdb.StringFieldIndex{
+								Field: "NamespacePath",
+							},
+							&memdb.StringFieldIndex{
+								Field: "MountPath",
+							},
+							&memdb.StringFieldIndex{
+								Field: "PathSuffix",
 							},
 						},
 					},
@@ -984,7 +1017,7 @@ func (m *Manager) HandleRemount(ctx context.Context, from, to namespace.MountPat
 
 	idx := indexNamespaceMount
 	leaseQuotaUpdated := false
-	args := []interface{}{fromNs, from.MountPath}
+	args := []interface{}{fromNs, from.MountPath, false}
 	for _, quotaType := range quotaTypes() {
 		iter, err := txn.Get(quotaType, idx, args...)
 		if err != nil {
@@ -1042,7 +1075,7 @@ func (m *Manager) HandleBackendDisabling(ctx context.Context, nsPath, mountPath 
 
 	idx := indexNamespaceMount
 	leaseQuotaDeleted := false
-	args := []interface{}{nsPath, mountPath}
+	args := []interface{}{nsPath, mountPath, false}
 	for _, quotaType := range quotaTypes() {
 		iter, err := txn.Get(quotaType, idx, args...)
 		if err != nil {

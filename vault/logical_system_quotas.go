@@ -193,12 +193,12 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 				return logical.ErrorResponse("invalid mount path %q", mountPath), nil
 			}
 
-			pathSuffix = strings.TrimPrefix(mountPath, match)
+			pathSuffix = strings.TrimSuffix(strings.TrimPrefix(mountPath, match), "/")
 			mountPath = match
 		}
 		// Disallow creation of new quota that has properties similar to an
 		// existing quota.
-		quotaByFactors, err := b.Core.quotaManager.QuotaByFactors(ctx, qType, ns.Path, mountPath)
+		quotaByFactors, err := b.Core.quotaManager.QuotaByFactors(ctx, qType, ns.Path, mountPath, pathSuffix)
 		if err != nil {
 			return nil, err
 		}
@@ -222,6 +222,7 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			rlq := clonedQuota.(*quotas.RateLimitQuota)
 			rlq.NamespacePath = ns.Path
 			rlq.MountPath = mountPath
+			rlq.PathSuffix = pathSuffix
 			rlq.Rate = rate
 			rlq.Interval = interval
 			rlq.BlockInterval = blockInterval
