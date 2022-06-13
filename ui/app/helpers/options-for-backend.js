@@ -42,7 +42,7 @@ const SECRET_BACKENDS = {
         create: 'Create role',
         tab: 'certs',
         listItemPartial: 'secret-list/pki-cert-item',
-        editComponent: 'pki-cert-show',
+        editComponent: 'pki/pki-cert-show',
       },
     ],
   },
