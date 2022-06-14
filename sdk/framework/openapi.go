@@ -263,7 +263,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 		// Body fields will be added to individual operations.
 		pathFields, bodyFields := splitFields(p.Fields, path)
 
-		if dynamicPaths {
+		if dynamicPaths && requestResponsePrefix != "system" && requestResponsePrefix != "identity" {
 			// Add mount path as a parameter
 			p := OASParameter{
 				Name:        "mountPath",
