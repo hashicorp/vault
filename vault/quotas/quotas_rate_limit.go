@@ -112,6 +112,7 @@ func (q *RateLimitQuota) Clone() Quota {
 		MountPath:     q.MountPath,
 		Type:          q.Type,
 		NamespacePath: q.NamespacePath,
+		PathSuffix:    q.PathSuffix,
 		BlockInterval: q.BlockInterval,
 		Rate:          q.Rate,
 		Interval:      q.Interval,
