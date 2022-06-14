@@ -3408,13 +3408,13 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 	}
 }
 
-func TestSystemBackend_OASDynamicMount(t *testing.T) {
+func TestSystemBackend_OASGenericMount(t *testing.T) {
 	_, b, rootToken := testCoreSystemBackend(t)
 	var oapi map[string]interface{}
 
 	// Check that default paths are present with a root token
 	req := logical.TestRequest(t, logical.ReadOperation, "internal/specs/openapi")
-	req.Data["dynamic"] = true
+	req.Data["genericPaths"] = true
 	req.ClientToken = rootToken
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
