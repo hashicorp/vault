@@ -223,8 +223,6 @@ func documentPaths(backend *Backend, requestResponsePrefix string, dynamicPaths 
 	return nil
 }
 
-// Set requestResponsePrefix = {mountPath}
-// Add parameter for {mountPath}
 // documentPath parses a framework.Path into one or more OpenAPI paths.
 func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix string, dynamicPaths bool, backendType logical.BackendType, doc *OASDocument) error {
 	var sudoPaths []string
