@@ -6,7 +6,7 @@ import logout from 'vault/tests/pages/logout';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
-module('Acceptance | Enterprise | kmse', function (hooks) {
+module('Acceptance | Enterprise | keymgmt', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
