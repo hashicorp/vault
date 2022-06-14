@@ -13,7 +13,8 @@ export default Route.extend({
     const type = backendModel.get('type');
     let modelType;
     if (type === 'pki') {
-      modelType = `pki/${type}-config`;
+      // pki models are in models/pki
+      modelType = `${type}/${type}-config`;
     } else {
       modelType = `${type}-config`;
     }
