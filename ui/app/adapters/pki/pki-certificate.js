@@ -1,5 +1,5 @@
 import { assign } from '@ember/polyfills';
-import Adapter from './pki';
+import Adapter from '../pki';
 
 export default Adapter.extend({
   url(role) {
