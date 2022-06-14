@@ -40,7 +40,7 @@ const SECRET_BACKENDS = {
         searchPlaceholder: 'Filter certificates',
         item: 'certificates',
         create: 'Create role',
-        tab: 'certs',
+        tab: 'pki-certificate',
         listItemPartial: 'secret-list/pki-cert-item',
         editComponent: 'pki/pki-cert-show',
       },
