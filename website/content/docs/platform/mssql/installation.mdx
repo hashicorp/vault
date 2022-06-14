@@ -12,6 +12,7 @@ For upgrade instructions, see [upgrading](/docs/platform/mssql/upgrading).
 ## Prerequisites
 
 * Vault Enterprise server 1.9+ with a license for the Advanced Data Protection Key Management module
+* Microsoft Windows Server editions for installing Vault EKM provider.
 * Microsoft SQL Server for Windows (SQL Server for Linux [does not support EKM][linux-ekm])
 * An authenticated Vault client
 
@@ -40,7 +41,7 @@ EKM provider to use it.
 
     ```bash
     vault auth enable approle
-    vault write auth/approle/role/tde-role \
+    vault write auth/approle/role/ekm-encryption-key-role \
         token_ttl=20m \
         max_token_ttl=30m \
         token_policies=tde-policy
@@ -157,6 +158,15 @@ installation.
     CREATION_DISPOSITION = OPEN_EXISTING,
     PROVIDER_KEY_NAME = 'ekm-encryption-key';
     ```
+
+    !> **Warning:** Encountering the SQL error response `Provider error code: 2050`
+    at this stage is typically caused by an incorrect license that's lacking
+    "Key Management Transparent Data Encryption". Using the Vault Audit Logs confirm
+    that EKM is in network reach to Vault API path `/sys/license/status`. Failing 
+    attempts by EKM to connect to Vault in order to check its license or the use 
+    of the wrong license are likely causes for the `2050` error response. This 
+    would need to be recitified for the above SQL to be successfully before 
+    commencing any farther.
 
 1. Create another login from the new asymmetric key:
 
