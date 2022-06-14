@@ -4008,7 +4008,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 	// be received from plugin backends.
 	doc := framework.NewOASDocument()
 
-	dynamic := d.Get("dynamic").(bool)
+	genericPaths := d.Get("genericPaths").(bool)
 
 	procMountGroup := func(group, mountPrefix string) error {
 		for mount, entry := range resp.Data[group].(map[string]interface{}) {
@@ -4027,7 +4027,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 			req := &logical.Request{
 				Operation: logical.HelpOperation,
 				Storage:   req.Storage,
-				Data:      map[string]interface{}{"requestResponsePrefix": pluginType, "dynamicPaths": dynamic},
+				Data:      map[string]interface{}{"requestResponsePrefix": pluginType, "genericPaths": genericPaths},
 			}
 
 			resp, err := backend.HandleRequest(ctx, req)
@@ -4081,7 +4081,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 					}
 				}
 
-				if dynamic && mount != "sys/" && mount != "identity/" {
+				if genericPaths && mount != "sys/" && mount != "identity/" {
 					doc.Paths["/"+mountPrefix+"{mountPath}/"+path] = obj
 				} else {
 					doc.Paths["/"+mountPrefix+mount+path] = obj
