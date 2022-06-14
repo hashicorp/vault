@@ -368,13 +368,22 @@ func (c *AgentCommand) Run(args []string) int {
 			client.SetNamespace(config.AutoAuth.Method.Namespace)
 		}
 		templateNamespace = client.Headers().Get(consts.NamespaceHeaderName)
+
+		sinkClient, err := client.CloneWithHeaders()
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error cloning client for file sink: %v", err))
+			return 1
+		}
+
+		sinkClient.SetDisableKeepAlives(config.DisableKeepAlivesAutoAuth)
+
 		for _, sc := range config.AutoAuth.Sinks {
 			switch sc.Type {
 			case "file":
 				config := &sink.SinkConfig{
 					Logger:    c.logger.Named("sink.file"),
 					Config:    sc.Config,
-					Client:    client,
+					Client:    sinkClient,
 					WrapTTL:   sc.WrapTTL,
 					DHType:    sc.DHType,
 					DeriveKey: sc.DeriveKey,
@@ -490,9 +499,17 @@ func (c *AgentCommand) Run(args []string) int {
 	if config.Cache != nil {
 		cacheLogger := c.logger.Named("cache")
 
+		proxyClient, err := client.CloneWithHeaders()
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error cloning client for caching: %v", err))
+			return 1
+		}
+
+		proxyClient.SetDisableKeepAlives(config.DisableKeepAlivesCaching)
+
 		// Create the API proxier
 		apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
-			Client:                 client,
+			Client:                 proxyClient,
 			Logger:                 cacheLogger.Named("apiproxy"),
 			EnforceConsistency:     enforceConsistency,
 			WhenInconsistentAction: whenInconsistent,
@@ -505,7 +522,7 @@ func (c *AgentCommand) Run(args []string) int {
 		// Create the lease cache proxier and set its underlying proxier to
 		// the API proxier.
 		leaseCache, err = cache.NewLeaseCache(&cache.LeaseCacheConfig{
-			Client:      client,
+			Client:      proxyClient,
 			BaseContext: ctx,
 			Proxier:     apiProxy,
 			Logger:      cacheLogger.Named("leasecache"),
@@ -793,14 +810,17 @@ func (c *AgentCommand) Run(args []string) int {
 
 		// Auth Handler is going to set its own retry values, so we want to
 		// work on a copy of the client to not affect other subsystems.
-		clonedClient, err := c.client.CloneWithHeaders()
+		ahClient, err := c.client.CloneWithHeaders()
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error cloning client for auth handler: %v", err))
 			return 1
 		}
+
+		ahClient.SetDisableKeepAlives(config.DisableKeepAlivesAutoAuth)
+
 		ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
 			Logger:                       c.logger.Named("auth.handler"),
-			Client:                       clonedClient,
+			Client:                       ahClient,
 			WrapTTL:                      config.AutoAuth.Method.WrapTTL,
 			MinBackoff:                   config.AutoAuth.Method.MinBackoff,
 			MaxBackoff:                   config.AutoAuth.Method.MaxBackoff,
@@ -811,7 +831,7 @@ func (c *AgentCommand) Run(args []string) int {
 
 		ss := sink.NewSinkServer(&sink.SinkServerConfig{
 			Logger:        c.logger.Named("sink.server"),
-			Client:        client,
+			Client:        ahClient,
 			ExitAfterAuth: exitAfterAuth,
 		})
 

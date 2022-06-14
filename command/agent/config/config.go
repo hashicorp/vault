@@ -24,12 +24,16 @@ import (
 type Config struct {
 	*configutil.SharedConfig `hcl:"-"`
 
-	AutoAuth       *AutoAuth                  `hcl:"auto_auth"`
-	ExitAfterAuth  bool                       `hcl:"exit_after_auth"`
-	Cache          *Cache                     `hcl:"cache"`
-	Vault          *Vault                     `hcl:"vault"`
-	TemplateConfig *TemplateConfig            `hcl:"template_config"`
-	Templates      []*ctconfig.TemplateConfig `hcl:"templates"`
+	AutoAuth                    *AutoAuth                  `hcl:"auto_auth"`
+	ExitAfterAuth               bool                       `hcl:"exit_after_auth"`
+	Cache                       *Cache                     `hcl:"cache"`
+	Vault                       *Vault                     `hcl:"vault"`
+	TemplateConfig              *TemplateConfig            `hcl:"template_config"`
+	Templates                   []*ctconfig.TemplateConfig `hcl:"templates"`
+	DisableKeepAlives           string                     `hcl:"disable_keep_alives"`
+	DisableKeepAlivesCaching    bool
+	DisableKeepAlivesTemplating bool
+	DisableKeepAlivesAutoAuth   bool
 }
 
 func (c *Config) Prune() {
@@ -258,6 +262,20 @@ func LoadConfig(path string) (*Config, error) {
 		result.Vault.Retry.NumRetries = ctconfig.DefaultRetryAttempts
 	case -1:
 		result.Vault.Retry.NumRetries = 0
+	}
+
+	if result.DisableKeepAlives != "" {
+		if strings.Contains(strings.ToLower(result.DisableKeepAlives), "caching") {
+			result.DisableKeepAlivesCaching = true
+		}
+
+		if strings.Contains(strings.ToLower(result.DisableKeepAlives), "auto-auth") {
+			result.DisableKeepAlivesAutoAuth = true
+		}
+
+		if strings.Contains(strings.ToLower(result.DisableKeepAlives), "templating") {
+			result.DisableKeepAlivesTemplating = true
+		}
 	}
 
 	return result, nil

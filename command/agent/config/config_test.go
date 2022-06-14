@@ -1033,3 +1033,199 @@ func TestLoadConfigFile_EnforceConsistency(t *testing.T) {
 		t.Fatal(diff)
 	}
 }
+
+func TestLoadConfigFile_Disable_Keep_Alives_All(t *testing.T) {
+	config, err := LoadConfig("./test-fixtures/config-disable-keep-alives-all.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			PidFile: "./pidfile",
+		},
+		DisableKeepAlives:           "auto-auth,templating,caching",
+		DisableKeepAlivesCaching:    true,
+		DisableKeepAlivesAutoAuth:   true,
+		DisableKeepAlivesTemplating: true,
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:      "aws",
+				MountPath: "auth/aws",
+				Namespace: "my-namespace/",
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+			Sinks: []*Sink{
+				{
+					Type:   "file",
+					DHType: "curve25519",
+					DHPath: "/tmp/file-foo-dhpath",
+					AAD:    "foobar",
+					Config: map[string]interface{}{
+						"path": "/tmp/file-foo",
+					},
+				},
+			},
+		},
+		Vault: &Vault{
+			Address: "http://127.0.0.1:1111",
+			Retry: &Retry{
+				ctconfig.DefaultRetryAttempts,
+			},
+		},
+	}
+
+	config.Prune()
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func TestLoadConfigFile_Disable_Keep_Alives_Auto_Auth(t *testing.T) {
+	config, err := LoadConfig("./test-fixtures/config-disable-keep-alives-auto-auth.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			PidFile: "./pidfile",
+		},
+		DisableKeepAlives:           "auto-auth",
+		DisableKeepAlivesCaching:    false,
+		DisableKeepAlivesAutoAuth:   true,
+		DisableKeepAlivesTemplating: false,
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:      "aws",
+				MountPath: "auth/aws",
+				Namespace: "my-namespace/",
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+			Sinks: []*Sink{
+				{
+					Type:   "file",
+					DHType: "curve25519",
+					DHPath: "/tmp/file-foo-dhpath",
+					AAD:    "foobar",
+					Config: map[string]interface{}{
+						"path": "/tmp/file-foo",
+					},
+				},
+			},
+		},
+		Vault: &Vault{
+			Address: "http://127.0.0.1:1111",
+			Retry: &Retry{
+				ctconfig.DefaultRetryAttempts,
+			},
+		},
+	}
+
+	config.Prune()
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func TestLoadConfigFile_Disable_Keep_Alives_Templating(t *testing.T) {
+	config, err := LoadConfig("./test-fixtures/config-disable-keep-alives-templating.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			PidFile: "./pidfile",
+		},
+		DisableKeepAlives:           "templating",
+		DisableKeepAlivesCaching:    false,
+		DisableKeepAlivesAutoAuth:   false,
+		DisableKeepAlivesTemplating: true,
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:      "aws",
+				MountPath: "auth/aws",
+				Namespace: "my-namespace/",
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+			Sinks: []*Sink{
+				{
+					Type:   "file",
+					DHType: "curve25519",
+					DHPath: "/tmp/file-foo-dhpath",
+					AAD:    "foobar",
+					Config: map[string]interface{}{
+						"path": "/tmp/file-foo",
+					},
+				},
+			},
+		},
+		Vault: &Vault{
+			Address: "http://127.0.0.1:1111",
+			Retry: &Retry{
+				ctconfig.DefaultRetryAttempts,
+			},
+		},
+	}
+
+	config.Prune()
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func TestLoadConfigFile_Disable_Keep_Alives_Caching(t *testing.T) {
+	config, err := LoadConfig("./test-fixtures/config-disable-keep-alives-caching.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			PidFile: "./pidfile",
+		},
+		DisableKeepAlives:           "caching",
+		DisableKeepAlivesCaching:    true,
+		DisableKeepAlivesAutoAuth:   false,
+		DisableKeepAlivesTemplating: false,
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:      "aws",
+				MountPath: "auth/aws",
+				Namespace: "my-namespace/",
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+			Sinks: []*Sink{
+				{
+					Type:   "file",
+					DHType: "curve25519",
+					DHPath: "/tmp/file-foo-dhpath",
+					AAD:    "foobar",
+					Config: map[string]interface{}{
+						"path": "/tmp/file-foo",
+					},
+				},
+			},
+		},
+		Vault: &Vault{
+			Address: "http://127.0.0.1:1111",
+			Retry: &Retry{
+				ctconfig.DefaultRetryAttempts,
+			},
+		},
+	}
+
+	config.Prune()
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
