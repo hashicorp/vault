@@ -8,7 +8,7 @@ description: Learn how to store and retrieve your first secret.
 
 This quick start will explore how to use Vault client libraries inside your application code to store and retrieve your first secret value. Vault takes the security burden away from developers by providing a secure, centralized secret store for an application’s sensitive data: credentials, certificates, encryption keys, and more.
 
-For an out-of-the-box runnable demo application showcasing these concepts and more, see the hello-vault repositories ([Go](https://github.com/hashicorp/hello-vault-go), [C#](https://github.com/hashicorp/hello-vault-dotnet)).
+For an out-of-the-box runnable demo application showcasing these concepts and more, see the hello-vault repositories ([Go](https://github.com/hashicorp/hello-vault-go), [C#](https://github.com/hashicorp/hello-vault-dotnet) and [Java/Spring Boot](https://github.com/hashicorp/hello-vault-spring)).
 
 ## Prerequisites
 
@@ -253,13 +253,11 @@ We'll use the Vault client we just initialized to write a secret to Vault, like 
 
 ```go
 secretData := map[string]interface{}{
-    "data": map[string]interface{}{
-        "password": "Hashi123",
-    },
+    "password": "Hashi123",
 }
 
 
-_, err = client.Logical().Write("secret/data/my-secret-password", secretData)
+_, err = client.KVv2("secret").Put(context.Background(), "my-secret-password", secretData)
 if err != nil {
     log.Fatalf("unable to write secret: %v", err)
 }
@@ -342,20 +340,14 @@ Underneath the line where you wrote a secret to Vault, let's add a few more line
 <CodeBlockConfig lineNumbers>
 
 ```go
-secret, err := client.Logical().Read("secret/data/my-secret-password")
+secret, err := client.KVv2("secret").Get(context.Background(), "my-secret-password")
 if err != nil {
     log.Fatalf("unable to read secret: %v", err)
 }
 
-data, ok := secret.Data["data"].(map[string]interface{})
+value, ok := secret.Data["password"].(string)
 if !ok {
-    log.Fatalf("data type assertion failed: %T %#v", secret.Data["data"], secret.Data["data"])
-}
-
-key := "password"
-value, ok := data[key].(string)
-if !ok {
-    log.Fatalf("value type assertion failed: %T %#v", data[key], data[key])
+log.Fatalf("value type assertion failed: %T %#v", secret.Data["password"], secret.Data["password"])
 }
 ```
 

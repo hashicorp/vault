@@ -289,6 +289,77 @@ func TestCore_Mount_Local(t *testing.T) {
 	}
 }
 
+func TestCore_FindOps(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	uuid1 := "80DA741F-3997-4179-B531-EBD7371DFA86"
+	uuid2 := "0178594D-F267-445A-89A3-5B5DFC4A4C0F"
+	path1 := "kv1"
+	path2 := "kv2"
+
+	c.mounts = &MountTable{
+		Type: mountTableType,
+		Entries: []*MountEntry{
+			{
+				Table:            mountTableType,
+				Path:             path1,
+				Type:             "kv",
+				UUID:             "abcd",
+				Accessor:         "kv-abcd",
+				BackendAwareUUID: uuid1,
+				NamespaceID:      namespace.RootNamespaceID,
+				namespace:        namespace.RootNamespace,
+			},
+			{
+				Table:            mountTableType,
+				Path:             path2,
+				Type:             "kv",
+				UUID:             "bcde",
+				Accessor:         "kv-bcde",
+				BackendAwareUUID: uuid2,
+				NamespaceID:      namespace.RootNamespaceID,
+				namespace:        namespace.RootNamespace,
+			},
+		},
+	}
+
+	// Both should set up successfully
+	if err := c.setupMounts(namespace.RootContext(nil)); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(c.mounts.Entries) != 2 {
+		t.Fatalf("expected two entries, got %d", len(c.mounts.Entries))
+	}
+
+	// Unknown uuids/paths should return nil, nil
+	entry, err := c.mounts.findByBackendUUID(namespace.RootContext(nil), "unknown")
+	if err != nil || entry != nil {
+		t.Fatalf("expected no errors nor matches got, error: %#v entry: %#v", err, entry)
+	}
+	entry, err = c.mounts.find(namespace.RootContext(nil), "unknown")
+	if err != nil || entry != nil {
+		t.Fatalf("expected no errors nor matches got, error: %#v entry: %#v", err, entry)
+	}
+
+	// Find our entry by its uuid
+	entry, err = c.mounts.findByBackendUUID(namespace.RootContext(nil), uuid1)
+	if err != nil || entry == nil {
+		t.Fatalf("failed finding entry by uuid error: %#v entry: %#v", err, entry)
+	}
+	if entry.Path != path1 {
+		t.Fatalf("found incorrect entry by uuid, entry should had a path of '%s': %#v", path1, entry)
+	}
+
+	// Find another entry by its path
+	entry, err = c.mounts.find(namespace.RootContext(nil), path2)
+	if err != nil || entry == nil {
+		t.Fatalf("failed finding entry by path error: %#v entry: %#v", err, entry)
+	}
+	if entry.BackendAwareUUID != uuid2 {
+		t.Fatalf("found incorrect entry by path, entry should had a uuid of '%s': %#v", uuid2, entry)
+	}
+}
+
 func TestCore_Unmount(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
 	err := c.unmount(namespace.RootContext(nil), "secret")

@@ -16,10 +16,6 @@ const controlGroupService = Service.extend({
   markTokenForUnwrap: sinon.stub(),
 });
 
-const routerService = Service.extend({
-  transitionTo: sinon.stub().returns(resolve()),
-});
-
 const storeService = Service.extend({
   adapterFor() {
     return {
@@ -38,9 +34,11 @@ module('Integration | Component | control group success', function (hooks) {
       this.owner.unregister('service:store');
       this.owner.register('service:control-group', controlGroupService);
       this.controlGroup = this.owner.lookup('service:control-group');
-      this.owner.register('service:router', routerService);
       this.owner.register('service:store', storeService);
       this.router = this.owner.lookup('service:router');
+      this.router.reopen({
+        transitionTo: sinon.stub().returns(resolve()),
+      });
     });
   });
 
@@ -52,6 +50,7 @@ module('Integration | Component | control group success', function (hooks) {
     reload: sinon.stub(),
   };
   test('render with saved token', async function (assert) {
+    assert.expect(3);
     let response = {
       uiParams: { url: '/foo' },
       token: 'token',
@@ -69,6 +68,7 @@ module('Integration | Component | control group success', function (hooks) {
   });
 
   test('render without token', async function (assert) {
+    assert.expect(2);
     this.set('model', MODEL);
     await render(hbs`{{control-group-success model=model}}`);
     assert.ok(component.showsUnwrapForm, 'shows unwrap form');

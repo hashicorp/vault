@@ -48,7 +48,7 @@ func TestTokenPreload_UsingAutoAuth(t *testing.T) {
 	}
 
 	// Setup Approle
-	_, err := client.Logical().WriteWithContext(context.Background(), "auth/approle/role/test1", map[string]interface{}{
+	_, err := client.Logical().Write("auth/approle/role/test1", map[string]interface{}{
 		"bind_secret_id": "true",
 		"token_ttl":      "3s",
 		"token_max_ttl":  "10s",
@@ -58,13 +58,13 @@ func TestTokenPreload_UsingAutoAuth(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err := client.Logical().WriteWithContext(context.Background(), "auth/approle/role/test1/secret-id", nil)
+	resp, err := client.Logical().Write("auth/approle/role/test1/secret-id", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	secretID1 := resp.Data["secret_id"].(string)
 
-	resp, err = client.Logical().ReadWithContext(context.Background(), "auth/approle/role/test1/role-id")
+	resp, err = client.Logical().Read("auth/approle/role/test1/role-id")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func TestTokenPreload_UsingAutoAuth(t *testing.T) {
 	}
 
 	// Setup Preload Token
-	tokenRespRaw, err := client.Logical().WriteWithContext(context.Background(), "auth/token/create", map[string]interface{}{
+	tokenRespRaw, err := client.Logical().Write("auth/token/create", map[string]interface{}{
 		"ttl":              "10s",
 		"explicit-max-ttl": "15s",
 		"policies":         []string{""},
@@ -222,7 +222,7 @@ func TestTokenPreload_UsingAutoAuth(t *testing.T) {
 	wrappedToken := map[string]interface{}{
 		"token": authToken.Token,
 	}
-	unwrapResp, err := client.Logical().WriteWithContext(context.Background(), "sys/wrapping/unwrap", wrappedToken)
+	unwrapResp, err := client.Logical().Write("sys/wrapping/unwrap", wrappedToken)
 	if err != nil {
 		t.Fatalf("error unwrapping token: %s", err)
 	}

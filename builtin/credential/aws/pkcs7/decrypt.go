@@ -60,7 +60,6 @@ func (eci encryptedContentInfo) decrypt(key []byte) ([]byte, error) {
 		!alg.Equal(OIDEncryptionAlgorithmAES128CBC) &&
 		!alg.Equal(OIDEncryptionAlgorithmAES128GCM) &&
 		!alg.Equal(OIDEncryptionAlgorithmAES256GCM) {
-		fmt.Printf("Unsupported Content Encryption Algorithm: %s\n", alg)
 		return nil, ErrUnsupportedAlgorithm
 	}
 

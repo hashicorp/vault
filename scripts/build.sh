@@ -7,8 +7,9 @@ GO_CMD=${GO_CMD:-go}
 
 # Get the parent directory of where this script is.
 SOURCE="${BASH_SOURCE[0]}"
+SOURCE_DIR=$( dirname "$SOURCE" )
 while [ -h "$SOURCE" ] ; do SOURCE="$(readlink "$SOURCE")"; done
-DIR="$( cd -P "$( dirname "$SOURCE" )/.." && pwd )"
+DIR="$( cd -P "$SOURCE_DIR/.." && pwd )"
 
 # Change into that directory
 cd "$DIR"
@@ -19,6 +20,8 @@ BUILD_TAGS="${BUILD_TAGS:-"vault"}"
 # Get the git commit
 GIT_COMMIT="$(git rev-parse HEAD)"
 GIT_DIRTY="$(test -n "`git status --porcelain`" && echo "+CHANGES" || true)"
+
+BUILD_DATE=$("$SOURCE_DIR"/build_date.sh)
 
 # If its dev mode, only build for ourself
 if [ "${VAULT_DEV_BUILD}x" != "x" ] && [ "${XC_OSARCH}x" == "x" ]; then
@@ -54,7 +57,7 @@ echo "==> Building..."
 gox \
     -osarch="${XC_OSARCH}" \
     -gcflags "${GCFLAGS}" \
-    -ldflags "${LD_FLAGS}-X github.com/hashicorp/vault/sdk/version.GitCommit='${GIT_COMMIT}${GIT_DIRTY}'" \
+    -ldflags "${LD_FLAGS}-X github.com/hashicorp/vault/sdk/version.GitCommit='${GIT_COMMIT}${GIT_DIRTY}' -X github.com/hashicorp/vault/sdk/version.BuildDate=${BUILD_DATE}" \
     -output "pkg/{{.OS}}_{{.Arch}}/vault" \
     ${GOX_PARALLEL_BUILDS+-parallel="${GOX_PARALLEL_BUILDS}"} \
     -tags="${BUILD_TAGS}" \

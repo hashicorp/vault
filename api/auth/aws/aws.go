@@ -25,7 +25,7 @@ type AWSAuth struct {
 	mountPath string
 	// Can be "iam" or "ec2". Defaults to "iam".
 	authType string
-	// Can be "pkcs7" or "identity". Defaults to "pkcs7".
+	// Can be "pkcs7", "identity", or "rsa2048". Defaults to "pkcs7".
 	signatureType          string
 	region                 string
 	iamServerIDHeaderValue string
@@ -42,6 +42,7 @@ const (
 	ec2Type              = "ec2"
 	pkcs7Type            = "pkcs7"
 	identityType         = "identity"
+	rsa2048Type          = "rsa2048"
 	defaultMountPath     = "aws"
 	defaultAuthType      = iamType
 	defaultRegion        = "us-east-1"
@@ -84,6 +85,10 @@ func NewAWSAuth(opts ...LoginOption) (*AWSAuth, error) {
 // variables. To specify a path to a credentials file on disk instead, set
 // the environment variable AWS_SHARED_CREDENTIALS_FILE.
 func (a *AWSAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	loginData := make(map[string]interface{})
 	switch a.authType {
 	case ec2Type:
@@ -104,7 +109,7 @@ func (a *AWSAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, e
 			}
 			pkcs7 := strings.TrimSpace(resp)
 			loginData["pkcs7"] = pkcs7
-		} else {
+		} else if a.signatureType == identityType {
 			// fetch signature from identity document
 			doc, err := metadataSvc.GetDynamicData("/instance-identity/document")
 			if err != nil {
@@ -117,6 +122,16 @@ func (a *AWSAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, e
 				return nil, fmt.Errorf("error requesting signature: %w", err)
 			}
 			loginData["signature"] = signature
+		} else if a.signatureType == rsa2048Type {
+			// fetch RSA 2048 signature, which is also a PKCS#7 signature
+			resp, err := metadataSvc.GetDynamicData("/instance-identity/rsa2048")
+			if err != nil {
+				return nil, fmt.Errorf("unable to get PKCS 7 data from metadata service: %w", err)
+			}
+			pkcs7 := strings.TrimSpace(resp)
+			loginData["pkcs7"] = pkcs7
+		} else {
+			return nil, fmt.Errorf("unknown signature type: %s", a.signatureType)
 		}
 
 		// Add the reauthentication value, if we have one
@@ -182,7 +197,7 @@ func (a *AWSAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, e
 	}
 
 	path := fmt.Sprintf("auth/%s/login", a.mountPath)
-	resp, err := client.Logical().Write(path, loginData)
+	resp, err := client.Logical().WriteWithContext(ctx, path, loginData)
 	if err != nil {
 		return nil, fmt.Errorf("unable to log in with AWS auth: %w", err)
 	}

@@ -60,7 +60,7 @@ func TestAliCloudEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := client.Logical().WriteWithContext(context.Background(), "auth/alicloud/role/test", map[string]interface{}{
+	if _, err := client.Logical().Write("auth/alicloud/role/test", map[string]interface{}{
 		"arn": os.Getenv(envVarAlicloudRoleArn),
 	}); err != nil {
 		t.Fatal(err)

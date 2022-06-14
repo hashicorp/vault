@@ -1,0 +1,97 @@
+<PageHeader as |p|>
+  <p.top>
+    <nav class="breadcrumb">
+      <ul>
+        <li>
+          <span class="sep">&#x0002f;</span>
+          <LinkTo @route="vault.cluster.access.mfa.methods.index">
+            Methods
+          </LinkTo>
+        </li>
+      </ul>
+    </nav>
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      <Icon @size="24" @name={{this.model.method.type}} />
+      {{this.model.method.name}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
+  <nav class="tabs">
+    <ul>
+      <LinkTo @route="vault.cluster.access.mfa.methods.method" @query={{hash tab="config"}} data-test-tab="config">
+        Configuration
+      </LinkTo>
+      <LinkTo
+        @route="vault.cluster.access.mfa.methods.method"
+        @query={{hash tab="enforcements"}}
+        data-test-tab="enforcements"
+      >
+        Enforcements
+      </LinkTo>
+    </ul>
+  </nav>
+</div>
+
+{{#if (eq this.tab "config")}}
+  <Toolbar>
+    <ToolbarActions>
+      <ConfirmAction
+        @buttonClasses="toolbar-link"
+        @disabled={{not (is-empty this.model.enforcements)}}
+        @onConfirmAction={{this.deleteMethod}}
+        @confirmTitle="Are you sure?"
+        @confirmMessage="Deleting this MFA configuration is permanent, and it will no longer be available."
+        @confirmButtonText="Delete"
+      >
+        Delete
+      </ConfirmAction>
+      <ToolbarLink
+        @params={{array "vault.cluster.access.mfa.methods.method.edit" this.model.method.id}}
+        data-test-mfa-method-edit
+      >
+        Edit
+      </ToolbarLink>
+    </ToolbarActions>
+  </Toolbar>
+  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    {{#each this.model.method.attrs as |attr|}}
+      {{#if (eq attr.type "object")}}
+        <InfoTableRow
+          @alwaysRender={{not (is-empty-value (get this.model.method attr.name))}}
+          @label={{or attr.options.label (to-label attr.name)}}
+          @value={{stringify (get this.model.method attr.name)}}
+        />
+      {{else}}
+        <InfoTableRow
+          @alwaysRender={{not (is-empty-value (get this.model.method attr.name))}}
+          @label={{or attr.options.label (to-label attr.name)}}
+          @value={{get this.model.method attr.name}}
+        />
+      {{/if}}
+    {{/each}}
+  </div>
+{{else if (eq this.tab "enforcements")}}
+  <Toolbar>
+    <ToolbarActions>
+      <ToolbarLink @type="add" @params={{array "vault.cluster.access.mfa.enforcements.create"}}>
+        New enforcement
+      </ToolbarLink>
+    </ToolbarActions>
+  </Toolbar>
+  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    {{#if (is-empty this.model.enforcements)}}
+      <EmptyState
+        @title="No enforcements found."
+        @message="No enforcements are applied to this MFA method. Edit an existing enforcement or add a new one to get started."
+      />
+    {{else}}
+      {{#each this.model.enforcements as |item|}}
+        <Mfa::LoginEnforcementListItem @model={{item}} />
+      {{/each}}
+    {{/if}}
+  </div>
+{{/if}}

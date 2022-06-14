@@ -6,6 +6,7 @@ import { task, timeout } from 'ember-concurrency';
 
 export default Component.extend({
   'data-test-component': 'path-filter-config',
+  attributeBindings: ['data-test-component'],
   namespace: service(),
   store: service(),
   config: null,

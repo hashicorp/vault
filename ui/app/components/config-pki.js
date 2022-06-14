@@ -20,7 +20,7 @@ export default Component.extend({
    * @param DS.Model
    * @public
    *
-   * a `pki-config` model - passed in in the component useage
+   * a `pki-config` model - passed in in the component usage
    *
    */
   config: null,

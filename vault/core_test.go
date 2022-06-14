@@ -56,17 +56,20 @@ func TestSealConfig_Invalid(t *testing.T) {
 	}
 }
 
-// TestCore_HasVaultVersion checks that versionTimestamps are correct and initialized
+// TestCore_HasVaultVersion checks that versionHistory is correct and initialized
 // after a core has been unsealed.
 func TestCore_HasVaultVersion(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	if c.versionTimestamps == nil {
+	if c.versionHistory == nil {
 		t.Fatalf("Version timestamps for core were not initialized for a new core")
 	}
-	upgradeTime, ok := c.versionTimestamps[version.Version]
+	versionEntry, ok := c.versionHistory[version.Version]
 	if !ok {
 		t.Fatalf("%s upgrade time not found", version.Version)
 	}
+
+	upgradeTime := versionEntry.TimestampInstalled
+
 	if upgradeTime.After(time.Now()) || upgradeTime.Before(time.Now().Add(-1*time.Hour)) {
 		t.Fatalf("upgrade time isn't within reasonable bounds of new core initialization. " +
 			fmt.Sprintf("time is: %+v, upgrade time is %+v", time.Now(), upgradeTime))
@@ -408,22 +411,19 @@ func TestCore_PreOneTen_BatchTokens(t *testing.T) {
 	// load up some versions and ensure that 1.9 is the most recent one by timestamp (even though this isn't realistic)
 	upgradeTimePlusEpsilon := time.Now().UTC()
 
-	versionEntries := []struct {
-		version string
-		ts      time.Time
-	}{
-		{"1.10.1", upgradeTimePlusEpsilon.Add(-4 * time.Hour)},
-		{"1.9.2", upgradeTimePlusEpsilon.Add(2 * time.Hour)},
+	versionEntries := []VaultVersion{
+		{Version: "1.10.1", TimestampInstalled: upgradeTimePlusEpsilon.Add(-4 * time.Hour)},
+		{Version: "1.9.2", TimestampInstalled: upgradeTimePlusEpsilon.Add(2 * time.Hour)},
 	}
 
 	for _, entry := range versionEntries {
-		_, err := c.storeVersionTimestamp(context.Background(), entry.version, entry.ts, false)
+		_, err := c.storeVersionEntry(context.Background(), &entry, false)
 		if err != nil {
 			t.Fatalf("failed to write version entry %#v, err: %s", entry, err.Error())
 		}
 	}
 
-	err := c.loadVersionTimestamps(c.activeContext)
+	err := c.loadVersionHistory(c.activeContext)
 	if err != nil {
 		t.Fatalf("failed to populate version history cache, err: %s", err.Error())
 	}
@@ -461,22 +461,19 @@ func TestCore_OneTenPlus_BatchTokens(t *testing.T) {
 	// load up some versions and ensure that 1.10 is the most recent version
 	upgradeTimePlusEpsilon := time.Now().UTC()
 
-	versionEntries := []struct {
-		version string
-		ts      time.Time
-	}{
-		{"1.9.2", upgradeTimePlusEpsilon.Add(-4 * time.Hour)},
-		{"1.10.1", upgradeTimePlusEpsilon.Add(2 * time.Hour)},
+	versionEntries := []VaultVersion{
+		{Version: "1.9.2", TimestampInstalled: upgradeTimePlusEpsilon.Add(-4 * time.Hour)},
+		{Version: "1.10.1", TimestampInstalled: upgradeTimePlusEpsilon.Add(2 * time.Hour)},
 	}
 
 	for _, entry := range versionEntries {
-		_, err := c.storeVersionTimestamp(context.Background(), entry.version, entry.ts, false)
+		_, err := c.storeVersionEntry(context.Background(), &entry, false)
 		if err != nil {
 			t.Fatalf("failed to write version entry %#v, err: %s", entry, err.Error())
 		}
 	}
 
-	err := c.loadVersionTimestamps(c.activeContext)
+	err := c.loadVersionHistory(c.activeContext)
 	if err != nil {
 		t.Fatalf("failed to populate version history cache, err: %s", err.Error())
 	}

@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -89,7 +88,7 @@ func TestSecretsDisableCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		if err := client.Sys().MountWithContext(context.Background(), "my-secret/", &api.MountInput{
+		if err := client.Sys().Mount("my-secret/", &api.MountInput{
 			Type: "generic",
 		}); err != nil {
 			t.Fatal(err)
@@ -111,7 +110,7 @@ func TestSecretsDisableCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		mounts, err := client.Sys().ListMountsWithContext(context.Background())
+		mounts, err := client.Sys().ListMounts()
 		if err != nil {
 			t.Fatal(err)
 		}

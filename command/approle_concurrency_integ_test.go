@@ -45,7 +45,7 @@ func TestAppRole_Integ_ConcurrentLogins(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/approle/role/role1", map[string]interface{}{
+	_, err = client.Logical().Write("auth/approle/role/role1", map[string]interface{}{
 		"bind_secret_id": "true",
 		"period":         "300",
 	})
@@ -53,13 +53,13 @@ func TestAppRole_Integ_ConcurrentLogins(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	secret, err := client.Logical().WriteWithContext(context.Background(), "auth/approle/role/role1/secret-id", nil)
+	secret, err := client.Logical().Write("auth/approle/role/role1/secret-id", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	secretID := secret.Data["secret_id"].(string)
 
-	secret, err = client.Logical().ReadWithContext(context.Background(), "auth/approle/role/role1/role-id")
+	secret, err = client.Logical().Read("auth/approle/role/role1/role-id")
 	if err != nil {
 		t.Fatal(err)
 	}

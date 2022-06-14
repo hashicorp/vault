@@ -58,7 +58,7 @@ module('Unit | Serializer | policy', function (hooks) {
     );
   });
 
-  test('it transforms a list request payload', function (assert) {
+  test('it transforms another list request payload', function (assert) {
     let serializer = this.owner.lookup('serializer:policy');
 
     let transformedPayload = serializer.normalizePolicies(POLICY_SHOW_RESPONSE);

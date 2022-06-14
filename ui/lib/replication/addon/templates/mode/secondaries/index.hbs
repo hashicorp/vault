@@ -12,7 +12,7 @@
         <ToolbarLink
           @type="add"
           @params={{array "mode.secondaries.add" this.replicationMode}}
-          @data-test-secondary-add={{true}}
+          data-test-secondary-add={{true}}
         >
           Add secondary
         </ToolbarLink>
@@ -36,9 +36,9 @@
                         <LinkTo
                           @route="mode.secondaries.config-show"
                           @models={{array this.replicationMode secondary}}
-                          data-test-replication-mount-filter-link={{true}}
+                          data-test-replication-path-filter-link={{true}}
                         >
-                          Mount filter config
+                          Path filter config
                         </LinkTo>
                       </li>
                     {{/if}}

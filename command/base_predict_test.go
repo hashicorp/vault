@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"reflect"
 	"testing"
 
@@ -17,25 +16,25 @@ func TestPredictVaultPaths(t *testing.T) {
 	defer closer()
 
 	data := map[string]interface{}{"a": "b"}
-	if _, err := client.Logical().WriteWithContext(context.Background(), "secret/bar", data); err != nil {
+	if _, err := client.Logical().Write("secret/bar", data); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := client.Logical().WriteWithContext(context.Background(), "secret/foo", data); err != nil {
+	if _, err := client.Logical().Write("secret/foo", data); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := client.Logical().WriteWithContext(context.Background(), "secret/zip/zap", data); err != nil {
+	if _, err := client.Logical().Write("secret/zip/zap", data); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := client.Logical().WriteWithContext(context.Background(), "secret/zip/zonk", data); err != nil {
+	if _, err := client.Logical().Write("secret/zip/zonk", data); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := client.Logical().WriteWithContext(context.Background(), "secret/zip/twoot", data); err != nil {
+	if _, err := client.Logical().Write("secret/zip/twoot", data); err != nil {
 		t.Fatal(err)
 	}
-	if err := client.Sys().MountWithContext(context.Background(), "level1a/level2a/level3a", &api.MountInput{Type: "kv"}); err != nil {
+	if err := client.Sys().Mount("level1a/level2a/level3a", &api.MountInput{Type: "kv"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := client.Sys().MountWithContext(context.Background(), "level1a/level2a/level3b", &api.MountInput{Type: "kv"}); err != nil {
+	if err := client.Sys().Mount("level1a/level2a/level3b", &api.MountInput{Type: "kv"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -231,7 +230,7 @@ func TestPredict_Audits(t *testing.T) {
 	badClient, badCloser := testVaultServerBad(t)
 	defer badCloser()
 
-	if err := client.Sys().EnableAuditWithOptionsWithContext(context.Background(), "file", &api.EnableAuditOptions{
+	if err := client.Sys().EnableAuditWithOptions("file", &api.EnableAuditOptions{
 		Type: "file",
 		Options: map[string]string{
 			"file_path": "discard",
@@ -496,13 +495,13 @@ func TestPredict_Paths(t *testing.T) {
 	defer closer()
 
 	data := map[string]interface{}{"a": "b"}
-	if _, err := client.Logical().WriteWithContext(context.Background(), "secret/bar", data); err != nil {
+	if _, err := client.Logical().Write("secret/bar", data); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := client.Logical().WriteWithContext(context.Background(), "secret/foo", data); err != nil {
+	if _, err := client.Logical().Write("secret/foo", data); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := client.Logical().WriteWithContext(context.Background(), "secret/zip/zap", data); err != nil {
+	if _, err := client.Logical().Write("secret/zip/zap", data); err != nil {
 		t.Fatal(err)
 	}
 
@@ -572,10 +571,10 @@ func TestPredict_ListPaths(t *testing.T) {
 	defer badCloser()
 
 	data := map[string]interface{}{"a": "b"}
-	if _, err := client.Logical().WriteWithContext(context.Background(), "secret/bar", data); err != nil {
+	if _, err := client.Logical().Write("secret/bar", data); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := client.Logical().WriteWithContext(context.Background(), "secret/foo", data); err != nil {
+	if _, err := client.Logical().Write("secret/foo", data); err != nil {
 		t.Fatal(err)
 	}
 

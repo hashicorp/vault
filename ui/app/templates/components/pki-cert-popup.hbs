@@ -2,19 +2,19 @@
   <nav class="menu">
     <ul class="menu-list">
       <li class="action">
-        <LinkTo @route="vault.cluster.secrets.backend.show" @model={{this.item.idForNav}} data-test-pki-cert-link="show">
+        <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@item.idForNav}} data-test-pki-cert-link="show">
           Details
         </LinkTo>
       </li>
-      {{#if this.item.canRevoke}}
+      {{#if @item.canRevoke}}
         <li class="action">
           <ConfirmAction
             @buttonClasses="link is-destroy"
-            @onConfirmAction={{action "delete" this.item}}
+            @onConfirmAction={{fn this.delete @item}}
             @confirmTitle="Revoke this cert?"
             @confirmMessage="Any services using this cert may be affected."
             @confirmButtonText="Revoke"
-            data-test-cert-revoke-delete={{this.item.id}}
+            data-test-cert-revoke-delete={{@item.id}}
           >
             Revoke
           </ConfirmAction>

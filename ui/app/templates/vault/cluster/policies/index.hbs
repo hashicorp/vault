@@ -44,7 +44,7 @@
       </ToolbarFilters>
     {{/if}}
     <ToolbarActions>
-      <ToolbarLink @type="add" @params={{array "vault.cluster.policies.create"}} @data-test-policy-create-link={{true}}>
+      <ToolbarLink @type="add" @params={{array "vault.cluster.policies.create"}} data-test-policy-create-link={{true}}>
         Create
         {{uppercase this.policyType}}
         policy
@@ -68,13 +68,11 @@
           </div>
         </div>
       {{else}}
-        {{#linked-block
-          "vault.cluster.policy.show"
-          this.policyType
-          item.id
+        <LinkedBlock
+          @params={{array "vault.cluster.policy.show" this.policyType item.id}}
           class="list-item-row"
-          data-test-policy-link=item.id
-        }}
+          data-test-policy-link={{item.id}}
+        >
           <div class="columns is-mobile">
             <div class="column is-10">
               <LinkTo
@@ -143,7 +141,7 @@
               </PopupMenu>
             </div>
           </div>
-        {{/linked-block}}
+        </LinkedBlock>
       {{/if}}
     {{else}}
       <EmptyState @title="No policies matching &quot;{{this.pageFilter}}&quot;" />

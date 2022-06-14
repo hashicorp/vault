@@ -34,9 +34,13 @@ for the OCSP servers attribute. See also RFC 5280 Section 4.2.2.1.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathWriteURL,
-			logical.ReadOperation:   b.pathReadURL,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathWriteURL,
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathReadURL,
+			},
 		},
 
 		HelpSynopsis:    pathConfigURLsHelpSyn,
@@ -59,16 +63,22 @@ func getURLs(ctx context.Context, req *logical.Request) (*certutil.URLEntries, e
 	if err != nil {
 		return nil, err
 	}
-	if entry == nil {
-		return nil, nil
+
+	entries := &certutil.URLEntries{
+		IssuingCertificates:   []string{},
+		CRLDistributionPoints: []string{},
+		OCSPServers:           []string{},
 	}
 
-	var entries certutil.URLEntries
-	if err := entry.DecodeJSON(&entries); err != nil {
+	if entry == nil {
+		return entries, nil
+	}
+
+	if err := entry.DecodeJSON(entries); err != nil {
 		return nil, err
 	}
 
-	return &entries, nil
+	return entries, nil
 }
 
 func writeURLs(ctx context.Context, req *logical.Request, entries *certutil.URLEntries) error {
@@ -88,13 +98,10 @@ func writeURLs(ctx context.Context, req *logical.Request, entries *certutil.URLE
 	return nil
 }
 
-func (b *backend) pathReadURL(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathReadURL(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	entries, err := getURLs(ctx, req)
 	if err != nil {
 		return nil, err
-	}
-	if entries == nil {
-		return nil, nil
 	}
 
 	resp := &logical.Response{
@@ -108,13 +115,6 @@ func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *
 	entries, err := getURLs(ctx, req)
 	if err != nil {
 		return nil, err
-	}
-	if entries == nil {
-		entries = &certutil.URLEntries{
-			IssuingCertificates:   []string{},
-			CRLDistributionPoints: []string{},
-			OCSPServers:           []string{},
-		}
 	}
 
 	if urlsInt, ok := data.GetOk("issuing_certificates"); ok {

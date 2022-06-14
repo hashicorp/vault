@@ -175,7 +175,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
     assert.dom('[data-test-select="ttl-unit"]').hasValue('m', 'Unit matches what is passed in');
   });
 
-  test('it calls onChange on init when rendered if changeOnInit is true', async function (assert) {
+  test('it calls onChange', async function (assert) {
     await render(hbs`
       <TtlPicker2
         @label="clicktest"
@@ -231,5 +231,18 @@ module('Integration | Component | ttl-picker2', function (hooks) {
     `);
     assert.dom('[data-test-ttl-value]').hasValue('1000', 'time value is converted');
     assert.dom('[data-test-select="ttl-unit"]').hasValue('m', 'unit value is m (minutes)');
+  });
+
+  test('it converts to the largest round unit on init when no unit provided', async function (assert) {
+    await render(hbs`
+      <TtlPicker2
+        @label="convertunits"
+        @onChange={{onChange}}
+        @initialValue={{86400}}
+        @initialEnabled="true"
+      />
+    `);
+    assert.dom('[data-test-ttl-value]').hasValue('1', 'time value is converted');
+    assert.dom('[data-test-select="ttl-unit"]').hasValue('d', 'unit value is d (days)');
   });
 });

@@ -36,7 +36,7 @@
           @secret={{this.model.id}}
           @mode="credentials"
           @queryParams={{query-params action="issue"}}
-          @data-test-credentials-link={{true}}
+          data-test-credentials-link={{true}}
         >
           Generate Certificate
         </ToolbarSecretLink>
@@ -46,13 +46,13 @@
           @secret={{this.model.id}}
           @mode="credentials"
           @queryParams={{query-params action="sign"}}
-          @data-test-sign-link={{true}}
+          data-test-sign-link={{true}}
         >
           Sign Certificate
         </ToolbarSecretLink>
       {{/if}}
       {{#if this.model.canEdit}}
-        <ToolbarSecretLink @secret={{this.model.id}} @mode="edit" @data-test-edit-link={{true}} @replace={{true}}>
+        <ToolbarSecretLink @secret={{this.model.id}} @mode="edit" data-test-edit-link={{true}} @replace={{true}}>
           Edit role
         </ToolbarSecretLink>
       {{/if}}
@@ -75,7 +75,7 @@
             Save
           {{/if}}
         </button>
-        <SecretLink @mode={{if (eq this.mode "create") "list" "show"}} @class="button" @secret={{this.model.id}}>
+        <SecretLink @mode={{if (eq this.mode "create") "list" "show"}} class="button" @secret={{this.model.id}}>
           Cancel
         </SecretLink>
       </div>

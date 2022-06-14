@@ -64,13 +64,13 @@
             @mode="create"
             @type="add"
             @queryParams={{query-params initialKey=@model.name itemType="role"}}
-            @data-test-secret-create={{true}}
+            data-test-secret-create={{true}}
           >
             Add role
           </ToolbarSecretLink>
         {{/if}}
         {{#if @model.canEdit}}
-          <ToolbarSecretLink @secret={{@model.id}} @mode="edit" @data-test-edit-link={{true}} @replace={{true}}>
+          <ToolbarSecretLink @secret={{@model.id}} @mode="edit" data-test-edit-link={{true}} @replace={{true}}>
             Edit configuration
           </ToolbarSecretLink>
         {{/if}}
@@ -120,21 +120,23 @@
                   {{/each}}
                 </div>
               {{else}}
-                <ToggleButton
-                  @class="is-block"
-                  @toggleAttr={{camelize (concat "show" group)}}
-                  @toggleTarget={{this}}
-                  @openLabel={{concat "Hide " group}}
-                  @closedLabel={{group}}
-                  @data-test-toggle-group={{group}}
-                />
-                {{#if (get this (camelize (concat "show" group)))}}
-                  <div class="box is-marginless">
-                    {{#each fields as |attr|}}
-                      <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
-                    {{/each}}
-                  </div>
-                {{/if}}
+                {{#let (camelize (concat "show" group)) as |prop|}}
+                  <ToggleButton
+                    @isOpen={{get this prop}}
+                    @openLabel={{concat "Hide " group}}
+                    @closedLabel={{group}}
+                    @onClick={{fn (mut (get this prop))}}
+                    class="is-block"
+                    data-test-toggle-group={{group}}
+                  />
+                  {{#if (get this prop)}}
+                    <div class="box is-marginless">
+                      {{#each fields as |attr|}}
+                        <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
+                      {{/each}}
+                    </div>
+                  {{/if}}
+                {{/let}}
               {{/if}}
             {{/each-in}}
           {{/each}}
@@ -167,7 +169,7 @@
           </button>
         </div>
         <div class="control">
-          <SecretLink @mode="list" @class="button">
+          <SecretLink @mode="list" class="button">
             Cancel
           </SecretLink>
         </div>
@@ -246,21 +248,23 @@
                 {{/each}}
               </div>
             {{else}}
-              <ToggleButton
-                @class="is-block"
-                @toggleAttr={{camelize (concat "show" group)}}
-                @toggleTarget={{this}}
-                @openLabel={{concat "Hide " group}}
-                @closedLabel={{group}}
-                @data-test-toggle-group={{group}}
-              />
-              {{#if (get this (camelize (concat "show" group)))}}
-                <div class="box is-marginless">
-                  {{#each fields as |attr|}}
-                    <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
-                  {{/each}}
-                </div>
-              {{/if}}
+              {{#let (camelize (concat "show" group)) as |prop|}}
+                <ToggleButton
+                  @isOpen={{get this prop}}
+                  @openLabel={{concat "Hide " group}}
+                  @closedLabel={{group}}
+                  @onClick={{fn (mut (get this prop))}}
+                  class="is-block"
+                  data-test-toggle-group={{group}}
+                />
+                {{#if (get this prop)}}
+                  <div class="box is-marginless">
+                    {{#each fields as |attr|}}
+                      <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
+                    {{/each}}
+                  </div>
+                {{/if}}
+              {{/let}}
             {{/if}}
           {{/each-in}}
         {{/each}}
@@ -287,7 +291,7 @@
           </button>
         </div>
         <div class="control">
-          <SecretLink @mode="list" @class="button">
+          <SecretLink @mode="list" class="button">
             Cancel
           </SecretLink>
         </div>

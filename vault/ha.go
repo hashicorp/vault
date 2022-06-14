@@ -185,6 +185,15 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 		oldAdv = true
 	}
 
+	// At the top of this function we return early when we're the active node.
+	// If we're not the active node, and there's a stale advertisement pointing
+	// to ourself, there's no point in paying any attention to it.  And by
+	// disregarding it, we can avoid a panic in raft tests using the Inmem network
+	// layer when we try to connect back to ourself.
+	if adv.ClusterAddr == c.ClusterAddr() && adv.RedirectAddr == c.redirectAddr {
+		return false, "", "", nil
+	}
+
 	if !oldAdv {
 		c.logger.Debug("parsing information for new active node", "active_cluster_addr", adv.ClusterAddr, "active_redirect_addr", adv.RedirectAddr)
 

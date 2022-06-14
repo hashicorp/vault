@@ -74,7 +74,7 @@ module('Integration | Component | config pki ca', function (hooks) {
     this.set('config', c);
     await render(hbs`{{config-pki-ca config=config}}`);
     assert.notOk(component.hasTitle, 'no title in the default state');
-    assert.equal(component.replaceCAText, 'Replace CA');
+    assert.equal(component.replaceCAText, 'Add CA');
     assert.equal(component.downloadLinks.length, 3, 'shows download links');
   });
 });

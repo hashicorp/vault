@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -23,13 +22,13 @@ func testLeaseRenewCommand(tb testing.TB) (*cli.MockUi, *LeaseRenewCommand) {
 // testLeaseRenewCommandMountAndLease mounts a leased secret backend and returns
 // the leaseID of an item.
 func testLeaseRenewCommandMountAndLease(tb testing.TB, client *api.Client) string {
-	if err := client.Sys().MountWithContext(context.Background(), "testing", &api.MountInput{
+	if err := client.Sys().Mount("testing", &api.MountInput{
 		Type: "generic-leased",
 	}); err != nil {
 		tb.Fatal(err)
 	}
 
-	if _, err := client.Logical().WriteWithContext(context.Background(), "testing/foo", map[string]interface{}{
+	if _, err := client.Logical().Write("testing/foo", map[string]interface{}{
 		"key":   "value",
 		"lease": "5m",
 	}); err != nil {
@@ -37,7 +36,7 @@ func testLeaseRenewCommandMountAndLease(tb testing.TB, client *api.Client) strin
 	}
 
 	// Read the secret back to get the leaseID
-	secret, err := client.Logical().ReadWithContext(context.Background(), "testing/foo")
+	secret, err := client.Logical().Read("testing/foo")
 	if err != nil {
 		tb.Fatal(err)
 	}

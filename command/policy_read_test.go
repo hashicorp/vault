@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -77,7 +76,7 @@ func TestPolicyReadCommand_Run(t *testing.T) {
 		defer closer()
 
 		policy := `path "secret/" {}`
-		if err := client.Sys().PutPolicyWithContext(context.Background(), "my-policy", policy); err != nil {
+		if err := client.Sys().PutPolicy("my-policy", policy); err != nil {
 			t.Fatal(err)
 		}
 

@@ -100,23 +100,24 @@ func (c *Sys) ListPluginsWithContext(ctx context.Context, i *ListPluginsInput) (
 		PluginsByType: make(map[consts.PluginType][]string),
 	}
 	if i.Type == consts.PluginTypeUnknown {
-		for pluginTypeStr, pluginsRaw := range secret.Data {
-			pluginType, err := consts.ParsePluginType(pluginTypeStr)
-			if err != nil {
-				return nil, err
+		for _, pluginType := range consts.PluginTypes {
+			pluginsRaw, ok := secret.Data[pluginType.String()]
+			if !ok {
+				continue
 			}
 
 			pluginsIfc, ok := pluginsRaw.([]interface{})
 			if !ok {
-				return nil, fmt.Errorf("unable to parse plugins for %q type", pluginTypeStr)
+				return nil, fmt.Errorf("unable to parse plugins for %q type", pluginType.String())
 			}
 
-			plugins := make([]string, len(pluginsIfc))
-			for i, nameIfc := range pluginsIfc {
+			plugins := make([]string, 0, len(pluginsIfc))
+			for _, nameIfc := range pluginsIfc {
 				name, ok := nameIfc.(string)
 				if !ok {
+					continue
 				}
-				plugins[i] = name
+				plugins = append(plugins, name)
 			}
 			result.PluginsByType[pluginType] = plugins
 		}

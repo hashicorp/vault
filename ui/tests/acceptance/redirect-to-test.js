@@ -47,7 +47,7 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
     // normally we'd use the auth.logout helper to visit the route and reset the app, but in this case that
     // also routes us to the auth page, and then all of the transitions from the auth page get redirected back
     // to the auth page resulting in no redirect_to query param being set
-    sessionStorage.clear();
+    localStorage.clear();
   });
   test('redirect to a route after authentication', async function (assert) {
     let url = '/vault/secrets/secret/create';

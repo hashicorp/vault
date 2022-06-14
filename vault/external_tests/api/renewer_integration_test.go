@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -19,13 +18,13 @@ func TestRenewer_Renew(t *testing.T) {
 		t.Run("kv", func(t *testing.T) {
 			t.Parallel()
 
-			if _, err := client.Logical().WriteWithContext(context.Background(), "secret/value", map[string]interface{}{
+			if _, err := client.Logical().Write("secret/value", map[string]interface{}{
 				"foo": "bar",
 			}); err != nil {
 				t.Fatal(err)
 			}
 
-			secret, err := client.Logical().ReadWithContext(context.Background(), "secret/value")
+			secret, err := client.Logical().Read("secret/value")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -54,13 +53,13 @@ func TestRenewer_Renew(t *testing.T) {
 		t.Run("transit", func(t *testing.T) {
 			t.Parallel()
 
-			if err := client.Sys().MountWithContext(context.Background(), "transit", &api.MountInput{
+			if err := client.Sys().Mount("transit", &api.MountInput{
 				Type: "transit",
 			}); err != nil {
 				t.Fatal(err)
 			}
 
-			secret, err := client.Logical().WriteWithContext(context.Background(), "transit/encrypt/my-app", map[string]interface{}{
+			secret, err := client.Logical().Write("transit/encrypt/my-app", map[string]interface{}{
 				"plaintext": "Zm9vCg==",
 			})
 			if err != nil {
@@ -94,19 +93,19 @@ func TestRenewer_Renew(t *testing.T) {
 			cleanup, pgURL := postgreshelper.PrepareTestContainer(t, "")
 			defer cleanup()
 
-			if err := client.Sys().MountWithContext(context.Background(), "database", &api.MountInput{
+			if err := client.Sys().Mount("database", &api.MountInput{
 				Type: "database",
 			}); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := client.Logical().WriteWithContext(context.Background(), "database/config/postgresql", map[string]interface{}{
+			if _, err := client.Logical().Write("database/config/postgresql", map[string]interface{}{
 				"plugin_name":    "postgresql-database-plugin",
 				"connection_url": pgURL,
 				"allowed_roles":  "readonly",
 			}); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := client.Logical().WriteWithContext(context.Background(), "database/roles/readonly", map[string]interface{}{
+			if _, err := client.Logical().Write("database/roles/readonly", map[string]interface{}{
 				"db_name": "postgresql",
 				"creation_statements": `` +
 					`CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';` +
@@ -117,7 +116,7 @@ func TestRenewer_Renew(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			secret, err := client.Logical().ReadWithContext(context.Background(), "database/creds/readonly")
+			secret, err := client.Logical().Read("database/creds/readonly")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -173,7 +172,7 @@ func TestRenewer_Renew(t *testing.T) {
 		t.Run("auth", func(t *testing.T) {
 			t.Parallel()
 
-			secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+			secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 				Policies:       []string{"default"},
 				TTL:            "5s",
 				ExplicitMaxTTL: "10s",

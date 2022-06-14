@@ -69,8 +69,7 @@ export default Controller.extend({
   actions: {
     onAuthResponse(authResponse, backend, data) {
       const { mfa_requirement } = authResponse;
-      // mfa methods handled by the backend are validated immediately in the auth service
-      // if the user must choose between methods or enter passcodes further action is required
+      // if an mfa requirement exists further action is required
       if (mfa_requirement) {
         this.set('mfaAuthData', { mfa_requirement, backend, data });
       } else {
@@ -81,8 +80,10 @@ export default Controller.extend({
       this.authSuccess(authResponse);
     },
     onMfaErrorDismiss() {
-      this.set('mfaAuthData', null);
-      this.auth.set('mfaErrors', null);
+      this.setProperties({
+        mfaAuthData: null,
+        mfaErrors: null,
+      });
     },
   },
 });

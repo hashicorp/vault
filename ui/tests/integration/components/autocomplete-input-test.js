@@ -25,6 +25,7 @@ module('Integration | Component | autocomplete-input', function (hooks) {
   });
 
   test('it should function as standard input', async function (assert) {
+    assert.expect(3);
     const changeValue = 'foo bar';
     this.value = 'test';
     this.placeholder = 'text goes here';

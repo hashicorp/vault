@@ -115,7 +115,6 @@ func TestServer_ReloadListener(t *testing.T) {
 	defer os.RemoveAll(td)
 
 	wg := &sync.WaitGroup{}
-
 	// Setup initial certs
 	inBytes, _ := ioutil.ReadFile(wd + "reload_foo.pem")
 	ioutil.WriteFile(td+"/reload_cert.pem", inBytes, 0o777)

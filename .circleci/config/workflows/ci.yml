@@ -38,18 +38,6 @@ jobs:
   - test-go-race-remote-docker:
       requires:
         - pre-flight-checks
-  - website-docker-image:
-      context: vault-docs
-      filters:
-        branches:
-          only:
-            - main
-  - algolia-index:
-      context: vault-docs
-      filters:
-        branches:
-          only:
-            - stable-website
   - semgrep:
        requires:
          - pre-flight-checks

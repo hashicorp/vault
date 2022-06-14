@@ -137,6 +137,8 @@ type NewUserRequest struct {
 	Expiration         *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=expiration,proto3" json:"expiration,omitempty"`
 	Statements         *Statements            `protobuf:"bytes,4,opt,name=statements,proto3" json:"statements,omitempty"`
 	RollbackStatements *Statements            `protobuf:"bytes,5,opt,name=rollback_statements,json=rollbackStatements,proto3" json:"rollback_statements,omitempty"`
+	CredentialType     int32                  `protobuf:"varint,6,opt,name=credential_type,json=credentialType,proto3" json:"credential_type,omitempty"`
+	PublicKey          []byte                 `protobuf:"bytes,7,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
 }
 
 func (x *NewUserRequest) Reset() {
@@ -202,6 +204,20 @@ func (x *NewUserRequest) GetStatements() *Statements {
 func (x *NewUserRequest) GetRollbackStatements() *Statements {
 	if x != nil {
 		return x.RollbackStatements
+	}
+	return nil
+}
+
+func (x *NewUserRequest) GetCredentialType() int32 {
+	if x != nil {
+		return x.CredentialType
+	}
+	return 0
+}
+
+func (x *NewUserRequest) GetPublicKey() []byte {
+	if x != nil {
+		return x.PublicKey
 	}
 	return nil
 }
@@ -316,9 +332,11 @@ type UpdateUserRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Username   string            `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
-	Password   *ChangePassword   `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
-	Expiration *ChangeExpiration `protobuf:"bytes,3,opt,name=expiration,proto3" json:"expiration,omitempty"`
+	Username       string            `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
+	Password       *ChangePassword   `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	Expiration     *ChangeExpiration `protobuf:"bytes,3,opt,name=expiration,proto3" json:"expiration,omitempty"`
+	PublicKey      *ChangePublicKey  `protobuf:"bytes,4,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
+	CredentialType int32             `protobuf:"varint,5,opt,name=credential_type,json=credentialType,proto3" json:"credential_type,omitempty"`
 }
 
 func (x *UpdateUserRequest) Reset() {
@@ -372,6 +390,20 @@ func (x *UpdateUserRequest) GetExpiration() *ChangeExpiration {
 		return x.Expiration
 	}
 	return nil
+}
+
+func (x *UpdateUserRequest) GetPublicKey() *ChangePublicKey {
+	if x != nil {
+		return x.PublicKey
+	}
+	return nil
+}
+
+func (x *UpdateUserRequest) GetCredentialType() int32 {
+	if x != nil {
+		return x.CredentialType
+	}
+	return 0
 }
 
 type ChangePassword struct {
@@ -429,6 +461,61 @@ func (x *ChangePassword) GetStatements() *Statements {
 	return nil
 }
 
+type ChangePublicKey struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	NewPublicKey []byte      `protobuf:"bytes,1,opt,name=new_public_key,json=newPublicKey,proto3" json:"new_public_key,omitempty"`
+	Statements   *Statements `protobuf:"bytes,2,opt,name=statements,proto3" json:"statements,omitempty"`
+}
+
+func (x *ChangePublicKey) Reset() {
+	*x = ChangePublicKey{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ChangePublicKey) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChangePublicKey) ProtoMessage() {}
+
+func (x *ChangePublicKey) ProtoReflect() protoreflect.Message {
+	mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChangePublicKey.ProtoReflect.Descriptor instead.
+func (*ChangePublicKey) Descriptor() ([]byte, []int) {
+	return file_sdk_database_dbplugin_v5_proto_database_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ChangePublicKey) GetNewPublicKey() []byte {
+	if x != nil {
+		return x.NewPublicKey
+	}
+	return nil
+}
+
+func (x *ChangePublicKey) GetStatements() *Statements {
+	if x != nil {
+		return x.Statements
+	}
+	return nil
+}
+
 type ChangeExpiration struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -441,7 +528,7 @@ type ChangeExpiration struct {
 func (x *ChangeExpiration) Reset() {
 	*x = ChangeExpiration{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[7]
+		mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -454,7 +541,7 @@ func (x *ChangeExpiration) String() string {
 func (*ChangeExpiration) ProtoMessage() {}
 
 func (x *ChangeExpiration) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[7]
+	mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -467,7 +554,7 @@ func (x *ChangeExpiration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChangeExpiration.ProtoReflect.Descriptor instead.
 func (*ChangeExpiration) Descriptor() ([]byte, []int) {
-	return file_sdk_database_dbplugin_v5_proto_database_proto_rawDescGZIP(), []int{7}
+	return file_sdk_database_dbplugin_v5_proto_database_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ChangeExpiration) GetNewExpiration() *timestamppb.Timestamp {
@@ -493,7 +580,7 @@ type UpdateUserResponse struct {
 func (x *UpdateUserResponse) Reset() {
 	*x = UpdateUserResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[8]
+		mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -506,7 +593,7 @@ func (x *UpdateUserResponse) String() string {
 func (*UpdateUserResponse) ProtoMessage() {}
 
 func (x *UpdateUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[8]
+	mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -519,7 +606,7 @@ func (x *UpdateUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateUserResponse.ProtoReflect.Descriptor instead.
 func (*UpdateUserResponse) Descriptor() ([]byte, []int) {
-	return file_sdk_database_dbplugin_v5_proto_database_proto_rawDescGZIP(), []int{8}
+	return file_sdk_database_dbplugin_v5_proto_database_proto_rawDescGZIP(), []int{9}
 }
 
 /////////////////
@@ -537,7 +624,7 @@ type DeleteUserRequest struct {
 func (x *DeleteUserRequest) Reset() {
 	*x = DeleteUserRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[9]
+		mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[10]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -550,7 +637,7 @@ func (x *DeleteUserRequest) String() string {
 func (*DeleteUserRequest) ProtoMessage() {}
 
 func (x *DeleteUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[9]
+	mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[10]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -563,7 +650,7 @@ func (x *DeleteUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteUserRequest.ProtoReflect.Descriptor instead.
 func (*DeleteUserRequest) Descriptor() ([]byte, []int) {
-	return file_sdk_database_dbplugin_v5_proto_database_proto_rawDescGZIP(), []int{9}
+	return file_sdk_database_dbplugin_v5_proto_database_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *DeleteUserRequest) GetUsername() string {
@@ -589,7 +676,7 @@ type DeleteUserResponse struct {
 func (x *DeleteUserResponse) Reset() {
 	*x = DeleteUserResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[10]
+		mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -602,7 +689,7 @@ func (x *DeleteUserResponse) String() string {
 func (*DeleteUserResponse) ProtoMessage() {}
 
 func (x *DeleteUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[10]
+	mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -615,7 +702,7 @@ func (x *DeleteUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteUserResponse.ProtoReflect.Descriptor instead.
 func (*DeleteUserResponse) Descriptor() ([]byte, []int) {
-	return file_sdk_database_dbplugin_v5_proto_database_proto_rawDescGZIP(), []int{10}
+	return file_sdk_database_dbplugin_v5_proto_database_proto_rawDescGZIP(), []int{11}
 }
 
 /////////////////
@@ -632,7 +719,7 @@ type TypeResponse struct {
 func (x *TypeResponse) Reset() {
 	*x = TypeResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[11]
+		mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[12]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -645,7 +732,7 @@ func (x *TypeResponse) String() string {
 func (*TypeResponse) ProtoMessage() {}
 
 func (x *TypeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[11]
+	mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[12]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -658,7 +745,7 @@ func (x *TypeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TypeResponse.ProtoReflect.Descriptor instead.
 func (*TypeResponse) Descriptor() ([]byte, []int) {
-	return file_sdk_database_dbplugin_v5_proto_database_proto_rawDescGZIP(), []int{11}
+	return file_sdk_database_dbplugin_v5_proto_database_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *TypeResponse) GetType() string {
@@ -682,7 +769,7 @@ type Statements struct {
 func (x *Statements) Reset() {
 	*x = Statements{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[12]
+		mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[13]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -695,7 +782,7 @@ func (x *Statements) String() string {
 func (*Statements) ProtoMessage() {}
 
 func (x *Statements) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[12]
+	mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[13]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -708,7 +795,7 @@ func (x *Statements) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Statements.ProtoReflect.Descriptor instead.
 func (*Statements) Descriptor() ([]byte, []int) {
-	return file_sdk_database_dbplugin_v5_proto_database_proto_rawDescGZIP(), []int{12}
+	return file_sdk_database_dbplugin_v5_proto_database_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *Statements) GetCommands() []string {
@@ -727,7 +814,7 @@ type Empty struct {
 func (x *Empty) Reset() {
 	*x = Empty{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[13]
+		mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[14]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -740,7 +827,7 @@ func (x *Empty) String() string {
 func (*Empty) ProtoMessage() {}
 
 func (x *Empty) ProtoReflect() protoreflect.Message {
-	mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[13]
+	mi := &file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[14]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -753,7 +840,7 @@ func (x *Empty) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Empty.ProtoReflect.Descriptor instead.
 func (*Empty) Descriptor() ([]byte, []int) {
-	return file_sdk_database_dbplugin_v5_proto_database_proto_rawDescGZIP(), []int{13}
+	return file_sdk_database_dbplugin_v5_proto_database_proto_rawDescGZIP(), []int{14}
 }
 
 var File_sdk_database_dbplugin_v5_proto_database_proto protoreflect.FileDescriptor
@@ -779,7 +866,7 @@ var file_sdk_database_dbplugin_v5_proto_database_proto_rawDesc = []byte{
 	0x0b, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x5f, 0x64, 0x61, 0x74, 0x61, 0x18, 0x01, 0x20, 0x01,
 	0x28, 0x0b, 0x32, 0x17, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74,
 	0x6f, 0x62, 0x75, 0x66, 0x2e, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74, 0x52, 0x0a, 0x63, 0x6f, 0x6e,
-	0x66, 0x69, 0x67, 0x44, 0x61, 0x74, 0x61, 0x22, 0xb1, 0x02, 0x0a, 0x0e, 0x4e, 0x65, 0x77, 0x55,
+	0x66, 0x69, 0x67, 0x44, 0x61, 0x74, 0x61, 0x22, 0xf9, 0x02, 0x0a, 0x0e, 0x4e, 0x65, 0x77, 0x55,
 	0x73, 0x65, 0x72, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x44, 0x0a, 0x0f, 0x75, 0x73,
 	0x65, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x5f, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x18, 0x01, 0x20,
 	0x01, 0x28, 0x0b, 0x32, 0x1b, 0x2e, 0x64, 0x62, 0x70, 0x6c, 0x75, 0x67, 0x69, 0x6e, 0x2e, 0x76,
@@ -798,29 +885,47 @@ var file_sdk_database_dbplugin_v5_proto_database_proto_rawDesc = []byte{
 	0x61, 0x74, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x73, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x17,
 	0x2e, 0x64, 0x62, 0x70, 0x6c, 0x75, 0x67, 0x69, 0x6e, 0x2e, 0x76, 0x35, 0x2e, 0x53, 0x74, 0x61,
 	0x74, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x73, 0x52, 0x12, 0x72, 0x6f, 0x6c, 0x6c, 0x62, 0x61, 0x63,
-	0x6b, 0x53, 0x74, 0x61, 0x74, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x73, 0x22, 0x50, 0x0a, 0x0e, 0x55,
-	0x73, 0x65, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x12, 0x21, 0x0a,
-	0x0c, 0x64, 0x69, 0x73, 0x70, 0x6c, 0x61, 0x79, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x0b, 0x64, 0x69, 0x73, 0x70, 0x6c, 0x61, 0x79, 0x4e, 0x61, 0x6d, 0x65,
-	0x12, 0x1b, 0x0a, 0x09, 0x72, 0x6f, 0x6c, 0x65, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x08, 0x72, 0x6f, 0x6c, 0x65, 0x4e, 0x61, 0x6d, 0x65, 0x22, 0x2d, 0x0a,
-	0x0f, 0x4e, 0x65, 0x77, 0x55, 0x73, 0x65, 0x72, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
-	0x12, 0x1a, 0x0a, 0x08, 0x75, 0x73, 0x65, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x08, 0x75, 0x73, 0x65, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x22, 0xa7, 0x01, 0x0a,
-	0x11, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x55, 0x73, 0x65, 0x72, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x12, 0x1a, 0x0a, 0x08, 0x75, 0x73, 0x65, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x75, 0x73, 0x65, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x37,
-	0x0a, 0x08, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b,
-	0x32, 0x1b, 0x2e, 0x64, 0x62, 0x70, 0x6c, 0x75, 0x67, 0x69, 0x6e, 0x2e, 0x76, 0x35, 0x2e, 0x43,
-	0x68, 0x61, 0x6e, 0x67, 0x65, 0x50, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x52, 0x08, 0x70,
-	0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x12, 0x3d, 0x0a, 0x0a, 0x65, 0x78, 0x70, 0x69, 0x72,
-	0x61, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1d, 0x2e, 0x64, 0x62,
-	0x70, 0x6c, 0x75, 0x67, 0x69, 0x6e, 0x2e, 0x76, 0x35, 0x2e, 0x43, 0x68, 0x61, 0x6e, 0x67, 0x65,
-	0x45, 0x78, 0x70, 0x69, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x0a, 0x65, 0x78, 0x70, 0x69,
-	0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x22, 0x6c, 0x0a, 0x0e, 0x43, 0x68, 0x61, 0x6e, 0x67, 0x65,
-	0x50, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x12, 0x21, 0x0a, 0x0c, 0x6e, 0x65, 0x77, 0x5f,
-	0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b,
-	0x6e, 0x65, 0x77, 0x50, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x12, 0x37, 0x0a, 0x0a, 0x73,
+	0x6b, 0x53, 0x74, 0x61, 0x74, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x73, 0x12, 0x27, 0x0a, 0x0f, 0x63,
+	0x72, 0x65, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x61, 0x6c, 0x5f, 0x74, 0x79, 0x70, 0x65, 0x18, 0x06,
+	0x20, 0x01, 0x28, 0x05, 0x52, 0x0e, 0x63, 0x72, 0x65, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x61, 0x6c,
+	0x54, 0x79, 0x70, 0x65, 0x12, 0x1d, 0x0a, 0x0a, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x5f, 0x6b,
+	0x65, 0x79, 0x18, 0x07, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x09, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63,
+	0x4b, 0x65, 0x79, 0x22, 0x50, 0x0a, 0x0e, 0x55, 0x73, 0x65, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x43,
+	0x6f, 0x6e, 0x66, 0x69, 0x67, 0x12, 0x21, 0x0a, 0x0c, 0x64, 0x69, 0x73, 0x70, 0x6c, 0x61, 0x79,
+	0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x64, 0x69, 0x73,
+	0x70, 0x6c, 0x61, 0x79, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x1b, 0x0a, 0x09, 0x72, 0x6f, 0x6c, 0x65,
+	0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x72, 0x6f, 0x6c,
+	0x65, 0x4e, 0x61, 0x6d, 0x65, 0x22, 0x2d, 0x0a, 0x0f, 0x4e, 0x65, 0x77, 0x55, 0x73, 0x65, 0x72,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x1a, 0x0a, 0x08, 0x75, 0x73, 0x65, 0x72,
+	0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x75, 0x73, 0x65, 0x72,
+	0x6e, 0x61, 0x6d, 0x65, 0x22, 0x8d, 0x02, 0x0a, 0x11, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x55,
+	0x73, 0x65, 0x72, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1a, 0x0a, 0x08, 0x75, 0x73,
+	0x65, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x75, 0x73,
+	0x65, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x37, 0x0a, 0x08, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f,
+	0x72, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1b, 0x2e, 0x64, 0x62, 0x70, 0x6c, 0x75,
+	0x67, 0x69, 0x6e, 0x2e, 0x76, 0x35, 0x2e, 0x43, 0x68, 0x61, 0x6e, 0x67, 0x65, 0x50, 0x61, 0x73,
+	0x73, 0x77, 0x6f, 0x72, 0x64, 0x52, 0x08, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x12,
+	0x3d, 0x0a, 0x0a, 0x65, 0x78, 0x70, 0x69, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x1d, 0x2e, 0x64, 0x62, 0x70, 0x6c, 0x75, 0x67, 0x69, 0x6e, 0x2e, 0x76,
+	0x35, 0x2e, 0x43, 0x68, 0x61, 0x6e, 0x67, 0x65, 0x45, 0x78, 0x70, 0x69, 0x72, 0x61, 0x74, 0x69,
+	0x6f, 0x6e, 0x52, 0x0a, 0x65, 0x78, 0x70, 0x69, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x3b,
+	0x0a, 0x0a, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x5f, 0x6b, 0x65, 0x79, 0x18, 0x04, 0x20, 0x01,
+	0x28, 0x0b, 0x32, 0x1c, 0x2e, 0x64, 0x62, 0x70, 0x6c, 0x75, 0x67, 0x69, 0x6e, 0x2e, 0x76, 0x35,
+	0x2e, 0x43, 0x68, 0x61, 0x6e, 0x67, 0x65, 0x50, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79,
+	0x52, 0x09, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79, 0x12, 0x27, 0x0a, 0x0f, 0x63,
+	0x72, 0x65, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x61, 0x6c, 0x5f, 0x74, 0x79, 0x70, 0x65, 0x18, 0x05,
+	0x20, 0x01, 0x28, 0x05, 0x52, 0x0e, 0x63, 0x72, 0x65, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x61, 0x6c,
+	0x54, 0x79, 0x70, 0x65, 0x22, 0x6c, 0x0a, 0x0e, 0x43, 0x68, 0x61, 0x6e, 0x67, 0x65, 0x50, 0x61,
+	0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x12, 0x21, 0x0a, 0x0c, 0x6e, 0x65, 0x77, 0x5f, 0x70, 0x61,
+	0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x6e, 0x65,
+	0x77, 0x50, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x12, 0x37, 0x0a, 0x0a, 0x73, 0x74, 0x61,
+	0x74, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x17, 0x2e,
+	0x64, 0x62, 0x70, 0x6c, 0x75, 0x67, 0x69, 0x6e, 0x2e, 0x76, 0x35, 0x2e, 0x53, 0x74, 0x61, 0x74,
+	0x65, 0x6d, 0x65, 0x6e, 0x74, 0x73, 0x52, 0x0a, 0x73, 0x74, 0x61, 0x74, 0x65, 0x6d, 0x65, 0x6e,
+	0x74, 0x73, 0x22, 0x70, 0x0a, 0x0f, 0x43, 0x68, 0x61, 0x6e, 0x67, 0x65, 0x50, 0x75, 0x62, 0x6c,
+	0x69, 0x63, 0x4b, 0x65, 0x79, 0x12, 0x24, 0x0a, 0x0e, 0x6e, 0x65, 0x77, 0x5f, 0x70, 0x75, 0x62,
+	0x6c, 0x69, 0x63, 0x5f, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x0c, 0x6e,
+	0x65, 0x77, 0x50, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79, 0x12, 0x37, 0x0a, 0x0a, 0x73,
 	0x74, 0x61, 0x74, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32,
 	0x17, 0x2e, 0x64, 0x62, 0x70, 0x6c, 0x75, 0x67, 0x69, 0x6e, 0x2e, 0x76, 0x35, 0x2e, 0x53, 0x74,
 	0x61, 0x74, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x73, 0x52, 0x0a, 0x73, 0x74, 0x61, 0x74, 0x65, 0x6d,
@@ -893,7 +998,7 @@ func file_sdk_database_dbplugin_v5_proto_database_proto_rawDescGZIP() []byte {
 	return file_sdk_database_dbplugin_v5_proto_database_proto_rawDescData
 }
 
-var file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_sdk_database_dbplugin_v5_proto_database_proto_goTypes = []interface{}{
 	(*InitializeRequest)(nil),     // 0: dbplugin.v5.InitializeRequest
 	(*InitializeResponse)(nil),    // 1: dbplugin.v5.InitializeResponse
@@ -902,46 +1007,49 @@ var file_sdk_database_dbplugin_v5_proto_database_proto_goTypes = []interface{}{
 	(*NewUserResponse)(nil),       // 4: dbplugin.v5.NewUserResponse
 	(*UpdateUserRequest)(nil),     // 5: dbplugin.v5.UpdateUserRequest
 	(*ChangePassword)(nil),        // 6: dbplugin.v5.ChangePassword
-	(*ChangeExpiration)(nil),      // 7: dbplugin.v5.ChangeExpiration
-	(*UpdateUserResponse)(nil),    // 8: dbplugin.v5.UpdateUserResponse
-	(*DeleteUserRequest)(nil),     // 9: dbplugin.v5.DeleteUserRequest
-	(*DeleteUserResponse)(nil),    // 10: dbplugin.v5.DeleteUserResponse
-	(*TypeResponse)(nil),          // 11: dbplugin.v5.TypeResponse
-	(*Statements)(nil),            // 12: dbplugin.v5.Statements
-	(*Empty)(nil),                 // 13: dbplugin.v5.Empty
-	(*structpb.Struct)(nil),       // 14: google.protobuf.Struct
-	(*timestamppb.Timestamp)(nil), // 15: google.protobuf.Timestamp
+	(*ChangePublicKey)(nil),       // 7: dbplugin.v5.ChangePublicKey
+	(*ChangeExpiration)(nil),      // 8: dbplugin.v5.ChangeExpiration
+	(*UpdateUserResponse)(nil),    // 9: dbplugin.v5.UpdateUserResponse
+	(*DeleteUserRequest)(nil),     // 10: dbplugin.v5.DeleteUserRequest
+	(*DeleteUserResponse)(nil),    // 11: dbplugin.v5.DeleteUserResponse
+	(*TypeResponse)(nil),          // 12: dbplugin.v5.TypeResponse
+	(*Statements)(nil),            // 13: dbplugin.v5.Statements
+	(*Empty)(nil),                 // 14: dbplugin.v5.Empty
+	(*structpb.Struct)(nil),       // 15: google.protobuf.Struct
+	(*timestamppb.Timestamp)(nil), // 16: google.protobuf.Timestamp
 }
 var file_sdk_database_dbplugin_v5_proto_database_proto_depIdxs = []int32{
-	14, // 0: dbplugin.v5.InitializeRequest.config_data:type_name -> google.protobuf.Struct
-	14, // 1: dbplugin.v5.InitializeResponse.config_data:type_name -> google.protobuf.Struct
+	15, // 0: dbplugin.v5.InitializeRequest.config_data:type_name -> google.protobuf.Struct
+	15, // 1: dbplugin.v5.InitializeResponse.config_data:type_name -> google.protobuf.Struct
 	3,  // 2: dbplugin.v5.NewUserRequest.username_config:type_name -> dbplugin.v5.UsernameConfig
-	15, // 3: dbplugin.v5.NewUserRequest.expiration:type_name -> google.protobuf.Timestamp
-	12, // 4: dbplugin.v5.NewUserRequest.statements:type_name -> dbplugin.v5.Statements
-	12, // 5: dbplugin.v5.NewUserRequest.rollback_statements:type_name -> dbplugin.v5.Statements
+	16, // 3: dbplugin.v5.NewUserRequest.expiration:type_name -> google.protobuf.Timestamp
+	13, // 4: dbplugin.v5.NewUserRequest.statements:type_name -> dbplugin.v5.Statements
+	13, // 5: dbplugin.v5.NewUserRequest.rollback_statements:type_name -> dbplugin.v5.Statements
 	6,  // 6: dbplugin.v5.UpdateUserRequest.password:type_name -> dbplugin.v5.ChangePassword
-	7,  // 7: dbplugin.v5.UpdateUserRequest.expiration:type_name -> dbplugin.v5.ChangeExpiration
-	12, // 8: dbplugin.v5.ChangePassword.statements:type_name -> dbplugin.v5.Statements
-	15, // 9: dbplugin.v5.ChangeExpiration.new_expiration:type_name -> google.protobuf.Timestamp
-	12, // 10: dbplugin.v5.ChangeExpiration.statements:type_name -> dbplugin.v5.Statements
-	12, // 11: dbplugin.v5.DeleteUserRequest.statements:type_name -> dbplugin.v5.Statements
-	0,  // 12: dbplugin.v5.Database.Initialize:input_type -> dbplugin.v5.InitializeRequest
-	2,  // 13: dbplugin.v5.Database.NewUser:input_type -> dbplugin.v5.NewUserRequest
-	5,  // 14: dbplugin.v5.Database.UpdateUser:input_type -> dbplugin.v5.UpdateUserRequest
-	9,  // 15: dbplugin.v5.Database.DeleteUser:input_type -> dbplugin.v5.DeleteUserRequest
-	13, // 16: dbplugin.v5.Database.Type:input_type -> dbplugin.v5.Empty
-	13, // 17: dbplugin.v5.Database.Close:input_type -> dbplugin.v5.Empty
-	1,  // 18: dbplugin.v5.Database.Initialize:output_type -> dbplugin.v5.InitializeResponse
-	4,  // 19: dbplugin.v5.Database.NewUser:output_type -> dbplugin.v5.NewUserResponse
-	8,  // 20: dbplugin.v5.Database.UpdateUser:output_type -> dbplugin.v5.UpdateUserResponse
-	10, // 21: dbplugin.v5.Database.DeleteUser:output_type -> dbplugin.v5.DeleteUserResponse
-	11, // 22: dbplugin.v5.Database.Type:output_type -> dbplugin.v5.TypeResponse
-	13, // 23: dbplugin.v5.Database.Close:output_type -> dbplugin.v5.Empty
-	18, // [18:24] is the sub-list for method output_type
-	12, // [12:18] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	8,  // 7: dbplugin.v5.UpdateUserRequest.expiration:type_name -> dbplugin.v5.ChangeExpiration
+	7,  // 8: dbplugin.v5.UpdateUserRequest.public_key:type_name -> dbplugin.v5.ChangePublicKey
+	13, // 9: dbplugin.v5.ChangePassword.statements:type_name -> dbplugin.v5.Statements
+	13, // 10: dbplugin.v5.ChangePublicKey.statements:type_name -> dbplugin.v5.Statements
+	16, // 11: dbplugin.v5.ChangeExpiration.new_expiration:type_name -> google.protobuf.Timestamp
+	13, // 12: dbplugin.v5.ChangeExpiration.statements:type_name -> dbplugin.v5.Statements
+	13, // 13: dbplugin.v5.DeleteUserRequest.statements:type_name -> dbplugin.v5.Statements
+	0,  // 14: dbplugin.v5.Database.Initialize:input_type -> dbplugin.v5.InitializeRequest
+	2,  // 15: dbplugin.v5.Database.NewUser:input_type -> dbplugin.v5.NewUserRequest
+	5,  // 16: dbplugin.v5.Database.UpdateUser:input_type -> dbplugin.v5.UpdateUserRequest
+	10, // 17: dbplugin.v5.Database.DeleteUser:input_type -> dbplugin.v5.DeleteUserRequest
+	14, // 18: dbplugin.v5.Database.Type:input_type -> dbplugin.v5.Empty
+	14, // 19: dbplugin.v5.Database.Close:input_type -> dbplugin.v5.Empty
+	1,  // 20: dbplugin.v5.Database.Initialize:output_type -> dbplugin.v5.InitializeResponse
+	4,  // 21: dbplugin.v5.Database.NewUser:output_type -> dbplugin.v5.NewUserResponse
+	9,  // 22: dbplugin.v5.Database.UpdateUser:output_type -> dbplugin.v5.UpdateUserResponse
+	11, // 23: dbplugin.v5.Database.DeleteUser:output_type -> dbplugin.v5.DeleteUserResponse
+	12, // 24: dbplugin.v5.Database.Type:output_type -> dbplugin.v5.TypeResponse
+	14, // 25: dbplugin.v5.Database.Close:output_type -> dbplugin.v5.Empty
+	20, // [20:26] is the sub-list for method output_type
+	14, // [14:20] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_sdk_database_dbplugin_v5_proto_database_proto_init() }
@@ -1035,7 +1143,7 @@ func file_sdk_database_dbplugin_v5_proto_database_proto_init() {
 			}
 		}
 		file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ChangeExpiration); i {
+			switch v := v.(*ChangePublicKey); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1047,7 +1155,7 @@ func file_sdk_database_dbplugin_v5_proto_database_proto_init() {
 			}
 		}
 		file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UpdateUserResponse); i {
+			switch v := v.(*ChangeExpiration); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1059,7 +1167,7 @@ func file_sdk_database_dbplugin_v5_proto_database_proto_init() {
 			}
 		}
 		file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteUserRequest); i {
+			switch v := v.(*UpdateUserResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1071,7 +1179,7 @@ func file_sdk_database_dbplugin_v5_proto_database_proto_init() {
 			}
 		}
 		file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteUserResponse); i {
+			switch v := v.(*DeleteUserRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1083,7 +1191,7 @@ func file_sdk_database_dbplugin_v5_proto_database_proto_init() {
 			}
 		}
 		file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*TypeResponse); i {
+			switch v := v.(*DeleteUserResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1095,7 +1203,7 @@ func file_sdk_database_dbplugin_v5_proto_database_proto_init() {
 			}
 		}
 		file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Statements); i {
+			switch v := v.(*TypeResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1107,6 +1215,18 @@ func file_sdk_database_dbplugin_v5_proto_database_proto_init() {
 			}
 		}
 		file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Statements); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_sdk_database_dbplugin_v5_proto_database_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Empty); i {
 			case 0:
 				return &v.state
@@ -1125,7 +1245,7 @@ func file_sdk_database_dbplugin_v5_proto_database_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_sdk_database_dbplugin_v5_proto_database_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -157,7 +157,7 @@ func TestConsul_newConsulBackend(t *testing.T) {
 }
 
 func TestConsulBackend(t *testing.T) {
-	cleanup, config := consul.PrepareTestContainer(t, "1.4.4", false)
+	cleanup, config := consul.PrepareTestContainer(t, "1.4.4", false, true)
 	defer cleanup()
 
 	client, err := api.NewClient(config.APIConfig())
@@ -187,7 +187,7 @@ func TestConsulBackend(t *testing.T) {
 }
 
 func TestConsul_TooLarge(t *testing.T) {
-	cleanup, config := consul.PrepareTestContainer(t, "1.4.4", false)
+	cleanup, config := consul.PrepareTestContainer(t, "1.4.4", false, true)
 	defer cleanup()
 
 	client, err := api.NewClient(config.APIConfig())
@@ -212,7 +212,7 @@ func TestConsul_TooLarge(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	zeros := make([]byte, 600000, 600000)
+	zeros := make([]byte, 600000)
 	n, err := rand.Read(zeros)
 	if n != 600000 {
 		t.Fatalf("expected 500k zeros, read %d", n)
@@ -250,7 +250,7 @@ func TestConsul_TooLarge(t *testing.T) {
 }
 
 func TestConsulHABackend(t *testing.T) {
-	cleanup, config := consul.PrepareTestContainer(t, "1.4.4", false)
+	cleanup, config := consul.PrepareTestContainer(t, "1.4.4", false, true)
 	defer cleanup()
 
 	client, err := api.NewClient(config.APIConfig())
