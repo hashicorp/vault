@@ -55,19 +55,13 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	}
 
 	b.credRotationQueue = queue.New()
-	// Create a context with a cancel method for processing any WAL entries and
-	// populating the queue
-	initCtx := context.Background()
-	b.ctx, b.cancelQueue = context.WithCancel(initCtx)
 	// Load queue and kickoff new periodic ticker
-	go b.initQueue(b.ctx, conf, conf.System.ReplicationState())
+	go b.initQueue(b.queueCtx, conf, conf.System.ReplicationState())
 	return b, nil
 }
 
 func Backend(conf *logical.BackendConfig) *databaseBackend {
 	var b databaseBackend
-	// set this just in case, since we sometimes call this from tests without Factory
-	b.ctx, b.cancelQueue = context.WithCancel(context.Background())
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
 
@@ -104,9 +98,8 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 
 	b.logger = conf.Logger
 	b.connections = make(map[string]*dbPluginInstance)
-
+	b.queueCtx, b.cancelQueueCtx = context.WithCancel(context.Background())
 	b.roleLocks = locksutil.CreateLocks()
-
 	return &b
 }
 
@@ -122,13 +115,11 @@ type databaseBackend struct {
 	// that require periodic rotation. Backends will have a PriorityQueue
 	// initialized on setup, but only backends that are mounted by a primary
 	// server or mounted as a local mount will perform the rotations.
-	//
-	// cancelQueue is used to remove the priority queue and terminate the
-	// background ticker.
 	credRotationQueue *queue.PriorityQueue
-	// context used for canceling operations
-	ctx         context.Context
-	cancelQueue context.CancelFunc
+	// queueCtx is the context for the priority queue
+	queueCtx context.Context
+	// cancelQueueCtx is used to terminate the background ticker
+	cancelQueueCtx context.CancelFunc
 
 	// roleLocks is used to lock modifications to roles in the queue, to ensure
 	// concurrent requests are not modifying the same role and possibly causing
@@ -332,6 +323,17 @@ func (b *databaseBackend) ClearConnection(name string) error {
 	return nil
 }
 
+// ClearConnectionId closes the database connection with a specific id and
+// removes it from the b.connections map.
+func (b *databaseBackend) ClearConnectionId(name, id string) error {
+	db := b.connPopIfEqual(name, id)
+	if db != nil {
+		// Ignore error here since the database client is always killed
+		db.Close()
+	}
+	return nil
+}
+
 func (b *databaseBackend) CloseIfShutdown(db *dbPluginInstance, err error) {
 	// Plugin has shutdown, close it so next call can reconnect.
 	switch err {
@@ -352,8 +354,8 @@ func (b *databaseBackend) CloseIfShutdown(db *dbPluginInstance, err error) {
 // and cancels any rotation queue loading operation.
 func (b *databaseBackend) clean(_ context.Context) {
 	// kill the queue and terminate the background ticker
-	if b.cancelQueue != nil {
-		b.cancelQueue()
+	if b.cancelQueueCtx != nil {
+		b.cancelQueueCtx()
 	}
 
 	connections := b.connClear()

@@ -643,7 +643,7 @@ func (b *databaseBackend) loadStaticWALs(ctx context.Context, s logical.Storage)
 // operate in go-routines, and could be accessing the queue concurrently
 func (b *databaseBackend) pushItem(item *queue.Item) error {
 	select {
-	case <-b.ctx.Done():
+	case <-b.queueCtx.Done():
 	default:
 		return b.credRotationQueue.Push(item)
 	}
@@ -656,7 +656,7 @@ func (b *databaseBackend) pushItem(item *queue.Item) error {
 // operate in go-routines, and could be accessing the queue concurrently
 func (b *databaseBackend) popFromRotationQueue() (*queue.Item, error) {
 	select {
-	case <-b.ctx.Done():
+	case <-b.queueCtx.Done():
 	default:
 		return b.credRotationQueue.Pop()
 	}
@@ -668,7 +668,7 @@ func (b *databaseBackend) popFromRotationQueue() (*queue.Item, error) {
 // operate in go-routines, and could be accessing the queue concurrently
 func (b *databaseBackend) popFromRotationQueueByKey(name string) (*queue.Item, error) {
 	select {
-	case <-b.ctx.Done():
+	case <-b.queueCtx.Done():
 	default:
 		item, err := b.credRotationQueue.PopByKey(name)
 		if err != nil {
