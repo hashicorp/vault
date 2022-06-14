@@ -3408,7 +3408,7 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 	}
 }
 
-func TestSystemBackend_OASDynamic(t *testing.T) {
+func TestSystemBackend_OASDynamicMount(t *testing.T) {
 	_, b, rootToken := testCoreSystemBackend(t)
 	var oapi map[string]interface{}
 
@@ -3453,9 +3453,9 @@ func TestSystemBackend_OASDynamic(t *testing.T) {
 		}
 	}
 
-	// Simple sanity check of response size (which is much larger than most
+	// Simple check of response size (which is much larger than most
 	// Vault responses), mainly to catch mass omission of expected path data.
-	minLen := 70000
+	const minLen = 70000
 	if len(body) < minLen {
 		t.Fatalf("response size too small; expected: min %d, actual: %d", minLen, len(body))
 	}
@@ -3538,9 +3538,9 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 		}
 	}
 
-	// Simple sanity check of response size (which is much larger than most
+	// Simple check of response size (which is much larger than most
 	// Vault responses), mainly to catch mass omission of expected path data.
-	minLen := 70000
+	const minLen = 70000
 	if len(body) < minLen {
 		t.Fatalf("response size too small; expected: min %d, actual: %d", minLen, len(body))
 	}
