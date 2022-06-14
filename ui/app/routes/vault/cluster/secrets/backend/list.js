@@ -95,7 +95,6 @@ export default Route.extend({
     const backend = this.enginePathParam();
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
     const modelType = this.getModelType(backend, params.tab);
-
     return hash({
       secret,
       secrets: this.store
@@ -130,7 +129,7 @@ export default Route.extend({
   afterModel(model) {
     const { tab } = this.paramsFor(this.routeName);
     const backend = this.enginePathParam();
-    if (!tab || tab !== 'certs') {
+    if (!tab || tab !== 'cert') {
       return;
     }
     return all(
@@ -138,7 +137,7 @@ export default Route.extend({
       // possible that there is no certificate for them in order to know,
       // we fetch them specifically on the list page, and then unload the
       // records if there is no `certificate` attribute on the resultant model
-      ['ca', 'crl', 'ca_chain'].map((id) => this.store.queryRecord('pki/pki-certificate', { id, backend }))
+      ['ca', 'crl', 'ca_chain'].map((id) => this.store.queryRecord('pki/cert', { id, backend }))
     ).then(
       (results) => {
         results.rejectBy('certificate').forEach((record) => record.unloadRecord());
