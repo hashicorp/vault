@@ -1229,3 +1229,52 @@ func TestLoadConfigFile_Disable_Keep_Alives_Caching(t *testing.T) {
 		t.Fatal(diff)
 	}
 }
+
+func TestLoadConfigFile_Disable_Keep_Alives_Empty(t *testing.T) {
+	config, err := LoadConfig("./test-fixtures/config-disable-keep-alives-empty.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			PidFile: "./pidfile",
+		},
+		DisableKeepAlives:           "",
+		DisableKeepAlivesCaching:    false,
+		DisableKeepAlivesAutoAuth:   false,
+		DisableKeepAlivesTemplating: false,
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:      "aws",
+				MountPath: "auth/aws",
+				Namespace: "my-namespace/",
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+			Sinks: []*Sink{
+				{
+					Type:   "file",
+					DHType: "curve25519",
+					DHPath: "/tmp/file-foo-dhpath",
+					AAD:    "foobar",
+					Config: map[string]interface{}{
+						"path": "/tmp/file-foo",
+					},
+				},
+			},
+		},
+		Vault: &Vault{
+			Address: "http://127.0.0.1:1111",
+			Retry: &Retry{
+				ctconfig.DefaultRetryAttempts,
+			},
+		},
+	}
+
+	config.Prune()
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
