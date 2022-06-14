@@ -11,23 +11,50 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// About 66 bytes per record:
-//{"namespace_id":"xxxxx","entities":1234,"non_entity_tokens":1234},
-// = approx 7900 namespaces in 512KiB
-// So one storage entry is fine (for now).
 type NamespaceRecord struct {
-	NamespaceID     string `json:"namespace_id"`
-	Entities        uint64 `json:"entities"`
-	NonEntityTokens uint64 `json:"non_entity_tokens"`
+	NamespaceID     string         `json:"namespace_id"`
+	Entities        uint64         `json:"entities"`
+	NonEntityTokens uint64         `json:"non_entity_tokens"`
+	Mounts          []*MountRecord `json:"mounts"`
+}
+
+type CountsRecord struct {
+	EntityClients    int `json:"entity_clients"`
+	NonEntityClients int `json:"non_entity_clients"`
+}
+
+type NewClientRecord struct {
+	Counts     *CountsRecord             `json:"counts"`
+	Namespaces []*MonthlyNamespaceRecord `json:"namespaces"`
+}
+
+type MonthRecord struct {
+	Timestamp  int64                     `json:"timestamp"`
+	Counts     *CountsRecord             `json:"counts"`
+	Namespaces []*MonthlyNamespaceRecord `json:"namespaces"`
+	NewClients *NewClientRecord          `json:"new_clients"`
+}
+
+type MonthlyNamespaceRecord struct {
+	NamespaceID string         `json:"namespace_id"`
+	Counts      *CountsRecord  `json:"counts"`
+	Mounts      []*MountRecord `json:"mounts"`
+}
+
+type MountRecord struct {
+	MountPath string        `json:"mount_path"`
+	Counts    *CountsRecord `json:"counts"`
 }
 
 type PrecomputedQuery struct {
 	StartTime  time.Time
 	EndTime    time.Time
 	Namespaces []*NamespaceRecord `json:"namespaces"`
+	Months     []*MonthRecord     `json:"months"`
 }
 
 type PrecomputedQueryStore struct {
@@ -50,13 +77,22 @@ func (s *PrecomputedQueryStore) Put(ctx context.Context, p *PrecomputedQuery) er
 	if err != nil {
 		return err
 	}
-	err = s.view.Put(ctx, &logical.StorageEntry{
-		Key:   path,
-		Value: asJson,
+
+	compressedPq, err := compressutil.Compress(asJson, &compressutil.CompressionConfig{
+		Type: compressutil.CompressionTypeLZ4,
 	})
 	if err != nil {
 		return err
 	}
+
+	err = s.view.Put(ctx, &logical.StorageEntry{
+		Key:   path,
+		Value: compressedPq,
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -199,12 +235,21 @@ func (s *PrecomputedQueryStore) Get(ctx context.Context, startTime, endTime time
 		return nil, nil
 	}
 
+	value, notCompressed, err := compressutil.Decompress(entry.Value)
+	if err != nil {
+		return nil, err
+	}
+	if notCompressed {
+		value = entry.Value
+	}
+
 	p := &PrecomputedQuery{}
-	err = json.Unmarshal(entry.Value, p)
+	err = json.Unmarshal(value, p)
 	if err != nil {
 		s.logger.Warn("failed query lookup at", "path", path)
 		return nil, err
 	}
+
 	return p, nil
 }
 

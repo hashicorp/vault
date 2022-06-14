@@ -1,5 +1,5 @@
-{{#if (eq selectedAction 'rotate')}}
-  {{#if key.canRotate}}
+{{#if (eq this.selectedAction "rotate")}}
+  {{#if this.key.canRotate}}
     <ConfirmAction
       @buttonClasses="toolbar-link"
       @confirmTitle="Rotate this key?"
@@ -12,38 +12,40 @@
     </ConfirmAction>
   {{/if}}
 {{else}}
-  <MessageError @errors={{errors}} />
-  {{#if selectedAction}}
-    <div data-test-transit-action={{selectedAction}}>
-      {{ component (concat 'transit-key-action/' selectedAction)
-          key=key
-          keys=keys
-          keyIsRSA=keyIsRSA
-          verification=verification
-          hmac=hmac
-          param=param
-          key_version=key_version 
-          isModalActive=isModalActive 
-          ciphertext=ciphertext 
-          plaintext=plaintext 
-          context=context 
-          nonce=nonce
-          input=input
-          bits=bits
-          algorithm=algorithm
-          signature=signature
-          signature_algorithm=signature_algorithm
-          hash_algorithm=hash_algorithm
-          prehashed=prehashed 
-          wrappedToken=wrappedToken
-          exportKeyType=exportKeyType
-          exportKeyVersion=exportKeyVersion
-          encodedBase64=encodedBase64 
-          doSubmit=(action "doSubmit") 
-          toggleModal=(action "toggleModal") 
-          clearParams=(action "clearParams")
+  <MessageError @errors={{this.errors}} />
+  {{#if this.selectedAction}}
+    <div data-test-transit-action={{this.selectedAction}}>
+      {{! template-lint-disable no-passed-in-event-handlers }}
+      {{component
+        (concat "transit-key-action/" this.selectedAction)
+        key=this.key
+        keys=this.keys
+        keyIsRSA=this.keyIsRSA
+        verification=this.verification
+        hmac=this.hmac
+        param=this.param
+        key_version=this.key_version
+        isModalActive=this.isModalActive
+        ciphertext=this.ciphertext
+        plaintext=this.plaintext
+        context=this.context
+        nonce=this.nonce
+        input=this.input
+        bits=this.bits
+        algorithm=this.algorithm
+        signature=this.signature
+        signature_algorithm=this.signature_algorithm
+        hash_algorithm=this.hash_algorithm
+        prehashed=this.prehashed
+        wrappedToken=this.wrappedToken
+        exportKeyType=this.exportKeyType
+        exportKeyVersion=this.exportKeyVersion
+        encodedBase64=this.encodedBase64
+        valid=this.valid
+        doSubmit=(action "doSubmit")
+        toggleModal=(action "toggleModal")
+        clearParams=(action "clearParams")
       }}
     </div>
-   {{/if}}
+  {{/if}}
 {{/if}}
-

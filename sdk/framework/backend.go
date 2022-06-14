@@ -198,7 +198,7 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 
 	// If the path is empty and it is a help operation, handle that.
 	if req.Path == "" && req.Operation == logical.HelpOperation {
-		return b.handleRootHelp()
+		return b.handleRootHelp(req)
 	}
 
 	// Find the matching route
@@ -284,7 +284,9 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 // the input and existing resource prior to performing the JSON merge operation
 // using the MergePatch function from the json-patch library. The preprocessor
 // is an arbitrary func that can be provided to further process the input. The
-// MergePatch function accepts and returns byte arrays.
+// MergePatch function accepts and returns byte arrays. Null values will unset
+// fields defined within the input's FieldData (as if they were never specified)
+// and remove user-specified keys that exist within a map field.
 func HandlePatchOperation(input *FieldData, resource map[string]interface{}, preprocessor PatchPreprocessorFunc) ([]byte, error) {
 	var err error
 
@@ -294,11 +296,18 @@ func HandlePatchOperation(input *FieldData, resource map[string]interface{}, pre
 
 	inputMap := map[string]interface{}{}
 
-	// Parse all fields to ensure data types are handled properly according to the FieldSchema
 	for key := range input.Raw {
-		val, ok := input.GetOk(key)
+		if _, ok := input.Schema[key]; !ok {
+			// Only accept fields in the schema
+			continue
+		}
 
-		// Only accept fields in the schema
+		// Ensure data types are handled properly according to the FieldSchema
+		val, ok, err := input.GetOkErr(key)
+		if err != nil {
+			return nil, err
+		}
+
 		if ok {
 			inputMap[key] = val
 		}
@@ -448,7 +457,7 @@ func (b *Backend) route(path string) (*Path, map[string]string) {
 	return nil, nil
 }
 
-func (b *Backend) handleRootHelp() (*logical.Response, error) {
+func (b *Backend) handleRootHelp(req *logical.Request) (*logical.Response, error) {
 	// Build a mapping of the paths and get the paths alphabetized to
 	// make the output prettier.
 	pathsMap := make(map[string]*Path)
@@ -477,9 +486,18 @@ func (b *Backend) handleRootHelp() (*logical.Response, error) {
 		return nil, err
 	}
 
+	// Plugins currently don't have a direct knowledge of their own "type"
+	// (e.g. "kv", "cubbyhole"). It defaults to the name of the executable but
+	// can be overridden when the plugin is mounted. Since we need this type to
+	// form the request & response full names, we are passing it as an optional
+	// request parameter to the plugin's root help endpoint. If specified in
+	// the request, the type will be used as part of the request/response body
+	// names in the OAS document.
+	requestResponsePrefix := req.GetString("requestResponsePrefix")
+
 	// Build OpenAPI response for the entire backend
 	doc := NewOASDocument()
-	if err := documentPaths(b, doc); err != nil {
+	if err := documentPaths(b, requestResponsePrefix, doc); err != nil {
 		b.Logger().Warn("error generating OpenAPI", "error", err)
 	}
 
@@ -616,8 +634,11 @@ type FieldSchema struct {
 	Type        FieldType
 	Default     interface{}
 	Description string
-	Required    bool
-	Deprecated  bool
+
+	// The Required and Deprecated members are only used by openapi, and are not actually
+	// used by the framework.
+	Required   bool
+	Deprecated bool
 
 	// Query indicates this field will be sent as a query parameter:
 	//

@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"encoding/json"
 	"strconv"
 	"strings"
@@ -106,7 +107,7 @@ func TestTokenRenewCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		secret, err := client.Auth().Token().Lookup(token)
+		secret, err := client.Auth().Token().LookupWithContext(context.Background(), token)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -141,7 +142,7 @@ func TestTokenRenewCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		secret, err := client.Auth().Token().Lookup(token)
+		secret, err := client.Auth().Token().LookupWithContext(context.Background(), token)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -180,7 +181,7 @@ func TestTokenRenewCommand_Run(t *testing.T) {
 		}
 
 		client.SetToken(oldToken)
-		secret, err := client.Auth().Token().Lookup(token)
+		secret, err := client.Auth().Token().LookupWithContext(context.Background(), token)
 		if err != nil {
 			t.Fatal(err)
 		}

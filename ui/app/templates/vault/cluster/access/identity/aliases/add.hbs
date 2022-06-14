@@ -1,9 +1,12 @@
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
-      Create {{lowercase (humanize model.identityType)}} for {{model.canonicalId}}
+      Create
+      {{lowercase (humanize this.model.identityType)}}
+      for
+      {{this.model.canonicalId}}
     </h1>
   </p.levelLeft>
 </PageHeader>
 
-<Identity::EditForm @model={{model}} @onSave={{perform navAfterSave}} />
+<Identity::EditForm @model={{this.model}} @onSave={{perform this.navAfterSave}} />

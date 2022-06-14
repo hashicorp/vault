@@ -54,11 +54,11 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   decryption. This may also be supplied using the `VAULT_TRANSIT_SEAL_KEY_NAME`
   environment variable.
 
-- `mount_path` `(string: <required>)`: The mount path to the transit secret engine.  
+- `mount_path` `(string: <required>)`: The mount path to the transit secret engine.
   This may also be supplied using the `VAULT_TRANSIT_SEAL_MOUNT_PATH` environment
   variable.
 
-- `namespace` `(string: "")`: The namespace path to the transit secret engine.  
+- `namespace` `(string: "")`: The namespace path to the transit secret engine.
   This may also be supplied using the `VAULT_NAMESPACE` environment variable.
 
 - `disable_renewal` `(string: "false")`: Disables the automatic renewal of the token
@@ -112,10 +112,10 @@ path "<mount path>/decrypt/<key name>" {
 ## Key Rotation
 
 This seal supports key rotation using the Transit Secret Engine's key rotation endpoints. See
-[doc](/api/secret/transit#rotate-key). Old keys must not be disabled or deleted and are
+[doc](/api-docs/secret/transit#rotate-key). Old keys must not be disabled or deleted and are
 used to decrypt older data.
 
-## Learn
+## Tutorial
 
 Refer to the [Auto-unseal using Transit Secrets Engine](https://learn.hashicorp.com/vault/operations/autounseal-transit)
-guide for a step-by-step tutorial.
+tutorial to learn how use the transit secrets engine to automatically unseal Vault.

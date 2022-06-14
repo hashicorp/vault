@@ -1,6 +1,6 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
-import { run } from '@ember/runloop';
+import { later } from '@ember/runloop';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
@@ -39,7 +39,7 @@ export default class AuthInfoComponent extends Component {
   @action
   renewToken() {
     this.fakeRenew = true;
-    run.later(() => {
+    later(() => {
       this.auth.renew().then(() => {
         this.fakeRenew = this.auth.isRenewing;
       });

@@ -3,14 +3,14 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 
-module('Integration | Component | read-more', function(hooks) {
+module('Integration | Component | read-more', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     await render(hbs`<ReadMore />`);
-    assert.equal(this.element.textContent.trim(), '');
+    assert.dom(this.element).hasText('');
   });
-  test('it can toggle open and closed when text is longer than parent', async function(assert) {
+  test('it can toggle open and closed when text is longer than parent', async function (assert) {
     this.set(
       'description',
       'My super long template block text dignissim dictum sem, ut varius ligula lacinia quis.'
@@ -34,7 +34,7 @@ module('Integration | Component | read-more', function(hooks) {
     assert.dom('[data-test-readmore-toggle]').hasText('See Less', 'Toggle should have text to see less');
   });
 
-  test('it does not show show more button if parent is wider than content', async function(assert) {
+  test('it does not show show more button if parent is wider than content', async function (assert) {
     this.set('description', 'Hello');
     await render(hbs`
       <div style="width: 150px">

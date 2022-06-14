@@ -31,16 +31,16 @@ export default Component.extend({
   marginless: false,
   classNameBindings: ['containerClass'],
 
-  containerClass: computed('type', 'marginless', function() {
+  containerClass: computed('type', 'marginless', function () {
     const base = this.marginless ? 'message message-marginless ' : 'message ';
     return base + messageTypes([this.type]).class;
   }),
 
-  alertType: computed('type', function() {
+  alertType: computed('type', function () {
     return messageTypes([this.type]);
   }),
 
-  secondAlertType: computed('secondIconType', function() {
+  secondAlertType: computed('secondIconType', function () {
     return messageTypes([this.secondIconType]);
   }),
 });

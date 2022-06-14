@@ -23,6 +23,6 @@ The `AlertPopup` is an implementation of the [ember-cli-flash](https://github.co
 **See**
 
 - [Uses of AlertPopup](https://github.com/hashicorp/vault/search?l=Handlebars&q=AlertPopup)
-- [AlertPopup Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/alert-popup.js)
+- [AlertPopup Source Code](https://github.com/hashicorp/vault/blob/main/ui/app/components/alert-popup.js)
 
 ---

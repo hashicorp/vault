@@ -74,15 +74,15 @@ const generateCreds = async () => {
   }
   return { path, scope, role, serial };
 };
-module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
+module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(async function() {
+  hooks.beforeEach(async function () {
     await authPage.login();
     return;
   });
 
-  test('it enables KMIP secrets engine', async function(assert) {
+  test('it enables KMIP secrets engine', async function (assert) {
     let path = `kmip-${Date.now()}`;
     await mountSecrets.enable('kmip', path);
     await settled();
@@ -94,7 +94,7 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
     assert.ok(scopesPage.isEmpty, 'renders empty state');
   });
 
-  test('it can configure a KMIP secrets engine', async function(assert) {
+  test('it can configure a KMIP secrets engine', async function (assert) {
     let path = await mount(false);
     await scopesPage.visit({ backend: path });
     await settled();
@@ -127,7 +127,7 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
     assert.notOk(scopesPage.isEmpty, 'configuration page no longer renders empty state');
   });
 
-  test('it can revoke from the credentials show page', async function(assert) {
+  test('it can revoke from the credentials show page', async function (assert) {
     let { path, scope, role, serial } = await generateCreds();
     await settled();
     await credentialsPage.visitDetail({ backend: path, scope, role, serial });
@@ -144,7 +144,7 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
     assert.ok(credentialsPage.isEmpty, 'renders an empty credentials page');
   });
 
-  test('it can create a scope', async function(assert) {
+  test('it can create a scope', async function (assert) {
     let path = await mount(this);
     await scopesPage.visit({ backend: path });
     await settled();
@@ -169,7 +169,7 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
     assert.equal(scopesPage.listItemLinks.length, 1, 'renders a single scope');
   });
 
-  test('it can delete a scope from the list', async function(assert) {
+  test('it can delete a scope from the list', async function (assert) {
     let { path } = await createScope();
     await scopesPage.visit({ backend: path });
     await settled();
@@ -184,7 +184,7 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
     assert.ok(scopesPage.isEmpty, 'renders the empty state');
   });
 
-  test('it can create a role', async function(assert) {
+  test('it can create a role', async function (assert) {
     // moving create scope here to help with flaky test
     let path = await mount();
     await settled();
@@ -221,7 +221,7 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
     assert.equal(rolesPage.listItemLinks.length, 1, 'renders a single role');
   });
 
-  test('it can delete a role from the list', async function(assert) {
+  test('it can delete a role from the list', async function (assert) {
     let { path, scope } = await createRole();
     await rolesPage.visit({ backend: path, scope });
     await settled();
@@ -236,7 +236,7 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
     assert.ok(rolesPage.isEmpty, 'renders empty');
   });
 
-  test('it can delete a role from the detail page', async function(assert) {
+  test('it can delete a role from the detail page', async function (assert) {
     let { path, scope, role } = await createRole();
     await settled();
     await rolesPage.visitDetail({ backend: path, scope, role });
@@ -265,7 +265,7 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
     assert.ok(rolesPage.isEmpty, 'renders an empty roles page');
   });
 
-  test('it can create a credential', async function(assert) {
+  test('it can create a credential', async function (assert) {
     // TODO come back and figure out why issue here with test
     let { path, scope, role } = await createRole();
     await credentialsPage.visit({ backend: path, scope, role });
@@ -290,7 +290,7 @@ module('Acceptance | Enterprise | KMIP secrets', function(hooks) {
     assert.equal(credentialsPage.listItemLinks.length, 1, 'renders a single credential');
   });
 
-  test('it can revoke a credential from the list', async function(assert) {
+  test('it can revoke a credential from the list', async function (assert) {
     let { path, scope, role } = await generateCreds();
     await credentialsPage.visit({ backend: path, scope, role });
     // revoke the credentials

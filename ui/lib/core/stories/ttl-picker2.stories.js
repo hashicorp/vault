@@ -28,7 +28,7 @@ storiesOf('TTL/TtlPicker2', module)
         label: text('label', 'Main label of TTL'),
         helperTextDisabled: text('helperTextDisabled', 'This helper text displays when TTL is disabled'),
         helperTextEnabled: text('helperTextEnabled', 'Enabling TTL will show this text instead'),
-        onChange: ttl => {
+        onChange: (ttl) => {
           console.log('onChange fired', ttl);
         },
       },
@@ -50,7 +50,7 @@ storiesOf('TTL/TtlPicker2', module)
       </TtlPicker2>
     `,
       context: {
-        onChange: ttl => {
+        onChange: (ttl) => {
           console.log('onChange fired', ttl);
         },
       },

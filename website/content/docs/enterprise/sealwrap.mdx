@@ -29,7 +29,7 @@ functionality.
 
 To disable seal wrapping, set `disable_sealwrap = true` in Vault's
 [configuration file][configuration]. This will not affect auto-unsealing functionality; Vault's
-master key will still be protected by the seal wrapping mechanism. It will
+root key will still be protected by the seal wrapping mechanism. It will
 simply prevent other storage entries within Vault from being seal wrapped.
 
 _N.B._: This is a lazy downgrade; as keys are accessed or written their seal
@@ -63,7 +63,7 @@ evaluated by the auditors.
 ## Activating Seal Wrapping
 
 For some values, seal wrapping is always enabled with a supporting seal. This
-includes the recovery key, any stored key shares, the master key, the keyring,
+includes the recovery key, any stored key shares, the root key, the keyring,
 and more; essentially, any Critical Security Parameter (CSP) within Vault's
 core. If upgrading from a version of Vault that did not support seal wrapping,
 the next time these values are read they will be seal-wrapped and stored.
@@ -74,8 +74,8 @@ backend with the `seal_wrap` configuration value set to `true`. (This value
 cannot currently be changed later.)
 
 A given backend's author can specify which values should be seal-wrapped by
-identifying where CSPs are stored. If no specific CSPs are identifiable, all
-data for the backend may be seal-wrapped.
+identifying where CSPs are stored.  They may also choose to seal wrap all or none
+of their values.
 
 To see the current list of seal-wrapped data per backend type, see the latest
 audit letter and updates in the FIPS 140-2 Compliance section above.

@@ -44,7 +44,7 @@ export default Component.extend({
   unit: 'm',
   initialValue: null,
   errorMessage: null,
-  unitOptions: computed(function() {
+  unitOptions: computed(function () {
     return [
       { label: 'seconds', value: 's' },
       { label: 'minutes', value: 'm' },
@@ -63,7 +63,7 @@ export default Component.extend({
     return time * toSeconds[unit];
   },
 
-  TTL: computed('outputSeconds', 'time', 'unit', function() {
+  TTL: computed('outputSeconds', 'time', 'unit', function () {
     let { time, unit, outputSeconds } = this;
     //convert to hours
     if (unit === 'd') {

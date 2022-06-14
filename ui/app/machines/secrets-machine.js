@@ -27,8 +27,8 @@ export default {
       ],
       on: {
         CONTINUE: {
-          details: { cond: type => supportedBackends.includes(type) },
-          list: { cond: type => !supportedBackends.includes(type) },
+          details: { cond: (type) => supportedBackends.includes(type) },
+          list: { cond: (type) => !supportedBackends.includes(type) },
         },
       },
     },
@@ -40,16 +40,16 @@ export default {
       on: {
         CONTINUE: {
           connection: {
-            cond: type => type === 'database',
+            cond: (type) => type === 'database',
           },
           role: {
-            cond: type => ['pki', 'aws', 'ssh'].includes(type),
+            cond: (type) => ['pki', 'aws', 'ssh'].includes(type),
           },
           secret: {
-            cond: type => ['kv'].includes(type),
+            cond: (type) => ['kv'].includes(type),
           },
           encryption: {
-            cond: type => type === 'transit',
+            cond: (type) => type === 'transit',
           },
         },
       },
@@ -134,19 +134,19 @@ export default {
       on: {
         REPEAT: {
           connection: {
-            cond: type => type === 'database',
+            cond: (type) => type === 'database',
             actions: [{ type: 'routeTransition', params: ['vault.cluster.secrets.backend.create-root'] }],
           },
           role: {
-            cond: type => ['pki', 'aws', 'ssh'].includes(type),
+            cond: (type) => ['pki', 'aws', 'ssh'].includes(type),
             actions: [{ type: 'routeTransition', params: ['vault.cluster.secrets.backend.create-root'] }],
           },
           secret: {
-            cond: type => ['kv'].includes(type),
+            cond: (type) => ['kv'].includes(type),
             actions: [{ type: 'routeTransition', params: ['vault.cluster.secrets.backend.create-root'] }],
           },
           encryption: {
-            cond: type => type === 'transit',
+            cond: (type) => type === 'transit',
             actions: [{ type: 'routeTransition', params: ['vault.cluster.secrets.backend.create-root'] }],
           },
         },

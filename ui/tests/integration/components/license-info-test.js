@@ -11,10 +11,10 @@ const FEATURES = allFeatures();
 
 const component = create(license);
 
-module('Integration | Component | license info', function(hooks) {
+module('Integration | Component | license info', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders feature status properly for features associated with license', async function(assert) {
+  test('it renders feature status properly for features associated with license', async function (assert) {
     const now = Date.now();
     this.set('licenseId', 'temporary');
     this.set('expirationTime', addMinutes(now, 30));
@@ -25,11 +25,11 @@ module('Integration | Component | license info', function(hooks) {
     );
     assert.equal(component.detailRows.length, 3, 'Shows License ID, Valid from, and License State rows');
     assert.equal(component.featureRows.length, FEATURES.length, 'it renders all of the features');
-    let activeFeatures = component.featureRows.filter(f => f.featureStatus === 'Active');
+    let activeFeatures = component.featureRows.filter((f) => f.featureStatus === 'Active');
     assert.equal(activeFeatures.length, 2, 'Has two features listed as active');
   });
 
-  test('it renders properly for autoloaded license', async function(assert) {
+  test('it renders properly for autoloaded license', async function (assert) {
     const now = Date.now();
     this.set('licenseId', 'test');
     this.set('expirationTime', addMinutes(now, 30));
@@ -49,7 +49,7 @@ module('Integration | Component | license info', function(hooks) {
     assert.equal(row.rowValue, 'Autoloaded', 'Shows autoloaded status');
   });
 
-  test('it renders properly for stored license', async function(assert) {
+  test('it renders properly for stored license', async function (assert) {
     const now = Date.now();
     this.set('licenseId', 'test');
     this.set('expirationTime', addMinutes(now, 30));
@@ -74,7 +74,7 @@ module('Integration | Component | license info', function(hooks) {
     );
   });
 
-  test('it renders Performance Standby as inactive if count is 0', async function(assert) {
+  test('it renders Performance Standby as inactive if count is 0', async function (assert) {
     const now = Date.now();
     this.set('licenseId', 'temporary');
     this.set('expirationTime', addMinutes(now, 30));
@@ -90,7 +90,7 @@ module('Integration | Component | license info', function(hooks) {
     assert.equal(row.featureStatus, 'Not Active', 'renders feature as inactive because when count is 0');
   });
 
-  test('it renders Performance Standby as active and shows count', async function(assert) {
+  test('it renders Performance Standby as active and shows count', async function (assert) {
     const now = Date.now();
     this.set('licenseId', 'temporary');
     this.set('expirationTime', addMinutes(now, 30));

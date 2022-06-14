@@ -63,10 +63,10 @@ func TestBackend_E2E_Initialize(t *testing.T) {
 		"policies":        "default",
 		"bound_subnet_id": "subnet-abcdef",
 	}
-	if _, err := core.Client.Logical().Write("auth/aws/role/test-role", data); err != nil {
+	if _, err := core.Client.Logical().WriteWithContext(context.Background(), "auth/aws/role/test-role", data); err != nil {
 		t.Fatal(err)
 	}
-	role, err := core.Client.Logical().Read("auth/aws/role/test-role")
+	role, err := core.Client.Logical().ReadWithContext(context.Background(), "auth/aws/role/test-role")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -8,18 +8,20 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/mitchellh/mapstructure"
 )
 
-const maxCustomMetadataKeys = 64
-const maxCustomMetadataKeyLength = 128
-const maxCustomMetadataValueLength = 512
-const customMetadataValidationErrorPrefix = "custom_metadata validation failed"
+const (
+	maxCustomMetadataKeys               = 64
+	maxCustomMetadataKeyLength          = 128
+	maxCustomMetadataValueLength        = 512
+	customMetadataValidationErrorPrefix = "custom_metadata validation failed"
+)
 
 // aliasPaths returns the API endpoints to operate on aliases.
 // Following are the paths supported:
@@ -138,10 +140,7 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 		customMetadata := make(map[string]string)
 		data, customMetadataExists := d.GetOk("custom_metadata")
 		if customMetadataExists {
-			err = mapstructure.Decode(data, &customMetadata)
-			if err != nil {
-				return nil, err
-			}
+			customMetadata = data.(map[string]string)
 		}
 
 		// Get entity id
@@ -151,11 +150,9 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 			canonicalID = d.Get("entity_id").(string)
 		}
 
-		//validate customMetadata if provided
+		// validate customMetadata if provided
 		if len(customMetadata) != 0 {
-
-			err := validateCustomMetadata(customMetadata)
-			if err != nil {
+			if err := validateCustomMetadata(customMetadata); err != nil {
 				return nil, err
 			}
 		}
@@ -178,8 +175,11 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 				if alias.NamespaceID != ns.ID {
 					return logical.ErrorResponse("cannot modify aliases across namespaces"), logical.ErrPermissionDenied
 				}
+				if !customMetadataExists {
+					customMetadata = alias.CustomMetadata
+				}
 				switch {
-				case mountAccessor == "" && name == "" && len(customMetadata) == 0:
+				case mountAccessor == "" && name == "":
 					// Just a canonical ID update, maybe
 					if canonicalID == "" {
 						// Nothing to do, so be idempotent
@@ -187,16 +187,12 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 					}
 					name = alias.Name
 					mountAccessor = alias.MountAccessor
-					customMetadata = alias.CustomMetadata
 				case mountAccessor == "":
 					// No change to mount accessor
 					mountAccessor = alias.MountAccessor
 				case name == "":
 					// No change to mount name
 					name = alias.Name
-				case len(customMetadata) == 0:
-					// No change to custom metadata
-					customMetadata = alias.CustomMetadata
 				default:
 					// mountAccessor, name and customMetadata  provided
 				}

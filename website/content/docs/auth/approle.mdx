@@ -231,16 +231,16 @@ not require a credential, but still enforce constraints for login. For
 example, `secret_id_bound_cidrs` will only allow logins coming from IP addresses
 belonging to configured CIDR blocks on the AppRole.
 
-## Learn
+## Tutorial
 
 Refer to the [AppRole Pull
 Authentication](https://learn.hashicorp.com/vault/identity-access-management/iam-authentication)
-guide for a step-by-step tutorial.
+tutorial to learn how to use the AppRole method to generate tokens for machines or apps.
 
 ## API
 
 The AppRole auth method has a full HTTP API. Please see the
-[AppRole API](/api/auth/approle) for more
+[AppRole API](/api-docs/auth/approle) for more
 details.
 
 ## Code Example
@@ -256,16 +256,15 @@ wrapping.
 package main
 
 import (
+	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"strings"
 
 	vault "github.com/hashicorp/vault/api"
+	auth "github.com/hashicorp/vault/api-docs/auth/approle"
 )
 
-// Fetches a key-value secret (kv-v2) after authenticating via AppRole,
-// an auth method used by machines that are unable to use platform-based authentication mechanisms like AWS Auth, Kubernetes Auth, etc.
+// Fetches a key-value secret (kv-v2) after authenticating via AppRole.
 func getSecretWithAppRole() (string, error) {
 	config := vault.DefaultConfig() // modify for more granular configuration
 
@@ -274,40 +273,38 @@ func getSecretWithAppRole() (string, error) {
 		return "", fmt.Errorf("unable to initialize Vault client: %w", err)
 	}
 
-	// A combination of a Role ID and Secret ID is required to log in to Vault with an AppRole.
-	// The Secret ID is a value that needs to be protected, so instead of the app having knowledge of the secret ID directly,
-	// we have a trusted orchestrator (https://learn.hashicorp.com/tutorials/vault/secure-introduction?in=vault/app-integration#trusted-orchestrator)
-	// give the app access to a short-lived response-wrapping token (https://www.vaultproject.io/docs/concepts/response-wrapping).
-	// Read more at: https://learn.hashicorp.com/tutorials/vault/approle-best-practices?in=vault/auth-methods#secretid-delivery-best-practices
-
-	wrappingToken, err := ioutil.ReadFile("path/to/wrapping-token") // placed here by a trusted orchestrator
-	if err != nil {
-		return "", fmt.Errorf("unable to read file containing wrapping token: %w", err)
-	}
-
-	unwrappedToken, err := client.Logical().Unwrap(strings.TrimSuffix(string(wrappingToken), "\n"))
-	if err != nil {
-		// a good opportunity to alert, in case the one-time use wrapping token appears to have already been used
-		return "", fmt.Errorf("unable to unwrap token: %w", err)
-	}
-	secretID := unwrappedToken.Data["secret_id"]
-
-	// the role ID given to you by your administrator
+	// A combination of a Role ID and Secret ID is required to log in to Vault
+	// with an AppRole.
+	// First, let's get the role ID given to us by our Vault administrator.
 	roleID := os.Getenv("APPROLE_ROLE_ID")
 	if roleID == "" {
 		return "", fmt.Errorf("no role ID was provided in APPROLE_ROLE_ID env var")
 	}
 
-	params := map[string]interface{}{
-		"role_id":   roleID,
-		"secret_id": secretID,
-	}
-	resp, err := client.Logical().Write("auth/approle/login", params)
-	if err != nil {
-		return "", fmt.Errorf("unable to log in with approle: %w", err)
-	}
-	client.SetToken(resp.Auth.ClientToken)
+	// The Secret ID is a value that needs to be protected, so instead of the
+	// app having knowledge of the secret ID directly, we have a trusted orchestrator (https://learn.hashicorp.com/tutorials/vault/secure-introduction?in=vault/app-integration#trusted-orchestrator)
+	// give the app access to a short-lived response-wrapping token (https://www.vaultproject.io/docs/concepts/response-wrapping).
+	// Read more at: https://learn.hashicorp.com/tutorials/vault/approle-best-practices?in=vault/auth-methods#secretid-delivery-best-practices
+	secretID := &auth.SecretID{FromFile: "path/to/wrapping-token"}
 
+	appRoleAuth, err := auth.NewAppRoleAuth(
+		roleID,
+		secretID,
+		auth.WithWrappingToken(), // Only required if the secret ID is response-wrapped.
+	)
+	if err != nil {
+		return "", fmt.Errorf("unable to initialize AppRole auth method: %w", err)
+	}
+
+	authInfo, err := client.Auth().Login(context.TODO(), appRoleAuth)
+	if err != nil {
+		return "", fmt.Errorf("unable to login to AppRole auth method: %w", err)
+	}
+	if authInfo == nil {
+		return "", fmt.Errorf("no auth info was returned after login")
+	}
+
+	// get secret
 	secret, err := client.Logical().Read("kv-v2/data/creds")
 	if err != nil {
 		return "", fmt.Errorf("unable to read secret: %w", err)
@@ -318,6 +315,8 @@ func getSecretWithAppRole() (string, error) {
 		return "", fmt.Errorf("data type assertion failed: %T %#v", secret.Data["data"], secret.Data["data"])
 	}
 
+	// data map can contain more than one key-value pair,
+	// in this case we're just grabbing one of them
 	key := "password"
 	value, ok := data[key].(string)
 	if !ok {
@@ -365,7 +364,7 @@ namespace Examples
             }
 
             var roleId = Environment.GetEnvironmentVariable("APPROLE_ROLE_ID");
-            if(String.IsNullOrEmpty(vaultAddr))
+            if(String.IsNullOrEmpty(roleId))
             {
                 throw new System.ArgumentNullException("AppRole Role Id");
             }

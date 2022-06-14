@@ -13,7 +13,7 @@ export default Controller.extend(BackendCrumbMixin, {
     this.set('type', '');
   },
   actions: {
-    refresh: function() {
+    refresh: function () {
       // closure actions don't bubble to routes,
       // so we have to manually bubble here
       this.send('refreshModel');

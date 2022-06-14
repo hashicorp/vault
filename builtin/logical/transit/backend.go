@@ -4,10 +4,14 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -59,9 +63,10 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 			b.pathCacheConfig(),
 		},
 
-		Secrets:     []*framework.Secret{},
-		Invalidate:  b.invalidate,
-		BackendType: logical.TypeLogical,
+		Secrets:      []*framework.Secret{},
+		Invalidate:   b.invalidate,
+		BackendType:  logical.TypeLogical,
+		PeriodicFunc: b.periodicFunc,
 	}
 
 	// determine cacheSize to use. Defaults to 0 which means unlimited
@@ -93,8 +98,10 @@ type backend struct {
 	*framework.Backend
 	lm *keysutil.LockManager
 	// Lock to make changes to any of the backend's cache configuration.
-	configMutex sync.RWMutex
-	cacheSizeChanged bool
+	configMutex          sync.RWMutex
+	cacheSizeChanged     bool
+	checkAutoRotateAfter time.Time
+	autoRotateOnce       sync.Once
 }
 
 func GetCacheSizeFromStorage(ctx context.Context, s logical.Storage) (int, error) {
@@ -161,4 +168,99 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 		defer b.configMutex.Unlock()
 		b.cacheSizeChanged = true
 	}
+}
+
+// periodicFunc is a central collection of functions that run on an interval.
+// Anything that should be called regularly can be placed within this method.
+func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error {
+	// These operations ensure the auto-rotate only happens once simultaneously. It's an unlikely edge
+	// given the time scale, but a safeguard nonetheless.
+	var err error
+	didAutoRotate := false
+	autoRotateOnceFn := func() {
+		err = b.autoRotateKeys(ctx, req)
+		didAutoRotate = true
+	}
+	b.autoRotateOnce.Do(autoRotateOnceFn)
+	if didAutoRotate {
+		b.autoRotateOnce = sync.Once{}
+	}
+
+	return err
+}
+
+// autoRotateKeys retrieves all transit keys and rotates those which have an
+// auto rotate period defined which has passed. This operation only happens
+// on primary nodes and performance secondary nodes which have a local mount.
+func (b *backend) autoRotateKeys(ctx context.Context, req *logical.Request) error {
+	// Only check for autorotation once an hour to avoid unnecessarily iterating
+	// over all keys too frequently.
+	if time.Now().Before(b.checkAutoRotateAfter) {
+		return nil
+	}
+	b.checkAutoRotateAfter = time.Now().Add(1 * time.Hour)
+
+	// Early exit if not a primary or performance secondary with a local mount.
+	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
+		(!b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+		return nil
+	}
+
+	// Retrieve all keys and loop over them to check if they need to be rotated.
+	keys, err := req.Storage.List(ctx, "policy/")
+	if err != nil {
+		return err
+	}
+
+	// Collect errors in a multierror to ensure a single failure doesn't prevent
+	// all keys from being rotated.
+	var errs *multierror.Error
+
+	for _, key := range keys {
+		p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
+			Storage: req.Storage,
+			Name:    key,
+		}, b.GetRandomReader())
+		if err != nil {
+			errs = multierror.Append(errs, err)
+			continue
+		}
+
+		// If the policy is nil, move onto the next one.
+		if p == nil {
+			continue
+		}
+
+		err = b.rotateIfRequired(ctx, req, key, p)
+		if err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+
+	return errs.ErrorOrNil()
+}
+
+// rotateIfRequired rotates a key if it is due for autorotation.
+func (b *backend) rotateIfRequired(ctx context.Context, req *logical.Request, key string, p *keysutil.Policy) error {
+	if !b.System().CachingDisabled() {
+		p.Lock(true)
+	}
+	defer p.Unlock()
+
+	// If the policy's automatic rotation period is 0, it should not
+	// automatically rotate.
+	if p.AutoRotatePeriod == 0 {
+		return nil
+	}
+
+	// Retrieve the latest version of the policy and determine if it is time to rotate.
+	latestKey := p.Keys[strconv.Itoa(p.LatestVersion)]
+	if time.Now().After(latestKey.CreationTime.Add(p.AutoRotatePeriod)) {
+		if b.Logger().IsDebug() {
+			b.Logger().Debug("automatically rotating key", "key", key)
+		}
+		return p.Rotate(ctx, req.Storage, b.GetRandomReader())
+
+	}
+	return nil
 }

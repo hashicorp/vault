@@ -4,13 +4,13 @@ import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
 
 export default JSONSerializer.extend({
-  keyForAttribute: function(attr) {
+  keyForAttribute: function (attr) {
     return decamelize(attr);
   },
 
   normalizeItems(payload) {
     if (payload.data && payload.data.keys && Array.isArray(payload.data.keys)) {
-      let models = payload.data.keys.map(key => {
+      let models = payload.data.keys.map((key) => {
         if (typeof key !== 'string') {
           return key;
         }

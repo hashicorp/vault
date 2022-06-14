@@ -3,10 +3,10 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
-module('Integration | Component | toggle button', function(hooks) {
+module('Integration | Component | toggle button', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('toggle functionality', async function(assert) {
+  test('toggle functionality', async function (assert) {
     this.set('toggleTarget', {});
 
     await render(hbs`{{toggle-button toggleTarget=toggleTarget toggleAttr="toggled"}}`);

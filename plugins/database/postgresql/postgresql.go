@@ -48,7 +48,6 @@ var (
 	singleQuotedPhrases = regexp.MustCompile(`('.*?')`)
 )
 
-// New implements builtinplugins.BuiltinFactory
 func New() (interface{}, error) {
 	db := new()
 	// Wrap the plugin with middleware to sanitize errors

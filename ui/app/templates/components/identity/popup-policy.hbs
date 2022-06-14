@@ -2,12 +2,12 @@
   <nav class="menu">
     <ul class="menu-list">
       <li class="action">
-        <LinkTo @route="vault.cluster.policy.show" @models={{array "acl" policyName}}>
+        <LinkTo @route="vault.cluster.policy.show" @models={{array "acl" this.policyName}}>
           View Policy
         </LinkTo>
       </li>
       <li class="action">
-        <LinkTo @route="vault.cluster.policy.edit" @models={{array "acl" policyName}}>
+        <LinkTo @route="vault.cluster.policy.edit" @models={{array "acl" this.policyName}}>
           Edit Policy
         </LinkTo>
       </li>
@@ -16,9 +16,10 @@
           @buttonClasses="link is-destroy"
           @confirmButtonText="Remove"
           @confirmMessage="This policy may affect permissions to access Vault data."
-          @onConfirmAction={{action "performTransaction" model policyName}}
+          @onConfirmAction={{action "performTransaction" this.model this.policyName}}
         >
-          Remove from {{model.identityType}}
+          Remove from
+          {{this.model.identityType}}
         </ConfirmAction>
       </li>
     </ul>

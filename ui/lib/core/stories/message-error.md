@@ -19,6 +19,6 @@
 **See**
 
 - [Uses of MessageError](https://github.com/hashicorp/vault/search?l=Handlebars&q=MessageError)
-- [MessageError Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/message-error.js)
+- [MessageError Source Code](https://github.com/hashicorp/vault/blob/main/ui/app/components/message-error.js)
 
 ---

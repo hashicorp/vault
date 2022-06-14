@@ -4,12 +4,13 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"net/http"
 )
 
 // Monitor returns a channel that outputs strings containing the log messages
 // coming from the server.
 func (c *Sys) Monitor(ctx context.Context, logLevel string) (chan string, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/monitor")
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/monitor")
 
 	if logLevel == "" {
 		r.Params.Add("log_level", "info")

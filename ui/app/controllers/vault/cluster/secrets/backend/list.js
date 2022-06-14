@@ -13,7 +13,7 @@ export default Controller.extend(ListController, BackendCrumbMixin, WithNavToNea
 
   tab: '',
 
-  filterIsFolder: computed('filter', function() {
+  filterIsFolder: computed('filter', function () {
     return !!utils.keyIsFolder(this.filter);
   }),
 
@@ -29,7 +29,7 @@ export default Controller.extend(ListController, BackendCrumbMixin, WithNavToNea
       this.set('loading-' + item.id, true);
       backend
         .saveZeroAddressConfig()
-        .catch(e => {
+        .catch((e) => {
           item.set('zeroAddress', false);
           this.flashMessages.danger(e.message);
         })

@@ -2,23 +2,6 @@ import { computed } from '@ember/object';
 import Component from '@ember/component';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
-export function linkParams({ mode, secret, queryParams }) {
-  let params;
-  const route = `vault.cluster.secrets.backend.${mode}`;
-
-  if ((mode !== 'versions' && !secret) || secret === ' ') {
-    params = [route + '-root'];
-  } else {
-    params = [route, encodePath(secret)];
-  }
-
-  if (queryParams) {
-    params.push(queryParams);
-  }
-
-  return params;
-}
-
 export default Component.extend({
   onLinkClick() {},
   tagName: '',
@@ -30,8 +13,16 @@ export default Component.extend({
   queryParams: null,
   ariaLabel: null,
 
-  linkParams: computed('mode', 'secret', 'queryParams', function() {
-    let data = { mode: this.mode, secret: this.secret, queryParams: this.queryParams };
-    return linkParams(data);
+  link: computed('mode', 'secret', function () {
+    const route = `vault.cluster.secrets.backend.${this.mode}`;
+    if ((this.mode !== 'versions' && !this.secret) || this.secret === ' ') {
+      return { route: `${route}-root`, models: [] };
+    } else {
+      return { route, models: [encodePath(this.secret)] };
+    }
+  }),
+  query: computed('queryParams', function () {
+    const qp = this.queryParams || {};
+    return qp.isQueryParams ? qp.values : qp;
   }),
 });

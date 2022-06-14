@@ -11,7 +11,6 @@
 
 /* Pages */
 @import './not-found/style.css';
-@import './use-cases/style.css';
 
 /* Print Styles */
 @import './print.css';

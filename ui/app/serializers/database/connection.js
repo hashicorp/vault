@@ -16,7 +16,7 @@ export default RESTSerializer.extend({
 
   normalizeSecrets(payload) {
     if (payload.data.keys && Array.isArray(payload.data.keys)) {
-      const connections = payload.data.keys.map(secret => ({ name: secret, backend: payload.backend }));
+      const connections = payload.data.keys.map((secret) => ({ name: secret, backend: payload.backend }));
       return connections;
     }
     // Query single record response:
@@ -52,14 +52,14 @@ export default RESTSerializer.extend({
     if (!data.plugin_name) {
       return data;
     }
-    let pluginType = AVAILABLE_PLUGIN_TYPES.find(plugin => plugin.value === data.plugin_name);
+    let pluginType = AVAILABLE_PLUGIN_TYPES.find((plugin) => plugin.value === data.plugin_name);
     if (!pluginType) {
       return data;
     }
-    let pluginAttributes = pluginType.fields.map(fields => fields.attr).concat('backend');
+    let pluginAttributes = pluginType.fields.map((fields) => fields.attr).concat('backend');
 
     // filter data to only allow plugin specific attrs
-    let allowedAttributes = Object.keys(data).filter(dataAttrs => pluginAttributes.includes(dataAttrs));
+    let allowedAttributes = Object.keys(data).filter((dataAttrs) => pluginAttributes.includes(dataAttrs));
     for (const key in data) {
       if (!allowedAttributes.includes(key)) {
         delete data[key];

@@ -24,16 +24,16 @@ const routerService = Service.extend({
   },
 });
 
-module('Integration | Component | auth-config-form options', function(hooks) {
+module('Integration | Component | auth-config-form options', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.owner.lookup('service:flash-messages').registerTypes(['success']);
     this.owner.register('service:router', routerService);
     this.router = this.owner.lookup('service:router');
   });
 
-  test('it submits data correctly', async function(assert) {
+  test('it submits data correctly', async function (assert) {
     let model = EmberObject.create({
       tune() {
         return resolve();

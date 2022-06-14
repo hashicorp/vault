@@ -197,16 +197,18 @@ func (p *GaugeCollectionProcess) collectAndFilterGauges() {
 	p.streamGaugesToSink(values)
 }
 
+// batchSize is the number of metrics to be sent per tick duration.
+const batchSize = 25
+
 func (p *GaugeCollectionProcess) streamGaugesToSink(values []GaugeLabelValues) {
 	// Dumping 500 metrics in one big chunk is somewhat unfriendly to UDP-based
 	// transport, and to the rest of the metrics trying to get through.
 	// Let's smooth things out over the course of a second.
-	// 1 second / 500 = 2 ms each, so we can send 25 per 50 milliseconds.
+	// 1 second / 500 = 2 ms each, so we can send 25 (batchSize) per 50 milliseconds.
 	// That should be one or two packets.
 	sendTick := p.clock.NewTicker(50 * time.Millisecond)
 	defer sendTick.Stop()
 
-	batchSize := 25
 	for i, lv := range values {
 		if i > 0 && i%batchSize == 0 {
 			select {

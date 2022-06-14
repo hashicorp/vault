@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Adds flight icons to UI
+```

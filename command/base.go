@@ -15,6 +15,8 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/token"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/mattn/go-isatty"
 	"github.com/mitchellh/cli"
 	"github.com/pkg/errors"
 	"github.com/posener/complete"
@@ -55,6 +57,7 @@ type BaseCommand struct {
 	flagFormat           string
 	flagField            string
 	flagOutputCurlString bool
+	flagNonInteractive   bool
 
 	flagMFA []string
 
@@ -209,6 +212,90 @@ func (c *BaseCommand) DefaultWrappingLookupFunc(operation, path string) string {
 	}
 
 	return api.DefaultWrappingLookupFunc(operation, path)
+}
+
+func (c *BaseCommand) isInteractiveEnabled(mfaConstraintLen int) bool {
+	if mfaConstraintLen != 1 || !isatty.IsTerminal(os.Stdin.Fd()) {
+		return false
+	}
+
+	if !c.flagNonInteractive {
+		return true
+	}
+
+	return false
+}
+
+// getMFAMethodInfo returns MFA method information only if one MFA method is
+// configured.
+func (c *BaseCommand) getMFAMethodInfo(mfaConstraintAny map[string]*logical.MFAConstraintAny) MFAMethodInfo {
+	for _, mfaConstraint := range mfaConstraintAny {
+		if len(mfaConstraint.Any) != 1 {
+			return MFAMethodInfo{}
+		}
+
+		return MFAMethodInfo{
+			methodType:  mfaConstraint.Any[0].Type,
+			methodID:    mfaConstraint.Any[0].ID,
+			usePasscode: mfaConstraint.Any[0].UsesPasscode,
+		}
+	}
+
+	return MFAMethodInfo{}
+}
+
+func (c *BaseCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) int {
+	var passcode string
+	var err error
+	if methodInfo.usePasscode {
+		passcode, err = c.UI.AskSecret(fmt.Sprintf("Enter the passphrase for methodID %q of type %q:", methodInfo.methodID, methodInfo.methodType))
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("failed to read the passphrase with error %q. please validate the login by sending a request to sys/mfa/validate", err.Error()))
+			return 2
+		}
+	} else {
+		c.UI.Warn("Asking Vault to perform MFA validation with upstream service. " +
+			"You should receive a push notification in your authenticator app shortly")
+	}
+
+	// passcode could be an empty string
+	mfaPayload := map[string][]string{
+		methodInfo.methodID: {passcode},
+	}
+
+	client, err := c.Client()
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 2
+	}
+
+	path := "sys/mfa/validate"
+
+	secret, err := client.Logical().Write(path, map[string]interface{}{
+		"mfa_request_id": reqID,
+		"mfa_payload":    mfaPayload,
+	})
+	if err != nil {
+		c.UI.Error(err.Error())
+		if secret != nil {
+			OutputSecret(c.UI, secret)
+		}
+		return 2
+	}
+	if secret == nil {
+		// Don't output anything unless using the "table" format
+		if Format(c.UI) == "table" {
+			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", path))
+		}
+		return 0
+	}
+
+	// Handle single field output
+	if c.flagField != "" {
+		return PrintRawField(c.UI, secret, c.flagField)
+	}
+
+	return OutputSecret(c.UI, secret)
 }
 
 type FlagSetBit uint
@@ -391,6 +478,13 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Usage: "Key-value pair provided as key=value to provide http header added to any request done by the CLI." +
 					"Trying to add headers starting with 'X-Vault-' is forbidden and will make the command fail " +
 					"This can be specified multiple times.",
+			})
+
+			f.BoolVar(&BoolVar{
+				Name:    "non-interactive",
+				Target:  &c.flagNonInteractive,
+				Default: false,
+				Usage:   "When set true, prevents asking the user for input via the terminal.",
 			})
 
 		}

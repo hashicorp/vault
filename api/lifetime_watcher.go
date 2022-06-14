@@ -225,7 +225,7 @@ func (r *LifetimeWatcher) Start() {
 	r.doneCh <- r.doRenew()
 }
 
-// Renew is for comnpatibility with the legacy api.Renewer. Calling Renew
+// Renew is for compatibility with the legacy api.Renewer. Calling Renew
 // simply chains to Start.
 func (r *LifetimeWatcher) Renew() {
 	r.Start()

@@ -32,7 +32,7 @@ func TestIngressToken(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = ioutil.WriteFile(path.Join(testDir, file), []byte("test"), 0644)
+		err = ioutil.WriteFile(path.Join(testDir, file), []byte("test"), 0o644)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -40,7 +40,7 @@ func TestIngressToken(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = os.Mkdir(path.Join(testDir, dir), 0755)
+		err = os.Mkdir(path.Join(testDir, dir), 0o755)
 		if err != nil {
 			t.Fatal(err)
 		}

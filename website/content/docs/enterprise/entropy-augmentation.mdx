@@ -33,7 +33,7 @@ These CSPs have been selected from our previous work in [evaluating Vault for co
 FIPS 140-2 guidelines for key storage and key transport](https://www.datocms-assets.com/2885/1510600487-vault_compliance_letter_fips_140-2.pdf)
 and include the following:
 
-- Vault’s master key
+- Vault’s root key
 - Keyring encryption keys
 - Auto Unseal recovery keys
 - TLS private keys for inter-node and inter cluster communication (HA leader, raft, and replication)
@@ -51,7 +51,7 @@ for a supported seal type.
 
 [configuration]: /docs/configuration
 
-## Learn
+## Tutorial
 
-Refer to the [HSM Integration - Entropy Augmentation](https://learn.hashicorp.com/vault/operations/hsm-entropy) guide
-for a step-by-step tutorial.
+Refer to the [HSM Integration - Entropy Augmentation](https://learn.hashicorp.com/vault/operations/hsm-entropy) tutorial
+to learn how to use the Entropy Augmentation function to leverage an external Hardware Security Module to augment system entropy.

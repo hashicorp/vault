@@ -4,10 +4,10 @@ import sinon from 'sinon';
 import { fillIn, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
-module('Integration | Component | confirmation-modal', function(hooks) {
+module('Integration | Component | confirmation-modal', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders with disabled confirmation button until input matches', async function(assert) {
+  test('it renders with disabled confirmation button until input matches', async function (assert) {
     let spy = sinon.spy();
     this.set('onConfirm', spy);
 

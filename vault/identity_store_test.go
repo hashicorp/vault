@@ -713,7 +713,6 @@ func testIdentityStoreWithGithubUserpassAuth(ctx context.Context, t *testing.T) 
 	}
 
 	return c.identityStore, githubMe.Accessor, userpassMe.Accessor, c
-
 }
 
 func TestIdentityStore_MetadataKeyRegex(t *testing.T) {

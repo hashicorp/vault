@@ -1,9 +1,9 @@
 //go:build !race
-// +build !race
 
 package command
 
 import (
+	"context"
 	"encoding/base64"
 	"io"
 	"os"
@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/xor"
+	"github.com/hashicorp/vault/sdk/helper/xor"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
@@ -256,7 +256,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 		defer closer()
 
 		// Initialize a generation
-		if _, err := client.Sys().GenerateRootInit("", ""); err != nil {
+		if _, err := client.Sys().GenerateRootInitWithContext(context.Background(), "", ""); err != nil {
 			t.Fatal(err)
 		}
 
@@ -276,7 +276,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		status, err := client.Sys().GenerateRootStatus()
+		status, err := client.Sys().GenerateRootStatusWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -308,7 +308,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		status, err := client.Sys().GenerateRootStatus()
+		status, err := client.Sys().GenerateRootStatusWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -344,7 +344,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		status, err := client.Sys().GenerateRootStatus()
+		status, err := client.Sys().GenerateRootStatusWithContext(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -387,7 +387,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 		defer closer()
 
 		// Initialize a generation
-		status, err := client.Sys().GenerateRootInit("", "")
+		status, err := client.Sys().GenerateRootInitWithContext(context.Background(), "", "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -436,7 +436,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if l, exp := len(token), vault.TokenLength+2; l != exp {
+		if l, exp := len(token), vault.TokenLength+vault.TokenPrefixLength; l != exp {
 			t.Errorf("expected %d to be %d: %s", l, exp, token)
 		}
 	})
@@ -448,7 +448,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 		defer closer()
 
 		// Initialize a generation
-		status, err := client.Sys().GenerateRootInit("", "")
+		status, err := client.Sys().GenerateRootInitWithContext(context.Background(), "", "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -522,7 +522,7 @@ func TestOperatorGenerateRootCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if l, exp := len(token), vault.TokenLength+2; l != exp {
+		if l, exp := len(token), vault.TokenLength+vault.TokenPrefixLength; l != exp {
 			t.Errorf("expected %d to be %d: %s", l, exp, token)
 		}
 	})

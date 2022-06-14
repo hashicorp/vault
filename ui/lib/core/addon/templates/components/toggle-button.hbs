@@ -1,5 +1,5 @@
-{{#if isOpen}}
-  <Icon @glyph="chevron-up" />{{openLabel}}
+{{#if this.isOpen}}
+  <Icon @name="chevron-up" />{{this.openLabel}}
 {{else}}
-  <Icon @glyph="chevron-down" />{{closedLabel}}
+  <Icon @name="chevron-down" />{{this.closedLabel}}
 {{/if}}

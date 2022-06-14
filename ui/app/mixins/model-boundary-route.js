@@ -19,7 +19,7 @@ export default Mixin.create({
   modelType: null,
   modelTypes: null,
 
-  verifyProps: on('init', function() {
+  verifyProps: on('init', function () {
     var modelType = this.modelType;
     var modelTypes = this.modelTypes;
     warn(
@@ -37,7 +37,7 @@ export default Mixin.create({
     );
   }),
 
-  clearModelCache: on('deactivate', function() {
+  clearModelCache: on('deactivate', function () {
     var modelType = this.modelType;
     var modelTypes = this.modelTypes;
 
@@ -55,7 +55,7 @@ export default Mixin.create({
       this.store.unloadAll(modelType);
     }
     if (modelTypes) {
-      modelTypes.forEach(type => {
+      modelTypes.forEach((type) => {
         this.store.unloadAll(type);
       });
     }

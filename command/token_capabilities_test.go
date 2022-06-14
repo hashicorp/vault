@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -67,11 +68,11 @@ func TestTokenCapabilitiesCommand_Run(t *testing.T) {
 		defer closer()
 
 		policy := `path "secret/foo" { capabilities = ["read"] }`
-		if err := client.Sys().PutPolicy("policy", policy); err != nil {
+		if err := client.Sys().PutPolicyWithContext(context.Background(), "policy", policy); err != nil {
 			t.Error(err)
 		}
 
-		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
 			Policies: []string{"policy"},
 			TTL:      "30m",
 		})
@@ -107,11 +108,11 @@ func TestTokenCapabilitiesCommand_Run(t *testing.T) {
 		defer closer()
 
 		policy := `path "secret/foo" { capabilities = ["read"] }`
-		if err := client.Sys().PutPolicy("policy", policy); err != nil {
+		if err := client.Sys().PutPolicyWithContext(context.Background(), "policy", policy); err != nil {
 			t.Error(err)
 		}
 
-		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
 			Policies: []string{"policy"},
 			TTL:      "30m",
 		})

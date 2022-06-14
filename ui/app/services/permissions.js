@@ -36,12 +36,12 @@ const API_PATHS = {
 };
 
 const API_PATHS_TO_ROUTE_PARAMS = {
-  'sys/auth': ['vault.cluster.access.methods'],
-  'identity/entity/id': ['vault.cluster.access.identity', 'entities'],
-  'identity/group/id': ['vault.cluster.access.identity', 'groups'],
-  'sys/leases/lookup': ['vault.cluster.access.leases'],
-  'sys/namespaces': ['vault.cluster.access.namespaces'],
-  'sys/control-group/': ['vault.cluster.access.control-groups'],
+  'sys/auth': { route: 'vault.cluster.access.methods', models: [] },
+  'identity/entity/id': { route: 'vault.cluster.access.identity', models: ['entities'] },
+  'identity/group/id': { route: 'vault.cluster.access.identity', models: ['groups'] },
+  'sys/leases/lookup': { route: 'vault.cluster.access.leases', models: [] },
+  'sys/namespaces': { route: 'vault.cluster.access.namespaces', models: [] },
+  'sys/control-group/': { route: 'vault.cluster.access.control-groups', models: [] },
 };
 
 /*
@@ -59,7 +59,7 @@ export default Service.extend({
   auth: service(),
   namespace: service(),
 
-  getPaths: task(function*() {
+  getPaths: task(function* () {
     if (this.paths) {
       return;
     }
@@ -93,13 +93,13 @@ export default Service.extend({
 
       return this.hasPermission(API_PATHS[navItem][routeParams], capability);
     }
-    return Object.values(API_PATHS[navItem]).some(path => this.hasPermission(path));
+    return Object.values(API_PATHS[navItem]).some((path) => this.hasPermission(path));
   },
 
   navPathParams(navItem) {
-    const path = Object.values(API_PATHS[navItem]).find(path => this.hasPermission(path));
+    const path = Object.values(API_PATHS[navItem]).find((path) => this.hasPermission(path));
     if (['policies', 'tools'].includes(navItem)) {
-      return path.split('/').lastObject;
+      return { models: [path.split('/').lastObject] };
     }
 
     return API_PATHS_TO_ROUTE_PARAMS[path];
@@ -122,14 +122,15 @@ export default Service.extend({
     }
 
     return capabilities.every(
-      capability => this.hasMatchingExactPath(path, capability) || this.hasMatchingGlobPath(path, capability)
+      (capability) =>
+        this.hasMatchingExactPath(path, capability) || this.hasMatchingGlobPath(path, capability)
     );
   },
 
   hasMatchingExactPath(pathName, capability) {
     const exactPaths = this.exactPaths;
     if (exactPaths) {
-      const prefix = Object.keys(exactPaths).find(path => path.startsWith(pathName));
+      const prefix = Object.keys(exactPaths).find((path) => path.startsWith(pathName));
       const hasMatchingPath = prefix && !this.isDenied(exactPaths[prefix]);
 
       if (prefix && capability) {
@@ -144,7 +145,7 @@ export default Service.extend({
   hasMatchingGlobPath(pathName, capability) {
     const globPaths = this.globPaths;
     if (globPaths) {
-      const matchingPath = Object.keys(globPaths).find(k => {
+      const matchingPath = Object.keys(globPaths).find((k) => {
         return pathName.includes(k) || pathName.includes(k.replace(/\/$/, ''));
       });
       const hasMatchingPath =

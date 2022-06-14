@@ -26,7 +26,7 @@ export default Model.extend({
     noDefault: true,
     possibleValues: ['static', 'dynamic'],
   }),
-  ttl: attr({
+  default_ttl: attr({
     editType: 'ttl',
     defaultValue: '1h',
     label: 'Generated credentials’s Time-to-Live (TTL)',
@@ -95,10 +95,10 @@ export default Model.extend({
     return expandAttributeMeta(this, fields);
   },
 
-  roleSettingAttrs: computed(function() {
+  roleSettingAttrs: computed(function () {
     // logic for which get displayed is on DatabaseRoleSettingForm
     let allRoleSettingFields = [
-      'ttl',
+      'default_ttl',
       'max_ttl',
       'username',
       'rotation_period',
@@ -130,4 +130,6 @@ export default Model.extend({
   canGetCredentials: alias('staticCredentialPath.canRead'),
   databasePath: lazyCapabilities(apiPath`${'backend'}/config/${'database[0]'}`, 'backend', 'database'),
   canUpdateDb: alias('databasePath.canUpdate'),
+  rotateRolePath: lazyCapabilities(apiPath`${'backend'}/rotate-role/${'id'}`, 'backend', 'id'),
+  canRotateRoleCredentials: alias('rotateRolePath.canUpdate'),
 });

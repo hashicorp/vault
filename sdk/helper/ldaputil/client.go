@@ -512,7 +512,7 @@ func EscapeLDAPValue(input string) string {
 	// - null
 	for i := 0; i < len(input); i++ {
 		escaped := false
-		if input[i] == '\\' {
+		if input[i] == '\\' && i+1 < len(input)-1 {
 			i++
 			escaped = true
 		}

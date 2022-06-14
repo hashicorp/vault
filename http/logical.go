@@ -183,7 +183,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 
 	requestId, err := uuid.GenerateUUID()
 	if err != nil {
-		return nil, nil, http.StatusBadRequest, fmt.Errorf("failed to generate identifier for the request: %w", err)
+		return nil, nil, http.StatusInternalServerError, fmt.Errorf("failed to generate identifier for the request: %w", err)
 	}
 
 	req := &logical.Request{
@@ -530,14 +530,21 @@ WRITE_RESPONSE:
 // attaching to a logical request
 func getConnection(r *http.Request) (connection *logical.Connection) {
 	var remoteAddr string
+	var remotePort int
 
-	remoteAddr, _, err := net.SplitHostPort(r.RemoteAddr)
+	remoteAddr, port, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		remoteAddr = ""
+	} else {
+		remotePort, err = strconv.Atoi(port)
+		if err != nil {
+			remotePort = 0
+		}
 	}
 
 	connection = &logical.Connection{
 		RemoteAddr: remoteAddr,
+		RemotePort: remotePort,
 		ConnState:  r.TLS,
 	}
 	return

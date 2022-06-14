@@ -16,14 +16,18 @@ storiesOf('InfoTable/InfoTableRow', module)
         @label={{label}} 
         @helperText={{helperText}} 
         @alwaysRender={{alwaysRender}} 
-        @tooltipText={{tooltipText}} />
+        @defaultShown={{defaultShown}} 
+        @tooltipText={{tooltipText}}
+        @isTooltipCopyable={{isTooltipCopyable}} />
     `,
       context: {
         label: text('Label', 'TTL'),
         value: text('Value', '30m (hover to see the tooltip!)'),
         helperText: text('helperText', 'This is helperText - for a short description'),
         alwaysRender: boolean('Always render?', false),
+        defaultShown: text('Default value', 'Some default value'),
         tooltipText: text('tooltipText', 'This is tooltipText'),
+        isTooltipCopyable: boolean('Allow tooltip to be copied', true),
       },
     }),
     { notes }

@@ -2,10 +2,10 @@ import { resolve } from 'rsvp';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 
-module('Unit | Adapter | secret', function(hooks) {
+module('Unit | Adapter | secret', function (hooks) {
   setupTest(hooks);
 
-  test('secret api urls', function(assert) {
+  test('secret api urls', function (assert) {
     let url, method, options;
     let adapter = this.owner.factoryFor('adapter:secret').create({
       ajax: (...args) => {

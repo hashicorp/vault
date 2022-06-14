@@ -100,6 +100,9 @@ type Auth struct {
 
 	// Orphan is set if the token does not have a parent
 	Orphan bool `json:"orphan"`
+
+	// MFARequirement
+	MFARequirement *MFARequirement `json:"mfa_requirement"`
 }
 
 func (a *Auth) GoString() string {

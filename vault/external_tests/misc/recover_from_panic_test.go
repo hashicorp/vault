@@ -1,6 +1,7 @@
 package misc
 
 import (
+	"context"
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
@@ -31,14 +32,14 @@ func TestRecoverFromPanic(t *testing.T) {
 	vault.TestWaitActive(t, core.Core)
 	client := core.Client
 
-	err := client.Sys().Mount("noop", &api.MountInput{
+	err := client.Sys().MountWithContext(context.Background(), "noop", &api.MountInput{
 		Type: "noop",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Read("noop/panic")
+	_, err = client.Logical().ReadWithContext(context.Background(), "noop/panic")
 	if err == nil {
 		t.Fatal("expected error")
 	}

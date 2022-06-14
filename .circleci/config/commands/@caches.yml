@@ -2,7 +2,7 @@ restore_yarn_cache:
   steps:
     - restore_cache:
         name: Restore yarn cache
-        key: &YARN_LOCK_CACHE_KEY yarn-lock-v6-{{ checksum "ui/yarn.lock" }}
+        key: &YARN_LOCK_CACHE_KEY yarn-lock-v7-{{ checksum "ui/yarn.lock" }}
 save_yarn_cache:
   steps:
     - save_cache:
@@ -12,14 +12,15 @@ save_yarn_cache:
           - ui/node_modules
 # allows restoring go mod caches by incomplete prefix. This is useful when re-generating
 # cache, but not when running builds and tests that require an exact match.
+# TODO should we be including arch in cache key?
 restore_go_mod_cache_permissive:
   steps:
     - restore_cache:
         name: Restore closest matching go modules cache
         keys:
-          - &gocachekey v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
-          -             v1.3-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
-          -             v1.3-{{checksum "go.sum"}}
+          - &gocachekey v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+          -             v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
+          -             v1.4-{{checksum "go.sum"}}
 restore_go_mod_cache:
   steps:
     - restore_cache:
@@ -32,7 +33,7 @@ save_go_mod_cache:
         name: Save go modules cache
         key: *gocachekey
         paths:
-          - /go/pkg/mod
+          - /home/circleci/go/pkg/mod
 refresh_go_mod_cache:
   steps:
     - restore_go_mod_cache_permissive

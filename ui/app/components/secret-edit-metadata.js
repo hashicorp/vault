@@ -16,9 +16,8 @@
  */
 
 import Component from '@glimmer/component';
-import { action } from '@ember/object';
+import { action, set } from '@ember/object';
 import { inject as service } from '@ember/service';
-import { set } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
 export default class SecretEditMetadata extends Component {

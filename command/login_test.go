@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -12,6 +13,11 @@ import (
 	"github.com/hashicorp/vault/command/token"
 	"github.com/hashicorp/vault/vault"
 )
+
+// minTokenLengthExternal is the minimum size of SSC
+// tokens we are currently handing out to end users, without any
+// namespace information
+const minTokenLengthExternal = 91
 
 func testLoginCommand(tb testing.TB) (*cli.MockUi, *LoginCommand) {
 	tb.Helper()
@@ -43,7 +49,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		if err := client.Sys().EnableAuth("my-auth", "userpass", ""); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := client.Logical().Write("auth/my-auth/users/test", map[string]interface{}{
+		if _, err := client.Logical().WriteWithContext(context.Background(), "auth/my-auth/users/test", map[string]interface{}{
 			"password": "test",
 			"policies": "default",
 		}); err != nil {
@@ -82,7 +88,7 @@ func TestLoginCommand_Run(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if l, exp := len(storedToken), vault.TokenLength+2; l != exp {
+		if l, exp := len(storedToken), minTokenLengthExternal+vault.TokenPrefixLength; l < exp {
 			t.Errorf("expected token to be %d characters, was %d: %q", exp, l, storedToken)
 		}
 	})
@@ -93,7 +99,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
 			Policies: []string{"default"},
 			TTL:      "30m",
 		})
@@ -139,7 +145,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
 			Policies: []string{"default"},
 			TTL:      "30m",
 		})
@@ -182,7 +188,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
+		if _, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/test", map[string]interface{}{
 			"password": "test",
 			"policies": "default",
 		}); err != nil {
@@ -209,7 +215,7 @@ func TestLoginCommand_Run(t *testing.T) {
 
 		// Verify only the token was printed
 		token := ui.OutputWriter.String()
-		if l, exp := len(token), vault.TokenLength+2; l != exp {
+		if l, exp := len(token), minTokenLengthExternal+vault.TokenPrefixLength; l != exp {
 			t.Errorf("expected token to be %d characters, was %d: %q", exp, l, token)
 		}
 
@@ -260,7 +266,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
+		if _, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/test", map[string]interface{}{
 			"password": "test",
 			"policies": "default",
 		}); err != nil {
@@ -297,7 +303,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		client.SetToken(token)
 
 		// Ensure the resulting token is unwrapped
-		secret, err := client.Auth().Token().LookupSelf()
+		secret, err := client.Auth().Token().LookupSelfWithContext(context.Background())
 		if err != nil {
 			t.Error(err)
 		}
@@ -319,7 +325,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
+		if _, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/test", map[string]interface{}{
 			"password": "test",
 			"policies": "default",
 		}); err != nil {
@@ -362,7 +368,7 @@ func TestLoginCommand_Run(t *testing.T) {
 
 		// Ensure the resulting token is, in fact, still wrapped.
 		client.SetToken(token)
-		secret, err := client.Logical().Unwrap("")
+		secret, err := client.Logical().UnwrapWithContext(context.Background(), "")
 		if err != nil {
 			t.Error(err)
 		}
@@ -380,7 +386,7 @@ func TestLoginCommand_Run(t *testing.T) {
 		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
+		if _, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/test", map[string]interface{}{
 			"password": "test",
 			"policies": "default",
 		}); err != nil {

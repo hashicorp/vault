@@ -24,6 +24,6 @@ It should only be used inside of `Toolbar`.
 **See**
 
 - [Uses of ToolbarSecretLink](https://github.com/hashicorp/vault/search?l=Handlebars&q=ToolbarSecretLink+OR+toolbar-secret-link)
-- [ToolbarSecretLink Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/toolbar-secret-link.js)
+- [ToolbarSecretLink Source Code](https://github.com/hashicorp/vault/blob/main/ui/app/components/toolbar-secret-link.js)
 
 ---

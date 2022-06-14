@@ -477,7 +477,7 @@ func TestGetPublicKeySize(t *testing.T) {
 	if GetPublicKeySize(ed25519) != 256 {
 		t.Fatal("unexpected ed25519 key size")
 	}
-	//Skipping DSA as too slow
+	// Skipping DSA as too slow
 }
 
 func refreshRSA8CertBundle() *CertBundle {

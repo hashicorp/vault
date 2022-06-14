@@ -133,6 +133,7 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 		NamespacePath: "qa",
 		MountPath:     "/foo/bar",
 		Rate:          16.7,
+		Interval:      5 * time.Second,
 		BlockInterval: 10 * time.Second,
 
 		// override values to lower durations for testing purposes
@@ -181,9 +182,10 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 
 			time.Sleep(2 * time.Millisecond)
 		}
-	}
 
-	wg.Wait()
+		// Limit the number of active go-routines to 5
+		wg.Wait()
+	}
 
 	for _, cr := range results {
 		numAllow := cr.atomicNumAllow.Load()
@@ -191,7 +193,7 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 
 		// Since blocking is enabled, each client should only have 'rate' successful
 		// requests, whereas all subsequent requests fail.
-		require.Equal(t, int32(17), numAllow)
+		require.Equal(t, int32(17), numAllow, "Expected 17 got %d allows with %d failures", numAllow, numFail)
 		require.NotZero(t, numFail)
 	}
 

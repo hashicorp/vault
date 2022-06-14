@@ -272,7 +272,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	var err error
 
 	// Mount /pki as a root CA
-	err = client.Sys().Mount("pki", &api.MountInput{
+	err = client.Sys().MountWithContext(context.Background(), "pki", &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "16h",
@@ -285,7 +285,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 
 	// Set the cluster's certificate as the root CA in /pki
 	pemBundleRootCA := string(cluster.CACertPEM) + string(cluster.CAKeyPEM)
-	_, err = client.Logical().Write("pki/config/ca", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/config/ca", map[string]interface{}{
 		"pem_bundle": pemBundleRootCA,
 	})
 	if err != nil {
@@ -293,7 +293,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	}
 
 	// Mount /pki2 to operate as an intermediate CA
-	err = client.Sys().Mount("pki2", &api.MountInput{
+	err = client.Sys().MountWithContext(context.Background(), "pki2", &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "16h",
@@ -305,14 +305,14 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	}
 
 	// Create a CSR for the intermediate CA
-	secret, err := client.Logical().Write("pki2/intermediate/generate/internal", nil)
+	secret, err := client.Logical().WriteWithContext(context.Background(), "pki2/intermediate/generate/internal", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	intermediateCSR := secret.Data["csr"].(string)
 
 	// Sign the intermediate CSR using /pki
-	secret, err = client.Logical().Write("pki/root/sign-intermediate", map[string]interface{}{
+	secret, err = client.Logical().WriteWithContext(context.Background(), "pki/root/sign-intermediate", map[string]interface{}{
 		"permitted_dns_domains": ".myvault.com",
 		"csr":                   intermediateCSR,
 	})
@@ -322,7 +322,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	intermediateCertPEM := secret.Data["certificate"].(string)
 
 	// Configure the intermediate cert as the CA in /pki2
-	_, err = client.Logical().Write("pki2/intermediate/set-signed", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki2/intermediate/set-signed", map[string]interface{}{
 		"certificate": intermediateCertPEM,
 	})
 	if err != nil {
@@ -330,7 +330,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	}
 
 	// Create a role on the intermediate CA mount
-	_, err = client.Logical().Write("pki2/roles/myvault-dot-com", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki2/roles/myvault-dot-com", map[string]interface{}{
 		"allowed_domains":  "myvault.com",
 		"allow_subdomains": "true",
 		"max_ttl":          "5m",
@@ -340,7 +340,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	}
 
 	// Issue a leaf cert using the intermediate CA
-	secret, err = client.Logical().Write("pki2/issue/myvault-dot-com", map[string]interface{}{
+	secret, err = client.Logical().WriteWithContext(context.Background(), "pki2/issue/myvault-dot-com", map[string]interface{}{
 		"common_name": "cert.myvault.com",
 		"format":      "pem",
 		"ip_sans":     "127.0.0.1",
@@ -360,7 +360,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	}
 
 	// Set the intermediate CA cert as a trusted certificate in the backend
-	_, err = client.Logical().Write("auth/cert/certs/myvault-dot-com", map[string]interface{}{
+	_, err = client.Logical().WriteWithContext(context.Background(), "auth/cert/certs/myvault-dot-com", map[string]interface{}{
 		"display_name": "myvault.com",
 		"policies":     "default",
 		"certificate":  intermediateCertPEM,
@@ -447,7 +447,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	// Create a new api client with the desired TLS configuration
 	newClient := getAPIClient(cores[0].Listeners[0].Address.Port, cores[0].TLSConfig)
 
-	secret, err = newClient.Logical().Write("auth/cert/login", map[string]interface{}{
+	secret, err = newClient.Logical().WriteWithContext(context.Background(), "auth/cert/login", map[string]interface{}{
 		"name": "myvault-dot-com",
 	})
 	if err != nil {
@@ -1107,6 +1107,10 @@ func TestBackend_ext_singleCert(t *testing.T) {
 			testAccStepLoginInvalid(t, connState),
 			testAccStepCert(t, "web", ca, "foo", allowed{names: "invalid", ext: "2.1.1.1:*,2.1.1.2:The Wrong Value"}, false),
 			testAccStepLoginInvalid(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{metadata_ext: "2.1.1.1,1.2.3.45"}, false),
+			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{"2-1-1-1": "A UTF8String Extension"}),
+			testAccStepCert(t, "web", ca, "foo", allowed{metadata_ext: "1.2.3.45"}, false),
+			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{}),
 		},
 	})
 }
@@ -1556,6 +1560,40 @@ func testAccStepLoginDefaultLease(t *testing.T, connState tls.ConnectionState) l
 	}
 }
 
+func testAccStepLoginWithMetadata(t *testing.T, connState tls.ConnectionState, certName string, metadata map[string]string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation:       logical.UpdateOperation,
+		Path:            "login",
+		Unauthenticated: true,
+		ConnState:       &connState,
+		Check: func(resp *logical.Response) error {
+			// Check for fixed metadata too
+			metadata["cert_name"] = certName
+			metadata["common_name"] = connState.PeerCertificates[0].Subject.CommonName
+			metadata["serial_number"] = connState.PeerCertificates[0].SerialNumber.String()
+			metadata["subject_key_id"] = certutil.GetHexFormatted(connState.PeerCertificates[0].SubjectKeyId, ":")
+			metadata["authority_key_id"] = certutil.GetHexFormatted(connState.PeerCertificates[0].AuthorityKeyId, ":")
+
+			for key, expected := range metadata {
+				value, ok := resp.Auth.Metadata[key]
+				if !ok {
+					t.Fatalf("missing metadata key: %s", key)
+				}
+
+				if value != expected {
+					t.Fatalf("expected metadata key %s to equal %s, but got: %s", key, expected, value)
+				}
+			}
+
+			fn := logicaltest.TestCheckAuth([]string{"default", "foo"})
+			return fn(resp)
+		},
+		Data: map[string]interface{}{
+			"metadata": metadata,
+		},
+	}
+}
+
 func testAccStepLoginInvalid(t *testing.T, connState tls.ConnectionState) logicaltest.TestStep {
 	return testAccStepLoginWithNameInvalid(t, connState, "")
 }
@@ -1633,6 +1671,7 @@ type allowed struct {
 	uris                 string // allowed uris in SAN extension of the certificate
 	organizational_units string // allowed OUs in the certificate
 	ext                  string // required extensions in the certificate
+	metadata_ext         string // allowed metadata extensions to add to identity alias
 }
 
 func testAccStepCert(
@@ -1652,6 +1691,7 @@ func testAccStepCert(
 			"allowed_uri_sans":             testData.uris,
 			"allowed_organizational_units": testData.organizational_units,
 			"required_extensions":          testData.ext,
+			"allowed_metadata_extensions":  testData.metadata_ext,
 			"lease":                        1000,
 		},
 		Check: func(resp *logical.Response) error {

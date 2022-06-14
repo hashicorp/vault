@@ -87,7 +87,7 @@ func (c *KVMetadataGetCommand) Run(args []string) int {
 		return 1
 	}
 
-	path = addPrefixToVKVPath(path, mountPath, "metadata")
+	path = addPrefixToKVPath(path, mountPath, "metadata")
 	secret, err := client.Logical().Read(path)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error reading %s: %s", path, err))
@@ -116,6 +116,8 @@ func (c *KVMetadataGetCommand) Run(args []string) int {
 	versions := versionsRaw.(map[string]interface{})
 
 	delete(secret.Data, "versions")
+
+	outputPath(c.UI, path, "Metadata Path")
 
 	c.UI.Info(getHeaderForMap("Metadata", secret.Data))
 	OutputSecret(c.UI, secret)

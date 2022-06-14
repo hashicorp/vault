@@ -32,4 +32,6 @@ const (
 	// ReplicationResolverALPN is the negotiated protocol used for
 	// resolving replicaiton addresses
 	ReplicationResolverALPN = "replication_resolver_v1"
+
+	VaultDisableFilePermissionsCheckEnv = "VAULT_DISABLE_FILE_PERMISSIONS_CHECK"
 )

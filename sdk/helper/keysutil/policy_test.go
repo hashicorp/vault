@@ -350,8 +350,8 @@ func checkKeys(t *testing.T,
 	storage logical.Storage,
 	keysArchive []KeyEntry,
 	action string,
-	archiveVer, latestVer, keysSize int) {
-
+	archiveVer, latestVer, keysSize int,
+) {
 	// Sanity check
 	if len(keysArchive) != latestVer+1 {
 		t.Fatalf("latest expected key version is %d, expected test keys archive size is %d, "+

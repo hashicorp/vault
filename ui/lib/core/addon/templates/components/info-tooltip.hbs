@@ -1,13 +1,15 @@
-{{#tool-tip as |d|}}
-  {{#d.trigger tagName="button" type="button" class="tool-tip-trigger button is-ghost is-compact" data-test-tool-tip-trigger=true}}
-    <Icon @glyph="info-circle-outline"
-      class="auto-width"
-      aria-label="help"
-    />
-  {{/d.trigger}}
-  {{#d.content class="tool-tip"}}
+<ToolTip as |d|>
+  <d.Trigger
+    @htmlTag="button"
+    @type="button"
+    class="tool-tip-trigger button is-ghost is-compact"
+    data-test-tool-tip-trigger={{true}}
+  >
+    <Icon @name="info" class="auto-width" aria-label="help" />
+  </d.Trigger>
+  <d.Content @defaultClass="tool-tip">
     <div class="box">
       {{yield}}
     </div>
-  {{/d.content}}
-{{/tool-tip}}
+  </d.Content>
+</ToolTip>

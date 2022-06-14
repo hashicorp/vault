@@ -3,7 +3,7 @@ import { storiesOf } from '@storybook/ember';
 import notes from './search-select.md';
 import { withKnobs, text } from '@storybook/addon-knobs';
 
-const onChange = value => alert(`New value is "${value}"`);
+const onChange = (value) => alert(`New value is "${value}"`);
 const models = ['identity/groups'];
 
 storiesOf('SearchSelect', module)

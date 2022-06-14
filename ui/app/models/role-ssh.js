@@ -6,7 +6,7 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 // these arrays define the order in which the fields will be displayed
 // see
-// https://github.com/hashicorp/vault/blob/master/builtin/logical/ssh/path_roles.go#L542 for list of fields for each key type
+// https://github.com/hashicorp/vault/blob/main/builtin/logical/ssh/path_roles.go#L542 for list of fields for each key type
 const OTP_FIELDS = [
   'name',
   'keyType',
@@ -40,7 +40,7 @@ const CA_FIELDS = [
 
 export default Model.extend({
   useOpenAPI: true,
-  getHelpUrl: function(backend) {
+  getHelpUrl: function (backend) {
     return `/v1/${backend}/roles/example?help=1`;
   },
   zeroAddress: attr('boolean', {
@@ -117,13 +117,13 @@ export default Model.extend({
     helpText: 'When supplied, this value specifies a custom format for the key id of a signed certificate',
   }),
 
-  showFields: computed('keyType', function() {
+  showFields: computed('keyType', function () {
     const keyType = this.keyType;
     let keys = keyType === 'ca' ? CA_FIELDS.slice(0) : OTP_FIELDS.slice(0);
     return expandAttributeMeta(this, keys);
   }),
 
-  fieldGroups: computed('keyType', function() {
+  fieldGroups: computed('keyType', function () {
     let numRequired = this.keyType === 'otp' ? 3 : 4;
     let fields = this.keyType === 'otp' ? [...OTP_FIELDS] : [...CA_FIELDS];
     let defaultFields = fields.splice(0, numRequired);

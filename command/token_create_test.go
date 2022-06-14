@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"reflect"
 	"strings"
 	"testing"
@@ -115,7 +116,7 @@ func TestTokenCreateCommand_Run(t *testing.T) {
 		}
 
 		token := strings.TrimSpace(ui.OutputWriter.String())
-		secret, err := client.Auth().Token().Lookup(token)
+		secret, err := client.Auth().Token().LookupWithContext(context.Background(), token)
 		if secret == nil || err != nil {
 			t.Fatal(err)
 		}
@@ -140,7 +141,7 @@ func TestTokenCreateCommand_Run(t *testing.T) {
 		}
 
 		token := strings.TrimSpace(ui.OutputWriter.String())
-		secret, err := client.Auth().Token().Lookup(token)
+		secret, err := client.Auth().Token().LookupWithContext(context.Background(), token)
 		if secret == nil || err != nil {
 			t.Fatal(err)
 		}
@@ -176,7 +177,7 @@ func TestTokenCreateCommand_Run(t *testing.T) {
 		}
 
 		token := strings.TrimSpace(ui.OutputWriter.String())
-		secret, err := client.Auth().Token().Lookup(token)
+		secret, err := client.Auth().Token().LookupWithContext(context.Background(), token)
 		if secret == nil || err != nil {
 			t.Fatal(err)
 		}

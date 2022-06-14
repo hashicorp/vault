@@ -18,6 +18,6 @@
 **See**
 
 - [Uses of Toolbar](https://github.com/hashicorp/vault/search?l=Handlebars&q=Toolbar+OR+toolbar)
-- [Toolbar Source Code](https://github.com/hashicorp/vault/blob/master/ui/lib/core/addon/components/toolbar.js)
+- [Toolbar Source Code](https://github.com/hashicorp/vault/blob/main/ui/lib/core/addon/components/toolbar.js)
 
 ---

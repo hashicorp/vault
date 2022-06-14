@@ -37,6 +37,7 @@ message NodeInformation {
 	string mode = 3;
 	string node_id = 4;
 	uint32 replication_state = 5;
+	string hostname = 6;
 }
 
 message ClientKey {

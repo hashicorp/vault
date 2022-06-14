@@ -40,6 +40,7 @@ type RunOptions struct {
 	DoNotAutoRemove bool
 	AuthUsername    string
 	AuthPassword    string
+	LogConsumer     func(string)
 }
 
 func NewServiceRunner(opts RunOptions) (*Runner, error) {
@@ -135,6 +136,23 @@ func (d *Runner) StartService(ctx context.Context, connect ServiceAdapter) (*Ser
 	}
 
 	cleanup := func() {
+		if d.RunOptions.LogConsumer != nil {
+			rc, err := d.DockerAPI.ContainerLogs(ctx, container.ID, types.ContainerLogsOptions{
+				ShowStdout: true,
+				ShowStderr: true,
+				Timestamps: true,
+				Details:    true,
+			})
+			if err == nil {
+				b, err := ioutil.ReadAll(rc)
+				if err != nil {
+					d.RunOptions.LogConsumer(fmt.Sprintf("error reading container logs, err=%v, read: %s", err, string(b)))
+				} else {
+					d.RunOptions.LogConsumer(string(b))
+				}
+			}
+		}
+
 		for i := 0; i < 10; i++ {
 			err := d.DockerAPI.ContainerRemove(ctx, container.ID, types.ContainerRemoveOptions{Force: true})
 			if err == nil {

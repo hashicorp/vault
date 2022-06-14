@@ -1,11 +1,14 @@
 package command
 
 import (
+	"context"
+	"encoding/json"
+	"strings"
+	"testing"
+
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
-	"strings"
-	"testing"
 )
 
 func testKVMetadataPutCommand(tb testing.TB) (*cli.MockUi, *KVMetadataPutCommand) {
@@ -19,12 +22,12 @@ func testKVMetadataPutCommand(tb testing.TB) (*cli.MockUi, *KVMetadataPutCommand
 	}
 }
 
-func TestKvMetadataPutCommandDeleteVersionAfter(t *testing.T) {
+func TestKvMetadataPutCommand_DeleteVersionAfter(t *testing.T) {
 	client, closer := testVaultServer(t)
 	defer closer()
 
 	basePath := t.Name() + "/"
-	if err := client.Sys().Mount(basePath, &api.MountInput{
+	if err := client.Sys().MountWithContext(context.Background(), basePath, &api.MountInput{
 		Type: "kv-v2",
 	}); err != nil {
 		t.Fatal(err)
@@ -46,7 +49,7 @@ func TestKvMetadataPutCommandDeleteVersionAfter(t *testing.T) {
 		t.Fatalf("expected %q but received %q", success, combined)
 	}
 
-	secret, err := client.Logical().Read(metaFullPath)
+	secret, err := client.Logical().ReadWithContext(context.Background(), metaFullPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +72,7 @@ func TestKvMetadataPutCommandDeleteVersionAfter(t *testing.T) {
 		t.Errorf("expected %q but received %q", success, combined)
 	}
 
-	secret, err = client.Logical().Read(metaFullPath)
+	secret, err = client.Logical().ReadWithContext(context.Background(), metaFullPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,14 +81,14 @@ func TestKvMetadataPutCommandDeleteVersionAfter(t *testing.T) {
 	}
 }
 
-func TestKvMetadataPutCommandCustomMetadata(t *testing.T) {
+func TestKvMetadataPutCommand_CustomMetadata(t *testing.T) {
 	client, closer := testVaultServer(t)
 	defer closer()
 
 	basePath := t.Name() + "/"
 	secretPath := basePath + "secret/my-secret"
 
-	if err := client.Sys().Mount(basePath, &api.MountInput{
+	if err := client.Sys().MountWithContext(context.Background(), basePath, &api.MountInput{
 		Type: "kv-v2",
 	}); err != nil {
 		t.Fatalf("kv-v2 mount error: %#v", err)
@@ -108,8 +111,7 @@ func TestKvMetadataPutCommandCustomMetadata(t *testing.T) {
 		t.Fatalf("Expected command output %q but received %q", expectedOutput, commandOutput)
 	}
 
-	metadata, err := client.Logical().Read(metaFullPath)
-
+	metadata, err := client.Logical().ReadWithContext(context.Background(), metaFullPath)
 	if err != nil {
 		t.Fatalf("Metadata read error: %#v", err)
 	}
@@ -140,7 +142,7 @@ func TestKvMetadataPutCommandCustomMetadata(t *testing.T) {
 		t.Fatalf("Expected command output %q but received %q", expectedOutput, commandOutput)
 	}
 
-	metadata, err = client.Logical().Read(metaFullPath)
+	metadata, err = client.Logical().ReadWithContext(context.Background(), metaFullPath)
 
 	if err != nil {
 		t.Fatalf("Metadata read error: %#v", err)
@@ -152,5 +154,49 @@ func TestKvMetadataPutCommandCustomMetadata(t *testing.T) {
 
 	if diff := deep.Equal(metadata.Data["custom_metadata"], expectedCustomMetadata); len(diff) > 0 {
 		t.Fatal(diff)
+	}
+}
+
+func TestKvMetadataPutCommand_UnprovidedFlags(t *testing.T) {
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	basePath := t.Name() + "/"
+	secretPath := basePath + "my-secret"
+
+	if err := client.Sys().MountWithContext(context.Background(), basePath, &api.MountInput{
+		Type: "kv-v2",
+	}); err != nil {
+		t.Fatalf("kv-v2 mount error: %#v", err)
+	}
+
+	_, cmd := testKVMetadataPutCommand(t)
+	cmd.client = client
+
+	args := []string{"-cas-required=true", "-max-versions=10", secretPath}
+	code, _ := kvMetadataPutWithRetry(t, client, args, nil)
+
+	if code != 0 {
+		t.Fatalf("expected 0 exit status but received %d", code)
+	}
+
+	args = []string{"-custom-metadata=foo=bar", secretPath}
+	code, _ = kvMetadataPutWithRetry(t, client, args, nil)
+
+	if code != 0 {
+		t.Fatalf("expected 0 exit status but received %d", code)
+	}
+
+	secret, err := client.Logical().ReadWithContext(context.Background(), basePath+"metadata/"+"my-secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if secret.Data["cas_required"] != true {
+		t.Fatalf("expected cas_required to be true but received %#v", secret.Data["cas_required"])
+	}
+
+	if secret.Data["max_versions"] != json.Number("10") {
+		t.Fatalf("expected max_versions to be 10 but received %#v", secret.Data["max_versions"])
 	}
 }

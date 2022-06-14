@@ -6,9 +6,9 @@ export default class Router extends EmberRouter {
   rootURL = config.rootURL;
 }
 
-Router.map(function() {
-  this.route('vault', { path: '/' }, function() {
-    this.route('cluster', { path: '/:cluster_name' }, function() {
+Router.map(function () {
+  this.route('vault', { path: '/' }, function () {
+    this.route('cluster', { path: '/:cluster_name' }, function () {
       this.route('oidc-provider-ns', { path: '/*namespace/identity/oidc/provider/:provider_name/authorize' });
       this.route('oidc-provider', { path: '/identity/oidc/provider/:provider_name/authorize' });
       this.route('oidc-callback', { path: '/auth/*auth_path/oidc/callback' });
@@ -17,38 +17,40 @@ Router.map(function() {
       this.route('logout');
       this.mount('open-api-explorer', { path: '/api-explorer' });
       this.route('license');
-      this.route('clients', function() {
-        this.route('index', { path: '/' });
+      this.route('clients', function () {
+        this.route('current');
+        this.route('history');
+        this.route('config');
         this.route('edit');
       });
       this.route('storage', { path: '/storage/raft' });
       this.route('storage-restore', { path: '/storage/raft/restore' });
-      this.route('settings', function() {
+      this.route('settings', function () {
         this.route('index', { path: '/' });
         this.route('seal');
-        this.route('auth', function() {
+        this.route('auth', function () {
           this.route('index', { path: '/' });
           this.route('enable');
-          this.route('configure', { path: '/configure/:method' }, function() {
+          this.route('configure', { path: '/configure/:method' }, function () {
             this.route('index', { path: '/' });
             this.route('section', { path: '/:section_name' });
           });
         });
         this.route('mount-secret-backend');
-        this.route('configure-secret-backend', { path: '/secrets/configure/:backend' }, function() {
+        this.route('configure-secret-backend', { path: '/secrets/configure/:backend' }, function () {
           this.route('index', { path: '/' });
           this.route('section', { path: '/:section_name' });
         });
       });
       this.route('unseal');
-      this.route('tools', function() {
+      this.route('tools', function () {
         this.route('tool', { path: '/:selected_action' });
       });
-      this.route('access', function() {
+      this.route('access', function () {
         this.route('methods', { path: '/' });
-        this.route('method', { path: '/:path' }, function() {
+        this.route('method', { path: '/:path' }, function () {
           this.route('index', { path: '/' });
-          this.route('item', { path: '/item/:item_type' }, function() {
+          this.route('item', { path: '/item/:item_type' }, function () {
             this.route('list', { path: '/' });
             this.route('create');
             this.route('edit', { path: '/edit/:item_id' });
@@ -56,7 +58,7 @@ Router.map(function() {
           });
           this.route('section', { path: '/:section_name' });
         });
-        this.route('leases', function() {
+        this.route('leases', function () {
           // lookup
           this.route('index', { path: '/' });
           // lookup prefix
@@ -67,13 +69,13 @@ Router.map(function() {
           this.route('show', { path: '/show/*lease_id' });
         });
         // the outer identity route handles group and entity items
-        this.route('identity', { path: '/identity/:item_type' }, function() {
+        this.route('identity', { path: '/identity/:item_type' }, function () {
           this.route('index', { path: '/' });
           this.route('create');
           this.route('merge');
           this.route('edit', { path: '/edit/:item_id' });
           this.route('show', { path: '/:item_id/:section' });
-          this.route('aliases', function() {
+          this.route('aliases', function () {
             this.route('index', { path: '/' });
             this.route('add', { path: '/add/:item_id' });
             this.route('edit', { path: '/edit/:item_alias_id' });
@@ -83,14 +85,14 @@ Router.map(function() {
         this.route('control-groups');
         this.route('control-groups-configure', { path: '/control-groups/configure' });
         this.route('control-group-accessor', { path: '/control-groups/:accessor' });
-        this.route('namespaces', function() {
+        this.route('namespaces', function () {
           this.route('index', { path: '/' });
           this.route('create');
         });
       });
-      this.route('secrets', function() {
+      this.route('secrets', function () {
         this.route('backends', { path: '/' });
-        this.route('backend', { path: '/:backend' }, function() {
+        this.route('backend', { path: '/:backend' }, function () {
           this.mount('kmip');
           this.route('index', { path: '/' });
           this.route('configuration');
@@ -103,6 +105,7 @@ Router.map(function() {
 
           this.route('list', { path: '/list/*secret' });
           this.route('show', { path: '/show/*secret' });
+          this.route('diff', { path: '/diff/*id' });
           this.route('metadata', { path: '/metadata/*secret' });
           this.route('edit-metadata', { path: '/edit-metadata/*secret' });
           this.route('create', { path: '/create/*secret' });
@@ -125,15 +128,15 @@ Router.map(function() {
           this.route('overview');
         });
       });
-      this.route('policies', { path: '/policies/:type' }, function() {
+      this.route('policies', { path: '/policies/:type' }, function () {
         this.route('index', { path: '/' });
         this.route('create');
       });
-      this.route('policy', { path: '/policy/:type' }, function() {
+      this.route('policy', { path: '/policy/:type' }, function () {
         this.route('show', { path: '/:policy_name' });
         this.route('edit', { path: '/:policy_name/edit' });
       });
-      this.route('replication-dr-promote', function() {
+      this.route('replication-dr-promote', function () {
         this.route('details');
       });
       if (config.addRootMounts) {

@@ -178,11 +178,14 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 				}
 
 				belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, entry.CIDRList)
-				if !belongs || err != nil {
+				if err != nil {
+					return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+				}
+
+				if !belongs {
 					return logical.ErrorResponse(fmt.Errorf(
-						"source address %q unauthorized through CIDR restrictions on the secret ID: %w",
+						"source address %q unauthorized through CIDR restrictions on the secret ID",
 						req.Connection.RemoteAddr,
-						err,
 					).Error()), nil
 				}
 			}

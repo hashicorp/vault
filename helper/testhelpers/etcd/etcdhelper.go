@@ -33,7 +33,8 @@ func PrepareTestContainer(t *testing.T, version string) (func(), *Config) {
 		ContainerName: "etcd",
 		ImageRepo:     "gcr.io/etcd-development/etcd",
 		ImageTag:      version,
-		Cmd: []string{"/usr/local/bin/etcd",
+		Cmd: []string{
+			"/usr/local/bin/etcd",
 			"--name", "s1",
 			"--listen-client-urls", "http://0.0.0.0:2379",
 			"--advertise-client-urls", "http://0.0.0.0:2379",

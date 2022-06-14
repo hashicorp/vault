@@ -87,13 +87,13 @@ func testConfig(t *testing.T) (*logical.BackendConfig, func()) {
 		System: sys,
 		Config: map[string]string{
 			"plugin_name": "mock-plugin",
-			"plugin_type": "database",
+			"plugin_type": "secret",
 		},
 	}
 
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
-	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain", []string{}, "")
+	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "TestBackend_PluginMain", []string{}, "")
 
 	return config, func() {
 		cluster.Cleanup()

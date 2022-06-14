@@ -35,7 +35,7 @@ export default Component.extend({
   layout,
   tagName: '',
 
-  renderGroup: computed(function() {
+  renderGroup: computed(function () {
     return null;
   }),
 

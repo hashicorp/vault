@@ -1,0 +1,98 @@
+.inPractice {
+  position: relative;
+  margin: 60px auto;
+  padding: 64px 0;
+  max-width: 1600px;
+
+  @media (--medium-up) {
+    padding: 80px 0;
+    margin: 120px auto;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--black);
+    background-image: url('/img/practice-pattern.svg');
+    background-repeat: no-repeat;
+    background-size: 50%;
+    background-position: top 200px left;
+
+    @media (--large) {
+      border-radius: 6px;
+      left: 24px;
+      right: 24px;
+      background-size: 35%;
+      background-position: top 64px left;
+    }
+  }
+}
+
+.container {
+  composes: g-grid-container from global;
+}
+
+.inPracticeCta {
+  --columns: 1;
+
+  position: relative;
+  margin-top: 64px;
+  display: grid;
+  grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+  gap: 64px 32px;
+
+  @media (--medium-up) {
+    --columns: 12;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    bottom: -64px;
+    background-image: radial-gradient(
+      42.33% 42.33% at 50% 100%,
+      #363638 0%,
+      #000 100%
+    );
+
+    @media (--medium-up) {
+      bottom: -80px;
+    }
+  }
+}
+
+.inPracticeCtaContent {
+  position: relative;
+  grid-column: 1 / -1;
+
+  @media (--medium-up) {
+    grid-column: 1 / 5;
+  }
+}
+
+.inPracticeCtaMedia {
+  grid-column: 1 / -1;
+
+  @media (--medium-up) {
+    grid-column: 6 / -1;
+  }
+}
+
+.inPracticeCtaHeading {
+  margin: 0;
+  color: var(--white);
+  composes: g-type-display-3 from global;
+}
+
+.inPracticeCtaDescription {
+  margin: 8px 0 32px;
+  color: var(--gray-5);
+  composes: g-type-body from global;
+}

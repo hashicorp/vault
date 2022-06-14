@@ -1,5 +1,10 @@
 module.exports = [
   {
+    source: '/home',
+    destination: '/',
+    permanent: true,
+  },
+  {
     source: '/trial',
     destination: 'https://www.hashicorp.com/products/vault/trial',
     permanent: true,
@@ -8,6 +13,11 @@ module.exports = [
     source: '/intro',
     destination: '/intro/getting-started',
     permanent: false,
+  },
+  {
+    source: '/docs/release-notes/1.10',
+    destination: '/docs/release-notes/1.10.0',
+    permanent: true,
   },
   {
     source: '/api/secret/generic',
@@ -211,13 +221,28 @@ module.exports = [
     permanent: true,
   },
   {
+    source: '/docs/http/sys-version-history',
+    destination: '/api-docs/system/version-history',
+    permanent: true,
+  },
+  {
     source: '/docs/install/install',
     destination: '/docs/install',
     permanent: true,
   },
   {
     source: '/docs/secrets/custom',
-    destination: '/docs/plugin',
+    destination: '/docs/plugins/plugin-management',
+    permanent: true,
+  },
+  {
+    source: '/docs/internals/plugins',
+    destination: '/docs/plugins',
+    permanent: true,
+  },
+  {
+    source: '/docs/plugin-portal',
+    destination: '/docs/plugins/plugin-portal',
     permanent: true,
   },
   {
@@ -431,6 +456,11 @@ module.exports = [
     permanent: true,
   },
   // Guides and Intro redirects to Learn
+  {
+    source: '/guides',
+    destination: 'https://learn.hashicorp.com/vault',
+    permanent: true,
+  },
   {
     source: '/guides/getting-started',
     destination: 'https://learn.hashicorp.com/vault',
@@ -745,6 +775,11 @@ module.exports = [
   {
     source: '/intro/what-is-vault',
     destination: '/docs/what-is-vault',
+    permanent: true,
+  },
+  {
+    source: '/api/:path*',
+    destination: '/api-docs/:path*',
     permanent: true,
   },
   // disallow '.html' or '/index.html' in favor of cleaner, simpler paths

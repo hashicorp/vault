@@ -5,7 +5,7 @@ import { create } from 'ember-cli-page-object';
 import auth from 'vault/tests/pages/auth';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 
-const visit = async url => {
+const visit = async (url) => {
   try {
     await _visit(url);
   } catch (e) {
@@ -40,16 +40,16 @@ const setupWrapping = async () => {
   let wrappedToken = await wrappedAuth();
   return wrappedToken;
 };
-module('Acceptance | redirect_to query param functionality', function(hooks) {
+module('Acceptance | redirect_to query param functionality', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     // normally we'd use the auth.logout helper to visit the route and reset the app, but in this case that
     // also routes us to the auth page, and then all of the transitions from the auth page get redirected back
     // to the auth page resulting in no redirect_to query param being set
-    localStorage.clear();
+    sessionStorage.clear();
   });
-  test('redirect to a route after authentication', async function(assert) {
+  test('redirect to a route after authentication', async function (assert) {
     let url = '/vault/secrets/secret/create';
     await visit(url);
     assert.ok(
@@ -62,13 +62,13 @@ module('Acceptance | redirect_to query param functionality', function(hooks) {
     assert.equal(currentURL(), url, 'navigates to the redirect_to url after auth');
   });
 
-  test('redirect from root does not include redirect_to', async function(assert) {
+  test('redirect from root does not include redirect_to', async function (assert) {
     let url = '/';
     await visit(url);
     assert.ok(currentURL().indexOf('redirect_to') < 0, 'there is no redirect_to query param');
   });
 
-  test('redirect to a route after authentication with a query param', async function(assert) {
+  test('redirect to a route after authentication with a query param', async function (assert) {
     let url = '/vault/secrets/secret/create?initialKey=hello';
     await visit(url);
     assert.ok(
@@ -80,7 +80,7 @@ module('Acceptance | redirect_to query param functionality', function(hooks) {
     assert.equal(currentURL(), url, 'navigates to the redirect_to with the query param after auth');
   });
 
-  test('redirect to logout with wrapped token authenticates you', async function(assert) {
+  test('redirect to logout with wrapped token authenticates you', async function (assert) {
     let wrappedToken = await setupWrapping();
     let url = '/vault/secrets/cubbyhole/create';
 

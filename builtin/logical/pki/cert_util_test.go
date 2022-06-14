@@ -163,9 +163,9 @@ func TestPki_PermitFQDNs(t *testing.T) {
 	fields := addCACommonFields(map[string]*framework.FieldSchema{})
 
 	cases := map[string]struct {
-		input    *inputBundle
+		input            *inputBundle
 		expectedDnsNames []string
-		expectedEmails []string
+		expectedEmails   []string
 	}{
 		"base valid case": {
 			input: &inputBundle{
@@ -183,7 +183,7 @@ func TestPki_PermitFQDNs(t *testing.T) {
 				},
 			},
 			expectedDnsNames: []string{"example.com."},
-			expectedEmails: []string{},
+			expectedEmails:   []string{},
 		},
 		"case insensitivity validation": {
 			input: &inputBundle{
@@ -202,7 +202,7 @@ func TestPki_PermitFQDNs(t *testing.T) {
 				},
 			},
 			expectedDnsNames: []string{"Example.Net", "eXaMPLe.COM"},
-			expectedEmails: []string{},
+			expectedEmails:   []string{},
 		},
 		"case email as AllowedDomain with bare domains": {
 			input: &inputBundle{
@@ -220,7 +220,7 @@ func TestPki_PermitFQDNs(t *testing.T) {
 				},
 			},
 			expectedDnsNames: []string{},
-			expectedEmails: []string{"test@testemail.com"},
+			expectedEmails:   []string{"test@testemail.com"},
 		},
 		"case email common name with bare domains": {
 			input: &inputBundle{
@@ -238,7 +238,7 @@ func TestPki_PermitFQDNs(t *testing.T) {
 				},
 			},
 			expectedDnsNames: []string{},
-			expectedEmails: []string{"test@testemail.com"},
+			expectedEmails:   []string{"test@testemail.com"},
 		},
 	}
 

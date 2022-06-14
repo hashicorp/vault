@@ -8,10 +8,10 @@ import listPage from 'vault/tests/pages/secrets/backend/list';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import authPage from 'vault/tests/pages/auth';
 
-module('Acceptance | secrets/ssh', function(hooks) {
+module('Acceptance | secrets/ssh', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     return authPage.login();
   });
 
@@ -24,7 +24,7 @@ module('Acceptance | secrets/ssh', function(hooks) {
     return path;
   };
 
-  test('it creates a role and redirects', async function(assert) {
+  test('it creates a role and redirects', async function (assert) {
     const path = await mountAndNav(assert);
     await editPage.createOTPRole('role');
     await settled();
@@ -49,7 +49,7 @@ module('Acceptance | secrets/ssh', function(hooks) {
     assert.ok(listPage.menuItems.length > 0, 'shows links in the menu');
   });
 
-  test('it deletes a role', async function(assert) {
+  test('it deletes a role', async function (assert) {
     const path = await mountAndNav(assert);
     await editPage.createOTPRole('role');
     await settled();
@@ -61,7 +61,7 @@ module('Acceptance | secrets/ssh', function(hooks) {
     assert.ok(listPage.backendIsEmpty, 'no roles listed');
   });
 
-  test('it generates an OTP', async function(assert) {
+  test('it generates an OTP', async function (assert) {
     const path = await mountAndNav(assert);
     await editPage.createOTPRole('role');
     await settled();

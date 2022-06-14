@@ -7,16 +7,16 @@ const TITLE = 'My Table';
 const HEADER = 'Cool Header';
 const ITEMS = ['https://127.0.0.1:8201', 'hello', 3];
 
-module('Integration | Component | InfoTable', function(hooks) {
+module('Integration | Component | InfoTable', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.set('title', TITLE);
     this.set('header', HEADER);
     this.set('items', ITEMS);
   });
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     await render(hbs`<InfoTable
         @title={{title}}
         @header={{header}}

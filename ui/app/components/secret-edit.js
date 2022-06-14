@@ -73,7 +73,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
   checkSecretCapabilities: maybeQueryRecord(
     'capabilities',
-    context => {
+    (context) => {
       if (!context.model || context.mode === 'create') {
         return;
       }
@@ -94,7 +94,7 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
   checkMetadataCapabilities: maybeQueryRecord(
     'capabilities',
-    context => {
+    (context) => {
       if (!context.model || !context.isV2) {
         return;
       }
@@ -117,38 +117,43 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
 
   buttonDisabled: or('requestInFlight', 'model.isFolder', 'model.flagsIsInvalid'),
 
-  modelForData: computed('isV2', 'model', function() {
+  modelForData: computed('isV2', 'model', function () {
     let { model } = this;
     if (!model) return null;
     return this.isV2 ? model.belongsTo('selectedVersion').value() : model;
   }),
 
-  basicModeDisabled: computed('secretDataIsAdvanced', 'showAdvancedMode', function() {
+  basicModeDisabled: computed('secretDataIsAdvanced', 'showAdvancedMode', function () {
     return this.secretDataIsAdvanced || this.showAdvancedMode === false;
   }),
 
-  secretDataAsJSON: computed('secretData', 'secretData.[]', function() {
+  secretDataAsJSON: computed('secretData', 'secretData.[]', function () {
     return this.secretData.toJSON();
   }),
 
-  secretDataIsAdvanced: computed('secretData', 'secretData.[]', function() {
+  secretDataIsAdvanced: computed('secretData', 'secretData.[]', function () {
     return this.secretData.isAdvanced();
   }),
 
   showAdvancedMode: or('secretDataIsAdvanced', 'preferAdvancedEdit'),
 
-  isWriteWithoutRead: computed('model.failedServerRead', 'modelForData.failedServerRead', 'isV2', function() {
-    if (!this.model) return;
-    // if the version couldn't be read from the server
-    if (this.isV2 && this.modelForData.failedServerRead) {
-      return true;
+  isWriteWithoutRead: computed(
+    'model.failedServerRead',
+    'modelForData.failedServerRead',
+    'isV2',
+    function () {
+      if (!this.model) return;
+      // if the version couldn't be read from the server
+      if (this.isV2 && this.modelForData.failedServerRead) {
+        return true;
+      }
+      // if the model couldn't be read from the server
+      if (!this.isV2 && this.model.failedServerRead) {
+        return true;
+      }
+      return false;
     }
-    // if the model couldn't be read from the server
-    if (!this.isV2 && this.model.failedServerRead) {
-      return true;
-    }
-    return false;
-  }),
+  ),
 
   actions: {
     refresh() {
