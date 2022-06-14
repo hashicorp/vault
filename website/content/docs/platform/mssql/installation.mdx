@@ -159,14 +159,9 @@ installation.
     PROVIDER_KEY_NAME = 'ekm-encryption-key';
     ```
 
-    !> **Warning:** Encountering the SQL error response `Provider error code: 2050`
-    at this stage is typically caused by an incorrect license that's lacking
-    "Key Management Transparent Data Encryption". Using the Vault Audit Logs confirm
-    that EKM is in network reach to Vault API path `/sys/license/status`. Failing 
-    attempts by EKM to connect to Vault in order to check its license or the use 
-    of the wrong license are likely causes for the `2050` error response. This 
-    would need to be recitified for the above SQL to be successful before 
-    commencing any farther.
+    -> **Note:** This is the first step at which the EKM provider will communicate with Vault. If
+    Vault is misconfigured, this step is likely to fail. See
+    [troubleshooting](/docs/platform/mssql/troubleshooting) for tips on specific error codes.
 
 1. Create another login from the new asymmetric key:
 
