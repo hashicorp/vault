@@ -11,13 +11,11 @@ module('Integration | Component | hover copy button', function (hooks) {
 
   // ember-cli-clipboard helpers don't like the new style
   test('it shows success message in tooltip', async function (assert) {
-    this.set('copyValue', 'foo');
-    await render(
-      hbs`<div class="has-copy-button" tabindex="-1">
-      <HoverCopyButton @copyValue={{copyValue}} />
-      </div>`
-    );
-
+    await render(hbs`
+    <div class="has-copy-button" tabindex="-1">
+      <HoverCopyButton @copyValue="foo" />
+      </div>
+  `);
     await component.focusContainer();
     await settled();
     assert.ok(component.buttonIsVisible);
@@ -27,7 +25,12 @@ module('Integration | Component | hover copy button', function (hooks) {
   });
 
   test('it has the correct class when alwaysShow is true', async function (assert) {
-    this.set('copyValue', 'foo');
+    await render(hbs`
+    <HoverCopyButton
+      @copyValue="foo"
+      @alwaysShow={{true}}
+    />
+  `);
     await render(hbs`{{hover-copy-button alwaysShow=true copyValue=copyValue}}`);
     assert.ok(component.buttonIsVisible);
     assert.ok(component.wrapperClass.includes('hover-copy-button-static'));

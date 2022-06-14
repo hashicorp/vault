@@ -264,6 +264,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
   });
 
   test('Connection create and edit form for each plugin', async function (assert) {
+    assert.expect(160);
     const backend = await mount();
     for (let testCase of connectionTests) {
       await connectionPage.visitCreate({ backend });

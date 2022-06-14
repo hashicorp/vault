@@ -134,6 +134,30 @@ func (s *PrecomputedQueryStore) listEndTimes(ctx context.Context, startTime time
 	return endTimes, nil
 }
 
+func (s *PrecomputedQueryStore) getMaxEndTime(ctx context.Context, startTime time.Time, endTimeBound time.Time) (time.Time, error) {
+	rawEndTimes, err := s.view.List(ctx, fmt.Sprintf("%v/", startTime.Unix()))
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	maxEndTime := time.Time{}
+	for _, raw := range rawEndTimes {
+		val, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			s.logger.Warn("could not parse precomputed query end time", "key", raw)
+			continue
+		}
+		endTime := time.Unix(val, 0).UTC()
+		s.logger.Trace("end time in consideration is", "end time", endTime, "end time bound", endTimeBound)
+		if endTime.After(maxEndTime) && !endTime.After(endTimeBound) {
+			s.logger.Trace("end time has been updated")
+			maxEndTime = endTime
+		}
+
+	}
+	return maxEndTime, nil
+}
+
 func (s *PrecomputedQueryStore) QueriesAvailable(ctx context.Context) (bool, error) {
 	startTimes, err := s.listStartTimes(ctx)
 	if err != nil {
@@ -181,7 +205,7 @@ func (s *PrecomputedQueryStore) Get(ctx context.Context, startTime, endTime time
 	}
 	s.logger.Trace("retrieved start times from storage", "startTimes", startTimes)
 
-	filteredList := make([]time.Time, 0, len(startTimes))
+	filteredList := make([]time.Time, 0)
 	for _, t := range startTimes {
 		if timeutil.InRange(t, startTime, endTime) {
 			filteredList = append(filteredList, t)
@@ -196,42 +220,45 @@ func (s *PrecomputedQueryStore) Get(ctx context.Context, startTime, endTime time
 	sort.Slice(filteredList, func(i, j int) bool {
 		return filteredList[i].After(filteredList[j])
 	})
-	contiguous := timeutil.GetMostRecentContiguousMonths(filteredList)
-	actualStartTime := contiguous[len(contiguous)-1]
 
-	s.logger.Trace("chose start time", "actualStartTime", actualStartTime, "contiguous", contiguous)
-
-	endTimes, err := s.listEndTimes(ctx, actualStartTime)
-	if err != nil {
-		return nil, err
-	}
-	s.logger.Trace("retrieved end times from storage", "endTimes", endTimes)
-
-	// Might happen if there's a race with GC
-	if len(endTimes) == 0 {
-		s.logger.Warn("missing end times", "start time", actualStartTime)
-		return nil, nil
-	}
-	var actualEndTime time.Time
-	for _, t := range endTimes {
-		if timeutil.InRange(t, startTime, endTime) {
-			if actualEndTime.IsZero() || t.After(actualEndTime) {
-				actualEndTime = t
-			}
+	closestStartTime := time.Time{}
+	closestEndTime := time.Time{}
+	maxTimeDifference := time.Duration(0)
+	for i := len(filteredList) - 1; i >= 0; i-- {
+		testStartTime := filteredList[i]
+		s.logger.Trace("trying test start times", "startTime", testStartTime, "filteredList", filteredList)
+		testEndTime, err := s.getMaxEndTime(ctx, testStartTime, endTime)
+		if err != nil {
+			return nil, err
+		}
+		if testEndTime.IsZero() {
+			// Might happen if there's a race with GC
+			s.logger.Warn("missing end times", "start time", testStartTime)
+			continue
+		}
+		s.logger.Trace("retrieved max end time from storage", "endTime", testEndTime)
+		diff := testEndTime.Sub(testStartTime)
+		if diff >= maxTimeDifference {
+			closestStartTime = testStartTime
+			closestEndTime = testEndTime
+			maxTimeDifference = diff
+			s.logger.Trace("updating closest times")
 		}
 	}
-	if actualEndTime.IsZero() {
-		s.logger.Warn("no end time in range", "start time", actualStartTime)
+	s.logger.Trace("chose start end end times", "startTime", closestStartTime, "endTime")
+
+	if closestStartTime.IsZero() || closestEndTime.IsZero() {
+		s.logger.Warn("no start or end time in range", "start time", closestStartTime, "end time", closestEndTime)
 		return nil, nil
 	}
 
-	path := fmt.Sprintf("%v/%v", actualStartTime.Unix(), actualEndTime.Unix())
+	path := fmt.Sprintf("%v/%v", closestStartTime.Unix(), closestEndTime.Unix())
 	entry, err := s.view.Get(ctx, path)
 	if err != nil {
 		return nil, err
 	}
 	if entry == nil {
-		s.logger.Warn("no end time entry found", "start time", actualStartTime, "end time", actualEndTime)
+		s.logger.Warn("no end time entry found", "start time", closestStartTime, "end time", closestEndTime)
 		return nil, nil
 	}
 

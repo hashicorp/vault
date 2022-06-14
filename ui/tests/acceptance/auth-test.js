@@ -1,3 +1,4 @@
+/* eslint qunit/no-conditional-assertions: "warn" */
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import sinon from 'sinon';
@@ -57,6 +58,7 @@ module('Acceptance | auth', function (hooks) {
   });
 
   test('it sends the right attributes when authenticating', async function (assert) {
+    assert.expect(8);
     let backends = supportedAuthBackends();
     await visit('/vault/auth');
     for (let backend of backends.reverse()) {

@@ -12,7 +12,7 @@ description: >-
 Vault works with Kubernetes in various modes: `dev`, `standalone`, `ha`,
 and `external`.
 
-~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3 with this chart.
+~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3.6+ with this chart.
 
 ## Helm Chart
 
@@ -375,7 +375,7 @@ failover to an older version of Vault must always be avoided.
 
 !> **IMPORTANT NOTE:** Always back up your data before upgrading! Vault does not
 make backward-compatibility guarantees for its data store. Simply replacing the
-newly-installed Vault binary with the previous version not cleanly
+newly-installed Vault binary with the previous version may not cleanly
 downgrade Vault, as upgrades may perform changes to the underlying data
 structure that make the data incompatible with a downgrade. If you need to roll
 back to a previous version of Vault, you should roll back your data store as
@@ -402,14 +402,14 @@ Next, list the Helm versions and choose the desired version to install.
 ```bash
 $ helm search repo hashicorp/vault
 NAME           	CHART VERSION	APP VERSION	DESCRIPTION
-hashicorp/vault	0.17.0        	1.8.4     	Official HashiCorp Vault Chart
+hashicorp/vault	0.20.1       	1.10.3     	Official HashiCorp Vault Chart
 ```
 
 Next, test the upgrade with `--dry-run` first to verify the changes sent to the
 Kubernetes cluster.
 
 ```shell-session
-$ helm upgrade vault hashicorp/vault --version=0.17.0 \
+$ helm upgrade vault hashicorp/vault --version=0.20.1 \
     --set='server.image.repository=vault' \
     --set='server.image.tag=123.456' \
     --dry-run

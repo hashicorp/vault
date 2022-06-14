@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -105,7 +104,7 @@ func TestAuthMoveCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		mounts, err := client.Sys().ListAuthWithContext(context.Background())
+		mounts, err := client.Sys().ListAuth()
 		if err != nil {
 			t.Fatal(err)
 		}

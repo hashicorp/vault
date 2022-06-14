@@ -52,6 +52,7 @@ module('Integration | Component | edit form', function (hooks) {
   });
 
   test('it calls flash message fns on save', async function (assert) {
+    assert.expect(4);
     let model = createModel();
     let onSave = () => {
       return resolve();

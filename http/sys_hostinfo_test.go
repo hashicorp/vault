@@ -1,7 +1,6 @@
 package http
 
 import (
-	"context"
 	"encoding/json"
 	"testing"
 
@@ -20,7 +19,7 @@ func TestSysHostInfo(t *testing.T) {
 	vault.TestWaitActive(t, cores[0].Core)
 
 	// Query against the active node, should get host information back
-	secret, err := cores[0].Client.Logical().ReadWithContext(context.Background(), "sys/host-info")
+	secret, err := cores[0].Client.Logical().Read("sys/host-info")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +54,7 @@ func TestSysHostInfo(t *testing.T) {
 	}
 
 	// Query against a standby, should error
-	secret, err = cores[1].Client.Logical().ReadWithContext(context.Background(), "sys/host-info")
+	secret, err = cores[1].Client.Logical().Read("sys/host-info")
 	if err == nil || secret != nil {
 		t.Fatalf("expected error on standby node, HostInfo: %v", secret)
 	}

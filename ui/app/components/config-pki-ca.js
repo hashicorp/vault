@@ -52,7 +52,7 @@ export default Component.extend({
    * @param DS.Model
    * @public
    *
-   * a `pki-config` model - passed in in the component useage
+   * a `pki-config` model - passed in in the component usage
    *
    */
   config: null,
@@ -140,15 +140,10 @@ export default Component.extend({
       const isUpload = this.model.uploadPemBundle;
       model
         .save({ adapterOptions: { method } })
-        .then((m) => {
+        .then(() => {
           if (method === 'setSignedIntermediate' || isUpload) {
             this.send('refresh');
             this.flashMessages.success('The certificate for this backend has been updated.');
-          } else if (!m.get('certificate') && !m.get('csr')) {
-            // if there's no certificate, it wasn't generated and the generation was a noop
-            this.flashMessages.warning(
-              'You tried to generate a new root CA, but one currently exists. To replace the existing one, delete it first and then generate again.'
-            );
           }
         })
         .catch((e) => {
@@ -156,25 +151,6 @@ export default Component.extend({
         })
         .finally(() => {
           this.set('loading', false);
-        });
-    },
-    deleteCA() {
-      this.set('loading', true);
-      const model = this.model;
-      const backend = model.get('backend');
-      //TODO Is there better way to do this? This forces the saved state so Ember Data will make a server call.
-      model.send('pushedData');
-      model
-        .destroyRecord()
-        .then(() => {
-          this.flashMessages.success(
-            `The CA key for ${backend} has been deleted. The old CA certificate will still be accessible for reading until a new certificate/key is generated or uploaded.`
-          );
-        })
-        .finally(() => {
-          this.set('loading', false);
-          this.send('refresh');
-          this.createOrReplaceModel();
         });
     },
     refresh() {

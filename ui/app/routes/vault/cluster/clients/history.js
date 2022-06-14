@@ -2,6 +2,7 @@ import Route from '@ember/routing/route';
 import { isSameMonth } from 'date-fns';
 import RSVP from 'rsvp';
 import getStorage from 'vault/lib/token-storage';
+import { parseRFC3339 } from 'core/utils/date-formatters';
 
 const INPUTTED_START_DATE = 'vault:ui-inputted-start-date';
 export default class HistoryRoute extends Route {
@@ -26,17 +27,6 @@ export default class HistoryRoute extends Route {
     }
   }
 
-  parseRFC3339(timestamp) {
-    // convert '2021-03-21T00:00:00Z' --> ['2021', 2] (e.g. 2021 March, month is zero indexed)
-    if (Array.isArray(timestamp)) {
-      // return if already formatted correctly
-      return timestamp;
-    }
-    return timestamp
-      ? [timestamp.split('-')[0], Number(timestamp.split('-')[1].replace(/^0+/, '')) - 1]
-      : null;
-  }
-
   async model() {
     let parentModel = this.modelFor('vault.cluster.clients');
     let licenseStart = await this.getLicenseStartTime();
@@ -45,8 +35,8 @@ export default class HistoryRoute extends Route {
     return RSVP.hash({
       config: parentModel.config,
       activity,
-      startTimeFromLicense: this.parseRFC3339(licenseStart),
-      endTimeFromResponse: this.parseRFC3339(activity?.endTime),
+      startTimeFromLicense: parseRFC3339(licenseStart),
+      endTimeFromResponse: parseRFC3339(activity?.endTime),
       versionHistory: parentModel.versionHistory,
     });
   }

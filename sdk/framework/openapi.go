@@ -336,6 +336,12 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 				}
 
 				for name, field := range bodyFields {
+					// Removing this field from the spec as it is deprecated in favor of using "sha256"
+					// The duplicate sha_256 and sha256 in these paths cause issues with codegen
+					if name == "sha_256" && strings.Contains(path, "plugins/catalog/") {
+						continue
+					}
+
 					openapiField := convertType(field.Type)
 					if field.Required {
 						s.Required = append(s.Required, name)
@@ -613,6 +619,9 @@ func convertType(t FieldType) schemaType {
 		ret.format = "lowercase"
 	case TypeInt:
 		ret.baseType = "integer"
+	case TypeInt64:
+		ret.baseType = "integer"
+		ret.format = "int64"
 	case TypeDurationSecond, TypeSignedDurationSecond:
 		ret.baseType = "integer"
 		ret.format = "seconds"

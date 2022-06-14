@@ -56,7 +56,9 @@ type BaseCommand struct {
 
 	flagFormat           string
 	flagField            string
+	flagDetailed         bool
 	flagOutputCurlString bool
+	flagOutputPolicy     bool
 	flagNonInteractive   bool
 
 	flagMFA []string
@@ -91,6 +93,9 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 
 	if c.flagOutputCurlString {
 		config.OutputCurlString = c.flagOutputCurlString
+	}
+	if c.flagOutputPolicy {
+		config.OutputPolicy = c.flagOutputPolicy
 	}
 
 	// If we need custom TLS configuration, then set it
@@ -259,8 +264,8 @@ func (c *BaseCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) int {
 	}
 
 	// passcode could be an empty string
-	mfaPayload := map[string][]string{
-		methodInfo.methodID: {passcode},
+	mfaPayload := map[string]interface{}{
+		methodInfo.methodID: []string{passcode},
 	}
 
 	client, err := c.Client()
@@ -269,12 +274,7 @@ func (c *BaseCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) int {
 		return 2
 	}
 
-	path := "sys/mfa/validate"
-
-	secret, err := client.Logical().Write(path, map[string]interface{}{
-		"mfa_request_id": reqID,
-		"mfa_payload":    mfaPayload,
-	})
+	secret, err := client.Sys().MFAValidate(reqID, mfaPayload)
 	if err != nil {
 		c.UI.Error(err.Error())
 		if secret != nil {
@@ -285,7 +285,7 @@ func (c *BaseCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) int {
 	if secret == nil {
 		// Don't output anything unless using the "table" format
 		if Format(c.UI) == "table" {
-			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", path))
+			c.UI.Info("Success! Data written to: sys/mfa/validate")
 		}
 		return 0
 	}
@@ -305,6 +305,7 @@ const (
 	FlagSetHTTP
 	FlagSetOutputField
 	FlagSetOutputFormat
+	FlagSetOutputDetailed
 )
 
 // flagSet creates the flags for this command. The result is cached on the
@@ -463,6 +464,14 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 					"command string and exit.",
 			})
 
+			f.BoolVar(&BoolVar{
+				Name:    "output-policy",
+				Target:  &c.flagOutputPolicy,
+				Default: false,
+				Usage: "Instead of executing the request, print an example HCL " +
+					"policy that would be required to run this command, and exit.",
+			})
+
 			f.StringVar(&StringVar{
 				Name:       "unlock-key",
 				Target:     &c.flagUnlockKey,
@@ -489,11 +498,11 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 
 		}
 
-		if bit&(FlagSetOutputField|FlagSetOutputFormat) != 0 {
-			f := set.NewFlagSet("Output Options")
+		if bit&(FlagSetOutputField|FlagSetOutputFormat|FlagSetOutputDetailed) != 0 {
+			outputSet := set.NewFlagSet("Output Options")
 
 			if bit&FlagSetOutputField != 0 {
-				f.StringVar(&StringVar{
+				outputSet.StringVar(&StringVar{
 					Name:       "field",
 					Target:     &c.flagField,
 					Default:    "",
@@ -506,7 +515,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			}
 
 			if bit&FlagSetOutputFormat != 0 {
-				f.StringVar(&StringVar{
+				outputSet.StringVar(&StringVar{
 					Name:       "format",
 					Target:     &c.flagFormat,
 					Default:    "table",
@@ -514,6 +523,16 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 					Completion: complete.PredictSet("table", "json", "yaml", "pretty"),
 					Usage: `Print the output in the given format. Valid formats
 						are "table", "json", "yaml", or "pretty".`,
+				})
+			}
+
+			if bit&FlagSetOutputDetailed != 0 {
+				outputSet.BoolVar(&BoolVar{
+					Name:    "detailed",
+					Target:  &c.flagDetailed,
+					Default: false,
+					EnvVar:  EnvVaultDetailed,
+					Usage:   "Enables additional metadata during some operations",
 				})
 			}
 		}

@@ -348,7 +348,7 @@ func TestTransit_UpdateKeyConfigWithAutorotation(t *testing.T) {
 	cores := cluster.Cores
 	vault.TestWaitActive(t, cores[0].Core)
 	client := cores[0].Client
-	err := client.Sys().MountWithContext(context.Background(), "transit", &api.MountInput{
+	err := client.Sys().Mount("transit", &api.MountInput{
 		Type: "transit",
 	})
 	if err != nil {
@@ -363,13 +363,13 @@ func TestTransit_UpdateKeyConfigWithAutorotation(t *testing.T) {
 			}
 			keyName := hex.EncodeToString(keyNameBytes)
 
-			_, err = client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("transit/keys/%s", keyName), map[string]interface{}{
+			_, err = client.Logical().Write(fmt.Sprintf("transit/keys/%s", keyName), map[string]interface{}{
 				"auto_rotate_period": test.initialAutoRotatePeriod,
 			})
 			if err != nil {
 				t.Fatal(err)
 			}
-			resp, err := client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("transit/keys/%s/config", keyName), map[string]interface{}{
+			resp, err := client.Logical().Write(fmt.Sprintf("transit/keys/%s/config", keyName), map[string]interface{}{
 				"auto_rotate_period": test.newAutoRotatePeriod,
 			})
 			switch {
@@ -380,7 +380,7 @@ func TestTransit_UpdateKeyConfigWithAutorotation(t *testing.T) {
 			}
 
 			if !test.shouldError {
-				resp, err = client.Logical().ReadWithContext(context.Background(), fmt.Sprintf("transit/keys/%s", keyName))
+				resp, err = client.Logical().Read(fmt.Sprintf("transit/keys/%s", keyName))
 				if err != nil {
 					t.Fatal(err)
 				}

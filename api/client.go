@@ -36,6 +36,7 @@ const (
 	EnvVaultAddress       = "VAULT_ADDR"
 	EnvVaultAgentAddr     = "VAULT_AGENT_ADDR"
 	EnvVaultCACert        = "VAULT_CACERT"
+	EnvVaultCACertBytes   = "VAULT_CACERT_BYTES"
 	EnvVaultCAPath        = "VAULT_CAPATH"
 	EnvVaultClientCert    = "VAULT_CLIENT_CERT"
 	EnvVaultClientKey     = "VAULT_CLIENT_KEY"
@@ -50,6 +51,7 @@ const (
 	EnvVaultMFA           = "VAULT_MFA"
 	EnvRateLimit          = "VAULT_RATE_LIMIT"
 	EnvHTTPProxy          = "VAULT_HTTP_PROXY"
+	EnvVaultProxyAddr     = "VAULT_PROXY_ADDR"
 	HeaderIndex           = "X-Vault-Index"
 	HeaderForward         = "X-Vault-Forward"
 	HeaderInconsistent    = "X-Vault-Inconsistent"
@@ -142,6 +144,14 @@ type Config struct {
 	// with the same client. Cloning a client will not clone this value.
 	OutputCurlString bool
 
+	// OutputPolicy causes the actual request to return an error of type
+	// *OutputPolicyError. Type asserting the error message will display
+	// an example of the required policy HCL needed for the operation.
+	//
+	// Note: It is not thread-safe to set this and make concurrent requests
+	// with the same client. Cloning a client will not clone this value.
+	OutputPolicy bool
+
 	// curlCACert, curlCAPath, curlClientCert and curlClientKey are used to keep
 	// track of the name of the TLS certs and keys when OutputCurlString is set.
 	// Cloning a client will also not clone those values.
@@ -172,8 +182,13 @@ type Config struct {
 // used to communicate with Vault.
 type TLSConfig struct {
 	// CACert is the path to a PEM-encoded CA cert file to use to verify the
-	// Vault server SSL certificate.
+	// Vault server SSL certificate. It takes precedence over CACertBytes
+	// and CAPath.
 	CACert string
+
+	// CACertBytes is a PEM-encoded certificate or bundle. It takes precedence
+	// over CAPath.
+	CACertBytes []byte
 
 	// CAPath is the path to a directory of PEM-encoded CA cert files to verify
 	// the Vault server SSL certificate.
@@ -266,12 +281,13 @@ func (c *Config) configureTLS(t *TLSConfig) error {
 		return fmt.Errorf("both client cert and client key must be provided")
 	}
 
-	if t.CACert != "" || t.CAPath != "" {
+	if t.CACert != "" || len(t.CACertBytes) != 0 || t.CAPath != "" {
 		c.curlCACert = t.CACert
 		c.curlCAPath = t.CAPath
 		rootConfig := &rootcerts.Config{
-			CAFile: t.CACert,
-			CAPath: t.CAPath,
+			CAFile:        t.CACert,
+			CACertificate: t.CACertBytes,
+			CAPath:        t.CAPath,
 		}
 		if err := rootcerts.ConfigureTLS(clientTLSConfig, rootConfig); err != nil {
 			return err
@@ -313,6 +329,7 @@ func (c *Config) ReadEnvironment() error {
 	var envAddress string
 	var envAgentAddress string
 	var envCACert string
+	var envCACertBytes []byte
 	var envCAPath string
 	var envClientCert string
 	var envClientKey string
@@ -322,7 +339,7 @@ func (c *Config) ReadEnvironment() error {
 	var envMaxRetries *uint64
 	var envSRVLookup bool
 	var limit *rate.Limiter
-	var envHTTPProxy string
+	var envVaultProxy string
 
 	// Parse the environment variables
 	if v := os.Getenv(EnvVaultAddress); v != "" {
@@ -342,6 +359,9 @@ func (c *Config) ReadEnvironment() error {
 	}
 	if v := os.Getenv(EnvVaultCACert); v != "" {
 		envCACert = v
+	}
+	if v := os.Getenv(EnvVaultCACertBytes); v != "" {
+		envCACertBytes = []byte(v)
 	}
 	if v := os.Getenv(EnvVaultCAPath); v != "" {
 		envCAPath = v
@@ -392,12 +412,18 @@ func (c *Config) ReadEnvironment() error {
 	}
 
 	if v := os.Getenv(EnvHTTPProxy); v != "" {
-		envHTTPProxy = v
+		envVaultProxy = v
+	}
+
+	// VAULT_PROXY_ADDR supersedes VAULT_HTTP_PROXY
+	if v := os.Getenv(EnvVaultProxyAddr); v != "" {
+		envVaultProxy = v
 	}
 
 	// Configure the HTTP clients TLS configuration.
 	t := &TLSConfig{
 		CACert:        envCACert,
+		CACertBytes:   envCACertBytes,
 		CAPath:        envCAPath,
 		ClientCert:    envClientCert,
 		ClientKey:     envClientKey,
@@ -431,14 +457,14 @@ func (c *Config) ReadEnvironment() error {
 		c.Timeout = envClientTimeout
 	}
 
-	if envHTTPProxy != "" {
-		url, err := url.Parse(envHTTPProxy)
+	if envVaultProxy != "" {
+		u, err := url.Parse(envVaultProxy)
 		if err != nil {
 			return err
 		}
 
 		transport := c.HttpClient.Transport.(*http.Transport)
-		transport.Proxy = http.ProxyURL(url)
+		transport.Proxy = http.ProxyURL(u)
 	}
 
 	return nil
@@ -576,7 +602,6 @@ func (c *Client) CloneConfig() *Config {
 	newConfig.CheckRetry = c.config.CheckRetry
 	newConfig.Logger = c.config.Logger
 	newConfig.Limiter = c.config.Limiter
-	newConfig.OutputCurlString = c.config.OutputCurlString
 	newConfig.SRVLookup = c.config.SRVLookup
 	newConfig.CloneHeaders = c.config.CloneHeaders
 	newConfig.CloneToken = c.config.CloneToken
@@ -589,7 +614,7 @@ func (c *Client) CloneConfig() *Config {
 	return newConfig
 }
 
-// Sets the address of Vault in the client. The format of address should be
+// SetAddress sets the address of Vault in the client. The format of address should be
 // "<Scheme>://<Host>:<Port>". Setting this on a client will override the
 // value of VAULT_ADDR environment variable.
 func (c *Client) SetAddress(addr string) error {
@@ -614,6 +639,16 @@ func (c *Client) Address() string {
 	defer c.modifyLock.RUnlock()
 
 	return c.addr.String()
+}
+
+func (c *Client) SetCheckRedirect(f func(*http.Request, []*http.Request) error) {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.HttpClient.CheckRedirect = f
 }
 
 // SetLimiter will set the rate limiter for this client.
@@ -768,6 +803,24 @@ func (c *Client) SetOutputCurlString(curl bool) {
 	c.config.OutputCurlString = curl
 }
 
+func (c *Client) OutputPolicy() bool {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+
+	return c.config.OutputPolicy
+}
+
+func (c *Client) SetOutputPolicy(isSet bool) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.OutputPolicy = isSet
+}
+
 // CurrentWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
 // for a given operation and path.
 func (c *Client) CurrentWrappingLookupFunc() WrappingLookupFunc {
@@ -808,10 +861,39 @@ func (c *Client) setNamespace(namespace string) {
 	c.headers.Set(consts.NamespaceHeaderName, namespace)
 }
 
+// ClearNamespace removes the namespace header if set.
 func (c *Client) ClearNamespace() {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
-	c.headers.Del(consts.NamespaceHeaderName)
+	if c.headers != nil {
+		c.headers.Del(consts.NamespaceHeaderName)
+	}
+}
+
+// Namespace returns the namespace currently set in this client. It will
+// return an empty string if there is no namespace set.
+func (c *Client) Namespace() string {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+	if c.headers == nil {
+		return ""
+	}
+	return c.headers.Get(consts.NamespaceHeaderName)
+}
+
+// WithNamespace makes a shallow copy of Client, modifies it to use
+// the given namespace, and returns it. Passing an empty string will
+// temporarily unset the namespace.
+func (c *Client) WithNamespace(namespace string) *Client {
+	c2 := *c
+	c2.modifyLock = sync.RWMutex{}
+	c2.headers = c.Headers()
+	if namespace == "" {
+		c2.ClearNamespace()
+	} else {
+		c2.SetNamespace(namespace)
+	}
+	return &c2
 }
 
 // Token returns the access token being used by this client. It will
@@ -990,22 +1072,21 @@ func (c *Client) clone(cloneHeaders bool) (*Client, error) {
 	defer config.modifyLock.RUnlock()
 
 	newConfig := &Config{
-		Address:          config.Address,
-		HttpClient:       config.HttpClient,
-		MinRetryWait:     config.MinRetryWait,
-		MaxRetryWait:     config.MaxRetryWait,
-		MaxRetries:       config.MaxRetries,
-		Timeout:          config.Timeout,
-		Backoff:          config.Backoff,
-		CheckRetry:       config.CheckRetry,
-		Logger:           config.Logger,
-		Limiter:          config.Limiter,
-		OutputCurlString: config.OutputCurlString,
-		AgentAddress:     config.AgentAddress,
-		SRVLookup:        config.SRVLookup,
-		CloneHeaders:     config.CloneHeaders,
-		CloneToken:       config.CloneToken,
-		ReadYourWrites:   config.ReadYourWrites,
+		Address:        config.Address,
+		HttpClient:     config.HttpClient,
+		MinRetryWait:   config.MinRetryWait,
+		MaxRetryWait:   config.MaxRetryWait,
+		MaxRetries:     config.MaxRetries,
+		Timeout:        config.Timeout,
+		Backoff:        config.Backoff,
+		CheckRetry:     config.CheckRetry,
+		Logger:         config.Logger,
+		Limiter:        config.Limiter,
+		AgentAddress:   config.AgentAddress,
+		SRVLookup:      config.SRVLookup,
+		CloneHeaders:   config.CloneHeaders,
+		CloneToken:     config.CloneToken,
+		ReadYourWrites: config.ReadYourWrites,
 	}
 	client, err := NewClient(newConfig)
 	if err != nil {
@@ -1131,11 +1212,22 @@ func (c *Client) rawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	checkRetry := c.config.CheckRetry
 	backoff := c.config.Backoff
 	httpClient := c.config.HttpClient
+	ns := c.headers.Get(consts.NamespaceHeaderName)
 	outputCurlString := c.config.OutputCurlString
+	outputPolicy := c.config.OutputPolicy
 	logger := c.config.Logger
 	c.config.modifyLock.RUnlock()
 
 	c.modifyLock.RUnlock()
+
+	// ensure that the most current namespace setting is used at the time of the call
+	// e.g. calls using (*Client).WithNamespace
+	switch ns {
+	case "":
+		r.Headers.Del(consts.NamespaceHeaderName)
+	default:
+		r.Headers.Set(consts.NamespaceHeaderName, ns)
+	}
 
 	for _, cb := range c.requestCallbacks {
 		cb(r)
@@ -1174,6 +1266,14 @@ START:
 			ClientCAPath:  c.config.curlCAPath,
 		}
 		return nil, LastOutputStringError
+	}
+
+	if outputPolicy {
+		LastOutputPolicyError = &OutputPolicyError{
+			method: req.Method,
+			path:   strings.TrimPrefix(req.URL.Path, "/v1"),
+		}
+		return nil, LastOutputPolicyError
 	}
 
 	req.Request = req.Request.WithContext(ctx)
@@ -1268,19 +1368,30 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 	limiter := c.config.Limiter
 	httpClient := c.config.HttpClient
 	outputCurlString := c.config.OutputCurlString
+	outputPolicy := c.config.OutputPolicy
+
+	// add headers
 	if c.headers != nil {
 		for header, vals := range c.headers {
 			for _, val := range vals {
 				req.Header.Add(header, val)
 			}
 		}
+		// explicitly set the namespace header to current client
+		if ns := c.headers.Get(consts.NamespaceHeaderName); ns != "" {
+			r.Headers.Set(consts.NamespaceHeaderName, ns)
+		}
 	}
+
 	c.config.modifyLock.RUnlock()
 	c.modifyLock.RUnlock()
 
-	// OutputCurlString logic relies on the request type to be retryable.Request as
+	// OutputCurlString and OutputPolicy logic rely on the request type to be retryable.Request
 	if outputCurlString {
 		return nil, fmt.Errorf("output-curl-string is not implemented for this request")
+	}
+	if outputPolicy {
+		return nil, fmt.Errorf("output-policy is not implemented for this request")
 	}
 
 	req.URL.User = r.URL.User

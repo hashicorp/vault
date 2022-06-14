@@ -32,6 +32,11 @@ export default ApplicationAdapter.extend({
       data = { certificate: snapshot.attr('certificate') };
     } else {
       data = serializer.serialize(snapshot, requestType);
+
+      // The type parameter is serialized but is part of the URL. This means
+      // we'll get an unknown parameter warning back from the server if we
+      // send it. Remove it instead.
+      delete data.type;
     }
 
     return this.ajax(this.url(snapshot, action), 'POST', { data }).then((response) => {
@@ -59,10 +64,5 @@ export default ApplicationAdapter.extend({
 
   updateRecord() {
     return this.createRecordOrUpdate(...arguments);
-  },
-
-  deleteRecord(store, type, snapshot) {
-    const backend = snapshot.attr('backend');
-    return this.ajax(`/v1/${backend}/root`, 'DELETE');
   },
 });

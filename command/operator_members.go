@@ -3,6 +3,7 @@ package command
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -70,9 +71,17 @@ func (c *OperatorMembersCommand) Run(args []string) int {
 
 	switch Format(c.UI) {
 	case "table":
-		out := []string{"Host Name | API Address | Cluster Address | ActiveNode | Last Echo"}
+		out := make([]string, 0)
+		cols := []string{"Host Name", "API Address", "Cluster Address", "Active Node", "Version", "Upgrade Version", "Redundancy Zone", "Last Echo"}
+		out = append(out, strings.Join(cols, " | "))
 		for _, node := range resp.Nodes {
-			out = append(out, fmt.Sprintf("%s | %s | %s | %t | %s", node.Hostname, node.APIAddress, node.ClusterAddress, node.ActiveNode, node.LastEcho))
+			cols := []string{node.Hostname, node.APIAddress, node.ClusterAddress, fmt.Sprintf("%t", node.ActiveNode), node.Version, node.UpgradeVersion, node.RedundancyZone}
+			if node.LastEcho != nil {
+				cols = append(cols, node.LastEcho.Format(time.RFC3339))
+			} else {
+				cols = append(cols, "")
+			}
+			out = append(out, strings.Join(cols, " | "))
 		}
 		c.UI.Output(tableOutput(out, nil))
 		return 0

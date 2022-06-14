@@ -112,6 +112,8 @@ type Method struct {
 	MountPath     string        `hcl:"mount_path"`
 	WrapTTLRaw    interface{}   `hcl:"wrap_ttl"`
 	WrapTTL       time.Duration `hcl:"-"`
+	MinBackoffRaw interface{}   `hcl:"min_backoff"`
+	MinBackoff    time.Duration `hcl:"-"`
 	MaxBackoffRaw interface{}   `hcl:"max_backoff"`
 	MaxBackoff    time.Duration `hcl:"-"`
 	Namespace     string        `hcl:"namespace"`
@@ -468,6 +470,14 @@ func parseAutoAuth(result *Config, list *ast.ObjectList) error {
 			return err
 		}
 		result.AutoAuth.Method.MaxBackoffRaw = nil
+	}
+
+	if result.AutoAuth.Method.MinBackoffRaw != nil {
+		var err error
+		if result.AutoAuth.Method.MinBackoff, err = parseutil.ParseDurationSecond(result.AutoAuth.Method.MinBackoffRaw); err != nil {
+			return err
+		}
+		result.AutoAuth.Method.MinBackoffRaw = nil
 	}
 
 	return nil

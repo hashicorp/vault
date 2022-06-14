@@ -161,6 +161,10 @@ There is a workaround for this error that will allow you to sign in to Vault usi
 auth method. Select the "Other" tab instead of selecting the specific OIDC auth mount tab.
 From there, select "OIDC" from the "Method" select box and proceed to sign in to Vault.
 
+### Error Initializing Raft Storage type with Windows
+
+When trying to start Vault server 1.10.0 on Windows, and there is less than 100GB of free disk space, there is an initialization error with raft DB related to insufficient space on the disk. See this [issue](https://github.com/hashicorp/vault/issues/14895) for details.  Windows users should wait till 1.10.1 to upgrade.
+
 ## Feature Deprecations and EOL
 
 Please refer to the [Deprecation Plans and Notice](/docs/deprecation) page for up-to-date information on feature deprecations and plans. An [Feature Deprecation FAQ](/docs/deprecation/faq) page is also available to address questions concerning decisions made about Vault feature deprecations.

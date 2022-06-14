@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -95,7 +94,7 @@ func TestPluginReloadCommand_Run(t *testing.T) {
 		ui, cmd := testPluginReloadCommand(t)
 		cmd.client = client
 
-		if err := client.Sys().RegisterPluginWithContext(context.Background(), &api.RegisterPluginInput{
+		if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
 			Name:    pluginName,
 			Type:    consts.PluginTypeCredential,
 			Command: pluginName,

@@ -356,6 +356,10 @@ func TestOpenAPI_Paths(t *testing.T) {
 					Description:   "a header value",
 					AllowedValues: []interface{}{"a", "b", "c"},
 				},
+				"maximum": {
+					Type:        TypeInt64,
+					Description: "a maximum value",
+				},
 				"format": {
 					Type:        TypeString,
 					Description: "a query param",

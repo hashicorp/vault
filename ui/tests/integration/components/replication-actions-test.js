@@ -137,6 +137,7 @@ module('Integration | Component | replication actions', function (hooks) {
     oldVersion,
   ] of testCases) {
     test(`replication mode ${replicationMode}, cluster mode: ${clusterMode}, action: ${action}`, async function (assert) {
+      assert.expect(1);
       const testKey = `${replicationMode}-${clusterMode}-${action}`;
       this.set('model', {
         replicationAttrs: {

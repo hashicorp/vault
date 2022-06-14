@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -82,7 +81,7 @@ func TestDeleteCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		if _, err := client.Logical().WriteWithContext(context.Background(), "secret/delete/foo", map[string]interface{}{
+		if _, err := client.Logical().Write("secret/delete/foo", map[string]interface{}{
 			"foo": "bar",
 		}); err != nil {
 			t.Fatal(err)
@@ -104,7 +103,7 @@ func TestDeleteCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		secret, _ := client.Logical().ReadWithContext(context.Background(), "secret/delete/foo")
+		secret, _ := client.Logical().Read("secret/delete/foo")
 		if secret != nil {
 			t.Errorf("expected deletion: %#v", secret)
 		}

@@ -1464,14 +1464,14 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	// Get auth accessor for identity template.
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		t.Fatal(err)
 	}
 	userpassAccessor := auths["userpass/"].Accessor
 
 	// Write SSH role.
-	_, err = client.Logical().WriteWithContext(context.Background(), "ssh/roles/test", map[string]interface{}{
+	_, err = client.Logical().Write("ssh/roles/test", map[string]interface{}{
 		"key_type":                    "ca",
 		"allowed_extensions":          "login@zipzap.com",
 		"allow_user_certificates":     true,
@@ -1490,7 +1490,7 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 
 	// Issue SSH certificate with default extensions templating enabled, and no user-provided extensions
 	client.SetToken(userpassToken)
-	resp, err := client.Logical().WriteWithContext(context.Background(), "ssh/sign/test", map[string]interface{}{
+	resp, err := client.Logical().Write("ssh/sign/test", map[string]interface{}{
 		"public_key": publicKey4096,
 	})
 	if err != nil {
@@ -1518,7 +1518,7 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 	userProvidedExtensionPermissions := map[string]string{
 		"login@zipzap.com": "some_other_user_name",
 	}
-	resp, err = client.Logical().WriteWithContext(context.Background(), "ssh/sign/test", map[string]interface{}{
+	resp, err = client.Logical().Write("ssh/sign/test", map[string]interface{}{
 		"public_key": publicKey4096,
 		"extensions": userProvidedExtensionPermissions,
 	})
@@ -1542,7 +1542,7 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 	invalidUserProvidedExtensionPermissions := map[string]string{
 		"login@foobar.com": "{{identity.entity.metadata}}",
 	}
-	resp, err = client.Logical().WriteWithContext(context.Background(), "ssh/sign/test", map[string]interface{}{
+	resp, err = client.Logical().Write("ssh/sign/test", map[string]interface{}{
 		"public_key": publicKey4096,
 		"extensions": invalidUserProvidedExtensionPermissions,
 	})
@@ -1557,7 +1557,7 @@ func TestBackend_EmptyAllowedExtensionFailsClosed(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	// Get auth accessor for identity template.
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1565,7 +1565,7 @@ func TestBackend_EmptyAllowedExtensionFailsClosed(t *testing.T) {
 
 	// Write SSH role to test with no allowed extension. We also provide a templated default extension,
 	// to verify that it's not actually being evaluated
-	_, err = client.Logical().WriteWithContext(context.Background(), "ssh/roles/test_allow_all_extensions", map[string]interface{}{
+	_, err = client.Logical().Write("ssh/roles/test_allow_all_extensions", map[string]interface{}{
 		"key_type":                    "ca",
 		"allow_user_certificates":     true,
 		"allowed_users":               "tuber",
@@ -1585,7 +1585,7 @@ func TestBackend_EmptyAllowedExtensionFailsClosed(t *testing.T) {
 	userProvidedAnyExtensionPermissions := map[string]string{
 		"login@foobar.com": "not_userpassname",
 	}
-	_, err = client.Logical().WriteWithContext(context.Background(), "ssh/sign/test_allow_all_extensions", map[string]interface{}{
+	_, err = client.Logical().Write("ssh/sign/test_allow_all_extensions", map[string]interface{}{
 		"public_key": publicKey4096,
 		"extensions": userProvidedAnyExtensionPermissions,
 	})
@@ -1604,7 +1604,7 @@ func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	// Get auth accessor for identity template.
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1612,7 +1612,7 @@ func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 
 	// Write SSH role to test with any extension. We also provide a templated default extension,
 	// to verify that it's not actually being evaluated
-	_, err = client.Logical().WriteWithContext(context.Background(), "ssh/roles/test_allow_all_extensions", map[string]interface{}{
+	_, err = client.Logical().Write("ssh/roles/test_allow_all_extensions", map[string]interface{}{
 		"key_type":                    "ca",
 		"allow_user_certificates":     true,
 		"allowed_users":               "tuber",
@@ -1635,7 +1635,7 @@ func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 		"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",
 		"login@zipzap.com": "some_other_user_name",
 	}
-	resp, err := client.Logical().WriteWithContext(context.Background(), "ssh/sign/test_allow_all_extensions", map[string]interface{}{
+	resp, err := client.Logical().Write("ssh/sign/test_allow_all_extensions", map[string]interface{}{
 		"public_key": publicKey4096,
 		"extensions": defaultExtensionPermissions,
 	})
@@ -1661,7 +1661,7 @@ func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 		"login@foobar.com": "not_userpassname",
 		"login@zipzap.com": "some_other_user_name",
 	}
-	resp, err = client.Logical().WriteWithContext(context.Background(), "ssh/sign/test_allow_all_extensions", map[string]interface{}{
+	resp, err = client.Logical().Write("ssh/sign/test_allow_all_extensions", map[string]interface{}{
 		"public_key": publicKey4096,
 		"extensions": userProvidedAnyExtensionPermissions,
 	})
@@ -1682,6 +1682,144 @@ func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 	}
 }
 
+func TestSSHBackend_ValidateNotBeforeDuration(t *testing.T) {
+	config := logical.TestBackendConfig()
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatalf("Cannot create backend: %s", err)
+	}
+	testCase := logicaltest.TestCase{
+		LogicalBackend: b,
+		Steps: []logicaltest.TestStep{
+			configCaStep(testCAPublicKey, testCAPrivateKey),
+
+			createRoleStep("testing", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_host_certificates": true,
+				"allowed_domains":         "example.com,example.org",
+				"allow_subdomains":        true,
+				"default_critical_options": map[string]interface{}{
+					"option": "value",
+				},
+				"default_extensions": map[string]interface{}{
+					"extension": "extended",
+				},
+				"not_before_duration": "300s",
+			}),
+
+			signCertificateStep("testing", "vault-root-22608f5ef173aabf700797cb95c5641e792698ec6380e8e1eb55523e39aa5e51", ssh.HostCert, []string{"dummy.example.org", "second.example.com"}, map[string]string{
+				"option": "value",
+			}, map[string]string{
+				"extension": "extended",
+			},
+				2*time.Hour+5*time.Minute-30*time.Second, map[string]interface{}{
+					"public_key":       publicKey2,
+					"ttl":              "2h",
+					"cert_type":        "host",
+					"valid_principals": "dummy.example.org,second.example.com",
+				}),
+
+			createRoleStep("testing", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_host_certificates": true,
+				"allowed_domains":         "example.com,example.org",
+				"allow_subdomains":        true,
+				"default_critical_options": map[string]interface{}{
+					"option": "value",
+				},
+				"default_extensions": map[string]interface{}{
+					"extension": "extended",
+				},
+				"not_before_duration": "2h",
+			}),
+
+			signCertificateStep("testing", "vault-root-22608f5ef173aabf700797cb95c5641e792698ec6380e8e1eb55523e39aa5e51", ssh.HostCert, []string{"dummy.example.org", "second.example.com"}, map[string]string{
+				"option": "value",
+			}, map[string]string{
+				"extension": "extended",
+			},
+				4*time.Hour-30*time.Second, map[string]interface{}{
+					"public_key":       publicKey2,
+					"ttl":              "2h",
+					"cert_type":        "host",
+					"valid_principals": "dummy.example.org,second.example.com",
+				}),
+			createRoleStep("testing", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_host_certificates": true,
+				"allowed_domains":         "example.com,example.org",
+				"allow_subdomains":        true,
+				"default_critical_options": map[string]interface{}{
+					"option": "value",
+				},
+				"default_extensions": map[string]interface{}{
+					"extension": "extended",
+				},
+				"not_before_duration": "30s",
+			}),
+
+			signCertificateStep("testing", "vault-root-22608f5ef173aabf700797cb95c5641e792698ec6380e8e1eb55523e39aa5e51", ssh.HostCert, []string{"dummy.example.org", "second.example.com"}, map[string]string{
+				"option": "value",
+			}, map[string]string{
+				"extension": "extended",
+			},
+				2*time.Hour, map[string]interface{}{
+					"public_key":       publicKey2,
+					"ttl":              "2h",
+					"cert_type":        "host",
+					"valid_principals": "dummy.example.org,second.example.com",
+				}),
+		},
+	}
+
+	logicaltest.Test(t, testCase)
+}
+
+func TestSSHBackend_IssueSign(t *testing.T) {
+	config := logical.TestBackendConfig()
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatalf("Cannot create backend: %s", err)
+	}
+
+	testCase := logicaltest.TestCase{
+		LogicalBackend: b,
+		Steps: []logicaltest.TestStep{
+			configCaStep(testCAPublicKey, testCAPrivateKey),
+
+			createRoleStep("testing", map[string]interface{}{
+				"key_type":     "otp",
+				"default_user": "user",
+			}),
+			// Key pair not issued with invalid role key type
+			issueSSHKeyPairStep("testing", "rsa", 0, true, "role key type 'otp' not allowed to issue key pairs"),
+
+			createRoleStep("testing", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_user_key_ids":      false,
+				"allow_user_certificates": true,
+				"allowed_user_key_lengths": map[string]interface{}{
+					"ssh-rsa":             []int{2048, 3072, 4096},
+					"ecdsa-sha2-nistp521": 0,
+					"ed25519":             0,
+				},
+			}),
+			// Key_type not in allowed_user_key_types_lengths
+			issueSSHKeyPairStep("testing", "ec", 256, true, "provided key_type value not in allowed_user_key_types"),
+			// Key_bits not in allowed_user_key_types_lengths for provided key_type
+			issueSSHKeyPairStep("testing", "rsa", 2560, true, "provided key_bits value not in list of role's allowed_user_key_types"),
+			// key_type `rsa` and key_bits `2048` successfully created
+			issueSSHKeyPairStep("testing", "rsa", 2048, false, ""),
+			// key_type `ed22519` and key_bits `0` successfully created
+			issueSSHKeyPairStep("testing", "ed25519", 0, false, ""),
+		},
+	}
+
+	logicaltest.Test(t, testCase)
+}
+
 func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster, string) {
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
@@ -1698,7 +1836,7 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 	client := cluster.Cores[0].Client
 
 	// Write test policy for userpass auth method.
-	err := client.Sys().PutPolicyWithContext(context.Background(), "test", `
+	err := client.Sys().PutPolicy("test", `
    path "ssh/*" {
      capabilities = ["update"]
    }`)
@@ -1712,7 +1850,7 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 	}
 
 	// Configure test role for userpass.
-	if _, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/"+userIdentity, map[string]interface{}{
+	if _, err := client.Logical().Write("auth/userpass/users/"+userIdentity, map[string]interface{}{
 		"password": "test",
 		"policies": "test",
 	}); err != nil {
@@ -1720,7 +1858,7 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 	}
 
 	// Login userpass for test role and keep client token.
-	secret, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/login/"+userIdentity, map[string]interface{}{
+	secret, err := client.Logical().Write("auth/userpass/login/"+userIdentity, map[string]interface{}{
 		"password": "test",
 	})
 	if err != nil || secret == nil {
@@ -1729,7 +1867,7 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 	userpassToken := secret.Auth.ClientToken
 
 	// Mount SSH.
-	err = client.Sys().MountWithContext(context.Background(), "ssh", &api.MountInput{
+	err = client.Sys().Mount("ssh", &api.MountInput{
 		Type: "ssh",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "16h",
@@ -1741,7 +1879,7 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 	}
 
 	// Configure SSH CA.
-	_, err = client.Logical().WriteWithContext(context.Background(), "ssh/config/ca", map[string]interface{}{
+	_, err = client.Logical().Write("ssh/config/ca", map[string]interface{}{
 		"public_key":  testCAPublicKey,
 		"private_key": testCAPrivateKey,
 	})
@@ -1753,27 +1891,28 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 }
 
 func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
-	expectedValidPrincipal string, testEntityMetadata map[string]string) {
+	expectedValidPrincipal string, testEntityMetadata map[string]string,
+) {
 	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
 	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 
 	// set metadata "ssh_username" to userpass username
-	tokenLookupResponse, err := client.Logical().WriteWithContext(context.Background(), "/auth/token/lookup", map[string]interface{}{
+	tokenLookupResponse, err := client.Logical().Write("/auth/token/lookup", map[string]interface{}{
 		"token": userpassToken,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	entityID := tokenLookupResponse.Data["entity_id"].(string)
-	_, err = client.Logical().WriteWithContext(context.Background(), "/identity/entity/id/"+entityID, map[string]interface{}{
+	_, err = client.Logical().Write("/identity/entity/id/"+entityID, map[string]interface{}{
 		"metadata": testEntityMetadata,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "ssh/roles/my-role", map[string]interface{}{
+	_, err = client.Logical().Write("ssh/roles/my-role", map[string]interface{}{
 		"key_type":                testCaKeyType,
 		"allow_user_certificates": true,
 		"allowed_users":           testAllowedUsersTemplate,
@@ -1785,7 +1924,7 @@ func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
 
 	// sign SSH key as userpass user
 	client.SetToken(userpassToken)
-	signResponse, err := client.Logical().WriteWithContext(context.Background(), "ssh/sign/my-role", map[string]interface{}{
+	signResponse, err := client.Logical().Write("ssh/sign/my-role", map[string]interface{}{
 		"public_key":       testCAPublicKey,
 		"valid_principals": expectedValidPrincipal,
 	})
@@ -1832,7 +1971,8 @@ func signCertificateStep(
 	role, keyID string, certType int, validPrincipals []string,
 	criticalOptionPermissions, extensionPermissions map[string]string,
 	ttl time.Duration,
-	requestParameters map[string]interface{}) logicaltest.TestStep {
+	requestParameters map[string]interface{},
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "sign/" + role,
@@ -1857,6 +1997,42 @@ func signCertificateStep(
 			}
 
 			return validateSSHCertificate(parsedKey.(*ssh.Certificate), keyID, certType, validPrincipals, criticalOptionPermissions, extensionPermissions, ttl)
+		},
+	}
+}
+
+func issueSSHKeyPairStep(role, keyType string, keyBits int, expectError bool, errorMsg string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "issue/" + role,
+		Data: map[string]interface{}{
+			"key_type": keyType,
+			"key_bits": keyBits,
+		},
+		ErrorOk: true,
+		Check: func(resp *logical.Response) error {
+			if expectError {
+				var err error
+				if resp.Data["error"] != errorMsg {
+					err = fmt.Errorf("actual error message \"%s\" different from expected error message \"%s\"", resp.Data["error"], errorMsg)
+				}
+
+				return err
+			}
+
+			if resp.IsError() {
+				return fmt.Errorf("unexpected error response returned: %v", resp.Error())
+			}
+
+			if resp.Data["private_key_type"] != keyType {
+				return fmt.Errorf("response private_key_type (%s) does not match the provided key_type (%s)", resp.Data["private_key_type"], keyType)
+			}
+
+			if resp.Data["signed_key"] == "" {
+				return errors.New("certificate/signed_key should not be empty")
+			}
+
+			return nil
 		},
 	}
 }

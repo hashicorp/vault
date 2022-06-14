@@ -1,3 +1,4 @@
+/* eslint qunit/no-conditional-assertions: "warn" */
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { click, render } from '@ember/test-helpers';
@@ -43,6 +44,7 @@ module('Integration | Component | date-dropdown', function (hooks) {
   });
 
   test('it renders dropdown and selects month and year', async function (assert) {
+    assert.expect(27);
     let parentAction = (month, year) => {
       assert.equal(month, 'January', 'sends correct month to parent callback');
       assert.equal(year, CURRENT_YEAR, 'sends correct year to parent callback');
@@ -60,7 +62,7 @@ module('Integration | Component | date-dropdown', function (hooks) {
     const yearDropdown = this.element.querySelector('[data-test-popup-menu-trigger="year"]');
     const submitButton = this.element.querySelector('[data-test-date-dropdown-submit]');
 
-    assert.strictEqual(submitButton.disabled, true, 'button is disabled when no month or year selected');
+    assert.true(submitButton.disabled, 'button is disabled when no month or year selected');
 
     await click(monthDropdown);
     let dropdownListMonths = this.element.querySelectorAll('[data-test-month-list] button');
@@ -85,12 +87,13 @@ module('Integration | Component | date-dropdown', function (hooks) {
     await click(dropdownListYears[0]);
     assert.dom(yearDropdown).hasText(`${CURRENT_YEAR}`, `dropdown selects ${CURRENT_YEAR}`);
     assert.dom('.ember-basic-dropdown-content').doesNotExist('dropdown closes after selecting year');
-    assert.strictEqual(submitButton.disabled, false, 'button enabled when month and year selected');
+    assert.false(submitButton.disabled, 'button enabled when month and year selected');
 
     await click(submitButton);
   });
 
   test('it disables correct years when selecting month first', async function (assert) {
+    assert.expect(60);
     await render(hbs`
     <div class="is-flex-align-baseline">
       <DateDropdown/>
@@ -110,14 +113,14 @@ module('Integration | Component | date-dropdown', function (hooks) {
 
       if (i < CURRENT_MONTH) {
         for (let year of dropdownListYears) {
-          assert.strictEqual(year.disabled, false, `${ARRAY_OF_MONTHS[i]} ${year.innerText} valid`);
+          assert.false(year.disabled, `${ARRAY_OF_MONTHS[i]} ${year.innerText} valid`);
         }
       } else {
         for (let [yearIndex, year] of dropdownListYears.entries()) {
           if (yearIndex === 0) {
-            assert.strictEqual(year.disabled, true, `${ARRAY_OF_MONTHS[i]} ${year.innerText} disabled`);
+            assert.true(year.disabled, `${ARRAY_OF_MONTHS[i]} ${year.innerText} disabled`);
           } else {
-            assert.strictEqual(year.disabled, false, `${ARRAY_OF_MONTHS[i]} ${year.innerText} valid`);
+            assert.false(year.disabled, `${ARRAY_OF_MONTHS[i]} ${year.innerText} valid`);
           }
         }
       }
@@ -126,6 +129,7 @@ module('Integration | Component | date-dropdown', function (hooks) {
   });
 
   test('it disables correct months when selecting year first', async function (assert) {
+    assert.expect(60);
     await render(hbs`
     <div class="is-flex-align-baseline">
       <DateDropdown/>
@@ -146,24 +150,21 @@ module('Integration | Component | date-dropdown', function (hooks) {
       if (i === 0) {
         for (let [monthIndex, month] of dropdownListMonths.entries()) {
           if (monthIndex < CURRENT_MONTH) {
-            assert.strictEqual(
+            assert.false(
               month.disabled,
-              false,
               `${ARRAY_OF_MONTHS[monthIndex]} ${dropdownListYears[i].innerText.trim()} valid`
             );
           } else {
-            assert.strictEqual(
+            assert.true(
               month.disabled,
-              true,
               `${ARRAY_OF_MONTHS[monthIndex]} ${dropdownListYears[i].innerText.trim()} disabled`
             );
           }
         }
       } else {
         for (let [monthIndex, month] of dropdownListMonths.entries()) {
-          assert.strictEqual(
+          assert.false(
             month.disabled,
-            false,
             `${ARRAY_OF_MONTHS[monthIndex]} ${dropdownListYears[i].innerText.trim()} valid`
           );
         }

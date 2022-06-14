@@ -5,9 +5,7 @@
   },
   "exclude": [
     "node_modules",
-    ".storybook",
     ".yarn",
-    "public",
-    "storybook-static"
+    "public"
   ]
 }

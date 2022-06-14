@@ -155,7 +155,7 @@ func TestBackend_CA_Steps(t *testing.T) {
 	// Setup backends
 	var rsaRoot, rsaInt, ecRoot, ecInt, edRoot, edInt *backend
 	{
-		if err := client.Sys().MountWithContext(context.Background(), "rsaroot", &api.MountInput{
+		if err := client.Sys().Mount("rsaroot", &api.MountInput{
 			Type: "pki",
 			Config: api.MountConfigInput{
 				DefaultLeaseTTL: "16h",
@@ -166,7 +166,7 @@ func TestBackend_CA_Steps(t *testing.T) {
 		}
 		rsaRoot = b
 
-		if err := client.Sys().MountWithContext(context.Background(), "rsaint", &api.MountInput{
+		if err := client.Sys().Mount("rsaint", &api.MountInput{
 			Type: "pki",
 			Config: api.MountConfigInput{
 				DefaultLeaseTTL: "16h",
@@ -177,7 +177,7 @@ func TestBackend_CA_Steps(t *testing.T) {
 		}
 		rsaInt = b
 
-		if err := client.Sys().MountWithContext(context.Background(), "ecroot", &api.MountInput{
+		if err := client.Sys().Mount("ecroot", &api.MountInput{
 			Type: "pki",
 			Config: api.MountConfigInput{
 				DefaultLeaseTTL: "16h",
@@ -188,7 +188,7 @@ func TestBackend_CA_Steps(t *testing.T) {
 		}
 		ecRoot = b
 
-		if err := client.Sys().MountWithContext(context.Background(), "ecint", &api.MountInput{
+		if err := client.Sys().Mount("ecint", &api.MountInput{
 			Type: "pki",
 			Config: api.MountConfigInput{
 				DefaultLeaseTTL: "16h",
@@ -199,7 +199,7 @@ func TestBackend_CA_Steps(t *testing.T) {
 		}
 		ecInt = b
 
-		if err := client.Sys().MountWithContext(context.Background(), "ed25519root", &api.MountInput{
+		if err := client.Sys().Mount("ed25519root", &api.MountInput{
 			Type: "pki",
 			Config: api.MountConfigInput{
 				DefaultLeaseTTL: "16h",
@@ -210,7 +210,7 @@ func TestBackend_CA_Steps(t *testing.T) {
 		}
 		edRoot = b
 
-		if err := client.Sys().MountWithContext(context.Background(), "ed25519int", &api.MountInput{
+		if err := client.Sys().Mount("ed25519int", &api.MountInput{
 			Type: "pki",
 			Config: api.MountConfigInput{
 				DefaultLeaseTTL: "16h",
@@ -257,56 +257,62 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 	//  Load CA cert/key in and ensure we can fetch it back in various formats,
 	//  unauthenticated
 	{
-		// Attempt import but only provide one the cert
+		// Attempt import but only provide one the cert; this should work.
 		{
-			_, err := client.Logical().WriteWithContext(context.Background(), rootName+"config/ca", map[string]interface{}{
+			_, err := client.Logical().Write(rootName+"config/ca", map[string]interface{}{
 				"pem_bundle": caCert,
 			})
-			if err == nil {
-				t.Fatal("expected error")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
 			}
 		}
 
 		// Same but with only the key
 		{
-			_, err := client.Logical().WriteWithContext(context.Background(), rootName+"config/ca", map[string]interface{}{
+			_, err := client.Logical().Write(rootName+"config/ca", map[string]interface{}{
 				"pem_bundle": caKey,
 			})
-			if err == nil {
-				t.Fatal("expected error")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
 			}
 		}
 
-		// Import CA bundle
+		// Import entire CA bundle; this should work as well
 		{
-			_, err := client.Logical().WriteWithContext(context.Background(), rootName+"config/ca", map[string]interface{}{
+			_, err := client.Logical().Write(rootName+"config/ca", map[string]interface{}{
 				"pem_bundle": strings.Join([]string{caKey, caCert}, "\n"),
 			})
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("unexpected error: %v", err)
 			}
 		}
 
 		prevToken := client.Token()
 		client.SetToken("")
 
-		// cert/ca path
-		{
-			resp, err := client.Logical().ReadWithContext(context.Background(), rootName+"cert/ca")
+		// cert/ca and issuer/default/json path
+		for _, path := range []string{"cert/ca", "issuer/default/json"} {
+			resp, err := client.Logical().Read(rootName + path)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if resp == nil {
 				t.Fatal("nil response")
 			}
-			if diff := deep.Equal(resp.Data["certificate"].(string), caCert); diff != nil {
+			expected := caCert
+			if path == "issuer/default/json" {
+				// Preserves the new line.
+				expected += "\n"
+			}
+			if diff := deep.Equal(resp.Data["certificate"].(string), expected); diff != nil {
 				t.Fatal(diff)
 			}
 		}
-		// ca/pem path (raw string)
-		{
+
+		// ca/pem and issuer/default/pem path (raw string)
+		for _, path := range []string{"ca/pem", "issuer/default/pem"} {
 			req := &logical.Request{
-				Path:      "ca/pem",
+				Path:      path,
 				Operation: logical.ReadOperation,
 				Storage:   rootB.storage,
 			}
@@ -317,7 +323,12 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 			if resp == nil {
 				t.Fatal("nil response")
 			}
-			if diff := deep.Equal(resp.Data["http_raw_body"].([]byte), []byte(caCert)); diff != nil {
+			expected := []byte(caCert)
+			if path == "issuer/default/pem" {
+				// Preserves the new line.
+				expected = []byte(caCert + "\n")
+			}
+			if diff := deep.Equal(resp.Data["http_raw_body"].([]byte), expected); diff != nil {
 				t.Fatal(diff)
 			}
 			if resp.Data["http_content_type"].(string) != "application/pem-certificate-chain" {
@@ -325,10 +336,10 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 			}
 		}
 
-		// ca (raw DER bytes)
-		{
+		// ca and issuer/default/der (raw DER bytes)
+		for _, path := range []string{"ca", "issuer/default/der"} {
 			req := &logical.Request{
-				Path:      "ca",
+				Path:      path,
 				Operation: logical.ReadOperation,
 				Storage:   rootB.storage,
 			}
@@ -359,7 +370,7 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 	{
 		// Set CRL config
 		{
-			_, err := client.Logical().WriteWithContext(context.Background(), rootName+"config/crl", map[string]interface{}{
+			_, err := client.Logical().Write(rootName+"config/crl", map[string]interface{}{
 				"expiry": "16h",
 			})
 			if err != nil {
@@ -369,7 +380,7 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 
 		// Verify it
 		{
-			resp, err := client.Logical().ReadWithContext(context.Background(), rootName+"config/crl")
+			resp, err := client.Logical().Read(rootName + "config/crl")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -390,7 +401,7 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 	{
 		// First, delete the existing CA info
 		{
-			_, err := client.Logical().DeleteWithContext(context.Background(), rootName+"root")
+			_, err := client.Logical().Delete(rootName + "root")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -399,7 +410,7 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 		var rootPEM, rootKey, rootPEMBundle string
 		// Test exported root generation
 		{
-			resp, err := client.Logical().WriteWithContext(context.Background(), rootName+"root/generate/exported", map[string]interface{}{
+			resp, err := client.Logical().Write(rootName+"root/generate/exported", map[string]interface{}{
 				"common_name": "Root Cert",
 				"ttl":         "180h",
 			})
@@ -421,7 +432,7 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 		var intPEM, intCSR, intKey string
 		// Test exported intermediate CSR generation
 		{
-			resp, err := client.Logical().WriteWithContext(context.Background(), intName+"intermediate/generate/exported", map[string]interface{}{
+			resp, err := client.Logical().Write(intName+"intermediate/generate/exported", map[string]interface{}{
 				"common_name": "intermediate.cert.com",
 				"ttl":         "180h",
 			})
@@ -441,7 +452,7 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 
 		// Test signing
 		{
-			resp, err := client.Logical().WriteWithContext(context.Background(), rootName+"root/sign-intermediate", map[string]interface{}{
+			resp, err := client.Logical().Write(rootName+"root/sign-intermediate", map[string]interface{}{
 				"common_name": "intermediate.cert.com",
 				"ttl":         "10s",
 				"csr":         intCSR,
@@ -458,20 +469,20 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 
 		// Test setting signed
 		{
-			resp, err := client.Logical().WriteWithContext(context.Background(), intName+"intermediate/set-signed", map[string]interface{}{
+			resp, err := client.Logical().Write(intName+"intermediate/set-signed", map[string]interface{}{
 				"certificate": intPEM,
 			})
 			if err != nil {
 				t.Fatal(err)
 			}
-			if resp != nil {
-				t.Fatal("expected nil response")
+			if resp == nil {
+				t.Fatal("nil response")
 			}
 		}
 
 		// Verify we can find it via the root
 		{
-			resp, err := client.Logical().ReadWithContext(context.Background(), rootName+"cert/"+intSerialNumber)
+			resp, err := client.Logical().Read(rootName + "cert/" + intSerialNumber)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -485,7 +496,7 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 
 		// Revoke the intermediate
 		{
-			resp, err := client.Logical().WriteWithContext(context.Background(), rootName+"revoke", map[string]interface{}{
+			resp, err := client.Logical().Write(rootName+"revoke", map[string]interface{}{
 				"serial_number": intSerialNumber,
 			})
 			if err != nil {
@@ -501,7 +512,7 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 		t.Helper()
 		// Verify it is now revoked
 		{
-			resp, err := client.Logical().ReadWithContext(context.Background(), rootName+"cert/"+intSerialNumber)
+			resp, err := client.Logical().Read(rootName + "cert/" + intSerialNumber)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -521,9 +532,16 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 		}
 
 		// Fetch the CRL and make sure it shows up
-		{
+		for path, derPemOrJSON := range map[string]int{
+			"crl":                    0,
+			"issuer/default/crl/der": 0,
+			"crl/pem":                1,
+			"issuer/default/crl/pem": 1,
+			"cert/crl":               2,
+			"issuer/default/crl":     3,
+		} {
 			req := &logical.Request{
-				Path:      "crl",
+				Path:      path,
 				Operation: logical.ReadOperation,
 				Storage:   rootB.storage,
 			}
@@ -534,7 +552,25 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 			if resp == nil {
 				t.Fatal("nil response")
 			}
-			crlBytes := resp.Data["http_raw_body"].([]byte)
+
+			var crlBytes []byte
+			if derPemOrJSON == 2 {
+				// Old endpoint
+				crlBytes = []byte(resp.Data["certificate"].(string))
+			} else if derPemOrJSON == 3 {
+				// New endpoint
+				crlBytes = []byte(resp.Data["crl"].(string))
+			} else {
+				// DER or PEM
+				crlBytes = resp.Data["http_raw_body"].([]byte)
+			}
+
+			if derPemOrJSON >= 1 {
+				// Do for both PEM and JSON endpoints
+				pemBlock, _ := pem.Decode(crlBytes)
+				crlBytes = pemBlock.Bytes
+			}
+
 			certList, err := x509.ParseCRL(crlBytes)
 			if err != nil {
 				t.Fatal(err)
@@ -559,7 +595,7 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 	}
 
 	verifyTidyStatus := func(expectedCertStoreDeleteCount int, expectedRevokedCertDeletedCount int) {
-		tidyStatus, err := client.Logical().ReadWithContext(context.Background(), rootName+"tidy-status")
+		tidyStatus, err := client.Logical().Read(rootName + "tidy-status")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -594,7 +630,7 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 	{
 		// Run with a high safety buffer, nothing should happen
 		{
-			resp, err := client.Logical().WriteWithContext(context.Background(), rootName+"tidy", map[string]interface{}{
+			resp, err := client.Logical().Write(rootName+"tidy", map[string]interface{}{
 				"safety_buffer":      "3h",
 				"tidy_cert_store":    true,
 				"tidy_revoked_certs": true,
@@ -617,7 +653,7 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 
 		// Run with both values set false, nothing should happen
 		{
-			resp, err := client.Logical().WriteWithContext(context.Background(), rootName+"tidy", map[string]interface{}{
+			resp, err := client.Logical().Write(rootName+"tidy", map[string]interface{}{
 				"safety_buffer":      "1s",
 				"tidy_cert_store":    false,
 				"tidy_revoked_certs": false,
@@ -640,7 +676,7 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 
 		// Run with a short safety buffer and both set to true, both should be cleared
 		{
-			resp, err := client.Logical().WriteWithContext(context.Background(), rootName+"tidy", map[string]interface{}{
+			resp, err := client.Logical().Write(rootName+"tidy", map[string]interface{}{
 				"safety_buffer":      "1s",
 				"tidy_cert_store":    true,
 				"tidy_revoked_certs": true,
