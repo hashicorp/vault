@@ -4687,85 +4687,65 @@ func TestIntermediateWithExistingKey(t *testing.T) {
 }
 
 func TestIssuanceTTLs(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"pki": Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
+	b, s := createBackendWithStorage(t)
 
-	client := cluster.Cores[0].Client
-	var err error
-	err = client.Sys().Mount("pki", &api.MountInput{
-		Type: "pki",
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: "16h",
-			MaxLeaseTTL:     "60h",
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"common_name": "root example.com",
 		"issuer_name": "root",
-		"ttl":         "15s",
+		"ttl":         "10s",
 		"key_type":    "ec",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
+	rootCert := parseCert(t, resp.Data["certificate"].(string))
 
-	_, err = client.Logical().Write("pki/roles/local-testing", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/local-testing", map[string]interface{}{
 		"allow_any_name":    true,
 		"enforce_hostnames": false,
 		"key_type":          "ec",
 	})
 	require.NoError(t, err)
 
-	_, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
 		"common_name": "testing",
 		"ttl":         "1s",
 	})
 	require.NoError(t, err, "expected issuance to succeed due to shorter ttl than cert ttl")
 
-	_, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
 		"common_name": "testing",
 	})
 	require.Error(t, err, "expected issuance to fail due to longer default ttl than cert ttl")
 
-	resp, err = client.Logical().Write("pki/issuer/root", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuer/root", map[string]interface{}{
 		"issuer_name":             "root",
 		"leaf_not_after_behavior": "permit",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 
-	_, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
 		"common_name": "testing",
 	})
 	require.NoError(t, err, "expected issuance to succeed due to permitted longer TTL")
 
-	resp, err = client.Logical().Write("pki/issuer/root", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuer/root", map[string]interface{}{
 		"issuer_name":             "root",
 		"leaf_not_after_behavior": "truncate",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 
-	_, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
 		"common_name": "testing",
 	})
 	require.NoError(t, err, "expected issuance to succeed due to truncated ttl")
 
-	// Sleep until the parent cert expires.
-	time.Sleep(16 * time.Second)
+	// Sleep until the parent cert expires and the clock rolls over
+	// to the next second.
+	time.Sleep(rootCert.NotAfter.Sub(time.Now()) + (1500 * time.Millisecond))
 
-	resp, err = client.Logical().Write("pki/issuer/root", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuer/root", map[string]interface{}{
 		"issuer_name":             "root",
 		"leaf_not_after_behavior": "err",
 	})
@@ -4773,7 +4753,7 @@ func TestIssuanceTTLs(t *testing.T) {
 	require.NotNil(t, resp)
 
 	// Even 1s ttl should now fail.
-	_, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
 		"common_name": "testing",
 		"ttl":         "1s",
 	})
