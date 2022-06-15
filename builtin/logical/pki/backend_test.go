@@ -49,6 +49,57 @@ import (
 
 var stepCount = 0
 
+// From builtin/credential/cert/test-fixtures/root/rootcacert.pem
+const (
+	rootCACertPEM = `-----BEGIN CERTIFICATE-----
+MIIDPDCCAiSgAwIBAgIUb5id+GcaMeMnYBv3MvdTGWigyJ0wDQYJKoZIhvcNAQEL
+BQAwFjEUMBIGA1UEAxMLZXhhbXBsZS5jb20wHhcNMTYwMjI5MDIyNzI5WhcNMjYw
+MjI2MDIyNzU5WjAWMRQwEgYDVQQDEwtleGFtcGxlLmNvbTCCASIwDQYJKoZIhvcN
+AQEBBQADggEPADCCAQoCggEBAOxTMvhTuIRc2YhxZpmPwegP86cgnqfT1mXxi1A7
+Q7qax24Nqbf00I3oDMQtAJlj2RB3hvRSCb0/lkF7i1Bub+TGxuM7NtZqp2F8FgG0
+z2md+W6adwW26rlxbQKjmRvMn66G9YPTkoJmPmxt2Tccb9+apmwW7lslL5j8H48x
+AHJTMb+PMP9kbOHV5Abr3PT4jXUPUr/mWBvBiKiHG0Xd/HEmlyOEPeAThxK+I5tb
+6m+eB+7cL9BsvQpy135+2bRAxUphvFi5NhryJ2vlAvoJ8UqigsNK3E28ut60FAoH
+SWRfFUFFYtfPgTDS1yOKU/z/XMU2giQv2HrleWt0mp4jqBUCAwEAAaOBgTB/MA4G
+A1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBSdxLNP/ocx
+7HK6JT3/sSAe76iTmzAfBgNVHSMEGDAWgBSdxLNP/ocx7HK6JT3/sSAe76iTmzAc
+BgNVHREEFTATggtleGFtcGxlLmNvbYcEfwAAATANBgkqhkiG9w0BAQsFAAOCAQEA
+wHThDRsXJunKbAapxmQ6bDxSvTvkLA6m97TXlsFgL+Q3Jrg9HoJCNowJ0pUTwhP2
+U946dCnSCkZck0fqkwVi4vJ5EQnkvyEbfN4W5qVsQKOFaFVzep6Qid4rZT6owWPa
+cNNzNcXAee3/j6hgr6OQ/i3J6fYR4YouYxYkjojYyg+CMdn6q8BoV0BTsHdnw1/N
+ScbnBHQIvIZMBDAmQueQZolgJcdOuBLYHe/kRy167z8nGg+PUFKIYOL8NaOU1+CJ
+t2YaEibVq5MRqCbRgnd9a2vG0jr5a3Mn4CUUYv+5qIjP3hUusYenW1/EWtn1s/gk
+zehNe5dFTjFpylg1o6b8Ow==
+-----END CERTIFICATE-----`
+	rootCAKeyPEM = `-----BEGIN RSA PRIVATE KEY-----
+MIIEpQIBAAKCAQEA7FMy+FO4hFzZiHFmmY/B6A/zpyCep9PWZfGLUDtDuprHbg2p
+t/TQjegMxC0AmWPZEHeG9FIJvT+WQXuLUG5v5MbG4zs21mqnYXwWAbTPaZ35bpp3
+BbbquXFtAqOZG8yfrob1g9OSgmY+bG3ZNxxv35qmbBbuWyUvmPwfjzEAclMxv48w
+/2Rs4dXkBuvc9PiNdQ9Sv+ZYG8GIqIcbRd38cSaXI4Q94BOHEr4jm1vqb54H7twv
+0Gy9CnLXfn7ZtEDFSmG8WLk2GvIna+UC+gnxSqKCw0rcTby63rQUCgdJZF8VQUVi
+18+BMNLXI4pT/P9cxTaCJC/YeuV5a3SaniOoFQIDAQABAoIBAQCoGZJC84JnnIgb
+ttZNWuWKBXbCJcDVDikOQJ9hBZbqsFg1X0CfGmQS3MHf9Ubc1Ro8zVjQh15oIEfn
+8lIpdzTeXcpxLdiW8ix3ekVJF20F6pnXY8ZP6UnTeOwamXY6QPZAtb0D9UXcvY+f
+nw+IVRD6082XS0Rmzu+peYWVXDy+FDN+HJRANBcdJZz8gOmNBIe0qDWx1b85d/s8
+2Kk1Wwdss1IwAGeSddTSwzBNaaHdItZaMZOqPW1gRyBfVSkcUQIE6zn2RKw2b70t
+grkIvyRcTdfmiKbqkkJ+eR+ITOUt0cBZSH4cDjlQA+r7hulvoBpQBRj068Toxkcc
+bTagHaPBAoGBAPWPGVkHqhTbJ/DjmqDIStxby2M1fhhHt4xUGHinhUYjQjGOtDQ9
+0mfaB7HObudRiSLydRAVGAHGyNJdQcTeFxeQbovwGiYKfZSA1IGpea7dTxPpGEdN
+ksA0pzSp9MfKzX/MdLuAkEtO58aAg5YzsgX9hDNxo4MhH/gremZhEGZlAoGBAPZf
+lqdYvAL0fjHGJ1FUEalhzGCGE9PH2iOqsxqLCXK7bDbzYSjvuiHkhYJHAOgVdiW1
+lB34UHHYAqZ1VVoFqJ05gax6DE2+r7K5VV3FUCaC0Zm3pavxchU9R/TKP82xRrBj
+AFWwdgDTxUyvQEmgPR9sqorftO71Iz2tiwyTpIfxAoGBAIhEMLzHFAse0rtKkrRG
+ccR27BbRyHeQ1Lp6sFnEHKEfT8xQdI/I/snCpCJ3e/PBu2g5Q9z416mktiyGs8ib
+thTNgYsGYnxZtfaCx2pssanoBcn2wBJRae5fSapf5gY49HDG9MBYR7qCvvvYtSzU
+4yWP2ZzyotpRt3vwJKxLkN5BAoGAORHpZvhiDNkvxj3da7Rqpu7VleJZA2y+9hYb
+iOF+HcqWhaAY+I+XcTRrTMM/zYLzLEcEeXDEyao86uwxCjpXVZw1kotvAC9UqbTO
+tnr3VwRkoxPsV4kFYTAh0+1pnC8dbcxxDmhi3Uww3tOVs7hfkEDuvF6XnebA9A+Y
+LyCgMzECgYEA6cCU8QODOivIKWFRXucvWckgE6MYDBaAwe6qcLsd1Q/gpE2e3yQc
+4RB3bcyiPROLzMLlXFxf1vSNJQdIaVfrRv+zJeGIiivLPU8+Eq4Lrb+tl1LepcOX
+OzQeADTSCn5VidOfjDkIst9UXjMlrFfV9/oJEw5Eiqa6lkNPCGDhfA8=
+-----END RSA PRIVATE KEY-----`
+)
+
 func TestPKI_RequireCN(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 
@@ -2258,22 +2309,10 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 }
 
 func TestBackend_Root_Idempotency(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"pki": Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-	client := cluster.Cores[0].Client
-
-	mountPKIEndpoint(t, client, "pki")
+	b, s := createBackendWithStorage(t)
 
 	// This is a change within 1.11, we are no longer idempotent across generate/internal calls.
-	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"common_name": "myvault.com",
 	})
 	require.NoError(t, err)
@@ -2281,13 +2320,13 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	keyId1 := resp.Data["key_id"]
 	issuerId1 := resp.Data["issuer_id"]
 
-	resp, err = client.Logical().Read("pki/cert/ca_chain")
+	resp, err = CBRead(b, s, "cert/ca_chain")
 	require.NoError(t, err, "error reading ca_chain: %v", err)
 
 	r1Data := resp.Data
 
 	// Calling generate/internal should generate a new CA as well.
-	resp, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	resp, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"common_name": "myvault.com",
 	})
 	require.NoError(t, err)
@@ -2300,7 +2339,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	require.NotEqual(t, issuerId1, issuerId2)
 
 	// Now because the issued CA's have no links, the call to ca_chain should return the same data (ca chain from default)
-	resp, err = client.Logical().Read("pki/cert/ca_chain")
+	resp, err = CBRead(b, s, "cert/ca_chain")
 	require.NoError(t, err, "error reading ca_chain: %v", err)
 
 	r2Data := resp.Data
@@ -2309,14 +2348,14 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	}
 
 	// Now let's validate that the import bundle is idempotent.
-	pemBundleRootCA := string(cluster.CACertPEM) + string(cluster.CAKeyPEM)
-	resp, err = client.Logical().Write("pki/config/ca", map[string]interface{}{
+	pemBundleRootCA := rootCACertPEM + "\n" + rootCAKeyPEM
+	resp, err = CBWrite(b, s, "config/ca", map[string]interface{}{
 		"pem_bundle": pemBundleRootCA,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp, "expected ca info")
-	firstImportedKeys := resp.Data["imported_keys"].([]interface{})
-	firstImportedIssuers := resp.Data["imported_issuers"].([]interface{})
+	firstImportedKeys := resp.Data["imported_keys"].([]string)
+	firstImportedIssuers := resp.Data["imported_issuers"].([]string)
 
 	require.NotContains(t, firstImportedKeys, keyId1)
 	require.NotContains(t, firstImportedKeys, keyId2)
@@ -2324,7 +2363,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	require.NotContains(t, firstImportedIssuers, issuerId2)
 
 	// Performing this again should result in no key/issuer ids being imported/generated.
-	resp, err = client.Logical().Write("pki/config/ca", map[string]interface{}{
+	resp, err = CBWrite(b, s, "config/ca", map[string]interface{}{
 		"pem_bundle": pemBundleRootCA,
 	})
 	require.NoError(t, err)
@@ -2335,22 +2374,22 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	require.Nil(t, secondImportedKeys)
 	require.Nil(t, secondImportedIssuers)
 
-	resp, err = client.Logical().Delete("pki/root")
+	resp, err = CBDelete(b, s, "root")
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.Equal(t, 1, len(resp.Warnings))
 
 	// Make sure we can delete twice...
-	resp, err = client.Logical().Delete("pki/root")
+	resp, err = CBDelete(b, s, "root")
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.Equal(t, 1, len(resp.Warnings))
 
-	_, err = client.Logical().Read("pki/cert/ca_chain")
+	_, err = CBRead(b, s, "cert/ca_chain")
 	require.Error(t, err, "expected an error fetching deleted ca_chain")
 
 	// We should be able to import the same ca bundle as before and get a different key/issuer ids
-	resp, err = client.Logical().Write("pki/config/ca", map[string]interface{}{
+	resp, err = CBWrite(b, s, "config/ca", map[string]interface{}{
 		"pem_bundle": pemBundleRootCA,
 	})
 	require.NoError(t, err)
@@ -2364,7 +2403,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	require.NotEqual(t, postDeleteImportedKeys, firstImportedKeys)
 	require.NotEqual(t, postDeleteImportedIssuers, firstImportedIssuers)
 
-	resp, err = client.Logical().Read("pki/cert/ca_chain")
+	resp, err = CBRead(b, s, "cert/ca_chain")
 	require.NoError(t, err)
 
 	caChainPostDelete := resp.Data
