@@ -18,9 +18,13 @@ Option flags for a given subcommand are provided after the subcommand but before
 
 The path to where the secrets engine is mounted can be indicated with the `-mount` flag, such as `vault kv get -mount=secret creds`.
 
+The deprecated path-like syntax can also be used (e.g. `vault kv get secret/creds`), but this should be avoided
+for KV v2, as the fact that it is not actually the full API path to the secret 
+(secret/data/foo) can cause confusion.
+
 ~> A `flag provided but not defined: -mount` error means you are using an older version of Vault from before the 
 mount flag syntax was introduced. Upgrade to at least Vault 1.11, or refer to previous versions of the docs 
-which use the old syntax to refer to the mount path (`secret/hello` instead of `-mount=secret hello`).
+which only use the old syntax to refer to the mount path.
 
 ## Examples
 
