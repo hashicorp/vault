@@ -76,7 +76,7 @@ management tool.
    $ vault auth enable gcp
    ```
 
-2. Configure the auth method credentials:
+1. Configure the auth method credentials:
 
    ```text
    $ vault write auth/gcp/config \
@@ -91,7 +91,7 @@ management tool.
    environment, you will additionally need to configure your environment’s custom endpoints
    via the [custom_endpoint](/api-docs/auth/gcp#custom_endpoint) configuration parameter.
 
-4. Create a named role:
+1. Create a named role:
 
    For an `iam`-type role:
 
