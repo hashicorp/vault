@@ -188,13 +188,20 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 
 		var pathSuffix string
 		if mountPath != "" {
-			match := b.Core.router.MatchingMount(namespace.ContextWithNamespace(ctx, ns), mountPath)
-			if match == "" {
+			me := b.Core.router.MatchingMountEntry(namespace.ContextWithNamespace(ctx, ns), mountPath)
+			if me == nil {
 				return logical.ErrorResponse("invalid mount path %q", mountPath), nil
 			}
 
-			pathSuffix = strings.TrimSuffix(strings.TrimPrefix(mountPath, match), "/")
-			mountPath = match
+			var newMountPath string
+			if me.Table == "mounts" {
+				newMountPath = me.Path
+			} else {
+				newMountPath = me.Table + "/" + me.Path
+			}
+
+			pathSuffix = strings.TrimSuffix(strings.TrimPrefix(mountPath, newMountPath), "/")
+			mountPath = newMountPath
 		}
 		// Disallow creation of new quota that has properties similar to an
 		// existing quota.
