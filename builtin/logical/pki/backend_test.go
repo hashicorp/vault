@@ -3102,31 +3102,11 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 }
 
 func TestBackend_URI_SANs(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"pki": Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
+	b, s := createBackendWithStorage(t)
 
-	client := cluster.Cores[0].Client
 	var err error
-	err = client.Sys().Mount("root", &api.MountInput{
-		Type: "pki",
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: "16h",
-			MaxLeaseTTL:     "60h",
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
+	_, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
 		"common_name": "myvault.com",
 	})
@@ -3134,7 +3114,7 @@ func TestBackend_URI_SANs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("root/roles/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/test", map[string]interface{}{
 		"allowed_domains":    []string{"foobar.com", "zipzap.com"},
 		"allow_bare_domains": true,
 		"allow_subdomains":   true,
@@ -3146,7 +3126,7 @@ func TestBackend_URI_SANs(t *testing.T) {
 	}
 
 	// First test some bad stuff that shouldn't work
-	_, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -3158,7 +3138,7 @@ func TestBackend_URI_SANs(t *testing.T) {
 	}
 
 	// Test valid single entry
-	_, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -3170,7 +3150,7 @@ func TestBackend_URI_SANs(t *testing.T) {
 	}
 
 	// Test globed entry
-	_, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -3182,7 +3162,7 @@ func TestBackend_URI_SANs(t *testing.T) {
 	}
 
 	// Test multiple entries
-	resp, err := client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err := CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
