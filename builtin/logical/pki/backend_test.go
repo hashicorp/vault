@@ -2774,36 +2774,15 @@ func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 // here into the form at that site as it will do the right thing so it's pretty
 // easy to validate.
 func TestBackend_OID_SANs(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"pki": Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
+	b, s := createBackendWithStorage(t)
 
-	client := cluster.Cores[0].Client
 	var err error
-	err = client.Sys().Mount("root", &api.MountInput{
-		Type: "pki",
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: "16h",
-			MaxLeaseTTL:     "60h",
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var resp *api.Secret
+	var resp *logical.Response
 	var certStr string
 	var block *pem.Block
 	var cert *x509.Certificate
 
-	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
+	_, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
 		"common_name": "myvault.com",
 	})
@@ -2811,7 +2790,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("root/roles/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/test", map[string]interface{}{
 		"allowed_domains":    []string{"foobar.com", "zipzap.com"},
 		"allow_bare_domains": true,
 		"allow_subdomains":   true,
@@ -2825,7 +2804,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 	// Get a baseline before adding OID SANs. In the next sections we'll verify
 	// that the SANs are all added even as the OID SAN inclusion forces other
 	// adding logic (custom rather than built-in Golang logic)
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foobar.com,foo.foobar.com,bar.foobar.com",
@@ -2851,7 +2830,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 	}
 
 	// First test some bad stuff that shouldn't work
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2863,7 +2842,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2875,7 +2854,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2887,7 +2866,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2899,7 +2878,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2912,7 +2891,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 	}
 
 	// Valid for first possibility
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2942,7 +2921,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 	}
 
 	// Valid for second possibility
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2978,7 +2957,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 		fmt.Sprintf("%s;%s:%s", oid1, type1, val1),
 		fmt.Sprintf("%s;%s:%s", oid2, type2, val2),
 	}
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
