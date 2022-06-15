@@ -2996,36 +2996,15 @@ func TestBackend_OID_SANs(t *testing.T) {
 }
 
 func TestBackend_AllowedSerialNumbers(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"pki": Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
+	b, s := createBackendWithStorage(t)
 
-	client := cluster.Cores[0].Client
 	var err error
-	err = client.Sys().Mount("root", &api.MountInput{
-		Type: "pki",
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: "16h",
-			MaxLeaseTTL:     "60h",
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var resp *api.Secret
+	var resp *logical.Response
 	var certStr string
 	var block *pem.Block
 	var cert *x509.Certificate
 
-	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
+	_, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
 		"common_name": "myvault.com",
 	})
@@ -3034,7 +3013,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 	}
 
 	// First test that Serial Numbers are not allowed
-	_, err = client.Logical().Write("root/roles/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/test", map[string]interface{}{
 		"allow_any_name":    true,
 		"enforce_hostnames": false,
 	})
@@ -3042,7 +3021,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name": "foobar",
 		"ttl":         "1h",
 	})
@@ -3050,7 +3029,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name":   "foobar",
 		"ttl":           "1h",
 		"serial_number": "foobar",
@@ -3060,7 +3039,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 	}
 
 	// Update the role to allow serial numbers
-	_, err = client.Logical().Write("root/roles/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/test", map[string]interface{}{
 		"allow_any_name":         true,
 		"enforce_hostnames":      false,
 		"allowed_serial_numbers": "f00*,b4r*",
@@ -3069,7 +3048,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name": "foobar",
 		"ttl":         "1h",
 		// Not a valid serial number
@@ -3080,7 +3059,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 	}
 
 	// Valid for first possibility
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name":   "foobar",
 		"serial_number": "f00bar",
 	})
@@ -3101,7 +3080,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 	}
 
 	// Valid for second possibility
-	resp, err = client.Logical().Write("root/issue/test", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name":   "foobar",
 		"serial_number": "b4rf00",
 	})
