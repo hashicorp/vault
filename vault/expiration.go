@@ -1096,8 +1096,9 @@ func (m *ExpirationManager) RevokeByToken(ctx context.Context, te *logical.Token
 }
 
 // revoke all leases under `prefix`
-// if sync == true, revoke immediately. otherwise, mark the lease as expiring
-// `now` and let the expiration manager queue it for revocation.
+// if sync == true, revoke immediately (using a single worker).
+// otherwise, mark the lease as expiring  `now` and let the expiration manager
+// queue it for revocation.
 func (m *ExpirationManager) revokePrefixCommon(ctx context.Context, prefix string, force, sync bool) error {
 	if m.inRestoreMode() {
 		m.restoreRequestLock.Lock()
