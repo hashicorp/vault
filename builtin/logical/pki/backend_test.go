@@ -4556,13 +4556,13 @@ func (k KeySizeRegression) KeyTypeValues() []string {
 	return []string{k.RoleKeyType}
 }
 
-func RoleKeySizeRegressionHelper(t *testing.T, client *api.Client, index int, test KeySizeRegression) int {
+func RoleKeySizeRegressionHelper(t *testing.T, b *backend, s logical.Storage, index int, test KeySizeRegression) int {
 	tested := 0
 
 	for _, caKeyType := range test.KeyTypeValues() {
 		for _, caKeyBits := range test.RoleKeyBits {
 			// Generate a new CA key.
-			resp, err := client.Logical().Write("pki/root/generate/exported", map[string]interface{}{
+			resp, err := CBWrite(b, s, "root/generate/exported", map[string]interface{}{
 				"common_name": "myvault.com",
 				"ttl":         "128h",
 				"key_type":    caKeyType,
@@ -4578,7 +4578,7 @@ func RoleKeySizeRegressionHelper(t *testing.T, client *api.Client, index int, te
 			for _, roleKeyBits := range test.RoleKeyBits {
 				for _, roleSignatureBits := range test.RoleSignatureBits {
 					role := fmt.Sprintf("key-size-regression-%d-keytype-%v-keybits-%d-signature-bits-%d", index, test.RoleKeyType, roleKeyBits, roleSignatureBits)
-					resp, err := client.Logical().Write("pki/roles/"+role, map[string]interface{}{
+					resp, err := CBWrite(b, s, "roles/"+role, map[string]interface{}{
 						"key_type":       test.RoleKeyType,
 						"key_bits":       roleKeyBits,
 						"signature_bits": roleSignatureBits,
@@ -4596,7 +4596,7 @@ func RoleKeySizeRegressionHelper(t *testing.T, client *api.Client, index int, te
 							},
 						}, keyType, keyBits)
 
-						resp, err = client.Logical().Write("pki/sign/"+role, map[string]interface{}{
+						resp, err = CBWrite(b, s, "sign/"+role, map[string]interface{}{
 							"common_name": "localhost",
 							"csr":         csrPem,
 						})
@@ -4612,7 +4612,7 @@ func RoleKeySizeRegressionHelper(t *testing.T, client *api.Client, index int, te
 				}
 			}
 
-			_, err = client.Logical().Delete("pki/root")
+			_, err = CBDelete(b, s, "root")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -4627,13 +4627,13 @@ func TestBackend_Roles_KeySizeRegression(t *testing.T) {
 	testCases := []KeySizeRegression{
 		// RSA with default parameters should fail to issue smaller RSA keys
 		// and any size ECDSA/Ed25519 keys.
-		/*  0 */ {"rsa", []int{0, 2048}, []int{0, 256, 384, 512}, []string{"rsa", "rsa", "ec", "ec", "ec", "ec", "ed25519"}, []int{512, 1024, 224, 256, 384, 521, 0}, true},
+		/*  0 */ {"rsa", []int{0, 2048}, []int{0, 256, 384, 512}, []string{"rsa", "ec", "ec", "ec", "ec", "ed25519"}, []int{1024, 224, 256, 384, 521, 0}, true},
 		// But it should work to issue larger RSA keys.
-		/*  1 */ {"rsa", []int{0, 2048}, []int{0, 256, 384, 512}, []string{"rsa", "rsa", "rsa"}, []int{2048, 3072, 4906}, false},
+		/*  1 */ {"rsa", []int{0, 2048}, []int{0, 256, 384, 512}, []string{"rsa", "rsa"}, []int{2048, 3072}, false},
 
 		// EC with default parameters should fail to issue smaller EC keys
 		// and any size RSA/Ed25519 keys.
-		/*  2 */ {"ec", []int{0}, []int{0}, []string{"rsa", "rsa", "rsa", "ec", "ed25519"}, []int{1024, 2048, 4096, 224, 0}, true},
+		/*  2 */ {"ec", []int{0}, []int{0}, []string{"rsa", "ec", "ed25519"}, []int{2048, 224, 0}, true},
 		// But it should work to issue larger EC keys. Note that we should be
 		// independent of signature bits as that's computed from the issuer
 		// type (for EC based issuers).
@@ -4643,52 +4643,28 @@ func TestBackend_Roles_KeySizeRegression(t *testing.T) {
 		/*  6 */ {"ec", []int{521}, []int{0, 256, 384, 512}, []string{"ec"}, []int{521}, false},
 
 		// Ed25519 should reject RSA and EC keys.
-		/*  7 */ {"ed25519", []int{0}, []int{0}, []string{"rsa", "rsa", "rsa", "ec", "ec"}, []int{1024, 2048, 4096, 256, 521}, true},
+		/*  7 */ {"ed25519", []int{0}, []int{0}, []string{"rsa", "ec", "ec"}, []int{2048, 256, 521}, true},
 		// But it should work to issue Ed25519 keys.
 		/*  8 */ {"ed25519", []int{0}, []int{0}, []string{"ed25519"}, []int{0}, false},
 
 		// Any key type should reject insecure RSA key sizes.
 		/*  9 */ {"any", []int{0}, []int{0, 256, 384, 512}, []string{"rsa", "rsa"}, []int{512, 1024}, true},
 		// But work for everything else.
-		/* 10 */ {"any", []int{0}, []int{0, 256, 384, 512}, []string{"rsa", "rsa", "rsa", "ec", "ec", "ec", "ec", "ed25519"}, []int{2048, 3072, 4906, 224, 256, 384, 521, 0}, false},
+		/* 10 */ {"any", []int{0}, []int{0, 256, 384, 512}, []string{"rsa", "rsa", "ec", "ec", "ec", "ec", "ed25519"}, []int{2048, 3072, 224, 256, 384, 521, 0}, false},
 
 		// RSA with larger than default key size should reject smaller ones.
-		/* 11 */ {"rsa", []int{3072}, []int{0, 256, 384, 512}, []string{"rsa", "rsa", "rsa"}, []int{512, 1024, 2048}, true},
+		/* 11 */ {"rsa", []int{3072}, []int{0, 256, 384, 512}, []string{"rsa"}, []int{2048}, true},
 	}
 
 	if len(testCases) != 12 {
 		t.Fatalf("misnumbered test case entries will make it hard to find bugs: %v", len(testCases))
 	}
 
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"pki": Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	client := cluster.Cores[0].Client
-	var err error
-
-	// Generate a root CA at /pki to use for our tests
-	err = client.Sys().Mount("pki", &api.MountInput{
-		Type: "pki",
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: "12h",
-			MaxLeaseTTL:     "128h",
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	b, s := createBackendWithStorage(t)
 
 	tested := 0
 	for index, test := range testCases {
-		tested += RoleKeySizeRegressionHelper(t, client, index, test)
+		tested += RoleKeySizeRegressionHelper(t, b, s, index, test)
 	}
 
 	t.Log(fmt.Sprintf("Key size regression expanded matrix test scenarios: %d", tested))
