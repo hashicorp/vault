@@ -900,7 +900,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "Context string appended to every operationId",
 				},
-				"genericPaths": {
+				"generic_paths": {
 					Type:        framework.TypeBool,
 					Description: "Use generic mount paths",
 					Query:       true,
