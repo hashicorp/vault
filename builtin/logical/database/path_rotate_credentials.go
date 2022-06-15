@@ -96,7 +96,7 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 				b.Logger().Error("error closing the database plugin connection", "err", err)
 			}
 			// Even on error, still remove the connection
-			// be careful with a deadlock here
+			// ClearConnectionId also will grab the lock, so we need to release it here to prevent deadlock.
 			unlock()
 			b.ClearConnectionId(name, dbi.id)
 		}()
