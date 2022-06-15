@@ -193,31 +193,9 @@ func TestPKI_DeviceCert(t *testing.T) {
 }
 
 func TestBackend_InvalidParameter(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"pki": Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
+	b, s := createBackendWithStorage(t)
 
-	client := cluster.Cores[0].Client
-	var err error
-	err = client.Sys().Mount("pki", &api.MountInput{
-		Type: "pki",
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: "16h",
-			MaxLeaseTTL:     "32h",
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"common_name": "myvault.com",
 		"not_after":   "9999-12-31T23:59:59Z",
 		"ttl":         "25h",
@@ -226,7 +204,7 @@ func TestBackend_InvalidParameter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	_, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"common_name": "myvault.com",
 		"not_after":   "9999-12-31T23:59:59",
 	})
