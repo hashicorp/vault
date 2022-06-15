@@ -240,6 +240,19 @@ func getParsedCrlAtPath(t *testing.T, client *api.Client, path string) *pkix.Cer
 	return crl
 }
 
+func getParsedCrlFromBackend(t *testing.T, b *backend, s logical.Storage, path string) *pkix.CertificateList {
+	resp, err := CBRead(b, s, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	crl, err := x509.ParseDERCRL(resp.Data[logical.HTTPRawBody].([]byte))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return crl
+}
+
 // Direct storage backend helpers (b, s := createBackendWithStorage(t)) which
 // are mostly compatible with client.Logical() operations. The main difference
 // is that the JSON round-tripping hasn't occurred, so values are as the

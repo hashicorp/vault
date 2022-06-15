@@ -3931,33 +3931,12 @@ func TestBackend_Root_FullCAChain(t *testing.T) {
 }
 
 func runFullCAChainTest(t *testing.T, keyType string) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"pki": Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
+	// Generate a root CA at /pki-root
+	b_root, s_root := createBackendWithStorage(t)
 
-	client := cluster.Cores[0].Client
 	var err error
 
-	// Generate a root CA at /pki-root
-	err = client.Sys().Mount("pki-root", &api.MountInput{
-		Type: "pki",
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: "16h",
-			MaxLeaseTTL:     "32h",
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	resp, err := client.Logical().Write("pki-root/root/generate/exported", map[string]interface{}{
+	resp, err := CBWrite(b_root, s_root, "root/generate/exported", map[string]interface{}{
 		"common_name": "root myvault.com",
 		"key_type":    keyType,
 	})
@@ -3971,7 +3950,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	rootCert := rootData["certificate"].(string)
 
 	// Validate that root's /cert/ca-chain now contains the certificate.
-	resp, err = client.Logical().Read("pki-root/cert/ca_chain")
+	resp, err = CBRead(b_root, s_root, "cert/ca_chain")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3983,34 +3962,25 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	requireCertInCaChainString(t, fullChain, rootCert, "expected root cert within root cert/ca_chain")
 
 	// Make sure when we issue a leaf certificate we get the full chain back.
-	resp, err = client.Logical().Write("pki-root/roles/example", map[string]interface{}{
+	resp, err = CBWrite(b_root, s_root, "roles/example", map[string]interface{}{
 		"allowed_domains":  "example.com",
 		"allow_subdomains": "true",
 		"max_ttl":          "1h",
 	})
 	require.NoError(t, err, "error setting up pki root role: %v", err)
 
-	resp, err = client.Logical().Write("pki-root/issue/example", map[string]interface{}{
+	resp, err = CBWrite(b_root, s_root, "issue/example", map[string]interface{}{
 		"common_name": "test.example.com",
 		"ttl":         "5m",
 	})
 	require.NoError(t, err, "error issuing certificate from pki root: %v", err)
-	fullChainArray := resp.Data["ca_chain"].([]interface{})
+	fullChainArray := resp.Data["ca_chain"].([]string)
 	requireCertInCaChainArray(t, fullChainArray, rootCert, "expected root cert within root issuance pki-root/issue/example")
 
 	// Now generate an intermediate at /pki-intermediate, signed by the root.
-	err = client.Sys().Mount("pki-intermediate", &api.MountInput{
-		Type: "pki",
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: "16h",
-			MaxLeaseTTL:     "32h",
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	b_int, s_int := createBackendWithStorage(t)
 
-	resp, err = client.Logical().Write("pki-intermediate/intermediate/generate/exported", map[string]interface{}{
+	resp, err = CBWrite(b_int, s_int, "intermediate/generate/exported", map[string]interface{}{
 		"common_name": "intermediate myvault.com",
 		"key_type":    keyType,
 	})
@@ -4023,7 +3993,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	intermediateData := resp.Data
 	intermediateKey := intermediateData["private_key"].(string)
 
-	resp, err = client.Logical().Write("pki-root/root/sign-intermediate", map[string]interface{}{
+	resp, err = CBWrite(b_root, s_root, "root/sign-intermediate", map[string]interface{}{
 		"csr":    intermediateData["csr"],
 		"format": "pem_bundle",
 	})
@@ -4039,12 +4009,12 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	rootCaCert := parseCert(t, rootCert)
 	intermediaryCaCert := parseCert(t, intermediateCert)
 	requireSignedBy(t, intermediaryCaCert, rootCaCert.PublicKey)
-	intermediateCaChain := intermediateSignedData["ca_chain"].([]interface{})
+	intermediateCaChain := intermediateSignedData["ca_chain"].([]string)
 
-	require.Equal(t, parseCert(t, intermediateCaChain[0].(string)), intermediaryCaCert, "intermediate signed cert should have been part of ca_chain")
-	require.Equal(t, parseCert(t, intermediateCaChain[1].(string)), rootCaCert, "root cert should have been part of ca_chain")
+	require.Equal(t, parseCert(t, intermediateCaChain[0]), intermediaryCaCert, "intermediate signed cert should have been part of ca_chain")
+	require.Equal(t, parseCert(t, intermediateCaChain[1]), rootCaCert, "root cert should have been part of ca_chain")
 
-	resp, err = client.Logical().Write("pki-intermediate/intermediate/set-signed", map[string]interface{}{
+	resp, err = CBWrite(b_int, s_int, "intermediate/set-signed", map[string]interface{}{
 		"certificate": intermediateCert + "\n" + rootCert + "\n",
 	})
 	if err != nil {
@@ -4053,7 +4023,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 
 	// Validate that intermediate's ca_chain field now includes the full
 	// chain.
-	resp, err = client.Logical().Read("pki-intermediate/cert/ca_chain")
+	resp, err = CBRead(b_int, s_int, "cert/ca_chain")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -4062,7 +4032,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	}
 
 	// Verify we have a proper CRL now
-	crl := getParsedCrl(t, client, "pki-intermediate")
+	crl := getParsedCrlFromBackend(t, b_int, s_int, "crl")
 	require.Equal(t, 0, len(crl.TBSCertList.RevokedCertificates))
 
 	fullChain = resp.Data["ca_chain"].(string)
@@ -4070,36 +4040,27 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	requireCertInCaChainString(t, fullChain, rootCert, "expected full chain to contain root certificate from pki-intermediate/cert/ca_chain")
 
 	// Make sure when we issue a leaf certificate we get the full chain back.
-	resp, err = client.Logical().Write("pki-intermediate/roles/example", map[string]interface{}{
+	resp, err = CBWrite(b_int, s_int, "roles/example", map[string]interface{}{
 		"allowed_domains":  "example.com",
 		"allow_subdomains": "true",
 		"max_ttl":          "1h",
 	})
 	require.NoError(t, err, "error setting up pki intermediate role: %v", err)
 
-	resp, err = client.Logical().Write("pki-intermediate/issue/example", map[string]interface{}{
+	resp, err = CBWrite(b_int, s_int, "issue/example", map[string]interface{}{
 		"common_name": "test.example.com",
 		"ttl":         "5m",
 	})
 	require.NoError(t, err, "error issuing certificate from pki intermediate: %v", err)
-	fullChainArray = resp.Data["ca_chain"].([]interface{})
+	fullChainArray = resp.Data["ca_chain"].([]string)
 	requireCertInCaChainArray(t, fullChainArray, intermediateCert, "expected full chain to contain intermediate certificate from pki-intermediate/issue/example")
 	requireCertInCaChainArray(t, fullChainArray, rootCert, "expected full chain to contain root certificate from pki-intermediate/issue/example")
 
 	// Finally, import this signing cert chain into a new mount to ensure
 	// "external" CAs behave as expected.
-	err = client.Sys().Mount("pki-external", &api.MountInput{
-		Type: "pki",
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: "16h",
-			MaxLeaseTTL:     "32h",
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	b_ext, s_ext := createBackendWithStorage(t)
 
-	resp, err = client.Logical().Write("pki-external/config/ca", map[string]interface{}{
+	resp, err = CBWrite(b_ext, s_ext, "config/ca", map[string]interface{}{
 		"pem_bundle": intermediateKey + "\n" + intermediateCert + "\n" + rootCert + "\n",
 	})
 	if err != nil {
@@ -4107,7 +4068,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	}
 
 	// Validate the external chain information was loaded correctly.
-	resp, err = client.Logical().Read("pki-external/cert/ca_chain")
+	resp, err = CBRead(b_ext, s_ext, "cert/ca_chain")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -4124,14 +4085,14 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	}
 
 	// Now issue a short-lived certificate from our pki-external.
-	resp, err = client.Logical().Write("pki-external/roles/example", map[string]interface{}{
+	resp, err = CBWrite(b_ext, s_ext, "roles/example", map[string]interface{}{
 		"allowed_domains":  "example.com",
 		"allow_subdomains": "true",
 		"max_ttl":          "1h",
 	})
 	require.NoError(t, err, "error setting up pki role: %v", err)
 
-	resp, err = client.Logical().Write("pki-external/issue/example", map[string]interface{}{
+	resp, err = CBWrite(b_ext, s_ext, "issue/example", map[string]interface{}{
 		"common_name": "test.example.com",
 		"ttl":         "5m",
 	})
@@ -4144,10 +4105,10 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	requireSignedBy(t, issuedCrt, intermediaryCaCert.PublicKey)
 }
 
-func requireCertInCaChainArray(t *testing.T, chain []interface{}, cert string, msgAndArgs ...interface{}) {
+func requireCertInCaChainArray(t *testing.T, chain []string, cert string, msgAndArgs ...interface{}) {
 	var fullChain string
 	for _, caCert := range chain {
-		fullChain = fullChain + "\n" + caCert.(string)
+		fullChain = fullChain + "\n" + caCert
 	}
 
 	requireCertInCaChainString(t, fullChain, cert, msgAndArgs)
