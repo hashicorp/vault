@@ -25,20 +25,20 @@ policy granting the "update" capability.
 Writes the data to the key "creds":
 
 ```shell-session
-$ vault kv put secret/creds passcode=my-long-passcode
+$ vault kv put -mount=secret creds passcode=my-long-passcode
 ```
 
 The data can also be consumed from a file on disk by prefixing with the "@"
 symbol. For example:
 
 ```shell-session
-$ vault kv put secret/foo @data.json
+$ vault kv put -mount=secret foo @data.json
 ```
 
 Or it can be read from stdin using the "-" symbol:
 
 ```shell-session
-$ echo "abcd1234" | vault kv put secret/foo bar=-
+$ echo "abcd1234" | vault kv put -mount=secret foo bar=-
 ```
 
 ## Usage
@@ -64,3 +64,9 @@ included on all commands.
   doesn’t exist. If the index is non-zero the write will only be allowed if the
   key’s current version matches the version specified in the cas parameter. The
   default is -1.
+
+- `-mount` `(string: "")` - Specifies the path where the KV backend is mounted. 
+  If specified, the next argument will be interpreted as the secret path. If 
+  this flag is not specified, the next argument will be interpreted as the 
+  combined mount path and secret path, with /data/ automatically inserted for 
+  KV v2 secrets.
