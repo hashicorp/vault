@@ -349,7 +349,7 @@ func (c *DebugCommand) generateIndex() error {
 
 		dir, file := filepath.Split(relPath)
 		if len(dir) != 0 {
-			dir = strings.TrimSuffix(dir, "/")
+			dir = filepath.Clean(dir)
 			filesArr := outputLayout[dir].(map[string]interface{})["files"]
 			outputLayout[dir].(map[string]interface{})["files"] = append(filesArr.([]string), file)
 		} else {
@@ -448,7 +448,7 @@ func (c *DebugCommand) preflight(rawArgs []string) (string, error) {
 	}
 
 	// Strip trailing slash before proceeding
-	c.flagOutput = strings.TrimSuffix(c.flagOutput, "/")
+	c.flagOutput = filepath.Clean(c.flagOutput)
 
 	// If compression is enabled, trim the extension so that the files are
 	// written to a directory even if compression somehow fails. We ensure the

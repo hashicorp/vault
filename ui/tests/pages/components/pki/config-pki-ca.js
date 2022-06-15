@@ -1,6 +1,6 @@
 import { clickable, collection, fillable, text, selectable, isPresent } from 'ember-cli-page-object';
 
-import fields from './form-field';
+import fields from '../form-field';
 
 export default {
   ...fields,

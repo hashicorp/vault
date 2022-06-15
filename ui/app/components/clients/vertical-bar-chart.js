@@ -31,6 +31,7 @@ import { formatNumber } from 'core/helpers/format-number';
  * @param {string} [noDataMessage] - custom empty state message that displays when no dataset is passed to the chart
  */
 
+const BAR_WIDTH = 7; // data bar width is 7 pixels
 export default class VerticalBarChart extends Component {
   @tracked tooltipTarget = '';
   @tracked tooltipTotal = '';
@@ -70,7 +71,6 @@ export default class VerticalBarChart extends Component {
 
     // clear out DOM before appending anything
     chartSvg.selectAll('g').remove().exit().data(stackedData).enter();
-
     const dataBars = chartSvg
       .selectAll('g')
       .data(stackedData)
@@ -83,12 +83,23 @@ export default class VerticalBarChart extends Component {
       .data((stackedData) => stackedData)
       .enter()
       .append('rect')
-      .attr('width', '7px')
+      .attr('width', `${BAR_WIDTH}px`)
       .attr('class', 'data-bar')
       .attr('data-test-vertical-chart', 'data-bar')
       .attr('height', (stackedData) => `${yScale(stackedData[1] - stackedData[0])}%`)
       .attr('x', ({ data }) => xScale(data[this.xKey])) // uses destructuring because was data.data.month
       .attr('y', (data) => `${100 - yScale(data[1])}%`); // subtract higher than 100% to give space for x axis ticks
+
+    const tooltipTether = chartSvg
+      .append('g')
+      .attr('transform', `translate(${BAR_WIDTH / 2})`)
+      .attr('data-test-vertical-chart', 'tool-tip-tethers')
+      .selectAll('circle')
+      .data(filteredData)
+      .enter()
+      .append('circle')
+      .attr('cy', (d) => `${100 - yScale(d[this.yKey])}%`)
+      .attr('cx', (d) => xScale(d[this.xKey]));
 
     // MAKE AXES //
     const yAxisScale = scaleLinear()
@@ -140,12 +151,9 @@ export default class VerticalBarChart extends Component {
       this.tooltipTotal = `${formatNumber([data[this.yKey]])} ${data.new_clients ? 'total' : 'new'} clients`;
       this.entityClients = `${formatNumber([data.entity_clients])} entity clients`;
       this.nonEntityClients = `${formatNumber([data.non_entity_clients])} non-entity clients`;
-      let node = chartSvg
-        .selectAll('rect.data-bar')
-        // filter for the top data bar (so y-coord !== 0) with matching month
-        .filter((data) => data[0] !== 0 && data.data.month === hoveredMonth)
-        .node();
-      this.tooltipTarget = node; // grab the node from the list of rects
+      // filter for the tether point that matches the hoveredMonth
+      let hoveredElement = tooltipTether.filter((data) => data.month === hoveredMonth).node();
+      this.tooltipTarget = hoveredElement; // grab the node from the list of rects
     });
   }
 

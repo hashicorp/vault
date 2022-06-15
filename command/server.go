@@ -34,6 +34,7 @@ import (
 	config2 "github.com/hashicorp/vault/command/config"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/builtinplugins"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -41,6 +42,7 @@ import (
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -74,8 +76,9 @@ const (
 
 	// Even though there are more types than the ones below, the following consts
 	// are declared internally for value comparison and reusability.
-	storageTypeRaft   = "raft"
-	storageTypeConsul = "consul"
+	storageTypeRaft            = "raft"
+	storageTypeConsul          = "consul"
+	disableStorageTypeCheckEnv = "VAULT_DISABLE_SUPPORTED_STORAGE_CHECK"
 )
 
 type ServerCommand struct {
@@ -424,6 +427,12 @@ func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError,
 			config = config.Merge(current)
 		}
 	}
+
+	if config != nil && config.Entropy != nil && config.Entropy.Mode == configutil.EntropyAugmentation && constants.IsFIPS() {
+		c.UI.Warn("WARNING: Entropy Augmentation is not supported in FIPS 140-2 Inside mode; disabling from server configuration!\n")
+		config.Entropy = nil
+	}
+
 	return config, configErrors, nil
 }
 
@@ -1317,6 +1326,24 @@ func (c *ServerCommand) Run(args []string) int {
 	// Apply any enterprise configuration onto the coreConfig.
 	adjustCoreConfigForEnt(config, &coreConfig)
 
+	if !c.flagDev && os.Getenv(disableStorageTypeCheckEnv) == "" {
+		inMemStorageTypes := []string{
+			"inmem", "inmem_ha", "inmem_transactional", "inmem_transactional_ha",
+		}
+
+		if strutil.StrListContains(inMemStorageTypes, coreConfig.StorageType) {
+			c.UI.Warn("")
+			c.UI.Warn(wrapAtLength(fmt.Sprintf("WARNING: storage configured to use %q which should NOT be used in production", coreConfig.StorageType)))
+			c.UI.Warn("")
+		} else {
+			err = checkStorageTypeForEnt(&coreConfig)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Invalid storage type: %s", err))
+				return 1
+			}
+		}
+	}
+
 	// Initialize the core
 	core, newCoreError := vault.NewCore(&coreConfig)
 	if newCoreError != nil {
@@ -2054,7 +2081,8 @@ func (c *ServerCommand) addPlugin(path, token string, core *vault.Core) error {
 
 // detectRedirect is used to attempt redirect address detection
 func (c *ServerCommand) detectRedirect(detect physical.RedirectDetect,
-	config *server.Config) (string, error) {
+	config *server.Config,
+) (string, error) {
 	// Get the hostname
 	host, err := detect.DetectHostAddr()
 	if err != nil {
@@ -2499,7 +2527,8 @@ func runUnseal(c *ServerCommand, core *vault.Core, ctx context.Context) {
 }
 
 func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.Backend, configSR sr.ServiceRegistration, barrierSeal, unwrapSeal vault.Seal,
-	metricsHelper *metricsutil.MetricsHelper, metricSink *metricsutil.ClusterMetricSink, secureRandomReader io.Reader) vault.CoreConfig {
+	metricsHelper *metricsutil.MetricsHelper, metricSink *metricsutil.ClusterMetricSink, secureRandomReader io.Reader,
+) vault.CoreConfig {
 	coreConfig := &vault.CoreConfig{
 		RawConfig:                      config,
 		Physical:                       backend,

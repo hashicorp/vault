@@ -244,7 +244,7 @@ func (m *PostgreSQLBackend) Put(ctx context.Context, entry *physical.Entry) erro
 
 	parentPath, path, key := m.splitKey(entry.Key)
 
-	_, err := m.client.Exec(m.put_query, parentPath, path, key, entry.Value)
+	_, err := m.client.ExecContext(ctx, m.put_query, parentPath, path, key, entry.Value)
 	if err != nil {
 		return err
 	}
@@ -261,7 +261,7 @@ func (m *PostgreSQLBackend) Get(ctx context.Context, fullPath string) (*physical
 	_, path, key := m.splitKey(fullPath)
 
 	var result []byte
-	err := m.client.QueryRow(m.get_query, path, key).Scan(&result)
+	err := m.client.QueryRowContext(ctx, m.get_query, path, key).Scan(&result)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -285,7 +285,7 @@ func (m *PostgreSQLBackend) Delete(ctx context.Context, fullPath string) error {
 
 	_, path, key := m.splitKey(fullPath)
 
-	_, err := m.client.Exec(m.delete_query, path, key)
+	_, err := m.client.ExecContext(ctx, m.delete_query, path, key)
 	if err != nil {
 		return err
 	}
@@ -300,7 +300,7 @@ func (m *PostgreSQLBackend) List(ctx context.Context, prefix string) ([]string, 
 	m.permitPool.Acquire()
 	defer m.permitPool.Release()
 
-	rows, err := m.client.Query(m.list_query, "/"+prefix)
+	rows, err := m.client.QueryContext(ctx, m.list_query, "/"+prefix)
 	if err != nil {
 		return nil, err
 	}

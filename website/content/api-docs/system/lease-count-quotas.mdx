@@ -29,7 +29,8 @@ that can either be a namespace or mount.
   `userpass` in `namespace1`. Updating this field on an existing quota can have
   "moving" effects. For example, updating `auth/userpass` to
   `namespace1/auth/userpass` moves this quota from being a global mount quota to a
-  namespace specific mount quota.
+  namespace specific mount quota. Quotas on a non-root namespace are not inherited by child
+  namespaces.
 - `max_leases` `(int: 0)` - Maximum number of leases allowed by the quota rule.
 
 ### Sample Payload

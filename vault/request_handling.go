@@ -1945,6 +1945,12 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 	if err != nil {
 		return "", err
 	}
+
+	// Disregard SSCT on perf-standbys for non-raft storage
+	if c.perfStandby && c.getRaftBackend() == nil {
+		return plainToken.Random, nil
+	}
+
 	ep := int(plainToken.IndexEpoch)
 	if ep < c.tokenStore.GetSSCTokensGenerationCounter() {
 		return plainToken.Random, nil

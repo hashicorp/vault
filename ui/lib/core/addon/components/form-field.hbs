@@ -196,12 +196,13 @@
     </Toggle>
   {{else if (eq @attr.options.editType "stringArray")}}
     <StringList
-      @data-test-input={{@attr.name}}
+      data-test-input={{@attr.name}}
       @label={{this.labelString}}
       @warning={{@attr.options.warning}}
       @helpText={{@attr.options.helpText}}
       @inputValue={{get @model this.valuePath}}
       @onChange={{this.setAndBroadcast}}
+      @attrName={{@attr.name}}
     />
   {{else if (eq @attr.options.sensitive true)}}
     {{! Masked Input }}

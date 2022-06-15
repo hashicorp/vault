@@ -190,6 +190,10 @@
       {
         "title": "Mount Migration",
         "path": "concepts/mount-migration"
+      },
+      {
+        "title": "Duration String Format",
+        "path": "concepts/duration-format"
       }
     ]
   },
@@ -1939,6 +1943,14 @@
       {
         "title": "Automated Integrated Storage Snapshots",
         "path": "enterprise/automated-integrated-storage-snapshots"
+      },
+      {
+        "title": "Automated Upgrades",
+        "path": "enterprise/automated-upgrades"
+      },
+      {
+        "title": "Redundancy Zones",
+        "path": "enterprise/redundancy-zones"
       },
       {
         "title": "Lease Count Quotas",
