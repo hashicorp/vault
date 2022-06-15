@@ -206,7 +206,7 @@ Note that if an argument is supplied in a @key=value format, Vault will treat th
 kv pair with the key being `@key`, not a file called `key=value`. This also means that Vault
 does not support filenames with `=` in them.
 
-### Mount flag syntax (KV)
+## Mount flag syntax (KV)
 
 All `kv` commands can alternatively refer to the path to the KV secrets engine using a flag-based syntax like `$ vault kv get -mount=secret password` 
 instead of `$ vault kv get secret/password`. The mount flag syntax was created to mitigate confusion caused by the fact that for KV v2 secrets, 
