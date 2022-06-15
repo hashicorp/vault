@@ -4307,7 +4307,7 @@ type IssuanceRegression struct {
 	Issued                    bool
 }
 
-func RoleIssuanceRegressionHelper(t *testing.T, client *api.Client, index int, test IssuanceRegression) int {
+func RoleIssuanceRegressionHelper(t *testing.T, b *backend, s logical.Storage, index int, test IssuanceRegression) int {
 	tested := 0
 	for _, AllowBareDomains := range test.AllowBareDomains.ToValues() {
 		for _, AllowGlobDomains := range test.AllowGlobDomains.ToValues() {
@@ -4315,7 +4315,7 @@ func RoleIssuanceRegressionHelper(t *testing.T, client *api.Client, index int, t
 				for _, AllowLocalhost := range test.AllowLocalhost.ToValues() {
 					for _, AllowWildcardCertificates := range test.AllowWildcardCertificates.ToValues() {
 						role := fmt.Sprintf("issuance-regression-%d-bare-%v-glob-%v-subdomains-%v-localhost-%v-wildcard-%v", index, AllowBareDomains, AllowGlobDomains, AllowSubdomains, AllowLocalhost, AllowWildcardCertificates)
-						resp, err := client.Logical().Write("pki/roles/"+role, map[string]interface{}{
+						resp, err := CBWrite(b, s, "roles/"+role, map[string]interface{}{
 							"allowed_domains":             test.AllowedDomains,
 							"allow_bare_domains":          AllowBareDomains,
 							"allow_glob_domains":          AllowGlobDomains,
@@ -4332,7 +4332,7 @@ func RoleIssuanceRegressionHelper(t *testing.T, client *api.Client, index int, t
 							t.Fatal(err)
 						}
 
-						resp, err = client.Logical().Write("pki/issue/"+role, map[string]interface{}{
+						resp, err = CBWrite(b, s, "issue/"+role, map[string]interface{}{
 							"common_name": test.CommonName,
 						})
 
@@ -4508,34 +4508,10 @@ func TestBackend_Roles_IssuanceRegression(t *testing.T) {
 		t.Fatalf("misnumbered test case entries will make it hard to find bugs: %v", len(testCases))
 	}
 
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"pki": Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	client := cluster.Cores[0].Client
-	var err error
-
-	// Generate a root CA at /pki to use for our tests
-	err = client.Sys().Mount("pki", &api.MountInput{
-		Type: "pki",
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: "12h",
-			MaxLeaseTTL:     "128h",
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	b, s := createBackendWithStorage(t)
 
 	// We need a RSA key so all signature sizes are valid with it.
-	resp, err := client.Logical().Write("pki/root/generate/exported", map[string]interface{}{
+	resp, err := CBWrite(b, s, "root/generate/exported", map[string]interface{}{
 		"common_name": "myvault.com",
 		"ttl":         "128h",
 		"key_type":    "rsa",
@@ -4550,7 +4526,7 @@ func TestBackend_Roles_IssuanceRegression(t *testing.T) {
 
 	tested := 0
 	for index, test := range testCases {
-		tested += RoleIssuanceRegressionHelper(t, client, index, test)
+		tested += RoleIssuanceRegressionHelper(t, b, s, index, test)
 	}
 
 	t.Log(fmt.Sprintf("Issuance regression expanded matrix test scenarios: %d", tested))
