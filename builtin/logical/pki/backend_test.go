@@ -2413,42 +2413,12 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 }
 
 func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"pki": Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	client := cluster.Cores[0].Client
+	b_root, s_root := createBackendWithStorage(t)
+	b_int, s_int := createBackendWithStorage(t)
 	var err error
-	err = client.Sys().Mount("root", &api.MountInput{
-		Type: "pki",
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: "16h",
-			MaxLeaseTTL:     "60h",
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = client.Sys().Mount("int", &api.MountInput{
-		Type: "pki",
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: "4h",
-			MaxLeaseTTL:     "20h",
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	// Direct issuing from root
-	_, err = client.Logical().Write("root/root/generate/internal", map[string]interface{}{
+	_, err = CBWrite(b_root, s_root, "root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
 		"common_name": "myvault.com",
 	})
@@ -2456,7 +2426,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("root/roles/test", map[string]interface{}{
+	_, err = CBWrite(b_root, s_root, "roles/test", map[string]interface{}{
 		"allow_bare_domains": true,
 		"allow_subdomains":   true,
 	})
@@ -2464,7 +2434,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err := client.Logical().Write("int/intermediate/generate/internal", map[string]interface{}{
+	resp, err := CBWrite(b_int, s_int, "intermediate/generate/internal", map[string]interface{}{
 		"common_name": "myint.com",
 	})
 	if err != nil {
@@ -2473,7 +2443,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 
 	csr := resp.Data["csr"]
 
-	_, err = client.Logical().Write("root/sign/test", map[string]interface{}{
+	_, err = CBWrite(b_root, s_root, "sign/test", map[string]interface{}{
 		"common_name": "myint.com",
 		"csr":         csr,
 		"ttl":         "60h",
@@ -2482,7 +2452,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	_, err = client.Logical().Write("root/sign-verbatim/test", map[string]interface{}{
+	_, err = CBWrite(b_root, s_root, "sign-verbatim/test", map[string]interface{}{
 		"common_name": "myint.com",
 		"other_sans":  "1.3.6.1.4.1.311.20.2.3;utf8:caadmin@example.com",
 		"csr":         csr,
@@ -2492,7 +2462,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	resp, err = client.Logical().Write("root/root/sign-intermediate", map[string]interface{}{
+	resp, err = CBWrite(b_root, s_root, "root/sign-intermediate", map[string]interface{}{
 		"common_name": "myint.com",
 		"other_sans":  "1.3.6.1.4.1.311.20.2.3;utf8:caadmin@example.com",
 		"csr":         csr,
