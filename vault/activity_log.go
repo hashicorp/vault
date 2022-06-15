@@ -1505,7 +1505,7 @@ func (a *ActivityLog) DefaultStartTime(endTime time.Time) time.Time {
 	return monthStart.AddDate(0, -a.defaultReportMonths+1, 0)
 }
 
-func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.Time,  limitNamespaces int) (map[string]interface{}, error) {
+func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.Time, limitNamespaces int) (map[string]interface{}, error) {
 	queryNS, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -1557,7 +1557,7 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 			} else {
 				displayPath = ns.Path
 			}
-			
+
 			byNamespace = append(byNamespace, &ResponseNamespace{
 				NamespaceID:   nsRecord.NamespaceID,
 				NamespacePath: displayPath,

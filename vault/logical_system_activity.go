@@ -208,7 +208,7 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 		limitNamespaces = limitNamespacesRaw.(int)
 	}
 
-	results, err := a.handleQuery(ctx, startTime, endTime,  limitNamespaces)
+	results, err := a.handleQuery(ctx, startTime, endTime, limitNamespaces)
 	if err != nil {
 		return nil, err
 	}
