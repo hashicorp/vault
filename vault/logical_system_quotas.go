@@ -276,7 +276,7 @@ func (b *SystemBackend) handleRateLimitQuotasRead() framework.OperationFunc {
 		data := map[string]interface{}{
 			"type":           qType,
 			"name":           rlq.Name,
-			"path":           nsPath + rlq.MountPath,
+			"path":           nsPath + rlq.MountPath + rlq.PathSuffix,
 			"rate":           rlq.Rate,
 			"interval":       int(rlq.Interval.Seconds()),
 			"block_interval": int(rlq.BlockInterval.Seconds()),

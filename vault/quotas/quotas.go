@@ -1016,35 +1016,49 @@ func (m *Manager) HandleRemount(ctx context.Context, from, to namespace.MountPat
 		toNs = namespace.RootNamespaceID
 	}
 
-	idx := indexNamespaceMount
 	leaseQuotaUpdated := false
-	args := []interface{}{fromNs, from.MountPath, false}
-	for _, quotaType := range quotaTypes() {
-		iter, err := txn.Get(quotaType, idx, args...)
-		if err != nil {
-			return err
-		}
-		for raw := iter.Next(); raw != nil; raw = iter.Next() {
-			quota := raw.(Quota)
 
-			// Clone the object and update it
-			clonedQuota := quota.Clone()
-			clonedQuota.handleRemount(to.MountPath, toNs)
-			// Update both underlying storage and memdb with the quota change
-			entry, err := logical.StorageEntryJSON(QuotaStoragePath(quotaType, quota.QuotaName()), quota)
+	updateMounts := func(idx string, args ...interface{}) error {
+		for _, quotaType := range quotaTypes() {
+			iter, err := txn.Get(quotaType, idx, args...)
 			if err != nil {
 				return err
 			}
-			if err := m.storage.Put(ctx, entry); err != nil {
-				return err
-			}
-			if err := m.setQuotaLockedWithTxn(ctx, quotaType, clonedQuota, false, txn); err != nil {
-				return err
-			}
-			if quotaType == TypeLeaseCount.String() {
-				leaseQuotaUpdated = true
+			for raw := iter.Next(); raw != nil; raw = iter.Next() {
+				quota := raw.(Quota)
+
+				// Clone the object and update it
+				clonedQuota := quota.Clone()
+				clonedQuota.handleRemount(to.MountPath, toNs)
+				// Update both underlying storage and memdb with the quota change
+				entry, err := logical.StorageEntryJSON(QuotaStoragePath(quotaType, quota.QuotaName()), quota)
+				if err != nil {
+					return err
+				}
+				if err := m.storage.Put(ctx, entry); err != nil {
+					return err
+				}
+				if err := m.setQuotaLockedWithTxn(ctx, quotaType, clonedQuota, false, txn); err != nil {
+					return err
+				}
+				if quotaType == TypeLeaseCount.String() {
+					leaseQuotaUpdated = true
+				}
 			}
 		}
+		return nil
+	}
+
+	// Update mounts for everything without a path prefix
+	err := updateMounts(indexNamespaceMount, fromNs, from.MountPath, false)
+	if err != nil {
+		return err
+	}
+
+	// Update mounts for everything with a path prefix
+	err = updateMounts(indexNamespaceMount, fromNs, from.MountPath, true)
+	if err != nil {
+		return err
 	}
 
 	if leaseQuotaUpdated {
@@ -1074,26 +1088,40 @@ func (m *Manager) HandleBackendDisabling(ctx context.Context, nsPath, mountPath 
 		nsPath = "root"
 	}
 
-	idx := indexNamespaceMount
 	leaseQuotaDeleted := false
-	args := []interface{}{nsPath, mountPath, false}
-	for _, quotaType := range quotaTypes() {
-		iter, err := txn.Get(quotaType, idx, args...)
-		if err != nil {
-			return err
+
+	updateMounts := func(idx string, args ...interface{}) error {
+		for _, quotaType := range quotaTypes() {
+			iter, err := txn.Get(quotaType, idx, args...)
+			if err != nil {
+				return err
+			}
+			for raw := iter.Next(); raw != nil; raw = iter.Next() {
+				if err := txn.Delete(quotaType, raw); err != nil {
+					return fmt.Errorf("failed to delete quota from db after mount disabling; namespace %q, err %v", nsPath, err)
+				}
+				quota := raw.(Quota)
+				if err := m.storage.Delete(ctx, QuotaStoragePath(quotaType, quota.QuotaName())); err != nil {
+					return fmt.Errorf("failed to delete quota from storage after mount disabling; namespace %q, err %v", nsPath, err)
+				}
+				if quotaType == TypeLeaseCount.String() {
+					leaseQuotaDeleted = true
+				}
+			}
 		}
-		for raw := iter.Next(); raw != nil; raw = iter.Next() {
-			if err := txn.Delete(quotaType, raw); err != nil {
-				return fmt.Errorf("failed to delete quota from db after mount disabling; namespace %q, err %v", nsPath, err)
-			}
-			quota := raw.(Quota)
-			if err := m.storage.Delete(ctx, QuotaStoragePath(quotaType, quota.QuotaName())); err != nil {
-				return fmt.Errorf("failed to delete quota from storage after mount disabling; namespace %q, err %v", nsPath, err)
-			}
-			if quotaType == TypeLeaseCount.String() {
-				leaseQuotaDeleted = true
-			}
-		}
+		return nil
+	}
+
+	// Update mounts for everything without a path prefix
+	err := updateMounts(indexNamespaceMount, nsPath, mountPath, false)
+	if err != nil {
+		return err
+	}
+
+	// Update mounts for everything with a path prefix
+	err = updateMounts(indexNamespaceMount, nsPath, mountPath, true)
+	if err != nil {
+		return err
 	}
 
 	if leaseQuotaDeleted {
