@@ -26,7 +26,7 @@ but is automatically bundled in Vault releases. Please file all feature
 requests, bugs, and pull requests specific to the GCP plugin under that
 repository.
 
-## Authenticate
+## Authentication
 
 ### Via the CLI Helper
 
@@ -42,9 +42,6 @@ $ vault login -method=gcp \
 ```
 
 For more usage information, run `vault auth help gcp`.
-
--> **Note:** The `project` parameter has been removed in Vault 1.5.9+, 1.6.5+, and 1.7.2+.
-It is no longer needed for configuration and will be ignored if provided.
 
 ### Via the CLI
 
@@ -79,7 +76,7 @@ management tool.
    $ vault auth enable gcp
    ```
 
-1. Configure the auth method credentials:
+2. Configure the auth method credentials:
 
    ```text
    $ vault write auth/gcp/config \
@@ -88,9 +85,13 @@ management tool.
 
    If you are using instance credentials or want to specify credentials via
    an environment variable, you can skip this step. To learn more, see the
-   [Google Cloud Authentication](#authentication) section below.
+   [Google Cloud Credentials](#gcp-credentials) section below.
 
-1. Create a named role:
+   -> **Note**: If you're using a [Private Google Access](https://cloud.google.com/vpc/docs/configure-private-google-access)
+   environment, you will additionally need to configure your environment’s custom endpoints
+   via the [custom_endpoint](/api-docs/auth/gcp#custom_endpoint) configuration parameter.
+
+4. Create a named role:
 
    For an `iam`-type role:
 
@@ -118,7 +119,7 @@ management tool.
    For the complete list of configuration options for each type, please see the
    [API documentation][api-docs].
 
-## Authentication
+## GCP Credentials
 
 The Google Cloud Vault auth method uses the official Google Cloud Golang SDK.
 This means it supports the common ways of [providing credentials to Google
