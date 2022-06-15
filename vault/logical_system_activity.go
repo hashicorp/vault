@@ -27,6 +27,11 @@ func (b *SystemBackend) activityQueryPath() *framework.Path {
 				Type:        framework.TypeTime,
 				Description: "End of query interval",
 			},
+			"limit_namespaces": {
+				Type:        framework.TypeInt,
+				Default:     0,
+				Description: "Limit query output by namespaces",
+			},
 		},
 		HelpSynopsis:    strings.TrimSpace(sysHelp["activity-query"][0]),
 		HelpDescription: strings.TrimSpace(sysHelp["activity-query"][1]),
@@ -198,7 +203,12 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	results, err := a.handleQuery(ctx, startTime, endTime)
+	var limitNamespaces int
+	if limitNamespacesRaw, ok := d.GetOk("limit_namespaces"); ok {
+		limitNamespaces = limitNamespacesRaw.(int)
+	}
+
+	results, err := a.handleQuery(ctx, startTime, endTime, limitNamespaces)
 	if err != nil {
 		return nil, err
 	}
