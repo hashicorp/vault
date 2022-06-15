@@ -1505,7 +1505,7 @@ func (a *ActivityLog) DefaultStartTime(endTime time.Time) time.Time {
 	return monthStart.AddDate(0, -a.defaultReportMonths+1, 0)
 }
 
-func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.Time) (map[string]interface{}, error) {
+func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.Time,  limitNamespaces int) (map[string]interface{}, error) {
 	queryNS, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -1557,6 +1557,7 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 			} else {
 				displayPath = ns.Path
 			}
+			
 			byNamespace = append(byNamespace, &ResponseNamespace{
 				NamespaceID:   nsRecord.NamespaceID,
 				NamespacePath: displayPath,
@@ -1577,6 +1578,19 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 	sort.Slice(byNamespace, func(i, j int) bool {
 		return byNamespace[i].Counts.Clients > byNamespace[j].Counts.Clients
 	})
+	if limitNamespaces > 0 {
+		if limitNamespaces > len(byNamespace) {
+			limitNamespaces = len(byNamespace)
+		}
+		byNamespace = byNamespace[:limitNamespaces]
+		// recalculate total entities and tokens
+		totalEntities = 0
+		totalTokens = 0
+		for _, namespaceData := range byNamespace {
+			totalEntities += namespaceData.Counts.DistinctEntities
+			totalTokens += namespaceData.Counts.NonEntityTokens
+		}
+	}
 
 	responseData["by_namespace"] = byNamespace
 	responseData["total"] = &ResponseCounts{
