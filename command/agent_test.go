@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	vaultjwt "github.com/hashicorp/vault-plugin-auth-jwt"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
@@ -27,7 +27,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
-	"github.com/ryboe/q"
 	"github.com/stretchr/testify/require"
 )
 
@@ -1556,13 +1555,14 @@ auto_auth {
 	return config, cleanup
 }
 
-
-func TestGHIssue(t *testing.T) {
-	//----------------------------------------------------
-	// Start the server and agent
-	//----------------------------------------------------
+/* TestAgentAutoAuthUnwrap verifies that the following scenario works:
+- agent is using auto auth
+- agent reads a secret
+- agent unwraps the token from the secret it read
+- agent is still able to read secrets, as unwrap has not overridden the original token
+*/
+func TestAgentAutoAuthUnwrap(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
-	var h handler
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
 			Logger: logger,
@@ -1574,12 +1574,8 @@ func TestGHIssue(t *testing.T) {
 			},
 		},
 		&vault.TestClusterOptions{
-			NumCores: 1,
-			HandlerFunc: func(properties *vault.HandlerProperties) http.Handler {
-				h.props = properties
-				h.t = t
-				return &h
-			},
+			NumCores:    1,
+			HandlerFunc: vaulthttp.Handler,
 		})
 	cluster.Start()
 	defer cluster.Cleanup()
@@ -1588,34 +1584,38 @@ func TestGHIssue(t *testing.T) {
 	serverClient := cluster.Cores[0].Client
 
 	// Enable the approle auth method
-	req := serverClient.NewRequest("POST", "/v1/sys/auth/approle")
-	req.BodyBytes = []byte(`{
-		"type": "approle"
-	}`)
-	request(t, serverClient, req, 204)
+	_, err := serverClient.Logical().Write("sys/auth/approle", map[string]interface{}{
+		"type": "approle",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Create a named role
-	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role")
-	req.BodyBytes = []byte(`{
-	  "secret_id_num_uses": "10",
-	  "secret_id_ttl": "1m",
-	  "token_max_ttl": "1m",
-	  "token_num_uses": "10",
-	  "token_ttl": "1m"
-	}`)
-	request(t, serverClient, req, 204)
+	_, err = serverClient.Logical().Write("auth/approle/role/test-role", map[string]interface{}{
+		"secret_id_num_uses": "10",
+		"secret_id_ttl":      "1m",
+		"token_max_ttl":      "1m",
+		"token_num_uses":     "10",
+		"token_ttl":          "1m",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Fetch the RoleID of the named role
-	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
-	body := request(t, serverClient, req, 200)
-	data := body["data"].(map[string]interface{})
-	roleID := data["role_id"].(string)
+	resp, err := serverClient.Logical().Read("auth/approle/role/test-role/role-id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	roleID := resp.Data["role_id"].(string)
 
 	// Get a SecretID issued against the named role
-	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role/secret-id")
-	body = request(t, serverClient, req, 200)
-	data = body["data"].(map[string]interface{})
-	secretID := data["secret_id"].(string)
+	resp, err = serverClient.Logical().Write("auth/approle/role/test-role/secret-id", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	secretID := resp.Data["secret_id"].(string)
 
 	// Write the RoleID and SecretID to temp files
 	roleIDPath := makeTempFile(t, "role_id.txt", roleID+"\n")
@@ -1628,31 +1628,13 @@ func TestGHIssue(t *testing.T) {
 	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
 	os.Unsetenv(api.EnvVaultAddress)
 
-	intRef := func(i int) *int {
-		return &i
-	}
-	// start test cases here
-	testCases := map[string]struct {
-		retries     *int
-		expectError bool
-	}{
-		"default": {
-			retries:     intRef(0),
-			expectError: false,
-		},
-	}
-
-	for tcname, tc := range testCases {
-		t.Run(tcname, func(t *testing.T) {
-			h.failCount = 2
-
-			cacheConfig := `
+	cacheConfig := `
 			cache {
 				use_auto_auth_token = true
 			}
 `
-			listenAddr := generateListenerAddress(t)
-			listenConfig := fmt.Sprintf(`
+	listenAddr := generateListenerAddress(t)
+	listenConfig := fmt.Sprintf(`
 			auto_auth {
 				method "approle" {
 					mount_path = "auth/approle"
@@ -1662,61 +1644,54 @@ func TestGHIssue(t *testing.T) {
 					}
 				}
 			}
-listener "tcp" {
-  address = "%s"
-  tls_disable = true
-}
-`, roleIDPath, secretIDPath,listenAddr)
-
-			var retryConf string
-			if tc.retries != nil {
-				retryConf = fmt.Sprintf("retry { num_retries = %d }", *tc.retries)
+			listener "tcp" {
+			  address = "%s"
+			  tls_disable = true
 			}
+`, roleIDPath, secretIDPath, listenAddr)
 
-			config := fmt.Sprintf(`
-vault {
-  address = "%s"
-  %s
-  tls_skip_verify = true
-}
-%s
-%s
+	config := fmt.Sprintf(`
+		vault {
+		  address = "%s"
+		  retry { num_retries = 0 }
+		  tls_skip_verify = true
+		}
+		%s
+		%s
+`, serverClient.Address(), cacheConfig, listenConfig)
 
-`, serverClient.Address(), retryConf, cacheConfig, listenConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+	defer os.Remove(configPath)
 
-			configPath := makeTempFile(t, "config.hcl", config)
-			defer os.Remove(configPath)
+	// Start the agent
+	_, cmd := testAgentCommand(t, logger)
+	cmd.startedCh = make(chan struct{})
 
-			// Start the agent
-			_, cmd := testAgentCommand(t, logger)
-			cmd.startedCh = make(chan struct{})
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmd.Run([]string{"-config", configPath})
+		wg.Done()
+	}()
 
-			wg := &sync.WaitGroup{}
-			wg.Add(1)
-			go func() {
-				cmd.Run([]string{"-config", configPath})
-				wg.Done()
-			}()
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
 
-			select {
-			case <-cmd.startedCh:
-			case <-time.After(5 * time.Second):
-				t.Errorf("timeout")
-			}
-
-			client, err := api.NewClient(api.DefaultConfig())
-			if err != nil {
-				t.Fatal(err)
-			}
-			client.SetToken(serverClient.Token())
-			client.SetMaxRetries(0)
-			err = client.SetAddress("http://" + listenAddr)
-			if err != nil {
-				t.Fatal(err)
-			}
+	client, err := api.NewClient(api.DefaultConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.SetToken(serverClient.Token())
+	client.SetMaxRetries(0)
+	err = client.SetAddress("http://" + listenAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Write a value that we will use with wrapping for lookup
-
 	_, err = client.Logical().Write("secret/foo", map[string]interface{}{
 		"zip": "zap",
 	})
@@ -1732,6 +1707,11 @@ vault {
 
 		return api.DefaultWrappingLookupFunc(operation, path)
 	})
+
+	// Store the original token for comparison later
+	origToken := client.Token()
+
+	// Read a secret
 	secret, err := client.Logical().Read("secret/foo")
 	if err != nil {
 		t.Fatal(err)
@@ -1739,33 +1719,30 @@ vault {
 	if secret == nil || secret.WrapInfo == nil {
 		t.Fatal("secret or wrap info is nil")
 	}
-	wrapInfo := secret.WrapInfo
-// Read via Unwrap method
-secret, err = client.Logical().Unwrap(wrapInfo.Token)
-if err != nil {
-	t.Fatal(err)
-}
-q.Q("Using unwrap method")
-q.Q(secret)
 
-//read the secret again using read
-secret, err = client.Logical().Read("secret/foo")
+	// Unwrap the token from the secret we just read
+	secret, err = client.Logical().Unwrap(secret.WrapInfo.Token)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// If the client token has changed from what it was before we did any reads, that's a problem
+	if client.Token() != origToken {
+		t.Fatalf("Unwrap changed the client token from %s to %s", origToken, client.Token())
+	}
+
+	// Read the secret again, just to make sure we don't get a 403
+	secret, err = client.Logical().Read("secret/foo")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if secret == nil || secret.WrapInfo == nil {
 		t.Fatal("secret or wrap info is nil")
 	}
-q.Q("Trying to read secret again")
-q.Q(secret)
 
-
-			time.Sleep(time.Second)
-
-			close(cmd.ShutdownCh)
-			wg.Wait()
-		})
-	}
+	time.Sleep(time.Second)
+	close(cmd.ShutdownCh)
+	wg.Wait()
 }
 
 func TestAgent_Cache_Retry(t *testing.T) {
