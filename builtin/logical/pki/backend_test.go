@@ -1661,32 +1661,10 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 }
 
 func TestRolesAltIssuer(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"pki": Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	client := cluster.Cores[0].Client
-	var err error
-	err = client.Sys().Mount("pki", &api.MountInput{
-		Type: "pki",
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: "16h",
-			MaxLeaseTTL:     "60h",
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	b, s := createBackendWithStorage(t)
 
 	// Create two issuers.
-	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"common_name": "root a - example.com",
 		"issuer_name": "root-a",
 		"key_type":    "ec",
@@ -1696,7 +1674,7 @@ func TestRolesAltIssuer(t *testing.T) {
 	rootAPem := resp.Data["certificate"].(string)
 	rootACert := parseCert(t, rootAPem)
 
-	resp, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	resp, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"common_name": "root b - example.com",
 		"issuer_name": "root-b",
 		"key_type":    "ec",
@@ -1708,14 +1686,14 @@ func TestRolesAltIssuer(t *testing.T) {
 
 	// Create three roles: one with no assignment, one with explicit root-a,
 	// one with explicit root-b.
-	_, err = client.Logical().Write("pki/roles/use-default", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/use-default", map[string]interface{}{
 		"allow_any_name":    true,
 		"enforce_hostnames": false,
 		"key_type":          "ec",
 	})
 	require.NoError(t, err)
 
-	_, err = client.Logical().Write("pki/roles/use-root-a", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/use-root-a", map[string]interface{}{
 		"allow_any_name":    true,
 		"enforce_hostnames": false,
 		"key_type":          "ec",
@@ -1723,7 +1701,7 @@ func TestRolesAltIssuer(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, err = client.Logical().Write("pki/roles/use-root-b", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/use-root-b", map[string]interface{}{
 		"allow_any_name":    true,
 		"enforce_hostnames": false,
 		"issuer_ref":        "root-b",
@@ -1731,7 +1709,7 @@ func TestRolesAltIssuer(t *testing.T) {
 	require.NoError(t, err)
 
 	// Now issue certs against these roles.
-	resp, err = client.Logical().Write("pki/issue/use-default", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/use-default", map[string]interface{}{
 		"common_name": "testing",
 		"ttl":         "5s",
 	})
@@ -1741,7 +1719,7 @@ func TestRolesAltIssuer(t *testing.T) {
 	err = leafCert.CheckSignatureFrom(rootACert)
 	require.NoError(t, err, "should be signed by root-a but wasn't")
 
-	resp, err = client.Logical().Write("pki/issue/use-root-a", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/use-root-a", map[string]interface{}{
 		"common_name": "testing",
 		"ttl":         "5s",
 	})
@@ -1751,7 +1729,7 @@ func TestRolesAltIssuer(t *testing.T) {
 	err = leafCert.CheckSignatureFrom(rootACert)
 	require.NoError(t, err, "should be signed by root-a but wasn't")
 
-	resp, err = client.Logical().Write("pki/issue/use-root-b", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/use-root-b", map[string]interface{}{
 		"common_name": "testing",
 		"ttl":         "5s",
 	})
@@ -1763,12 +1741,12 @@ func TestRolesAltIssuer(t *testing.T) {
 
 	// Update the default issuer to be root B and make sure that the
 	// use-default role updates.
-	_, err = client.Logical().Write("pki/config/issuers", map[string]interface{}{
+	_, err = CBWrite(b, s, "config/issuers", map[string]interface{}{
 		"default": "root-b",
 	})
 	require.NoError(t, err)
 
-	resp, err = client.Logical().Write("pki/issue/use-default", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/use-default", map[string]interface{}{
 		"common_name": "testing",
 		"ttl":         "5s",
 	})
