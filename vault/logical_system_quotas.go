@@ -194,7 +194,7 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			}
 
 			var newMountPath string
-			if me.Table == "mounts" {
+			if me.Table == mountTableType {
 				newMountPath = me.Path
 			} else {
 				newMountPath = me.Table + "/" + me.Path
