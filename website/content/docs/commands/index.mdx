@@ -210,7 +210,7 @@ does not support filenames with `=` in them.
 
 All `kv` commands can alternatively refer to the path to the KV secrets engine using a flag-based syntax like `$ vault kv get -mount=secret password` 
 instead of `$ vault kv get secret/password`. The mount flag syntax was created to mitigate confusion caused by the fact that for KV v2 secrets, 
-their full path (used in policies and raw API calls) actually contains a nested `/data/` element (e.g. `secret/data/password`) which can be easily forgotten when using 
+their full path (used in policies and raw API calls) actually contains a nested `/data/` element (e.g. `secret/data/password`) which can be easily overlooked when using 
 the above KV v1-like syntax `secret/password`. To avoid this confusion, all KV-specific docs pages will use the `-mount` flag.
 
 ## Exit Codes

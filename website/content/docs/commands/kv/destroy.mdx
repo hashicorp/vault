@@ -40,7 +40,7 @@ included on all commands.
 - `-mount` `(string: "")` - Specifies the path where the KV backend is mounted. 
   If specified, the next argument will be interpreted as the secret path. If 
   this flag is not specified, the next argument will be interpreted as the 
-  combined mount path and secret path, with /data/ automatically appended between
+  combined mount path and secret path, with /data/ automatically inserted for 
   KV v2 secrets.
 
 - `-versions` `([]int: <required>)` - The versions to destroy. Their data will
