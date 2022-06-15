@@ -4491,25 +4491,11 @@ func TestBackend_Roles_KeySizeRegression(t *testing.T) {
 }
 
 func TestRootWithExistingKey(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"pki": Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	client := cluster.Cores[0].Client
+	b, s := createBackendWithStorage(t)
 	var err error
 
-	mountPKIEndpoint(t, client, "pki-root")
-
 	// Fail requests if type is existing, and we specify the key_type param
-	ctx := context.Background()
-	_, err = client.Logical().WriteWithContext(ctx, "pki-root/root/generate/existing", map[string]interface{}{
+	_, err = CBWrite(b, s, "root/generate/existing", map[string]interface{}{
 		"common_name": "root myvault.com",
 		"key_type":    "rsa",
 	})
@@ -4517,7 +4503,7 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.Contains(t, err.Error(), "key_type nor key_bits arguments can be set in this mode")
 
 	// Fail requests if type is existing, and we specify the key_bits param
-	_, err = client.Logical().WriteWithContext(ctx, "pki-root/root/generate/existing", map[string]interface{}{
+	_, err = CBWrite(b, s, "root/generate/existing", map[string]interface{}{
 		"common_name": "root myvault.com",
 		"key_bits":    "2048",
 	})
@@ -4525,7 +4511,7 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.Contains(t, err.Error(), "key_type nor key_bits arguments can be set in this mode")
 
 	// Fail if the specified key does not exist.
-	_, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/existing", map[string]interface{}{
+	_, err = CBWrite(b, s, "issuers/generate/root/existing", map[string]interface{}{
 		"common_name": "root myvault.com",
 		"issuer_name": "my-issuer1",
 		"key_ref":     "my-key1",
@@ -4534,7 +4520,7 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.Contains(t, err.Error(), "unable to find PKI key for reference: my-key1")
 
 	// Fail if the specified key name is default.
-	_, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/internal", map[string]interface{}{
+	_, err = CBWrite(b, s, "issuers/generate/root/internal", map[string]interface{}{
 		"common_name": "root myvault.com",
 		"issuer_name": "my-issuer1",
 		"key_name":    "Default",
@@ -4543,7 +4529,7 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.Contains(t, err.Error(), "reserved keyword 'default' can not be used as key name")
 
 	// Fail if the specified issuer name is default.
-	_, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/internal", map[string]interface{}{
+	_, err = CBWrite(b, s, "issuers/generate/root/internal", map[string]interface{}{
 		"common_name": "root myvault.com",
 		"issuer_name": "DEFAULT",
 	})
@@ -4551,7 +4537,7 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.Contains(t, err.Error(), "reserved keyword 'default' can not be used as issuer name")
 
 	// Create the first CA
-	resp, err := client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/internal", map[string]interface{}{
+	resp, err := CBWrite(b, s, "issuers/generate/root/internal", map[string]interface{}{
 		"common_name": "root myvault.com",
 		"key_type":    "rsa",
 		"issuer_name": "my-issuer1",
@@ -4564,11 +4550,11 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.NotEmpty(t, myKeyId1)
 
 	// Fetch the parsed CRL; it should be empty as we've not revoked anything
-	parsedCrl := getParsedCrlForIssuer(t, client, "pki-root", "my-issuer1")
+	parsedCrl := getParsedCrlFromBackend(t, b, s, "issuer/my-issuer1/crl/der")
 	require.Equal(t, len(parsedCrl.TBSCertList.RevokedCertificates), 0, "should have no revoked certificates")
 
 	// Fail if the specified issuer name is re-used.
-	_, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/internal", map[string]interface{}{
+	_, err = CBWrite(b, s, "issuers/generate/root/internal", map[string]interface{}{
 		"common_name": "root myvault.com",
 		"issuer_name": "my-issuer1",
 	})
@@ -4576,7 +4562,7 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.Contains(t, err.Error(), "issuer name already in use")
 
 	// Create the second CA
-	resp, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/internal", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuers/generate/root/internal", map[string]interface{}{
 		"common_name": "root myvault.com",
 		"key_type":    "rsa",
 		"issuer_name": "my-issuer2",
@@ -4590,11 +4576,11 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.NotEmpty(t, myKeyId2)
 
 	// Fetch the parsed CRL; it should be empty as we've not revoked anything
-	parsedCrl = getParsedCrlForIssuer(t, client, "pki-root", "my-issuer2")
+	parsedCrl = getParsedCrlFromBackend(t, b, s, "issuer/my-issuer2/crl/der")
 	require.Equal(t, len(parsedCrl.TBSCertList.RevokedCertificates), 0, "should have no revoked certificates")
 
 	// Fail if the specified key name is re-used.
-	_, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/internal", map[string]interface{}{
+	_, err = CBWrite(b, s, "issuers/generate/root/internal", map[string]interface{}{
 		"common_name": "root myvault.com",
 		"issuer_name": "my-issuer3",
 		"key_name":    "root-key2",
@@ -4603,7 +4589,7 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.Contains(t, err.Error(), "key name already in use")
 
 	// Create a third CA re-using key from CA 1
-	resp, err = client.Logical().WriteWithContext(ctx, "pki-root/issuers/generate/root/existing", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuers/generate/root/existing", map[string]interface{}{
 		"common_name": "root myvault.com",
 		"issuer_name": "my-issuer3",
 		"key_ref":     myKeyId1,
@@ -4616,11 +4602,11 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.NotEmpty(t, myKeyId3)
 
 	// Fetch the parsed CRL; it should be empty as we've not revoking anything.
-	parsedCrl = getParsedCrlForIssuer(t, client, "pki-root", "my-issuer3")
+	parsedCrl = getParsedCrlFromBackend(t, b, s, "issuer/my-issuer3/crl/der")
 	require.Equal(t, len(parsedCrl.TBSCertList.RevokedCertificates), 0, "should have no revoked certificates")
 	// Signatures should be the same since this is just a reissued cert. We
 	// use signature as a proxy for "these two CRLs are equal".
-	firstCrl := getParsedCrlForIssuer(t, client, "pki-root", "my-issuer1")
+	firstCrl := getParsedCrlFromBackend(t, b, s, "issuer/my-issuer1/crl/der")
 	require.Equal(t, parsedCrl.SignatureValue, firstCrl.SignatureValue)
 
 	require.NotEqual(t, myIssuerId1, myIssuerId2)
@@ -4628,12 +4614,12 @@ func TestRootWithExistingKey(t *testing.T) {
 	require.NotEqual(t, myKeyId1, myKeyId2)
 	require.Equal(t, myKeyId1, myKeyId3)
 
-	resp, err = client.Logical().ListWithContext(ctx, "pki-root/issuers")
+	resp, err = CBList(b, s, "issuers")
 	require.NoError(t, err)
-	require.Equal(t, 3, len(resp.Data["keys"].([]interface{})))
-	require.Contains(t, resp.Data["keys"], myIssuerId1)
-	require.Contains(t, resp.Data["keys"], myIssuerId2)
-	require.Contains(t, resp.Data["keys"], myIssuerId3)
+	require.Equal(t, 3, len(resp.Data["keys"].([]string)))
+	require.Contains(t, resp.Data["keys"], string(myIssuerId1.(issuerID)))
+	require.Contains(t, resp.Data["keys"], string(myIssuerId2.(issuerID)))
+	require.Contains(t, resp.Data["keys"], string(myIssuerId3.(issuerID)))
 }
 
 func TestIntermediateWithExistingKey(t *testing.T) {

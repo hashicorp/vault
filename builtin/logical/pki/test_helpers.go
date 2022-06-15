@@ -284,6 +284,10 @@ func CBWrite(b *backend, s logical.Storage, path string, data map[string]interfa
 	return CBReq(b, s, logical.UpdateOperation, path, data)
 }
 
+func CBList(b *backend, s logical.Storage, path string) (*logical.Response, error) {
+	return CBReq(b, s, logical.ListOperation, path, make(map[string]interface{}))
+}
+
 func CBDelete(b *backend, s logical.Storage, path string) (*logical.Response, error) {
 	return CBReq(b, s, logical.DeleteOperation, path, make(map[string]interface{}))
 }
