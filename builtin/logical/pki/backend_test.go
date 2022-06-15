@@ -125,31 +125,9 @@ func TestPKI_RequireCN(t *testing.T) {
 }
 
 func TestPKI_DeviceCert(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"pki": Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
+	b, s := createBackendWithStorage(t)
 
-	client := cluster.Cores[0].Client
-	var err error
-	err = client.Sys().Mount("pki", &api.MountInput{
-		Type: "pki",
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: "16h",
-			MaxLeaseTTL:     "32h",
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"common_name":         "myvault.com",
 		"not_after":           "9999-12-31T23:59:59Z",
 		"not_before_duration": "2h",
@@ -180,7 +158,7 @@ func TestPKI_DeviceCert(t *testing.T) {
 	}
 
 	// Create a role which does require CN (default)
-	_, err = client.Logical().Write("pki/roles/example", map[string]interface{}{
+	_, err = CBWrite(b, s, "roles/example", map[string]interface{}{
 		"allowed_domains":    "foobar.com,zipzap.com,abc.com,xyz.com",
 		"allow_bare_domains": true,
 		"allow_subdomains":   true,
@@ -192,7 +170,7 @@ func TestPKI_DeviceCert(t *testing.T) {
 
 	// Issue a cert with require_cn set to true and with common name supplied.
 	// It should succeed.
-	resp, err = client.Logical().Write("pki/issue/example", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issue/example", map[string]interface{}{
 		"common_name": "foobar.com",
 	})
 	if err != nil {
