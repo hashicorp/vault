@@ -83,7 +83,6 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 		unlocked := false
 		unlock := func() {
 			if !unlocked {
-				// set to true before unlocking to avoid race condition
 				unlocked = true
 				dbi.Unlock()
 			}
