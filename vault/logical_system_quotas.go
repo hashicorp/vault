@@ -193,15 +193,9 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 				return logical.ErrorResponse("invalid mount path %q", mountPath), nil
 			}
 
-			var newMountPath string
-			if me.Table == mountTableType {
-				newMountPath = me.Path
-			} else {
-				newMountPath = me.Table + "/" + me.Path
-			}
-
-			pathSuffix = strings.TrimSuffix(strings.TrimPrefix(mountPath, newMountPath), "/")
-			mountPath = newMountPath
+			mountAPIPath := me.APIPathNoNamespace()
+			pathSuffix = strings.TrimSuffix(strings.TrimPrefix(mountPath, mountAPIPath), "/")
+			mountPath = mountAPIPath
 		}
 		// Disallow creation of new quota that has properties similar to an
 		// existing quota.
