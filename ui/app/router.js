@@ -110,38 +110,38 @@ Router.map(function () {
         });
         this.route('oidc', function () {
           this.route('index', { path: '/' });
-          this.route('applications', function () {
+          this.route('clients', function () {
             this.route('index', { path: '/' });
             this.route('create');
-            this.route('application', { path: '/:id' }, function () {
+            this.route('client', { path: '/:name' }, function () {
               this.route('edit');
             });
           });
           this.route('keys', function () {
             this.route('index', { path: '/' });
             this.route('create');
-            this.route('key', { path: '/:id' }, function () {
+            this.route('key', { path: '/:name' }, function () {
               this.route('edit');
             });
           });
           this.route('assignments', function () {
             this.route('index', { path: '/' });
             this.route('create');
-            this.route('assignment', { path: '/:id' }, function () {
+            this.route('assignment', { path: '/:name' }, function () {
               this.route('edit');
             });
           });
           this.route('providers', function () {
             this.route('index', { path: '/' });
             this.route('create');
-            this.route('provider', { path: '/:id' }, function () {
+            this.route('provider', { path: '/:name' }, function () {
               this.route('edit');
             });
           });
           this.route('scopes', function () {
             this.route('index', { path: '/' });
             this.route('create');
-            this.route('scope', { path: '/:id' }, function () {
+            this.route('scope', { path: '/:name' }, function () {
               this.route('edit');
             });
           });
