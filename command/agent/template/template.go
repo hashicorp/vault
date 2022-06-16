@@ -245,7 +245,10 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 		conf.Vault.DefaultLeaseDuration = &sc.AgentConfig.TemplateConfig.StaticSecretRenderInt
 	}
 
-	conf.Vault.Transport.DisableKeepAlives = &sc.AgentConfig.DisableKeepAlivesTemplating
+	if sc.AgentConfig.DisableIdleConnsTemplating {
+		idleConns := -1
+		conf.Vault.Transport.MaxIdleConns = &idleConns
+	}
 
 	conf.Vault.SSL = &ctconfig.SSLConfig{
 		Enabled:    pointerutil.BoolPtr(false),

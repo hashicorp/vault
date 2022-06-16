@@ -1034,7 +1034,7 @@ func TestLoadConfigFile_EnforceConsistency(t *testing.T) {
 	}
 }
 
-func TestLoadConfigFile_Disable_Keep_Alives_All(t *testing.T) {
+func TestLoadConfigFile_Disable_Idle_Conns_All(t *testing.T) {
 	config, err := LoadConfig("./test-fixtures/config-disable-keep-alives-all.hcl")
 	if err != nil {
 		t.Fatal(err)
@@ -1044,10 +1044,10 @@ func TestLoadConfigFile_Disable_Keep_Alives_All(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			PidFile: "./pidfile",
 		},
-		DisableKeepAlives:           "auto-auth,templating,caching",
-		DisableKeepAlivesCaching:    true,
-		DisableKeepAlivesAutoAuth:   true,
-		DisableKeepAlivesTemplating: true,
+		DisableIdleConns:           "auto-auth,templating,caching",
+		DisableIdleConnsCaching:    true,
+		DisableIdleConnsAutoAuth:   true,
+		DisableIdleConnsTemplating: true,
 		AutoAuth: &AutoAuth{
 			Method: &Method{
 				Type:      "aws",
@@ -1083,7 +1083,7 @@ func TestLoadConfigFile_Disable_Keep_Alives_All(t *testing.T) {
 	}
 }
 
-func TestLoadConfigFile_Disable_Keep_Alives_Auto_Auth(t *testing.T) {
+func TestLoadConfigFile_Disable_Idle_Conns_Auto_Auth(t *testing.T) {
 	config, err := LoadConfig("./test-fixtures/config-disable-keep-alives-auto-auth.hcl")
 	if err != nil {
 		t.Fatal(err)
@@ -1093,10 +1093,10 @@ func TestLoadConfigFile_Disable_Keep_Alives_Auto_Auth(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			PidFile: "./pidfile",
 		},
-		DisableKeepAlives:           "auto-auth",
-		DisableKeepAlivesCaching:    false,
-		DisableKeepAlivesAutoAuth:   true,
-		DisableKeepAlivesTemplating: false,
+		DisableIdleConns:           "auto-auth",
+		DisableIdleConnsCaching:    false,
+		DisableIdleConnsAutoAuth:   true,
+		DisableIdleConnsTemplating: false,
 		AutoAuth: &AutoAuth{
 			Method: &Method{
 				Type:      "aws",
@@ -1132,7 +1132,7 @@ func TestLoadConfigFile_Disable_Keep_Alives_Auto_Auth(t *testing.T) {
 	}
 }
 
-func TestLoadConfigFile_Disable_Keep_Alives_Templating(t *testing.T) {
+func TestLoadConfigFile_Disable_Idle_Conns_Templating(t *testing.T) {
 	config, err := LoadConfig("./test-fixtures/config-disable-keep-alives-templating.hcl")
 	if err != nil {
 		t.Fatal(err)
@@ -1142,10 +1142,10 @@ func TestLoadConfigFile_Disable_Keep_Alives_Templating(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			PidFile: "./pidfile",
 		},
-		DisableKeepAlives:           "templating",
-		DisableKeepAlivesCaching:    false,
-		DisableKeepAlivesAutoAuth:   false,
-		DisableKeepAlivesTemplating: true,
+		DisableIdleConns:           "templating",
+		DisableIdleConnsCaching:    false,
+		DisableIdleConnsAutoAuth:   false,
+		DisableIdleConnsTemplating: true,
 		AutoAuth: &AutoAuth{
 			Method: &Method{
 				Type:      "aws",
@@ -1181,7 +1181,7 @@ func TestLoadConfigFile_Disable_Keep_Alives_Templating(t *testing.T) {
 	}
 }
 
-func TestLoadConfigFile_Disable_Keep_Alives_Caching(t *testing.T) {
+func TestLoadConfigFile_Disable_Idle_Conns_Caching(t *testing.T) {
 	config, err := LoadConfig("./test-fixtures/config-disable-keep-alives-caching.hcl")
 	if err != nil {
 		t.Fatal(err)
@@ -1191,10 +1191,10 @@ func TestLoadConfigFile_Disable_Keep_Alives_Caching(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			PidFile: "./pidfile",
 		},
-		DisableKeepAlives:           "caching",
-		DisableKeepAlivesCaching:    true,
-		DisableKeepAlivesAutoAuth:   false,
-		DisableKeepAlivesTemplating: false,
+		DisableIdleConns:           "caching",
+		DisableIdleConnsCaching:    true,
+		DisableIdleConnsAutoAuth:   false,
+		DisableIdleConnsTemplating: false,
 		AutoAuth: &AutoAuth{
 			Method: &Method{
 				Type:      "aws",
@@ -1230,7 +1230,7 @@ func TestLoadConfigFile_Disable_Keep_Alives_Caching(t *testing.T) {
 	}
 }
 
-func TestLoadConfigFile_Disable_Keep_Alives_Empty(t *testing.T) {
+func TestLoadConfigFile_Disable_Idle_Conns_Empty(t *testing.T) {
 	config, err := LoadConfig("./test-fixtures/config-disable-keep-alives-empty.hcl")
 	if err != nil {
 		t.Fatal(err)
@@ -1240,10 +1240,10 @@ func TestLoadConfigFile_Disable_Keep_Alives_Empty(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			PidFile: "./pidfile",
 		},
-		DisableKeepAlives:           "",
-		DisableKeepAlivesCaching:    false,
-		DisableKeepAlivesAutoAuth:   false,
-		DisableKeepAlivesTemplating: false,
+		DisableIdleConns:           "",
+		DisableIdleConnsCaching:    false,
+		DisableIdleConnsAutoAuth:   false,
+		DisableIdleConnsTemplating: false,
 		AutoAuth: &AutoAuth{
 			Method: &Method{
 				Type:      "aws",
