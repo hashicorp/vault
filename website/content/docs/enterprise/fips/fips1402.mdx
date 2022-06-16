@@ -72,7 +72,22 @@ from the following sources:
 
 Hashicorp **does not** support in-place migrations from non-FIPS Inside
 versions of Vault to FIPS Inside versions of Vault, regardless of version.
-A fresh cluster installation is required to receive support.
+A fresh cluster installation is required to receive support. We generally
+recommend avoiding direct upgrades and replicated-migrations for several
+reasons:
+
+ - Old entries remain encrypted with the old barrier key until overwritten,
+   this barrier key was likely not created by a FIPS library and thus
+   is not compliant.
+ - Many secrets engines internally create keys; things like Transit create
+   and store keys, but don't store any data (inside of Vault) -- these would
+   still need to be accessible and rotated to a new, FIPS-compliant key.
+   Any PKI engines would have also created non-compliant keys, but rotation
+   of say, a Root CA involves a concerted, non-Vault effort to accomplish
+   and must be done thoughtfully.
+
+Combined, we suggest leaving the existing cluster in place, and carefully
+consider migration of specific workloads to the FIPS-backed cluster.
 
 Entropy Augmentation **does not** work with FIPS 140-2 Inside. The internal
 BoringCrypto RNG is FIPS 140-2 certified and does not accept entropy from
