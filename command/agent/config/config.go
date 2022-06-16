@@ -30,7 +30,7 @@ type Config struct {
 	Vault                      *Vault                     `hcl:"vault"`
 	TemplateConfig             *TemplateConfig            `hcl:"template_config"`
 	Templates                  []*ctconfig.TemplateConfig `hcl:"templates"`
-	DisableIdleConns           string                     `hcl:"disable_idle_connections"`
+	DisableIdleConns           []string                   `hcl:"disable_idle_connections"`
 	DisableIdleConnsCaching    bool                       `hcl:"-"`
 	DisableIdleConnsTemplating bool                       `hcl:"-"`
 	DisableIdleConnsAutoAuth   bool                       `hcl:"-"`
@@ -267,24 +267,23 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	if disableIdleConnsEnv := os.Getenv(DisableIdleConnsEnv); disableIdleConnsEnv != "" {
-		result.DisableIdleConns = disableIdleConnsEnv
+		result.DisableIdleConns, err = parseutil.ParseCommaStringSlice(strings.ToLower(disableIdleConnsEnv))
+		if err != nil {
+			return nil, fmt.Errorf("error parsing environment variable %s: %v", DisableIdleConnsEnv, err)
+		}
 	}
 
-	if result.DisableIdleConns != "" {
-		diableIdleConns := strings.ToLower(result.DisableIdleConns)
-		if strings.Contains(diableIdleConns, "auto-auth") {
+	for _, subsystem := range result.DisableIdleConns {
+		switch subsystem {
+		case "auto-auth":
 			result.DisableIdleConnsAutoAuth = true
-		}
-
-		if strings.Contains(diableIdleConns, "caching") {
+		case "caching":
 			result.DisableIdleConnsCaching = true
-		}
-
-		if strings.Contains(diableIdleConns, "templating") {
+		case "templating":
 			result.DisableIdleConnsTemplating = true
+
 		}
 	}
-
 	return result, nil
 }
 

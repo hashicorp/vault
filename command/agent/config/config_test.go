@@ -1044,7 +1044,7 @@ func TestLoadConfigFile_Disable_Idle_Conns_All(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			PidFile: "./pidfile",
 		},
-		DisableIdleConns:           "auto-auth, caching, templating",
+		DisableIdleConns:           []string{"auto-auth", "caching", "templating"},
 		DisableIdleConnsCaching:    true,
 		DisableIdleConnsAutoAuth:   true,
 		DisableIdleConnsTemplating: true,
@@ -1093,7 +1093,7 @@ func TestLoadConfigFile_Disable_Idle_Conns_Auto_Auth(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			PidFile: "./pidfile",
 		},
-		DisableIdleConns:           "auto-auth",
+		DisableIdleConns:           []string{"auto-auth"},
 		DisableIdleConnsCaching:    false,
 		DisableIdleConnsAutoAuth:   true,
 		DisableIdleConnsTemplating: false,
@@ -1142,7 +1142,7 @@ func TestLoadConfigFile_Disable_Idle_Conns_Templating(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			PidFile: "./pidfile",
 		},
-		DisableIdleConns:           "templating",
+		DisableIdleConns:           []string{"templating"},
 		DisableIdleConnsCaching:    false,
 		DisableIdleConnsAutoAuth:   false,
 		DisableIdleConnsTemplating: true,
@@ -1191,7 +1191,7 @@ func TestLoadConfigFile_Disable_Idle_Conns_Caching(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			PidFile: "./pidfile",
 		},
-		DisableIdleConns:           "caching",
+		DisableIdleConns:           []string{"caching"},
 		DisableIdleConnsCaching:    true,
 		DisableIdleConnsAutoAuth:   false,
 		DisableIdleConnsTemplating: false,
@@ -1240,7 +1240,7 @@ func TestLoadConfigFile_Disable_Idle_Conns_Empty(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			PidFile: "./pidfile",
 		},
-		DisableIdleConns:           "",
+		DisableIdleConns:           []string{""},
 		DisableIdleConnsCaching:    false,
 		DisableIdleConnsAutoAuth:   false,
 		DisableIdleConnsTemplating: false,
@@ -1280,11 +1280,10 @@ func TestLoadConfigFile_Disable_Idle_Conns_Empty(t *testing.T) {
 }
 
 func TestLoadConfigFile_Disable_Idle_Conns_Env(t *testing.T) {
-	err := os.Setenv(DisableIdleConnsEnv, "auto-auth, caching, templating")
+	err := os.Setenv(DisableIdleConnsEnv, "auto-auth,caching,templating")
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	config, err := LoadConfig("./test-fixtures/config-disable-idle-connections-empty.hcl")
 	if err != nil {
 		t.Fatal(err)
@@ -1294,7 +1293,7 @@ func TestLoadConfigFile_Disable_Idle_Conns_Env(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			PidFile: "./pidfile",
 		},
-		DisableIdleConns:           "auto-auth, caching, templating",
+		DisableIdleConns:           []string{"auto-auth", "caching", "templating"},
 		DisableIdleConnsCaching:    true,
 		DisableIdleConnsAutoAuth:   true,
 		DisableIdleConnsTemplating: true,
