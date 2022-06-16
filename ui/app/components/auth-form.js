@@ -9,6 +9,7 @@ import { computed } from '@ember/object';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { task, timeout } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
+import { v4 as uuidv4 } from 'uuid';
 
 const BACKENDS = supportedAuthBackends();
 
@@ -275,6 +276,10 @@ export default Component.extend(DEFAULTS, {
       }
       if (this.customPath || backend.id) {
         data.path = this.customPath || backend.id;
+      }
+      // add nonce field for okta backend
+      if (backend.id == 'okta') {
+        data.nonce = uuidv4();
       }
       return this.authenticate.unlinked().perform(backend.type, data);
     },
