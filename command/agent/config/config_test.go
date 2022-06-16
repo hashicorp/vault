@@ -1035,7 +1035,7 @@ func TestLoadConfigFile_EnforceConsistency(t *testing.T) {
 }
 
 func TestLoadConfigFile_Disable_Idle_Conns_All(t *testing.T) {
-	config, err := LoadConfig("./test-fixtures/config-disable-keep-alives-all.hcl")
+	config, err := LoadConfig("./test-fixtures/config-disable-idle-connections-all.hcl")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1044,7 +1044,7 @@ func TestLoadConfigFile_Disable_Idle_Conns_All(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			PidFile: "./pidfile",
 		},
-		DisableIdleConns:           "auto-auth,templating,caching",
+		DisableIdleConns:           "auto-auth, caching, templating",
 		DisableIdleConnsCaching:    true,
 		DisableIdleConnsAutoAuth:   true,
 		DisableIdleConnsTemplating: true,
@@ -1084,7 +1084,7 @@ func TestLoadConfigFile_Disable_Idle_Conns_All(t *testing.T) {
 }
 
 func TestLoadConfigFile_Disable_Idle_Conns_Auto_Auth(t *testing.T) {
-	config, err := LoadConfig("./test-fixtures/config-disable-keep-alives-auto-auth.hcl")
+	config, err := LoadConfig("./test-fixtures/config-disable-idle-connections-auto-auth.hcl")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1133,7 +1133,7 @@ func TestLoadConfigFile_Disable_Idle_Conns_Auto_Auth(t *testing.T) {
 }
 
 func TestLoadConfigFile_Disable_Idle_Conns_Templating(t *testing.T) {
-	config, err := LoadConfig("./test-fixtures/config-disable-keep-alives-templating.hcl")
+	config, err := LoadConfig("./test-fixtures/config-disable-idle-connections-templating.hcl")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1182,7 +1182,7 @@ func TestLoadConfigFile_Disable_Idle_Conns_Templating(t *testing.T) {
 }
 
 func TestLoadConfigFile_Disable_Idle_Conns_Caching(t *testing.T) {
-	config, err := LoadConfig("./test-fixtures/config-disable-keep-alives-caching.hcl")
+	config, err := LoadConfig("./test-fixtures/config-disable-idle-connections-caching.hcl")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1231,7 +1231,7 @@ func TestLoadConfigFile_Disable_Idle_Conns_Caching(t *testing.T) {
 }
 
 func TestLoadConfigFile_Disable_Idle_Conns_Empty(t *testing.T) {
-	config, err := LoadConfig("./test-fixtures/config-disable-keep-alives-empty.hcl")
+	config, err := LoadConfig("./test-fixtures/config-disable-idle-connections-empty.hcl")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1244,6 +1244,60 @@ func TestLoadConfigFile_Disable_Idle_Conns_Empty(t *testing.T) {
 		DisableIdleConnsCaching:    false,
 		DisableIdleConnsAutoAuth:   false,
 		DisableIdleConnsTemplating: false,
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:      "aws",
+				MountPath: "auth/aws",
+				Namespace: "my-namespace/",
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+			Sinks: []*Sink{
+				{
+					Type:   "file",
+					DHType: "curve25519",
+					DHPath: "/tmp/file-foo-dhpath",
+					AAD:    "foobar",
+					Config: map[string]interface{}{
+						"path": "/tmp/file-foo",
+					},
+				},
+			},
+		},
+		Vault: &Vault{
+			Address: "http://127.0.0.1:1111",
+			Retry: &Retry{
+				ctconfig.DefaultRetryAttempts,
+			},
+		},
+	}
+
+	config.Prune()
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func TestLoadConfigFile_Disable_Idle_Conns_Env(t *testing.T) {
+	err := os.Setenv(DisableIdleConnsEnv, "auto-auth, caching, templating")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	config, err := LoadConfig("./test-fixtures/config-disable-idle-connections-empty.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			PidFile: "./pidfile",
+		},
+		DisableIdleConns:           "auto-auth, caching, templating",
+		DisableIdleConnsCaching:    true,
+		DisableIdleConnsAutoAuth:   true,
+		DisableIdleConnsTemplating: true,
 		AutoAuth: &AutoAuth{
 			Method: &Method{
 				Type:      "aws",

@@ -144,7 +144,7 @@ These are the currently-available general configuration option:
   with code `0` after a single successful auth, where success means that a
   token was retrieved and all sinks successfully wrote it
 
-- `disable_keep_alives` `(string: "")` - A comma separated string that disables keep alives for various features in Vault Agent.
+- `disable_idle_connections` `(string: "")` - A comma separated string that disables idle connections for various features in Vault Agent.
   Valid values include: `auto-auth`, `caching` and `templating`.
 
 - `template` <code>([template][template]: <optional\>)</code> - Specifies options used for templating Vault secrets to files.

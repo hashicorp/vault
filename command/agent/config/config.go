@@ -36,6 +36,8 @@ type Config struct {
 	DisableIdleConnsAutoAuth   bool                       `hcl:"-"`
 }
 
+const DisableIdleConnsEnv = "VAULT_AGENT_DISABLE_IDLE_CONNECTIONS"
+
 func (c *Config) Prune() {
 	for _, l := range c.Listeners {
 		l.RawConfig = nil
@@ -264,16 +266,21 @@ func LoadConfig(path string) (*Config, error) {
 		result.Vault.Retry.NumRetries = 0
 	}
 
-	if result.DisableIdleConns != "" {
-		if strings.Contains(strings.ToLower(result.DisableIdleConns), "caching") {
-			result.DisableIdleConnsCaching = true
-		}
+	if disableIdleConnsEnv := os.Getenv(DisableIdleConnsEnv); disableIdleConnsEnv != "" {
+		result.DisableIdleConns = disableIdleConnsEnv
+	}
 
-		if strings.Contains(strings.ToLower(result.DisableIdleConns), "auto-auth") {
+	if result.DisableIdleConns != "" {
+		diableIdleConns := strings.ToLower(result.DisableIdleConns)
+		if strings.Contains(diableIdleConns, "auto-auth") {
 			result.DisableIdleConnsAutoAuth = true
 		}
 
-		if strings.Contains(strings.ToLower(result.DisableIdleConns), "templating") {
+		if strings.Contains(diableIdleConns, "caching") {
+			result.DisableIdleConnsCaching = true
+		}
+
+		if strings.Contains(diableIdleConns, "templating") {
 			result.DisableIdleConnsTemplating = true
 		}
 	}
