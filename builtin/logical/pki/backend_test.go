@@ -4159,7 +4159,7 @@ func RoleIssuanceRegressionHelper(t *testing.T, b *backend, s logical.Storage, i
 						}
 
 						resp, err = CBWrite(b, s, "issue/"+role, map[string]interface{}{
-							"common_name": test.CommonName,
+							"common_name":          test.CommonName,
 							"exclude_cn_from_sans": true,
 						})
 
