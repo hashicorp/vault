@@ -1326,6 +1326,10 @@ github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc h1:7xGrl4tTpBQu5Z
 github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc/go.mod h1:1rLVY/DWf3U6vSZgH16S7pymfrhK2lcUlXjgGglw/lY=
 github.com/ncw/swift v1.0.47 h1:4DQRPj35Y41WogBxyhOXlrI37nzGlyEcsforeudyYPQ=
 github.com/ncw/swift v1.0.47/go.mod h1:23YIA4yWVnGwv2dQlN4bB7egfYX6YLn0Yo/S6zZO/ZM=
+github.com/neo4j/neo4j-go-driver/v5 v5.0.0-preview h1:TAgaXsSlqRCQVGLn0RAQALOJRxEZ3/SNvvTFG0hBUyk=
+github.com/neo4j/neo4j-go-driver/v5 v5.0.0-preview/go.mod h1:B9SY/FQUDv30fwNhXiNO2mo8QzouUKR3DhVH7w0yXaE=
+github.com/neo4j/neo4j-go-driver/v5 v5.0.0-preview.0.20220525132830-28c758643240 h1:aeOharGhEGOXZ2T9rjOwiwqjqgi03ZHSmQGGXzp7F7o=
+github.com/neo4j/neo4j-go-driver/v5 v5.0.0-preview.0.20220525132830-28c758643240/go.mod h1:Vff8OwT7QpLm7L2yYr85XNWe9Rbqlbeb9asNXJTHO4k=
 github.com/nicolai86/scaleway-sdk v1.10.2-0.20180628010248-798f60e20bb2 h1:BQ1HW7hr4IVovMwWg0E0PYcyW8CzqDcVmaew9cujU4s=
 github.com/nicolai86/scaleway-sdk v1.10.2-0.20180628010248-798f60e20bb2/go.mod h1:TLb2Sg7HQcgGdloNxkrmtgDNR9uVYF3lfdFIN4Ro6Sk=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
@@ -2030,6 +2034,7 @@ golang.org/x/sys v0.0.0-20211007075335-d3039528d8ac/go.mod h1:oPkhp1MJrh7nUepCBc
 golang.org/x/sys v0.0.0-20211025112917-711f33c9992c/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20211025201205-69cdffdb9359/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20211031064116-611d5d643895/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+golang.org/x/sys v0.0.0-20211124211545-fe61309f8881/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20220207234003-57398862261d/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20220209214540-3681064d5158/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=

@@ -145,6 +145,7 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2
 	github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc
 	github.com/ncw/swift v1.0.47
+	github.com/neo4j/neo4j-go-driver/v5 v5.0.0-preview.0.20220525132830-28c758643240
 	github.com/oklog/run v1.1.0
 	github.com/okta/okta-sdk-golang/v2 v2.12.1
 	github.com/oracle/oci-go-sdk v13.1.0+incompatible

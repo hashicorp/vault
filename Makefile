@@ -231,6 +231,9 @@ influxdb-database-plugin:
 postgresql-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/postgresql-database-plugin ./plugins/database/postgresql/postgresql-database-plugin
 
+neo4j-database-plugin:
+	@CGO_ENABLED=0 $(GO_CMD) build -o bin/neo4j-database-plugin ./plugins/database/neo4j/neo4j-database-plugin
+
 mssql-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/mssql-database-plugin ./plugins/database/mssql/mssql-database-plugin
 
