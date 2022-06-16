@@ -119,6 +119,11 @@ binary.`,
 				Description: `Base64 encoded SHA256 RSA signature of the instance identity document. This
 needs to be supplied along with 'identity' parameter.`,
 			},
+			"region": {
+				Type: framework.TypeString,
+				Description: `The AWS region to which the request should be directed to. Defaults to 
+'us-east-1', can be adjusted if necessary for regions such as 'us-gov-west-1','us-gov-east-1'.`
+			},			
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
