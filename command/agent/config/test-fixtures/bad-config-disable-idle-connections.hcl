@@ -1,5 +1,5 @@
 pid_file = "./pidfile"
-disable_idle_connections = []
+disable_idle_connections = ["foo","caching","templating"]
 
 auto_auth {
   method {

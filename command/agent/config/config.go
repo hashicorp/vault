@@ -281,9 +281,13 @@ func LoadConfig(path string) (*Config, error) {
 			result.DisableIdleConnsCaching = true
 		case "templating":
 			result.DisableIdleConnsTemplating = true
-
+		case "":
+			continue
+		default:
+			return nil, fmt.Errorf("unknown disable_idle_connections value: %s", subsystem)
 		}
 	}
+
 	return result, nil
 }
 

@@ -1240,7 +1240,7 @@ func TestLoadConfigFile_Disable_Idle_Conns_Empty(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			PidFile: "./pidfile",
 		},
-		DisableIdleConns:           []string{""},
+		DisableIdleConns:           []string{},
 		DisableIdleConnsCaching:    false,
 		DisableIdleConnsAutoAuth:   false,
 		DisableIdleConnsTemplating: false,
@@ -1281,6 +1281,8 @@ func TestLoadConfigFile_Disable_Idle_Conns_Empty(t *testing.T) {
 
 func TestLoadConfigFile_Disable_Idle_Conns_Env(t *testing.T) {
 	err := os.Setenv(DisableIdleConnsEnv, "auto-auth,caching,templating")
+	defer os.Unsetenv(DisableIdleConnsEnv)
+
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1329,5 +1331,12 @@ func TestLoadConfigFile_Disable_Idle_Conns_Env(t *testing.T) {
 	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
+	}
+}
+
+func TestLoadConfigFile_Bad_Value_Disable_Idle_Conns(t *testing.T) {
+	_, err := LoadConfig("./test-fixtures/bad-config-disable-idle-connections.hcl")
+	if err == nil {
+		t.Fatal("should have error, it didn't")
 	}
 }
