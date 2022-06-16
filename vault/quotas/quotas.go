@@ -449,6 +449,7 @@ func (m *Manager) QueryQuota(req *Request) (Quota, error) {
 // Priority rules are as follows:
 // - namespace specific quota takes precedence over global quota
 // - mount specific quota takes precedence over namespace specific quota
+// - path suffix specific quota takes precedence over mount specific quota
 func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 	if txn == nil {
 		txn = m.db.Txn(false)
