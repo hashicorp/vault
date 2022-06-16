@@ -275,6 +275,10 @@ export default Component.extend(DEFAULTS, {
       if (this.customPath || backend.id) {
         data.path = this.customPath || backend.id;
       }
+      // add nonce field for okta backend
+      if (backend.id == 'okta') {
+        data.nonce = crypto.randomUUID();
+      }
       return this.authenticate.unlinked().perform(backend.type, data);
     },
     handleError(e) {
