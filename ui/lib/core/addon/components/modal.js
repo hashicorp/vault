@@ -8,13 +8,21 @@ import { messageTypes } from 'core/helpers/message-types';
  *
  * @example
  * ```js
- * <Modal @title={'myTitle'} @showCloseButton={true} @onClose={{this.closeModalAndExportData}}/>
+ *  <Modal
+ *    @title="Export attribution data"
+ *    @type="info"
+ *    @isActive={{this.showCSVDownloadModal}}
+ *    @showCloseButton={{true}}
+ *    @onClose={{action (mut this.showCSVDownloadModal) false}}
+ *  >
+ *    Whatever content pops up when the modal isActive! 
+ *  </Modal>
  * ```
  * @callback onClose - onClose is the action taken when someone clicks the modal background or close button (if shown).
  * @param {boolean} isActive=false - whether or not modal displays
  * @param {string} [title] - This text shows up in the header section of the modal.
  * @param {boolean} [showCloseButton=false] - controls whether the close button in the top right corner shows.
- * @param {string} type=null - The header type. This comes from the message-types helper.
+ * @param {string} [type=null] - The header type. This comes from the message-types helper.
  */
 
 export default class ModalComponent extends Component {
