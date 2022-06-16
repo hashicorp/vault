@@ -145,7 +145,8 @@ These are the currently-available general configuration option:
   token was retrieved and all sinks successfully wrote it
 
 - `disable_idle_connections` `(string: "")` - A comma separated string that disables idle connections for various features in Vault Agent.
-  Valid values include: `auto-auth`, `caching` and `templating`.
+  Valid values include: `auto-auth`, `caching` and `templating`. Can additionally be configured by setting the `VAULT_AGENT_DISABLE_IDLE_CONNECTIONS` 
+  environment variable and will be used instead of values found in configuration files.
 
 - `template` <code>([template][template]: <optional\>)</code> - Specifies options used for templating Vault secrets to files.
 
