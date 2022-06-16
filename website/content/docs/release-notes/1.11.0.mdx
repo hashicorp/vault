@@ -48,7 +48,7 @@ Kubernetes service accounts must be manually generated and passed to a Kubernete
 The KV version 2 secrets engine now includes a set of utilities and enhancements for easier retrieval of key-value secrets and metadata. This includes:
 
 * New optional Vault CLI mount flag (`vault kv get -mount=secret foo`).
-* New flag to output a sample policy in HCL for any Vault CLI command.
+* New flag to output a sample policy in HCL (`-output-policy`) for any Vault CLI command.
 * New KV convenience/helper methods (GET and PUT) added to the Go client library.
 
 For more details, refer to the [Version Key/Value Secrets Engine](https://learn.hashicorp.com/tutorials/vault/versioned-kv) tutorial.
