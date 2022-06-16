@@ -193,6 +193,7 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 		AllowedOtherSANs:          []string{"*"},
 		AllowedSerialNumbers:      []string{"*"},
 		AllowedURISANs:            []string{"*"},
+		CNValidations:             []string{"disabled"},
 		GenerateLease:             new(bool),
 		KeyUsage:                  data.Get("key_usage").([]string),
 		ExtKeyUsage:               data.Get("ext_key_usage").([]string),
