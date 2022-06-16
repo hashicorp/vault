@@ -629,7 +629,6 @@ func (c *Core) loadTable(ctx context.Context, path string) (*MountTable, bool, e
 // It returns both the decoded mount table and the total physical size used by
 // the header and all the chunks.
 func (c *Core) decodeMountTableV1(ctx context.Context, mountTable *MountTable, path string) (int, error) {
-
 	c.logger.Debug("loading table chunks", "chunks", mountTable.Chunks)
 
 	// Read the chunks
@@ -887,7 +886,6 @@ func (c *Core) persistMountTableHeader(ctx context.Context, mt *MountTable, path
 //   - we update the table header so that it points to the new chunks
 //   - finally we remove the previous chunks which are noz unused
 func (c *Core) persistMountTableV1(ctx context.Context, mt, currentTable *MountTable, path string) (int, error) {
-
 	compressedEntries, err := jsonutil.EncodeJSONAndCompress(mt.Entries, nil)
 	if err != nil {
 		c.logger.Error("failed to encode mount table entries", "error", err)
