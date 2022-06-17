@@ -11,7 +11,6 @@ import (
 	monitoring "cloud.google.com/go/monitoring/apiv3"
 	"github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/circonus"
-	"github.com/armon/go-metrics/datadog"
 	"github.com/armon/go-metrics/prometheus"
 	stackdriver "github.com/google/go-metrics-stackdriver"
 	stackdrivervault "github.com/google/go-metrics-stackdriver/vault"
@@ -351,7 +350,7 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 			tags = opts.Config.DogStatsDTags
 		}
 
-		sink, err := datadog.NewDogStatsdSink(opts.Config.DogStatsDAddr, metricsConf.HostName)
+		sink, err := NewDatadogSink(opts.Config.DogStatsDAddr, metricsConf.HostName, opts.Ui)
 		if err != nil {
 			return nil, nil, false, fmt.Errorf("failed to start DogStatsD sink: %w", err)
 		}
