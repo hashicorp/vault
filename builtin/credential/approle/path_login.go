@@ -75,21 +75,9 @@ func (b *backend) pathLoginResolveRole(ctx context.Context, req *logical.Request
 
 	roleName := roleIDIndex.Name
 
-	roleLock := b.roleLock(roleName)
-	roleLock.RLock()
-
-	role, err := b.roleEntry(ctx, req.Storage, roleName)
-	roleLock.RUnlock()
-	if err != nil {
-		return nil, err
-	}
-	if role == nil {
-		return logical.ErrorResponse("invalid role ID"), nil
-	}
-
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"role": role.name,
+			"role": roleName,
 		},
 	}, nil
 }
