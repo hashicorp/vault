@@ -776,28 +776,7 @@ func (sc *storageContext) fetchCertBundleByIssuerId(id issuerID, loadKey bool) (
 		return issuer, bundle, err
 	}
 
-	issuer, err := sc.fetchIssuerById(id)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var bundle certutil.CertBundle
-	bundle.Certificate = issuer.Certificate
-	bundle.CAChain = issuer.CAChain
-	bundle.SerialNumber = issuer.SerialNumber
-
-	// Fetch the key if it exists. Sometimes we don't need the key immediately.
-	if loadKey && issuer.KeyID != keyID("") {
-		key, err := sc.fetchKeyById(issuer.KeyID)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		bundle.PrivateKeyType = key.PrivateKeyType
-		bundle.PrivateKey = key.PrivateKey
-	}
-
-	return issuer, &bundle, nil
+	return sc.Backend.issuerCache.fetchCertBundleByIssuerId(sc.Context, sc.Storage, sc.Backend, id, loadKey)
 }
 
 func (sc *storageContext) writeCaBundle(caBundle *certutil.CertBundle, issuerName string, keyName string) (*issuerEntry, *keyEntry, error) {
