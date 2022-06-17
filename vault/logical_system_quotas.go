@@ -222,7 +222,7 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			if authBackend == nil || authBackend.Type() != logical.TypeCredential {
 				return logical.ErrorResponse("Mount path '%s' is not a valid auth method and therefore unsuitable for use with role-based quotas", mountPath), nil
 			}
-			//We will always error as we aren't supplying real data, but we're looking for "unsupported operation" in particular
+			// We will always error as we aren't supplying real data, but we're looking for "unsupported operation" in particular
 			_, err := authBackend.HandleRequest(ctx, &logical.Request{
 				Path:      "login",
 				Operation: logical.ResolveRoleOperation,
