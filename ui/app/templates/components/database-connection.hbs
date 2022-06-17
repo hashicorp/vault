@@ -346,7 +346,7 @@
 
 <Modal
   @title="Rotate your root credentials?"
-  @onClose={{action "continueWithoutRotate"}}
+  @onClose={{this.continueWithoutRotate}}
   @isActive={{this.showSaveModal}}
   @type="info"
   @showCloseButton={{false}}
