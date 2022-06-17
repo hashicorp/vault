@@ -779,15 +779,22 @@ func (sc *storageContext) fetchCertBundleByIssuerId(id issuerID, loadKey bool) (
 	return sc.Backend.issuerCache.fetchCertBundleByIssuerId(sc.Context, sc.Storage, sc.Backend, id, loadKey)
 }
 
-func (sc *storageContext) fetchParsedCertBundleByIssuerId(id issuerID) (*issuerEntry, *certutil.CertBundle, *certutil.ParsedCertBundle, error) {
-	entry, bundle, err := sc.fetchCertBundleByIssuerId(id, true)
-	if err != nil {
-		return nil, nil, nil, err
-	}
+func (sc *storageContext) fetchParsedCertBundleByIssuerId(id issuerID) (entry *issuerEntry, bundle *certutil.CertBundle, parsedBundle *certutil.ParsedCertBundle, err error) {
+	if id == legacyBundleShimID {
+		entry, bundle, err = sc.fetchCertBundleByIssuerId(id, true)
+		if err != nil {
+			return nil, nil, nil, err
+		}
 
-	parsedBundle, err := parseCABundle(sc.Context, sc.Backend, bundle)
-	if err != nil {
-		return nil, nil, nil, err
+		parsedBundle, err = parseCABundle(sc.Context, sc.Backend, bundle)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+	} else {
+		entry, bundle, parsedBundle, err = sc.Backend.issuerCache.fetchIssuerInfoById(sc.Context, sc.Storage, sc.Backend, id)
+		if err != nil {
+			return nil, nil, nil, err
+		}
 	}
 
 	if parsedBundle.Certificate == nil {
