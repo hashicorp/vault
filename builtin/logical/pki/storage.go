@@ -402,17 +402,7 @@ func (i issuerEntry) EnsureUsage(usage issuerUsage) error {
 }
 
 func (sc *storageContext) listIssuers() ([]issuerID, error) {
-	strList, err := sc.Storage.List(sc.Context, issuerPrefix)
-	if err != nil {
-		return nil, err
-	}
-
-	issuerIds := make([]issuerID, 0, len(strList))
-	for _, entry := range strList {
-		issuerIds = append(issuerIds, issuerID(entry))
-	}
-
-	return issuerIds, nil
+	return sc.Backend.issuerCache.listIssuers(sc.Context, sc.Storage)
 }
 
 func (sc *storageContext) resolveKeyReference(reference string) (keyID, error) {
@@ -446,25 +436,7 @@ func (sc *storageContext) resolveKeyReference(reference string) (keyID, error) {
 
 // fetchIssuerById returns an issuerEntry based on issuerId, if none found an error is returned.
 func (sc *storageContext) fetchIssuerById(issuerId issuerID) (*issuerEntry, error) {
-	if len(issuerId) == 0 {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki issuer: empty issuer identifier")}
-	}
-
-	entry, err := sc.Storage.Get(sc.Context, issuerPrefix+issuerId.String())
-	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki issuer: %v", err)}
-	}
-	if entry == nil {
-		// FIXME: Dedicated/specific error for this?
-		return nil, errutil.UserError{Err: fmt.Sprintf("pki issuer id %s does not exist", issuerId.String())}
-	}
-
-	var issuer issuerEntry
-	if err := entry.DecodeJSON(&issuer); err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode pki issuer with id %s: %v", issuerId.String(), err)}
-	}
-
-	return &issuer, nil
+	return sc.Backend.issuerCache.fetchIssuerById(sc.Context, sc.Storage, issuerId)
 }
 
 func (sc *storageContext) writeIssuer(issuer *issuerEntry) error {
@@ -475,6 +447,7 @@ func (sc *storageContext) writeIssuer(issuer *issuerEntry) error {
 		return err
 	}
 
+	sc.Backend.issuerCache.Invalidate()
 	return sc.Storage.Put(sc.Context, json)
 }
 
@@ -493,6 +466,7 @@ func (sc *storageContext) deleteIssuer(id issuerID) (bool, error) {
 		}
 	}
 
+	sc.Backend.issuerCache.Invalidate()
 	return wasDefault, sc.Storage.Delete(sc.Context, issuerPrefix+id.String())
 }
 
@@ -745,34 +719,17 @@ func (sc *storageContext) resolveIssuerReference(reference string) (issuerID, er
 
 	// Lookup by a direct get first to see if our reference is an ID, this is quick and cached.
 	if len(reference) == uuidLength {
-		entry, err := sc.Storage.Get(sc.Context, issuerPrefix+reference)
+		refAsId := issuerID(reference)
+		ok, err := sc.Backend.issuerCache.issuerWithID(sc.Context, sc.Storage, refAsId)
 		if err != nil {
 			return issuerID("issuer-read"), err
 		}
-		if entry != nil {
-			return issuerID(reference), nil
+		if ok {
+			return refAsId, nil
 		}
 	}
 
-	// ... than to pull all issuers from storage.
-	issuers, err := sc.listIssuers()
-	if err != nil {
-		return issuerID("list-error"), err
-	}
-
-	for _, issuerId := range issuers {
-		issuer, err := sc.fetchIssuerById(issuerId)
-		if err != nil {
-			return issuerID("issuer-read"), err
-		}
-
-		if issuer.Name == reference {
-			return issuer.ID, nil
-		}
-	}
-
-	// Otherwise, we must not have found the issuer.
-	return IssuerRefNotFound, errutil.UserError{Err: fmt.Sprintf("unable to find PKI issuer for reference: %v", reference)}
+	return sc.Backend.issuerCache.issuerWithName(sc.Context, sc.Storage, reference)
 }
 
 func (sc *storageContext) resolveIssuerCRLPath(reference string) (string, error) {
