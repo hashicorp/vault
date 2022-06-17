@@ -177,6 +177,9 @@ func Backend(conf *logical.BackendConfig) *backend {
 	b.pkiStorageVersion.Store(0)
 
 	b.crlBuilder = &crlBuilder{}
+
+	b.keyCache = InitKeyStorageCache()
+
 	return &b
 }
 
@@ -197,6 +200,9 @@ type backend struct {
 
 	// Write lock around issuers and keys.
 	issuersLock sync.RWMutex
+
+	// Issuer caching layer for performance
+	keyCache *keyStorageCache
 }
 
 type (
