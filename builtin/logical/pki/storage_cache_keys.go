@@ -30,11 +30,17 @@ func InitKeyStorageCache() *keyStorageCache {
 	return &ret
 }
 
-func (c *keyStorageCache) Invalidate() {
+func (c *keyStorageCache) Invalidate(op func() error) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	c.invalid = true
+
+	if op != nil {
+		return op()
+	}
+
+	return nil
 }
 
 func (c *keyStorageCache) reloadOnInvalidation(ctx context.Context, s logical.Storage) error {

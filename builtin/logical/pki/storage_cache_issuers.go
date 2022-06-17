@@ -37,11 +37,17 @@ func InitIssuerStorageCache() *issuerStorageCache {
 	return &ret
 }
 
-func (c *issuerStorageCache) Invalidate() {
+func (c *issuerStorageCache) Invalidate(op func() error) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	c.invalid = true
+
+	if op != nil {
+		return op()
+	}
+
+	return nil
 }
 
 func (c *issuerStorageCache) reloadOnInvalidation(ctx context.Context, s logical.Storage) error {

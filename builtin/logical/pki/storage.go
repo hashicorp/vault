@@ -190,8 +190,9 @@ func (sc *storageContext) writeKey(key keyEntry) error {
 		return err
 	}
 
-	sc.Backend.keyCache.Invalidate()
-	return sc.Storage.Put(sc.Context, json)
+	return sc.Backend.keyCache.Invalidate(func() error {
+		return sc.Storage.Put(sc.Context, json)
+	})
 }
 
 func (sc *storageContext) deleteKey(id keyID) (bool, error) {
@@ -209,8 +210,9 @@ func (sc *storageContext) deleteKey(id keyID) (bool, error) {
 		}
 	}
 
-	sc.Backend.keyCache.Invalidate()
-	return wasDefault, sc.Storage.Delete(sc.Context, keyPrefix+id.String())
+	return wasDefault, sc.Backend.keyCache.Invalidate(func() error {
+		return sc.Storage.Delete(sc.Context, keyPrefix+id.String())
+	})
 }
 
 func (sc *storageContext) importKey(keyValue string, keyName string, keyType certutil.PrivateKeyType) (*keyEntry, bool, error) {
@@ -447,8 +449,9 @@ func (sc *storageContext) writeIssuer(issuer *issuerEntry) error {
 		return err
 	}
 
-	sc.Backend.issuerCache.Invalidate()
-	return sc.Storage.Put(sc.Context, json)
+	return sc.Backend.issuerCache.Invalidate(func() error {
+		return sc.Storage.Put(sc.Context, json)
+	})
 }
 
 func (sc *storageContext) deleteIssuer(id issuerID) (bool, error) {
@@ -466,8 +469,9 @@ func (sc *storageContext) deleteIssuer(id issuerID) (bool, error) {
 		}
 	}
 
-	sc.Backend.issuerCache.Invalidate()
-	return wasDefault, sc.Storage.Delete(sc.Context, issuerPrefix+id.String())
+	return wasDefault, sc.Backend.issuerCache.Invalidate(func() error {
+		return sc.Storage.Delete(sc.Context, issuerPrefix+id.String())
+	})
 }
 
 func (sc *storageContext) importIssuer(certValue string, issuerName string) (*issuerEntry, bool, error) {
