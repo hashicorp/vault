@@ -1,5 +1,5 @@
 <EmberWormhole @to="modal-wormhole">
-  <div class="{{this.modalClass}} {{if this.isActive 'is-active'}}" aria-modal="true">
+  <div class="{{this.modalClass}} {{if this.isActive 'is-active'}}" aria-modal="true" data-test-modal-div>
     <div class="modal-background" role="button" {{on "click" @onClose}} data-test-modal-background></div>
     <div class="modal-card">
       <header class="modal-card-head">
@@ -10,6 +10,7 @@
               aria-hidden="true"
               @name={{this.glyph.glyph}}
               data-test-modal-glyph={{this.glyph.glyph}}
+              @escape-press={{@onClose}}
             />
           {{/if}}
           <span>{{@title}}</span>
