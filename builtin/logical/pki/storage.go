@@ -175,39 +175,11 @@ func (b *backend) makeStorageContext(ctx context.Context, s logical.Storage) *st
 }
 
 func (sc *storageContext) listKeys() ([]keyID, error) {
-	strList, err := sc.Storage.List(sc.Context, keyPrefix)
-	if err != nil {
-		return nil, err
-	}
-
-	keyIds := make([]keyID, 0, len(strList))
-	for _, entry := range strList {
-		keyIds = append(keyIds, keyID(entry))
-	}
-
-	return keyIds, nil
+	return sc.Backend.keyCache.listKeys(sc.Context, sc.Storage)
 }
 
 func (sc *storageContext) fetchKeyById(keyId keyID) (*keyEntry, error) {
-	if len(keyId) == 0 {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki key: empty key identifier")}
-	}
-
-	entry, err := sc.Storage.Get(sc.Context, keyPrefix+keyId.String())
-	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki key: %v", err)}
-	}
-	if entry == nil {
-		// FIXME: Dedicated/specific error for this?
-		return nil, errutil.UserError{Err: fmt.Sprintf("pki key id %s does not exist", keyId.String())}
-	}
-
-	var key keyEntry
-	if err := entry.DecodeJSON(&key); err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode pki key with id %s: %v", keyId.String(), err)}
-	}
-
-	return &key, nil
+	return sc.Backend.keyCache.fetchKeyById(sc.Context, sc.Storage, keyId)
 }
 
 func (sc *storageContext) writeKey(key keyEntry) error {
@@ -218,6 +190,7 @@ func (sc *storageContext) writeKey(key keyEntry) error {
 		return err
 	}
 
+	sc.Backend.keyCache.Invalidate()
 	return sc.Storage.Put(sc.Context, json)
 }
 
@@ -236,6 +209,7 @@ func (sc *storageContext) deleteKey(id keyID) (bool, error) {
 		}
 	}
 
+	sc.Backend.keyCache.Invalidate()
 	return wasDefault, sc.Storage.Delete(sc.Context, keyPrefix+id.String())
 }
 
@@ -457,33 +431,17 @@ func (sc *storageContext) resolveKeyReference(reference string) (keyID, error) {
 
 	// Lookup by a direct get first to see if our reference is an ID, this is quick and cached.
 	if len(reference) == uuidLength {
-		entry, err := sc.Storage.Get(sc.Context, keyPrefix+reference)
+		refAsId := keyID(reference)
+		ok, err := sc.Backend.keyCache.keyWithID(sc.Context, sc.Storage, refAsId)
 		if err != nil {
 			return keyID("key-read"), err
 		}
-		if entry != nil {
-			return keyID(reference), nil
+		if ok {
+			return refAsId, nil
 		}
 	}
 
-	// ... than to pull all keys from storage.
-	keys, err := sc.listKeys()
-	if err != nil {
-		return keyID("list-error"), err
-	}
-	for _, keyId := range keys {
-		key, err := sc.fetchKeyById(keyId)
-		if err != nil {
-			return keyID("key-read"), err
-		}
-
-		if key.Name == reference {
-			return key.ID, nil
-		}
-	}
-
-	// Otherwise, we must not have found the key.
-	return KeyRefNotFound, errutil.UserError{Err: fmt.Sprintf("unable to find PKI key for reference: %v", reference)}
+	return sc.Backend.keyCache.keyWithName(sc.Context, sc.Storage, reference)
 }
 
 // fetchIssuerById returns an issuerEntry based on issuerId, if none found an error is returned.
