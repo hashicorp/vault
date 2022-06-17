@@ -2,6 +2,7 @@ package pki
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBackend_CRL_EnableDisable(t *testing.T) {
+func TestBackend_CRL_EnableDisableRoot(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -19,7 +20,73 @@ func TestBackend_CRL_EnableDisable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	caSerial := resp.Data["serial_number"]
+	caSerial := resp.Data["serial_number"].(string)
+
+	crlEnableDisableTestForBackend(t, b, s, []string{caSerial})
+}
+
+func TestBackend_CRL_EnableDisableIntermediateWithRoot(t *testing.T) {
+	crlEnableDisableIntermediateTestForBackend(t, true)
+}
+
+func TestBackend_CRL_EnableDisableIntermediateWithoutRoot(t *testing.T) {
+	crlEnableDisableIntermediateTestForBackend(t, false)
+}
+
+func crlEnableDisableIntermediateTestForBackend(t *testing.T, withRoot bool) {
+	b_root, s_root := createBackendWithStorage(t)
+
+	resp, err := CBWrite(b_root, s_root, "root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rootSerial := resp.Data["serial_number"].(string)
+
+	b_int, s_int := createBackendWithStorage(t)
+
+	resp, err = CBWrite(b_int, s_int, "intermediate/generate/internal", map[string]interface{}{
+		"common_name": "intermediate myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected intermediate CSR info")
+	}
+	intermediateData := resp.Data
+
+	resp, err = CBWrite(b_root, s_root, "root/sign-intermediate", map[string]interface{}{
+		"ttl": "30h",
+		"csr": intermediateData["csr"],
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected signed intermediate info")
+	}
+	intermediateSignedData := resp.Data
+	var certs string = intermediateSignedData["certificate"].(string)
+	caSerial := intermediateSignedData["serial_number"].(string)
+	caSerials := []string{caSerial}
+	if withRoot {
+		intermediateAndRootCert := intermediateSignedData["ca_chain"].([]string)
+		certs = strings.Join(intermediateAndRootCert, "\n")
+		caSerials = append(caSerials, rootSerial)
+	}
+
+	resp, err = CBWrite(b_int, s_int, "intermediate/set-signed", map[string]interface{}{
+		"certificate": certs,
+	})
+
+	crlEnableDisableTestForBackend(t, b_int, s_int, caSerials)
+}
+
+func crlEnableDisableTestForBackend(t *testing.T, b *backend, s logical.Storage, caSerials []string) {
+	var err error
 
 	_, err = CBWrite(b, s, "roles/test", map[string]interface{}{
 		"allow_bare_domains": true,
@@ -55,18 +122,20 @@ func TestBackend_CRL_EnableDisable(t *testing.T) {
 	}
 
 	revoke := func(serialIndex int) {
-		resp, err = CBWrite(b, s, "revoke", map[string]interface{}{
+		_, err = CBWrite(b, s, "revoke", map[string]interface{}{
 			"serial_number": serials[serialIndex],
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		resp, err = CBWrite(b, s, "revoke", map[string]interface{}{
-			"serial_number": caSerial,
-		})
-		if err == nil {
-			t.Fatal("expected error")
+		for _, caSerial := range caSerials {
+			_, err = CBWrite(b, s, "revoke", map[string]interface{}{
+				"serial_number": caSerial,
+			})
+			if err == nil {
+				t.Fatal("expected error")
+			}
 		}
 	}
 
