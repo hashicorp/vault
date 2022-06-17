@@ -105,7 +105,7 @@ func (sc *storageContext) fetchCAInfo(issuerRef string, usage issuerUsage) (*cer
 // fetchCAInfoByIssuerId will fetch the CA info, will return an error if no ca info exists for the given issuerId.
 // This does support the loading using the legacyBundleShimID
 func (sc *storageContext) fetchCAInfoByIssuerId(issuerId issuerID, usage issuerUsage) (*certutil.CAInfoBundle, error) {
-	entry, bundle, err := sc.fetchCertBundleByIssuerId(issuerId, true)
+	entry, _, parsedBundle, err := sc.fetchParsedCertBundleByIssuerId(issuerId)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -119,18 +119,6 @@ func (sc *storageContext) fetchCAInfoByIssuerId(issuerId issuerID, usage issuerU
 
 	if err := entry.EnsureUsage(usage); err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error while attempting to use issuer %v: %v", issuerId, err)}
-	}
-
-	parsedBundle, err := parseCABundle(sc.Context, sc.Backend, bundle)
-	if err != nil {
-		return nil, errutil.InternalError{Err: err.Error()}
-	}
-
-	if parsedBundle.Certificate == nil {
-		return nil, errutil.InternalError{Err: "stored CA information not able to be parsed"}
-	}
-	if parsedBundle.PrivateKey == nil {
-		return nil, errutil.UserError{Err: fmt.Sprintf("unable to fetch corresponding key for issuer %v; unable to use this issuer for signing", issuerId)}
 	}
 
 	caInfo := &certutil.CAInfoBundle{

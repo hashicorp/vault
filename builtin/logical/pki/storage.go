@@ -779,6 +779,27 @@ func (sc *storageContext) fetchCertBundleByIssuerId(id issuerID, loadKey bool) (
 	return sc.Backend.issuerCache.fetchCertBundleByIssuerId(sc.Context, sc.Storage, sc.Backend, id, loadKey)
 }
 
+func (sc *storageContext) fetchParsedCertBundleByIssuerId(id issuerID) (*issuerEntry, *certutil.CertBundle, *certutil.ParsedCertBundle, error) {
+	entry, bundle, err := sc.fetchCertBundleByIssuerId(id, true)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	parsedBundle, err := parseCABundle(sc.Context, sc.Backend, bundle)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	if parsedBundle.Certificate == nil {
+		return nil, nil, nil, errutil.InternalError{Err: "stored CA information not able to be parsed"}
+	}
+	if parsedBundle.PrivateKey == nil {
+		return nil, nil, nil, errutil.UserError{Err: fmt.Sprintf("unable to fetch corresponding key for issuer %v; unable to use this issuer for signing", id)}
+	}
+
+	return entry, bundle, parsedBundle, nil
+}
+
 func (sc *storageContext) writeCaBundle(caBundle *certutil.CertBundle, issuerName string, keyName string) (*issuerEntry, *keyEntry, error) {
 	myKey, _, err := sc.importKey(caBundle.PrivateKey, keyName, caBundle.PrivateKeyType)
 	if err != nil {
