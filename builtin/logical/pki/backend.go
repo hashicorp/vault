@@ -379,6 +379,15 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 		} else {
 			b.Logger().Debug("Ignoring invalidation updates for issuer as the PKI migration has yet to complete.")
 		}
+
+		// Now invalidate our issuer cache so we can pick up any updates.
+		b.issuerCache.Invalidate(nil)
+	case strings.HasPrefix(key, keyPrefix):
+		// Now invalidate our key and issuer caches so we can pick up any
+		// updates. We update the issuer cache because we cache issuers'
+		// parsed bundles, which contains key data.
+		b.keyCache.Invalidate(nil)
+		b.issuerCache.Invalidate(nil)
 	}
 }
 

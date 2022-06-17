@@ -139,7 +139,11 @@ func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *
 		}
 	}
 
-	return nil, writeURLs(ctx, req.Storage, entries)
+	// Because we cache the CAInfo bundle, we have to invalidate the issuer
+	// cache here as well.
+	return nil, b.issuerCache.Invalidate(func() error {
+		return writeURLs(ctx, req.Storage, entries)
+	})
 }
 
 const pathConfigURLsHelpSyn = `
