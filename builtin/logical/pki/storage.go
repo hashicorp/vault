@@ -791,7 +791,7 @@ func (sc *storageContext) fetchParsedCertBundleByIssuerId(id issuerID) (entry *i
 			return nil, nil, nil, err
 		}
 	} else {
-		entry, bundle, parsedBundle, err = sc.Backend.issuerCache.fetchIssuerInfoById(sc.Context, sc.Storage, sc.Backend, id)
+		entry, bundle, parsedBundle, _, err = sc.Backend.issuerCache.fetchIssuerInfoById(sc.Context, sc.Storage, sc.Backend, id)
 		if err != nil {
 			return nil, nil, nil, err
 		}

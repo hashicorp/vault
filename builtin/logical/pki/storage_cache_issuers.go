@@ -18,6 +18,7 @@ type issuerStorageCache struct {
 	entries       *lru.Cache
 	bundles       *lru.Cache
 	parsedBundles *lru.Cache
+	infoBundles   *lru.Cache
 }
 
 func InitIssuerStorageCache() *issuerStorageCache {
@@ -37,6 +38,11 @@ func InitIssuerStorageCache() *issuerStorageCache {
 	}
 
 	ret.parsedBundles, err = lru.New(32)
+	if err != nil {
+		panic(err)
+	}
+
+	ret.infoBundles, err = lru.New(32)
 	if err != nil {
 		panic(err)
 	}
@@ -72,6 +78,7 @@ func (c *issuerStorageCache) reloadOnInvalidation(ctx context.Context, s logical
 	c.entries.Purge()
 	c.bundles.Purge()
 	c.parsedBundles.Purge()
+	c.infoBundles.Purge()
 
 	// List all issuers which exist.
 	strList, err := s.List(ctx, issuerPrefix)
@@ -201,7 +208,7 @@ func (c *issuerStorageCache) issuerWithName(ctx context.Context, s logical.Stora
 	return issuerId, nil
 }
 
-func (c *issuerStorageCache) fetchIssuerInfoById(ctx context.Context, s logical.Storage, b *backend, issuerId issuerID) (*issuerEntry, *certutil.CertBundle, *certutil.ParsedCertBundle, error) {
+func (c *issuerStorageCache) fetchIssuerInfoById(ctx context.Context, s logical.Storage, b *backend, issuerId issuerID) (*issuerEntry, *certutil.CertBundle, *certutil.ParsedCertBundle, *certutil.CAInfoBundle, error) {
 	// This method is more complex than the keys counterpart. Here, we handle
 	// the logic for all three types of calls:
 	//
@@ -229,7 +236,7 @@ func (c *issuerStorageCache) fetchIssuerInfoById(ctx context.Context, s logical.
 		needUnlock = false
 
 		if err := c.reloadOnInvalidation(ctx, s); err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, nil, err
 		}
 
 		// Now re-read-lock.
@@ -239,7 +246,7 @@ func (c *issuerStorageCache) fetchIssuerInfoById(ctx context.Context, s logical.
 
 	// Now we can service the request as expected.
 	if haveId, ok := c.idSet[issuerId]; !ok || !haveId {
-		return nil, nil, nil, fmt.Errorf("pki issuer id %v does not exist", issuerId)
+		return nil, nil, nil, nil, fmt.Errorf("pki issuer id %v does not exist", issuerId)
 	}
 
 	entry, entryOk := c.entries.Get(issuerId)
@@ -247,17 +254,19 @@ func (c *issuerStorageCache) fetchIssuerInfoById(ctx context.Context, s logical.
 		// We can exit fast if we don't need the bundle. This only occurs when
 		// the keyStorageCache value is nil.
 		e := entry.(*issuerEntry)
-		return e, nil, nil, nil
+		return e, nil, nil, nil, nil
 	}
 
 	bundle, bundleOk := c.bundles.Get(issuerId)
 	parsedBundle, parsedOk := c.parsedBundles.Get(issuerId)
-	if bundleOk && bundle != nil && parsedOk && parsedBundle != nil {
+	infoBundle, infoOk := c.infoBundles.Get(issuerId)
+	if entryOk && entry != nil && bundleOk && bundle != nil && parsedOk && parsedBundle != nil && infoOk && infoBundle != nil {
 		// If everything was loaded from cache, we're good.
 		e := entry.(*issuerEntry)
 		n := bundle.(*certutil.CertBundle)
 		p := parsedBundle.(*certutil.ParsedCertBundle)
-		return e, n, p, nil
+		i := infoBundle.(*certutil.CAInfoBundle)
+		return e, n, p, i, nil
 	}
 
 	if !entryOk || entry == nil {
@@ -270,15 +279,15 @@ func (c *issuerStorageCache) fetchIssuerInfoById(ctx context.Context, s logical.
 
 		rawEntry, err := s.Get(ctx, issuerPrefix+issuerId.String())
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, nil, err
 		}
 		if rawEntry == nil {
-			return nil, nil, nil, fmt.Errorf("pki issuer id %s does not exist", issuerId)
+			return nil, nil, nil, nil, fmt.Errorf("pki issuer id %s does not exist", issuerId)
 		}
 
 		var storedEntry issuerEntry
 		if err := rawEntry.DecodeJSON(&storedEntry); err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, nil, err
 		}
 
 		c.idSet[issuerId] = true
@@ -296,7 +305,7 @@ func (c *issuerStorageCache) fetchIssuerInfoById(ctx context.Context, s logical.
 	// If we don't have a key storage cache, don't bother building the cert
 	// bundle entries.
 	if b == nil {
-		return e, nil, nil, nil
+		return e, nil, nil, nil, nil
 	}
 
 	// Finally, we can finish building the cert bundle entries. Since we
@@ -313,7 +322,7 @@ func (c *issuerStorageCache) fetchIssuerInfoById(ctx context.Context, s logical.
 	if e.KeyID != keyID("") {
 		keyEntry, err := b.keyCache.fetchKeyById(ctx, s, e.KeyID)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, nil, err
 		}
 
 		rawBundle.PrivateKeyType = keyEntry.PrivateKeyType
@@ -327,7 +336,7 @@ func (c *issuerStorageCache) fetchIssuerInfoById(ctx context.Context, s logical.
 
 	rawParsedBundle, err := parseCABundle(ctx, b, n)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	c.parsedBundles.Add(issuerId, rawParsedBundle)
@@ -335,16 +344,33 @@ func (c *issuerStorageCache) fetchIssuerInfoById(ctx context.Context, s logical.
 	parsedBundle = &copiedParsedBundle
 
 	p := parsedBundle.(*certutil.ParsedCertBundle)
-	return e, n, p, nil
+
+	caInfo := &certutil.CAInfoBundle{
+		ParsedCertBundle:     *p,
+		URLs:                 nil,
+		LeafNotAfterBehavior: e.LeafNotAfterBehavior,
+	}
+
+	urlEntries, err := getURLs(ctx, s)
+	if err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("unable to fetch URL information: %v", err)
+	}
+	caInfo.URLs = urlEntries
+
+	c.infoBundles.Add(issuerId, caInfo)
+	copiedInfo := *caInfo
+	i := &copiedInfo
+
+	return e, n, p, i, nil
 }
 
 func (c *issuerStorageCache) fetchIssuerById(ctx context.Context, s logical.Storage, issuerId issuerID) (*issuerEntry, error) {
-	entry, _, _, err := c.fetchIssuerInfoById(ctx, s, nil, issuerId)
+	entry, _, _, _, err := c.fetchIssuerInfoById(ctx, s, nil, issuerId)
 	return entry, err
 }
 
 func (c *issuerStorageCache) fetchCertBundleByIssuerId(ctx context.Context, s logical.Storage, b *backend, issuerId issuerID, loadKey bool) (*issuerEntry, *certutil.CertBundle, error) {
-	entry, bundle, _, err := c.fetchIssuerInfoById(ctx, s, b, issuerId)
+	entry, bundle, _, _, err := c.fetchIssuerInfoById(ctx, s, b, issuerId)
 
 	if err != nil && !loadKey {
 		bundle.PrivateKey = ""
@@ -354,5 +380,6 @@ func (c *issuerStorageCache) fetchCertBundleByIssuerId(ctx context.Context, s lo
 }
 
 func (c *issuerStorageCache) fetchParsedBundleByIssuerId(ctx context.Context, s logical.Storage, b *backend, issuerId issuerID, loadKey bool) (*issuerEntry, *certutil.CertBundle, *certutil.ParsedCertBundle, error) {
-	return c.fetchIssuerInfoById(ctx, s, b, issuerId)
+	entry, bundle, parsedBundle, _, err := c.fetchIssuerInfoById(ctx, s, b, issuerId)
+	return entry, bundle, parsedBundle, err
 }
