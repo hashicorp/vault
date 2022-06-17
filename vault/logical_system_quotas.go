@@ -186,15 +186,20 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			mountPath = strings.TrimPrefix(mountPath, ns.Path)
 		}
 
+		var pathSuffix string
 		if mountPath != "" {
-			match := b.Core.router.MatchingMount(namespace.ContextWithNamespace(ctx, ns), mountPath)
-			if match == "" {
+			me := b.Core.router.MatchingMountEntry(namespace.ContextWithNamespace(ctx, ns), mountPath)
+			if me == nil {
 				return logical.ErrorResponse("invalid mount path %q", mountPath), nil
 			}
+
+			mountAPIPath := me.APIPathNoNamespace()
+			pathSuffix = strings.TrimSuffix(strings.TrimPrefix(mountPath, mountAPIPath), "/")
+			mountPath = mountAPIPath
 		}
 		// Disallow creation of new quota that has properties similar to an
 		// existing quota.
-		quotaByFactors, err := b.Core.quotaManager.QuotaByFactors(ctx, qType, ns.Path, mountPath)
+		quotaByFactors, err := b.Core.quotaManager.QuotaByFactors(ctx, qType, ns.Path, mountPath, pathSuffix)
 		if err != nil {
 			return nil, err
 		}
@@ -210,7 +215,7 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 
 		switch {
 		case quota == nil:
-			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, rate, interval, blockInterval)
+			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, pathSuffix, rate, interval, blockInterval)
 		default:
 			// Re-inserting the already indexed object in memdb might cause problems.
 			// So, clone the object. See https://github.com/hashicorp/go-memdb/issues/76.
@@ -218,6 +223,7 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			rlq := clonedQuota.(*quotas.RateLimitQuota)
 			rlq.NamespacePath = ns.Path
 			rlq.MountPath = mountPath
+			rlq.PathSuffix = pathSuffix
 			rlq.Rate = rate
 			rlq.Interval = interval
 			rlq.BlockInterval = blockInterval
@@ -264,7 +270,7 @@ func (b *SystemBackend) handleRateLimitQuotasRead() framework.OperationFunc {
 		data := map[string]interface{}{
 			"type":           qType,
 			"name":           rlq.Name,
-			"path":           nsPath + rlq.MountPath,
+			"path":           nsPath + rlq.MountPath + rlq.PathSuffix,
 			"rate":           rlq.Rate,
 			"interval":       int(rlq.Interval.Seconds()),
 			"block_interval": int(rlq.BlockInterval.Seconds()),

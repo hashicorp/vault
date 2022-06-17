@@ -64,6 +64,7 @@ func (b *backend) getGenerationParams(ctx context.Context, storage logical.Stora
 		StreetAddress:             data.Get("street_address").([]string),
 		PostalCode:                data.Get("postal_code").([]string),
 		NotBeforeDuration:         time.Duration(data.Get("not_before_duration").(int)) * time.Second,
+		CNValidations:             []string{"disabled"},
 	}
 	*role.AllowWildcardCertificates = true
 

@@ -243,6 +243,54 @@ func validateURISAN(b *backend, data *inputBundle, uri string) bool {
 	return valid
 }
 
+// Validates a given common name, ensuring its either a email or a hostname
+// after validating it according to the role parameters, or disables
+// validation altogether.
+func validateCommonName(b *backend, data *inputBundle, name string) string {
+	isDisabled := len(data.role.CNValidations) == 1 && data.role.CNValidations[0] == "disabled"
+	if isDisabled {
+		return ""
+	}
+
+	if validateNames(b, data, []string{name}) != "" {
+		return name
+	}
+
+	// Validations weren't disabled, but the role lacked CN Validations, so
+	// don't restrict types. This case is hit in certain existing tests.
+	if len(data.role.CNValidations) == 0 {
+		return ""
+	}
+
+	// If there's an at in the data, ensure email type validation is allowed.
+	// Otherwise, ensure hostname is allowed.
+	if strings.Contains(name, "@") {
+		var allowsEmails bool
+		for _, validation := range data.role.CNValidations {
+			if validation == "email" {
+				allowsEmails = true
+				break
+			}
+		}
+		if !allowsEmails {
+			return name
+		}
+	} else {
+		var allowsHostnames bool
+		for _, validation := range data.role.CNValidations {
+			if validation == "hostname" {
+				allowsHostnames = true
+				break
+			}
+		}
+		if !allowsHostnames {
+			return name
+		}
+	}
+
+	return ""
+}
+
 // Given a set of requested names for a certificate, verifies that all of them
 // match the various toggles set in the role for controlling issuance.
 // If one does not pass, it is returned in the string argument.
@@ -1049,7 +1097,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		// Check the CN. This ensures that the CN is checked even if it's
 		// excluded from SANs.
 		if cn != "" {
-			badName := validateNames(b, data, []string{cn})
+			badName := validateCommonName(b, data, cn)
 			if len(badName) != 0 {
 				return nil, errutil.UserError{Err: fmt.Sprintf(
 					"common name %s not allowed by this role", badName)}

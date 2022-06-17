@@ -16,7 +16,7 @@ const MODEL_TYPES = {
     backIsListLink: true,
   },
   'pki-issue': {
-    model: 'pki/pki-certificate',
+    model: 'pki/cert',
     title: 'Issue Certificate',
   },
   'pki-sign': {
