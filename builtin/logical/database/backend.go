@@ -6,8 +6,10 @@ import (
 	"net/rpc"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
@@ -26,6 +28,29 @@ const (
 	databaseStaticRolePath = "static-role/"
 	minRootCredRollbackAge = 1 * time.Minute
 )
+
+// metrics collection
+var (
+	gaugeSync = sync.Mutex{}
+	gauges    = map[string]*int32{}
+	gaugeKey  = []string{"secrets", "database", "backend", "connections", "count"}
+)
+
+func createGauge(name string) {
+	gaugeSync.Lock()
+	defer gaugeSync.Unlock()
+	gauges[name] = new(int32)
+}
+
+func addToGauge(dbType, version string, uuid string, amount int32) {
+	labels := []metrics.Label{{"type", dbType}, {"version", version}, {"backend", uuid}}
+	gaugeName := fmt.Sprintf("%s-%s", dbType, version)
+	if _, ok := gauges[gaugeName]; !ok {
+		createGauge(gaugeName)
+	}
+	val := atomic.AddInt32(gauges[gaugeName], amount)
+	metrics.SetGaugeWithLabels(gaugeKey, float32(val), labels)
+}
 
 type dbPluginInstance struct {
 	sync.RWMutex
@@ -96,6 +121,7 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 		BackendType:       logical.TypeLogical,
 	}
 
+	b.backendUUID = conf.BackendUUID
 	b.logger = conf.Logger
 	b.connections = make(map[string]*dbPluginInstance)
 	b.queueCtx, b.cancelQueueCtx = context.WithCancel(context.Background())
@@ -125,6 +151,23 @@ type databaseBackend struct {
 	// concurrent requests are not modifying the same role and possibly causing
 	// issues with the priority queue.
 	roleLocks []*locksutil.LockEntry
+	// backendUUID is a unique identifier for this backend
+	backendUUID string
+}
+
+// addConnectionsCounter is used to keep metrics on how many and what types of databases we have open
+func (b *databaseBackend) addConnectionsCounter(dbw databaseVersionWrapper, amount int) {
+	// keep track of what databases we open
+	dbType, err := dbw.Type()
+	if err != nil {
+		b.Logger().Debug("Error getting database type", "err", err)
+		dbType = "unknown"
+	}
+	version := "5"
+	if dbw.isV4() {
+		version = "4"
+	}
+	addToGauge(dbType, version, b.backendUUID, int32(amount))
 }
 
 func (b *databaseBackend) connGet(name string) *dbPluginInstance {
@@ -136,8 +179,11 @@ func (b *databaseBackend) connGet(name string) *dbPluginInstance {
 func (b *databaseBackend) connPop(name string) *dbPluginInstance {
 	b.connLock.Lock()
 	defer b.connLock.Unlock()
-	dbi := b.connections[name]
-	delete(b.connections, name)
+	dbi, ok := b.connections[name]
+	if ok {
+		b.addConnectionsCounter(dbi.database, -1)
+		delete(b.connections, name)
+	}
 	return dbi
 }
 
@@ -146,6 +192,7 @@ func (b *databaseBackend) connPopIfEqual(name, id string) *dbPluginInstance {
 	defer b.connLock.Unlock()
 	dbi, ok := b.connections[name]
 	if ok && dbi.id == id {
+		b.addConnectionsCounter(dbi.database, -1)
 		delete(b.connections, name)
 		return dbi
 	}
@@ -155,8 +202,12 @@ func (b *databaseBackend) connPopIfEqual(name, id string) *dbPluginInstance {
 func (b *databaseBackend) connPut(name string, newDbi *dbPluginInstance) *dbPluginInstance {
 	b.connLock.Lock()
 	defer b.connLock.Unlock()
-	dbi := b.connections[name]
+	dbi, ok := b.connections[name]
+	if ok {
+		b.addConnectionsCounter(dbi.database, -1)
+	}
 	b.connections[name] = newDbi
+	b.addConnectionsCounter(newDbi.database, 1)
 	return dbi
 }
 
@@ -164,6 +215,9 @@ func (b *databaseBackend) connClear() map[string]*dbPluginInstance {
 	b.connLock.Lock()
 	defer b.connLock.Unlock()
 	old := b.connections
+	for _, conn := range old {
+		b.addConnectionsCounter(conn.database, -1)
+	}
 	b.connections = make(map[string]*dbPluginInstance)
 	return old
 }
