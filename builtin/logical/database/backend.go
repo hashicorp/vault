@@ -144,8 +144,8 @@ func (b *databaseBackend) connPop(name string) *dbPluginInstance {
 func (b *databaseBackend) connPopIfEqual(name, id string) *dbPluginInstance {
 	b.connLock.Lock()
 	defer b.connLock.Unlock()
-	dbi := b.connections[name]
-	if dbi.id == id {
+	dbi, ok := b.connections[name]
+	if ok && dbi.id == id {
 		delete(b.connections, name)
 		return dbi
 	}
