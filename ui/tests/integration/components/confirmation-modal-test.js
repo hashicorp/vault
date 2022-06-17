@@ -26,7 +26,7 @@ module('Integration | Component | confirmation-modal', function (hooks) {
     `);
 
     assert.dom('[data-test-confirm-button]').isDisabled();
-    assert.dom('[data-test-modal-div]').hasAttribute('class', 'modal is-active');
+    assert.dom('[data-test-modal-div]').hasAttribute('class', 'modal is-highlight is-active');
     assert.dom('[data-test-confirm-button]').hasText('Plz Continue', 'Confirm button has specified value');
     assert
       .dom('[data-test-modal-title]')
