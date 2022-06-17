@@ -13,17 +13,17 @@
         class="input has-margin-top"
         autocomplete="off"
         spellcheck="false"
-        data-test-confirmation-modal-input={{@testSelector}}
+        data-test-confirmation-modal-input={{or @title true}}
       />
     </div>
   </section>
   <footer class="modal-card-foot modal-card-foot-outlined">
     <button
       type="button"
-      class={{concat "button " this.buttonClass}}
+      class="button {{this.buttonClass}}"
       disabled={{not-eq this.confirmationInput this.confirmText}}
       {{on "click" @onConfirm}}
-      data-test-confirm-button={{@testSelector}}
+      data-test-confirm-button={{or @title true}}
     >
       {{this.buttonText}}
     </button>

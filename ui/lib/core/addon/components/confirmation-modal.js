@@ -22,7 +22,6 @@ import Component from '@glimmer/component';
  * @param {string} [buttonText=Confirm] - Button text on the confirm button
  * @param {string} [buttonClass=is-danger] - extra class to add to confirm button (eg. "is-danger")
  * @param {string} [type=warning] - The header styling based on type, passed into the message-types helper (in the Modal component).
- * @param {string} [testSelector] - The unique test selector used on the input to fill in text during tests.
  */
 
 export default class ConfirmationModal extends Component {

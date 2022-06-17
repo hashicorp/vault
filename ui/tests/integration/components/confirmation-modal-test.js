@@ -21,7 +21,6 @@ module('Integration | Component | confirmation-modal', function (hooks) {
         @onClose={{this.onClose}}
         @buttonText="Plz Continue"
         @confirmText="Destructive Thing"
-        @testSelector="demote"
       />
     `);
 
@@ -32,7 +31,7 @@ module('Integration | Component | confirmation-modal', function (hooks) {
       .dom('[data-test-modal-title]')
       .hasStyle({ color: 'rgb(160, 125, 2)' }, 'title exists with warning header');
     await fillIn('[data-test-confirmation-modal-input="demote"]', 'Destructive Thing');
-    assert.dom('[data-test-confirm-button="demote"]').isNotDisabled();
+    assert.dom('[data-test-confirm-button="Confirmation Modal"]').isNotDisabled();
 
     await click('[data-test-cancel-button]');
     assert.true(closeAction.called, 'executes passed in onClose function');
