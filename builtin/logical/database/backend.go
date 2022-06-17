@@ -104,7 +104,7 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 }
 
 type databaseBackend struct {
-	// used to synchronize access to the connections map
+	// connLock is used to synchronize access to the connections map
 	connLock sync.RWMutex
 	// connections holds configured database connections by config name
 	connections map[string]*dbPluginInstance
