@@ -75,11 +75,7 @@ func (b *backend) pathLoginResolveRole(ctx context.Context, req *logical.Request
 
 	roleName := roleIDIndex.Name
 
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"role": roleName,
-		},
-	}, nil
+	return logical.ResolveRoleResponse(roleName)
 }
 
 // Returns the Auth object indicating the authentication and authorization information
