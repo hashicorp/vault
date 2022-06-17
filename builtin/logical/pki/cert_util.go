@@ -102,40 +102,6 @@ func (sc *storageContext) fetchCAInfo(issuerRef string, usage issuerUsage) (*cer
 	return sc.fetchCAInfoByIssuerId(issuerId, usage)
 }
 
-// fetchCAInfoByIssuerId will fetch the CA info, will return an error if no ca info exists for the given issuerId.
-// This does support the loading using the legacyBundleShimID
-func (sc *storageContext) fetchCAInfoByIssuerId(issuerId issuerID, usage issuerUsage) (*certutil.CAInfoBundle, error) {
-	entry, _, parsedBundle, err := sc.fetchParsedCertBundleByIssuerId(issuerId)
-	if err != nil {
-		switch err.(type) {
-		case errutil.UserError:
-			return nil, err
-		case errutil.InternalError:
-			return nil, err
-		default:
-			return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching CA info: %v", err)}
-		}
-	}
-
-	if err := entry.EnsureUsage(usage); err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error while attempting to use issuer %v: %v", issuerId, err)}
-	}
-
-	caInfo := &certutil.CAInfoBundle{
-		ParsedCertBundle:     *parsedBundle,
-		URLs:                 nil,
-		LeafNotAfterBehavior: entry.LeafNotAfterBehavior,
-	}
-
-	entries, err := getURLs(sc.Context, sc.Storage)
-	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
-	}
-	caInfo.URLs = entries
-
-	return caInfo, nil
-}
-
 // Allows fetching certificates from the backend; it handles the slightly
 // separate pathing for CRL, and revoked certificates.
 //

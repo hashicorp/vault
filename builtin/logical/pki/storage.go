@@ -807,6 +807,57 @@ func (sc *storageContext) fetchParsedCertBundleByIssuerId(id issuerID) (entry *i
 	return entry, bundle, parsedBundle, nil
 }
 
+// fetchCAInfoByIssuerId will fetch the CA info, will return an error if no ca info exists for the given issuerId.
+// This does support the loading using the legacyBundleShimID
+func (sc *storageContext) fetchCAInfoByIssuerId(id issuerID, usage issuerUsage) (caInfo *certutil.CAInfoBundle, err error) {
+	var entry *issuerEntry
+	var parsedBundle *certutil.ParsedCertBundle
+
+	if id == legacyBundleShimID {
+		entry, _, parsedBundle, err = sc.fetchParsedCertBundleByIssuerId(id)
+		if err != nil {
+			switch err.(type) {
+			case errutil.UserError:
+				return nil, err
+			case errutil.InternalError:
+				return nil, err
+			default:
+				return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching CA info: %v", err)}
+			}
+		}
+
+		caInfo = &certutil.CAInfoBundle{
+			ParsedCertBundle:     *parsedBundle,
+			URLs:                 nil,
+			LeafNotAfterBehavior: entry.LeafNotAfterBehavior,
+		}
+
+		entries, err := getURLs(sc.Context, sc.Storage)
+		if err != nil {
+			return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
+		}
+		caInfo.URLs = entries
+	} else {
+		entry, _, _, caInfo, err = sc.Backend.issuerCache.fetchIssuerInfoById(sc.Context, sc.Storage, sc.Backend, id)
+		if err != nil {
+			switch err.(type) {
+			case errutil.UserError:
+				return nil, err
+			case errutil.InternalError:
+				return nil, err
+			default:
+				return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching CA info: %v", err)}
+			}
+		}
+	}
+
+	if err := entry.EnsureUsage(usage); err != nil {
+		return nil, errutil.InternalError{Err: fmt.Sprintf("error while attempting to use issuer %v: %v", id, err)}
+	}
+
+	return caInfo, nil
+}
+
 func (sc *storageContext) writeCaBundle(caBundle *certutil.CertBundle, issuerName string, keyName string) (*issuerEntry, *keyEntry, error) {
 	myKey, _, err := sc.importKey(caBundle.PrivateKey, keyName, caBundle.PrivateKeyType)
 	if err != nil {
