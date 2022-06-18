@@ -42,6 +42,7 @@ const keyTypes = [
     type: 'chacha20-poly1305',
     convergent: true,
     supportsEncryption: true,
+    autoRotate: true,
   },
   {
     name: (ts) => `ecdsa-${ts}`,
@@ -84,6 +85,7 @@ const keyTypes = [
     type: `rsa-4096`,
     supportsSigning: true,
     supportsEncryption: true,
+    autoRotate: true,
   },
 ];
 
@@ -101,6 +103,9 @@ let generateTransitKey = async function (key, now) {
   }
   if (key.convergent) {
     await click('[data-test-transit-key-convergent-encryption]');
+  }
+  if (key.autoRotate) {
+    await click('[data-test-toggle-label="Auto-rotation period"]');
   }
   await click('[data-test-transit-key-create]');
   await settled(); // eslint-disable-line
@@ -298,9 +303,14 @@ module('Acceptance | transit', function (hooks) {
   });
   for (let key of keyTypes) {
     test(`transit backend: ${key.type}`, async function (assert) {
-      assert.expect(key.convergent ? 42 : 6);
+      assert.expect(key.convergent ? 43 : 7);
       let name = await generateTransitKey(key, now);
       await visit(`vault/secrets/${path}/show/${name}`);
+
+      const expectedRotateValue = key.autoRotate ? '30 days' : 'Key will not be automatically rotated';
+      assert
+        .dom('[data-test-row-value="Auto-rotation period"]')
+        .hasText(expectedRotateValue, 'Has expected auto rotate value');
 
       await click('[data-test-transit-link="versions"]');
       // wait for capabilities

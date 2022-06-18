@@ -1,0 +1,19 @@
+<div
+  {{did-update this.refresh @message}}
+  class={{concat "message-inline" this.paddingTop this.isMarginless this.sizeSmall}}
+  data-test-inline-alert
+  ...attributes
+>
+  {{#if this.isRefreshing}}
+    <Icon @name="loading" class="loading" />
+  {{else}}
+    <Icon @name={{this.alertType.glyph}} class={{this.alertType.glyphClass}} />
+    <p class={{this.textClass}} data-test-inline-error-message>
+      {{#if (has-block)}}
+        {{yield}}
+      {{else}}
+        {{@message}}
+      {{/if}}
+    </p>
+  {{/if}}
+</div>

@@ -8,8 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+
 	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/stretchr/testify/require"
@@ -58,6 +60,32 @@ func TestPostgreSQL_InitializeWithStringVals(t *testing.T) {
 
 	if err := db.Close(); err != nil {
 		t.Fatalf("err: %s", err)
+	}
+}
+
+func TestPostgreSQL_Initialize_ConnURLWithDSNFormat(t *testing.T) {
+	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	defer cleanup()
+
+	dsnConnURL, err := dbutil.ParseURL(connURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": dsnConnURL,
+	}
+
+	req := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+
+	db := new()
+	dbtesting.AssertInitialize(t, db, req)
+
+	if !db.Initialized {
+		t.Fatal("Database should be initialized")
 	}
 }
 
@@ -675,7 +703,7 @@ func testCredsExist(t testing.TB, connURL, username, password string) error {
 	t.Helper()
 	// Log in with the new creds
 	connURL = strings.Replace(connURL, "postgres:secret", fmt.Sprintf("%s:%s", username, password), 1)
-	db, err := sql.Open("postgres", connURL)
+	db, err := sql.Open("pgx", connURL)
 	if err != nil {
 		return err
 	}

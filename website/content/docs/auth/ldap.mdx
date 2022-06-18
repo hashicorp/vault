@@ -8,6 +8,8 @@ description: |-
 
 # LDAP Auth Method
 
+@include 'x509-sha1-deprecation.mdx'
+
 The `ldap` auth method allows authentication using an existing LDAP
 server and user/password credentials. This allows Vault to be integrated
 into environments using LDAP without duplicating the user/pass configuration

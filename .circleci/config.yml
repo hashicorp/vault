@@ -7,7 +7,9 @@ version: 2
 jobs:
   install-ui-dependencies:
     docker:
-    - image: docker.mirror.hashicorp.services/node:14-buster
+    - environment:
+        JOBS: 2
+      image: docker.mirror.hashicorp.services/circleci/node:14-browsers
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
@@ -28,7 +30,9 @@ jobs:
         - ui/node_modules
   test-ui:
     docker:
-    - image: docker.mirror.hashicorp.services/node:14-buster
+    - environment:
+        JOBS: 2
+      image: docker.mirror.hashicorp.services/circleci/node:14-browsers
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     resource_class: xlarge
@@ -55,18 +59,6 @@ jobs:
         at: .
     - run:
         command: |
-          set -x
-
-          # Install Chrome
-          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub \
-            | apt-key add -
-          echo "deb http://dl.google.com/linux/chrome/deb/ stable main" \
-            | tee /etc/apt/sources.list.d/google-chrome.list
-          apt-get update
-          apt-get -y install google-chrome-stable
-          rm /etc/apt/sources.list.d/google-chrome.list
-          rm -rf /var/lib/apt/lists/* /var/cache/apt/*
-
           # Add ./bin to the PATH so vault binary can be run by Ember tests
           export PATH="${PWD}/bin:${PATH}"
 
@@ -79,25 +71,6 @@ jobs:
         path: ui/test-results
     - store_test_results:
         path: ui/test-results
-  test-ui-browserstack:
-    docker:
-    - image: docker.mirror.hashicorp.services/node:14-buster
-    shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
-    resource_class: xlarge
-    steps:
-    - checkout
-    - restore_cache:
-        key: yarn-lock-v7-{{ checksum "ui/yarn.lock" }}
-        name: Restore yarn cache
-    - attach_workspace:
-        at: .
-    - run:
-        command: |
-          # Add ./bin to the PATH so vault binary can be found.
-          export PATH="${PWD}"/bin:${PATH}
-          make test-ui-browserstack
-        name: Run Browserstack Tests
   build-go-dev:
     machine:
       image: ubuntu-2004:202201-02
@@ -147,12 +120,12 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.17.9
+    - GO_VERSION: 1.17.11
     - GOFUMPT_VERSION: 0.2.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.9
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.11
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -285,7 +258,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.9 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.11 \
               tail -f /dev/null
 
             # Run tests
@@ -386,12 +359,12 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.17.9
+    - GO_VERSION: 1.17.11
     - GOFUMPT_VERSION: 0.2.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.9
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.11
     resource_class: xlarge
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -520,7 +493,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.9 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.11 \
               tail -f /dev/null
 
             # Run tests
@@ -578,7 +551,7 @@ jobs:
     - GO_TAGS: ''
   test-go:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.9
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.11
     resource_class: large
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -707,7 +680,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.9 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.11 \
               tail -f /dev/null
 
             # Run tests
@@ -772,7 +745,7 @@ jobs:
     - run:
         command: |
           apk add --no-cache python3 py3-pip make
-          python3 -m pip install --user semgrep==0.86.5
+          python3 -m pip install --user semgrep==0.97.0
           export PATH="$HOME/.local/bin:$PATH"
 
           echo "$ semgrep --version"
@@ -876,12 +849,12 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.17.9
+    - GO_VERSION: 1.17.11
     - GOFUMPT_VERSION: 0.2.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.9
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.11
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -1014,7 +987,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.9 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.11 \
               tail -f /dev/null
 
             # Run tests
@@ -1088,13 +1061,6 @@ workflows:
         requires:
         - pre-flight-checks
     - test-ui:
-        requires:
-        - install-ui-dependencies
-        - build-go-dev
-    - test-ui-browserstack:
-        filters:
-          branches:
-            ignore: /pull\/[0-9]+/
         requires:
         - install-ui-dependencies
         - build-go-dev

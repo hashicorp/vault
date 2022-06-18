@@ -15,13 +15,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/benchhelpers"
-	vaultseal "github.com/hashicorp/vault/vault/seal"
-
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/benchhelpers"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
@@ -31,6 +29,7 @@ import (
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/http2"
 )
@@ -44,6 +43,8 @@ type RaftClusterOpts struct {
 	EnableResponseHeaderRaftNodeID bool
 	NumCores                       int
 	Seal                           vault.Seal
+	VersionMap                     map[int]string
+	RedundancyZoneMap              map[int]string
 }
 
 func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
@@ -67,6 +68,8 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 	opts.PhysicalFactoryConfig = ropts.PhysicalFactoryConfig
 	conf.DisablePerformanceStandby = ropts.DisablePerfStandby
 	opts.NumCores = ropts.NumCores
+	opts.VersionMap = ropts.VersionMap
+	opts.RedundancyZoneMap = ropts.RedundancyZoneMap
 
 	teststorage.RaftBackendSetup(conf, &opts)
 

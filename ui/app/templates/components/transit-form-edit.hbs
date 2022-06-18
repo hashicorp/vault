@@ -18,7 +18,7 @@
     </div>
     <div class="field">
       <TtlPicker2
-        @initialValue={{or @key.autoRotatePeriod "1h"}}
+        @initialValue={{or @key.autoRotatePeriod "30d"}}
         @initialEnabled={{not (eq @key.autoRotatePeriod "0s")}}
         @label="Auto-rotation period"
         @helperTextDisabled="Key will never be automatically rotated"

@@ -2,9 +2,11 @@ import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { compareAsc } from 'date-fns';
 
 export const formatByMonths = (monthsArray) => {
+  // the months array will always include a timestamp of the month and either new/total client data or counts = null
   if (!Array.isArray(monthsArray)) return monthsArray;
+
   const sortedPayload = sortMonthsByTimestamp(monthsArray);
-  return sortedPayload.map((m) => {
+  return sortedPayload?.map((m) => {
     const month = parseAPITimestamp(m.timestamp, 'M/yy');
     let totalClientsByNamespace = formatByNamespace(m.namespaces);
     let newClientsByNamespace = formatByNamespace(m.new_clients?.namespaces);
@@ -14,7 +16,7 @@ export const formatByMonths = (monthsArray) => {
       return {
         month,
         ...totalCounts,
-        namespaces: formatByNamespace(m.namespaces),
+        namespaces: formatByNamespace(m.namespaces) || [],
         namespaces_by_key: namespaceArrayToObject(totalClientsByNamespace, newClientsByNamespace, month),
         new_clients: {
           month,
@@ -75,7 +77,6 @@ export const homogenizeClientNaming = (object) => {
 };
 
 export const flattenDataset = (object) => {
-  // TODO CMB revisit when backend has finished ticket VAULT-6035
   if (object?.counts) {
     let flattenedObject = {};
     Object.keys(object['counts']).forEach((key) => (flattenedObject[key] = object['counts'][key]));
@@ -85,8 +86,6 @@ export const flattenDataset = (object) => {
 };
 
 export const sortMonthsByTimestamp = (monthsArray) => {
-  // backend is working on a fix to sort months by date
-  // right now months are ordered in descending client count number
   const sortedPayload = [...monthsArray];
   return sortedPayload.sort((a, b) =>
     compareAsc(parseAPITimestamp(a.timestamp), parseAPITimestamp(b.timestamp))
@@ -94,15 +93,16 @@ export const sortMonthsByTimestamp = (monthsArray) => {
 };
 
 export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByNamespace, month) => {
+  if (!totalClientsByNamespace) return {}; // return if no data for that month
   // all 'new_client' data resides within a separate key of each month (see data structure below)
   // FIRST: iterate and nest respective 'new_clients' data within each namespace and mount object
   // note: this is happening within the month object
-  const nestNewClientsWithinNamespace = totalClientsByNamespace.map((ns) => {
+  const nestNewClientsWithinNamespace = totalClientsByNamespace?.map((ns) => {
     let newNamespaceCounts = newClientsByNamespace?.find((n) => n.label === ns.label);
     if (newNamespaceCounts) {
       let { label, clients, entity_clients, non_entity_clients } = newNamespaceCounts;
       let newClientsByMount = [...newNamespaceCounts?.mounts];
-      let nestNewClientsWithinMounts = ns.mounts.map((mount) => {
+      let nestNewClientsWithinMounts = ns.mounts?.map((mount) => {
         let new_clients = newClientsByMount?.find((m) => m.label === mount.label) || {};
         return {
           ...mount,
@@ -125,10 +125,9 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
       new_clients: {},
     };
   });
-
   // SECOND: create a new object (namespace_by_key) in which each namespace label is a key
   let namespaces_by_key = {};
-  nestNewClientsWithinNamespace.forEach((namespaceObject) => {
+  nestNewClientsWithinNamespace?.forEach((namespaceObject) => {
     // THIRD: make another object within the namespace where each mount label is a key
     let mounts_by_key = {};
     namespaceObject.mounts.forEach((mountObject) => {

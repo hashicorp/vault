@@ -81,6 +81,10 @@
 .is-flex-start {
   display: flex !important;
   justify-content: flex-start;
+
+  &.has-gap {
+    gap: $spacing-m;
+  }
 }
 .is-flex-full {
   flex-basis: 100%;
@@ -164,6 +168,12 @@
   font-size: $size-8;
   text-transform: lowercase;
 }
+.has-top-padding-s {
+  padding-top: $spacing-s;
+}
+.has-top-padding-l {
+  padding-top: $spacing-l;
+}
 .has-bottom-margin-xs {
   margin-bottom: $spacing-xs;
 }
@@ -184,6 +194,12 @@
 }
 .has-top-margin-s {
   margin-top: $spacing-s;
+}
+.has-top-margin-xs {
+  margin-top: $spacing-xs;
+}
+.has-top-margin-m {
+  margin-top: $spacing-m;
 }
 .has-top-margin-l {
   margin-top: $spacing-l;
@@ -211,6 +227,9 @@
 }
 .has-left-margin-xl {
   margin-left: $spacing-xl;
+}
+.has-right-margin-m {
+  margin-right: $spacing-m;
 }
 .has-right-margin-l {
   margin-right: $spacing-l;
@@ -240,4 +259,7 @@ ul.bullet {
 }
 .has-text-grey-400 {
   color: $ui-gray-400;
+}
+.has-text-align-center {
+  text-align: center;
 }

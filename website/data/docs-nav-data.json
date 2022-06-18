@@ -190,6 +190,10 @@
       {
         "title": "Mount Migration",
         "path": "concepts/mount-migration"
+      },
+      {
+        "title": "Duration String Format",
+        "path": "concepts/duration-format"
       }
     ]
   },
@@ -1015,6 +1019,23 @@
         "path": "secrets/gcpkms"
       },
       {
+        "title": "Identity",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/identity"
+          },
+          {
+            "title": "Identity Tokens",
+            "path": "secrets/identity/identity-token"
+          },
+          {
+            "title": "OIDC Identity Provider",
+            "path": "secrets/identity/oidc-provider"
+          }
+        ]
+      },
+      {
         "title": "Key Management <sup>ENTERPRISE</sup>",
         "routes": [
           {
@@ -1036,10 +1057,6 @@
         ]
       },
       {
-        "title": "KMIP <sup>ENTERPRISE</sup>",
-        "path": "secrets/kmip"
-      },
-      {
         "title": "Key/Value",
         "routes": [
           {
@@ -1057,21 +1074,12 @@
         ]
       },
       {
-        "title": "Identity",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "secrets/identity"
-          },
-          {
-            "title": "Identity Tokens",
-            "path": "secrets/identity/identity-token"
-          },
-          {
-            "title": "OIDC Identity Provider",
-            "path": "secrets/identity/oidc-provider"
-          }
-        ]
+        "title": "KMIP <sup>ENTERPRISE</sup>",
+        "path": "secrets/kmip"
+      },
+      {
+        "title": "Kubernetes",
+        "path": "secrets/kubernetes"
       },
       {
         "title": "MongoDB Atlas",
@@ -1087,7 +1095,32 @@
       },
       {
         "title": "PKI (Certificates)",
-        "path": "secrets/pki"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/pki"
+          },
+          {
+            "title": "Setup and Usage",
+            "path": "secrets/pki/setup"
+          },
+          {
+            "title": "Quick Start - Root CA Setup",
+            "path": "secrets/pki/quick-start-root-ca"
+          },
+          {
+            "title": "Quick Start - Intermediate CA Setup",
+            "path": "secrets/pki/quick-start-intermediate-ca"
+          },
+          {
+            "title": "Considerations",
+            "path": "secrets/pki/considerations"
+          },
+          {
+            "title": "Rotation Primitives",
+            "path": "secrets/pki/rotation-primitives"
+          }
+        ]
       },
       {
         "title": "RabbitMQ",
@@ -1511,6 +1544,14 @@
             "path": "platform/mssql/installation"
           },
           {
+            "title": "Configuration",
+            "path": "platform/mssql/configuration"
+          },
+          {
+            "title": "Upgrading",
+            "path": "platform/mssql/upgrading"
+          },
+          {
             "title": "Troubleshooting",
             "path": "platform/mssql/troubleshooting"
           }
@@ -1531,6 +1572,10 @@
       {
         "title": "Upgrade Plugins",
         "path": "upgrading/plugins"
+      },
+      {
+        "title": "Upgrade to 1.11.x",
+        "path": "upgrading/upgrade-to-1.11.x"
       },
       {
         "title": "Upgrade to 1.10.x",
@@ -1765,6 +1810,10 @@
         "path": "release-notes"
       },
       {
+        "title": "1.11.0",
+        "path": "release-notes/1.11.0"
+      },
+      {
         "title": "1.10.0",
         "path": "release-notes/1.10.0"
       },
@@ -1900,6 +1949,14 @@
         "path": "enterprise/automated-integrated-storage-snapshots"
       },
       {
+        "title": "Automated Upgrades",
+        "path": "enterprise/automated-upgrades"
+      },
+      {
+        "title": "Redundancy Zones",
+        "path": "enterprise/redundancy-zones"
+      },
+      {
         "title": "Lease Count Quotas",
         "path": "enterprise/lease-count-quotas"
       },
@@ -1908,7 +1965,24 @@
         "path": "enterprise/entropy-augmentation"
       },
       {
-        "title": "Seal Wrap / FIPS 140-2",
+        "title": "FIPS",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "enterprise/fips"
+          },
+          {
+            "title": "FIPS 140-2 Inside Vault",
+            "path": "enterprise/fips/fips1402"
+          },
+          {
+            "title": "Seal Wrap for FIPS 140-2",
+            "path": "enterprise/fips/sealwrap"
+          }
+        ]
+      },
+      {
+        "title": "Seal Wrap",
         "path": "enterprise/sealwrap"
       },
       {

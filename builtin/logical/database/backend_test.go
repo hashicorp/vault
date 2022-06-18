@@ -14,9 +14,6 @@ import (
 
 	"github.com/go-test/deep"
 	mongodbatlas "github.com/hashicorp/vault-plugin-database-mongodbatlas"
-	"github.com/lib/pq"
-	"github.com/mitchellh/mapstructure"
-
 	"github.com/hashicorp/vault/helper/namespace"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -30,6 +27,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	_ "github.com/jackc/pgx/v4"
+	"github.com/mitchellh/mapstructure"
 )
 
 func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
@@ -1472,14 +1471,8 @@ func testCredsExist(t *testing.T, resp *logical.Response, connURL string) bool {
 		t.Fatal(err)
 	}
 	log.Printf("[TRACE] Generated credentials: %v", d)
-	conn, err := pq.ParseURL(connURL)
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	conn += " timezone=utc"
-
-	db, err := sql.Open("postgres", conn)
+	db, err := sql.Open("pgx", connURL+"&timezone=utc")
 	if err != nil {
 		t.Fatal(err)
 	}

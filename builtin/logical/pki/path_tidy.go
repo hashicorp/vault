@@ -225,7 +225,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 				}
 
 				if rebuildCRL {
-					if err := buildCRL(ctx, b, req, false); err != nil {
+					if err := b.crlBuilder.rebuild(ctx, b, req, false); err != nil {
 						return err
 					}
 				}
@@ -247,7 +247,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
 }
 
-func (b *backend) pathTidyStatusRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	// If this node is a performance secondary return an ErrReadOnly so that the request gets forwarded,
 	// but only if the PKI backend is not a local mount.
 	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && !b.System().LocalMount() {

@@ -8,6 +8,8 @@ description: >-
 
 # MongoDB Database Plugin HTTP API
 
+@include 'x509-sha1-deprecation.mdx'
+
 The MongoDB database plugin is one of the supported plugins for the database
 secrets engine. This plugin generates database credentials dynamically based on
 configured roles for the MongoDB database.

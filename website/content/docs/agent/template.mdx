@@ -45,16 +45,34 @@ The following links contain additional resources for the templating language use
 
 ### Template Language Example
 
-Template with Vault Agent requires the use of the `secret` [function from Consul
-Template](https://github.com/hashicorp/consul-template/blob/master/docs/templating-language.md#secret).
+Template with Vault Agent requires the use of the `secret` [function](https://github.com/hashicorp/consul-template/blob/master/docs/templating-language.md#secret)
+or `pkiCert` [function](https://github.com/hashicorp/consul-template/blob/main/docs/templating-language.md#pkicert)
+from Consul Template.
+
 The following is an example of a template that retrieves a generic secret from Vault's
 KV store:
-
 ```
 {{ with secret "secret/my-secret" }}
 {{ .Data.data.foo }}
 {{ end }}
 ```
+
+The following is an example of a template that retrieves a PKI certificate from
+Vault's PKI secrets engine. The fetching of a certificate from a PKI role
+through this function will be based on the certificate's expiration.
+```
+{{ pkiCert "pki/issue/my-domain-dot-com" "common_name=foo.example.com" }}
+```
+
+To fetch the issuing CA for this mount, use:
+
+```
+{{- with secret "pki/cert/ca" -}}
+{{ .Data.certificate }}
+{{- end -}}
+```
+
+Alternatively, `pki/cert/ca_chain` can be used to fetch the full CA chain.
 
 ## Global Configurations
 
@@ -68,7 +86,7 @@ failures.
 - `static_secret_render_interval` `(string or integer: 5m)` - If specified, configures
   how often Vault Agent Template should render non-leased secrets such as KV v2.
   This setting will not change how often Vault Agent Templating renders leased
-  secrets.
+  secrets. Uses [duration format strings](/docs/concepts/duration-format).
 
 ### `template_config` Stanza Example
 

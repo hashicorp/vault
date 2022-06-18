@@ -268,9 +268,9 @@ func mfaGenerateOktaLoginMFATest(client *api.Client) error {
 			"org_name":        org_name,
 			"api_token":       api_token,
 			"primary_email":   true,
-			"username_format": "{{entity.metadata.email}}",
+			"username_format": "{{identity.entity.metadata.email}}",
 		}
-		resp, err := client.Logical().Write("identity/mfa/method-id/okta", mfaConfigData)
+		resp, err := client.Logical().Write("identity/mfa/method/okta", mfaConfigData)
 
 		if err != nil || (resp == nil) {
 			return fmt.Errorf("bad: resp: %#v\n err: %v", resp, err)

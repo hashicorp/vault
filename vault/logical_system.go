@@ -741,7 +741,8 @@ func (b *SystemBackend) handleRekeyRetrieve(
 	ctx context.Context,
 	req *logical.Request,
 	data *framework.FieldData,
-	recovery bool) (*logical.Response, error) {
+	recovery bool,
+) (*logical.Response, error) {
 	backup, err := b.Core.RekeyRetrieveBackup(ctx, recovery)
 	if err != nil {
 		return nil, fmt.Errorf("unable to look up backed-up keys: %w", err)
@@ -792,7 +793,8 @@ func (b *SystemBackend) handleRekeyDelete(
 	ctx context.Context,
 	req *logical.Request,
 	data *framework.FieldData,
-	recovery bool) (*logical.Response, error) {
+	recovery bool,
+) (*logical.Response, error) {
 	err := b.Core.RekeyDeleteBackup(ctx, recovery)
 	if err != nil {
 		return nil, fmt.Errorf("error during deletion of backed-up keys: %w", err)
@@ -1082,7 +1084,8 @@ func (b *SystemBackend) handleReadMount(ctx context.Context, req *logical.Reques
 
 // used to intercept an HTTPCodedError so it goes back to callee
 func handleError(
-	err error) (*logical.Response, error) {
+	err error,
+) (*logical.Response, error) {
 	if strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
 		return logical.ErrorResponse(err.Error()), err
 	}
@@ -1097,7 +1100,8 @@ func handleError(
 // Performs a similar function to handleError, but upon seeing a ReadOnlyError
 // will actually strip it out to prevent forwarding
 func handleErrorNoReadOnlyForward(
-	err error) (*logical.Response, error) {
+	err error,
+) (*logical.Response, error) {
 	if strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
 		return nil, fmt.Errorf("operation could not be completed as storage is read-only")
 	}
@@ -2007,7 +2011,8 @@ func (b *SystemBackend) handleRevokeForce(ctx context.Context, req *logical.Requ
 
 // handleRevokePrefixCommon is used to revoke a prefix with many LeaseIDs
 func (b *SystemBackend) handleRevokePrefixCommon(ctx context.Context,
-	req *logical.Request, data *framework.FieldData, force, sync bool) (*logical.Response, error) {
+	req *logical.Request, data *framework.FieldData, force, sync bool,
+) (*logical.Response, error) {
 	// Get all the options
 	prefix := data.Get("prefix").(string)
 
@@ -3239,6 +3244,14 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse("unknown log level"), nil
 	}
 
+	lf := data.Get("log_format").(string)
+	lowerLogFormat := strings.ToLower(lf)
+
+	validFormats := []string{"standard", "json"}
+	if !strutil.StrListContains(validFormats, lowerLogFormat) {
+		return logical.ErrorResponse("unknown log format"), nil
+	}
+
 	flusher, ok := w.ResponseWriter.(http.Flusher)
 	if !ok {
 		// http.ResponseWriter is wrapped in wrapGenericHandler, so let's
@@ -3253,7 +3266,7 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 		}
 	}
 
-	isJson := b.Core.LogFormat() == "json"
+	isJson := b.Core.LogFormat() == "json" || lf == "json"
 	logger := b.Core.Logger().(log.InterceptLogger)
 
 	mon, err := monitor.NewMonitor(512, logger, &log.LoggerOptions{
@@ -3391,13 +3404,23 @@ func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.R
 		return nil, errors.New("token is not a valid unwrap token")
 	}
 
+	lookupNS, err := NamespaceByID(ctx, te.NamespaceID, b.Core)
+	if err != nil {
+		return nil, err
+	}
+	if lookupNS == nil {
+		return nil, errors.New("token is not from a valid namespace")
+	}
+
+	lookupCtx := namespace.ContextWithNamespace(ctx, lookupNS)
+
 	cubbyReq := &logical.Request{
 		Operation:   logical.ReadOperation,
 		Path:        "cubbyhole/wrapinfo",
 		ClientToken: token,
 	}
 	cubbyReq.SetTokenEntry(te)
-	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
+	cubbyResp, err := b.Core.router.Route(lookupCtx, cubbyReq)
 	if err != nil {
 		return nil, fmt.Errorf("error looking up wrapping information: %w", err)
 	}
@@ -3711,7 +3734,11 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		}
 
 		if isAuthed {
-			return hasMountAccess(ctx, acl, me.Namespace().Path+me.Path)
+			if me.Table == "auth" {
+				return hasMountAccess(ctx, acl, me.Namespace().Path+me.Table+"/"+me.Path)
+			} else {
+				return hasMountAccess(ctx, acl, me.Namespace().Path+me.Path)
+			}
 		}
 
 		return false
@@ -3821,10 +3848,18 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	}
 	resp.Data["path"] = me.Path
 
-	fullMountPath := ns.Path + me.Path
+	pathWithTable := ""
+
+	if me.Table == "auth" {
+		pathWithTable = me.Table + "/" + me.Path
+	} else {
+		pathWithTable = me.Path
+	}
+
+	fullMountPath := ns.Path + pathWithTable
 	if ns.ID != me.Namespace().ID {
-		resp.Data["path"] = me.Namespace().Path + me.Path
-		fullMountPath = ns.Path + me.Namespace().Path + me.Path
+		resp.Data["path"] = me.Namespace().Path + pathWithTable
+		fullMountPath = ns.Path + me.Namespace().Path + pathWithTable
 	}
 
 	if !hasMountAccess(ctx, acl, fullMountPath) {
@@ -4318,14 +4353,20 @@ func (b *SystemBackend) handleHAStatus(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	nodes := []HAStatusNode{
-		{
-			Hostname:       hostname,
-			APIAddress:     b.Core.redirectAddr,
-			ClusterAddress: b.Core.ClusterAddr(),
-			ActiveNode:     true,
-		},
+	leader := HAStatusNode{
+		Hostname:       hostname,
+		APIAddress:     b.Core.redirectAddr,
+		ClusterAddress: b.Core.ClusterAddr(),
+		ActiveNode:     true,
+		Version:        version.GetVersion().Version,
 	}
+
+	if rb := b.Core.getRaftBackend(); rb != nil {
+		leader.UpgradeVersion = rb.EffectiveVersion()
+		leader.RedundancyZone = rb.RedundancyZone()
+	}
+
+	nodes := []HAStatusNode{leader}
 
 	for _, peerNode := range b.Core.GetHAPeerNodesCached() {
 		lastEcho := peerNode.LastEcho
@@ -4334,8 +4375,15 @@ func (b *SystemBackend) handleHAStatus(ctx context.Context, req *logical.Request
 			APIAddress:     peerNode.APIAddress,
 			ClusterAddress: peerNode.ClusterAddress,
 			LastEcho:       &lastEcho,
+			Version:        peerNode.Version,
+			UpgradeVersion: peerNode.UpgradeVersion,
+			RedundancyZone: peerNode.RedundancyZone,
 		})
 	}
+
+	sort.Slice(nodes, func(i, j int) bool {
+		return nodes[i].APIAddress < nodes[j].APIAddress
+	})
 
 	return &logical.Response{
 		Data: map[string]interface{}{
@@ -4350,6 +4398,9 @@ type HAStatusNode struct {
 	ClusterAddress string     `json:"cluster_address"`
 	ActiveNode     bool       `json:"active_node"`
 	LastEcho       *time.Time `json:"last_echo"`
+	Version        string     `json:"version"`
+	UpgradeVersion string     `json:"upgrade_version,omitempty"`
+	RedundancyZone string     `json:"redundancy_zone,omitempty"`
 }
 
 func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -5098,7 +5149,7 @@ This path responds to the following HTTP methods.
 		"This function can be used to generate high-entropy random bytes.",
 	},
 	"listing_visibility": {
-		"Determines the visibility of the mount in the UI-specific listing endpoint. Accepted value are 'unauth' and ''.",
+		"Determines the visibility of the mount in the UI-specific listing endpoint. Accepted value are 'unauth' and 'hidden', with the empty default ('') behaving like 'hidden'.",
 		"",
 	},
 	"passthrough_request_headers": {
@@ -5168,6 +5219,10 @@ This path responds to the following HTTP methods.
 	"activity-query": {
 		"Query the historical count of clients.",
 		"Query the historical count of clients.",
+	},
+	"activity-export": {
+		"Export the historical activity of clients.",
+		"Export the historical activity of clients.",
 	},
 	"activity-monthly": {
 		"Count of active clients so far this month.",
