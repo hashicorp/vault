@@ -35,6 +35,7 @@ You will need the following things properly installed on your computer.
 
 - [Node.js](https://nodejs.org/) (with NPM)
 - [Yarn](https://yarnpkg.com/en/)
+- [python](https://www.python.org)
 - [Git](https://git-scm.com/)
 - [Ember CLI](https://ember-cli.com/)
 - [lint-staged\*](https://www.npmjs.com/package/lint-staged)
@@ -46,6 +47,12 @@ running `yarn --force`.
 
 In order to enforce the same version of `yarn` across installs, the `yarn` binary is included in the repo
 in the `.yarn/releases` folder. To update to a different version of `yarn`, use the `yarn policies set-version VERSION` command. For more information on this, see the [documentation](https://yarnpkg.com/en/docs/cli/policies).
+
+\* macOS Monterey installs python3 only. To fix that run the following command:
+
+```sh
+$ ln -s "$(brew --prefix)/bin/python"{3,}
+```
 
 ## Running a Vault Server
 
