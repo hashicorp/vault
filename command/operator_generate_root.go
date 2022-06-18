@@ -64,17 +64,20 @@ Usage: vault operator generate-root [options] [KEY]
     - A file containing a PGP key or a keybase username in the "-pgp-key"
       flag. The resulting token is encrypted with this public key.
 
+  If you don't provide any of these, a one-time-password (OTP) will be generated
+  for you and show in the OTP field.
+
   An unseal key may be provided directly on the command line as an argument to
   the command. If key is specified as "-", the command will read from stdin. If
   a TTY is available, the command will prompt for text.
 
-  Generate an OTP code for the final token:
-
-      $ vault operator generate-root -generate-otp
-
   Start a root token generation:
 
       $ vault operator generate-root -init
+
+  Generate an OTP code for the final token:
+
+      $ vault operator generate-root -generate-otp
 
   Start a root token generation by providing key:
 
