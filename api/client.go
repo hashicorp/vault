@@ -464,7 +464,8 @@ func (c *Config) ReadEnvironment() error {
 
 // ParseAddress transforms the provided address into a url.URL and handles
 // the case of Unix domain sockets by setting the DialContext in the
-// configuration's HttpClient.Transport.
+// configuration's HttpClient.Transport. This function must be called with
+// c.modifyLock held for write access.
 func (c *Config) ParseAddress(address string) (*url.URL, error) {
 	u, err := url.Parse(address)
 	if err != nil {
@@ -1103,8 +1104,8 @@ func (c *Client) clone(cloneHeaders bool) (*Client, error) {
 	defer c.modifyLock.RUnlock()
 
 	config := c.config
-	config.modifyLock.Lock()
-	defer config.modifyLock.Unlock()
+	config.modifyLock.RLock()
+	defer config.modifyLock.RUnlock()
 
 	newConfig := &Config{
 		Address:        config.Address,
