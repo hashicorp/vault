@@ -155,8 +155,8 @@ type databaseBackend struct {
 	backendUUID string
 }
 
-// addConnectionsCounter is used to keep metrics on how many and what types of databases we have open
-func (b *databaseBackend) addConnectionsCounter(dbw databaseVersionWrapper, amount int) {
+// updateConnectionsGauge is used to keep metrics on how many and what types of databases we have open
+func (b *databaseBackend) updateConnectionsGauge(dbw databaseVersionWrapper, amount int) {
 	// keep track of what databases we open
 	dbType, err := dbw.Type()
 	if err != nil {
@@ -181,7 +181,7 @@ func (b *databaseBackend) connPop(name string) *dbPluginInstance {
 	defer b.connLock.Unlock()
 	dbi, ok := b.connections[name]
 	if ok {
-		b.addConnectionsCounter(dbi.database, -1)
+		b.updateConnectionsGauge(dbi.database, -1)
 		delete(b.connections, name)
 	}
 	return dbi
@@ -192,7 +192,7 @@ func (b *databaseBackend) connPopIfEqual(name, id string) *dbPluginInstance {
 	defer b.connLock.Unlock()
 	dbi, ok := b.connections[name]
 	if ok && dbi.id == id {
-		b.addConnectionsCounter(dbi.database, -1)
+		b.updateConnectionsGauge(dbi.database, -1)
 		delete(b.connections, name)
 		return dbi
 	}
@@ -204,10 +204,10 @@ func (b *databaseBackend) connPut(name string, newDbi *dbPluginInstance) *dbPlug
 	defer b.connLock.Unlock()
 	dbi, ok := b.connections[name]
 	if ok {
-		b.addConnectionsCounter(dbi.database, -1)
+		b.updateConnectionsGauge(dbi.database, -1)
 	}
 	b.connections[name] = newDbi
-	b.addConnectionsCounter(newDbi.database, 1)
+	b.updateConnectionsGauge(newDbi.database, 1)
 	return dbi
 }
 
@@ -216,7 +216,7 @@ func (b *databaseBackend) connClear() map[string]*dbPluginInstance {
 	defer b.connLock.Unlock()
 	old := b.connections
 	for _, conn := range old {
-		b.addConnectionsCounter(conn.database, -1)
+		b.updateConnectionsGauge(conn.database, -1)
 	}
 	b.connections = make(map[string]*dbPluginInstance)
 	return old
