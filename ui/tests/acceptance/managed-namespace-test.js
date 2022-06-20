@@ -25,7 +25,7 @@ module('Acceptance | Enterprise | Managed namespace root', function (hooks) {
       this.get('/v1/sys/health', this.passthrough);
       this.get('/v1/sys/seal-status', this.passthrough);
       this.get('/v1/sys/license/features', this.passthrough);
-      this.get('/v1/sys/internal/ui/mounts', this.passthrough);
+      this.get('/v1/sys/mounts-all', this.passthrough);
     });
   });
 

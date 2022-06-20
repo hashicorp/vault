@@ -87,7 +87,7 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
       `write sys/policies/acl/kv-control-group policy=${btoa(POLICY)}`,
       `write sys/policies/acl/authorizer policy=${btoa(AUTHORIZER_POLICY)}`,
       // read out mount to get the accessor
-      'read -field=accessor sys/internal/ui/mounts/auth/userpass',
+      'read -field=accessor sys/mounts-all/auth/userpass',
     ]);
     await settled();
     userpassAccessor = consoleComponent.lastTextOutput;

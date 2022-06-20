@@ -29,8 +29,8 @@ export default Component.extend({
     let secret = [];
     let auth = [];
     let mounts = ns
-      ? yield adapter.ajax('/v1/sys/internal/ui/mounts', 'GET', { namespace: ns })
-      : yield adapter.ajax('/v1/sys/internal/ui/mounts', 'GET');
+      ? yield adapter.ajax('/v1/sys/mounts-all', 'GET', { namespace: ns })
+      : yield adapter.ajax('/v1/sys/mounts-all', 'GET');
 
     ['secret', 'auth'].forEach((key) => {
       for (let [id, info] of Object.entries(mounts.data[key])) {
@@ -83,7 +83,7 @@ export default Component.extend({
       yield timeout(200);
     }
     if (!term || (term && namespaceToFetch)) {
-      // fetch auth and secret methods from sys/internal/ui/mounts for the given namespace
+      // fetch auth and secret methods from sys/mounts-all for the given namespace
       let result = yield this.fetchMountsForNamespace.perform(namespaceToFetch);
       secretList = result.secret;
       authList = result.auth;

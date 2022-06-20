@@ -54,7 +54,7 @@ module('Acceptance | oidc auth method', function (hooks) {
   test('it should login with oidc from listed auth mount tab', async function (assert) {
     assert.expect(3);
 
-    this.server.get('/sys/internal/ui/mounts', () => ({
+    this.server.get('/sys/mounts-all', () => ({
       data: {
         auth: {
           'test-path/': { description: '', options: {}, type: 'oidc' },

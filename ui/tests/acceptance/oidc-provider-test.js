@@ -47,7 +47,7 @@ const authAccessor = async function (path = 'userpass') {
   await enablePage.enable('userpass', path);
   await consoleComponent.runCommands([
     `write auth/${path}/users/end-user password="${USER_PASSWORD}"`,
-    `read -field=accessor sys/internal/ui/mounts/auth/${path}`,
+    `read -field=accessor sys/mounts-all/auth/${path}`,
   ]);
   return consoleComponent.lastLogOutput;
 };

@@ -35,10 +35,8 @@ module('Integration | Component | path filter config list', function (hooks) {
   setupRenderingTest(hooks, { resolver });
   hooks.beforeEach(function () {
     let ajaxStub = sinon.stub().usingPromise(Promise);
-    ajaxStub.withArgs('/v1/sys/internal/ui/mounts', 'GET').resolves(MOUNTS_RESPONSE);
-    ajaxStub
-      .withArgs('/v1/sys/internal/ui/mounts', 'GET', { namespace: 'ns1' })
-      .resolves(NAMESPACE_MOUNTS_RESPONSE);
+    ajaxStub.withArgs('/v1/sys/mounts-all', 'GET').resolves(MOUNTS_RESPONSE);
+    ajaxStub.withArgs('/v1/sys/mounts-all', 'GET', { namespace: 'ns1' }).resolves(NAMESPACE_MOUNTS_RESPONSE);
     this.set('ajaxStub', ajaxStub);
     const namespaceServiceStub = Service.extend({
       init() {

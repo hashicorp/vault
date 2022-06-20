@@ -120,7 +120,7 @@ module('Integration | Component | auth form', function (hooks) {
       },
     };
     let server = new Pretender(function () {
-      this.get('/v1/sys/internal/ui/mounts', () => {
+      this.get('/v1/sys/mounts-all', () => {
         return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
       });
     });
@@ -140,7 +140,7 @@ module('Integration | Component | auth form', function (hooks) {
       },
     };
     let server = new Pretender(function () {
-      this.get('/v1/sys/internal/ui/mounts', () => {
+      this.get('/v1/sys/mounts-all', () => {
         return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
       });
     });
@@ -162,7 +162,7 @@ module('Integration | Component | auth form', function (hooks) {
       },
     };
     let server = new Pretender(function () {
-      this.get('/v1/sys/internal/ui/mounts', () => {
+      this.get('/v1/sys/mounts-all', () => {
         return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
       });
     });
@@ -184,7 +184,7 @@ module('Integration | Component | auth form', function (hooks) {
       },
     };
     let server = new Pretender(function () {
-      this.get('/v1/sys/internal/ui/mounts', () => {
+      this.get('/v1/sys/mounts-all', () => {
         return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
       });
     });
@@ -209,7 +209,7 @@ module('Integration | Component | auth form', function (hooks) {
       },
     };
     let server = new Pretender(function () {
-      this.get('/v1/sys/internal/ui/mounts', () => {
+      this.get('/v1/sys/mounts-all', () => {
         return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
       });
     });

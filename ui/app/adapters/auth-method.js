@@ -18,7 +18,7 @@ export default ApplicationAdapter.extend({
   findAll(store, type, sinceToken, snapshotRecordArray) {
     let isUnauthenticated = snapshotRecordArray?.adapterOptions?.unauthenticated;
     if (isUnauthenticated) {
-      let url = `/${this.urlPrefix()}/internal/ui/mounts`;
+      let url = `/${this.urlPrefix()}/mounts-all`;
       return this.ajax(url, 'GET', {
         unauthenticated: true,
       })

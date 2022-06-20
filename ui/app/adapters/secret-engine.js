@@ -14,7 +14,7 @@ export default ApplicationAdapter.extend({
   },
 
   internalURL(path) {
-    let url = `/${this.urlPrefix()}/internal/ui/mounts`;
+    let url = `/${this.urlPrefix()}/mounts-all`;
     if (path) {
       url = `${url}/${encodePath(path)}`;
     }

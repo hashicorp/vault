@@ -29,14 +29,14 @@ module('Unit | Adapter | secret engine', function (hooks) {
       description: 'Empty query',
       adapterMethod: 'query',
       args: [storeStub, type, {}],
-      url: '/v1/sys/internal/ui/mounts',
+      url: '/v1/sys/mounts-all',
       method: 'GET',
     },
     {
       description: 'Query with a path',
       adapterMethod: 'query',
       args: [storeStub, type, { path: 'foo' }],
-      url: '/v1/sys/internal/ui/mounts/foo',
+      url: '/v1/sys/mounts-all/foo',
       method: 'GET',
     },
 
@@ -44,7 +44,7 @@ module('Unit | Adapter | secret engine', function (hooks) {
       description: 'Query with nested path',
       adapterMethod: 'query',
       args: [storeStub, type, { path: 'foo/bar/baz' }],
-      url: '/v1/sys/internal/ui/mounts/foo/bar/baz',
+      url: '/v1/sys/mounts-all/foo/bar/baz',
       method: 'GET',
     },
   ];
