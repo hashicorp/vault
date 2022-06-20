@@ -61,9 +61,8 @@
         </LinkTo>
       </li>
     {{/if}}
-    {{!  ARG TODO add permissions }}
-    {{!-- {{#if (has-permission "access" routeParams="mfa")}} --}}
-    {{#if true}}
+    {{! ARG TODO test this when writing test later }}
+    {{#if (has-permission "access" routeParams="oidc")}}
       <li>
         <LinkTo
           @route="vault.cluster.access.oidc.clients"
