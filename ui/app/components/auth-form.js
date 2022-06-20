@@ -219,7 +219,11 @@ export default Component.extend(DEFAULTS, {
         cluster: { id: clusterId },
       } = this;
       try {
-        this.delayAuthMessageReminder.perform();
+        if (backendType === 'okta') {
+          this.pollForOktaNumberChallenge.perform(data.nonce);
+        } else {
+          this.delayAuthMessageReminder.perform();
+        }
         const authResponse = yield this.auth.authenticate({
           clusterId,
           backend: backendType,
@@ -235,6 +239,17 @@ export default Component.extend(DEFAULTS, {
       }
     })
   ),
+
+  pollForOktaNumberChallenge: task(function* (nonce) {
+    let response = undefined;
+    // keep polling /auth/okta/verify/:nonce API every 1s until a response is given with the correct number for the Okta Number Challenge
+    while (response === undefined && !this.error) {
+      yield timeout(1000);
+      response = yield this.auth.getOktaNumberChallengeAnswer(nonce);
+    }
+    // line below was temporarily used to print the response to make sure polling works and can log in, will remove after create screens to display response
+    // console.log(response);
+  }),
 
   delayAuthMessageReminder: task(function* () {
     if (Ember.testing) {
