@@ -675,7 +675,7 @@ on standard AWS credentials precedence as described earlier. Whichever method is
 be sure the designated region corresponds to that of the STS endpoint you're using.
 
 -> **Note on GovCloud:** If you are making use of AWS GovCloud and setting the `sts_endpoint`
-and `sts_region` role parameters to `us-gov-west-1` / `us-gov-east-1` then you should include
+and `sts_region` role parameters to `us-gov-west-1` / `us-gov-east-1` then you must include
 the `region` argument in your login request with a matching value, i.e. `region=us-gov-west-1`.
 
 An example of how to generate the required request values for the `login` method
