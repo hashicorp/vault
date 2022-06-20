@@ -441,4 +441,22 @@ export default Service.extend({
       backend: BACKENDS.findBy('type', backend),
     });
   }),
+
+  getOktaNumberChallengeAnswer(nonce) {
+    let namespace = 'undefined';
+    const url = `/v1/auth/okta/verify/${nonce}`;
+    return this.ajax(url, 'GET', { namespace }).then(
+      (resp) => {
+        return resp.data.correct_answer;
+      },
+      (e) => {
+        // if error status is 404, return and keep polling for a response
+        if (e.status === 404) {
+          return;
+        } else {
+          throw e;
+        }
+      }
+    );
+  },
 });
