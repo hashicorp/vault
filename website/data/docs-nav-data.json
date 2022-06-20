@@ -190,6 +190,10 @@
       {
         "title": "Mount Migration",
         "path": "concepts/mount-migration"
+      },
+      {
+        "title": "Duration String Format",
+        "path": "concepts/duration-format"
       }
     ]
   },
@@ -1844,6 +1848,10 @@
       {
         "title": "Overview",
         "path": "release-notes"
+      },
+      {
+        "title": "1.11.0",
+        "path": "release-notes/1.11.0"
       },
       {
         "title": "1.10.0",

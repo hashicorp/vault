@@ -2,7 +2,7 @@ import AdapterError from '@ember-data/adapter/error';
 import { hash, resolve } from 'rsvp';
 import { capitalize } from '@ember/string';
 import { set } from '@ember/object';
-import ApplicationAdapter from './application';
+import ApplicationAdapter from '../application';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',

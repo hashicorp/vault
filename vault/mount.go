@@ -391,6 +391,15 @@ func (e *MountEntry) APIPath() string {
 	return e.namespace.Path + path
 }
 
+// APIPathNoNamespace returns the API Path without the namespace for the given mount entry
+func (e *MountEntry) APIPathNoNamespace() string {
+	path := e.Path
+	if e.Table == credentialTableType {
+		path = credentialRoutePrefix + path
+	}
+	return path
+}
+
 // SyncCache syncs tunable configuration values to the cache. In the case of
 // cached values, they should be retrieved via synthesizedConfigCache.Load()
 // instead of accessing them directly through MountConfig.

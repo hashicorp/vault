@@ -2,7 +2,7 @@ import RESTSerializer from '@ember-data/serializer/rest';
 import { isNone, isBlank } from '@ember/utils';
 import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
-import { parsePkiCert } from '../helpers/parse-pki-cert';
+import { parsePkiCert } from '../../helpers/parse-pki-cert';
 
 export default RESTSerializer.extend({
   keyForAttribute: function (attr) {

@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -384,6 +385,21 @@ for "generate_lease".`,
 				},
 			},
 
+			"cn_validations": {
+				Type:    framework.TypeCommaStringSlice,
+				Default: []string{"email", "hostname"},
+				Description: `List of allowed validations to run against the
+Common Name field. Values can include 'email' to validate the CN is a email
+address, 'hostname' to validate the CN is a valid hostname (potentially
+including wildcards). When multiple validations are specified, these take
+OR semantics (either email OR hostname are allowed). The special value
+'disabled' allows disabling all CN name validations, allowing for arbitrary
+non-Hostname, non-Email address CNs.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Common Name Validations",
+				},
+			},
+
 			"policy_identifiers": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated string or list of policy OIDs, or a JSON list of qualified policy
@@ -565,6 +581,18 @@ func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*ro
 		modified = true
 	}
 
+	// Update CN Validations to be the present default, "email,hostname"
+	if len(result.CNValidations) == 0 {
+		result.CNValidations = []string{"email", "hostname"}
+		modified = true
+	}
+
+	// Ensure the role is valida fter updating.
+	_, err = validateRole(b, &result, ctx, s)
+	if err != nil {
+		return nil, err
+	}
+
 	if modified && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
 		jsonEntry, err := logical.StorageEntryJSON("role/"+n, &result)
 		if err != nil {
@@ -660,6 +688,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		GenerateLease:                 new(bool),
 		NoStore:                       data.Get("no_store").(bool),
 		RequireCN:                     data.Get("require_cn").(bool),
+		CNValidations:                 data.Get("cn_validations").([]string),
 		AllowedSerialNumbers:          data.Get("allowed_serial_numbers").([]string),
 		PolicyIdentifiers:             getPolicyIdentifier(data, nil),
 		BasicConstraintsValidForNonCA: data.Get("basic_constraints_valid_for_non_ca").(bool),
@@ -781,6 +810,12 @@ func validateRole(b *backend, entry *roleEntry, ctx context.Context, s logical.S
 
 	}
 
+	// Ensures CNValidations are alright
+	entry.CNValidations, err = checkCNValidations(entry.CNValidations)
+	if err != nil {
+		return nil, errutil.UserError{Err: err.Error()}
+	}
+
 	return resp, nil
 }
 
@@ -848,6 +883,7 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 		GenerateLease:                 new(bool),
 		NoStore:                       getWithExplicitDefault(data, "no_store", oldEntry.NoStore).(bool),
 		RequireCN:                     getWithExplicitDefault(data, "require_cn", oldEntry.RequireCN).(bool),
+		CNValidations:                 getWithExplicitDefault(data, "cn_validations", oldEntry.CNValidations).([]string),
 		AllowedSerialNumbers:          getWithExplicitDefault(data, "allowed_serial_numbers", oldEntry.AllowedSerialNumbers).([]string),
 		PolicyIdentifiers:             getPolicyIdentifier(data, &oldEntry.PolicyIdentifiers),
 		BasicConstraintsValidForNonCA: getWithExplicitDefault(data, "basic_constraints_valid_for_non_ca", oldEntry.BasicConstraintsValidForNonCA).(bool),
@@ -1043,6 +1079,7 @@ type roleEntry struct {
 	GenerateLease                 *bool         `json:"generate_lease,omitempty"`
 	NoStore                       bool          `json:"no_store" mapstructure:"no_store"`
 	RequireCN                     bool          `json:"require_cn" mapstructure:"require_cn"`
+	CNValidations                 []string      `json:"cn_validations" mapstructure:"cn_validations"`
 	AllowedOtherSANs              []string      `json:"allowed_other_sans" mapstructure:"allowed_other_sans"`
 	AllowedSerialNumbers          []string      `json:"allowed_serial_numbers" mapstructure:"allowed_serial_numbers"`
 	AllowedURISANs                []string      `json:"allowed_uri_sans" mapstructure:"allowed_uri_sans"`
@@ -1095,6 +1132,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"allowed_serial_numbers":             r.AllowedSerialNumbers,
 		"allowed_uri_sans":                   r.AllowedURISANs,
 		"require_cn":                         r.RequireCN,
+		"cn_validations":                     r.CNValidations,
 		"policy_identifiers":                 r.PolicyIdentifiers,
 		"basic_constraints_valid_for_non_ca": r.BasicConstraintsValidForNonCA,
 		"not_before_duration":                int64(r.NotBeforeDuration.Seconds()),
@@ -1108,6 +1146,52 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		responseData["generate_lease"] = r.GenerateLease
 	}
 	return responseData
+}
+
+func checkCNValidations(validations []string) ([]string, error) {
+	var haveDisabled bool
+	var haveEmail bool
+	var haveHostname bool
+
+	var result []string
+
+	if len(validations) == 0 {
+		return []string{"email", "hostname"}, nil
+	}
+
+	for _, validation := range validations {
+		switch strings.ToLower(validation) {
+		case "disabled":
+			if haveDisabled {
+				return nil, fmt.Errorf("cn_validations value incorrect: `disabled` specified multiple times")
+			}
+			haveDisabled = true
+		case "email":
+			if haveEmail {
+				return nil, fmt.Errorf("cn_validations value incorrect: `email` specified multiple times")
+			}
+			haveEmail = true
+		case "hostname":
+			if haveHostname {
+				return nil, fmt.Errorf("cn_validations value incorrect: `hostname` specified multiple times")
+			}
+			haveHostname = true
+		default:
+			return nil, fmt.Errorf("cn_validations value incorrect: unknown type: `%s`", validation)
+		}
+
+		result = append(result, strings.ToLower(validation))
+	}
+
+	if !haveDisabled && !haveEmail && !haveHostname {
+		return nil, fmt.Errorf("cn_validations value incorrect: must specify a value (`email` and/or `hostname`) or `disabled`")
+	}
+
+	if haveDisabled && (haveEmail || haveHostname) {
+		return nil, fmt.Errorf("cn_validations value incorrect: cannot specify `disabled` along with `email` or `hostname`")
+	}
+
+	return result, nil
 }
 
 const pathListRolesHelpSyn = `List the existing roles in this backend`

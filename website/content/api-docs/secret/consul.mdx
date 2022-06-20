@@ -97,7 +97,7 @@ To create a client token within a particular Consul admin partition:
 
 - `consul_namespace` `(string: "default")` - Specifies the Consul namespace in which the token is generated.
   The namespace must exist, and the Consul policies or roles assigned
-  to the Vault role must also exist inside the given Consul namespace. If not provided, the 
+  to the Vault role must also exist inside the given Consul namespace. If not provided, the
   namespace `default` is used.
 
 - `node_identities` `(list: <node identity or identities>)` - The list of node identities to assign to the generated
@@ -175,13 +175,11 @@ To create a client token with service identities attached:
   globally and instead be local to the current datacenter. Only available in Consul
   1.4 and greater.
 
-- `ttl` `(duration: "")` – Specifies the TTL for this role. This is provided
-  as a string duration with a time suffix like `"30s"` or `"1h"` or as seconds. If not
-  provided, the default Vault TTL is used.
+- `ttl` `(duration: "")` – Specifies the TTL for this role. If not
+  provided, the default Vault TTL is used. Uses [duration format strings](/docs/concepts/duration-format).
 
-- `max_ttl` `(duration: "")` – Specifies the max TTL for this role. This is provided
-  as a string duration with a time suffix like `"30s"` or `"1h"` or as seconds. If not
-  provided, the default Vault Max TTL is used.
+- `max_ttl` `(duration: "")` – Specifies the max TTL for this role. If not
+  provided, the default Vault Max TTL is used. Uses [duration format strings](/docs/concepts/duration-format).
 
 ### Sample Payload
 
@@ -195,8 +193,8 @@ To create a client token with policies defined in Consul:
 
 ### Parameters for Consul version below 1.4
 
-- `lease` <sup>DEPRECATED (1.11)</sup> `(string: "")` – Specifies the lease for this role. This is provided
-  as a string duration with a time suffix like `"30s"` or `"1h"`. If not
+- `lease` <sup>DEPRECATED (1.11)</sup> `(string: "")` – Specifies the lease for this role.
+  Uses [duration format strings](/docs/concepts/duration-format). If not
   provided, the default Vault lease is used.
 
 - `policy` <sup>DEPRECATED (1.11)</sup> `(string: <policy>)` – Specifies the base64-encoded ACL policy. The
