@@ -13,6 +13,10 @@
   border-radius: $radius;
   transition: all ease-in-out $speed;
 
+  &.is-half-width {
+    width: 38rem;
+  }
+
   input[type='radio'] {
     position: absolute;
     z-index: 1;

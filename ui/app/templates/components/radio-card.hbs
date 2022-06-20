@@ -1,6 +1,9 @@
 <label
   for={{dasherize @value}}
-  class="radio-card {{if (eq @value @groupValue) 'is-selected'}} {{if @disabled 'is-disabled'}}"
+  class="radio-card
+    {{if (eq @value @groupValue) 'is-selected'}}
+    {{if @disabled 'is-disabled'}}
+    {{if @isHalfWidth 'is-half-width'}}"
   ...attributes
 >
   {{#if (has-block)}}

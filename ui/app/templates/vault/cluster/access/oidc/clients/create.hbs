@@ -1,0 +1,24 @@
+<h3 class="title is-5">Assign Access</h3>
+<div class="has-border-top-light">
+  <p class="has-top-margin-m">Use assignment to specify which Vault entities and groups are allowed to authenticate.</p>
+</div>
+<div class="is-flex-row has-top-margin-m">
+  <RadioCard
+    @title="Allow everyone to access"
+    @description="All Vault entities can authenticate through this application"
+    @icon="user-organization"
+    @value="everyone"
+    @onChange={{this.onAssignAccessChange}}
+    @isHalfWidth={{true}}
+    data-test-oidc-radio="everyone"
+  />
+  <RadioCard
+    @title="Limit access to selected users"
+    @description="Choose or create an assignment to give access to selected entities"
+    @icon="user-team"
+    @value="limited"
+    @onChange={{this.onAssignAccessChange}}
+    @isHalfWidth={{true}}
+    data-test-oidc-radio="limited"
+  />
+</div>
