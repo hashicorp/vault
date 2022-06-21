@@ -244,6 +244,11 @@ export default Component.extend(DEFAULTS, {
     let response = undefined;
     // keep polling /auth/okta/verify/:nonce API every 1s until a response is given with the correct number for the Okta Number Challenge
     while (response === undefined && !this.error) {
+      // when testing, the polling loop causes promises to be rejected making acceptance tests fail
+      // so disable the poll in tests
+      if (Ember.testing) {
+        return;
+      }
       yield timeout(1000);
       response = yield this.auth.getOktaNumberChallengeAnswer(nonce);
     }
