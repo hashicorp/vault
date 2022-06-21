@@ -487,8 +487,8 @@ metadata:
 spec:
   # automountServiceAccountToken is redundant in this example because the
   # mountPath used overlaps with the default path. The overlap stops the default
-  # admission injected token from being created. You can this option to ensure
-  # only a single token is mounted if you choose a different mount path.
+  # admission injected token from being created. You can use this option to
+  # ensure only a single token is mounted if you choose a different mount path.
   automountServiceAccountToken: false
   containers:
     - name: nginx
