@@ -346,7 +346,7 @@
 
 <Modal
   @title="Rotate your root credentials?"
-  @onClose={{action "continueWithoutRotate"}}
+  @onClose={{this.continueWithoutRotate}}
   @isActive={{this.showSaveModal}}
   @type="info"
   @showCloseButton={{false}}
@@ -381,7 +381,6 @@
   @confirmText={{@model.name}}
   @toConfirmMsg="deleting the connection"
   @onConfirm={{action "delete"}}
-  @testSelector="delete"
 >
   <p>
     Deleting the connection means that any associated roles won't be able to generate credentials until the connection is
