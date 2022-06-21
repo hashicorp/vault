@@ -1,0 +1,3 @@
+```release-note:feature
+api/sys/internal/ui/mounts: Move this path to a public supported endpoint
+```
