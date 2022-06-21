@@ -1,10 +1,5 @@
 import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-import fieldToAttrs from '../../utils/field-to-attrs';
-import ArrayProxy from '@ember/array/proxy';
-import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
-
 export default class OidcClientModel extends Model {
   @attr('string', {
     label: 'Application name',
@@ -35,7 +30,7 @@ export default class OidcClientModel extends Model {
     defaultValue: 'default-key',
     possibleValues: [],
   })
-  key; // possibleValues are fetched below, in getter
+  key; // asking design about changing this to a search-select to fetch all of the oidc/keys
 
   @attr({
     label: 'Access Token TTL',
@@ -113,38 +108,5 @@ export default class OidcClientModel extends Model {
   // API WIP
   get canListProviders() {
     return this.clientProvidersPath.get('canList');
-  }
-
-  get fieldGroups() {
-    const groups = [
-      { default: ['name', 'clientType', 'redirectUris'] },
-      { 'More options': ['key', 'idTokenTtl', 'accessTokenTtl'] },
-    ];
-    this.attrs.findBy('name', 'key').options.possibleValues = ArrayProxy.extend(PromiseProxyMixin).create({
-      promise: this.getKeys(),
-    });
-    // this.attrs.key.options.possibleValues = ['default-key', ...this.getKeys()];
-    return fieldToAttrs(this, groups);
-  }
-
-  get attrs() {
-    return expandAttributeMeta(this, [
-      'name',
-      'clientType',
-      'redirectUris',
-      'key',
-      'idTokenTtl',
-      'accessTokenTtl',
-      'assignments',
-    ]);
-  }
-
-  async getKeys() {
-    let keys = this.store.peekAll('oidc/key').toArray();
-    if (!keys.length) {
-      keys = await this.store.query('oidc/key', {});
-    }
-    console.log(keys, 'KEYS');
-    return ['default-key', 'hello'];
   }
 }
