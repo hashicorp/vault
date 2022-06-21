@@ -1,7 +1,9 @@
 package http
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"strings"
@@ -48,12 +50,16 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 			return
 		}
 		mountPath := strings.TrimPrefix(core.MatchingMount(r.Context(), path), ns.Path)
-		quotaResp, err := core.ApplyRateLimitQuota(r.Context(), &quotas.Request{
-			Type:      quotas.TypeRateLimit,
-			Path:      path,
-			MountPath: mountPath,
-			Role:      core.DetermineRoleFromLoginRequest(mountPath, r.Body, r.Context()),
 
+		// Clone body, so we do not close the request body reader
+		bodyBytes, _ := ioutil.ReadAll(r.Body)
+		r.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+
+		quotaResp, err := core.ApplyRateLimitQuota(r.Context(), &quotas.Request{
+			Type:          quotas.TypeRateLimit,
+			Path:          path,
+			MountPath:     mountPath,
+			Role:          core.DetermineRoleFromLoginRequest(mountPath, bodyBytes, r.Context()),
 			NamespacePath: ns.Path,
 			ClientAddress: parseRemoteIPAddress(r),
 		})

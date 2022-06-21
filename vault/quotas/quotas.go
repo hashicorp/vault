@@ -494,7 +494,7 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 	}
 
 	// Fetch role suffix quota
-	quota, err := quotaFetchFunc(indexNamespaceMountPath, req.NamespacePath, req.MountPath, false, req.Role)
+	quota, err := quotaFetchFunc(indexNamespaceMountRole, req.NamespacePath, req.MountPath, false, req.Role)
 	if err != nil {
 		return nil, err
 	}
@@ -819,7 +819,7 @@ func dbSchema() *memdb.DBSchema {
 								Field: "PathSuffix",
 							},
 							&memdb.StringFieldIndex{
-								Field: "MountPath",
+								Field: "Role",
 							},
 						},
 					},
