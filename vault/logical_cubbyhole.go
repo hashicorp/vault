@@ -6,13 +6,15 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/metricsutil"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // CubbyholeBackendFactory constructs a new cubbyhole backend
-func CubbyholeBackendFactory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+func CubbyholeBackendFactory(ctx context.Context, conf *logical.BackendConfig, _ *metricsutil.ClusterMetricSink) (logical.Backend, error) {
 	b := &CubbyholeBackend{}
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(cubbyholeHelp),

@@ -1459,7 +1459,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	}
 
 	ctx = context.WithValue(ctx, "core_number", c.coreNumber)
-	b, err := f(ctx, config)
+	b, err := f(ctx, config, c.metricSink)
 	if err != nil {
 		return nil, err
 	}

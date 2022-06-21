@@ -3,6 +3,8 @@ package logical
 import (
 	"context"
 
+	"github.com/hashicorp/vault/helper/metricsutil"
+
 	log "github.com/hashicorp/go-hclog"
 )
 
@@ -108,7 +110,7 @@ type BackendConfig struct {
 }
 
 // Factory is the factory function to create a logical backend.
-type Factory func(context.Context, *BackendConfig) (Backend, error)
+type Factory func(context.Context, *BackendConfig, *metricsutil.ClusterMetricSink) (Backend, error)
 
 // Paths is the structure of special paths that is used for SpecialPaths.
 type Paths struct {

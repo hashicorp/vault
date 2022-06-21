@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/helper/metricsutil"
+
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -15,19 +18,19 @@ import (
 
 // PassthroughBackendFactory returns a PassthroughBackend
 // with leases switched off
-func PassthroughBackendFactory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
-	return LeaseSwitchedPassthroughBackend(ctx, conf, false)
+func PassthroughBackendFactory(ctx context.Context, conf *logical.BackendConfig, metricsSink *metricsutil.ClusterMetricSink) (logical.Backend, error) {
+	return LeaseSwitchedPassthroughBackend(ctx, conf, false, metricsSink)
 }
 
 // LeasedPassthroughBackendFactory returns a PassthroughBackend
 // with leases switched on
-func LeasedPassthroughBackendFactory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
-	return LeaseSwitchedPassthroughBackend(ctx, conf, true)
+func LeasedPassthroughBackendFactory(ctx context.Context, conf *logical.BackendConfig, metricsSink *metricsutil.ClusterMetricSink) (logical.Backend, error) {
+	return LeaseSwitchedPassthroughBackend(ctx, conf, true, metricsSink)
 }
 
 // LeaseSwitchedPassthroughBackend returns a PassthroughBackend
 // with leases switched on or off
-func LeaseSwitchedPassthroughBackend(ctx context.Context, conf *logical.BackendConfig, leases bool) (logical.Backend, error) {
+func LeaseSwitchedPassthroughBackend(ctx context.Context, conf *logical.BackendConfig, leases bool, metricsSink *metricsutil.ClusterMetricSink) (logical.Backend, error) {
 	var b PassthroughBackend
 	b.generateLeases = leases
 	b.Backend = &framework.Backend{
@@ -84,6 +87,7 @@ func LeaseSwitchedPassthroughBackend(ctx context.Context, conf *logical.BackendC
 type PassthroughBackend struct {
 	*framework.Backend
 	generateLeases bool
+	metricsSink    *metricsutil.ClusterMetricSink
 }
 
 func (b *PassthroughBackend) handleRevoke(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -124,6 +128,8 @@ func (b *PassthroughBackend) handleRead(ctx context.Context, req *logical.Reques
 		// Generate the response
 		resp = b.Secret("kv").Response(rawData, nil)
 		resp.Secret.Renewable = false
+
+		b.metricsSink.IncrCounterWithLabels([]string{"secret", "kv", "read"}, 1, []metrics.Label{})
 	} else {
 		resp = &logical.Response{
 			Secret: &logical.Secret{},

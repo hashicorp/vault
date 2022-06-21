@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/vault/helper/metricsutil"
+
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
 	plugin "github.com/hashicorp/go-plugin"
@@ -82,7 +84,7 @@ type pluginClient struct {
 }
 
 func wrapFactoryCheckPerms(core *Core, f logical.Factory) logical.Factory {
-	return func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+	return func(ctx context.Context, conf *logical.BackendConfig, _ *metricsutil.ClusterMetricSink) (logical.Backend, error) {
 		if err := core.CheckPluginPerms(conf.Config["plugin_name"]); err != nil {
 			return nil, err
 		}

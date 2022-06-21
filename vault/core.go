@@ -1044,7 +1044,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	logicalBackends["cubbyhole"] = CubbyholeBackendFactory
-	logicalBackends[systemMountType] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+	logicalBackends[systemMountType] = func(ctx context.Context, config *logical.BackendConfig, metricsSink *metricsutil.ClusterMetricSink) (logical.Backend, error) {
 		sysBackendLogger := conf.Logger.Named("system")
 		c.AddLogger(sysBackendLogger)
 		b := NewSystemBackend(c, sysBackendLogger)
@@ -1053,7 +1053,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		}
 		return b, nil
 	}
-	logicalBackends["identity"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+	logicalBackends["identity"] = func(ctx context.Context, config *logical.BackendConfig, metricsSink *metricsutil.ClusterMetricSink) (logical.Backend, error) {
 		identityLogger := conf.Logger.Named("identity")
 		c.AddLogger(identityLogger)
 		return NewIdentityStore(ctx, c, config, identityLogger)
@@ -1065,7 +1065,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	for k, f := range conf.CredentialBackends {
 		credentialBackends[k] = f
 	}
-	credentialBackends["token"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+	credentialBackends["token"] = func(ctx context.Context, config *logical.BackendConfig, metricsSink *metricsutil.ClusterMetricSink) (logical.Backend, error) {
 		tsLogger := conf.Logger.Named("token")
 		c.AddLogger(tsLogger)
 		return NewTokenStore(ctx, tsLogger, c, config)

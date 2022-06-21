@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/hashicorp/vault/helper/metricsutil"
+
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -20,12 +22,12 @@ var (
 )
 
 // Factory returns a configured plugin logical.Backend.
-func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+func Factory(ctx context.Context, conf *logical.BackendConfig, metricsSink *metricsutil.ClusterMetricSink) (logical.Backend, error) {
 	_, ok := conf.Config["plugin_name"]
 	if !ok {
 		return nil, fmt.Errorf("plugin_name not provided")
 	}
-	b, err := Backend(ctx, conf)
+	b, err := Backend(ctx, conf, metricsSink)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +40,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 
 // Backend returns an instance of the backend, either as a plugin if external
 // or as a concrete implementation if builtin, casted as logical.Backend.
-func Backend(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+func Backend(ctx context.Context, conf *logical.BackendConfig, _ *metricsutil.ClusterMetricSink) (logical.Backend, error) {
 	var b PluginBackend
 
 	name := conf.Config["plugin_name"]
