@@ -306,7 +306,7 @@ service account tokens using JWT/OIDC auth.
 
 -> **Note:** The JWT auth engine does **not** use Kubernetes' `TokenReview` API
 during authentication, and instead uses public key cryptography to verify the
-contents of JWTs. This means tokens that have been revoked by Kubernetes will
+contents of JWTs. This means tokens that have been revoked by Kubernetes will
 still be considered valid by Vault until their expiry time. To mitigate this
 risk, use short TTLs for service account tokens or use
 [Kubernetes auth](/docs/auth/kubernetes) which _does_ use the `TokenReview` API.
@@ -392,10 +392,7 @@ Configuration steps:
 1. Fetch the service account signing public key from your cluster's JWKS URI.
 
    ```bash
-   # 1. Find the issuer URL of the cluster.
-   ISSUER="$(kubectl get --raw /.well-known/openid-configuration | jq -r '.issuer')"
-
-   # 2. Query the jwks_uri specified in /.well-known/openid-configuration
+   # Query the jwks_uri specified in /.well-known/openid-configuration
    kubectl get --raw "$(kubectl get --raw /.well-known/openid-configuration | jq -r '.jwks_uri' | sed -r 's/.*\.[^/]+(.*)/\1/')"
    ```
 
@@ -420,16 +417,36 @@ Configuration steps:
 ### Creating a role and logging in
 
 Once your JWT auth mount is configured, you're ready to configure a role and
-log in.
+log in. The following assumes you use the projected service account token
+available in all pods by default. See [Specifying TTL and audience](#specifying-ttl-and-audience)
+below if you'd like to control the audience or TTL.
+
+1. Choose any value from the array of default audiences. In these examples,
+   there is only one audience in the `aud` array,
+   `https://kubernetes.default.svc.cluster.local`.
+
+   To find the default audiences, either create a fresh token (requires
+   `kubectl` v1.24.0+):
+
+   ```shell-session
+   $ kubectl create token default | cut -f2 -d. | base64 --decode
+   {"aud":["https://kubernetes.default.svc.cluster.local"], ... "sub":"system:serviceaccount:default:default"}
+   ```
+
+   Or read a token from a running pod's filesystem:
+
+   ```shell-session
+   $ kubectl exec my-pod -- cat /var/run/secrets/kubernetes.io/serviceaccount/token
+   {"aud":["https://kubernetes.default.svc.cluster.local"], ... "sub":"system:serviceaccount:default:default"}
+   ```
 
 1. Create a role for JWT auth that the `default` service account from the
-   `default` namespace can use. The audience of tokens defaults to the same as
-   the issuer, but it is configurable.
+   `default` namespace can use.
 
    ```bash
    vault write auth/jwt/role/my-role \
       role_type="jwt" \
-      bound_audiences="${ISSUER}" \
+      bound_audiences="<AUDIENCE-FROM-PREVIOUS-STEP>" \
       user_claim="sub" \
       bound_subject="system:serviceaccount:default:default" \
       policies="default" \
@@ -469,9 +486,9 @@ metadata:
   name: nginx
 spec:
   # automountServiceAccountToken is redundant in this example because the
-  # mountPath overlapping with the default path below will already stop the
-  # default admission injected token from being created. Use this option if you
-  # choose a different mount path.
+  # mountPath used overlaps with the default path. The overlap stops the default
+  # admission injected token from being created. You can this option to ensure
+  # only a single token is mounted if you choose a different mount path.
   automountServiceAccountToken: false
   containers:
     - name: nginx
@@ -487,7 +504,9 @@ spec:
       - serviceAccountToken:
           path: token
           expirationSeconds: 600 # 10 minutes is the minimum TTL
-          audience: vault
+          audience: vault        # Must match your JWT role's `bound_audiences`
+      # The remaining sources are included to mimic the rest of the default
+      # admission injected volume.
       - configMap:
           name: kube-root-ca.crt
           items:
