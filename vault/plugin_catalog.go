@@ -157,6 +157,10 @@ func (c *PluginCatalog) cleanupExternalPlugin(name, id string) error {
 		return fmt.Errorf("plugin client not found")
 	}
 
+	if _, ok := extPlugin.connections[id]; !ok {
+		return fmt.Errorf("plugin connection not found")
+	}
+
 	pc := extPlugin.connections[id]
 
 	delete(extPlugin.connections, id)
