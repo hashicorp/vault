@@ -436,7 +436,7 @@ below if you'd like to control the audience or TTL.
    Or read a token from a running pod's filesystem:
 
    ```shell-session
-   $ kubectl exec my-pod -- cat /var/run/secrets/kubernetes.io/serviceaccount/token
+   $ kubectl exec my-pod -- cat /var/run/secrets/kubernetes.io/serviceaccount/token | cut -f2 -d. | base64 --decode
    {"aud":["https://kubernetes.default.svc.cluster.local"], ... "sub":"system:serviceaccount:default:default"}
    ```
 
