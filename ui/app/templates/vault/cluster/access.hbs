@@ -64,7 +64,7 @@
     {{#if (has-permission "access" routeParams="oidc")}}
       <li>
         <LinkTo
-          @route="vault.cluster.access.oidc.clients"
+          @route="vault.cluster.access.oidc.index"
           @current-when="vault.cluster.access.oidc.clients vault.cluster.access.oidc.index"
           data-test-link="oidc"
         >
