@@ -1,5 +1,8 @@
 import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
+import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import fieldToAttrs from '../../utils/field-to-attrs';
+
 export default class OidcClientModel extends Model {
   @attr('string', {
     label: 'Application name',
@@ -108,5 +111,26 @@ export default class OidcClientModel extends Model {
   // API WIP
   get canListProviders() {
     return this.clientProvidersPath.get('canList');
+  }
+
+  // fieldGroups was behaving k
+  get fieldGroups() {
+    const groups = [
+      { default: ['name', 'clientType', 'redirectUris'] },
+      { 'More options': ['key', 'idTokenTtl', 'accessTokenTtl'] },
+    ];
+    return fieldToAttrs(this, groups);
+  }
+
+  get attrs() {
+    return expandAttributeMeta(this, [
+      'name',
+      'clientType',
+      'redirectUris',
+      'key',
+      'idTokenTtl',
+      'accessTokenTtl',
+      'assignments',
+    ]);
   }
 }

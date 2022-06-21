@@ -51,7 +51,7 @@ export default class OidcKeyModel extends Model {
     return this.keysPath.get('canList');
   }
 
-  // need to list all for search select in form?
+  // need to list all for search select in create/edit form
   @lazyCapabilities(apiPath`identity/oidc/client`) clientsPath;
   get canListClients() {
     return this.clientsPath.get('canList');
