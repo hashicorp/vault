@@ -4436,6 +4436,74 @@ func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logic
 	return logical.ListResponseWithInfo(respKeys, respKeyInfo), nil
 }
 
+func getLogLevel(logLevel string) (log.Level, error) {
+	var level log.Level
+
+	switch logLevel {
+	case "trace":
+		level = log.Trace
+	case "debug":
+		level = log.Debug
+	case "notice", "info":
+		level = log.Info
+	case "warn", "warning":
+		level = log.Warn
+	case "err", "error":
+		level = log.Error
+	default:
+		return level, fmt.Errorf("unrecognized log level %q", logLevel)
+	}
+
+	return level, nil
+}
+
+func (b *SystemBackend) handleLoggersWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	logLevelRaw, ok := d.GetOk("level")
+
+	if !ok {
+		return logical.ErrorResponse("level is required"), nil
+	}
+
+	level, err := getLogLevel(logLevelRaw.(string))
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("invalid level provided: %s", err.Error())), nil
+	}
+
+	b.Core.SetLogLevel(level)
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handleLoggersByNameWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	nameRaw, nameOk := d.GetOk("name")
+	if !nameOk {
+		return logical.ErrorResponse("name is required"), nil
+	}
+
+	logLevelRaw, logLevelOk := d.GetOk("level")
+
+	if !logLevelOk {
+		return logical.ErrorResponse("level is required"), nil
+	}
+
+	logLevel := logLevelRaw.(string)
+	if logLevel == "" {
+		return logical.ErrorResponse("level is empty"), nil
+	}
+
+	level, err := getLogLevel(logLevel)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("invalid level provided: %s", err.Error())), nil
+	}
+
+	err = b.Core.SetLogLevelByName(nameRaw.(string), level)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("invalid params: %s", err.Error())), nil
+	}
+
+	return nil, nil
+}
+
 func sanitizePath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
