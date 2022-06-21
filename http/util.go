@@ -47,11 +47,13 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 			respondError(w, status, err)
 			return
 		}
-
+		mountPath := strings.TrimPrefix(core.MatchingMount(r.Context(), path), ns.Path)
 		quotaResp, err := core.ApplyRateLimitQuota(r.Context(), &quotas.Request{
-			Type:          quotas.TypeRateLimit,
-			Path:          path,
-			MountPath:     strings.TrimPrefix(core.MatchingMount(r.Context(), path), ns.Path),
+			Type:      quotas.TypeRateLimit,
+			Path:      path,
+			MountPath: mountPath,
+			Role:      core.DetermineRoleFromLoginRequest(mountPath, r.Body, r.Context()),
+
 			NamespacePath: ns.Path,
 			ClientAddress: parseRemoteIPAddress(r),
 		})

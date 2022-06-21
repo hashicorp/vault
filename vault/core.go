@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
@@ -3299,4 +3300,37 @@ func (c *Core) CheckPluginPerms(pluginName string) (err error) {
 		}
 	}
 	return err
+}
+
+// DetermineRoleFromLoginRequest will determine the role that should be applied to a quota for a given
+// login request
+func (c *Core) DetermineRoleFromLoginRequest(mountPoint string, payload io.ReadCloser, ctx context.Context) string {
+	//if authBackend == nil {
+	//	// roles don't apply
+	//	return ""
+	//}
+	//origBody := new(bytes.Buffer)
+	//reader := ioutil.NopCloser(io.TeeReader(payload, origBody))
+
+	finBuf := bytes.NewBuffer(nil)
+	_, err := finBuf.ReadFrom(payload)
+	if err != nil {
+		return ""
+	}
+	data := make(map[string]interface{})
+	err = jsonutil.DecodeJSON(finBuf.Bytes(), &data)
+	if err != nil {
+		// best effort, ignore
+	}
+
+	resp, err := c.HandleRequest(ctx, &logical.Request{
+		MountPoint: mountPoint,
+		Path:       "login",
+		Operation:  logical.ResolveRoleOperation,
+		Data:       data,
+	})
+	if err != nil {
+		return ""
+	}
+	return resp.Data["role"].(string)
 }
