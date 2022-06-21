@@ -69,6 +69,11 @@ func (b *SystemBackend) quotasPaths() []*framework.Path {
 global quota. For example namespace1/ adds a quota to a full namespace,
 namespace1/auth/userpass adds a quota to userpass in namespace1.`,
 				},
+				"role": {
+					Type: framework.TypeString,
+					Description: `Login role to apply this quota to. Note that when set, path must be configured
+to a valid auth method with a concept of roles.`,
+				},
 				"rate": {
 					Type: framework.TypeFloat,
 					Description: `The maximum number of requests in a given interval to be allowed by the quota rule.
@@ -205,6 +210,26 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 		}
 		if quotaByFactors != nil && quotaByFactors.QuotaName() != name {
 			return logical.ErrorResponse("quota rule with similar properties exists under the name %q", quotaByFactors.QuotaName()), nil
+		}
+
+		role := d.Get("role").(string)
+		// If this is a quota with a role, ensure the backend supports role resolution
+		if role != "" {
+			if pathSuffix != "" {
+				return logical.ErrorResponse("Quotas cannot contain both a path suffix and a role. If a role is provided, path must be a valid auth mount with a concept of roles"), nil
+			}
+			authBackend := b.Core.router.MatchingBackend(namespace.ContextWithNamespace(ctx, ns), mountPath)
+			if authBackend == nil || authBackend.Type() != logical.TypeCredential {
+				return logical.ErrorResponse("Mount path '%s' is not a valid auth method and therefore unsuitable for use with role-based quotas", mountPath), nil
+			}
+			// We will always error as we aren't supplying real data, but we're looking for "unsupported operation" in particular
+			_, err := authBackend.HandleRequest(ctx, &logical.Request{
+				Path:      "login",
+				Operation: logical.ResolveRoleOperation,
+			})
+			if err != nil && (err == logical.ErrUnsupportedOperation || err == logical.ErrUnsupportedPath) {
+				return logical.ErrorResponse("Mount path '%s' does not support use with role-based quotas", mountPath), nil
+			}
 		}
 
 		// If a quota already exists, fetch and update it.
