@@ -51,6 +51,9 @@ export default Component.extend(DEFAULTS, {
   oldNamespace: null,
   authMethods: BACKENDS,
 
+  // number answer for okta number challenge if applicable
+  oktaNumberChallengeAnswer: null,
+
   didReceiveAttrs() {
     this._super(...arguments);
     let {
@@ -220,7 +223,7 @@ export default Component.extend(DEFAULTS, {
       } = this;
       try {
         if (backendType === 'okta') {
-          this.pollForOktaNumberChallenge.perform(data.nonce);
+          this.pollForOktaNumberChallenge.perform(data.nonce, data.path);
         } else {
           this.delayAuthMessageReminder.perform();
         }
@@ -240,20 +243,21 @@ export default Component.extend(DEFAULTS, {
     })
   ),
 
-  pollForOktaNumberChallenge: task(function* (nonce) {
-    let response = undefined;
+  pollForOktaNumberChallenge: task(function* (nonce, mount) {
+    let response = null;
     // keep polling /auth/okta/verify/:nonce API every 1s until a response is given with the correct number for the Okta Number Challenge
-    while (response === undefined && !this.error) {
+    while (response === null && !this.error) {
       // when testing, the polling loop causes promises to be rejected making acceptance tests fail
       // so disable the poll in tests
       if (Ember.testing) {
         return;
       }
       yield timeout(1000);
-      response = yield this.auth.getOktaNumberChallengeAnswer(nonce);
+      response = yield this.auth.getOktaNumberChallengeAnswer(nonce, mount);
     }
+    this.set('oktaNumberChallengeResponse', response);
     // line below was temporarily used to print the response to make sure polling works and can log in, will remove after create screens to display response
-    // console.log(response);
+    //console.log(this.oktaNumberAnswer);
   }),
 
   delayAuthMessageReminder: task(function* () {
