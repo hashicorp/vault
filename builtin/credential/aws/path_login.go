@@ -157,7 +157,7 @@ func (b *backend) pathLoginResolveRole(ctx context.Context, req *logical.Request
 	}
 }
 
-func (b *backend) pathLoginEc2GetRoleNameAndIdentityDocumentParsed(ctx context.Context, req *logical.Request, data *framework.FieldData) (string, *identityDocument, *logical.Response, error) {
+func (b *backend) pathLoginEc2GetRoleNameAndIdentityDoc(ctx context.Context, req *logical.Request, data *framework.FieldData) (string, *identityDocument, *logical.Response, error) {
 	identityDocB64 := data.Get("identity").(string)
 	var identityDocBytes []byte
 	var err error
@@ -216,6 +216,8 @@ func (b *backend) pathLoginEc2GetRoleNameAndIdentityDocumentParsed(ctx context.C
 	}
 
 	// Get the entry for the role used by the instance
+	// Note that we don't return the roleEntry, but use it to determine if the role exists
+	// roleEntry does not contain the role name, so it is not appropriate to return
 	roleEntry, err := b.role(ctx, req.Storage, roleName)
 	if err != nil {
 		return "", nil, nil, err
@@ -227,7 +229,7 @@ func (b *backend) pathLoginEc2GetRoleNameAndIdentityDocumentParsed(ctx context.C
 }
 
 func (b *backend) pathLoginResolveRoleEc2(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	role, _, resp, err := b.pathLoginEc2GetRoleNameAndIdentityDocumentParsed(ctx, req, data)
+	role, _, resp, err := b.pathLoginEc2GetRoleNameAndIdentityDoc(ctx, req, data)
 	if resp != nil || err != nil {
 		return resp, err
 	}
@@ -752,7 +754,7 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 // and a client created nonce. Client nonce is optional if 'disallow_reauthentication'
 // option is enabled on the registered role.
 func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	roleName, identityDocParsed, errResp, err := b.pathLoginEc2GetRoleNameAndIdentityDocumentParsed(ctx, req, data)
+	roleName, identityDocParsed, errResp, err := b.pathLoginEc2GetRoleNameAndIdentityDoc(ctx, req, data)
 	if errResp != nil || err != nil {
 		return errResp, err
 	}
