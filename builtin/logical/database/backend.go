@@ -6,13 +6,14 @@ import (
 	"net/rpc"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
@@ -28,29 +29,6 @@ const (
 	databaseStaticRolePath = "static-role/"
 	minRootCredRollbackAge = 1 * time.Minute
 )
-
-// metrics collection
-var (
-	gaugeSync = sync.Mutex{}
-	gauges    = map[string]*int32{}
-	gaugeKey  = []string{"secrets", "database", "backend", "connections", "count"}
-)
-
-func createGauge(name string) {
-	gaugeSync.Lock()
-	defer gaugeSync.Unlock()
-	gauges[name] = new(int32)
-}
-
-func addToGauge(dbType, version string, uuid string, amount int32) {
-	labels := []metrics.Label{{"type", dbType}, {"version", version}, {"backend", uuid}}
-	gaugeName := fmt.Sprintf("%s-%s", dbType, version)
-	if _, ok := gauges[gaugeName]; !ok {
-		createGauge(gaugeName)
-	}
-	val := atomic.AddInt32(gauges[gaugeName], amount)
-	metrics.SetGaugeWithLabels(gaugeKey, float32(val), labels)
-}
 
 type dbPluginInstance struct {
 	sync.RWMutex
@@ -82,6 +60,20 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	b.credRotationQueue = queue.New()
 	// Load queue and kickoff new periodic ticker
 	go b.initQueue(b.queueCtx, conf, conf.System.ReplicationState())
+
+	// collect metrics on number of plugin instances
+	pluginInstanceGaugeProcess, err := metricsutil.NewGaugeCollectionProcess(
+		[]string{"secrets", "database", "backend", "pluginInstances", "count"},
+		[]metricsutil.Label{},
+		b.collectPluginInstanceGaugeValues,
+		metrics.Default(),
+		configutil.UsageGaugeDefaultPeriod, // TODO: we seem to have no way to access the actual configured values for these?
+		configutil.MaximumGaugeCardinalityDefault,
+		b.logger)
+	if err != nil {
+		return nil, err
+	}
+	go pluginInstanceGaugeProcess.Run()
 	return b, nil
 }
 
@@ -121,12 +113,32 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 		BackendType:       logical.TypeLogical,
 	}
 
-	b.backendUUID = conf.BackendUUID
 	b.logger = conf.Logger
 	b.connections = make(map[string]*dbPluginInstance)
 	b.queueCtx, b.cancelQueueCtx = context.WithCancel(context.Background())
 	b.roleLocks = locksutil.CreateLocks()
 	return &b
+}
+
+func (b *databaseBackend) collectPluginInstanceGaugeValues(context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	b.connLock.RLock()
+	defer b.connLock.RUnlock()
+	counts := map[string]int{}
+	for _, v := range b.connections {
+		dbType, err := v.database.Type()
+		if err != nil {
+			continue
+		}
+		if _, ok := counts[dbType]; !ok {
+			counts[dbType] = 0
+		}
+		counts[dbType] += 1
+	}
+	var gauges []metricsutil.GaugeLabelValues
+	for k, v := range counts {
+		gauges = append(gauges, metricsutil.GaugeLabelValues{Labels: []metricsutil.Label{{Name: "dbType", Value: k}}, Value: float32(v)})
+	}
+	return gauges, nil
 }
 
 type databaseBackend struct {
@@ -151,23 +163,6 @@ type databaseBackend struct {
 	// concurrent requests are not modifying the same role and possibly causing
 	// issues with the priority queue.
 	roleLocks []*locksutil.LockEntry
-	// backendUUID is a unique identifier for this backend
-	backendUUID string
-}
-
-// updateConnectionsGauge is used to keep metrics on how many and what types of databases we have open
-func (b *databaseBackend) updateConnectionsGauge(dbw databaseVersionWrapper, amount int) {
-	// keep track of what databases we open
-	dbType, err := dbw.Type()
-	if err != nil {
-		b.Logger().Debug("Error getting database type", "err", err)
-		dbType = "unknown"
-	}
-	version := "5"
-	if dbw.isV4() {
-		version = "4"
-	}
-	addToGauge(dbType, version, b.backendUUID, int32(amount))
 }
 
 func (b *databaseBackend) connGet(name string) *dbPluginInstance {
@@ -181,7 +176,6 @@ func (b *databaseBackend) connPop(name string) *dbPluginInstance {
 	defer b.connLock.Unlock()
 	dbi, ok := b.connections[name]
 	if ok {
-		b.updateConnectionsGauge(dbi.database, -1)
 		delete(b.connections, name)
 	}
 	return dbi
@@ -192,7 +186,6 @@ func (b *databaseBackend) connPopIfEqual(name, id string) *dbPluginInstance {
 	defer b.connLock.Unlock()
 	dbi, ok := b.connections[name]
 	if ok && dbi.id == id {
-		b.updateConnectionsGauge(dbi.database, -1)
 		delete(b.connections, name)
 		return dbi
 	}
@@ -202,12 +195,8 @@ func (b *databaseBackend) connPopIfEqual(name, id string) *dbPluginInstance {
 func (b *databaseBackend) connPut(name string, newDbi *dbPluginInstance) *dbPluginInstance {
 	b.connLock.Lock()
 	defer b.connLock.Unlock()
-	dbi, ok := b.connections[name]
-	if ok {
-		b.updateConnectionsGauge(dbi.database, -1)
-	}
+	dbi := b.connections[name]
 	b.connections[name] = newDbi
-	b.updateConnectionsGauge(newDbi.database, 1)
 	return dbi
 }
 
@@ -215,9 +204,6 @@ func (b *databaseBackend) connClear() map[string]*dbPluginInstance {
 	b.connLock.Lock()
 	defer b.connLock.Unlock()
 	old := b.connections
-	for _, conn := range old {
-		b.updateConnectionsGauge(conn.database, -1)
-	}
 	b.connections = make(map[string]*dbPluginInstance)
 	return old
 }
