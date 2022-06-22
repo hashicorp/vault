@@ -4444,7 +4444,7 @@ func getLogLevel(logLevel string) (log.Level, error) {
 		level = log.Trace
 	case "debug":
 		level = log.Debug
-	case "notice", "info":
+	case "notice", "info", "":
 		level = log.Info
 	case "warn", "warning":
 		level = log.Warn
@@ -4464,9 +4464,26 @@ func (b *SystemBackend) handleLoggersWrite(ctx context.Context, req *logical.Req
 		return logical.ErrorResponse("level is required"), nil
 	}
 
-	level, err := getLogLevel(logLevelRaw.(string))
+	logLevel := logLevelRaw.(string)
+	if logLevel == "" {
+		return logical.ErrorResponse("level is empty"), nil
+	}
+
+	level, err := getLogLevel(logLevel)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("invalid level provided: %s", err.Error())), nil
+	}
+
+	b.Core.SetLogLevel(level)
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handleLoggersDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	config := b.Core.GetCoreConfigInternal()
+	level, err := getLogLevel(config.LogLevel)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("log level from config is invalid: %s", err.Error())), nil
 	}
 
 	b.Core.SetLogLevel(level)
@@ -4494,6 +4511,26 @@ func (b *SystemBackend) handleLoggersByNameWrite(ctx context.Context, req *logic
 	level, err := getLogLevel(logLevel)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("invalid level provided: %s", err.Error())), nil
+	}
+
+	err = b.Core.SetLogLevelByName(nameRaw.(string), level)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("invalid params: %s", err.Error())), nil
+	}
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handleLoggersByNameDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	nameRaw, ok := d.GetOk("name")
+	if !ok {
+		return logical.ErrorResponse("name is required"), nil
+	}
+
+	config := b.Core.GetCoreConfigInternal()
+	level, err := getLogLevel(config.LogLevel)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("log level from config is invalid: %s", err.Error())), nil
 	}
 
 	err = b.Core.SetLogLevelByName(nameRaw.(string), level)

@@ -4557,60 +4557,66 @@ func TestProcessLimit(t *testing.T) {
 	}
 }
 
+func validateLevel(level string, logger hclog.Logger) bool {
+	switch level {
+	case "trace":
+		return logger.IsTrace()
+	case "debug":
+		return logger.IsDebug()
+	case "notice", "info", "":
+		return logger.IsInfo()
+	case "warn", "warning":
+		return logger.IsWarn()
+	case "err", "error":
+		return logger.IsError()
+	}
+
+	return false
+}
+
 func TestSystemBackend_Loggers(t *testing.T) {
 	testCases := []struct {
 		level       string
-		validator   func(hclog.Logger) bool
 		expectError bool
 	}{
 		{
 			"trace",
-			func(l hclog.Logger) bool { return l.IsTrace() },
 			false,
 		},
 		{
 			"debug",
-			func(l hclog.Logger) bool { return l.IsDebug() },
 			false,
 		},
 		{
 			"notice",
-			func(l hclog.Logger) bool { return l.IsInfo() },
 			false,
 		},
 		{
 			"info",
-			func(l hclog.Logger) bool { return l.IsInfo() },
 			false,
 		},
 		{
 			"warn",
-			func(l hclog.Logger) bool { return l.IsWarn() },
 			false,
 		},
 		{
 			"warning",
-			func(l hclog.Logger) bool { return l.IsWarn() },
 			false,
 		},
 		{
 			"err",
-			func(l hclog.Logger) bool { return l.IsError() },
 			false,
 		},
 		{
 			"error",
-			func(l hclog.Logger) bool { return l.IsError() },
 			false,
 		},
 		{
 			"",
-			func(l hclog.Logger) bool { return true },
 			true,
 		},
 		{
 			"invalid",
-			func(l hclog.Logger) bool { return true },
 			true,
 		},
 	}
@@ -4622,6 +4628,7 @@ func TestSystemBackend_Loggers(t *testing.T) {
 			t.Parallel()
 
 			core, b, _ := testCoreSystemBackend(t)
+			config := core.GetCoreConfigInternal()
 
 			req := &logical.Request{
 				Path:      "loggers",
@@ -4642,96 +4649,110 @@ func TestSystemBackend_Loggers(t *testing.T) {
 				t.Fatalf("expected response error, resp: %#v", resp)
 			}
 
+			if !tc.expectError {
+				for _, logger := range core.allLoggers {
+					if !validateLevel(tc.level, logger) {
+						t.Fatalf("expected logger %q to be %q", logger.Name(), tc.level)
+					}
+				}
+			}
+
+			req = &logical.Request{
+				Path:      fmt.Sprintf("loggers"),
+				Operation: logical.DeleteOperation,
+			}
+
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
 			for _, logger := range core.allLoggers {
-				if !tc.validator(logger) {
-					t.Fatalf("expected logger %q to be %q", logger.Name(), tc.level)
+				if !validateLevel(config.LogLevel, logger) {
+					t.Errorf("expected level of logger %q to match original config", logger.Name())
 				}
 			}
 		})
 	}
 }
 
-func validateLevel(level string, logger hclog.Logger) bool {
-	switch level {
-	case "trace":
-		return logger.IsTrace()
-	case "debug":
-		return logger.IsDebug()
-	case "notice", "info", "":
-		return logger.IsInfo()
-	case "warn", "warning":
-		return logger.IsWarn()
-	case "err", "error":
-		return logger.IsError()
-	}
-
-	return false
-}
-
 func TestSystemBackend_LoggersByName(t *testing.T) {
 	testCases := []struct {
-		logger      string
-		level       string
-		expectError bool
+		logger            string
+		level             string
+		expectWriteError  bool
+		expectDeleteError bool
 	}{
 		{
 			"core",
 			"trace",
+			false,
 			false,
 		},
 		{
 			"token",
 			"debug",
 			false,
+			false,
 		},
 		{
 			"audit",
 			"notice",
+			false,
 			false,
 		},
 		{
 			"expiration",
 			"info",
 			false,
+			false,
 		},
 		{
 			"policy",
 			"warn",
+			false,
 			false,
 		},
 		{
 			"activity",
 			"warning",
 			false,
+			false,
 		},
 		{
 			"identity",
 			"err",
+			false,
 			false,
 		},
 		{
 			"rollback",
 			"error",
 			false,
+			false,
 		},
 		{
 			"system",
 			"",
 			true,
+			false,
 		},
 		{
 			"quotas",
 			"invalid",
 			true,
+			false,
 		},
 		{
 			"",
 			"info",
 			true,
+			true,
 		},
 		{
 			"does_not_exist",
 			"error",
+			true,
 			true,
 		},
 	}
@@ -4757,21 +4778,50 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 			resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 			respIsError := resp != nil && resp.IsError()
 
-			if err != nil || (!tc.expectError && respIsError) {
+			if err != nil || (!tc.expectWriteError && respIsError) {
 				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
 			}
 
-			if tc.expectError && !respIsError {
+			if tc.expectWriteError && !respIsError {
 				t.Fatalf("expected response error, resp: %#v", resp)
 			}
 
-			for _, logger := range core.allLoggers {
-				if logger.Name() != tc.logger && !validateLevel(config.LogLevel, logger) {
-					t.Errorf("expected level of logger %q to be unchanged", logger.Name())
-				}
+			if !tc.expectWriteError {
+				for _, logger := range core.allLoggers {
+					if logger.Name() != tc.logger && !validateLevel(config.LogLevel, logger) {
+						t.Errorf("expected level of logger %q to be unchanged", logger.Name())
+					}
 
-				if !tc.expectError && !validateLevel(tc.level, logger) {
-					t.Fatalf("expected logger %q to be %q", logger.Name(), tc.level)
+					if !validateLevel(tc.level, logger) {
+						t.Fatalf("expected logger %q to be %q", logger.Name(), tc.level)
+					}
+				}
+			}
+
+			req = &logical.Request{
+				Path:      fmt.Sprintf("loggers/%s", tc.logger),
+				Operation: logical.DeleteOperation,
+				Data: map[string]interface{}{
+					"name": tc.logger,
+				},
+			}
+
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			respIsError = resp != nil && resp.IsError()
+
+			if err != nil || (!tc.expectDeleteError && respIsError) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			if tc.expectDeleteError && !respIsError {
+				t.Fatalf("expected response error, resp: %#v", resp)
+			}
+
+			if !tc.expectDeleteError {
+				for _, logger := range core.allLoggers {
+					if !validateLevel(config.LogLevel, logger) {
+						t.Errorf("expected level of logger %q to match original config", logger.Name())
+					}
 				}
 			}
 		})

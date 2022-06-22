@@ -302,6 +302,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					Callback: b.handleLoggersWrite,
 					Summary:  "Modify the log level for all existing loggers.",
 				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: b.handleLoggersDelete,
+					Summary:  "Revert the all loggers to use log level provided in config.",
+				},
 			},
 		},
 		{
@@ -321,6 +325,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleLoggersByNameWrite,
 					Summary:  "Modify the log level of a single logger.",
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: b.handleLoggersByNameDelete,
+					Summary:  "Revert a single logger to use log level provided in config.",
 				},
 			},
 		},
