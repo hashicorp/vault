@@ -242,6 +242,10 @@ Vault Helm mounts this to `/vault/userconfig/kms-creds/credentials.json`.
 
 This is a Vault Helm configuration that uses Google KMS:
 
+<CodeTabs>
+
+<CodeBlockConfig>
+
 ```yaml
 global:
   enabled: true
@@ -252,9 +256,16 @@ server:
     GOOGLE_PROJECT: <PROJECT NAME>
     GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/kms-creds/credentials.json
 
-  extraVolumes:
-    - type: 'secret'
-      name: 'kms-creds'
+  volumes:
+    - name: userconfig-kms-creds
+      secret:
+        defaultMode: 420
+        secretName: kms-creds
+
+  volumeMounts:
+    - mountPath: /vault/userconfig/kms-creds
+      name: userconfig-kms-creds
+      readOnly: true
 
   ha:
     enabled: true
@@ -282,6 +293,99 @@ server:
       }
 ```
 
+</CodeBlockConfig>
+
+<CodeBlockConfig>
+
+```hcl
+resource "helm_release" "vault" {
+  name       = "vault"
+  repository = "https://helm.releases.hashicorp.com"
+  chart      = "vault"
+
+  set {
+    name  = "global.enabled"
+    value = "true"
+  }
+
+  set {
+    name  = "server.extraEnvironmentVars.GOOGLE_REGION"
+    value = "global"
+  }
+  set {
+    name  = "server.extraEnvironmentVars.GOOGLE_PROJECT"
+    value = "<PROJECT NAME>"
+  }
+  set {
+    name  = "server.extraEnvironmentVars.GOOGLE_APPLICATION_CREDENTIALS"
+    value = "/vault/userconfig/kms-creds/credentials.json"
+  }
+
+  set {
+    name  = "server.volumes[0].name"
+    value = "userconfig-kms-creds"
+  }
+  set {
+    name  = "server.volumes[0].secret.defaultMode"
+    value = 420
+  }
+  set {
+    name  = "server.volumes[0].secret.secretName"
+    value = "kms-creds"
+  }
+
+  set {
+    name  = "server.volumeMounts[0].mountPath"
+    value = "/vault/userconfig/kms-creds"
+  }
+  set {
+    name  = "server.volumeMounts[0].name"
+    value = "userconfig-kms-creds"
+  }
+  set {
+    name  = "server.volumeMounts[0].readOnly"
+    value = "true"
+  }
+
+  set {
+    name  = "server.ha.enabled"
+    value = "true"
+  }
+  set {
+    name  = "server.ha.replicas"
+    value = 3
+  }
+  set {
+    name  = "server.ha.config"
+    value = <<EOT
+ui = true
+
+listener "tcp" {
+  tls_disable = 1
+  address = "[::]:8200"
+  cluster_address = "[::]:8201"
+}
+
+seal "gcpckms" {
+  project     = "<NAME OF PROJECT>"
+  region      = "global"
+  key_ring    = "<NAME OF KEYRING>"
+  crypto_key  = "<NAME OF KEY>"
+}
+
+storage "consul" {
+  path = "vault"
+  address = "HOST_IP:8500"
+}
+EOT
+  }
+}
+```
+
+</CodeBlockConfig>
+
+</CodeTabs>
+
 #### Amazon KMS Auto Unseal
 
 The Helm chart may be run with [AWS KMS for Auto
@@ -304,6 +408,10 @@ $ kubectl create secret generic kms-creds \
 ##### Config Example
 
 This is a Vault Helm configuration that uses AWS KMS:
+
+<CodeTabs>
+
+<CodeBlockConfig>
 
 ```yaml
 global:
@@ -339,6 +447,79 @@ server:
         address = "HOST_IP:8500"
       }
 ```
+
+</CodeBlockConfig>
+
+<CodeBlockConfig>
+
+```hcl
+resource "helm_release" "vault" {
+  name       = "vault"
+  repository = "https://helm.releases.hashicorp.com"
+  chart      = "vault"
+
+  set {
+    name  = "global.enabled"
+    value = "true"
+  }
+
+  set {
+    name  = "server.extraSecretEnvironmentVars[0].envName"
+    value = "AWS_ACCESS_KEY_ID"
+  }
+  set {
+    name  = "server.extraSecretEnvironmentVars[0].secretName"
+    value = "kms-creds"
+  }
+  set {
+    name  = "server.extraSecretEnvironmentVars[0].secretKey"
+    value = "AWS_ACCESS_KEY_ID"
+  }
+  set {
+    name  = "server.extraSecretEnvironmentVars[1].envName"
+    value = "AWS_SECRET_ACCESS_KEY"
+  }
+  set {
+    name  = "server.extraSecretEnvironmentVars[1].secretName"
+    value = "kms-creds"
+  }
+  set {
+    name  = "server.extraSecretEnvironmentVars[1].secretKey"
+    value = "AWS_SECRET_ACCESS_KEY"
+  }
+
+  set {
+    name  = "server.ha.enabled"
+    value = "true"
+  }
+  set {
+    name  = "server.ha.config"
+    value = <<EOT
+ui = true
+
+listener "tcp" {
+  tls_disable = 1
+  address = "[::]:8200"
+  cluster_address = "[::]:8201"
+}
+
+seal "awskms" {
+  region     = "KMS_REGION_HERE"
+  kms_key_id = "KMS_KEY_ID_HERE"
+}
+
+storage "consul" {
+  path = "vault"
+  address = "HOST_IP:8500"
+}
+EOT
+  }
+}
+```
+
+</CodeBlockConfig>
+
+</CodeTabs>
 
 ### Probes
 
@@ -502,8 +683,12 @@ to the Vault startup command:
 
 ```shell-session
 $ helm install vault hashicorp/vault \
-  --set='server.extraVolumes[0].type=secret' \
-  --set='server.extraVolumes[0].name=vault-storage-config' \
+  --set='server.volumes[0].name=userconfig-vault-storage-config' \
+  --set='server.volumes[0].secret.defaultMode=420' \
+  --set='server.volumes[0].secret.secretName=vault-storage-config' \
+  --set='server.volumeMounts[0].mountPath=/vault/userconfig/vault-storage-config' \
+  --set='server.volumeMounts[0].name=userconfig-vault-storage-config' \
+  --set='server.volumeMounts[0].readOnly=true' \
   --set='server.extraArgs=-config=/vault/userconfig/vault-storage-config/config.hcl'
 ```
 

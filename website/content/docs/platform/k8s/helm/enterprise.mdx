@@ -28,6 +28,10 @@ kubectl create secret generic vault-ent-license --from-literal="license=${secret
 
 In your chart overrides, set the values of [`server.image`](/docs/platform/k8s/helm/configuration#image-2) to one of the enterprise [release tags](https://hub.docker.com/r/hashicorp/vault-enterprise/tags). Also set the name of the secret you just created in [`server.enterpriseLicense`](/docs/platform/k8s/helm/configuration#enterpriselicense).
 
+<CodeTabs>
+
+<CodeBlockConfig>
+
 ```yaml
 # config.yaml
 server:
@@ -37,6 +41,35 @@ server:
   enterpriseLicense:
     secretName: vault-ent-license
 ```
+
+</CodeBlockConfig>
+
+<CodeBlockConfig>
+
+```hcl
+resource "helm_release" "vault" {
+  name       = "vault"
+  repository = "https://helm.releases.hashicorp.com"
+  chart      = "vault"
+
+  set {
+    name  = "server.image.repository"
+    value = "hashicorp/vault-enterprise"
+  }
+  set {
+    name  = "server.image.tag"
+    value = "1.10.3-ent"
+  }
+  set {
+    name  = "server.enterpriseLicense.secretName"
+    value = "vault-ent-license"
+  }
+}
+```
+
+</CodeBlockConfig>
+
+</CodeTabs>
 
 Now run `helm install`:
 

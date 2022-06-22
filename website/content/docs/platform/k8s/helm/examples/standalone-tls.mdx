@@ -171,11 +171,16 @@ e is 65537 (0x10001)
 
 ## 3. Helm Configuration
 
-The below `custom-values.yaml` can be used to set up a single server Vault cluster using TLS.
+The below `custom-values.yaml` or Terraform configuration can be used to set up a single server Vault cluster using TLS.
 This assumes that a Kubernetes `secret` exists with the server certificate, key and
 certificate authority:
 
+<CodeTabs>
+
+<CodeBlockConfig>
+
 ```yaml
+# custom-values.yaml
 global:
   enabled: true
   tlsDisable: false
@@ -184,9 +189,16 @@ server:
   extraEnvironmentVars:
     VAULT_CACERT: /vault/userconfig/vault-server-tls/vault.ca
 
-  extraVolumes:
-    - type: secret
-      name: vault-server-tls # Matches the ${SECRET_NAME} from above
+  volumes:
+    - name: userconfig-vault-server-tls
+      secret:
+        defaultMode: 420
+        secretName: vault-server-tls # Matches the ${SECRET_NAME} from above
+
+  volumeMounts:
+    - mountPath: /vault/userconfig/vault-server-tls
+      name: userconfig-vault-server-tls
+      readOnly: true
 
   standalone:
     enabled: true
@@ -203,3 +215,80 @@ server:
         path = "/vault/data"
       }
 ```
+
+</CodeBlockConfig>
+
+<CodeBlockConfig>
+
+```hcl
+resource "helm_release" "vault" {
+  name       = "vault"
+  repository = "https://helm.releases.hashicorp.com"
+  chart      = "vault"
+
+  set {
+    name  = "global.enabled"
+    value = "true"
+  }
+  set {
+    name  = "global.tlsDisable"
+    value = "false"
+  }
+
+  set {
+    name  = "server.extraEnvironmentVars.VAULT_CACERT"
+    value = "/vault/userconfig/vault-server-tls/vault.ca"
+  }
+
+  set {
+    name  = "server.volumes[0].name"
+    value = "userconfig-vault-server-tls"
+  }
+  set {
+    name  = "server.volumes[0].secret.defaultMode"
+    value = 420
+  }
+  set {
+    name  = "server.volumes[0].secret.secretName"
+    value = "vault-server-tls" # Matches the ${SECRET_NAME} from above
+  }
+
+  set {
+    name  = "server.volumeMounts[0].mountPath"
+    value = "/vault/userconfig/vault-server-tls"
+  }
+  set {
+    name  = "server.volumeMounts[0].name"
+    value = "userconfig-vault-server-tls"
+  }
+  set {
+    name  = "server.volumeMounts[0].readOnly"
+    value = "true"
+  }
+
+  set {
+    name  = "server.standalone.enabled"
+    value = "true"
+  }
+  set {
+    name  = "server.standalone.config"
+    value = <<EOT
+listener "tcp" {
+   address = "[::]:8200"
+   cluster_address = "[::]:8201"
+   tls_cert_file = "/vault/userconfig/vault-server-tls/vault.crt"
+   tls_key_file  = "/vault/userconfig/vault-server-tls/vault.key"
+   tls_client_ca_file = "/vault/userconfig/vault-server-tls/vault.ca"
+}
+
+storage "file" {
+   path = "/vault/data"
+}
+EOT
+  }
+}
+```
+
+</CodeBlockConfig>
+
+</CodeTabs>

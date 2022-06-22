@@ -10,10 +10,15 @@ description: |-
 
 ~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3.6+ with this chart.
 
-The below `values.yaml` can be used to set up a single server Vault cluster with
+The below `values.yaml` or Terraform configuration can be used to set up a single server Vault cluster with
 auditing enabled.
 
+<CodeTabs>
+
+<CodeBlockConfig>
+
 ```yaml
+# values.yaml
 server:
   standalone:
     enabled: true
@@ -43,6 +48,80 @@ server:
     storageClass: null
     accessMode: ReadWriteOnce
 ```
+
+</CodeBlockConfig>
+
+<CodeBlockConfig>
+
+```hcl
+resource "helm_release" "vault" {
+  name       = "vault"
+  repository = "https://helm.releases.hashicorp.com"
+  chart      = "vault"
+
+  set {
+    name  = "server.standalone.enabled"
+    value = "true"
+  }
+  set {
+    name  = "server.standalone.config"
+    value = <<EOT
+listener "tcp" {
+  tls_disable = true
+  address = "[::]:8200"
+  cluster_address = "[::]:8201"
+}
+
+storage "file" {
+  path = "/vault/data"
+}
+EOT
+  }
+
+  set {
+    name  = "server.service.enabled"
+    value = "true"
+  }
+
+  set {
+    name  = "server.dataStorage.enabled"
+    value = "true"
+  }
+  set {
+    name  = "server.dataStorage.size"
+    value = "10Gi"
+  }
+  set {
+    name  = "server.dataStorage.storageClass"
+    value = null
+  }
+  set {
+    name  = "server.dataStorage.accessMode"
+    value = "ReadWriteOnce"
+  }
+
+  set {
+    name  = "server.auditStorage.enabled"
+    value = "true"
+  }
+  set {
+    name  = "server.auditStorage.size"
+    value = "10Gi"
+  }
+  set {
+    name  = "server.auditStorage.storageClass"
+    value = "null"
+  }
+  set {
+    name  = "server.auditStorage.accessMode"
+    value = "ReadWriteOnce"
+  }
+}
+```
+
+</CodeBlockConfig>
+
+</CodeTabs>
 
 After Vault has been deployed, initialized and unsealed, auditing can be enabled
 by running the following command against the Vault pod:

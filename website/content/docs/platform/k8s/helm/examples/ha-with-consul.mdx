@@ -10,19 +10,31 @@ description: |-
 
 ~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3.6+ with this chart.
 
-The below `values.yaml` can be used to set up a five server Vault cluster using
+The below `values.yaml` or Terraform configuration can be used to set up a five server Vault cluster using
 Consul as a highly available storage backend, Google Cloud KMS for Auto Unseal.
 
+<CodeTabs>
+
+<CodeBlockConfig>
+
 ```yaml
+# values.yaml
 server:
   extraEnvironmentVars:
     GOOGLE_REGION: global
     GOOGLE_PROJECT: myproject
     GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/my-gcp-iam/myproject-creds.json
 
-  extraVolumes:
-    - type: secret
-      name: my-gcp-iam
+  volumes:
+    - name: userconfig-my-gcp-iam
+      secret:
+        defaultMode: 420
+        secretName: my-gcp-iam
+
+  volumeMounts:
+    - mountPath: /vault/userconfig/my-gcp-iam
+      name: userconfig-my-gcp-iam
+      readOnly: true
 
   affinity: |
     podAntiAffinity:
@@ -64,3 +76,112 @@ server:
 
       service_registration "kubernetes" {}
 ```
+
+</CodeBlockConfig>
+
+<CodeBlockConfig>
+
+```hcl
+resource "helm_release" "vault" {
+  name       = "vault"
+  repository = "https://helm.releases.hashicorp.com"
+  chart      = "vault"
+
+  set {
+    name  = "server.extraEnvironmentVars.GOOGLE_REGION"
+    value = "global"
+  }
+  set {
+    name  = "server.extraEnvironmentVars.GOOGLE_PROJECT"
+    value = "myproject"
+  }
+  set {
+    name  = "server.extraEnvironmentVars.GOOGLE_APPLICATION_CREDENTIALS"
+    value = "/vault/userconfig/my-gcp-iam/myproject-creds.json"
+  }
+
+  set {
+    name  = "server.volumes[0].name
+    value = "userconfig-my-gcp-iam"
+  }
+  set {
+    name  = "server.volumes[0].secret.defaultMode"
+    value = 420
+  }
+  set {
+    name  = "server.volumes[0].secret.secretName"
+    value = "my-gcp-iam"
+  }
+
+  set {
+    name  = "server.volumeMounts[0].mountPath"
+    value = "/vault/userconfig/my-gcp-iam"
+  }
+  set {
+    name  = "server.volumeMounts[0].name"
+    value = "userconfig-my-gcp-iam"
+  }
+  set {
+    name  = "server.volumeMounts[0].readOnly"
+    value = "true"
+  }
+
+  set {
+    name  = "server.affinity"
+    value = <<EOT
+podAntiAffinity:
+  requiredDuringSchedulingIgnoredDuringExecution:
+    - labelSelector:
+        matchLabels:
+          app: {{ template "vault.name" . }}
+          release: "{{ .Release.Name }}"
+          component: server
+      topologyKey: kubernetes.io/hostname
+EOT
+  }
+
+  set {
+    name  = "server.service.enabled"
+    value = "true"
+  }
+
+  set {
+    name  = "server.ha.enabled"
+    value = "true"
+  }
+  set {
+    name  = "server.ha.replicas"
+    value = 5
+  }
+  set {
+    name  = "server.ha.config"
+    value = <<EOT
+ui = true
+
+listener "tcp" {
+  tls_disable = 1
+  address = "[::]:8200"
+  cluster_address = "[::]:8201"
+}
+
+storage "consul" {
+  path = "vault"
+  address = "HOST_IP:8500"
+}
+
+seal "gcpckms" {
+    project     = "myproject"
+    region      = "global"
+    key_ring    = "vault-unseal-kr"
+    crypto_key  = "vault-unseal-key"
+}
+
+service_registration "kubernetes" {}
+EOT
+  }
+}
+```
+
+</CodeBlockConfig>
+
+</CodeTabs>

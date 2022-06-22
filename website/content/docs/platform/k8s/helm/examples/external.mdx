@@ -10,13 +10,39 @@ description: |-
 
 ~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3.6+ with this chart.
 
-The below `values.yaml` can be used to set up an external vault server or
-cluster.
+The below `values.yaml` or Terraform configuration can be used to set up an
+external vault server or cluster.
+
+<CodeTabs>
+
+<CodeBlockConfig>
 
 ```yaml
+# values.yaml
 injector:
   externalVaultAddr: 'http://external-vault:8200'
 ```
+
+</CodeBlockConfig>
+
+<CodeBlockConfig>
+
+```hcl
+resource "helm_release" "vault" {
+  name       = "vault"
+  repository = "https://helm.releases.hashicorp.com"
+  chart      = "vault"
+
+  set {
+    name  = "injector.externalVaultAddr"
+    value = "http://external-vault:8200"
+  }
+}
+```
+
+</CodeBlockConfig>
+
+</CodeTabs>
 
 ## Learn
 
