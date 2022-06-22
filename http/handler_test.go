@@ -337,7 +337,7 @@ func TestHandler_MissingToken(t *testing.T) {
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
-	req, err := http.NewRequest("GET", addr+"/v1/sys/internal/ui/mounts/cubbyhole", nil)
+	req, err := http.NewRequest("GET", addr+"/v1/sys/mounts-all/cubbyhole", nil)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

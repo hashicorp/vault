@@ -451,10 +451,6 @@
         "path": "system/internal-ui-feature"
       },
       {
-        "title": "<code>/sys/internal/ui/mounts</code>",
-        "path": "system/internal-ui-mounts"
-      },
-      {
         "title": "<code>/sys/internal/ui/namespaces</code>",
         "path": "system/internal-ui-namespaces"
       },
@@ -526,6 +522,10 @@
       {
         "title": "<code>/sys/mounts</code>",
         "path": "system/mounts"
+      },
+      {
+        "title": "<code>/sys/mounts-all</code>",
+        "path": "system/mounts-all"
       },
       {
         "title": "<code>/sys/namespaces</code>",

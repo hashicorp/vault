@@ -28,7 +28,7 @@ The `/sys/quotas/config` endpoint is used to configure rate limit quotas.
 ```json
 {
   "rate_limit_exempt_paths": [
-    "sys/internal/ui/mounts",
+    "sys/mounts-all",
     "sys/generate-recovery-token/attempt",
     "sys/generate-recovery-token/update",
     "sys/generate-root/attempt",
@@ -79,7 +79,7 @@ $ curl \
     "enable_rate_limit_audit_logging": false,
     "enable_rate_limit_response_headers": false,
     "rate_limit_exempt_paths": [
-      "sys/internal/ui/mounts",
+      "sys/mounts-all",
       "sys/generate-recovery-token/attempt",
       "sys/generate-recovery-token/update",
       "sys/generate-root/attempt",

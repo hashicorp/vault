@@ -55,7 +55,7 @@ func kvPreflightVersionRequest(client *api.Client, path string) (string, int, er
 	client.SetOutputPolicy(false)
 	defer client.SetOutputPolicy(currentOutputPolicy)
 
-	r := client.NewRequest("GET", "/v1/sys/internal/ui/mounts/"+path)
+	r := client.NewRequest("GET", "/v1/sys/mounts-all/"+path)
 	resp, err := client.RawRequest(r)
 	if resp != nil {
 		defer resp.Body.Close()
