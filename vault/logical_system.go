@@ -4082,7 +4082,8 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 				}
 
 				if genericPaths && mount != "sys/" && mount != "identity/" {
-					doc.Paths["/"+mountPrefix+"{mountPath}/"+path] = obj
+					s := fmt.Sprintf("/%s{mountPath}/%s", mountPrefix, path)
+					doc.Paths[s] = obj
 				} else {
 					doc.Paths["/"+mountPrefix+mount+path] = obj
 				}
