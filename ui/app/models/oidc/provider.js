@@ -39,7 +39,6 @@ export default class OidcProviderModel extends Model {
     return this.providersPath.get('canList');
   }
 
-  // need to list all for search select in form?
   @lazyCapabilities(apiPath`identity/oidc/client`) clientsPath;
   get canListClients() {
     return this.clientsPath.get('canList');

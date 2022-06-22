@@ -27,13 +27,15 @@ export default class OidcClientModel extends Model {
 
   // >> MORE OPTIONS TOGGLE <<
 
+  // might be a good candidate for using @belongsTo relationship?
   @attr('string', {
     label: 'Signing key',
     subText: 'Add a key to sign and verify the JSON web tokens (JWT). This cannot be edited later.',
-    defaultValue: 'default-key',
-    possibleValues: [],
+    editType: 'searchSelect',
+    fallbackComponent: 'string-list',
+    models: ['oidc/key'],
   })
-  key; // asking design about changing this to a search-select to fetch all of the oidc/keys
+  key;
 
   @attr({
     label: 'Access Token TTL',
@@ -52,12 +54,12 @@ export default class OidcClientModel extends Model {
   // >> END MORE OPTIONS TOGGLE <<
 
   // form has a radio option to allow_all (default), or limit access to selected 'assignment'
-  // if limited, expose assignment dropdown and create or add via search-select + modal
+  // if limited, expose search-select to select or create new and add via modal
   @attr('array', {
     label: 'Assign access',
     editType: 'searchSelect',
   })
-  assignments;
+  assignments; // might be a good candidate for @hasMany relationship instead of @attr
 
   @attr('string', {
     label: 'Client ID',
@@ -69,11 +71,11 @@ export default class OidcClientModel extends Model {
   })
   clientSecret;
 
-  // API WIP
+  // API WIP - param TBD
   @attr('string', {
     label: 'Providers',
   })
-  providers;
+  provider_ds; // might be a good candidate for @hasMany relationship instead of @attr
 
   @lazyCapabilities(apiPath`identity/oidc/client/${'name'}`, 'name') clientPath;
   @lazyCapabilities(apiPath`identity/oidc/client`) clientsPath;
@@ -113,7 +115,7 @@ export default class OidcClientModel extends Model {
     return this.clientProvidersPath.get('canList');
   }
 
-  // fieldGroups was behaving k
+  // fieldGroups was behaving buggy so may not use
   get fieldGroups() {
     const groups = [
       { default: ['name', 'clientType', 'redirectUris'] },
@@ -122,7 +124,8 @@ export default class OidcClientModel extends Model {
     return fieldToAttrs(this, groups);
   }
 
-  get attrs() {
+  // WIP
+  get fieldAttrs() {
     return expandAttributeMeta(this, [
       'name',
       'clientType',
