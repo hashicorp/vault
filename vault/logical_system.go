@@ -4480,8 +4480,7 @@ func (b *SystemBackend) handleLoggersWrite(ctx context.Context, req *logical.Req
 }
 
 func (b *SystemBackend) handleLoggersDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	config := b.Core.GetCoreConfigInternal()
-	level, err := getLogLevel(config.LogLevel)
+	level, err := getLogLevel(b.Core.logLevel)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("log level from config is invalid: %s", err.Error())), nil
 	}
@@ -4527,8 +4526,7 @@ func (b *SystemBackend) handleLoggersByNameDelete(ctx context.Context, req *logi
 		return logical.ErrorResponse("name is required"), nil
 	}
 
-	config := b.Core.GetCoreConfigInternal()
-	level, err := getLogLevel(config.LogLevel)
+	level, err := getLogLevel(b.Core.logLevel)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("log level from config is invalid: %s", err.Error())), nil
 	}

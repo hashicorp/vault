@@ -593,6 +593,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		Physical:     backend,
 		StorageType:  config.Storage.Type,
 		Seal:         barrierSeal,
+		LogLevel:     logLevelString,
 		Logger:       c.logger,
 		DisableMlock: config.DisableMlock,
 		RecoveryMode: c.flagRecovery,

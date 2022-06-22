@@ -408,6 +408,9 @@ type Core struct {
 	baseLogger log.Logger
 	logger     log.Logger
 
+	// log level provided by config, CLI flag, or env
+	logLevel string
+
 	// Disables the trace display for Sentinel checks
 	sentinelTraceDisabled bool
 
@@ -665,6 +668,8 @@ type CoreConfig struct {
 
 	SecureRandomReader io.Reader
 
+	LogLevel string
+
 	Logger log.Logger
 
 	// Disables the trace display for Sentinel checks
@@ -848,6 +853,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		standbyStopCh:        new(atomic.Value),
 		baseLogger:           conf.Logger,
 		logger:               conf.Logger.Named("core"),
+		logLevel:             conf.LogLevel,
 
 		defaultLeaseTTL:                conf.DefaultLeaseTTL,
 		maxLeaseTTL:                    conf.MaxLeaseTTL,
