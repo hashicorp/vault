@@ -12,14 +12,14 @@ export default class OidcProviderModel extends Model {
   @attr('array', {
     editType: 'searchSelect',
   })
-  scopesSupported;
+  scopesSupported; // potential candidate for @hasMany relationship
 
   // form has a radio option to allow_all, or limit access to selected 'application'
   // if limited, expose assignment dropdown and add via search-select
   @attr('array', {
     editType: 'searchSelect',
   })
-  allowedClientIds;
+  allowedClientIds; // potential candidate for @hasMany relationship
 
   @lazyCapabilities(apiPath`identity/oidc/provider/${'name'}`, 'name') providerPath;
   @lazyCapabilities(apiPath`identity/oidc/provider`) providersPath;
