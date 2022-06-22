@@ -460,8 +460,9 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	c.logger = hclog.NewInterceptLogger(&hclog.LoggerOptions{
-		Output: c.gatedWriter,
-		Level:  level,
+		Output:            c.gatedWriter,
+		Level:             level,
+		IndependentLevels: true,
 		// Note that if logFormat is either unspecified or standard, then
 		// the resulting logger's format will be standard.
 		JSONFormat: logFormat == logging.JSONFormat,
@@ -1116,14 +1117,16 @@ func (c *ServerCommand) Run(args []string) int {
 
 	if c.flagDevThreeNode || c.flagDevFourCluster {
 		c.logger = hclog.NewInterceptLogger(&hclog.LoggerOptions{
-			Mutex:  &sync.Mutex{},
-			Output: c.gatedWriter,
-			Level:  hclog.Trace,
+			Mutex:             &sync.Mutex{},
+			Output:            c.gatedWriter,
+			Level:             hclog.Trace,
+			IndependentLevels: true,
 		})
 	} else {
 		c.logger = hclog.NewInterceptLogger(&hclog.LoggerOptions{
-			Output: c.gatedWriter,
-			Level:  level,
+			Output:            c.gatedWriter,
+			Level:             level,
+			IndependentLevels: true,
 			// Note that if logFormat is either unspecified or standard, then
 			// the resulting logger's format will be standard.
 			JSONFormat: logFormat == logging.JSONFormat,
