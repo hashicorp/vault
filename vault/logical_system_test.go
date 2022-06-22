@@ -4651,83 +4651,87 @@ func TestSystemBackend_Loggers(t *testing.T) {
 	}
 }
 
+func validateLevel(level string, logger hclog.Logger) bool {
+	switch level {
+	case "trace":
+		return logger.IsTrace()
+	case "debug":
+		return logger.IsDebug()
+	case "notice", "info", "":
+		return logger.IsInfo()
+	case "warn", "warning":
+		return logger.IsWarn()
+	case "err", "error":
+		return logger.IsError()
+	}
+
+	return false
+}
+
 func TestSystemBackend_LoggersByName(t *testing.T) {
 	testCases := []struct {
 		logger      string
 		level       string
-		validator   func(hclog.Logger) bool
 		expectError bool
 	}{
 		{
 			"core",
 			"trace",
-			func(l hclog.Logger) bool { return l.IsTrace() },
 			false,
 		},
 		{
 			"token",
 			"debug",
-			func(l hclog.Logger) bool { return l.IsDebug() },
 			false,
 		},
 		{
 			"audit",
 			"notice",
-			func(l hclog.Logger) bool { return l.IsInfo() },
 			false,
 		},
 		{
 			"expiration",
 			"info",
-			func(l hclog.Logger) bool { return l.IsInfo() },
 			false,
 		},
 		{
 			"policy",
 			"warn",
-			func(l hclog.Logger) bool { return l.IsWarn() },
 			false,
 		},
 		{
 			"activity",
 			"warning",
-			func(l hclog.Logger) bool { return l.IsWarn() },
 			false,
 		},
 		{
 			"identity",
 			"err",
-			func(l hclog.Logger) bool { return l.IsError() },
 			false,
 		},
 		{
 			"rollback",
 			"error",
-			func(l hclog.Logger) bool { return l.IsError() },
 			false,
 		},
 		{
 			"system",
 			"",
-			func(l hclog.Logger) bool { return true },
 			true,
 		},
 		{
 			"quotas",
 			"invalid",
-			func(l hclog.Logger) bool { return true },
 			true,
 		},
 		{
 			"",
 			"info",
-			func(l hclog.Logger) bool { return true },
 			true,
 		},
 		{
 			"does_not_exist",
 			"error",
-			func(l hclog.Logger) bool { return true },
 			true,
 		},
 	}
@@ -4739,11 +4743,13 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 			t.Parallel()
 
 			core, b, _ := testCoreSystemBackend(t)
+			config := core.GetCoreConfigInternal()
 
 			req := &logical.Request{
 				Path:      fmt.Sprintf("loggers/%s", tc.logger),
 				Operation: logical.UpdateOperation,
 				Data: map[string]interface{}{
+					"name":  tc.logger,
 					"level": tc.level,
 				},
 			}
@@ -4760,7 +4766,11 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 			}
 
 			for _, logger := range core.allLoggers {
-				if !tc.validator(logger) {
+				if logger.Name() != tc.logger && !validateLevel(config.LogLevel, logger) {
+					t.Errorf("expected level of logger %q to be unchanged", logger.Name())
+				}
+
+				if !tc.expectError && !validateLevel(tc.level, logger) {
 					t.Fatalf("expected logger %q to be %q", logger.Name(), tc.level)
 				}
 			}
