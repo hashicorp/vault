@@ -41,6 +41,7 @@ export default class OidcClientModel extends Model {
     label: 'Access Token TTL',
     editType: 'ttl',
     helperTextDisabled: 'Vault will use the default lease duration',
+    setDefault: false,
   })
   accessTokenTtl;
 
@@ -48,6 +49,7 @@ export default class OidcClientModel extends Model {
     label: 'ID Token TTL',
     editType: 'ttl',
     helperTextDisabled: 'Vault will use the default lease duration',
+    setDefault: false,
   })
   idTokenTtl;
 
@@ -115,25 +117,13 @@ export default class OidcClientModel extends Model {
     return this.clientProvidersPath.get('canList');
   }
 
-  // fieldGroups was behaving buggy so may not use
-  get fieldGroups() {
-    const groups = [
-      { default: ['name', 'clientType', 'redirectUris'] },
-      { 'More options': ['key', 'idTokenTtl', 'accessTokenTtl'] },
-    ];
-    return fieldToAttrs(this, groups);
+  // default form fields
+  get formFields() {
+    return expandAttributeMeta(this, ['name', 'clientType', 'redirectUris']);
   }
 
-  // WIP
-  get fieldAttrs() {
-    return expandAttributeMeta(this, [
-      'name',
-      'clientType',
-      'redirectUris',
-      'key',
-      'idTokenTtl',
-      'accessTokenTtl',
-      'assignments',
-    ]);
+  // more options fields
+  get fieldGroups() {
+    return fieldToAttrs(this, [{ 'More options': ['key', 'idTokenTtl', 'accessTokenTtl'] }]);
   }
 }

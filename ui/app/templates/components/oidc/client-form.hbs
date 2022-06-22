@@ -1,0 +1,55 @@
+<form>
+  <div class="box is-sideless is-fullwidth is-marginless" ...attributes>
+    {{#each @model.formFields as |attr|}}
+      <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
+    {{/each}}
+
+    {{! MORE OPTIONS TOGGLE }}
+    <FormFieldGroups @renderGroup="More options" @model={{@model}} @mode={{@mode}} />
+  </div>
+
+  {{! RADIO CARD + SEARCH SELECT }}
+  <div class="box is-sideless is-fullwidth is-marginless" ...attributes>
+    <FormFieldLabel @label="Assign access" />
+    <div class="is-flex-row">
+      <RadioCard
+        @title="Allow everyone to access existing"
+        @description="All Vault entities can authenticate through this application."
+        @icon="org"
+        @value="allow_all"
+        @groupValue={{this.radioCardGroupValue}}
+        @onChange={{fn (mut this.radioCardGroupValue)}}
+      />
+      <RadioCard
+        @title="Limit access to selected users"
+        @description="Choose or create an assignment to give access to selected entities."
+        @icon="users"
+        @value="limited"
+        @groupValue={{this.radioCardGroupValue}}
+        @onChange={{fn (mut this.radioCardGroupValue)}}
+      />
+    </div>
+    {{#if (eq this.radioCardGroupValue "limited")}}
+      <SearchSelect
+        @label="Assignment name"
+        @labelClass="is-label"
+        @subText="Search for an existing assignment, or type a new name to create it."
+      />
+    {{/if}}
+  </div>
+</form>
+{{!-- <div class="field is-grouped-split box is-fullwidth is-bottomless">
+    <div class="control">
+      <button
+        type="button"
+        class="button is-primary {{if this.save.isRunning 'is-loading'}}"
+        disabled={{this.save.isRunning}}
+        {{on "click" this.createClient}}
+      >
+        Create
+      </button>
+      <button type="button" class="button has-left-margin-s" disabled={{this.save.isRunning}} {{on "click" this.cancel}}>
+        Cancel
+      </button>
+    </div>
+  </div> --}}
