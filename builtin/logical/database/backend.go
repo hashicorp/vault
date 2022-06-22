@@ -121,12 +121,21 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 }
 
 func (b *databaseBackend) collectPluginInstanceGaugeValues(context.Context) ([]metricsutil.GaugeLabelValues, error) {
-	b.connLock.RLock()
-	defer b.connLock.RUnlock()
+	// copy the map so we can release the lock
+	connMapCopy := func() map[string]*dbPluginInstance {
+		b.connLock.RLock()
+		defer b.connLock.RUnlock()
+		mapCopy := map[string]*dbPluginInstance{}
+		for k, v := range b.connections {
+			mapCopy[k] = v
+		}
+		return mapCopy
+	}()
 	counts := map[string]int{}
-	for _, v := range b.connections {
+	for _, v := range connMapCopy {
 		dbType, err := v.database.Type()
 		if err != nil {
+			// there's a chance this will already be closed since we don't hold the lock
 			continue
 		}
 		if _, ok := counts[dbType]; !ok {
