@@ -241,7 +241,7 @@ Currently, the cache key is a hash of the request URL path, headers, body, and
 token.
 
 Caching may also be enabled for all requests by setting the environment variable
-`VAULT_DEFAULT_CACHE_ENABLE` to `true`. Then all requests will be fetched and/or
+`VAULT_DEFAULT_CACHE_ENABLED` to `true`. Then all requests will be fetched and/or
 cached as though the header `X-Vault-Cache-Control: cache` was present. Setting
 the header to `nocache` on a request will opt-out of caching entirely in this
 configuration. Setting the header to `recache` will skip the cache lookup and
