@@ -904,6 +904,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 					Type:        framework.TypeBool,
 					Description: "Use generic mount paths",
 					Query:       true,
+					Default:     false,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
