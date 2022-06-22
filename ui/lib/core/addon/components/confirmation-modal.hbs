@@ -1,14 +1,6 @@
-<Modal
-  @title={{this.title}}
-  @onClose={{this.onClose}}
-  @isActive={{this.isActive}}
-  @type={{this.type}}
-  @showCloseButton={{true}}
->
+<Modal @title={{@title}} @onClose={{@onClose}} @isActive={{@isActive}} @type={{this.type}} @showCloseButton={{true}}>
   <section class="modal-card-body">
-
     {{yield}}
-
     <div class="modal-confirm-section">
       <p class="has-text-weight-semibold is-size-6">
         Confirm
@@ -21,7 +13,7 @@
         class="input has-margin-top"
         autocomplete="off"
         spellcheck="false"
-        data-test-confirmation-modal-input={{this.testSelector}}
+        data-test-confirmation-modal-input={{or @title true}}
       />
     </div>
   </section>
@@ -30,12 +22,12 @@
       type="button"
       class="button {{this.buttonClass}}"
       disabled={{not-eq this.confirmationInput this.confirmText}}
-      onclick={{this.onConfirm}}
-      data-test-confirm-button={{this.testSelector}}
+      {{on "click" @onConfirm}}
+      data-test-confirm-button={{or @title true}}
     >
       {{this.buttonText}}
     </button>
-    <button type="button" class="button is-secondary" onclick={{action (mut this.isActive) false}} data-test-cancel-button>
+    <button type="button" class="button is-secondary" {{on "click" @onClose}} data-test-cancel-button>
       Cancel
     </button>
   </footer>
