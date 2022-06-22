@@ -3182,7 +3182,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 	_, b, rootToken := testCoreSystemBackend(t)
 
 	// Ensure no entries are in the endpoint as a starting point
-	req := logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts")
+	req := logical.TestRequest(t, logical.ReadOperation, "mounts-all")
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -3196,7 +3196,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
 	}
 
-	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts")
+	req = logical.TestRequest(t, logical.ReadOperation, "mounts-all")
 	req.ClientToken = rootToken
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
@@ -3309,7 +3309,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 		t.Fatalf("resp.Error: %v, err:%v", resp.Error(), err)
 	}
 
-	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts")
+	req = logical.TestRequest(t, logical.ReadOperation, "mounts-all")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -3361,7 +3361,7 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 		t.Fatalf("Bad %#v %#v", err, resp)
 	}
 
-	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts/kv/bar")
+	req = logical.TestRequest(t, logical.ReadOperation, "mounts-all/kv/bar")
 	req.ClientToken = rootToken
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -3373,14 +3373,14 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 
 	testMakeServiceTokenViaBackend(t, core.tokenStore, rootToken, "tokenid", "", []string{"secret"})
 
-	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts/kv")
+	req = logical.TestRequest(t, logical.ReadOperation, "mounts-all/kv")
 	req.ClientToken = "tokenid"
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != logical.ErrPermissionDenied {
 		t.Fatal("expected permission denied error")
 	}
 
-	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts/secret")
+	req = logical.TestRequest(t, logical.ReadOperation, "mounts-all/secret")
 	req.ClientToken = "tokenid"
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -3390,7 +3390,7 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 		t.Fatalf("Bad Response: %#v", resp)
 	}
 
-	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts/sys")
+	req = logical.TestRequest(t, logical.ReadOperation, "mounts-all/sys")
 	req.ClientToken = "tokenid"
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -3400,7 +3400,7 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 		t.Fatalf("Bad Response: %#v", resp)
 	}
 
-	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts/non-existent")
+	req = logical.TestRequest(t, logical.ReadOperation, "mounts-all/non-existent")
 	req.ClientToken = "tokenid"
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != logical.ErrPermissionDenied {
@@ -3589,7 +3589,7 @@ func TestSystemBackend_PathWildcardPreflight(t *testing.T) {
 	}
 
 	// Check the mount access func again
-	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts/kv-v1/baz")
+	req = logical.TestRequest(t, logical.ReadOperation, "mounts-all/kv-v1/baz")
 	req.ClientToken = te.ID
 	resp, err = b.HandleRequest(ctx, req)
 	if err != nil {

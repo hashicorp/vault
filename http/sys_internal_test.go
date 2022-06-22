@@ -15,7 +15,7 @@ func TestSysInternal_UIMounts(t *testing.T) {
 	TestServerAuth(t, addr, token)
 
 	// Get original tune values, ensure that listing_visibility is not set
-	resp := testHttpGet(t, "", addr+"/v1/sys/internal/ui/mounts")
+	resp := testHttpGet(t, "", addr+"/v1/sys/mounts-all")
 	testResponseStatus(t, resp, 200)
 
 	actual := map[string]interface{}{}
@@ -49,7 +49,7 @@ func TestSysInternal_UIMounts(t *testing.T) {
 	testResponseStatus(t, resp, 204)
 
 	// Check results
-	resp = testHttpGet(t, "", addr+"/v1/sys/internal/ui/mounts")
+	resp = testHttpGet(t, "", addr+"/v1/sys/mounts-all")
 	testResponseStatus(t, resp, 200)
 
 	actual = map[string]interface{}{}
