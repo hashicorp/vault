@@ -3569,7 +3569,7 @@ func TestSystemBackend_PathWildcardPreflight(t *testing.T) {
 	}
 
 	// Check the mount access func
-	req = logical.TestRequest(t, logical.ReadOperation, "internal/ui/mounts/kv-v1/baz")
+	req = logical.TestRequest(t, logical.ReadOperation, "mounts-all/kv-v1/baz")
 	req.ClientToken = te.ID
 	resp, err = b.HandleRequest(ctx, req)
 	if err == nil || !strings.Contains(err.Error(), "permission denied") {
