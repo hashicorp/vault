@@ -591,7 +591,8 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 				// If we receive an error from CheckSSCToken, we can assume the token is bad somehow, and the client
 				// should receive a 403 bad token error like they do for all other invalid tokens.
 				if err != nil {
-					return logical.ErrorResponse(fmt.Sprintf("bad token: %s", err.Error())), logical.ErrPermissionDenied
+					c.Logger().Error("bad token", "error", err)
+					return logical.ErrorResponse("bad token"), logical.ErrPermissionDenied
 				}
 				req.Data["token"] = token
 			}
