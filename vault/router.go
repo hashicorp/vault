@@ -778,6 +778,35 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 					}
 				}
 			}
+
+			var rResult string
+			if resp.IsError() {
+				rResult = "error"
+			} else {
+				rResult = "success"
+			}
+
+			metrics.MeasureSinceWithLabels(
+				[]string{"route", string(req.Operation), "result", rResult},
+				time.Now(),
+				[]metrics.Label{
+					{
+						Name:  "mount_entry_type",
+						Value: re.mountEntry.Type,
+					},
+					{
+						Name:  "mount_entry_table",
+						Value: re.mountEntry.Table,
+					},
+					{
+						Name:  "mount_entry_path",
+						Value: re.mountEntry.Path,
+					},
+					{
+						Name:  "namespace",
+						Value: re.mountEntry.NamespaceID,
+					},
+				})
 		}
 
 		return resp, false, false, err
