@@ -2376,14 +2376,14 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 	}
 
 	var numUses int
-	// Check whether or not num_uses is defined, otherwise fallback to secret_id_num_uses
+	// Check whether or not specified num_uses is defined, otherwise fallback to role's secret_id_num_uses
 	if numUsesRaw, ok := data.GetOk("num_uses"); ok {
 		numUses = numUsesRaw.(int)
 		if numUses < 0 {
 			return logical.ErrorResponse("num_uses cannot be negative"), nil
 		}
 
-		// If the role's secret_id_num_uses is higher than the specified num_uses, throw an error rather than implicitly overriding
+		// If the specified num_uses is higher than the role's secret_id_num_uses, throw an error rather than implicitly overriding
 		if (numUses == 0 && role.SecretIDNumUses > 0) || (role.SecretIDNumUses > 0 && numUses > role.SecretIDNumUses) {
 			return logical.ErrorResponse("num_uses cannot be higher than the role's secret_id_num_uses"), nil
 		}
@@ -2392,11 +2392,11 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 	}
 
 	var ttl time.Duration
-	// Check whether or not ttl is defined, otherwise fallback to secret_id_ttl
+	// Check whether or not specified ttl is defined, otherwise fallback to role's secret_id_ttl
 	if ttlRaw, ok := data.GetOk("ttl"); ok {
 		ttl = time.Second * time.Duration(ttlRaw.(int))
 
-		// If the ttl is more than the role's secret_id_ttl, throw an error rather than implicitly overriding
+		// If the specified ttl is longer than the role's secret_id_ttl, throw an error rather than implicitly overriding
 		if (ttl == 0 && role.SecretIDTTL > 0) || (role.SecretIDTTL > 0 && ttl > role.SecretIDTTL) {
 			return logical.ErrorResponse("ttl cannot be longer than the role's secret_id_ttl"), nil
 		}
