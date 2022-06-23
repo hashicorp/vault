@@ -1194,7 +1194,7 @@ func TestAppRole_RoleSecretIDWithValidFields(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			name:    "finit num_uses ttl",
+			name:    "finite num_uses ttl",
 			payload: map[string]interface{}{"secret_id": "finite", "ttl": 5, "num_uses": 5},
 		},
 		{
