@@ -59,7 +59,7 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 			Type:          quotas.TypeRateLimit,
 			Path:          path,
 			MountPath:     mountPath,
-			Role:          core.DetermineRoleFromLoginRequest(mountPath, bodyBytes, r.Context()),
+			Role:          core.DetermineRoleFromLoginRequestFromBytes(mountPath, bodyBytes, r.Context()),
 			NamespacePath: ns.Path,
 			ClientAddress: parseRemoteIPAddress(r),
 		})

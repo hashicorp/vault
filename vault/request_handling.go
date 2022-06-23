@@ -966,9 +966,11 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	}
 
 	leaseGenerated := false
+	loginRole := c.DetermineRoleFromLoginRequest(req.MountPoint, req.Data, ctx)
 	quotaResp, quotaErr := c.applyLeaseCountQuota(ctx, &quotas.Request{
 		Path:          req.Path,
 		MountPath:     strings.TrimPrefix(req.MountPoint, ns.Path),
+		Role:          loginRole,
 		NamespacePath: ns.Path,
 	})
 	if quotaErr != nil {
@@ -1108,7 +1110,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 				return nil, auth, retErr
 			}
 
-			leaseID, err := registerFunc(ctx, req, resp)
+			leaseID, err := registerFunc(ctx, req, resp, loginRole)
 			if err != nil {
 				c.logger.Error("failed to register lease", "request_path", req.Path, "error", err)
 				retErr = multierror.Append(retErr, ErrInternalError)
@@ -1387,6 +1389,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		quotaResp, quotaErr := c.applyLeaseCountQuota(ctx, &quotas.Request{
 			Path:          req.Path,
 			MountPath:     strings.TrimPrefix(req.MountPoint, ns.Path),
+			Role:          c.DetermineRoleFromLoginRequest(req.MountPoint, req.Data, ctx),
 			NamespacePath: ns.Path,
 		})
 
@@ -1573,7 +1576,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// Attach the display name, might be used by audit backends
 		req.DisplayName = auth.DisplayName
 
-		leaseGen, respTokenCreate, errCreateToken := c.LoginCreateToken(ctx, ns, req.Path, source, resp)
+		leaseGen, respTokenCreate, errCreateToken := c.LoginCreateToken(ctx, ns, req.Path, source, resp, req.Data)
 		leaseGenerated = leaseGen
 		if errCreateToken != nil {
 			return respTokenCreate, nil, errCreateToken
@@ -1604,7 +1607,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 // LoginCreateToken creates a token as a result of a login request.
 // If MFA is enforced, mfa/validate endpoint calls this functions
 // after successful MFA validation to generate the token.
-func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, reqPath, mountPoint string, resp *logical.Response) (bool, *logical.Response, error) {
+func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, reqPath, mountPoint string, resp *logical.Response, loginRequestData map[string]interface{}) (bool, *logical.Response, error) {
 	auth := resp.Auth
 
 	source := strings.TrimPrefix(mountPoint, credentialRoutePrefix)
@@ -1666,7 +1669,7 @@ func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, re
 	}
 
 	leaseGenerated := false
-	err = registerFunc(ctx, tokenTTL, reqPath, auth)
+	err = registerFunc(ctx, tokenTTL, reqPath, auth, c.DetermineRoleFromLoginRequest(mountPoint, loginRequestData, ctx))
 	switch {
 	case err == nil:
 		if auth.TokenType != logical.TokenTypeBatch {
@@ -1733,7 +1736,8 @@ func blockRequestIfErrorImpl(_ *Core, _, _ string) error { return nil }
 
 // RegisterAuth uses a logical.Auth object to create a token entry in the token
 // store, and registers a corresponding token lease to the expiration manager.
-func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path string, auth *logical.Auth) error {
+// role is ignored in this function, but may be required in other implementors of RegisterAuthFunc
+func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path string, auth *logical.Auth, role string) error {
 	// We first assign token policies to what was returned from the backend
 	// via auth.Policies. Then, we get the full set of policies into
 	// auth.Policies from the backend + entity information -- this is not

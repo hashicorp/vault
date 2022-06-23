@@ -1385,7 +1385,7 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 // Register is used to take a request and response with an associated
 // lease. The secret gets assigned a LeaseID and the management of
 // of lease is assumed by the expiration manager.
-func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, resp *logical.Response) (id string, retErr error) {
+func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, resp *logical.Response, loginRole string) (id string, retErr error) {
 	defer metrics.MeasureSince([]string{"expire", "register"}, time.Now())
 
 	te := req.TokenEntry()
@@ -1427,6 +1427,7 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 		Path:            req.Path,
 		Data:            resp.Data,
 		Secret:          resp.Secret,
+		LoginRole:       loginRole,
 		IssueTime:       time.Now(),
 		ExpireTime:      resp.Secret.ExpirationTime(),
 		namespace:       ns,
@@ -2658,6 +2659,11 @@ type leaseEntry struct {
 	IssueTime       time.Time              `json:"issue_time"`
 	ExpireTime      time.Time              `json:"expire_time"`
 	LastRenewalTime time.Time              `json:"last_renewal_time"`
+
+	// LoginRole is used to indicate which login role (if applicable) this lease
+	// was created with. This is required to decrement lease count quotas
+	// based on login roles upon lease expiry.
+	LoginRole string `json:"login_role"`
 
 	// Version is used to track new different versions of leases. V0 (or
 	// zero-value) had non-root namespaced secondary indexes live in the root
