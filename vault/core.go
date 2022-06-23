@@ -3313,7 +3313,8 @@ func (c *Core) DetermineRoleFromLoginRequest(mountPoint string, payload []byte, 
 	data := make(map[string]interface{})
 	err := jsonutil.DecodeJSON(payload, &data)
 	if err != nil {
-		// best effort, ignore
+		// Cannot discern a role from a request we cannot parse
+		return ""
 	}
 
 	resp, err := matchingBackend.HandleRequest(ctx, &logical.Request{
