@@ -1,9 +1,10 @@
-import Model, { attr } from '@ember-data/model';
+import Model, { attr, hasMany } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import fieldToAttrs from '../../utils/field-to-attrs';
 
 export default class OidcClientModel extends Model {
+  @hasMany('oidc/assignment') assignments;
   @attr('string', {
     label: 'Application name',
   })
@@ -13,6 +14,7 @@ export default class OidcClientModel extends Model {
     label: 'Type',
     subText: 'Specify whether the application type is confidential or public. The public type must use PKCE.',
     editType: 'radio',
+    defaultValue: 'confidential',
     possibleValues: ['confidential', 'public'],
   })
   clientType;
@@ -54,14 +56,6 @@ export default class OidcClientModel extends Model {
   idTokenTtl;
 
   // >> END MORE OPTIONS TOGGLE <<
-
-  // form has a radio option to allow_all (default), or limit access to selected 'assignment'
-  // if limited, expose search-select to select or create new and add via modal
-  @attr('array', {
-    label: 'Assign access',
-    editType: 'searchSelect',
-  })
-  assignments; // might be a good candidate for @hasMany relationship instead of @attr
 
   @attr('string', {
     label: 'Client ID',

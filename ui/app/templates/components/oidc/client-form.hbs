@@ -34,6 +34,9 @@
           @label="Assignment name"
           @labelClass="is-label"
           @subText="Search for an existing assignment, or type a new name to create it."
+          @models={{array "oidc/assignment"}}
+          @inputValue={{map-by "id" @model.assignments}}
+          @onChange={{this.selectAssignments}}
         />
       {{/if}}
     </div>
