@@ -529,6 +529,7 @@ func (b *Backend) handleRootHelp(req *logical.Request) (*logical.Response, error
 	requestResponsePrefix := req.GetString("requestResponsePrefix")
 
 	genericMountPaths, ok := req.Get("genericMountPaths").(bool)
+
 	if !ok {
 		genericMountPaths = false
 	}
