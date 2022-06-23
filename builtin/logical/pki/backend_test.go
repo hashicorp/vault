@@ -2132,13 +2132,17 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 		t.Fatal("pem csr is empty")
 	}
 
+	signVerbatimData := map[string]interface{}{
+		"csr": pemCSR,
+	}
+	if keyType == "rsa" {
+		signVerbatimData["signature_bits"] = 512
+	}
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "sign-verbatim",
-		Storage:   storage,
-		Data: map[string]interface{}{
-			"csr": pemCSR,
-		},
+		Operation:  logical.UpdateOperation,
+		Path:       "sign-verbatim",
+		Storage:    storage,
+		Data:       signVerbatimData,
 		MountPoint: "pki/",
 	})
 	if resp != nil && resp.IsError() {
