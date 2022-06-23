@@ -3414,7 +3414,7 @@ func TestSystemBackend_OASGenericMount(t *testing.T) {
 
 	// Check that default paths are present with a root token
 	req := logical.TestRequest(t, logical.ReadOperation, "internal/specs/openapi")
-	req.Data["generic_paths"] = true
+	req.Data["generic_mount_paths"] = true
 	req.ClientToken = rootToken
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
