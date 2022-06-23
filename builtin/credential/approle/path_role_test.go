@@ -1135,6 +1135,12 @@ func TestAppRole_RoleSecretIDWithoutFields(t *testing.T) {
 	if resp.Data["secret_id"].(string) == "" {
 		t.Fatalf("failed to generate secret_id")
 	}
+	if resp.Data["secret_id_ttl"].(int64) != int64(roleData["secret_id_ttl"].(int)) {
+		t.Fatalf("secret_id_ttl has not defaulted to the role's secret id ttl")
+	}
+	if resp.Data["secret_id_num_uses"].(int) != roleData["secret_id_num_uses"].(int) {
+		t.Fatalf("secret_id_num_uses has not defaulted to the role's secret id num_uses")
+	}
 
 	roleSecretIDReq.Path = "role/role1/custom-secret-id"
 	roleCustomSecretIDData := map[string]interface{}{
@@ -1148,6 +1154,12 @@ func TestAppRole_RoleSecretIDWithoutFields(t *testing.T) {
 
 	if resp.Data["secret_id"] != "abcd123" {
 		t.Fatalf("failed to set specific secret_id to role")
+	}
+	if resp.Data["secret_id_ttl"].(int64) != int64(roleData["secret_id_ttl"].(int)) {
+		t.Fatalf("secret_id_ttl has not defaulted to the role's secret id ttl")
+	}
+	if resp.Data["secret_id_num_uses"].(int) != roleData["secret_id_num_uses"].(int) {
+		t.Fatalf("secret_id_num_uses has not defaulted to the role's secret id num_uses")
 	}
 }
 
