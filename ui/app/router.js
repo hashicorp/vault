@@ -114,6 +114,7 @@ Router.map(function () {
             this.route('index', { path: '/' });
             this.route('create');
             this.route('client', { path: '/:name' }, function () {
+              this.route('details');
               this.route('edit');
             });
           });
@@ -121,6 +122,7 @@ Router.map(function () {
             this.route('index', { path: '/' });
             this.route('create');
             this.route('key', { path: '/:name' }, function () {
+              this.route('details');
               this.route('edit');
             });
           });
@@ -128,6 +130,7 @@ Router.map(function () {
             this.route('index', { path: '/' });
             this.route('create');
             this.route('assignment', { path: '/:name' }, function () {
+              this.route('details');
               this.route('edit');
             });
           });
@@ -135,6 +138,7 @@ Router.map(function () {
             this.route('index', { path: '/' });
             this.route('create');
             this.route('provider', { path: '/:name' }, function () {
+              this.route('details');
               this.route('edit');
             });
           });
@@ -142,6 +146,7 @@ Router.map(function () {
             this.route('index', { path: '/' });
             this.route('create');
             this.route('scope', { path: '/:name' }, function () {
+              this.route('details');
               this.route('edit');
             });
           });
