@@ -1,7 +1,9 @@
 import Model, { attr, hasMany } from '@ember-data/model';
+// eslint-disable-next-line ember/no-computed-properties-in-native-classes
+import { computed } from '@ember/object';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-import fieldToAttrs from '../../utils/field-to-attrs';
+import fieldToAttrs from 'vault/utils/field-to-attrs';
 
 export default class OidcClientModel extends Model {
   @hasMany('oidc/assignment') assignments;
@@ -35,6 +37,7 @@ export default class OidcClientModel extends Model {
     subText: 'Add a key to sign and verify the JSON web tokens (JWT). This cannot be edited later.',
     editType: 'searchSelect',
     fallbackComponent: 'string-list',
+    selectLimit: 1,
     models: ['oidc/key'],
   })
   key;
@@ -111,13 +114,16 @@ export default class OidcClientModel extends Model {
     return this.clientProvidersPath.get('canList');
   }
 
-  // default form fields
+  fields = ['name', 'clientType', 'redirectUris'];
+  @computed('fields', 'formFields')
   get formFields() {
-    return expandAttributeMeta(this, ['name', 'clientType', 'redirectUris']);
+    return expandAttributeMeta(this, this.fields);
   }
 
+  moreOptions = [{ 'More options': ['key', 'idTokenTtl', 'accessTokenTtl'] }];
   // more options fields
+  @computed('moreOptions', 'fieldGroups')
   get fieldGroups() {
-    return fieldToAttrs(this, [{ 'More options': ['key', 'idTokenTtl', 'accessTokenTtl'] }]);
+    return fieldToAttrs(this, this.moreOptions);
   }
 }

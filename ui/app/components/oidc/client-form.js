@@ -2,7 +2,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import handleHasManySelection from 'core/utils/search-select-has-many';
+// import handleHasManySelection from 'core/utils/search-select-has-many';
 
 /**
  * @module OidcClientForm
@@ -27,7 +27,19 @@ export default class OidcClientForm extends Component {
   @action
   async selectAssignments(selectedIds) {
     const assignments = await this.args.model.assignments;
-    handleHasManySelection(selectedIds, assignments, this.store, 'oidc/assignment');
+    // handleHasManySelection(selectedIds, assignments, this.store, 'oidc/assignment');
+    assignments.forEach((model) => {
+      if (!selectedIds.includes(model.id)) {
+        assignments.removeObject(model);
+      }
+    });
+    const modelIds = assignments.mapBy('id');
+    selectedIds.forEach((id) => {
+      if (!modelIds.includes(id)) {
+        const model = this.store.peekRecord('oidc/assignment', id);
+        assignments.addObject(model);
+      }
+    });
   }
 
   @action
