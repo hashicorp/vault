@@ -528,16 +528,12 @@ func (b *Backend) handleRootHelp(req *logical.Request) (*logical.Response, error
 	// names in the OAS document.
 	requestResponsePrefix := req.GetString("requestResponsePrefix")
 
-	// Generic paths will primarily be used for code generation purposes.
-	// This will result in a dynamic mount path being placed instead of
-	// a hardcoded default path. For example /auth/approle/login would be replaced
+	// Generic mount paths will primarily be used for code generation purposes.
+	// This will result in dynamic mount paths being placed instead of
+	// hardcoded default paths. For example /auth/approle/login would be replaced
 	// with /auth/{mountPath}/login. This will be replaced for all secrets
 	// engines and auth methods that are enabled.
-	genericMountPaths, ok := req.Get("genericMountPaths").(bool)
-
-	if !ok {
-		genericMountPaths = false
-	}
+	genericMountPaths, _ := req.Get("genericMountPaths").(bool)
 
 	// Build OpenAPI response for the entire backend
 	doc := NewOASDocument()

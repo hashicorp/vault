@@ -4008,7 +4008,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 	// be received from plugin backends.
 	doc := framework.NewOASDocument()
 
-	genericMountPaths := d.Get("generic_mount_paths").(bool)
+	genericMountPaths, _ := d.Get("generic_mount_paths").(bool)
 
 	procMountGroup := func(group, mountPrefix string) error {
 		for mount, entry := range resp.Data[group].(map[string]interface{}) {
