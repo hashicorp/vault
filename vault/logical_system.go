@@ -4436,6 +4436,9 @@ func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logic
 	return logical.ListResponseWithInfo(respKeys, respKeyInfo), nil
 }
 
+// getLogLevel returns the hclog.Level that corresponds with the provided level string.
+// This differs hclog.LevelFromString in that it supports additional level strings so
+// that in remains consistent with the handling found in the "vault server" command.
 func getLogLevel(logLevel string) (log.Level, error) {
 	var level log.Level
 
