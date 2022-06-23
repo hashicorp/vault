@@ -82,6 +82,7 @@ with Active Directory Certificate Services.`,
 	// signed certificate's bits (that's on the /sign-intermediate
 	// endpoints). Remove it from the list of fields to avoid confusion.
 	delete(ret.Fields, "signature_bits")
+	delete(ret.Fields, "use_pss")
 
 	return ret
 }

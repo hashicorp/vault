@@ -290,6 +290,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		EnforceHostnames:          false,
 		KeyType:                   "any",
 		SignatureBits:             data.Get("signature_bits").(int),
+		UsePSS:                    new(bool),
 		AllowedOtherSANs:          []string{"*"},
 		AllowedSerialNumbers:      []string{"*"},
 		AllowedURISANs:            []string{"*"},
@@ -298,6 +299,12 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		CNValidations:             []string{"disabled"},
 	}
 	*role.AllowWildcardCertificates = true
+
+	usePSS, present := data.GetOk("use_pss")
+	if !present {
+		usePSS = false
+	}
+	*role.UsePSS = usePSS.(bool)
 
 	if cn := data.Get("common_name").(string); len(cn) == 0 {
 		role.UseCSRCommonName = true

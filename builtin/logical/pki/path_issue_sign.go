@@ -151,6 +151,13 @@ SHA-2-512. Defaults to 0 to automatically detect based on key length
 		},
 	}
 
+	ret.Fields["use_pss"] = &framework.FieldSchema{
+		Type:    framework.TypeBool,
+		Default: false,
+		Description: `Whether or not to use PSS signatures when using a
+RSA key-type issuer. Defaults to false.`,
+	}
+
 	return ret
 }
 
@@ -211,10 +218,17 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 		ExtKeyUsage:               data.Get("ext_key_usage").([]string),
 		ExtKeyUsageOIDs:           data.Get("ext_key_usage_oids").([]string),
 		SignatureBits:             data.Get("signature_bits").(int),
+		UsePSS:                    new(bool),
 	}
 	*entry.AllowWildcardCertificates = true
 
 	*entry.GenerateLease = false
+
+	usePSS, present := data.GetOk("use_pss")
+	if !present {
+		usePSS = false
+	}
+	*entry.UsePSS = usePSS.(bool)
 
 	if role != nil {
 		if role.TTL > 0 {

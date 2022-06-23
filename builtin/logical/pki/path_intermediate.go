@@ -66,13 +66,18 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 	// Nasty hack part two. :-) For generation of CSRs, certutil presently doesn't
 	// support configuration of this. However, because we need generation parameters,
 	// which create a role and attempt to read this parameter, we need to provide
-	// a value (which will be ignored). Hence, we stub in the missing parameter here,
+	// a value (which will be ignored). Hence, we stub in the missing parameters here,
 	// including its schema, just enough for it to work..
 	data.Schema["signature_bits"] = &framework.FieldSchema{
 		Type:    framework.TypeInt,
 		Default: 0,
 	}
 	data.Raw["signature_bits"] = 0
+	data.Schema["use_pss"] = &framework.FieldSchema{
+		Type:    framework.TypeBool,
+		Default: false,
+	}
+	data.Raw["use_pss"] = false
 
 	sc := b.makeStorageContext(ctx, req.Storage)
 	exported, format, role, errorResp := getGenerationParams(sc, data)

@@ -3552,6 +3552,7 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 		"allowed_serial_numbers":             []interface{}{},
 		"generate_lease":                     false,
 		"signature_bits":                     json.Number("256"),
+		"use_pss":                            false,
 		"allowed_domains":                    []interface{}{},
 		"allowed_uri_sans_template":          false,
 		"enforce_hostnames":                  true,

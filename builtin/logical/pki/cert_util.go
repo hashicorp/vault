@@ -1373,6 +1373,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			KeyType:                       data.role.KeyType,
 			KeyBits:                       data.role.KeyBits,
 			SignatureBits:                 data.role.SignatureBits,
+			UsePSS:                        false,
 			NotAfter:                      notAfter,
 			KeyUsage:                      x509.KeyUsage(parseKeyUsages(data.role.KeyUsage)),
 			ExtKeyUsage:                   parseExtKeyUsages(data.role),
@@ -1385,6 +1386,9 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		},
 		SigningBundle: caSign,
 		CSR:           csr,
+	}
+	if data.role.UsePSS != nil {
+		creation.Params.UsePSS = *data.role.UsePSS
 	}
 
 	// Don't deal with URLs or max path length if it's self-signed, as these

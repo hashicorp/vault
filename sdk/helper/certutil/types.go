@@ -782,6 +782,7 @@ type CreationParameters struct {
 	PolicyIdentifiers             []string
 	BasicConstraintsValidForNonCA bool
 	SignatureBits                 int
+	UsePSS                        bool
 	ForceAppendCaChain            bool
 
 	// Only used when signing a CA cert
