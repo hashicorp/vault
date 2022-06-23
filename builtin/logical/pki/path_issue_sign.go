@@ -139,6 +139,18 @@ this value to an empty list.`,
 		Description: `A comma-separated string or list of extended key usage oids.`,
 	}
 
+	ret.Fields["signature_bits"] = &framework.FieldSchema{
+		Type:    framework.TypeInt,
+		Default: 0,
+		Description: `The number of bits to use in the signature
+algorithm; accepts 256 for SHA-2-256, 384 for SHA-2-384, and 512 for
+SHA-2-512. Defaults to 0 to automatically detect based on key length
+(SHA-2-256 for RSA keys, and matching the curve size for NIST P-Curves).`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Value: 0,
+		},
+	}
+
 	return ret
 }
 
@@ -198,6 +210,7 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 		KeyUsage:                  data.Get("key_usage").([]string),
 		ExtKeyUsage:               data.Get("ext_key_usage").([]string),
 		ExtKeyUsageOIDs:           data.Get("ext_key_usage_oids").([]string),
+		SignatureBits:             data.Get("signature_bits").(int),
 	}
 	*entry.AllowWildcardCertificates = true
 
