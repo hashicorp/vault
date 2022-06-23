@@ -3,6 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
+import handleHasManySelection from 'core/utils/search-select-has-many';
 
 /**
  * @module MfaLoginEnforcementForm
@@ -115,21 +116,9 @@ export default class MfaLoginEnforcementForm extends Component {
   @action
   async onMethodChange(selectedIds) {
     const methods = await this.args.model.mfa_methods;
-    // first check for existing methods that have been removed from selection
-    methods.forEach((method) => {
-      if (!selectedIds.includes(method.id)) {
-        methods.removeObject(method);
-      }
-    });
-    // now check for selected items that don't exist and add them to the model
-    const methodIds = methods.mapBy('id');
-    selectedIds.forEach((id) => {
-      if (!methodIds.includes(id)) {
-        const model = this.store.peekRecord('mfa-method', id);
-        methods.addObject(model);
-      }
-    });
+    handleHasManySelection(selectedIds, methods, this.store, 'mfa-method');
   }
+
   @action
   onTargetSelect(type) {
     this.selectedTargetType = type;
