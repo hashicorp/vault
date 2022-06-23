@@ -2,7 +2,7 @@ import Model, { attr, hasMany } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 export default class OidcProviderModel extends Model {
-  @hasMany('identity/oidc/scope') scopes_supported;
+  @hasMany('oidc/scope') scopes_supported;
   @attr('string') name;
   @attr('string', {
     label: 'Issuer URL',
