@@ -77,7 +77,7 @@ export default class OidcClientModel extends Model {
   @attr('string', {
     label: 'Providers',
   })
-  provider_ds; // might be a good candidate for @hasMany relationship instead of @attr
+  providerIds; // might be a good candidate for @hasMany relationship instead of @attr
 
   @lazyCapabilities(apiPath`identity/oidc/client/${'name'}`, 'name') clientPath;
   @lazyCapabilities(apiPath`identity/oidc/client`) clientsPath;

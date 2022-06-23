@@ -2,7 +2,6 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-
 /**
  * @module OidcClientForm
  * OidcClientForm components are used to...
@@ -18,12 +17,22 @@ import { tracked } from '@glimmer/tracking';
 
 export default class OidcClientForm extends Component {
   @service flashMessages;
+  @service router;
   @tracked showMoreOptions = false;
   @tracked radioCardGroupValue = 'allow_all';
 
   @action
-  radioCardSelect(name, value) {
-    console.log(name);
-    console.log(value);
+  async createClient() {
+    try {
+      this.args.model.save();
+    } catch (e) {
+      this.flashMessages.danger(e.errors?.join('. ') || e.message);
+    }
+  }
+
+  @action
+  cancel() {
+    this.args.model.rollbackAttributes();
+    this.router.transitionTo('vault.cluster.access.oidc.clients');
   }
 }
