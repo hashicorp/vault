@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -529,16 +528,14 @@ func (b *Backend) handleRootHelp(req *logical.Request) (*logical.Response, error
 	// names in the OAS document.
 	requestResponsePrefix := req.GetString("requestResponsePrefix")
 
-	genericPaths := fmt.Sprintf("%v", req.Data["genericPaths"])
-	generic, err := strconv.ParseBool(genericPaths)
-
-	if err != nil {
-		generic = false
+	genericMountPaths, ok := req.Get("genericMountPaths").(bool)
+	if !ok {
+		genericMountPaths = false
 	}
 
 	// Build OpenAPI response for the entire backend
 	doc := NewOASDocument()
-	if err := documentPaths(b, requestResponsePrefix, generic, doc); err != nil {
+	if err := documentPaths(b, requestResponsePrefix, genericMountPaths, doc); err != nil {
 		b.Logger().Warn("error generating OpenAPI", "error", err)
 	}
 
