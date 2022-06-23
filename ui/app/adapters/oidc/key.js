@@ -1,15 +1,11 @@
-import ApplicationAdapter from '../application';
+import NamedPathAdapter from '../named-path';
 
-export default class OidcKeyAdapter extends ApplicationAdapter {
-  namespace = 'v1';
-
+export default class OidcKeyAdapter extends NamedPathAdapter {
   pathForType() {
-    // backend name prepended in buildURL method
     return 'identity/oidc/key';
   }
-
-  query(store, type, query) {
-    const url = this.urlForQuery(query, type.modelName);
-    return this.ajax(url, 'GET', { data: { list: true } });
+  rotate(name, verification_ttl) {
+    const data = verification_ttl ? { verification_ttl } : {};
+    return this.ajax(`${this.urlForUpdateRecord(name, 'oidc/key')}/rotate`, 'POST', { data });
   }
 }
