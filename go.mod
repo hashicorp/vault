@@ -232,6 +232,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.5.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.12.0 // indirect
 	github.com/aws/smithy-go v1.7.0 // indirect
+	github.com/axiomhq/hyperloglog v0.0.0-20220105174342-98591331716a // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/speakeasy v0.1.0 // indirect
 	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
@@ -253,6 +254,7 @@ require (
 	github.com/couchbase/gocbcore/v10 v10.0.4 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/denverdino/aliyungo v0.0.0-20190125010748-a747050bb1ba // indirect
+	github.com/dgryski/go-metro v0.0.0-20180109044635-280f6062b5bc // indirect
 	github.com/digitalocean/godo v1.7.5 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/docker/cli v20.10.9+incompatible // indirect
