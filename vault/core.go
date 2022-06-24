@@ -1040,6 +1040,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	c.loginMFABackend = NewLoginMFABackend(c, conf.Logger)
 
+	if c.loginMFABackend.mfaLogger != nil {
+		c.AddLogger(c.loginMFABackend.mfaLogger)
+	}
+
 	logicalBackends := make(map[string]logical.Factory)
 	for k, f := range conf.LogicalBackends {
 		logicalBackends[k] = f
