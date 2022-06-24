@@ -68,7 +68,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 		[]metricsutil.Label{},
 		b.collectPluginInstanceGaugeValues,
 		metrics.Default(),
-		configutil.UsageGaugeDefaultPeriod, // TODO: we seem to have no way to access the actual configured values for these?
+		configutil.UsageGaugeDefaultPeriod, // TODO: add config settings for these, or add plumbing to the main config settings
 		configutil.MaximumGaugeCardinalityDefault,
 		b.logger)
 	if err != nil {
