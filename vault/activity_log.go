@@ -379,16 +379,14 @@ func (a *ActivityLog) CreateOrFetchHyperlogLog(ctx context.Context, startTime ti
 		a.logger.Error("error fetching hyperloglog", "path", monthlyHLLPath, "error", err)
 		return hll
 	}
-	switch {
-	case data == nil: // no data at given path, create new hyperlogLog
+	if data == nil {
 		a.logger.Trace("creating hyperloglog ", "path", monthlyHLLPath)
 		err = a.StoreHyperlogLog(ctx, startTime, hll)
 		if err != nil {
 			a.logger.Error("error storing hyperloglog", "path", monthlyHLLPath, "error", err)
 			return hll
 		}
-
-	default:
+	} else {
 		err = hll.UnmarshalBinary(data.Value)
 		if err != nil {
 			a.logger.Error("error unmarshaling hyperloglog", "path", monthlyHLLPath, "error", err)
