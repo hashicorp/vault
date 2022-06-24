@@ -464,11 +464,12 @@ func (m *ExpirationManager) invalidate(key string) {
 			case le == nil:
 				// Handle lease deletion
 				pending := info.(pendingInfo)
+				leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: leaseID, Role: pending.cachedLeaseInfo.LoginRole}
 				pending.timer.Stop()
 				m.pending.Delete(leaseID)
 				m.leaseCount--
 
-				if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
+				if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
 					m.logger.Error("failed to update quota on lease invalidation", "error", err)
 					return
 				}
@@ -483,12 +484,14 @@ func (m *ExpirationManager) invalidate(key string) {
 				// other maps, and update metrics/quotas if appropriate.
 				m.nonexpiring.Delete(leaseID)
 
-				if _, ok := m.irrevocable.Load(leaseID); ok {
+				if info, ok := m.irrevocable.Load(leaseID); ok {
+					irrevocable := info.(pendingInfo)
+					leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: leaseID, Role: irrevocable.cachedLeaseInfo.LoginRole}
 					m.irrevocable.Delete(leaseID)
 					m.irrevocableLeaseCount--
 
 					m.leaseCount--
-					if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
+					if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
 						m.logger.Error("failed to update quota on lease invalidation", "error", err)
 						return
 					}
@@ -1718,6 +1721,7 @@ func (m *ExpirationManager) inMemoryLeaseInfo(le *leaseEntry) *leaseEntry {
 	if le.isIrrevocable() {
 		ret.RevokeErr = le.RevokeErr
 	}
+	ret.LoginRole = le.LoginRole
 	return ret
 }
 
@@ -1792,7 +1796,8 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 			info.(pendingInfo).timer.Stop()
 			m.pending.Delete(le.LeaseID)
 			m.leaseCount--
-			if err := m.core.quotasHandleLeases(m.quitContext, quotas.LeaseActionDeleted, []string{le.LeaseID}); err != nil {
+			leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: le.LeaseID, Role: le.LoginRole}
+			if err := m.core.quotasHandleLeases(m.quitContext, quotas.LeaseActionDeleted, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
 				m.logger.Error("failed to update quota on lease deletion", "error", err)
 				return
 			}
@@ -1846,7 +1851,8 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 
 	if leaseCreated {
 		m.leaseCount++
-		if err := m.core.quotasHandleLeases(m.quitContext, quotas.LeaseActionCreated, []string{le.LeaseID}); err != nil {
+		leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: le.LeaseID, Role: le.LoginRole}
+		if err := m.core.quotasHandleLeases(m.quitContext, quotas.LeaseActionCreated, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
 			m.logger.Error("failed to update quota on lease creation", "error", err)
 			return
 		}
@@ -2447,8 +2453,9 @@ func (m *ExpirationManager) removeFromPending(ctx context.Context, leaseID strin
 		m.pending.Delete(leaseID)
 		if decrementCounters {
 			m.leaseCount--
+			leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: leaseID, Role: pending.cachedLeaseInfo.LoginRole}
 			// Log but do not fail; unit tests (and maybe Tidy on production systems)
-			if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
+			if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
 				m.logger.Error("failed to update quota on revocation", "error", err)
 			}
 		}

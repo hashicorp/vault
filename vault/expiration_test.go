@@ -477,7 +477,7 @@ func TestExpiration_Tidy(t *testing.T) {
 				"test_key": "test_value",
 			},
 		}
-		_, err := exp.Register(namespace.RootContext(nil), req, resp)
+		_, err := exp.Register(namespace.RootContext(nil), req, resp, "")
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -636,7 +636,7 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, 
 				"secret_key": "abcd",
 			},
 		}
-		_, err = exp.Register(namespace.RootContext(nil), req, resp)
+		_, err = exp.Register(namespace.RootContext(nil), req, resp, "")
 		if err != nil {
 			b.Fatalf("err: %v", err)
 		}
@@ -698,7 +698,7 @@ func BenchmarkExpiration_Create_Leases(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		req.Path = fmt.Sprintf("prod/aws/%d", i)
-		_, err = exp.Register(namespace.RootContext(nil), req, resp)
+		_, err = exp.Register(namespace.RootContext(nil), req, resp, "")
 		if err != nil {
 			b.Fatalf("err: %v", err)
 		}
@@ -743,7 +743,7 @@ func TestExpiration_Restore(t *testing.T) {
 				"secret_key": "abcd",
 			},
 		}
-		_, err := exp.Register(namespace.RootContext(nil), req, resp)
+		_, err := exp.Register(namespace.RootContext(nil), req, resp, "")
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -815,7 +815,7 @@ func TestExpiration_Register(t *testing.T) {
 		},
 	}
 
-	id, err := exp.Register(namespace.RootContext(nil), req, resp)
+	id, err := exp.Register(namespace.RootContext(nil), req, resp, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -883,7 +883,7 @@ func TestExpiration_Register_BatchToken(t *testing.T) {
 		},
 	}
 
-	leaseID, err := exp.Register(namespace.RootContext(nil), req, resp)
+	leaseID, err := exp.Register(namespace.RootContext(nil), req, resp, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1098,7 +1098,7 @@ func TestExpiration_Revoke(t *testing.T) {
 		},
 	}
 
-	id, err := exp.Register(namespace.RootContext(nil), req, resp)
+	id, err := exp.Register(namespace.RootContext(nil), req, resp, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1145,7 +1145,7 @@ func TestExpiration_RevokeOnExpire(t *testing.T) {
 		},
 	}
 
-	_, err = exp.Register(namespace.RootContext(nil), req, resp)
+	_, err = exp.Register(namespace.RootContext(nil), req, resp, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1208,7 +1208,7 @@ func TestExpiration_RevokePrefix(t *testing.T) {
 				"secret_key": "abcd",
 			},
 		}
-		_, err := exp.Register(namespace.RootContext(nil), req, resp)
+		_, err := exp.Register(namespace.RootContext(nil), req, resp, "")
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -1277,7 +1277,7 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 				"secret_key": "abcd",
 			},
 		}
-		_, err := exp.Register(namespace.RootContext(nil), req, resp)
+		_, err := exp.Register(namespace.RootContext(nil), req, resp, "")
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -1376,7 +1376,7 @@ func TestExpiration_RevokeByToken_Blocking(t *testing.T) {
 				"secret_key": "abcd",
 			},
 		}
-		_, err := exp.Register(namespace.RootContext(nil), req, resp)
+		_, err := exp.Register(namespace.RootContext(nil), req, resp, "")
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -1688,7 +1688,7 @@ func TestExpiration_Renew(t *testing.T) {
 		},
 	}
 
-	id, err := exp.Register(namespace.RootContext(nil), req, resp)
+	id, err := exp.Register(namespace.RootContext(nil), req, resp, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1759,7 +1759,7 @@ func TestExpiration_Renew_NotRenewable(t *testing.T) {
 		},
 	}
 
-	id, err := exp.Register(namespace.RootContext(nil), req, resp)
+	id, err := exp.Register(namespace.RootContext(nil), req, resp, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1810,7 +1810,7 @@ func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 		},
 	}
 
-	id, err := exp.Register(namespace.RootContext(nil), req, resp)
+	id, err := exp.Register(namespace.RootContext(nil), req, resp, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1887,7 +1887,7 @@ func TestExpiration_Renew_FinalSecond(t *testing.T) {
 	}
 
 	ctx := namespace.RootContext(nil)
-	id, err := exp.Register(ctx, req, resp)
+	id, err := exp.Register(ctx, req, resp, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1962,7 +1962,7 @@ func TestExpiration_Renew_FinalSecond_Lease(t *testing.T) {
 	}
 
 	ctx := namespace.RootContext(nil)
-	id, err := exp.Register(ctx, req, resp)
+	id, err := exp.Register(ctx, req, resp, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2822,7 +2822,7 @@ func registerOneLease(t *testing.T, ctx context.Context, exp *ExpirationManager)
 		},
 	}
 
-	leaseID, err := exp.Register(ctx, req, resp)
+	leaseID, err := exp.Register(ctx, req, resp, "")
 	if err != nil {
 		t.Fatal(err)
 	}
