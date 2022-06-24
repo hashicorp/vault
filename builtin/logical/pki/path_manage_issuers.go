@@ -144,6 +144,21 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 		keysAllowed = false
 		pemBundle = certificate
 	}
+	if len(pemBundle) < 75 {
+		// It is almost nearly impossible to store a complete certificate in
+		// less than 75 bytes. It is definitely impossible to do so when PEM
+		// encoding has been applied. Detect this and give a better warning
+		// than "provided PEM block contained no data" in this case. This is
+		// because the PEM headers contain 5*4 + 6 + 4 + 2 + 2 = 34 characters
+		// minimum (five dashes, "BEGIN" + space + at least one character
+		// identifier, "END" + space + at least one character identifier, and
+		// a pair of new lines). That would leave 41 bytes for Base64 data,
+		// meaning at most a 30-byte DER certificate.
+		//
+		// However, < 75 bytes is probably a good length for a file path so
+		// suggest that is the case.
+		return logical.ErrorResponse("provided data for import was too short; perhaps a path was passed to the API rather than the contents of a PEM file"), nil
+	}
 
 	var createdKeys []string
 	var createdIssuers []string
