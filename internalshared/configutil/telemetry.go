@@ -353,10 +353,11 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 
 		sink, err := datadog.NewDogStatsdSink(opts.Config.DogStatsDAddr, metricsConf.HostName)
 		if err != nil {
-			return nil, nil, false, fmt.Errorf("failed to start DogStatsD sink: %w", err)
+			opts.Ui.Error(fmt.Sprintf("failed to start DogStatsD sink: %s", err))
+		} else {
+			sink.SetTags(tags)
+			fanout = append(fanout, sink)
 		}
-		sink.SetTags(tags)
-		fanout = append(fanout, sink)
 	}
 
 	// Configure the stackdriver sink
