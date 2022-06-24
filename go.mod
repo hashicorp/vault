@@ -56,7 +56,7 @@ require (
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/google/tink/go v1.6.1
 	github.com/hashicorp/cap v0.2.1-0.20220502204956-9a9f4a9d6e61
-	github.com/hashicorp/consul-template v0.29.1-0.20220620193322-35718beec7bf
+	github.com/hashicorp/consul-template v0.29.1
 	github.com/hashicorp/consul/api v1.12.0
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
@@ -176,7 +176,7 @@ require (
 	go.opentelemetry.io/otel/trace v0.20.0
 	go.uber.org/atomic v1.9.0
 	go.uber.org/goleak v1.1.12
-	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
+	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	golang.org/x/sys v0.0.0-20220520151150-f9599da83cde
