@@ -15,6 +15,7 @@ func Test_migrateStorageEmptyStorage(t *testing.T) {
 	startTime := time.Now()
 	ctx := context.Background()
 	b, s := createBackendWithStorage(t)
+	sc := b.makeStorageContext(ctx, s)
 
 	// Reset the version the helper above set to 1.
 	b.pkiStorageVersion.Store(0)
@@ -24,11 +25,11 @@ func Test_migrateStorageEmptyStorage(t *testing.T) {
 	err := b.initialize(ctx, request)
 	require.NoError(t, err)
 
-	issuerIds, err := listIssuers(ctx, s)
+	issuerIds, err := sc.listIssuers()
 	require.NoError(t, err)
 	require.Empty(t, issuerIds)
 
-	keyIds, err := listKeys(ctx, s)
+	keyIds, err := sc.listKeys()
 	require.NoError(t, err)
 	require.Empty(t, keyIds)
 
@@ -62,6 +63,8 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 	startTime := time.Now()
 	ctx := context.Background()
 	b, s := createBackendWithStorage(t)
+	sc := b.makeStorageContext(ctx, s)
+
 	// Reset the version the helper above set to 1.
 	b.pkiStorageVersion.Store(0)
 	require.True(t, b.useLegacyBundleCaStorage(), "pre migration we should have been told to use legacy storage.")
@@ -77,11 +80,11 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, err)
 
-	issuerIds, err := listIssuers(ctx, s)
+	issuerIds, err := sc.listIssuers()
 	require.NoError(t, err)
 	require.Equal(t, 1, len(issuerIds))
 
-	keyIds, err := listKeys(ctx, s)
+	keyIds, err := sc.listKeys()
 	require.NoError(t, err)
 	require.Equal(t, 1, len(keyIds))
 
@@ -98,13 +101,13 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 
 	issuerId := issuerIds[0]
 	keyId := keyIds[0]
-	issuer, err := fetchIssuerById(ctx, s, issuerId)
+	issuer, err := sc.fetchIssuerById(issuerId)
 	require.NoError(t, err)
 	require.True(t, strings.HasPrefix(issuer.Name, "current-"),
 		"expected issuer name to start with current- was %s", issuer.Name)
 	require.Equal(t, certutil.ErrNotAfterBehavior, issuer.LeafNotAfterBehavior)
 
-	key, err := fetchKeyById(ctx, s, keyId)
+	key, err := sc.fetchKeyById(keyId)
 	require.NoError(t, err)
 	require.True(t, strings.HasPrefix(key.Name, "current-"),
 		"expected key name to start with current- was %s", key.Name)
@@ -128,11 +131,11 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 	require.Equal(t, bundle, certBundle)
 
 	// Make sure we setup the default values
-	keysConfig, err := getKeysConfig(ctx, s)
+	keysConfig, err := sc.getKeysConfig()
 	require.NoError(t, err)
 	require.Equal(t, &keyConfigEntry{DefaultKeyId: keyId}, keysConfig)
 
-	issuersConfig, err := getIssuersConfig(ctx, s)
+	issuersConfig, err := sc.getIssuersConfig()
 	require.NoError(t, err)
 	require.Equal(t, &issuerConfigEntry{DefaultIssuerId: issuerId}, issuersConfig)
 

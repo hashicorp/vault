@@ -794,7 +794,8 @@ func validateRole(b *backend, entry *roleEntry, ctx context.Context, s logical.S
 	}
 	// Check that the issuers reference set resolves to something
 	if !b.useLegacyBundleCaStorage() {
-		issuerId, err := resolveIssuerReference(ctx, s, entry.Issuer)
+		sc := b.makeStorageContext(ctx, s)
+		issuerId, err := sc.resolveIssuerReference(entry.Issuer)
 		if err != nil {
 			if issuerId == IssuerRefNotFound {
 				resp = &logical.Response{}

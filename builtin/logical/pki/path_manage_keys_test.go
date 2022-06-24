@@ -409,9 +409,10 @@ func TestPKI_PathManageKeys_ImportKeyRejectsMultipleKeys(t *testing.T) {
 	require.True(t, resp.IsError(), "should have received an error response importing a pem bundle with more than 1 key")
 
 	ctx := context.Background()
-	keys, _ := listKeys(ctx, s)
+	sc := b.makeStorageContext(ctx, s)
+	keys, _ := sc.listKeys()
 	for _, keyId := range keys {
-		id, _ := fetchKeyById(ctx, s, keyId)
+		id, _ := sc.fetchKeyById(keyId)
 		t.Logf("%s:%s", id.ID, id.Name)
 	}
 }

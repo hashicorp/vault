@@ -180,10 +180,11 @@ func crlEnableDisableTestForBackend(t *testing.T, b *backend, s logical.Storage,
 func TestBackend_Secondary_CRL_Rebuilding(t *testing.T) {
 	ctx := context.Background()
 	b, s := createBackendWithStorage(t)
+	sc := b.makeStorageContext(ctx, s)
 
 	// Write out the issuer/key to storage without going through the api call as replication would.
 	bundle := genCertBundle(t, b, s)
-	issuer, _, err := writeCaBundle(ctx, b, s, bundle, "", "")
+	issuer, _, err := sc.writeCaBundle(bundle, "", "")
 	require.NoError(t, err)
 
 	// Just to validate, before we call the invalidate function, make sure our CRL has not been generated
@@ -203,10 +204,11 @@ func TestBackend_Secondary_CRL_Rebuilding(t *testing.T) {
 func TestCrlRebuilder(t *testing.T) {
 	ctx := context.Background()
 	b, s := createBackendWithStorage(t)
+	sc := b.makeStorageContext(ctx, s)
 
 	// Write out the issuer/key to storage without going through the api call as replication would.
 	bundle := genCertBundle(t, b, s)
-	_, _, err := writeCaBundle(ctx, b, s, bundle, "", "")
+	_, _, err := sc.writeCaBundle(bundle, "", "")
 	require.NoError(t, err)
 
 	req := &logical.Request{Storage: s}

@@ -41,18 +41,19 @@ func (b *backend) pathListKeysHandler(ctx context.Context, req *logical.Request,
 	var responseKeys []string
 	responseInfo := make(map[string]interface{})
 
-	entries, err := listKeys(ctx, req.Storage)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	entries, err := sc.listKeys()
 	if err != nil {
 		return nil, err
 	}
 
-	config, err := getKeysConfig(ctx, req.Storage)
+	config, err := sc.getKeysConfig()
 	if err != nil {
 		return nil, err
 	}
 
 	for _, identifier := range entries {
-		key, err := fetchKeyById(ctx, req.Storage, identifier)
+		key, err := sc.fetchKeyById(identifier)
 		if err != nil {
 			return nil, err
 		}
@@ -134,7 +135,8 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 		return logical.ErrorResponse("missing key reference"), nil
 	}
 
-	keyId, err := resolveKeyReference(ctx, req.Storage, keyRef)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	keyId, err := sc.resolveKeyReference(keyRef)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +144,7 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 		return logical.ErrorResponse("unable to resolve key id for reference" + keyRef), nil
 	}
 
-	key, err := fetchKeyById(ctx, req.Storage, keyId)
+	key, err := sc.fetchKeyById(keyId)
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +191,8 @@ func (b *backend) pathUpdateKeyHandler(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("missing key reference"), nil
 	}
 
-	keyId, err := resolveKeyReference(ctx, req.Storage, keyRef)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	keyId, err := sc.resolveKeyReference(keyRef)
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +200,7 @@ func (b *backend) pathUpdateKeyHandler(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("unable to resolve key id for reference" + keyRef), nil
 	}
 
-	key, err := fetchKeyById(ctx, req.Storage, keyId)
+	key, err := sc.fetchKeyById(keyId)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +213,7 @@ func (b *backend) pathUpdateKeyHandler(ctx context.Context, req *logical.Request
 	if newName != key.Name {
 		key.Name = newName
 
-		err := writeKey(ctx, req.Storage, *key)
+		err := sc.writeKey(*key)
 		if err != nil {
 			return nil, err
 		}
@@ -246,7 +249,8 @@ func (b *backend) pathDeleteKeyHandler(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("missing key reference"), nil
 	}
 
-	keyId, err := resolveKeyReference(ctx, req.Storage, keyRef)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	keyId, err := sc.resolveKeyReference(keyRef)
 	if err != nil {
 		if keyId == KeyRefNotFound {
 			// We failed to lookup the key, we should ignore any error here and reply as if it was deleted.
@@ -255,7 +259,7 @@ func (b *backend) pathDeleteKeyHandler(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	keyInUse, issuerId, err := isKeyInUse(keyId.String(), ctx, req.Storage)
+	keyInUse, issuerId, err := sc.isKeyInUse(keyId.String())
 	if err != nil {
 		return nil, err
 	}
@@ -263,7 +267,7 @@ func (b *backend) pathDeleteKeyHandler(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse(fmt.Sprintf("Failed to Delete Key.  Key in Use by Issuer: %s", issuerId)), nil
 	}
 
-	wasDefault, err := deleteKey(ctx, req.Storage, keyId)
+	wasDefault, err := sc.deleteKey(keyId)
 	if err != nil {
 		return nil, err
 	}

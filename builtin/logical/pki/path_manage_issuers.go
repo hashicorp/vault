@@ -186,9 +186,11 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 		return logical.ErrorResponse("private keys found in the PEM bundle but not allowed by the path; use /issuers/import/bundle"), nil
 	}
 
+	sc := b.makeStorageContext(ctx, req.Storage)
+
 	for keyIndex, keyPem := range keys {
 		// Handle import of private key.
-		key, existing, err := importKeyFromBytes(ctx, b, req.Storage, keyPem, "")
+		key, existing, err := importKeyFromBytes(sc, keyPem, "")
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("Error parsing key %v: %v", keyIndex, err)), nil
 		}
@@ -199,7 +201,7 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	}
 
 	for certIndex, certPem := range issuers {
-		cert, existing, err := importIssuer(ctx, b, req.Storage, certPem, "")
+		cert, existing, err := sc.importIssuer(certPem, "")
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("Error parsing issuer %v: %v\n%v", certIndex, err, certPem)), nil
 		}
@@ -229,7 +231,7 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	// do this unconditionally if the issuer or key was modified, so the admin
 	// is always warned. But if unrelated key material was imported, we do
 	// not warn.
-	config, err := getIssuersConfig(ctx, req.Storage)
+	config, err := sc.getIssuersConfig()
 	if err == nil && len(config.DefaultIssuerId) > 0 {
 		// We can use the mapping above to check the issuer mapping.
 		if keyId, ok := issuerKeyMap[string(config.DefaultIssuerId)]; ok && len(keyId) == 0 {
