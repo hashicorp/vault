@@ -1524,7 +1524,7 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 // RegisterAuth is used to take an Auth response with an associated lease.
 // The token does not get a LeaseID, but the lease management is handled by
 // the expiration manager.
-func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenEntry, auth *logical.Auth) error {
+func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenEntry, auth *logical.Auth, loginRole string) error {
 	defer metrics.MeasureSince([]string{"expire", "register-auth"}, time.Now())
 
 	// Triggers failure of RegisterAuth. This should only be set and triggered
@@ -1576,6 +1576,7 @@ func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenE
 		ClientToken: auth.ClientToken,
 		Auth:        auth,
 		Path:        te.Path,
+		LoginRole:   loginRole,
 		IssueTime:   time.Now(),
 		ExpireTime:  authExpirationTime,
 		namespace:   tokenNS,
