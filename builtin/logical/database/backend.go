@@ -172,6 +172,9 @@ type databaseBackend struct {
 	// concurrent requests are not modifying the same role and possibly causing
 	// issues with the priority queue.
 	roleLocks []*locksutil.LockEntry
+
+	// the running gauge collection process
+	gaugeCollectionProcess *metricsutil.GaugeCollectionProcess
 }
 
 func (b *databaseBackend) connGet(name string) *dbPluginInstance {
@@ -410,6 +413,9 @@ func (b *databaseBackend) clean(_ context.Context) {
 	connections := b.connClear()
 	for _, db := range connections {
 		go db.Close()
+	}
+	if b.gaugeCollectionProcess != nil {
+		b.gaugeCollectionProcess.Stop()
 	}
 }
 

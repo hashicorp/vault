@@ -1499,7 +1499,9 @@ func TestBackend_PluginMain_Hanging(t *testing.T) {
 	v5.Serve(&hangingPlugin{})
 }
 
-func TestBackend_Closes_Cleanly_Even_If_Plugin_Hangs(t *testing.T) {
+func TestBackend_AsyncClose(t *testing.T) {
+	// Test that having a plugin that takes a LONG time to close will not cause the cleanup function to take
+	// longer than 750ms.
 	cluster, sys := getCluster(t)
 	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "hanging-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Hanging", []string{}, "")
 	t.Cleanup(cluster.Cleanup)
