@@ -1,0 +1,3 @@
+```release-note:improvement
+core/metrics: Fixed crash issue during Datadog telemetry setup if it can't connect to the server.
+```
