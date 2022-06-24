@@ -200,7 +200,7 @@ func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request
 		// encoding has been applied. Detect this and give a better warning
 		// than "provided PEM block contained no data" in this case. This is
 		// because the PEM headers contain 5*4 + 6 + 4 + 2 + 2 = 34 characters
-		// minimum (four dashes, "BEGIN" + space + at least one character
+		// minimum (five dashes, "BEGIN" + space + at least one character
 		// identifier, "END" + space + at least one character identifier, and
 		// a pair of new lines). That would leave 30 bytes for Base64 data,
 		// meaning at most a 22-byte DER key. Even with a 128-bit key, 6 bytes
