@@ -61,7 +61,7 @@ The following is an example of a template that issues a PKI certificate in
 Vault's PKI secrets engine. The fetching of the certificate or key from a PKI role
 through this function will be based on the certificate's expiration.
 
-To generate a new certicate and create a bundle with the key, certificate, and CA, use:
+To generate a new certificate and create a bundle with the key, certificate, and CA, use:
 ```
 {{ with pkiCert "pki/issue/my-domain-dot-com" "common_name=foo.example.com" }}
 {{ .Data.Key }}
