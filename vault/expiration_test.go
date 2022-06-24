@@ -829,6 +829,49 @@ func TestExpiration_Register(t *testing.T) {
 	}
 }
 
+func TestExpiration_Register_Role(t *testing.T) {
+	exp := mockExpiration(t)
+	role := "role1"
+	req := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "prod/aws/foo",
+		ClientToken: "foobar",
+	}
+	req.SetTokenEntry(&logical.TokenEntry{ID: "foobar", NamespaceID: "root"})
+	resp := &logical.Response{
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				TTL: time.Hour,
+			},
+		},
+		Data: map[string]interface{}{
+			"access_key": "xyz",
+			"secret_key": "abcd",
+		},
+	}
+
+	id, err := exp.Register(namespace.RootContext(nil), req, resp, role)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if !strings.HasPrefix(id, req.Path) {
+		t.Fatalf("bad: %s", id)
+	}
+
+	if len(id) <= len(req.Path) {
+		t.Fatalf("bad: %s", id)
+	}
+
+	le, err := exp.loadEntry(exp.quitContext, id)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if le.LoginRole != role {
+		t.Fatalf("Login role incorrect. Expected %s, received %s", role, le.LoginRole)
+	}
+}
+
 func TestExpiration_Register_BatchToken(t *testing.T) {
 	c, _, rootToken := TestCoreUnsealed(t)
 	exp := c.expiration
@@ -952,7 +995,7 @@ func TestExpiration_RegisterAuth(t *testing.T) {
 		Path:        "auth/github/login",
 		NamespaceID: namespace.RootNamespaceID,
 	}
-	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -961,7 +1004,41 @@ func TestExpiration_RegisterAuth(t *testing.T) {
 		Path:        "auth/github/../login",
 		NamespaceID: namespace.RootNamespaceID,
 	}
-	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestExpiration_RegisterAuth_Role(t *testing.T) {
+	exp := mockExpiration(t)
+	role := "role1"
+	root, err := exp.tokenStore.rootToken(context.Background())
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	auth := &logical.Auth{
+		ClientToken: root.ID,
+		LeaseOptions: logical.LeaseOptions{
+			TTL: time.Hour,
+		},
+	}
+
+	te := &logical.TokenEntry{
+		Path:        "auth/github/login",
+		NamespaceID: namespace.RootNamespaceID,
+	}
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, role)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	te = &logical.TokenEntry{
+		Path:        "auth/github/../login",
+		NamespaceID: namespace.RootNamespaceID,
+	}
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, role)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -985,7 +1062,7 @@ func TestExpiration_RegisterAuth_NoLease(t *testing.T) {
 		Policies:    []string{"root"},
 		NamespaceID: namespace.RootNamespaceID,
 	}
-	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1053,14 +1130,14 @@ func TestExpiration_RegisterAuth_NoTTL(t *testing.T) {
 		Policies:    []string{"root"},
 		NamespaceID: namespace.RootNamespaceID,
 	}
-	err = exp.RegisterAuth(ctx, te, auth)
+	err = exp.RegisterAuth(ctx, te, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Test non-root token with zero TTL
 	te.Policies = []string{"default"}
-	err = exp.RegisterAuth(ctx, te, auth)
+	err = exp.RegisterAuth(ctx, te, auth, "")
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -1448,7 +1525,7 @@ func TestExpiration_RenewToken(t *testing.T) {
 		Path:        "auth/token/login",
 		NamespaceID: namespace.RootNamespaceID,
 	}
-	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1497,7 +1574,7 @@ func TestExpiration_RenewToken_period(t *testing.T) {
 		Path:        "auth/token/login",
 		NamespaceID: namespace.RootNamespaceID,
 	}
-	err := exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err := exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1578,7 +1655,7 @@ func TestExpiration_RenewToken_period_backend(t *testing.T) {
 		NamespaceID: namespace.RootNamespaceID,
 	}
 
-	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1635,7 +1712,7 @@ func TestExpiration_RenewToken_NotRenewable(t *testing.T) {
 		Path:        "auth/foo/login",
 		NamespaceID: namespace.RootNamespaceID,
 	}
-	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2647,7 +2724,7 @@ func sampleToken(t *testing.T, exp *ExpirationManager, path string, expiring boo
 		Policies:    auth.Policies,
 	}
 
-	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
