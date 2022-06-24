@@ -62,7 +62,8 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	go b.initQueue(b.queueCtx, conf, conf.System.ReplicationState())
 
 	// collect metrics on number of plugin instances
-	pluginInstanceGaugeProcess, err := metricsutil.NewGaugeCollectionProcess(
+	var err error
+	b.gaugeCollectionProcess, err = metricsutil.NewGaugeCollectionProcess(
 		[]string{"secrets", "database", "backend", "pluginInstances", "count"},
 		[]metricsutil.Label{},
 		b.collectPluginInstanceGaugeValues,
@@ -73,7 +74,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	if err != nil {
 		return nil, err
 	}
-	go pluginInstanceGaugeProcess.Run()
+	go b.gaugeCollectionProcess.Run()
 	return b, nil
 }
 
