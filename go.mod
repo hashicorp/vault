@@ -6,6 +6,8 @@ replace github.com/hashicorp/vault/api => ./api
 
 replace github.com/hashicorp/vault/api/auth/approle => ./api/auth/approle
 
+replace github.com/hashicorp/vault/api/auth/kubernetes => ./api/auth/kubernetes
+
 replace github.com/hashicorp/vault/api/auth/userpass => ./api/auth/userpass
 
 replace github.com/hashicorp/vault/sdk => ./sdk

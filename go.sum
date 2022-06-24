@@ -1072,8 +1072,6 @@ github.com/hashicorp/vault-plugin-secrets-terraform v0.5.0/go.mod h1:GzYAJYytgbN
 github.com/hashicorp/vault-testing-stepwise v0.1.1/go.mod h1:3vUYn6D0ZadvstNO3YQQlIcp7u1a19MdoOC0NQ0yaOE=
 github.com/hashicorp/vault-testing-stepwise v0.1.2 h1:3obC/ziAPGnsz2IQxr5e4Ayb7tu7WL6pm6mmZ5gwhhs=
 github.com/hashicorp/vault-testing-stepwise v0.1.2/go.mod h1:TeU6B+5NqxUjto+Zey+QQEH1iywuHn0ciHZNYh4q3uI=
-github.com/hashicorp/vault/api/auth/kubernetes v0.1.0 h1:6BtyahbF4aQp8gg3ww0A/oIoqzbhpNP1spXU3nHE0n0=
-github.com/hashicorp/vault/api/auth/kubernetes v0.1.0/go.mod h1:Pdgk78uIs0mgDOLvc3a+h/vYIT9rznw2sz+ucuH9024=
 github.com/hashicorp/vic v1.5.1-0.20190403131502-bbfe86ec9443 h1:O/pT5C1Q3mVXMyuqg7yuAWUg/jMZR1/0QTzTRdNR6Uw=
 github.com/hashicorp/vic v1.5.1-0.20190403131502-bbfe86ec9443/go.mod h1:bEpDU35nTu0ey1EXjwNwPjI9xErAsoOCmcMb9GKvyxo=
 github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb/go.mod h1:+NfK9FKeTrX5uv1uIXGdwYDTeHna2qgaIlx54MXqjAM=
