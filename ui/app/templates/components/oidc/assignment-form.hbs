@@ -6,6 +6,29 @@
     value={{@model.name}}
     disabled={{not @model.isNew}}
     class="input field"
-    {{on "input" (pipe (pick "target.value") (fn (mut @model.name)))}}
+    {{on "input" this.handleOperation}}
   />
+  <div class="has-top-padding-s has-border-top-light">
+    <SearchSelect
+      @subLabel="Entities"
+      @placeholder="Search"
+      @models={{array "identity/entity"}}
+      @shouldRenderName={{true}}
+      @onChange={{this.onEntitiesSelect}}
+    />
+  </div>
+  <hr />
+  <div class="has-top-padding-s">
+    <button
+      type="button"
+      class="button is-primary {{if this.save.isRunning 'is-loading'}}"
+      disabled={{this.save.isRunning}}
+      {{on "click" (perform this.save)}}
+    >
+      {{if @model.isNew "Create" "Update"}}
+    </button>
+    <button type="button" class="button has-left-margin-s" disabled={{this.save.isRunning}} {{on "click" this.cancel}}>
+      Cancel
+    </button>
+  </div>
 </div>

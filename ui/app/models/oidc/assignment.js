@@ -1,11 +1,17 @@
 import Model, { attr, hasMany } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
+import { withModelValidations } from 'vault/decorators/model-validations';
 
+const validations = {
+  name: [{ type: 'presence', message: 'Name is required' }],
+};
+
+@withModelValidations(validations)
 export default class OidcAssignmentModel extends Model {
   @attr('string') name;
   @hasMany('identity/entity') entityIds;
   @hasMany('identity/group') groupIds;
-  // ARG TODO test if assignmentPath will work for create
+
   @lazyCapabilities(apiPath`identity/oidc/assignment/${'name'}`, 'name') assignmentPath;
   @lazyCapabilities(apiPath`identity/oidc/assignment`) assignmentsPath;
 
