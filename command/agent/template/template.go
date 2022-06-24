@@ -107,6 +107,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	// configuration
 	var runnerConfig *ctconfig.Config
 	var runnerConfigErr error
+
 	if runnerConfig, runnerConfigErr = newRunnerConfig(ts.config, templates); runnerConfigErr != nil {
 		return fmt.Errorf("template server failed to runner generate config: %w", runnerConfigErr)
 	}
@@ -242,6 +243,11 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 
 	if sc.AgentConfig.TemplateConfig != nil && sc.AgentConfig.TemplateConfig.StaticSecretRenderInt != 0 {
 		conf.Vault.DefaultLeaseDuration = &sc.AgentConfig.TemplateConfig.StaticSecretRenderInt
+	}
+
+	if sc.AgentConfig.DisableIdleConnsTemplating {
+		idleConns := -1
+		conf.Vault.Transport.MaxIdleConns = &idleConns
 	}
 
 	conf.Vault.SSL = &ctconfig.SSLConfig{
