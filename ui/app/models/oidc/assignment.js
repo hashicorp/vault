@@ -5,7 +5,7 @@ export default class OidcAssignmentModel extends Model {
   @attr('string') name;
   @hasMany('identity/entity') entityIds;
   @hasMany('identity/group') groupIds;
-
+  // ARG TODO test if assignmentPath will work for create
   @lazyCapabilities(apiPath`identity/oidc/assignment/${'name'}`, 'name') assignmentPath;
   @lazyCapabilities(apiPath`identity/oidc/assignment`) assignmentsPath;
 
