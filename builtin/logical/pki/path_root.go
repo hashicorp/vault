@@ -286,6 +286,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		AllowWildcardCertificates: new(bool),
 		EnforceHostnames:          false,
 		KeyType:                   "any",
+		SignatureBits:             data.Get("signature_bits").(int),
 		AllowedOtherSANs:          []string{"*"},
 		AllowedSerialNumbers:      []string{"*"},
 		AllowedURISANs:            []string{"*"},
