@@ -53,8 +53,8 @@ module('Integration | Component | mfa-method-form', function (hooks) {
 
     await fillIn('[data-test-input="issuer"]', 'Vault');
     await click('[data-test-mfa-save]');
-    await fillIn('[data-test-confirmation-modal-input="mfa"]', 'totp');
-    await click('[data-test-confirm-button="mfa"]');
+    await fillIn('[data-test-confirmation-modal-input="Edit totp configuration?"]', 'totp');
+    await click('[data-test-confirm-button="Edit totp configuration?"]');
     assert.true(this.didSave, 'onSave callback triggered');
     assert.equal(this.model.issuer, 'Vault', 'Issuer property set on model');
   });
