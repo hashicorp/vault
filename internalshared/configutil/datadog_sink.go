@@ -15,13 +15,13 @@ type DatadogSink struct {
 	logger            cli.Ui
 }
 
-func NewDatadogSink(addr string, hostName string, logger cli.Ui) (*DatadogSink, error) {
+func NewDatadogSink(addr string, hostName string, logger cli.Ui) *DatadogSink {
 	return &DatadogSink{
 		addr:              addr,
 		hostName:          hostName,
 		propagateHostname: false,
 		logger:            logger,
-	}, nil
+	}
 }
 
 func (s *DatadogSink) SetTags(tags []string) {

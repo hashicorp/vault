@@ -350,10 +350,7 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 			tags = opts.Config.DogStatsDTags
 		}
 
-		sink, err := NewDatadogSink(opts.Config.DogStatsDAddr, metricsConf.HostName, opts.Ui)
-		if err != nil {
-			return nil, nil, false, fmt.Errorf("failed to start DogStatsD sink: %w", err)
-		}
+		sink := NewDatadogSink(opts.Config.DogStatsDAddr, metricsConf.HostName, opts.Ui)
 		sink.SetTags(tags)
 		fanout = append(fanout, sink)
 	}
