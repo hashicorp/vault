@@ -3,14 +3,14 @@ package fairshare
 import (
 	"container/list"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math"
 	"sync"
 	"time"
 
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 )
@@ -47,7 +47,7 @@ type JobManager struct {
 // NewJobManager creates a job manager, with an optional name
 func NewJobManager(name string, numWorkers int, l log.Logger, metricSink *metricsutil.ClusterMetricSink) *JobManager {
 	if l == nil {
-		l = logging.NewVaultLoggerWithWriter(ioutil.Discard, log.NoLevel)
+		l = logging.NewVaultLoggerWithWriter(io.Discard, log.NoLevel)
 	}
 	if name == "" {
 		guid, err := uuid.GenerateUUID()

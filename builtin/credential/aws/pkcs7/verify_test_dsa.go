@@ -5,7 +5,6 @@ package pkcs7
 import (
 	"crypto/x509"
 	"encoding/pem"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"testing"
@@ -68,27 +67,27 @@ A ship in port is safe,
 but that's not what ships are built for.
 -- Grace Hopper`)
 	// write the content to a temp file
-	tmpContentFile, err := ioutil.TempFile("", "TestDSASignWithOpenSSLAndVerify_content")
+	tmpContentFile, err := os.CreateTemp("", "TestDSASignWithOpenSSLAndVerify_content")
 	if err != nil {
 		t.Fatal(err)
 	}
-	ioutil.WriteFile(tmpContentFile.Name(), content, 0o755)
+	os.WriteFile(tmpContentFile.Name(), content, 0o755)
 
 	// write the signer cert to a temp file
-	tmpSignerCertFile, err := ioutil.TempFile("", "TestDSASignWithOpenSSLAndVerify_signer")
+	tmpSignerCertFile, err := os.CreateTemp("", "TestDSASignWithOpenSSLAndVerify_signer")
 	if err != nil {
 		t.Fatal(err)
 	}
-	ioutil.WriteFile(tmpSignerCertFile.Name(), dsaPublicCert, 0o755)
+	os.WriteFile(tmpSignerCertFile.Name(), dsaPublicCert, 0o755)
 
 	// write the signer key to a temp file
-	tmpSignerKeyFile, err := ioutil.TempFile("", "TestDSASignWithOpenSSLAndVerify_key")
+	tmpSignerKeyFile, err := os.CreateTemp("", "TestDSASignWithOpenSSLAndVerify_key")
 	if err != nil {
 		t.Fatal(err)
 	}
-	ioutil.WriteFile(tmpSignerKeyFile.Name(), dsaPrivateKey, 0o755)
+	os.WriteFile(tmpSignerKeyFile.Name(), dsaPrivateKey, 0o755)
 
-	tmpSignedFile, err := ioutil.TempFile("", "TestDSASignWithOpenSSLAndVerify_signature")
+	tmpSignedFile, err := os.CreateTemp("", "TestDSASignWithOpenSSLAndVerify_signature")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +102,7 @@ but that's not what ships are built for.
 	}
 
 	// verify the signed content
-	pemSignature, err := ioutil.ReadFile(tmpSignedFile.Name())
+	pemSignature, err := os.ReadFile(tmpSignedFile.Name())
 	if err != nil {
 		t.Fatal(err)
 	}

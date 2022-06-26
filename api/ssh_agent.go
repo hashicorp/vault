@@ -5,14 +5,13 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 
 	"github.com/hashicorp/errwrap"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	multierror "github.com/hashicorp/go-multierror"
-	rootcerts "github.com/hashicorp/go-rootcerts"
+	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/sdk/helper/hclutil"
@@ -139,7 +138,7 @@ func (c *SSHHelperConfig) NewClient() (*Client, error) {
 // Vault address is a required parameter.
 // Mount point defaults to "ssh".
 func LoadSSHHelperConfig(path string) (*SSHHelperConfig, error) {
-	contents, err := ioutil.ReadFile(path)
+	contents, err := os.ReadFile(path)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, multierror.Prefix(err, "ssh_helper:")
 	}

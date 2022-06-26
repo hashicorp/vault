@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"strings"
 	"time"
 
 	kvbuilder "github.com/hashicorp/go-secure-stdlib/kv-builder"
 	"github.com/hashicorp/vault/api"
 	"github.com/kr/text"
-	homedir "github.com/mitchellh/go-homedir"
+	"github.com/mitchellh/go-homedir"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	"github.com/ryanuber/columnize"
@@ -282,7 +282,7 @@ func humanDurationInt(i interface{}) interface{} {
 func parseFlagFile(raw string) (string, error) {
 	// check if the provided argument should be read from file
 	if len(raw) > 0 && raw[0] == '@' {
-		contents, err := ioutil.ReadFile(raw[1:])
+		contents, err := os.ReadFile(raw[1:])
 		if err != nil {
 			return "", fmt.Errorf("error reading file: %w", err)
 		}

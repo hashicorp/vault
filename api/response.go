@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -41,7 +40,7 @@ func (r *Response) Error() error {
 	}
 
 	r.Body.Close()
-	r.Body = ioutil.NopCloser(bodyBuf)
+	r.Body = io.NopCloser(bodyBuf)
 	ns := r.Header.Get(consts.NamespaceHeaderName)
 
 	// Build up the error object

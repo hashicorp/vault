@@ -3,7 +3,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -51,7 +50,7 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 	}
 
 	// Set a plugin, test overwriting a builtin plugin
-	file, err := ioutil.TempFile(os.TempDir(), "temp")
+	file, err := os.CreateTemp(os.TempDir(), "temp")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +141,7 @@ func TestPluginCatalog_List(t *testing.T) {
 	}
 
 	// Set a plugin, test overwriting a builtin plugin
-	file, err := ioutil.TempFile(os.TempDir(), "temp")
+	file, err := os.CreateTemp(os.TempDir(), "temp")
 	if err != nil {
 		t.Fatal(err)
 	}

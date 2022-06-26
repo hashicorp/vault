@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
@@ -557,7 +556,7 @@ func NewFlagSets(ui cli.Ui) *FlagSets {
 
 	// Errors and usage are controlled by the CLI.
 	mainSet.Usage = func() {}
-	mainSet.SetOutput(ioutil.Discard)
+	mainSet.SetOutput(io.Discard)
 
 	return &FlagSets{
 		flagSets:    make([]*FlagSet, 0, 6),

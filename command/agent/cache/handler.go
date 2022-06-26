@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -36,7 +35,7 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 		}
 
 		// Parse and reset body.
-		reqBody, err := ioutil.ReadAll(r.Body)
+		reqBody, err := io.ReadAll(r.Body)
 		if err != nil {
 			logger.Error("failed to read request body")
 			logical.RespondError(w, http.StatusInternalServerError, errors.New("failed to read request body"))
@@ -45,7 +44,7 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 		if r.Body != nil {
 			r.Body.Close()
 		}
-		r.Body = ioutil.NopCloser(bytes.NewReader(reqBody))
+		r.Body = io.NopCloser(bytes.NewReader(reqBody))
 		req := &SendRequest{
 			Token:       token,
 			Request:     r,
@@ -197,7 +196,7 @@ func sanitizeAutoAuthTokenResponse(ctx context.Context, logger hclog.Logger, inm
 	if resp.Response.Body != nil {
 		resp.Response.Body.Close()
 	}
-	resp.Response.Body = ioutil.NopCloser(bytes.NewReader(bodyBytes))
+	resp.Response.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 	resp.Response.ContentLength = int64(len(bodyBytes))
 
 	// Serialize and re-read the response

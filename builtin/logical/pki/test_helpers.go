@@ -14,7 +14,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"hash"
-	"io/ioutil"
+	"io"
 	"strings"
 	"testing"
 
@@ -194,7 +194,7 @@ func getParsedCrlForIssuer(t *testing.T, client *api.Client, mountPoint string, 
 	}
 	defer resp.Body.Close()
 
-	certBytes, err := ioutil.ReadAll(resp.Body)
+	certBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -225,7 +225,7 @@ func getParsedCrlAtPath(t *testing.T, client *api.Client, path string) *pkix.Cer
 	}
 	defer resp.Body.Close()
 
-	crlBytes, err := ioutil.ReadAll(resp.Body)
+	crlBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

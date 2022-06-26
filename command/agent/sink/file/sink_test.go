@@ -4,14 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 )
@@ -55,7 +54,7 @@ func TestSinkServer(t *testing.T) {
 	}
 
 	for _, path := range []string{path1, path2} {
-		fileBytes, err := ioutil.ReadFile(fmt.Sprintf("%s/token", path))
+		fileBytes, err := os.ReadFile(fmt.Sprintf("%s/token", path))
 		if err != nil {
 			t.Fatal(err)
 		}

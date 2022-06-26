@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/physical"
 )
@@ -111,7 +111,7 @@ func (m *couchDBClient) get(key string) (*physical.Entry, error) {
 	} else if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("GET returned %q", resp.Status)
 	}
-	bs, err := ioutil.ReadAll(resp.Body)
+	bs, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +140,7 @@ func (m *couchDBClient) list(prefix string) ([]couchDBListItem, error) {
 	}
 	defer resp.Body.Close()
 
-	data, err := ioutil.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}

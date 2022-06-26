@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"sort"
 	"strconv"
@@ -172,7 +172,7 @@ func (o *Backend) Put(ctx context.Context, entry *physical.Entry) error {
 		BucketName:         &o.bucketName,
 		ObjectName:         &entry.Key,
 		ContentLength:      &size,
-		PutObjectBody:      ioutil.NopCloser(bytes.NewReader(entry.Value)),
+		PutObjectBody:      io.NopCloser(bytes.NewReader(entry.Value)),
 		OpcMeta:            nil,
 		OpcClientRequestId: &opcClientRequestId,
 	}
@@ -230,7 +230,7 @@ func (o *Backend) Get(ctx context.Context, key string) (*physical.Entry, error) 
 		return nil, fmt.Errorf("failed to read Value: %w", err)
 	}
 
-	body, err := ioutil.ReadAll(resp.Content)
+	body, err := io.ReadAll(resp.Content)
 	if err != nil {
 		metrics.IncrCounter(metricGetFailed, 1)
 		return nil, fmt.Errorf("failed to decode Value into bytes: %w", err)

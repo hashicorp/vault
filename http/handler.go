@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"mime"
 	"net"
 	"net/http"
@@ -253,7 +252,7 @@ func (w *copyResponseWriter) WriteHeader(code int) {
 func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origBody := new(bytes.Buffer)
-		reader := ioutil.NopCloser(io.TeeReader(r.Body, origBody))
+		reader := io.NopCloser(io.TeeReader(r.Body, origBody))
 		r.Body = reader
 		req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
 		if err != nil || status != 0 {
@@ -261,7 +260,7 @@ func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 			return
 		}
 		if origBody != nil {
-			r.Body = ioutil.NopCloser(origBody)
+			r.Body = io.NopCloser(origBody)
 		}
 		input := &logical.LogInput{
 			Request: req,
@@ -710,14 +709,14 @@ func parseJSONRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, 
 		// Since we're checking PerfStandby here we key on origBody being nil
 		// or not later, so we need to always allocate so it's non-nil
 		origBody = new(bytes.Buffer)
-		reader = ioutil.NopCloser(io.TeeReader(reader, origBody))
+		reader = io.NopCloser(io.TeeReader(reader, origBody))
 	}
 	err := jsonutil.DecodeJSONFromReader(reader, out)
 	if err != nil && err != io.EOF {
 		return nil, fmt.Errorf("failed to parse JSON input: %w", err)
 	}
 	if origBody != nil {
-		return ioutil.NopCloser(origBody), err
+		return io.NopCloser(origBody), err
 	}
 	return nil, err
 }
@@ -733,7 +732,7 @@ func parseFormRequest(r *http.Request) (map[string]interface{}, error) {
 			return nil, errors.New("could not parse max_request_size from request context")
 		}
 		if max > 0 {
-			r.Body = ioutil.NopCloser(io.LimitReader(r.Body, max))
+			r.Body = io.NopCloser(io.LimitReader(r.Body, max))
 		}
 	}
 	if err := r.ParseForm(); err != nil {

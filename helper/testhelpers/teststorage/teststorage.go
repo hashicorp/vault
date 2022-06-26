@@ -2,7 +2,6 @@ package teststorage
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"time"
 
@@ -50,7 +49,7 @@ func MakeInmemNonTransactionalBackend(t testing.T, logger hclog.Logger) *vault.P
 }
 
 func MakeFileBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle {
-	path, err := ioutil.TempDir("", "vault-integ-file-")
+	path, err := os.MkdirTemp("", "vault-integ-file-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +80,7 @@ func MakeFileBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBun
 
 func MakeRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, extraConf map[string]interface{}) *vault.PhysicalBackendBundle {
 	nodeID := fmt.Sprintf("core-%d", coreIdx)
-	raftDir, err := ioutil.TempDir("", "vault-raft-")
+	raftDir, err := os.MkdirTemp("", "vault-raft-")
 	if err != nil {
 		t.Fatal(err)
 	}

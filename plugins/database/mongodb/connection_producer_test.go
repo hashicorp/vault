@@ -3,7 +3,6 @@ package mongodb
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	paths "path"
@@ -15,7 +14,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/ory/dockertest"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -151,7 +150,7 @@ net:
 }
 
 func makeTempDir(t *testing.T) (confDir string) {
-	confDir, err := ioutil.TempDir(".", "mongodb-test-data")
+	confDir, err := os.MkdirTemp(".", "mongodb-test-data")
 	if err != nil {
 		t.Fatalf("Unable to make temp directory: %s", err)
 	}
@@ -313,7 +312,7 @@ func (r roles) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
 func writeFile(t *testing.T, filename string, data []byte, perms os.FileMode) {
 	t.Helper()
 
-	err := ioutil.WriteFile(filename, data, perms)
+	err := os.WriteFile(filename, data, perms)
 	if err != nil {
 		t.Fatalf("Unable to write to file [%s]: %s", filename, err)
 	}

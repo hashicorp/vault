@@ -7,9 +7,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"net/url"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -20,8 +20,8 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 
-	metrics "github.com/armon/go-metrics"
-	mysql "github.com/go-sql-driver/mysql"
+	"github.com/armon/go-metrics"
+	"github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )
@@ -756,7 +756,7 @@ func (i *MySQLLock) Unlock() error {
 func setupMySQLTLSConfig(tlsCaFile string) error {
 	rootCertPool := x509.NewCertPool()
 
-	pem, err := ioutil.ReadFile(tlsCaFile)
+	pem, err := os.ReadFile(tlsCaFile)
 	if err != nil {
 		return err
 	}

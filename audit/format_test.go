@@ -3,7 +3,6 @@ package audit
 import (
 	"context"
 	"io"
-	"io/ioutil"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -41,7 +40,7 @@ func TestFormatRequestErrors(t *testing.T) {
 		AuditFormatWriter: &noopFormatWriter{},
 	}
 
-	if err := formatter.FormatRequest(context.Background(), ioutil.Discard, config, &logical.LogInput{}); err == nil {
+	if err := formatter.FormatRequest(context.Background(), io.Discard, config, &logical.LogInput{}); err == nil {
 		t.Fatal("expected error due to nil request")
 	}
 
@@ -59,7 +58,7 @@ func TestFormatResponseErrors(t *testing.T) {
 		AuditFormatWriter: &noopFormatWriter{},
 	}
 
-	if err := formatter.FormatResponse(context.Background(), ioutil.Discard, config, &logical.LogInput{}); err == nil {
+	if err := formatter.FormatResponse(context.Background(), io.Discard, config, &logical.LogInput{}); err == nil {
 		t.Fatal("expected error due to nil request")
 	}
 

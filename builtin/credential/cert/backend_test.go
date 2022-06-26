@@ -12,7 +12,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/big"
 	mathrand "math/rand"
 	"net"
@@ -29,12 +28,12 @@ import (
 
 	"golang.org/x/net/http2"
 
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
 
-	rootcerts "github.com/hashicorp/go-rootcerts"
+	"github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -63,7 +62,7 @@ const (
 
 func generateTestCertAndConnState(t *testing.T, template *x509.Certificate) (string, tls.ConnectionState, error) {
 	t.Helper()
-	tempDir, err := ioutil.TempDir("", "vault-cert-auth-test-")
+	tempDir, err := os.MkdirTemp("", "vault-cert-auth-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +96,7 @@ func generateTestCertAndConnState(t *testing.T, template *x509.Certificate) (str
 		Type:  "CERTIFICATE",
 		Bytes: caBytes,
 	}
-	err = ioutil.WriteFile(filepath.Join(tempDir, "ca_cert.pem"), pem.EncodeToMemory(caCertPEMBlock), 0o755)
+	err = os.WriteFile(filepath.Join(tempDir, "ca_cert.pem"), pem.EncodeToMemory(caCertPEMBlock), 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +108,7 @@ func generateTestCertAndConnState(t *testing.T, template *x509.Certificate) (str
 		Type:  "EC PRIVATE KEY",
 		Bytes: marshaledCAKey,
 	}
-	err = ioutil.WriteFile(filepath.Join(tempDir, "ca_key.pem"), pem.EncodeToMemory(caKeyPEMBlock), 0o755)
+	err = os.WriteFile(filepath.Join(tempDir, "ca_key.pem"), pem.EncodeToMemory(caKeyPEMBlock), 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +125,7 @@ func generateTestCertAndConnState(t *testing.T, template *x509.Certificate) (str
 		Type:  "CERTIFICATE",
 		Bytes: certBytes,
 	}
-	err = ioutil.WriteFile(filepath.Join(tempDir, "cert.pem"), pem.EncodeToMemory(certPEMBlock), 0o755)
+	err = os.WriteFile(filepath.Join(tempDir, "cert.pem"), pem.EncodeToMemory(certPEMBlock), 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,7 +137,7 @@ func generateTestCertAndConnState(t *testing.T, template *x509.Certificate) (str
 		Type:  "EC PRIVATE KEY",
 		Bytes: marshaledKey,
 	}
-	err = ioutil.WriteFile(filepath.Join(tempDir, "key.pem"), pem.EncodeToMemory(keyPEMBlock), 0o755)
+	err = os.WriteFile(filepath.Join(tempDir, "key.pem"), pem.EncodeToMemory(keyPEMBlock), 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -371,7 +370,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 
 	// Create temporary files for CA cert, client cert and client cert key.
 	// This is used to configure TLS in the api client.
-	caCertFile, err := ioutil.TempFile("", "caCert")
+	caCertFile, err := os.CreateTemp("", "caCert")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -383,7 +382,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	leafCertFile, err := ioutil.TempFile("", "leafCert")
+	leafCertFile, err := os.CreateTemp("", "leafCert")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -395,7 +394,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	leafCertKeyFile, err := ioutil.TempFile("", "leafCertKey")
+	leafCertKeyFile, err := os.CreateTemp("", "leafCertKey")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -520,7 +519,7 @@ func TestBackend_NonCAExpiry(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	caCertFile, err := ioutil.TempFile("", "caCert")
+	caCertFile, err := os.CreateTemp("", "caCert")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -534,7 +533,7 @@ func TestBackend_NonCAExpiry(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	caKeyFile, err := ioutil.TempFile("", "caKey")
+	caKeyFile, err := os.CreateTemp("", "caKey")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -590,7 +589,7 @@ func TestBackend_NonCAExpiry(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	issuedCertFile, err := ioutil.TempFile("", "issuedCert")
+	issuedCertFile, err := os.CreateTemp("", "issuedCert")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -604,7 +603,7 @@ func TestBackend_NonCAExpiry(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	issuedKeyFile, err := ioutil.TempFile("", "issuedKey")
+	issuedKeyFile, err := os.CreateTemp("", "issuedKey")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -687,7 +686,7 @@ func TestBackend_RegisteredNonCA_CRL(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	nonCACert, err := ioutil.ReadFile(testCertPath1)
+	nonCACert, err := os.ReadFile(testCertPath1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -732,7 +731,7 @@ func TestBackend_RegisteredNonCA_CRL(t *testing.T) {
 	}
 
 	// Register a CRL containing the issued client certificate used above.
-	issuedCRL, err := ioutil.ReadFile(testIssuedCertCRL)
+	issuedCRL, err := os.ReadFile(testIssuedCertCRL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -770,7 +769,7 @@ func TestBackend_CRLs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	clientCA1, err := ioutil.ReadFile(testRootCACertPath1)
+	clientCA1, err := os.ReadFile(testRootCACertPath1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -828,7 +827,7 @@ func TestBackend_CRLs(t *testing.T) {
 	}
 
 	// Register a CRL containing the issued client certificate used above.
-	issuedCRL, err := ioutil.ReadFile(testIssuedCertCRL)
+	issuedCRL, err := os.ReadFile(testIssuedCertCRL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -857,7 +856,7 @@ func TestBackend_CRLs(t *testing.T) {
 	}
 
 	// Register a different client CA certificate.
-	clientCA2, err := ioutil.ReadFile(testRootCACertPath2)
+	clientCA2, err := os.ReadFile(testRootCACertPath2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -881,7 +880,7 @@ func TestBackend_CRLs(t *testing.T) {
 	}
 
 	// Register a CRL containing the root CA certificate used above.
-	rootCRL, err := ioutil.ReadFile(testRootCertCRL)
+	rootCRL, err := os.ReadFile(testRootCertCRL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -918,17 +917,17 @@ func testFactory(t *testing.T) logical.Backend {
 // Test the certificates being registered to the backend
 func TestBackend_CertWrites(t *testing.T) {
 	// CA cert
-	ca1, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+	ca1, err := os.ReadFile("test-fixtures/root/rootcacert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	// Non CA Cert
-	ca2, err := ioutil.ReadFile("test-fixtures/keys/cert.pem")
+	ca2, err := os.ReadFile("test-fixtures/keys/cert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	// Non CA cert without TLS web client authentication
-	ca3, err := ioutil.ReadFile("test-fixtures/noclientauthcert.pem")
+	ca3, err := os.ReadFile("test-fixtures/noclientauthcert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -952,7 +951,7 @@ func TestBackend_basic_CA(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error testing connection state: %v", err)
 	}
-	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+	ca, err := os.ReadFile("test-fixtures/root/rootcacert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -983,11 +982,11 @@ func TestBackend_Basic_CRLs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error testing connection state: %v", err)
 	}
-	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+	ca, err := os.ReadFile("test-fixtures/root/rootcacert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	crl, err := ioutil.ReadFile("test-fixtures/root/root.crl")
+	crl, err := os.ReadFile("test-fixtures/root/root.crl")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1012,7 +1011,7 @@ func TestBackend_basic_singleCert(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error testing connection state: %v", err)
 	}
-	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+	ca, err := os.ReadFile("test-fixtures/root/rootcacert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1037,7 +1036,7 @@ func TestBackend_common_name_singleCert(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error testing connection state: %v", err)
 	}
-	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+	ca, err := os.ReadFile("test-fixtures/root/rootcacert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1066,7 +1065,7 @@ func TestBackend_ext_singleCert(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error testing connection state: %v", err)
 	}
-	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+	ca, err := os.ReadFile("test-fixtures/root/rootcacert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1140,7 +1139,7 @@ func TestBackend_dns_singleCert(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error testing connection state: %v", err)
 	}
-	ca, err := ioutil.ReadFile(filepath.Join(tempDir, "ca_cert.pem"))
+	ca, err := os.ReadFile(filepath.Join(tempDir, "ca_cert.pem"))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1187,7 +1186,7 @@ func TestBackend_email_singleCert(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error testing connection state: %v", err)
 	}
-	ca, err := ioutil.ReadFile(filepath.Join(tempDir, "ca_cert.pem"))
+	ca, err := os.ReadFile(filepath.Join(tempDir, "ca_cert.pem"))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1219,7 +1218,7 @@ func TestBackend_organizationalUnit_singleCert(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error testing connection state: %v", err)
 	}
-	ca, err := ioutil.ReadFile("test-fixtures/root/rootcawoucert.pem")
+	ca, err := os.ReadFile("test-fixtures/root/rootcawoucert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1268,7 +1267,7 @@ func TestBackend_uri_singleCert(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error testing connection state: %v", err)
 	}
-	ca, err := ioutil.ReadFile(filepath.Join(tempDir, "ca_cert.pem"))
+	ca, err := os.ReadFile(filepath.Join(tempDir, "ca_cert.pem"))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1296,7 +1295,7 @@ func TestBackend_mixed_constraints(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error testing connection state: %v", err)
 	}
-	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+	ca, err := os.ReadFile("test-fixtures/root/rootcacert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1344,7 +1343,7 @@ func TestBackend_validCIDR(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error testing connection state: %v", err)
 	}
-	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+	ca, err := os.ReadFile("test-fixtures/root/rootcacert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1426,7 +1425,7 @@ func TestBackend_invalidCIDR(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error testing connection state: %v", err)
 	}
-	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+	ca, err := os.ReadFile("test-fixtures/root/rootcacert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1866,7 +1865,7 @@ func Test_Renew(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error testing connection state: %v", err)
 	}
-	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+	ca, err := os.ReadFile("test-fixtures/root/rootcacert.pem")
 	if err != nil {
 		t.Fatal(err)
 	}

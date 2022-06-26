@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"regexp"
 	"sort"
@@ -415,7 +414,7 @@ func (b *Backend) Logger() log.Logger {
 		return b.logger
 	}
 
-	return logging.NewVaultLoggerWithWriter(ioutil.Discard, log.NoLevel)
+	return logging.NewVaultLoggerWithWriter(io.Discard, log.NoLevel)
 }
 
 // System returns the backend's system view.

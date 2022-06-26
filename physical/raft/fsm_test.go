@@ -2,22 +2,21 @@ package raft
 
 import (
 	"context"
-	fmt "fmt"
-	"io/ioutil"
+	"fmt"
 	"math/rand"
 	"os"
 	"sort"
 	"testing"
 
 	"github.com/go-test/deep"
-	proto "github.com/golang/protobuf/proto"
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/golang/protobuf/proto"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
 func getFSM(t testing.TB) (*FSM, string) {
-	raftDir, err := ioutil.TempDir("", "vault-raft-")
+	raftDir, err := os.MkdirTemp("", "vault-raft-")
 	if err != nil {
 		t.Fatal(err)
 	}

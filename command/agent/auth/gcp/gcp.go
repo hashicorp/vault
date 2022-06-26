@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-gcp-common/gcputil"
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
@@ -148,7 +148,7 @@ func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (retPa
 				return
 			}
 			defer resp.Body.Close()
-			jwtBytes, err := ioutil.ReadAll(resp.Body)
+			jwtBytes, err := io.ReadAll(resp.Body)
 			if err != nil {
 				retErr = fmt.Errorf("error reading instance token response body: %w", err)
 				return

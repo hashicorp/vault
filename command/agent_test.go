@@ -3,7 +3,7 @@ package command
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	vaultjwt "github.com/hashicorp/vault-plugin-auth-jwt"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
@@ -96,7 +96,7 @@ func TestAgent_Cache_UnixListener(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	inf, err := ioutil.TempFile("", "auth.jwt.test.")
+	inf, err := os.CreateTemp("", "auth.jwt.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +105,7 @@ func TestAgent_Cache_UnixListener(t *testing.T) {
 	os.Remove(in)
 	t.Logf("input: %s", in)
 
-	sink1f, err := ioutil.TempFile("", "sink1.jwt.test.")
+	sink1f, err := os.CreateTemp("", "sink1.jwt.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +114,7 @@ func TestAgent_Cache_UnixListener(t *testing.T) {
 	os.Remove(sink1)
 	t.Logf("sink1: %s", sink1)
 
-	sink2f, err := ioutil.TempFile("", "sink2.jwt.test.")
+	sink2f, err := os.CreateTemp("", "sink2.jwt.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +123,7 @@ func TestAgent_Cache_UnixListener(t *testing.T) {
 	os.Remove(sink2)
 	t.Logf("sink2: %s", sink2)
 
-	conff, err := ioutil.TempFile("", "conf.jwt.test.")
+	conff, err := os.CreateTemp("", "conf.jwt.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,13 +133,13 @@ func TestAgent_Cache_UnixListener(t *testing.T) {
 	t.Logf("config: %s", conf)
 
 	jwtToken, _ := agent.GetTestJWT(t)
-	if err := ioutil.WriteFile(in, []byte(jwtToken), 0600); err != nil {
+	if err := os.WriteFile(in, []byte(jwtToken), 0600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test jwt", "path", in)
 	}
 
-	socketff, err := ioutil.TempFile("", "cache.socket.")
+	socketff, err := os.CreateTemp("", "cache.socket.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,7 +183,7 @@ cache {
 `
 
 	config = fmt.Sprintf(config, in, sink1, sink2, socketf)
-	if err := ioutil.WriteFile(conf, []byte(config), 0600); err != nil {
+	if err := os.WriteFile(conf, []byte(config), 0600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test config", "path", conf)
@@ -285,7 +285,7 @@ func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 		t.Fatal(err)
 	}
 
-	inf, err := ioutil.TempFile("", "auth.jwt.test.")
+	inf, err := os.CreateTemp("", "auth.jwt.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -294,7 +294,7 @@ func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 	os.Remove(in)
 	t.Logf("input: %s", in)
 
-	sink1f, err := ioutil.TempFile("", "sink1.jwt.test.")
+	sink1f, err := os.CreateTemp("", "sink1.jwt.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -303,7 +303,7 @@ func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 	os.Remove(sink1)
 	t.Logf("sink1: %s", sink1)
 
-	sink2f, err := ioutil.TempFile("", "sink2.jwt.test.")
+	sink2f, err := os.CreateTemp("", "sink2.jwt.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -312,7 +312,7 @@ func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 	os.Remove(sink2)
 	t.Logf("sink2: %s", sink2)
 
-	conff, err := ioutil.TempFile("", "conf.jwt.test.")
+	conff, err := os.CreateTemp("", "conf.jwt.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -322,7 +322,7 @@ func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 	t.Logf("config: %s", conf)
 
 	jwtToken, _ := agent.GetTestJWT(t)
-	if err := ioutil.WriteFile(in, []byte(jwtToken), 0o600); err != nil {
+	if err := os.WriteFile(in, []byte(jwtToken), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test jwt", "path", in)
@@ -361,7 +361,7 @@ auto_auth {
 `
 
 	config = fmt.Sprintf(config, exitAfterAuthTemplText, in, sink1, sink2)
-	if err := ioutil.WriteFile(conf, []byte(config), 0o600); err != nil {
+	if err := os.WriteFile(conf, []byte(config), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test config", "path", conf)
@@ -393,7 +393,7 @@ auto_auth {
 		t.Fatal("timeout reached while waiting for agent to exit")
 	}
 
-	sink1Bytes, err := ioutil.ReadFile(sink1)
+	sink1Bytes, err := os.ReadFile(sink1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -401,7 +401,7 @@ auto_auth {
 		t.Fatal("got no output from sink 1")
 	}
 
-	sink2Bytes, err := ioutil.ReadFile(sink2)
+	sink2Bytes, err := os.ReadFile(sink2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -437,9 +437,9 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 		return cli
 	}
 
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	// Start the server and agent
-	//----------------------------------------------------
+	// ----------------------------------------------------
 
 	// Start a vault server
 	logger := logging.NewVaultLogger(hclog.Trace)
@@ -568,9 +568,9 @@ listener "tcp" {
 		wg.Wait()
 	}()
 
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	// Perform the tests
-	//----------------------------------------------------
+	// ----------------------------------------------------
 
 	// Test against a listener configuration that omits
 	// 'require_request_header', with the header missing from the request.
@@ -652,9 +652,9 @@ listener "tcp" {
 
 // TestAgent_Template tests rendering templates
 func TestAgent_Template_Basic(t *testing.T) {
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	// Start the server and agent
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	logger := logging.NewVaultLogger(hclog.Trace)
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
@@ -751,7 +751,7 @@ func TestAgent_Template_Basic(t *testing.T) {
 
 	// make a temp directory to hold renders. Each test will create a temp dir
 	// inside this one
-	tmpDirRoot, err := ioutil.TempDir("", "agent-test-renders")
+	tmpDirRoot, err := os.MkdirTemp("", "agent-test-renders")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -781,7 +781,7 @@ func TestAgent_Template_Basic(t *testing.T) {
 	for tcname, tc := range testCases {
 		t.Run(tcname, func(t *testing.T) {
 			// create temp dir for this test run
-			tmpDir, err := ioutil.TempDir(tmpDirRoot, tcname)
+			tmpDir, err := os.MkdirTemp(tmpDirRoot, tcname)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -790,7 +790,7 @@ func TestAgent_Template_Basic(t *testing.T) {
 			var templatePaths []string
 			for i := 0; i < tc.templateCount; i++ {
 				fileName := filepath.Join(tmpDir, fmt.Sprintf("render_%d.tmpl", i))
-				if err := ioutil.WriteFile(fileName, []byte(templateContents(i)), 0o600); err != nil {
+				if err := os.WriteFile(fileName, []byte(templateContents(i)), 0o600); err != nil {
 					t.Fatal(err)
 				}
 				templatePaths = append(templatePaths, fileName)
@@ -892,9 +892,9 @@ auto_auth {
 					// early for shutdown if we do have all the files
 					// rendered
 
-					//----------------------------------------------------
+					// ----------------------------------------------------
 					// Perform the tests
-					//----------------------------------------------------
+					// ----------------------------------------------------
 
 					if numFiles := testListFiles(t, tmpDir, ".json"); numFiles != len(templatePaths) {
 						err = fmt.Errorf("expected (%d) templates, got (%d)", len(templatePaths), numFiles)
@@ -904,7 +904,7 @@ auto_auth {
 					for i := range templatePaths {
 						fileName := filepath.Join(tmpDir, fmt.Sprintf("render_%d.json", i))
 						var c []byte
-						c, err = ioutil.ReadFile(fileName)
+						c, err = os.ReadFile(fileName)
 						if err != nil {
 							continue
 						}
@@ -921,7 +921,7 @@ auto_auth {
 
 			for i := 0; i < tc.templateCount; i++ {
 				fileName := filepath.Join(tmpDir, fmt.Sprintf("render_%d.tmpl", i))
-				if err := ioutil.WriteFile(fileName, []byte(templateContents(i)+"{}"), 0o600); err != nil {
+				if err := os.WriteFile(fileName, []byte(templateContents(i)+"{}"), 0o600); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -934,7 +934,7 @@ auto_auth {
 func testListFiles(t *testing.T, dir, extension string) int {
 	t.Helper()
 
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -955,9 +955,9 @@ func testListFiles(t *testing.T, dir, extension string) int {
 // generate a random number of secrets, but all using the same source. This test
 // reproduces https://github.com/hashicorp/vault/issues/7883
 func TestAgent_Template_ExitCounter(t *testing.T) {
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	// Start the server and agent
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	logger := logging.NewVaultLogger(hclog.Trace)
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
@@ -1064,14 +1064,14 @@ func TestAgent_Template_ExitCounter(t *testing.T) {
 
 	// make a temp directory to hold renders. Each test will create a temp dir
 	// inside this one
-	tmpDirRoot, err := ioutil.TempDir("", "agent-test-renders")
+	tmpDirRoot, err := os.MkdirTemp("", "agent-test-renders")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(tmpDirRoot)
 
 	// create temp dir for this test run
-	tmpDir, err := ioutil.TempDir(tmpDirRoot, "agent-test")
+	tmpDir, err := os.MkdirTemp(tmpDirRoot, "agent-test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1149,11 +1149,11 @@ exit_after_auth = true
 
 	wg.Wait()
 
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	// Perform the tests
-	//----------------------------------------------------
+	// ----------------------------------------------------
 
-	files, err := ioutil.ReadDir(tmpDir)
+	files, err := os.ReadDir(tmpDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1216,7 +1216,7 @@ func request(t *testing.T, client *api.Client, req *api.Request, expectedStatusC
 		t.Fatalf("expected status code %d, not %d", expectedStatusCode, resp.StatusCode)
 	}
 
-	bytes, err := ioutil.ReadAll(resp.Body)
+	bytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -1235,7 +1235,7 @@ func request(t *testing.T, client *api.Client, req *api.Request, expectedStatusC
 // makeTempFile creates a temp file and populates it.
 func makeTempFile(t *testing.T, name, contents string) string {
 	t.Helper()
-	f, err := ioutil.TempFile("", name)
+	f, err := os.CreateTemp("", name)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1269,9 +1269,9 @@ func (h *handler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 // TestAgent_Template_Retry verifies that the template server retries requests
 // based on retry configuration.
 func TestAgent_Template_Retry(t *testing.T) {
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	// Start the server and agent
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	logger := logging.NewVaultLogger(hclog.Trace)
 	var h handler
 	cluster := vault.NewTestCluster(t,
@@ -1328,7 +1328,7 @@ func TestAgent_Template_Retry(t *testing.T) {
 
 	// make a temp directory to hold renders. Each test will create a temp dir
 	// inside this one
-	tmpDirRoot, err := ioutil.TempDir("", "agent-test-renders")
+	tmpDirRoot, err := os.MkdirTemp("", "agent-test-renders")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1376,14 +1376,14 @@ func TestAgent_Template_Retry(t *testing.T) {
 			h.failCount = 6
 
 			// create temp dir for this test run
-			tmpDir, err := ioutil.TempDir(tmpDirRoot, tcname)
+			tmpDir, err := os.MkdirTemp(tmpDirRoot, tcname)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			// make some template files
 			templatePath := filepath.Join(tmpDir, "render_0.tmpl")
-			if err := ioutil.WriteFile(templatePath, []byte(templateContents(0)), 0o600); err != nil {
+			if err := os.WriteFile(templatePath, []byte(templateContents(0)), 0o600); err != nil {
 				t.Fatal(err)
 			}
 			templateConfig := fmt.Sprintf(templateConfigString, templatePath, tmpDir, "render_0.json")
@@ -1446,9 +1446,9 @@ template_config {
 					// early for shutdown if we do have all the files
 					// rendered
 
-					//----------------------------------------------------
+					// ----------------------------------------------------
 					// Perform the tests
-					//----------------------------------------------------
+					// ----------------------------------------------------
 
 					if numFiles := testListFiles(t, tmpDir, ".json"); numFiles != 1 {
 						err = fmt.Errorf("expected 1 template, got (%d)", numFiles)
@@ -1457,7 +1457,7 @@ template_config {
 
 					fileName := filepath.Join(tmpDir, "render_0.json")
 					var c []byte
-					c, err = ioutil.ReadFile(fileName)
+					c, err = os.ReadFile(fileName)
 					if err != nil {
 						continue
 					}
@@ -1556,9 +1556,9 @@ auto_auth {
 }
 
 func TestAgent_Cache_Retry(t *testing.T) {
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	// Start the server and agent
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	logger := logging.NewVaultLogger(hclog.Trace)
 	var h handler
 	cluster := vault.NewTestCluster(t,
@@ -1710,9 +1710,9 @@ vault {
 }
 
 func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	// Start the server and agent
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	logger := logging.NewVaultLogger(hclog.Trace)
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
@@ -1764,7 +1764,7 @@ func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
 
 	// make a temp directory to hold renders. Each test will create a temp dir
 	// inside this one
-	tmpDirRoot, err := ioutil.TempDir("", "agent-test-renders")
+	tmpDirRoot, err := os.MkdirTemp("", "agent-test-renders")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1868,7 +1868,7 @@ func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
 	for tcName, tc := range testCases {
 		t.Run(tcName, func(t *testing.T) {
 			// create temp dir for this test run
-			tmpDir, err := ioutil.TempDir(tmpDirRoot, tcName)
+			tmpDir, err := os.MkdirTemp(tmpDirRoot, tcName)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1966,9 +1966,9 @@ vault {
 					// early for shutdown if we do have all the files
 					// rendered
 
-					//----------------------------------------------------
+					// ----------------------------------------------------
 					// Perform the tests
-					//----------------------------------------------------
+					// ----------------------------------------------------
 
 					if numFiles := testListFiles(t, tmpDir, ".json"); numFiles != 1 {
 						err = fmt.Errorf("expected 1 template, got (%d)", numFiles)
@@ -1977,7 +1977,7 @@ vault {
 
 					fileName := filepath.Join(tmpDir, "render_0.json")
 					var c []byte
-					c, err = ioutil.ReadFile(fileName)
+					c, err = os.ReadFile(fileName)
 					if err != nil {
 						continue
 					}
@@ -2014,9 +2014,9 @@ vault {
 }
 
 func TestAgent_Metrics(t *testing.T) {
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	// Start the server and agent
-	//----------------------------------------------------
+	// ----------------------------------------------------
 
 	// Start a vault server
 	logger := logging.NewVaultLogger(hclog.Trace)
@@ -2097,9 +2097,9 @@ listener "tcp" {
 }
 
 func TestAgent_Quit(t *testing.T) {
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	// Start the server and agent
-	//----------------------------------------------------
+	// ----------------------------------------------------
 	logger := logging.NewVaultLogger(hclog.Error)
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{

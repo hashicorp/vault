@@ -2,14 +2,14 @@ package command
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/hashicorp/hcl/hcl/printer"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
-	homedir "github.com/mitchellh/go-homedir"
+	"github.com/mitchellh/go-homedir"
 	"github.com/posener/complete"
 )
 
@@ -82,7 +82,7 @@ func (c *PolicyFmtCommand) Run(args []string) int {
 
 	// Read the entire contents into memory - it would be nice if we could use
 	// a buffer, but hcl wants the full contents.
-	b, err := ioutil.ReadFile(path)
+	b, err := os.ReadFile(path)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error reading source file: %s", err))
 		return 1
@@ -103,7 +103,7 @@ func (c *PolicyFmtCommand) Run(args []string) int {
 	}
 
 	// Write them back out
-	if err := ioutil.WriteFile(path, result, 0o644); err != nil {
+	if err := os.WriteFile(path, result, 0o644); err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing result: %s", err))
 		return 1
 	}

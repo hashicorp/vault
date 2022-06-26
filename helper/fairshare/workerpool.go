@@ -2,11 +2,11 @@ package fairshare
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"sync"
 
 	log "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
@@ -132,7 +132,7 @@ func (d *dispatcher) stop() {
 // worker pool
 func createDispatcher(name string, numWorkers int, l log.Logger) *dispatcher {
 	if l == nil {
-		l = logging.NewVaultLoggerWithWriter(ioutil.Discard, log.NoLevel)
+		l = logging.NewVaultLoggerWithWriter(io.Discard, log.NoLevel)
 	}
 	if numWorkers <= 0 {
 		numWorkers = 1

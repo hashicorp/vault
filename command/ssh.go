@@ -3,7 +3,6 @@ package command
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
@@ -363,7 +362,7 @@ func (c *SSHCommand) Run(args []string) int {
 // handleTypeCA is used to handle SSH logins using the "CA" key type.
 func (c *SSHCommand) handleTypeCA(username, ip, port string, sshArgs []string) int {
 	// Read the key from disk
-	publicKey, err := ioutil.ReadFile(c.flagPublicKeyPath)
+	publicKey, err := os.ReadFile(c.flagPublicKeyPath)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("failed to read public key %s: %s",
 			c.flagPublicKeyPath, err))
@@ -717,14 +716,14 @@ func (c *SSHCommand) writeTemporaryFile(name string, data []byte, perms os.FileM
 	// default closer to prevent panic
 	closer := func() error { return nil }
 
-	f, err := ioutil.TempFile("", name)
+	f, err := os.CreateTemp("", name)
 	if err != nil {
 		return "", errors.Wrap(err, "creating temporary file"), closer
 	}
 
 	closer = func() error { return os.Remove(f.Name()) }
 
-	if err := ioutil.WriteFile(f.Name(), data, perms); err != nil {
+	if err := os.WriteFile(f.Name(), data, perms); err != nil {
 		return "", errors.Wrap(err, "writing temporary key"), closer
 	}
 

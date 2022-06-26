@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"strings"
@@ -25,7 +24,7 @@ func TestPubKeyFilesFlag_implements(t *testing.T) {
 }
 
 func TestPubKeyFilesFlagSetBinary(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "vault-test")
+	tempDir, err := os.MkdirTemp("", "vault-test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %s", err)
 	}
@@ -36,7 +35,7 @@ func TestPubKeyFilesFlagSetBinary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error decoding bytes for public key 1: %s", err)
 	}
-	err = ioutil.WriteFile(tempDir+"/pubkey1", pub1Bytes, 0o755)
+	err = os.WriteFile(tempDir+"/pubkey1", pub1Bytes, 0o755)
 	if err != nil {
 		t.Fatalf("Error writing pub key 1 to temp file: %s", err)
 	}
@@ -44,7 +43,7 @@ func TestPubKeyFilesFlagSetBinary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error decoding bytes for public key 2: %s", err)
 	}
-	err = ioutil.WriteFile(tempDir+"/pubkey2", pub2Bytes, 0o755)
+	err = os.WriteFile(tempDir+"/pubkey2", pub2Bytes, 0o755)
 	if err != nil {
 		t.Fatalf("Error writing pub key 2 to temp file: %s", err)
 	}
@@ -52,7 +51,7 @@ func TestPubKeyFilesFlagSetBinary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error decoding bytes for public key 3: %s", err)
 	}
-	err = ioutil.WriteFile(tempDir+"/pubkey3", pub3Bytes, 0o755)
+	err = os.WriteFile(tempDir+"/pubkey3", pub3Bytes, 0o755)
 	if err != nil {
 		t.Fatalf("Error writing pub key 3 to temp file: %s", err)
 	}
@@ -75,21 +74,21 @@ func TestPubKeyFilesFlagSetBinary(t *testing.T) {
 }
 
 func TestPubKeyFilesFlagSetB64(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "vault-test")
+	tempDir, err := os.MkdirTemp("", "vault-test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %s", err)
 	}
 	defer os.RemoveAll(tempDir)
 
-	err = ioutil.WriteFile(tempDir+"/pubkey1", []byte(pubKey1), 0o755)
+	err = os.WriteFile(tempDir+"/pubkey1", []byte(pubKey1), 0o755)
 	if err != nil {
 		t.Fatalf("Error writing pub key 1 to temp file: %s", err)
 	}
-	err = ioutil.WriteFile(tempDir+"/pubkey2", []byte(pubKey2), 0o755)
+	err = os.WriteFile(tempDir+"/pubkey2", []byte(pubKey2), 0o755)
 	if err != nil {
 		t.Fatalf("Error writing pub key 2 to temp file: %s", err)
 	}
-	err = ioutil.WriteFile(tempDir+"/pubkey3", []byte(pubKey3), 0o755)
+	err = os.WriteFile(tempDir+"/pubkey3", []byte(pubKey3), 0o755)
 	if err != nil {
 		t.Fatalf("Error writing pub key 3 to temp file: %s", err)
 	}
@@ -112,13 +111,13 @@ func TestPubKeyFilesFlagSetB64(t *testing.T) {
 }
 
 func TestPubKeyFilesFlagSetKeybase(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "vault-test")
+	tempDir, err := os.MkdirTemp("", "vault-test")
 	if err != nil {
 		t.Fatalf("Error creating temporary directory: %s", err)
 	}
 	defer os.RemoveAll(tempDir)
 
-	err = ioutil.WriteFile(tempDir+"/pubkey2", []byte(pubKey2), 0o755)
+	err = os.WriteFile(tempDir+"/pubkey2", []byte(pubKey2), 0o755)
 	if err != nil {
 		t.Fatalf("Error writing pub key 2 to temp file: %s", err)
 	}

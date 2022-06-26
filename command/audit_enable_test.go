@@ -1,7 +1,6 @@
 package command
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -166,7 +165,7 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 		client, closer := testVaultServerAllBackends(t)
 		defer closer()
 
-		files, err := ioutil.ReadDir("../builtin/audit")
+		files, err := os.ReadDir("../builtin/audit")
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -6,7 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/url"
 	"os"
 	"strconv"
@@ -144,7 +144,7 @@ func (d *Runner) StartService(ctx context.Context, connect ServiceAdapter) (*Ser
 				Details:    true,
 			})
 			if err == nil {
-				b, err := ioutil.ReadAll(rc)
+				b, err := io.ReadAll(rc)
 				if err != nil {
 					d.RunOptions.LogConsumer(fmt.Sprintf("error reading container logs, err=%v, read: %s", err, string(b)))
 				} else {
@@ -250,7 +250,7 @@ func (d *Runner) Start(ctx context.Context) (*types.ContainerJSON, []string, err
 	}
 	resp, _ := d.DockerAPI.ImageCreate(ctx, cfg.Image, opts)
 	if resp != nil {
-		_, _ = ioutil.ReadAll(resp)
+		_, _ = io.ReadAll(resp)
 	}
 
 	c, err := d.DockerAPI.ContainerCreate(ctx, cfg, hostConfig, netConfig, nil, cfg.Hostname)

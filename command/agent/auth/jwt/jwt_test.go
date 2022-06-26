@@ -2,7 +2,6 @@ package jwt
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -21,18 +20,18 @@ func TestIngressToken(t *testing.T) {
 		symlinked = "symlinked"
 	)
 
-	rootDir, err := ioutil.TempDir("", "vault-agent-jwt-auth-test")
+	rootDir, err := os.MkdirTemp("", "vault-agent-jwt-auth-test")
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %s", err)
 	}
 	defer os.RemoveAll(rootDir)
 
 	setupTestDir := func() string {
-		testDir, err := ioutil.TempDir(rootDir, "")
+		testDir, err := os.MkdirTemp(rootDir, "")
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = ioutil.WriteFile(path.Join(testDir, file), []byte("test"), 0o644)
+		err = os.WriteFile(path.Join(testDir, file), []byte("test"), 0o644)
 		if err != nil {
 			t.Fatal(err)
 		}

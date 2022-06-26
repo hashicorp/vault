@@ -3,7 +3,7 @@ package command
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -33,7 +33,7 @@ func TestOperatorUnsealCommand_Run(t *testing.T) {
 
 		ui, cmd := testOperatorUnsealCommand(t)
 		cmd.client = client
-		cmd.testOutput = ioutil.Discard
+		cmd.testOutput = io.Discard
 
 		code := cmd.Run(nil)
 		if exp := 1; code != exp {
@@ -65,7 +65,7 @@ func TestOperatorUnsealCommand_Run(t *testing.T) {
 
 		ui, cmd := testOperatorUnsealCommand(t)
 		cmd.client = client
-		cmd.testOutput = ioutil.Discard
+		cmd.testOutput = io.Discard
 
 		// Reset and check output
 		code := cmd.Run([]string{
@@ -95,7 +95,7 @@ func TestOperatorUnsealCommand_Run(t *testing.T) {
 		for _, key := range keys {
 			ui, cmd := testOperatorUnsealCommand(t)
 			cmd.client = client
-			cmd.testOutput = ioutil.Discard
+			cmd.testOutput = io.Discard
 
 			// Reset and check output
 			code := cmd.Run([]string{

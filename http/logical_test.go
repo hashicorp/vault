@@ -5,9 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -154,7 +154,7 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	testResponseStatus(t, resp, 307)
 	logger.Debug("307 test one stopping")
 
-	//// READ to standby
+	// // READ to standby
 	resp = testHttpGet(t, root, addr2+"/v1/auth/token/lookup-self")
 	var actual map[string]interface{}
 	var nilWarnings interface{}
@@ -193,7 +193,7 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 		t.Fatal(diff)
 	}
 
-	//// DELETE to standby
+	// // DELETE to standby
 	resp = testHttpDeleteDisableRedirect(t, root, addr2+"/v1/secret/foo")
 	logger.Debug("307 test two starting")
 	testResponseStatus(t, resp, 307)
@@ -381,7 +381,7 @@ func TestLogical_RespondWithStatusCode(t *testing.T) {
 		t.Fatalf("Bad Status code: %d", w.Code)
 	}
 
-	bodyRaw, err := ioutil.ReadAll(w.Body)
+	bodyRaw, err := io.ReadAll(w.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -534,7 +534,7 @@ func TestLogical_AuditPort(t *testing.T) {
 		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
 	}
 
-	auditLogFile, err := ioutil.TempFile("", "auditport")
+	auditLogFile, err := os.CreateTemp("", "auditport")
 	if err != nil {
 		t.Fatal(err)
 	}

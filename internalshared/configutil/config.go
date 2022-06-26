@@ -2,7 +2,7 @@ package configutil
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
@@ -46,7 +46,7 @@ type SharedConfig struct {
 // LoadConfigFile loads the configuration from the given file.
 func LoadConfigFile(path string) (*SharedConfig, error) {
 	// Read the file
-	d, err := ioutil.ReadFile(path)
+	d, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func LoadConfigFile(path string) (*SharedConfig, error) {
 
 func LoadConfigKMSes(path string) ([]*KMS, error) {
 	// Read the file
-	d, err := ioutil.ReadFile(path)
+	d, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}

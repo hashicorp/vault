@@ -5,14 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
 )
@@ -165,7 +164,7 @@ func (j *jwtMethod) ingressToken() {
 
 	// Check that the path refers to a file.
 	// If it's a symlink, it could still be a symlink to a directory,
-	// but ioutil.ReadFile below will return a descriptive error.
+	// but os.ReadFile below will return a descriptive error.
 	switch mode := fi.Mode(); {
 	case mode.IsRegular():
 		// regular file
@@ -176,7 +175,7 @@ func (j *jwtMethod) ingressToken() {
 		return
 	}
 
-	token, err := ioutil.ReadFile(j.path)
+	token, err := os.ReadFile(j.path)
 	if err != nil {
 		j.logger.Error("failed to read jwt file", "error", err)
 		return

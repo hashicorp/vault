@@ -4,13 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"sync/atomic"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/dhutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -181,7 +180,7 @@ func (s *SinkConfig) encryptToken(token string) (string, error) {
 				}
 				return "", errors.New("no dh parameters file found, and no cached pub key")
 			}
-			fileBytes, err := ioutil.ReadFile(s.DHPath)
+			fileBytes, err := os.ReadFile(s.DHPath)
 			if err != nil {
 				return "", fmt.Errorf("error reading file for dh parameters: %w", err)
 			}

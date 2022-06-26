@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"time"
@@ -47,7 +46,7 @@ func (p *cfMethod) Authenticate(ctx context.Context, client *api.Client) (string
 	if pathToClientCert == "" {
 		return "", nil, nil, fmt.Errorf("missing %q value", cf.EnvVarInstanceCertificate)
 	}
-	certBytes, err := ioutil.ReadFile(pathToClientCert)
+	certBytes, err := os.ReadFile(pathToClientCert)
 	if err != nil {
 		return "", nil, nil, err
 	}

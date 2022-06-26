@@ -2,12 +2,11 @@ package agent
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	credCF "github.com/hashicorp/vault-plugin-auth-cf"
 	"github.com/hashicorp/vault-plugin-auth-cf/testing/certificates"
 	cfAPI "github.com/hashicorp/vault-plugin-auth-cf/testing/cf"
@@ -122,7 +121,7 @@ func TestCFEndToEnd(t *testing.T) {
 		}
 	}()
 
-	tmpFile, err := ioutil.TempFile("", "auth.tokensink.test.")
+	tmpFile, err := os.CreateTemp("", "auth.tokensink.test.")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,7 +1,6 @@
 package command
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -81,7 +80,7 @@ path "secret" {
 }
 `)
 
-		f, err := ioutil.TempFile("", "")
+		f, err := os.CreateTemp("", "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -110,7 +109,7 @@ path "secret" {
 }
 `) + "\n"
 
-		contents, err := ioutil.ReadFile(f.Name())
+		contents, err := os.ReadFile(f.Name())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -124,7 +123,7 @@ path "secret" {
 
 		policy := `dafdaf`
 
-		f, err := ioutil.TempFile("", "")
+		f, err := os.CreateTemp("", "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -159,7 +158,7 @@ path "secret" {
 
 		policy := `banana "foo" {}`
 
-		f, err := ioutil.TempFile("", "")
+		f, err := os.CreateTemp("", "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -194,7 +193,7 @@ path "secret" {
 
 		policy := `path "secret/" { capabilities = ["bogus"] }`
 
-		f, err := ioutil.TempFile("", "")
+		f, err := os.CreateTemp("", "")
 		if err != nil {
 			t.Fatal(err)
 		}
