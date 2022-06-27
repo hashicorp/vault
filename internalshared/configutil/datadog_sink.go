@@ -17,7 +17,7 @@ type DatadogSink struct {
 	sink                 *datadog.DogStatsdSink
 	logger               cli.Ui
 	attemptedToConnectAt *time.Time
-	lock                 sync.Mutex
+	lock                 sync.RWMutex
 }
 
 func NewDatadogSink(addr string, hostName string, logger cli.Ui) *DatadogSink {
@@ -30,26 +30,26 @@ func NewDatadogSink(addr string, hostName string, logger cli.Ui) *DatadogSink {
 }
 
 func (s *DatadogSink) SetTags(tags []string) {
-	s.lock.Lock()
-	s.tags = tags
-	s.lock.Unlock()
-
 	sink := s.getSink()
 	if sink == nil {
+		s.lock.Lock()
+		defer s.lock.Unlock()
+		s.tags = tags
 		return
 	}
+
 	sink.SetTags(tags)
 }
 
 func (s *DatadogSink) EnableHostNamePropagation() {
-	s.lock.Lock()
-	s.propagateHostname = true
-	s.lock.Unlock()
-
 	sink := s.getSink()
 	if sink == nil {
+		s.lock.Lock()
+		defer s.lock.Unlock()
+		s.propagateHostname = true
 		return
 	}
+
 	sink.EnableHostNamePropagation()
 }
 
@@ -76,6 +76,14 @@ func (s *DatadogSink) AddSample(key []string, val float32) {
 }
 
 func (s *DatadogSink) getSink() *datadog.DogStatsdSink {
+	s.lock.RLock()
+	sink := s.sink
+	s.lock.RUnlock()
+
+	if sink != nil {
+		return sink
+	}
+
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
