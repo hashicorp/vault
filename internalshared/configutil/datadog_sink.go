@@ -9,15 +9,29 @@ import (
 	"github.com/mitchellh/cli"
 )
 
+type dogStatsdSink interface {
+	SetTags(tags []string)
+	EnableHostNamePropagation()
+	SetGauge(key []string, val float32)
+	IncrCounter(key []string, val float32)
+	EmitKey(key []string, val float32)
+	AddSample(key []string, val float32)
+	SetGaugeWithLabels(key []string, val float32, labels []metrics.Label)
+	IncrCounterWithLabels(key []string, val float32, labels []metrics.Label)
+	AddSampleWithLabels(key []string, val float32, labels []metrics.Label)
+	Shutdown()
+}
+
 type DatadogSink struct {
 	tags                 []string
 	addr                 string
 	hostName             string
 	propagateHostname    bool
-	sink                 *datadog.DogStatsdSink
+	sink                 dogStatsdSink
 	logger               cli.Ui
 	attemptedToConnectAt *time.Time
 	lock                 sync.RWMutex
+	creator              func(addr string, hostName string) (dogStatsdSink, error)
 }
 
 func NewDatadogSink(addr string, hostName string, logger cli.Ui) *DatadogSink {
@@ -26,16 +40,23 @@ func NewDatadogSink(addr string, hostName string, logger cli.Ui) *DatadogSink {
 		hostName:          hostName,
 		propagateHostname: false,
 		logger:            logger,
+		creator: func(addr string, hostName string) (dogStatsdSink, error) {
+			return datadog.NewDogStatsdSink(addr, hostName)
+		},
 	}
 }
 
 func (s *DatadogSink) SetTags(tags []string) {
 	sink := s.getSink()
+
 	if sink == nil {
 		s.lock.Lock()
 		defer s.lock.Unlock()
-		s.tags = tags
-		return
+		sink = s.sink
+		if sink == nil { // store the tags in object if we can't connect to the server
+			s.tags = tags
+			return
+		}
 	}
 
 	sink.SetTags(tags)
@@ -43,11 +64,15 @@ func (s *DatadogSink) SetTags(tags []string) {
 
 func (s *DatadogSink) EnableHostNamePropagation() {
 	sink := s.getSink()
+
 	if sink == nil {
 		s.lock.Lock()
 		defer s.lock.Unlock()
-		s.propagateHostname = true
-		return
+		sink = s.sink
+		if sink == nil { // store the flag in object if we can't connect to the server
+			s.propagateHostname = true
+			return
+		}
 	}
 
 	sink.EnableHostNamePropagation()
@@ -75,7 +100,29 @@ func (s *DatadogSink) AddSample(key []string, val float32) {
 	s.AddSampleWithLabels(key, val, nil)
 }
 
-func (s *DatadogSink) getSink() *datadog.DogStatsdSink {
+func (s *DatadogSink) initSinkIfNil() bool {
+	if s.sink != nil {
+		return false
+	}
+
+	now := time.Now()
+	if s.attemptedToConnectAt != nil && now.Sub(*s.attemptedToConnectAt).Minutes() < 5 {
+		return false
+	}
+
+	s.attemptedToConnectAt = &now
+
+	sink, err := s.creator(s.addr, s.hostName)
+	if err != nil {
+		s.logger.Warn("failed to connect to datadog: " + err.Error())
+		return false
+	}
+
+	s.sink = sink
+	return true
+}
+
+func (s *DatadogSink) getSink() dogStatsdSink {
 	s.lock.RLock()
 	sink := s.sink
 	s.lock.RUnlock()
@@ -85,34 +132,26 @@ func (s *DatadogSink) getSink() *datadog.DogStatsdSink {
 	}
 
 	s.lock.Lock()
-	defer s.lock.Unlock()
 
-	if s.sink != nil {
+	if !s.initSinkIfNil() {
+		s.lock.Unlock()
 		return s.sink
 	}
 
-	now := time.Now()
-	if s.attemptedToConnectAt != nil && now.Sub(*s.attemptedToConnectAt).Minutes() < 5 {
-		return nil
-	}
+	tags := s.tags
+	s.tags = nil
 
-	s.attemptedToConnectAt = &now
-
-	sink, err := datadog.NewDogStatsdSink(s.addr, s.hostName)
-	if err != nil {
-		s.logger.Warn("failed to connect to datadog: " + err.Error())
-		return nil
-	}
+	s.lock.Unlock()
 
 	s.logger.Info("connected to datadog")
 
-	sink.SetTags(s.tags)
+	s.sink.SetTags(tags)
+
 	if s.propagateHostname {
-		sink.EnableHostNamePropagation()
+		s.sink.EnableHostNamePropagation()
 	}
 
-	s.sink = sink
-	return sink
+	return s.sink
 }
 
 func (s *DatadogSink) SetGaugeWithLabels(key []string, val float32, labels []metrics.Label) {

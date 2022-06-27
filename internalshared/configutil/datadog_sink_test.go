@@ -1,10 +1,47 @@
 package configutil
 
 import (
+	"fmt"
+	"github.com/armon/go-metrics"
 	"strings"
 	"testing"
 	"time"
 )
+
+type mocIDogStatsd struct {
+	tagsHistory [][]string
+}
+
+func (m *mocIDogStatsd) SetTags(tags []string) {
+	m.tagsHistory = append(m.tagsHistory, tags)
+}
+
+func (m *mocIDogStatsd) EnableHostNamePropagation() {
+}
+
+func (m mocIDogStatsd) SetGauge(key []string, val float32) {
+}
+
+func (m mocIDogStatsd) IncrCounter(key []string, val float32) {
+}
+
+func (m mocIDogStatsd) EmitKey(key []string, val float32) {
+}
+
+func (m mocIDogStatsd) AddSample(key []string, val float32) {
+}
+
+func (m mocIDogStatsd) SetGaugeWithLabels(key []string, val float32, labels []metrics.Label) {
+}
+
+func (m mocIDogStatsd) IncrCounterWithLabels(key []string, val float32, labels []metrics.Label) {
+}
+
+func (m mocIDogStatsd) AddSampleWithLabels(key []string, val float32, labels []metrics.Label) {
+}
+
+func (m mocIDogStatsd) Shutdown() {
+}
 
 type mockUi struct {
 	t        *testing.T
@@ -36,9 +73,12 @@ func (m *mockUi) Warn(s string) {
 	m.t.Log(s)
 }
 
-func TestDatadogSink(t *testing.T) {
+func TestDatadogSink_BadConnection(t *testing.T) {
 	ui := mockUi{t: t}
 	datadog := NewDatadogSink("", "", &ui)
+	datadog.creator = func(addr string, hostName string) (dogStatsdSink, error) {
+		return nil, fmt.Errorf("can not connect")
+	}
 
 	if datadog == nil {
 		t.Fatalf("result can not be nil")
@@ -82,5 +122,48 @@ func TestDatadogSink(t *testing.T) {
 	if !strings.HasPrefix(ui.warnings[1], "failed to connect to datadog:") {
 		t.Fatalf("incorrect message logged")
 	}
+}
 
+func TestDatadogSink_Concurrency(t *testing.T) {
+	ui := mockUi{t: t}
+	statsd := mocIDogStatsd{}
+
+	datadog := NewDatadogSink("", "", &ui)
+
+	i := 0
+	datadog.creator = func(addr string, hostName string) (dogStatsdSink, error) {
+		i++
+		if i < 2 {
+			return nil, fmt.Errorf("bad connection")
+		}
+		return &statsd, nil
+	}
+
+	if datadog == nil {
+		t.Fatalf("result can not be nil")
+	}
+
+	datadog.SetTags([]string{"tag1", "tag2"})
+	if len(datadog.tags) != 2 {
+		t.Fatalf("")
+	}
+
+	datadog.SetTags([]string{"tag3"})
+
+	interval, err := time.ParseDuration("-15m")
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldTime := datadog.attemptedToConnectAt.Add(interval)
+	datadog.attemptedToConnectAt = &oldTime
+
+	datadog.SetTags([]string{"tag4"})
+
+	if len(datadog.tags) != 0 {
+		t.Fatalf("didn't reset cached tags")
+	}
+
+	if len(statsd.tagsHistory) != 2 {
+		t.Fatalf("didn't send all tags to server")
+	}
 }
