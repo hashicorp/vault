@@ -1739,7 +1739,8 @@ func blockRequestIfErrorImpl(_ *Core, _, _ string) error { return nil }
 
 // RegisterAuth uses a logical.Auth object to create a token entry in the token
 // store, and registers a corresponding token lease to the expiration manager.
-// role is ignored in this function, but may be required in other implementors of RegisterAuthFunc
+// role is the login role used as part of the creation of the token entry. If not
+// relevant, can be omitted (by being provided as "").
 func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path string, auth *logical.Auth, role string) error {
 	// We first assign token policies to what was returned from the backend
 	// via auth.Policies. Then, we get the full set of policies into
