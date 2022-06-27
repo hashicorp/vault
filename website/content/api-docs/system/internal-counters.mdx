@@ -281,6 +281,10 @@ This endpoint was added in Vault 1.6.
 - `end_time` `(string, optional)` - An RFC3339 timestamp or Unix epoch time. Specifies the end of the period
   for which client counts will be reported. If no end time is specified, the end of the previous calendar
   month will be used.
+- `limit_namespaces` `(int, optional)` - Controls the total number of by_namespace data returned. This can
+   be used to return the client counts for the specified number of namespaces having highest activity. 
+   If no `limit_namespaces` parameter is specified, client counts for all namespaces in specified usage period is returned.
+
 
 ### Sample Request
 
@@ -637,6 +641,15 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
     http://127.0.0.1:8200/v1/sys/internal/counters/activity?end_time=2020-06-30T00%3A00%3A00Z&start_time=2020-06-01T00%3A00%3A00Z
+```
+
+### Sample request to get client counts for top 2 namespaces with highest activity for a usage period
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/internal/counters/activity?end_time=2020-06-30T00%3A00%3A00Z&start_time=2020-06-01T00%3A00%3A00Z&limit_namespaces=2
 ```
 
 ## Partial Month Client Count
