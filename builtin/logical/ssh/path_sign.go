@@ -36,6 +36,8 @@ type creationBundle struct {
 	Extensions      map[string]string
 }
 
+var containsTemplateRegex = regexp.MustCompile(`{{.+?}}`)
+
 func pathSign(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "sign/" + framework.GenericNameWithAtRegex("role"),
@@ -220,7 +222,7 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, req *logic
 	for _, principal := range strutil.RemoveDuplicates(strutil.ParseStringSlice(principalsAllowedByRole, ","), false) {
 		if role.AllowedUsersTemplate {
 			// Look for templating markers {{ .* }}
-			matched, _ := regexp.MatchString(`{{.+?}}`, principal)
+			matched := containsTemplateRegex.MatchString(principal)
 			if matched {
 				if req.EntityID != "" {
 					// Retrieve principal based on template + entityID from request.
@@ -384,7 +386,7 @@ func (b *backend) calculateExtensions(data *framework.FieldData, req *logical.Re
 	if role.DefaultExtensionsTemplate {
 		for extensionKey, extensionValue := range role.DefaultExtensions {
 			// Look for templating markers {{ .* }}
-			matched, _ := regexp.MatchString(`^{{.+?}}$`, extensionValue)
+			matched := containsTemplateRegex.MatchString(extensionValue)
 			if matched {
 				if req.EntityID != "" {
 					// Retrieve extension value based on template + entityID from request.
