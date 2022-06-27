@@ -324,6 +324,103 @@ func TestExpiration_TotalLeaseCount(t *testing.T) {
 	}
 }
 
+func TestExpiration_TotalLeaseCount_WithRoles(t *testing.T) {
+	// Quotas and internal lease count tracker are coupled, so this is a proxy
+	// for testing the total lease count quota
+	c, _, _ := TestCoreUnsealed(t)
+	exp := c.expiration
+
+	expectedCount := 0
+	otherNS := &namespace.Namespace{
+		ID:   "nsid",
+		Path: "foo/bar",
+	}
+	for i := 0; i < 50; i++ {
+		le := &leaseEntry{
+			LeaseID:    "lease" + fmt.Sprintf("%d", i),
+			Path:       "foo/bar/" + fmt.Sprintf("%d", i),
+			LoginRole:  "loginRole" + fmt.Sprintf("%d", i),
+			namespace:  namespace.RootNamespace,
+			IssueTime:  time.Now(),
+			ExpireTime: time.Now().Add(time.Hour),
+		}
+
+		otherNSle := &leaseEntry{
+			LeaseID:    "lease" + fmt.Sprintf("%d", i) + "/blah.nsid",
+			Path:       "foo/bar/" + fmt.Sprintf("%d", i) + "/blah.nsid",
+			LoginRole:  "loginRole" + fmt.Sprintf("%d", i),
+			namespace:  otherNS,
+			IssueTime:  time.Now(),
+			ExpireTime: time.Now().Add(time.Hour),
+		}
+
+		exp.pendingLock.Lock()
+		if err := exp.persistEntry(namespace.RootContext(nil), le); err != nil {
+			exp.pendingLock.Unlock()
+			t.Fatalf("error persisting irrevocable entry: %v", err)
+		}
+		exp.updatePendingInternal(le)
+		expectedCount++
+
+		if err := exp.persistEntry(namespace.RootContext(nil), otherNSle); err != nil {
+			exp.pendingLock.Unlock()
+			t.Fatalf("error persisting irrevocable entry: %v", err)
+		}
+		exp.updatePendingInternal(otherNSle)
+		expectedCount++
+		exp.pendingLock.Unlock()
+	}
+
+	// add some irrevocable leases to each count to ensure they are counted too
+	// note: irrevocable leases almost certainly have an expire time set in the
+	// past, but for this exercise it should be fine to set it to whatever
+	for i := 50; i < 60; i++ {
+		le := &leaseEntry{
+			LeaseID:    "lease" + fmt.Sprintf("%d", i+1),
+			Path:       "foo/bar/" + fmt.Sprintf("%d", i+1),
+			LoginRole:  "loginRole" + fmt.Sprintf("%d", i),
+			namespace:  namespace.RootNamespace,
+			IssueTime:  time.Now(),
+			ExpireTime: time.Now(),
+			RevokeErr:  "some err message",
+		}
+
+		otherNSle := &leaseEntry{
+			LeaseID:    "lease" + fmt.Sprintf("%d", i+1) + "/blah.nsid",
+			Path:       "foo/bar/" + fmt.Sprintf("%d", i+1) + "/blah.nsid",
+			LoginRole:  "loginRole" + fmt.Sprintf("%d", i),
+			namespace:  otherNS,
+			IssueTime:  time.Now(),
+			ExpireTime: time.Now(),
+			RevokeErr:  "some err message",
+		}
+
+		exp.pendingLock.Lock()
+		if err := exp.persistEntry(namespace.RootContext(nil), le); err != nil {
+			exp.pendingLock.Unlock()
+			t.Fatalf("error persisting irrevocable entry: %v", err)
+		}
+		exp.updatePendingInternal(le)
+		expectedCount++
+
+		if err := exp.persistEntry(namespace.RootContext(nil), otherNSle); err != nil {
+			exp.pendingLock.Unlock()
+			t.Fatalf("error persisting irrevocable entry: %v", err)
+		}
+		exp.updatePendingInternal(otherNSle)
+		expectedCount++
+		exp.pendingLock.Unlock()
+	}
+
+	exp.pendingLock.RLock()
+	count := exp.leaseCount
+	exp.pendingLock.RUnlock()
+
+	if count != expectedCount {
+		t.Errorf("bad lease count. expected %d, got %d", expectedCount, count)
+	}
+}
+
 func TestExpiration_Tidy(t *testing.T) {
 	var err error
 
