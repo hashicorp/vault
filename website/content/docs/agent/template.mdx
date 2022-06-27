@@ -57,12 +57,28 @@ KV store:
 {{ end }}
 ```
 
-The following is an example of a template that retrieves a PKI certificate from
-Vault's PKI secrets engine. The fetching of a certificate from a PKI role
+The following is an example of a template that issues a PKI certificate in
+Vault's PKI secrets engine. The fetching of the certificate or key from a PKI role
 through this function will be based on the certificate's expiration.
+
+To generate a new certificate and create a bundle with the key, certificate, and CA, use:
 ```
-{{ pkiCert "pki/issue/my-domain-dot-com" "common_name=foo.example.com" }}
+{{ with pkiCert "pki/issue/my-domain-dot-com" "common_name=foo.example.com" }}
+{{ .Data.Key }}
+{{ .Data.Cert }}
+{{ .Data.CA }}
+{{ end }}
 ```
+
+To fetch only the issuing CA for this mount, use:
+
+```
+{{- with secret "pki/cert/ca" -}}
+{{ .Data.certificate }}
+{{- end -}}
+```
+
+Alternatively, `pki/cert/ca_chain` can be used to fetch the full CA chain.
 
 ## Global Configurations
 
