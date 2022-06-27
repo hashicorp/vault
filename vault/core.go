@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -2162,6 +2163,10 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		if err := c.postSealMigration(ctx); err != nil {
 			c.logger.Warn("post-unseal post seal migration failed", "error", err)
 		}
+	}
+
+	if os.Getenv(EnvVaultDisableLocalAuthMountEntities) != "" {
+		c.logger.Warn("disabling entities for local auth mounts through env var", "env", EnvVaultDisableLocalAuthMountEntities)
 	}
 
 	c.logger.Info("post-unseal setup complete")
