@@ -16,6 +16,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/axiomhq/hyperloglog"
 	"github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -35,6 +36,9 @@ const (
 	activityQueryBasePath  = "queries/"
 	activityConfigKey      = "config"
 	activityIntentLogKey   = "endofmonth"
+
+	// sketch for each month that stores hash of client ids
+	distinctClientsBasePath = "log/distinctclients/"
 
 	// for testing purposes (public as needed)
 	ActivityLogPrefix = "sys/counters/activity/log/"
@@ -363,6 +367,53 @@ func (a *ActivityLog) saveCurrentSegmentToStorageLocked(ctx context.Context, for
 	return nil
 }
 
+// CreateOrFetchHyperlogLog creates a new hyperlogLog for each startTime (month) if it does not exist in storage.
+// hyperlogLog is used here to solve count-distinct problem i.e, to count the number of distinct clients
+// In activity log, hyperloglog is a sketch containing clientID's in a given month
+func (a *ActivityLog) CreateOrFetchHyperlogLog(ctx context.Context, startTime time.Time) *hyperloglog.Sketch {
+	monthlyHLLPath := fmt.Sprintf("%s%d", distinctClientsBasePath, startTime.Unix())
+	hll := hyperloglog.New()
+	a.logger.Trace("fetching hyperloglog ", "path", monthlyHLLPath)
+	data, err := a.view.Get(ctx, monthlyHLLPath)
+	if err != nil {
+		a.logger.Error("error fetching hyperloglog", "path", monthlyHLLPath, "error", err)
+		return hll
+	}
+	if data == nil {
+		a.logger.Trace("creating hyperloglog ", "path", monthlyHLLPath)
+		err = a.StoreHyperlogLog(ctx, startTime, hll)
+		if err != nil {
+			a.logger.Error("error storing hyperloglog", "path", monthlyHLLPath, "error", err)
+			return hll
+		}
+	} else {
+		err = hll.UnmarshalBinary(data.Value)
+		if err != nil {
+			a.logger.Error("error unmarshaling hyperloglog", "path", monthlyHLLPath, "error", err)
+			return hll
+		}
+	}
+	return hll
+}
+
+// StoreHyperlogLog stores the hyperloglog (a sketch containing client IDs) for startTime (month) in storage
+func (a *ActivityLog) StoreHyperlogLog(ctx context.Context, startTime time.Time, newHll *hyperloglog.Sketch) error {
+	monthlyHLLPath := fmt.Sprintf("%s%d", distinctClientsBasePath, startTime.Unix())
+	a.logger.Trace("storing hyperloglog ", "path", monthlyHLLPath)
+	marshalledHll, err := newHll.MarshalBinary()
+	if err != nil {
+		return err
+	}
+	err = a.view.Put(ctx, &logical.StorageEntry{
+		Key:   monthlyHLLPath,
+		Value: marshalledHll,
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // :force: forces a save of tokens/entities even if the in-memory log is empty
 func (a *ActivityLog) saveCurrentSegmentInternal(ctx context.Context, force bool) error {
 	entityPath := fmt.Sprintf("%s%d/%d", activityEntityBasePath, a.currentSegment.startTimestamp, a.currentSegment.clientSequenceNumber)
@@ -515,7 +566,7 @@ func (a *ActivityLog) getLastEntitySegmentNumber(ctx context.Context, startTime 
 }
 
 // WalkEntitySegments loads each of the entity segments for a particular start time
-func (a *ActivityLog) WalkEntitySegments(ctx context.Context, startTime time.Time, walkFn func(*activity.EntityActivityLog, time.Time) error) error {
+func (a *ActivityLog) WalkEntitySegments(ctx context.Context, startTime time.Time, hll *hyperloglog.Sketch, walkFn func(*activity.EntityActivityLog, time.Time, *hyperloglog.Sketch) error) error {
 	basePath := activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/"
 	pathList, err := a.view.List(ctx, basePath)
 	if err != nil {
@@ -537,7 +588,7 @@ func (a *ActivityLog) WalkEntitySegments(ctx context.Context, startTime time.Tim
 		if err != nil {
 			return fmt.Errorf("unable to parse segment %v%v: %w", basePath, path, err)
 		}
-		err = walkFn(out, startTime)
+		err = walkFn(out, startTime, hll)
 		if err != nil {
 			return fmt.Errorf("unable to walk entities: %w", err)
 		}
@@ -2069,9 +2120,20 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 	byNamespace := make(map[string]*processByNamespace)
 	byMonth := make(map[int64]*processMonth)
 
-	walkEntities := func(l *activity.EntityActivityLog, startTime time.Time) error {
+	walkEntities := func(l *activity.EntityActivityLog, startTime time.Time, hll *hyperloglog.Sketch) error {
 		for _, e := range l.Clients {
+
 			processClientRecord(e, byNamespace, byMonth, startTime)
+
+			// We maintain an hyperloglog for each month
+			// hyperloglog is a sketch (hyperloglog data-structure) containing client ID's in a given month
+			// hyperloglog is used in activity log to get the approximate number new clients in the current billing month
+			// by counting the number of distinct clients in all the months including current month
+			// (this can be done by merging the hyperloglog all months with current month hyperloglog)
+			// and subtracting the number of distinct clients in the current month
+			// NOTE: current month here is not the month of startTime but the time period from the start of the current month,
+			// up until the time that this request was made.
+			hll.Insert([]byte(e.ClientID))
 
 			// The byMonth map will be filled in the reverse order of time. For
 			// example, if the billing period is from Jan to June, the byMonth
@@ -2144,10 +2206,16 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 			break
 		}
 
-		err = a.WalkEntitySegments(ctx, startTime, walkEntities)
+		hyperloglog := a.CreateOrFetchHyperlogLog(ctx, startTime)
+		err = a.WalkEntitySegments(ctx, startTime, hyperloglog, walkEntities)
 		if err != nil {
 			a.logger.Warn("failed to load previous segments", "error", err)
 			return err
+		}
+		// Store the hyperloglog
+		err = a.StoreHyperlogLog(ctx, startTime, hyperloglog)
+		if err != nil {
+			a.logger.Warn("failed to store hyperloglog for month", "start time", startTime, "error", err)
 		}
 		err = a.WalkTokenSegments(ctx, startTime, walkTokens)
 		if err != nil {
@@ -2646,7 +2714,8 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 	a.logger.Info("starting activity log export", "start_time", startTime, "end_time", endTime, "format", format)
 
 	dedupedIds := make(map[string]struct{})
-	walkEntities := func(l *activity.EntityActivityLog, startTime time.Time) error {
+
+	walkEntities := func(l *activity.EntityActivityLog, startTime time.Time, hll *hyperloglog.Sketch) error {
 		for _, e := range l.Clients {
 			if _, ok := dedupedIds[e.ClientID]; ok {
 				continue
@@ -2663,8 +2732,9 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 	}
 
 	// For each month in the filtered list walk all the log segments
+
 	for _, startTime := range filteredList {
-		err := a.WalkEntitySegments(ctx, startTime, walkEntities)
+		err := a.WalkEntitySegments(ctx, startTime, nil, walkEntities)
 		if err != nil {
 			a.logger.Error("failed to load segments for export", "error", err)
 			return fmt.Errorf("failed to load segments for export: %w", err)

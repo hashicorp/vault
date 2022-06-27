@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/axiomhq/hyperloglog"
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/vault/helper/constants"
@@ -470,6 +471,34 @@ func TestActivityLog_SaveEntitiesToStorage(t *testing.T) {
 		t.Fatalf("could not unmarshal protobuf: %v", err)
 	}
 	expectedEntityIDs(t, out, ids)
+}
+
+// Test to check store hyperloglog and fetch hyperloglog from storage
+func TestActivityLog_StoreAndReadHyperloglog(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	ctx := context.Background()
+
+	a := core.activityLog
+	a.SetStandbyEnable(ctx, true)
+	a.SetStartTimestamp(time.Now().Unix()) // set a nonzero segment
+	currentMonth := timeutil.StartOfMonth(time.Now())
+	currentMonthHll := hyperloglog.New()
+	currentMonthHll.Insert([]byte("a"))
+	currentMonthHll.Insert([]byte("a"))
+	currentMonthHll.Insert([]byte("b"))
+	currentMonthHll.Insert([]byte("c"))
+	currentMonthHll.Insert([]byte("d"))
+	currentMonthHll.Insert([]byte("d"))
+
+	err := a.StoreHyperlogLog(ctx, currentMonth, currentMonthHll)
+	if err != nil {
+		t.Fatalf("error storing hyperloglog in storage: %v", err)
+	}
+	fetchedHll := a.CreateOrFetchHyperlogLog(ctx, currentMonth)
+	// check the distinct count stored from hll
+	if fetchedHll.Estimate() != 4 {
+		t.Fatalf("wrong number of distinct elements: expected: 5 actual: %v", fetchedHll.Estimate())
+	}
 }
 
 func TestModifyResponseMonthsNilAppend(t *testing.T) {
