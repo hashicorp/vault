@@ -1197,11 +1197,13 @@ func NewTestLogger(t testing.T) *TestLogger {
 	// We send nothing on the regular logger, that way we can later deregister
 	// the sink to stop logging during cluster cleanup.
 	logger := log.NewInterceptLogger(&log.LoggerOptions{
-		Output: ioutil.Discard,
+		Output:            ioutil.Discard,
+		IndependentLevels: true,
 	})
 	sink := log.NewSinkAdapter(&log.LoggerOptions{
-		Output: output,
-		Level:  log.Trace,
+		Output:            output,
+		Level:             log.Trace,
+		IndependentLevels: true,
 	})
 	logger.RegisterSink(sink)
 	return &TestLogger{
