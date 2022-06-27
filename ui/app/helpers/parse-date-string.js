@@ -8,9 +8,11 @@ export function parseDateString(date, separator = '-') {
     if (datePieces[0] < 1 || datePieces[0] > 12) {
       throw new Error('Not a valid month value');
     }
-    let firstOfMonth = new Date(datePieces[1], datePieces[0] - 1, 1);
-    if (isValid(firstOfMonth)) {
-      return firstOfMonth;
+    // Since backend converts the timezone to UTC, sending the first (1) as start or end date can cause the month to change.
+    // To mitigate this impact of timezone conversion, hard coding the date to avoid month change.
+    let date = new Date(datePieces[1], datePieces[0] - 1, 10);
+    if (isValid(date)) {
+      return date;
     }
   }
   // what to return if not valid?

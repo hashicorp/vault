@@ -186,6 +186,7 @@ event "promote-staging" {
     organization = "hashicorp"
     repository = "crt-workflows-common"
     workflow = "promote-staging"
+    config = "release-metadata.hcl"
   }
 
   notification {
