@@ -175,7 +175,8 @@ type databaseBackend struct {
 	roleLocks []*locksutil.LockEntry
 
 	// the running gauge collection process
-	gaugeCollectionProcess *metricsutil.GaugeCollectionProcess
+	gaugeCollectionProcess     *metricsutil.GaugeCollectionProcess
+	gaugeCollectionProcessStop sync.Once
 }
 
 func (b *databaseBackend) connGet(name string) *dbPluginInstance {
@@ -415,9 +416,12 @@ func (b *databaseBackend) clean(_ context.Context) {
 	for _, db := range connections {
 		go db.Close()
 	}
-	if b.gaugeCollectionProcess != nil {
-		b.gaugeCollectionProcess.Stop()
-	}
+	b.gaugeCollectionProcessStop.Do(func() {
+		if b.gaugeCollectionProcess != nil {
+			b.gaugeCollectionProcess.Stop()
+		}
+		b.gaugeCollectionProcess = nil
+	})
 }
 
 const backendHelp = `

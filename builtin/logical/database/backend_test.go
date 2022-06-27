@@ -1535,6 +1535,8 @@ func TestBackend_AsyncClose(t *testing.T) {
 	done := make(chan bool)
 	go func() {
 		b.Cleanup(context.Background())
+		// check that clean can be called twice safely
+		b.Cleanup(context.Background())
 		done <- true
 	}()
 	select {
