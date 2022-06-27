@@ -36,6 +36,7 @@ export default class OidcAssignmentForm extends Component {
         yield this.args.model.save();
         this.args.onSave();
       } catch (error) {
+        console.log(error, 'error');
         const message = error.errors ? error.errors.join('. ') : error.message;
         this.flashMessages.danger(message);
       }
@@ -55,8 +56,10 @@ export default class OidcAssignmentForm extends Component {
     this.args.model.name = value;
   }
 
-  async onEntitiesSelect(selectedIds) {
-    const entityIds = await this.args.model.entityIds;
-    handleHasManySelection(selectedIds, entityIds, this.store, 'entityIds');
+  @action
+  onEntitiesSelect(selectedIds) {
+    const entityIds = this.args.model.entityIds;
+    handleHasManySelection(selectedIds, entityIds, this.store, 'identity/entity');
+    console.log(this.args.model.entityIds.toArray(), 'here');
   }
 }

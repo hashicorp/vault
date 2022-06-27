@@ -19,5 +19,9 @@
   </p.top>
 </PageHeader>
 <div class="has-border-top-light has-top-padding-l">
-  <Oidc::AssignmentForm @model={{this.model}} />
+  <Oidc::AssignmentForm
+    @model={{this.model}}
+    @onClose={{transition-to "vault.cluster.access.oidc.assignment"}}
+    @onSave={{transition-to "vault.cluster.access.oidc.assignments.assignment.details" this.model.name}}
+  />
 </div>

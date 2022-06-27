@@ -23,6 +23,16 @@ export default class NamedPathAdapter extends ApplicationAdapter {
   updateRecord() {
     return this._saveRecord(...arguments);
   }
+  // add name to payload
+  findRecord(store, type, id) {
+    return super.findRecord(...arguments).then((resp) => {
+      if (!resp.data.name) {
+        resp.data.name = id;
+      }
+
+      return resp;
+    });
+  }
   // GET request with list=true as query param
   query(store, type, query) {
     const url = this.urlForQuery(query, type.modelName);
