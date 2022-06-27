@@ -1,6 +1,7 @@
 package configutil
 
 import (
+	"sync"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -9,13 +10,14 @@ import (
 )
 
 type DatadogSink struct {
-	tags              []string
-	addr              string
-	hostName          string
-	propagateHostname bool
-	sink              *datadog.DogStatsdSink
-	logger            cli.Ui
-	tryedAt           *time.Time
+	tags                 []string
+	addr                 string
+	hostName             string
+	propagateHostname    bool
+	sink                 *datadog.DogStatsdSink
+	logger               cli.Ui
+	attemptedToConnectAt *time.Time
+	lock                 sync.Mutex
 }
 
 func NewDatadogSink(addr string, hostName string, logger cli.Ui) *DatadogSink {
@@ -28,7 +30,10 @@ func NewDatadogSink(addr string, hostName string, logger cli.Ui) *DatadogSink {
 }
 
 func (s *DatadogSink) SetTags(tags []string) {
+	s.lock.Lock()
 	s.tags = tags
+	s.lock.Unlock()
+
 	sink := s.getSink()
 	if sink == nil {
 		return
@@ -37,7 +42,10 @@ func (s *DatadogSink) SetTags(tags []string) {
 }
 
 func (s *DatadogSink) EnableHostNamePropagation() {
+	s.lock.Lock()
 	s.propagateHostname = true
+	s.lock.Unlock()
+
 	sink := s.getSink()
 	if sink == nil {
 		return
@@ -68,16 +76,19 @@ func (s *DatadogSink) AddSample(key []string, val float32) {
 }
 
 func (s *DatadogSink) getSink() *datadog.DogStatsdSink {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
 	if s.sink != nil {
 		return s.sink
 	}
 
 	now := time.Now()
-	if s.tryedAt != nil && now.Sub(*s.tryedAt).Minutes() < 5 {
+	if s.attemptedToConnectAt != nil && now.Sub(*s.attemptedToConnectAt).Minutes() < 5 {
 		return nil
 	}
 
-	s.tryedAt = &now
+	s.attemptedToConnectAt = &now
 
 	sink, err := datadog.NewDogStatsdSink(s.addr, s.hostName)
 	if err != nil {

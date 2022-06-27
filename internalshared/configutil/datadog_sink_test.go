@@ -3,6 +3,7 @@ package configutil
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 type mockUi struct {
@@ -27,11 +28,11 @@ func (m *mockUi) Info(s string) {
 	m.t.Log(s)
 }
 func (m *mockUi) Error(s string) {
-	m.errors = append(m.infos, s)
+	m.errors = append(m.errors, s)
 	m.t.Log(s)
 }
 func (m *mockUi) Warn(s string) {
-	m.warnings = append(m.infos, s)
+	m.warnings = append(m.warnings, s)
 	m.t.Log(s)
 }
 
@@ -58,4 +59,28 @@ func TestDatadogSink(t *testing.T) {
 	if !strings.HasPrefix(ui.warnings[0], "failed to connect to datadog:") {
 		t.Fatalf("incorrect message logged")
 	}
+
+	interval, err := time.ParseDuration("-15m")
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldTime := datadog.attemptedToConnectAt.Add(interval)
+	datadog.attemptedToConnectAt = &oldTime
+
+	_ = datadog.getSink()
+	_ = datadog.getSink()
+	_ = datadog.getSink()
+
+	if len(ui.warnings) < 2 {
+		t.Fatalf("no warnings logged")
+	}
+
+	if len(ui.warnings) > 2 || len(ui.errors) > 0 || len(ui.infos) > 0 {
+		t.Fatalf("excess logging")
+	}
+
+	if !strings.HasPrefix(ui.warnings[1], "failed to connect to datadog:") {
+		t.Fatalf("incorrect message logged")
+	}
+
 }
