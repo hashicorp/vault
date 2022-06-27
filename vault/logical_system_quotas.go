@@ -69,6 +69,11 @@ func (b *SystemBackend) quotasPaths() []*framework.Path {
 global quota. For example namespace1/ adds a quota to a full namespace,
 namespace1/auth/userpass adds a quota to userpass in namespace1.`,
 				},
+				"role": {
+					Type: framework.TypeString,
+					Description: `Login role to apply this quota to. Note that when set, path must be configured
+to a valid auth method with a concept of roles.`,
+				},
 				"rate": {
 					Type: framework.TypeFloat,
 					Description: `The maximum number of requests in a given interval to be allowed by the quota rule.
@@ -197,9 +202,30 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			pathSuffix = strings.TrimSuffix(strings.TrimPrefix(mountPath, mountAPIPath), "/")
 			mountPath = mountAPIPath
 		}
+
+		role := d.Get("role").(string)
+		// If this is a quota with a role, ensure the backend supports role resolution
+		if role != "" {
+			if pathSuffix != "" {
+				return logical.ErrorResponse("Quotas cannot contain both a path suffix and a role. If a role is provided, path must be a valid auth mount with a concept of roles"), nil
+			}
+			authBackend := b.Core.router.MatchingBackend(namespace.ContextWithNamespace(ctx, ns), mountPath)
+			if authBackend == nil || authBackend.Type() != logical.TypeCredential {
+				return logical.ErrorResponse("Mount path '%s' is not a valid auth method and therefore unsuitable for use with role-based quotas", mountPath), nil
+			}
+			// We will always error as we aren't supplying real data, but we're looking for "unsupported operation" in particular
+			_, err := authBackend.HandleRequest(ctx, &logical.Request{
+				Path:      "login",
+				Operation: logical.ResolveRoleOperation,
+			})
+			if err != nil && (err == logical.ErrUnsupportedOperation || err == logical.ErrUnsupportedPath) {
+				return logical.ErrorResponse("Mount path '%s' does not support use with role-based quotas", mountPath), nil
+			}
+		}
+
 		// Disallow creation of new quota that has properties similar to an
 		// existing quota.
-		quotaByFactors, err := b.Core.quotaManager.QuotaByFactors(ctx, qType, ns.Path, mountPath, pathSuffix)
+		quotaByFactors, err := b.Core.quotaManager.QuotaByFactors(ctx, qType, ns.Path, mountPath, pathSuffix, role)
 		if err != nil {
 			return nil, err
 		}
@@ -215,7 +241,7 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 
 		switch {
 		case quota == nil:
-			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, pathSuffix, rate, interval, blockInterval)
+			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, pathSuffix, role, rate, interval, blockInterval)
 		default:
 			// Re-inserting the already indexed object in memdb might cause problems.
 			// So, clone the object. See https://github.com/hashicorp/go-memdb/issues/76.
@@ -271,6 +297,7 @@ func (b *SystemBackend) handleRateLimitQuotasRead() framework.OperationFunc {
 			"type":           qType,
 			"name":           rlq.Name,
 			"path":           nsPath + rlq.MountPath + rlq.PathSuffix,
+			"role":           rlq.Role,
 			"rate":           rlq.Rate,
 			"interval":       int(rlq.Interval.Seconds()),
 			"block_interval": int(rlq.BlockInterval.Seconds()),
