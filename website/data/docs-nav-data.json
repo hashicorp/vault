@@ -1262,10 +1262,6 @@
               {
                 "title": "Okta",
                 "path": "auth/jwt/oidc-providers/okta"
-              },
-              {
-                "title": "SecureAuth",
-                "path": "auth/jwt/oidc-providers/secureauth"
               }
             ]
           }
