@@ -282,6 +282,7 @@
           data-test-input={{@attr.name}}
           id={{@attr.name}}
           readonly={{this.isReadOnly}}
+          disabled={{and @attr.options.editDisabled (not @model.isNew)}}
           autocomplete="off"
           spellcheck="false"
           value={{or (get @model this.valuePath) @attr.options.defaultValue}}
