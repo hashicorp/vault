@@ -3317,8 +3317,8 @@ func (c *Core) DetermineRoleFromLoginRequestFromBytes(mountPoint string, payload
 // DetermineRoleFromLoginRequest will determine the role that should be applied to a quota for a given
 // login request
 func (c *Core) DetermineRoleFromLoginRequest(mountPoint string, data map[string]interface{}, ctx context.Context) string {
-	c.authLock.Lock()
-	defer c.authLock.Unlock()
+	c.authLock.RLock()
+	defer c.authLock.RUnlock()
 	matchingBackend := c.router.MatchingBackend(ctx, mountPoint)
 	if matchingBackend == nil || matchingBackend.Type() != logical.TypeCredential {
 		// Role based quotas do not apply to this request
