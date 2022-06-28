@@ -39,8 +39,17 @@ func pathLogin(b *backend) *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation:         b.pathLogin,
 			logical.AliasLookaheadOperation: b.pathLoginAliasLookahead,
+			logical.ResolveRoleOperation:    b.pathLoginResolveRole,
 		},
 	}
+}
+
+func (b *backend) pathLoginResolveRole(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	certRole := data.Get("name").(string)
+	if certRole == "" {
+		return logical.ErrorResponse("Role not present in this request"), nil
+	}
+	return logical.ResolveRoleResponse(certRole)
 }
 
 func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {

@@ -86,6 +86,7 @@ const (
 	indexNamespace          = "ns"
 	indexNamespaceMount     = "ns_mount"
 	indexNamespaceMountPath = "ns_mount_path"
+	indexNamespaceMountRole = "ns_mount_role"
 )
 
 const (
@@ -232,6 +233,9 @@ type Request struct {
 
 	// Path is the request path to which quota rules are being queried for
 	Path string
+
+	// Role is the role given as part of the request to a login endpoint
+	Role string
 
 	// NamespacePath is the namespace path to which the request belongs
 	NamespacePath string
@@ -392,7 +396,7 @@ func (m *Manager) QuotaByName(qType string, name string) (Quota, error) {
 }
 
 // QuotaByFactors returns the quota rule that matches the provided factors
-func (m *Manager) QuotaByFactors(ctx context.Context, qType, nsPath, mountPath, pathSuffix string) (Quota, error) {
+func (m *Manager) QuotaByFactors(ctx context.Context, qType, nsPath, mountPath, pathSuffix, role string) (Quota, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
@@ -403,14 +407,17 @@ func (m *Manager) QuotaByFactors(ctx context.Context, qType, nsPath, mountPath, 
 	}
 
 	idx := indexNamespace
-	args := []interface{}{nsPath, false, false}
+	args := []interface{}{nsPath, false, false, false}
 	if mountPath != "" {
 		if pathSuffix != "" {
 			idx = indexNamespaceMountPath
-			args = []interface{}{nsPath, mountPath, pathSuffix}
+			args = []interface{}{nsPath, mountPath, pathSuffix, false}
+		} else if role != "" {
+			idx = indexNamespaceMountRole
+			args = []interface{}{nsPath, mountPath, false, role}
 		} else {
 			idx = indexNamespaceMount
-			args = []interface{}{nsPath, mountPath, false}
+			args = []interface{}{nsPath, mountPath, false, false}
 		}
 	}
 
@@ -450,6 +457,7 @@ func (m *Manager) QueryQuota(req *Request) (Quota, error) {
 // - namespace specific quota takes precedence over global quota
 // - mount specific quota takes precedence over namespace specific quota
 // - path suffix specific quota takes precedence over mount specific quota
+// - role based quota takes precedence over path suffix/mount specific quota
 func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 	if txn == nil {
 		txn = m.db.Txn(false)
@@ -485,9 +493,18 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 		return quotas[0], nil
 	}
 
+	// Fetch role suffix quota
+	quota, err := quotaFetchFunc(indexNamespaceMountRole, req.NamespacePath, req.MountPath, false, req.Role)
+	if err != nil {
+		return nil, err
+	}
+	if quota != nil {
+		return quota, nil
+	}
+
 	// Fetch path suffix quota
 	pathSuffix := strings.TrimSuffix(strings.TrimPrefix(strings.TrimPrefix(req.Path, req.NamespacePath), req.MountPath), "/")
-	quota, err := quotaFetchFunc(indexNamespaceMountPath, req.NamespacePath, req.MountPath, pathSuffix)
+	quota, err = quotaFetchFunc(indexNamespaceMountPath, req.NamespacePath, req.MountPath, pathSuffix, false)
 	if err != nil {
 		return nil, err
 	}
@@ -496,7 +513,7 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 	}
 
 	// Fetch mount quota
-	quota, err = quotaFetchFunc(indexNamespaceMount, req.NamespacePath, req.MountPath, false)
+	quota, err = quotaFetchFunc(indexNamespaceMount, req.NamespacePath, req.MountPath, false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -505,7 +522,7 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 	}
 
 	// Fetch ns quota. If NamespacePath is root, this will return the global quota.
-	quota, err = quotaFetchFunc(indexNamespace, req.NamespacePath, false, false)
+	quota, err = quotaFetchFunc(indexNamespace, req.NamespacePath, false, false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -522,7 +539,7 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 	}
 
 	// Fetch global quota
-	quota, err = quotaFetchFunc(indexNamespace, "root", false, false)
+	quota, err = quotaFetchFunc(indexNamespace, "root", false, false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -753,6 +770,11 @@ func dbSchema() *memdb.DBSchema {
 							&memdb.FieldSetIndex{
 								Field: "PathSuffix",
 							},
+							// By sending false as the query parameter, we can
+							// query just the namespace specific quota.
+							&memdb.FieldSetIndex{
+								Field: "Role",
+							},
 						},
 					},
 				},
@@ -772,6 +794,33 @@ func dbSchema() *memdb.DBSchema {
 							&memdb.FieldSetIndex{
 								Field: "PathSuffix",
 							},
+							// By sending false as the query parameter, we can
+							// query just the namespace specific quota.
+							&memdb.FieldSetIndex{
+								Field: "Role",
+							},
+						},
+					},
+				},
+				indexNamespaceMountRole: {
+					Name:         indexNamespaceMountRole,
+					AllowMissing: true,
+					Indexer: &memdb.CompoundMultiIndex{
+						Indexes: []memdb.Indexer{
+							&memdb.StringFieldIndex{
+								Field: "NamespacePath",
+							},
+							&memdb.StringFieldIndex{
+								Field: "MountPath",
+							},
+							// By sending false as the query parameter, we can
+							// query just the role specific quota.
+							&memdb.FieldSetIndex{
+								Field: "PathSuffix",
+							},
+							&memdb.StringFieldIndex{
+								Field: "Role",
+							},
 						},
 					},
 				},
@@ -788,6 +837,11 @@ func dbSchema() *memdb.DBSchema {
 							},
 							&memdb.StringFieldIndex{
 								Field: "PathSuffix",
+							},
+							// By sending false as the query parameter, we can
+							// query just the namespace specific quota.
+							&memdb.FieldSetIndex{
+								Field: "Role",
 							},
 						},
 					},
@@ -1050,14 +1104,20 @@ func (m *Manager) HandleRemount(ctx context.Context, from, to namespace.MountPat
 		return nil
 	}
 
-	// Update mounts for everything without a path prefix
-	err := updateMounts(indexNamespaceMount, fromNs, from.MountPath, false)
+	// Update mounts for everything without a path prefix or role
+	err := updateMounts(indexNamespaceMount, fromNs, from.MountPath, false, false)
 	if err != nil {
 		return err
 	}
 
 	// Update mounts for everything with a path prefix
-	err = updateMounts(indexNamespaceMount, fromNs, from.MountPath, true)
+	err = updateMounts(indexNamespaceMount, fromNs, from.MountPath, true, false)
+	if err != nil {
+		return err
+	}
+
+	// Update mounts for everything with a role
+	err = updateMounts(indexNamespaceMount, fromNs, from.MountPath, false, true)
 	if err != nil {
 		return err
 	}
@@ -1113,14 +1173,20 @@ func (m *Manager) HandleBackendDisabling(ctx context.Context, nsPath, mountPath 
 		return nil
 	}
 
-	// Update mounts for everything without a path prefix
-	err := updateMounts(indexNamespaceMount, nsPath, mountPath, false)
+	// Update mounts for everything without a path prefix or role
+	err := updateMounts(indexNamespaceMount, nsPath, mountPath, false, false)
 	if err != nil {
 		return err
 	}
 
 	// Update mounts for everything with a path prefix
-	err = updateMounts(indexNamespaceMount, nsPath, mountPath, true)
+	err = updateMounts(indexNamespaceMount, nsPath, mountPath, true, false)
+	if err != nil {
+		return err
+	}
+
+	// Update mounts for everything with a role
+	err = updateMounts(indexNamespaceMount, nsPath, mountPath, false, true)
 	if err != nil {
 		return err
 	}

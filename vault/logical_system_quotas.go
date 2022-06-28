@@ -202,15 +202,6 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			pathSuffix = strings.TrimSuffix(strings.TrimPrefix(mountPath, mountAPIPath), "/")
 			mountPath = mountAPIPath
 		}
-		// Disallow creation of new quota that has properties similar to an
-		// existing quota.
-		quotaByFactors, err := b.Core.quotaManager.QuotaByFactors(ctx, qType, ns.Path, mountPath, pathSuffix)
-		if err != nil {
-			return nil, err
-		}
-		if quotaByFactors != nil && quotaByFactors.QuotaName() != name {
-			return logical.ErrorResponse("quota rule with similar properties exists under the name %q", quotaByFactors.QuotaName()), nil
-		}
 
 		role := d.Get("role").(string)
 		// If this is a quota with a role, ensure the backend supports role resolution
@@ -232,6 +223,16 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			}
 		}
 
+		// Disallow creation of new quota that has properties similar to an
+		// existing quota.
+		quotaByFactors, err := b.Core.quotaManager.QuotaByFactors(ctx, qType, ns.Path, mountPath, pathSuffix, role)
+		if err != nil {
+			return nil, err
+		}
+		if quotaByFactors != nil && quotaByFactors.QuotaName() != name {
+			return logical.ErrorResponse("quota rule with similar properties exists under the name %q", quotaByFactors.QuotaName()), nil
+		}
+
 		// If a quota already exists, fetch and update it.
 		quota, err := b.Core.quotaManager.QuotaByName(qType, name)
 		if err != nil {
@@ -240,7 +241,7 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 
 		switch {
 		case quota == nil:
-			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, pathSuffix, rate, interval, blockInterval)
+			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, pathSuffix, role, rate, interval, blockInterval)
 		default:
 			// Re-inserting the already indexed object in memdb might cause problems.
 			// So, clone the object. See https://github.com/hashicorp/go-memdb/issues/76.
@@ -296,6 +297,7 @@ func (b *SystemBackend) handleRateLimitQuotasRead() framework.OperationFunc {
 			"type":           qType,
 			"name":           rlq.Name,
 			"path":           nsPath + rlq.MountPath + rlq.PathSuffix,
+			"role":           rlq.Role,
 			"rate":           rlq.Rate,
 			"interval":       int(rlq.Interval.Seconds()),
 			"block_interval": int(rlq.BlockInterval.Seconds()),

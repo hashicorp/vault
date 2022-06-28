@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 )
 
@@ -60,7 +61,7 @@ type GaugeCollectionProcess struct {
 	collector GaugeCollector
 
 	// destination for metrics
-	sink   *ClusterMetricSink
+	sink   Metrics
 	logger log.Logger
 
 	// time between collections
@@ -68,8 +69,37 @@ type GaugeCollectionProcess struct {
 	currentInterval  time.Duration
 	ticker           *time.Ticker
 
+	// used to help limit cardinality
+	maxGaugeCardinality int
+
 	// time source
 	clock clock
+}
+
+// NewGaugeCollectionProcess creates a new collection process for the callback
+// function given as an argument, and starts it running.
+// A label should be provided for metrics *about* this collection process.
+//
+// The Run() method must be called to start the process.
+func NewGaugeCollectionProcess(
+	key []string,
+	id []Label,
+	collector GaugeCollector,
+	m metrics.MetricSink,
+	gaugeInterval time.Duration,
+	maxGaugeCardinality int,
+	logger log.Logger,
+) (*GaugeCollectionProcess, error) {
+	return newGaugeCollectionProcessWithClock(
+		key,
+		id,
+		collector,
+		SinkWrapper{MetricSink: m},
+		gaugeInterval,
+		maxGaugeCardinality,
+		logger,
+		defaultClock{},
+	)
 }
 
 // NewGaugeCollectionProcess creates a new collection process for the callback
@@ -83,41 +113,48 @@ func (m *ClusterMetricSink) NewGaugeCollectionProcess(
 	collector GaugeCollector,
 	logger log.Logger,
 ) (*GaugeCollectionProcess, error) {
-	return m.newGaugeCollectionProcessWithClock(
+	return newGaugeCollectionProcessWithClock(
 		key,
 		id,
 		collector,
+		m,
+		m.GaugeInterval,
+		m.MaxGaugeCardinality,
 		logger,
 		defaultClock{},
 	)
 }
 
 // test version allows an alternative clock implementation
-func (m *ClusterMetricSink) newGaugeCollectionProcessWithClock(
+func newGaugeCollectionProcessWithClock(
 	key []string,
 	id []Label,
 	collector GaugeCollector,
+	sink Metrics,
+	gaugeInterval time.Duration,
+	maxGaugeCardinality int,
 	logger log.Logger,
 	clock clock,
 ) (*GaugeCollectionProcess, error) {
 	process := &GaugeCollectionProcess{
-		stop:             make(chan struct{}, 1),
-		stopped:          make(chan struct{}, 1),
-		key:              key,
-		labels:           id,
-		collector:        collector,
-		sink:             m,
-		originalInterval: m.GaugeInterval,
-		currentInterval:  m.GaugeInterval,
-		logger:           logger,
-		clock:            clock,
+		stop:                make(chan struct{}, 1),
+		stopped:             make(chan struct{}, 1),
+		key:                 key,
+		labels:              id,
+		collector:           collector,
+		sink:                sink,
+		originalInterval:    gaugeInterval,
+		currentInterval:     gaugeInterval,
+		maxGaugeCardinality: maxGaugeCardinality,
+		logger:              logger,
+		clock:               clock,
 	}
 	return process, nil
 }
 
 // delayStart randomly delays by up to one extra interval
-// so that collection processes do not all run at the time time.
-// If we knew all the procsses in advance, we could just schedule them
+// so that collection processes do not all run at the time.
+// If we knew all the processes in advance, we could just schedule them
 // evenly, but a new one could be added per secret engine.
 func (p *GaugeCollectionProcess) delayStart() bool {
 	randomDelay := time.Duration(rand.Int63n(int64(p.currentInterval)))
@@ -187,11 +224,11 @@ func (p *GaugeCollectionProcess) collectAndFilterGauges() {
 	// Filter to top N.
 	// This does not guarantee total cardinality is <= N, but it does slow things down
 	// a little if the cardinality *is* too high and the gauge needs to be disabled.
-	if len(values) > p.sink.MaxGaugeCardinality {
+	if len(values) > p.maxGaugeCardinality {
 		sort.Slice(values, func(a, b int) bool {
 			return values[a].Value > values[b].Value
 		})
-		values = values[:p.sink.MaxGaugeCardinality]
+		values = values[:p.maxGaugeCardinality]
 	}
 
 	p.streamGaugesToSink(values)
