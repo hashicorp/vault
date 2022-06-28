@@ -184,7 +184,7 @@ server:
   extraEnvironmentVars:
     VAULT_CACERT: /vault/userconfig/vault-server-tls/vault.ca
 
-  extraVolumes:
+  Volumes:
     - type: secret
       name: vault-server-tls # Matches the ${SECRET_NAME} from above
 

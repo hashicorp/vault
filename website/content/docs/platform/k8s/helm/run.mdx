@@ -252,7 +252,7 @@ server:
     GOOGLE_PROJECT: <PROJECT NAME>
     GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/kms-creds/credentials.json
 
-  extraVolumes:
+  Volumes:
     - type: 'secret'
       name: 'kms-creds'
 
@@ -502,8 +502,8 @@ to the Vault startup command:
 
 ```shell-session
 $ helm install vault hashicorp/vault \
-  --set='server.extraVolumes[0].type=secret' \
-  --set='server.extraVolumes[0].name=vault-storage-config' \
+  --set='server.Volumes[0].type=secret' \
+  --set='server.Volumes[0].name=vault-storage-config' \
   --set='server.extraArgs=-config=/vault/userconfig/vault-storage-config/config.hcl'
 ```
 
