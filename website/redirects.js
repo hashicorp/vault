@@ -50,8 +50,8 @@ module.exports = [
     permanent: true,
   },
   {
-    source: '/docs/auth/jwt_oidc_providers',
-    destination: '/docs/auth/jwt/oidc_providers',
+    source: '/docs/auth/jwt/oidc_providers',
+    destination: '/docs/auth/jwt/oidc-providers',
     permanent: true,
   },
   {
