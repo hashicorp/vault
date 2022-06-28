@@ -243,7 +243,12 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	}()
 
 	resp := &logical.Response{}
-	resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
+	if !tidyCertStore && !tidyRevokedCerts && !tidyRevocationList {
+		resp.AddWarning("No targets to tidy; specify tidy_cert_store=true or tidy_revoked_certs=true to start a tidy operation.")
+	} else {
+		resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
+	}
+
 	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
 }
 
