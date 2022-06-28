@@ -321,6 +321,20 @@ System.out.println("Secret written successfully.");
 
 </CodeBlockConfig>
 
+<CodeBlockConfig lineNumbers>
+
+```Curl
+curl \
+    --header "X-Vault-Token: dev-only-token" \
+    --header "Content-Type: application/json" \
+    --request POST \
+    --data '{"data": {"password": "hashi123"}}' \
+    http://127.0.0.1:8200/v1/secret/data/my-secret-password
+
+```
+
+</CodeBlockConfig>
+
 </CodeTabs>
 
 A common way of storing secrets is as key-value pairs using the [KV secrets engine (v2)](/docs/secrets/kv/kv-v2). In the code we've just added, `password` is the key in the key-value pair, and `Hashi123` is the value.
@@ -396,6 +410,17 @@ String password = "";
 if (readResponse != null && readResponse.hasData()) {
     password = (String) readResponse.getData().get("password");
 }
+```
+
+</CodeBlockConfig>
+
+<CodeBlockConfig lineNumbers>
+
+```Curl
+curl \
+    --header "X-Vault-Token: dev-only-token" \
+    http://127.0.0.1:8200/v1/secret/data/my-secret-password
+
 ```
 
 </CodeBlockConfig>
