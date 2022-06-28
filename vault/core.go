@@ -406,6 +406,9 @@ type Core struct {
 	baseLogger log.Logger
 	logger     log.Logger
 
+	// log level provided by config, CLI flag, or env
+	logLevel string
+
 	// Disables the trace display for Sentinel checks
 	sentinelTraceDisabled bool
 
@@ -656,6 +659,8 @@ type CoreConfig struct {
 
 	SecureRandomReader io.Reader
 
+	LogLevel string
+
 	Logger log.Logger
 
 	// Disables the trace display for Sentinel checks
@@ -835,6 +840,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		standbyStopCh:        new(atomic.Value),
 		baseLogger:           conf.Logger,
 		logger:               conf.Logger.Named("core"),
+		logLevel:             conf.LogLevel,
 
 		defaultLeaseTTL:                conf.DefaultLeaseTTL,
 		maxLeaseTTL:                    conf.MaxLeaseTTL,
@@ -1012,6 +1018,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	c.loginMFABackend = NewLoginMFABackend(c, conf.Logger)
+
+	if c.loginMFABackend.mfaLogger != nil {
+		c.AddLogger(c.loginMFABackend.mfaLogger)
+	}
 
 	logicalBackends := make(map[string]logical.Factory)
 	for k, f := range conf.LogicalBackends {
@@ -2786,6 +2796,19 @@ func (c *Core) SetLogLevel(level log.Level) {
 	for _, logger := range c.allLoggers {
 		logger.SetLevel(level)
 	}
+}
+
+func (c *Core) SetLogLevelByName(name string, level log.Level) error {
+	c.allLoggersLock.RLock()
+	defer c.allLoggersLock.RUnlock()
+	for _, logger := range c.allLoggers {
+		if logger.Name() == name {
+			logger.SetLevel(level)
+			return nil
+		}
+	}
+
+	return fmt.Errorf("logger %q does not exist", name)
 }
 
 // SetConfig sets core's config object to the newly provided config.
