@@ -98,8 +98,8 @@ export default Component.extend(FocusOnInsertMixin, WithNavToNearestAncestor, {
       if (!context.model || !context.isV2) {
         return;
       }
-      const backend = context.args.model.backend;
-      const id = context.args.model.id;
+      const backend = context.model.backend;
+      const id = context.model.id;
       const path = `${backend}/metadata/${id}`;
       return {
         id: path,
