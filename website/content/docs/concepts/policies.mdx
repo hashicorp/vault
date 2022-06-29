@@ -340,10 +340,8 @@ path take precedence over permissions on parameters.
 
 See the [API Specification](/api-docs/secret/kv/kv-v2) for more information.
 
-In Vault, data is represented as `key=value` pairs. Vault policies can
-optionally further restrict paths based on the keys and data at those keys when
-evaluating the permissions for a path. The optional finer-grained control
-options are:
+Policies can take into account HTTP request parameters to further
+constrain requests:
 
 - `required_parameters` - A list of parameters that must be specified.
 
