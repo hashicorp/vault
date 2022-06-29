@@ -1,4 +1,16 @@
 <PageHeader as |p|>
+  <p.top>
+    <nav class="breadcrumb" aria-label="breadcrumbs">
+      <ul>
+        <li>
+          <span class="sep">&#x0002f;</span>
+          <LinkTo @route={{concat "vault.cluster.access.oidc.scopes" (unless @model.isNew ".scope.details")}}>
+            {{if @model.isNew "Scopes" "Details"}}
+          </LinkTo>
+        </li>
+      </ul>
+    </nav>
+  </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-oidc-scope-title>
       {{if @model.isNew "Create" "Edit"}}
@@ -10,8 +22,7 @@
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <p class="has-bottom-margin-l">
-      Providers may reference scope resources via the scopes_supported parameter to make specific identity information
-      available as claims.
+      Providers may reference a set of scopes to make specific identity information available as claims
     </p>
     {{#each @model.formFields as |field|}}
       <FormField @attr={{field}} @model={{@model}} @modelValidations={{this.modelValidations}} />
