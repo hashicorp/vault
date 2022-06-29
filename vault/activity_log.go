@@ -367,53 +367,6 @@ func (a *ActivityLog) saveCurrentSegmentToStorageLocked(ctx context.Context, for
 	return nil
 }
 
-// CreateOrFetchHyperlogLog creates a new hyperlogLog for each startTime (month) if it does not exist in storage.
-// hyperlogLog is used here to solve count-distinct problem i.e, to count the number of distinct clients
-// In activity log, hyperloglog is a sketch containing clientID's in a given month
-func (a *ActivityLog) CreateOrFetchHyperlogLog(ctx context.Context, startTime time.Time) *hyperloglog.Sketch {
-	monthlyHLLPath := fmt.Sprintf("%s%d", distinctClientsBasePath, startTime.Unix())
-	hll := hyperloglog.New()
-	a.logger.Trace("fetching hyperloglog ", "path", monthlyHLLPath)
-	data, err := a.view.Get(ctx, monthlyHLLPath)
-	if err != nil {
-		a.logger.Error("error fetching hyperloglog", "path", monthlyHLLPath, "error", err)
-		return hll
-	}
-	if data == nil {
-		a.logger.Trace("creating hyperloglog ", "path", monthlyHLLPath)
-		err = a.StoreHyperlogLog(ctx, startTime, hll)
-		if err != nil {
-			a.logger.Error("error storing hyperloglog", "path", monthlyHLLPath, "error", err)
-			return hll
-		}
-	} else {
-		err = hll.UnmarshalBinary(data.Value)
-		if err != nil {
-			a.logger.Error("error unmarshaling hyperloglog", "path", monthlyHLLPath, "error", err)
-			return hll
-		}
-	}
-	return hll
-}
-
-// StoreHyperlogLog stores the hyperloglog (a sketch containing client IDs) for startTime (month) in storage
-func (a *ActivityLog) StoreHyperlogLog(ctx context.Context, startTime time.Time, newHll *hyperloglog.Sketch) error {
-	monthlyHLLPath := fmt.Sprintf("%s%d", distinctClientsBasePath, startTime.Unix())
-	a.logger.Trace("storing hyperloglog ", "path", monthlyHLLPath)
-	marshalledHll, err := newHll.MarshalBinary()
-	if err != nil {
-		return err
-	}
-	err = a.view.Put(ctx, &logical.StorageEntry{
-		Key:   monthlyHLLPath,
-		Value: marshalledHll,
-	})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // :force: forces a save of tokens/entities even if the in-memory log is empty
 func (a *ActivityLog) saveCurrentSegmentInternal(ctx context.Context, force bool) error {
 	entityPath := fmt.Sprintf("%s%d/%d", activityEntityBasePath, a.currentSegment.startTimestamp, a.currentSegment.clientSequenceNumber)
@@ -1613,7 +1566,7 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 
 	distinctEntitiesResponse := totalEntities
 	if computePartial {
-		currentMonth, err := a.computeCurrentMonthForBillingPeriod(partialByMonth, startTime, endTime)
+		currentMonth, err := a.computeCurrentMonthForBillingPeriod(ctx, partialByMonth, startTime, endTime)
 		if err != nil {
 			return nil, err
 		}
@@ -2067,7 +2020,12 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 			break
 		}
 
-		hyperloglog := a.CreateOrFetchHyperlogLog(ctx, startTime)
+		hyperloglog, err := a.CreateOrFetchHyperlogLog(ctx, startTime)
+		if err != nil {
+			// We were unable to create or fetch the hll, but we should still
+			// continue with our precomputation
+			a.logger.Warn("unable to create or fetch hyperloglog", "start time", startTime, "error", err)
+		}
 		err = a.WalkEntitySegments(ctx, startTime, hyperloglog, walkEntities)
 		if err != nil {
 			a.logger.Warn("failed to load previous segments", "error", err)
