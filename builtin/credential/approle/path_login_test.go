@@ -301,3 +301,56 @@ func generateRenewRequest(s logical.Storage, auth *logical.Auth) *logical.Reques
 
 	return renewReq
 }
+
+func TestAppRole_RoleResolve(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	role := "role1"
+	createRole(t, b, storage, role, "a,b,c")
+	roleRoleIDReq := &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "role/role1/role-id",
+		Storage:   storage,
+	}
+	resp, err = b.HandleRequest(context.Background(), roleRoleIDReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	roleID := resp.Data["role_id"]
+
+	roleSecretIDReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "role/role1/secret-id",
+		Storage:   storage,
+	}
+	resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	secretID := resp.Data["secret_id"]
+
+	loginData := map[string]interface{}{
+		"role_id":   roleID,
+		"secret_id": secretID,
+	}
+	loginReq := &logical.Request{
+		Operation: logical.ResolveRoleOperation,
+		Path:      "login",
+		Storage:   storage,
+		Data:      loginData,
+		Connection: &logical.Connection{
+			RemoteAddr: "127.0.0.1",
+		},
+	}
+
+	resp, err = b.HandleRequest(context.Background(), loginReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	if resp.Data["role"] != role {
+		t.Fatalf("Role was not as expected. Expected %s, received %s", role, resp.Data["role"])
+	}
+}

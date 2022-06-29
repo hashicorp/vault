@@ -574,6 +574,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			Data: map[string]interface{}{
 				"common_name":         "intermediate.cert.com",
 				"csr":                 csrPem2048,
+				"signature_bits":      512,
 				"format":              "der",
 				"not_before_duration": "2h",
 			},
@@ -597,13 +598,15 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 
 				switch {
 				case !reflect.DeepEqual(expected.IssuingCertificates, cert.IssuingCertificateURL):
-					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", expected.IssuingCertificates, cert.IssuingCertificateURL)
+					return fmt.Errorf("IssuingCertificateURL:\nexpected\n%#v\ngot\n%#v\n", expected.IssuingCertificates, cert.IssuingCertificateURL)
 				case !reflect.DeepEqual(expected.CRLDistributionPoints, cert.CRLDistributionPoints):
-					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", expected.CRLDistributionPoints, cert.CRLDistributionPoints)
+					return fmt.Errorf("CRLDistributionPoints:\nexpected\n%#v\ngot\n%#v\n", expected.CRLDistributionPoints, cert.CRLDistributionPoints)
 				case !reflect.DeepEqual(expected.OCSPServers, cert.OCSPServer):
-					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", expected.OCSPServers, cert.OCSPServer)
+					return fmt.Errorf("OCSPServer:\nexpected\n%#v\ngot\n%#v\n", expected.OCSPServers, cert.OCSPServer)
 				case !reflect.DeepEqual([]string{"intermediate.cert.com"}, cert.DNSNames):
-					return fmt.Errorf("expected\n%#v\ngot\n%#v\n", []string{"intermediate.cert.com"}, cert.DNSNames)
+					return fmt.Errorf("DNSNames\nexpected\n%#v\ngot\n%#v\n", []string{"intermediate.cert.com"}, cert.DNSNames)
+				case !reflect.DeepEqual(x509.SHA512WithRSA, cert.SignatureAlgorithm):
+					return fmt.Errorf("Signature Algorithm:\nexpected\n%#v\ngot\n%#v\n", x509.SHA512WithRSA, cert.SignatureAlgorithm)
 				}
 
 				if math.Abs(float64(time.Now().Add(-2*time.Hour).Unix()-cert.NotBefore.Unix())) > 10 {
@@ -2129,13 +2132,17 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 		t.Fatal("pem csr is empty")
 	}
 
+	signVerbatimData := map[string]interface{}{
+		"csr": pemCSR,
+	}
+	if keyType == "rsa" {
+		signVerbatimData["signature_bits"] = 512
+	}
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "sign-verbatim",
-		Storage:   storage,
-		Data: map[string]interface{}{
-			"csr": pemCSR,
-		},
+		Operation:  logical.UpdateOperation,
+		Path:       "sign-verbatim",
+		Storage:    storage,
+		Data:       signVerbatimData,
 		MountPoint: "pki/",
 	})
 	if resp != nil && resp.IsError() {

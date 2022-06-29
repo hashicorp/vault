@@ -144,6 +144,10 @@ These are the currently-available general configuration option:
   with code `0` after a single successful auth, where success means that a
   token was retrieved and all sinks successfully wrote it
 
+- `disable_idle_connections` `(string array: [])` - A list of strings that disables idle connections for various features in Vault Agent.
+  Valid values include: `auto-auth`, `caching` and `templating`. Can also be configured by setting the `VAULT_AGENT_DISABLE_IDLE_CONNECTIONS` 
+  environment variable as a comma separated string. This environment variable will override any values found in a configuration file.
+
 - `template` <code>([template][template]: <optional\>)</code> - Specifies options used for templating Vault secrets to files.
 
 - `template_config` <code>([template_config][template-config]: <optional\>)</code> - Specifies templating engine behavior.
@@ -209,7 +213,7 @@ Here are the options for the `retry` stanza:
   A value of `-1` disables retries. The environment variable `VAULT_MAX_RETRIES`
   overrides this setting.
 
-There are a couple of subtleties to be aware of here. First, requests originating
+There are a few subtleties to be aware of here. First, requests originating
 from the proxy cache will only be retried if they resulted in specific HTTP
 result codes: any 50x code except 501 ("not implemented"), as well as 412
 ("precondition failed"); 412 is used in Vault Enterprise 1.7+ to indicate a

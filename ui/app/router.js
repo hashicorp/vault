@@ -109,39 +109,38 @@ Router.map(function () {
           this.route('create');
         });
         this.route('oidc', function () {
-          this.route('index', { path: '/' });
           this.route('clients', function () {
-            this.route('index', { path: '/' });
             this.route('create');
             this.route('client', { path: '/:name' }, function () {
+              this.route('details');
               this.route('edit');
             });
           });
           this.route('keys', function () {
-            this.route('index', { path: '/' });
             this.route('create');
             this.route('key', { path: '/:name' }, function () {
+              this.route('details');
               this.route('edit');
             });
           });
           this.route('assignments', function () {
-            this.route('index', { path: '/' });
             this.route('create');
             this.route('assignment', { path: '/:name' }, function () {
+              this.route('details');
               this.route('edit');
             });
           });
           this.route('providers', function () {
-            this.route('index', { path: '/' });
             this.route('create');
             this.route('provider', { path: '/:name' }, function () {
+              this.route('details');
               this.route('edit');
             });
           });
           this.route('scopes', function () {
-            this.route('index', { path: '/' });
             this.route('create');
             this.route('scope', { path: '/:name' }, function () {
+              this.route('details');
               this.route('edit');
             });
           });

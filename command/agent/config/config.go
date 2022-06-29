@@ -24,13 +24,19 @@ import (
 type Config struct {
 	*configutil.SharedConfig `hcl:"-"`
 
-	AutoAuth       *AutoAuth                  `hcl:"auto_auth"`
-	ExitAfterAuth  bool                       `hcl:"exit_after_auth"`
-	Cache          *Cache                     `hcl:"cache"`
-	Vault          *Vault                     `hcl:"vault"`
-	TemplateConfig *TemplateConfig            `hcl:"template_config"`
-	Templates      []*ctconfig.TemplateConfig `hcl:"templates"`
+	AutoAuth                   *AutoAuth                  `hcl:"auto_auth"`
+	ExitAfterAuth              bool                       `hcl:"exit_after_auth"`
+	Cache                      *Cache                     `hcl:"cache"`
+	Vault                      *Vault                     `hcl:"vault"`
+	TemplateConfig             *TemplateConfig            `hcl:"template_config"`
+	Templates                  []*ctconfig.TemplateConfig `hcl:"templates"`
+	DisableIdleConns           []string                   `hcl:"disable_idle_connections"`
+	DisableIdleConnsCaching    bool                       `hcl:"-"`
+	DisableIdleConnsTemplating bool                       `hcl:"-"`
+	DisableIdleConnsAutoAuth   bool                       `hcl:"-"`
 }
+
+const DisableIdleConnsEnv = "VAULT_AGENT_DISABLE_IDLE_CONNECTIONS"
 
 func (c *Config) Prune() {
 	for _, l := range c.Listeners {
@@ -258,6 +264,28 @@ func LoadConfig(path string) (*Config, error) {
 		result.Vault.Retry.NumRetries = ctconfig.DefaultRetryAttempts
 	case -1:
 		result.Vault.Retry.NumRetries = 0
+	}
+
+	if disableIdleConnsEnv := os.Getenv(DisableIdleConnsEnv); disableIdleConnsEnv != "" {
+		result.DisableIdleConns, err = parseutil.ParseCommaStringSlice(strings.ToLower(disableIdleConnsEnv))
+		if err != nil {
+			return nil, fmt.Errorf("error parsing environment variable %s: %v", DisableIdleConnsEnv, err)
+		}
+	}
+
+	for _, subsystem := range result.DisableIdleConns {
+		switch subsystem {
+		case "auto-auth":
+			result.DisableIdleConnsAutoAuth = true
+		case "caching":
+			result.DisableIdleConnsCaching = true
+		case "templating":
+			result.DisableIdleConnsTemplating = true
+		case "":
+			continue
+		default:
+			return nil, fmt.Errorf("unknown disable_idle_connections value: %s", subsystem)
+		}
 	}
 
 	return result, nil

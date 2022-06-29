@@ -125,7 +125,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 	}
 
 	for _, issuer := range issuers {
-		signingBundle, caErr := fetchCAInfoByIssuerId(ctx, b, req, issuer, ReadOnlyUsage)
+		_, bundle, caErr := fetchCertBundleByIssuerId(ctx, req.Storage, issuer, false)
 		if caErr != nil {
 			switch caErr.(type) {
 			case errutil.UserError:
@@ -135,12 +135,21 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 			}
 		}
 
-		if signingBundle == nil {
+		if bundle == nil {
 			return nil, fmt.Errorf("faulty reference: %v - CA info not found", issuer)
 		}
 
+		parsedBundle, err := parseCABundle(ctx, b, bundle)
+		if err != nil {
+			return nil, errutil.InternalError{Err: err.Error()}
+		}
+
+		if parsedBundle.Certificate == nil {
+			return nil, errutil.InternalError{Err: "stored CA information not able to be parsed"}
+		}
+
 		colonSerial := strings.Replace(strings.ToLower(serial), "-", ":", -1)
-		if colonSerial == certutil.GetHexFormatted(signingBundle.Certificate.SerialNumber.Bytes(), ":") {
+		if colonSerial == certutil.GetHexFormatted(parsedBundle.Certificate.SerialNumber.Bytes(), ":") {
 			return logical.ErrorResponse(fmt.Sprintf("adding issuer (id: %v) to its own CRL is not allowed", issuer)), nil
 		}
 	}
