@@ -80,7 +80,8 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse("Can not generate keys until migration has completed"), nil
 	}
 
-	keyName, err := getKeyName(ctx, req.Storage, data)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	keyName, err := getKeyName(sc, data)
 	if err != nil { // Fail Immediately if Key Name is in Use, etc...
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -127,7 +128,7 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 
-	key, _, err := importKey(ctx, b, req.Storage, privateKeyPemString, keyName, keyBundle.PrivateKeyType)
+	key, _, err := sc.importKey(privateKeyPemString, keyName, keyBundle.PrivateKeyType)
 	if err != nil {
 		return nil, err
 	}
@@ -188,8 +189,9 @@ func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("Cannot import keys until migration has completed"), nil
 	}
 
+	sc := b.makeStorageContext(ctx, req.Storage)
 	pemBundle := data.Get("pem_bundle").(string)
-	keyName, err := getKeyName(ctx, req.Storage, data)
+	keyName, err := getKeyName(sc, data)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -229,7 +231,7 @@ func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("only a single key can be present within the pem_bundle for importing"), nil
 	}
 
-	key, existed, err := importKeyFromBytes(ctx, b, req.Storage, keys[0], keyName)
+	key, existed, err := importKeyFromBytes(sc, keys[0], keyName)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}

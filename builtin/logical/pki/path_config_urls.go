@@ -58,8 +58,8 @@ func validateURLs(urls []string) string {
 	return ""
 }
 
-func getURLs(ctx context.Context, req *logical.Request) (*certutil.URLEntries, error) {
-	entry, err := req.Storage.Get(ctx, "urls")
+func getURLs(ctx context.Context, storage logical.Storage) (*certutil.URLEntries, error) {
+	entry, err := storage.Get(ctx, "urls")
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func getURLs(ctx context.Context, req *logical.Request) (*certutil.URLEntries, e
 	return entries, nil
 }
 
-func writeURLs(ctx context.Context, req *logical.Request, entries *certutil.URLEntries) error {
+func writeURLs(ctx context.Context, storage logical.Storage, entries *certutil.URLEntries) error {
 	entry, err := logical.StorageEntryJSON("urls", entries)
 	if err != nil {
 		return err
@@ -90,7 +90,7 @@ func writeURLs(ctx context.Context, req *logical.Request, entries *certutil.URLE
 		return fmt.Errorf("unable to marshal entry into JSON")
 	}
 
-	err = req.Storage.Put(ctx, entry)
+	err = storage.Put(ctx, entry)
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func writeURLs(ctx context.Context, req *logical.Request, entries *certutil.URLE
 }
 
 func (b *backend) pathReadURL(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	entries, err := getURLs(ctx, req)
+	entries, err := getURLs(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (b *backend) pathReadURL(ctx context.Context, req *logical.Request, _ *fram
 }
 
 func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	entries, err := getURLs(ctx, req)
+	entries, err := getURLs(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +139,7 @@ func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *
 		}
 	}
 
-	return nil, writeURLs(ctx, req, entries)
+	return nil, writeURLs(ctx, req.Storage, entries)
 }
 
 const pathConfigURLsHelpSyn = `

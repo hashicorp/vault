@@ -83,29 +83,29 @@ func getFormat(data *framework.FieldData) string {
 // fetchCAInfo will fetch the CA info, will return an error if no ca info exists, this does NOT support
 // loading using the legacyBundleShimID and should be used with care. This should be called only once
 // within the request path otherwise you run the risk of a race condition with the issuer migration on perf-secondaries.
-func fetchCAInfo(ctx context.Context, b *backend, req *logical.Request, issuerRef string, usage issuerUsage) (*certutil.CAInfoBundle, error) {
+func (sc *storageContext) fetchCAInfo(issuerRef string, usage issuerUsage) (*certutil.CAInfoBundle, error) {
 	var issuerId issuerID
 
-	if b.useLegacyBundleCaStorage() {
+	if sc.Backend.useLegacyBundleCaStorage() {
 		// We have not completed the migration so attempt to load the bundle from the legacy location
-		b.Logger().Info("Using legacy CA bundle as PKI migration has not completed.")
+		sc.Backend.Logger().Info("Using legacy CA bundle as PKI migration has not completed.")
 		issuerId = legacyBundleShimID
 	} else {
 		var err error
-		issuerId, err = resolveIssuerReference(ctx, req.Storage, issuerRef)
+		issuerId, err = sc.resolveIssuerReference(issuerRef)
 		if err != nil {
 			// Usually a bad label from the user or mis-configured default.
 			return nil, errutil.UserError{Err: err.Error()}
 		}
 	}
 
-	return fetchCAInfoByIssuerId(ctx, b, req, issuerId, usage)
+	return sc.fetchCAInfoByIssuerId(issuerId, usage)
 }
 
 // fetchCAInfoByIssuerId will fetch the CA info, will return an error if no ca info exists for the given issuerId.
 // This does support the loading using the legacyBundleShimID
-func fetchCAInfoByIssuerId(ctx context.Context, b *backend, req *logical.Request, issuerId issuerID, usage issuerUsage) (*certutil.CAInfoBundle, error) {
-	entry, bundle, err := fetchCertBundleByIssuerId(ctx, req.Storage, issuerId, true)
+func (sc *storageContext) fetchCAInfoByIssuerId(issuerId issuerID, usage issuerUsage) (*certutil.CAInfoBundle, error) {
+	entry, bundle, err := sc.fetchCertBundleByIssuerId(issuerId, true)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -121,7 +121,7 @@ func fetchCAInfoByIssuerId(ctx context.Context, b *backend, req *logical.Request
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error while attempting to use issuer %v: %v", issuerId, err)}
 	}
 
-	parsedBundle, err := parseCABundle(ctx, b, bundle)
+	parsedBundle, err := parseCABundle(sc.Context, sc.Backend, bundle)
 	if err != nil {
 		return nil, errutil.InternalError{Err: err.Error()}
 	}
@@ -139,7 +139,7 @@ func fetchCAInfoByIssuerId(ctx context.Context, b *backend, req *logical.Request
 		LeafNotAfterBehavior: entry.LeafNotAfterBehavior,
 	}
 
-	entries, err := getURLs(ctx, req)
+	entries, err := getURLs(sc.Context, sc.Storage)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
 	}
@@ -171,7 +171,8 @@ func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, pr
 		if err = b.crlBuilder.rebuildIfForced(ctx, b, req); err != nil {
 			return nil, err
 		}
-		path, err = resolveIssuerCRLPath(ctx, b, req.Storage, defaultRef)
+		sc := b.makeStorageContext(ctx, req.Storage)
+		path, err = sc.resolveIssuerCRLPath(defaultRef)
 		if err != nil {
 			return nil, err
 		}
@@ -641,13 +642,15 @@ func validateSerialNumber(data *inputBundle, serialNumber string) string {
 	}
 }
 
-func generateCert(ctx context.Context,
-	b *backend,
+func generateCert(sc *storageContext,
 	input *inputBundle,
 	caSign *certutil.CAInfoBundle,
 	isCA bool,
 	randomSource io.Reader) (*certutil.ParsedCertBundle, error,
 ) {
+	ctx := sc.Context
+	b := sc.Backend
+
 	if input.role == nil {
 		return nil, errutil.InternalError{Err: "no role found in data bundle"}
 	}
@@ -670,7 +673,7 @@ func generateCert(ctx context.Context,
 
 		if data.SigningBundle == nil {
 			// Generating a self-signed root certificate
-			entries, err := getURLs(ctx, input.req)
+			entries, err := getURLs(ctx, sc.Storage)
 			if err != nil {
 				return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
 			}
@@ -684,7 +687,7 @@ func generateCert(ctx context.Context,
 		}
 	}
 
-	parsedBundle, err := generateCABundle(ctx, b, input, data, randomSource)
+	parsedBundle, err := generateCABundle(sc, input, data, randomSource)
 	if err != nil {
 		return nil, err
 	}
@@ -694,7 +697,9 @@ func generateCert(ctx context.Context,
 
 // N.B.: This is only meant to be used for generating intermediate CAs.
 // It skips some sanity checks.
-func generateIntermediateCSR(ctx context.Context, b *backend, input *inputBundle, randomSource io.Reader) (*certutil.ParsedCSRBundle, error) {
+func generateIntermediateCSR(sc *storageContext, input *inputBundle, randomSource io.Reader) (*certutil.ParsedCSRBundle, error) {
+	b := sc.Backend
+
 	creation, err := generateCreationBundle(b, input, nil, nil)
 	if err != nil {
 		return nil, err
@@ -704,7 +709,7 @@ func generateIntermediateCSR(ctx context.Context, b *backend, input *inputBundle
 	}
 
 	addBasicConstraints := input.apiData != nil && input.apiData.Get("add_basic_constraints").(bool)
-	parsedBundle, err := generateCSRBundle(ctx, b, input, creation, addBasicConstraints, randomSource)
+	parsedBundle, err := generateCSRBundle(sc, input, creation, addBasicConstraints, randomSource)
 	if err != nil {
 		return nil, err
 	}
