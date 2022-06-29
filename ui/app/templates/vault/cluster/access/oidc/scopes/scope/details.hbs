@@ -30,18 +30,22 @@
 
 <Toolbar>
   <ToolbarActions>
-    <ConfirmAction
-      @buttonClasses="toolbar-link"
-      @onConfirmAction={{this.delete}}
-      @confirmTitle="Delete scope?"
-      @confirmMessage="This scope will be permanently deleted. You will not be able to recover it."
-      @confirmButtonText="Delete"
-    >
-      Delete scope
-    </ConfirmAction>
-    <ToolbarLink @params={{array "vault.cluster.access.oidc.scopes.scope.edit" this.model.name}}>
-      Edit scope
-    </ToolbarLink>
+    {{#if this.model.canDelete}}
+      <ConfirmAction
+        @buttonClasses="toolbar-link"
+        @onConfirmAction={{this.delete}}
+        @confirmTitle="Delete scope?"
+        @confirmMessage="This scope will be permanently deleted. You will not be able to recover it."
+        @confirmButtonText="Delete"
+      >
+        Delete scope
+      </ConfirmAction>
+    {{/if}}
+    {{#if this.model.canEdit}}
+      <ToolbarLink @params={{array "vault.cluster.access.oidc.scopes.scope.edit" this.model.name}}>
+        Edit scope
+      </ToolbarLink>
+    {{/if}}
   </ToolbarActions>
 </Toolbar>
 
