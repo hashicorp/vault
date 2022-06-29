@@ -135,6 +135,19 @@ type provider struct {
 	effectiveIssuer string
 }
 
+// allowedClientID returns true if the given client ID is in
+// the provider's set of allowed client IDs or its allowed client
+// IDs contains the wildcard "*" char.
+func (p *provider) allowedClientID(clientID string) bool {
+	for _, allowedID := range p.AllowedClientIDs {
+		switch allowedID {
+		case "*", clientID:
+			return true
+		}
+	}
+	return false
+}
+
 type providerDiscovery struct {
 	Issuer                string   `json:"issuer"`
 	Keys                  string   `json:"jwks_uri"`
@@ -356,6 +369,14 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/provider/?$",
+			Fields: map[string]*framework.FieldSchema{
+				"allowed_client_id": {
+					Type: framework.TypeString,
+					Description: "Filters the set of returned OIDC providers to those " +
+						"that allow the given value in their set of allowed_client_ids.",
+					Query: true,
+				},
+			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.pathOIDCListProvider,
@@ -1301,6 +1322,34 @@ func (i *IdentityStore) pathOIDCListProvider(ctx context.Context, req *logical.R
 	if err != nil {
 		return nil, err
 	}
+
+	// If allowed_client_id is provided as a query parameter, filter the set of
+	// returned OIDC providers to those that allow the given value in their set
+	// of allowed_client_ids.
+	if clientIDRaw, ok := d.GetOk("allowed_client_id"); ok {
+		clientID := clientIDRaw.(string)
+		if clientID == "" {
+			return logical.ListResponse(providers), nil
+		}
+
+		filtered := make([]string, 0)
+		for _, name := range providers {
+			provider, err := i.getOIDCProvider(ctx, req.Storage, name)
+			if err != nil {
+				return nil, err
+			}
+			if provider == nil {
+				continue
+			}
+
+			if provider.allowedClientID(clientID) {
+				filtered = append(filtered, name)
+			}
+		}
+
+		providers = filtered
+	}
+
 	return logical.ListResponse(providers), nil
 }
 
@@ -1592,8 +1641,7 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 	if client == nil {
 		return authResponse("", state, ErrAuthInvalidClientID, "client with client_id not found")
 	}
-	if !strutil.StrListContains(provider.AllowedClientIDs, "*") &&
-		!strutil.StrListContains(provider.AllowedClientIDs, clientID) {
+	if !provider.allowedClientID(clientID) {
 		return authResponse("", state, ErrAuthUnauthorizedClient, "client is not authorized to use the provider")
 	}
 
@@ -1812,8 +1860,7 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 	}
 
 	// Validate that the client is authorized to use the provider
-	if !strutil.StrListContains(provider.AllowedClientIDs, "*") &&
-		!strutil.StrListContains(provider.AllowedClientIDs, clientID) {
+	if !provider.allowedClientID(clientID) {
 		return tokenResponse(nil, ErrTokenInvalidClient, "client is not authorized to use the provider")
 	}
 
@@ -2133,8 +2180,7 @@ func (i *IdentityStore) pathOIDCUserInfo(ctx context.Context, req *logical.Reque
 	}
 
 	// Validate that the client is authorized to use the provider
-	if !strutil.StrListContains(provider.AllowedClientIDs, "*") &&
-		!strutil.StrListContains(provider.AllowedClientIDs, clientID) {
+	if !provider.allowedClientID(clientID) {
 		return userInfoResponse(nil, ErrUserInfoAccessDenied, "client is not authorized to use the provider")
 	}
 

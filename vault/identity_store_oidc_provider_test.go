@@ -3350,6 +3350,90 @@ func TestOIDC_Path_OIDC_Provider_List(t *testing.T) {
 	expectStrings(t, respListProvidersAfterDelete.Data["keys"].([]string), expectedStrings)
 }
 
+func TestOIDC_Path_OIDC_Provider_List_Filter(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	s := new(logical.InmemStorage)
+
+	// Create providers with different allowed_client_ids values
+	providers := []struct {
+		name             string
+		allowedClientIDs []string
+	}{
+		{name: "p0", allowedClientIDs: []string{"*"}},
+		{name: "p1", allowedClientIDs: []string{"abc"}},
+		{name: "p2", allowedClientIDs: []string{"abc", "def"}},
+		{name: "p3", allowedClientIDs: []string{"abc", "def", "ghi"}},
+		{name: "p4", allowedClientIDs: []string{"ghi"}},
+		{name: "p5", allowedClientIDs: []string{"jkl"}},
+	}
+	for _, p := range providers {
+		resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+			Path:      "oidc/provider/" + p.name,
+			Operation: logical.CreateOperation,
+			Storage:   s,
+			Data: map[string]interface{}{
+				"allowed_client_ids": p.allowedClientIDs,
+			},
+		})
+		expectSuccess(t, resp, err)
+	}
+
+	tests := []struct {
+		name              string
+		clientIDFilter    string
+		expectedProviders []string
+	}{
+		{
+			name:              "list providers with client_id filter subset 1",
+			clientIDFilter:    "abc",
+			expectedProviders: []string{"p0", "p1", "p2", "p3"},
+		},
+		{
+			name:              "list providers with client_id filter subset 2",
+			clientIDFilter:    "def",
+			expectedProviders: []string{"p0", "p2", "p3"},
+		},
+		{
+			name:              "list providers with client_id filter subset 3",
+			clientIDFilter:    "ghi",
+			expectedProviders: []string{"p0", "p3", "p4"},
+		},
+		{
+			name:              "list providers with client_id filter subset 4",
+			clientIDFilter:    "jkl",
+			expectedProviders: []string{"p0", "p5"},
+		},
+		{
+			name:              "list providers with client_id filter only matching glob",
+			clientIDFilter:    "globmatch_only",
+			expectedProviders: []string{"p0"},
+		},
+		{
+			name:              "list providers with empty client_id filter returns all",
+			clientIDFilter:    "",
+			expectedProviders: []string{"p0", "p1", "p2", "p3", "p4", "p5"},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// List providers with the allowed_client_id query parameter
+			resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+				Path:      "oidc/provider",
+				Operation: logical.ListOperation,
+				Storage:   s,
+				Data: map[string]interface{}{
+					"allowed_client_id": tc.clientIDFilter,
+				},
+			})
+			expectSuccess(t, resp, err)
+
+			// Assert the filtered set of providers is returned
+			require.Equal(t, tc.expectedProviders, resp.Data["keys"])
+		})
+	}
+}
+
 // TestOIDC_Path_OpenIDProviderConfig tests read operations for the
 // openid-configuration path
 func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
