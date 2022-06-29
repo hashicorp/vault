@@ -239,6 +239,14 @@ VaultTemplate vaultTemplate = new VaultTemplate(
 
 </CodeBlockConfig>
 
+<CodeBlockConfig lineNumbers>
+
+```shell-session
+export VAULT_TOKEN="dev-only-token"
+```
+
+</CodeBlockConfig>
+
 </CodeTabs>
 
 ## Step 4: Store a secret
@@ -325,12 +333,11 @@ System.out.println("Secret written successfully.");
 
 ```shell-session
 curl \
-    --header "X-Vault-Token: dev-only-token" \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
     --header "Content-Type: application/json" \
     --request POST \
     --data '{"data": {"password": "Hashi123"}}' \
     http://127.0.0.1:8200/v1/secret/data/my-secret-password
-
 ```
 
 </CodeBlockConfig>
@@ -418,9 +425,8 @@ if (readResponse != null && readResponse.hasData()) {
 
 ```shell-session
 curl \
-    --header "X-Vault-Token: dev-only-token" \
-    http://127.0.0.1:8200/v1/secret/data/my-secret-password
-
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    http://127.0.0.1:8200/v1/secret/data/my-secret-password > secrets.json
 ```
 
 </CodeBlockConfig>
@@ -488,6 +494,10 @@ System.out.println("Access granted!");
 ```
 
 </CodeBlockConfig>
+
+```shell-session
+    cat secrets.json | jq '.data.data'
+```
 
 </CodeTabs>
 
