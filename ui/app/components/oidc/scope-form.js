@@ -23,18 +23,15 @@ export default class OidcScopeFormComponent extends Component {
   @service flashMessages;
 
   @tracked modelValidations;
-
-  exampleTemplate = JSON.stringify(
-    {
-      username: '{{identity.entity.aliases.$MOUNT_ACCESSOR.name}}',
-      contact: {
-        email: '{{identity.entity.metadata.email}}',
-        phone_number: '{{identity.entity.metadata.phone_number}}',
-      },
-    },
-    null,
-    2
-  );
+  // formatting here is purposeful so that whitespace renders correctly in JsonEditor
+  exampleTemplate = `{
+  "username": {{identity.entity.aliases.$MOUNT_ACCESSOR.name}},
+  "contact": {
+    "email": {{identity.entity.metadata.email}},
+    "phone_number": {{identity.entity.metadata.phone_number}}
+  },
+  "groups": {{identity.entity.groups.names}}
+}`;
 
   @task
   *save(event) {
@@ -44,6 +41,7 @@ export default class OidcScopeFormComponent extends Component {
       this.modelValidations = isValid ? null : state;
       if (isValid) {
         yield this.args.model.save();
+        this.flashMessages.success('Successfully created a scope');
         this.args.onSave();
       }
     } catch (error) {
