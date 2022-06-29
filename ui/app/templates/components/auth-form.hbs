@@ -1,8 +1,6 @@
 <div class="auth-form" data-test-auth-form>
   {{#if (and this.waitingForOktaNumberChallenge (not this.cancelAuthForOktaNumberChallenge))}}
-    <OktaNumberChallenge
-      @correctAnswer={{this.oktaNumberChallengeAnswer}}
-    />
+    <OktaNumberChallenge @correctAnswer={{this.oktaNumberChallengeAnswer}} />
   {{else}}
     {{#if this.hasMethodsWithPath}}
       <nav class="tabs is-marginless">
@@ -11,7 +9,9 @@
             {{#let (or method.path method.type) as |methodKey|}}
               <li
                 class={{if
-                  (and this.selectedAuthIsPath (eq (or this.selectedAuthBackend.path this.selectedAuthBackend.type) methodKey))
+                  (and
+                    this.selectedAuthIsPath (eq (or this.selectedAuthBackend.path this.selectedAuthBackend.type) methodKey)
+                  )
                   "is-active"
                   ""
                 }}
