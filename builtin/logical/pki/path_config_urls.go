@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/asaskevich/govalidator"
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -105,7 +104,11 @@ func (b *backend) pathReadURL(ctx context.Context, req *logical.Request, _ *fram
 	}
 
 	resp := &logical.Response{
-		Data: structs.New(entries).Map(),
+		Data: map[string]interface{}{
+			"issuing_certificates":    entries.IssuingCertificates,
+			"crl_distribution_points": entries.CRLDistributionPoints,
+			"ocsp_servers":            entries.OCSPServers,
+		},
 	}
 
 	return resp, nil

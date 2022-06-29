@@ -56,10 +56,10 @@ const (
 )
 
 type keyEntry struct {
-	ID             keyID                   `json:"id" structs:"id" mapstructure:"id"`
-	Name           string                  `json:"name" structs:"name" mapstructure:"name"`
-	PrivateKeyType certutil.PrivateKeyType `json:"private_key_type" structs:"private_key_type" mapstructure:"private_key_type"`
-	PrivateKey     string                  `json:"private_key" structs:"private_key" mapstructure:"private_key"`
+	ID             keyID                   `json:"id"`
+	Name           string                  `json:"name"`
+	PrivateKeyType certutil.PrivateKeyType `json:"private_key_type"`
+	PrivateKey     string                  `json:"private_key"`
 }
 
 func (e keyEntry) getManagedKeyUUID() (UUIDKey, error) {
@@ -136,28 +136,28 @@ func NewIssuerUsageFromNames(names []string) (issuerUsage, error) {
 }
 
 type issuerEntry struct {
-	ID                   issuerID                  `json:"id" structs:"id" mapstructure:"id"`
-	Name                 string                    `json:"name" structs:"name" mapstructure:"name"`
-	KeyID                keyID                     `json:"key_id" structs:"key_id" mapstructure:"key_id"`
-	Certificate          string                    `json:"certificate" structs:"certificate" mapstructure:"certificate"`
-	CAChain              []string                  `json:"ca_chain" structs:"ca_chain" mapstructure:"ca_chain"`
-	ManualChain          []issuerID                `json:"manual_chain" structs:"manual_chain" mapstructure:"manual_chain"`
-	SerialNumber         string                    `json:"serial_number" structs:"serial_number" mapstructure:"serial_number"`
-	LeafNotAfterBehavior certutil.NotAfterBehavior `json:"not_after_behavior" structs:"not_after_behavior" mapstructure:"not_after_behavior"`
-	Usage                issuerUsage               `json:"usage" structs:"usage" mapstructure:"usage"`
+	ID                   issuerID                  `json:"id"`
+	Name                 string                    `json:"name"`
+	KeyID                keyID                     `json:"key_id"`
+	Certificate          string                    `json:"certificate"`
+	CAChain              []string                  `json:"ca_chain"`
+	ManualChain          []issuerID                `json:"manual_chain"`
+	SerialNumber         string                    `json:"serial_number"`
+	LeafNotAfterBehavior certutil.NotAfterBehavior `json:"not_after_behavior"`
+	Usage                issuerUsage               `json:"usage"`
 }
 
 type localCRLConfigEntry struct {
-	IssuerIDCRLMap map[issuerID]crlID `json:"issuer_id_crl_map" structs:"issuer_id_crl_map" mapstructure:"issuer_id_crl_map"`
-	CRLNumberMap   map[crlID]int64    `json:"crl_number_map" structs:"crl_number_map" mapstructure:"crl_number_map"`
+	IssuerIDCRLMap map[issuerID]crlID `json:"issuer_id_crl_map"`
+	CRLNumberMap   map[crlID]int64    `json:"crl_number_map"`
 }
 
 type keyConfigEntry struct {
-	DefaultKeyId keyID `json:"default" structs:"default" mapstructure:"default"`
+	DefaultKeyId keyID `json:"default"`
 }
 
 type issuerConfigEntry struct {
-	DefaultIssuerId issuerID `json:"default" structs:"default" mapstructure:"default"`
+	DefaultIssuerId issuerID `json:"default"`
 }
 
 type storageContext struct {

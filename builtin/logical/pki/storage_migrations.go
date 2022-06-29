@@ -21,11 +21,11 @@ const (
 )
 
 type legacyBundleMigrationLog struct {
-	Hash             string    `json:"hash" structs:"hash" mapstructure:"hash"`
-	Created          time.Time `json:"created" structs:"created" mapstructure:"created"`
-	CreatedIssuer    issuerID  `json:"issuer_id" structs:"issuer_id" mapstructure:"issuer_id"`
-	CreatedKey       keyID     `json:"key_id" structs:"key_id" mapstructure:"key_id"`
-	MigrationVersion int       `json:"migrationVersion" structs:"migrationVersion" mapstructure:"migrationVersion"`
+	Hash             string    `json:"hash"`
+	Created          time.Time `json:"created"`
+	CreatedIssuer    issuerID  `json:"issuer_id"`
+	CreatedKey       keyID     `json:"key_id"`
+	MigrationVersion int       `json:"migrationVersion"`
 }
 
 type migrationInfo struct {
