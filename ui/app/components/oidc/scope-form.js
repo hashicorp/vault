@@ -23,7 +23,7 @@ export default class OidcScopeFormComponent extends Component {
   @service flashMessages;
 
   @tracked modelValidations;
-
+  // formatting here is purposeful so that whitespace renders correctly in JsonEditor
   exampleTemplate = `{
   "username": {{identity.entity.aliases.$MOUNT_ACCESSOR.name}},
   "contact": {
@@ -41,6 +41,7 @@ export default class OidcScopeFormComponent extends Component {
       this.modelValidations = isValid ? null : state;
       if (isValid) {
         yield this.args.model.save();
+        this.flashMessages.success('Successfully created a scope');
         this.args.onSave();
       }
     } catch (error) {
