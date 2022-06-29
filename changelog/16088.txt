@@ -1,0 +1,3 @@
+```release-note:bug
+core/identity: Replicate member_entity_ids and policies in identity/group across nodes identically
+```
