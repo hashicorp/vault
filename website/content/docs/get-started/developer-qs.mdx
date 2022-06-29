@@ -57,7 +57,7 @@ $ go get github.com/hashicorp/vault/api
 
 Now, let's add the import statements for the client library to the top of the file.
 
-<CodeBlockConfig heading="import statements for client library" lineNumbers>
+<CodeBlockConfig heading="import statements for client library">
 
 ```go
 import vault "github.com/hashicorp/vault/api"
@@ -97,7 +97,7 @@ $ dotnet add package VaultSharp
 
 Now, let's add the import statements for the client library to the top of the file.
 
-<CodeBlockConfig heading="import statements for client library" lineNumbers>
+<CodeBlockConfig heading="import statements for client library">
 
 ```cs
 using VaultSharp;
@@ -120,7 +120,7 @@ $ pip install hvac
 
 Now, let's add the import statements for the client library to the top of the file.
 
-<CodeBlockConfig heading="import statements for client library" lineNumbers>
+<CodeBlockConfig heading="import statements for client library">
 
 ```Python
 import hvac
@@ -146,7 +146,7 @@ Add the following to pom.xml:
 
 Now, let's add the import statements for the client library to the top of the file.
 
-<CodeBlockConfig heading="import statements for client library" lineNumbers>
+<CodeBlockConfig heading="import statements for client library">
 
 ```Java
 import org.springframework.vault.authentication.TokenAuthentication;
@@ -171,8 +171,6 @@ Paste the following code to initialize a new Vault client that will use token-ba
 
 <CodeTabs heading="initialize a new vault client">
 
-<CodeBlockConfig lineNumbers>
-
 ```go
 config := vault.DefaultConfig()
 
@@ -186,20 +184,12 @@ if err != nil {
 client.SetToken("dev-only-token")
 ```
 
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
-
 ```ruby
 Vault.configure do |config|
     config.address = "http://127.0.0.1:8200"
     config.token = "dev-only-token"
 end
 ```
-
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
 
 ```cs
 IAuthMethodInfo authMethod = new TokenAuthMethodInfo(vaultToken: "dev-only-token");
@@ -209,20 +199,12 @@ VaultClientSettings("http://127.0.0.1:8200", authMethod);
 IVaultClient vaultClient = new VaultClient(vaultClientSettings);
 ```
 
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
-
 ```Python
 client = hvac.Client(
     url='http://127.0.0.1:8200',
     token='dev-only-token',
 )
 ```
-
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
 
 ```Java
 VaultEndpoint vaultEndpoint = new VaultEndpoint();
@@ -237,15 +219,9 @@ VaultTemplate vaultTemplate = new VaultTemplate(
 );
 ```
 
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
-
 ```shell-session
 export VAULT_TOKEN="dev-only-token"
 ```
-
-</CodeBlockConfig>
 
 </CodeTabs>
 
@@ -256,8 +232,6 @@ Secrets are sensitive data like API keys and passwords that we shouldn’t be st
 We'll use the Vault client we just initialized to write a secret to Vault, like so:
 
 <CodeTabs heading="write a secret to vault">
-
-<CodeBlockConfig lineNumbers>
 
 ```go
 secretData := map[string]interface{}{
@@ -273,20 +247,12 @@ if err != nil {
 fmt.Println("Secret written successfully.")
 ```
 
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
-
 ```ruby
 secret_data = {data: {password: "Hashi123"}}
 Vault.logical.write("secret/data/my-secret-password", secret_data)
 
 puts "Secret written successfully."
 ```
-
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
 
 ```cs
 var secretData = new Dictionary<string, object> { { "password", "Hashi123" } };
@@ -299,10 +265,6 @@ vaultClient.V1.Secrets.KeyValue.V2.WriteSecretAsync(
 Console.WriteLine("Secret written successfully.");
 ```
 
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
-
 ```Python
 create_response = client.secrets.kv.v2.create_or_update_secret(
     path='my-secret-password',
@@ -311,10 +273,6 @@ create_response = client.secrets.kv.v2.create_or_update_secret(
 
 print('Secret written successfully.')
 ```
-
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
 
 ```Java
 Map<String, String> data = new HashMap<>();
@@ -327,10 +285,6 @@ Versioned.Metadata createResponse = vaultTemplate
 System.out.println("Secret written successfully.");
 ```
 
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
-
 ```shell-session
 curl \
     --header "X-Vault-Token: $VAULT_TOKEN" \
@@ -339,8 +293,6 @@ curl \
     --data '{"data": {"password": "Hashi123"}}' \
     http://127.0.0.1:8200/v1/secret/data/my-secret-password
 ```
-
-</CodeBlockConfig>
 
 </CodeTabs>
 
@@ -358,8 +310,6 @@ Underneath the line where you wrote a secret to Vault, let's add a few more line
 
 <CodeTabs heading="read a secret">
 
-<CodeBlockConfig lineNumbers>
-
 ```go
 secret, err := client.KVv2("secret").Get(context.Background(), "my-secret-password")
 if err != nil {
@@ -372,18 +322,10 @@ log.Fatalf("value type assertion failed: %T %#v", secret.Data["password"], secre
 }
 ```
 
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
-
 ```ruby
 secret = Vault.logical.read("secret/data/my-secret-password")
 password = secret.data[:data][:password]
 ```
-
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
 
 ```cs
 Secret<SecretData> secret = vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(
@@ -394,19 +336,11 @@ Secret<SecretData> secret = vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(
 var password = secret.Data.Data["password"];
 ```
 
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
-
 ```Python
 read_response = client.secrets.kv.read_secret_version(path='my-secret-password')
 
 password = read_response['data']['data']['password']
 ```
-
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
 
 ```Java
 Versioned<Map<String, Object>> readResponse = vaultTemplate
@@ -419,25 +353,17 @@ if (readResponse != null && readResponse.hasData()) {
 }
 ```
 
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
-
 ```shell-session
 curl \
     --header "X-Vault-Token: $VAULT_TOKEN" \
     http://127.0.0.1:8200/v1/secret/data/my-secret-password > secrets.json
 ```
 
-</CodeBlockConfig>
-
 </CodeTabs>
 
 Last, confirm that the value we unpacked from the read response is correct:
 
 <CodeTabs heading="confirm value">
-
-<CodeBlockConfig lineNumbers>
 
 ```go
 if value != "Hashi123" {
@@ -447,19 +373,11 @@ if value != "Hashi123" {
 fmt.Println("Access granted!")
 ```
 
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
-
 ```ruby
 abort "Unexpected password" if password != "Hashi123"
 
 puts "Access granted!"
 ```
-
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
 
 ```cs
 if (password.ToString() != "Hashi123")
@@ -470,20 +388,12 @@ if (password.ToString() != "Hashi123")
 Console.WriteLine("Access granted!");
 ```
 
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
-
 ```Python
 if password != 'Hashi123':
     sys.exit('unexpected password')
 
 print('Access granted!')
 ```
-
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
 
 ```Java
 if (!password.equals("Hashi123")) {
@@ -493,13 +403,9 @@ if (!password.equals("Hashi123")) {
 System.out.println("Access granted!");
 ```
 
-</CodeBlockConfig>
-
 ```shell-session
     cat secrets.json | jq '.data.data'
 ```
-
-</CodeTabs>
 
 If the secret was fetched successfully, you should see the `Access granted!` message after you run the code. If not, check to see if you provided the correct path to your secret.
 
