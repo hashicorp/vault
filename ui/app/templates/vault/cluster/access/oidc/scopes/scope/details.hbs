@@ -1,0 +1,59 @@
+<PageHeader as |p|>
+  <p.top>
+    <nav class="breadcrumb" aria-label="breadcrumbs">
+      <ul>
+        <li>
+          <span class="sep">&#x0002f;</span>
+          <LinkTo @route="vault.cluster.access.oidc.scopes">
+            Scopes
+          </LinkTo>
+        </li>
+      </ul>
+    </nav>
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      {{this.model.name}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
+  <nav class="tabs" aria-label="tabs">
+    <ul>
+      <LinkTo @route="vault.cluster.access.oidc.scopes.scope.details" @model={{this.model}}>
+        Details
+      </LinkTo>
+    </ul>
+  </nav>
+</div>
+
+<Toolbar>
+  <ToolbarActions>
+    <ConfirmAction
+      @buttonClasses="toolbar-link"
+      @disabled={{false}}
+      @onConfirmAction={{this.delete}}
+      @confirmTitle="Are you sure?"
+      @confirmMessage="Deleting this scope is permanent, and it will no longer be available."
+      @confirmButtonText="Delete"
+    >
+      Delete scope
+    </ConfirmAction>
+    <ToolbarLink @params={{array "vault.cluster.access.oidc.scopes.scope.edit" this.model.name}}>
+      Edit scope
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+
+<div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+  <InfoTableRow @label="Name" @value={{this.model.name}} />
+  <InfoTableRow @label="Description" @value={{this.model.description}} />
+  <JsonEditor
+    @title="JSON Template"
+    @mode="ruby"
+    @value={{this.model.template}}
+    @readOnly={{true}}
+    class="has-top-margin-xl has-bottom-margin-xl"
+  />
+</div>

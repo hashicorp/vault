@@ -56,13 +56,23 @@
   @showCloseButton={{true}}
 >
   <section class="modal-card-body">
-    <p class="has-bottom-margin-s" data-test-modal-copy>
-      Example of a JSON template for scopes:
-    </p>
+    <div class="is-flex-between is-flex-center has-bottom-margin-s">
+      <p data-test-modal-copy>
+        Example of a JSON template for scopes:
+      </p>
+      <CopyButton
+        class="button is-transparent"
+        @clipboardText={{this.exampleTemplate}}
+        @buttonType="button"
+        @success={{fn (set-flash-message "Example template copied!")}}
+      >
+        <Icon @name="clipboard-copy" aria-label="Copy" />
+      </CopyButton>
+    </div>
     {{! code-mirror modifier does not render value initially in wormhole until focus event fires }}
     {{! wait until the Modal is rendered and then show the JsonEditor }}
     {{#if this.showTemplateModal}}
-      <JsonEditor @value={{this.exampleTemplate}} @readOnly={{true}} @showToolbar={{false}} />
+      <JsonEditor @value={{this.exampleTemplate}} @mode="ruby" @readOnly={{true}} @showToolbar={{false}} />
     {{/if}}
     <p class="has-top-margin-m">
       The full list of template parameters can be found
