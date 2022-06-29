@@ -1,6 +1,4 @@
 import Model, { attr, hasMany } from '@ember-data/model';
-// eslint-disable-next-line ember/no-computed-properties-in-native-classes
-import { computed } from '@ember/object';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
@@ -41,7 +39,6 @@ export default class OidcClientModel extends Model {
     models: ['oidc/key'],
   })
   key;
-
   @attr({
     label: 'Access Token TTL',
     editType: 'ttl',
@@ -59,7 +56,6 @@ export default class OidcClientModel extends Model {
   idTokenTtl;
 
   // >> END MORE OPTIONS TOGGLE <<
-
   @attr('string', {
     label: 'Client ID',
   })
@@ -76,6 +72,7 @@ export default class OidcClientModel extends Model {
   })
   providerIds; // might be a good candidate for @hasMany relationship instead of @attr
 
+  // PERMISSIONS //
   @lazyCapabilities(apiPath`identity/oidc/client/${'name'}`, 'name') clientPath;
   @lazyCapabilities(apiPath`identity/oidc/client`) clientsPath;
   get canCreate() {
@@ -108,22 +105,29 @@ export default class OidcClientModel extends Model {
     return this.assignmentsPath.get('canList');
   }
 
-  @lazyCapabilities(apiPath`identity/oidc/${'name'}/provider`, 'backend', 'name') clientProvidersPath; // API is WIP
   // API WIP
+  @lazyCapabilities(apiPath`identity/oidc/${'name'}/provider`, 'backend', 'name') clientProvidersPath; // API is WIP
   get canListProviders() {
     return this.clientProvidersPath.get('canList');
   }
 
-  fields = ['name', 'clientType', 'redirectUris'];
-  @computed('fields', 'formFields')
+  // TODO refactor when field-to-attrs util is refactored as decorator
+  _attributeMeta = null; // cache initial result of expandAttributeMeta in getter and return
   get formFields() {
-    return expandAttributeMeta(this, this.fields);
+    if (!this._attributeMeta) {
+      this._attributeMeta = expandAttributeMeta(this, ['name', 'clientType', 'redirectUris']);
+    }
+    return this._attributeMeta;
   }
 
-  moreOptions = [{ 'More options': ['key', 'idTokenTtl', 'accessTokenTtl'] }];
+  _fieldToAttrsGroups = null;
   // more options fields
-  @computed('moreOptions', 'fieldGroups')
   get fieldGroups() {
-    return fieldToAttrs(this, this.moreOptions);
+    if (!this._fieldToAttrsGroups) {
+      this._fieldToAttrsGroups = fieldToAttrs(this, [
+        { 'More options': ['key', 'idTokenTtl', 'accessTokenTtl'] },
+      ]);
+    }
+    return this._fieldToAttrsGroups;
   }
 }

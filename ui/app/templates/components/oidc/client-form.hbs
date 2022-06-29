@@ -1,5 +1,26 @@
-<div class="box is-sideless is-fullwidth is-marginless" ...attributes>
-  <form id="client-form" {{on "submit" this.createClient}}>
+<PageHeader as |p|>
+  <p.top>
+    <nav class="breadcrumb">
+      <ul>
+        <li>
+          <span class="sep">&#x0002f;</span>
+          <LinkTo @route="vault.cluster.access.oidc.clients">
+            Applications
+          </LinkTo>
+        </li>
+      </ul>
+    </nav>
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      {{if @model.isNew "Create" "Edit"}}
+      application
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<form {{on "submit" this.createClient}}>
+  <div class="box is-sideless is-fullwidth is-bottomless">
     <MessageError @errorMessage={{this.error}} class="has-top-margin-s" />
     {{#each @model.formFields as |attr|}}
       <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
@@ -7,53 +28,52 @@
 
     {{! MORE OPTIONS TOGGLE }}
     <FormFieldGroups @renderGroup="More options" @model={{@model}} @mode={{@mode}} />
-
-    {{! RADIO CARD + SEARCH SELECT }}
-    <div class="box is-sideless is-fullwidth is-marginless">
-      <h4 class="title is-4">Assign access</h4>
-      <div class="is-flex-row">
-        <RadioCard
-          @title="Allow everyone to access existing"
-          @description="All Vault entities can authenticate through this application."
-          @icon="org"
-          @value="allow_all"
-          @groupValue={{this.radioCardGroupValue}}
-          @onChange={{fn (mut this.radioCardGroupValue)}}
-        />
-        <RadioCard
-          @title="Limit access to selected users"
-          @description="Choose or create an assignment to give access to selected entities."
-          @icon="users"
-          @value="limited"
-          @groupValue={{this.radioCardGroupValue}}
-          @onChange={{fn (mut this.radioCardGroupValue)}}
-        />
-      </div>
-      {{#if (eq this.radioCardGroupValue "limited")}}
-        <SearchSelect
-          @label="Assignment name"
-          @labelClass="is-label"
-          @subText="Search for an existing assignment, or type a new name to create it."
-          @models={{array "oidc/assignment"}}
-          @inputValue={{map-by "id" @model.assignments}}
-          @onChange={{this.selectAssignments}}
-        />
-      {{/if}}
+  </div>
+  {{! RADIO CARD + SEARCH SELECT }}
+  <div class="box is-sideless is-fullwidth is-marginless has-top-padding-xxl">
+    <h4 class="title is-4">Assign access</h4>
+    <div class="is-flex-row">
+      <RadioCard
+        @title="Allow everyone to access existing"
+        @description="All Vault entities can authenticate through this application."
+        @icon="org"
+        @value="allow_all"
+        @groupValue={{this.radioCardGroupValue}}
+        @onChange={{fn (mut this.radioCardGroupValue)}}
+      />
+      <RadioCard
+        @title="Limit access to selected users"
+        @description="Choose or create an assignment to give access to selected entities."
+        @icon="users"
+        @value="limited"
+        @groupValue={{this.radioCardGroupValue}}
+        @onChange={{fn (mut this.radioCardGroupValue)}}
+      />
     </div>
-    <div class="field box is-fullwidth is-bottomless">
-      <div class="control">
-        <button
-          type="button"
-          class="button is-primary {{if false 'is-loading'}}"
-          disabled={{false}}
-          {{on "click" this.createClient}}
-        >
-          Create
-        </button>
-        <button type="button" class="button has-left-margin-s" disabled={{false}} {{on "click" this.cancel}}>
-          Cancel
-        </button>
-      </div>
+    {{#if (eq this.radioCardGroupValue "limited")}}
+      <SearchSelect
+        @label="Assignment name"
+        @labelClass="is-label"
+        @subText="Search for an existing assignment, or type a new name to create it."
+        @models={{array "oidc/assignment"}}
+        @inputValue={{map-by "id" @model.assignments}}
+        @onChange={{this.selectAssignments}}
+      />
+    {{/if}}
+  </div>
+  <div class="field box is-fullwidth is-bottomless">
+    <div class="control">
+      <button
+        type="button"
+        class="button is-primary {{if false 'is-loading'}}"
+        disabled={{false}}
+        {{on "click" this.createClient}}
+      >
+        Create
+      </button>
+      <button type="button" class="button has-left-margin-s" disabled={{false}} {{on "click" this.cancel}}>
+        Cancel
+      </button>
     </div>
-  </form>
-</div>
+  </div>
+</form>

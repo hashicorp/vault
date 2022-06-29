@@ -21,6 +21,7 @@ export default class OidcClientForm extends Component {
   @service store;
   @service router;
   @service flashMessages;
+
   @tracked showMoreOptions = false;
   @tracked radioCardGroupValue = 'allow_all';
 

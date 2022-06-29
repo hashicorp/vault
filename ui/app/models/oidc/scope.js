@@ -13,6 +13,7 @@ export default class OidcScopeModel extends Model {
   @attr('string', { editType: 'textarea' }) description;
   @attr('string', { label: 'JSON Template', editType: 'json' }) template;
 
+  // TODO refactor when field-to-attrs is refactored as decorator
   _attributeMeta = null; // cache initial result of expandAttributeMeta in getter and return
   get formFields() {
     if (!this._attributeMeta) {
