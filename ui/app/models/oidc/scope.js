@@ -11,7 +11,7 @@ const validations = {
 export default class OidcScopeModel extends Model {
   @attr('string', { editDisabled: true }) name;
   @attr('string', { editType: 'textarea' }) description;
-  @attr('string', { label: 'JSON Template', editType: 'json' }) template;
+  @attr('string', { label: 'JSON Template', editType: 'json', mode: 'ruby' }) template;
 
   // TODO refactor when field-to-attrs is refactored as decorator
   _attributeMeta = null; // cache initial result of expandAttributeMeta in getter and return
