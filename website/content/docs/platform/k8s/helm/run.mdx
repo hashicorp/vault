@@ -252,9 +252,16 @@ server:
     GOOGLE_PROJECT: <PROJECT NAME>
     GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/kms-creds/credentials.json
 
-  Volumes:
-    - type: 'secret'
-      name: 'kms-creds'
+  volumes:
+    - name: userconfig-kms-creds
+      secret:
+        defaultMode: 420
+        secretName: kms-creds
+
+  volumeMounts:
+    - mountPath: /vault/userconfig/kms-creds
+      name: userconfig-kms-creds
+      readOnly: true
 
   ha:
     enabled: true
