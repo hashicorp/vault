@@ -1,26 +1,5 @@
-<PageHeader as |p|>
-  <p.levelLeft class="has-border-bottom-light">
-    <h1 class="title is-3">
-      Create Assignment
-    </h1>
-  </p.levelLeft>
-  <p.top>
-    <nav class="breadcrumb">
-      <ul>
-        <li>
-          <span class="sep">&#x0002f;</span>
-          <LinkTo @route="vault.cluster.access.oidc.assignments.index">
-            Assignments
-          </LinkTo>
-        </li>
-      </ul>
-    </nav>
-  </p.top>
-</PageHeader>
-<div class="has-border-top-light has-top-padding-l">
-  <Oidc::AssignmentForm
-    @model={{this.model}}
-    @onClose={{transition-to "vault.cluster.access.oidc.assignment"}}
-    @onSave={{transition-to "vault.cluster.access.oidc.assignments.assignment.details" this.model.name}}
-  />
-</div>
+<Oidc::AssignmentForm
+  @model={{this.model}}
+  @onCancel={{transition-to "vault.cluster.access.oidc.assignments"}}
+  @onSave={{transition-to "vault.cluster.access.oidc.assignments.assignment.details" this.model.name}}
+/>

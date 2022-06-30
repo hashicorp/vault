@@ -12,16 +12,18 @@ import handleHasManySelection from 'core/utils/search-select-has-many';
  * @example
  * ```js
  * <Oidc::AssignmentForm @model={this.model}
- * @onClose={transition-to "vault.cluster.access.oidc.assignment"} @param1={{param1}}
+ * @onCancel={transition-to "vault.cluster.access.oidc.assignment"} @param1={{param1}}
  * @onSave={transition-to "vault.cluster.access.oidc.assignments.assignment.details" this.model.name}
  * />
  * ```
+ * @callback onCancel
+ * @callback onSave
  * @param {object} model - The parent's model
- * @param {string} onClose - The transition-to helper directing where to go on cancel.
- * @param {string} onSave - The transition-to helper directing where to go on save.
+ * @param {string} onCancel - callback triggered when cancel button is clicked
+ * @param {string} onSave - callback triggered when save button is clicked
  */
 
-export default class OidcAssignmentForm extends Component {
+export default class OidcAssignmentFormComponent extends Component {
   @service store;
   @service flashMessages;
 
@@ -33,28 +35,26 @@ export default class OidcAssignmentForm extends Component {
 
   @task
   *save() {
-    this.modelErrors = {};
-    // check validity state first and abort if invalid
-    const { isValid, state } = this.args.model.validate();
-    if (!isValid) {
-      this.modelErrors = state;
-    } else {
-      try {
+    event.preventDefault();
+    try {
+      const { isValid, state } = this.args.model.validate();
+      this.modelValidations = isValid ? null : state;
+      if (isValid) {
         yield this.args.model.save();
+        this.flashMessages.success('Successfully created an assignment');
         this.args.onSave();
-      } catch (error) {
-        console.log(error, 'error');
-        const message = error.errors ? error.errors.join('. ') : error.message;
-        this.flashMessages.danger(message);
       }
+    } catch (error) {
+      const message = error.errors ? error.errors.join('. ') : error.message;
+      this.flashMessages.danger(message);
     }
   }
 
   @action
   cancel() {
-    // revert model changes
-    this.args.model.rollbackAttributes();
-    this.args.onClose();
+    const method = this.args.model.isNew ? 'unloadRecord' : 'rollbackAttributes';
+    this.args.model[method]();
+    this.args.onCancel();
   }
 
   @action
