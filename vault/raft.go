@@ -1007,6 +1007,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 
 		select {
 		case <-ctx.Done():
+			err = ctx.Err()
 		case raftInfo := <-challengeCh:
 			if raftInfo != nil {
 				err = answerChallenge(ctx, raftInfo)
@@ -1015,7 +1016,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				}
 			}
 		}
-		return fmt.Errorf("timed out on raft join: %w", ctx.Err())
+		return err
 	}
 
 	switch retryFailures {
