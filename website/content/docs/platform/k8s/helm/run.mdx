@@ -509,8 +509,12 @@ to the Vault startup command:
 
 ```shell-session
 $ helm install vault hashicorp/vault \
-  --set='server.Volumes[0].type=secret' \
-  --set='server.Volumes[0].name=vault-storage-config' \
+  --set='server.volumes[0].name=userconfig-vault-storage-config' \
+  --set='server.volumes[0].secret.defaultMode=420' \
+  --set='server.volumes[0].secret.secretName=vault-storage-config' \
+  --set='server.volumeMounts[0].mountPath=/vault/userconfig/vault-storage-config' \
+  --set='server.volumeMounts[0].name=userconfig-vault-storage-config' \
+  --set='server.volumeMounts[0].readOnly=true' \
   --set='server.extraArgs=-config=/vault/userconfig/vault-storage-config/config.hcl'
 ```
 
