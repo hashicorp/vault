@@ -2562,19 +2562,17 @@ defined on the role, can access the role.`,
 	},
 	"role-secret-id-num-uses": {
 		"Use limit of the SecretID generated against the role.",
-		`If the SecretIDs are generated/assigned against the role using the
-'role/<role_name>/secret-id' or 'role/<role_name>/custom-secret-id' endpoints,
-then the number of times that SecretID can access the role is by default defined by this option.
-Can be overriden by the 'num_uses' field on either of the two endpoints,
-but is still the highest possible num_uses.`,
+		`If a SecretID is generated/assigned against a role using the
+'role/<role_name>/secret-id' or 'role/<role_name>/custom-secret-id' endpoint,
+then the number of times this SecretID can be used is defined by this option.
+However, this option may be overriden by the request's 'num_uses' field.`,
 	},
 	"role-secret-id-ttl": {
 		"Duration in seconds of the SecretID generated against the role.",
-		`If the SecretIDs are generated/assigned against the role using the
-'role/<role_name>/secret-id' or 'role/<role_name>/custom-secret-id' endpoints,
-then the lifetime of the SecretID is by default defined by this option.
-Can be overriden by the 'ttl' field on either of the two endpoints,
-but is still the longest possible ttl.`,
+		`If a SecretID is generated/assigned against a role using the
+'role/<role_name>/secret-id' or 'role/<role_name>/custom-secret-id' endpoint,
+then the lifetime of this SecretID is defined by this option.
+However, this option may be overridden by the request's 'ttl' field.`,
 	},
 	"role-secret-id-lookup": {
 		"Read the properties of an issued secret_id",
