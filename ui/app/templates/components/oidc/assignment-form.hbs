@@ -1,73 +1,82 @@
-<PageHeader as |p|>
-  <p.top>
-    <nav class="breadcrumb" aria-label="breadcrumbs">
-      <ul>
-        <li>
-          <span class="sep">&#x0002f;</span>
-          <LinkTo @route={{concat "vault.cluster.access.oidc.assignments" (unless @model.isNew ".assignment.details")}}>
-            {{if @model.isNew "Assignments" "Details"}}
-          </LinkTo>
-        </li>
-      </ul>
-    </nav>
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3" data-test-oidc-assignment-title>
-      {{if @model.isNew "Create" "Edit"}}
-      assignment
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+<div ...attributes>
+  <PageHeader as |p|>
+    <p.top>
+      <nav class="breadcrumb" aria-label="breadcrumbs">
+        <ul>
+          <li>
+            <span class="sep">&#x0002f;</span>
+            {{#if @model.isNew}}
+              <LinkTo @route={{"vault.cluster.access.oidc.assignments"}}>
+                Assignments
+              </LinkTo>
+            {{else}}
+              {{! You're editing in this view }}
+              <LinkTo @route={{"vault.cluster.access.oidc.assignments.assignment.details"}} @model={{@model.name}}>
+                Details
+              </LinkTo>
+            {{/if}}
+          </li>
+        </ul>
+      </nav>
+    </p.top>
+    <p.levelLeft>
+      <h1 class="title is-3" data-test-oidc-assignment-title>
+        {{if @model.isNew "Create" "Edit"}}
+        assignment
+      </h1>
+    </p.levelLeft>
+  </PageHeader>
 
-<form {{on "submit" (perform this.save)}}>
-  <div class="box is-sideless is-fullwidth is-marginless">
-    <FormFieldLabel for="name" @label="Name" />
-    <input
-      autocomplete="off"
-      spellcheck="false"
-      value={{@model.name}}
-      disabled={{not @model.isNew}}
-      class="input field {{if this.errors.name.errors 'has-error-border'}}"
-      {{on "input" this.handleOperation}}
-    />
-    {{#if this.errors.name.errors}}
-      <AlertInline @type="danger" @message={{join ", " this.errors.name.errors}} />
-    {{/if}}
+  <form {{on "submit" (perform this.save)}}>
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <FormFieldLabel for="name" @label="Name" />
+      <input
+        autocomplete="off"
+        spellcheck="false"
+        value={{@model.name}}
+        disabled={{not @model.isNew}}
+        class="input field {{if this.errors.name.errors 'has-error-border'}}"
+        {{on "input" this.handleOperation}}
+      />
+      {{#if this.errors.name.errors}}
+        <AlertInline @type="danger" @message={{join ", " this.errors.name.errors}} />
+      {{/if}}
 
-    <SearchSelect
-      @subLabel="Entities"
-      @placeholder="Search"
-      @models={{array "identity/entity"}}
-      @shouldRenderName={{true}}
-      @onChange={{this.onEntitiesSelect}}
-      @fallbackComponent="string-list"
-    />
-    <SearchSelect
-      @subLabel="Groups"
-      @placeholder="Search"
-      @models={{array "identity/group"}}
-      @shouldRenderName={{true}}
-      @onChange={{this.onGroupsSelect}}
-      @fallbackComponent="string-list"
-    />
-  </div>
-  <div class="has-top-padding-s">
-    <button
-      type="submit"
-      class="button is-primary {{if this.save.isRunning 'is-loading'}}"
-      disabled={{this.save.isRunning}}
-      data-test-oidc-assignment-save
-    >
-      {{if @model.isNew "Create" "Update"}}
-    </button>
-    <button
-      type="button"
-      class="button has-left-margin-s"
-      disabled={{this.save.isRunning}}
-      {{on "click" this.cancel}}
-      data-test-oidc-assignment-cancel
-    >
-      Cancel
-    </button>
-  </div>
-</form>
+      <SearchSelect
+        @subLabel="Entities"
+        @placeholder="Search"
+        @models={{array "identity/entity"}}
+        @shouldRenderName={{true}}
+        @onChange={{this.onEntitiesSelect}}
+        @fallbackComponent="string-list"
+      />
+      <SearchSelect
+        @subLabel="Groups"
+        @placeholder="Search"
+        @models={{array "identity/group"}}
+        @shouldRenderName={{true}}
+        @onChange={{this.onGroupsSelect}}
+        @fallbackComponent="string-list"
+      />
+    </div>
+    <div class="has-top-padding-s">
+      <button
+        type="submit"
+        class="button is-primary {{if this.save.isRunning 'is-loading'}}"
+        disabled={{this.save.isRunning}}
+        data-test-oidc-assignment-save
+      >
+        {{if @model.isNew "Create" "Update"}}
+      </button>
+      <button
+        type="button"
+        class="button has-left-margin-s"
+        disabled={{this.save.isRunning}}
+        {{on "click" this.cancel}}
+        data-test-oidc-assignment-cancel
+      >
+        Cancel
+      </button>
+    </div>
+  </form>
+</div>
