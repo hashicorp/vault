@@ -69,11 +69,11 @@ enabled while creating or updating a role.
 - `secret_id_num_uses` `(integer: 0)` - Number of times any particular SecretID
   can be used to fetch a token from this AppRole, after which the SecretID by default
   will expire. A value of zero will allow unlimited uses.
-  Can be overriden by `num_uses` request field when generating a SecretID, but is still the highest possible num_uses.
+  However, this option may be overridden by the request's 'num_uses' field when generating a SecretID.
 - `secret_id_ttl` `(string: "")` - Duration in either an integer number of
   seconds (`3600`) or an integer time unit (`60m`) after which by default any SecretID
-  expires.
-  Can be overriden by `ttl` request field when generating a SecretID, but is still the longest possible ttl.
+  expires. A value of zero will allow the SecretID to not expire.
+  However, this option may be overridden by the request's 'ttl' field when generating a SecretID.
 - `local_secret_ids` `(bool: false)` - If set, the secret IDs generated
   using this role will be cluster local. This can only be set during role
   creation and once set, it can't be reset later.
@@ -279,7 +279,7 @@ itself, and also to delete the SecretID from the AppRole.
   Overrides secret_id_num_uses role option when supplied.
   May not be higher than role's secret_id_num_uses.
 - `ttl` `(string: "")` - Duration in seconds (`3600`) or an integer time unit (`60m`)
-  after which this SecretID expires. Defaults to 0, meaning no expiration.
+  after which this SecretID expires. A value of zero will allow the SecretID to not expire.
   Overrides secret_id_ttl role option when supplied.
   May not be longer than role's secret_id_ttl.
 
@@ -519,7 +519,7 @@ Assigns a "custom" SecretID against an existing AppRole. This is used in the
   Overrides secret_id_num_uses role option when supplied.
   May not be higher than role's secret_id_num_uses.
 - `ttl` `(string: "")` - Duration in seconds (`3600`) or an integer time unit (`60m`)
-  after which this SecretID expires. Defaults to 0, meaning no expiration.
+  after which this SecretID expires. A value of zero will allow the SecretID to not expire.
   Overrides secret_id_ttl role option when supplied.
   May not be longer than role's secret_id_ttl.
 
