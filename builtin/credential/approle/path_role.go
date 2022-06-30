@@ -488,7 +488,7 @@ Overrides secret_id_num_uses role option when supplied. May not be higher than r
 				},
 				"ttl": {
 					Type: framework.TypeDurationSecond,
-					Description: `Duration in seconds after which this SecretID expires. Defaults to 0, meaning no expiration.
+					Description: `Duration in seconds after which this SecretID expires.
 Overrides secret_id_ttl role option when supplied. May not be longer than role's secret_id_ttl.`,
 				},
 			},
