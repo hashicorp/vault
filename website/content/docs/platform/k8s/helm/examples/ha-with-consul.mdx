@@ -20,9 +20,16 @@ server:
     GOOGLE_PROJECT: myproject
     GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/my-gcp-iam/myproject-creds.json
 
-  Volumes:
-    - type: secret
-      name: my-gcp-iam
+  volumes:
+    - name: userconfig-my-gcp-iam
+      secret:
+        defaultMode: 420
+        secretName: my-gcp-iam
+
+  volumeMounts:
+    - mountPath: /vault/userconfig/my-gcp-iam
+      name: userconfig-my-gcp-iam
+      readOnly: true
 
   affinity: |
     podAntiAffinity:
