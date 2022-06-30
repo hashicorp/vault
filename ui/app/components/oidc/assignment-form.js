@@ -60,6 +60,11 @@ export default class OidcAssignmentForm extends Component {
   onEntitiesSelect(selectedIds) {
     const entityIds = this.args.model.entityIds;
     handleHasManySelection(selectedIds, entityIds, this.store, 'identity/entity');
-    console.log(this.args.model.entityIds.toArray(), 'here');
+  }
+
+  @action
+  onGroupsSelect(selectedIds) {
+    const groupIds = this.args.model.GroupIds;
+    handleHasManySelection(selectedIds, groupIds, this.store, 'identity/group');
   }
 }

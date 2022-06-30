@@ -8,15 +8,26 @@
     class="input field"
     {{on "input" this.handleOperation}}
   />
-  <div class="has-top-padding-s has-border-top-light">
-    <SearchSelect
-      @subLabel="Entities"
-      @placeholder="Search"
-      @models={{array "identity/entity"}}
-      @shouldRenderName={{true}}
-      @onChange={{this.onEntitiesSelect}}
-    />
-  </div>
+  {{#if this.errors.name.errors}}
+    <AlertInline @type="danger" @message={{join ", " this.errors.name.errors}} />
+  {{/if}}
+
+  <SearchSelect
+    @subLabel="Entities"
+    @placeholder="Search"
+    @models={{array "identity/entity"}}
+    @shouldRenderName={{true}}
+    @onChange={{this.onEntitiesSelect}}
+    @fallbackComponent="string-list"
+  />
+  <SearchSelect
+    @subLabel="Groups"
+    @placeholder="Search"
+    @models={{array "identity/group"}}
+    @shouldRenderName={{true}}
+    @onChange={{this.onGroupsSelect}}
+    @fallbackComponent="string-list"
+  />
   <hr />
   <div class="has-top-padding-s">
     <button
