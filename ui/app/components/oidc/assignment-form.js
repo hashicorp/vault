@@ -24,6 +24,10 @@ export default class OidcAssignmentForm extends Component {
 
   @tracked modelErrors;
 
+  get errors() {
+    return this.args.modelErrors || this.modelErrors;
+  }
+
   @task
   *save() {
     this.modelErrors = {};

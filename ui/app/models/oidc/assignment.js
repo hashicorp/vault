@@ -5,10 +5,11 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 const validations = {
   name: [
     { type: 'presence', message: 'Name is required' },
-    {
-      type: 'containsWhiteSpace',
-      message: 'Name cannot contain whitespace.',
-    },
+    // ARG TODO add in after Claire pushes her branch
+    // {
+    //   type: 'containsWhiteSpace',
+    //   message: 'Name cannot contain whitespace.',
+    // },
   ],
 };
 

@@ -5,7 +5,7 @@
     spellcheck="false"
     value={{@model.name}}
     disabled={{not @model.isNew}}
-    class="input field"
+    class="input field {{if this.errors.name.errors 'has-error-border'}}"
     {{on "input" this.handleOperation}}
   />
   {{#if this.errors.name.errors}}
