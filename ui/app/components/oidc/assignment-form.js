@@ -6,16 +6,19 @@ import { tracked } from '@glimmer/tracking';
 import handleHasManySelection from 'core/utils/search-select-has-many';
 
 /**
- * @module OidcAssignmentForm
- * OidcAssignmentForm components are used to...
+ * @module Oidc::AssignmentForm
+ * Oidc::AssignmentForm components are used to display the create view for OIDC providers assignments.
  *
  * @example
  * ```js
- * <OidcAssignmentForm @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <Oidc::AssignmentForm @model={this.model}
+ * @onClose={transition-to "vault.cluster.access.oidc.assignment"} @param1={{param1}}
+ * @onSave={transition-to "vault.cluster.access.oidc.assignments.assignment.details" this.model.name}
+ * />
  * ```
- * @param {object} requiredParam - requiredParam is...
- * @param {string} [optionalParam] - optionalParam is...
- * @param {string} [param1=defaultValue] - param1 is...
+ * @param {object} model - The parent's model
+ * @param {string} onClose - The transition-to helper directing where to go on cancel.
+ * @param {string} onSave - The transition-to helper directing where to go on save.
  */
 
 export default class OidcAssignmentForm extends Component {
