@@ -19,15 +19,15 @@
   </p.levelLeft>
 </PageHeader>
 
-<form {{on "submit" this.createClient}}>
+<form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-bottomless">
     <MessageError @errorMessage={{this.error}} class="has-top-margin-s" />
     {{#each @model.formFields as |attr|}}
-      <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
+      <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
     {{/each}}
 
     {{! MORE OPTIONS TOGGLE }}
-    <FormFieldGroups @renderGroup="More options" @model={{@model}} @mode={{@mode}} />
+    <FormFieldGroups @renderGroup="More options" @model={{@model}} @modelValidations={{this.modelValidations}} />
   </div>
   {{! RADIO CARD + SEARCH SELECT }}
   <div class="box is-sideless is-fullwidth is-marginless has-top-padding-xxl">
@@ -64,14 +64,13 @@
   <div class="field box is-fullwidth is-bottomless">
     <div class="control">
       <button
-        type="button"
-        class="button is-primary {{if false 'is-loading'}}"
-        disabled={{false}}
-        {{on "click" this.createClient}}
+        type="submit"
+        class="button is-primary {{if this.save.isRunning 'is-loading'}}"
+        disabled={{this.save.isRunning}}
       >
-        Create
+        {{if @model.isNew "Create" "Update"}}
       </button>
-      <button type="button" class="button has-left-margin-s" disabled={{false}} {{on "click" this.cancel}}>
+      <button type="button" class="button has-left-margin-s" disabled={{this.save.isRunning}} {{on "click" this.cancel}}>
         Cancel
       </button>
     </div>

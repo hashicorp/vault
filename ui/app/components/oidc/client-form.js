@@ -2,19 +2,22 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-// import handleHasManySelection from 'core/utils/search-select-has-many';
+import { task } from 'ember-concurrency';
+import handleHasManySelection from 'core/utils/search-select-has-many';
 
 /**
  * @module OidcClientForm
- * OidcClientForm components are used to...
+ * OidcClientForm components are used to create and update OIDC clients (a.k.a. applications)
  *
  * @example
  * ```js
- * <OidcClientForm @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <OidcClientForm @model={{this.model}} />
  * ```
- * @param {object} requiredParam - requiredParam is...
- * @param {string} [optionalParam] - optionalParam is...
- * @param {string} [param1=defaultValue] - param1 is...
+ * @callback onCancel
+ * @callback onSave
+ * @param {Object} model - oidc client model
+ * @param {onCancel} onCancel - callback triggered when cancel button is clicked
+ * @param {onSave} onSave - callback triggered on save success
  */
 
 export default class OidcClientForm extends Component {
@@ -22,39 +25,37 @@ export default class OidcClientForm extends Component {
   @service router;
   @service flashMessages;
 
+  @tracked modelValidations;
   @tracked showMoreOptions = false;
   @tracked radioCardGroupValue = 'allow_all';
 
   @action
   async selectAssignments(selectedIds) {
     const assignments = await this.args.model.assignments;
-    // handleHasManySelection(selectedIds, assignments, this.store, 'oidc/assignment');
-    assignments.forEach((model) => {
-      if (!selectedIds.includes(model.id)) {
-        assignments.removeObject(model);
-      }
-    });
-    const modelIds = assignments.mapBy('id');
-    selectedIds.forEach((id) => {
-      if (!modelIds.includes(id)) {
-        const model = this.store.peekRecord('oidc/assignment', id);
-        assignments.addObject(model);
-      }
-    });
+    handleHasManySelection(selectedIds, assignments, this.store, 'oidc/assignment');
   }
 
-  @action
-  async createClient() {
+  @task
+  *save(event) {
+    event.preventDefault();
     try {
-      this.args.model.save();
-    } catch (e) {
-      this.flashMessages.danger(e.errors?.join('. ') || e.message);
+      const { isValid, state } = this.args.model.validate();
+      this.modelValidations = isValid ? null : state;
+      if (isValid) {
+        yield this.args.model.save();
+        this.flashMessages.success('Successfully created an application');
+        this.args.onSave();
+      }
+    } catch (error) {
+      const message = error.errors ? error.errors.join('. ') : error.message;
+      this.flashMessages.danger(message);
     }
   }
 
   @action
   cancel() {
-    this.args.model.rollbackAttributes();
-    this.router.transitionTo('vault.cluster.access.oidc.clients');
+    const method = this.args.model.isNew ? 'unloadRecord' : 'rollbackAttributes';
+    this.args.model[method]();
+    this.args.onCancel();
   }
 }

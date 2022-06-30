@@ -2,11 +2,24 @@ import Model, { attr, hasMany } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
+import { withModelValidations } from 'vault/decorators/model-validations';
 
+const validations = {
+  name: [
+    { type: 'presence', message: 'Name is required.' },
+    {
+      type: 'containsWhiteSpace',
+      message: 'Name cannot contain whitespace.',
+    },
+  ],
+};
+
+@withModelValidations(validations)
 export default class OidcClientModel extends Model {
   @hasMany('oidc/assignment') assignments;
   @attr('string', {
     label: 'Application name',
+    editDisabled: true,
   })
   name;
 
@@ -34,6 +47,11 @@ export default class OidcClientModel extends Model {
     label: 'Signing key',
     subText: 'Add a key to sign and verify the JSON web tokens (JWT). This cannot be edited later.',
     editType: 'searchSelect',
+    editDisabled: true,
+    disallowNewItems: true,
+    defaultValue() {
+      return ['default'];
+    },
     fallbackComponent: 'string-list',
     selectLimit: 1,
     models: ['oidc/key'],
