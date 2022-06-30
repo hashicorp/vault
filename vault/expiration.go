@@ -464,14 +464,19 @@ func (m *ExpirationManager) invalidate(key string) {
 			case le == nil:
 				// Handle lease deletion
 				pending := info.(pendingInfo)
-				leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: leaseID, Role: pending.cachedLeaseInfo.LoginRole}
 				pending.timer.Stop()
 				m.pending.Delete(leaseID)
 				m.leaseCount--
 
-				if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
-					m.logger.Error("failed to update quota on lease invalidation", "error", err)
-					return
+				// Avoid nil pointer dereference. Without cachedLeaseInfo we do not have enough information to
+				// accurately update quota lease information.
+				// Note that cachedLeaseInfo should never be nil under normal operation.
+				if pending.cachedLeaseInfo != nil {
+					leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: leaseID, Role: pending.cachedLeaseInfo.LoginRole}
+					if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
+						m.logger.Error("failed to update quota on lease invalidation", "error", err)
+						return
+					}
 				}
 			default:
 				// Update the lease in memory
@@ -486,14 +491,19 @@ func (m *ExpirationManager) invalidate(key string) {
 
 				if info, ok := m.irrevocable.Load(leaseID); ok {
 					irrevocable := info.(pendingInfo)
-					leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: leaseID, Role: irrevocable.cachedLeaseInfo.LoginRole}
 					m.irrevocable.Delete(leaseID)
 					m.irrevocableLeaseCount--
 
 					m.leaseCount--
-					if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
-						m.logger.Error("failed to update quota on lease invalidation", "error", err)
-						return
+					// Avoid nil pointer dereference. Without cachedLeaseInfo we do not have enough information to
+					// accurately update quota lease information.
+					// Note that cachedLeaseInfo should never be nil under normal operation.
+					if irrevocable.cachedLeaseInfo != nil {
+						leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: leaseID, Role: irrevocable.cachedLeaseInfo.LoginRole}
+						if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
+							m.logger.Error("failed to update quota on lease invalidation", "error", err)
+							return
+						}
 					}
 				}
 				return
@@ -1797,10 +1807,15 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 			info.(pendingInfo).timer.Stop()
 			m.pending.Delete(le.LeaseID)
 			m.leaseCount--
-			leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: le.LeaseID, Role: le.LoginRole}
-			if err := m.core.quotasHandleLeases(m.quitContext, quotas.LeaseActionDeleted, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
-				m.logger.Error("failed to update quota on lease deletion", "error", err)
-				return
+			// Avoid nil pointer dereference. Without cachedLeaseInfo we do not have enough information to
+			// accurately update quota lease information.
+			// Note that cachedLeaseInfo should never be nil under normal operation.
+			if pending.cachedLeaseInfo != nil {
+				leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: le.LeaseID, Role: le.LoginRole}
+				if err := m.core.quotasHandleLeases(m.quitContext, quotas.LeaseActionDeleted, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
+					m.logger.Error("failed to update quota on lease deletion", "error", err)
+					return
+				}
 			}
 		}
 		return
@@ -1852,10 +1867,15 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 
 	if leaseCreated {
 		m.leaseCount++
-		leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: le.LeaseID, Role: le.LoginRole}
-		if err := m.core.quotasHandleLeases(m.quitContext, quotas.LeaseActionCreated, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
-			m.logger.Error("failed to update quota on lease creation", "error", err)
-			return
+		// Avoid nil pointer dereference. Without cachedLeaseInfo we do not have enough information to
+		// accurately update quota lease information.
+		// Note that cachedLeaseInfo should never be nil under normal operation.
+		if pending.cachedLeaseInfo != nil {
+			leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: le.LeaseID, Role: le.LoginRole}
+			if err := m.core.quotasHandleLeases(m.quitContext, quotas.LeaseActionCreated, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
+				m.logger.Error("failed to update quota on lease creation", "error", err)
+				return
+			}
 		}
 	}
 }
@@ -2454,10 +2474,15 @@ func (m *ExpirationManager) removeFromPending(ctx context.Context, leaseID strin
 		m.pending.Delete(leaseID)
 		if decrementCounters {
 			m.leaseCount--
-			leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: leaseID, Role: pending.cachedLeaseInfo.LoginRole}
-			// Log but do not fail; unit tests (and maybe Tidy on production systems)
-			if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
-				m.logger.Error("failed to update quota on revocation", "error", err)
+			// Avoid nil pointer dereference. Without cachedLeaseInfo we do not have enough information to
+			// accurately update quota lease information.
+			// Note that cachedLeaseInfo should never be nil under normal operation.
+			if pending.cachedLeaseInfo != nil {
+				leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: leaseID, Role: pending.cachedLeaseInfo.LoginRole}
+				// Log but do not fail; unit tests (and maybe Tidy on production systems)
+				if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
+					m.logger.Error("failed to update quota on revocation", "error", err)
+				}
 			}
 		}
 	}
