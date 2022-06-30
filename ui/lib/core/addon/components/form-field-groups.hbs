@@ -28,7 +28,13 @@
         {{#if (eq this.showGroup group)}}
           <div class="box is-marginless">
             {{#each fields as |attr|}}
-              <FormField data-test-field @attr={{attr}} @mode={{@mode}} @model={{@model}} />
+              <FormField
+                data-test-field
+                @attr={{attr}}
+                @mode={{@mode}}
+                @model={{@model}}
+                @modelValidations={{@modelValidations}}
+              />
             {{/each}}
           </div>
         {{/if}}
