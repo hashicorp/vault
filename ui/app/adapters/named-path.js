@@ -23,13 +23,13 @@ export default class NamedPathAdapter extends ApplicationAdapter {
   updateRecord() {
     return this._saveRecord(...arguments);
   }
-  // add name to payload
-  findRecord(store, type, id) {
+  // if backend does not return name in response Ember Data will throw an error for pushing a record with no id
+  // use the id (name) supplied to findRecord to set property on response data
+  findRecord(store, type, name) {
     return super.findRecord(...arguments).then((resp) => {
       if (!resp.data.name) {
-        resp.data.name = id;
+        resp.data.name = name;
       }
-
       return resp;
     });
   }

@@ -240,31 +240,34 @@
         />
       {{else if (eq @attr.options.editType "json")}}
         {{! JSON Editor }}
-        <JsonEditor
-          data-test-input={{@attr.name}}
-          @title={{this.labelString}}
-          @value={{if
-            (get @model this.valuePath)
-            (stringify (jsonify (get @model this.valuePath)))
-            @attr.options.defaultValue
-          }}
-          @valueUpdated={{fn this.codemirrorUpdated true}}
-          @theme={{or @attr.options.theme "hashi"}}
-          @helpText={{@attr.options.helpText}}
-        >
-          {{#if @attr.options.allowReset}}
-            <button
-              type="button"
-              class="toolbar-link"
-              disabled={{not (get @model this.valuePath)}}
-              onClick={{this.setAndBroadcast}}
-              data-test-json-clear-button
-            >
-              Clear
-              <Icon @name="reload" />
-            </button>
-          {{/if}}
-        </JsonEditor>
+        {{#let (get @model this.valuePath) as |value|}}
+          <JsonEditor
+            data-test-input={{@attr.name}}
+            @title={{this.labelString}}
+            @value={{if
+              value
+              (if (eq @attr.options.mode "ruby") value (stringify (jsonify value)))
+              @attr.options.defaultValue
+            }}
+            @valueUpdated={{fn this.codemirrorUpdated true}}
+            @theme={{or @attr.options.theme "hashi"}}
+            @helpText={{@attr.options.helpText}}
+            @mode={{@attr.options.mode}}
+          >
+            {{#if @attr.options.allowReset}}
+              <button
+                type="button"
+                class="toolbar-link"
+                disabled={{not value}}
+                onClick={{this.setAndBroadcast}}
+                data-test-json-clear-button
+              >
+                Clear
+                <Icon @name="reload" />
+              </button>
+            {{/if}}
+          </JsonEditor>
+        {{/let}}
         {{#if @attr.options.subText}}
           <p class="sub-text">
             {{@attr.options.subText}}
@@ -282,6 +285,7 @@
           data-test-input={{@attr.name}}
           id={{@attr.name}}
           readonly={{this.isReadOnly}}
+          disabled={{and @attr.options.editDisabled (not @model.isNew)}}
           autocomplete="off"
           spellcheck="false"
           value={{or (get @model this.valuePath) @attr.options.defaultValue}}
