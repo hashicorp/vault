@@ -12,7 +12,7 @@ import (
 
 // CRLConfig holds basic CRL configuration information
 type crlConfig struct {
-	Expiry  string `json:"expiry" mapstructure:"expiry"`
+	Expiry  string `json:"expiry"`
 	Disable bool   `json:"disable"`
 }
 

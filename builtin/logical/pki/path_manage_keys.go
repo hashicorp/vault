@@ -80,7 +80,8 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse("Can not generate keys until migration has completed"), nil
 	}
 
-	keyName, err := getKeyName(ctx, req.Storage, data)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	keyName, err := getKeyName(sc, data)
 	if err != nil { // Fail Immediately if Key Name is in Use, etc...
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -127,7 +128,7 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 
-	key, _, err := importKey(ctx, b, req.Storage, privateKeyPemString, keyName, keyBundle.PrivateKeyType)
+	key, _, err := sc.importKey(privateKeyPemString, keyName, keyBundle.PrivateKeyType)
 	if err != nil {
 		return nil, err
 	}
@@ -188,10 +189,28 @@ func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("Cannot import keys until migration has completed"), nil
 	}
 
+	sc := b.makeStorageContext(ctx, req.Storage)
 	pemBundle := data.Get("pem_bundle").(string)
-	keyName, err := getKeyName(ctx, req.Storage, data)
+	keyName, err := getKeyName(sc, data)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	if len(pemBundle) < 64 {
+		// It is almost nearly impossible to store a complete key in
+		// less than 64 bytes. It is definitely impossible to do so when PEM
+		// encoding has been applied. Detect this and give a better warning
+		// than "provided PEM block contained no data" in this case. This is
+		// because the PEM headers contain 5*4 + 6 + 4 + 2 + 2 = 34 characters
+		// minimum (five dashes, "BEGIN" + space + at least one character
+		// identifier, "END" + space + at least one character identifier, and
+		// a pair of new lines). That would leave 30 bytes for Base64 data,
+		// meaning at most a 22-byte DER key. Even with a 128-bit key, 6 bytes
+		// is not sufficient for the required ASN.1 structure and OID encoding.
+		//
+		// However, < 64 bytes is probably a good length for a file path so
+		// suggest that is the case.
+		return logical.ErrorResponse("provided data for import was too short; perhaps a path was passed to the API rather than the contents of a PEM file"), nil
 	}
 
 	pemBytes := []byte(pemBundle)
@@ -212,7 +231,7 @@ func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("only a single key can be present within the pem_bundle for importing"), nil
 	}
 
-	key, existed, err := importKeyFromBytes(ctx, b, req.Storage, keys[0], keyName)
+	key, existed, err := importKeyFromBytes(sc, keys[0], keyName)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}

@@ -50,8 +50,8 @@ EKM provider to use it.
 1. Retrieve the AppRole ID and secret ID for use later when configuring SQL Server:
 
     ```bash
-    vault read auth/approle/role/ekm-encryption-key-role/role-id
-    vault write -f auth/approle/role/ekm-encryption-key-role/secret-id
+    vault read auth/approle/role/tde-role/role-id
+    vault write -f auth/approle/role/tde-role/secret-id
     ```
 
 1. Enable the transit secret engine and create a key:
@@ -137,8 +137,8 @@ installation.
     ```sql
     -- Replace <approle-role-id> and <approle-secret-id> with the values from
     -- the earlier vault commands:
-    -- vault read auth/approle/role/ekm-encryption-key-role/role-id
-    -- vault write -f auth/approle/role/ekm-encryption-key-role/secret-id
+    -- vault read auth/approle/role/tde-role/role-id
+    -- vault write -f auth/approle/role/tde-role/secret-id
     CREATE CREDENTIAL TransitVaultCredentials
         WITH IDENTITY = '<approle-role-id>',
         SECRET = '<approle-secret-id>'
@@ -213,22 +213,40 @@ installation.
 
     ```
 
-## Error Codes
+## Key Rotation
 
-During installation, the EKM provider registers a manifest of coded event logs to aid debugging. You may see the following error codes during operation.
+Both the database encryption key and Vault Transit's asymmetric key can be rotated independently.
 
-### 2050 License Error
+To rotate the database encryption key, you can execute the
+[following SQL query](https://docs.microsoft.com/en-us/sql/t-sql/statements/alter-database-encryption-key-transact-sql?view=azuresqldb-current)
+in Microsoft SQL Server Management Studio:
 
-The EKM provider was unable to verify that Vault has the correct license features. This
-could be due to:
+```sql
+USE TestTDE;
+GO
 
-- An incompatible Vault Enterprise license - see the installation [prerequisites](/docs/platform/mssql/installation#prerequisites) for the required license feature.
-- Lack of network connectivity - Check Vault's audit logs to see if any requests are made to
-   authenticate via AppRole or query the `/sys/license/status` API.
-- Misconfigured AppRole auth - Ensure you provided the correct Role ID and Secret ID when
-   configuring the SQL Server `CREDENTIAL`. See the
-   [installation instructions](/docs/platform/mssql/installation) for an end-to-end working example.
-- Incorrect policy permissions - The EKM provider requires the `read` capability
-   on the path `sys/license/status`. See the `tde-policy` created in the
-   [installation instructions](/docs/platform/mssql/installation#configuring-vault)
-   for an example of a working policy.
+ALTER DATABASE ENCRYPTION KEY
+REGENERATE WITH ALGORITHM = AES_256;
+GO
+
+SELECT * FROM sys.dm_database_encryption_keys;
+```
+
+To rotate the asymmetric key in Vault's Transit, you can use the standard
+[`/rotate`](/api-docs/secret/transit#rotate-key) endpoint:
+
+```shell-session
+$ vault write -f transit/keys/ekm-encryption-key/rotate
+```
+
+After rotating the Vault asymmetric key, you can force SQL Server to re-encrypt the database encryption
+key with the newest version of the Vault key with:
+
+```sql
+USE TestTDE;
+GO
+
+ALTER DATABASE ENCRYPTION KEY
+ENCRYPTION BY SERVER ASYMMETRIC KEY TransitVaultAsymmetric;
+GO
+```

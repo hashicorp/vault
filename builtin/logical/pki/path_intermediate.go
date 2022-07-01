@@ -74,12 +74,13 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 	}
 	data.Raw["signature_bits"] = 0
 
-	exported, format, role, errorResp := b.getGenerationParams(ctx, req.Storage, data)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	exported, format, role, errorResp := getGenerationParams(sc, data)
 	if errorResp != nil {
 		return errorResp, nil
 	}
 
-	keyName, err := getKeyName(ctx, req.Storage, data)
+	keyName, err := getKeyName(sc, data)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -89,7 +90,7 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		req:     req,
 		apiData: data,
 	}
-	parsedBundle, err := generateIntermediateCSR(ctx, b, input, b.Backend.GetRandomReader())
+	parsedBundle, err := generateIntermediateCSR(sc, input, b.Backend.GetRandomReader())
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -108,7 +109,7 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		Data: map[string]interface{}{},
 	}
 
-	entries, err := getURLs(ctx, req)
+	entries, err := getURLs(ctx, req.Storage)
 	if err == nil && len(entries.OCSPServers) == 0 && len(entries.IssuingCertificates) == 0 && len(entries.CRLDistributionPoints) == 0 {
 		// If the operator hasn't configured any of the URLs prior to
 		// generating this issuer, we should add a warning to the response,
@@ -149,7 +150,7 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		}
 	}
 
-	myKey, _, err := importKey(ctx, b, req.Storage, csrb.PrivateKey, keyName, csrb.PrivateKeyType)
+	myKey, _, err := sc.importKey(csrb.PrivateKey, keyName, csrb.PrivateKeyType)
 	if err != nil {
 		return nil, err
 	}

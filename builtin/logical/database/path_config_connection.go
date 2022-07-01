@@ -344,16 +344,14 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 		b.Logger().Debug("created database object", "name", name, "plugin_name", config.PluginName)
 
-		b.Lock()
-		defer b.Unlock()
-
 		// Close and remove the old connection
-		b.clearConnection(name)
-
-		b.connections[name] = &dbPluginInstance{
+		oldConn := b.connPut(name, &dbPluginInstance{
 			database: dbw,
 			name:     name,
 			id:       id,
+		})
+		if oldConn != nil {
+			oldConn.Close()
 		}
 
 		err = storeConfig(ctx, req.Storage, name, config)

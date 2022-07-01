@@ -2,12 +2,9 @@ package pki
 
 import (
 	"bytes"
-	"context"
 	"crypto/x509"
 	"fmt"
 	"sort"
-
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func prettyIssuer(issuerIdEntryMap map[issuerID]*issuerEntry, issuer issuerID) string {
@@ -18,7 +15,7 @@ func prettyIssuer(issuerIdEntryMap map[issuerID]*issuerEntry, issuer issuerID) s
 	return "[" + string(issuer) + "]"
 }
 
-func rebuildIssuersChains(ctx context.Context, s logical.Storage, referenceCert *issuerEntry /* optional */) error {
+func (sc *storageContext) rebuildIssuersChains(referenceCert *issuerEntry /* optional */) error {
 	// This function rebuilds the CAChain field of all known issuers. This
 	// function should usually be invoked when a new issuer is added to the
 	// pool of issuers.
@@ -42,7 +39,7 @@ func rebuildIssuersChains(ctx context.Context, s logical.Storage, referenceCert 
 	// themselves.
 	//
 	// To begin, we fetch all known issuers from disk.
-	issuers, err := listIssuers(ctx, s)
+	issuers, err := sc.listIssuers()
 	if err != nil {
 		return fmt.Errorf("unable to list issuers to build chain: %v", err)
 	}
@@ -58,7 +55,7 @@ func rebuildIssuersChains(ctx context.Context, s logical.Storage, referenceCert 
 		// Otherwise, the only entry in the chain (that we know about) is the
 		// certificate itself.
 		referenceCert.CAChain = []string{referenceCert.Certificate}
-		return writeIssuer(ctx, s, referenceCert)
+		return sc.writeIssuer(referenceCert)
 	}
 
 	// Our provided reference cert might not be in the list of issuers. In
@@ -115,7 +112,7 @@ func rebuildIssuersChains(ctx context.Context, s logical.Storage, referenceCert 
 			stored = referenceCert
 		} else {
 			// Otherwise, fetch it from disk.
-			stored, err = fetchIssuerById(ctx, s, identifier)
+			stored, err = sc.fetchIssuerById(identifier)
 			if err != nil {
 				return fmt.Errorf("unable to fetch issuer %v to build chain: %v", identifier, err)
 			}
@@ -419,7 +416,7 @@ func rebuildIssuersChains(ctx context.Context, s logical.Storage, referenceCert 
 	for _, issuer := range issuers {
 		entry := issuerIdEntryMap[issuer]
 
-		err := writeIssuer(ctx, s, entry)
+		err := sc.writeIssuer(entry)
 		if err != nil {
 			pretty := prettyIssuer(issuerIdEntryMap, issuer)
 			return fmt.Errorf("failed to persist issuer (%v) chain to disk: %v", pretty, err)
