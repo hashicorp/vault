@@ -1,6 +1,4 @@
-import Component from '@ember/component';
-import { set, get, defineProperty, computed } from '@ember/object';
-import layout from '../templates/components/toggle-button';
+import Component from '@glimmer/component';
 
 /**
  * @module ToggleButton
@@ -8,7 +6,7 @@ import layout from '../templates/components/toggle-button';
  *
  * @example
  * ```js
- *   <ToggleButton @openLabel="Encrypt Output with PGP" @closedLabel="Encrypt Output with PGP" @toggleTarget={{this}} @toggleAttr="showOptions"/>
+ *   <ToggleButton @isOpen={{this.showOptions}} @openLabel="Encrypt Output with PGP" @closedLabel="Encrypt Output with PGP" @onClick={{fn (mut this.showOptions}} />
  *  {{#if showOptions}}
  *     <div>
  *       <p>
@@ -17,39 +15,17 @@ import layout from '../templates/components/toggle-button';
  *     </div>
  *   {{/if}}
  * ```
- *
- * @param toggleAttr=null {String} - The attribute upon which to toggle.
- * @param openLabel=Hide options {String} - The message to display when the toggle is open.
- * @param closedLabel=More options {String} - The message to display when the toggle is closed.
+ * @callback onClickCallback
+ * @param {boolean} isOpen - determines whether to show open or closed label
+ * @param {onClickCallback} onClick - fired when button is clicked
+ * @param {string} [openLabel="Hide options"] - The message to display when the toggle is open.
+ * @param {string} [closedLabel="More options"] - The message to display when the toggle is closed.
  */
-export default Component.extend({
-  layout,
-  tagName: 'button',
-  type: 'button',
-  toggleTarget: null,
-  toggleAttr: null,
-  classNameBindings: ['buttonClass'],
-  attributeBindings: ['type'],
-  buttonClass: 'has-text-info',
-  classNames: ['button', 'is-transparent'],
-  openLabel: 'Hide options',
-  closedLabel: 'More options',
-  init() {
-    this._super(...arguments);
-    const toggleAttr = this.toggleAttr;
-    defineProperty(
-      this,
-      'isOpen',
-      computed(`toggleTarget.${toggleAttr}`, 'toggleAttr', 'toggleTarget', function() {
-        const props = { toggleTarget: this.toggleTarget, toggleAttr: this.toggleAttr };
-        return get(props.toggleTarget, props.toggleAttr);
-      })
-    );
-  },
-  click() {
-    const target = this.toggleTarget;
-    const attr = this.toggleAttr;
-    const current = get(target, attr);
-    set(target, attr, !current);
-  },
-});
+export default class ToggleButtonComponent extends Component {
+  get openLabel() {
+    return this.args.openLabel || 'Hide options';
+  }
+  get closedLabel() {
+    return this.args.closedLabel || 'More options';
+  }
+}

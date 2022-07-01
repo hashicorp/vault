@@ -4,11 +4,11 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, triggerEvent, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
-module('Integration | Component | raft-storage-restore', function(hooks) {
+module('Integration | Component | raft-storage-restore', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
-  test('it should restore snapshot', async function(assert) {
+  test('it should restore snapshot', async function (assert) {
     assert.expect(2);
 
     this.server.post('/sys/storage/raft/snapshot', () => {

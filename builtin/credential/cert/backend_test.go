@@ -1107,6 +1107,10 @@ func TestBackend_ext_singleCert(t *testing.T) {
 			testAccStepLoginInvalid(t, connState),
 			testAccStepCert(t, "web", ca, "foo", allowed{names: "invalid", ext: "2.1.1.1:*,2.1.1.2:The Wrong Value"}, false),
 			testAccStepLoginInvalid(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{metadata_ext: "2.1.1.1,1.2.3.45"}, false),
+			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{"2-1-1-1": "A UTF8String Extension"}),
+			testAccStepCert(t, "web", ca, "foo", allowed{metadata_ext: "1.2.3.45"}, false),
+			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{}),
 		},
 	})
 }
@@ -1556,6 +1560,40 @@ func testAccStepLoginDefaultLease(t *testing.T, connState tls.ConnectionState) l
 	}
 }
 
+func testAccStepLoginWithMetadata(t *testing.T, connState tls.ConnectionState, certName string, metadata map[string]string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation:       logical.UpdateOperation,
+		Path:            "login",
+		Unauthenticated: true,
+		ConnState:       &connState,
+		Check: func(resp *logical.Response) error {
+			// Check for fixed metadata too
+			metadata["cert_name"] = certName
+			metadata["common_name"] = connState.PeerCertificates[0].Subject.CommonName
+			metadata["serial_number"] = connState.PeerCertificates[0].SerialNumber.String()
+			metadata["subject_key_id"] = certutil.GetHexFormatted(connState.PeerCertificates[0].SubjectKeyId, ":")
+			metadata["authority_key_id"] = certutil.GetHexFormatted(connState.PeerCertificates[0].AuthorityKeyId, ":")
+
+			for key, expected := range metadata {
+				value, ok := resp.Auth.Metadata[key]
+				if !ok {
+					t.Fatalf("missing metadata key: %s", key)
+				}
+
+				if value != expected {
+					t.Fatalf("expected metadata key %s to equal %s, but got: %s", key, expected, value)
+				}
+			}
+
+			fn := logicaltest.TestCheckAuth([]string{"default", "foo"})
+			return fn(resp)
+		},
+		Data: map[string]interface{}{
+			"metadata": metadata,
+		},
+	}
+}
+
 func testAccStepLoginInvalid(t *testing.T, connState tls.ConnectionState) logicaltest.TestStep {
 	return testAccStepLoginWithNameInvalid(t, connState, "")
 }
@@ -1633,6 +1671,7 @@ type allowed struct {
 	uris                 string // allowed uris in SAN extension of the certificate
 	organizational_units string // allowed OUs in the certificate
 	ext                  string // required extensions in the certificate
+	metadata_ext         string // allowed metadata extensions to add to identity alias
 }
 
 func testAccStepCert(
@@ -1652,6 +1691,7 @@ func testAccStepCert(
 			"allowed_uri_sans":             testData.uris,
 			"allowed_organizational_units": testData.organizational_units,
 			"required_extensions":          testData.ext,
+			"allowed_metadata_extensions":  testData.metadata_ext,
 			"lease":                        1000,
 		},
 		Check: func(resp *logical.Response) error {

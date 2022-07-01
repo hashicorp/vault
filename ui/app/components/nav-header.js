@@ -5,11 +5,12 @@ import { computed } from '@ember/object';
 export default Component.extend({
   router: service(),
   'data-test-navheader': true,
+  attributeBindings: ['data-test-navheader'],
   classNameBindings: 'consoleFullscreen:panel-fullscreen',
   tagName: 'header',
   navDrawerOpen: false,
   consoleFullscreen: false,
-  hideLinks: computed('router.currentRouteName', function() {
+  hideLinks: computed('router.currentRouteName', function () {
     let currentRoute = this.router.currentRouteName;
     if ('vault.cluster.oidc-provider' === currentRoute) {
       return true;

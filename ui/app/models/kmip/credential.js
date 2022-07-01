@@ -19,7 +19,7 @@ const ModelExport = Model.extend({
     defaultValue: 'pem',
     label: 'Certificate format',
   }),
-  fieldGroups: computed(function() {
+  fieldGroups: computed(function () {
     const groups = [
       {
         default: ['format'],

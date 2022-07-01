@@ -6,6 +6,8 @@ description: This is the API documentation for the Vault Kubernetes auth method 
 
 # Kubernetes Auth Method (API)
 
+@include 'x509-sha1-deprecation.mdx'
+
 This is the API documentation for the Vault Kubernetes auth method plugin. To
 learn more about the usage and operation, see the
 [Vault Kubernetes auth method](/docs/auth/kubernetes).
@@ -29,8 +31,10 @@ access the Kubernetes API.
 
 - `kubernetes_host` `(string: <required>)` - Host must be a host string, a host:port pair, or a URL to the base of the Kubernetes API server.
 - `kubernetes_ca_cert` `(string: "")` - PEM encoded CA cert for use by the TLS client used to talk with the Kubernetes API. NOTE: Every line must end with a newline: `\n`
+  If not set, the local CA cert will be used if running in a Kubernetes pod.
 - `token_reviewer_jwt` `(string: "")` - A service account JWT used to access the TokenReview
   API to validate other JWTs during login. If not set,
+  the local service account token is used if running in a Kubernetes pod, otherwise
   the JWT submitted in the login payload will be used to access the Kubernetes TokenReview API.
 - `pem_keys` `(array: [])` - Optional list of PEM-formatted public keys or certificates
   used to verify the signatures of Kubernetes service account
@@ -45,7 +49,7 @@ access the Kubernetes API.
 
 - `disable_iss_validation` `(bool: true)` **Deprecated** Disable JWT issuer validation. Allows to skip ISS validation.
 
-- `issuer` `(string: "")` **Deprecated** Optional JWT issuer. If no issuer is specified, then this plugin will use `kubernetes/serviceaccount` as the default issuer. 
+- `issuer` `(string: "")` **Deprecated** Optional JWT issuer. If no issuer is specified, then this plugin will use `kubernetes/serviceaccount` as the default issuer.
 See [these instructions](/docs/auth/kubernetes#discovering-the-service-account-issuer) for looking up the issuer for a given Kubernetes cluster.
 
 ### Caveats
@@ -81,7 +85,7 @@ $ curl \
 
 ## Read Config
 
-Returns the previously configured config, including credentials.
+Returns the previously configured config, excluding credentials.
 
 | Method | Path                      |
 | :----- | :------------------------ |
@@ -134,7 +138,8 @@ entities attempting to login.
   While it is strongly advised that you use `serviceaccount_uid`, you may also use `serviceaccount_name` in cases where
   you want to set the alias ahead of time, and the risks are mitigated or otherwise acceptable given your use case.
   It is very important to limit who is able to delete/create service accounts within a given cluster.
-  Please see (/api-docs/secret/identity/entity-alias#create-an-entity-alias), which further elaborates on the related security implications.
+  See the [Create an Entity Alias](/api-docs/secret/identity/entity-alias#create-an-entity-alias) document
+  which further expands on the potential security implications mentioned above.
 
 @include 'tokenfields.mdx'
 

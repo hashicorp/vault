@@ -8,7 +8,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	math "math"
+	"math"
 	"net/http"
 	"net/url"
 	"sync"
@@ -234,8 +234,8 @@ func (c *Core) stopForwarding() {
 // alive and that the current active address value matches the most
 // recently-known address.
 func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAddr string) error {
-	c.logger.Debug("refreshing forwarding connection")
-	defer c.logger.Debug("done refreshing forwarding connection")
+	c.logger.Debug("refreshing forwarding connection", "clusterAddr", clusterAddr)
+	defer c.logger.Debug("done refreshing forwarding connection", "clusterAddr", clusterAddr)
 
 	c.requestForwardingConnectionLock.Lock()
 	defer c.requestForwardingConnectionLock.Unlock()

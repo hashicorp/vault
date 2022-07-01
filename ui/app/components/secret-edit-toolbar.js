@@ -12,7 +12,6 @@
  * @secretDataIsAdvanced={{secretDataIsAdvanced}}
  * @showAdvancedMode={{showAdvancedMode}}
  * @modelForData={{this.modelForData}}
- * @navToNearestAncestor={{this.navToNearestAncestor}}
  * @canUpdateSecretData={{canUpdateSecretData}}
  * @codemirrorString={{codemirrorString}}
  * @wrappedData={{wrappedData}}
@@ -30,13 +29,12 @@
  * @param {boolean} secretDataIsAdvanced - used to determine if show JSON toggle
  * @param {boolean} showAdvacnedMode - used for JSON toggle
  * @param {object} modelForData - a modified version of the model with secret data
- * @param {string} navToNearestAncestor - route to nav to if press cancel
  * @param {boolean} canUpdateSecretData - permissions that show the create new version button or not.
  * @param {string} codemirrorString - used to copy the JSON
  * @param {object} wrappedData - when copy the data it's the token of the secret returned.
  * @param {object} editActions - actions passed from parent to child
  */
-
+/* eslint ember/no-computed-properties-in-native-classes: 'warn' */
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { not } from '@ember/object/computed';
@@ -75,7 +73,7 @@ export default class SecretEditToolbar extends Component {
       this.store
         .adapterFor('secret-v2-version')
         .queryRecord(this.args.modelForData.id, { wrapTTL: 1800 })
-        .then(resp => {
+        .then((resp) => {
           this.wrappedData = resp.wrap_info.token;
           this.flashMessages.success('Secret Successfully Wrapped!');
         })
@@ -93,7 +91,7 @@ export default class SecretEditToolbar extends Component {
           id: this.args.modelForData.id,
           wrapTTL: 1800,
         })
-        .then(resp => {
+        .then((resp) => {
           this.wrappedData = resp.wrap_info.token;
           this.flashMessages.success('Secret Successfully Wrapped!');
         })

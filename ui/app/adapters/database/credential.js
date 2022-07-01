@@ -9,14 +9,14 @@ export default ApplicationAdapter.extend({
     return this.ajax(
       `${this.buildURL()}/${encodeURIComponent(backend)}/static-creds/${encodeURIComponent(secret)}`,
       'GET'
-    ).then(resp => ({ ...resp, roleType: 'static' }));
+    ).then((resp) => ({ ...resp, roleType: 'static' }));
   },
 
   _dynamicCreds(backend, secret) {
     return this.ajax(
       `${this.buildURL()}/${encodeURIComponent(backend)}/creds/${encodeURIComponent(secret)}`,
       'GET'
-    ).then(resp => ({ ...resp, roleType: 'dynamic' }));
+    ).then((resp) => ({ ...resp, roleType: 'dynamic' }));
   },
 
   fetchByQuery(store, query) {
@@ -46,5 +46,12 @@ export default ApplicationAdapter.extend({
 
   queryRecord(store, type, query) {
     return this.fetchByQuery(store, query);
+  },
+
+  rotateRoleCredentials(backend, id) {
+    return this.ajax(
+      `${this.buildURL()}/${encodeURIComponent(backend)}/rotate-role/${encodeURIComponent(id)}`,
+      'POST'
+    );
   },
 });

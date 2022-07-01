@@ -1,82 +1,74 @@
 import Ember from 'ember';
+import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
-import { computed, set } from '@ember/object';
-import Component from '@ember/component';
+import { action, setProperties } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { methods } from 'vault/helpers/mountable-auth-methods';
-import { engines, KMIP, TRANSFORM } from 'vault/helpers/mountable-secret-engines';
+import { engines, KMIP, TRANSFORM, KEYMGMT } from 'vault/helpers/mountable-secret-engines';
+import { waitFor } from '@ember/test-waiters';
+
+/**
+ * @module MountBackendForm
+ * The `MountBackendForm` is used to mount either a secret or auth backend.
+ *
+ * @example ```js
+ *   <MountBackendForm @mountType="secret" @onMountSuccess={{this.onMountSuccess}} />```
+ *
+ * @param {function} onMountSuccess - A function that transitions once the Mount has been successfully posted.
+ * @param {string} [mountType=auth] - The type of backend we want to mount.
+ *
+ */
 
 const METHODS = methods();
 const ENGINES = engines();
 
-export default Component.extend({
-  store: service(),
-  wizard: service(),
-  flashMessages: service(),
-  version: service(),
+export default class MountBackendForm extends Component {
+  @service store;
+  @service wizard;
+  @service flashMessages;
+  @service version;
 
-  /*
-   * @param Function
-   * @public
-   *
-   * Optional param to call a function upon successfully mounting a backend
-   *
-   */
-  onMountSuccess() {},
-  /*
-   * @param String
-   * @public
-   * the type of backend we want to mount
-   * defaults to `auth`
-   *
-   */
-  mountType: 'auth',
+  get mountType() {
+    return this.args.mountType || 'auth';
+  }
 
-  /*
-   *
-   * @param DS.Model
-   * @private
-   * Ember Data model corresponding to the `mountType`.
-   * Created and set during `init`
-   *
-   */
-  mountModel: null,
+  @tracked mountModel = null;
+  @tracked showEnable = false;
 
-  showEnable: false,
+  // validation related properties
+  @tracked modelValidations = null;
+  @tracked invalidFormAlert = null;
 
-  // cp-validation related properties
-  validationMessages: null,
-  isFormInvalid: false,
+  @tracked mountIssue = false;
 
-  mountIssue: false,
+  @tracked errors = '';
+  @tracked errorMessage = '';
 
-  init() {
-    this._super(...arguments);
-    const type = this.mountType;
+  constructor() {
+    super(...arguments);
+    const type = this.args.mountType || 'auth';
     const modelType = type === 'secret' ? 'secret-engine' : 'auth-method';
     const model = this.store.createRecord(modelType);
-    this.set('mountModel', model);
+    this.mountModel = model;
+  }
 
-    this.set('validationMessages', {
-      path: '',
-    });
-  },
-
-  mountTypes: computed('engines', 'mountType', function() {
+  get mountTypes() {
     return this.mountType === 'secret' ? this.engines : METHODS;
-  }),
+  }
 
-  engines: computed('version.{features[],isEnterprise}', function() {
+  get engines() {
     if (this.version.isEnterprise) {
-      return ENGINES.concat([KMIP, TRANSFORM]);
+      return ENGINES.concat([KMIP, TRANSFORM, KEYMGMT]);
     }
     return ENGINES;
-  }),
+  }
 
   willDestroy() {
     // if unsaved, we want to unload so it doesn't show up in the auth mount list
+    super.willDestroy(...arguments);
     this.mountModel.rollbackAttributes();
-  },
+  }
 
   checkPathChange(type) {
     let mount = this.mountModel;
@@ -86,13 +78,29 @@ export default Component.extend({
     // change it here to match the new type
     let isUnchanged = list.findBy('type', currentPath);
     if (!currentPath || isUnchanged) {
-      mount.set('path', type);
+      mount.path = type;
     }
-  },
+  }
 
-  mountBackend: task(function*() {
+  checkModelValidity(model) {
+    const { isValid, state, invalidFormMessage } = model.validate();
+    setProperties(this, {
+      modelValidations: state,
+      invalidFormAlert: invalidFormMessage,
+    });
+
+    return isValid;
+  }
+
+  @task
+  @waitFor
+  *mountBackend() {
     const mountModel = this.mountModel;
     const { type, path } = mountModel;
+    // only submit form if validations pass
+    if (!this.checkModelValidity(mountModel)) {
+      return;
+    }
     let capabilities = null;
     try {
       capabilities = yield this.store.findRecord('capabilities', `${path}/config`);
@@ -103,15 +111,45 @@ export default Component.extend({
         let mountType = this.mountType;
         mountType = mountType === 'secret' ? `${mountType}s engine` : `${mountType} method`;
         this.flashMessages.success(`Successfully mounted the ${type} ${mountType} at ${path}.`);
-        yield this.onMountSuccess(type, path);
+        yield this.args.onMountSuccess(type, path);
         return;
       } else {
         throw err;
       }
     }
 
-    if (!capabilities.get('canUpdate')) {
-      // if there is no sys/mount issue then error is config endpoint.
+    let changedAttrKeys = Object.keys(mountModel.changedAttributes());
+    let updatesConfig =
+      changedAttrKeys.includes('casRequired') ||
+      changedAttrKeys.includes('deleteVersionAfter') ||
+      changedAttrKeys.includes('maxVersions');
+
+    try {
+      yield mountModel.save();
+    } catch (err) {
+      if (err.httpStatus === 403) {
+        this.mountIssue = true;
+        this.flashMessages.danger(
+          'You do not have access to the sys/mounts endpoint. The secret engine was not mounted.'
+        );
+        return;
+      }
+      if (err.errors) {
+        let errors = err.errors.map((e) => {
+          if (typeof e === 'object') return e.title || e.message || JSON.stringify(e);
+          return e;
+        });
+        this.errors = errors;
+      } else if (err.message) {
+        this.errorMessage = err.message;
+      } else {
+        this.errorMessage = 'An error occurred, check the vault logs.';
+      }
+      return;
+    }
+    // mountModel must be after the save
+    if (mountModel.isV2KV && updatesConfig && !capabilities.get('canUpdate')) {
+      // config error is not thrown from secret-engine adapter, so handling here
       this.flashMessages.warning(
         'You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.'
       );
@@ -122,67 +160,33 @@ export default Component.extend({
         0,
       ];
     }
-    try {
-      yield mountModel.save();
-    } catch (err) {
-      if (err.message === 'mountIssue') {
-        this.mountIssue = true;
-        this.set('isFormInvalid', this.mountIssue);
-        this.flashMessages.danger(
-          'You do not have access to the sys/mounts endpoint. The secret engine was not mounted.'
-        );
-        return;
-      }
-      this.set('errorMessage', 'This mount path already exist.');
-      return;
-    }
     let mountType = this.mountType;
     mountType = mountType === 'secret' ? `${mountType}s engine` : `${mountType} method`;
     this.flashMessages.success(`Successfully mounted the ${type} ${mountType} at ${path}.`);
-    yield this.onMountSuccess(type, path);
+    yield this.args.onMountSuccess(type, path);
     return;
-  })
-    .drop()
-    .withTestWaiter(),
+  }
 
-  actions: {
-    onKeyUp(name, value) {
-      // validate path
-      if (name === 'path') {
-        this.mountModel.set('path', value);
-        this.mountModel.validations.attrs.path.isValid
-          ? set(this.validationMessages, 'path', '')
-          : set(this.validationMessages, 'path', this.mountModel.validations.attrs.path.message);
-      }
-      // check maxVersions is a number
-      if (name === 'maxVersions') {
-        this.mountModel.set('maxVersions', value);
-        this.mountModel.validations.attrs.maxVersions.isValid
-          ? set(this.validationMessages, 'maxVersions', '')
-          : set(
-              this.validationMessages,
-              'maxVersions',
-              this.mountModel.validations.attrs.maxVersions.message
-            );
-      }
-      this.mountModel.validate().then(({ validations }) => {
-        this.set('isFormInvalid', !validations.isValid);
-      });
-    },
-    onTypeChange(path, value) {
-      if (path === 'type') {
-        this.wizard.set('componentState', value);
-        this.checkPathChange(value);
-      }
-    },
+  @action
+  onKeyUp(name, value) {
+    this.mountModel.set(name, value);
+  }
 
-    toggleShowEnable(value) {
-      this.set('showEnable', value);
-      if (value === true && this.wizard.featureState === 'idle') {
-        this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', this.mountModel.type);
-      } else {
-        this.wizard.transitionFeatureMachine(this.wizard.featureState, 'RESET', this.mountModel.type);
-      }
-    },
-  },
-});
+  @action
+  onTypeChange(path, value) {
+    if (path === 'type') {
+      this.wizard.set('componentState', value);
+      this.checkPathChange(value);
+    }
+  }
+
+  @action
+  toggleShowEnable(value) {
+    this.showEnable = value;
+    if (value === true && this.wizard.featureState === 'idle') {
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', this.mountModel.type);
+    } else {
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'RESET', this.mountModel.type);
+    }
+  }
+}

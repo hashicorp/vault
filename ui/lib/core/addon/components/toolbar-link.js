@@ -1,3 +1,4 @@
+import Component from '@glimmer/component';
 /**
  * @module ToolbarLink
  * `ToolbarLink` components style links and buttons for the Toolbar
@@ -20,22 +21,8 @@
  * @param {string} disabledTooltip - tooltip to display on hover when disabled
  */
 
-import Component from '@ember/component';
-import { computed } from '@ember/object';
-import layout from '../templates/components/toolbar-link';
-
-export default Component.extend({
-  layout,
-  tagName: '',
-  supportsDataTestProperties: true,
-  type: null,
-  disabled: false,
-  disabledTooltip: null,
-  glyph: computed('type', function() {
-    if (this.type == 'add') {
-      return 'plus-plain';
-    } else {
-      return 'chevron-right';
-    }
-  }),
-});
+export default class ToolbarLinkComponent extends Component {
+  get glyph() {
+    return this.args.type == 'add' ? 'plus' : 'chevron-right';
+  }
+}

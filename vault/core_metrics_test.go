@@ -269,7 +269,7 @@ func TestCoreMetrics_EntityGauges(t *testing.T) {
 		Name:          "githubuser",
 	}
 
-	entity, err := is.CreateOrFetchEntity(ctx, alias1)
+	entity, _, err := is.CreateOrFetchEntity(ctx, alias1)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,0 +1,3 @@
+```release-note:bug
+agent: Redact auto auth token from renew endpoints
+```

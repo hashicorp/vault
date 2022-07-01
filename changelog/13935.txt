@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Return complete chain (in `ca_chain` field) on calls to `pki/cert/ca_chain`
+```

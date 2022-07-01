@@ -51,7 +51,7 @@ export default Model.extend({
   secretKey: attr('string'),
   securityToken: attr('string'),
 
-  attrs: computed('credentialType', 'accessKey', 'securityToken', function() {
+  attrs: computed('credentialType', 'accessKey', 'securityToken', function () {
     let type = this.credentialType;
     let fieldsForType = {
       iam_user: ['credentialType'],
@@ -64,12 +64,12 @@ export default Model.extend({
     return expandAttributeMeta(this, fieldsForType[type].slice(0));
   }),
 
-  toCreds: computed('accessKey', 'secretKey', 'securityToken', 'leaseId', function() {
+  toCreds: computed('accessKey', 'secretKey', 'securityToken', 'leaseId', function () {
     const props = {
       accessKey: this.accessKey,
       secretKey: this.secretKey,
       securityToken: this.securityToken,
-      leasId: this.leaseId,
+      leaseId: this.leaseId,
     };
     const propsWithVals = Object.keys(props).reduce((ret, prop) => {
       if (props[prop]) {

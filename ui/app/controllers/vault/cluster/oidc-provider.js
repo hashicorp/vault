@@ -11,6 +11,8 @@ export default class VaultClusterOidcProviderController extends Controller {
     'display',
     'prompt',
     'max_age',
+    'code_challenge',
+    'code_challenge_method',
   ];
   scope = null;
   response_type = null;
@@ -21,4 +23,6 @@ export default class VaultClusterOidcProviderController extends Controller {
   display = null;
   prompt = null;
   max_age = null;
+  code_challenge = null;
+  code_challenge_method = null;
 }

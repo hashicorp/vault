@@ -4,10 +4,10 @@ import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { stringifyObjectValues } from 'vault/components/console/log-object';
 
-module('Integration | Component | console/log object', function(hooks) {
+module('Integration | Component | console/log object', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     const objectContent = { one: 'two', three: 'four', seven: { five: 'six' }, eight: [5, 6] };
     const data = { one: 'two', three: 'four', seven: { five: 'six' }, eight: [5, 6] };
     stringifyObjectValues(data);

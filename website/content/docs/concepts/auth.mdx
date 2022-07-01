@@ -115,7 +115,7 @@ leased token associated with your identity to renew it.
 
 The following code snippet demonstrates how to renew auth tokens.
 
-<CodeTabs heading="gcp auth example">
+<CodeTabs heading="token renewal example">
 
 <CodeBlockConfig lineNumbers>
 
@@ -128,7 +128,7 @@ import (
 	"log"
 
 	vault "github.com/hashicorp/vault/api"
-	auth "github.com/hashicorp/vault/api/auth/userpass"
+	auth "github.com/hashicorp/vault/api-docs/auth/userpass"
 )
 
 // Once you've set the token for your Vault client, you will need to
@@ -188,6 +188,7 @@ func manageTokenLifecycle(client *vault.Client, token *vault.Secret) error {
 				log.Printf("Failed to renew token: %v. Re-attempting login.", err)
 				return nil
 			}
+			// This occurs once the token has reached max TTL.
 			log.Printf("Token can no longer be renewed. Re-attempting login.")
 			return nil
 
@@ -200,7 +201,7 @@ func manageTokenLifecycle(client *vault.Client, token *vault.Secret) error {
 
 func login(client *vault.Client) (*vault.Secret, error) {
 	// WARNING: A plaintext password like this is obviously insecure.
-	// See the files starting in auth-* for full examples of how to securely
+	// See the hashicorp/vault-examples repo for full examples of how to securely
 	// log in to Vault using various auth methods. This function is just
 	// demonstrating the basic idea that a *vault.Secret is returned by
 	// the login call.

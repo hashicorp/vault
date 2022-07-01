@@ -34,7 +34,7 @@ export default Component.extend({
       list = [...this.listData, ...this.newList(this.listLength - this.listData.length)];
     }
     this.set('listData', list || this.listData);
-    this.onDataUpdate((list || this.listData).compact().map(k => k.value));
+    this.onDataUpdate((list || this.listData).compact().map((k) => k.value));
   },
 
   newList(length) {
@@ -47,7 +47,7 @@ export default Component.extend({
     setKey(index, key) {
       let { listData } = this;
       listData.splice(index, 1, key);
-      this.onDataUpdate(listData.compact().map(k => k.value));
+      this.onDataUpdate(listData.compact().map((k) => k.value));
     },
   },
 });

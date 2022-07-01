@@ -1,0 +1,6 @@
+```release-note:change
+secrets/pki: A new aliased api path (/pki/issuer/:issuer_ref/sign-self-issued)
+providing the same functionality as the existing API(/pki/root/sign-self-issued)
+does not require sudo capabilities but the latter still requires it in an
+effort to maintain backwards compatibility.
+```

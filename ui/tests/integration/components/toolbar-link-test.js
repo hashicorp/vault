@@ -4,10 +4,10 @@ import { render, triggerEvent } from '@ember/test-helpers';
 import { isPresent } from 'ember-cli-page-object';
 import hbs from 'htmlbars-inline-precompile';
 
-module('Integration | Component | toolbar-link', function(hooks) {
+module('Integration | Component | toolbar-link', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     await render(hbs`<ToolbarLink @params={{array '/secrets'}}>Link</ToolbarLink>`);
 
     assert.dom(this.element).hasText('Link');
@@ -15,7 +15,7 @@ module('Integration | Component | toolbar-link', function(hooks) {
     assert.ok(isPresent('.icon'));
   });
 
-  test('it should render icons', async function(assert) {
+  test('it should render icons', async function (assert) {
     assert.expect(2);
 
     await render(hbs`
@@ -29,10 +29,10 @@ module('Integration | Component | toolbar-link', function(hooks) {
 
     assert.dom('[data-test-icon="chevron-right"]').exists('Default chevron right icon renders');
     this.set('type', 'add');
-    assert.dom('[data-test-icon="plus-plain"]').exists('Icon can be overriden to show plus sign');
+    assert.dom('[data-test-icon="plus"]').exists('Icon can be overriden to show plus sign');
   });
 
-  test('it should disable and show tooltip if provided', async function(assert) {
+  test('it should disable and show tooltip if provided', async function (assert) {
     assert.expect(3);
 
     await render(hbs`

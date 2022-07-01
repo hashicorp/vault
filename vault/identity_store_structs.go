@@ -99,6 +99,7 @@ type IdentityStore struct {
 	groupUpdater  GroupUpdater
 	tokenStorer   TokenStorer
 	entityCreator EntityCreator
+	mfaBackend    *LoginMFABackend
 }
 
 type groupDiff struct {

@@ -3,30 +3,37 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
-module('Integration | Component | toggle button', function(hooks) {
+module('Integration | Component | toggle-button', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('toggle functionality', async function(assert) {
-    this.set('toggleTarget', {});
-
-    await render(hbs`{{toggle-button toggleTarget=toggleTarget toggleAttr="toggled"}}`);
+  test('toggle functionality', async function (assert) {
+    await render(hbs`
+      <ToggleButton
+        @isOpen={{this.isOpen}}
+        @openLabel={{this.openLabel}}
+        @closedLabel={{this.closedLabel}}
+        @onClick={{fn (mut this.isOpen)}}
+        data-test-toggle-button
+      />
+    `);
 
     assert.dom('button').hasText('More options', 'renders default closedLabel');
-
     await click('button');
-    assert.equal(this.toggleTarget.toggled, true, 'it toggles the attr on the target');
+    assert.true(this.isOpen, 'it updates the value on click');
     assert.dom('button').hasText('Hide options', 'renders default openLabel');
     await click('button');
-    assert.equal(this.toggleTarget.toggled, false, 'it toggles the attr on the target');
+    assert.false(this.isOpen, 'it updates the value on click');
 
-    this.set('closedLabel', 'Open the options!');
-    this.set('openLabel', 'Close the options!');
-    await render(
-      hbs`{{toggle-button toggleTarget=toggleTarget toggleAttr="toggled" closedLabel=closedLabel openLabel=openLabel}}`
-    );
+    this.setProperties({
+      openLabel: 'Close the options!',
+      closedLabel: 'Open the options!',
+    });
 
     assert.dom('button').hasText('Open the options!', 'renders passed closedLabel');
     await click('button');
     assert.dom('button').hasText('Close the options!', 'renders passed openLabel');
+    assert
+      .dom('button')
+      .hasAttribute('data-test-toggle-button', '', 'Attributes are spread on the button element');
   });
 });

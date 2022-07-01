@@ -10,6 +10,10 @@ import (
 	sockaddr "github.com/hashicorp/go-sockaddr"
 )
 
+func isIPAddr(cidr sockaddr.SockAddr) bool {
+	return (cidr.Type() & sockaddr.TypeIP) != 0
+}
+
 // RemoteAddrIsOk checks if the given remote address is either:
 //   - OK because there's no CIDR whitelist
 //   - OK because it's in the CIDR whitelist
@@ -24,7 +28,7 @@ func RemoteAddrIsOk(remoteAddr string, boundCIDRs []*sockaddr.SockAddrMarshaler)
 		return false
 	}
 	for _, cidr := range boundCIDRs {
-		if cidr.Contains(remoteSockAddr) {
+		if isIPAddr(cidr) && cidr.Contains(remoteSockAddr) {
 			// Whitelisted.
 			return true
 		}

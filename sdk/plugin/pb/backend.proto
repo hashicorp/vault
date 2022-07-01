@@ -242,7 +242,7 @@ message TokenEntry {
 
 message LeaseOptions {
 	int64 TTL = 1;
-	
+
 	bool renewable = 2;
 
 	int64 increment = 3;
@@ -388,7 +388,7 @@ message HandleExistenceCheckReply {
 
 // SetupArgs is the args for Setup method.
 message SetupArgs {
-	uint32 broker_id = 1; 
+	uint32 broker_id = 1;
 	map<string, string> Config = 2;
 	string backendUUID = 3;
 }
@@ -623,6 +623,9 @@ service SystemView {
 message Connection {
 	// RemoteAddr is the network address that sent the request.
 	string remote_addr = 1;
+
+	// RemotePort is the network port that sent the request.
+	int32 remote_port = 3;
 
 	// ConnectionState is the marshalled tls.ConnectionState from the original
 	// request

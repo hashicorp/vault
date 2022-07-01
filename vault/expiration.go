@@ -313,8 +313,11 @@ func getNumExpirationWorkers(c *Core, l log.Logger) int {
 // NewExpirationManager creates a new ExpirationManager that is backed
 // using a given view, and uses the provided router for revocation.
 func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, logger log.Logger) *ExpirationManager {
-	jobManager := fairshare.NewJobManager("expire", getNumExpirationWorkers(c, logger), logger.Named("job-manager"), c.metricSink)
+	managerLogger := logger.Named("job-manager")
+	jobManager := fairshare.NewJobManager("expire", getNumExpirationWorkers(c, logger), managerLogger, c.metricSink)
 	jobManager.Start()
+
+	c.AddLogger(managerLogger)
 
 	exp := &ExpirationManager{
 		core:        c,
@@ -742,16 +745,17 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 	}()
 
 	// Ensure all keys on the chan are processed
+LOOP:
 	for i := 0; i < leaseCount; i++ {
 		select {
-		case err := <-errs:
+		case err = <-errs:
 			// Close all go routines
 			close(quit)
-			return err
+			break LOOP
 
 		case <-m.quitCh:
 			close(quit)
-			return nil
+			break LOOP
 
 		case <-result:
 		}
@@ -759,6 +763,9 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 
 	// Let all go routines finish
 	wg.Wait()
+	if err != nil {
+		return err
+	}
 
 	m.restoreModeLock.Lock()
 	atomic.StoreInt32(m.restoreMode, 0)
@@ -1091,6 +1098,10 @@ func (m *ExpirationManager) RevokeByToken(ctx context.Context, te *logical.Token
 	return nil
 }
 
+// revoke all leases under `prefix`
+// if sync == true, revoke immediately (using a single worker).
+// otherwise, mark the lease as expiring  `now` and let the expiration manager
+// queue it for revocation.
 func (m *ExpirationManager) revokePrefixCommon(ctx context.Context, prefix string, force, sync bool) error {
 	if m.inRestoreMode() {
 		m.restoreRequestLock.Lock()
@@ -1260,7 +1271,8 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 // RenewToken is used to renew a token which does not need to
 // invoke a logical backend.
 func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request, te *logical.TokenEntry,
-	increment time.Duration) (*logical.Response, error) {
+	increment time.Duration,
+) (*logical.Response, error) {
 	defer metrics.MeasureSince([]string{"expire", "renew-token"}, time.Now())
 
 	tokenNS, err := NamespaceByID(ctx, te.NamespaceID, m.core)
@@ -1581,6 +1593,11 @@ func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenE
 
 	// Setup revocation timer
 	m.updatePending(&le)
+	if strings.HasPrefix(auth.ClientToken, consts.ServiceTokenPrefix) {
+		generatedTokenEntry := logical.TokenEntry{Policies: auth.Policies}
+		tok := m.tokenStore.GenerateSSCTokenID(auth.ClientToken, logical.IndexStateFromContext(ctx), &generatedTokenEntry)
+		te.ExternalID = tok
+	}
 
 	return nil
 }
@@ -1709,7 +1726,11 @@ func (m *ExpirationManager) inMemoryLeaseInfo(le *leaseEntry) *leaseEntry {
 
 func (m *ExpirationManager) uniquePoliciesGc() {
 	for {
-		<-m.emptyUniquePolicies.C
+		select {
+		case <-m.quitCh:
+			return
+		case <-m.emptyUniquePolicies.C:
+		}
 
 		// If the maximum lease is a month, and we blow away the unique
 		// policy cache every week, the pessimal case is 4x larger space

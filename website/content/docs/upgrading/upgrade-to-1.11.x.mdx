@@ -1,0 +1,20 @@
+---
+layout: docs
+page_title: Upgrading to Vault 1.11.x - Guides
+description: |-
+  This page contains the list of deprecations and important or breaking changes
+  for Vault 1.11.x. Please read it carefully.
+---
+
+# Overview
+
+This page contains the list of deprecations and important or breaking changes
+for Vault 1.11.x compared to 1.10. Please read it carefully.
+
+## Elasticsearch Database Secrets Engine
+
+The Elaticsearch Database Secrets Engine now uses the new `/_security` base API
+path instead of `/_xpack/security` when managing Elasticsearch. If users are on
+an Elasticsearch version prior to 6, they will need to switch back to the old
+API path by setting the [bool config option](/api-docs/secret/databases/elasticdb#use_old_xpack)
+`use_old_xpack=true`.

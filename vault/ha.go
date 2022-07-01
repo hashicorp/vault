@@ -62,6 +62,8 @@ func (c *Core) Standby() (bool, error) {
 }
 
 // PerfStandby checks if the vault is a performance standby
+// This function cannot be used during request handling
+// because this causes a deadlock with the statelock.
 func (c *Core) PerfStandby() bool {
 	c.stateLock.RLock()
 	perfStandby := c.perfStandby
@@ -181,6 +183,15 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 		adv.RedirectAddr = string(entry.Value)
 		c.logger.Debug("parsed redirect addr for new active node", "redirect_addr", adv.RedirectAddr)
 		oldAdv = true
+	}
+
+	// At the top of this function we return early when we're the active node.
+	// If we're not the active node, and there's a stale advertisement pointing
+	// to ourself, there's no point in paying any attention to it.  And by
+	// disregarding it, we can avoid a panic in raft tests using the Inmem network
+	// layer when we try to connect back to ourself.
+	if adv.ClusterAddr == c.ClusterAddr() && adv.RedirectAddr == c.redirectAddr {
+		return false, "", "", nil
 	}
 
 	if !oldAdv {
@@ -768,7 +779,8 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 				// keys (e.g. from replication being activated) and we need to seal to
 				// be unsealed again.
 				entry, _ := c.barrier.Get(ctx, poisonPillPath)
-				if entry != nil && len(entry.Value) > 0 {
+				entryDR, _ := c.barrier.Get(ctx, poisonPillDRPath)
+				if (entry != nil && len(entry.Value) > 0) || (entryDR != nil && len(entryDR.Value) > 0) {
 					c.logger.Warn("encryption keys have changed out from underneath us (possibly due to replication enabling), must be unsealed again")
 					// If we are using raft storage we do not want to shut down
 					// raft during replication secondary enablement. This will
@@ -825,9 +837,9 @@ func (c *Core) checkKeyUpgrades(ctx context.Context) error {
 	return nil
 }
 
-func (c *Core) reloadMasterKey(ctx context.Context) error {
-	if err := c.barrier.ReloadMasterKey(ctx); err != nil {
-		return fmt.Errorf("error reloading master key: %w", err)
+func (c *Core) reloadRootKey(ctx context.Context) error {
+	if err := c.barrier.ReloadRootKey(ctx); err != nil {
+		return fmt.Errorf("error reloading root key: %w", err)
 	}
 	return nil
 }
@@ -841,7 +853,7 @@ func (c *Core) reloadShamirKey(ctx context.Context) error {
 	switch c.seal.StoredKeysSupported() {
 	case seal.StoredKeysSupportedGeneric:
 		return nil
-	case seal.StoredKeysSupportedShamirMaster:
+	case seal.StoredKeysSupportedShamirRoot:
 		entry, err := c.barrier.Get(ctx, shamirKekPath)
 		if err != nil {
 			return err
@@ -855,7 +867,7 @@ func (c *Core) reloadShamirKey(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("failed to update seal access: %w", err)
 		}
-		shamirKey = keyring.masterKey
+		shamirKey = keyring.rootKey
 	}
 	return c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(shamirKey)
 }
@@ -865,8 +877,8 @@ func (c *Core) performKeyUpgrades(ctx context.Context) error {
 		return fmt.Errorf("error checking for key upgrades: %w", err)
 	}
 
-	if err := c.reloadMasterKey(ctx); err != nil {
-		return fmt.Errorf("error reloading master key: %w", err)
+	if err := c.reloadRootKey(ctx); err != nil {
+		return fmt.Errorf("error reloading root key: %w", err)
 	}
 
 	if err := c.barrier.ReloadKeyring(ctx); err != nil {

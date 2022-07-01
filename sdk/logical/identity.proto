@@ -73,4 +73,19 @@ message Group {
 	// NamespaceID is the identifier of the namespace to which this group 
 	// belongs to.
 	string namespace_id = 4;
-}   
+}
+
+message MFAMethodID {
+	string type = 1;
+	string id = 2;
+	bool uses_passcode = 3;
+}
+
+message MFAConstraintAny {
+	repeated MFAMethodID any = 1;
+}
+
+message MFARequirement {
+	string mfa_request_id = 1;
+	map<string, MFAConstraintAny> mfa_constraints = 2;
+}

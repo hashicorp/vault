@@ -228,7 +228,7 @@ type WrappingResponseWriter interface {
 type StatusHeaderResponseWriter struct {
 	wrapped     http.ResponseWriter
 	wroteHeader bool
-	statusCode  int
+	StatusCode  int
 	headers     map[string][]*CustomHeader
 }
 
@@ -236,7 +236,7 @@ func NewStatusHeaderResponseWriter(w http.ResponseWriter, h map[string][]*Custom
 	return &StatusHeaderResponseWriter{
 		wrapped:     w,
 		wroteHeader: false,
-		statusCode:  200,
+		StatusCode:  200,
 		headers:     h,
 	}
 }
@@ -259,7 +259,7 @@ func (w *StatusHeaderResponseWriter) Write(buf []byte) (int, error) {
 	// statusHeaderResponseWriter struct are called the internal call to the
 	// WriterHeader invoked from inside Write method won't change the headers.
 	if !w.wroteHeader {
-		w.setCustomResponseHeaders(w.statusCode)
+		w.setCustomResponseHeaders(w.StatusCode)
 	}
 
 	return w.wrapped.Write(buf)
@@ -268,7 +268,7 @@ func (w *StatusHeaderResponseWriter) Write(buf []byte) (int, error) {
 func (w *StatusHeaderResponseWriter) WriteHeader(statusCode int) {
 	w.setCustomResponseHeaders(statusCode)
 	w.wrapped.WriteHeader(statusCode)
-	w.statusCode = statusCode
+	w.StatusCode = statusCode
 	// in cases where Write is called after WriteHeader, let's prevent setting
 	// ResponseWriter headers twice
 	w.wroteHeader = true
@@ -310,3 +310,12 @@ func (w *StatusHeaderResponseWriter) setCustomResponseHeaders(status int) {
 }
 
 var _ WrappingResponseWriter = &StatusHeaderResponseWriter{}
+
+// ResolveRoleResponse returns a standard response to be returned by functions handling a ResolveRoleOperation
+func ResolveRoleResponse(roleName string) (*Response, error) {
+	return &Response{
+		Data: map[string]interface{}{
+			"role": roleName,
+		},
+	}, nil
+}

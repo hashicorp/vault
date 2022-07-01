@@ -1,0 +1,3 @@
+```release-note:improvement
+identity/oidc: Adds proof key for code exchange (PKCE) support to OIDC providers.
+```

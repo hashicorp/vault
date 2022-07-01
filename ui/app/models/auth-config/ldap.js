@@ -11,7 +11,7 @@ export default AuthConfig.extend({
     label: 'Certificate',
     editType: 'file',
   }),
-  fieldGroups: computed('newFields', function() {
+  fieldGroups: computed('newFields', function () {
     let groups = [
       {
         default: ['url'],

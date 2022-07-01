@@ -10,10 +10,10 @@ let makeModelClass = () => {
   return Model.extend();
 };
 
-module('Unit | lib | attach capabilities', function(hooks) {
+module('Unit | lib | attach capabilities', function (hooks) {
   setupTest(hooks);
 
-  test('it attaches passed capabilities', function(assert) {
+  test('it attaches passed capabilities', function (assert) {
     let mc = makeModelClass();
     mc = attachCapabilities(mc, {
       updatePath: apiPath`update/{'id'}`,
@@ -31,19 +31,17 @@ module('Unit | lib | attach capabilities', function(hooks) {
     assert.equal(relationship.type, 'capabilities', 'deletePath is a related capabilities model');
   });
 
-  test('it adds a static method to the model class', function(assert) {
+  test('it adds a static method to the model class', function (assert) {
     let mc = makeModelClass();
     mc = attachCapabilities(mc, {
       updatePath: apiPath`update/{'id'}`,
       deletePath: apiPath`delete/{'id'}`,
     });
-    assert.ok(
-      !!mc.relatedCapabilities && typeof mc.relatedCapabilities === 'function',
-      'model class now has a relatedCapabilities static function'
-    );
+    const relatedCapabilities = !!mc.relatedCapabilities && typeof mc.relatedCapabilities === 'function';
+    assert.true(relatedCapabilities, 'model class now has a relatedCapabilities static function');
   });
 
-  test('calling static method with single response JSON-API document adds expected relationships', function(assert) {
+  test('calling static method with single response JSON-API document adds expected relationships', function (assert) {
     let mc = makeModelClass();
     mc = attachCapabilities(mc, {
       updatePath: apiPath`update/${'id'}`,
@@ -92,7 +90,7 @@ module('Unit | lib | attach capabilities', function(hooks) {
     assert.deepEqual(jsonAPIDocSingle, expected, 'has the exected new document structure');
   });
 
-  test('calling static method with an arrary response JSON-API document adds expected relationships', function(assert) {
+  test('calling static method with an arrary response JSON-API document adds expected relationships', function (assert) {
     let mc = makeModelClass();
     mc = attachCapabilities(mc, {
       updatePath: apiPath`update/${'id'}`,

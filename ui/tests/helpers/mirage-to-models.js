@@ -1,6 +1,6 @@
 import { getContext } from '@ember/test-helpers';
 
-export default data => {
+export default (data) => {
   const context = getContext();
   const store = context.owner.lookup('service:store');
   const modelName = Array.isArray(data) ? data[0].modelName : data.modelName;

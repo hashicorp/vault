@@ -7,7 +7,7 @@ export default class SecretV2VersionModel extends SecretModel {
   @attr('string') path;
   @attr('string') deletionTime;
   @attr('string') createdTime;
-  @attr('boolean') detroyed;
+  @attr('boolean') destroyed;
   @attr('number') currentVersion;
   @belongsTo('secret-v2') secret;
 

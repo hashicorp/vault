@@ -237,6 +237,26 @@ func testTransit_SignVerify_ECDSA(t *testing.T, bits int) {
 	sig = signRequest(req, false, "")
 	verifyRequest(req, false, "", sig)
 
+	req.Data["hash_algorithm"] = "sha2-512"
+	sig = signRequest(req, false, "")
+	verifyRequest(req, false, "", sig)
+
+	req.Data["hash_algorithm"] = "sha3-224"
+	sig = signRequest(req, false, "")
+	verifyRequest(req, false, "", sig)
+
+	req.Data["hash_algorithm"] = "sha3-256"
+	sig = signRequest(req, false, "")
+	verifyRequest(req, false, "", sig)
+
+	req.Data["hash_algorithm"] = "sha3-384"
+	sig = signRequest(req, false, "")
+	verifyRequest(req, false, "", sig)
+
+	req.Data["hash_algorithm"] = "sha3-512"
+	sig = signRequest(req, false, "")
+	verifyRequest(req, false, "", sig)
+
 	req.Data["prehashed"] = true
 	sig = signRequest(req, false, "")
 	verifyRequest(req, false, "", sig)

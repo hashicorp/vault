@@ -1,11 +1,10 @@
-// +build go1.11 go1.12 go1.13 go1.14 go1.15
+//go:build go1.11 || go1.12 || go1.13 || go1.14 || go1.15
 
 package pkcs7
 
 import (
 	"crypto/x509"
 	"encoding/pem"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -73,21 +72,21 @@ but that's not what ships are built for.
 	if err != nil {
 		t.Fatal(err)
 	}
-	ioutil.WriteFile(tmpContentFile.Name(), content, 0755)
+	ioutil.WriteFile(tmpContentFile.Name(), content, 0o755)
 
 	// write the signer cert to a temp file
 	tmpSignerCertFile, err := ioutil.TempFile("", "TestDSASignWithOpenSSLAndVerify_signer")
 	if err != nil {
 		t.Fatal(err)
 	}
-	ioutil.WriteFile(tmpSignerCertFile.Name(), dsaPublicCert, 0755)
+	ioutil.WriteFile(tmpSignerCertFile.Name(), dsaPublicCert, 0o755)
 
 	// write the signer key to a temp file
 	tmpSignerKeyFile, err := ioutil.TempFile("", "TestDSASignWithOpenSSLAndVerify_key")
 	if err != nil {
 		t.Fatal(err)
 	}
-	ioutil.WriteFile(tmpSignerKeyFile.Name(), dsaPrivateKey, 0755)
+	ioutil.WriteFile(tmpSignerKeyFile.Name(), dsaPrivateKey, 0o755)
 
 	tmpSignedFile, err := ioutil.TempFile("", "TestDSASignWithOpenSSLAndVerify_signature")
 	if err != nil {
@@ -108,7 +107,7 @@ but that's not what ships are built for.
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Printf("%s\n", pemSignature)
+	t.Logf("%s\n", pemSignature)
 	derBlock, _ := pem.Decode(pemSignature)
 	if derBlock == nil {
 		t.Fatalf("failed to read DER block from signature PEM %s", tmpSignedFile.Name())
@@ -164,7 +163,7 @@ type DSATestFixture struct {
 func UnmarshalDSATestFixture(testPEMBlock string) DSATestFixture {
 	var result DSATestFixture
 	var derBlock *pem.Block
-	var pemBlock = []byte(testPEMBlock)
+	pemBlock := []byte(testPEMBlock)
 	for {
 		derBlock, pemBlock = pem.Decode(pemBlock)
 		if derBlock == nil {

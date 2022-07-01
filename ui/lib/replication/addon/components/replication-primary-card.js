@@ -26,7 +26,7 @@ export default Component.extend({
   description: null,
   metric: null,
   glyph: null,
-  hasError: computed('title', 'metric', function() {
+  hasError: computed('title', 'metric', function () {
     const { title, metric } = this;
 
     // only show errors on the state card if state is not ok
@@ -35,7 +35,7 @@ export default Component.extend({
     }
     return false;
   }),
-  errorMessage: computed('hasError', function() {
+  errorMessage: computed('hasError', function () {
     return this.hasError ? 'Check server logs!' : false;
   }),
 });

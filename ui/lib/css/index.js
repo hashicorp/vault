@@ -13,7 +13,7 @@ module.exports = {
     return true;
   },
 
-  included: function(app) {
+  included: function (app) {
     this._super.included.apply(this, arguments);
 
     // see: https://github.com/ember-cli/ember-cli/issues/3718
@@ -28,7 +28,7 @@ module.exports = {
     return app;
   },
 
-  treeForStyles: function() {
+  treeForStyles: function () {
     var bulma = new Funnel(this.bulmaPath, {
       srcDir: '/',
       destDir: 'app/styles/bulma',

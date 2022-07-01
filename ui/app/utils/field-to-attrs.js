@@ -35,10 +35,10 @@ import { expandProperties } from '@ember/object/computed';
  *
  */
 
-export const expandAttributeMeta = function(modelClass, attributeNames, namePrefix, map) {
+export const expandAttributeMeta = function (modelClass, attributeNames, namePrefix, map) {
   let fields = [];
   // expand all attributes
-  attributeNames.forEach(field => expandProperties(field, x => fields.push(x)));
+  attributeNames.forEach((field) => expandProperties(field, (x) => fields.push(x)));
   let attributeMap = map || new Map();
   modelClass.eachAttribute((name, meta) => {
     let fieldName = namePrefix ? namePrefix + name : name;
@@ -48,7 +48,7 @@ export const expandAttributeMeta = function(modelClass, attributeNames, namePref
       // the fragment name down to get extracted from the Fragment
       expandAttributeMeta(
         maybeFragment,
-        fields.filter(f => f.startsWith(fieldName)),
+        fields.filter((f) => f.startsWith(fieldName)),
         fieldName + '.',
         attributeMap
       );
@@ -59,7 +59,7 @@ export const expandAttributeMeta = function(modelClass, attributeNames, namePref
 
   // we have all of the attributes in the map now,
   // so we'll replace each key in `fields` with the expanded meta
-  fields = fields.map(field => {
+  fields = fields.map((field) => {
     let meta = attributeMap.get(field);
     if (meta) {
       var { type, options } = meta;
@@ -95,8 +95,8 @@ export const expandAttributeMeta = function(modelClass, attributeNames, namePref
  *  The array will get mapped over producing a new array with each attribute replaced with that attribute's metadata from the attr declaration
  */
 
-export default function(modelClass, fieldGroups) {
-  return fieldGroups.map(group => {
+export default function (modelClass, fieldGroups) {
+  return fieldGroups.map((group) => {
     const groupKey = Object.keys(group)[0];
     const fields = expandAttributeMeta(modelClass, group[groupKey]);
     return { [groupKey]: fields };

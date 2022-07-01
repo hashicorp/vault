@@ -12,7 +12,7 @@ export default ApplicationSerializer.extend({
     ) {
       // if we have data.keys, it's a list of ids, so we map over that
       // and create objects with id's
-      return payload.data.keys.map(secret => {
+      return payload.data.keys.map((secret) => {
         // secrets don't have an id in the response, so we need to concat the full
         // path of the secret here - the id in the payload is added
         // in the adapter after making the request

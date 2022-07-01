@@ -1,11 +1,9 @@
 import { attr } from '@ember-data/model';
-import { and } from '@ember/object/computed';
 import { computed } from '@ember/object';
-import Certificate from './pki-certificate';
-import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
+import Certificate from './pki/cert';
 
 export default Certificate.extend({
-  DISPLAY_FIELDS: computed(function() {
+  DISPLAY_FIELDS: computed(function () {
     return [
       'csr',
       'certificate',
@@ -100,7 +98,7 @@ export default Certificate.extend({
     label: 'Province/State',
   }),
 
-  fieldDefinition: computed('caType', 'uploadPemBundle', function() {
+  fieldDefinition: computed('caType', 'uploadPemBundle', function () {
     const type = this.caType;
     const isUpload = this.uploadPemBundle;
     let groups = [{ default: ['caType', 'uploadPemBundle'] }];
@@ -151,7 +149,4 @@ export default Certificate.extend({
 
     return groups;
   }),
-
-  deletePath: lazyCapabilities(apiPath`${'backend'}/root`, 'backend'),
-  canDeleteRoot: and('deletePath.canDelete', 'deletePath.canSudo'),
 });

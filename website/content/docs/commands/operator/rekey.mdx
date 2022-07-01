@@ -4,7 +4,7 @@ page_title: operator rekey - Command
 description: |-
   The "operator rekey" command generates a new set of unseal keys. This can
   optionally change the total number of key shares or the required threshold of
-  those key shares to reconstruct the master key. This operation is zero
+  those key shares to reconstruct the root key. This operation is zero
   downtime, but it requires the Vault is unsealed and a quorum of existing
   unseal keys are provided.
 ---
@@ -13,7 +13,7 @@ description: |-
 
 The `operator rekey` command generates a new set of unseal keys. This can
 optionally change the total number of key shares or the required threshold of
-those key shares to reconstruct the master key. This operation is zero downtime,
+those key shares to reconstruct the root key. This operation is zero downtime,
 but it requires the Vault is unsealed and a quorum of existing unseal keys are
 provided.
 
@@ -30,6 +30,16 @@ Initialize a rekey:
 
 ```shell-session
 $ vault operator rekey \
+    -init \
+    -key-shares=15 \
+    -key-threshold=9
+```
+
+Initialize a rekey when Auto Unseal is used for the Vault cluster:
+
+```shell-session
+$ vault operator rekey \
+    -target=recovery \
     -init \
     -key-shares=15 \
     -key-threshold=9
@@ -118,7 +128,7 @@ flags](/docs/commands) included on all commands.
   `-n`
 
 - `-key-threshold` `(int: 3)` - Number of key shares required to reconstruct the
-  master key. This must be less than or equal to -key-shares. This is aliased as
+  root key. This must be less than or equal to -key-shares. This is aliased as
   `-t`.
 
 - `-nonce` `(string: "")` - Nonce value provided at initialization. The same

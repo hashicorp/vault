@@ -64,7 +64,6 @@ For example, these three requests are equivalent:
 There are certain API paths that can only be called from the root namespace:
 
 - `sys/init`
-- `sys/license`
 - `sys/leader`
 - `sys/health`
 - `sys/metrics`
@@ -97,7 +96,7 @@ may refer to parent identities (entities and groups) when writing policies that 
 within that child namespace. Similarly, a parent namespace can have policies asserted on child
 identities.
 
-## Learn
+## Tutorial
 
 Refer to the [Secure Multi-Tenancy with Namespaces](https://learn.hashicorp.com/vault/operations/namespaces)
-guide for a step-by-step tutorial.
+tutorial to learn how to use Vault as a Service to allow organizations(tenants) to manage their own secrets and policies.

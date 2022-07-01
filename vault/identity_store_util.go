@@ -22,8 +22,11 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var errDuplicateIdentityName = errors.New("duplicate identity name")
-var tmpSuffix = ".tmp"
+var (
+	errDuplicateIdentityName = errors.New("duplicate identity name")
+	errCycleDetectedPrefix   = "cyclic relationship detected for member group ID"
+	tmpSuffix                = ".tmp"
+)
 
 func (c *Core) SetLoadCaseSensitiveIdentityStore(caseSensitive bool) {
 	c.loadCaseSensitiveIdentityStore = caseSensitive
@@ -86,39 +89,6 @@ func (i *IdentityStore) sanitizeName(name string) string {
 		return name
 	}
 	return strings.ToLower(name)
-}
-
-func (i *IdentityStore) loadOIDCClients(ctx context.Context) error {
-	i.logger.Debug("identity loading OIDC clients")
-
-	clients, err := i.view.List(ctx, clientPath)
-	if err != nil {
-		return err
-	}
-
-	txn := i.db.Txn(true)
-	defer txn.Abort()
-	for _, name := range clients {
-		entry, err := i.view.Get(ctx, clientPath+name)
-		if err != nil {
-			return err
-		}
-		if entry == nil {
-			continue
-		}
-
-		var client client
-		if err := entry.DecodeJSON(&client); err != nil {
-			return err
-		}
-
-		if err := i.memDBUpsertClientInTxn(txn, &client); err != nil {
-			return err
-		}
-	}
-	txn.Commit()
-
-	return nil
 }
 
 func (i *IdentityStore) loadGroups(ctx context.Context) error {
@@ -300,6 +270,13 @@ func (i *IdentityStore) loadCachedEntitiesOfLocalAliases(ctx context.Context) er
 		close(broker)
 	}()
 
+	defer func() {
+		// Let all go routines finish
+		wg.Wait()
+
+		i.logger.Info("cached entities of local aliases restored")
+	}()
+
 	// Restore each key by pulling from the result chan
 	for j := 0; j < len(existing); j++ {
 		select {
@@ -335,13 +312,6 @@ func (i *IdentityStore) loadCachedEntitiesOfLocalAliases(ctx context.Context) er
 				}
 			}
 		}
-	}
-
-	// Let all go routines finish
-	wg.Wait()
-
-	if i.logger.IsInfo() {
-		i.logger.Info("cached entities of local aliases restored")
 	}
 
 	return nil
@@ -422,13 +392,13 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 	}()
 
 	// Restore each key by pulling from the result chan
+LOOP:
 	for j := 0; j < len(existing); j++ {
 		select {
-		case err := <-errs:
+		case err = <-errs:
 			// Close all go routines
 			close(quit)
-
-			return err
+			break LOOP
 
 		case bucket := <-result:
 			// If there is no entry, nothing to restore
@@ -505,6 +475,9 @@ func (i *IdentityStore) loadEntities(ctx context.Context) error {
 
 	// Let all go routines finish
 	wg.Wait()
+	if err != nil {
+		return err
+	}
 
 	// Flatten the map into a list of keys, in order to log them
 	duplicatedAccessorsList := make([]string, len(duplicatedAccessors))
@@ -1500,15 +1473,22 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 	}
 
 	// Remove duplicate entity IDs and check if all IDs are valid
-	group.MemberEntityIDs = strutil.RemoveDuplicates(group.MemberEntityIDs, false)
-	for _, entityID := range group.MemberEntityIDs {
-		entity, err := i.MemDBEntityByID(entityID, false)
-		if err != nil {
-			return fmt.Errorf("failed to validate entity ID %q: %w", entityID, err)
+	if group.MemberEntityIDs != nil {
+		group.MemberEntityIDs = strutil.RemoveDuplicates(group.MemberEntityIDs, false)
+		for _, entityID := range group.MemberEntityIDs {
+			entity, err := i.MemDBEntityByID(entityID, false)
+			if err != nil {
+				return fmt.Errorf("failed to validate entity ID %q: %w", entityID, err)
+			}
+			if entity == nil {
+				return fmt.Errorf("invalid entity ID %q", entityID)
+			}
 		}
-		if entity == nil {
-			return fmt.Errorf("invalid entity ID %q", entityID)
-		}
+	}
+
+	// Remove duplicate policies
+	if group.Policies != nil {
+		group.Policies = strutil.RemoveDuplicates(group.Policies, false)
 	}
 
 	txn := i.db.Txn(true)
@@ -1603,7 +1583,7 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 				return fmt.Errorf("failed to perform cyclic relationship detection for member group ID %q", memberGroupID)
 			}
 			if cycleDetected {
-				return fmt.Errorf("cyclic relationship detected for member group ID %q", memberGroupID)
+				return fmt.Errorf("%s %q", errCycleDetectedPrefix, memberGroupID)
 			}
 		}
 
@@ -2182,7 +2162,7 @@ func (i *IdentityStore) detectCycleDFS(visited map[string]bool, startingGroupID,
 			return false, fmt.Errorf("failed to perform cycle detection at member group ID %q", memberGroup.ID)
 		}
 		if cycleDetected {
-			return true, fmt.Errorf("cycle detected at member group ID %q", memberGroup.ID)
+			return true, nil
 		}
 	}
 

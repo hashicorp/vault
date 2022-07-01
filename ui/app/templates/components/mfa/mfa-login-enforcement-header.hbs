@@ -1,0 +1,81 @@
+{{#if @isInline}}
+  <h3 class="title is-5" data-test-mleh-title>Enforcement</h3>
+{{else}}
+  <PageHeader as |p|>
+    <p.top>
+      <nav class="breadcrumb">
+        <ul>
+          <li>
+            <span class="sep">&#x0002f;</span>
+            <LinkTo @route="vault.cluster.access.mfa.enforcements.index">
+              Enforcements
+            </LinkTo>
+          </li>
+        </ul>
+      </nav>
+    </p.top>
+    <p.levelLeft>
+      <h1 class="title is-3" data-test-mleh-title>
+        <Icon @name="lock" @size="24" />
+        {{@heading}}
+      </h1>
+    </p.levelLeft>
+  </PageHeader>
+{{/if}}
+<div class="has-border-top-light">
+  <p class="has-top-margin-m" data-test-mleh-description>
+    {{#if @isInline}}
+      An enforcement includes the authentication types, authentication methods, groups, and entities that will require this
+      MFA method. This is optional and can be added later.
+    {{else}}
+      An enforcement will define which auth types, auth mounts, groups, and/or entities will require this MFA method. Keep in
+      mind that only one of these conditions needs to be satisfied. For example, if an authentication method is added here,
+      all entities and groups which make use of that authentication method will be subject to an MFA request.
+      <DocLink @path="/docs/auth/login-mfa">Learn more here.</DocLink>
+    {{/if}}
+  </p>
+  {{#if @isInline}}
+    <div class="is-flex-row">
+      <RadioCard
+        @title="Create new"
+        @description="Create a new enforcement for this MFA method."
+        @icon="plus-circle"
+        @value="new"
+        @groupValue={{@radioCardGroupValue}}
+        @onChange={{@onRadioCardSelect}}
+        data-test-mleh-radio="new"
+      />
+      <RadioCard
+        @title="Use existing"
+        @description="Use an existing enforcement configuration."
+        @icon="list"
+        @value="existing"
+        @groupValue={{@radioCardGroupValue}}
+        @disabled={{not this.enforcements.length}}
+        @onChange={{@onRadioCardSelect}}
+        data-test-mleh-radio="existing"
+      />
+      <RadioCard
+        @title="Skip this step"
+        @description="Create MFA without enforcement for now. "
+        @icon="build"
+        @value="skip"
+        @groupValue={{@radioCardGroupValue}}
+        @onChange={{@onRadioCardSelect}}
+        data-test-mleh-radio="skip"
+      />
+    </div>
+    {{#if (eq @radioCardGroupValue "existing")}}
+      <SearchSelect
+        @label="Enforcement"
+        @labelClass="is-label"
+        @subText="Choose the existing enforcement(s) to add to this MFA method."
+        @placeholder="Search for an existing enforcement"
+        @options={{this.enforcements}}
+        @shouldRenderName={{true}}
+        @selectLimit={{1}}
+        @onChange={{this.onEnforcementSelect}}
+      />
+    {{/if}}
+  {{/if}}
+</div>

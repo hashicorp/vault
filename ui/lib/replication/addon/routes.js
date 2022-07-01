@@ -1,12 +1,12 @@
 import buildRoutes from 'ember-engines/routes';
 
-export default buildRoutes(function() {
+export default buildRoutes(function () {
   this.route('index', { path: '/' });
-  this.route('mode', { path: '/:replication_mode' }, function() {
+  this.route('mode', { path: '/:replication_mode' }, function () {
     //details
     this.route('index', { path: '/' });
     this.route('manage');
-    this.route('secondaries', function() {
+    this.route('secondaries', function () {
       this.route('add');
       this.route('revoke');
       this.route('config-show', { path: '/config/show/:secondary_id' });
