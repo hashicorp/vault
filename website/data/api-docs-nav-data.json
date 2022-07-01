@@ -415,8 +415,7 @@
       },
       {
         "title": "<code>/sys/generate-recovery-token</code>",
-        "path": "system/generate-recovery-token",
-        "hidden": true
+        "path": "system/generate-recovery-token"
       },
       {
         "title": "<code>/sys/generate-root</code>",
