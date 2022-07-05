@@ -40,7 +40,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 
 // Backend returns an instance of the backend, either as a plugin if external
 // or as a concrete implementation if builtin, casted as logical.Backend.
-func Backend(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+func Backend(ctx context.Context, conf *logical.BackendConfig) (*PluginBackend, error) {
 	var b PluginBackend
 
 	name := conf.Config["plugin_name"]
@@ -77,7 +77,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 
 	b.config = conf
 
-	return b.Backend, nil
+	return &b, nil
 }
 
 // PluginBackend is a thin wrapper around plugin.BackendPluginClient
