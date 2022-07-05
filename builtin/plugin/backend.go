@@ -225,49 +225,49 @@ func (b *PluginBackend) Initialize(ctx context.Context, req *logical.Initializat
 
 // SpecialPaths is a thin wrapper used to ensure we grab the lock for race purposes
 func (b *PluginBackend) SpecialPaths() *logical.Paths {
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 	return b.Backend.SpecialPaths()
 }
 
 // System is a thin wrapper used to ensure we grab the lock for race purposes
 func (b *PluginBackend) System() logical.SystemView {
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 	return b.Backend.System()
 }
 
 // Logger is a thin wrapper used to ensure we grab the lock for race purposes
 func (b *PluginBackend) Logger() log.Logger {
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 	return b.Backend.Logger()
 }
 
 // Cleanup is a thin wrapper used to ensure we grab the lock for race purposes
 func (b *PluginBackend) Cleanup(ctx context.Context) {
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 	b.Backend.Cleanup(ctx)
 }
 
 // InvalidateKey is a thin wrapper used to ensure we grab the lock for race purposes
 func (b *PluginBackend) InvalidateKey(ctx context.Context, key string) {
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 	b.Backend.InvalidateKey(ctx, key)
 }
 
 // Setup is a thin wrapper used to ensure we grab the lock for race purposes
 func (b *PluginBackend) Setup(ctx context.Context, config *logical.BackendConfig) error {
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 	return b.Backend.Setup(ctx, config)
 }
 
 // Type is a thin wrapper used to ensure we grab the lock for race purposes
 func (b *PluginBackend) Type() logical.BackendType {
-	b.Lock()
-	defer b.Unlock()
+	b.RLock()
+	defer b.RUnlock()
 	return b.Backend.Type()
 }
