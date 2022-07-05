@@ -85,7 +85,7 @@ func NewPebbleSnapshotStore(base string, logger log.Logger, fsm *FSM) (*PebbleSn
 
 	// Ensure our path exists
 	path := filepath.Join(base, snapPath)
-	if err := os.MkdirAll(path, 0o755); err != nil && !os.IsExist(err) {
+	if err := os.MkdirAll(path, 0o700); err != nil && !os.IsExist(err) {
 		return nil, fmt.Errorf("snapshot path not accessible: %v", err)
 	}
 
@@ -333,7 +333,7 @@ func (s *PebbleSnapshotSink) writePebbleDatabase() error {
 	s.logger.Info("creating new snapshot", "path", path)
 
 	// Make the directory
-	if err := os.MkdirAll(path, 0o755); err != nil {
+	if err := os.MkdirAll(path, 0o700); err != nil {
 		s.logger.Error("failed to make snapshot directory", "error", err)
 		return err
 	}

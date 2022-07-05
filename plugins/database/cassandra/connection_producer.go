@@ -60,7 +60,7 @@ func (c *cassandraConnectionProducer) Initialize(ctx context.Context, req dbplug
 	}
 
 	if c.ConnectTimeoutRaw == nil {
-		c.ConnectTimeoutRaw = "0s"
+		c.ConnectTimeoutRaw = "5s"
 	}
 	c.connectTimeout, err = parseutil.ParseDurationSecond(c.ConnectTimeoutRaw)
 	if err != nil {

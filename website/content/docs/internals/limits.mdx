@@ -229,7 +229,7 @@ This limit depends on the key size.
 ### Request size
 
 The maximum size of an HTTP request sent to Vault is limited by
-the `maximum_request_size` option in the [listener stanza](/docs/configuration/listener/tcp). It defaults to 32 MiB. This value, minus the overhead of
+the `max_request_size` option in the [listener stanza](/docs/configuration/listener/tcp). It defaults to 32 MiB. This value, minus the overhead of
 the HTTP request itself, places an upper bound on any Transit operation,
 and on the maximum size of any key-value secrets.
 
@@ -288,7 +288,7 @@ are a function of the alphabet size.
 
 ### External plugin limits
 
-The [plugin system](/docs/internals/plugins) launches a separate process
+The [plugin system](/docs/plugins) launches a separate process
 initiated by Vault that communicates over RPC. For each secret engine and auth
 method that's enabled as an external plugin, Vault will spawn a process on the
 host system. For the Database Secrets Engines, external database plugins will

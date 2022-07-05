@@ -1,6 +1,6 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
-import { run } from '@ember/runloop';
+import { later } from '@ember/runloop';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
@@ -20,8 +20,13 @@ export default class AuthInfoComponent extends Component {
   @service wizard;
   @service router;
 
-  @tracked
-  fakeRenew = false;
+  @tracked fakeRenew = false;
+
+  get hasEntityId() {
+    // root users will not have an entity_id because they are not associated with an entity.
+    // in order to use the MFA end user setup they need an entity_id
+    return !!this.auth.authData.entity_id;
+  }
 
   get isRenewing() {
     return this.fakeRenew || this.auth.isRenewing;
@@ -39,7 +44,7 @@ export default class AuthInfoComponent extends Component {
   @action
   renewToken() {
     this.fakeRenew = true;
-    run.later(() => {
+    later(() => {
       this.auth.renew().then(() => {
         this.fakeRenew = this.auth.isRenewing;
       });

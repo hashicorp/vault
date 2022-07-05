@@ -244,7 +244,7 @@ func (c *Client) GetUserAliasAttributeValue(cfg *ConfigEntry, conn Connection, u
 		}
 
 		if len(result.Entries[0].Attributes) != 1 {
-			return aliasAttributeValue, errwrap.Wrapf("LDAP attribute missing for entity alias mapping{{err}}", err)
+			return aliasAttributeValue, fmt.Errorf("LDAP attribute missing for entity alias mapping")
 		}
 
 		if len(result.Entries[0].Attributes[0].Values) != 1 {
@@ -512,7 +512,7 @@ func EscapeLDAPValue(input string) string {
 	// - null
 	for i := 0; i < len(input); i++ {
 		escaped := false
-		if input[i] == '\\' {
+		if input[i] == '\\' && i+1 < len(input)-1 {
 			i++
 			escaped = true
 		}

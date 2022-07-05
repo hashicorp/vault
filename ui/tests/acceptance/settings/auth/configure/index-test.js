@@ -5,14 +5,14 @@ import enablePage from 'vault/tests/pages/settings/auth/enable';
 import page from 'vault/tests/pages/settings/auth/configure/index';
 import authPage from 'vault/tests/pages/auth';
 
-module('Acceptance | settings/auth/configure', function(hooks) {
+module('Acceptance | settings/auth/configure', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     return authPage.login();
   });
 
-  test('it redirects to section options when there are no other sections', async function(assert) {
+  test('it redirects to section options when there are no other sections', async function (assert) {
     const path = `approle-${new Date().getTime()}`;
     const type = 'approle';
     await enablePage.enable(type, path);
@@ -21,7 +21,7 @@ module('Acceptance | settings/auth/configure', function(hooks) {
     assert.equal(currentURL(), `/vault/settings/auth/configure/${path}/options`, 'loads the options route');
   });
 
-  test('it redirects to the first section', async function(assert) {
+  test('it redirects to the first section', async function (assert) {
     const path = `aws-${new Date().getTime()}`;
     const type = 'aws';
     await enablePage.enable(type, path);

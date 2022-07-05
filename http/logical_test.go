@@ -14,6 +14,10 @@ import (
 	"testing"
 	"time"
 
+	kv "github.com/hashicorp/vault-plugin-secrets-kv"
+	"github.com/hashicorp/vault/api"
+	auditFile "github.com/hashicorp/vault/builtin/audit/file"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -208,7 +212,6 @@ func TestLogical_CreateToken(t *testing.T) {
 	})
 
 	var actual map[string]interface{}
-	var nilWarnings interface{}
 	expected := map[string]interface{}{
 		"lease_id":       "",
 		"renewable":      false,
@@ -216,21 +219,23 @@ func TestLogical_CreateToken(t *testing.T) {
 		"data":           nil,
 		"wrap_info":      nil,
 		"auth": map[string]interface{}{
-			"policies":       []interface{}{"root"},
-			"token_policies": []interface{}{"root"},
-			"metadata":       nil,
-			"lease_duration": json.Number("0"),
-			"renewable":      false,
-			"entity_id":      "",
-			"token_type":     "service",
-			"orphan":         false,
+			"policies":        []interface{}{"root"},
+			"token_policies":  []interface{}{"root"},
+			"metadata":        nil,
+			"lease_duration":  json.Number("0"),
+			"renewable":       false,
+			"entity_id":       "",
+			"token_type":      "service",
+			"orphan":          false,
+			"mfa_requirement": nil,
+			"num_uses":        json.Number("0"),
 		},
-		"warnings": nilWarnings,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	delete(actual["auth"].(map[string]interface{}), "client_token")
 	delete(actual["auth"].(map[string]interface{}), "accessor")
+	delete(actual, "warnings")
 	expected["request_id"] = actual["request_id"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad:\nexpected:\n%#v\nactual:\n%#v", expected, actual)
@@ -497,5 +502,164 @@ func TestLogical_ShouldParseForm(t *testing.T) {
 		if isForm != test.isForm {
 			t.Fatalf("%s fail: expected isForm %t, got %t", name, test.isForm, isForm)
 		}
+	}
+}
+
+func TestLogical_AuditPort(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": kv.VersionedKVFactory,
+		},
+		AuditBackends: map[string]audit.Factory{
+			"file": auditFile.Factory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	core := cores[0].Core
+	c := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	if err := c.Sys().Mount("kv/", &api.MountInput{
+		Type: "kv-v2",
+	}); err != nil {
+		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
+	}
+
+	auditLogFile, err := ioutil.TempFile("", "auditport")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = c.Sys().EnableAuditWithOptions("file", &api.EnableAuditOptions{
+		Type: "file",
+		Options: map[string]string{
+			"file_path": auditLogFile.Name(),
+		},
+	})
+	if err != nil {
+		t.Fatalf("failed to enable audit file, err: %#v\n", err)
+	}
+
+	writeData := map[string]interface{}{
+		"data": map[string]interface{}{
+			"bar": "a",
+		},
+	}
+
+	resp, err := c.Logical().Write("kv/data/foo", writeData)
+	if err != nil {
+		t.Fatalf("write request failed, err: %#v, resp: %#v\n", err, resp)
+	}
+
+	decoder := json.NewDecoder(auditLogFile)
+
+	var auditRecord map[string]interface{}
+	count := 0
+	for decoder.Decode(&auditRecord) == nil {
+		count += 1
+
+		// Skip the first line
+		if count == 1 {
+			continue
+		}
+
+		auditRequest := map[string]interface{}{}
+
+		if req, ok := auditRecord["request"]; ok {
+			auditRequest = req.(map[string]interface{})
+		}
+
+		if _, ok := auditRequest["remote_address"].(string); !ok {
+			t.Fatalf("remote_port should be a number, not %T", auditRequest["remote_address"])
+		}
+
+		if _, ok := auditRequest["remote_port"].(float64); !ok {
+			t.Fatalf("remote_port should be a number, not %T", auditRequest["remote_port"])
+		}
+	}
+
+	if count != 4 {
+		t.Fatalf("wrong number of audit entries: %d", count)
+	}
+}
+
+func TestLogical_ErrRelativePath(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": credUserpass.Factory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	core := cores[0].Core
+	c := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	err := c.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	if err != nil {
+		t.Fatalf("failed to enable userpass, err: %v", err)
+	}
+
+	resp, err := c.Logical().Read("auth/userpass/users/user..aaa")
+
+	if err == nil || resp != nil {
+		t.Fatalf("expected read request to fail, resp: %#v, err: %v", resp, err)
+	}
+
+	respErr, ok := err.(*api.ResponseError)
+
+	if !ok {
+		t.Fatalf("unexpected error type, err: %#v", err)
+	}
+
+	if respErr.StatusCode != 400 {
+		t.Errorf("expected 400 response for read, actual: %d", respErr.StatusCode)
+	}
+
+	if !strings.Contains(respErr.Error(), logical.ErrRelativePath.Error()) {
+		t.Errorf("expected response for read to include %q", logical.ErrRelativePath.Error())
+	}
+
+	data := map[string]interface{}{
+		"password": "abc123",
+	}
+
+	resp, err = c.Logical().Write("auth/userpass/users/user..aaa", data)
+
+	if err == nil || resp != nil {
+		t.Fatalf("expected write request to fail, resp: %#v, err: %v", resp, err)
+	}
+
+	respErr, ok = err.(*api.ResponseError)
+
+	if !ok {
+		t.Fatalf("unexpected error type, err: %#v", err)
+	}
+
+	if respErr.StatusCode != 400 {
+		t.Errorf("expected 400 response for write, actual: %d", respErr.StatusCode)
+	}
+
+	if !strings.Contains(respErr.Error(), logical.ErrRelativePath.Error()) {
+		t.Errorf("expected response for write to include %q", logical.ErrRelativePath.Error())
 	}
 }

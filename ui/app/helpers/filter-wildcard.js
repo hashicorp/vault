@@ -8,8 +8,8 @@ export function filterWildcard([string, array]) {
     string = { id: string };
   }
   let stringId = string.id;
-  const filterBy = stringId =>
-    array.filter(item => new RegExp('^' + stringId.replace(/\*/g, '.*') + '$').test(item));
+  const filterBy = (stringId) =>
+    array.filter((item) => new RegExp('^' + stringId.replace(/\*/g, '.*') + '$').test(item));
   return filterBy(stringId).length;
 }
 

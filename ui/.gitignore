@@ -3,7 +3,6 @@
 # compiled output
 /dist/
 /tmp/
-/storybook-static/
 
 # dependencies
 /bower_components/
@@ -11,13 +10,13 @@
 
 # misc
 /.sass-cache
+/.eslintcache
 /connect.lock
 /coverage/
 /libpeerconnection.log
 /npm-debug.log*
 /testem.log
 /yarn-error.log
-/.storybook/preview-head.html
 package-lock.json
 
 # ember-try

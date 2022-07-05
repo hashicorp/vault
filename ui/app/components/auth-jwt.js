@@ -1,12 +1,13 @@
 import Ember from 'ember';
 import { inject as service } from '@ember/service';
+// ARG NOTE: Once you remove outer-html after glimmerizing you can remove the outer-html component
 import Component from './outer-html';
 import { later } from '@ember/runloop';
 import { task, timeout, waitForEvent } from 'ember-concurrency';
 import { computed } from '@ember/object';
+import { waitFor } from '@ember/test-waiters';
 
-/* eslint-disable ember/no-ember-testing-in-module-scope */
-const WAIT_TIME = Ember.testing ? 0 : 500;
+const WAIT_TIME = 500;
 const ERROR_WINDOW_CLOSED =
   'The provider window was closed before authentication was complete.  Please click Sign In to try again.';
 const ERROR_MISSING_PARAMS =
@@ -29,6 +30,7 @@ export default Component.extend({
   onNamespace() {},
 
   didReceiveAttrs() {
+    this._super();
     let { oldSelectedAuthPath, selectedAuthPath } = this;
     let shouldDebounce = !oldSelectedAuthPath && !selectedAuthPath;
     if (oldSelectedAuthPath !== selectedAuthPath) {
@@ -44,7 +46,7 @@ export default Component.extend({
 
   // Assumes authentication using OIDC until it's known that the mount is
   // configured for JWT authentication via static keys, JWKS, or OIDC discovery.
-  isOIDC: computed('errorMessage', function() {
+  isOIDC: computed('errorMessage', function () {
     return this.errorMessage !== ERROR_JWT_LOGIN;
   }),
 
@@ -52,29 +54,30 @@ export default Component.extend({
     return this.window || window;
   },
 
-  fetchRole: task(function*(roleName, options = { debounce: true }) {
-    if (options.debounce) {
-      this.onRoleName(roleName);
-      // debounce
-      yield timeout(WAIT_TIME);
-    }
-    let path = this.selectedAuthPath || this.selectedAuthType;
-    let id = JSON.stringify([path, roleName]);
-    let role = null;
-    try {
-      role = yield this.store.findRecord('role-jwt', id, { adapterOptions: { namespace: this.namespace } });
-    } catch (e) {
-      if (!e.httpStatus || e.httpStatus !== 400) {
-        throw e;
+  fetchRole: task(
+    waitFor(function* (roleName, options = { debounce: true }) {
+      if (options.debounce) {
+        this.onRoleName(roleName);
+        // debounce
+        yield timeout(Ember.testing ? 0 : WAIT_TIME);
       }
-      if (e.errors && e.errors.length > 0) {
-        this.set('errorMessage', e.errors[0]);
+      let path = this.selectedAuthPath || this.selectedAuthType;
+      let id = JSON.stringify([path, roleName]);
+      let role = null;
+      try {
+        role = yield this.store.findRecord('role-jwt', id, { adapterOptions: { namespace: this.namespace } });
+      } catch (e) {
+        // throwing here causes failures in tests
+        if ((!e.httpStatus || e.httpStatus !== 400) && !Ember.testing) {
+          throw e;
+        }
+        if (e.errors && e.errors.length > 0) {
+          this.set('errorMessage', e.errors[0]);
+        }
       }
-    }
-    this.set('role', role);
-  })
-    .restartable()
-    .withTestWaiter(),
+      this.set('role', role);
+    })
+  ).restartable(),
 
   handleOIDCError(err) {
     this.onLoading(false);
@@ -82,7 +85,7 @@ export default Component.extend({
     this.onError(err);
   },
 
-  prepareForOIDC: task(function*(oidcWindow) {
+  prepareForOIDC: task(function* (oidcWindow) {
     const thisWindow = this.getWindow();
     // show the loading animation in the parent
     this.onLoading(true);
@@ -104,7 +107,7 @@ export default Component.extend({
     }
   }),
 
-  watchPopup: task(function*(oidcWindow) {
+  watchPopup: task(function* (oidcWindow) {
     while (true) {
       yield timeout(WAIT_TIME);
       if (!oidcWindow || oidcWindow.closed) {
@@ -113,7 +116,7 @@ export default Component.extend({
     }
   }),
 
-  watchCurrent: task(function*(oidcWindow) {
+  watchCurrent: task(function* (oidcWindow) {
     // when user is about to change pages, close the popup window
     yield waitForEvent(this.getWindow(), 'beforeunload');
     oidcWindow.close();
@@ -125,7 +128,7 @@ export default Component.extend({
     oidcWindow.close();
   },
 
-  exchangeOIDC: task(function*(oidcState, oidcWindow) {
+  exchangeOIDC: task(function* (oidcState, oidcWindow) {
     if (oidcState === null || oidcState === undefined) {
       return;
     }
@@ -163,7 +166,6 @@ export default Component.extend({
       return this.handleOIDCError(e);
     }
     let token = resp.auth.client_token;
-    this.onSelectedAuth('token');
     this.onToken(token);
     yield this.onSubmit();
   }),
@@ -177,8 +179,14 @@ export default Component.extend({
       if (!this.isOIDC || !this.role || !this.role.authUrl) {
         return;
       }
-
-      await this.fetchRole.perform(this.roleName, { debounce: false });
+      try {
+        await this.fetchRole.perform(this.roleName, { debounce: false });
+      } catch (error) {
+        // this task could be cancelled if the instances in didReceiveAttrs resolve after this was started
+        if (error?.name !== 'TaskCancelation') {
+          throw error;
+        }
+      }
       let win = this.getWindow();
 
       const POPUP_WIDTH = 500;

@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/approle"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -133,10 +134,10 @@ path "kv/*" {
 		if resp.Auth.ClientToken == "" {
 			t.Fatal("expected a client token")
 		}
-		if batch && !strings.HasPrefix(resp.Auth.ClientToken, "b.") {
+		if batch && !strings.HasPrefix(resp.Auth.ClientToken, consts.BatchTokenPrefix) {
 			t.Fatal("expected a batch token")
 		}
-		if !batch && strings.HasPrefix(resp.Auth.ClientToken, "b.") {
+		if !batch && strings.HasPrefix(resp.Auth.ClientToken, consts.BatchTokenPrefix) {
 			t.Fatal("expected a non-batch token")
 		}
 		return resp.Auth.ClientToken
@@ -268,7 +269,7 @@ path "kv/*" {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if secret.Auth.ClientToken[0:2] != "b." {
+	if secret.Auth.ClientToken[0:vault.TokenPrefixLength] != consts.BatchTokenPrefix {
 		t.Fatal(secret.Auth.ClientToken)
 	}
 
@@ -354,7 +355,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if secret.Auth.ClientToken[0:2] != "s." {
+		if secret.Auth.ClientToken[0:vault.TokenPrefixLength] != consts.ServiceTokenPrefix {
 			t.Fatal(secret.Auth.ClientToken)
 		}
 	}
@@ -397,7 +398,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if secret.Auth.ClientToken[0:2] != "b." {
+		if secret.Auth.ClientToken[0:vault.TokenPrefixLength] != consts.BatchTokenPrefix {
 			t.Fatal(secret.Auth.ClientToken)
 		}
 	}
@@ -424,7 +425,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if secret.Auth.ClientToken[0:2] != "b." {
+		if secret.Auth.ClientToken[0:vault.TokenPrefixLength] != consts.BatchTokenPrefix {
 			t.Fatal(secret.Auth.ClientToken)
 		}
 		// Client specifies service
@@ -441,7 +442,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if secret.Auth.ClientToken[0:2] != "s." {
+		if secret.Auth.ClientToken[0:vault.TokenPrefixLength] != consts.ServiceTokenPrefix {
 			t.Fatal(secret.Auth.ClientToken)
 		}
 		// Client doesn't specify
@@ -457,7 +458,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if secret.Auth.ClientToken[0:2] != "s." {
+		if secret.Auth.ClientToken[0:vault.TokenPrefixLength] != consts.ServiceTokenPrefix {
 			t.Fatal(secret.Auth.ClientToken)
 		}
 	}
@@ -484,7 +485,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if secret.Auth.ClientToken[0:2] != "b." {
+		if secret.Auth.ClientToken[0:vault.TokenPrefixLength] != consts.BatchTokenPrefix {
 			t.Fatal(secret.Auth.ClientToken)
 		}
 		// Client specifies service
@@ -501,7 +502,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if secret.Auth.ClientToken[0:2] != "s." {
+		if secret.Auth.ClientToken[0:vault.TokenPrefixLength] != consts.ServiceTokenPrefix {
 			t.Fatal(secret.Auth.ClientToken)
 		}
 		// Client doesn't specify
@@ -517,7 +518,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if secret.Auth.ClientToken[0:2] != "b." {
+		if secret.Auth.ClientToken[0:vault.TokenPrefixLength] != consts.BatchTokenPrefix {
 			t.Fatal(secret.Auth.ClientToken)
 		}
 	}

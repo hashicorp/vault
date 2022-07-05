@@ -228,6 +228,24 @@ func (c *LoginCommand) Run(args []string) int {
 		return 2
 	}
 
+	if secret != nil && secret.Auth != nil && secret.Auth.MFARequirement != nil {
+		if c.isInteractiveEnabled(len(secret.Auth.MFARequirement.MFAConstraints)) {
+			// Currently, if there is only one MFA method configured, the login
+			// request is validated interactively
+			methodInfo := c.getMFAMethodInfo(secret.Auth.MFARequirement.MFAConstraints)
+			if methodInfo.methodID != "" {
+				return c.validateMFA(secret.Auth.MFARequirement.MFARequestID, methodInfo)
+			}
+		}
+		c.UI.Warn(wrapAtLength("A login request was issued that is subject to "+
+			"MFA validation. Please make sure to validate the login by sending another "+
+			"request to sys/mfa/validate endpoint.") + "\n")
+
+		// We return early to prevent success message from being printed
+		c.checkForAndWarnAboutLoginToken()
+		return OutputSecret(c.UI, secret)
+	}
+
 	// Unset any previous token wrapping functionality. If the original request
 	// was for a wrapped token, we don't want future requests to be wrapped.
 	client.SetWrappingLookupFunc(func(string, string) string { return "" })
@@ -288,15 +306,7 @@ func (c *LoginCommand) Run(args []string) int {
 			return 2
 		}
 
-		// Warn if the VAULT_TOKEN environment variable is set, as that will take
-		// precedence. We output as a warning, so piping should still work since it
-		// will be on a different stream.
-		if os.Getenv("VAULT_TOKEN") != "" {
-			c.UI.Warn(wrapAtLength("WARNING! The VAULT_TOKEN environment variable "+
-				"is set! This takes precedence over the value set by this command. To "+
-				"use the value set by this command, unset the VAULT_TOKEN environment "+
-				"variable or set it to the token displayed below.") + "\n")
-		}
+		c.checkForAndWarnAboutLoginToken()
 	} else if !c.flagTokenOnly {
 		// If token-only the user knows it won't be stored, so don't warn
 		c.UI.Warn(wrapAtLength(
@@ -356,5 +366,16 @@ func (c *LoginCommand) extractToken(client *api.Client, secret *api.Secret, unwr
 
 	default:
 		return nil, false, fmt.Errorf("no auth or wrapping info in response")
+	}
+}
+
+// Warn if the VAULT_TOKEN environment variable is set, as that will take
+// precedence. We output as a warning, so piping should still work since it
+// will be on a different stream.
+func (c *LoginCommand) checkForAndWarnAboutLoginToken() {
+	if os.Getenv("VAULT_TOKEN") != "" {
+		c.UI.Warn(wrapAtLength("WARNING! The VAULT_TOKEN environment variable "+
+			"is set! The value of this variable will take precedence; if this is unwanted "+
+			"please unset VAULT_TOKEN or update its value accordingly.") + "\n")
 	}
 }

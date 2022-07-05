@@ -16,6 +16,12 @@
     font-weight: $font-weight-semibold;
     color: $ui-gray-500;
   }
+
+  .center-display {
+    width: 50%;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 
 a.list-item-row,

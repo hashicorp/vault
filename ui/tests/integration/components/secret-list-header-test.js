@@ -6,11 +6,11 @@ import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import mirageToModels from 'vault/tests/helpers/mirage-to-models';
 
-module('Integration | Component | secret-list-header', function(hooks) {
+module('Integration | Component | secret-list-header', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
-  test('it should render version badge for kv and generic engine types', async function(assert) {
+  test('it should render version badge for kv and generic engine types', async function (assert) {
     const backends = supportedSecretBackends();
     assert.expect(backends.length);
 

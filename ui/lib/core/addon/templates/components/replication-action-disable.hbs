@@ -4,7 +4,9 @@
       Disable Replication
     </h4>
     <p>
-      Disable {{model.replicationModeForDisplay}} Replication entirely on the cluster.
+      Disable
+      {{this.model.replicationModeForDisplay}}
+      Replication entirely on the cluster.
     </p>
   </div>
 
@@ -12,7 +14,7 @@
     <button
       type="button"
       class="button is-danger"
-      onclick={{action (mut isModalActive) true}}
+      onclick={{action (mut this.isModalActive) true}}
       data-test-replication-action-trigger
     >
       Disable Replication
@@ -22,32 +24,33 @@
 
 <ConfirmationModal
   @title="Disable Replication?"
-  @onClose={{action (mut isModalActive) false}}
-  @isActive={{isModalActive}}
-  @confirmText={{model.replicationModeForDisplay}}
-  @toConfirmMsg="disabling {{model.replicationModeForDisplay}} Replication on this cluster"
+  @onClose={{action (mut this.isModalActive) false}}
+  @isActive={{this.isModalActive}}
+  @confirmText={{this.model.replicationModeForDisplay}}
+  @toConfirmMsg="disabling {{this.model.replicationModeForDisplay}} Replication on this cluster"
   @onConfirm={{action
     "onSubmit"
     "disable"
-    (if
-      (eq model.replicationAttrs.modeForUrl 'bootstrapping')
-      mode
-      model.replicationAttrs.modeForUrl
-    )
+    (if (eq this.model.replicationAttrs.modeForUrl "bootstrapping") this.mode this.model.replicationAttrs.modeForUrl)
   }}
-  @testSelector="disable"
 >
   <p class="has-bottom-margin-m">
-    {{#if (and model.replicationAttrs.isPrimary (eq model.replicationMode "dr"))}}This cannot be undone. {{/if}}
-    Disabling {{model.replicationModeForDisplay}} Replication entirely on this {{if (eq model.replicationAttrs.isPrimary true) "primary" "secondary"}} cluster means that:
+    {{#if (and this.model.replicationAttrs.isPrimary (eq this.model.replicationMode "dr"))}}
+      This cannot be undone.
+    {{/if}}
+    Disabling
+    {{this.model.replicationModeForDisplay}}
+    Replication entirely on this
+    {{if (eq this.model.replicationAttrs.isPrimary true) "primary" "secondary"}}
+    cluster means that:
   </p>
   <ul class="bullet">
-    {{#if model.replicationAttrs.isPrimary}}
-    <li>Secondaries will no longer be able to connect</li>
-    <li>We will wipe the underlying storage of connected secondaries</li>
-    <li>Secondaries connecting back to the cluster will require a wipe of the underlying storage</li>
+    {{#if this.model.replicationAttrs.isPrimary}}
+      <li>Secondaries will no longer be able to connect</li>
+      <li>We will wipe the underlying storage of connected secondaries</li>
+      <li>Secondaries connecting back to the cluster will require a wipe of the underlying storage</li>
     {{else}}
-    <li>We will wipe the underlying storage of this secondary when connected to a primary</li>
+      <li>We will wipe the underlying storage of this secondary when connected to a primary</li>
     {{/if}}
     <li>Re-enabling this node will change its cluster ID</li>
   </ul>

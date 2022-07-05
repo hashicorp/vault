@@ -6,7 +6,7 @@ steps:
       name: Check branch name
       command: |
         # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
-        [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* ]] && {
+        [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* || "$CIRCLE_BRANCH" = backport/docs/* ]] && {
           # stop the job from this step
           circleci-agent step halt
         }

@@ -17,11 +17,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	insecureFileMounts = map[string]string{
-		"test-fixtures/no_tls/cassandra.yaml": "/etc/cassandra/cassandra.yaml",
-	}
-)
+var insecureFileMounts = map[string]string{
+	"test-fixtures/no_tls/cassandra.yaml": "/etc/cassandra/cassandra.yaml",
+}
 
 func TestSelfSignedCA(t *testing.T) {
 	copyFromTo := map[string]string{

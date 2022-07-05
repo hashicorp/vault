@@ -27,7 +27,7 @@ export default class OidcConsentBlockComponent extends Component {
   buildUrl(urlString, params) {
     try {
       let url = new URL(urlString);
-      Object.keys(params).forEach(key => {
+      Object.keys(params).forEach((key) => {
         if (params[key] && validParameters.includes(key)) {
           url.searchParams.append(key, params[key]);
         }

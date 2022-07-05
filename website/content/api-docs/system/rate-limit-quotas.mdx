@@ -27,7 +27,8 @@ either be a namespace or mount.
   `userpass` in `namespace1`. Updating this field on an existing quota can have
   "moving" effects. For example, updating `auth/userpass` to
   `namespace1/auth/userpass` moves this quota from being a global mount quota to a
-  namespace specific mount quota. **Note, namespaces are supported in Enterprise only**.
+  namespace specific mount quota. Quotas on a non-root namespace are not inherited by child
+  namespaces. **Note, namespaces are supported in Enterprise only**.
 - `rate` `(float: 0.0)` - The maximum number of requests in a given interval to
   be allowed by the quota rule. The `rate` must be positive.
 - `interval` `(string: "")` - The duration to enforce rate limiting for (default `"1s"`).

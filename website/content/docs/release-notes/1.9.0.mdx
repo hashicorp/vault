@@ -25,7 +25,7 @@ The improvements made include the following:
 
 * New logic enables de-duplication of non-entity tokens, thereby reducing their contribution towards the client count
 * New logic allows entities to be created for local auth mounts, thereby eliminating  non-entity-tokens being  issued by the local auth mounts and reducing the overall client count
-* Eliminates root tokesn from the client count aggregate
+* Eliminates root tokens from the client count aggregate
 * Displays client counts per namespace (top ten, descending order by attribution) in the usage metrics UI with the ability to export data for all namespaces
 * Displays clients earlier than a month in the usage metrics UI (within ten minutes since initiation of computation)
 
@@ -49,7 +49,7 @@ The [KMS Engine for GCP](https://www.vaultproject.io/docs/secrets/gcpkms) provid
 
 This section describes other features and enhancements introduced as part of the Vault 1.9 release.
 
-### Vaut Agent improvements
+### Vault Agent improvements
 
 Improvements were made to the Vault Agent Cache to ensure that [consul-template is always routed through the Vault Agent cache](/docs/agent/template), therefore, eliminating the need for listeners to be defined in the Vault Agent for just templating.
 

@@ -92,12 +92,19 @@ func verifyCIDRRoleSecretIDSubset(secretIDCIDRs []string, roleBoundCIDRList []st
 	return nil
 }
 
+const maxHmacInputLength = 1024
+
 // Creates a SHA256 HMAC of the given 'value' using the given 'key' and returns
 // a hex encoded string.
 func createHMAC(key, value string) (string, error) {
 	if key == "" {
 		return "", fmt.Errorf("invalid HMAC key")
 	}
+
+	if len(value) > maxHmacInputLength {
+		return "", fmt.Errorf("value is longer than maximum of %d bytes", maxHmacInputLength)
+	}
+
 	hm := hmac.New(sha256.New, []byte(key))
 	hm.Write([]byte(value))
 	return hex.EncodeToString(hm.Sum(nil)), nil
@@ -118,6 +125,11 @@ func decodeSecretIDStorageEntry(entry *logical.StorageEntry) (*secretIDStorageEn
 	}
 
 	cleanup := func(in []string) []string {
+		if len(in) == 0 {
+			// Don't change unnecessarily, if it was empty list leave as empty list
+			// instead of making it nil.
+			return in
+		}
 		var out []string
 		for _, s := range in {
 			out = append(out, parseip.TrimLeadingZeroesCIDR(s))

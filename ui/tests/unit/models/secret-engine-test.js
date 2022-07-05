@@ -2,10 +2,11 @@ import { run } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 
-module('Unit | Model | secret-engine', function(hooks) {
+module('Unit | Model | secret-engine', function (hooks) {
   setupTest(hooks);
 
-  test('modelTypeForKV is secret by default', function(assert) {
+  test('modelTypeForKV is secret by default', function (assert) {
+    assert.expect(1);
     let model;
     run(() => {
       model = run(() => this.owner.lookup('service:store').createRecord('secret-engine'));
@@ -13,7 +14,8 @@ module('Unit | Model | secret-engine', function(hooks) {
     });
   });
 
-  test('modelTypeForKV is secret-v2 for kv v2', function(assert) {
+  test('modelTypeForKV is secret-v2 for kv v2', function (assert) {
+    assert.expect(1);
     let model;
     run(() => {
       model = run(() =>
@@ -26,7 +28,8 @@ module('Unit | Model | secret-engine', function(hooks) {
     });
   });
 
-  test('modelTypeForKV is secret-v2 for generic v2', function(assert) {
+  test('modelTypeForKV is secret-v2 for generic v2', function (assert) {
+    assert.expect(1);
     let model;
     run(() => {
       model = run(() =>

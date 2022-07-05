@@ -8,7 +8,8 @@ import (
 )
 
 // Auth is the resulting authentication information that is part of
-// Response for credential backends.
+// Response for credential backends. It's also attached to Request objects and
+// defines the authentication used for the request. This value is audit logged.
 type Auth struct {
 	LeaseOptions
 
@@ -100,8 +101,29 @@ type Auth struct {
 
 	// Orphan is set if the token does not have a parent
 	Orphan bool `json:"orphan"`
+
+	// PolicyResults is the set of policies that grant the token access to the
+	// requesting path.
+	PolicyResults *PolicyResults `json:"policy_results"`
+
+	// MFARequirement
+	MFARequirement *MFARequirement `json:"mfa_requirement"`
+
+	// EntityCreated is set to true if an entity is created as part of a login request
+	EntityCreated bool `json:"entity_created"`
 }
 
 func (a *Auth) GoString() string {
 	return fmt.Sprintf("*%#v", *a)
+}
+
+type PolicyResults struct {
+	Allowed          bool         `json:"allowed"`
+	GrantingPolicies []PolicyInfo `json:"granting_policies"`
+}
+
+type PolicyInfo struct {
+	Name        string `json:"name"`
+	NamespaceId string `json:"namespace_id"`
+	Type        string `json:"type"`
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -36,6 +37,7 @@ func TestSysSealStatus(t *testing.T) {
 		"recovery_seal": false,
 		"initialized":   true,
 		"migration":     false,
+		"build_date":    version.BuildDate,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -120,6 +122,7 @@ func TestSysUnseal(t *testing.T) {
 			"recovery_seal": false,
 			"initialized":   true,
 			"migration":     false,
+			"build_date":    version.BuildDate,
 		}
 		if i == len(keys)-1 {
 			expected["sealed"] = false
@@ -201,6 +204,7 @@ func TestSysUnseal_Reset(t *testing.T) {
 			"recovery_seal": false,
 			"initialized":   true,
 			"migration":     false,
+			"build_date":    version.BuildDate,
 		}
 		testResponseStatus(t, resp, 200)
 		testResponseBody(t, resp, &actual)
@@ -240,6 +244,7 @@ func TestSysUnseal_Reset(t *testing.T) {
 		"type":          "shamir",
 		"recovery_seal": false,
 		"initialized":   true,
+		"build_date":    version.BuildDate,
 		"migration":     false,
 	}
 	testResponseStatus(t, resp, 200)

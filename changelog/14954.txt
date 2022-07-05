@@ -1,0 +1,3 @@
+```release-note:change
+auth/aws: Add RoleSession to DisplayName when using assumeRole for authentication
+```

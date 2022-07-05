@@ -25,10 +25,10 @@ const storeService = Service.extend({
   },
 });
 
-module('Integration | Component | get-credentials-card', function(hooks) {
+module('Integration | Component | get-credentials-card', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     run(() => {
       this.owner.unregister('service:store');
       this.owner.register('service:store', storeService);
@@ -37,25 +37,25 @@ module('Integration | Component | get-credentials-card', function(hooks) {
     });
   });
 
-  test('it shows a disabled button when no item is selected', async function(assert) {
-    await render(hbs`<GetCredentialsCard @title={{title}} @searchLabel={{searchLabel}}/>`);
+  test('it shows a disabled button when no item is selected', async function (assert) {
+    await render(hbs`<GetCredentialsCard @title={{this.title}} @searchLabel={{this.searchLabel}}/>`);
     assert.dom('[data-test-get-credentials]').isDisabled();
   });
 
-  test('it shows button that can be clicked to credentials route when an item is selected', async function(assert) {
+  test('it shows button that can be clicked to credentials route when an item is selected', async function (assert) {
     const models = ['database/role'];
     this.set('models', models);
     await render(
-      hbs`<GetCredentialsCard @title={{title}} @searchLabel={{searchLabel}} @models={{models}} @type="role"/>`
+      hbs`<GetCredentialsCard @title={{this.title}} @searchLabel={{this.searchLabel}} @models={{this.models}} @type="role"/>`
     );
     await clickTrigger();
     await selectChoose('', 'my-role');
     assert.dom('[data-test-get-credentials]').isEnabled();
   });
 
-  test('it shows input field that can be clicked to a secret when role is secret', async function(assert) {
+  test('it shows input field that can be clicked to a secret when role is secret', async function (assert) {
     await render(
-      hbs`<GetCredentialsCard @title={{title}} @shouldUseFallback={{true}} @placeHolder="secret/" @backend="kv" @type="secret"/>`
+      hbs`<GetCredentialsCard @title={{this.title}} @shouldUseFallback={{true}} @placeHolder="secret/" @backend="kv" @type="secret"/>`
     );
     let card = document.querySelector('[data-test-search-roles]').childNodes[1];
     let placeholder = card.querySelector('input').placeholder;

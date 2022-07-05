@@ -18,8 +18,9 @@ import (
 	"github.com/cockroachdb/pebble"
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
-	hclog "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/base62"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -202,6 +203,57 @@ func TestRaft_Backend(t *testing.T) {
 	physical.ExerciseBackend(t, b)
 }
 
+func TestRaft_ParseAutopilotUpgradeVersion(t *testing.T) {
+	raftDir, err := ioutil.TempDir("", "vault-raft-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(raftDir)
+
+	conf := map[string]string{
+		"path":                      raftDir,
+		"node_id":                   "abc123",
+		"autopilot_upgrade_version": "hahano",
+	}
+
+	_, err = NewRaftBackend(conf, hclog.NewNullLogger())
+	if err == nil {
+		t.Fatal("expected an error but got none")
+	}
+
+	if !strings.Contains(err.Error(), "does not parse") {
+		t.Fatal("expected an error about unparseable versions but got none")
+	}
+}
+
+func TestRaft_Backend_LargeKey(t *testing.T) {
+	b, dir := getRaft(t, true, true)
+	defer os.RemoveAll(dir)
+
+	key, err := base62.Random(bolt.MaxKeySize + 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry := &physical.Entry{Key: key, Value: []byte(key)}
+
+	err = b.Put(context.Background(), entry)
+	if err == nil {
+		t.Fatal("expected error for put entry")
+	}
+
+	if !strings.Contains(err.Error(), physical.ErrKeyTooLarge) {
+		t.Fatalf("expected %q, got %v", physical.ErrKeyTooLarge, err)
+	}
+
+	out, err := b.Get(context.Background(), entry.Key)
+	if err != nil {
+		t.Fatalf("unexpected error after failed put: %v", err)
+	}
+	if out != nil {
+		t.Fatal("expected response entry to be nil after a failed put")
+	}
+}
+
 func TestRaft_Backend_LargeValue(t *testing.T) {
 	b, dir := getRaft(t, true, true)
 	defer os.RemoveAll(dir)
@@ -220,6 +272,45 @@ func TestRaft_Backend_LargeValue(t *testing.T) {
 	}
 
 	out, err := b.Get(context.Background(), entry.Key)
+	if err != nil {
+		t.Fatalf("unexpected error after failed put: %v", err)
+	}
+	if out != nil {
+		t.Fatal("expected response entry to be nil after a failed put")
+	}
+}
+
+func TestRaft_TransactionalBackend_LargeKey(t *testing.T) {
+	b, dir := getRaft(t, true, true)
+	defer os.RemoveAll(dir)
+
+	value := make([]byte, defaultMaxEntrySize+1)
+	rand.Read(value)
+
+	key, err := base62.Random(bolt.MaxKeySize + 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	txns := []*physical.TxnEntry{
+		{
+			Operation: physical.PutOperation,
+			Entry: &physical.Entry{
+				Key:   key,
+				Value: []byte(key),
+			},
+		},
+	}
+
+	err = b.Transaction(context.Background(), txns)
+	if err == nil {
+		t.Fatal("expected error for transactions")
+	}
+
+	if !strings.Contains(err.Error(), physical.ErrKeyTooLarge) {
+		t.Fatalf("expected %q, got %v", physical.ErrValueTooLarge, err)
+	}
+
+	out, err := b.Get(context.Background(), txns[0].Entry.Key)
 	if err != nil {
 		t.Fatalf("unexpected error after failed put: %v", err)
 	}

@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/asaskevich/govalidator"
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -18,25 +17,29 @@ func pathConfigURLs(b *backend) *framework.Path {
 			"issuing_certificates": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `Comma-separated list of URLs to be used
-for the issuing certificate attribute`,
+for the issuing certificate attribute. See also RFC 5280 Section 4.2.2.1.`,
 			},
 
 			"crl_distribution_points": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `Comma-separated list of URLs to be used
-for the CRL distribution points attribute`,
+for the CRL distribution points attribute. See also RFC 5280 Section 4.2.1.13.`,
 			},
 
 			"ocsp_servers": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `Comma-separated list of URLs to be used
-for the OCSP servers attribute`,
+for the OCSP servers attribute. See also RFC 5280 Section 4.2.2.1.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathWriteURL,
-			logical.ReadOperation:   b.pathReadURL,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathWriteURL,
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathReadURL,
+			},
 		},
 
 		HelpSynopsis:    pathConfigURLsHelpSyn,
@@ -54,24 +57,30 @@ func validateURLs(urls []string) string {
 	return ""
 }
 
-func getURLs(ctx context.Context, req *logical.Request) (*certutil.URLEntries, error) {
-	entry, err := req.Storage.Get(ctx, "urls")
+func getURLs(ctx context.Context, storage logical.Storage) (*certutil.URLEntries, error) {
+	entry, err := storage.Get(ctx, "urls")
 	if err != nil {
 		return nil, err
 	}
-	if entry == nil {
-		return nil, nil
+
+	entries := &certutil.URLEntries{
+		IssuingCertificates:   []string{},
+		CRLDistributionPoints: []string{},
+		OCSPServers:           []string{},
 	}
 
-	var entries certutil.URLEntries
-	if err := entry.DecodeJSON(&entries); err != nil {
+	if entry == nil {
+		return entries, nil
+	}
+
+	if err := entry.DecodeJSON(entries); err != nil {
 		return nil, err
 	}
 
-	return &entries, nil
+	return entries, nil
 }
 
-func writeURLs(ctx context.Context, req *logical.Request, entries *certutil.URLEntries) error {
+func writeURLs(ctx context.Context, storage logical.Storage, entries *certutil.URLEntries) error {
 	entry, err := logical.StorageEntryJSON("urls", entries)
 	if err != nil {
 		return err
@@ -80,7 +89,7 @@ func writeURLs(ctx context.Context, req *logical.Request, entries *certutil.URLE
 		return fmt.Errorf("unable to marshal entry into JSON")
 	}
 
-	err = req.Storage.Put(ctx, entry)
+	err = storage.Put(ctx, entry)
 	if err != nil {
 		return err
 	}
@@ -88,33 +97,27 @@ func writeURLs(ctx context.Context, req *logical.Request, entries *certutil.URLE
 	return nil
 }
 
-func (b *backend) pathReadURL(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	entries, err := getURLs(ctx, req)
+func (b *backend) pathReadURL(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	entries, err := getURLs(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
-	if entries == nil {
-		return nil, nil
-	}
 
 	resp := &logical.Response{
-		Data: structs.New(entries).Map(),
+		Data: map[string]interface{}{
+			"issuing_certificates":    entries.IssuingCertificates,
+			"crl_distribution_points": entries.CRLDistributionPoints,
+			"ocsp_servers":            entries.OCSPServers,
+		},
 	}
 
 	return resp, nil
 }
 
 func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	entries, err := getURLs(ctx, req)
+	entries, err := getURLs(ctx, req.Storage)
 	if err != nil {
 		return nil, err
-	}
-	if entries == nil {
-		entries = &certutil.URLEntries{
-			IssuingCertificates:   []string{},
-			CRLDistributionPoints: []string{},
-			OCSPServers:           []string{},
-		}
 	}
 
 	if urlsInt, ok := data.GetOk("issuing_certificates"); ok {
@@ -139,7 +142,7 @@ func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *
 		}
 	}
 
-	return nil, writeURLs(ctx, req, entries)
+	return nil, writeURLs(ctx, req.Storage, entries)
 }
 
 const pathConfigURLsHelpSyn = `

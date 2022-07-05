@@ -14,7 +14,9 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -34,8 +36,10 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/osutil"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -74,6 +78,21 @@ const (
 	coreKeyringCanaryPath = "core/canary-keyring"
 
 	indexHeaderHMACKeyPath = "core/index-header-hmac-key"
+
+	// defaultMFAAuthResponseTTL is the default duration that Vault caches the
+	// MfaAuthResponse when the value is not specified in the server config
+	defaultMFAAuthResponseTTL = 300 * time.Second
+
+	// defaultMaxTOTPValidateAttempts is the default value for the number
+	// of failed attempts to validate a request subject to TOTP MFA. If the
+	// number of failed totp passcode validations exceeds this max value, the
+	// user needs to wait until a fresh totp passcode is generated.
+	defaultMaxTOTPValidateAttempts = 5
+
+	// ForwardSSCTokenToActive is the value that must be set in the
+	// forwardToActive to trigger forwarding if a perf standby encounters
+	// an SSC Token that it does not have the WAL state for.
+	ForwardSSCTokenToActive = "new_token"
 )
 
 var (
@@ -306,6 +325,10 @@ type Core struct {
 	// change underneath a calling function
 	mountsLock sync.RWMutex
 
+	// mountMigrationTracker tracks past and ongoing remount operations
+	// against their migration ids
+	mountMigrationTracker *sync.Map
+
 	// auth is loaded after unseal since it is a protected
 	// configuration
 	auth *MountTable
@@ -331,7 +354,8 @@ type Core struct {
 	auditedHeaders *AuditedHeadersConfig
 
 	// systemBackend is the backend which is used to manage internal operations
-	systemBackend *SystemBackend
+	systemBackend   *SystemBackend
+	loginMFABackend *LoginMFABackend
 
 	// cubbyholeBackend is the backend which manages the per-token storage
 	cubbyholeBackend *CubbyholeBackend
@@ -365,6 +389,13 @@ type Core struct {
 	// metrics emission and sealing leading to a nil pointer
 	metricsMutex sync.Mutex
 
+	// inFlightReqMap is used to store info about in-flight requests
+	inFlightReqData *InFlightRequests
+
+	// mfaResponseAuthQueue is used to cache the auth response per request ID
+	mfaResponseAuthQueue     *LoginMFAPriorityQueue
+	mfaResponseAuthQueueLock sync.Mutex
+
 	// metricSink is the destination for all metrics that have
 	// a cluster label.
 	metricSink *metricsutil.ClusterMetricSink
@@ -377,6 +408,9 @@ type Core struct {
 	baseLogger log.Logger
 	logger     log.Logger
 
+	// log level provided by config, CLI flag, or env
+	logLevel string
+
 	// Disables the trace display for Sentinel checks
 	sentinelTraceDisabled bool
 
@@ -385,6 +419,9 @@ type Core struct {
 	// Cache stores the actual cache; we always have this but may bypass it if
 	// disabled
 	physicalCache physical.ToggleablePurgemonster
+
+	// logRequestsLevel indicates at which level requests should be logged
+	logRequestsLevel *uberAtomic.Int32
 
 	// reloadFuncs is a map containing reload functions
 	reloadFuncs map[string][]reloadutil.ReloadFunc
@@ -461,6 +498,12 @@ type Core struct {
 
 	// pluginDirectory is the location vault will look for plugin binaries
 	pluginDirectory string
+
+	// pluginFileUid is the uid of the plugin files and directory
+	pluginFileUid int
+
+	// pluginFilePermissions is the permissions of the plugin files and directory
+	pluginFilePermissions int
 
 	// pluginCatalog is used to manage plugin configurations
 	pluginCatalog *PluginCatalog
@@ -570,11 +613,15 @@ type Core struct {
 	enableResponseHeaderHostname   bool
 	enableResponseHeaderRaftNodeID bool
 
-	// versionTimestamps is a map of vault versions to timestamps when the version
+	// disableSSCTokens is used to disable server side consistent token creation/usage
+	disableSSCTokens bool
+
+	// versionHistory is a map of vault versions to VaultVersion. The
+	// VaultVersion.TimestampInstalled when the version will denote when the version
 	// was first run. Note that because perf standbys should be upgraded first, and
 	// only the active node will actually write the new version timestamp, a perf
 	// standby shouldn't rely on the stored version timestamps being present.
-	versionTimestamps map[string]time.Time
+	versionHistory map[string]VaultVersion
 }
 
 func (c *Core) HAState() consts.HAState {
@@ -621,6 +668,8 @@ type CoreConfig struct {
 
 	SecureRandomReader io.Reader
 
+	LogLevel string
+
 	Logger log.Logger
 
 	// Disables the trace display for Sentinel checks
@@ -655,6 +704,10 @@ type CoreConfig struct {
 	EnableRaw bool
 
 	PluginDirectory string
+
+	PluginFileUid int
+
+	PluginFilePermissions int
 
 	DisableSealWrap bool
 
@@ -696,6 +749,9 @@ type CoreConfig struct {
 	// Whether to send headers in the HTTP response showing hostname or raft node ID
 	EnableResponseHeaderHostname   bool
 	EnableResponseHeaderRaftNodeID bool
+
+	// DisableSSCTokens is used to disable the use of server side consistent tokens
+	DisableSSCTokens bool
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -797,6 +853,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		standbyStopCh:        new(atomic.Value),
 		baseLogger:           conf.Logger,
 		logger:               conf.Logger.Named("core"),
+		logLevel:             conf.LogLevel,
 
 		defaultLeaseTTL:                conf.DefaultLeaseTTL,
 		maxLeaseTTL:                    conf.MaxLeaseTTL,
@@ -838,7 +895,10 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		disableAutopilot:               conf.DisableAutopilot,
 		enableResponseHeaderHostname:   conf.EnableResponseHeaderHostname,
 		enableResponseHeaderRaftNodeID: conf.EnableResponseHeaderRaftNodeID,
+		mountMigrationTracker:          &sync.Map{},
+		disableSSCTokens:               conf.DisableSSCTokens,
 	}
+
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)
 	c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 0, nil)
@@ -847,6 +907,11 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 	c.router.logger = c.logger.Named("router")
 	c.allLoggers = append(c.allLoggers, c.router.logger)
+
+	c.inFlightReqData = &InFlightRequests{
+		InFlightReqMap:   &sync.Map{},
+		InFlightReqCount: uberAtomic.NewUint64(0),
+	}
 
 	c.SetConfig(conf.RawConfig)
 
@@ -960,10 +1025,23 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		}
 	}
 
+	if conf.PluginFileUid != 0 {
+		c.pluginFileUid = conf.PluginFileUid
+	}
+	if conf.PluginFilePermissions != 0 {
+		c.pluginFilePermissions = conf.PluginFilePermissions
+	}
+
 	createSecondaries(c, conf)
 
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
 		c.ha = conf.HAPhysical
+	}
+
+	c.loginMFABackend = NewLoginMFABackend(c, conf.Logger)
+
+	if c.loginMFABackend.mfaLogger != nil {
+		c.AddLogger(c.loginMFABackend.mfaLogger)
 	}
 
 	logicalBackends := make(map[string]logical.Factory)
@@ -1027,6 +1105,15 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		c.customListenerHeader.Store(([]*ListenerCustomHeaders)(nil))
 	}
 
+	logRequestsLevel := conf.RawConfig.LogRequestsLevel
+	c.logRequestsLevel = uberAtomic.NewInt32(0)
+	switch {
+	case log.LevelFromString(logRequestsLevel) > log.NoLevel && log.LevelFromString(logRequestsLevel) < log.Off:
+		c.logRequestsLevel.Store(int32(log.LevelFromString(logRequestsLevel)))
+	case logRequestsLevel != "":
+		c.logger.Warn("invalid log_requests_level", "level", conf.RawConfig.LogRequestsLevel)
+	}
+
 	quotasLogger := conf.Logger.Named("quotas")
 	c.allLoggers = append(c.allLoggers, quotasLogger)
 	c.quotaManager, err = quotas.NewManager(quotasLogger, c.quotaLeaseWalker, c.metricSink)
@@ -1039,27 +1126,34 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 
-	if c.versionTimestamps == nil {
-		c.logger.Info("Initializing versionTimestamps for core")
-		c.versionTimestamps = make(map[string]time.Time)
+	if c.versionHistory == nil {
+		c.logger.Info("Initializing version history cache for core")
+		c.versionHistory = make(map[string]VaultVersion)
 	}
 
 	return c, nil
 }
 
-// HandleVersionTimeStamps stores the current version at the current time to
+// handleVersionTimeStamps stores the current version at the current time to
 // storage, and then loads all versions and upgrade timestamps out from storage.
 func (c *Core) handleVersionTimeStamps(ctx context.Context) error {
-	currentTime := time.Now()
-	isUpdated, err := c.storeVersionTimestamp(ctx, version.Version, currentTime)
+	currentTime := time.Now().UTC()
+
+	vaultVersion := &VaultVersion{
+		TimestampInstalled: currentTime,
+		Version:            version.Version,
+		BuildDate:          version.BuildDate,
+	}
+
+	isUpdated, err := c.storeVersionEntry(ctx, vaultVersion, false)
 	if err != nil {
 		return fmt.Errorf("error storing vault version: %w", err)
 	}
 	if isUpdated {
-		c.logger.Info("Recorded vault version", "vault version", version.Version, "upgrade time", currentTime)
+		c.logger.Info("Recorded vault version", "vault version", version.Version, "upgrade time", currentTime, "build date", version.BuildDate)
 	}
-	// Finally, load the versions into core fields
-	err = c.loadVersionTimestamps(ctx)
+	// Finally, populate the version history cache
+	err = c.loadVersionHistory(ctx)
 	if err != nil {
 		return err
 	}
@@ -1078,6 +1172,11 @@ func (c *Core) RaftNodeIDHeaderEnabled() bool {
 	return c.enableResponseHeaderRaftNodeID
 }
 
+// DisableSSCTokens determines whether to use server side consistent tokens or not.
+func (c *Core) DisableSSCTokens() bool {
+	return c.disableSSCTokens
+}
+
 // Shutdown is invoked when the Vault instance is about to be terminated. It
 // should not be accessible as part of an API call as it will cause an availability
 // problem. It is only used to gracefully quit in the case of HA so that failover
@@ -1093,6 +1192,15 @@ func (c *Core) Shutdown() error {
 		c.shutdownDoneCh = nil
 	}
 
+	return err
+}
+
+func (c *Core) ShutdownWait() error {
+	donech := c.ShutdownDone()
+	err := c.Shutdown()
+	if donech != nil {
+		<-donech
+	}
 	return err
 }
 
@@ -1369,6 +1477,9 @@ func (c *Core) getUnsealKey(ctx context.Context, seal Seal) ([]byte, error) {
 	}
 	if err != nil {
 		return nil, err
+	}
+	if config == nil {
+		return nil, fmt.Errorf("failed to obtain seal/recovery configuration")
 	}
 
 	// Check if we don't have enough keys to unlock, proceed through the rest of
@@ -2023,6 +2134,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupPolicyStore(ctx); err != nil {
 		return err
 	}
+	if err := c.setupManagedKeyRegistry(); err != nil {
+		return err
+	}
 	if err := c.loadCORSConfig(ctx); err != nil {
 		return err
 	}
@@ -2038,6 +2152,11 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupQuotas(ctx, false); err != nil {
 		return err
 	}
+
+	if err := c.setupHeaderHMACKey(ctx, false); err != nil {
+		return err
+	}
+
 	if !c.IsDRSecondary() {
 		if err := c.startRollback(); err != nil {
 			return err
@@ -2054,9 +2173,14 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.loadIdentityStoreArtifacts(ctx); err != nil {
 			return err
 		}
-		if err := loadMFAConfigs(ctx, c); err != nil {
+		if err := loadPolicyMFAConfigs(ctx, c); err != nil {
 			return err
 		}
+		c.setupCachedMFAResponseAuth()
+		if err := c.loadLoginMFAConfigs(ctx); err != nil {
+			return err
+		}
+
 		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
 			return err
 		}
@@ -2167,6 +2291,13 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		}
 	}
 
+	if os.Getenv(EnvVaultDisableLocalAuthMountEntities) != "" {
+		c.logger.Warn("disabling entities for local auth mounts through env var", "env", EnvVaultDisableLocalAuthMountEntities)
+	}
+	c.loginMFABackend.usedCodes = cache.New(0, 30*time.Second)
+	if c.systemBackend != nil && c.systemBackend.mfaBackend != nil {
+		c.systemBackend.mfaBackend.usedCodes = cache.New(0, 30*time.Second)
+	}
 	c.logger.Info("post-unseal setup complete")
 	return nil
 }
@@ -2177,6 +2308,9 @@ func (c *Core) preSeal() error {
 	defer metrics.MeasureSince([]string{"core", "pre_seal"}, time.Now())
 	c.logger.Info("pre-seal teardown starting")
 
+	if seal, ok := c.seal.(*autoSeal); ok {
+		seal.StopHealthCheck()
+	}
 	// Clear any pending funcs
 	c.postUnsealFuncs = nil
 	c.activeTime = time.Time{}
@@ -2208,6 +2342,7 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
 	c.stopActivityLog()
+
 	if err := c.teardownCredentials(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down credentials: %w", err))
 	}
@@ -2232,6 +2367,13 @@ func (c *Core) preSeal() error {
 
 	if seal, ok := c.seal.(*autoSeal); ok {
 		seal.StopHealthCheck()
+	}
+
+	if c.systemBackend != nil && c.systemBackend.mfaBackend != nil {
+		c.systemBackend.mfaBackend.usedCodes = nil
+	}
+	if err := c.teardownLoginMFA(); err != nil {
+		result = multierror.Append(result, fmt.Errorf("error tearing down login MFA, error: %w", err))
 	}
 
 	preSealPhysical(c)
@@ -2547,7 +2689,7 @@ func (c *Core) adjustSealConfigDuringMigration(existBarrierSealConfig, existReco
 	}
 }
 
-func (c *Core) unsealKeyToMasterKeyPostUnseal(ctx context.Context, combinedKey []byte) ([]byte, error) {
+func (c *Core) unsealKeyToRootKeyPostUnseal(ctx context.Context, combinedKey []byte) ([]byte, error) {
 	return c.unsealKeyToMasterKey(ctx, c.seal, combinedKey, true, false)
 }
 
@@ -2586,7 +2728,7 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, seal Seal, combinedKey 
 		}
 		return storedKeys[0], nil
 
-	case vaultseal.StoredKeysSupportedShamirMaster:
+	case vaultseal.StoredKeysSupportedShamirRoot:
 		if useTestSeal {
 			testseal := NewDefaultSeal(&vaultseal.Access{
 				Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
@@ -2682,6 +2824,19 @@ func (c *Core) SetLogLevel(level log.Level) {
 	for _, logger := range c.allLoggers {
 		logger.SetLevel(level)
 	}
+}
+
+func (c *Core) SetLogLevelByName(name string, level log.Level) error {
+	c.allLoggersLock.RLock()
+	defer c.allLoggersLock.RUnlock()
+	for _, logger := range c.allLoggers {
+		if logger.Name() == name {
+			logger.SetLevel(level)
+			return nil
+		}
+	}
+
+	return fmt.Errorf("logger %q does not exist", name)
 }
 
 // SetConfig sets core's config object to the newly provided config.
@@ -2945,4 +3100,255 @@ type LicenseState struct {
 	State      string
 	ExpiryTime time.Time
 	Terminated bool
+}
+
+func (c *Core) loadLoginMFAConfigs(ctx context.Context) error {
+	eConfigs := make([]*mfa.MFAEnforcementConfig, 0)
+	allNamespaces := c.collectNamespaces()
+	for _, ns := range allNamespaces {
+		err := c.loginMFABackend.loadMFAMethodConfigs(ctx, ns)
+		if err != nil {
+			return fmt.Errorf("error loading MFA method Config, namespaceid %s, error: %w", ns.ID, err)
+		}
+
+		loadedConfigs, err := c.loginMFABackend.loadMFAEnforcementConfigs(ctx, ns)
+		if err != nil {
+			return fmt.Errorf("error loading MFA enforcement Config, namespaceid %s, error: %w", ns.ID, err)
+		}
+
+		eConfigs = append(eConfigs, loadedConfigs...)
+	}
+
+	for _, conf := range eConfigs {
+		if err := c.loginMFABackend.loginMFAMethodExistenceCheck(conf); err != nil {
+			c.loginMFABackend.mfaLogger.Error("failed to find all MFA methods that exist in MFA enforcement configs", "configID", conf.ID, "namespaceID", conf.NamespaceID, "error", err.Error())
+		}
+	}
+	return nil
+}
+
+type MFACachedAuthResponse struct {
+	CachedAuth            *logical.Auth
+	RequestPath           string
+	RequestNSID           string
+	RequestNSPath         string
+	RequestConnRemoteAddr string
+	TimeOfStorage         time.Time
+	RequestID             string
+}
+
+func (c *Core) setupCachedMFAResponseAuth() {
+	c.mfaResponseAuthQueueLock.Lock()
+	c.mfaResponseAuthQueue = NewLoginMFAPriorityQueue()
+	mfaQueue := c.mfaResponseAuthQueue
+	c.mfaResponseAuthQueueLock.Unlock()
+
+	ctx := c.activeContext
+
+	go func() {
+		ticker := time.Tick(5 * time.Second)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker:
+				err := mfaQueue.RemoveExpiredMfaAuthResponse(defaultMFAAuthResponseTTL, time.Now())
+				if err != nil {
+					c.Logger().Error("failed to remove stale MFA auth response", "error", err)
+				}
+			}
+		}
+	}()
+	return
+}
+
+// PopMFAResponseAuthByID pops an item from the mfaResponseAuthQueue by ID
+// it returns the cached auth response or an error
+func (c *Core) PopMFAResponseAuthByID(reqID string) (*MFACachedAuthResponse, error) {
+	c.mfaResponseAuthQueueLock.Lock()
+	defer c.mfaResponseAuthQueueLock.Unlock()
+	return c.mfaResponseAuthQueue.PopByKey(reqID)
+}
+
+// SaveMFAResponseAuth pushes an MFACachedAuthResponse to the mfaResponseAuthQueue.
+// it returns an error in case of failure
+func (c *Core) SaveMFAResponseAuth(respAuth *MFACachedAuthResponse) error {
+	c.mfaResponseAuthQueueLock.Lock()
+	defer c.mfaResponseAuthQueueLock.Unlock()
+	return c.mfaResponseAuthQueue.Push(respAuth)
+}
+
+type InFlightRequests struct {
+	InFlightReqMap   *sync.Map
+	InFlightReqCount *uberAtomic.Uint64
+}
+
+type InFlightReqData struct {
+	StartTime        time.Time `json:"start_time"`
+	ClientRemoteAddr string    `json:"client_remote_address"`
+	ReqPath          string    `json:"request_path"`
+	Method           string    `json:"request_method"`
+	ClientID         string    `json:"client_id"`
+}
+
+func (c *Core) StoreInFlightReqData(reqID string, data InFlightReqData) {
+	c.inFlightReqData.InFlightReqMap.Store(reqID, data)
+	c.inFlightReqData.InFlightReqCount.Inc()
+}
+
+// FinalizeInFlightReqData is going log the completed request if the
+// corresponding server config option is enabled. It also removes the
+// request from the inFlightReqMap and decrement the number of in-flight
+// requests by one.
+func (c *Core) FinalizeInFlightReqData(reqID string, statusCode int) {
+	if c.logRequestsLevel != nil && c.logRequestsLevel.Load() != 0 {
+		c.LogCompletedRequests(reqID, statusCode)
+	}
+
+	c.inFlightReqData.InFlightReqMap.Delete(reqID)
+	c.inFlightReqData.InFlightReqCount.Dec()
+}
+
+// LoadInFlightReqData creates a snapshot map of the current
+// in-flight requests
+func (c *Core) LoadInFlightReqData() map[string]InFlightReqData {
+	currentInFlightReqMap := make(map[string]InFlightReqData)
+	c.inFlightReqData.InFlightReqMap.Range(func(key, value interface{}) bool {
+		// there is only one writer to this map, so skip checking for errors
+		v := value.(InFlightReqData)
+		currentInFlightReqMap[key.(string)] = v
+		return true
+	})
+
+	return currentInFlightReqMap
+}
+
+// UpdateInFlightReqData updates the data for a specific reqID with
+// the clientID
+func (c *Core) UpdateInFlightReqData(reqID, clientID string) {
+	v, ok := c.inFlightReqData.InFlightReqMap.Load(reqID)
+	if !ok {
+		c.Logger().Trace("failed to retrieve request with ID", "request_id", reqID)
+		return
+	}
+
+	// there is only one writer to this map, so skip checking for errors
+	reqData := v.(InFlightReqData)
+	reqData.ClientID = clientID
+	c.inFlightReqData.InFlightReqMap.Store(reqID, reqData)
+}
+
+// LogCompletedRequests Logs the completed request to the server logs
+func (c *Core) LogCompletedRequests(reqID string, statusCode int) {
+	logLevel := log.Level(c.logRequestsLevel.Load())
+	v, ok := c.inFlightReqData.InFlightReqMap.Load(reqID)
+	if !ok {
+		c.logger.Log(logLevel, fmt.Sprintf("failed to retrieve request with ID %v", reqID))
+		return
+	}
+
+	// there is only one writer to this map, so skip checking for errors
+	reqData := v.(InFlightReqData)
+	c.logger.Log(logLevel, "completed_request",
+		"start_time", reqData.StartTime.Format(time.RFC3339),
+		"duration", fmt.Sprintf("%dms", time.Now().Sub(reqData.StartTime).Milliseconds()),
+		"client_id", reqData.ClientID,
+		"client_address", reqData.ClientRemoteAddr, "status_code", statusCode, "request_path", reqData.ReqPath,
+		"request_method", reqData.Method)
+}
+
+func (c *Core) ReloadLogRequestsLevel() {
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return
+	}
+
+	infoLevel := conf.(*server.Config).LogRequestsLevel
+	switch {
+	case log.LevelFromString(infoLevel) > log.NoLevel && log.LevelFromString(infoLevel) < log.Off:
+		c.logRequestsLevel.Store(int32(log.LevelFromString(infoLevel)))
+	case infoLevel != "":
+		c.logger.Warn("invalid log_requests_level", "level", infoLevel)
+	}
+}
+
+type PeerNode struct {
+	Hostname       string    `json:"hostname"`
+	APIAddress     string    `json:"api_address"`
+	ClusterAddress string    `json:"cluster_address"`
+	Version        string    `json:"version"`
+	LastEcho       time.Time `json:"last_echo"`
+	UpgradeVersion string    `json:"upgrade_version,omitempty"`
+	RedundancyZone string    `json:"redundancy_zone,omitempty"`
+}
+
+// GetHAPeerNodesCached returns the nodes that've sent us Echo requests recently.
+func (c *Core) GetHAPeerNodesCached() []PeerNode {
+	var nodes []PeerNode
+	for itemClusterAddr, item := range c.clusterPeerClusterAddrsCache.Items() {
+		info := item.Object.(nodeHAConnectionInfo)
+		nodes = append(nodes, PeerNode{
+			Hostname:       info.nodeInfo.Hostname,
+			APIAddress:     info.nodeInfo.ApiAddr,
+			ClusterAddress: itemClusterAddr,
+			LastEcho:       info.lastHeartbeat,
+			Version:        info.version,
+			UpgradeVersion: info.upgradeVersion,
+			RedundancyZone: info.redundancyZone,
+		})
+	}
+	return nodes
+}
+
+func (c *Core) CheckPluginPerms(pluginName string) (err error) {
+	var enableFilePermissionsCheck bool
+	if enableFilePermissionsCheckEnv := os.Getenv(consts.VaultEnableFilePermissionsCheckEnv); enableFilePermissionsCheckEnv != "" {
+		var err error
+		enableFilePermissionsCheck, err = strconv.ParseBool(enableFilePermissionsCheckEnv)
+		if err != nil {
+			return errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
+		}
+	}
+
+	if c.pluginDirectory != "" && enableFilePermissionsCheck {
+		err = osutil.OwnerPermissionsMatch(c.pluginDirectory, c.pluginFileUid, c.pluginFilePermissions)
+		if err != nil {
+			return err
+		}
+		fullPath := filepath.Join(c.pluginDirectory, pluginName)
+		err = osutil.OwnerPermissionsMatch(fullPath, c.pluginFileUid, c.pluginFilePermissions)
+		if err != nil {
+			return err
+		}
+	}
+	return err
+}
+
+// DetermineRoleFromLoginRequest will determine the role that should be applied to a quota for a given
+// login request
+func (c *Core) DetermineRoleFromLoginRequest(mountPoint string, payload []byte, ctx context.Context) string {
+	matchingBackend := c.router.MatchingBackend(ctx, mountPoint)
+	if matchingBackend == nil || matchingBackend.Type() != logical.TypeCredential {
+		// Role based quotas do not apply to this request
+		return ""
+	}
+
+	data := make(map[string]interface{})
+	err := jsonutil.DecodeJSON(payload, &data)
+	if err != nil {
+		// Cannot discern a role from a request we cannot parse
+		return ""
+	}
+
+	resp, err := matchingBackend.HandleRequest(ctx, &logical.Request{
+		MountPoint: mountPoint,
+		Path:       "login",
+		Operation:  logical.ResolveRoleOperation,
+		Data:       data,
+		Storage:    c.router.MatchingStorageByAPIPath(ctx, mountPoint+"login"),
+	})
+	if err != nil || resp.Data["role"] == nil {
+		return ""
+	}
+	return resp.Data["role"].(string)
 }

@@ -1,0 +1,3 @@
+```release-note:deprecation
+secrets/consul: Deprecate parameter "policies" in favor of "consul_policies" for consistency
+```

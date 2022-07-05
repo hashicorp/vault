@@ -49,7 +49,7 @@ export default ApplicationAdapter.extend({
 
   fetchByQuery(store, query) {
     const { id, backend } = query;
-    return this.ajax(this.urlForRole(backend, id), 'GET', this.optionsForQuery(id)).then(resp => {
+    return this.ajax(this.urlForRole(backend, id), 'GET', this.optionsForQuery(id)).then((resp) => {
       const data = {
         id,
         name: id,
