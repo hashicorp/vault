@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"sync"
 
+	log "github.com/hashicorp/go-hclog"
+
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -75,12 +77,12 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 
 	b.config = conf
 
-	return &b, nil
+	return b.Backend, nil
 }
 
 // PluginBackend is a thin wrapper around plugin.BackendPluginClient
 type PluginBackend struct {
-	logical.Backend
+	Backend logical.Backend
 	sync.RWMutex
 
 	config *logical.BackendConfig
@@ -118,12 +120,12 @@ func (b *PluginBackend) startBackend(ctx context.Context, storage logical.Storag
 	if !b.loaded {
 		if b.Backend.Type() != nb.Type() {
 			nb.Cleanup(ctx)
-			b.Logger().Warn("failed to start plugin process", "plugin", b.config.Config["plugin_name"], "error", ErrMismatchType)
+			b.Backend.Logger().Warn("failed to start plugin process", "plugin", b.config.Config["plugin_name"], "error", ErrMismatchType)
 			return ErrMismatchType
 		}
 		if !reflect.DeepEqual(b.Backend.SpecialPaths(), nb.SpecialPaths()) {
 			nb.Cleanup(ctx)
-			b.Logger().Warn("failed to start plugin process", "plugin", b.config.Config["plugin_name"], "error", ErrMismatchPaths)
+			b.Backend.Logger().Warn("failed to start plugin process", "plugin", b.config.Config["plugin_name"], "error", ErrMismatchPaths)
 			return ErrMismatchPaths
 		}
 	}
@@ -169,7 +171,7 @@ func (b *PluginBackend) lazyLoadBackend(ctx context.Context, storage logical.Sto
 		// Reload plugin if it's an rpc.ErrShutdown
 		b.Lock()
 		if b.canary == canary {
-			b.Logger().Debug("reloading plugin backend", "plugin", b.config.Config["plugin_name"])
+			b.Backend.Logger().Debug("reloading plugin backend", "plugin", b.config.Config["plugin_name"])
 			err := b.startBackend(ctx, storage)
 			if err != nil {
 				b.Unlock()
@@ -219,4 +221,53 @@ func (b *PluginBackend) HandleExistenceCheck(ctx context.Context, req *logical.R
 // initialized when it is lazily loaded.
 func (b *PluginBackend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
 	return nil
+}
+
+// SpecialPaths is a thin wrapper used to ensure we grab the lock for race purposes
+func (b *PluginBackend) SpecialPaths() *logical.Paths {
+	b.Lock()
+	defer b.Unlock()
+	return b.Backend.SpecialPaths()
+}
+
+// System is a thin wrapper used to ensure we grab the lock for race purposes
+func (b *PluginBackend) System() logical.SystemView {
+	b.Lock()
+	defer b.Unlock()
+	return b.Backend.System()
+}
+
+// Logger is a thin wrapper used to ensure we grab the lock for race purposes
+func (b *PluginBackend) Logger() log.Logger {
+	b.Lock()
+	defer b.Unlock()
+	return b.Backend.Logger()
+}
+
+// Cleanup is a thin wrapper used to ensure we grab the lock for race purposes
+func (b *PluginBackend) Cleanup(ctx context.Context) {
+	b.Lock()
+	defer b.Unlock()
+	b.Backend.Cleanup(ctx)
+}
+
+// InvalidateKey is a thin wrapper used to ensure we grab the lock for race purposes
+func (b *PluginBackend) InvalidateKey(ctx context.Context, key string) {
+	b.Lock()
+	defer b.Unlock()
+	b.Backend.InvalidateKey(ctx, key)
+}
+
+// Setup is a thin wrapper used to ensure we grab the lock for race purposes
+func (b *PluginBackend) Setup(ctx context.Context, config *logical.BackendConfig) error {
+	b.Lock()
+	defer b.Unlock()
+	return b.Backend.Setup(ctx, config)
+}
+
+// Type is a thin wrapper used to ensure we grab the lock for race purposes
+func (b *PluginBackend) Type() logical.BackendType {
+	b.Lock()
+	defer b.Unlock()
+	return b.Backend.Type()
 }
