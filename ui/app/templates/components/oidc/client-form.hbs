@@ -9,7 +9,7 @@
               Applications
             </LinkTo>
           {{else}}
-            <LinkTo @route="vault.cluster.access.oidc.clients.client.details">
+            <LinkTo @route="vault.cluster.access.oidc.clients.client.details" @model={{@model.name}}>
               Details
             </LinkTo>
           {{/if}}
