@@ -184,9 +184,16 @@ server:
   extraEnvironmentVars:
     VAULT_CACERT: /vault/userconfig/vault-server-tls/vault.ca
 
-  extraVolumes:
-    - type: secret
-      name: vault-server-tls # Matches the ${SECRET_NAME} from above
+  volumes:
+    - name: userconfig-vault-server-tls
+      secret:
+        defaultMode: 420
+        secretName: vault-server-tls # Matches the ${SECRET_NAME} from above
+
+  volumeMounts:
+    - mountPath: /vault/userconfig/vault-server-tls
+      name: userconfig-vault-server-tls
+      readOnly: true
 
   standalone:
     enabled: true
