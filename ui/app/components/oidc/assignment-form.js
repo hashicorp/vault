@@ -71,7 +71,7 @@ export default class OidcAssignmentFormComponent extends Component {
 
   @action
   onGroupsSelect(selectedIds) {
-    const groupIds = this.args.model.GroupIds;
+    const groupIds = this.args.model.groupIds;
     handleHasManySelection(selectedIds, groupIds, this.store, 'identity/group');
   }
 }
