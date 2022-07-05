@@ -31,7 +31,6 @@ const (
 	deleteOp uint32 = 1 << iota
 	putOp
 	restoreCallbackOp
-
 	chunkingPrefix        = "raftchunking/"
 	databaseDirectoryName = "vault-db"
 )
@@ -43,6 +42,7 @@ var (
 	latestIndexKey     = []byte("latest_indexes")
 	latestConfigKey    = []byte("latest_config")
 	localNodeConfigKey = []byte("local_node_config")
+	pebbleWriteOptions = &pebble.WriteOptions{Sync: true}
 )
 
 // Verify FSM satisfies the correct interfaces
@@ -163,7 +163,7 @@ func (f *FSM) openDBFile(dbPath string) error {
 	default:
 		perms := st.Mode() & os.ModePerm
 		if perms&0o077 != 0 {
-			f.logger.Warn("raft FSM db file has wider permissions than needed",
+			f.logger.Warn("raft FSM db directory has wider permissions than needed",
 				"needed", os.FileMode(0o600), "existing", perms)
 		}
 	}
@@ -178,6 +178,11 @@ func (f *FSM) openDBFile(dbPath string) error {
 	metrics.MeasureSince([]string{"raft_storage", "fsm", "open_db_file"}, start)
 
 	val, closer, err := pebbleDB.Get(latestIndexKey)
+	defer func(c io.Closer) {
+		if c != nil {
+			_ = c.Close()
+		}
+	}(closer)
 	if err != nil && err != pebble.ErrNotFound {
 		return err
 	}
@@ -192,11 +197,13 @@ func (f *FSM) openDBFile(dbPath string) error {
 		atomic.StoreUint64(f.latestTerm, latest.Term)
 		atomic.StoreUint64(f.latestIndex, latest.Index)
 	}
-	if closer != nil {
-		closer.Close()
-	}
 
 	val, closer, err = pebbleDB.Get(latestConfigKey)
+	defer func(c io.Closer) {
+		if c != nil {
+			_ = c.Close()
+		}
+	}(closer)
 	if err != nil && err != pebble.ErrNotFound {
 		return err
 	}
@@ -209,9 +216,6 @@ func (f *FSM) openDBFile(dbPath string) error {
 
 		f.latestConfig.Store(&latest)
 	}
-	if closer != nil {
-		closer.Close()
-	}
 
 	f.db = pebbleDB
 	return nil
@@ -220,7 +224,6 @@ func (f *FSM) openDBFile(dbPath string) error {
 func (f *FSM) Close() error {
 	f.l.RLock()
 	defer f.l.RUnlock()
-
 	return f.db.Close()
 }
 
@@ -240,27 +243,35 @@ func writeSnapshotMetaToDB(metadata *raft.SnapshotMeta, db *pebble.DB) error {
 		return err
 	}
 
-	err = db.Set(append(configBucketPrefix, latestConfigKey...), configBytes, nil)
+	batch := db.NewBatch()
+	defer func() { _ = batch.Close() }()
+
+	err = batch.Set(append(configBucketPrefix, latestConfigKey...), configBytes, pebbleWriteOptions)
 	if err != nil {
 		return err
 	}
-	err = db.Set(append(configBucketPrefix, latestIndexKey...), indexBytes, nil)
+	err = batch.Set(append(configBucketPrefix, latestIndexKey...), indexBytes, pebbleWriteOptions)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	return batch.Commit(pebbleWriteOptions)
 }
 
 func (f *FSM) localNodeConfig() (*LocalNodeConfigValue, error) {
 	var configBytes []byte
 	key := append(configBucketPrefix, localNodeConfigKey...)
 
-	value, closer, err := f.db.Get(key)
-	if err != nil && err != pebble.ErrNotFound {
+	snap := f.db.NewSnapshot()
+	defer func() { _ = snap.Close() }()
+
+	value, closer, err := snap.Get(key)
+	defer func() {
 		if closer != nil {
-			closer.Close()
+			_ = closer.Close()
 		}
+	}()
+	if err != nil && err != pebble.ErrNotFound {
 		return nil, err
 	}
 
@@ -268,11 +279,6 @@ func (f *FSM) localNodeConfig() (*LocalNodeConfigValue, error) {
 		configBytes = make([]byte, len(value))
 		copy(configBytes, value)
 	}
-
-	if closer != nil {
-		closer.Close()
-	}
-
 	if configBytes == nil {
 		return nil, nil
 	}
@@ -293,7 +299,6 @@ func (f *FSM) localNodeConfig() (*LocalNodeConfigValue, error) {
 func (f *FSM) DesiredSuffrage() string {
 	f.l.RLock()
 	defer f.l.RUnlock()
-
 	return f.desiredSuffrage
 }
 
@@ -375,7 +380,7 @@ func (f *FSM) persistDesiredSuffrage(lnconfig *LocalNodeConfigValue) error {
 	}
 
 	key := append(configBucketPrefix, localNodeConfigKey...)
-	return f.db.Set(key, dsBytes, nil)
+	return f.db.Set(key, dsBytes, pebbleWriteOptions)
 }
 
 func (f *FSM) witnessSnapshot(metadata *raft.SnapshotMeta) error {
@@ -420,23 +425,25 @@ func (f *FSM) DeletePrefix(ctx context.Context, prefix string) error {
 	f.l.RLock()
 	defer f.l.RUnlock()
 
-	bt := f.db.NewIndexedBatch()
-	iter := bt.NewIter(nil)
+	batch := f.db.NewIndexedBatch()
+	defer func() { _ = batch.Close() }()
+
+	iter := batch.NewIter(nil)
+	defer func() { _ = iter.Close() }()
+
 	prefixBytes := append(dataBucketPrefix, []byte(prefix)...)
 
 	for iter.SeekGE(prefixBytes); iter.Valid(); iter.Next() {
 		k := iter.Key()
 
 		if bytes.HasPrefix(k, prefixBytes) {
-			if err := bt.Delete(k, nil); err != nil {
-				iter.Close()
+			if err := batch.Delete(k, nil); err != nil {
 				return err
 			}
 		}
 	}
 
-	iter.Close()
-	return bt.Commit(nil)
+	return batch.Commit(pebbleWriteOptions)
 }
 
 // Get retrieves the value at the given path from the pebble database.
@@ -452,12 +459,17 @@ func (f *FSM) Get(ctx context.Context, path string) (*physical.Entry, error) {
 	var found bool
 	key := append(dataBucketPrefix, []byte(path)...)
 
-	val, closer, err := f.db.Get(key)
-	if err != nil && err != pebble.ErrNotFound {
-		if closer != nil {
-			closer.Close()
-		}
+	snap := f.db.NewSnapshot()
+	defer func() { _ = snap.Close() }()
 
+	val, closer, err := snap.Get(key)
+	defer func() {
+		if closer != nil {
+			_ = closer.Close()
+		}
+	}()
+
+	if err != nil && err != pebble.ErrNotFound {
 		return nil, err
 	}
 
@@ -465,10 +477,6 @@ func (f *FSM) Get(ctx context.Context, path string) (*physical.Entry, error) {
 		found = true
 		valCopy = make([]byte, len(val))
 		copy(valCopy, val)
-	}
-
-	if closer != nil {
-		closer.Close()
 	}
 
 	if !found {
@@ -489,7 +497,7 @@ func (f *FSM) Put(ctx context.Context, entry *physical.Entry) error {
 	defer f.l.RUnlock()
 
 	key := append(dataBucketPrefix, []byte(entry.Key)...)
-	return f.db.Set(key, entry.Value, nil)
+	return f.db.Set(key, entry.Value, pebbleWriteOptions)
 }
 
 // List retrieves the set of keys with the given prefix from the pebble database.
@@ -502,9 +510,13 @@ func (f *FSM) List(ctx context.Context, prefix string) ([]string, error) {
 	defer f.l.RUnlock()
 
 	var keys []string
-	bt := f.db.NewIndexedBatch()
-	iter := bt.NewIter(nil)
 	prefixBytes := append(dataBucketPrefix, []byte(prefix)...)
+
+	batch := f.db.NewIndexedBatch()
+	defer func() { _ = batch.Close() }()
+
+	iter := batch.NewIter(nil)
+	defer func() { _ = iter.Close() }()
 
 	for iter.SeekGE(prefixBytes); iter.Valid(); iter.Next() {
 		k := iter.Key()
@@ -524,8 +536,6 @@ func (f *FSM) List(ctx context.Context, prefix string) ([]string, error) {
 		}
 	}
 
-	iter.Close()
-	bt.Close()
 	return keys, nil
 }
 
@@ -535,14 +545,16 @@ func (f *FSM) Transaction(ctx context.Context, txns []*physical.TxnEntry) error 
 	defer f.l.RUnlock()
 
 	// Start a write transaction.
-	bt := f.db.NewIndexedBatch()
+	batch := f.db.NewBatch()
+	defer func() { _ = batch.Close() }()
+
 	for _, txn := range txns {
 		var err error
 		switch txn.Operation {
 		case physical.PutOperation:
-			err = f.db.Set([]byte(txn.Entry.Key), txn.Entry.Value, nil)
+			err = batch.Set([]byte(txn.Entry.Key), txn.Entry.Value, pebbleWriteOptions)
 		case physical.DeleteOperation:
-			err = f.db.Delete([]byte(txn.Entry.Key), nil)
+			err = batch.Delete([]byte(txn.Entry.Key), pebbleWriteOptions)
 		default:
 			return fmt.Errorf("%q is not a supported transaction operation", txn.Operation)
 		}
@@ -550,7 +562,8 @@ func (f *FSM) Transaction(ctx context.Context, txns []*physical.TxnEntry) error 
 			return err
 		}
 	}
-	return bt.Commit(nil)
+
+	return batch.Commit(pebbleWriteOptions)
 }
 
 // ApplyBatch will apply a set of logs to the FSM. This is called from the raft
@@ -612,7 +625,9 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 		f.applyCallback()
 	}
 
-	bt := f.db.NewIndexedBatch()
+	batch := f.db.NewBatch()
+	defer func() { _ = batch.Close() }()
+
 	for _, commandRaw := range commands {
 		switch command := commandRaw.(type) {
 		case *LogData:
@@ -620,9 +635,9 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 				key := append(dataBucketPrefix, []byte(op.Key)...)
 				switch op.OpType {
 				case putOp:
-					err = bt.Set(key, op.Value, nil)
+					err = batch.Set(key, op.Value, pebbleWriteOptions)
 				case deleteOp:
-					err = bt.Delete(key, nil)
+					err = batch.Delete(key, pebbleWriteOptions)
 				case restoreCallbackOp:
 					if f.restoreCb != nil {
 						// Kick off the restore callback function in a go routine
@@ -639,7 +654,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 			if err != nil {
 				break
 			}
-			if err = bt.Set(key, configBytes, nil); err != nil {
+			if err = batch.Set(key, configBytes, pebbleWriteOptions); err != nil {
 				break
 			}
 		}
@@ -647,7 +662,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 
 	if len(logIndex) > 0 {
 		key := append(configBucketPrefix, latestIndexKey...)
-		err = bt.Set(key, logIndex, nil)
+		err = batch.Set(key, logIndex, pebbleWriteOptions)
 	}
 
 	if err != nil {
@@ -655,7 +670,11 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 		panic("failed to store data")
 	}
 
-	bt.Commit(nil)
+	err = batch.Commit(pebbleWriteOptions)
+	if err != nil {
+		f.logger.Error("failed to commit batch", "error", err)
+		panic("failed to commit batch")
+	}
 
 	// If we advanced the latest value, update the in-memory representation too.
 	if len(logIndex) > 0 {
@@ -706,12 +725,12 @@ func (f *FSM) writeTo(ctx context.Context, metaSink writeErrorCloser, sink write
 	defer f.l.RUnlock()
 
 	// snapshot the db first, so we get a consistent view of the data during this process
-	snapshot := f.db.NewSnapshot()
-	defer snapshot.Close()
+	snap := f.db.NewSnapshot()
+	defer func() { _ = snap.Close() }()
 
 	var err error
 
-	metaIter := snapshot.NewIter(&pebble.IterOptions{
+	metaIter := snap.NewIter(&pebble.IterOptions{
 		LowerBound: dataBucketPrefix,
 	})
 	copyIter, err := metaIter.Clone(pebble.CloneOptions{})
@@ -732,8 +751,8 @@ func (f *FSM) writeTo(ctx context.Context, metaSink writeErrorCloser, sink write
 			break
 		}
 	}
-	metaSink.Close()
-	metaIter.Close()
+	_ = metaSink.Close()
+	_ = metaIter.Close()
 
 	// Do the second scan for copy purposes.
 	for copyIter.First(); copyIter.Valid(); copyIter.Next() {
@@ -750,8 +769,8 @@ func (f *FSM) writeTo(ctx context.Context, metaSink writeErrorCloser, sink write
 			break
 		}
 	}
-	sink.CloseWithError(err)
-	copyIter.Close()
+	_ = sink.CloseWithError(err)
+	_ = copyIter.Close()
 }
 
 // Snapshot implements the FSM interface. It returns a noop snapshot object.
@@ -809,7 +828,6 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 	}
 
 	dbPath := filepath.Join(f.path, databaseDirectoryName)
-
 	f.logger.Info("installing snapshot to FSM")
 
 	// Install the new pebble database
@@ -821,10 +839,10 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 		f.logger.Info("snapshot installed")
 	}
 
-	// Open the db file. We want to do this regardless of if the above install
-	// worked. If the install failed we should try to open the old DB file.
+	// Open the db. We want to do this regardless of if the above install
+	// worked. If the install failed we should try to open the old db.
 	if err := f.openDBFile(dbPath); err != nil {
-		f.logger.Error("failed to open new database file", "error", err)
+		f.logger.Error("failed to open new database", "error", err)
 		retErr = multierror.Append(retErr, fmt.Errorf("failed to open new pebble database: %w", err))
 	}
 
@@ -929,13 +947,15 @@ func (f *FSMChunkStorage) StoreChunk(chunk *raftchunking.ChunkInfo) (bool, error
 
 	// Start a write transaction.
 	done := new(bool)
-	bt := f.f.db.NewIndexedBatch()
+	batch := f.f.db.NewBatch()
+	defer func() { _ = batch.Close() }()
+
 	byteKey := append(dataBucketPrefix, []byte(entry.Key)...)
-	if err := bt.Set(byteKey, entry.Value, nil); err != nil {
+	if err := batch.Set(byteKey, entry.Value, pebbleWriteOptions); err != nil {
 		return *done, fmt.Errorf("error storing chunk info: %w", err)
 	}
 
-	iter := bt.NewIter(&pebble.IterOptions{
+	iter := batch.NewIter(&pebble.IterOptions{
 		LowerBound: dataBucketPrefix,
 	})
 
@@ -958,7 +978,7 @@ func (f *FSMChunkStorage) StoreChunk(chunk *raftchunking.ChunkInfo) (bool, error
 		}
 	}
 
-	bt.Commit(nil)
+	batch.Commit(pebbleWriteOptions)
 	*done = uint32(len(keys)) == chunk.NumChunks
 	return *done, nil
 }

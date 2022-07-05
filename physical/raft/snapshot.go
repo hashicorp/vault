@@ -38,7 +38,7 @@ const (
 // to provide just-in-time snapshots without doing incremental data dumps.
 //
 // When a snapshot is being installed on the node we will Create and Write data
-// to it. This will cause the snapshot store to create a new pebble file and
+// to it. This will cause the snapshot store to create a new pebble database and
 // write the snapshot data to it. Then, we can simply rename the snapshot to the
 // FSM's filename. This allows us to atomically install the snapshot and
 // reduces the amount of disk i/o. Older snapshots are reaped on startup and
@@ -105,7 +105,7 @@ func NewPebbleSnapshotStore(base string, logger log.Logger, fsm *FSM) (*PebbleSn
 }
 
 // Create is used to start a new snapshot
-func (f *PebbleSnapshotStore) Create(version raft.SnapshotVersion, index, term uint64, configuration raft.Configuration, configurationIndex uint64, trans raft.Transport) (raft.SnapshotSink, error) {
+func (p *PebbleSnapshotStore) Create(version raft.SnapshotVersion, index, term uint64, configuration raft.Configuration, configurationIndex uint64, trans raft.Transport) (raft.SnapshotSink, error) {
 	// We only support version 1 snapshots at this time.
 	if version != 1 {
 		return nil, fmt.Errorf("unsupported snapshot version %d", version)
@@ -113,8 +113,8 @@ func (f *PebbleSnapshotStore) Create(version raft.SnapshotVersion, index, term u
 
 	// Create the sink
 	sink := &PebbleSnapshotSink{
-		store:  f,
-		logger: f.logger,
+		store:  p,
+		logger: p.logger,
 		meta: raft.SnapshotMeta{
 			Version:            version,
 			ID:                 pebbleSnapshotID,
@@ -132,8 +132,8 @@ func (f *PebbleSnapshotStore) Create(version raft.SnapshotVersion, index, term u
 // List returns available snapshots in the store. It only returns pebble
 // snapshots. No snapshot will be returned if there are no indexes in the
 // FSM.
-func (f *PebbleSnapshotStore) List() ([]*raft.SnapshotMeta, error) {
-	meta, err := f.getMetaFromFSM()
+func (p *PebbleSnapshotStore) List() ([]*raft.SnapshotMeta, error) {
+	meta, err := p.getMetaFromFSM()
 	if err != nil {
 		return nil, err
 	}
@@ -146,8 +146,8 @@ func (f *PebbleSnapshotStore) List() ([]*raft.SnapshotMeta, error) {
 	return []*raft.SnapshotMeta{meta}, nil
 }
 
-func (f *PebbleSnapshotStore) getMetaFromFSM() (*raft.SnapshotMeta, error) {
-	latestIndex, latestConfig := f.fsm.LatestState()
+func (p *PebbleSnapshotStore) getMetaFromFSM() (*raft.SnapshotMeta, error) {
+	latestIndex, latestConfig := p.fsm.LatestState()
 	meta := &raft.SnapshotMeta{
 		Version: 1,
 		ID:      pebbleSnapshotID,
@@ -163,16 +163,16 @@ func (f *PebbleSnapshotStore) getMetaFromFSM() (*raft.SnapshotMeta, error) {
 }
 
 // Open takes a snapshot ID and returns a ReadCloser for that snapshot.
-func (f *PebbleSnapshotStore) Open(id string) (*raft.SnapshotMeta, io.ReadCloser, error) {
+func (p *PebbleSnapshotStore) Open(id string) (*raft.SnapshotMeta, io.ReadCloser, error) {
 	if id == pebbleSnapshotID {
-		return f.openFromFSM()
+		return p.openFromFSM()
 	}
 
-	return f.openFromDirectory(id)
+	return p.openFromDirectory(id)
 }
 
-func (f *PebbleSnapshotStore) openFromFSM() (*raft.SnapshotMeta, io.ReadCloser, error) {
-	meta, err := f.getMetaFromFSM()
+func (p *PebbleSnapshotStore) openFromFSM() (*raft.SnapshotMeta, io.ReadCloser, error) {
+	meta, err := p.getMetaFromFSM()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -185,13 +185,13 @@ func (f *PebbleSnapshotStore) openFromFSM() (*raft.SnapshotMeta, io.ReadCloser, 
 	readCloser, writeCloser := io.Pipe()
 	metaReadCloser, metaWriteCloser := io.Pipe()
 	go func() {
-		f.fsm.writeTo(context.Background(), metaWriteCloser, writeCloser)
+		p.fsm.writeTo(context.Background(), metaWriteCloser, writeCloser)
 	}()
 
 	// Compute the size
 	n, err := io.Copy(ioutil.Discard, metaReadCloser)
 	if err != nil {
-		f.logger.Error("failed to read state file", "error", err)
+		p.logger.Error("failed to read state file", "error", err)
 		metaReadCloser.Close()
 		readCloser.Close()
 		return nil, nil, err
@@ -203,30 +203,34 @@ func (f *PebbleSnapshotStore) openFromFSM() (*raft.SnapshotMeta, io.ReadCloser, 
 	return meta, readCloser, nil
 }
 
-func (f *PebbleSnapshotStore) getMetaFromDB(id string) (*raft.SnapshotMeta, error) {
+func (p *PebbleSnapshotStore) getMetaFromDB(id string) (*raft.SnapshotMeta, error) {
 	if len(id) == 0 {
 		return nil, errors.New("can not open empty snapshot ID")
 	}
 
-	dirname := filepath.Join(f.path, id, databaseDirectoryName)
+	dirname := filepath.Join(p.path, id, databaseDirectoryName)
 	pebbleDB, err := pebble.Open(dirname, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer pebbleDB.Close()
+	defer func() { _ = pebbleDB.Close() }()
 
 	meta := &raft.SnapshotMeta{
 		Version: 1,
 		ID:      id,
 	}
 
-	key := append(configBucketPrefix, latestIndexKey...)
-	val, closer, err := pebbleDB.Get(key)
-	if err != nil && err != pebble.ErrNotFound {
-		if closer != nil {
-			closer.Close()
-		}
+	snap := pebbleDB.NewSnapshot()
+	defer func() { _ = snap.Close() }()
 
+	key := append(configBucketPrefix, latestIndexKey...)
+	val, closer, err := snap.Get(key)
+	defer func(c io.Closer) {
+		if c != nil {
+			_ = c.Close()
+		}
+	}(closer)
+	if err != nil && err != pebble.ErrNotFound {
 		return nil, err
 	}
 
@@ -240,15 +244,15 @@ func (f *PebbleSnapshotStore) getMetaFromDB(id string) (*raft.SnapshotMeta, erro
 		meta.Index = snapshotIndexes.Index
 		meta.Term = snapshotIndexes.Term
 	}
-	closer.Close()
 
 	key = append(configBucketPrefix, latestConfigKey...)
-	val, closer, err = pebbleDB.Get(key)
-	if err != nil && err != pebble.ErrNotFound {
-		if closer != nil {
-			closer.Close()
+	val, closer, err = snap.Get(key)
+	defer func(c io.Closer) {
+		if c != nil {
+			_ = c.Close()
 		}
-
+	}(closer)
+	if err != nil && err != pebble.ErrNotFound {
 		return nil, err
 	}
 
@@ -265,13 +269,13 @@ func (f *PebbleSnapshotStore) getMetaFromDB(id string) (*raft.SnapshotMeta, erro
 	return meta, nil
 }
 
-func (f *PebbleSnapshotStore) openFromDirectory(id string) (*raft.SnapshotMeta, io.ReadCloser, error) {
-	meta, err := f.getMetaFromDB(id)
+func (p *PebbleSnapshotStore) openFromDirectory(id string) (*raft.SnapshotMeta, io.ReadCloser, error) {
+	meta, err := p.getMetaFromDB(id)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	dirname := filepath.Join(f.path, id, databaseDirectoryName)
+	dirname := filepath.Join(p.path, id, databaseDirectoryName)
 	installer := &pebbleSnapshotInstaller{
 		meta:       meta,
 		ReadCloser: ioutil.NopCloser(strings.NewReader(dirname)),
@@ -282,14 +286,14 @@ func (f *PebbleSnapshotStore) openFromDirectory(id string) (*raft.SnapshotMeta, 
 }
 
 // ReapSnapshots reaps all snapshots.
-func (f *PebbleSnapshotStore) ReapSnapshots() error {
-	snapshots, err := ioutil.ReadDir(f.path)
+func (p *PebbleSnapshotStore) ReapSnapshots() error {
+	snapshots, err := ioutil.ReadDir(p.path)
 	switch {
 	case err == nil:
 	case os.IsNotExist(err):
 		return nil
 	default:
-		f.logger.Error("failed to scan snapshot directory", "error", err)
+		p.logger.Error("failed to scan snapshot directory", "error", err)
 		return err
 	}
 
@@ -303,13 +307,13 @@ func (f *PebbleSnapshotStore) ReapSnapshots() error {
 		// snapshot attempt. We still want to clean these up.
 		dirName := snap.Name()
 		if strings.HasSuffix(dirName, tmpSuffix) {
-			f.logger.Warn("found temporary snapshot", "name", dirName)
+			p.logger.Warn("found temporary snapshot", "name", dirName)
 		}
 
-		path := filepath.Join(f.path, dirName)
-		f.logger.Info("reaping snapshot", "path", path)
+		path := filepath.Join(p.path, dirName)
+		p.logger.Info("reaping snapshot", "path", path)
 		if err := os.RemoveAll(path); err != nil {
-			f.logger.Error("failed to reap snapshot", "path", snap.Name(), "error", err)
+			p.logger.Error("failed to reap snapshot", "path", snap.Name(), "error", err)
 			return err
 		}
 	}
@@ -347,6 +351,7 @@ func (s *PebbleSnapshotSink) writePebbleDatabase() error {
 
 	// Write the snapshot metadata
 	if err := writeSnapshotMetaToDB(&s.meta, pebbleDB); err != nil {
+		_ = pebbleDB.Close()
 		return err
 	}
 
@@ -369,7 +374,7 @@ func (s *PebbleSnapshotSink) writePebbleDatabase() error {
 	// call to the delimtedreader and the pebble database.
 	go func() {
 		defer close(s.doneWritingCh)
-		defer pebbleDB.Close()
+		defer func() { _ = pebbleDB.Close() }()
 
 		// The delimted reader will parse full proto messages from the snapshot
 		// data.
@@ -382,7 +387,7 @@ func (s *PebbleSnapshotSink) writePebbleDatabase() error {
 		entry := new(pb.StorageEntry)
 
 		for !done {
-			bt := pebbleDB.NewIndexedBatch()
+			batch := pebbleDB.NewBatch()
 
 			// Commit in batches of 50k. Pebble does some stuff I don't fully
 			// understand yet, but I don't have a reason for deviating from
@@ -396,7 +401,7 @@ func (s *PebbleSnapshotSink) writePebbleDatabase() error {
 				}
 
 				key := append(dataBucketPrefix, []byte(entry.Key)...)
-				err = bt.Set(key, entry.Value, nil)
+				err = batch.Set(key, entry.Value, pebbleWriteOptions)
 				if err != nil {
 					done = true
 				}
@@ -406,11 +411,13 @@ func (s *PebbleSnapshotSink) writePebbleDatabase() error {
 			if err != nil {
 				s.logger.Error("snapshot write: failed to write transaction", "error", err)
 				s.writeError = err
+				_ = batch.Close()
 				return
 			}
 
 			s.logger.Trace("snapshot write: writing keys", "num_written", keys)
-			bt.Commit(nil)
+			_ = batch.Commit(pebbleWriteOptions)
+			_ = batch.Close()
 		}
 	}()
 
@@ -526,6 +533,7 @@ func (i *pebbleSnapshotInstaller) Install(dirname string) error {
 	}
 
 	// Rename the snapshot to the FSM location
+	// TODO: make this better
 	// os.Rename doesn't overwrite directories that already exist, so to make this work
 	// I have to delete the old directory first. This is no longer atomic, which is a
 	// a bummer, but this is also hack week and I just want this to work.

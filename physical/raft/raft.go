@@ -384,7 +384,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 
 		// Create the backend raft store for logs and stable storage.
 		raftOptions := raftpebble.Options{
-			Path: filepath.Join(path, "raft.db"),
+			Path: filepath.Join(path, "raft-db"),
 		}
 		store, err := raftpebble.New(raftOptions)
 		if err != nil {
