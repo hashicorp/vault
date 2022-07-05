@@ -714,7 +714,7 @@ func (f *FSM) writeTo(ctx context.Context, metaSink writeErrorCloser, sink write
 	metaIter := snapshot.NewIter(&pebble.IterOptions{
 		LowerBound: dataBucketPrefix,
 	})
-	copyIter, err := metaIter.Clone()
+	copyIter, err := metaIter.Clone(pebble.CloneOptions{})
 
 	// Do the first scan of the data for metadata purposes.
 	for metaIter.First(); metaIter.Valid(); metaIter.Next() {
@@ -787,7 +787,7 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 			return fmt.Errorf("expected ReadCloserWrapper object, got: %T", r)
 		}
 		snapshotInstallerRaw := wrapper.WrappedReadCloser()
-		snapshotInstaller, ok = snapshotInstallerRaw.(*boltSnapshotInstaller)
+		snapshotInstaller, ok = snapshotInstallerRaw.(*pebbleSnapshotInstaller)
 		if !ok {
 			return fmt.Errorf("expected snapshot installer object, got: %T", snapshotInstallerRaw)
 		}

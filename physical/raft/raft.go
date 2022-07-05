@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/boltdb/bolt"
 	"github.com/cockroachdb/pebble"
 	"github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
@@ -575,26 +574,7 @@ func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
 }
 
 func (b *RaftBackend) collectMetricsWithStats(metrics *pebble.Metrics, sink *metricsutil.ClusterMetricSink, database string) {
-	// txstats := stats.TxStats
-	// labels := []metricsutil.Label{{"database", database}}
-	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "free_pages"}, float32(stats.FreePageN), labels)
-	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "pending_pages"}, float32(stats.PendingPageN), labels)
-	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "allocated_bytes"}, float32(stats.FreeAlloc), labels)
-	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "used_bytes"}, float32(stats.FreelistInuse), labels)
-	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "transaction", "started_read_transactions"}, float32(stats.TxN), labels)
-	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "transaction", "currently_open_read_transactions"}, float32(stats.OpenTxN), labels)
-	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "page", "count"}, float32(txstats.PageCount), labels)
-	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "page", "bytes_allocated"}, float32(txstats.PageAlloc), labels)
-	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "cursor", "count"}, float32(txstats.CursorCount), labels)
-	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "node", "count"}, float32(txstats.NodeCount), labels)
-	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "node", "dereferences"}, float32(txstats.NodeDeref), labels)
-	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "rebalance", "count"}, float32(txstats.Rebalance), labels)
-	// sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "rebalance", "time"}, float32(txstats.RebalanceTime), labels)
-	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "split", "count"}, float32(txstats.Split), labels)
-	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "spill", "count"}, float32(txstats.Spill), labels)
-	// sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "spill", "time"}, float32(txstats.SpillTime), labels)
-	// sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "write", "count"}, float32(txstats.Write), labels)
-	// sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "write", "time"}, float32(txstats.WriteTime), labels)
+	// TODO: put something useful here
 }
 
 // RaftServer has information about a server in the Raft configuration
@@ -1449,10 +1429,6 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 // or if the call to applyLog fails.
 func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "put"}, time.Now())
-	if len(entry.Key) > bolt.MaxKeySize {
-		return fmt.Errorf("%s, max key size for integrated storage is %d", physical.ErrKeyTooLarge, bolt.MaxKeySize)
-	}
-
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -1513,9 +1489,6 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 		op := &LogOperation{}
 		switch txn.Operation {
 		case physical.PutOperation:
-			if len(txn.Entry.Key) > bolt.MaxKeySize {
-				return fmt.Errorf("%s, max key size for integrated storage is %d", physical.ErrKeyTooLarge, bolt.MaxKeySize)
-			}
 			op.OpType = putOp
 			op.Key = txn.Entry.Key
 			op.Value = txn.Entry.Value
