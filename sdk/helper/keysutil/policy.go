@@ -1025,7 +1025,7 @@ func (p *Policy) HMACKey(version int) ([]byte, error) {
 	return keyEntry.HMACKey, nil
 }
 
-func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, sigAlgorithm string, marshaling MarshalingType) (*SigningResult, error) {
+func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, sigAlgorithm string, marshaling MarshalingType, pssSaltLength int) (*SigningResult, error) {
 	if !p.Type.SigningSupported() {
 		return nil, fmt.Errorf("message signing not supported for key type %v", p.Type)
 	}
@@ -1169,7 +1169,13 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 
 		switch sigAlgorithm {
 		case "pss":
-			sig, err = rsa.SignPSS(rand.Reader, key, algo, input, nil)
+			var pssOpts *rsa.PSSOptions = nil
+			if pssSaltLength != 0 {
+				pssOpts = &rsa.PSSOptions{
+					SaltLength: pssSaltLength,
+				}
+			}
+			sig, err = rsa.SignPSS(rand.Reader, key, algo, input, pssOpts)
 			if err != nil {
 				return nil, err
 			}

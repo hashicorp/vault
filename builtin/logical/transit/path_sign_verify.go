@@ -131,6 +131,11 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 				Default:     "asn1",
 				Description: `The method by which to marshal the signature. The default is 'asn1' which is used by openssl and X.509. It can also be set to 'jws' which is used for JWT signatures; setting it to this will also cause the encoding of the signature to be url-safe base64 instead of using standard base64 encoding. Currently only valid for ECDSA P-256 key types".`,
 			},
+			"pss_salt_length": {
+				Type:        framework.TypeInt,
+				Default:     0,
+				Description: `The Salt Length used for RSA-PSS-Signatures. Applies only to RSA key types. The default is 0 which delegates salt length choice to the underlying cryptographic library.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -217,6 +222,11 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 				Default:     "asn1",
 				Description: `The method by which to unmarshal the signature when verifying. The default is 'asn1' which is used by openssl and X.509; can also be set to 'jws' which is used for JWT signatures in which case the signature is also expected to be url-safe base64 encoding instead of standard base64 encoding. Currently only valid for ECDSA P-256 key types".`,
 			},
+			"pss_salt_length": {
+				Type:        framework.TypeInt,
+				Default:     0,
+				Description: `The Salt Length used for RSA-PSS-Signatures. Applies only to RSA key types. The default is 0 which delegates salt length choice to the underlying cryptographic library.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -238,6 +248,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 			hashAlgorithmStr = d.Get("algorithm").(string)
 		}
 	}
+	pssSaltLength := d.Get("pss_salt_length").(int)
 
 	hashAlgorithm, ok := keysutil.HashTypeMap[hashAlgorithmStr]
 	if !ok {
@@ -330,7 +341,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 			}
 		}
 
-		sig, err := p.Sign(ver, context, input, hashAlgorithm, sigAlgorithm, marshaling)
+		sig, err := p.Sign(ver, context, input, hashAlgorithm, sigAlgorithm, marshaling, pssSaltLength)
 		if err != nil {
 			if batchInputRaw != nil {
 				response[i].Error = err.Error()
