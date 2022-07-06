@@ -29,6 +29,7 @@ import layout from '../templates/components/search-select';
  * @param {string} [wildcardLabel] - when you want the searchSelect component to return a count on the model for options returned when using a wildcard you must provide a label of the count e.g. role.  Should be singular.
  * @param {string} [placeholder] - text you wish to replace the default "search" with
  * @param {boolean} [displayInherit] - if you need the search select component to display inherit instead of box.
+ * @param {array} [removeOptions] - array of strings containing option names or model ids to filter from the dropdown (ex: 'allow_all)
  *
  * @param {Array} options - *Advanced usage* - `options` can be passed directly from the outside to the
  * power-select component. If doing this, `models` should not also be passed as that will overwrite the
@@ -52,6 +53,7 @@ export default Component.extend({
   allOptions: null, // list of options including matched
   selectedOptions: null, // list of selected options
   options: null, // all possible options
+  removeOptions: null, // array of strings passed as an arg to remove from dropdown
   shouldUseFallback: false,
   shouldRenderName: false,
   disallowNewItems: false,
@@ -72,11 +74,15 @@ export default Component.extend({
     this.set('oldOptions', options);
   },
   formatOptions: function (options) {
-    options = options.toArray().map((option) => {
+    options = options.toArray();
+    if (this.removeOptions && this.removeOptions.length > 0) {
+      options = options.filter((o) => !this.removeOptions.includes(o.id));
+    }
+    options = options.map((option) => {
       option.searchText = `${option.name} ${option.id}`;
       return option;
     });
-    let allOptions = options.toArray().map((option) => {
+    let allOptions = options.map((option) => {
       return option.id;
     });
     this.set('allOptions', allOptions); // used by filter-wildcard helper
@@ -89,9 +95,11 @@ export default Component.extend({
         searchText: matchingOption ? matchingOption.searchText : option,
       };
     });
-
     this.set('selectedOptions', formattedOptions);
     if (this.options) {
+      if (this.removeOptions && this.removeOptions.length > 0) {
+        options = this.options.filter((o) => !this.removeOptions.includes(o.id));
+      }
       options = this.options.concat(options).uniq();
     }
     this.set('options', options);

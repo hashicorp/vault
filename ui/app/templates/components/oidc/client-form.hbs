@@ -24,7 +24,6 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
-
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-bottomless">
     <MessageError @errorMessage={{this.error}} class="has-top-margin-s" />
@@ -64,6 +63,7 @@
         @models={{array "oidc/assignment"}}
         @inputValue={{map-by "id" @model.assignments}}
         @onChange={{this.selectAssignments}}
+        @removeOptions={{array "allow_all"}}
       />
     {{/if}}
   </div>
