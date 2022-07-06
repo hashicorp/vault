@@ -8,6 +8,7 @@ module('Integration | Component | okta-number-challenge', function (hooks) {
 
   hooks.beforeEach(function () {
     this.oktaNumberChallengeAnswer = null;
+    this.hasError = false;
   });
 
   test('it should render correct descriptions', async function (assert) {
@@ -46,5 +47,21 @@ module('Integration | Component | okta-number-challenge', function (hooks) {
     assert
       .dom('[data-test-okta-number-challenge-answer]')
       .includesText('1', 'Correct okta number challenge answer renders');
+  });
+
+  test('it should show error screen', async function (assert) {
+    this.set('hasError', true);
+    await render(
+      hbs`<OktaNumberChallenge @correctAnswer={{this.oktaNumberChallengeAnswer}} @hasError={{this.hasError}}/>`
+    );
+    assert
+      .dom('[data-test-okta-number-challenge-description]')
+      .includesText(
+        'To finish signing in, you will need to complete an additional MFA step.',
+        'Correct description renders'
+      );
+    assert
+      .dom('[data-test-error]')
+      .includesText('There was a problem', 'Shows error that there was a problem');
   });
 });
