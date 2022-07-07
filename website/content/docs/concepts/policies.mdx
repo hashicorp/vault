@@ -8,7 +8,7 @@ description: >-
 
 # Policies
 
-Everything in Vault is path based, and policies are no exception. Policies
+Everything in Vault is path-based, and policies are no exception. Policies
 provide a declarative way to grant or forbid access to certain paths and
 operations in Vault. This section discusses policy workflows and syntaxes.
 
@@ -169,7 +169,7 @@ corresponding path and capability - even Vault's internal core configuration
 endpoints live under the `"sys/"` path. Policies define access to these paths and
 capabilities, which controls a token's access to credentials in Vault.
 
-~> The policy rules that Vault applies are determined by the most-specific match
+~> **Note:** The policy rules that Vault applies are determined by the most-specific match
 available, using the priority rules described below. This may be an exact match
 or the longest-prefix match of a glob. If the same pattern appears in multiple
 policies, we take the union of the capabilities. If different patterns appear in
@@ -191,7 +191,7 @@ wildcard appears in the same place, both end in `*` and the latter has two wildc
 segments while the former has zero. So we end at rule (3), and give `"secret/+/+/foo/*"`
 _lower_ priority.
 
-!> The glob character referred to in this documentation is the asterisk (`*`).
+!> **Informational:**The glob character referred to in this documentation is the asterisk (`*`).
 It _is not a regular expression_ and is only supported **as the last character of the path**!
 
 When providing `list` capability, it is important to note that since listing
@@ -203,13 +203,12 @@ will sanitize request paths to be prefixes.
 Each path must define one or more capabilities which provide fine-grained
 control over permitted (or denied) operations. As shown in the examples above,
 capabilities are always specified as a list of strings, even if there is only
-one capability. The list of capabilities are:
+one capability.
 
-~> In the list below, the associated HTTP verbs are shown in parenthesis next to
-the capability. When authoring policy, it is usually helpful to look at the HTTP
-API documentation for the paths and HTTP verbs and map them back onto
-capabilities. While the mapping is not strictly 1:1, they are often very
-similarly matched.
+To determine the capabilities needed to perform a specific operation, the `-output-policy` flag can be added to the CLI subcommand. For an example, refer to the [Print Policy Requirements](/docs/commands#print-policy-requirements) document section.
+
+
+The list of capabilities include the following:
 
 - `create` (`POST/PUT`) - Allows creating data at the given path. Very few
   parts of Vault distinguish between `create` and `update`, so most operations
@@ -230,6 +229,12 @@ similarly matched.
   keys returned by a `list` operation are _not_ filtered by policies. Do not
   encode sensitive information in key names. Not all backends support listing.
 
+In the list above, the associated HTTP verbs are shown in parenthesis next to
+the capability. When authoring policy, it is usually helpful to look at the HTTP
+API documentation for the paths and HTTP verbs and map them back onto
+capabilities. While the mapping is not strictly 1:1, they are often very
+similarly matched.
+
 In addition to the standard set, there are some capabilities that do not map to
 HTTP verbs.
 
@@ -244,7 +249,7 @@ HTTP verbs.
 - `deny` - Disallows access. This always takes precedence regardless of any
   other defined capabilities, including `sudo`.
 
-~> Note that capabilities usually map to the HTTP verb, not the underlying
+~> **Note:** Capabilities usually map to the HTTP verb, and not the underlying
 action taken. This can be a common source of confusion. Generating database
 credentials _creates_ database credentials, but the HTTP request is a GET which
 corresponds to a `read` capability. Thus, to grant access to generate database
@@ -300,7 +305,7 @@ path "secret/metadata/groups/{{identity.groups.ids.fb036ebc-2f62-4124-9503-42aa7
 }
 ```
 
-~> When developing templated policies, use IDs wherever possible. Each ID is
+~> **Note:** When developing templated policies, use IDs wherever possible. Each ID is
 unique to the user, whereas names can change over time and can be reused. This
 ensures that if a given user or group name is changed, the policy will be
 mapped to the intended entity or group.
@@ -336,7 +341,7 @@ path take precedence over permissions on parameters.
 
 ### Parameter Constraints
 
--> **Note:**: The `allowed_parameters`, `denied_parameters`, and `required_parameters` fields are not supported for policies used with the version 2 kv store.
+~> **Note:**: The `allowed_parameters`, `denied_parameters`, and `required_parameters` fields are not supported for policies used with the version 2 kv store.
 
 See the [API Specification](/api-docs/secret/kv/kv-v2) for more information.
 
@@ -487,7 +492,7 @@ path "secret/foo" {
 }
 ```
 
-Note: the only value that can be used with the `*` parameter is `[]`.
+~> **Note:** the only value that can be used with the `*` parameter is `[]`.
 
 ### Required Response Wrapping TTLs
 
@@ -620,7 +625,7 @@ $ curl \
   https://vault.hashicorp.rocks/v1/sys/policy
 ```
 
-~> You may also see the CLI command `vault policies`. This is a convenience
+~> **Note:** You may also see the CLI command `vault policies`. This is a convenience
 wrapper around reading the sys endpoint directly. It provides the same
 functionality but formats the output in a special manner.
 
