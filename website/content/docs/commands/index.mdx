@@ -87,7 +87,7 @@ curl -X PUT -H "X-Vault-Request: true" -H "X-Vault-Token: $(vault print token)" 
 
 #### Print Policy Requirements
 
-To view the policy requirements and perform an operation, use the `-output-policy` flag after the subcommand.
+To view the policy requirements to perform an operation, use the `-output-policy` flag after the subcommand.
 
 ```
 $ vault kv put -output-policy kv/secret value=itsasecret
