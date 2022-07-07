@@ -35,11 +35,11 @@
         spellcheck="false"
         value={{@model.name}}
         disabled={{not @model.isNew}}
-        class="input field {{if this.errors.name.errors 'has-error-border'}}"
+        class="input field {{if this.modelValidations.name.errors 'has-error-border'}}"
         {{on "input" this.handleOperation}}
       />
-      {{#if this.errors.name.errors}}
-        <AlertInline @type="danger" @message={{join ", " this.errors.name.errors}} />
+      {{#if this.modelValidations.name.errors}}
+        <AlertInline @type="danger" @message={{join ", " this.modelValidations.name.errors}} />
       {{/if}}
 
       <SearchSelect

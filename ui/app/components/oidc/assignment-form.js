@@ -27,11 +27,7 @@ export default class OidcAssignmentFormComponent extends Component {
   @service store;
   @service flashMessages;
 
-  @tracked modelErrors;
-
-  get errors() {
-    return this.args.modelErrors || this.modelErrors;
-  }
+  @tracked modelValidations;
 
   @task
   *save() {

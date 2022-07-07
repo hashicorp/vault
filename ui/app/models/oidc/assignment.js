@@ -4,7 +4,7 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 
 const validations = {
   name: [
-    { type: 'presence', message: 'Name is required' },
+    { type: 'presence', message: 'Name is required.' },
     // ARG TODO add in after Claire pushes her branch
     // {
     //   type: 'containsWhiteSpace',
