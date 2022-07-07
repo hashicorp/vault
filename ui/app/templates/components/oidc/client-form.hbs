@@ -36,35 +36,40 @@
   </div>
   {{! RADIO CARD + SEARCH SELECT }}
   <div class="box is-sideless is-fullwidth is-marginless has-top-padding-xxl">
-    <h4 class="title is-4">Assign access</h4>
-    <div class="is-flex-row">
-      <RadioCard
-        @title="Allow everyone to access existing"
-        @description="All Vault entities can authenticate through this application."
-        @icon="org"
-        @value="allow_all"
-        @groupValue={{this.radioCardGroupValue}}
-        @onChange={{fn (mut this.radioCardGroupValue)}}
-      />
-      <RadioCard
-        @title="Limit access to selected users"
-        @description="Choose or create an assignment to give access to selected entities."
-        @icon="users"
-        @value="limited"
-        @groupValue={{this.radioCardGroupValue}}
-        @onChange={{fn (mut this.radioCardGroupValue)}}
-      />
-    </div>
-    {{#if (eq this.radioCardGroupValue "limited")}}
-      <SearchSelect
-        @label="Assignment name"
-        @labelClass="is-label"
-        @subText="Search for an existing assignment, or type a new name to create it."
-        @models={{array "oidc/assignment"}}
-        @inputValue={{map-by "id" @model.assignments}}
-        @onChange={{this.selectAssignments}}
-        @removeOptions={{array "allow_all"}}
-      />
+    {{#if @model.assignments.isFulfilled}}
+      <h4 class="title is-4">Assign access</h4>
+      <div class="is-flex-row">
+        <RadioCard
+          @title="Allow everyone to access existing"
+          @description="All Vault entities can authenticate through this application."
+          @icon="org"
+          @value="allow_all"
+          @groupValue={{this.radioCardGroupValue}}
+          @onChange={{this.onChange}}
+        />
+        <RadioCard
+          @title="Limit access to selected users"
+          @description="Choose or create an assignment to give access to selected entities."
+          @icon="users"
+          @value="limited"
+          @groupValue={{this.radioCardGroupValue}}
+          @onChange={{this.onChange}}
+        />
+      </div>
+      {{#if (eq this.radioCardGroupValue "limited")}}
+        <SearchSelect
+          @id="assignments"
+          @label="Assignment name"
+          @labelClass="is-label"
+          @subText="Search for an existing assignment, or type a new name to create it."
+          @models={{array "oidc/assignment"}}
+          @inputValue={{map-by "id" @model.assignments}}
+          @onChange={{this.onChange}}
+          {{! since this is the "limited" radio select option we do not want to include 'allow_all' }}
+          @removeOptions={{array "allow_all"}}
+          @fallbackComponent="string-list"
+        />
+      {{/if}}
     {{/if}}
   </div>
   <div class="field box is-fullwidth is-bottomless">

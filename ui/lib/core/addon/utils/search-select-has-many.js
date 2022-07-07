@@ -17,11 +17,18 @@
 
 export default function handleHasManySelection(selectedIds, modelCollection, store, modelRecord) {
   // first check for existing models that have been removed from selection
+  let removeModels = [];
   modelCollection.forEach((model) => {
     if (!selectedIds.includes(model.id)) {
-      modelCollection.removeObject(model);
+      removeModels.push(model);
     }
   });
+  modelCollection.removeObjects(removeModels);
+  // modelCollection.forEach((model) => {
+  //   if (!selectedIds.includes(model.id)) {
+  //     modelCollection.removeObject(model);
+  //   }
+  // });
   // now check for selected items that don't exist and add them to the model
   const modelIds = modelCollection.mapBy('id');
   selectedIds.forEach((id) => {

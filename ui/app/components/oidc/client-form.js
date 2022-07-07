@@ -4,7 +4,6 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import handleHasManySelection from 'core/utils/search-select-has-many';
-
 /**
  * @module OidcClientForm
  * OidcClientForm components are used to create and update OIDC clients (a.k.a. applications)
@@ -22,23 +21,44 @@ import handleHasManySelection from 'core/utils/search-select-has-many';
 
 export default class OidcClientForm extends Component {
   @service store;
-  @service router;
   @service flashMessages;
 
   @tracked modelValidations;
-  @tracked showMoreOptions = false;
-  @tracked radioCardGroupValue = 'allow_all';
+  @tracked radioCardGroupValue;
+  @tracked selectedAssignments;
+
+  constructor() {
+    super(...arguments);
+    this.fetchAssignments();
+  }
+
+  async fetchAssignments() {
+    const assignments = (await this.args.model.assignments).toArray().mapBy('id');
+    this.radioCardGroupValue =
+      assignments.length === 0 || assignments.includes('allow_all') ? 'allow_all' : 'limited';
+  }
 
   @action
-  async selectAssignments(selectedIds) {
+  onChange(selection) {
+    if (typeof selection === 'string') this.radioCardGroupValue = selection;
+    if (Array.isArray(selection)) {
+      this.selectedAssignments = selection;
+    }
+  }
+
+  @action
+  async handleAssignmentSelection() {
     const assignments = await this.args.model.assignments;
-    handleHasManySelection(selectedIds, assignments, this.store, 'oidc/assignment');
+    console.log(assignments, 'assignments');
+    let selection = this.radioCardGroupValue === 'allow_all' ? ['allow_all'] : this.selectedAssignments;
+    handleHasManySelection(selection, assignments.toArray(), this.store, 'oidc/assignment');
   }
 
   @task
   *save(event) {
     event.preventDefault();
     try {
+      this.handleAssignmentSelection();
       const { isValid, state } = this.args.model.validate();
       this.modelValidations = isValid ? null : state;
       if (isValid) {
