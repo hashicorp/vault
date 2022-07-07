@@ -587,7 +587,7 @@ func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*ro
 		modified = true
 	}
 
-	// Ensure the role is valida fter updating.
+	// Ensure the role is valid after updating.
 	_, err = validateRole(b, &result, ctx, s)
 	if err != nil {
 		return nil, err
