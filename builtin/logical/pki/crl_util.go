@@ -898,6 +898,9 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 				lastCompleteNumber = crlNumber - 1
 			}
 
+            // Update `LastModified`
+			crlConfig.LastModified = time.Now().In(time.FixedZone("GMT", 0))
+
 			// Lastly, build the CRL.
 			nextUpdate, err := buildCRL(sc, globalCRLConfig, forceNew, representative, revokedCerts, crlIdentifier, crlNumber, isDelta, lastCompleteNumber)
 			if err != nil {

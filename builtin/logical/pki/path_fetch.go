@@ -156,6 +156,8 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 	var certificate []byte
 	var fullChain []byte
 	var revocationTime int64
+	var httpStatusCode int
+	responseHeaders := map[string][]string{}
 	response = &logical.Response{
 		Data: map[string]interface{}{},
 	}
@@ -179,6 +181,19 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 			contentType = "application/pkix-cert"
 		}
 	case req.Path == "crl" || req.Path == "crl/pem" || req.Path == "crl/delta" || req.Path == "crl/delta/pem":
+		if hasHeader(headerIfModifiedSince, req) {
+            // Maybe a sc declared at the top of function?
+		    sc := b.makeStorageContext(ctx, req.Storage)
+			before, err := isIfModifiedSinceBeforeLastModified(sc, req, responseHeaders)
+			if err != nil || before {
+				retErr = err
+				if before {
+					httpStatusCode = 304
+				}
+				goto reply
+			}
+		}
+
 		serial = legacyCRLPath
 		if req.Path == "crl/delta" || req.Path == "crl/delta/pem" {
 			serial = deltaCRLPath
@@ -330,6 +345,19 @@ reply:
 		return
 	case response.IsError():
 		return response, nil
+	case httpStatusCode != 0:
+		response = &logical.Response{
+			Data: map[string]interface{}{
+				logical.HTTPContentType: contentType,
+				logical.HTTPRawBody:     certificate,
+			},
+		}
+		retErr = nil
+		response.Data[logical.HTTPStatusCode] = httpStatusCode
+		switch {
+		case httpStatusCode == 304:
+			response.Headers = responseHeaders
+		}
 	default:
 		response.Data["certificate"] = string(certificate)
 		response.Data["revocation_time"] = revocationTime
