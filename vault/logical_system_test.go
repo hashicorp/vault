@@ -4628,7 +4628,6 @@ func TestSystemBackend_Loggers(t *testing.T) {
 			t.Parallel()
 
 			core, b, _ := testCoreSystemBackend(t)
-			config := core.GetCoreConfigInternal()
 
 			req := &logical.Request{
 				Path:      "loggers",
@@ -4668,7 +4667,7 @@ func TestSystemBackend_Loggers(t *testing.T) {
 			}
 
 			for _, logger := range core.allLoggers {
-				if !validateLevel(config.LogLevel, logger) {
+				if !validateLevel(core.logLevel, logger) {
 					t.Errorf("expected level of logger %q to match original config", logger.Name())
 				}
 			}
@@ -4764,7 +4763,6 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 			t.Parallel()
 
 			core, b, _ := testCoreSystemBackend(t)
-			config := core.GetCoreConfigInternal()
 
 			req := &logical.Request{
 				Path:      fmt.Sprintf("loggers/%s", tc.logger),
@@ -4788,7 +4786,7 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 
 			if !tc.expectWriteError {
 				for _, logger := range core.allLoggers {
-					if logger.Name() != tc.logger && !validateLevel(config.LogLevel, logger) {
+					if logger.Name() != tc.logger && !validateLevel(core.logLevel, logger) {
 						t.Errorf("expected level of logger %q to be unchanged", logger.Name())
 					}
 
@@ -4819,7 +4817,7 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 
 			if !tc.expectDeleteError {
 				for _, logger := range core.allLoggers {
-					if !validateLevel(config.LogLevel, logger) {
+					if !validateLevel(core.logLevel, logger) {
 						t.Errorf("expected level of logger %q to match original config", logger.Name())
 					}
 				}
