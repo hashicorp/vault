@@ -24,8 +24,8 @@ export default class OidcClientForm extends Component {
   @service flashMessages;
 
   @tracked modelValidations;
-  @tracked radioCardGroupValue;
-  @tracked selectedAssignments;
+  @tracked radioCardGroupValue = 'allow_all';
+  @tracked selectedAssignments = ['allow_all']; // default is 'allow_all' so no selected assignments
 
   constructor() {
     super(...arguments);
@@ -33,37 +33,47 @@ export default class OidcClientForm extends Component {
   }
 
   async fetchAssignments() {
-    const assignments = (await this.args.model.assignments).toArray().mapBy('id');
+    const assignmentIds = (await this.args.model.assignments).toArray().mapBy('id');
     this.radioCardGroupValue =
-      assignments.length === 0 || assignments.includes('allow_all') ? 'allow_all' : 'limited';
+      assignmentIds.length === 0 || assignmentIds.includes('allow_all') ? 'allow_all' : 'limited';
   }
 
-  @action
-  onChange(selection) {
-    if (typeof selection === 'string') this.radioCardGroupValue = selection;
-    if (Array.isArray(selection)) {
-      this.selectedAssignments = selection;
+  @action handleSearchSelect(selectedIds) {
+    this.selectedAssignments = this.radioCardGroupValue === 'allow_all' ? ['allow_all'] : selectedIds;
+  }
+
+  async selectModelAssignments() {
+    const modelAssignments = await this.args.model.assignments;
+    if (this.radioCardGroupValue === 'limited') {
+      handleHasManySelection(
+        this.selectedAssignments,
+        modelAssignments,
+        this.store,
+        'oidc/assignment',
+        this.args.model
+      );
+    } else {
+      // search select hasn't queried the assignments unless the "limit" radio select has been interacted with
+      // so need to make a network request to fetch allow_all record
+      // move to init?
+      const allowAllRecord = await this.store.findRecord('oidc/assignment', 'allow_all');
+      modelAssignments.addObject(allowAllRecord);
+      this.args.model.save();
     }
-  }
-
-  @action
-  async handleAssignmentSelection() {
-    const assignments = await this.args.model.assignments;
-    console.log(assignments, 'assignments');
-    let selection = this.radioCardGroupValue === 'allow_all' ? ['allow_all'] : this.selectedAssignments;
-    handleHasManySelection(selection, assignments.toArray(), this.store, 'oidc/assignment');
   }
 
   @task
   *save(event) {
     event.preventDefault();
     try {
-      this.handleAssignmentSelection();
       const { isValid, state } = this.args.model.validate();
       this.modelValidations = isValid ? null : state;
       if (isValid) {
+        this.selectModelAssignments();
         yield this.args.model.save();
-        this.flashMessages.success('Successfully created an application');
+        this.flashMessages.success(
+          `Successfully ${this.args.model.isNew ? 'created an' : 'updated'} application`
+        );
         this.args.onSave();
       }
     } catch (error) {

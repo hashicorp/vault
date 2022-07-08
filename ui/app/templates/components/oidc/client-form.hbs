@@ -45,7 +45,7 @@
           @icon="org"
           @value="allow_all"
           @groupValue={{this.radioCardGroupValue}}
-          @onChange={{this.onChange}}
+          @onChange={{fn (mut this.radioCardGroupValue)}}
         />
         <RadioCard
           @title="Limit access to selected users"
@@ -53,7 +53,7 @@
           @icon="users"
           @value="limited"
           @groupValue={{this.radioCardGroupValue}}
-          @onChange={{this.onChange}}
+          @onChange={{fn (mut this.radioCardGroupValue)}}
         />
       </div>
       {{#if (eq this.radioCardGroupValue "limited")}}
@@ -64,7 +64,7 @@
           @subText="Search for an existing assignment, or type a new name to create it."
           @models={{array "oidc/assignment"}}
           @inputValue={{map-by "id" @model.assignments}}
-          @onChange={{this.onChange}}
+          @onChange={{this.handleSearchSelect}}
           {{! since this is the "limited" radio select option we do not want to include 'allow_all' }}
           @removeOptions={{array "allow_all"}}
           @fallbackComponent="string-list"
