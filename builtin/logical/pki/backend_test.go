@@ -2645,23 +2645,6 @@ func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 	}
 }
 
-func getSelfSigned(t *testing.T, subject, issuer *x509.Certificate, key *rsa.PrivateKey) (string, *x509.Certificate) {
-	t.Helper()
-	selfSigned, err := x509.CreateCertificate(rand.Reader, subject, issuer, key.Public(), key)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cert, err := x509.ParseCertificate(selfSigned)
-	if err != nil {
-		t.Fatal(err)
-	}
-	pemSS := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: selfSigned,
-	})))
-	return pemSS, cert
-}
-
 // This is a really tricky test because the Go stdlib asn1 package is incapable
 // of doing the right thing with custom OID SANs (see comments in the package,
 // it's readily admitted that it's too magic) but that means that any
