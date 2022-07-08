@@ -840,9 +840,9 @@ func signCert(b *backend,
 		//
 		// We ignore the role's original KeyBits value if the KeyType is any
 		// as legacy (pre-1.10) roles had default values that made sense only
-		// for RSA keys (2048) and the older code paths ignored the role value
+		// for RSA keys (key_bits=2048) and the older code paths ignored the role value
 		// set for KeyBits when KeyType was set to any. This also enforces the
-		// docs saying when key_type any we only enforce our specified minimums
+		// docs saying when key_type=any, we only enforce our specified minimums
 		// for signing operations
 		if data.role.KeyBits, data.role.SignatureBits, err = certutil.ValidateDefaultOrValueKeyTypeSignatureLength(
 			actualKeyType, 0, data.role.SignatureBits); err != nil {
