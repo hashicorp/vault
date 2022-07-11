@@ -325,13 +325,30 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 	}
 	merr = multierror.Append(merr, err)
 
-	config := pluginutil.PluginClientConfig{
-		Name:           plugin.Name,
-		Logger:         log.NewNullLogger(),
-		IsMetadataMode: true,
+	pluginType, err := c.getBackendPluginType(ctx, plugin)
+	if err == nil {
+		return pluginType, nil
 	}
-	c.logger.Debug("attempting to load backend plugin", "name", plugin.Name)
-	client, err := backendplugin.NewPluginClient(ctx, plugin, config)
+	merr = multierror.Append(merr, err)
+
+	return consts.PluginTypeUnknown, merr
+}
+
+// getBackendPluginType returns the plugin type (secrets/auth) and an error if
+// the plugin is not a backend plugin.
+func (c *PluginCatalog) getBackendPluginType(ctx context.Context, pluginRunner *pluginutil.PluginRunner) (consts.PluginType, error) {
+	var client logical.Backend
+	var merr *multierror.Error
+	config := pluginutil.PluginClientConfig{
+		Name:           pluginRunner.Name,
+		Logger:         log.NewNullLogger(),
+		IsMetadataMode: false,
+		AutoMTLS:       true,
+	}
+
+	// Attempt to run as backend V5 plugin
+	c.logger.Debug("attempting to load backend plugin", "name", pluginRunner.Name)
+	client, err := backendplugin.NewPluginClient(ctx, pluginRunner, config)
 	if err == nil {
 		err := client.Setup(ctx, &logical.BackendConfig{})
 		if err != nil {
@@ -349,20 +366,46 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 		}
 	} else {
 		merr = multierror.Append(merr, err)
+		c.logger.Debug("failed to dispense v5 backend plugin", "name", pluginRunner.Name, "error", err)
+		config.AutoMTLS = false
+		config.IsMetadataMode = true
+		// attemtp to run as a v4 backend plugin
+		client, err = backendplugin.NewPluginClient(ctx, pluginRunner, config)
+		if err != nil {
+			c.logger.Debug("failed to dispense v4 backend plugin", "name", pluginRunner.Name, "error", err)
+			return consts.PluginTypeUnknown, merr.ErrorOrNil()
+		}
+		c.logger.Debug("successfully dispensed v4 backend plugin", "name", pluginRunner.Name)
+	}
+
+	err = client.Setup(ctx, &logical.BackendConfig{})
+	if err != nil {
+		return consts.PluginTypeUnknown, err
+	}
+	backendType := client.Type()
+	client.Cleanup(ctx)
+
+	switch backendType {
+	case logical.TypeCredential:
+		return consts.PluginTypeCredential, nil
+	case logical.TypeLogical:
+		return consts.PluginTypeSecrets, nil
 	}
 
 	if client == nil || client.Type() == logical.TypeUnknown {
-		logger.Warn("unknown plugin type",
-			"plugin name", plugin.Name,
+		c.logger.Warn("unknown plugin type",
+			"plugin name", pluginRunner.Name,
 			"error", merr.Error())
 	} else {
-		logger.Warn("unsupported plugin type",
-			"plugin name", plugin.Name,
+		c.logger.Warn("unsupported plugin type",
+			"plugin name", pluginRunner.Name,
 			"plugin type", client.Type().String(),
 			"error", merr.Error())
 	}
 
-	return consts.PluginTypeUnknown, nil
+	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as backend plugin: %w", err))
+
+	return consts.PluginTypeUnknown, merr.ErrorOrNil()
 }
 
 // isDatabasePlugin returns true if the plugin supports multiplexing. An error
