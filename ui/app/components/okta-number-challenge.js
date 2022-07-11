@@ -8,7 +8,7 @@ import Component from '@glimmer/component';
  * ```js
  * <OktaNumberChallenge @correctAnswer={correctAnswer}/>
  * ```
- * @param {number} correctAnswer - The correct answer to click for the okta number challenge
+ * @param {number} correctAnswer - The correct answer to click for the okta number challenge.
  */
 
 export default class OktaNumberChallenge extends Component {

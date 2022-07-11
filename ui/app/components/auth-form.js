@@ -18,17 +18,17 @@ const BACKENDS = supportedAuthBackends();
  *
  * @example ```js
  * // All properties are passed in via query params.
- * <AuthForm @wrappedToken={{wrappedToken}} @cluster={{model}} @namespace={{namespaceQueryParam}} @selectedAuth={{authMethod}} @onSuccess={{action this.onSuccess}} @setOktaNumberChallenge={{action this.onOktaNumberChallenge}} @cancelAuthForOktaNumberChallenge={{cancelAuth}}/>```
+ * <AuthForm @wrappedToken={{wrappedToken}} @cluster={{model}} @namespace={{namespaceQueryParam}} @selectedAuth={{authMethod}} @onSuccess={{action this.onSuccess}}/>```
  *
  * @param {string} wrappedToken - The auth method that is currently selected in the dropdown.
  * @param {object} cluster - The auth method that is currently selected in the dropdown. This corresponds to an Ember Model.
  * @param {string} namespace- The currently active namespace.
  * @param {string} selectedAuth - The auth method that is currently selected in the dropdown.
- * @param {function} onSuccess - Fired on auth success
- * @param {function} setOktaNumberChallenge - Sets whether we are waiting for okta number challenge to be used to sign in
- * @param {boolean} waitingForOktaNumberChallenge - Determines if we are waiting for the Okta Number Challenge to sign in
- * @param {function} setCancellingAuth - Sets whether we are cancelling or not the login authentication for Okta Number Challenge
- * @param {boolean} cancelAuthForOktaNumberChallenge - Determines if we are cancelling the login authentication for the Okta Number Challenge
+ * @param {function} onSuccess - Fired on auth success.
+ * @param {function} [setOktaNumberChallenge] - Sets whether we are waiting for okta number challenge to be used to sign in.
+ * @param {boolean} [waitingForOktaNumberChallenge=false] - Determines if we are waiting for the Okta Number Challenge to sign in.
+ * @param {function} [setCancellingAuth] - Sets whether we are cancelling or not the login authentication for Okta Number Challenge.
+ * @param {boolean} [cancelAuthForOktaNumberChallenge=false] - Determines if we are cancelling the login authentication for the Okta Number Challenge.
  */
 
 const DEFAULTS = {
