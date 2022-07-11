@@ -1222,7 +1222,44 @@
           },
           {
             "title": "OIDC Providers",
-            "path": "auth/jwt/oidc_providers"
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "auth/jwt/oidc-providers"
+              },
+              {
+                "title": "Auth0",
+                "path": "auth/jwt/oidc-providers/auth0"
+              },
+              {
+                "title": "Azure AD",
+                "path": "auth/jwt/oidc-providers/azuread"
+              },
+              {
+                "title": "Forgerock",
+                "path": "auth/jwt/oidc-providers/forgerock"
+              },
+              {
+                "title": "Gitlab",
+                "path": "auth/jwt/oidc-providers/gitlab"
+              },
+              {
+                "title": "Google",
+                "path": "auth/jwt/oidc-providers/google"
+              },
+              {
+                "title": "Keycloak",
+                "path": "auth/jwt/oidc-providers/keycloak"
+              },
+              {
+                "title": "Kubernetes",
+                "path": "auth/jwt/oidc-providers/kubernetes"
+              },
+              {
+                "title": "Okta",
+                "path": "auth/jwt/oidc-providers/okta"
+              }
+            ]
           }
         ]
       },
