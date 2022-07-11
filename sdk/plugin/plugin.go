@@ -110,17 +110,31 @@ func pluginSet(autoMTLS, metadataMode bool) map[int]plugin.PluginSet {
 func NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (logical.Backend, error) {
 	var client *plugin.Client
 	var err error
-	pluginSet := pluginSet(config.AutoMTLS, config.IsMetadataMode)
+	ps := pluginSet(config.AutoMTLS, config.IsMetadataMode)
 
-	if config.AutoMTLS {
-		client, err = pluginRunner.RunAutoMTLS(ctx, config.Wrapper, pluginSet, handshakeConfig, []string{}, config.Logger)
-	} else if config.IsMetadataMode {
-		client, err = pluginRunner.RunMetadataMode(ctx, config.Wrapper, pluginSet, handshakeConfig, []string{}, config.Logger)
-	} else {
-		client, err = pluginRunner.Run(ctx, config.Wrapper, pluginSet, handshakeConfig, []string{}, config.Logger)
-	}
-	if err != nil {
-		return nil, err
+	// Best effort attempt to run with the version 5 plugin set which supports
+	// autoMTLS if that's the set returned
+	client, err = pluginRunner.RunConfig(ctx,
+		pluginutil.Runner(config.Wrapper),
+		pluginutil.PluginSets(ps),
+		pluginutil.HandshakeConfig(handshakeConfig),
+		pluginutil.Env(),
+		pluginutil.Logger(config.Logger),
+		pluginutil.MetadataMode(config.IsMetadataMode && !config.AutoMTLS),
+		pluginutil.AutoMTLS(config.AutoMTLS),
+	)
+	// This is the fallback: If we error with a v5 plugin set then try again,
+	// but force the old plugin set
+	if config.AutoMTLS && err != nil {
+		ps = pluginSet(false, config.IsMetadataMode)
+		client, err = pluginRunner.RunConfig(ctx,
+			pluginutil.Runner(config.Wrapper),
+			pluginutil.PluginSets(ps),
+			pluginutil.HandshakeConfig(handshakeConfig),
+			pluginutil.Env(),
+			pluginutil.Logger(config.Logger),
+			pluginutil.MetadataMode(config.IsMetadataMode),
+		)
 	}
 
 	// Connect via RPC
