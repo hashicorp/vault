@@ -81,6 +81,15 @@ type pluginClient struct {
 	plugin.ClientProtocol
 }
 
+func wrapFactoryCheckPerms(core *Core, f logical.Factory) logical.Factory {
+	return func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+		if err := core.CheckPluginPerms(conf.Config["plugin_name"]); err != nil {
+			return nil, err
+		}
+		return f(ctx, conf)
+	}
+}
+
 func (c *Core) setupPluginCatalog(ctx context.Context) error {
 	c.pluginCatalog = &PluginCatalog{
 		builtinRegistry: c.builtinRegistry,
@@ -148,7 +157,10 @@ func (c *PluginCatalog) cleanupExternalPlugin(name, id string) error {
 		return fmt.Errorf("plugin client not found")
 	}
 
-	pc := extPlugin.connections[id]
+	pc, ok := extPlugin.connections[id]
+	if !ok {
+		return fmt.Errorf("plugin connection not found")
+	}
 
 	delete(extPlugin.connections, id)
 	if !extPlugin.multiplexingSupport {

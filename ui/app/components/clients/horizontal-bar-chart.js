@@ -6,8 +6,9 @@ import { select, event, selectAll } from 'd3-selection';
 import { scaleLinear, scaleBand } from 'd3-scale';
 import { axisLeft } from 'd3-axis';
 import { max, maxIndex } from 'd3-array';
-import { BAR_COLOR_HOVER, GREY, LIGHT_AND_DARK_BLUE, formatTooltipNumber } from '../../utils/chart-helpers';
+import { BAR_COLOR_HOVER, GREY, LIGHT_AND_DARK_BLUE, formatTooltipNumber } from 'vault/utils/chart-helpers';
 import { tracked } from '@glimmer/tracking';
+import { formatNumber } from 'core/helpers/format-number';
 
 /**
  * @module HorizontalBarChart
@@ -19,6 +20,10 @@ import { tracked } from '@glimmer/tracking';
  * ```
  * @param {array} dataset - dataset for the chart, must be an array of flattened objects
  * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
+ * @param {string} labelKey - string of key name for label value in chart data
+ * @param {string} xKey - string of key name for x value in chart data
+ * @param {object} totalCounts - object to calculate percentage for tooltip
+ * @param {string} [noDataMessage] - custom empty state message that displays when no dataset is passed to the chart
  */
 
 // SIZING CONSTANTS
@@ -36,12 +41,20 @@ export default class HorizontalBarChart extends Component {
     return this.args.labelKey || 'label';
   }
 
+  get xKey() {
+    return this.args.xKey || 'clients';
+  }
+
   get chartLegend() {
     return this.args.chartLegend;
   }
 
   get topNamespace() {
-    return this.args.dataset[maxIndex(this.args.dataset, (d) => d.clients)];
+    return this.args.dataset[maxIndex(this.args.dataset, (d) => d[this.xKey])];
+  }
+
+  get total() {
+    return this.args.totalCounts[this.xKey] || null;
   }
 
   @action removeTooltip() {
@@ -49,17 +62,17 @@ export default class HorizontalBarChart extends Component {
   }
 
   @action
-  renderChart(element, args) {
+  renderChart(element, [chartData]) {
     // chart legend tells stackFunction how to stack/organize data
     // creates an array of data for each key name
     // each array contains coordinates for each data bar
     let stackFunction = stack().keys(this.chartLegend.map((l) => l.key));
-    let dataset = args[0];
+    let dataset = chartData;
     let stackedData = stackFunction(dataset);
     let labelKey = this.labelKey;
-
+    let xKey = this.xKey;
     let xScale = scaleLinear()
-      .domain([0, max(dataset.map((d) => d.clients))])
+      .domain([0, max(dataset.map((d) => d[xKey]))])
       .range([0, 75]); // 25% reserved for margins
 
     let yScale = scaleBand()
@@ -162,13 +175,15 @@ export default class HorizontalBarChart extends Component {
     // MOUSE EVENTS FOR DATA BARS
     actionBars
       .on('mouseover', (data) => {
-        let hoveredElement = actionBars.filter((bar) => bar.label === data.label).node();
+        let hoveredElement = actionBars.filter((bar) => bar[labelKey] === data[labelKey]).node();
         this.tooltipTarget = hoveredElement;
         this.isLabel = false;
-        this.tooltipText = `${Math.round((data.clients * 100) / this.args.totalUsageCounts.clients)}% 
+        this.tooltipText = this.total
+          ? `${Math.round((data[xKey] * 100) / this.total)}% 
         of total client counts:
         ${formatTooltipNumber(data.entity_clients)} entity clients, 
-        ${formatTooltipNumber(data.non_entity_clients)} non-entity clients.`;
+        ${formatTooltipNumber(data.non_entity_clients)} non-entity clients.`
+          : '';
 
         select(hoveredElement).style('opacity', 1);
 
@@ -190,11 +205,11 @@ export default class HorizontalBarChart extends Component {
     // MOUSE EVENTS FOR Y-AXIS LABELS
     labelActionBar
       .on('mouseover', (data) => {
-        if (data.label.length >= CHAR_LIMIT) {
-          let hoveredElement = labelActionBar.filter((bar) => bar.label === data.label).node();
+        if (data[labelKey].length >= CHAR_LIMIT) {
+          let hoveredElement = labelActionBar.filter((bar) => bar[labelKey] === data[labelKey]).node();
           this.tooltipTarget = hoveredElement;
           this.isLabel = true;
-          this.tooltipText = data.label;
+          this.tooltipText = data[labelKey];
         } else {
           this.tooltipTarget = null;
         }
@@ -234,13 +249,13 @@ export default class HorizontalBarChart extends Component {
       .data(dataset)
       .enter()
       .append('text')
-      .text((d) => d.clients)
+      .text((d) => formatNumber([d[xKey]]))
       .attr('fill', '#000')
       .attr('class', 'total-value')
       .style('font-size', '.8rem')
       .attr('text-anchor', 'start')
       .attr('alignment-baseline', 'middle')
-      .attr('x', (chartData) => `${xScale(chartData.clients)}%`)
-      .attr('y', (chartData) => yScale(chartData.label));
+      .attr('x', (chartData) => `${xScale(chartData[xKey])}%`)
+      .attr('y', (chartData) => yScale(chartData[labelKey]));
   }
 }

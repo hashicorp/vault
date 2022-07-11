@@ -60,18 +60,18 @@ path "secret/foo" {
 }
 	`
 
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		return fmt.Errorf("failed to list auth mount")
 	}
 	mountAccessor := auths["userpass/"].Accessor
 
-	err = client.Sys().PutPolicyWithContext(context.Background(), "mfa_policy", rules)
+	err = client.Sys().PutPolicy("mfa_policy", rules)
 	if err != nil {
 		return fmt.Errorf("failed to create mfa_policy: %v", err)
 	}
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/vaultmfa", map[string]interface{}{
+	_, err = client.Logical().Write("auth/userpass/users/vaultmfa", map[string]interface{}{
 		"password": "testpassword",
 		"policies": "mfa_policy",
 	})
@@ -79,7 +79,7 @@ path "secret/foo" {
 		return fmt.Errorf("failed to configure userpass backend: %v", err)
 	}
 
-	secret, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/login/vaultmfa", map[string]interface{}{
+	secret, err := client.Logical().Write("auth/userpass/login/vaultmfa", map[string]interface{}{
 		"password": "testpassword",
 	})
 	if err != nil {
@@ -88,7 +88,7 @@ path "secret/foo" {
 
 	userpassToken := secret.Auth.ClientToken
 
-	secret, err = client.Logical().WriteWithContext(context.Background(), "auth/token/lookup", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/token/lookup", map[string]interface{}{
 		"token": userpassToken,
 	})
 	if err != nil {
@@ -103,7 +103,7 @@ path "secret/foo" {
 		"integration_key": integration_key,
 		"api_hostname":    api_hostname,
 	}
-	_, err = client.Logical().WriteWithContext(context.Background(), "sys/mfa/method/duo/my_duo", mfaConfigData)
+	_, err = client.Logical().Write("sys/mfa/method/duo/my_duo", mfaConfigData)
 	if err != nil {
 		return fmt.Errorf("failed to persist TOTP MFA configuration: %v", err)
 	}
@@ -112,7 +112,7 @@ path "secret/foo" {
 	genericData := map[string]interface{}{
 		"somedata": "which can only be read if MFA succeeds",
 	}
-	_, err = client.Logical().WriteWithContext(context.Background(), "secret/foo", genericData)
+	_, err = client.Logical().Write("secret/foo", genericData)
 	if err != nil {
 		return fmt.Errorf("failed to store data in generic backend: %v", err)
 	}
@@ -180,19 +180,19 @@ func TestInteg_LoginMFADUO(t *testing.T) {
 func mfaGenerateLoginDUOTest(client *api.Client) error {
 	var err error
 
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	auths, err := client.Sys().ListAuth()
 	if err != nil {
 		return fmt.Errorf("failed to list auth mount")
 	}
 	mountAccessor := auths["userpass/"].Accessor
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/vaultmfa", map[string]interface{}{
+	_, err = client.Logical().Write("auth/userpass/users/vaultmfa", map[string]interface{}{
 		"password": "testpassword",
 	})
 	if err != nil {
 		return fmt.Errorf("failed to configure userpass backend: %v", err)
 	}
-	secret, err := client.Logical().WriteWithContext(context.Background(), "identity/entity", map[string]interface{}{
+	secret, err := client.Logical().Write("identity/entity", map[string]interface{}{
 		"name": "test",
 	})
 	if err != nil {
@@ -200,7 +200,7 @@ func mfaGenerateLoginDUOTest(client *api.Client) error {
 	}
 	entityID := secret.Data["id"].(string)
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "identity/entity-alias", map[string]interface{}{
+	_, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
 		"name":           "vaultmfa",
 		"canonical_id":   entityID,
 		"mount_accessor": mountAccessor,
@@ -214,12 +214,12 @@ func mfaGenerateLoginDUOTest(client *api.Client) error {
 	{
 		// create a config
 		mfaConfigData := map[string]interface{}{
-			"username_template": fmt.Sprintf("{{identity.entity.aliases.%s.name}}", mountAccessor),
-			"secret_key":        secret_key,
-			"integration_key":   integration_key,
-			"api_hostname":      api_hostname,
+			"username_format": fmt.Sprintf("{{identity.entity.aliases.%s.name}}", mountAccessor),
+			"secret_key":      secret_key,
+			"integration_key": integration_key,
+			"api_hostname":    api_hostname,
 		}
-		resp, err := client.Logical().WriteWithContext(context.Background(), "identity/mfa/method/duo", mfaConfigData)
+		resp, err := client.Logical().Write("identity/mfa/method/duo", mfaConfigData)
 
 		if err != nil || (resp == nil) {
 			return fmt.Errorf("bad: resp: %#v\n err: %v", resp, err)
@@ -231,7 +231,7 @@ func mfaGenerateLoginDUOTest(client *api.Client) error {
 		}
 
 		// creating MFAEnforcementConfig
-		_, err = client.Logical().WriteWithContext(context.Background(), "identity/mfa/login-enforcement/randomName", map[string]interface{}{
+		_, err = client.Logical().Write("identity/mfa/login-enforcement/randomName", map[string]interface{}{
 			"auth_method_accessors": []string{mountAccessor},
 			"auth_method_types":     []string{"userpass"},
 			"identity_entity_ids":   []string{entityID},
@@ -242,8 +242,7 @@ func mfaGenerateLoginDUOTest(client *api.Client) error {
 			return fmt.Errorf("failed to configure MFAEnforcementConfig: %v", err)
 		}
 	}
-
-	secret, err = client.Logical().WriteWithContext(context.Background(), "auth/userpass/login/vaultmfa", map[string]interface{}{
+	secret, err = client.Logical().Write("auth/userpass/login/vaultmfa", map[string]interface{}{
 		"password": "testpassword",
 	})
 	if err != nil {
@@ -273,12 +272,11 @@ func mfaGenerateLoginDUOTest(client *api.Client) error {
 	}
 
 	// validation
-	secret, err = client.Logical().WriteWithContext(context.Background(), "sys/mfa/validate", map[string]interface{}{
-		"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
-		"mfa_payload": map[string][]string{
-			methodID: {},
-		},
-	})
+	secret, err = client.Sys().MFAValidateWithContext(context.Background(),
+		secret.Auth.MFARequirement.MFARequestID,
+		map[string]interface{}{
+			methodID: []string{},
+		})
 	if err != nil {
 		return fmt.Errorf("MFA failed: %v", err)
 	}

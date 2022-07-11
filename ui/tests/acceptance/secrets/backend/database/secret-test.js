@@ -264,6 +264,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
   });
 
   test('Connection create and edit form for each plugin', async function (assert) {
+    assert.expect(160);
     const backend = await mount();
     for (let testCase of connectionTests) {
       await connectionPage.visitCreate({ backend });
@@ -385,7 +386,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert
       .dom('.modal.is-active .title')
       .hasText('Delete connection?', 'Modal appears asking to confirm delete action');
-    await fillIn('[data-test-confirmation-modal-input="delete"]', connectionDetails.id);
+    await fillIn('[data-test-confirmation-modal-input="Delete connection?"]', connectionDetails.id);
     await click('[data-test-confirm-button]');
 
     assert.equal(currentURL(), `/vault/secrets/${backend}/list`, 'Redirects to connection list page');

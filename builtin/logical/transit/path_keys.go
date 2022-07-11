@@ -239,7 +239,12 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 			"supports_signing":       p.Type.SigningSupported(),
 			"supports_derivation":    p.Type.DerivationSupported(),
 			"auto_rotate_period":     int64(p.AutoRotatePeriod.Seconds()),
+			"imported_key":           p.Imported,
 		},
+	}
+
+	if p.Imported {
+		resp.Data["imported_key_allow_rotation"] = p.AllowImportedKeyRotation
 	}
 
 	if p.BackupInfo != nil {

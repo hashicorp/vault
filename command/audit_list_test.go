@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -58,7 +57,7 @@ func TestAuditListCommand_Run(t *testing.T) {
 			client, closer := testVaultServer(t)
 			defer closer()
 
-			if err := client.Sys().EnableAuditWithOptionsWithContext(context.Background(), "file", &api.EnableAuditOptions{
+			if err := client.Sys().EnableAuditWithOptions("file", &api.EnableAuditOptions{
 				Type: "file",
 				Options: map[string]string{
 					"file_path": "discard",

@@ -1,3 +1,4 @@
+/* eslint qunit/no-conditional-assertions: "warn" */
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -25,6 +26,7 @@ module('Integration | Component | replication known-secondaries-table', function
   });
 
   test('it shows the secondary URL and connection_status', async function (assert) {
+    assert.expect(9);
     await render(hbs`<KnownSecondariesTable @secondaries={{secondaries}} />`);
 
     SECONDARIES.forEach((secondary) => {

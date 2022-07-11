@@ -70,7 +70,7 @@ func TestAWSEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := client.Logical().WriteWithContext(context.Background(), "auth/aws/role/test", map[string]interface{}{
+	if _, err := client.Logical().Write("auth/aws/role/test", map[string]interface{}{
 		"auth_type": "iam",
 		"policies":  "default",
 		// Retain thru the account number of the given arn and wildcard the rest.

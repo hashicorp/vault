@@ -182,7 +182,7 @@ func TestIdentityStore_EntityIDPassthrough(t *testing.T) {
 	}
 
 	// Create an entity with GitHub alias
-	entity, err := is.CreateOrFetchEntity(ctx, alias)
+	entity, _, err := is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -258,7 +258,7 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 		},
 	}
 
-	entity, err := is.CreateOrFetchEntity(ctx, alias)
+	entity, _, err := is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -274,7 +274,7 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 		t.Fatalf("bad: alias name; expected: %q, actual: %q", alias.Name, entity.Aliases[0].Name)
 	}
 
-	entity, err = is.CreateOrFetchEntity(ctx, alias)
+	entity, _, err = is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -309,7 +309,7 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	entity, err = is.CreateOrFetchEntity(ctx, alias)
+	entity, _, err = is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -335,7 +335,7 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 		"foo": "zzzz",
 	}
 
-	entity, err = is.CreateOrFetchEntity(ctx, alias)
+	entity, _, err = is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -599,7 +599,7 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	newEntity, err := c.identityStore.CreateOrFetchEntity(namespace.RootContext(nil), &logical.Alias{
+	newEntity, _, err := c.identityStore.CreateOrFetchEntity(namespace.RootContext(nil), &logical.Alias{
 		MountAccessor: meGH.Accessor,
 		MountType:     "github",
 		Name:          "githubuser",
@@ -792,14 +792,14 @@ func TestIdentityStore_NewEntityCounter(t *testing.T) {
 		},
 	}
 
-	_, err = is.CreateOrFetchEntity(ctx, alias)
+	_, _, err = is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	expectSingleCount(t, sink, "identity.entity.creation")
 
-	_, err = is.CreateOrFetchEntity(ctx, alias)
+	_, _, err = is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}

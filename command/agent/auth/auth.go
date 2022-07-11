@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	initialBackoff    = 1 * time.Second
+	defaultMinBackoff = 1 * time.Second
 	defaultMaxBackoff = 5 * time.Minute
 )
 
@@ -55,6 +55,7 @@ type AuthHandler struct {
 	random                       *rand.Rand
 	wrapTTL                      time.Duration
 	maxBackoff                   time.Duration
+	minBackoff                   time.Duration
 	enableReauthOnNewCredentials bool
 	enableTemplateTokenCh        bool
 }
@@ -64,6 +65,7 @@ type AuthHandlerConfig struct {
 	Client                       *api.Client
 	WrapTTL                      time.Duration
 	MaxBackoff                   time.Duration
+	MinBackoff                   time.Duration
 	Token                        string
 	EnableReauthOnNewCredentials bool
 	EnableTemplateTokenCh        bool
@@ -80,6 +82,7 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		client:                       conf.Client,
 		random:                       rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
 		wrapTTL:                      conf.WrapTTL,
+		minBackoff:                   conf.MinBackoff,
 		maxBackoff:                   conf.MaxBackoff,
 		enableReauthOnNewCredentials: conf.EnableReauthOnNewCredentials,
 		enableTemplateTokenCh:        conf.EnableTemplateTokenCh,
@@ -104,7 +107,15 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		return errors.New("auth handler: nil auth method")
 	}
 
-	backoff := newAgentBackoff(ah.maxBackoff)
+	if ah.minBackoff <= 0 {
+		ah.minBackoff = defaultMinBackoff
+	}
+
+	backoff := newAgentBackoff(ah.minBackoff, ah.maxBackoff)
+
+	if backoff.min >= backoff.max {
+		return errors.New("auth handler: min_backoff cannot be greater than max_backoff")
+	}
 
 	ah.logger.Info("starting auth handler")
 	defer func() {
@@ -164,6 +175,10 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			clientToUse = ah.client
 		}
 
+		// Disable retry on the client to ensure our backoffOrQuit function is
+		// the only source of retry/backoff.
+		clientToUse.SetMaxRetries(0)
+
 		var secret *api.Secret = new(api.Secret)
 		if first && ah.token != "" {
 			ah.logger.Debug("using preloaded token")
@@ -172,7 +187,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			ah.logger.Debug("lookup-self with preloaded token")
 			clientToUse.SetToken(ah.token)
 
-			secret, err = clientToUse.Logical().Read("auth/token/lookup-self")
+			secret, err = clientToUse.Auth().Token().LookupSelfWithContext(ctx)
 			if err != nil {
 				ah.logger.Error("could not look up token", "err", err, "backoff", backoff)
 				backoffOrQuit(ctx, backoff)
@@ -220,7 +235,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		// This should only happen if there's no preloaded token (regular auto-auth login)
 		//  or if a preloaded token has expired and is now switching to auto-auth.
 		if secret.Auth == nil {
-			secret, err = clientToUse.Logical().Write(path, data)
+			secret, err = clientToUse.Logical().WriteWithContext(ctx, path, data)
 			// Check errors/sanity
 			if err != nil {
 				ah.logger.Error("error authenticating", "error", err, "backoff", backoff)
@@ -342,18 +357,24 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 
 // agentBackoff tracks exponential backoff state.
 type agentBackoff struct {
+	min     time.Duration
 	max     time.Duration
 	current time.Duration
 }
 
-func newAgentBackoff(max time.Duration) *agentBackoff {
+func newAgentBackoff(min, max time.Duration) *agentBackoff {
 	if max <= 0 {
 		max = defaultMaxBackoff
 	}
 
+	if min <= 0 {
+		min = defaultMinBackoff
+	}
+
 	return &agentBackoff{
+		current: min,
 		max:     max,
-		current: initialBackoff,
+		min:     min,
 	}
 }
 
@@ -372,7 +393,7 @@ func (b *agentBackoff) next() {
 }
 
 func (b *agentBackoff) reset() {
-	b.current = initialBackoff
+	b.current = b.min
 }
 
 func (b agentBackoff) String() string {

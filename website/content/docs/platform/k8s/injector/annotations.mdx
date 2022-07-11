@@ -27,8 +27,8 @@ them, optional commands to run, etc.
   Agent configuration file and templates can be found.
 
 - `vault.hashicorp.com/agent-image` - name of the Vault docker image to use. This
-  value overrides the default image configured in the controller and is usually
-  not needed. Defaults to `hashicorp/vault:1.9.4`.
+  value overrides the default image configured in the injector and is usually
+  not needed. Defaults to `hashicorp/vault:1.10.3`.
 
 - `vault.hashicorp.com/agent-init-first` - configures the pod to run the Vault Agent
   init container first if `true` (last if `false`). This is useful when other init
@@ -184,13 +184,17 @@ them, optional commands to run, etc.
   by default.
 
 - `vault.hashicorp.com/agent-cache-listener-port` - configures Vault Agent cache
-  listening port. Defaults to `8080`.
+  listening port. Defaults to `8200`.
 
 - `vault.hashicorp.com/agent-copy-volume-mounts` - copies the mounts from the specified
   container and mounts them to the Vault Agent containers. The service account volume is
   ignored.
 
 - `vault.hashicorp.com/agent-service-account-token-volume-name` - the optional name of a projected volume containing a service account token for use with auto-auth against Vault's Kubernetes auth method. If the volume is mounted to another container in the deployment, the token volume will be mounted to the same location in the vault-agent containers. Otherwise it will be mounted at the default location of `/var/run/secrets/vault.hashicorp.com/serviceaccount/`.
+
+- `vault.hashicorp.com/agent-enable-quit` - enable the [`/agent/v1/quit` endpoint](/docs/agent#quit) on an injected agent. This option defaults to false, and if true will be set on the existing cache listener, or a new localhost listener with a basic cache stanza configured. The [agent-cache-listener-port annotation](/docs/platform/k8s/injector/annotations#vault-hashicorp-com-agent-cache-listener-port) can be used to change the port.
+
+- `vault.hashicorp.com/go-max-procs` - set the `GOMAXPROCS` environment variable for injected agents
 
 ## Vault Annotations
 
@@ -212,6 +216,10 @@ etc.
 - `vault.hashicorp.com/auth-type` - configures the authentication type for Vault Agent.
   Defaults to `kubernetes`. For a list of valid authentication methods, see the Vault Agent
   [auto-auth documentation](/docs/agent/autoauth/methods).
+
+- `vault.hashicorp.com/auth-min-backoff` - set the [min_backoff](/docs/agent/autoauth#min_backoff) option in the auto-auth config. Requires Vault 1.11+.
+
+- `vault.hashicorp.com/auth-max-backoff` - set the [max_backoff](/docs/agent/autoauth#max_backoff) option in the auto-auth config
 
 - `vault.hashicorp.com/ca-cert` - path of the CA certificate used to verify Vault's
   TLS.
@@ -249,9 +257,10 @@ etc.
 - `vault.hashicorp.com/role` - configures the Vault role used by the Vault Agent
   auto-auth method. Required when `vault.hashicorp.com/agent-configmap` is not set.
 
-- `vault.hashicorp.com/service` - name of the Vault service to use. This value
-  overrides the default service configured in the controller and is usually not
-  needed.
+- `vault.hashicorp.com/service` - configures the Vault address for the injected
+  Vault Agent to use. This value overrides the default Vault address configured
+  in the injector, and may either be the address of a Vault service within the
+  same Kubernetes cluster as the injector, or an external Vault URL.
 
 - `vault.hashicorp.com/tls-secret` - name of the Kubernetes secret containing TLS
   Client and CA certificates and keys. This is mounted to `/vault/tls`.

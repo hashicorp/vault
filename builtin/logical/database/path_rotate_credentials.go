@@ -30,8 +30,8 @@ func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 				},
 			},
 
-			HelpSynopsis:    pathCredsCreateReadHelpSyn,
-			HelpDescription: pathCredsCreateReadHelpDesc,
+			HelpSynopsis:    pathRotateCredentialsUpdateHelpSyn,
+			HelpDescription: pathRotateCredentialsUpdateHelpDesc,
 		},
 		{
 			Pattern: "rotate-role/" + framework.GenericNameRegex("name"),
@@ -50,8 +50,8 @@ func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 				},
 			},
 
-			HelpSynopsis:    pathCredsCreateReadHelpSyn,
-			HelpDescription: pathCredsCreateReadHelpDesc,
+			HelpSynopsis:    pathRotateRoleCredentialsUpdateHelpSyn,
+			HelpDescription: pathRotateRoleCredentialsUpdateHelpDesc,
 		},
 	}
 }
@@ -78,29 +78,33 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 			return nil, err
 		}
 
-		// Take out the backend lock since we are swapping out the connection
-		b.Lock()
-		defer b.Unlock()
-
 		// Take the write lock on the instance
 		dbi.Lock()
-		defer dbi.Unlock()
-
+		defer func() {
+			dbi.Unlock()
+			// Even on error, still remove the connection
+			b.ClearConnectionId(name, dbi.id)
+		}()
 		defer func() {
 			// Close the plugin
 			dbi.closed = true
 			if err := dbi.database.Close(); err != nil {
 				b.Logger().Error("error closing the database plugin connection", "err", err)
 			}
-			// Even on error, still remove the connection
-			delete(b.connections, name)
 		}()
+
+		generator, err := newPasswordGenerator(nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to construct credential generator: %s", err)
+		}
+		generator.PasswordPolicy = config.PasswordPolicy
 
 		// Generate new credentials
 		oldPassword := config.ConnectionDetails["password"].(string)
-		newPassword, err := dbi.database.GeneratePassword(ctx, b.System(), config.PasswordPolicy)
+		newPassword, err := generator.generate(ctx, b, dbi.database)
 		if err != nil {
-			return nil, err
+			b.CloseIfShutdown(dbi, err)
+			return nil, fmt.Errorf("failed to generate password: %s", err)
 		}
 		config.ConnectionDetails["password"] = newPassword
 
@@ -116,7 +120,8 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 		}
 
 		updateReq := v5.UpdateUserRequest{
-			Username: rootUsername,
+			Username:       rootUsername,
+			CredentialType: v5.CredentialTypePassword,
 			Password: &v5.ChangePassword{
 				NewPassword: newPassword,
 				Statements: v5.Statements{

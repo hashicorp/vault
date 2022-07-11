@@ -92,9 +92,7 @@ cannot be added to Vault unless it exists in the plugin directory. There is no
 default for this configuration option, and if it is not set, plugins cannot be
 added to Vault.
 
-~> Warning: A Vault operator should take caution and lock down the permissions on
-this directory to ensure a plugin cannot be modified by an unauthorized user
-between the time of the SHA check and the time of plugin execution.
+@include 'plugin-file-permissions-check.mdx'
 
 ### Plugin Catalog
 
@@ -161,7 +159,7 @@ opt-out capability for plugins that implement multiplexing. To use a
 non-multiplexed plugin, run an older version of the plugin, i.e., the
 plugin calls the `dbplugin.Serve` function. More details
 on implementing plugin multiplexing can be found in
-[Upgrading Vault Plugins](/docs/secrets/databases/custom#serving-a-plugin-with-multiplexing).
+[Serving a Multiplexed Plugin](/docs/secrets/databases/custom#serving-a-plugin-with-multiplexing).
 
 ## Troubleshooting
 

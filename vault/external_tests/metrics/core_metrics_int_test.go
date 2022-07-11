@@ -49,7 +49,7 @@ func TestMountTableMetrics(t *testing.T) {
 	}
 
 	// Mount new kv
-	if err = client.Sys().MountWithContext(context.Background(), "kv", &api.MountInput{
+	if err = client.Sys().Mount("kv", &api.MountInput{
 		Type: "kv",
 		Options: map[string]string{
 			"version": "2",
@@ -166,7 +166,7 @@ func TestLeaderReElectionMetrics(t *testing.T) {
 		t.Errorf("unseal metric or leader metric are missing")
 	}
 
-	err = client.Sys().StepDownWithContext(context.Background())
+	err = client.Sys().StepDown()
 	if err != nil {
 		t.Fatal(err)
 	}

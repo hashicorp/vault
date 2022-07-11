@@ -35,20 +35,20 @@
   </div>
 {{/unless}}
 <div
-  class="field text-file box is-fullwidth is-marginless is-shadowless {{if this.inputOnly "is-paddingless"}}"
+  class="field text-file box is-fullwidth is-marginless is-shadowless {{if this.inputOnly 'is-paddingless'}}"
   data-test-component="text-file"
 >
   {{#if @file.enterAsText}}
     <div class="control has-icon-right">
       <textarea
-        class="textarea {{unless this.showValue "masked-font"}}"
+        class="textarea {{unless this.showValue 'masked-font'}}"
         {{on "input" this.updateData}}
         data-test-text-file-textarea={{true}}
       >{{@file.value}}</textarea>
       <button
         {{on "click" this.toggleMask}}
         type="button"
-        class="{{if (eq this.value "") "has-text-grey"}} masked-input-toggle button {{if this.displayOnly "is-compact"}}"
+        class="{{if (eq this.value '') 'has-text-grey'}} masked-input-toggle button {{if this.displayOnly 'is-compact'}}"
         data-test-button
       >
         <Icon @name={{if this.showValue "eye" "eye-off"}} />

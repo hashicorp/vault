@@ -12,6 +12,10 @@ export default Controller.extend({
       if (SUPPORTED_BACKENDS.includes(type)) {
         if (type === 'kmip') {
           transition = this.transitionToRoute('vault.cluster.secrets.backend.kmip.scopes', path);
+        } else if (type === 'keymgmt') {
+          transition = this.transitionToRoute('vault.cluster.secrets.backend.index', path, {
+            queryParams: { tab: 'provider' },
+          });
         } else {
           transition = this.transitionToRoute('vault.cluster.secrets.backend.index', path);
         }

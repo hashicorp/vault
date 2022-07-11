@@ -212,7 +212,6 @@ func TestLogical_CreateToken(t *testing.T) {
 	})
 
 	var actual map[string]interface{}
-	var nilWarnings interface{}
 	expected := map[string]interface{}{
 		"lease_id":       "",
 		"renewable":      false,
@@ -231,12 +230,12 @@ func TestLogical_CreateToken(t *testing.T) {
 			"mfa_requirement": nil,
 			"num_uses":        json.Number("0"),
 		},
-		"warnings": nilWarnings,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	delete(actual["auth"].(map[string]interface{}), "client_token")
 	delete(actual["auth"].(map[string]interface{}), "accessor")
+	delete(actual, "warnings")
 	expected["request_id"] = actual["request_id"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad:\nexpected:\n%#v\nactual:\n%#v", expected, actual)

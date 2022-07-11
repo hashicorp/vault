@@ -237,7 +237,7 @@ func TestKV_Patch_RootToken(t *testing.T) {
 	client.SetToken(cluster.RootToken)
 
 	// Enable KVv2
-	err := client.Sys().MountWithContext(context.Background(), "kv", &api.MountInput{
+	err := client.Sys().Mount("kv", &api.MountInput{
 		Type: "kv-v2",
 	})
 	if err != nil {
@@ -252,7 +252,7 @@ func TestKV_Patch_RootToken(t *testing.T) {
 			},
 		}
 
-		return client.Logical().WriteWithContext(context.Background(), "kv/data/foo", data)
+		return client.Logical().Write("kv/data/foo", data)
 	})
 
 	if err != nil {
@@ -273,7 +273,7 @@ func TestKV_Patch_RootToken(t *testing.T) {
 	}
 
 	secretRaw, err := kvRequestWithRetry(t, func() (interface{}, error) {
-		return client.Logical().ReadWithContext(context.Background(), "kv/data/foo")
+		return client.Logical().Read("kv/data/foo")
 	})
 	if err != nil {
 		t.Fatal(err)

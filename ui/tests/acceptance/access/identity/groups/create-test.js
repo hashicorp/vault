@@ -22,11 +22,13 @@ module('Acceptance | /access/identity/groups/create', function (hooks) {
   });
 
   test('it allows create, list, delete of an group', async function (assert) {
+    assert.expect(6);
     let name = `group-${Date.now()}`;
     await testCRUD(name, 'groups', assert);
   });
 
   test('it can be deleted from the group edit form', async function (assert) {
+    assert.expect(6);
     let name = `group-${Date.now()}`;
     await testDeleteFromForm(name, 'groups', assert);
   });

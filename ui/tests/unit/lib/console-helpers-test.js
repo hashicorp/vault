@@ -112,7 +112,7 @@ module('Unit | Lib | console helpers', function () {
   test('#parseCommand: invalid commands', function (assert) {
     let command = 'vault kv get foo';
     let result = parseCommand(command);
-    assert.equal(result, false, 'parseCommand returns false by default');
+    assert.false(result, 'parseCommand returns false by default');
 
     assert.throws(
       () => {

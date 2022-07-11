@@ -71,6 +71,7 @@ module('Acceptance | ssh secret backend', function (hooks) {
     },
   ];
   test('ssh backend', async function (assert) {
+    assert.expect(26);
     const now = new Date().getTime();
     const sshPath = `ssh-${now}`;
 

@@ -8,7 +8,7 @@
     </div>
     <div class="field">
       <TtlPicker2
-        @initialValue="1h"
+        @initialValue="30d"
         @initialEnabled={{false}}
         @label="Auto-rotation period"
         @helperTextDisabled="Key will never be automatically rotated"
@@ -124,13 +124,13 @@
         data-test-transit-key-create
         type="submit"
         disabled={{@requestInFlight}}
-        class="button is-primary {{if @requestInFlight "is-loading"}}"
+        class="button is-primary {{if @requestInFlight 'is-loading'}}"
       >
         Create encryption key
       </button>
     </div>
     <div class="control">
-      <SecretLink @mode="list" @class="button">
+      <SecretLink @mode="list" class="button">
         Cancel
       </SecretLink>
     </div>

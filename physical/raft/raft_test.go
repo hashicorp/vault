@@ -15,12 +15,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-secure-stdlib/base62"
-
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
-	hclog "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/base62"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -224,6 +223,29 @@ func TestRaft_Backend(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	physical.ExerciseBackend(t, b)
+}
+
+func TestRaft_ParseAutopilotUpgradeVersion(t *testing.T) {
+	raftDir, err := ioutil.TempDir("", "vault-raft-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(raftDir)
+
+	conf := map[string]string{
+		"path":                      raftDir,
+		"node_id":                   "abc123",
+		"autopilot_upgrade_version": "hahano",
+	}
+
+	_, err = NewRaftBackend(conf, hclog.NewNullLogger())
+	if err == nil {
+		t.Fatal("expected an error but got none")
+	}
+
+	if !strings.Contains(err.Error(), "does not parse") {
+		t.Fatal("expected an error about unparseable versions but got none")
+	}
 }
 
 func TestRaft_Backend_LargeKey(t *testing.T) {

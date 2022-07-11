@@ -1,7 +1,6 @@
 package http
 
 import (
-	"context"
 	"testing"
 
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
@@ -27,7 +26,7 @@ func TestUnwrapping_Raw_Body(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	// Mount a k/v backend, version 2
-	err := client.Sys().MountWithContext(context.Background(), "kv", &api.MountInput{
+	err := client.Sys().Mount("kv", &api.MountInput{
 		Type:    "kv",
 		Options: map[string]string{"version": "2"},
 	})
@@ -38,7 +37,7 @@ func TestUnwrapping_Raw_Body(t *testing.T) {
 	client.SetWrappingLookupFunc(func(operation, path string) string {
 		return "5m"
 	})
-	secret, err := client.Logical().WriteWithContext(context.Background(), "kv/foo/bar", map[string]interface{}{
+	secret, err := client.Logical().Write("kv/foo/bar", map[string]interface{}{
 		"a": "b",
 	})
 	if err != nil {
@@ -53,7 +52,7 @@ func TestUnwrapping_Raw_Body(t *testing.T) {
 	wrapToken := secret.WrapInfo.Token
 
 	client.SetWrappingLookupFunc(nil)
-	secret, err = client.Logical().UnwrapWithContext(context.Background(), wrapToken)
+	secret, err = client.Logical().Unwrap(wrapToken)
 	if err != nil {
 		t.Fatal(err)
 	}
