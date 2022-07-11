@@ -19,6 +19,7 @@
  * @param initialValue=null {String} - This is the value set initially (particularly from a string like '30h')
  * @param initialEnabled=null {Boolean} - Set this value if you want the toggle on when component is mounted
  * @param changeOnInit=false {Boolean} - set this value if you'd like the passed onChange function to be called on component initialization
+ * @param hideToggle=false {Boolean} - set this value if you'd like to hide the toggle and just leverage the input field
  */
 
 import { computed } from '@ember/object';
@@ -53,6 +54,7 @@ export default TtlForm.extend({
   unit: 's',
   initialValue: null,
   changeOnInit: false,
+  hideToggle: false,
 
   init() {
     this._super(...arguments);
@@ -66,7 +68,7 @@ export default TtlForm.extend({
 
     let time = 30;
     let unit = 's';
-    let setEnable = this.enableTTL;
+    let setEnable = this.hideToggle || this.enableTTL;
     if (!!enable || typeOf(enable) === 'boolean') {
       // This allows non-boolean values passed in to be evaluated for truthiness
       setEnable = !!enable;
@@ -74,7 +76,15 @@ export default TtlForm.extend({
 
     if (typeOf(value) === 'number') {
       // if the passed value is a number, assume unit is seconds
-      time = value;
+      // then check if the value can be converted into a larger unit
+      if (value % secondsMap.d === 0) {
+        unit = 'd';
+      } else if (value % secondsMap.h === 0) {
+        unit = 'h';
+      } else if (value % secondsMap.m === 0) {
+        unit = 'm';
+      }
+      time = convertFromSeconds(value, unit);
     } else {
       try {
         const seconds = Duration.parse(value).seconds();
@@ -118,7 +128,7 @@ export default TtlForm.extend({
   handleChange() {
     let { time, unit, enableTTL, seconds } = this;
     const ttl = {
-      enabled: enableTTL,
+      enabled: this.hideToggle || enableTTL,
       seconds,
       timeString: time + unit,
       goSafeTimeString: goSafeConvertFromSeconds(seconds, unit),
@@ -132,8 +142,9 @@ export default TtlForm.extend({
     'helperTextEnabled',
     'helperTextSet',
     'helperTextUnset',
+    'hideToggle',
     function () {
-      return this.enableTTL ? this.helperTextEnabled : this.helperTextDisabled;
+      return this.enableTTL || this.hideToggle ? this.helperTextEnabled : this.helperTextDisabled;
     }
   ),
 

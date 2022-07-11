@@ -1,22 +1,22 @@
 import Model, { hasMany, attr } from '@ember-data/model';
-import { alias } from '@ember/object/computed';
-import { computed } from '@ember/object';
+import { alias } from '@ember/object/computed'; // eslint-disable-line
+import { computed } from '@ember/object'; // eslint-disable-line
 import { fragment } from 'ember-data-model-fragments/attributes';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { memberAction } from 'ember-api-actions';
-import { validator, buildValidations } from 'ember-cp-validations';
-
 import apiPath from 'vault/utils/api-path';
 import attachCapabilities from 'vault/lib/attach-capabilities';
+import { withModelValidations } from 'vault/decorators/model-validations';
 
-const Validations = buildValidations({
-  path: validator('presence', {
-    presence: true,
-    message: "Path can't be blank.",
-  }),
-});
+const validations = {
+  path: [{ type: 'presence', message: "Path can't be blank." }],
+};
 
-let ModelExport = Model.extend(Validations, {
+// unsure if ember-api-actions will work on native JS class model
+// for now create class to use validations and then use classic extend pattern
+@withModelValidations(validations)
+class AuthMethodModel extends Model {}
+const ModelExport = AuthMethodModel.extend({
   authConfigs: hasMany('auth-config', { polymorphic: true, inverse: 'backend', async: false }),
   path: attr('string'),
   accessor: attr('string'),

@@ -51,7 +51,12 @@ module.exports = [
   },
   {
     source: '/docs/auth/jwt_oidc_providers',
-    destination: '/docs/auth/jwt/oidc_providers',
+    destination: '/docs/auth/jwt/oidc-providers',
+    permanent: true,
+  },
+  {
+    source: '/docs/auth/jwt/oidc_providers',
+    destination: '/docs/auth/jwt/oidc-providers',
     permanent: true,
   },
   {
@@ -453,6 +458,11 @@ module.exports = [
   {
     source: '/docs/install/upgrade',
     destination: '/docs/upgrading',
+    permanent: true,
+  },
+  {
+    source: '/docs/platform/aws/lambda-extension-cache',
+    destination: '/docs/platform/aws/lambda-extension',
     permanent: true,
   },
   // Guides and Intro redirects to Learn

@@ -7,35 +7,35 @@ module('Unit | Service | version', function (hooks) {
   test('setting version computes isOSS properly', function (assert) {
     let service = this.owner.lookup('service:version');
     service.set('version', '0.9.5');
-    assert.equal(service.get('isOSS'), true);
-    assert.equal(service.get('isEnterprise'), false);
+    assert.true(service.get('isOSS'));
+    assert.false(service.get('isEnterprise'));
   });
 
   test('setting version computes isEnterprise properly', function (assert) {
     let service = this.owner.lookup('service:version');
     service.set('version', '0.9.5+prem');
-    assert.equal(service.get('isOSS'), false);
-    assert.equal(service.get('isEnterprise'), true);
+    assert.false(service.get('isOSS'));
+    assert.true(service.get('isEnterprise'));
   });
 
   test('setting version with hsm ending computes isEnterprise properly', function (assert) {
     let service = this.owner.lookup('service:version');
     service.set('version', '0.9.5+prem.hsm');
-    assert.equal(service.get('isOSS'), false);
-    assert.equal(service.get('isEnterprise'), true);
+    assert.false(service.get('isOSS'));
+    assert.true(service.get('isEnterprise'));
   });
 
   test('hasPerfReplication', function (assert) {
     let service = this.owner.lookup('service:version');
-    assert.equal(service.get('hasPerfReplication'), false);
+    assert.false(service.get('hasPerfReplication'));
     service.set('_features', ['Performance Replication']);
-    assert.equal(service.get('hasPerfReplication'), true);
+    assert.true(service.get('hasPerfReplication'));
   });
 
   test('hasDRReplication', function (assert) {
     let service = this.owner.lookup('service:version');
-    assert.equal(service.get('hasDRReplication'), false);
+    assert.false(service.get('hasDRReplication'));
     service.set('_features', ['DR Replication']);
-    assert.equal(service.get('hasDRReplication'), true);
+    assert.true(service.get('hasDRReplication'));
   });
 });

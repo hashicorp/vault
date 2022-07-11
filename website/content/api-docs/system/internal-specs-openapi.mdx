@@ -31,10 +31,15 @@ This endpoint returns a single OpenAPI document describing all paths visible to 
 | :----- | :---------------------------- |
 | `GET`  | `/sys/internal/specs/openapi` |
 
+### Parameters
+
+- `generic_mount_paths` `(bool: false)` – Used to specify whether to use generic mount paths. If set, the mount paths will be replaced with a dynamic parameter: `{mountPath}`
+
+
 ### Sample Request
 
 ```shell-session
-$ curl http://127.0.0.1:8200/v1/sys/internal/specs/openapi
+$ curl http://127.0.0.1:8200/v1/sys/internal/specs/openapi?generic_mount_paths=false
 ```
 
 ### Sample Response

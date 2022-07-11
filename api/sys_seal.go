@@ -101,6 +101,7 @@ type SealStatusResponse struct {
 	Progress     int    `json:"progress"`
 	Nonce        string `json:"nonce"`
 	Version      string `json:"version"`
+	BuildDate    string `json:"build_date"`
 	Migration    bool   `json:"migration"`
 	ClusterName  string `json:"cluster_name,omitempty"`
 	ClusterID    string `json:"cluster_id,omitempty"`

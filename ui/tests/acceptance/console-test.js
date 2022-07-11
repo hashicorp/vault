@@ -64,7 +64,7 @@ module('Acceptance | console', function (hooks) {
     const consoleOut = document.querySelector('.console-ui-output>pre');
     // wait for the CSS transition to finish
     await waitUntil(() => consoleOut.innerText);
-    assert.ok(consoleOut.innerText.match(/^\d+$/).length == 1);
+    assert.equal(consoleOut.innerText.match(/^\d+$/).length, 1);
   });
 
   test('boolean output is correctly formatted', async function (assert) {
@@ -75,6 +75,6 @@ module('Acceptance | console', function (hooks) {
     let consoleOut = document.querySelector('.console-ui-output>pre');
     // have to wrap in a later so that we can wait for the CSS transition to finish
     await waitUntil(() => consoleOut.innerText);
-    assert.ok(consoleOut.innerText.match(/^(true|false)$/g).length == 1);
+    assert.equal(consoleOut.innerText.match(/^(true|false)$/g).length, 1);
   });
 });

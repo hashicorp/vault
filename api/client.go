@@ -51,6 +51,7 @@ const (
 	EnvVaultMFA           = "VAULT_MFA"
 	EnvRateLimit          = "VAULT_RATE_LIMIT"
 	EnvHTTPProxy          = "VAULT_HTTP_PROXY"
+	EnvVaultProxyAddr     = "VAULT_PROXY_ADDR"
 	HeaderIndex           = "X-Vault-Index"
 	HeaderForward         = "X-Vault-Forward"
 	HeaderInconsistent    = "X-Vault-Inconsistent"
@@ -142,6 +143,14 @@ type Config struct {
 	// Note: It is not thread-safe to set this and make concurrent requests
 	// with the same client. Cloning a client will not clone this value.
 	OutputCurlString bool
+
+	// OutputPolicy causes the actual request to return an error of type
+	// *OutputPolicyError. Type asserting the error message will display
+	// an example of the required policy HCL needed for the operation.
+	//
+	// Note: It is not thread-safe to set this and make concurrent requests
+	// with the same client. Cloning a client will not clone this value.
+	OutputPolicy bool
 
 	// curlCACert, curlCAPath, curlClientCert and curlClientKey are used to keep
 	// track of the name of the TLS certs and keys when OutputCurlString is set.
@@ -330,15 +339,13 @@ func (c *Config) ReadEnvironment() error {
 	var envMaxRetries *uint64
 	var envSRVLookup bool
 	var limit *rate.Limiter
-	var envHTTPProxy string
+	var envVaultProxy string
 
 	// Parse the environment variables
 	if v := os.Getenv(EnvVaultAddress); v != "" {
 		envAddress = v
 	}
 	if v := os.Getenv(EnvVaultAgentAddr); v != "" {
-		envAgentAddress = v
-	} else if v := os.Getenv(EnvVaultAgentAddress); v != "" {
 		envAgentAddress = v
 	}
 	if v := os.Getenv(EnvVaultMaxRetries); v != "" {
@@ -383,12 +390,6 @@ func (c *Config) ReadEnvironment() error {
 		if err != nil {
 			return fmt.Errorf("could not parse VAULT_SKIP_VERIFY")
 		}
-	} else if v := os.Getenv(EnvVaultInsecure); v != "" {
-		var err error
-		envInsecure, err = strconv.ParseBool(v)
-		if err != nil {
-			return fmt.Errorf("could not parse VAULT_INSECURE")
-		}
 	}
 	if v := os.Getenv(EnvVaultSRVLookup); v != "" {
 		var err error
@@ -403,7 +404,12 @@ func (c *Config) ReadEnvironment() error {
 	}
 
 	if v := os.Getenv(EnvHTTPProxy); v != "" {
-		envHTTPProxy = v
+		envVaultProxy = v
+	}
+
+	// VAULT_PROXY_ADDR supersedes VAULT_HTTP_PROXY
+	if v := os.Getenv(EnvVaultProxyAddr); v != "" {
+		envVaultProxy = v
 	}
 
 	// Configure the HTTP clients TLS configuration.
@@ -443,17 +449,62 @@ func (c *Config) ReadEnvironment() error {
 		c.Timeout = envClientTimeout
 	}
 
-	if envHTTPProxy != "" {
-		url, err := url.Parse(envHTTPProxy)
+	if envVaultProxy != "" {
+		u, err := url.Parse(envVaultProxy)
 		if err != nil {
 			return err
 		}
 
 		transport := c.HttpClient.Transport.(*http.Transport)
-		transport.Proxy = http.ProxyURL(url)
+		transport.Proxy = http.ProxyURL(u)
 	}
 
 	return nil
+}
+
+// ParseAddress transforms the provided address into a url.URL and handles
+// the case of Unix domain sockets by setting the DialContext in the
+// configuration's HttpClient.Transport. This function must be called with
+// c.modifyLock held for write access.
+func (c *Config) ParseAddress(address string) (*url.URL, error) {
+	u, err := url.Parse(address)
+	if err != nil {
+		return nil, err
+	}
+
+	c.Address = address
+
+	if strings.HasPrefix(address, "unix://") {
+		// When the address begins with unix://, always change the transport's
+		// DialContext (to match previous behaviour)
+		socket := strings.TrimPrefix(address, "unix://")
+
+		if transport, ok := c.HttpClient.Transport.(*http.Transport); ok {
+			transport.DialContext = func(context.Context, string, string) (net.Conn, error) {
+				return net.Dial("unix", socket)
+			}
+
+			// Since the address points to a unix domain socket, the scheme in the
+			// *URL would be set to `unix`. The *URL in the client is expected to
+			// be pointing to the protocol used in the application layer and not to
+			// the transport layer. Hence, setting the fields accordingly.
+			u.Scheme = "http"
+			u.Host = socket
+			u.Path = ""
+		} else {
+			return nil, fmt.Errorf("attempting to specify unix:// address with non-transport transport")
+		}
+	} else if strings.HasPrefix(c.Address, "unix://") {
+		// When the address being set does not begin with unix:// but the previous
+		// address in the Config did, change the transport's DialContext back to
+		// use the default configuration that cleanhttp uses.
+
+		if transport, ok := c.HttpClient.Transport.(*http.Transport); ok {
+			transport.DialContext = cleanhttp.DefaultPooledTransport().DialContext
+		}
+	}
+
+	return u, nil
 }
 
 func parseRateLimit(val string) (rate float64, burst int, err error) {
@@ -528,25 +579,9 @@ func NewClient(c *Config) (*Client, error) {
 		address = c.AgentAddress
 	}
 
-	u, err := url.Parse(address)
+	u, err := c.ParseAddress(address)
 	if err != nil {
 		return nil, err
-	}
-
-	if strings.HasPrefix(address, "unix://") {
-		socket := strings.TrimPrefix(address, "unix://")
-		transport := c.HttpClient.Transport.(*http.Transport)
-		transport.DialContext = func(context.Context, string, string) (net.Conn, error) {
-			return net.Dial("unix", socket)
-		}
-
-		// Since the address points to a unix domain socket, the scheme in the
-		// *URL would be set to `unix`. The *URL in the client is expected to
-		// be pointing to the protocol used in the application layer and not to
-		// the transport layer. Hence, setting the fields accordingly.
-		u.Scheme = "http"
-		u.Host = socket
-		u.Path = ""
 	}
 
 	client := &Client{
@@ -600,21 +635,18 @@ func (c *Client) CloneConfig() *Config {
 	return newConfig
 }
 
-// Sets the address of Vault in the client. The format of address should be
+// SetAddress sets the address of Vault in the client. The format of address should be
 // "<Scheme>://<Host>:<Port>". Setting this on a client will override the
 // value of VAULT_ADDR environment variable.
 func (c *Client) SetAddress(addr string) error {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
 
-	parsedAddr, err := url.Parse(addr)
+	parsedAddr, err := c.config.ParseAddress(addr)
 	if err != nil {
 		return errwrap.Wrapf("failed to set address: {{err}}", err)
 	}
 
-	c.config.modifyLock.Lock()
-	c.config.Address = addr
-	c.config.modifyLock.Unlock()
 	c.addr = parsedAddr
 	return nil
 }
@@ -625,6 +657,16 @@ func (c *Client) Address() string {
 	defer c.modifyLock.RUnlock()
 
 	return c.addr.String()
+}
+
+func (c *Client) SetCheckRedirect(f func(*http.Request, []*http.Request) error) {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.HttpClient.CheckRedirect = f
 }
 
 // SetLimiter will set the rate limiter for this client.
@@ -694,6 +736,24 @@ func (c *Client) SetMaxRetries(retries int) {
 	defer c.config.modifyLock.Unlock()
 
 	c.config.MaxRetries = retries
+}
+
+func (c *Client) SetMaxIdleConnections(idle int) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.HttpClient.Transport.(*http.Transport).MaxIdleConns = idle
+}
+
+func (c *Client) MaxIdleConnections() int {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	return c.config.HttpClient.Transport.(*http.Transport).MaxIdleConns
 }
 
 func (c *Client) MaxRetries() int {
@@ -779,6 +839,24 @@ func (c *Client) SetOutputCurlString(curl bool) {
 	c.config.OutputCurlString = curl
 }
 
+func (c *Client) OutputPolicy() bool {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+
+	return c.config.OutputPolicy
+}
+
+func (c *Client) SetOutputPolicy(isSet bool) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.OutputPolicy = isSet
+}
+
 // CurrentWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
 // for a given operation and path.
 func (c *Client) CurrentWrappingLookupFunc() WrappingLookupFunc {
@@ -819,10 +897,39 @@ func (c *Client) setNamespace(namespace string) {
 	c.headers.Set(consts.NamespaceHeaderName, namespace)
 }
 
+// ClearNamespace removes the namespace header if set.
 func (c *Client) ClearNamespace() {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
-	c.headers.Del(consts.NamespaceHeaderName)
+	if c.headers != nil {
+		c.headers.Del(consts.NamespaceHeaderName)
+	}
+}
+
+// Namespace returns the namespace currently set in this client. It will
+// return an empty string if there is no namespace set.
+func (c *Client) Namespace() string {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+	if c.headers == nil {
+		return ""
+	}
+	return c.headers.Get(consts.NamespaceHeaderName)
+}
+
+// WithNamespace makes a shallow copy of Client, modifies it to use
+// the given namespace, and returns it. Passing an empty string will
+// temporarily unset the namespace.
+func (c *Client) WithNamespace(namespace string) *Client {
+	c2 := *c
+	c2.modifyLock = sync.RWMutex{}
+	c2.headers = c.Headers()
+	if namespace == "" {
+		c2.ClearNamespace()
+	} else {
+		c2.SetNamespace(namespace)
+	}
+	return &c2
 }
 
 // Token returns the access token being used by this client. It will
@@ -1141,11 +1248,22 @@ func (c *Client) rawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	checkRetry := c.config.CheckRetry
 	backoff := c.config.Backoff
 	httpClient := c.config.HttpClient
+	ns := c.headers.Get(consts.NamespaceHeaderName)
 	outputCurlString := c.config.OutputCurlString
+	outputPolicy := c.config.OutputPolicy
 	logger := c.config.Logger
 	c.config.modifyLock.RUnlock()
 
 	c.modifyLock.RUnlock()
+
+	// ensure that the most current namespace setting is used at the time of the call
+	// e.g. calls using (*Client).WithNamespace
+	switch ns {
+	case "":
+		r.Headers.Del(consts.NamespaceHeaderName)
+	default:
+		r.Headers.Set(consts.NamespaceHeaderName, ns)
+	}
 
 	for _, cb := range c.requestCallbacks {
 		cb(r)
@@ -1184,6 +1302,14 @@ START:
 			ClientCAPath:  c.config.curlCAPath,
 		}
 		return nil, LastOutputStringError
+	}
+
+	if outputPolicy {
+		LastOutputPolicyError = &OutputPolicyError{
+			method: req.Method,
+			path:   strings.TrimPrefix(req.URL.Path, "/v1"),
+		}
+		return nil, LastOutputPolicyError
 	}
 
 	req.Request = req.Request.WithContext(ctx)
@@ -1278,19 +1404,30 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 	limiter := c.config.Limiter
 	httpClient := c.config.HttpClient
 	outputCurlString := c.config.OutputCurlString
+	outputPolicy := c.config.OutputPolicy
+
+	// add headers
 	if c.headers != nil {
 		for header, vals := range c.headers {
 			for _, val := range vals {
 				req.Header.Add(header, val)
 			}
 		}
+		// explicitly set the namespace header to current client
+		if ns := c.headers.Get(consts.NamespaceHeaderName); ns != "" {
+			r.Headers.Set(consts.NamespaceHeaderName, ns)
+		}
 	}
+
 	c.config.modifyLock.RUnlock()
 	c.modifyLock.RUnlock()
 
-	// OutputCurlString logic relies on the request type to be retryable.Request as
+	// OutputCurlString and OutputPolicy logic rely on the request type to be retryable.Request
 	if outputCurlString {
 		return nil, fmt.Errorf("output-curl-string is not implemented for this request")
+	}
+	if outputPolicy {
+		return nil, fmt.Errorf("output-policy is not implemented for this request")
 	}
 
 	req.URL.User = r.URL.User

@@ -310,3 +310,12 @@ func (w *StatusHeaderResponseWriter) setCustomResponseHeaders(status int) {
 }
 
 var _ WrappingResponseWriter = &StatusHeaderResponseWriter{}
+
+// ResolveRoleResponse returns a standard response to be returned by functions handling a ResolveRoleOperation
+func ResolveRoleResponse(roleName string) (*Response, error) {
+	return &Response{
+		Data: map[string]interface{}{
+			"role": roleName,
+		},
+	}, nil
+}

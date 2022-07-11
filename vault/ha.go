@@ -185,6 +185,15 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 		oldAdv = true
 	}
 
+	// At the top of this function we return early when we're the active node.
+	// If we're not the active node, and there's a stale advertisement pointing
+	// to ourself, there's no point in paying any attention to it.  And by
+	// disregarding it, we can avoid a panic in raft tests using the Inmem network
+	// layer when we try to connect back to ourself.
+	if adv.ClusterAddr == c.ClusterAddr() && adv.RedirectAddr == c.redirectAddr {
+		return false, "", "", nil
+	}
+
 	if !oldAdv {
 		c.logger.Debug("parsing information for new active node", "active_cluster_addr", adv.ClusterAddr, "active_redirect_addr", adv.RedirectAddr)
 
@@ -770,7 +779,8 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 				// keys (e.g. from replication being activated) and we need to seal to
 				// be unsealed again.
 				entry, _ := c.barrier.Get(ctx, poisonPillPath)
-				if entry != nil && len(entry.Value) > 0 {
+				entryDR, _ := c.barrier.Get(ctx, poisonPillDRPath)
+				if (entry != nil && len(entry.Value) > 0) || (entryDR != nil && len(entryDR.Value) > 0) {
 					c.logger.Warn("encryption keys have changed out from underneath us (possibly due to replication enabling), must be unsealed again")
 					// If we are using raft storage we do not want to shut down
 					// raft during replication secondary enablement. This will

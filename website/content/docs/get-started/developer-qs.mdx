@@ -8,12 +8,20 @@ description: Learn how to store and retrieve your first secret.
 
 This quick start will explore how to use Vault client libraries inside your application code to store and retrieve your first secret value. Vault takes the security burden away from developers by providing a secure, centralized secret store for an application’s sensitive data: credentials, certificates, encryption keys, and more.
 
+The complete code samples for the steps below are available here:
+
+- [Go](https://github.com/hashicorp/vault-examples/blob/main/examples/_quick-start/go/example.go)
+- [Ruby](https://github.com/hashicorp/vault-examples/blob/main/examples/_quick-start/ruby/example.rb)
+- [C#](https://github.com/hashicorp/vault-examples/blob/main/examples/_quick-start/dotnet/Example.cs)
+- [Python](https://github.com/hashicorp/vault-examples/blob/main/examples/_quick-start/python/example.py)
+- [Java (Spring)](https://github.com/hashicorp/vault-examples/blob/main/examples/_quick-start/java/Example.java)
+
 For an out-of-the-box runnable demo application showcasing these concepts and more, see the hello-vault repositories ([Go](https://github.com/hashicorp/hello-vault-go), [C#](https://github.com/hashicorp/hello-vault-dotnet) and [Java/Spring Boot](https://github.com/hashicorp/hello-vault-spring)).
 
 ## Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) or a [local installation](https://learn.hashicorp.com/tutorials/vault/getting-started-install?in=vault/getting-started) of the Vault binary
-- A development environment applicable to one of the languages in this quick start (currently **Go**, **Ruby**, **C#**, **Python**, and **Java (Spring)**)
+- A development environment applicable to one of the languages in this quick start (currently **Go**, **Ruby**, **C#**, **Python**, **Java (Spring)**, and **Bash (curl)**)
 
 ## Step 1: Start Vault
 
@@ -171,8 +179,6 @@ Paste the following code to initialize a new Vault client that will use token-ba
 
 <CodeTabs heading="initialize a new vault client">
 
-<CodeBlockConfig lineNumbers>
-
 ```go
 config := vault.DefaultConfig()
 
@@ -186,20 +192,12 @@ if err != nil {
 client.SetToken("dev-only-token")
 ```
 
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
-
 ```ruby
 Vault.configure do |config|
     config.address = "http://127.0.0.1:8200"
     config.token = "dev-only-token"
 end
 ```
-
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
 
 ```cs
 IAuthMethodInfo authMethod = new TokenAuthMethodInfo(vaultToken: "dev-only-token");
@@ -209,20 +207,12 @@ VaultClientSettings("http://127.0.0.1:8200", authMethod);
 IVaultClient vaultClient = new VaultClient(vaultClientSettings);
 ```
 
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
-
 ```Python
 client = hvac.Client(
     url='http://127.0.0.1:8200',
     token='dev-only-token',
 )
 ```
-
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
 
 ```Java
 VaultEndpoint vaultEndpoint = new VaultEndpoint();
@@ -237,7 +227,9 @@ VaultTemplate vaultTemplate = new VaultTemplate(
 );
 ```
 
-</CodeBlockConfig>
+```shell-session
+export VAULT_TOKEN="dev-only-token"
+```
 
 </CodeTabs>
 
@@ -249,17 +241,13 @@ We'll use the Vault client we just initialized to write a secret to Vault, like 
 
 <CodeTabs heading="write a secret to vault">
 
-<CodeBlockConfig lineNumbers>
-
 ```go
 secretData := map[string]interface{}{
-    "data": map[string]interface{}{
-        "password": "Hashi123",
-    },
+    "password": "Hashi123",
 }
 
 
-_, err = client.Logical().Write("secret/data/my-secret-password", secretData)
+_, err = client.KVv2("secret").Put(context.Background(), "my-secret-password", secretData)
 if err != nil {
     log.Fatalf("unable to write secret: %v", err)
 }
@@ -267,20 +255,12 @@ if err != nil {
 fmt.Println("Secret written successfully.")
 ```
 
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
-
 ```ruby
 secret_data = {data: {password: "Hashi123"}}
 Vault.logical.write("secret/data/my-secret-password", secret_data)
 
 puts "Secret written successfully."
 ```
-
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
 
 ```cs
 var secretData = new Dictionary<string, object> { { "password", "Hashi123" } };
@@ -293,10 +273,6 @@ vaultClient.V1.Secrets.KeyValue.V2.WriteSecretAsync(
 Console.WriteLine("Secret written successfully.");
 ```
 
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
-
 ```Python
 create_response = client.secrets.kv.v2.create_or_update_secret(
     path='my-secret-password',
@@ -305,10 +281,6 @@ create_response = client.secrets.kv.v2.create_or_update_secret(
 
 print('Secret written successfully.')
 ```
-
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
 
 ```Java
 Map<String, String> data = new HashMap<>();
@@ -321,7 +293,14 @@ Versioned.Metadata createResponse = vaultTemplate
 System.out.println("Secret written successfully.");
 ```
 
-</CodeBlockConfig>
+```shell-session
+curl \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    --header "Content-Type: application/json" \
+    --request POST \
+    --data '{"data": {"password": "Hashi123"}}' \
+    http://127.0.0.1:8200/v1/secret/data/my-secret-password
+```
 
 </CodeTabs>
 
@@ -339,38 +318,22 @@ Underneath the line where you wrote a secret to Vault, let's add a few more line
 
 <CodeTabs heading="read a secret">
 
-<CodeBlockConfig lineNumbers>
-
 ```go
-secret, err := client.Logical().Read("secret/data/my-secret-password")
+secret, err := client.KVv2("secret").Get(context.Background(), "my-secret-password")
 if err != nil {
     log.Fatalf("unable to read secret: %v", err)
 }
 
-data, ok := secret.Data["data"].(map[string]interface{})
+value, ok := secret.Data["password"].(string)
 if !ok {
-    log.Fatalf("data type assertion failed: %T %#v", secret.Data["data"], secret.Data["data"])
-}
-
-key := "password"
-value, ok := data[key].(string)
-if !ok {
-    log.Fatalf("value type assertion failed: %T %#v", data[key], data[key])
+log.Fatalf("value type assertion failed: %T %#v", secret.Data["password"], secret.Data["password"])
 }
 ```
-
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
 
 ```ruby
 secret = Vault.logical.read("secret/data/my-secret-password")
 password = secret.data[:data][:password]
 ```
-
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
 
 ```cs
 Secret<SecretData> secret = vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(
@@ -381,19 +344,11 @@ Secret<SecretData> secret = vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(
 var password = secret.Data.Data["password"];
 ```
 
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
-
 ```Python
 read_response = client.secrets.kv.read_secret_version(path='my-secret-password')
 
 password = read_response['data']['data']['password']
 ```
-
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
 
 ```Java
 Versioned<Map<String, Object>> readResponse = vaultTemplate
@@ -406,15 +361,17 @@ if (readResponse != null && readResponse.hasData()) {
 }
 ```
 
-</CodeBlockConfig>
+```shell-session
+curl \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    http://127.0.0.1:8200/v1/secret/data/my-secret-password > secrets.json
+```
 
 </CodeTabs>
 
 Last, confirm that the value we unpacked from the read response is correct:
 
 <CodeTabs heading="confirm value">
-
-<CodeBlockConfig lineNumbers>
 
 ```go
 if value != "Hashi123" {
@@ -424,19 +381,11 @@ if value != "Hashi123" {
 fmt.Println("Access granted!")
 ```
 
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
-
 ```ruby
 abort "Unexpected password" if password != "Hashi123"
 
 puts "Access granted!"
 ```
-
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
 
 ```cs
 if (password.ToString() != "Hashi123")
@@ -447,20 +396,12 @@ if (password.ToString() != "Hashi123")
 Console.WriteLine("Access granted!");
 ```
 
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
-
 ```Python
 if password != 'Hashi123':
     sys.exit('unexpected password')
 
 print('Access granted!')
 ```
-
-</CodeBlockConfig>
-
-<CodeBlockConfig lineNumbers>
 
 ```Java
 if (!password.equals("Hashi123")) {
@@ -470,21 +411,14 @@ if (!password.equals("Hashi123")) {
 System.out.println("Access granted!");
 ```
 
-</CodeBlockConfig>
-
+```shell-session
+    cat secrets.json | jq '.data.data'
+```
 </CodeTabs>
 
 If the secret was fetched successfully, you should see the `Access granted!` message after you run the code. If not, check to see if you provided the correct path to your secret.
 
 **That's it! You've just written and retrieved your first Vault secret!**
-
-The complete code samples for the steps you've just performed in this quick start are available here:
-
-- [Go](https://github.com/hashicorp/vault-examples/blob/main/examples/_quick-start/go/example.go)
-- [Ruby](https://github.com/hashicorp/vault-examples/blob/main/examples/_quick-start/ruby/example.rb)
-- [C#](https://github.com/hashicorp/vault-examples/blob/main/examples/_quick-start/dotnet/Example.cs)
-- [Python](https://github.com/hashicorp/vault-examples/blob/main/examples/_quick-start/python/example.py)
-- [Java (Spring)](https://github.com/hashicorp/vault-examples/blob/main/examples/_quick-start/java/Example.java)
 
 # Additional examples
 

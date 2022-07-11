@@ -71,6 +71,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
   };
 
   test('cert config: generate', async function (assert) {
+    assert.expect(10);
     await mountAndNav(assert);
     await settled();
     assert.equal(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
@@ -90,14 +91,10 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     await page.form.back();
     await page.form.generateCA();
     await settled();
-
-    assert.ok(
-      page.flash.latestMessage.includes('You tried to generate a new root CA'),
-      'shows warning message'
-    );
   });
 
   test('cert config: upload', async function (assert) {
+    assert.expect(2);
     await mountAndNav(assert);
     await settled();
     assert.equal(page.form.downloadLinks.length, 0, 'there are no download links');
@@ -111,6 +108,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
   });
 
   test('cert config: sign intermediate and set signed intermediate', async function (assert) {
+    assert.expect(3);
     let csrVal, intermediateCert;
     const rootPath = await mountAndNav(assert, 'root-');
     await page.form.generateCA();
@@ -129,7 +127,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     await settled();
     await page.form.csrField(csrVal).submit();
     await settled();
-    assert.dom(SELECTORS.caChain).doesNotExist('does not display empty CA chain');
+    assert.dom(SELECTORS.caChain).exists('full CA chain is shown');
     assert.dom(SELECTORS.privateKey).doesNotExist('does not display empty private key');
     await click('.masked-input-toggle');
     intermediateCert = document.querySelector('[data-test-masked-input]').innerText;

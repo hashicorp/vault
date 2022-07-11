@@ -29,7 +29,6 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -742,7 +741,8 @@ func (b *SystemBackend) handleRekeyRetrieve(
 	ctx context.Context,
 	req *logical.Request,
 	data *framework.FieldData,
-	recovery bool) (*logical.Response, error) {
+	recovery bool,
+) (*logical.Response, error) {
 	backup, err := b.Core.RekeyRetrieveBackup(ctx, recovery)
 	if err != nil {
 		return nil, fmt.Errorf("unable to look up backed-up keys: %w", err)
@@ -793,7 +793,8 @@ func (b *SystemBackend) handleRekeyDelete(
 	ctx context.Context,
 	req *logical.Request,
 	data *framework.FieldData,
-	recovery bool) (*logical.Response, error) {
+	recovery bool,
+) (*logical.Response, error) {
 	err := b.Core.RekeyDeleteBackup(ctx, recovery)
 	if err != nil {
 		return nil, fmt.Errorf("error during deletion of backed-up keys: %w", err)
@@ -1083,7 +1084,8 @@ func (b *SystemBackend) handleReadMount(ctx context.Context, req *logical.Reques
 
 // used to intercept an HTTPCodedError so it goes back to callee
 func handleError(
-	err error) (*logical.Response, error) {
+	err error,
+) (*logical.Response, error) {
 	if strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
 		return logical.ErrorResponse(err.Error()), err
 	}
@@ -1098,7 +1100,8 @@ func handleError(
 // Performs a similar function to handleError, but upon seeing a ReadOnlyError
 // will actually strip it out to prevent forwarding
 func handleErrorNoReadOnlyForward(
-	err error) (*logical.Response, error) {
+	err error,
+) (*logical.Response, error) {
 	if strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
 		return nil, fmt.Errorf("operation could not be completed as storage is read-only")
 	}
@@ -2008,7 +2011,8 @@ func (b *SystemBackend) handleRevokeForce(ctx context.Context, req *logical.Requ
 
 // handleRevokePrefixCommon is used to revoke a prefix with many LeaseIDs
 func (b *SystemBackend) handleRevokePrefixCommon(ctx context.Context,
-	req *logical.Request, data *framework.FieldData, force, sync bool) (*logical.Response, error) {
+	req *logical.Request, data *framework.FieldData, force, sync bool,
+) (*logical.Response, error) {
 	// Get all the options
 	prefix := data.Get("prefix").(string)
 
@@ -3240,6 +3244,14 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse("unknown log level"), nil
 	}
 
+	lf := data.Get("log_format").(string)
+	lowerLogFormat := strings.ToLower(lf)
+
+	validFormats := []string{"standard", "json"}
+	if !strutil.StrListContains(validFormats, lowerLogFormat) {
+		return logical.ErrorResponse("unknown log format"), nil
+	}
+
 	flusher, ok := w.ResponseWriter.(http.Flusher)
 	if !ok {
 		// http.ResponseWriter is wrapped in wrapGenericHandler, so let's
@@ -3254,7 +3266,7 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 		}
 	}
 
-	isJson := b.Core.LogFormat() == "json"
+	isJson := b.Core.LogFormat() == "json" || lf == "json"
 	logger := b.Core.Logger().(log.InterceptLogger)
 
 	mon, err := monitor.NewMonitor(512, logger, &log.LoggerOptions{
@@ -3392,13 +3404,23 @@ func (b *SystemBackend) handleWrappingLookup(ctx context.Context, req *logical.R
 		return nil, errors.New("token is not a valid unwrap token")
 	}
 
+	lookupNS, err := NamespaceByID(ctx, te.NamespaceID, b.Core)
+	if err != nil {
+		return nil, err
+	}
+	if lookupNS == nil {
+		return nil, errors.New("token is not from a valid namespace")
+	}
+
+	lookupCtx := namespace.ContextWithNamespace(ctx, lookupNS)
+
 	cubbyReq := &logical.Request{
 		Operation:   logical.ReadOperation,
 		Path:        "cubbyhole/wrapinfo",
 		ClientToken: token,
 	}
 	cubbyReq.SetTokenEntry(te)
-	cubbyResp, err := b.Core.router.Route(ctx, cubbyReq)
+	cubbyResp, err := b.Core.router.Route(lookupCtx, cubbyReq)
 	if err != nil {
 		return nil, fmt.Errorf("error looking up wrapping information: %w", err)
 	}
@@ -3610,55 +3632,8 @@ func (b *SystemBackend) pathHashWrite(ctx context.Context, req *logical.Request,
 	return resp, nil
 }
 
-func (b *SystemBackend) pathRandomWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	bytes := 0
-	var err error
-	strBytes := d.Get("urlbytes").(string)
-	if strBytes != "" {
-		bytes, err = strconv.Atoi(strBytes)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("error parsing url-set byte count: %s", err)), nil
-		}
-	} else {
-		bytes = d.Get("bytes").(int)
-	}
-	format := d.Get("format").(string)
-
-	if bytes < 1 {
-		return logical.ErrorResponse(`"bytes" cannot be less than 1`), nil
-	}
-
-	if bytes > maxBytes {
-		return logical.ErrorResponse(`"bytes" should be less than %d`, maxBytes), nil
-	}
-
-	switch format {
-	case "hex":
-	case "base64":
-	default:
-		return logical.ErrorResponse("unsupported encoding format %q; must be \"hex\" or \"base64\"", format), nil
-	}
-
-	randBytes, err := uuid.GenerateRandomBytes(bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	var retStr string
-	switch format {
-	case "hex":
-		retStr = hex.EncodeToString(randBytes)
-	case "base64":
-		retStr = base64.StdEncoding.EncodeToString(randBytes)
-	}
-
-	// Generate the response
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"random_bytes": retStr,
-		},
-	}
-	return resp, nil
+func (b *SystemBackend) pathRandomWrite(_ context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return random.HandleRandomAPI(d, b.Core.secureRandomReader)
 }
 
 func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
@@ -3759,7 +3734,11 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		}
 
 		if isAuthed {
-			return hasMountAccess(ctx, acl, me.Namespace().Path+me.Path)
+			if me.Table == "auth" {
+				return hasMountAccess(ctx, acl, me.Namespace().Path+me.Table+"/"+me.Path)
+			} else {
+				return hasMountAccess(ctx, acl, me.Namespace().Path+me.Path)
+			}
 		}
 
 		return false
@@ -3869,10 +3848,18 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 	}
 	resp.Data["path"] = me.Path
 
-	fullMountPath := ns.Path + me.Path
+	pathWithTable := ""
+
+	if me.Table == "auth" {
+		pathWithTable = me.Table + "/" + me.Path
+	} else {
+		pathWithTable = me.Path
+	}
+
+	fullMountPath := ns.Path + pathWithTable
 	if ns.ID != me.Namespace().ID {
-		resp.Data["path"] = me.Namespace().Path + me.Path
-		fullMountPath = ns.Path + me.Namespace().Path + me.Path
+		resp.Data["path"] = me.Namespace().Path + pathWithTable
+		fullMountPath = ns.Path + me.Namespace().Path + pathWithTable
 	}
 
 	if !hasMountAccess(ctx, acl, fullMountPath) {
@@ -4043,6 +4030,8 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 	// be received from plugin backends.
 	doc := framework.NewOASDocument()
 
+	genericMountPaths, _ := d.Get("generic_mount_paths").(bool)
+
 	procMountGroup := func(group, mountPrefix string) error {
 		for mount, entry := range resp.Data[group].(map[string]interface{}) {
 
@@ -4060,7 +4049,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 			req := &logical.Request{
 				Operation: logical.HelpOperation,
 				Storage:   req.Storage,
-				Data:      map[string]interface{}{"requestResponsePrefix": pluginType},
+				Data:      map[string]interface{}{"requestResponsePrefix": pluginType, "genericMountPaths": genericMountPaths},
 			}
 
 			resp, err := backend.HandleRequest(ctx, req)
@@ -4114,7 +4103,12 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 					}
 				}
 
-				doc.Paths["/"+mountPrefix+mount+path] = obj
+				if genericMountPaths && mount != "sys/" && mount != "identity/" {
+					s := fmt.Sprintf("/%s{mountPath}/%s", mountPrefix, path)
+					doc.Paths[s] = obj
+				} else {
+					doc.Paths["/"+mountPrefix+mount+path] = obj
+				}
 			}
 
 			// Merge backend schema components
@@ -4159,6 +4153,7 @@ type SealStatusResponse struct {
 	Progress     int    `json:"progress"`
 	Nonce        string `json:"nonce"`
 	Version      string `json:"version"`
+	BuildDate    string `json:"build_date"`
 	Migration    bool   `json:"migration"`
 	ClusterName  string `json:"cluster_name,omitempty"`
 	ClusterID    string `json:"cluster_id,omitempty"`
@@ -4192,6 +4187,7 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 			RecoverySeal: core.SealAccess().RecoveryKeySupported(),
 			StorageType:  core.StorageType(),
 			Version:      version.GetVersion().VersionNumber(),
+			BuildDate:    version.BuildDate,
 		}, nil
 	}
 
@@ -4220,6 +4216,7 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		Progress:     progress,
 		Nonce:        nonce,
 		Version:      version.GetVersion().VersionNumber(),
+		BuildDate:    version.BuildDate,
 		Migration:    core.IsInSealMigrationMode() && !core.IsSealMigrated(),
 		ClusterName:  clusterName,
 		ClusterID:    clusterID,
@@ -4363,14 +4360,20 @@ func (b *SystemBackend) handleHAStatus(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	nodes := []HAStatusNode{
-		{
-			Hostname:       hostname,
-			APIAddress:     b.Core.redirectAddr,
-			ClusterAddress: b.Core.ClusterAddr(),
-			ActiveNode:     true,
-		},
+	leader := HAStatusNode{
+		Hostname:       hostname,
+		APIAddress:     b.Core.redirectAddr,
+		ClusterAddress: b.Core.ClusterAddr(),
+		ActiveNode:     true,
+		Version:        version.GetVersion().Version,
 	}
+
+	if rb := b.Core.getRaftBackend(); rb != nil {
+		leader.UpgradeVersion = rb.EffectiveVersion()
+		leader.RedundancyZone = rb.RedundancyZone()
+	}
+
+	nodes := []HAStatusNode{leader}
 
 	for _, peerNode := range b.Core.GetHAPeerNodesCached() {
 		lastEcho := peerNode.LastEcho
@@ -4379,8 +4382,15 @@ func (b *SystemBackend) handleHAStatus(ctx context.Context, req *logical.Request
 			APIAddress:     peerNode.APIAddress,
 			ClusterAddress: peerNode.ClusterAddress,
 			LastEcho:       &lastEcho,
+			Version:        peerNode.Version,
+			UpgradeVersion: peerNode.UpgradeVersion,
+			RedundancyZone: peerNode.RedundancyZone,
 		})
 	}
+
+	sort.Slice(nodes, func(i, j int) bool {
+		return nodes[i].APIAddress < nodes[j].APIAddress
+	})
 
 	return &logical.Response{
 		Data: map[string]interface{}{
@@ -4395,17 +4405,17 @@ type HAStatusNode struct {
 	ClusterAddress string     `json:"cluster_address"`
 	ActiveNode     bool       `json:"active_node"`
 	LastEcho       *time.Time `json:"last_echo"`
+	Version        string     `json:"version"`
+	UpgradeVersion string     `json:"upgrade_version,omitempty"`
+	RedundancyZone string     `json:"redundancy_zone,omitempty"`
 }
 
 func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	versions := make([]VaultVersion, 0)
 	respKeys := make([]string, 0)
 
-	for versionString, ts := range b.Core.versionTimestamps {
-		versions = append(versions, VaultVersion{
-			Version:            versionString,
-			TimestampInstalled: ts,
-		})
+	for _, versionEntry := range b.Core.versionHistory {
+		versions = append(versions, versionEntry)
 	}
 
 	sort.Slice(versions, func(i, j int) bool {
@@ -4419,6 +4429,7 @@ func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logic
 
 		entry := map[string]interface{}{
 			"timestamp_installed": v.TimestampInstalled.Format(time.RFC3339),
+			"build_date":          v.BuildDate,
 			"previous_version":    nil,
 		}
 
@@ -4430,6 +4441,112 @@ func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logic
 	}
 
 	return logical.ListResponseWithInfo(respKeys, respKeyInfo), nil
+}
+
+// getLogLevel returns the hclog.Level that corresponds with the provided level string.
+// This differs hclog.LevelFromString in that it supports additional level strings so
+// that in remains consistent with the handling found in the "vault server" command.
+func getLogLevel(logLevel string) (log.Level, error) {
+	var level log.Level
+
+	switch logLevel {
+	case "trace":
+		level = log.Trace
+	case "debug":
+		level = log.Debug
+	case "notice", "info", "":
+		level = log.Info
+	case "warn", "warning":
+		level = log.Warn
+	case "err", "error":
+		level = log.Error
+	default:
+		return level, fmt.Errorf("unrecognized log level %q", logLevel)
+	}
+
+	return level, nil
+}
+
+func (b *SystemBackend) handleLoggersWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	logLevelRaw, ok := d.GetOk("level")
+
+	if !ok {
+		return logical.ErrorResponse("level is required"), nil
+	}
+
+	logLevel := logLevelRaw.(string)
+	if logLevel == "" {
+		return logical.ErrorResponse("level is empty"), nil
+	}
+
+	level, err := getLogLevel(logLevel)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("invalid level provided: %s", err.Error())), nil
+	}
+
+	b.Core.SetLogLevel(level)
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handleLoggersDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	level, err := getLogLevel(b.Core.logLevel)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("log level from config is invalid: %s", err.Error())), nil
+	}
+
+	b.Core.SetLogLevel(level)
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handleLoggersByNameWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	nameRaw, nameOk := d.GetOk("name")
+	if !nameOk {
+		return logical.ErrorResponse("name is required"), nil
+	}
+
+	logLevelRaw, logLevelOk := d.GetOk("level")
+
+	if !logLevelOk {
+		return logical.ErrorResponse("level is required"), nil
+	}
+
+	logLevel := logLevelRaw.(string)
+	if logLevel == "" {
+		return logical.ErrorResponse("level is empty"), nil
+	}
+
+	level, err := getLogLevel(logLevel)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("invalid level provided: %s", err.Error())), nil
+	}
+
+	err = b.Core.SetLogLevelByName(nameRaw.(string), level)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("invalid params: %s", err.Error())), nil
+	}
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handleLoggersByNameDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	nameRaw, ok := d.GetOk("name")
+	if !ok {
+		return logical.ErrorResponse("name is required"), nil
+	}
+
+	level, err := getLogLevel(b.Core.logLevel)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("log level from config is invalid: %s", err.Error())), nil
+	}
+
+	err = b.Core.SetLogLevelByName(nameRaw.(string), level)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("invalid params: %s", err.Error())), nil
+	}
+
+	return nil, nil
 }
 
 func sanitizePath(path string) string {
@@ -5145,7 +5262,7 @@ This path responds to the following HTTP methods.
 		"This function can be used to generate high-entropy random bytes.",
 	},
 	"listing_visibility": {
-		"Determines the visibility of the mount in the UI-specific listing endpoint. Accepted value are 'unauth' and ''.",
+		"Determines the visibility of the mount in the UI-specific listing endpoint. Accepted value are 'unauth' and 'hidden', with the empty default ('') behaving like 'hidden'.",
 		"",
 	},
 	"passthrough_request_headers": {
@@ -5215,6 +5332,10 @@ This path responds to the following HTTP methods.
 	"activity-query": {
 		"Query the historical count of clients.",
 		"Query the historical count of clients.",
+	},
+	"activity-export": {
+		"Export the historical activity of clients.",
+		"Export the historical activity of clients.",
 	},
 	"activity-monthly": {
 		"Count of active clients so far this month.",

@@ -455,28 +455,62 @@ func TestSystemBackend_Plugin_SealUnseal(t *testing.T) {
 }
 
 func TestSystemBackend_Plugin_reload(t *testing.T) {
-	data := map[string]interface{}{
-		"plugin": "mock-plugin",
+	testCases := []struct {
+		name        string
+		backendType logical.BackendType
+		data        map[string]interface{}
+	}{
+		{
+			name:        "test plugin reload for type credential",
+			backendType: logical.TypeCredential,
+			data: map[string]interface{}{
+				"plugin": "mock-plugin",
+			},
+		},
+		{
+			name:        "test mount reload for type credential",
+			backendType: logical.TypeCredential,
+			data: map[string]interface{}{
+				"mounts": "sys/auth/mock-0/,auth/mock-1/",
+			},
+		},
+		{
+			name:        "test plugin reload for type secret",
+			backendType: logical.TypeLogical,
+			data: map[string]interface{}{
+				"plugin": "mock-plugin",
+			},
+		},
+		{
+			name:        "test mount reload for type secret",
+			backendType: logical.TypeLogical,
+			data: map[string]interface{}{
+				"mounts": "mock-0/,mock-1",
+			},
+		},
 	}
-	t.Run("plugin", func(t *testing.T) { testSystemBackend_PluginReload(t, data) })
-
-	data = map[string]interface{}{
-		"mounts": "mock-0/,mock-1/",
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			testSystemBackend_PluginReload(t, tc.data, tc.backendType)
+		})
 	}
-	t.Run("mounts", func(t *testing.T) { testSystemBackend_PluginReload(t, data) })
 }
 
 // Helper func to test different reload methods on plugin reload endpoint
-func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}) {
-	cluster := testSystemBackendMock(t, 1, 2, logical.TypeLogical)
+func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}, backendType logical.BackendType) {
+	cluster := testSystemBackendMock(t, 1, 2, backendType)
 	defer cluster.Cleanup()
 
 	core := cluster.Cores[0]
 	client := core.Client
 
+	pathPrefix := "mock-"
+	if backendType == logical.TypeCredential {
+		pathPrefix = "auth/" + pathPrefix
+	}
 	for i := 0; i < 2; i++ {
 		// Update internal value in the backend
-		resp, err := client.Logical().Write(fmt.Sprintf("mock-%d/internal", i), map[string]interface{}{
+		resp, err := client.Logical().Write(fmt.Sprintf("%s%d/internal", pathPrefix, i), map[string]interface{}{
 			"value": "baz",
 		})
 		if err != nil {
@@ -501,7 +535,7 @@ func testSystemBackend_PluginReload(t *testing.T, reqData map[string]interface{}
 
 	for i := 0; i < 2; i++ {
 		// Ensure internal backed value is reset
-		resp, err := client.Logical().Read(fmt.Sprintf("mock-%d/internal", i))
+		resp, err := client.Logical().Read(fmt.Sprintf("%s%d/internal", pathPrefix, i))
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -528,8 +562,6 @@ func testSystemBackendMock(t *testing.T, numCores, numMounts int, backendType lo
 			"plugin": plugin.Factory,
 		},
 	}
-
-	os.Setenv(consts.VaultDisableFilePermissionsCheckEnv, "true")
 
 	// Create a tempdir, cluster.Cleanup will clean up this directory
 	tempDir, err := ioutil.TempDir("", "vault-test-cluster")
@@ -603,7 +635,6 @@ func testSystemBackend_SingleCluster_Env(t *testing.T, env []string) *vault.Test
 			"test": plugin.Factory,
 		},
 	}
-	os.Setenv(consts.VaultDisableFilePermissionsCheckEnv, "true")
 	// Create a tempdir, cluster.Cleanup will clean up this directory
 	tempDir, err := ioutil.TempDir("", "vault-test-cluster")
 	if err != nil {

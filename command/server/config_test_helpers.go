@@ -320,7 +320,6 @@ func testParseEntropy(t *testing.T, oss bool) {
 		case err != test.outErr:
 			t.Fatalf("error mismatch: expected %#v got %#v", err, test.outErr)
 		case err == nil && config.Entropy != nil && *config.Entropy != test.outEntropy:
-			fmt.Printf("\n config.Entropy: %#v", config.Entropy)
 			t.Fatalf("entropy config mismatch: expected %#v got %#v", test.outEntropy, *config.Entropy)
 		}
 	}
@@ -473,6 +472,16 @@ func testLoadConfigFile(t *testing.T) {
 	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
 		t.Fatal(diff)
+	}
+}
+
+func testUnknownFieldValidationStorageAndListener(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/storage-listener-config.json")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if len(config.UnusedKeys) != 0 {
+		t.Fatalf("unused keys for valid config are %+v\n", config.UnusedKeys)
 	}
 }
 
@@ -891,6 +900,49 @@ EOF
 	}
 }
 
+func testParseStorageTemplate(t *testing.T) {
+	config, err := ParseConfig(`
+storage "consul" {
+
+	disable_registration = false
+	path = "tmp/"
+
+}
+ha_storage "consul" {
+	tls_skip_verify = true
+	scheme = "http"
+	max_parallel = 128
+}
+
+`, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &Config{
+		Storage: &Storage{
+			Type: "consul",
+			Config: map[string]string{
+				"disable_registration": "false",
+				"path":                 "tmp/",
+			},
+		},
+		HAStorage: &Storage{
+			Type: "consul",
+			Config: map[string]string{
+				"tls_skip_verify": "true",
+				"scheme":          "http",
+				"max_parallel":    "128",
+			},
+		},
+		SharedConfig: &configutil.SharedConfig{},
+	}
+	config.Prune()
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
 func testParseSeals(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/config_seals.hcl")
 	if err != nil {
@@ -1004,6 +1056,7 @@ func testLoadConfigFileLeaseMetrics(t *testing.T) {
 			Config: map[string]string{
 				"bar": "baz",
 			},
+
 			DisableClustering: true,
 		},
 

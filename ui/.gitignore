@@ -3,7 +3,6 @@
 # compiled output
 /dist/
 /tmp/
-/storybook-static/
 
 # dependencies
 /bower_components/
@@ -18,7 +17,6 @@
 /npm-debug.log*
 /testem.log
 /yarn-error.log
-/.storybook/preview-head.html
 package-lock.json
 
 # ember-try

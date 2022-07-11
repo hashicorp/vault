@@ -9,6 +9,8 @@ import { encodePath, normalizePath } from 'vault/utils/path-encoding-helpers';
 
 export default Route.extend(UnloadModelRoute, {
   pathHelp: service('path-help'),
+  wizard: service(),
+
   secretParam() {
     let { secret } = this.paramsFor(this.routeName);
     return secret ? normalizePath(secret) : '';
@@ -66,9 +68,9 @@ export default Route.extend(UnloadModelRoute, {
 
   templateName: 'vault/cluster/secrets/backend/secretEditLayout',
 
-  beforeModel() {
+  beforeModel({ to: { queryParams } }) {
     let secret = this.secretParam();
-    return this.buildModel(secret).then(() => {
+    return this.buildModel(secret, queryParams).then(() => {
       const parentKey = utils.parentKeyForKey(secret);
       const mode = this.routeName.split('.').pop();
       if (mode === 'edit' && utils.keyIsFolder(secret)) {
@@ -81,17 +83,16 @@ export default Route.extend(UnloadModelRoute, {
     });
   },
 
-  buildModel(secret) {
+  buildModel(secret, queryParams) {
     const backend = this.enginePathParam();
-
-    let modelType = this.modelType(backend, secret);
+    let modelType = this.modelType(backend, secret, { queryParams });
     if (['secret', 'secret-v2'].includes(modelType)) {
       return resolve();
     }
     return this.pathHelp.getNewModel(modelType, backend);
   },
 
-  modelType(backend, secret) {
+  modelType(backend, secret, options = {}) {
     let backendModel = this.modelFor('vault.cluster.secrets.backend', backend);
     let type = backendModel.get('engineType');
     let types = {
@@ -100,9 +101,10 @@ export default Route.extend(UnloadModelRoute, {
       ssh: 'role-ssh',
       transform: this.modelTypeForTransform(secret),
       aws: 'role-aws',
-      pki: secret && secret.startsWith('cert/') ? 'pki-certificate' : 'role-pki',
+      pki: secret && secret.startsWith('cert/') ? 'pki/cert' : 'pki/pki-role',
       cubbyhole: 'secret',
       kv: backendModel.get('modelTypeForKV'),
+      keymgmt: `keymgmt/${options.queryParams?.itemType || 'key'}`,
       generic: backendModel.get('modelTypeForKV'),
     };
     return types[type];
@@ -211,16 +213,24 @@ export default Route.extend(UnloadModelRoute, {
     let secretModel = this.store.peekRecord(modelType, secretId);
     return secretModel;
   },
+  // wizard will pause unless we manually continue it
+  updateWizard(params) {
+    // verify that keymgmt tutorial is in progress
+    if (params.itemType === 'provider' && this.wizard.nextStep === 'displayProvider') {
+      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', 'keymgmt');
+    }
+  },
 
-  async model(params) {
+  async model(params, { to: { queryParams } }) {
+    this.updateWizard(params);
     let secret = this.secretParam();
     let backend = this.enginePathParam();
-    let modelType = this.modelType(backend, secret);
+    let modelType = this.modelType(backend, secret, { queryParams });
     let type = params.type || '';
     if (!secret) {
       secret = '\u0020';
     }
-    if (modelType === 'pki-certificate') {
+    if (modelType === 'pki/cert') {
       secret = secret.replace('cert/', '');
     }
     if (modelType.startsWith('transform/')) {

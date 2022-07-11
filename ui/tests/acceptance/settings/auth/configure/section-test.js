@@ -42,7 +42,7 @@ module('Acceptance | settings/auth/configure/section', function (hooks) {
   });
 
   for (let type of ['aws', 'azure', 'gcp', 'github', 'kubernetes']) {
-    test(`it shows tabs for auth method: ${type}`, async (assert) => {
+    test(`it shows tabs for auth method: ${type}`, async function (assert) {
       let path = `${type}-${Date.now()}`;
       await cli.consoleInput(`write sys/auth/${path} type=${type}`);
       await cli.enter();

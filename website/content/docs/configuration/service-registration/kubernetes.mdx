@@ -156,7 +156,7 @@ $ vault write -f sys/replication/performance/primary/enable \
 In conjunction with the pod labels and the `OnDelete` upgrade strategy, upgrades are much easier to orchestrate:
 
 ```shell-session
-$ helm upgrade vault --set='server.image.tag=1.4.0'
+$ helm upgrade vault --set='server.image.tag=1.10.3'
 
 $ kubectl delete pod --selector=vault-active=false \
     --selector=vault-version=1.2.3

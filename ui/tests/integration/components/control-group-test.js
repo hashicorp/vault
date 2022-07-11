@@ -62,7 +62,7 @@ module('Integration | Component | control group', function (hooks) {
     assert.equal(component.bannerPrefix, 'Locked');
     assert.equal(component.bannerText, 'The path you requested is locked by a Control Group');
     assert.equal(component.requestorText, `You are requesting access to ${model.requestPath}`);
-    assert.equal(component.showsTokenText, false, 'does not show token message when there is no token');
+    assert.false(component.showsTokenText, 'does not show token message when there is no token');
     assert.ok(component.showsRefresh, 'shows refresh button');
     assert.ok(component.authorizationText, 'Awaiting authorization.');
   });
@@ -73,7 +73,7 @@ module('Integration | Component | control group', function (hooks) {
     this.set('auth.authData', authData);
     this.set('controlGroup.wrapInfo', { token: 'token' });
     await render(hbs`{{control-group model=model}}`);
-    assert.equal(component.showsTokenText, true, 'shows token message');
+    assert.true(component.showsTokenText, 'shows token message');
     assert.equal(component.token, 'token', 'shows token value');
   });
 
@@ -93,7 +93,7 @@ module('Integration | Component | control group', function (hooks) {
 
     assert.equal(component.bannerPrefix, 'Success!');
     assert.equal(component.bannerText, 'You have been given authorization');
-    assert.equal(component.showsTokenText, false, 'does not show token message when there is no token');
+    assert.false(component.showsTokenText, 'does not show token message when there is no token');
     assert.notOk(component.showsRefresh, 'does not shows refresh button');
     assert.ok(component.showsSuccessComponent, 'renders control group success');
   });
@@ -104,7 +104,7 @@ module('Integration | Component | control group', function (hooks) {
     this.set('auth.authData', authData);
     this.set('controlGroup.wrapInfo', { token: 'token' });
     await render(hbs`{{control-group model=model}}`);
-    assert.equal(component.showsTokenText, true, 'shows token');
+    assert.true(component.showsTokenText, 'shows token');
     assert.notOk(component.showsRefresh, 'does not shows refresh button');
     assert.ok(component.showsSuccessComponent, 'renders control group success');
   });
@@ -122,7 +122,7 @@ module('Integration | Component | control group', function (hooks) {
       component.requestorText,
       `${model.requestEntity.name} is requesting access to ${model.requestPath}`
     );
-    assert.equal(component.showsTokenText, false, 'does not show token message when there is no token');
+    assert.false(component.showsTokenText, 'does not show token message when there is no token');
 
     assert.ok(component.showsAuthorize, 'shows authorize button');
   });

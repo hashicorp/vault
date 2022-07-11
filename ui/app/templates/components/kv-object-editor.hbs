@@ -29,7 +29,7 @@
           <Textarea
             data-test-kv-value={{index}}
             name={{row.name}}
-            class="input {{if @validationError "has-error-border"}}"
+            class="input {{if @validationError 'has-error-border'}}"
             @value={{row.value}}
             wrap="off"
             placeholder={{this.placeholders.value}}

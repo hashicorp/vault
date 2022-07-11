@@ -7,10 +7,6 @@ import sinon from 'sinon';
 import { storageKey, CONTROL_GROUP_PREFIX, TOKEN_SEPARATOR } from 'vault/services/control-group';
 
 let versionStub = Service.extend();
-let routerStub = Service.extend({
-  transitionTo: sinon.stub(),
-  urlFor: sinon.stub().returns('/ui/vault/foo'),
-});
 
 function storage() {
   return {
@@ -40,8 +36,11 @@ module('Unit | Service | control group', function (hooks) {
   hooks.beforeEach(function () {
     this.owner.register('service:version', versionStub);
     this.version = this.owner.lookup('service:version');
-    this.owner.register('service:router', routerStub);
     this.router = this.owner.lookup('service:router');
+    this.router.reopen({
+      transitionTo: sinon.stub(),
+      urlFor: sinon.stub().returns('/ui/vault/foo'),
+    });
   });
 
   hooks.afterEach(function () {});
@@ -102,6 +101,8 @@ module('Unit | Service | control group', function (hooks) {
     ],
   ].forEach(function ([name, setup, args, expectation]) {
     test(`checkForControlGroup: ${name}`, function (assert) {
+      const assertCount = name === 'it rejects isOSS: false, wrapTTL:false, response: has wrap_info' ? 2 : 1;
+      assert.expect(assertCount);
       if (setup) {
         setup(this);
       }

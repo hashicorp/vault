@@ -12,7 +12,7 @@ export default class ClientsRoute extends Route {
       response.forEach((model) => {
         arrayOfModels.push({
           id: model.id,
-          perviousVersion: model.previousVersion,
+          previousVersion: model.previousVersion,
           timestampInstalled: model.timestampInstalled,
         });
       });

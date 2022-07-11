@@ -40,17 +40,17 @@ type (
 type ManagedKeySystemView interface {
 	// WithManagedKeyByName retrieves an instantiated managed key for consumption by the given function.  The
 	// provided key can only be used within the scope of that function call
-	WithManagedKeyByName(ctx context.Context, keyName, mountPoint string, f ManagedKeyConsumer) error
+	WithManagedKeyByName(ctx context.Context, keyName, backendUUID string, f ManagedKeyConsumer) error
 	// WithManagedKeyByUUID retrieves an instantiated managed key for consumption by the given function.  The
 	// provided key can only be used within the scope of that function call
-	WithManagedKeyByUUID(ctx context.Context, keyUuid, mountPoint string, f ManagedKeyConsumer) error
+	WithManagedKeyByUUID(ctx context.Context, keyUuid, backendUUID string, f ManagedKeyConsumer) error
 
 	// WithManagedSigningKeyByName retrieves an instantiated managed signing key for consumption by the given function,
 	// with the same semantics as WithManagedKeyByName
-	WithManagedSigningKeyByName(ctx context.Context, keyName, mountPoint string, f ManagedSigningKeyConsumer) error
+	WithManagedSigningKeyByName(ctx context.Context, keyName, backendUUID string, f ManagedSigningKeyConsumer) error
 	// WithManagedSigningKeyByUUID retrieves an instantiated managed signing key for consumption by the given function,
 	// with the same semantics as WithManagedKeyByUUID
-	WithManagedSigningKeyByUUID(ctx context.Context, keyUuid, mountPoint string, f ManagedSigningKeyConsumer) error
+	WithManagedSigningKeyByUUID(ctx context.Context, keyUuid, backendUUID string, f ManagedSigningKeyConsumer) error
 }
 
 type ManagedAsymmetricKey interface {

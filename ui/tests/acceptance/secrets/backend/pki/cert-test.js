@@ -9,7 +9,7 @@ import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import authPage from 'vault/tests/pages/auth';
 import { SELECTORS } from 'vault/tests/helpers/pki';
 
-module('Acceptance | secrets/pki/list?tab=certs', function (hooks) {
+module('Acceptance | secrets/pki/list?tab=cert', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
@@ -52,6 +52,7 @@ elRplAzrMF4=
   };
 
   test('it issues a cert', async function (assert) {
+    assert.expect(9);
     await setup(assert);
     await settled();
     await generatePage.issueCert('foo');
@@ -63,7 +64,7 @@ elRplAzrMF4=
     assert.dom(SELECTORS.issuingCa).exists('displays masked issuing CA');
     assert.dom(SELECTORS.privateKey).exists('displays masked private key');
     assert.dom(SELECTORS.serialNumber).exists('displays serial number');
-    assert.dom(SELECTORS.caChain).doesNotExist('does not display empty masked CA chain');
+    assert.dom(SELECTORS.caChain).exists('displays the CA chain');
 
     await generatePage.back();
     await settled();
@@ -71,6 +72,7 @@ elRplAzrMF4=
   });
 
   test('it signs a csr', async function (assert) {
+    assert.expect(4);
     await setup(assert, 'sign');
     await settled();
     await generatePage.sign('common', CSR);
@@ -82,10 +84,11 @@ elRplAzrMF4=
   });
 
   test('it views a cert', async function (assert) {
+    assert.expect(11);
     const path = await setup(assert);
     await generatePage.issueCert('foo');
     await settled();
-    await listPage.visitRoot({ backend: path, tab: 'certs' });
+    await listPage.visitRoot({ backend: path, tab: 'cert' });
     await settled();
     assert.ok(listPage.secrets.length > 0, 'lists certs');
     await listPage.secrets.objectAt(0).click();

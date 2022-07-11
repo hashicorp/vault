@@ -1480,6 +1480,8 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 		"default_extensions_template": true,
 		"default_extensions": map[string]interface{}{
 			"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",
+			"login@foobar2.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}, " +
+				"{{identity.entity.aliases." + userpassAccessor + ".name}}_foobar",
 		},
 	})
 	if err != nil {
@@ -1505,7 +1507,8 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 	}
 
 	defaultExtensionPermissions := map[string]string{
-		"login@foobar.com": testUserName,
+		"login@foobar.com":  testUserName,
+		"login@foobar2.com": fmt.Sprintf("%s, %s_foobar", testUserName, testUserName),
 	}
 
 	err = validateSSHCertificate(parsedKey.(*ssh.Certificate), sshKeyID, ssh.UserCert, []string{"tuber"}, map[string]string{}, defaultExtensionPermissions, 16*time.Hour)
@@ -1682,6 +1685,144 @@ func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 	}
 }
 
+func TestSSHBackend_ValidateNotBeforeDuration(t *testing.T) {
+	config := logical.TestBackendConfig()
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatalf("Cannot create backend: %s", err)
+	}
+	testCase := logicaltest.TestCase{
+		LogicalBackend: b,
+		Steps: []logicaltest.TestStep{
+			configCaStep(testCAPublicKey, testCAPrivateKey),
+
+			createRoleStep("testing", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_host_certificates": true,
+				"allowed_domains":         "example.com,example.org",
+				"allow_subdomains":        true,
+				"default_critical_options": map[string]interface{}{
+					"option": "value",
+				},
+				"default_extensions": map[string]interface{}{
+					"extension": "extended",
+				},
+				"not_before_duration": "300s",
+			}),
+
+			signCertificateStep("testing", "vault-root-22608f5ef173aabf700797cb95c5641e792698ec6380e8e1eb55523e39aa5e51", ssh.HostCert, []string{"dummy.example.org", "second.example.com"}, map[string]string{
+				"option": "value",
+			}, map[string]string{
+				"extension": "extended",
+			},
+				2*time.Hour+5*time.Minute-30*time.Second, map[string]interface{}{
+					"public_key":       publicKey2,
+					"ttl":              "2h",
+					"cert_type":        "host",
+					"valid_principals": "dummy.example.org,second.example.com",
+				}),
+
+			createRoleStep("testing", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_host_certificates": true,
+				"allowed_domains":         "example.com,example.org",
+				"allow_subdomains":        true,
+				"default_critical_options": map[string]interface{}{
+					"option": "value",
+				},
+				"default_extensions": map[string]interface{}{
+					"extension": "extended",
+				},
+				"not_before_duration": "2h",
+			}),
+
+			signCertificateStep("testing", "vault-root-22608f5ef173aabf700797cb95c5641e792698ec6380e8e1eb55523e39aa5e51", ssh.HostCert, []string{"dummy.example.org", "second.example.com"}, map[string]string{
+				"option": "value",
+			}, map[string]string{
+				"extension": "extended",
+			},
+				4*time.Hour-30*time.Second, map[string]interface{}{
+					"public_key":       publicKey2,
+					"ttl":              "2h",
+					"cert_type":        "host",
+					"valid_principals": "dummy.example.org,second.example.com",
+				}),
+			createRoleStep("testing", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_host_certificates": true,
+				"allowed_domains":         "example.com,example.org",
+				"allow_subdomains":        true,
+				"default_critical_options": map[string]interface{}{
+					"option": "value",
+				},
+				"default_extensions": map[string]interface{}{
+					"extension": "extended",
+				},
+				"not_before_duration": "30s",
+			}),
+
+			signCertificateStep("testing", "vault-root-22608f5ef173aabf700797cb95c5641e792698ec6380e8e1eb55523e39aa5e51", ssh.HostCert, []string{"dummy.example.org", "second.example.com"}, map[string]string{
+				"option": "value",
+			}, map[string]string{
+				"extension": "extended",
+			},
+				2*time.Hour, map[string]interface{}{
+					"public_key":       publicKey2,
+					"ttl":              "2h",
+					"cert_type":        "host",
+					"valid_principals": "dummy.example.org,second.example.com",
+				}),
+		},
+	}
+
+	logicaltest.Test(t, testCase)
+}
+
+func TestSSHBackend_IssueSign(t *testing.T) {
+	config := logical.TestBackendConfig()
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatalf("Cannot create backend: %s", err)
+	}
+
+	testCase := logicaltest.TestCase{
+		LogicalBackend: b,
+		Steps: []logicaltest.TestStep{
+			configCaStep(testCAPublicKey, testCAPrivateKey),
+
+			createRoleStep("testing", map[string]interface{}{
+				"key_type":     "otp",
+				"default_user": "user",
+			}),
+			// Key pair not issued with invalid role key type
+			issueSSHKeyPairStep("testing", "rsa", 0, true, "role key type 'otp' not allowed to issue key pairs"),
+
+			createRoleStep("testing", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_user_key_ids":      false,
+				"allow_user_certificates": true,
+				"allowed_user_key_lengths": map[string]interface{}{
+					"ssh-rsa":             []int{2048, 3072, 4096},
+					"ecdsa-sha2-nistp521": 0,
+					"ed25519":             0,
+				},
+			}),
+			// Key_type not in allowed_user_key_types_lengths
+			issueSSHKeyPairStep("testing", "ec", 256, true, "provided key_type value not in allowed_user_key_types"),
+			// Key_bits not in allowed_user_key_types_lengths for provided key_type
+			issueSSHKeyPairStep("testing", "rsa", 2560, true, "provided key_bits value not in list of role's allowed_user_key_types"),
+			// key_type `rsa` and key_bits `2048` successfully created
+			issueSSHKeyPairStep("testing", "rsa", 2048, false, ""),
+			// key_type `ed22519` and key_bits `0` successfully created
+			issueSSHKeyPairStep("testing", "ed25519", 0, false, ""),
+		},
+	}
+
+	logicaltest.Test(t, testCase)
+}
+
 func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster, string) {
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
@@ -1753,7 +1894,8 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 }
 
 func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
-	expectedValidPrincipal string, testEntityMetadata map[string]string) {
+	expectedValidPrincipal string, testEntityMetadata map[string]string,
+) {
 	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
 	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
@@ -1832,7 +1974,8 @@ func signCertificateStep(
 	role, keyID string, certType int, validPrincipals []string,
 	criticalOptionPermissions, extensionPermissions map[string]string,
 	ttl time.Duration,
-	requestParameters map[string]interface{}) logicaltest.TestStep {
+	requestParameters map[string]interface{},
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "sign/" + role,
@@ -1857,6 +2000,42 @@ func signCertificateStep(
 			}
 
 			return validateSSHCertificate(parsedKey.(*ssh.Certificate), keyID, certType, validPrincipals, criticalOptionPermissions, extensionPermissions, ttl)
+		},
+	}
+}
+
+func issueSSHKeyPairStep(role, keyType string, keyBits int, expectError bool, errorMsg string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "issue/" + role,
+		Data: map[string]interface{}{
+			"key_type": keyType,
+			"key_bits": keyBits,
+		},
+		ErrorOk: true,
+		Check: func(resp *logical.Response) error {
+			if expectError {
+				var err error
+				if resp.Data["error"] != errorMsg {
+					err = fmt.Errorf("actual error message \"%s\" different from expected error message \"%s\"", resp.Data["error"], errorMsg)
+				}
+
+				return err
+			}
+
+			if resp.IsError() {
+				return fmt.Errorf("unexpected error response returned: %v", resp.Error())
+			}
+
+			if resp.Data["private_key_type"] != keyType {
+				return fmt.Errorf("response private_key_type (%s) does not match the provided key_type (%s)", resp.Data["private_key_type"], keyType)
+			}
+
+			if resp.Data["signed_key"] == "" {
+				return errors.New("certificate/signed_key should not be empty")
+			}
+
+			return nil
 		},
 	}
 }
