@@ -326,5 +326,9 @@ export default Component.extend(DEFAULTS, {
         error: e ? this.auth.handleError(e) : null,
       });
     },
+    returnToLoginFromOktaNumberChallenge() {
+      this.setOktaNumberChallenge(false);
+      this.set('oktaNumberChallengeAnswer', null);
+    },
   },
 });
