@@ -18,13 +18,17 @@ const BACKENDS = supportedAuthBackends();
  *
  * @example ```js
  * // All properties are passed in via query params.
- * <AuthForm @wrappedToken={{wrappedToken}} @cluster={{model}} @namespace={{namespaceQueryParam}} @selectedAuth={{authMethod}} @onSuccess={{action this.onSuccess}} />```
+ * <AuthForm @wrappedToken={{wrappedToken}} @cluster={{model}} @namespace={{namespaceQueryParam}} @selectedAuth={{authMethod}} @onSuccess={{action this.onSuccess}}/>```
  *
  * @param {string} wrappedToken - The auth method that is currently selected in the dropdown.
  * @param {object} cluster - The auth method that is currently selected in the dropdown. This corresponds to an Ember Model.
  * @param {string} namespace- The currently active namespace.
  * @param {string} selectedAuth - The auth method that is currently selected in the dropdown.
- * @param {function} onSuccess - Fired on auth success
+ * @param {function} onSuccess - Fired on auth success.
+ * @param {function} [setOktaNumberChallenge] - Sets whether we are waiting for okta number challenge to be used to sign in.
+ * @param {boolean} [waitingForOktaNumberChallenge=false] - Determines if we are waiting for the Okta Number Challenge to sign in.
+ * @param {function} [setCancellingAuth] - Sets whether we are cancelling or not the login authentication for Okta Number Challenge.
+ * @param {boolean} [cancelAuthForOktaNumberChallenge=false] - Determines if we are cancelling the login authentication for the Okta Number Challenge.
  */
 
 const DEFAULTS = {
@@ -63,8 +67,14 @@ export default Component.extend(DEFAULTS, {
       namespace: ns,
       selectedAuth: newMethod,
       oldSelectedAuth: oldMethod,
+      cancelAuthForOktaNumberChallenge: cancelAuth,
     } = this;
-
+    // if we are cancelling the login then we reset the number challenge answer and cancel the current authenticate and polling tasks
+    if (cancelAuth) {
+      this.set('oktaNumberChallengeAnswer', null);
+      this.authenticate.cancelAll();
+      this.pollForOktaNumberChallenge.cancelAll();
+    }
     next(() => {
       if (!token && (oldNS === null || oldNS !== ns)) {
         this.fetchMethods.perform();
@@ -244,9 +254,16 @@ export default Component.extend(DEFAULTS, {
   ),
 
   pollForOktaNumberChallenge: task(function* (nonce, mount) {
+    // yield for 1s to wait to see if there is a login error before polling
+    yield timeout(1000);
+    if (this.error) {
+      return;
+    }
     let response = null;
+    this.setOktaNumberChallenge(true);
+    this.setCancellingAuth(false);
     // keep polling /auth/okta/verify/:nonce API every 1s until a response is given with the correct number for the Okta Number Challenge
-    while (response === null && !this.error) {
+    while (response === null) {
       // when testing, the polling loop causes promises to be rejected making acceptance tests fail
       // so disable the poll in tests
       if (Ember.testing) {
@@ -255,9 +272,7 @@ export default Component.extend(DEFAULTS, {
       yield timeout(1000);
       response = yield this.auth.getOktaNumberChallengeAnswer(nonce, mount);
     }
-    this.set('oktaNumberChallengeResponse', response);
-    // line below was temporarily used to print the response to make sure polling works and can log in, will remove after create screens to display response
-    //console.log(this.oktaNumberAnswer);
+    this.set('oktaNumberChallengeAnswer', response);
   }),
 
   delayAuthMessageReminder: task(function* () {
