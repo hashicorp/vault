@@ -1,6 +1,10 @@
 <div class="auth-form" data-test-auth-form>
-  {{#if (and this.waitingForOktaNumberChallenge (not this.cancelAuthForOktaNumberChallenge))}}
-    <OktaNumberChallenge @correctAnswer={{this.oktaNumberChallengeAnswer}} />
+  {{#if (or (this.error) (and this.waitingForOktaNumberChallenge (not this.cancelAuthForOktaNumberChallenge)))}}
+    <OktaNumberChallenge
+      @correctAnswer={{this.oktaNumberChallengeAnswer}}
+      @hasError={{(not-eq this.error null)}}
+      @onReturnToLogin={{action "returnToLoginFromOktaNumberChallenge"}}
+    />
   {{else}}
     {{#if this.hasMethodsWithPath}}
       <nav class="tabs is-marginless">
