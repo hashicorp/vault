@@ -95,8 +95,9 @@ consider migration of specific workloads to the FIPS-backed cluster.
 
 Entropy Augmentation **does not** work with FIPS 140-2 Inside. The internal
 BoringCrypto RNG is FIPS 140-2 certified and does not accept entropy from
-other sources. Attempting to use Entropy Augmentation will result in failures
-at runtime such as `panic: boringcrypto: invalid code execution`.
+other sources. On Vault 1.11.0 and later, attempting to use Entropy
+Augmentation will result in a warning ("Entropy Augmentation is not supported...")
+and Entropy Augmentation will be disabled.
 
 #### TLS Restrictions
 
