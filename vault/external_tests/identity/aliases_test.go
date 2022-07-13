@@ -1,7 +1,11 @@
 package identity
 
 import (
+	"context"
+	"fmt"
 	"testing"
+
+	auth "github.com/hashicorp/vault/api/auth/userpass"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/github"
@@ -248,5 +252,151 @@ func TestIdentityStore_RenameAlias_CannotMergeEntity(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected rename over existing entity to fail")
+	}
+}
+
+func TestIdentityStore_MergeEntitiesThenUseAlias(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+
+	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("auth/userpass/users/bob", map[string]interface{}{
+		"password": "training",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = client.Logical().Write("auth/userpass/login/bob", map[string]interface{}{
+		"password": "training",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mounts, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var mountAccessor string
+	for k, v := range mounts {
+		if k == "userpass/" {
+			mountAccessor = v.Accessor
+			break
+		}
+	}
+	if mountAccessor == "" {
+		t.Fatal("did not find userpass accessor")
+	}
+
+	// Now create an entity and alias for bob
+	entityRespBob, err := client.Logical().Write("identity/entity", map[string]interface{}{
+		"name": "bob-smith",
+	})
+	if err != nil {
+		t.Fatalf("err:%v resp:%#v", err, entityRespBob)
+	}
+	if entityRespBob == nil {
+		t.Fatalf("expected a non-nil response")
+	}
+	entityIdBob := entityRespBob.Data["id"].(string)
+	if entityIdBob == "" {
+		t.Fatal("EntityID not present in response")
+	}
+
+	aliasResp, err := client.Logical().Write("identity/entity-alias", map[string]interface{}{
+		"name":           "bob",
+		"canonical_id":   entityIdBob,
+		"mount_accessor": mountAccessor,
+	})
+	if err != nil {
+		t.Fatalf("err:%v resp:%#v", err, aliasResp)
+	}
+
+	// Create userpass login for alice
+	_, err = client.Logical().Write("auth/userpass/users/alice", map[string]interface{}{
+		"password": "training",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = client.Logical().Write("auth/userpass/login/alice", map[string]interface{}{
+		"password": "training",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Now create a new unrelated entity and alias, alice-smith
+	entityRespAlice, err := client.Logical().Write("identity/entity", map[string]interface{}{
+		"name": "alice-smith",
+	})
+	if err != nil {
+		t.Fatalf("err:%v resp:%#v", err, entityRespAlice)
+	}
+	if entityRespAlice == nil {
+		t.Fatalf("expected a non-nil response")
+	}
+	entityIdAlice := entityRespAlice.Data["id"].(string)
+	if entityIdAlice == "" {
+		t.Fatal("EntityID not present in response")
+	}
+
+	aliasResp, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
+		"name":           "alice",
+		"canonical_id":   entityIdAlice,
+		"mount_accessor": mountAccessor,
+	})
+	if err != nil {
+		t.Fatalf("err:%v resp:%#v", err, aliasResp)
+	}
+
+	// Try and login with alias 2 (alice) pre-merge
+	loginResp, err := client.Logical().Write("auth/userpass/login/alice", map[string]interface{}{
+		"password": "training",
+	})
+	if err != nil {
+		t.Fatalf("err:%v resp:%#v", err, loginResp)
+	}
+
+	// Perform entity merge
+	mergeResp, err := client.Logical().Write("identity/entity/merge", map[string]interface{}{
+		"to_entity_id":    entityIdBob,
+		"from_entity_ids": entityIdAlice,
+	})
+	if err != nil {
+		t.Fatalf("err:%v resp:%#v", err, mergeResp)
+	}
+
+	// Delete entity id 1 (bob)
+	deleteResp, err := client.Logical().Delete(fmt.Sprintf("identity/entity/id/%s", entityIdBob))
+	if err != nil {
+		t.Fatalf("err:%v resp:%#v", err, deleteResp)
+	}
+
+	// Try and login with alias 2 (alice) post-merge
+	userpassAuth, err := auth.NewUserpassAuth("alice", &auth.Password{FromString: "training"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	loginResp, err = client.Auth().Login(context.TODO(), userpassAuth)
+	if err != nil {
+		t.Fatalf("err:%v resp:%#v", err, loginResp)
 	}
 }

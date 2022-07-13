@@ -800,6 +800,16 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		}
 
 		for _, alias := range fromEntity.Aliases {
+			if _, ok := toEntityAccessors[alias.MountAccessor]; ok {
+				i.logger.Warn("Deleting from_entity alias during entity merge as to_entity has an alias with its accessor to prevent orphan", "from_entity", fromEntityID, "skipped_alias", alias.ID)
+				// Delete aliases that won't get merged over, else they will be orphaned
+				err := i.MemDBDeleteAliasByIDInTxn(txn, alias.ID, false)
+				if err != nil {
+					return nil, fmt.Errorf("failed to delete orphaned alias during merge: %w", err)
+				}
+				continue
+			}
+
 			// Set the desired canonical ID
 			alias.CanonicalID = toEntity.ID
 
@@ -810,10 +820,6 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 				return nil, fmt.Errorf("failed to update alias during merge: %w", err)
 			}
 
-			if _, ok := toEntityAccessors[alias.MountAccessor]; ok {
-				i.logger.Warn("skipping from_entity alias during entity merge as to_entity has an alias with its accessor", "from_entity", fromEntityID, "skipped_alias", alias.ID)
-				continue
-			}
 			// Add the alias to the desired entity
 			toEntity.Aliases = append(toEntity.Aliases, alias)
 		}
