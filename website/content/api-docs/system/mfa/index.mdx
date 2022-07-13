@@ -11,7 +11,7 @@ description: >-
 The `/sys/mfa` endpoint focuses on managing Multi-factor Authentication (MFA)
 behaviors in Vault Enterprise MFA.
 
-## Supported MFA types.
+## Supported MFA types
 
 - [TOTP](/api/system/mfa/totp)
 
@@ -20,3 +20,17 @@ behaviors in Vault Enterprise MFA.
 - [Duo](/api/system/mfa/duo)
 
 - [PingID](/api/system/mfa/pingid)
+
+## Step-up Enterprise MFA 
+
+[Vault Enterprise](/docs/enterprise/mfa) allows MFA for login and access to
+sensitive resources in Vault.  The Step-up Enterprise MFA expects the method
+creator to specify a name for the method; Login MFA does not, and instead
+returns an ID when a method is created. They use different API endpoints. 
+
+- Step-up Enterprise MFA: `sys/mfa/method/:type/:/name`
+- Login MFA: `identity/mfa/method/:type`
+
+See the [Login MFA
+FAQ](/docs/auth/login-mfa/faq#q-are-there-new-mfa-api-endpoints-introduced-as-part-of-the-new-vault-version-1-10-mfa-for-login-functionality)
+for more details.
