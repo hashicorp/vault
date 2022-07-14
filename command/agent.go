@@ -234,7 +234,7 @@ func (c *AgentCommand) Run(args []string) int {
 				"-config flag."))
 		return 1
 	}
-	if config.AutoAuth == nil && config.Cache == nil {
+	if config.Cache == nil {
 		c.UI.Error("No auto_auth or cache block found in config file")
 		return 1
 	}
