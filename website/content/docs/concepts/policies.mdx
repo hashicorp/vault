@@ -368,7 +368,7 @@ constrain requests, using the following options:
     ```ruby
     # This allows the user to update the password parameter value set on any
     # users configured for userpass auth method. The password value can be
-    # anything.  However, the user cannot update other parameter values such as
+    # anything. However, the user cannot update other parameter values such as
     # token_ttl. 
     path "auth/userpass/users/*" {
       capabilities = ["update"]
@@ -450,11 +450,12 @@ constrain requests, using the following options:
 
     ```ruby
     # This allows the user to update the userpass auth method's user
-    # configurations with an exception of the "password" parameter value.
+    # configurations (e.g., "password") but cannot update the "token_policies"
+    # parameter value.
     path "auth/userpass/users/*" {
       capabilities = ["update"]
       denied_parameters = {
-        "password" = []
+        "token_policies" = []
       }
     }
     ```
@@ -465,7 +466,7 @@ constrain requests, using the following options:
     ```ruby
     # This allows the user to create or update token roles. However, the
     # "allowed_policies" parameter value cannot be "admin", but the user can
-    # assign any other policies.   
+    # assign any other policies to the parameter.   
     path "auth/token/roles/*" {
       capabilities = ["create", "update"]
       denied_parameters = {
