@@ -618,6 +618,71 @@ listener "tcp" {
 	request(t, agentClient, req, 200)
 }
 
+// TestAgent_UseAutoAuthToken verifies that the agent starts up with the
+// use_auto_auth_token parameter enabled and no auto_auth stanza.
+func TestAgent_UseAutoAuthToken(t *testing.T) {
+	//----------------------------------------------------
+	// Start the server and agent
+	//----------------------------------------------------
+	logger := logging.NewVaultLogger(hclog.Trace)
+	cluster := vault.NewTestCluster(t,
+		&vault.CoreConfig{
+			Logger: logger,
+		},
+		&vault.TestClusterOptions{
+			HandlerFunc: vaulthttp.Handler,
+		})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+
+	// Unset the environment variable so that agent picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	// Create a config file
+	config := fmt.Sprintf(`
+cache {
+    use_auto_auth_token = true
+}
+
+listener "tcp" {
+    address = "%s"
+    tls_disable = true
+}
+`, generateListenerAddress(t))
+
+	configPath := makeTempFile(t, "config.hcl", config)
+	defer os.Remove(configPath)
+	// Start the agent
+	ui, cmd := testAgentCommand(t, logger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	var code int
+	go func() {
+		code = cmd.Run([]string{"-config", configPath})
+		if code != 0 {
+			t.Errorf("expected %d to be %d", code, 0)
+			t.Logf("output from agent:\n%s", ui.OutputWriter.String())
+			t.Logf("error from agent:\n%s", ui.ErrorWriter.String())
+		}
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+	close(cmd.ShutdownCh)
+	wg.Wait()
+
+}
+
 // TestAgent_RequireAutoAuthWithForce ensures that the client exits with a
 // non-zero code if configured to force the use of an auto-auth token without
 // configuring the auto_auth block

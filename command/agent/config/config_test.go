@@ -333,34 +333,68 @@ func TestLoadConfigFile_Method_InitialBackoff(t *testing.T) {
 	}
 }
 
+// Test agent config with caching and no auto_auth stanza.
 func TestLoadConfigFile_AgentCache_NoAutoAuth(t *testing.T) {
-	config, err := LoadConfig("./test-fixtures/config-cache-no-auto_auth.hcl")
-	if err != nil {
-		t.Fatalf("err: %s", err)
+	defaultListener := []*configutil.Listener{
+		{
+			Type:       "tcp",
+			Address:    "127.0.0.1:8300",
+			TLSDisable: true,
+		},
 	}
 
-	expected := &Config{
-		Cache: &Cache{},
-		SharedConfig: &configutil.SharedConfig{
-			PidFile: "./pidfile",
-			Listeners: []*configutil.Listener{
-				{
-					Type:       "tcp",
-					Address:    "127.0.0.1:8300",
-					TLSDisable: true,
+	noauthTests := []struct {
+		testName   string
+		configPath string
+		expected   *Config
+	}{
+		{
+			testName:   "cache stanza with no auto_auth",
+			configPath: "./test-fixtures/config-cache-no-auto_auth.hcl",
+			expected: &Config{
+				Cache: &Cache{},
+				SharedConfig: &configutil.SharedConfig{
+					PidFile:   "./pidfile",
+					Listeners: defaultListener,
+				},
+				Vault: &Vault{
+					Retry: &Retry{
+						NumRetries: 12,
+					},
 				},
 			},
 		},
-		Vault: &Vault{
-			Retry: &Retry{
-				NumRetries: 12,
+		{
+			testName:   "use_auto_auth_token with no auto_auth",
+			configPath: "./test-fixtures/config-cache-auto_auth_token-no-auto_auth.hcl",
+			expected: &Config{
+				Cache: &Cache{UseAutoAuthTokenRaw: true, UseAutoAuthToken: true},
+				SharedConfig: &configutil.SharedConfig{
+					PidFile:   "./pidfile",
+					Listeners: defaultListener,
+				},
+				Vault: &Vault{
+					Retry: &Retry{
+						NumRetries: 12,
+					},
+				},
 			},
 		},
 	}
 
-	config.Prune()
-	if diff := deep.Equal(config, expected); diff != nil {
-		t.Fatal(diff)
+	for _, tt := range noauthTests {
+		t.Run(tt.testName, func(t *testing.T) {
+			result, err := LoadConfig(tt.configPath)
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			result.Prune()
+			if diff := deep.Equal(result, tt.expected); diff != nil {
+				t.Fatal(diff)
+			}
+
+		})
 	}
 }
 
