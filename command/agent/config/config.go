@@ -229,10 +229,7 @@ func LoadConfig(path string) (*Config, error) {
 		}
 
 		if result.Cache.UseAutoAuthToken {
-			if result.AutoAuth == nil {
-				return nil, fmt.Errorf("cache.use_auto_auth_token is true but auto_auth not configured")
-			}
-			if result.AutoAuth.Method.WrapTTL > 0 {
+			if result.AutoAuth != nil && result.AutoAuth.Method.WrapTTL > 0 {
 				return nil, fmt.Errorf("cache.use_auto_auth_token is true and auto_auth uses wrapping")
 			}
 		}
