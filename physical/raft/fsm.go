@@ -177,7 +177,10 @@ func (f *FSM) openDBFile(dbPath string) error {
 	f.logger.Debug("time to open database", "elapsed", elapsed, "path", dbPath)
 	metrics.MeasureSince([]string{"raft_storage", "fsm", "open_db_file"}, start)
 
-	val, closer, err := pebbleDB.Get(latestIndexKey)
+	configKey := append(configBucketPrefix, latestConfigKey...)
+	indexKey := append(configBucketPrefix, latestIndexKey...)
+
+	val, closer, err := pebbleDB.Get(indexKey)
 	defer func(c io.Closer) {
 		if c != nil {
 			_ = c.Close()
@@ -189,16 +192,20 @@ func (f *FSM) openDBFile(dbPath string) error {
 
 	if val != nil {
 		var latest IndexValue
-		err := proto.Unmarshal(val, &latest)
+		newVal := make([]byte, len(val))
+		copy(newVal, val)
+		err := proto.Unmarshal(newVal, &latest)
 		if err != nil {
 			return err
 		}
+
+		f.logger.Trace("-- openDBFile", "latestIndexKey.Term", latest.Term, "latestIndexKey.Index", latest.Index)
 
 		atomic.StoreUint64(f.latestTerm, latest.Term)
 		atomic.StoreUint64(f.latestIndex, latest.Index)
 	}
 
-	val, closer, err = pebbleDB.Get(latestConfigKey)
+	val, closer, err = pebbleDB.Get(configKey)
 	defer func(c io.Closer) {
 		if c != nil {
 			_ = c.Close()
@@ -209,11 +216,14 @@ func (f *FSM) openDBFile(dbPath string) error {
 	}
 	if val != nil {
 		var latest ConfigurationValue
-		err := proto.Unmarshal(val, &latest)
+		newVal := make([]byte, len(val))
+		copy(newVal, val)
+		err := proto.Unmarshal(newVal, &latest)
 		if err != nil {
 			return err
 		}
 
+		f.logger.Trace("-- openDBFile", "latestConfigurationValue.Index", latest.Index, "latestIndexKey.Servers", latest.Servers)
 		f.latestConfig.Store(&latest)
 	}
 
@@ -550,11 +560,13 @@ func (f *FSM) Transaction(ctx context.Context, txns []*physical.TxnEntry) error 
 
 	for _, txn := range txns {
 		var err error
+		key := append(dataBucketPrefix, []byte(txn.Entry.Key)...)
+
 		switch txn.Operation {
 		case physical.PutOperation:
-			err = batch.Set([]byte(txn.Entry.Key), txn.Entry.Value, pebbleWriteOptions)
+			err = batch.Set(key, txn.Entry.Value, pebbleWriteOptions)
 		case physical.DeleteOperation:
-			err = batch.Delete([]byte(txn.Entry.Key), pebbleWriteOptions)
+			err = batch.Delete(key, pebbleWriteOptions)
 		default:
 			return fmt.Errorf("%q is not a supported transaction operation", txn.Operation)
 		}
@@ -734,6 +746,9 @@ func (f *FSM) writeTo(ctx context.Context, metaSink writeErrorCloser, sink write
 		LowerBound: dataBucketPrefix,
 	})
 	copyIter, err := metaIter.Clone(pebble.CloneOptions{})
+	if err != nil {
+		f.logger.Error("error cloning iterator", "error", err)
+	}
 
 	// Do the first scan of the data for metadata purposes.
 	for metaIter.First(); metaIter.Valid(); metaIter.Next() {
@@ -820,6 +835,7 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 	if err != nil {
 		return err
 	}
+	f.logger.Trace("local node config from existing db", "config", lnConfig)
 
 	// Close the db
 	if err := f.db.Close(); err != nil {
@@ -832,6 +848,8 @@ func (f *FSM) Restore(r io.ReadCloser) error {
 
 	// Install the new pebble database
 	var retErr *multierror.Error
+	f.logger.Trace("existing dbpath", "dbpath", dbPath)
+	f.logger.Trace("new dbpath", "dbpath", snapshotInstaller.Dirname())
 	if err := snapshotInstaller.Install(dbPath); err != nil {
 		f.logger.Error("failed to install snapshot", "error", err)
 		retErr = multierror.Append(retErr, fmt.Errorf("failed to install snapshot database: %w", err))

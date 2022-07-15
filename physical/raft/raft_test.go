@@ -19,7 +19,6 @@ import (
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -167,26 +166,38 @@ func compareDBs(t *testing.T, pb1, pb2 *pebble.DB, dataOnly bool) error {
 	db1 := make(map[string]string)
 	db2 := make(map[string]string)
 
-	iter := pb1.NewIter(nil)
-	for iter.First(); iter.Valid(); iter.Next() {
-		k := iter.Key()
+	snap1 := pb1.NewSnapshot()
+	iter1 := snap1.NewIter(nil)
+	for iter1.First(); iter1.Valid(); iter1.Next() {
+		k := iter1.Key()
+		t.Logf("-- compareDBs. pb1 key = %s\n", string(k))
 
 		if dataOnly && !bytes.HasPrefix(k, dataBucketPrefix) {
 			continue
 		}
 
-		db1[string(k)] = base64.StdEncoding.EncodeToString(iter.Value())
+		db1[string(k)] = base64.StdEncoding.EncodeToString(iter1.Value())
+	}
+	err := snap1.Close()
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	iter = pb2.NewIter(nil)
-	for iter.First(); iter.Valid(); iter.Next() {
-		k := iter.Key()
+	snap2 := pb2.NewSnapshot()
+	iter2 := snap2.NewIter(nil)
+	for iter2.First(); iter2.Valid(); iter2.Next() {
+		k := iter2.Key()
+		t.Logf("-- compareDBs. pb2 key = %s\n", string(k))
 
 		if dataOnly && !bytes.HasPrefix(k, dataBucketPrefix) {
 			continue
 		}
 
-		db2[string(k)] = base64.StdEncoding.EncodeToString(iter.Value())
+		db2[string(k)] = base64.StdEncoding.EncodeToString(iter2.Value())
+	}
+	err = snap2.Close()
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	if diff := deep.Equal(db1, db2); diff != nil {
@@ -226,34 +237,6 @@ func TestRaft_ParseAutopilotUpgradeVersion(t *testing.T) {
 	}
 }
 
-func TestRaft_Backend_LargeKey(t *testing.T) {
-	b, dir := getRaft(t, true, true)
-	defer os.RemoveAll(dir)
-
-	key, err := base62.Random(bolt.MaxKeySize + 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	entry := &physical.Entry{Key: key, Value: []byte(key)}
-
-	err = b.Put(context.Background(), entry)
-	if err == nil {
-		t.Fatal("expected error for put entry")
-	}
-
-	if !strings.Contains(err.Error(), physical.ErrKeyTooLarge) {
-		t.Fatalf("expected %q, got %v", physical.ErrKeyTooLarge, err)
-	}
-
-	out, err := b.Get(context.Background(), entry.Key)
-	if err != nil {
-		t.Fatalf("unexpected error after failed put: %v", err)
-	}
-	if out != nil {
-		t.Fatal("expected response entry to be nil after a failed put")
-	}
-}
-
 func TestRaft_Backend_LargeValue(t *testing.T) {
 	b, dir := getRaft(t, true, true)
 	defer os.RemoveAll(dir)
@@ -272,45 +255,6 @@ func TestRaft_Backend_LargeValue(t *testing.T) {
 	}
 
 	out, err := b.Get(context.Background(), entry.Key)
-	if err != nil {
-		t.Fatalf("unexpected error after failed put: %v", err)
-	}
-	if out != nil {
-		t.Fatal("expected response entry to be nil after a failed put")
-	}
-}
-
-func TestRaft_TransactionalBackend_LargeKey(t *testing.T) {
-	b, dir := getRaft(t, true, true)
-	defer os.RemoveAll(dir)
-
-	value := make([]byte, defaultMaxEntrySize+1)
-	rand.Read(value)
-
-	key, err := base62.Random(bolt.MaxKeySize + 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	txns := []*physical.TxnEntry{
-		{
-			Operation: physical.PutOperation,
-			Entry: &physical.Entry{
-				Key:   key,
-				Value: []byte(key),
-			},
-		},
-	}
-
-	err = b.Transaction(context.Background(), txns)
-	if err == nil {
-		t.Fatal("expected error for transactions")
-	}
-
-	if !strings.Contains(err.Error(), physical.ErrKeyTooLarge) {
-		t.Fatalf("expected %q, got %v", physical.ErrValueTooLarge, err)
-	}
-
-	out, err := b.Get(context.Background(), txns[0].Entry.Key)
 	if err != nil {
 		t.Fatalf("unexpected error after failed put: %v", err)
 	}
@@ -369,7 +313,6 @@ func TestRaft_TransactionalBackend(t *testing.T) {
 }
 
 func TestRaft_HABackend(t *testing.T) {
-	t.Skip()
 	raft, dir := getRaft(t, true, true)
 	defer os.RemoveAll(dir)
 	raft2, dir2 := getRaft(t, false, true)

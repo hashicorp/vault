@@ -164,10 +164,13 @@ func (p *PebbleSnapshotStore) getMetaFromFSM() (*raft.SnapshotMeta, error) {
 
 // Open takes a snapshot ID and returns a ReadCloser for that snapshot.
 func (p *PebbleSnapshotStore) Open(id string) (*raft.SnapshotMeta, io.ReadCloser, error) {
+	fmt.Printf("-- pebbleSnapshotStore.Open(). id = %v\n", id)
 	if id == pebbleSnapshotID {
+		fmt.Println("-- pebbleSnapshotStore.Open(). opening from fsm")
 		return p.openFromFSM()
 	}
 
+	fmt.Println("-- pebbleSnapshotStore.Open(). opening from directory")
 	return p.openFromDirectory(id)
 }
 
@@ -235,8 +238,10 @@ func (p *PebbleSnapshotStore) getMetaFromDB(id string) (*raft.SnapshotMeta, erro
 	}
 
 	if val != nil {
+		newVal := make([]byte, len(val))
+		copy(newVal, val)
 		var snapshotIndexes IndexValue
-		err := proto.Unmarshal(val, &snapshotIndexes)
+		err := proto.Unmarshal(newVal, &snapshotIndexes)
 		if err != nil {
 			return nil, err
 		}
@@ -257,8 +262,10 @@ func (p *PebbleSnapshotStore) getMetaFromDB(id string) (*raft.SnapshotMeta, erro
 	}
 
 	if val != nil {
+		newVal := make([]byte, len(val))
+		copy(newVal, val)
 		var config ConfigurationValue
-		err := proto.Unmarshal(val, &config)
+		err := proto.Unmarshal(newVal, &config)
 		if err != nil {
 			return nil, err
 		}
@@ -266,6 +273,7 @@ func (p *PebbleSnapshotStore) getMetaFromDB(id string) (*raft.SnapshotMeta, erro
 		meta.ConfigurationIndex, meta.Configuration = protoConfigurationToRaftConfiguration(&config)
 	}
 
+	fmt.Printf("-- getMetaFromDB. id = %v. meta = %#v\n", id, meta)
 	return meta, nil
 }
 
@@ -287,7 +295,7 @@ func (p *PebbleSnapshotStore) openFromDirectory(id string) (*raft.SnapshotMeta, 
 
 // ReapSnapshots reaps all snapshots.
 func (p *PebbleSnapshotStore) ReapSnapshots() error {
-	snapshots, err := ioutil.ReadDir(p.path)
+	snapshots, err := os.ReadDir(p.path)
 	switch {
 	case err == nil:
 	case os.IsNotExist(err):
@@ -298,8 +306,10 @@ func (p *PebbleSnapshotStore) ReapSnapshots() error {
 	}
 
 	for _, snap := range snapshots {
+		fmt.Printf("-- reaping snapshots. snap = %v\n", snap)
 		// Ignore any files
 		if !snap.IsDir() {
+			fmt.Printf("-- reaping snapshots. %v is not a directory, ignoring\n", snap)
 			continue
 		}
 
@@ -383,41 +393,44 @@ func (s *PebbleSnapshotSink) writePebbleDatabase() error {
 
 		var done bool
 		var keys int
-		var err error
 		entry := new(pb.StorageEntry)
+		batch := pebbleDB.NewBatch()
+		defer func() { _ = batch.Close() }()
 
 		for !done {
-			batch := pebbleDB.NewBatch()
+			err := func() error {
+				for i := 0; i < 50000; i++ {
+					err := protoReader.ReadMsg(entry)
+					if err != nil {
+						if err == io.EOF {
+							done = true
+							return nil
+						}
 
-			// Commit in batches of 50k. Pebble does some stuff I don't fully
-			// understand yet, but I don't have a reason for deviating from
-			// what we did for bolt, so here we are.
-			for i := 0; i < 50000; i++ {
-				err = protoReader.ReadMsg(entry)
-				if err != nil {
-					if err == io.EOF {
-						done = true
+						return err
 					}
+
+					key := append(dataBucketPrefix, []byte(entry.Key)...)
+					err = batch.Set(key, entry.Value, pebbleWriteOptions)
+					if err != nil {
+						return err
+					}
+
+					keys += 1
 				}
 
-				key := append(dataBucketPrefix, []byte(entry.Key)...)
-				err = batch.Set(key, entry.Value, pebbleWriteOptions)
-				if err != nil {
-					done = true
-				}
-				keys += 1
-			}
+				_ = batch.Commit(pebbleWriteOptions)
 
+				return nil
+			}()
 			if err != nil {
 				s.logger.Error("snapshot write: failed to write transaction", "error", err)
 				s.writeError = err
-				_ = batch.Close()
 				return
 			}
 
 			s.logger.Trace("snapshot write: writing keys", "num_written", keys)
-			_ = batch.Commit(pebbleWriteOptions)
-			_ = batch.Close()
+			batch.Reset()
 		}
 	}()
 
@@ -471,7 +484,16 @@ func (s *PebbleSnapshotSink) Close() error {
 		// Move the directory into place
 		newPath := strings.TrimSuffix(s.dir, tmpSuffix)
 
-		var err error
+		// Rename the snapshot to the FSM location
+		// TODO: make this better
+		// os.Rename doesn't overwrite directories that already exist, so to make this work
+		// I have to delete the old directory first. This is no longer atomic, which is a
+		// a bummer, but this is also hack week and I just want this to work.
+		err := os.RemoveAll(newPath)
+		if err != nil {
+			return err
+		}
+
 		if runtime.GOOS != "windows" {
 			err = safeio.Rename(s.dir, newPath)
 		} else {
