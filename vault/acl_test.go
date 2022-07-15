@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sync"
 	"testing"
@@ -527,6 +528,160 @@ func testACLAllowOperation(t *testing.T, ns *namespace.Namespace) {
 			if authResults.Allowed != tc.allowed {
 				t.Fatalf("bad: case %#v: %v", tc, authResults.Allowed)
 			}
+		}
+	}
+}
+
+func TestACL_NestedParameterConstraints(t *testing.T) {
+	t.Run("root-ns", func(t *testing.T) {
+		t.Parallel()
+		testACLNestedParameterConstraints(t, namespace.RootNamespace)
+	})
+}
+
+func testACLNestedParameterConstraints(t *testing.T, ns *namespace.Namespace) {
+	policy, err := ParseACLPolicy(ns, policyWithNestedParameterConstraints)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+	acl, err := NewACL(ctx, []*Policy{policy})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	type tcase struct {
+		path    string
+		name    string
+		request map[string]interface{}
+		allowed bool
+	}
+
+	tcases := []tcase{{
+		path:    "with/required",
+		name:    "empty request",
+		request: map[string]interface{}{},
+		allowed: false,
+	}, {
+		path:    "with/required",
+		name:    "simple match",
+		request: map[string]interface{}{"a": map[string]interface{}{"b": "something", "c": "something"}},
+		allowed: true,
+	}, {
+		path:    "with/required",
+		name:    "extra parameters",
+		request: map[string]interface{}{"a": map[string]interface{}{"b": "x", "c": "y", "d": "z"}, "f": "g"},
+		allowed: true,
+	}, {
+		path:    "with/required",
+		name:    "missing required nested key",
+		request: map[string]interface{}{"a": map[string]interface{}{"c": "y", "d": "z"}, "f": "g"},
+		allowed: false,
+	}, {
+		path:    "with/denied",
+		name:    "empty request",
+		request: map[string]interface{}{},
+		allowed: true,
+	}, {
+		path:    "with/denied",
+		name:    "expect denied due to /a/b = [bar*]",
+		request: map[string]interface{}{"a": map[string]interface{}{"b": "barbar", "c": "something"}},
+		allowed: false,
+	}, {
+		path:    "with/denied",
+		name:    "expect denied due to /with-wildcard/* = []",
+		request: map[string]interface{}{"with-wildcard": map[string]interface{}{"b": "something", "c": "something"}},
+		allowed: false,
+	}, {
+		path:    "with/denied",
+		name:    "expect denied due to /a/0/b = [foo]",
+		request: map[string]interface{}{"a": []interface{}{map[string]interface{}{"b": "foo"}}},
+		allowed: false,
+	}, {
+		path:    "with/denied",
+		name:    "expect allowed since the parameter is not map[string]interface{}",
+		request: map[string]interface{}{"with-wildcard": "a"},
+		allowed: true,
+	}, {
+		path:    "with/allowed",
+		name:    "empty request",
+		request: map[string]interface{}{},
+		allowed: true,
+	}, {
+		path:    "with/allowed",
+		name:    "not in allowed list",
+		request: map[string]interface{}{"not-in-allowed-list": map[string]interface{}{"a": "b"}},
+		allowed: false,
+	}, {
+		path:    "with/allowed",
+		name:    "expect allowed due to foo = [bar]",
+		request: map[string]interface{}{"foo": "bar"},
+		allowed: true,
+	}, {
+		path:    "with/allowed",
+		name:    "expect denied due to /a/b = [bar*]",
+		request: map[string]interface{}{"a": map[string]interface{}{"b": "not-bar"}},
+		allowed: false,
+	}, {
+		path:    "with/allowed",
+		name:    "expect allowed due to /a/x/z = []",
+		request: map[string]interface{}{"a": map[string]interface{}{"x": map[string]interface{}{"z": "d"}}},
+		allowed: true,
+	}, {
+		path:    "with/allowed",
+		name:    "expect denied since /a/x/z is not a leaf",
+		request: map[string]interface{}{"a": map[string]interface{}{"x": map[string]interface{}{"z": map[string]interface{}{"d": "e"}}}},
+		allowed: false,
+	}, {
+		path:    "with/allowed",
+		name:    "expect allowed due to /a/0/b = [foo]",
+		request: map[string]interface{}{"a": []interface{}{map[string]interface{}{"b": "foo"}}},
+		allowed: true,
+	}, {
+		path:    "with/allowed",
+		name:    "expect allowed due to /with-wildcard/* = []",
+		request: map[string]interface{}{"with-wildcard": map[string]interface{}{"a": map[string]interface{}{"b": "c"}}},
+		allowed: true,
+	}, {
+		path:    "with/allowed",
+		name:    "expect allowed due to /with~1escaped/* = []",
+		request: map[string]interface{}{"with/escaped": map[string]interface{}{"a": "b"}},
+		allowed: true,
+	}, {
+		path:    "with/multiple/constraints",
+		name:    "expect allowed",
+		request: map[string]interface{}{"a": map[string]interface{}{"b": "foo", "c": "d"}},
+		allowed: true,
+	}, {
+		path:    "with/multiple/constraints",
+		name:    "expect denied due to /a/b = [foo, bar*]",
+		request: map[string]interface{}{"a": map[string]interface{}{"b": "not-foo"}},
+		allowed: false,
+	}, {
+		path:    "with/multiple/constraints",
+		name:    "expect denied due to /a/b/c",
+		request: map[string]interface{}{"a": map[string]interface{}{"b": map[string]interface{}{"c": "d"}}},
+		allowed: false,
+	}}
+
+	for _, tc := range tcases {
+		for _, operation := range []logical.Operation{
+			logical.UpdateOperation,
+			logical.CreateOperation,
+		} {
+			request := &logical.Request{
+				Path:      tc.path,
+				Data:      tc.request,
+				Operation: operation,
+			}
+
+			t.Run(fmt.Sprintf("%s - %s (%v)", tc.path, tc.name, operation), func(t *testing.T) {
+				r := acl.AllowOperation(ctx, request, false)
+				if r.Allowed != tc.allowed {
+					t.Fatalf("%s - %s (%v) :: want: %t, got: %t", tc.path, tc.name, operation, tc.allowed, r.Allowed)
+				}
+			})
 		}
 	}
 }
@@ -1317,6 +1472,48 @@ path "test/star" {
 		"bar" = [false]
 	}
 	denied_parameters = {
+	}
+}
+`
+
+const policyWithNestedParameterConstraints = `
+path "with/required" {
+	capabilities = ["update", "create"]
+	required_parameters = ["/a/b", "/a/c"]
+}
+
+path "with/denied" {
+	capabilities = ["update", "create"]
+	denied_parameters = {
+		"/a/b"             = ["bar*"]
+		"/a/x/z"           = []
+		"/a/0/b"           = ["foo"]
+		"/with-wildcard/*" = []
+	}
+}
+
+path "with/allowed" {
+	capabilities = ["update", "create"]
+	allowed_parameters = {
+		"foo"              = ["bar"]
+		"/a/b"             = ["bar*"]
+		"/a/x/z"           = []
+		"/a/0/b"           = ["foo"]
+		"/with-wildcard/*" = []
+		"/with~1escaped/a" = []
+	}
+}
+
+path "with/multiple/constraints" {
+	capabilities = ["update", "create"]
+	required_parameters = ["/a/b"]
+	denied_parameters = {
+		"/a/b/c"           = []
+		"/with-wildcard/*" = []
+	}
+	allowed_parameters = {
+		"/a/b" = ["foo", "bar*"]
+		"*"    = []
 	}
 }
 `

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/armon/go-radix"
@@ -14,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
+	"github.com/mitchellh/pointerstructure"
 )
 
 // ACL is used to wrap a set of policies to provide
@@ -472,10 +474,9 @@ CHECK:
 	// Only check parameter permissions for operations that can modify
 	// parameters.
 	if op == logical.ReadOperation || op == logical.UpdateOperation || op == logical.CreateOperation || op == logical.PatchOperation {
-		for _, parameter := range permissions.RequiredParameters {
-			if _, ok := req.Data[strings.ToLower(parameter)]; !ok {
-				return
-			}
+		if requiredParameterMissing(req, permissions.RequiredParameters) {
+			ret.Allowed = false
+			return
 		}
 
 		// If there are no data fields, allow
@@ -484,51 +485,18 @@ CHECK:
 			return
 		}
 
-		if len(permissions.DeniedParameters) == 0 {
-			goto ALLOWED_PARAMETERS
-		}
-
-		// Check if all parameters have been denied
-		if _, ok := permissions.DeniedParameters["*"]; ok {
+		if inDeniedList(req, permissions.DeniedParameters) {
+			ret.Allowed = false
 			return
 		}
 
-		for parameter, value := range req.Data {
-			// Check if parameter has been explicitly denied
-			if valueSlice, ok := permissions.DeniedParameters[strings.ToLower(parameter)]; ok {
-				// If the value exists in denied values slice, deny
-				if valueInParameterList(value, valueSlice) {
-					return
-				}
-			}
-		}
-
-	ALLOWED_PARAMETERS:
-		// If we don't have any allowed parameters set, allow
-		if len(permissions.AllowedParameters) == 0 {
+		if inAllowedList(req, permissions.AllowedParameters) {
 			ret.Allowed = true
 			return
 		}
 
-		_, allowedAll := permissions.AllowedParameters["*"]
-		if len(permissions.AllowedParameters) == 1 && allowedAll {
-			ret.Allowed = true
-			return
-		}
-
-		for parameter, value := range req.Data {
-			valueSlice, ok := permissions.AllowedParameters[strings.ToLower(parameter)]
-			// Requested parameter is not in allowed list
-			if !ok && !allowedAll {
-				return
-			}
-
-			// If the value doesn't exists in the allowed values slice,
-			// deny
-			if ok && !valueInParameterList(value, valueSlice) {
-				return
-			}
-		}
+		ret.Allowed = false
+		return
 	}
 
 	ret.Allowed = true
@@ -727,6 +695,190 @@ func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *logical.To
 	c.performEntPolicyChecks(ctx, acl, te, req, inEntity, opts, ret)
 
 	return ret
+}
+
+// requiredParameterMissing returns true if a parameter specified in the
+// required_parameters list is missing from the request
+func requiredParameterMissing(req *logical.Request, requiredParameters []string) bool {
+	for _, parameter := range requiredParameters {
+		if strings.HasPrefix(parameter, "/") {
+			_, err := pointerstructure.Get(req.Data, strings.ToLower(parameter))
+			if err != nil {
+				return true
+			}
+		} else if _, ok := req.Data[strings.ToLower(parameter)]; !ok {
+			return true
+		}
+	}
+
+	return false
+}
+
+// inAllowedList checks whether the request parameters are in the
+// policy's allowed_parameters map taking into account the nested parameter
+// paths, paths with wildcards and value lists. Wildcards (*) are evaluated
+// after more specific rules
+// Example:
+//   Given the following allowed_parameters:
+//     "foo"    = ["bar"]
+//     "/a/b/*" = []
+//     "/a/b"   = ["d"]
+//   The following requests will return true:
+//     { "foo": "bar" }
+//     { "a": { "b": "d" } }
+//     { "a": { "b": { "c": "d" } } }
+//     { "a": { "b": { "c": { "d": "e" } } }
+//   The following requests will return false:
+//     { "not-in-list": "a" }
+//     { "a": { "b": "c" } }
+//     { "a": { "c": "d" } }
+//     { "a": "b" }                // "/a/b" is expected to be nested
+func inAllowedList(req *logical.Request, allowedParameters map[string][]interface{}) bool {
+	// If we don't have any allowed parameters, allow
+	if len(allowedParameters) == 0 {
+		return true
+	}
+
+	_, wildcard := allowedParameters["*"]
+
+	return inAllowedListRecursive(req.Data, allowedParameters, nil, wildcard)
+}
+
+// inDeniedList checks whether the request parameters are in the
+// policy's denied_parameters map taking into account the nested parameter
+// paths, paths with wildcards and value lists. Wildcards (*) take precedence
+// over more specific rules.
+func inDeniedList(req *logical.Request, deniedParameters map[string][]interface{}) bool {
+	// If we don't have any denied parameters, skip
+	if len(deniedParameters) == 0 {
+		return false
+	}
+
+	if _, exists := deniedParameters["*"]; exists {
+		return true
+	}
+
+	return inDeniedListRecursive(req.Data, deniedParameters, nil)
+}
+
+// inAllowedListRecursive is a recursive helper for inAllowedList;
+// path is the current path in the request data tree which translates into
+// a pointerstructure path (e.g. ["a" "b" "c"] => "/a/b/c")
+func inAllowedListRecursive(requestData interface{}, allowedParameters map[string][]interface{}, path []string, wildcard bool) bool {
+	// Prevent inifinite recursion / stack overflow
+	if len(path) > 20 {
+		return false
+	}
+
+	// Check if there is a wildcard at the next level
+	wildcardPath := pointerstructure.Pointer{
+		Parts: append(path, "*"),
+	}
+	_, wildcardBelow := allowedParameters[strings.ToLower(wildcardPath.String())]
+
+	switch data := requestData.(type) {
+	// If this is a map, recurse to the leaf level
+	case map[string]interface{}:
+		for k, v := range data {
+			if !inAllowedListRecursive(v, allowedParameters, append(path, k), wildcard || wildcardBelow) {
+				return false
+			}
+		}
+		return true
+
+	// If this is a slice, recurse to the leaf level
+	case []interface{}:
+		for i, v := range data {
+			if !inAllowedListRecursive(v, allowedParameters, append(path, strconv.Itoa(i)), wildcard || wildcardBelow) {
+				return false
+			}
+		}
+		return true
+
+	// This is a leaf value
+	default:
+		// check as a simple parameter
+		if len(path) == 1 {
+			if list, exists := allowedParameters[strings.ToLower(path[0])]; exists {
+				return valueInParameterList(data, list)
+			}
+		}
+
+		// check as a nested parameter
+		p := pointerstructure.Pointer{
+			Parts: path,
+		}
+
+		if list, exists := allowedParameters[strings.ToLower(p.String())]; exists {
+			return valueInParameterList(data, list)
+		}
+
+		// this parameter key is not in the allowed parameter list
+		return wildcard
+	}
+}
+
+// inDeniedListRecursive is a recursive helper for inDeniedList;
+// path is the current path in the request data tree which translates into
+// a pointerstructure path (e.g. ["a" "b" "c"] => "/a/b/c")
+func inDeniedListRecursive(requestData interface{}, deniedParameters map[string][]interface{}, path []string) bool {
+	// Prevent inifinite recursion / stack overflow
+	if len(path) > 20 {
+		return true
+	}
+
+	// Check if there is a wildcard at the next level
+	wildcardPath := pointerstructure.Pointer{
+		Parts: append(path, "*"),
+	}
+	_, wildcardBelow := deniedParameters[strings.ToLower(wildcardPath.String())]
+
+	switch data := requestData.(type) {
+	// If this is a map, check the wildcard path, otherwise recurse to the leaf level
+	case map[string]interface{}:
+		if wildcardBelow {
+			return true
+		}
+		for k, v := range data {
+			if inDeniedListRecursive(v, deniedParameters, append(path, k)) {
+				return true
+			}
+		}
+		return false
+
+	// If this is a slice, check the wildcard path, otherwise recurse to the leaf level
+	case []interface{}:
+		if wildcardBelow {
+			return true
+		}
+		for i, v := range data {
+			if inDeniedListRecursive(v, deniedParameters, append(path, strconv.Itoa(i))) {
+				return true
+			}
+		}
+		return false
+
+	// This is a leaf value
+	default:
+		// check as a simple parameter
+		if len(path) == 1 {
+			if list, exists := deniedParameters[strings.ToLower(path[0])]; exists {
+				return valueInParameterList(data, list)
+			}
+		}
+
+		// check as a nested parameter
+		p := pointerstructure.Pointer{
+			Parts: path,
+		}
+
+		if list, exists := deniedParameters[strings.ToLower(p.String())]; exists {
+			return valueInParameterList(data, list)
+		}
+
+		// otherwise
+		return false
+	}
 }
 
 func valueInParameterList(v interface{}, list []interface{}) bool {
