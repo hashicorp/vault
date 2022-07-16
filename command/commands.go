@@ -53,6 +53,7 @@ import (
 	physFoundationDB "github.com/hashicorp/vault/physical/foundationdb"
 	physGCS "github.com/hashicorp/vault/physical/gcs"
 	physManta "github.com/hashicorp/vault/physical/manta"
+	physMCCockroachDB "github.com/hashicorp/vault/physical/mccockroachdb"
 	physMSSQL "github.com/hashicorp/vault/physical/mssql"
 	physMySQL "github.com/hashicorp/vault/physical/mysql"
 	physOCI "github.com/hashicorp/vault/physical/oci"
@@ -151,6 +152,7 @@ var (
 		"azure":                  physAzure.NewAzureBackend,
 		"cassandra":              physCassandra.NewCassandraBackend,
 		"cockroachdb":            physCockroachDB.NewCockroachDBBackend,
+		"mccockroachdb":          physMCCockroachDB.NewMultiDCCockroachDBBackend,
 		"consul":                 physConsul.NewConsulBackend,
 		"couchdb_transactional":  physCouchDB.NewTransactionalCouchDBBackend,
 		"couchdb":                physCouchDB.NewCouchDBBackend,
