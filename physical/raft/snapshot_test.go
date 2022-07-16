@@ -728,7 +728,10 @@ func TestPebbleSnapshotStore_CreateInstallSnapshot(t *testing.T) {
 		}
 
 		// Close/Reopen the db and make sure we still match
-		fsm.Close()
+		err = fsm.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
 		fsm, err = NewFSM(parent, "", logger)
 		if err != nil {
 			t.Fatal(err)

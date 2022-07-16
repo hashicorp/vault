@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
+	uatomic "go.uber.org/atomic"
 )
 
 const (
@@ -92,6 +93,7 @@ type FSM struct {
 
 	localID         string
 	desiredSuffrage string
+	dbClosed        uatomic.Bool
 }
 
 // NewFSM constructs a FSM using the given directory
@@ -117,6 +119,8 @@ func NewFSM(path string, localID string, logger log.Logger) (*FSM, error) {
 		desiredSuffrage: "voter",
 		localID:         localID,
 	}
+
+	f.dbClosed.Store(false)
 
 	f.chunker = raftchunking.NewChunkingBatchingFSM(f, &FSMChunkStorage{
 		f:   f,
@@ -199,8 +203,6 @@ func (f *FSM) openDBFile(dbPath string) error {
 			return err
 		}
 
-		f.logger.Trace("-- openDBFile", "latestIndexKey.Term", latest.Term, "latestIndexKey.Index", latest.Index)
-
 		atomic.StoreUint64(f.latestTerm, latest.Term)
 		atomic.StoreUint64(f.latestIndex, latest.Index)
 	}
@@ -223,7 +225,6 @@ func (f *FSM) openDBFile(dbPath string) error {
 			return err
 		}
 
-		f.logger.Trace("-- openDBFile", "latestConfigurationValue.Index", latest.Index, "latestIndexKey.Servers", latest.Servers)
 		f.latestConfig.Store(&latest)
 	}
 
@@ -232,8 +233,14 @@ func (f *FSM) openDBFile(dbPath string) error {
 }
 
 func (f *FSM) Close() error {
-	f.l.RLock()
-	defer f.l.RUnlock()
+	f.l.Lock()
+	defer f.l.Unlock()
+
+	// pebble doesn't let you call Close() multiple times, unlike boltdb
+	if f.dbClosed.Load() {
+		return nil
+	}
+	f.dbClosed.Store(true)
 	return f.db.Close()
 }
 
