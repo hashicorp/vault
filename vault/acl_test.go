@@ -630,9 +630,9 @@ func testACLNestedParameterConstraints(t *testing.T, ns *namespace.Namespace) {
 		allowed: true,
 	}, {
 		path:    "with/allowed",
-		name:    "expect denied since /a/x/z is not a leaf",
+		name:    "expect allowed due to /a/x/z = []",
 		request: map[string]interface{}{"a": map[string]interface{}{"x": map[string]interface{}{"z": map[string]interface{}{"d": "e"}}}},
-		allowed: false,
+		allowed: true,
 	}, {
 		path:    "with/allowed",
 		name:    "expect allowed due to /a/0/b = [foo]",

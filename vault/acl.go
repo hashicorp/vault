@@ -764,10 +764,33 @@ func inDeniedList(req *logical.Request, deniedParameters map[string][]interface{
 // inAllowedListRecursive is a recursive helper for inAllowedList;
 // path is the current path in the request data tree which translates into
 // a pointerstructure path (e.g. ["a" "b" "c"] => "/a/b/c")
-func inAllowedListRecursive(requestData interface{}, allowedParameters map[string][]interface{}, path []string, wildcard bool) bool {
+func inAllowedListRecursive(requestData interface{}, allowedParameters map[string][]interface{}, path []string, subtreeAllowed bool) bool {
 	// Prevent inifinite recursion / stack overflow
 	if len(path) > 20 {
 		return false
+	}
+
+	// Check as a simple parameter key
+	if len(path) == 1 {
+		if list, exists := allowedParameters[strings.ToLower(path[0])]; exists {
+			if !valueInParameterList(requestData, list) {
+				return false
+			} else {
+				subtreeAllowed = true
+			}
+		}
+	}
+
+	// Check as a nested parameter key
+	p := pointerstructure.Pointer{
+		Parts: path,
+	}
+	if list, exists := allowedParameters[strings.ToLower(p.String())]; exists {
+		if !valueInParameterList(requestData, list) {
+			return false
+		} else {
+			subtreeAllowed = true
+		}
 	}
 
 	// Check if there is a wildcard at the next level
@@ -777,44 +800,27 @@ func inAllowedListRecursive(requestData interface{}, allowedParameters map[strin
 	_, wildcardBelow := allowedParameters[strings.ToLower(wildcardPath.String())]
 
 	switch data := requestData.(type) {
-	// If this is a map, recurse to the leaf level
+	// If this is a map, recurse to the next level
 	case map[string]interface{}:
 		for k, v := range data {
-			if !inAllowedListRecursive(v, allowedParameters, append(path, k), wildcard || wildcardBelow) {
+			if !inAllowedListRecursive(v, allowedParameters, append(path, k), subtreeAllowed || wildcardBelow) {
 				return false
 			}
 		}
 		return true
 
-	// If this is a slice, recurse to the leaf level
+	// If this is a slice, recurse to the next level
 	case []interface{}:
 		for i, v := range data {
-			if !inAllowedListRecursive(v, allowedParameters, append(path, strconv.Itoa(i)), wildcard || wildcardBelow) {
+			if !inAllowedListRecursive(v, allowedParameters, append(path, strconv.Itoa(i)), subtreeAllowed || wildcardBelow) {
 				return false
 			}
 		}
 		return true
 
-	// This is a leaf value
+	// This is a leaf value, only return true if we are in an allowed subtree
 	default:
-		// check as a simple parameter
-		if len(path) == 1 {
-			if list, exists := allowedParameters[strings.ToLower(path[0])]; exists {
-				return valueInParameterList(data, list)
-			}
-		}
-
-		// check as a nested parameter
-		p := pointerstructure.Pointer{
-			Parts: path,
-		}
-
-		if list, exists := allowedParameters[strings.ToLower(p.String())]; exists {
-			return valueInParameterList(data, list)
-		}
-
-		// this parameter key is not in the allowed parameter list
-		return wildcard
+		return subtreeAllowed
 	}
 }
 
@@ -827,6 +833,25 @@ func inDeniedListRecursive(requestData interface{}, deniedParameters map[string]
 		return true
 	}
 
+	// Check as a simple parameter key
+	if len(path) == 1 {
+		if list, exists := deniedParameters[strings.ToLower(path[0])]; exists {
+			if valueInParameterList(requestData, list) {
+				return true
+			}
+		}
+	}
+
+	// Check as a nested parameter key
+	p := pointerstructure.Pointer{
+		Parts: path,
+	}
+	if list, exists := deniedParameters[strings.ToLower(p.String())]; exists {
+		if valueInParameterList(requestData, list) {
+			return true
+		}
+	}
+
 	// Check if there is a wildcard at the next level
 	wildcardPath := pointerstructure.Pointer{
 		Parts: append(path, "*"),
@@ -834,7 +859,7 @@ func inDeniedListRecursive(requestData interface{}, deniedParameters map[string]
 	_, wildcardBelow := deniedParameters[strings.ToLower(wildcardPath.String())]
 
 	switch data := requestData.(type) {
-	// If this is a map, check the wildcard path, otherwise recurse to the leaf level
+	// If this is a map, check the wildcard path, otherwise recurse
 	case map[string]interface{}:
 		if wildcardBelow {
 			return true
@@ -846,7 +871,7 @@ func inDeniedListRecursive(requestData interface{}, deniedParameters map[string]
 		}
 		return false
 
-	// If this is a slice, check the wildcard path, otherwise recurse to the leaf level
+	// If this is a slice, check the wildcard path, otherwise recurse
 	case []interface{}:
 		if wildcardBelow {
 			return true
@@ -858,25 +883,8 @@ func inDeniedListRecursive(requestData interface{}, deniedParameters map[string]
 		}
 		return false
 
-	// This is a leaf value
+	// This is a leaf value, not found in denied list - return false
 	default:
-		// check as a simple parameter
-		if len(path) == 1 {
-			if list, exists := deniedParameters[strings.ToLower(path[0])]; exists {
-				return valueInParameterList(data, list)
-			}
-		}
-
-		// check as a nested parameter
-		p := pointerstructure.Pointer{
-			Parts: path,
-		}
-
-		if list, exists := deniedParameters[strings.ToLower(p.String())]; exists {
-			return valueInParameterList(data, list)
-		}
-
-		// otherwise
 		return false
 	}
 }
