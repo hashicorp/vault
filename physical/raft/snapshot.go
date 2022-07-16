@@ -1,7 +1,9 @@
 package raft
 
 import (
+	"bytes"
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -164,13 +166,10 @@ func (p *PebbleSnapshotStore) getMetaFromFSM() (*raft.SnapshotMeta, error) {
 
 // Open takes a snapshot ID and returns a ReadCloser for that snapshot.
 func (p *PebbleSnapshotStore) Open(id string) (*raft.SnapshotMeta, io.ReadCloser, error) {
-	fmt.Printf("-- pebbleSnapshotStore.Open(). id = %v\n", id)
 	if id == pebbleSnapshotID {
-		fmt.Println("-- pebbleSnapshotStore.Open(). opening from fsm")
 		return p.openFromFSM()
 	}
 
-	fmt.Println("-- pebbleSnapshotStore.Open(). opening from directory")
 	return p.openFromDirectory(id)
 }
 
@@ -273,7 +272,6 @@ func (p *PebbleSnapshotStore) getMetaFromDB(id string) (*raft.SnapshotMeta, erro
 		meta.ConfigurationIndex, meta.Configuration = protoConfigurationToRaftConfiguration(&config)
 	}
 
-	fmt.Printf("-- getMetaFromDB. id = %v. meta = %#v\n", id, meta)
 	return meta, nil
 }
 
@@ -306,10 +304,8 @@ func (p *PebbleSnapshotStore) ReapSnapshots() error {
 	}
 
 	for _, snap := range snapshots {
-		fmt.Printf("-- reaping snapshots. snap = %v\n", snap)
 		// Ignore any files
 		if !snap.IsDir() {
-			fmt.Printf("-- reaping snapshots. %v is not a directory, ignoring\n", snap)
 			continue
 		}
 
@@ -394,32 +390,43 @@ func (s *PebbleSnapshotSink) writePebbleDatabase() error {
 		var done bool
 		var keys int
 		entry := new(pb.StorageEntry)
-		batch := pebbleDB.NewBatch()
-		defer func() { _ = batch.Close() }()
 
+		// TODO: this can be optimized
+		// get rid of anonymous function
+		// loop until io.EOF instead of batches of 50K
 		for !done {
 			err := func() error {
+				batch := pebbleDB.NewBatch()
+
 				for i := 0; i < 50000; i++ {
 					err := protoReader.ReadMsg(entry)
 					if err != nil {
 						if err == io.EOF {
 							done = true
+							_ = batch.Commit(pebbleWriteOptions)
 							return nil
 						}
 
 						return err
 					}
 
-					key := append(dataBucketPrefix, []byte(entry.Key)...)
+					key := []byte(entry.Key)
+					if !bytes.HasPrefix(key, dataBucketPrefix) {
+						key = append(dataBucketPrefix, key...)
+					}
 					err = batch.Set(key, entry.Value, pebbleWriteOptions)
 					if err != nil {
+						_ = batch.Close()
 						return err
 					}
 
 					keys += 1
 				}
 
-				_ = batch.Commit(pebbleWriteOptions)
+				err = batch.Commit(pebbleWriteOptions)
+				if err != nil {
+					return err
+				}
 
 				return nil
 			}()
@@ -430,7 +437,6 @@ func (s *PebbleSnapshotSink) writePebbleDatabase() error {
 			}
 
 			s.logger.Trace("snapshot write: writing keys", "num_written", keys)
-			batch.Reset()
 		}
 	}()
 
@@ -575,4 +581,23 @@ func snapshotName(term, index uint64) string {
 	now := time.Now()
 	msec := now.UnixNano() / int64(time.Millisecond)
 	return fmt.Sprintf("%d-%d-%d", term, index, msec)
+}
+
+func checkDB(db *pebble.DB) error {
+	snap := db.NewSnapshot()
+	iter := snap.NewIter(nil)
+	for iter.First(); iter.Valid(); iter.Next() {
+		k := iter.Key()
+		fmt.Printf("-- checkDB. key = %s. value as hex = %s. value as string = %s\n", string(k), hex.EncodeToString(iter.Value()), string(iter.Value()))
+	}
+	err := iter.Close()
+	if err != nil {
+		return err
+	}
+	err = snap.Close()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

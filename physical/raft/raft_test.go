@@ -170,7 +170,6 @@ func compareDBs(t *testing.T, pb1, pb2 *pebble.DB, dataOnly bool) error {
 	iter1 := snap1.NewIter(nil)
 	for iter1.First(); iter1.Valid(); iter1.Next() {
 		k := iter1.Key()
-		t.Logf("-- compareDBs. pb1 key = %s\n", string(k))
 
 		if dataOnly && !bytes.HasPrefix(k, dataBucketPrefix) {
 			continue
@@ -178,7 +177,11 @@ func compareDBs(t *testing.T, pb1, pb2 *pebble.DB, dataOnly bool) error {
 
 		db1[string(k)] = base64.StdEncoding.EncodeToString(iter1.Value())
 	}
-	err := snap1.Close()
+	err := iter1.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = snap1.Close()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,13 +190,16 @@ func compareDBs(t *testing.T, pb1, pb2 *pebble.DB, dataOnly bool) error {
 	iter2 := snap2.NewIter(nil)
 	for iter2.First(); iter2.Valid(); iter2.Next() {
 		k := iter2.Key()
-		t.Logf("-- compareDBs. pb2 key = %s\n", string(k))
 
 		if dataOnly && !bytes.HasPrefix(k, dataBucketPrefix) {
 			continue
 		}
 
 		db2[string(k)] = base64.StdEncoding.EncodeToString(iter2.Value())
+	}
+	err = iter2.Close()
+	if err != nil {
+		t.Fatal(err)
 	}
 	err = snap2.Close()
 	if err != nil {

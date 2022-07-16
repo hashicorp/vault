@@ -34,29 +34,24 @@ func addPeer(t *testing.T, leader, follower *RaftBackend) {
 	if err := leader.AddPeer(context.Background(), follower.NodeID(), follower.NodeID()); err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("-- leader added peer %v\n", follower.NodeID())
 
 	peers, err := leader.Peers(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("-- leader retrieved peers. peers = %#v\n", peers)
 
 	err = follower.Bootstrap(peers)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log("-- follower bootstrapped from peers")
 
 	err = follower.SetupCluster(context.Background(), SetupOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log("-- follower setup cluster")
 
 	leader.raftTransport.(*raft.InmemTransport).Connect(raft.ServerAddress(follower.NodeID()), follower.raftTransport)
 	follower.raftTransport.(*raft.InmemTransport).Connect(raft.ServerAddress(leader.NodeID()), leader.raftTransport)
-	t.Log("leader and follower connected to each other")
 }
 
 func TestRaft_Snapshot_Loading(t *testing.T) {
@@ -262,8 +257,6 @@ func TestRaft_Snapshot_Peers(t *testing.T) {
 
 	ensureCommitApplied(t, commitIdx, raft2)
 
-	// TODO: start here. this fails because db2 only has config keys, not data keys
-	// Make sure the snapshot was applied correctly on the follower
 	if err := compareDBs(t, raft1.fsm.getDB(), raft2.fsm.getDB(), false); err != nil {
 		t.Fatal(err)
 	}
