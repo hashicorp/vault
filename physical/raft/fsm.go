@@ -528,14 +528,14 @@ func (f *FSM) List(ctx context.Context, prefix string) ([]string, error) {
 
 	var keys []string
 	prefixBytes := append(dataBucketPrefix, []byte(prefix)...)
-
-	batch := f.db.NewIndexedBatch()
-	defer func() { _ = batch.Close() }()
-
-	iter := batch.NewIter(nil)
+	snap := f.db.NewSnapshot()
+	defer func() { _ = snap.Close() }()
+	iter := snap.NewIter(&pebble.IterOptions{
+		LowerBound: prefixBytes,
+	})
 	defer func() { _ = iter.Close() }()
 
-	for iter.SeekGE(prefixBytes); iter.Valid(); iter.Next() {
+	for iter.First(); iter.Valid(); iter.Next() {
 		k := iter.Key()
 
 		if bytes.HasPrefix(k, prefixBytes) {
@@ -547,7 +547,7 @@ func (f *FSM) List(ctx context.Context, prefix string) ([]string, error) {
 			} else {
 				// Add truncated 'folder' paths
 				if len(keys) == 0 || keys[len(keys)-1] != key[:i+1] {
-					keys = append(keys, string(key[:i+1]))
+					keys = append(keys, key[:i+1])
 				}
 			}
 		}
@@ -752,7 +752,9 @@ func (f *FSM) writeTo(ctx context.Context, metaSink writeErrorCloser, sink write
 	metaIter := snap.NewIter(&pebble.IterOptions{
 		LowerBound: dataBucketPrefix,
 	})
+	defer func() { _ = metaIter.Close() }()
 	copyIter, err := metaIter.Clone(pebble.CloneOptions{})
+	defer func() { _ = copyIter.Close() }()
 	if err != nil {
 		f.logger.Error("error cloning iterator", "error", err)
 	}
@@ -774,7 +776,6 @@ func (f *FSM) writeTo(ctx context.Context, metaSink writeErrorCloser, sink write
 		}
 	}
 	_ = metaSink.Close()
-	_ = metaIter.Close()
 
 	// Do the second scan for copy purposes.
 	for copyIter.First(); copyIter.Valid(); copyIter.Next() {
@@ -792,7 +793,6 @@ func (f *FSM) writeTo(ctx context.Context, metaSink writeErrorCloser, sink write
 		}
 	}
 	_ = sink.CloseWithError(err)
-	_ = copyIter.Close()
 }
 
 // Snapshot implements the FSM interface. It returns a noop snapshot object.
@@ -970,40 +970,41 @@ func (f *FSMChunkStorage) StoreChunk(chunk *raftchunking.ChunkInfo) (bool, error
 	f.f.l.RLock()
 	defer f.f.l.RUnlock()
 
-	// Start a write transaction.
 	done := new(bool)
-	batch := f.f.db.NewBatch()
-	defer func() { _ = batch.Close() }()
-
 	byteKey := append(dataBucketPrefix, []byte(entry.Key)...)
-	if err := batch.Set(byteKey, entry.Value, pebbleWriteOptions); err != nil {
-		return *done, fmt.Errorf("error storing chunk info: %w", err)
+	if err := f.f.db.Set(byteKey, entry.Value, pebbleWriteOptions); err != nil {
+		return false, fmt.Errorf("error storing chunk info: %w", err)
 	}
 
-	iter := batch.NewIter(&pebble.IterOptions{
+	snap := f.f.db.NewSnapshot()
+	defer func() { _ = snap.Close() }()
+	iter := snap.NewIter(&pebble.IterOptions{
 		LowerBound: dataBucketPrefix,
 	})
+	defer func() { _ = iter.Close() }()
 
 	var keys []string
 	prefixBytes := []byte(prefix)
 	truePrefix := append(dataBucketPrefix, prefixBytes...)
 
-	for iter.SeekGE(prefixBytes); iter.Valid(); iter.Next() {
+	for iter.SeekGE(truePrefix); iter.Valid(); iter.Next() {
 		k := iter.Key()
-		if bytes.HasPrefix(k, truePrefix) {
-			stringKey := string(k)
-			stringKey = strings.TrimPrefix(stringKey, string(truePrefix))
-			if i := strings.Index(key, "/"); i == -1 {
-				// Add objects only from the current 'folder'
-				keys = append(keys, key)
-			} else {
-				// Add truncated 'folder' paths
-				keys = strutil.AppendIfMissing(keys, string(key[:i+1]))
-			}
+
+		if !bytes.HasPrefix(k, truePrefix) {
+			continue
+		}
+
+		stringKey := string(k)
+		stringKey = strings.TrimPrefix(stringKey, string(truePrefix))
+		if i := strings.Index(stringKey, "/"); i == -1 {
+			// Add objects only from the current 'folder'
+			keys = append(keys, stringKey)
+		} else {
+			// Add truncated 'folder' paths
+			keys = strutil.AppendIfMissing(keys, stringKey[:i+1])
 		}
 	}
 
-	batch.Commit(pebbleWriteOptions)
 	*done = uint32(len(keys)) == chunk.NumChunks
 	return *done, nil
 }
@@ -1024,7 +1025,6 @@ func (f *FSMChunkStorage) FinalizeOp(opNum uint64) ([]*raftchunking.ChunkInfo, e
 
 func (f *FSMChunkStorage) chunksForOpNum(opNum uint64) ([]*raftchunking.ChunkInfo, error) {
 	prefix, _ := f.chunkPaths(&raftchunking.ChunkInfo{OpNum: opNum})
-
 	opChunkKeys, err := f.f.List(f.ctx, prefix)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching op chunk keys: %w", err)

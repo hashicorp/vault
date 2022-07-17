@@ -3,17 +3,17 @@ package raft
 import (
 	"bytes"
 	"context"
-	fmt "fmt"
+	"fmt"
 	"os"
 	"testing"
 
-	proto "github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-raftchunking"
 	raftchunkingtypes "github.com/hashicorp/go-raftchunking/types"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
-	"github.com/hashicorp/raft-boltdb/v2"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/raskchanky/raft-pebble"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -82,7 +82,7 @@ func TestRaft_Chunking_Lifecycle(t *testing.T) {
 	t.Log("tearing down cluster")
 	require.NoError(b.TeardownCluster(nil))
 	require.NoError(b.fsm.getDB().Close())
-	require.NoError(b.stableStore.(*raftboltdb.BoltStore).Close())
+	require.NoError(b.stableStore.(*raftpebble.PebbleStore).Close())
 
 	t.Log("starting new backend")
 	backendRaw, err := NewRaftBackend(b.conf, b.logger)

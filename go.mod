@@ -66,7 +66,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-discover v0.0.0-20210818145131-c573d69da192
 	github.com/hashicorp/go-gcp-common v0.7.1-0.20220519220342-94aabf4c4c87
-	github.com/hashicorp/go-hclog v1.2.0
+	github.com/hashicorp/go-hclog v1.2.1
 	github.com/hashicorp/go-kms-wrapping v0.7.0
 	github.com/hashicorp/go-memdb v1.3.3
 	github.com/hashicorp/go-msgpack v1.1.5
@@ -161,7 +161,7 @@ require (
 	github.com/pquerna/otp v1.2.1-0.20191009055518-468c2dd2b58d
 	github.com/prometheus/client_golang v1.11.1
 	github.com/prometheus/common v0.26.0
-	github.com/raskchanky/raft-pebble v0.0.0-20220704234909-7626296afc37
+	github.com/raskchanky/raft-pebble v0.0.0-20220717205736-3546efd1938e
 	github.com/rboyer/safeio v0.2.1
 	github.com/ryanuber/columnize v2.1.0+incompatible
 	github.com/ryanuber/go-glob v1.0.0
@@ -169,7 +169,7 @@ require (
 	github.com/sasha-s/go-deadlock v0.2.0
 	github.com/sethvargo/go-limiter v0.7.1
 	github.com/shirou/gopsutil v3.21.5+incompatible
-	github.com/stretchr/testify v1.7.1
+	github.com/stretchr/testify v1.7.2
 	go.etcd.io/bbolt v1.3.6
 	go.etcd.io/etcd/client/pkg/v3 v3.5.0
 	go.etcd.io/etcd/client/v2 v2.305.0
@@ -401,7 +401,7 @@ require (
 	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
 	gopkg.in/resty.v1 v1.12.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/api v0.22.2 // indirect
 	k8s.io/apimachinery v0.22.2 // indirect
 	k8s.io/client-go v0.22.2 // indirect
