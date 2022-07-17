@@ -387,56 +387,46 @@ func (s *PebbleSnapshotSink) writePebbleDatabase() error {
 		protoReader := NewDelimitedReader(reader, math.MaxInt32)
 		defer protoReader.Close()
 
-		var done bool
+		var commit bool
 		var keys int
 		entry := new(pb.StorageEntry)
+		batch := pebbleDB.NewBatch()
 
-		// TODO: this can be optimized
-		// get rid of anonymous function
-		// loop until io.EOF instead of batches of 50K
-		for !done {
-			err := func() error {
-				batch := pebbleDB.NewBatch()
-
-				for i := 0; i < 50000; i++ {
-					err := protoReader.ReadMsg(entry)
-					if err != nil {
-						if err == io.EOF {
-							done = true
-							_ = batch.Commit(pebbleWriteOptions)
-							return nil
-						}
-
-						return err
-					}
-
-					key := []byte(entry.Key)
-					if !bytes.HasPrefix(key, dataBucketPrefix) {
-						key = append(dataBucketPrefix, key...)
-					}
-					err = batch.Set(key, entry.Value, pebbleWriteOptions)
-					if err != nil {
-						_ = batch.Close()
-						return err
-					}
-
-					keys += 1
-				}
-
-				err = batch.Commit(pebbleWriteOptions)
-				if err != nil {
-					return err
-				}
-
-				return nil
-			}()
+		for {
+			err := protoReader.ReadMsg(entry)
 			if err != nil {
-				s.logger.Error("snapshot write: failed to write transaction", "error", err)
+				if err == io.EOF {
+					commit = true
+					break
+				}
+
+				s.logger.Error("snapshot write: failed to read proto msg", "error", err)
 				s.writeError = err
-				return
+				break
 			}
 
-			s.logger.Trace("snapshot write: writing keys", "num_written", keys)
+			key := []byte(entry.Key)
+			if !bytes.HasPrefix(key, dataBucketPrefix) {
+				key = append(dataBucketPrefix, key...)
+			}
+			err = batch.Set(key, entry.Value, pebbleWriteOptions)
+			if err != nil {
+				s.logger.Error("snapshot write: failed to set key", "error", err)
+				s.writeError = err
+				break
+			}
+
+			keys += 1
+		}
+
+		s.logger.Trace("snapshot write: writing keys", "num_written", keys)
+
+		if commit {
+			err = batch.Commit(pebbleWriteOptions)
+			if err != nil {
+				s.logger.Error("snapshot write: failed to commit batch", "error", err)
+				s.writeError = err
+			}
 		}
 	}()
 
