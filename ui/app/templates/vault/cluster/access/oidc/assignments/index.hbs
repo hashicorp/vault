@@ -9,8 +9,9 @@
 {{#if (gt this.model.length 0)}}
   {{#each this.model as |model|}}
     <LinkedBlock
-      class="list-item-row"
+      class={{concat "list-item-row" (if (eq model.name "allow_all") " is-disabled")}}
       @params={{array "vault.cluster.access.oidc.assignments.assignment.details" model.name}}
+      @disabled={{(eq model.name "allow_all")}}
     >
       <div class="level is-mobile">
         <div class="level-left">
@@ -21,34 +22,36 @@
             </span>
           </div>
         </div>
-        <div class="level-right is-flex is-paddingless is-marginless">
-          <div class="level-item">
-            <PopupMenu>
-              <nav class="menu">
-                <ul class="menu-list">
-                  <li>
-                    <LinkTo
-                      @route="vault.cluster.access.oidc.assignments.assignment.details"
-                      @model={{model.name}}
-                      @disabled={{not model.canRead}}
-                    >
-                      Details
-                    </LinkTo>
-                  </li>
-                  <li>
-                    <LinkTo
-                      @route="vault.cluster.access.oidc.assignments.assignment.edit"
-                      @model={{model.name}}
-                      @disabled={{not model.canEdit}}
-                    >
-                      Edit
-                    </LinkTo>
-                  </li>
-                </ul>
-              </nav>
-            </PopupMenu>
+        {{#if (not-eq model.name "allow_all")}}
+          <div class="level-right is-flex is-paddingless is-marginless">
+            <div class="level-item">
+              <PopupMenu>
+                <nav class="menu">
+                  <ul class="menu-list">
+                    <li>
+                      <LinkTo
+                        @route="vault.cluster.access.oidc.assignments.assignment.details"
+                        @model={{model.name}}
+                        @disabled={{not model.canRead}}
+                      >
+                        Details
+                      </LinkTo>
+                    </li>
+                    <li>
+                      <LinkTo
+                        @route="vault.cluster.access.oidc.assignments.assignment.edit"
+                        @model={{model.name}}
+                        @disabled={{not model.canEdit}}
+                      >
+                        Edit
+                      </LinkTo>
+                    </li>
+                  </ul>
+                </nav>
+              </PopupMenu>
+            </div>
           </div>
-        </div>
+        {{/if}}
       </div>
     </LinkedBlock>
   {{/each}}
