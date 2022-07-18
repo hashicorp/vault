@@ -494,3 +494,54 @@ path "foo/+*" {
 		t.Errorf("bad error: %s", err)
 	}
 }
+
+func TestPolicy_BadParameterWildcards(t *testing.T) {
+	type testCase struct {
+		name          string
+		rules         string
+		expectedError string
+	}
+
+	testCases := []testCase{{
+		name: "partial wildcard",
+		rules: `
+			path "/" {
+				capabilities = ["read"]
+				allowed_parameters = {
+					"zip*" = []
+				}
+			}`,
+		expectedError: `path "/": allowed_parameters: parameter key "zip*" cannot contain partial wildcards`,
+	}, {
+		name: "wildcard in path",
+		rules: `
+			path "/" {
+				capabilities = ["read"]
+				denied_parameters = {
+					"/a/*/b" = []
+				}
+			}`,
+		expectedError: `path "/": denied_parameters: nested parameter key "/a/*/b" cannot contain non-tail wildcards`,
+	}, {
+		name: "wildcard in path",
+		rules: `
+			path "/" {
+				capabilities = ["read"]
+				required_parameters = ["*"]
+			}`,
+		expectedError: `path "/": required_parameters: parameter key "*": wildcards are not permitted here`,
+	}}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(tc.rules))
+			if err == nil {
+				t.Fatalf("%s: expected error", tc.name)
+			}
+
+			if !strings.Contains(err.Error(), tc.expectedError) {
+				t.Errorf("%s: bad error: %s", tc.name, err)
+			}
+		})
+	}
+}

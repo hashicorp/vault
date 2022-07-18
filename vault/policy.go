@@ -439,21 +439,20 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 
 		if pc.AllowedParametersHCL != nil {
 			pc.Permissions.AllowedParameters = make(map[string][]interface{}, len(pc.AllowedParametersHCL))
-			for key, val := range pc.AllowedParametersHCL {
-				if err := validateParameter(key, val, true); err != nil {
-					return fmt.Errorf("path %q: allowed_parameters: %w", pc.Path, err)
+			for k, v := range pc.AllowedParametersHCL {
+				if err := validateParameter(k, v, true); err != nil {
+					return fmt.Errorf("path %q: allowed_parameters: %w", key, err)
 				}
-				pc.Permissions.AllowedParameters[strings.ToLower(key)] = val
+				pc.Permissions.AllowedParameters[strings.ToLower(k)] = v
 			}
 		}
 		if pc.DeniedParametersHCL != nil {
 			pc.Permissions.DeniedParameters = make(map[string][]interface{}, len(pc.DeniedParametersHCL))
-
-			for key, val := range pc.DeniedParametersHCL {
-				if err := validateParameter(key, val, true); err != nil {
-					return fmt.Errorf("path %q: denied_parameters: %w", pc.Path, err)
+			for k, v := range pc.DeniedParametersHCL {
+				if err := validateParameter(k, v, true); err != nil {
+					return fmt.Errorf("path %q: denied_parameters: %w", key, err)
 				}
-				pc.Permissions.DeniedParameters[strings.ToLower(key)] = val
+				pc.Permissions.DeniedParameters[strings.ToLower(k)] = v
 			}
 		}
 		if pc.MinWrappingTTLHCL != nil {
@@ -534,9 +533,9 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 			return errors.New("max_wrapping_ttl cannot be less than min_wrapping_ttl")
 		}
 		if len(pc.RequiredParametersHCL) > 0 {
-			for _, p := range pc.Permissions.RequiredParameters {
+			for _, p := range pc.RequiredParametersHCL {
 				if err := validateParameter(p, nil, false); err != nil {
-					return fmt.Errorf("path %q: required_parameters: %w", pc.Path, err)
+					return fmt.Errorf("path %q: required_parameters: %w", key, err)
 				}
 			}
 			pc.Permissions.RequiredParameters = pc.RequiredParametersHCL[:]
@@ -562,7 +561,7 @@ func validateParameter(key string, values []interface{}, widlcardPermitted bool)
 	// ensure that wildcard keys are either "*" or end with "/*"
 	if strings.Contains(key, "*") {
 		if !widlcardPermitted {
-			return fmt.Errorf("parameter key %q: wildcard is not permitted here", key)
+			return fmt.Errorf("parameter key %q: wildcards are not permitted here", key)
 		}
 
 		switch {
@@ -570,8 +569,10 @@ func validateParameter(key string, values []interface{}, widlcardPermitted bool)
 			// OK
 		case strings.HasPrefix(key, "/") && strings.HasSuffix(key, "/*") && !strings.Contains(key[:len(key)-2], "*"):
 			// OK
+		case strings.HasPrefix(key, "/"):
+			return fmt.Errorf("nested parameter key %q cannot contain non-tail wildcards", key)
 		default:
-			return fmt.Errorf("parameter key %q cannot contain non-tail wildcards", key)
+			return fmt.Errorf("parameter key %q cannot contain partial wildcards", key)
 		}
 	}
 
