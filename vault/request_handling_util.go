@@ -42,7 +42,7 @@ func forward(ctx context.Context, c *Core, req *logical.Request) (*logical.Respo
 	panic("forward called in OSS Vault")
 }
 
-func getLeaseRegisterFunc(c *Core) (func(context.Context, *logical.Request, *logical.Response) (string, error), error) {
+func getLeaseRegisterFunc(c *Core) (func(context.Context, *logical.Request, *logical.Response, string) (string, error), error) {
 	return c.expiration.Register, nil
 }
 

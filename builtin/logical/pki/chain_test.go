@@ -1605,9 +1605,10 @@ func BenchmarkChainBuilding(benchies *testing.B) {
 
 			// Run the benchmark.
 			ctx := context.Background()
+			sc := b.makeStorageContext(ctx, s)
 			bench.StartTimer()
 			for n := 0; n < bench.N; n++ {
-				rebuildIssuersChains(ctx, s, nil)
+				sc.rebuildIssuersChains(nil)
 			}
 		})
 	}

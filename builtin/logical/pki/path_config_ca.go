@@ -101,7 +101,8 @@ func (b *backend) pathCAIssuersRead(ctx context.Context, req *logical.Request, _
 		return logical.ErrorResponse("Cannot read defaults until migration has completed"), nil
 	}
 
-	config, err := getIssuersConfig(ctx, req.Storage)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	config, err := sc.getIssuersConfig()
 	if err != nil {
 		return logical.ErrorResponse("Error loading issuers configuration: " + err.Error()), nil
 	}
@@ -128,7 +129,8 @@ func (b *backend) pathCAIssuersWrite(ctx context.Context, req *logical.Request, 
 		return logical.ErrorResponse("Invalid issuer specification; must be non-empty and can't be 'default'."), nil
 	}
 
-	parsedIssuer, err := resolveIssuerReference(ctx, req.Storage, newDefault)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	parsedIssuer, err := sc.resolveIssuerReference(newDefault)
 	if err != nil {
 		return logical.ErrorResponse("Error resolving issuer reference: " + err.Error()), nil
 	}
@@ -139,7 +141,7 @@ func (b *backend) pathCAIssuersWrite(ctx context.Context, req *logical.Request, 
 		},
 	}
 
-	entry, err := fetchIssuerById(ctx, req.Storage, parsedIssuer)
+	entry, err := sc.fetchIssuerById(parsedIssuer)
 	if err != nil {
 		return logical.ErrorResponse("Unable to fetch issuer: " + err.Error()), nil
 	}
@@ -150,7 +152,7 @@ func (b *backend) pathCAIssuersWrite(ctx context.Context, req *logical.Request, 
 		b.Logger().Error(msg)
 	}
 
-	err = updateDefaultIssuerId(ctx, req.Storage, parsedIssuer)
+	err = sc.updateDefaultIssuerId(parsedIssuer)
 	if err != nil {
 		return logical.ErrorResponse("Error updating issuer configuration: " + err.Error()), nil
 	}
@@ -204,7 +206,8 @@ func (b *backend) pathKeyDefaultRead(ctx context.Context, req *logical.Request, 
 		return logical.ErrorResponse("Cannot read key defaults until migration has completed"), nil
 	}
 
-	config, err := getKeysConfig(ctx, req.Storage)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	config, err := sc.getKeysConfig()
 	if err != nil {
 		return logical.ErrorResponse("Error loading keys configuration: " + err.Error()), nil
 	}
@@ -231,12 +234,13 @@ func (b *backend) pathKeyDefaultWrite(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse("Invalid key specification; must be non-empty and can't be 'default'."), nil
 	}
 
-	parsedKey, err := resolveKeyReference(ctx, req.Storage, newDefault)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	parsedKey, err := sc.resolveKeyReference(newDefault)
 	if err != nil {
 		return logical.ErrorResponse("Error resolving issuer reference: " + err.Error()), nil
 	}
 
-	err = updateDefaultKeyId(ctx, req.Storage, parsedKey)
+	err = sc.updateDefaultKeyId(parsedKey)
 	if err != nil {
 		return logical.ErrorResponse("Error updating issuer configuration: " + err.Error()), nil
 	}

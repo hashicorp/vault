@@ -1,14 +1,11 @@
 package pki
 
 import (
-	"context"
 	"strings"
-
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func isDefaultKeySet(ctx context.Context, s logical.Storage) (bool, error) {
-	config, err := getKeysConfig(ctx, s)
+func (sc *storageContext) isDefaultKeySet() (bool, error) {
+	config, err := sc.getKeysConfig()
 	if err != nil {
 		return false, err
 	}
@@ -16,8 +13,8 @@ func isDefaultKeySet(ctx context.Context, s logical.Storage) (bool, error) {
 	return strings.TrimSpace(config.DefaultKeyId.String()) != "", nil
 }
 
-func isDefaultIssuerSet(ctx context.Context, s logical.Storage) (bool, error) {
-	config, err := getIssuersConfig(ctx, s)
+func (sc *storageContext) isDefaultIssuerSet() (bool, error) {
+	config, err := sc.getIssuersConfig()
 	if err != nil {
 		return false, err
 	}
@@ -25,14 +22,14 @@ func isDefaultIssuerSet(ctx context.Context, s logical.Storage) (bool, error) {
 	return strings.TrimSpace(config.DefaultIssuerId.String()) != "", nil
 }
 
-func updateDefaultKeyId(ctx context.Context, s logical.Storage, id keyID) error {
-	config, err := getKeysConfig(ctx, s)
+func (sc *storageContext) updateDefaultKeyId(id keyID) error {
+	config, err := sc.getKeysConfig()
 	if err != nil {
 		return err
 	}
 
 	if config.DefaultKeyId != id {
-		return setKeysConfig(ctx, s, &keyConfigEntry{
+		return sc.setKeysConfig(&keyConfigEntry{
 			DefaultKeyId: id,
 		})
 	}
@@ -40,14 +37,14 @@ func updateDefaultKeyId(ctx context.Context, s logical.Storage, id keyID) error 
 	return nil
 }
 
-func updateDefaultIssuerId(ctx context.Context, s logical.Storage, id issuerID) error {
-	config, err := getIssuersConfig(ctx, s)
+func (sc *storageContext) updateDefaultIssuerId(id issuerID) error {
+	config, err := sc.getIssuersConfig()
 	if err != nil {
 		return err
 	}
 
 	if config.DefaultIssuerId != id {
-		return setIssuersConfig(ctx, s, &issuerConfigEntry{
+		return sc.setIssuersConfig(&issuerConfigEntry{
 			DefaultIssuerId: id,
 		})
 	}
