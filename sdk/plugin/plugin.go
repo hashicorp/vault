@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-multierror"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -109,40 +108,19 @@ func pluginSet(autoMTLS, metadataMode bool) map[int]plugin.PluginSet {
 }
 
 func NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (logical.Backend, error) {
-	var client *plugin.Client
-	var err error
-	merr := &multierror.Error{}
 	ps := pluginSet(config.AutoMTLS, config.IsMetadataMode)
 
-	// Best effort attempt to run with the version 5 plugin set which supports
-	// autoMTLS if that's the set returned
-	client, err = pluginRunner.RunConfig(ctx,
+	client, err := pluginRunner.RunConfig(ctx,
 		pluginutil.Runner(config.Wrapper),
 		pluginutil.PluginSets(ps),
 		pluginutil.HandshakeConfig(handshakeConfig),
 		pluginutil.Env(),
 		pluginutil.Logger(config.Logger),
-		pluginutil.MetadataMode(config.IsMetadataMode && !config.AutoMTLS),
+		pluginutil.MetadataMode(config.IsMetadataMode),
 		pluginutil.AutoMTLS(config.AutoMTLS),
 	)
-	// This is the fallback: If we error with a v5 plugin set then try again,
-	// but force the old plugin set
-	if config.AutoMTLS && err != nil {
-		merr = multierror.Append(merr, err)
-
-		ps = pluginSet(false, config.IsMetadataMode)
-		client, err = pluginRunner.RunConfig(ctx,
-			pluginutil.Runner(config.Wrapper),
-			pluginutil.PluginSets(ps),
-			pluginutil.HandshakeConfig(handshakeConfig),
-			pluginutil.Env(),
-			pluginutil.Logger(config.Logger),
-			pluginutil.MetadataMode(config.IsMetadataMode),
-		)
-	}
 	if err != nil {
-		merr = multierror.Append(merr, err)
-		return nil, merr
+		return nil, err
 	}
 
 	// Connect via RPC

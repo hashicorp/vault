@@ -349,22 +349,7 @@ func (c *PluginCatalog) getBackendPluginType(ctx context.Context, pluginRunner *
 	// Attempt to run as backend V5 plugin
 	c.logger.Debug("attempting to load backend plugin", "name", pluginRunner.Name)
 	client, err := backendplugin.NewPluginClient(ctx, pluginRunner, config)
-	if err == nil {
-		err := client.Setup(ctx, &logical.BackendConfig{})
-		if err != nil {
-			return consts.PluginTypeUnknown, err
-		}
-
-		backendType := client.Type()
-		client.Cleanup(ctx)
-
-		switch backendType {
-		case logical.TypeCredential:
-			return consts.PluginTypeCredential, nil
-		case logical.TypeLogical:
-			return consts.PluginTypeSecrets, nil
-		}
-	} else {
+	if err != nil {
 		merr = multierror.Append(merr, err)
 		c.logger.Debug("failed to dispense v5 backend plugin", "name", pluginRunner.Name, "error", err)
 		config.AutoMTLS = false
