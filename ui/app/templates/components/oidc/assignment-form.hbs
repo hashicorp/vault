@@ -37,11 +37,11 @@
         disabled={{not @model.isNew}}
         class="input field {{if this.modelValidations.name.errors 'has-error-border'}}"
         {{on "input" this.handleOperation}}
+        data-test-input="name"
       />
       {{#if this.modelValidations.name.errors}}
         <AlertInline @type="danger" @message={{join ", " this.modelValidations.name.errors}} />
       {{/if}}
-
       <SearchSelect
         @subLabel="Entities"
         @placeholder="Search"
@@ -59,6 +59,9 @@
         @fallbackComponent="string-list"
       />
     </div>
+    {{#if this.modelValidations.entityIds.errors}}
+      <AlertInline @type="danger" @message={{join ", " this.modelValidations.entityIds.errors}} />
+    {{/if}}
     <div class="has-top-padding-s">
       <button
         type="submit"

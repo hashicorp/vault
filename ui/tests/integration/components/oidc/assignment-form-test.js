@@ -1,27 +1,43 @@
-import { module, skip } from 'qunit';
+import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { render, fillIn, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 
 module('Integration | Component | oidc/assignment-form', function (hooks) {
   setupRenderingTest(hooks);
-  // ARG TODO in next PR.
+  setupMirage(hooks);
 
-  skip('it renders', async function (assert) {
-    // Set any properties with this.set('myProperty', 'value');
-    // Handle any actions with this.set('myAction', function(val) { ... });
+  hooks.beforeEach(function () {
+    this.store = this.owner.lookup('service:store');
+  });
 
-    await render(hbs`<Oidc::AssignmentForm />`);
+  test('it should save new assignment meep', async function (assert) {
+    assert.expect(5);
 
-    assert.dom(this.element).hasText('');
+    this.server.post('/identity/oidc/assignment/test', (schema, req) => {
+      assert.ok(true, 'Request made to save assignment');
+      return JSON.parse(req.requestBody);
+    });
 
-    // Template block usage:
+    this.model = this.store.createRecord('oidc/assignment');
+    this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
+
     await render(hbs`
-      <Oidc::AssignmentForm>
-        template block text
-      </Oidc::AssignmentForm>
+      <Oidc::AssignmentForm
+        @model={{this.model}}
+        @onCancel={{this.onCancel}}
+        @onSave={{this.onSave}}
+      />
     `);
 
-    assert.dom(this.element).hasText('template block text');
+    assert.dom('[data-test-oidc-assignment-title]').hasText('Create assignment', 'Form title renders');
+    assert.dom('[data-test-oidc-assignment-save]').hasText('Create', 'Save button has correct label');
+    await click('[data-test-oidc-assignment-save]');
+    assert
+      .dom('[data-test-inline-alert]')
+      .hasText('Name is required.', 'Validation message is shown for name');
+    await fillIn('[data-test-input="name"]', 'test');
+    await click('[data-test-oidc-assignment-save]');
   });
 });
