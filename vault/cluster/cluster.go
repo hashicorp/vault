@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"net/url"
 	"os"
@@ -81,6 +82,10 @@ func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Lo
 		// Our forwarding connections heartbeat regularly so anything else we
 		// want to go away/get cleaned up pretty rapidly
 		IdleTimeout: idleTimeout,
+
+		// By default this is 250 which can be too small on high traffic
+		// clusters with many forwarded or replication gRPC connections.
+		MaxConcurrentStreams: math.MaxUint32,
 	}
 
 	return &Listener{
