@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
+	"github.com/mitchellh/pointerstructure"
 )
 
 const (
@@ -439,6 +440,9 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 		if pc.AllowedParametersHCL != nil {
 			pc.Permissions.AllowedParameters = make(map[string][]interface{}, len(pc.AllowedParametersHCL))
 			for key, val := range pc.AllowedParametersHCL {
+				if err := validateParameter(key, val, true); err != nil {
+					return fmt.Errorf("path %q: allowed_parameters: %w", pc.Path, err)
+				}
 				pc.Permissions.AllowedParameters[strings.ToLower(key)] = val
 			}
 		}
@@ -446,6 +450,9 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 			pc.Permissions.DeniedParameters = make(map[string][]interface{}, len(pc.DeniedParametersHCL))
 
 			for key, val := range pc.DeniedParametersHCL {
+				if err := validateParameter(key, val, true); err != nil {
+					return fmt.Errorf("path %q: denied_parameters: %w", pc.Path, err)
+				}
 				pc.Permissions.DeniedParameters[strings.ToLower(key)] = val
 			}
 		}
@@ -527,6 +534,11 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 			return errors.New("max_wrapping_ttl cannot be less than min_wrapping_ttl")
 		}
 		if len(pc.RequiredParametersHCL) > 0 {
+			for _, p := range pc.Permissions.RequiredParameters {
+				if err := validateParameter(p, nil, false); err != nil {
+					return fmt.Errorf("path %q: required_parameters: %w", pc.Path, err)
+				}
+			}
 			pc.Permissions.RequiredParameters = pc.RequiredParametersHCL[:]
 		}
 
@@ -535,5 +547,33 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 	}
 
 	result.Paths = paths
+	return nil
+}
+
+func validateParameter(key string, values []interface{}, widlcardPermitted bool) error {
+	// path keys
+	if strings.HasPrefix(key, "/") {
+		// ensure that the key conforms the pointerstructure syntax (RFC 6901)
+		if _, err := pointerstructure.Parse(key); err != nil {
+			return fmt.Errorf("parameter key %q: invalid path syntax: %w", key, err)
+		}
+	}
+
+	// ensure that wildcard keys are either "*" or end with "/*"
+	if strings.Contains(key, "*") {
+		if !widlcardPermitted {
+			return fmt.Errorf("parameter key %q: wildcard is not pemitted here", key)
+		}
+
+		switch {
+		case key == "*":
+			// OK
+		case strings.HasPrefix(key, "/") && strings.HasSuffix(key, "/*") && !strings.Contains(key[:len(key)-2], "*"):
+			// OK
+		default:
+			return fmt.Errorf("parameter key %q cannot contain non-tail wildcards", key)
+		}
+	}
+
 	return nil
 }
