@@ -67,6 +67,7 @@ jobs:
         goos: [ freebsd, windows, netbsd, openbsd, solaris ]
         goarch: [ "386", "amd64", "arm" ]
         go: [ "1.18.4" ]
+        debug: [ "", "_debug" ]
         exclude:
           - goos: solaris
             goarch: 386
@@ -76,7 +77,7 @@ jobs:
             goarch: arm
       fail-fast: true
 
-    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
+    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }}${{ matrix.debug }} build
 
     steps:
       - uses: actions/checkout@v2
@@ -104,12 +105,15 @@ jobs:
           CGO_ENABLED: 0
         run: |
           mkdir dist out
+          if [ "${{ matrix.debug }}" = "_debug" ]; then
+            export LD_FLAGS="-s -w ";
+          fi
           GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.get-product-version.outputs.product-base-version }} VAULT_REVISION="$(git rev-parse HEAD)" VAULT_BUILD_DATE="${{ needs.get-build-date.outputs.build-date }}" make build
-          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
+          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.debug }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.debug }}.zip
+          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.debug }}.zip
 
   build-linux:
     needs: [ get-product-version, get-build-date ]
@@ -119,9 +123,10 @@ jobs:
         goos: [linux]
         goarch: ["arm", "arm64", "386", "amd64"]
         go: ["1.18.4"]
+        debug: [ "", "_debug" ]
       fail-fast: true
 
-    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
+    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }}${{ matrix.debug }} build
 
     steps:
       - uses: actions/checkout@v2
@@ -150,17 +155,20 @@ jobs:
           CGO_ENABLED: 0
         run: |
           mkdir dist out
+          if [ "${{ matrix.debug }}" = "_debug" ]; then
+            export LD_FLAGS="-s -w ";
+          fi
           GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.get-product-version.outputs.product-base-version }} VAULT_REVISION="$(git rev-parse HEAD)" VAULT_BUILD_DATE="${{ needs.get-build-date.outputs.build-date }}" make build
-          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
+          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.debug }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.debug }}.zip
+          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.debug }}.zip
 
       - name: Package
         uses: hashicorp/actions-packaging-linux@v1
         with:
-          name: ${{ github.event.repository.name }}
+          name: ${{ github.event.repository.name }}${{ matrix.debug }}
           description: "Vault is a tool for secrets management, encryption as a service, and privileged access management."
           arch: ${{ matrix.goarch }}
           version: ${{ needs.get-product-version.outputs.product-version }}
@@ -196,8 +204,9 @@ jobs:
         goos: [ darwin ]
         goarch: [ "amd64", "arm64" ]
         go: [ "1.18.4" ]
+        debug: [ "", "_debug" ]
       fail-fast: true
-    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
+    name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }}${{ matrix.debug }} build
     steps:
       - uses: actions/checkout@v2
 
@@ -226,15 +235,18 @@ jobs:
           CGO_ENABLED: 0
         run: |
           mkdir dist out
+          if [ "${{ matrix.debug }}" = "_debug" ]; then
+            export LD_FLAGS="-s -w ";
+          fi
           GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.get-product-version.outputs.product-base-version }} VAULT_REVISION="$(git rev-parse HEAD)" VAULT_BUILD_DATE="${{ needs.get-build-date.outputs.build-date }}" make build
-          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
+          zip -r -j out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.debug }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
-          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip
+          name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.debug }}.zip
+          path: out/${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}${{ matrix.debug }}.zip
 
   build-docker:
-    name: Docker ${{ matrix.arch }} build
+    name: Docker ${{ matrix.arch }}${{ matrix.debug }} build
     needs:
       - get-product-version
       - build-linux
@@ -242,24 +254,33 @@ jobs:
     strategy:
       matrix:
         arch: ["arm", "arm64", "386", "amd64"]
+        debug: [ "", "_debug" ]
     env:
       repo: ${{github.event.repository.name}}
       version: ${{needs.get-product-version.outputs.product-version}}
     steps:
       - uses: actions/checkout@v2
+      - name: Fix version
+        id: fix_version
+        run:
+          if [[ "${{ matrix.debug }}" == "_debug" ]]; then
+            echo "::set-output name=version::${{ env.version}}+debug";
+          else
+            echo "::set-output name=version::${{ env.version }}";
+          fi
       - name: Docker Build (Action)
         uses: hashicorp/actions-docker-build@v1
         with:
-          version: ${{env.version}}
+          version: ${{ steps.fix_version.outputs.version }}
           target: default
           arch: ${{matrix.arch}}
-          zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ matrix.arch }}.zip
+          zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ matrix.arch }}${{ matrix.debug }}.zip
           tags: |
-            docker.io/hashicorp/${{env.repo}}:${{env.version}}
-            public.ecr.aws/hashicorp/${{env.repo}}:${{env.version}}
+            docker.io/hashicorp/${{env.repo}}:${{ steps.fix_version.outputs.version }}
+            public.ecr.aws/hashicorp/${{env.repo}}:${{ steps.fix_version.outputs.version }}
 
   build-ubi:
-    name: Red Hat UBI ${{ matrix.arch }} build
+    name: Red Hat UBI ${{ matrix.arch }}${{ matrix.debug }} build
     needs:
       - get-product-version
       - build-linux
@@ -267,16 +288,25 @@ jobs:
     strategy:
       matrix:
         arch: ["amd64"]
+        debug: [ "", "_debug" ]
     env:
       repo: ${{github.event.repository.name}}
       version: ${{needs.get-product-version.outputs.product-version}}
     steps:
       - uses: actions/checkout@v2
+      - name: Fix version
+        id: fix_version
+        run:
+          if [[ "${{ matrix.debug }}" == "_debug" ]]; then
+            echo "::set-output name=version::${{ env.version}}+debug";
+          else
+            echo "::set-output name=version::${{ env.version }}";
+          fi
       - name: Docker Build (Action)
         uses: hashicorp/actions-docker-build@v1
         with:
-          version: ${{env.version}}
+          version: ${{ steps.fix_version.outputs.version }}
           target: ubi
           arch: ${{matrix.arch}}
-          zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ matrix.arch }}.zip
-          redhat_tag: scan.connect.redhat.com/ospid-f0a92725-d8c6-4023-9a87-ba785b94c3fd/${{env.repo}}:${{env.version}}-ubi
+          zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ matrix.arch }}${{ matrix.debug }}.zip
+          redhat_tag: scan.connect.redhat.com/ospid-f0a92725-d8c6-4023-9a87-ba785b94c3fd/${{env.repo}}:${{ steps.fix_version.outputs.version }}-ubi
