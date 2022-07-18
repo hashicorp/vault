@@ -516,7 +516,7 @@ and consider if they're appropriate for your deployment.
       Default mode of the mounted files.
 
     ```yaml
-    extraVolumes:
+    Volumes:
       - type: 'secret'
         name: 'vault-certs'
         path: '/etc/pki'
@@ -808,7 +808,7 @@ and consider if they're appropriate for your deployment.
       }
 
       storage "consul" {
-          path = "vault"
+          path = "vault/"
           address = "HOST_IP:8500"
       }
     ```

@@ -2,13 +2,13 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { find, render, waitUntil } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import { addMinutes } from 'date-fns';
+import { addMinutes, subMinutes } from 'date-fns';
 
 module('Integration | Component | token-expire-warning', function (hooks) {
   setupRenderingTest(hooks);
 
   test('it renders a warning when the token is expired', async function (assert) {
-    const expirationDate = Date.now();
+    const expirationDate = subMinutes(Date.now(), 30);
     this.set('expirationDate', expirationDate);
 
     await render(hbs`<TokenExpireWarning @expirationDate={{expirationDate}}/>`);

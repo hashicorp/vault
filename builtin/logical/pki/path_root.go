@@ -54,13 +54,14 @@ func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, _ 
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
 
+	sc := b.makeStorageContext(ctx, req.Storage)
 	if !b.useLegacyBundleCaStorage() {
-		issuers, err := listIssuers(ctx, req.Storage)
+		issuers, err := sc.listIssuers()
 		if err != nil {
 			return nil, err
 		}
 
-		keys, err := listKeys(ctx, req.Storage)
+		keys, err := sc.listKeys()
 		if err != nil {
 			return nil, err
 		}
@@ -68,12 +69,12 @@ func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, _ 
 		// Delete all issuers and keys. Ignore deleting the default since we're
 		// explicitly deleting everything.
 		for _, issuer := range issuers {
-			if _, err = deleteIssuer(ctx, req.Storage, issuer); err != nil {
+			if _, err = sc.deleteIssuer(issuer); err != nil {
 				return nil, err
 			}
 		}
 		for _, key := range keys {
-			if _, err = deleteKey(ctx, req.Storage, key); err != nil {
+			if _, err = sc.deleteKey(key); err != nil {
 				return nil, err
 			}
 		}
@@ -108,7 +109,9 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		return logical.ErrorResponse("Can not create root CA until migration has completed"), nil
 	}
 
-	exported, format, role, errorResp := b.getGenerationParams(ctx, req.Storage, data)
+	sc := b.makeStorageContext(ctx, req.Storage)
+
+	exported, format, role, errorResp := getGenerationParams(sc, data)
 	if errorResp != nil {
 		return errorResp, nil
 	}
@@ -119,7 +122,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		role.MaxPathLength = &maxPathLength
 	}
 
-	issuerName, err := getIssuerName(ctx, req.Storage, data)
+	issuerName, err := getIssuerName(sc, data)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -127,13 +130,13 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	// only do it if its not in use.
 	if strings.HasPrefix(req.Path, "root/rotate/") && len(issuerName) == 0 {
 		// err is nil when the issuer name is in use.
-		_, err = resolveIssuerReference(ctx, req.Storage, "next")
+		_, err = sc.resolveIssuerReference("next")
 		if err != nil {
 			issuerName = "next"
 		}
 	}
 
-	keyName, err := getKeyName(ctx, req.Storage, data)
+	keyName, err := getKeyName(sc, data)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -143,7 +146,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		apiData: data,
 		role:    role,
 	}
-	parsedBundle, err := generateCert(ctx, b, input, nil, true, b.Backend.GetRandomReader())
+	parsedBundle, err := generateCert(sc, input, nil, true, b.Backend.GetRandomReader())
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -224,7 +227,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	}
 
 	// Store it as the CA bundle
-	myIssuer, myKey, err := writeCaBundle(ctx, b, req.Storage, cb, issuerName, keyName)
+	myIssuer, myKey, err := sc.writeCaBundle(cb, issuerName, keyName)
 	if err != nil {
 		return nil, err
 	}
@@ -301,7 +304,8 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(ctx, b, req, issuerName, IssuanceUsage)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	signingBundle, caErr := sc.fetchCAInfo(issuerName, IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -460,7 +464,8 @@ func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Req
 	}
 
 	var caErr error
-	signingBundle, caErr := fetchCAInfo(ctx, b, req, issuerName, IssuanceUsage)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	signingBundle, caErr := sc.fetchCAInfo(issuerName, IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:

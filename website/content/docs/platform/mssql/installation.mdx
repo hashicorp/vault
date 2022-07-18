@@ -12,6 +12,7 @@ For upgrade instructions, see [upgrading](/docs/platform/mssql/upgrading).
 ## Prerequisites
 
 * Vault Enterprise server 1.9+ with a license for the Advanced Data Protection Key Management module
+* Microsoft Windows Server operating system
 * Microsoft SQL Server for Windows (SQL Server for Linux [does not support EKM][linux-ekm])
 * An authenticated Vault client
 
@@ -40,7 +41,7 @@ EKM provider to use it.
 
     ```bash
     vault auth enable approle
-    vault write auth/approle/role/tde-role \
+    vault write auth/approle/role/ekm-encryption-key-role \
         token_ttl=20m \
         max_token_ttl=30m \
         token_policies=tde-policy
@@ -157,6 +158,10 @@ installation.
     CREATION_DISPOSITION = OPEN_EXISTING,
     PROVIDER_KEY_NAME = 'ekm-encryption-key';
     ```
+
+    -> **Note:** This is the first step at which the EKM provider will communicate with Vault. If
+    Vault is misconfigured, this step is likely to fail. See
+    [troubleshooting](/docs/platform/mssql/troubleshooting) for tips on specific error codes.
 
 1. Create another login from the new asymmetric key:
 

@@ -267,6 +267,9 @@ and the username is now used without making superfluous LDAP searches. [[GH-1552
 ## 1.10.3
 ### May 11, 2022
 
+SECURITY:
+* auth: A vulnerability was identified in Vault and Vault Enterprise (“Vault”) from 1.10.0 to 1.10.2 where MFA may not be enforced on user logins after a server restart. This vulnerability, CVE-2022-30689, was fixed in Vault 1.10.3.
+
 BUG FIXES:
 
 * auth: load login MFA configuration upon restart [[GH-15261](https://github.com/hashicorp/vault/pull/15261)]
@@ -638,6 +641,10 @@ autosnapshot save error.
 ## 1.9.4
 ### March 3, 2022
 
+SECURITY:
+* secrets/pki: Vault and Vault Enterprise (“Vault”) allowed the PKI secrets engine under certain configurations to issue wildcard certificates to authorized users for a specified domain, even if the PKI role policy attribute allow_subdomains is set to false. This vulnerability, CVE-2022-25243, was fixed in Vault 1.8.9 and 1.9.4.
+* transform (enterprise): Vault Enterprise (“Vault”) clusters using the tokenization transform feature can expose the tokenization key through the tokenization key configuration endpoint to authorized operators with read permissions on this endpoint. This vulnerability, CVE-2022-25244, was fixed in Vault Enterprise 1.7.10, 1.8.9, and 1.9.4.
+
 CHANGES:
 
 * secrets/azure: Changes the configuration parameter `use_microsoft_graph_api` to use the Microsoft
@@ -1008,6 +1015,9 @@ autosnapshot save error.
 ## 1.8.9
 ### March 3, 2022
 
+* secrets/pki: Vault and Vault Enterprise (“Vault”) allowed the PKI secrets engine under certain configurations to issue wildcard certificates to authorized users for a specified domain, even if the PKI role policy attribute allow_subdomains is set to false. This vulnerability, CVE-2022-25243, was fixed in Vault 1.8.9 and 1.9.4.
+* transform (enterprise): Vault Enterprise (“Vault”) clusters using the tokenization transform feature can expose the tokenization key through the tokenization key configuration endpoint to authorized operators with read permissions on this endpoint. This vulnerability, CVE-2022-25244, was fixed in Vault Enterprise 1.7.10, 1.8.9, and 1.9.4.
+
 IMPROVEMENTS:
 
 * secrets/pki: Restrict issuance of wildcard certificates via role parameter (`allow_wildcard_certificates`) [[GH-14238](https://github.com/hashicorp/vault/pull/14238)]
@@ -1342,6 +1352,10 @@ BUG FIXES:
 
 ## 1.7.10
 ### March 3, 2022
+
+SECURITY:
+
+* transform (enterprise): Vault Enterprise (“Vault”) clusters using the tokenization transform feature can expose the tokenization key through the tokenization key configuration endpoint to authorized operators with read permissions on this endpoint. This vulnerability, CVE-2022-25244, was fixed in Vault Enterprise 1.7.10, 1.8.9, and 1.9.4.
 
 BUG FIXES:
 

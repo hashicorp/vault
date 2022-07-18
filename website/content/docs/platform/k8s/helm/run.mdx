@@ -252,9 +252,16 @@ server:
     GOOGLE_PROJECT: <PROJECT NAME>
     GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/kms-creds/credentials.json
 
-  extraVolumes:
-    - type: 'secret'
-      name: 'kms-creds'
+  volumes:
+    - name: userconfig-kms-creds
+      secret:
+        defaultMode: 420
+        secretName: kms-creds
+
+  volumeMounts:
+    - mountPath: /vault/userconfig/kms-creds
+      name: userconfig-kms-creds
+      readOnly: true
 
   ha:
     enabled: true
@@ -335,8 +342,8 @@ server:
       }
 
       storage "consul" {
-        path = "vault"
         address = "HOST_IP:8500"
+        path = "vault/"
       }
 ```
 
@@ -502,8 +509,12 @@ to the Vault startup command:
 
 ```shell-session
 $ helm install vault hashicorp/vault \
-  --set='server.extraVolumes[0].type=secret' \
-  --set='server.extraVolumes[0].name=vault-storage-config' \
+  --set='server.volumes[0].name=userconfig-vault-storage-config' \
+  --set='server.volumes[0].secret.defaultMode=420' \
+  --set='server.volumes[0].secret.secretName=vault-storage-config' \
+  --set='server.volumeMounts[0].mountPath=/vault/userconfig/vault-storage-config' \
+  --set='server.volumeMounts[0].name=userconfig-vault-storage-config' \
+  --set='server.volumeMounts[0].readOnly=true' \
   --set='server.extraArgs=-config=/vault/userconfig/vault-storage-config/config.hcl'
 ```
 

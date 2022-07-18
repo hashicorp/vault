@@ -34,12 +34,13 @@ func (b *backend) pathListIssuersHandler(ctx context.Context, req *logical.Reque
 	var responseKeys []string
 	responseInfo := make(map[string]interface{})
 
-	entries, err := listIssuers(ctx, req.Storage)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	entries, err := sc.listIssuers()
 	if err != nil {
 		return nil, err
 	}
 
-	config, err := getIssuersConfig(ctx, req.Storage)
+	config, err := sc.getIssuersConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +49,7 @@ func (b *backend) pathListIssuersHandler(ctx context.Context, req *logical.Reque
 	// listIssuers), but also the name of the issuer. This means we have to
 	// fetch the actual issuer object as well.
 	for _, identifier := range entries {
-		issuer, err := fetchIssuerById(ctx, req.Storage, identifier)
+		issuer, err := sc.fetchIssuerById(identifier)
 		if err != nil {
 			return nil, err
 		}
@@ -155,7 +156,8 @@ func (b *backend) pathGetIssuer(ctx context.Context, req *logical.Request, data 
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
 
-	ref, err := resolveIssuerReference(ctx, req.Storage, issuerName)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	ref, err := sc.resolveIssuerReference(issuerName)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +165,7 @@ func (b *backend) pathGetIssuer(ctx context.Context, req *logical.Request, data 
 		return logical.ErrorResponse("unable to resolve issuer id for reference: " + issuerName), nil
 	}
 
-	issuer, err := fetchIssuerById(ctx, req.Storage, ref)
+	issuer, err := sc.fetchIssuerById(ref)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +208,8 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
 
-	ref, err := resolveIssuerReference(ctx, req.Storage, issuerName)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	ref, err := sc.resolveIssuerReference(issuerName)
 	if err != nil {
 		return nil, err
 	}
@@ -214,12 +217,12 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("unable to resolve issuer id for reference: " + issuerName), nil
 	}
 
-	issuer, err := fetchIssuerById(ctx, req.Storage, ref)
+	issuer, err := sc.fetchIssuerById(ref)
 	if err != nil {
 		return nil, err
 	}
 
-	newName, err := getIssuerName(ctx, req.Storage, data)
+	newName, err := getIssuerName(sc, data)
 	if err != nil && err != errIssuerNameInUse {
 		// If the error is name already in use, and the new name is the
 		// old name for this issuer, we're not actually updating the
@@ -282,7 +285,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 			newPathRef = string(ref)
 		}
 
-		resolvedId, err := resolveIssuerReference(ctx, req.Storage, newPathRef)
+		resolvedId, err := sc.resolveIssuerReference(newPathRef)
 		if err != nil {
 			return nil, err
 		}
@@ -307,14 +310,14 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		// Building the chain will write the issuer to disk; no need to do it
 		// twice.
 		modified = false
-		err := rebuildIssuersChains(ctx, req.Storage, issuer)
+		err := sc.rebuildIssuersChains(issuer)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	if modified {
-		err := writeIssuer(ctx, req.Storage, issuer)
+		err := sc.writeIssuer(issuer)
 		if err != nil {
 			return nil, err
 		}
@@ -322,7 +325,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 
 	response, err := respondReadIssuer(issuer)
 	if newName != oldName {
-		addWarningOnDereferencing(oldName, response, ctx, req.Storage)
+		addWarningOnDereferencing(sc, oldName, response)
 	}
 
 	return response, err
@@ -344,7 +347,8 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
 
-	ref, err := resolveIssuerReference(ctx, req.Storage, issuerName)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	ref, err := sc.resolveIssuerReference(issuerName)
 	if err != nil {
 		return nil, err
 	}
@@ -352,7 +356,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 		return logical.ErrorResponse("unable to resolve issuer id for reference: " + issuerName), nil
 	}
 
-	issuer, err := fetchIssuerById(ctx, req.Storage, ref)
+	issuer, err := sc.fetchIssuerById(ref)
 	if err != nil {
 		return nil, err
 	}
@@ -365,7 +369,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	var oldName string
 	var newName string
 	if ok {
-		newName, err = getIssuerName(ctx, req.Storage, data)
+		newName, err = getIssuerName(sc, data)
 		if err != nil && err != errIssuerNameInUse {
 			// If the error is name already in use, and the new name is the
 			// old name for this issuer, we're not actually updating the
@@ -434,7 +438,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 				newPathRef = string(ref)
 			}
 
-			resolvedId, err := resolveIssuerReference(ctx, req.Storage, newPathRef)
+			resolvedId, err := sc.resolveIssuerReference(newPathRef)
 			if err != nil {
 				return nil, err
 			}
@@ -459,7 +463,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 			// Building the chain will write the issuer to disk; no need to do it
 			// twice.
 			modified = false
-			err := rebuildIssuersChains(ctx, req.Storage, issuer)
+			err := sc.rebuildIssuersChains(issuer)
 			if err != nil {
 				return nil, err
 			}
@@ -467,7 +471,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	}
 
 	if modified {
-		err := writeIssuer(ctx, req.Storage, issuer)
+		err := sc.writeIssuer(issuer)
 		if err != nil {
 			return nil, err
 		}
@@ -475,7 +479,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 
 	response, err := respondReadIssuer(issuer)
 	if newName != oldName {
-		addWarningOnDereferencing(oldName, response, ctx, req.Storage)
+		addWarningOnDereferencing(sc, oldName, response)
 	}
 
 	return response, err
@@ -491,7 +495,8 @@ func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
 
-	ref, err := resolveIssuerReference(ctx, req.Storage, issuerName)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	ref, err := sc.resolveIssuerReference(issuerName)
 	if err != nil {
 		return nil, err
 	}
@@ -499,7 +504,7 @@ func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("unable to resolve issuer id for reference: " + issuerName), nil
 	}
 
-	issuer, err := fetchIssuerById(ctx, req.Storage, ref)
+	issuer, err := sc.fetchIssuerById(ref)
 	if err != nil {
 		return nil, err
 	}
@@ -560,7 +565,8 @@ func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
 
-	ref, err := resolveIssuerReference(ctx, req.Storage, issuerName)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	ref, err := sc.resolveIssuerReference(issuerName)
 	if err != nil {
 		// Return as if we deleted it if we fail to lookup the issuer.
 		if ref == IssuerRefNotFound {
@@ -571,28 +577,28 @@ func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, da
 
 	response := &logical.Response{}
 
-	issuer, err := fetchIssuerById(ctx, req.Storage, ref)
+	issuer, err := sc.fetchIssuerById(ref)
 	if err != nil {
 		return nil, err
 	}
 	if issuer.Name != "" {
-		addWarningOnDereferencing(issuer.Name, response, ctx, req.Storage)
+		addWarningOnDereferencing(sc, issuer.Name, response)
 	}
-	addWarningOnDereferencing(string(issuer.ID), response, ctx, req.Storage)
+	addWarningOnDereferencing(sc, string(issuer.ID), response)
 
-	wasDefault, err := deleteIssuer(ctx, req.Storage, ref)
+	wasDefault, err := sc.deleteIssuer(ref)
 	if err != nil {
 		return nil, err
 	}
 	if wasDefault {
 		response.AddWarning(fmt.Sprintf("Deleted issuer %v (via issuer_ref %v); this was configured as the default issuer. Operations without an explicit issuer will not work until a new default is configured.", ref, issuerName))
-		addWarningOnDereferencing(defaultRef, response, ctx, req.Storage)
+		addWarningOnDereferencing(sc, defaultRef, response)
 	}
 
 	// Since we've deleted an issuer, the chains might've changed. Call the
 	// rebuild code. We shouldn't technically err (as the issuer was deleted
 	// successfully), but log a warning (and to the response) if this fails.
-	if err := rebuildIssuersChains(ctx, req.Storage, nil); err != nil {
+	if err := sc.rebuildIssuersChains(nil); err != nil {
 		msg := fmt.Sprintf("Failed to rebuild remaining issuers' chains: %v", err)
 		b.Logger().Error(msg)
 		response.AddWarning(msg)
@@ -601,8 +607,8 @@ func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, da
 	return response, nil
 }
 
-func addWarningOnDereferencing(name string, resp *logical.Response, ctx context.Context, s logical.Storage) {
-	timeout, inUseBy, err := checkForRolesReferencing(name, ctx, s)
+func addWarningOnDereferencing(sc *storageContext, name string, resp *logical.Response) {
+	timeout, inUseBy, err := sc.checkForRolesReferencing(name)
 	if err != nil || timeout {
 		if inUseBy == 0 {
 			resp.AddWarning(fmt.Sprint("Unable to check if any roles referenced this issuer by ", name))
@@ -673,7 +679,8 @@ func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, da
 		return nil, err
 	}
 
-	crlPath, err := resolveIssuerCRLPath(ctx, b, req.Storage, issuerName)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	crlPath, err := sc.resolveIssuerCRLPath(issuerName)
 	if err != nil {
 		return nil, err
 	}

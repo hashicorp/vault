@@ -211,7 +211,7 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			}
 			authBackend := b.Core.router.MatchingBackend(namespace.ContextWithNamespace(ctx, ns), mountPath)
 			if authBackend == nil || authBackend.Type() != logical.TypeCredential {
-				return logical.ErrorResponse("Mount path '%s' is not a valid auth method and therefore unsuitable for use with role-based quotas", mountPath), nil
+				return logical.ErrorResponse("Mount path %q is not a valid auth method and therefore unsuitable for use with role-based quotas", mountPath), nil
 			}
 			// We will always error as we aren't supplying real data, but we're looking for "unsupported operation" in particular
 			_, err := authBackend.HandleRequest(ctx, &logical.Request{
@@ -219,7 +219,7 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 				Operation: logical.ResolveRoleOperation,
 			})
 			if err != nil && (err == logical.ErrUnsupportedOperation || err == logical.ErrUnsupportedPath) {
-				return logical.ErrorResponse("Mount path '%s' does not support use with role-based quotas", mountPath), nil
+				return logical.ErrorResponse("Mount path %q does not support use with role-based quotas", mountPath), nil
 			}
 		}
 

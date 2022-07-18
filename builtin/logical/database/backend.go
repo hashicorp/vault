@@ -8,9 +8,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
@@ -57,6 +60,21 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	b.credRotationQueue = queue.New()
 	// Load queue and kickoff new periodic ticker
 	go b.initQueue(b.queueCtx, conf, conf.System.ReplicationState())
+
+	// collect metrics on number of plugin instances
+	var err error
+	b.gaugeCollectionProcess, err = metricsutil.NewGaugeCollectionProcess(
+		[]string{"secrets", "database", "backend", "pluginInstances", "count"},
+		[]metricsutil.Label{},
+		b.collectPluginInstanceGaugeValues,
+		metrics.Default(),
+		configutil.UsageGaugeDefaultPeriod, // TODO: add config settings for these, or add plumbing to the main config settings
+		configutil.MaximumGaugeCardinalityDefault,
+		b.logger)
+	if err != nil {
+		return nil, err
+	}
+	go b.gaugeCollectionProcess.Run()
 	return b, nil
 }
 
@@ -103,6 +121,36 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	return &b
 }
 
+func (b *databaseBackend) collectPluginInstanceGaugeValues(context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	// copy the map so we can release the lock
+	connMapCopy := func() map[string]*dbPluginInstance {
+		b.connLock.RLock()
+		defer b.connLock.RUnlock()
+		mapCopy := map[string]*dbPluginInstance{}
+		for k, v := range b.connections {
+			mapCopy[k] = v
+		}
+		return mapCopy
+	}()
+	counts := map[string]int{}
+	for _, v := range connMapCopy {
+		dbType, err := v.database.Type()
+		if err != nil {
+			// there's a chance this will already be closed since we don't hold the lock
+			continue
+		}
+		if _, ok := counts[dbType]; !ok {
+			counts[dbType] = 0
+		}
+		counts[dbType] += 1
+	}
+	var gauges []metricsutil.GaugeLabelValues
+	for k, v := range counts {
+		gauges = append(gauges, metricsutil.GaugeLabelValues{Labels: []metricsutil.Label{{Name: "dbType", Value: k}}, Value: float32(v)})
+	}
+	return gauges, nil
+}
+
 type databaseBackend struct {
 	// connLock is used to synchronize access to the connections map
 	connLock sync.RWMutex
@@ -125,6 +173,10 @@ type databaseBackend struct {
 	// concurrent requests are not modifying the same role and possibly causing
 	// issues with the priority queue.
 	roleLocks []*locksutil.LockEntry
+
+	// the running gauge collection process
+	gaugeCollectionProcess     *metricsutil.GaugeCollectionProcess
+	gaugeCollectionProcessStop sync.Once
 }
 
 func (b *databaseBackend) connGet(name string) *dbPluginInstance {
@@ -136,8 +188,10 @@ func (b *databaseBackend) connGet(name string) *dbPluginInstance {
 func (b *databaseBackend) connPop(name string) *dbPluginInstance {
 	b.connLock.Lock()
 	defer b.connLock.Unlock()
-	dbi := b.connections[name]
-	delete(b.connections, name)
+	dbi, ok := b.connections[name]
+	if ok {
+		delete(b.connections, name)
+	}
 	return dbi
 }
 
@@ -362,6 +416,12 @@ func (b *databaseBackend) clean(_ context.Context) {
 	for _, db := range connections {
 		go db.Close()
 	}
+	b.gaugeCollectionProcessStop.Do(func() {
+		if b.gaugeCollectionProcess != nil {
+			b.gaugeCollectionProcess.Stop()
+		}
+		b.gaugeCollectionProcess = nil
+	})
 }
 
 const backendHelp = `
