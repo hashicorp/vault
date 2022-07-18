@@ -1,0 +1,70 @@
+<Toolbar>
+  <ToolbarActions>
+    <ToolbarLink @type="add" @params={{array "vault.cluster.access.oidc.assignments.create"}}>
+      Create assignment
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+
+{{#if (gt this.model.length 0)}}
+  {{#each this.model as |model|}}
+    <LinkedBlock
+      class="list-item-row"
+      @params={{array "vault.cluster.access.oidc.assignments.assignment.details" model.name}}
+    >
+      <div class="level is-mobile">
+        <div class="level-left">
+          <div>
+            <Icon @name="file" />
+            <span class="has-text-weight-semibold has-text-black">
+              {{model.name}}
+            </span>
+          </div>
+        </div>
+        <div class="level-right is-flex is-paddingless is-marginless">
+          <div class="level-item">
+            <PopupMenu>
+              <nav class="menu">
+                <ul class="menu-list">
+                  <li>
+                    <LinkTo
+                      @route="vault.cluster.access.oidc.assignments.assignment.details"
+                      @model={{model.name}}
+                      @disabled={{not model.canRead}}
+                    >
+                      Details
+                    </LinkTo>
+                  </li>
+                  <li>
+                    <LinkTo
+                      @route="vault.cluster.access.oidc.assignments.assignment.edit"
+                      @model={{model.name}}
+                      @disabled={{not model.canEdit}}
+                    >
+                      Edit
+                    </LinkTo>
+                  </li>
+                </ul>
+              </nav>
+            </PopupMenu>
+          </div>
+        </div>
+      </div>
+    </LinkedBlock>
+  {{/each}}
+{{else}}
+  <EmptyState @title="No assignments yet">
+    <div>
+      <p>Create an assignment to specify which Vault entities and groups are allowed to authenticate.
+        <DocLink @path="/docs/concepts/oidc-provider#assignments">
+          Learn more.
+        </DocLink>
+      </p>
+      <div class="has-top-margin-m">
+        <LinkTo @route="vault.cluster.access.oidc.assignments.create">
+          Create assignment
+        </LinkTo>
+      </div>
+    </div>
+  </EmptyState>
+{{/if}}
