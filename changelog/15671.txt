@@ -1,0 +1,3 @@
+```release-note:improvement
+plugins: Use AutoMTLS for secrets engines and auth methods run as external plugins.
+```
