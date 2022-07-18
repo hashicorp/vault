@@ -550,15 +550,15 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 }
 
 func validateParameter(key string, values []interface{}, widlcardPermitted bool) error {
-	// path keys
+	// nested path-like keys
 	if strings.HasPrefix(key, "/") {
-		// ensure that the key conforms the pointerstructure syntax (RFC 6901)
+		// ensure that the nested key conforms the pointerstructure syntax (RFC 6901)
 		if _, err := pointerstructure.Parse(key); err != nil {
 			return fmt.Errorf("parameter key %q: invalid path syntax: %w", key, err)
 		}
 	}
 
-	// ensure that wildcard keys are either "*" or end with "/*"
+	// ensure that keys with wildcards are either "*" or end with "/*"
 	if strings.Contains(key, "*") {
 		if !widlcardPermitted {
 			return fmt.Errorf("parameter key %q: wildcards are not permitted here", key)
@@ -573,6 +573,11 @@ func validateParameter(key string, values []interface{}, widlcardPermitted bool)
 			return fmt.Errorf("nested parameter key %q cannot contain non-tail wildcards", key)
 		default:
 			return fmt.Errorf("parameter key %q cannot contain partial wildcards", key)
+		}
+
+		// "*" = ["a"] is not allowed
+		if len(values) != 0 {
+			return fmt.Errorf("wildcard parameter %q must have an empty value list", key)
 		}
 	}
 

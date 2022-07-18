@@ -530,6 +530,15 @@ func TestPolicy_BadParameterWildcards(t *testing.T) {
 				required_parameters = ["*"]
 			}`,
 		expectedError: `path "/": required_parameters: parameter key "*": wildcards are not permitted here`,
+	}, {
+		name: "wildcard parameter with non-empty value list",
+		rules: `
+			path "/" {
+				allowed_parameters = {
+					"/a/b/*" = ["not", "empty"]
+				}
+			}`,
+		expectedError: `path "/": allowed_parameters: wildcard parameter "/a/b/*" must have an empty value list`,
 	}}
 
 	for _, tc := range testCases {
