@@ -51,6 +51,11 @@
               </PopupMenu>
             </div>
           </div>
+        {{else}}
+          This assignment cannot be modified or deleted.
+          <DocLink @path="/docs/concepts/oidc-provider#assignments">
+            Learn more
+          </DocLink>
         {{/if}}
       </div>
     </LinkedBlock>
