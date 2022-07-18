@@ -513,7 +513,7 @@ func TestPolicy_BadParameterWildcards(t *testing.T) {
 			}`,
 		expectedError: `path "/": allowed_parameters: parameter key "zip*" cannot contain partial wildcards`,
 	}, {
-		name: "wildcard in path",
+		name: "wildcard in a nested parameter",
 		rules: `
 			path "/" {
 				capabilities = ["read"]
@@ -523,7 +523,7 @@ func TestPolicy_BadParameterWildcards(t *testing.T) {
 			}`,
 		expectedError: `path "/": denied_parameters: nested parameter key "/a/*/b" cannot contain non-tail wildcards`,
 	}, {
-		name: "wildcard in path",
+		name: "wildcard in required_parameters",
 		rules: `
 			path "/" {
 				capabilities = ["read"]
