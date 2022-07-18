@@ -562,7 +562,7 @@ func validateParameter(key string, values []interface{}, widlcardPermitted bool)
 	// ensure that wildcard keys are either "*" or end with "/*"
 	if strings.Contains(key, "*") {
 		if !widlcardPermitted {
-			return fmt.Errorf("parameter key %q: wildcard is not pemitted here", key)
+			return fmt.Errorf("parameter key %q: wildcard is not permitted here", key)
 		}
 
 		switch {
