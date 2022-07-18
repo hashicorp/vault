@@ -28,10 +28,10 @@ type HostInfo struct {
 	Disk []*disk.UsageStat `json:"disk"`
 	// Host returns general host information such as hostname, platform, uptime,
 	// kernel version, etc.
-	Host *host.InfoStat `json:"host"`
+	Host *HostInfoStat `json:"host"`
 	// Memory contains statistics about the memory such as total, available, and
 	// used memory in number of bytes.
-	Memory *mem.VirtualMemoryStat `json:"memory"`
+	Memory *VirtualMemoryStat `json:"memory"`
 }
 
 // CollectHostInfo returns information on the host, which includes general
@@ -44,13 +44,13 @@ func CollectHostInfo(ctx context.Context) (*HostInfo, error) {
 	var retErr *multierror.Error
 	info := &HostInfo{Timestamp: time.Now().UTC()}
 
-	if h, err := host.InfoWithContext(ctx); err != nil {
+	if h, err := CollectHostInfoStat(ctx); err != nil {
 		retErr = multierror.Append(retErr, &HostInfoError{"host", err})
 	} else {
 		info.Host = h
 	}
 
-	if v, err := mem.VirtualMemoryWithContext(ctx); err != nil {
+	if v, err := CollectHostMemory(ctx); err != nil {
 		retErr = multierror.Append(retErr, &HostInfoError{"memory", err})
 	} else {
 		info.Memory = v
@@ -96,9 +96,38 @@ func CollectHostMemory(ctx context.Context) (*VirtualMemoryStat, error) {
 	}
 
 	return &VirtualMemoryStat{
-		Total:       m.Total,
-		Available:   m.Available,
-		Used:        m.Used,
-		UsedPercent: m.UsedPercent,
+		VirtualMemoryStat: m,
+		// Fields below are added to maintain backwards compatibility with gopsutil v2
+		CommitLimit:    m.CommitLimit,
+		CommittedAS:    m.CommittedAS,
+		HighFree:       m.HighFree,
+		HighTotal:      m.HighTotal,
+		HugePagesFree:  m.HugePagesFree,
+		HugePageSize:   m.HugePageSize,
+		HugePagesTotal: m.HugePagesTotal,
+		LowFree:        m.LowFree,
+		LowTotal:       m.LowTotal,
+		PageTables:     m.PageTables,
+		SwapCached:     m.SwapCached,
+		SwapFree:       m.SwapFree,
+		SwapTotal:      m.SwapTotal,
+		VMallocChunk:   m.VmallocChunk,
+		VMallocTotal:   m.VmallocTotal,
+		VMallocUsed:    m.VmallocUsed,
+		Writeback:      m.WriteBack,
+		WritebackTmp:   m.WriteBackTmp,
+	}, nil
+}
+
+func CollectHostInfoStat(ctx context.Context) (*HostInfoStat, error) {
+	h, err := host.InfoWithContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &HostInfoStat{
+		InfoStat: h,
+		// Fields below are added to maintain backwards compatibility with gopsutil v2
+		HostID: h.HostID,
 	}, nil
 }
