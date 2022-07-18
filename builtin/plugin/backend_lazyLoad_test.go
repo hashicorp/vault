@@ -59,7 +59,7 @@ func testLazyLoad(t *testing.T, methodWrapper func() error) *PluginBackend {
 	}
 
 	// this is a dummy plugin that hasn't really been loaded yet
-	orig, err := plugin.NewBackend(ctx, "test-plugin", consts.PluginTypeSecrets, sysView, config, true)
+	orig, err := plugin.NewBackend(ctx, "test-plugin", consts.PluginTypeSecrets, sysView, config, true, false)
 	if err != nil {
 		t.Fatal(err)
 	}
