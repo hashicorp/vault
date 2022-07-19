@@ -182,9 +182,6 @@ The `/v1/sys/metrics` endpoint is only accessible on active nodes
 and automatically disabled on standby nodes. You can enable the `/v1/sys/metrics`
 endpoint on standby nodes by [enabling unauthenticated metrics access][telemetry-tcp].
 
-Vault does not use the default Prometheus path, so Prometheus must be configured
-to scrape `v1/sys/metrics` instead of the default scrape path.
-
 Querying `/v1/sys/metrics` with one of the following headers:
 
  - `Accept: prometheus/telemetry`
@@ -196,6 +193,9 @@ query scrape targets with these headers by default.
 A Vault token is required with `capabilities = ["read", "list"]` to
 /v1/sys/metrics. The Prometheus `bearer_token` or `bearer_token_file` options
 must be added to the scrape job.
+
+Vault does not use the default Prometheus path, so Prometheus must be configured
+to scrape `v1/sys/metrics` instead of the default scrape path.
 
 An example job_name stanza required in the [Prometheus config](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#scrape_config) is provided below.
 
