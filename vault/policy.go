@@ -3,6 +3,7 @@ package vault
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -578,6 +579,19 @@ func validateParameter(key string, values []interface{}, widlcardPermitted bool)
 		// "*" = ["a"] is not allowed
 		if len(values) != 0 {
 			return fmt.Errorf("wildcard parameter %q must have an empty value list", key)
+		}
+	}
+
+	// ensure regular expressions (if any) are valid
+	for _, value := range values {
+		if s, ok := value.(string); ok {
+			// interpret "/expression/" as a regular expression
+			if len(s) >= 2 && s[0] == '/' && s[len(s)-1] == '/' {
+				_, err := regexp.Compile(s[1 : len(s)-1])
+				if err != nil {
+					return fmt.Errorf("parameter key %q: value %q is not a valid regular expression: %w", key, value, err)
+				}
+			}
 		}
 	}
 

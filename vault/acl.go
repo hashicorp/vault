@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -910,6 +911,17 @@ func valueInSlice(v interface{}, list []interface{}) bool {
 		} else if reflect.TypeOf(el).String() == "string" && reflect.TypeOf(v).String() == "string" {
 			item := el.(string)
 			val := v.(string)
+
+			// Interpret "/expression/" as a regular expression
+			if len(item) >= 2 && item[0] == '/' && item[len(item)-1] == '/' {
+				r, err := regexp.Compile(item[1 : len(item)-1])
+				if err != nil {
+					continue
+				}
+				if r.MatchString(val) {
+					return true
+				}
+			}
 
 			if strutil.GlobbedStringsMatch(item, val) {
 				return true

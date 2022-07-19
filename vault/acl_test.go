@@ -686,6 +686,95 @@ func testACLNestedParameterConstraints(t *testing.T, ns *namespace.Namespace) {
 	}
 }
 
+func TestACL_RegexParameterConstraints(t *testing.T) {
+	t.Run("root-ns", func(t *testing.T) {
+		t.Parallel()
+		testACLRegexParameterConstraints(t, namespace.RootNamespace)
+	})
+}
+
+func testACLRegexParameterConstraints(t *testing.T, ns *namespace.Namespace) {
+	policy, err := ParseACLPolicy(ns, policyWithRegexParameterConstraints)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+	acl, err := NewACL(ctx, []*Policy{policy})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	type tcase struct {
+		path    string
+		name    string
+		request map[string]interface{}
+		allowed bool
+	}
+
+	tcases := []tcase{{
+		path:    "with/denied",
+		name:    "numeric regex match",
+		request: map[string]interface{}{"numeric": "12345"},
+		allowed: false,
+	}, {
+		path:    "with/denied",
+		name:    "numeric regex no match",
+		request: map[string]interface{}{"numeric": "not-numeric"},
+		allowed: true,
+	}, {
+		path:    "with/denied",
+		name:    "backslash-escape regex match",
+		request: map[string]interface{}{"backslash-escape": "hello-world"},
+		allowed: false,
+	}, {
+		path:    "with/denied",
+		name:    "nested param regex match",
+		request: map[string]interface{}{"nested": map[string]interface{}{"param": "exact"}},
+		allowed: false,
+	}, {
+		path:    "with/allowed",
+		name:    "numeric regex match",
+		request: map[string]interface{}{"numeric": "98765"},
+		allowed: true,
+	}, {
+		path:    "with/allowed",
+		name:    "numeric regex no match",
+		request: map[string]interface{}{"numeric": "not-numeric"},
+		allowed: false,
+	}, {
+		path:    "with/allowed",
+		name:    "empty regex",
+		request: map[string]interface{}{"empty": "anything will match!"},
+		allowed: true,
+	}, {
+		path:    "with/allowed",
+		name:    "nested param regex match",
+		request: map[string]interface{}{"nested": map[string]interface{}{"param": "exact"}},
+		allowed: true,
+	}}
+
+	for _, tc := range tcases {
+		for _, operation := range []logical.Operation{
+			logical.UpdateOperation,
+			logical.CreateOperation,
+		} {
+			request := &logical.Request{
+				Path:      tc.path,
+				Data:      tc.request,
+				Operation: operation,
+			}
+
+			t.Run(fmt.Sprintf("%s - %s (%v)", tc.path, tc.name, operation), func(t *testing.T) {
+				r := acl.AllowOperation(ctx, request, false)
+				if r.Allowed != tc.allowed {
+					t.Fatalf("%s - %s (%v) :: want: %t, got: %t", tc.path, tc.name, operation, tc.allowed, r.Allowed)
+				}
+			})
+		}
+	}
+}
+
 func TestACL_ValuePermissions(t *testing.T) {
 	t.Run("root-ns", func(t *testing.T) {
 		t.Parallel()
@@ -1514,6 +1603,26 @@ path "with/multiple/constraints" {
 	allowed_parameters = {
 		"/a/b" = ["foo", "bar*"]
 		"*"    = []
+	}
+}
+`
+
+const policyWithRegexParameterConstraints = `
+path "with/denied" {
+	capabilities = ["update", "create"]
+	denied_parameters = {
+		"numeric"          = ["/^[0-9]+$/"]
+		"backslash-escape" = ["/^hello-(\\w)+$/"]
+		"/nested/param"    = ["/exact/"]
+	}
+}
+
+path "with/allowed" {
+	capabilities = ["update", "create"]
+	allowed_parameters = {
+		"numeric"          = ["/^[0-9]+$/"]
+		"empty"            = ["//"]
+		"/nested/param"    = ["/exact/"]
 	}
 }
 `

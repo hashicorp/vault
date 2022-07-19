@@ -554,3 +554,21 @@ func TestPolicy_BadParameterWildcards(t *testing.T) {
 		})
 	}
 }
+
+func TestPolicy_ParseBadParameterRegex(t *testing.T) {
+	_, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
+path "/" {
+	capabilities = ["read"]
+	allowed_parameters = {
+		"foo" = ["/bad-regex(((/"]
+	}
+}
+`))
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	if !strings.Contains(err.Error(), `path "/": allowed_parameters: parameter key "foo": value "/bad-regex(((/" is not a valid regular expression`) {
+		t.Errorf("bad error: %s", err)
+	}
+}
