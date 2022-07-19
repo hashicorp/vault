@@ -49,9 +49,6 @@ export default class OidcAssignmentModel extends Model {
       (await this[key]).forEach((model) => {
         targets.addObject({
           key,
-          icon: 'user',
-          link: 'vault.cluster.access.identity.show',
-          linkModels: [key.split('_')[1], model.id, 'details'],
           title: model.name,
           subTitle: model.id,
         });
