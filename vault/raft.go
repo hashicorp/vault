@@ -827,11 +827,6 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		return false, errors.New("raft backend not in use")
 	}
 
-	if err := raftBackend.SetDesiredSuffrage(nonVoter); err != nil {
-		c.logger.Error("failed to set desired suffrage for this node", "error", err)
-		return false, nil
-	}
-
 	init, err := c.InitializedLocally(ctx)
 	if err != nil {
 		return false, fmt.Errorf("failed to check if core is initialized: %w", err)
@@ -955,10 +950,21 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		if err != nil {
 			return fmt.Errorf("failed to check if core is initialized: %w", err)
 		}
-		if init && !isRaftHAOnly {
+
+		// InitializedLocally will return non-nil before HA backends are
+		// initialized. c.Initialized(ctx) checks InitializedLocally first, so
+		// we can't use that generically for both cases. Instead check
+		// raftBackend.Initialized() directly for the HA-Only case.
+		if (!isRaftHAOnly && init) || (isRaftHAOnly && raftBackend.Initialized()) {
 			c.logger.Info("returning from raft join as the node is initialized")
 			return nil
 		}
+
+		if err := raftBackend.SetDesiredSuffrage(nonVoter); err != nil {
+			c.logger.Error("failed to set desired suffrage for this node", "error", err)
+			return nil
+		}
+
 		challengeCh := make(chan *raftInformation)
 		var expandedJoinInfos []*raft.LeaderJoinInfo
 		for _, leaderInfo := range leaderInfos {
@@ -993,6 +999,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 
 		select {
 		case <-ctx.Done():
+			err = ctx.Err()
 		case raftInfo := <-challengeCh:
 			if raftInfo != nil {
 				err = answerChallenge(ctx, raftInfo)
@@ -1001,7 +1008,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				}
 			}
 		}
-		return fmt.Errorf("timed out on raft join: %w", ctx.Err())
+		return err
 	}
 
 	switch retryFailures {
