@@ -101,7 +101,7 @@ func TestACL_Capabilities(t *testing.T) {
 	t.Run("root-ns", func(t *testing.T) {
 		t.Parallel()
 		policy := []*Policy{{Name: "root"}}
-		ctx := namespace.RootContext(nil)
+		ctx := namespace.RootContext(context.Background())
 		acl, err := NewACL(ctx, policy)
 		if err != nil {
 			t.Fatalf("err: %v", err)
@@ -159,7 +159,7 @@ func testACLRoot(t *testing.T, ns *namespace.Namespace) {
 	// Create the root policy ACL. Always create on root namespace regardless of
 	// which namespace to ACL check on.
 	policy := []*Policy{{Name: "root"}}
-	acl, err := NewACL(namespace.RootContext(nil), policy)
+	acl, err := NewACL(namespace.RootContext(context.Background()), policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -293,7 +293,7 @@ func TestACL_Layered(t *testing.T) {
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
-		acl, err := NewACL(namespace.RootContext(nil), []*Policy{policy1, policy2})
+		acl, err := NewACL(namespace.RootContext(context.Background()), []*Policy{policy1, policy2})
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -830,7 +830,7 @@ func TestACL_CreationRace(t *testing.T) {
 				if time.Now().After(stopTime) {
 					return
 				}
-				_, err := NewACL(namespace.RootContext(nil), []*Policy{policy})
+				_, err := NewACL(namespace.RootContext(context.Background()), []*Policy{policy})
 				if err != nil {
 					t.Fatalf("err: %v", err)
 				}
@@ -1179,7 +1179,6 @@ var permissionsPolicy = `
 name = "dev"
 path "dev/*" {
 	policy = "write"
-	
 	allowed_parameters = {
 		"zip" = []
 	}
@@ -1269,7 +1268,6 @@ var valuePermissionsPolicy = `
 name = "op"
 path "dev/*" {
 	policy = "write"
-	
 	allowed_parameters = {
 		"allow" = ["good"]
 	}
