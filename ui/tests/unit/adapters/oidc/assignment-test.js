@@ -12,8 +12,8 @@ module('Unit | Adapter | oidc/assignment', function (hooks) {
     this.modelName = 'oidc/assignment';
     this.data = {
       name: 'foo-assignment',
-      group_ids: ['my-group'],
-      entity_ids: ['my-entity'],
+      // group_ids: ['my-group'],
+      // entity_ids: ['my-entity'],
     };
     this.path = '/identity/oidc/assignment/foo-assignment';
   });
