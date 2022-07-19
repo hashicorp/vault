@@ -818,7 +818,7 @@ func (p *Policy) convergentVersion(ver int) int {
 	return convergentVersion
 }
 
-func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, error) {
+func (p *Policy) Encrypt(ver int, context, nonce []byte, value string, paddingScheme string) (string, error) {
 	if !p.Type.EncryptionSupported() {
 		return "", errutil.UserError{Err: fmt.Sprintf("message encryption not supported for key type %v", p.Type)}
 	}
@@ -894,8 +894,19 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 		if err != nil {
 			return "", err
 		}
+		if paddingScheme == "" {
+			paddingScheme = "oaep"
+		}
 		key := keyEntry.RSAKey
-		ciphertext, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, &key.PublicKey, plaintext, nil)
+		switch paddingScheme {
+		case "pkcs1v15":
+			ciphertext, err = rsa.EncryptPKCS1v15(rand.Reader, &key.PublicKey, plaintext)
+		case "oaep":
+			ciphertext, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, &key.PublicKey, plaintext, nil)
+		default:
+			return "", errutil.InternalError{Err: fmt.Sprintf("unsupported RSA padding scheme %s", paddingScheme)}
+		}
+
 		if err != nil {
 			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA encrypt the plaintext: %v", err)}
 		}
@@ -913,7 +924,7 @@ func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, 
 	return encoded, nil
 }
 
-func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
+func (p *Policy) Decrypt(context, nonce []byte, value string, paddingScheme string) (string, error) {
 	if !p.Type.DecryptionSupported() {
 		return "", errutil.UserError{Err: fmt.Sprintf("message decryption not supported for key type %v", p.Type)}
 	}
@@ -994,8 +1005,18 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 		if err != nil {
 			return "", err
 		}
+		if paddingScheme == "" {
+			paddingScheme = "oaep"
+		}
 		key := keyEntry.RSAKey
-		plain, err = rsa.DecryptOAEP(sha256.New(), rand.Reader, key, decoded, nil)
+		switch paddingScheme {
+		case "pkcs1v15":
+			plain, err = rsa.DecryptPKCS1v15(rand.Reader, key, decoded)
+		case "oaep":
+			plain, err = rsa.DecryptOAEP(sha256.New(), rand.Reader, key, decoded, nil)
+		default:
+			return "", errutil.InternalError{Err: fmt.Sprintf("unsupported RSA padding scheme %s", paddingScheme)}
+		}
 		if err != nil {
 			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA decrypt the ciphertext: %v", err)}
 		}

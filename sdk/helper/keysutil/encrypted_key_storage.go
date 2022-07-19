@@ -183,7 +183,7 @@ func (s *encryptedKeyStorage) List(ctx context.Context, prefix string) ([]string
 		}
 
 		// Decrypt the data with the object's key policy.
-		encodedPlaintext, err := s.policy.Decrypt(context, nil, string(decoded[:]))
+		encodedPlaintext, err := s.policy.Decrypt(context, nil, string(decoded[:]), "")
 		if err != nil {
 			return nil, err
 		}
@@ -268,7 +268,7 @@ func (s *encryptedKeyStorage) encryptPath(path string) (string, error) {
 	context := strings.TrimSuffix(s.prefix, "/")
 	for _, p := range parts {
 		encoded := base64.StdEncoding.EncodeToString([]byte(p))
-		ciphertext, err := s.policy.Encrypt(0, []byte(context), nil, encoded)
+		ciphertext, err := s.policy.Encrypt(0, []byte(context), nil, encoded, "")
 		if err != nil {
 			return "", err
 		}

@@ -37,6 +37,12 @@ func (b *backend) pathDecrypt() *framework.Path {
 The ciphertext to decrypt, provided as returned by encrypt.`,
 			},
 
+			"padding_scheme": {
+				Type: framework.TypeString,
+				Description: `The padding scheme to use for decrypt. Currently only applies to RSA key types.
+Options are 'oaep' or 'pkcs1v15'. Defaults to 'oaep'`,
+			},
+
 			"context": {
 				Type: framework.TypeString,
 				Description: `
@@ -147,7 +153,8 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 			continue
 		}
 
-		plaintext, err := p.Decrypt(item.DecodedContext, item.DecodedNonce, item.Ciphertext)
+		paddingScheme := d.Get("padding_scheme").(string)
+		plaintext, err := p.Decrypt(item.DecodedContext, item.DecodedNonce, item.Ciphertext, paddingScheme)
 		if err != nil {
 			switch err.(type) {
 			case errutil.InternalError:
