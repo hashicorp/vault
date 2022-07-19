@@ -49,6 +49,8 @@
         @shouldRenderName={{true}}
         @onChange={{this.onEntitiesSelect}}
         @fallbackComponent="string-list"
+        @disallowNewItems={{true}}
+        data-test-search-select="entities"
       />
       <SearchSelect
         @subLabel="Groups"
@@ -57,6 +59,7 @@
         @shouldRenderName={{true}}
         @onChange={{this.onGroupsSelect}}
         @fallbackComponent="string-list"
+        @disallowNewItems={{true}}
       />
     </div>
     <div class="has-top-padding-s">

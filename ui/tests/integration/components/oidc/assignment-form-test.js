@@ -1,6 +1,6 @@
 import { module, test, skip } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, fillIn, click } from '@ember/test-helpers';
+import { render, fillIn, click, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
@@ -13,12 +13,26 @@ module('Integration | Component | oidc/assignment-form', function (hooks) {
   });
 
   test('it should save new assignment', async function (assert) {
-    assert.expect(5);
+    assert.expect(6);
 
     this.server.post('/identity/oidc/assignment/test', (schema, req) => {
       assert.ok(true, 'Request made to save assignment');
       return JSON.parse(req.requestBody);
     });
+
+    // so test can select an entity to remove validation error
+    this.server.get('/identity/entity/id', () => ({
+      data: {
+        key_info: { 'f831667b-7392-7a1c-c0fc-33d48cb1c57d': { name: 'test-entity' } },
+        keys: ['f831667b-7392-7a1c-c0fc-33d48cb1c57d'],
+      },
+    }));
+    this.server.get('/identity/group/id', () => ({
+      data: {
+        key_info: { 'h831667b-7392-7a1c-c0fc-33d48cb1c57d': { name: 'test-group' } },
+        keys: ['h831667b-7392-7a1c-c0fc-33d48cb1c57d'],
+      },
+    }));
 
     this.model = this.store.createRecord('oidc/assignment');
     this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
@@ -37,7 +51,10 @@ module('Integration | Component | oidc/assignment-form', function (hooks) {
     assert
       .dom('[data-test-inline-alert]')
       .hasText('Name is required.', 'Validation message is shown for name');
+    assert.equal(findAll('[data-test-inline-error-message]').length, 2, `there are two validations errors.`);
     await fillIn('[data-test-input="name"]', 'test');
+    await click('[data-test-component="search-select"] .ember-basic-dropdown-trigger');
+    await click('.ember-power-select-option');
     await click('[data-test-oidc-assignment-save]');
   });
 
