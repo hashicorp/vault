@@ -340,6 +340,147 @@ func TestBackend_AllowedUsersTemplate_WithStaticPrefix(t *testing.T) {
 	)
 }
 
+func TestBackend_DefaultUserTemplate(t *testing.T) {
+	testDefaultUserTemplate(t,
+		"{{ identity.entity.metadata.ssh_username }}",
+		testUserName,
+		map[string]string{
+			"ssh_username": testUserName,
+		},
+	)
+}
+
+func TestBackend_DefaultUserTemplate_WithStaticPrefix(t *testing.T) {
+	testDefaultUserTemplate(t,
+		"user-{{ identity.entity.metadata.ssh_username }}",
+		"user-"+testUserName,
+		map[string]string{
+			"ssh_username": testUserName,
+		},
+	)
+}
+
+func TestBackend_DefaultUserTemplateFalse_AllowedUsersTemplateTrue(t *testing.T) {
+	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// set metadata "ssh_username" to userpass username
+	tokenLookupResponse, err := client.Logical().Write("/auth/token/lookup", map[string]interface{}{
+		"token": userpassToken,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entityID := tokenLookupResponse.Data["entity_id"].(string)
+	_, err = client.Logical().Write("/identity/entity/id/"+entityID, map[string]interface{}{
+		"metadata": map[string]string{
+			"ssh_username": testUserName,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("ssh/roles/my-role", map[string]interface{}{
+		"key_type":                testCaKeyType,
+		"allow_user_certificates": true,
+		"default_user":            "{{identity.entity.metadata.ssh_username}}",
+		// disable user templating but not allowed_user_template and the request should fail
+		"default_user_template":  false,
+		"allowed_users":          "{{identity.entity.metadata.ssh_username}}",
+		"allowed_users_template": true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// sign SSH key as userpass user
+	client.SetToken(userpassToken)
+	_, err = client.Logical().Write("ssh/sign/my-role", map[string]interface{}{
+		"public_key": testCAPublicKey,
+	})
+	if err == nil {
+		t.Errorf("signing request should fail when default_user is not in the allowed_users list, because allowed_users_template is true and default_user_template is not")
+	}
+
+	expectedErrStr := ":TKTKT"
+	if !strings.Contains(err.Error(), expectedErrStr) {
+		t.Errorf("expected error to include %q but it was: %q", expectedErrStr, err.Error())
+	}
+}
+
+func TestBackend_DefaultUserTemplateFalse_AllowedUsersTemplateFalse(t *testing.T) {
+	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// set metadata "ssh_username" to userpass username
+	tokenLookupResponse, err := client.Logical().Write("/auth/token/lookup", map[string]interface{}{
+		"token": userpassToken,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entityID := tokenLookupResponse.Data["entity_id"].(string)
+	_, err = client.Logical().Write("/identity/entity/id/"+entityID, map[string]interface{}{
+		"metadata": map[string]string{
+			"ssh_username": testUserName,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("ssh/roles/my-role", map[string]interface{}{
+		"key_type":                testCaKeyType,
+		"allow_user_certificates": true,
+		"default_user":            "{{identity.entity.metadata.ssh_username}}",
+		"default_user_template":   false,
+		"allowed_users":           "{{identity.entity.metadata.ssh_username}}",
+		"allowed_users_template":  false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// sign SSH key as userpass user
+	client.SetToken(userpassToken)
+	signResponse, err := client.Logical().Write("ssh/sign/my-role", map[string]interface{}{
+		"public_key": testCAPublicKey,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// check for the expected valid principals of certificate
+	signedKey := signResponse.Data["signed_key"].(string)
+	key, _ := base64.StdEncoding.DecodeString(strings.Split(signedKey, " ")[1])
+	parsedKey, err := ssh.ParsePublicKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	actualPrincipals := parsedKey.(*ssh.Certificate).ValidPrincipals
+	if len(actualPrincipals) < 1 {
+		t.Fatal(
+			fmt.Sprintf("No ValidPrincipals returned: should have been %v",
+				[]string{"{{identity.entity.metadata.ssh_username}}"}),
+		)
+	}
+	if len(actualPrincipals) > 1 {
+		t.Error(
+			fmt.Sprintf("incorrect number ValidPrincipals, expected only 1: %v should be %v",
+				actualPrincipals, []string{"{{identity.entity.metadata.ssh_username}}"}),
+		)
+	}
+	if actualPrincipals[0] != "{{identity.entity.metadata.ssh_username}}" {
+		t.Fatal(
+			fmt.Sprintf("incorrect ValidPrincipals: %v should be %v",
+				actualPrincipals, []string{"{{identity.entity.metadata.ssh_username}}"}),
+		)
+	}
+}
+
 func newTestingFactory(t *testing.T) func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	return func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 		defaultLeaseTTLVal := 2 * time.Minute
@@ -1891,6 +2032,66 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 	}
 
 	return cluster, userpassToken
+}
+
+// TKTK
+func testDefaultUserTemplate(t *testing.T, testDefaultUserTemplate string,
+	expectedValidPrincipal string, testEntityMetadata map[string]string,
+) {
+	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// set metadata "ssh_username" to userpass username
+	tokenLookupResponse, err := client.Logical().Write("/auth/token/lookup", map[string]interface{}{
+		"token": userpassToken,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entityID := tokenLookupResponse.Data["entity_id"].(string)
+	_, err = client.Logical().Write("/identity/entity/id/"+entityID, map[string]interface{}{
+		"metadata": testEntityMetadata,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("ssh/roles/my-role", map[string]interface{}{
+		"key_type":                testCaKeyType,
+		"allow_user_certificates": true,
+		"default_user":            testDefaultUserTemplate,
+		"default_user_template":   true,
+		"allowed_users":           testDefaultUserTemplate,
+		"allowed_users_template":  true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// sign SSH key as userpass user
+	client.SetToken(userpassToken)
+	signResponse, err := client.Logical().Write("ssh/sign/my-role", map[string]interface{}{
+		"public_key": testCAPublicKey,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// check for the expected valid principals of certificate
+	signedKey := signResponse.Data["signed_key"].(string)
+	key, _ := base64.StdEncoding.DecodeString(strings.Split(signedKey, " ")[1])
+	parsedKey, err := ssh.ParsePublicKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	actualPrincipals := parsedKey.(*ssh.Certificate).ValidPrincipals
+	if actualPrincipals[0] != expectedValidPrincipal {
+		t.Fatal(
+			fmt.Sprintf("incorrect ValidPrincipals: %v should be %v",
+				actualPrincipals, []string{expectedValidPrincipal}),
+		)
+	}
 }
 
 func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
