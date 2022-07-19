@@ -20,9 +20,10 @@ var (
 // GRPCBackendPlugin is the plugin.Plugin implementation that only supports GRPC
 // transport
 type GRPCBackendPlugin struct {
-	Factory      logical.Factory
-	MetadataMode bool
-	Logger       log.Logger
+	Factory           logical.Factory
+	MetadataMode      bool
+	AutoMTLSSupported bool
+	Logger            log.Logger
 
 	// Embeding this will disable the netRPC protocol
 	plugin.NetRPCUnsupportedPlugin
@@ -41,12 +42,13 @@ func (b GRPCBackendPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server)
 
 func (b *GRPCBackendPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
 	ret := &backendGRPCPluginClient{
-		client:       pb.NewBackendClient(c),
-		clientConn:   c,
-		broker:       broker,
-		cleanupCh:    make(chan struct{}),
-		doneCtx:      ctx,
-		metadataMode: b.MetadataMode,
+		client:     pb.NewBackendClient(c),
+		clientConn: c,
+		broker:     broker,
+		cleanupCh:  make(chan struct{}),
+		doneCtx:    ctx,
+		// Only run in metadata mode if mode is true and autoMTLS is not supported
+		metadataMode: b.MetadataMode && !b.AutoMTLSSupported,
 	}
 
 	// Create the value and set the type

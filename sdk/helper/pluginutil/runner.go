@@ -38,8 +38,6 @@ type PluginClient interface {
 	plugin.ClientProtocol
 }
 
-const MultiplexingCtxKey string = "multiplex_id"
-
 // PluginRunner defines the metadata needed to run a plugin securely with
 // go-plugin.
 type PluginRunner struct {
