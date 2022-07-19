@@ -59,10 +59,10 @@
         @fallbackComponent="string-list"
       />
     </div>
-    {{#if this.modelValidations.entity_ids.errors}}
-      <AlertInline @type="danger" @message={{join ", " this.modelValidations.entity_ids.errors}} />
-    {{/if}}
     <div class="has-top-padding-s">
+      {{#if this.modelValidations.targets.errors}}
+        <AlertInline @type="danger" @message={{join ", " this.modelValidations.targets.errors}} class="has-top-margin-m" />
+      {{/if}}
       <button
         type="submit"
         class="button is-primary {{if this.save.isRunning 'is-loading'}}"

@@ -3,6 +3,7 @@ import ArrayProxy from '@ember/array/proxy';
 import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
+import { isPresent } from '@ember/utils';
 
 const validations = {
   name: [
@@ -12,6 +13,16 @@ const validations = {
     //   type: 'containsWhiteSpace',
     //   message: 'Name cannot contain whitespace.',
     // },
+  ],
+  targets: [
+    {
+      validator(model) {
+        const entityIds = model.hasMany('entity_ids').ids();
+        const groupIds = model.hasMany('group_ids').ids();
+        return isPresent(entityIds) || isPresent(groupIds);
+      },
+      message: 'At least one entity or group is required.',
+    },
   ],
 };
 
