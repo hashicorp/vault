@@ -820,6 +820,7 @@ func TestACL_CreationRace(t *testing.T) {
 	}
 
 	var wg sync.WaitGroup
+	errors := make(chan error)
 	stopTime := time.Now().Add(20 * time.Second)
 
 	for i := 0; i < 50; i++ {
@@ -832,13 +833,20 @@ func TestACL_CreationRace(t *testing.T) {
 				}
 				_, err := NewACL(namespace.RootContext(context.Background()), []*Policy{policy})
 				if err != nil {
-					t.Fatalf("err: %v", err)
+					errors <- err
 				}
 			}
 		}()
 	}
 
-	wg.Wait()
+	go func() {
+		wg.Wait()
+		close(errors)
+	}()
+
+	for err := range errors {
+		t.Fatalf("err: %v", err)
+	}
 }
 
 func TestACLGrantingPolicies(t *testing.T) {
