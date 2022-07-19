@@ -27,7 +27,57 @@ export default class OidcAssignmentFormComponent extends Component {
   @service store;
   @service flashMessages;
 
+  targetTypes = [
+    { label: 'Entity', type: 'identity/entity', key: 'entity_ids' },
+    { label: 'Group', type: 'identity/group', key: 'groups_ids' },
+  ];
+
   @tracked modelValidations;
+  @tracked targets = [];
+
+  constructor() {
+    super(...arguments);
+    // aggregate different target array properties on model into flat list
+    this.flattenTargets();
+    // eagerly fetch identity groups and entities for use as search select options
+    this.resetTargetState();
+  }
+
+  async flattenTargets() {
+    for (let { label, key } of this.targetTypes) {
+      const targetArray = await this.args.model[key];
+      if (typeof targetArray !== 'object') {
+        return;
+      }
+      const targets = targetArray.map((value) => ({ label, key, value }));
+      this.targets.addObjects(targets);
+    }
+  }
+  async resetTargetState() {
+    this.selectedTargetValue = null;
+    const options = this.searchSelectOptions || {};
+    if (!this.searchSelectOptions) {
+      const types = ['identity/group', 'identity/entity'];
+      for (const type of types) {
+        try {
+          options[type] = (await this.store.query(type, {})).toArray();
+        } catch (error) {
+          options[type] = [];
+        }
+      }
+      this.searchSelectOptions = options;
+    }
+    // if (this.selectedTargetType.includes('identity')) {
+    //   this.searchSelect = {
+    //     selected: [],
+    //     options: [...options[this.selectedTargetType]],
+    //   };
+    // }
+  }
+
+  get selectedTarget() {
+    return this.targetTypes.findBy('type', this.selectedTargetType);
+  }
 
   @task
   *save() {
@@ -61,7 +111,7 @@ export default class OidcAssignmentFormComponent extends Component {
 
   @action
   onEntitiesSelect(selectedIds) {
-    const entityIds = this.args.model.entityIds;
+    const entityIds = this.args.model.entity_ids;
     handleHasManySelection(selectedIds, entityIds, this.store, 'identity/entity');
   }
 

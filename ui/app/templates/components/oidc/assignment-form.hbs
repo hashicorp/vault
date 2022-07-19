@@ -59,8 +59,8 @@
         @fallbackComponent="string-list"
       />
     </div>
-    {{#if this.modelValidations.entityIds.errors}}
-      <AlertInline @type="danger" @message={{join ", " this.modelValidations.entityIds.errors}} />
+    {{#if this.modelValidations.entity_ids.errors}}
+      <AlertInline @type="danger" @message={{join ", " this.modelValidations.entity_ids.errors}} />
     {{/if}}
     <div class="has-top-padding-s">
       <button

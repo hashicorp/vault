@@ -1,4 +1,6 @@
 import Model, { attr, hasMany } from '@ember-data/model';
+import ArrayProxy from '@ember/array/proxy';
+import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
 
@@ -16,11 +18,37 @@ const validations = {
 @withModelValidations(validations)
 export default class OidcAssignmentModel extends Model {
   @attr('string') name;
-  @hasMany('identity/entity') entityIds;
-  @hasMany('identity/group') groupIds;
+  @hasMany('identity/entity') entity_ids;
+  @hasMany('identity/group') group_ids;
 
   @lazyCapabilities(apiPath`identity/oidc/assignment/${'name'}`, 'name') assignmentPath;
   @lazyCapabilities(apiPath`identity/oidc/assignment`) assignmentsPath;
+
+  get targets() {
+    return ArrayProxy.extend(PromiseProxyMixin).create({
+      promise: this.prepareTargets(),
+    });
+  }
+
+  async prepareTargets() {
+    const targets = [];
+
+    for (const key of ['entity_ids', 'group_ids']) {
+      //
+      (await this[key]).forEach((model) => {
+        targets.addObject({
+          key,
+          icon: 'user',
+          link: 'vault.cluster.access.identity.show',
+          linkModels: [key.split('_')[1], model.id, 'details'],
+          title: model.name,
+          subTitle: model.id,
+        });
+      });
+    }
+
+    return targets;
+  }
 
   get canCreate() {
     return this.assignmentPath.get('canCreate');
