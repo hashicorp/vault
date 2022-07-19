@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sync"
 	"testing"
@@ -825,7 +826,7 @@ func TestACL_CreationRace(t *testing.T) {
 
 	for i := 0; i < 50; i++ {
 		wg.Add(1)
-		go func() {
+		go func(i int) {
 			defer wg.Done()
 			for {
 				if time.Now().After(stopTime) {
@@ -833,10 +834,10 @@ func TestACL_CreationRace(t *testing.T) {
 				}
 				_, err := NewACL(namespace.RootContext(context.Background()), []*Policy{policy})
 				if err != nil {
-					errors <- err
+					errors <- fmt.Errorf("goroutine %d: %w", i, err)
 				}
 			}
-		}()
+		}(i)
 	}
 
 	go func() {
