@@ -4,7 +4,7 @@ import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { withModelValidations } from 'vault/decorators/model-validations';
 
 const validations = {
-  name: [{ type: 'presence', message: 'Name is required' }],
+  name: [{ type: 'presence', message: 'Name is required.' }],
 };
 
 @withModelValidations(validations)
