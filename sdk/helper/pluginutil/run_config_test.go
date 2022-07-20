@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"reflect"
 	"testing"
 	"time"
 
@@ -13,7 +14,6 @@ import (
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 )
 
 func TestMakeConfig(t *testing.T) {
@@ -78,7 +78,6 @@ func TestMakeConfig(t *testing.T) {
 						"initial=true",
 						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version),
 						fmt.Sprintf("%s=%t", PluginMetadataModeEnv, true),
-						fmt.Sprintf("%s=%t", PluginAutoMTLSEnv, false),
 					},
 				),
 				SecureConfig: &plugin.SecureConfig{
@@ -144,7 +143,6 @@ func TestMakeConfig(t *testing.T) {
 						fmt.Sprintf("%s=%t", PluginMlockEnabled, true),
 						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version),
 						fmt.Sprintf("%s=%t", PluginMetadataModeEnv, false),
-						fmt.Sprintf("%s=%t", PluginAutoMTLSEnv, false),
 						fmt.Sprintf("%s=%s", PluginUnwrapTokenEnv, "testtoken"),
 					},
 				),
@@ -207,7 +205,6 @@ func TestMakeConfig(t *testing.T) {
 						"initial=true",
 						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version),
 						fmt.Sprintf("%s=%t", PluginMetadataModeEnv, true),
-						fmt.Sprintf("%s=%t", PluginAutoMTLSEnv, true),
 					},
 				),
 				SecureConfig: &plugin.SecureConfig{
@@ -269,7 +266,6 @@ func TestMakeConfig(t *testing.T) {
 						"initial=true",
 						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version),
 						fmt.Sprintf("%s=%t", PluginMetadataModeEnv, false),
-						fmt.Sprintf("%s=%t", PluginAutoMTLSEnv, true),
 					},
 				),
 				SecureConfig: &plugin.SecureConfig{
@@ -294,7 +290,7 @@ func TestMakeConfig(t *testing.T) {
 				Return(test.responseWrapInfo, test.responseWrapInfoErr)
 			mockWrapper.On("MlockEnabled").
 				Return(test.mlockEnabled)
-			test.rc.Wrapper = mockWrapper
+			test.rc.wrapper = mockWrapper
 			defer mockWrapper.AssertNumberOfCalls(t, "ResponseWrapData", test.responseWrapInfoTimes)
 			defer mockWrapper.AssertNumberOfCalls(t, "MlockEnabled", test.mlockEnabledTimes)
 
@@ -322,7 +318,9 @@ func TestMakeConfig(t *testing.T) {
 			}
 			config.TLSConfig = nil
 
-			require.Equal(t, config, test.expectedConfig)
+			if !reflect.DeepEqual(config, test.expectedConfig) {
+				t.Fatalf("Actual config: %#v\nExpected config: %#v", config, test.expectedConfig)
+			}
 		})
 	}
 }

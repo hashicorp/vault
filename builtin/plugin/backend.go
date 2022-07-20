@@ -7,7 +7,6 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/hashicorp/go-multierror"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -50,32 +49,17 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 
 	sys := conf.System
 
-	merr := &multierror.Error{}
-	// NewBackend with isMetadataMode set to false
-	raw, err := bplugin.NewBackend(ctx, name, pluginType, sys, conf, false, true)
+	// NewBackend with isMetadataMode set to true
+	raw, err := bplugin.NewBackend(ctx, name, pluginType, sys, conf, true)
 	if err != nil {
-		merr = multierror.Append(merr, err)
-		// NewBackend with isMetadataMode set to true
-		raw, err = bplugin.NewBackend(ctx, name, pluginType, sys, conf, true, false)
-		if err != nil {
-			merr = multierror.Append(merr, err)
-			return nil, merr
-		}
-	} else {
-		b.Backend = raw
-		b.config = conf
-		b.loaded = true
-		b.autoMTLSSupported = true
-
-		return &b, nil
+		return nil, err
 	}
-
-	// Setup the backend so we can inspect the SpecialPaths and Type
 	err = raw.Setup(ctx, conf)
 	if err != nil {
 		raw.Cleanup(ctx)
 		return nil, err
 	}
+	// Get SpecialPaths and BackendType
 	paths := raw.SpecialPaths()
 	btype := raw.Type()
 
@@ -99,8 +83,7 @@ type PluginBackend struct {
 	logical.Backend
 	sync.RWMutex
 
-	autoMTLSSupported bool
-	config            *logical.BackendConfig
+	config *logical.BackendConfig
 
 	// Used to detect if we already reloaded
 	canary string
@@ -120,7 +103,7 @@ func (b *PluginBackend) startBackend(ctx context.Context, storage logical.Storag
 	// Ensure proper cleanup of the backend (i.e. call client.Kill())
 	b.Backend.Cleanup(ctx)
 
-	nb, err := bplugin.NewBackend(ctx, pluginName, pluginType, b.config.System, b.config, false, b.autoMTLSSupported)
+	nb, err := bplugin.NewBackend(ctx, pluginName, pluginType, b.config.System, b.config, false)
 	if err != nil {
 		return err
 	}
