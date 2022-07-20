@@ -50,6 +50,9 @@ OLDIFS=$IFS
 IFS=: MAIN_GOPATH=($GOPATH)
 IFS=$OLDIFS
 
+rm -f ${MAIN_GOPATH}/bin/vault
+cp bin/vault ${MAIN_GOPATH}/bin/
+
 # Done!
 echo
 echo "==> Results:"
