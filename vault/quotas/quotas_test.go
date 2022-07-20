@@ -89,6 +89,10 @@ func TestQuotas_Precedence(t *testing.T) {
 	rateLimitNSMountQuota := setQuotaFunc(t, "rateLimitNSMountQuota", "testns/", "testmount/", "", "")
 	checkQuotaFunc(t, "testns/", "testmount/", "", "", rateLimitNSMountQuota)
 
+	// Define a namespace mount + path specific quota with a glob and expect that to be returned.
+	rateLimitNSMountPathQuotaGlob := setQuotaFunc(t, "rateLimitNSMountPathQuotaGlob", "testns/", "testmount/", "test*", "")
+	checkQuotaFunc(t, "testns/", "testmount/", "testpath", "", rateLimitNSMountPathQuotaGlob)
+
 	// Define a namespace mount + path specific quota and expect that to be returned.
 	rateLimitNSMountPathQuota := setQuotaFunc(t, "rateLimitNSMountPathQuota", "testns/", "testmount/", "testpath", "")
 	checkQuotaFunc(t, "testns/", "testmount/", "testpath", "", rateLimitNSMountPathQuota)

@@ -523,6 +523,19 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 		return quota, nil
 	}
 
+	// Fetch path suffix quotas with globbing
+	for i := 1; i <= len(pathSuffix); i++ {
+		trimmedSuffixWithGlob := pathSuffix[:len(pathSuffix)-i] + "*"
+		// Check to see if aa quota exists with this particular pattern
+		quota, err = quotaFetchFunc(indexNamespaceMountPath, req.NamespacePath, req.MountPath, trimmedSuffixWithGlob, false)
+		if err != nil {
+			return nil, err
+		}
+		if quota != nil {
+			return quota, nil
+		}
+	}
+
 	// Fetch mount quota
 	quota, err = quotaFetchFunc(indexNamespaceMount, req.NamespacePath, req.MountPath, false, false)
 	if err != nil {
