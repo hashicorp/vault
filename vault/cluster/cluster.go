@@ -75,7 +75,6 @@ type Listener struct {
 }
 
 func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Logger, idleTimeout time.Duration) *Listener {
-
 	maxStreams := math.MaxUint32
 	if override := os.Getenv("VAULT_GRPC_MAX_STREAMS"); override != "" {
 		i, err := strconv.Atoi(override)
