@@ -14,7 +14,7 @@ The `/sys/quotas/lease-count` endpoint is used to create, edit and delete lease 
 
 This endpoint is used to create a lease count quota with an identifier, `name`.
 A lease count quota must include a `max_leases` value with an optional `path`
-that can either be a namespace or mount.
+that can either be a namespace or mount, or a full path to restrict one specific endpoint.
 
 | Method | Path                            |
 | :----- | :------------------------------ |
@@ -26,12 +26,16 @@ that can either be a namespace or mount.
 - `path` `(string: "")` - Path of the mount or namespace to apply the quota.
   A blank path configures a global lease count quota. For example `namespace1/`
   adds a quota to a full namespace, `namespace1/auth/userpass` adds a quota to
-  `userpass` in `namespace1`. Updating this field on an existing quota can have
-  "moving" effects. For example, updating `auth/userpass` to
-  `namespace1/auth/userpass` moves this quota from being a global mount quota to a
-  namespace specific mount quota. Quotas on a non-root namespace are not inherited by child
+  `userpass` in `namespace1`, and `namespace1/kv-v2/data/foo/bar` adds a quota to
+  a specific secret on a K/V v2 mount in `namespace1`. Updating this field on an existing
+  quota can have "moving" effects. For example, updating `namespace1` to
+  `namespace1/auth/userpass` moves this quota from being a namespace quota to a
+  namespace specific mount quota. Non-global quotas are not inherited by child
   namespaces.
 - `max_leases` `(int: 0)` - Maximum number of leases allowed by the quota rule.
+- `role` `(string: "")` - If set on a quota where `path` is set to an auth mount with a
+  concept of roles (such as `/auth/approle/`), this will make the quota restrict login
+  requests to that mount that are made with the specified role.
 
 ### Sample Payload
 
@@ -98,6 +102,7 @@ $ curl \
     "max_leases": 1000,
     "name": "global-lease-count-quota",
     "path": "",
+    "role": "",
     "type": "lease-count"
   },
   "warnings": null
