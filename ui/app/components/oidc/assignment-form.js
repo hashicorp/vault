@@ -99,7 +99,7 @@ export default class OidcAssignmentFormComponent extends Component {
 
   @action
   handleOperation(e) {
-    let value = e.target.value;
+    const value = e.target.value;
     this.args.model.name = value;
   }
 
