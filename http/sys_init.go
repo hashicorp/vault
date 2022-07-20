@@ -136,14 +136,6 @@ type InitStatusResponse struct {
 	Initialized bool `json:"initialized"`
 }
 
-const (
-	defKeyShares         = 5
-	defKeyThreshold      = 3
-	defRecoveryShares    = 5
-	defRecoveryThreshold = 3
-)
-
-
 // Validates if the right parameters are used based on AutoUnseal
 func validateInitParameters(core *vault.Core, req InitRequest) error {
 	var recoveryFlagsPresent bool
