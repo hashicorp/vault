@@ -1,51 +1,97 @@
 package hostutil
 
-import (
-	"github.com/shirou/gopsutil/v3/host"
-	"github.com/shirou/gopsutil/v3/mem"
-)
-
-// VirutalMemoryStat holds commonly used memory measurements. We must have a
+// VirtualMemoryStat holds commonly used memory measurements. We must have a
 // local type here in order to avoid building the gopsutil library on certain
 // arch types.
+//
+// This struct is copied from https://github.com/shirou/gopsutil/blob/b49f37e9f30f49530cf2ad6038a4dac1b746c8f7/mem/mem.go#L15
+// to maintain backwards compatibility in the Vault host-info API. This is done because
+// gopsutil changed JSON struct tags between its v2 and v3 releases. For details see
+// https://github.com/shirou/gopsutil/tree/master/_tools/v3migration.
 type VirtualMemoryStat struct {
-	*mem.VirtualMemoryStat
+	// Total amount of RAM on this system
+	Total uint64 `json:"total"`
 
-	// A subset of JSON struct tags in mem.VirtualMemoryStat were changed in a backwards
-	// incompatible way in the v3 release of gopsutil. The fields below are copied from
-	// v2 of gopsutil to maintain backwards compatibility in the Vault host-info API.
+	// RAM available for programs to allocate
 	//
-	// The following details the changed JSON struct tags between v2 and v3:
-	// https://github.com/shirou/gopsutil/blob/master/_tools/v3migration/v3migration.sh#L61
-	CommitLimit    uint64 `json:"commitlimit"`
-	CommittedAS    uint64 `json:"committedas"`
-	HighFree       uint64 `json:"highfree"`
-	HighTotal      uint64 `json:"hightotal"`
-	HugePagesFree  uint64 `json:"hugepagesfree"`
-	HugePageSize   uint64 `json:"hugepagesize"`
-	HugePagesTotal uint64 `json:"hugepagestotal"`
-	LowFree        uint64 `json:"lowfree"`
-	LowTotal       uint64 `json:"lowtotal"`
+	// This value is computed from the kernel specific values.
+	Available uint64 `json:"available"`
+
+	// RAM used by programs
+	//
+	// This value is computed from the kernel specific values.
+	Used uint64 `json:"used"`
+
+	// Percentage of RAM used by programs
+	//
+	// This value is computed from the kernel specific values.
+	UsedPercent float64 `json:"usedPercent"`
+
+	// This is the kernel's notion of free memory; RAM chips whose bits nobody
+	// cares about the value of right now. For a human consumable number,
+	// Available is what you really want.
+	Free uint64 `json:"free"`
+
+	// OS X / BSD specific numbers:
+	// http://www.macyourself.com/2010/02/17/what-is-free-wired-active-and-inactive-system-memory-ram/
+	Active   uint64 `json:"active"`
+	Inactive uint64 `json:"inactive"`
+	Wired    uint64 `json:"wired"`
+
+	// FreeBSD specific numbers:
+	// https://reviews.freebsd.org/D8467
+	Laundry uint64 `json:"laundry"`
+
+	// Linux specific numbers
+	// https://www.centos.org/docs/5/html/5.1/Deployment_Guide/s2-proc-meminfo.html
+	// https://www.kernel.org/doc/Documentation/filesystems/proc.txt
+	// https://www.kernel.org/doc/Documentation/vm/overcommit-accounting
+	Buffers        uint64 `json:"buffers"`
+	Cached         uint64 `json:"cached"`
+	Writeback      uint64 `json:"writeback"`
+	Dirty          uint64 `json:"dirty"`
+	WritebackTmp   uint64 `json:"writebacktmp"`
+	Shared         uint64 `json:"shared"`
+	Slab           uint64 `json:"slab"`
+	SReclaimable   uint64 `json:"sreclaimable"`
+	SUnreclaim     uint64 `json:"sunreclaim"`
 	PageTables     uint64 `json:"pagetables"`
 	SwapCached     uint64 `json:"swapcached"`
-	SwapFree       uint64 `json:"swapfree"`
+	CommitLimit    uint64 `json:"commitlimit"`
+	CommittedAS    uint64 `json:"committedas"`
+	HighTotal      uint64 `json:"hightotal"`
+	HighFree       uint64 `json:"highfree"`
+	LowTotal       uint64 `json:"lowtotal"`
+	LowFree        uint64 `json:"lowfree"`
 	SwapTotal      uint64 `json:"swaptotal"`
-	VMallocChunk   uint64 `json:"vmallocchunk"`
+	SwapFree       uint64 `json:"swapfree"`
+	Mapped         uint64 `json:"mapped"`
 	VMallocTotal   uint64 `json:"vmalloctotal"`
 	VMallocUsed    uint64 `json:"vmallocused"`
-	Writeback      uint64 `json:"writeback"`
-	WritebackTmp   uint64 `json:"writebacktmp"`
+	VMallocChunk   uint64 `json:"vmallocchunk"`
+	HugePagesTotal uint64 `json:"hugepagestotal"`
+	HugePagesFree  uint64 `json:"hugepagesfree"`
+	HugePageSize   uint64 `json:"hugepagesize"`
 }
 
-// A HostInfoStat describes the host status.
+// HostInfoStat describes the host status.
+//
+// This struct is copied from https://github.com/shirou/gopsutil/blob/b49f37e9f30f49530cf2ad6038a4dac1b746c8f7/host/host.go#L17
+// to maintain backwards compatibility in the Vault host-info API. This is done because
+// gopsutil changed JSON struct tags between its v2 and v3 releases. For details see
+// https://github.com/shirou/gopsutil/tree/master/_tools/v3migration.
 type HostInfoStat struct {
-	*host.InfoStat
-
-	// A subset of JSON struct tags in host.InfoStat were changed in a backwards
-	// incompatible way in the v3 release of gopsutil. The fields below are copied from
-	// v2 of gopsutil to maintain backwards compatibility in the Vault host-info API.
-	//
-	// The following details the changed JSON struct tags between v2 and v3:
-	// https://github.com/shirou/gopsutil/blob/master/_tools/v3migration/v3migration.sh#L72
-	HostID string `json:"hostid"`
+	Hostname             string `json:"hostname"`
+	Uptime               uint64 `json:"uptime"`
+	BootTime             uint64 `json:"bootTime"`
+	Procs                uint64 `json:"procs"`
+	OS                   string `json:"os"`
+	Platform             string `json:"platform"`
+	PlatformFamily       string `json:"platformFamily"`
+	PlatformVersion      string `json:"platformVersion"`
+	KernelVersion        string `json:"kernelVersion"`
+	KernelArch           string `json:"kernelArch"`
+	VirtualizationSystem string `json:"virtualizationSystem"`
+	VirtualizationRole   string `json:"virtualizationRole"`
+	HostID               string `json:"hostid"`
 }

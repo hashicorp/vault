@@ -96,26 +96,41 @@ func CollectHostMemory(ctx context.Context) (*VirtualMemoryStat, error) {
 	}
 
 	return &VirtualMemoryStat{
-		VirtualMemoryStat: m,
-		// Fields below are added to maintain backwards compatibility with gopsutil v2
-		CommitLimit:    m.CommitLimit,
-		CommittedAS:    m.CommittedAS,
-		HighFree:       m.HighFree,
-		HighTotal:      m.HighTotal,
-		HugePagesFree:  m.HugePagesFree,
-		HugePageSize:   m.HugePageSize,
-		HugePagesTotal: m.HugePagesTotal,
-		LowFree:        m.LowFree,
-		LowTotal:       m.LowTotal,
+		Total:          m.Total,
+		Available:      m.Available,
+		Used:           m.Used,
+		UsedPercent:    m.UsedPercent,
+		Free:           m.Free,
+		Active:         m.Active,
+		Inactive:       m.Inactive,
+		Wired:          m.Wired,
+		Laundry:        m.Laundry,
+		Buffers:        m.Buffers,
+		Cached:         m.Cached,
+		Writeback:      m.WriteBack,
+		Dirty:          m.Dirty,
+		WritebackTmp:   m.WriteBackTmp,
+		Shared:         m.Shared,
+		Slab:           m.Slab,
+		SReclaimable:   m.Sreclaimable,
+		SUnreclaim:     m.Sunreclaim,
 		PageTables:     m.PageTables,
 		SwapCached:     m.SwapCached,
-		SwapFree:       m.SwapFree,
+		CommitLimit:    m.CommitLimit,
+		CommittedAS:    m.CommittedAS,
+		HighTotal:      m.HighTotal,
+		HighFree:       m.HighFree,
+		LowTotal:       m.LowTotal,
+		LowFree:        m.LowFree,
 		SwapTotal:      m.SwapTotal,
-		VMallocChunk:   m.VmallocChunk,
+		SwapFree:       m.SwapFree,
+		Mapped:         m.Mapped,
 		VMallocTotal:   m.VmallocTotal,
 		VMallocUsed:    m.VmallocUsed,
-		Writeback:      m.WriteBack,
-		WritebackTmp:   m.WriteBackTmp,
+		VMallocChunk:   m.VmallocChunk,
+		HugePagesTotal: m.HugePagesTotal,
+		HugePagesFree:  m.HugePagesFree,
+		HugePageSize:   m.HugePageSize,
 	}, nil
 }
 
@@ -126,8 +141,18 @@ func CollectHostInfoStat(ctx context.Context) (*HostInfoStat, error) {
 	}
 
 	return &HostInfoStat{
-		InfoStat: h,
-		// Fields below are added to maintain backwards compatibility with gopsutil v2
-		HostID: h.HostID,
+		Hostname:             h.Hostname,
+		Uptime:               h.Uptime,
+		BootTime:             h.BootTime,
+		Procs:                h.Procs,
+		OS:                   h.OS,
+		Platform:             h.Platform,
+		PlatformFamily:       h.PlatformFamily,
+		PlatformVersion:      h.PlatformVersion,
+		KernelVersion:        h.KernelVersion,
+		KernelArch:           h.KernelArch,
+		VirtualizationSystem: h.VirtualizationSystem,
+		VirtualizationRole:   h.VirtualizationRole,
+		HostID:               h.HostID,
 	}, nil
 }
