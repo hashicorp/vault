@@ -75,15 +75,13 @@ type Listener struct {
 }
 
 func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Logger, idleTimeout time.Duration) *Listener {
-	maxStreams := math.MaxUint32
+	var maxStreams uint32 = math.MaxUint32
 	if override := os.Getenv("VAULT_GRPC_MAX_STREAMS"); override != "" {
-		i, err := strconv.Atoi(override)
+		i, err := strconv.ParseUint(override, 10, 32)
 		if err != nil {
-			logger.Warn("vault grpc max streams override must be an integer", "value", override)
-		} else if i < 0 || i > math.MaxUint32 {
-			logger.Warn("vault grpc max streams override out of range", "value", i)
+			logger.Warn("vault grpc max streams override must be an uint32 integer", "value", override)
 		} else {
-			maxStreams = i
+			maxStreams = uint32(i)
 			logger.Info("overriding grpc max streams", "value", i)
 		}
 	}
@@ -99,7 +97,7 @@ func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Lo
 
 		// By default this is 250 which can be too small on high traffic
 		// clusters with many forwarded or replication gRPC connections.
-		MaxConcurrentStreams: uint32(maxStreams),
+		MaxConcurrentStreams: maxStreams,
 	}
 
 	return &Listener{
