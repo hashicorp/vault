@@ -1,13 +1,41 @@
+// Copyright (c) 2014, WAKAYAMA Shirou
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//  * Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//  * Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//  * Neither the name of the gopsutil authors nor the names of its contributors
+//    may be used to endorse or promote products derived from this software without
+//    specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+// ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+// ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+// Copied from https://github.com/shirou/gopsutil/blob/b49f37e9f30f49530cf2ad6038a4dac1b746c8f7/mem/mem.go#L15
+// Copied from https://github.com/shirou/gopsutil/blob/b49f37e9f30f49530cf2ad6038a4dac1b746c8f7/host/host.go#L17
+
 package hostutil
 
 // VirtualMemoryStat holds commonly used memory measurements. We must have a
 // local type here in order to avoid building the gopsutil library on certain
 // arch types.
 //
-// This struct is copied from https://github.com/shirou/gopsutil/blob/b49f37e9f30f49530cf2ad6038a4dac1b746c8f7/mem/mem.go#L15
-// to maintain backwards compatibility in the Vault host-info API. This is done because
-// gopsutil changed JSON struct tags between its v2 and v3 releases. For details see
-// https://github.com/shirou/gopsutil/tree/master/_tools/v3migration.
+// This struct is copied to maintain backwards compatibility in the Vault host-info API.
+// This is done because gopsutil changed JSON struct tags between its v2 and v3 releases.
+// For details see https://github.com/shirou/gopsutil/tree/master/_tools/v3migration.
 type VirtualMemoryStat struct {
 	// Total amount of RAM on this system
 	Total uint64 `json:"total"`
@@ -76,10 +104,9 @@ type VirtualMemoryStat struct {
 
 // HostInfoStat describes the host status.
 //
-// This struct is copied from https://github.com/shirou/gopsutil/blob/b49f37e9f30f49530cf2ad6038a4dac1b746c8f7/host/host.go#L17
-// to maintain backwards compatibility in the Vault host-info API. This is done because
-// gopsutil changed JSON struct tags between its v2 and v3 releases. For details see
-// https://github.com/shirou/gopsutil/tree/master/_tools/v3migration.
+// This struct is copied to maintain backwards compatibility in the Vault host-info API.
+// This is done because gopsutil changed JSON struct tags between its v2 and v3 releases.
+// For details see https://github.com/shirou/gopsutil/tree/master/_tools/v3migration.
 type HostInfoStat struct {
 	Hostname             string `json:"hostname"`
 	Uptime               uint64 `json:"uptime"`
