@@ -45,7 +45,6 @@ export default class OidcAssignmentModel extends Model {
     const targets = [];
 
     for (const key of ['entity_ids', 'group_ids']) {
-      //
       (await this[key]).forEach((model) => {
         targets.addObject({
           key,
