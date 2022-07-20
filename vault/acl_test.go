@@ -622,6 +622,100 @@ func testACLValuePermissions(t *testing.T, ns *namespace.Namespace) {
 	}
 }
 
+func TestACL_NestedPermissions(t *testing.T) {
+	t.Run("root-ns", func(t *testing.T) {
+		t.Parallel()
+		testACLNestedPermissions(t, namespace.RootNamespace)
+	})
+}
+
+func testACLNestedPermissions(t *testing.T, ns *namespace.Namespace) {
+	policy, err := ParseACLPolicy(ns, nestedPolicy)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+	acl, err := NewACL(ctx, []*Policy{policy})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	toperations := []logical.Operation{
+		logical.UpdateOperation,
+		logical.CreateOperation,
+	}
+
+	type tcase struct {
+		request map[string]interface{}
+		allowed bool
+	}
+
+	tCases := map[string]map[string]tcase{
+		"allow": {
+			"emptyReq":                       {map[string]interface{}{}, true},
+			"globbedParam":                   {map[string]interface{}{"kvstar": map[string]interface{}{"any": "vals"}}, true},
+			"matchParam":                     {map[string]interface{}{"kv": map[string]interface{}{"key1": "one"}}, true},
+			"matchNestedParam":               {map[string]interface{}{"kv": map[string]interface{}{"nest": map[string]interface{}{"some": map[string]interface{}{"key": "nested"}}}}, true},
+			"noMatchNestedParam":             {map[string]interface{}{"kv": map[string]interface{}{"nest": map[string]interface{}{"some": map[string]interface{}{"key": "invalid"}}}}, false},
+			"matchNestedGlobParam":           {map[string]interface{}{"kv": map[string]interface{}{"nest": map[string]interface{}{"other": map[string]interface{}{"key1": "neststar", "key2": "neststar"}}}}, true},
+			"matchNestedParamOverrideGlob":   {map[string]interface{}{"kv": map[string]interface{}{"nest": map[string]interface{}{"other": map[string]interface{}{"key": "val"}}}}, true},
+			"noMatchNestedParamOverrideGlob": {map[string]interface{}{"kv": map[string]interface{}{"nest": map[string]interface{}{"other": map[string]interface{}{"key": "neststar"}}}}, false},
+			"noMatchNestedGlobParam":         {map[string]interface{}{"kv": map[string]interface{}{"nest": map[string]interface{}{"other": map[string]interface{}{"key": "invalid", "key2": "nested"}}}}, false},
+			"noMatchParamValue":              {map[string]interface{}{"kv": map[string]interface{}{"key1": "uno"}}, false},
+			"unknownParam":                   {map[string]interface{}{"kv": map[string]interface{}{"key2": "two"}}, false},
+		},
+		"deny": {
+			"emptyReq":                     {map[string]interface{}{}, true},
+			"globbedParam":                 {map[string]interface{}{"kvstar": map[string]interface{}{"any": "vals"}}, false},
+			"matchParam":                   {map[string]interface{}{"kv": map[string]interface{}{"key1": "one"}}, false},
+			"matchNestedParam":             {map[string]interface{}{"kv": map[string]interface{}{"nest": map[string]interface{}{"some": map[string]interface{}{"key": "nested"}}}}, false},
+			"noMatchNestedParam":           {map[string]interface{}{"kv": map[string]interface{}{"nest": map[string]interface{}{"some": map[string]interface{}{"key": "invalid"}}}}, true},
+			"matchNestedGlobParam":         {map[string]interface{}{"kv": map[string]interface{}{"nest": map[string]interface{}{"other": map[string]interface{}{"key1": "neststar", "key2": "neststar"}}}}, false},
+			"matchNestedParamOverrideGlob": {map[string]interface{}{"kv": map[string]interface{}{"nest": map[string]interface{}{"other": map[string]interface{}{"key": "val"}}}}, false},
+			"noMatchNestedGlobParam":       {map[string]interface{}{"kv": map[string]interface{}{"nest": map[string]interface{}{"other": map[string]interface{}{"key": "invalid", "key2": "nested"}}}}, true},
+			"noMatchParamValue":            {map[string]interface{}{"kv": map[string]interface{}{"key1": "uno"}}, true},
+			"unknownParam":                 {map[string]interface{}{"kv": map[string]interface{}{"key2": "two"}}, true},
+		},
+		"require": {
+			"emptyReq":  {map[string]interface{}{}, false},
+			"oneParam":  {map[string]interface{}{"kv": map[string]interface{}{"key3": "val"}}, false},
+			"allParams": {map[string]interface{}{"kv": map[string]interface{}{"key3": "val", "nest": map[string]interface{}{"some": "val"}}}, true},
+		},
+		"combined": {
+			"emptyReq":                   {map[string]interface{}{}, false},
+			"missingRequired":            {map[string]interface{}{"kvstar": "val"}, false},
+			"denyOverridesAllowExplicit": {map[string]interface{}{"kv": map[string]interface{}{"key3": "val", "key1": "one"}}, false},
+			"denyOverridesAllowGlob":     {map[string]interface{}{"kv": map[string]interface{}{"key3": "val"}, "kvstar": map[string]interface{}{"nested": map[string]interface{}{"key": "val"}}}, false},
+			"validRequest":               {map[string]interface{}{"kv": map[string]interface{}{"key3": "val"}, "kvstar": map[string]interface{}{"nested": map[string]interface{}{"allowed": "val"}}}, true},
+		},
+	}
+
+	for path, cases := range tCases {
+		t.Run(path, func(t *testing.T) {
+			for name, tc := range cases {
+				t.Run(name, func(t *testing.T) {
+					request := &logical.Request{
+						Path: path,
+						Data: tc.request,
+					}
+					ctx := namespace.ContextWithNamespace(context.Background(), ns)
+
+					for _, op := range toperations {
+						t.Run(string(op), func(t *testing.T) {
+							request.Operation = op
+							authResults := acl.AllowOperation(ctx, request, false)
+							if authResults.Allowed != tc.allowed {
+								t.Fatalf("bad: case %#v: %v", tc, authResults.Allowed)
+							}
+						})
+					}
+				})
+			}
+		})
+	}
+}
+
 func TestACL_SegmentWildcardPriority(t *testing.T) {
 	ns := namespace.RootNamespace
 	ctx := namespace.ContextWithNamespace(context.Background(), ns)
@@ -1317,6 +1411,50 @@ path "test/star" {
 		"bar" = [false]
 	}
 	denied_parameters = {
+	}
+}
+`
+
+var nestedPolicy = `
+path "allow" {
+	policy = "write"
+	allowed_parameters = {
+		"kv.key1" = ["one"]
+		"kv.nest.some.key" = ["nested"]
+		"kv.nest.other.key" = ["val"]
+		"kv.nest.other.*" = ["neststar"]
+		"kvstar.*" = []
+	}
+}
+	
+path "deny" {
+	policy = "write"
+	denied_parameters = {
+		"kv.key1" = ["one"]
+		"kv.nest.some.key" = ["nested"]
+		"kv.nest.other.key" = ["val"]
+		"kv.nest.other.*" = ["neststar"]
+		"kvstar.*" = []
+	}
+}
+
+path "require" {
+	policy = "write"
+	required_parameters = ["kv.key3", "kv.nest.some"]
+}
+
+path "combined" {
+	policy = "write"
+	required_parameters = ["kv.key3"]
+	allowed_parameters = {
+		"kv.key1" = ["one"]
+		"kv.key3" = []
+		"kvstar.*" = []
+	}
+	denied_parameters = {
+		"kv.key1" = []
+		"kv.key2" = ["two"]
+		"kvstar.nested.key" = []
 	}
 }
 `

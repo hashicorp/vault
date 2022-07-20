@@ -173,6 +173,13 @@ type ACLPermissions struct {
 	GrantingPoliciesMap map[uint32][]logical.PolicyInfo
 }
 
+type NestedParameter struct {
+	// Key is the supplied policy key, with the
+	// first section (the parameter name) removed.
+	Key       string
+	Parameter []interface{}
+}
+
 func (p *ACLPermissions) Clone() (*ACLPermissions, error) {
 	ret := &ACLPermissions{
 		CapabilitiesBitmap: p.CapabilitiesBitmap,
@@ -439,6 +446,17 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 		if pc.AllowedParametersHCL != nil {
 			pc.Permissions.AllowedParameters = make(map[string][]interface{}, len(pc.AllowedParametersHCL))
 			for key, val := range pc.AllowedParametersHCL {
+				if idx := strings.Index(key, "."); idx > 0 {
+					if !validNestedParameter(key) {
+						return fmt.Errorf("path %q: invalid allowed parameter %q", pc.Path, key)
+					}
+					rootKey := strings.ToLower(key[:idx])
+					pc.Permissions.AllowedParameters[rootKey] = append(pc.Permissions.AllowedParameters[rootKey], NestedParameter{
+						Key:       strings.ToLower(key[idx+1:]),
+						Parameter: val,
+					})
+					continue
+				}
 				pc.Permissions.AllowedParameters[strings.ToLower(key)] = val
 			}
 		}
@@ -446,6 +464,17 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 			pc.Permissions.DeniedParameters = make(map[string][]interface{}, len(pc.DeniedParametersHCL))
 
 			for key, val := range pc.DeniedParametersHCL {
+				if idx := strings.Index(key, "."); idx > 0 {
+					if !validNestedParameter(key) {
+						return fmt.Errorf("path %q: invalid denied parameter %q", pc.Path, key)
+					}
+					rootKey := strings.ToLower(key[:idx])
+					pc.Permissions.DeniedParameters[rootKey] = append(pc.Permissions.DeniedParameters[rootKey], NestedParameter{
+						Key:       strings.ToLower(key[idx+1:]),
+						Parameter: val,
+					})
+					continue
+				}
 				pc.Permissions.DeniedParameters[strings.ToLower(key)] = val
 			}
 		}
@@ -527,6 +556,11 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 			return errors.New("max_wrapping_ttl cannot be less than min_wrapping_ttl")
 		}
 		if len(pc.RequiredParametersHCL) > 0 {
+			for _, key := range pc.RequiredParametersHCL {
+				if !validNestedParameter(key) {
+					return fmt.Errorf("path %q: invalid required parameter %q", pc.Path, key)
+				}
+			}
 			pc.Permissions.RequiredParameters = pc.RequiredParametersHCL[:]
 		}
 
@@ -536,4 +570,21 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 
 	result.Paths = paths
 	return nil
+}
+
+// validNestedParamter returns false if a nested parameters ends with a '.' or contains any glob that is not '.*'.
+// Non-nested, and valid parameters return true.
+func validNestedParameter(key string) bool {
+	if !strings.Contains(key, ".") {
+		return true
+	}
+	if strings.HasSuffix(key, ".") {
+		return false
+	}
+
+	globIdx := strings.Index(key, "*")
+	if globIdx > 0 && (globIdx != len(key)-1 || !strings.HasSuffix(key, ".*")) {
+		return false
+	}
+	return true
 }

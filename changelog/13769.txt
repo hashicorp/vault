@@ -1,0 +1,3 @@
+```release-note:improvement
+core/policy: Add support for nested policy parameters
+```

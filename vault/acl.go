@@ -473,7 +473,23 @@ CHECK:
 	// parameters.
 	if op == logical.ReadOperation || op == logical.UpdateOperation || op == logical.CreateOperation || op == logical.PatchOperation {
 		for _, parameter := range permissions.RequiredParameters {
-			if _, ok := req.Data[strings.ToLower(parameter)]; !ok {
+			if !strings.Contains(parameter, ".") {
+				if _, ok := req.Data[strings.ToLower(parameter)]; !ok {
+					return
+				}
+				continue
+			}
+
+			parameterParts := strings.Split(strings.ToLower(parameter), ".")
+			data := req.Data
+			for _, part := range parameterParts[:len(parameterParts)-1] {
+				rawData, ok := data[part]
+				if !ok || reflect.TypeOf(rawData).String() != "map[string]interface {}" {
+					return
+				}
+				data = rawData.(map[string]interface{})
+			}
+			if _, ok := data[parameterParts[len(parameterParts)-1]]; !ok {
 				return
 			}
 		}
@@ -739,6 +755,7 @@ func valueInParameterList(v interface{}, list []interface{}) bool {
 }
 
 func valueInSlice(v interface{}, list []interface{}) bool {
+	var nestedGlobs []NestedParameter
 	for _, el := range list {
 		if el == nil || v == nil {
 			// It doesn't seem possible to set up a nil entry in the list, but it is possible
@@ -754,7 +771,66 @@ func valueInSlice(v interface{}, list []interface{}) bool {
 			if strutil.GlobbedStringsMatch(item, val) {
 				return true
 			}
+		} else if reflect.TypeOf(el).String() == "vault.NestedParameter" && reflect.TypeOf(v).String() == "map[string]interface {}" {
+			item := el.(NestedParameter)
+			val := v.(map[string]interface{})
+			if strings.HasSuffix(item.Key, "*") {
+				nestedGlobs = append(nestedGlobs, item)
+				continue
+			}
+
+			itemSections := strings.Split(item.Key, ".")
+			var vsec interface{}
+			ok := true
+			if len(itemSections) > 1 {
+				for _, name := range itemSections[:len(itemSections)-1] {
+					if vsec, ok = val[name]; !ok {
+						break
+					}
+					if reflect.TypeOf(vsec).String() != "map[string]interface {}" {
+						ok = false
+						break
+					}
+					val = vsec.(map[string]interface{})
+				}
+			}
+			vsec, ok = val[itemSections[len(itemSections)-1]]
+			if !ok {
+				continue
+			}
+			return ok && valueInParameterList(vsec, item.Parameter)
 		} else if reflect.DeepEqual(el, v) {
+			return true
+		}
+	}
+
+	// handle nested globs after normal keys
+	// to give them higher priority
+	for _, item := range nestedGlobs {
+		val := v.(map[string]interface{})
+		itemSections := strings.Split(item.Key, ".")
+		var vsec interface{}
+		ok := true
+		if len(itemSections) > 1 {
+			for _, name := range itemSections[:len(itemSections)-1] {
+				if vsec, ok = val[name]; !ok {
+					break
+				}
+				if reflect.TypeOf(vsec).String() != "map[string]interface {}" {
+					ok = false
+					break
+				}
+				val = vsec.(map[string]interface{})
+			}
+		}
+		if !ok {
+			continue
+		}
+		allIncluded := true
+		for _, v := range val {
+			allIncluded = allIncluded && valueInParameterList(v, item.Parameter)
+		}
+		if allIncluded {
 			return true
 		}
 	}
