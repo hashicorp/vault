@@ -237,7 +237,7 @@ func (c *OperatorInitCommand) Run(args []string) int {
 		return 2
 	}
 
-	// check if this is auto-unseal
+	// Set defaults based on use of auto unseal seal
 	sealInfo, err := client.Sys().SealStatus()
 	if err != nil {
 		c.UI.Error(err.Error())

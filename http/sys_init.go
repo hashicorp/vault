@@ -45,7 +45,7 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Validate the request parameters
+	// Validate init request parameters
 	if err := validateInitParameters(core, req); err != nil {
 		respondError(w, http.StatusBadRequest, err)
 		return
