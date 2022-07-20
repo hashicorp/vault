@@ -9,8 +9,6 @@ import (
 	status "google.golang.org/grpc/status"
 )
 
-const MultiplexingCtxKey string = "multiplex_id"
-
 type PluginMultiplexingServerImpl struct {
 	UnimplementedPluginMultiplexingServer
 
