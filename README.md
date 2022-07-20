@@ -15,9 +15,9 @@
 
 <img width="300" alt="Vault Logo" src="https://github.com/hashicorp/vault/blob/f22d202cde2018f9455dec755118a9b84586e082/Vault_PrimaryLogo_Black.png">
 
-Vault is a tool for securely accessing secrets. A secret is anything that you want to tightly control access to, such as API keys, passwords, certificates, and more. Vault provides a unified interface to any secret, while providing tight access control and recording a detailed audit log.
+Vault is a tool for securely accessing secrets. A secret is anything that you want to tightly control access to, such as API keys, passwords, certificates, and more. Vault provides a unified interface to any secret while providing tight access control and recording a detailed audit log.
 
-A modern system requires access to a multitude of secrets: database credentials, API keys for external services, credentials for service-oriented architecture communication, etc. Understanding who is accessing what secrets is already very difficult and platform-specific. Adding on key rolling, secure storage, and detailed audit logs is almost impossible without a custom solution. This is where Vault steps in.
+A modern system requires access to a multitude of secrets: database credentials, API keys for external services, credentials for service-oriented architecture communication, etc. Understanding who is accessing what secrets is already very difficult and platform-specific. Adding key rolling, secure storage, and detailed audit logs are almost impossible without a custom solution, and that is where Vault steps in.
 
 The key features of Vault are:
 
@@ -35,7 +35,7 @@ The key features of Vault are:
   after the lease is up.
 
 * **Data Encryption**: Vault can encrypt and decrypt data without storing
-  it. This allows security teams to define encryption parameters and
+  them. This allows security teams to define encryption parameters and
   developers to store encrypted data in a location such as a SQL database without
   having to design their own encryption methods.
 
@@ -44,8 +44,8 @@ The key features of Vault are:
   secret. Clients are able to renew leases via built-in renew APIs.
 
 * **Revocation**: Vault has built-in support for secret revocation. Vault
-  can revoke not only single secrets, but a tree of secrets, for example
-  all secrets read by a specific user, or all secrets of a particular type.
+  can revoke not only single secrets but a tree of secrets, for example,
+  all secrets read by a specific user or all secrets of a particular type.
   Revocation assists in key rolling as well as locking down systems in the
   case of an intrusion.
 
@@ -59,11 +59,11 @@ check out our [Getting Started guides](https://learn.hashicorp.com/collections/v
 on HashiCorp's learning platform. There are also [additional guides](https://learn.hashicorp.com/vault)
 to continue your learning.
 
-For examples of how to interact with Vault from inside your application in different programming languages, see the [vault-examples](https://github.com/hashicorp/vault-examples) repo. An out-of-the-box [sample application](https://github.com/hashicorp/hello-vault-go) is also available.
+See the [vault-examples](https://github.com/hashicorp/vault-examples) repo for examples of how to interact with Vault from inside your application in different programming languages. An out-of-the-box [sample application](https://github.com/hashicorp/hello-vault-go) is also available.
 
 Show off your Vault knowledge by passing a certification exam. Visit the
 [certification page](https://www.hashicorp.com/certification/#hashicorp-certified-vault-associate)
-for information about exams and find [study materials](https://learn.hashicorp.com/collections/vault/certification)
+for exam information and find [study materials](https://learn.hashicorp.com/collections/vault/certification)
 on HashiCorp's learning platform.
 
 Developing Vault
@@ -147,7 +147,7 @@ $ make testacc TEST=./builtin/logical/consul
 
 The `TEST` variable is required, and you should specify the folder where the
 backend is. The `TESTARGS` variable is recommended to filter down to a specific
-resource to test, since testing all of them at once can sometimes take a very
+resource to test since testing all of them at once can sometimes take a very
 long time.
 
 Acceptance tests typically require other environment variables to be set for
