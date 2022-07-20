@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 
 	"github.com/hashicorp/vault/vault"
@@ -43,6 +44,15 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 		respondError(w, http.StatusBadRequest, err)
 		return
 	}
+
+	// Validate the request parameters
+	if err := validateInitParameters(core, req); err != nil {
+		respondError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	// Set Default values for shares and threshold if absent
+	req = setDefaultIfAbsent(req)
 
 	// Initialize
 	barrierConfig := &vault.SealConfig{
@@ -127,4 +137,55 @@ type InitResponse struct {
 
 type InitStatusResponse struct {
 	Initialized bool `json:"initialized"`
+}
+
+const (
+	defKeyShares         = 5
+	defKeyThreshold      = 3
+	defRecoveryShares    = 5
+	defRecoveryThreshold = 3
+)
+
+// Set default values for shares and threshold if absent in init request
+func setDefaultIfAbsent(req InitRequest) InitRequest {
+	if req.SecretShares == 0 {
+		req.SecretShares = defKeyShares
+	}
+	if req.SecretThreshold == 0 {
+		req.SecretThreshold = defKeyThreshold
+	}
+	if req.RecoveryShares == 0 {
+		req.RecoveryShares = defRecoveryShares
+	}
+	if req.RecoveryThreshold == 0 {
+		req.RecoveryThreshold = defRecoveryThreshold
+	}
+	return req
+}
+
+// Validates if the right parameters are used based on AutoUnseal
+func validateInitParameters(core *vault.Core, req InitRequest) error {
+	var recoveryFlagsPresent bool
+	var barrierFlagsPresent bool
+
+	if req.SecretShares != 0 || req.SecretThreshold != 0 || req.StoredShares != 0 || len(req.PGPKeys) != 0 {
+		barrierFlagsPresent = true
+	}
+
+	if req.RecoveryShares != 0 || req.RecoveryThreshold != 0 || len(req.RecoveryPGPKeys) != 0 {
+		recoveryFlagsPresent = true
+	}
+
+	switch core.SealAccess().RecoveryKeySupported() {
+	case true:
+		if barrierFlagsPresent {
+			return fmt.Errorf("parameters not specific to auto unseal seals present")
+		}
+	default:
+		if recoveryFlagsPresent {
+			return fmt.Errorf("parameters specific to auto unseal seals present")
+		}
+
+	}
+	return nil
 }

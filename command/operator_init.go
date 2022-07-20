@@ -39,11 +39,6 @@ type OperatorInitCommand struct {
 	flagConsulService string
 }
 
-const (
-	defKeyShares    = 5
-	defKeyThreshold = 3
-)
-
 func (c *OperatorInitCommand) Synopsis() string {
 	return "Initializes a server"
 }
@@ -103,7 +98,6 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 		Name:       "key-shares",
 		Aliases:    []string{"n"},
 		Target:     &c.flagKeyShares,
-		Default:    defKeyShares,
 		Completion: complete.PredictAnything,
 		Usage: "Number of key shares to split the generated root key into. " +
 			"This is the number of \"unseal keys\" to generate.",
@@ -113,7 +107,6 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 		Name:       "key-threshold",
 		Aliases:    []string{"t"},
 		Target:     &c.flagKeyThreshold,
-		Default:    defKeyThreshold,
 		Completion: complete.PredictAnything,
 		Usage: "Number of key shares required to reconstruct the root key. " +
 			"This must be less than or equal to -key-shares.",
@@ -182,7 +175,6 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 	f.IntVar(&IntVar{
 		Name:       "recovery-shares",
 		Target:     &c.flagRecoveryShares,
-		Default:    5,
 		Completion: complete.PredictAnything,
 		Usage: "Number of key shares to split the recovery key into. " +
 			"This is only used in auto-unseal mode.",
@@ -191,7 +183,6 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 	f.IntVar(&IntVar{
 		Name:       "recovery-threshold",
 		Target:     &c.flagRecoveryThreshold,
-		Default:    3,
 		Completion: complete.PredictAnything,
 		Usage: "Number of key shares required to reconstruct the recovery key. " +
 			"This is only used in Auto Unseal mode.",
@@ -469,14 +460,6 @@ func (c *OperatorInitCommand) init(client *api.Client, req *api.InitRequest) int
 				"Please securely distribute the key shares printed above.",
 			req.RecoveryShares,
 			req.RecoveryThreshold)))
-	}
-
-	if len(resp.RecoveryKeys) > 0 && (req.SecretShares != defKeyShares || req.SecretThreshold != defKeyThreshold) {
-		c.UI.Output("")
-		c.UI.Warn(wrapAtLength(
-			"WARNING! -key-shares and -key-threshold is ignored when " +
-				"Auto Unseal is used. Use -recovery-shares and -recovery-threshold instead.",
-		))
 	}
 
 	return 0
