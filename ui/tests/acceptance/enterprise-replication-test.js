@@ -367,9 +367,9 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await click('[data-test-demote-replication] [data-test-replication-action-trigger]');
 
     // enter confirmation text
-    await fillIn('[data-test-confirmation-modal-input="demote"]', 'Performance');
+    await fillIn('[data-test-confirmation-modal-input="Demote to secondary?"]', 'Performance');
     // Click confirm button
-    await click('[data-test-confirm-button="demote"]');
+    await click('[data-test-confirm-button="Demote to secondary?"]');
 
     await click('[data-test-replication-link="details"]');
 
