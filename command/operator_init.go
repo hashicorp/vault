@@ -39,6 +39,13 @@ type OperatorInitCommand struct {
 	flagConsulService string
 }
 
+const (
+	defKeyShares         = 5
+	defKeyThreshold      = 3
+	defRecoveryShares    = 5
+	defRecoveryThreshold = 3
+)
+
 func (c *OperatorInitCommand) Synopsis() string {
 	return "Initializes a server"
 }
@@ -224,6 +231,35 @@ func (c *OperatorInitCommand) Run(args []string) int {
 	if c.flagStoredShares != -1 {
 		c.UI.Warn("-stored-shares has no effect and will be removed in Vault 1.3.\n")
 	}
+	client, err := c.Client()
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 2
+	}
+
+	// check if this is auto-unseal
+	sealInfo, err := client.Sys().SealStatus()
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 2
+	}
+
+	switch sealInfo.RecoverySeal {
+	case true:
+		if c.flagRecoveryShares == 0 {
+			c.flagRecoveryShares = defRecoveryShares
+		}
+		if c.flagRecoveryThreshold == 0 {
+			c.flagRecoveryThreshold = defRecoveryThreshold
+		}
+	default:
+		if c.flagKeyShares == 0 {
+			c.flagKeyShares = defKeyShares
+		}
+		if c.flagKeyThreshold == 0 {
+			c.flagKeyThreshold = defKeyThreshold
+		}
+	}
 
 	// Build the initial init request
 	initReq := &api.InitRequest{
@@ -235,12 +271,6 @@ func (c *OperatorInitCommand) Run(args []string) int {
 		RecoveryShares:    c.flagRecoveryShares,
 		RecoveryThreshold: c.flagRecoveryThreshold,
 		RecoveryPGPKeys:   c.flagRecoveryPGPKeys,
-	}
-
-	client, err := c.Client()
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 2
 	}
 
 	// Check auto mode

@@ -51,9 +51,6 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Set Default values for shares and threshold if absent
-	req = setDefaultIfAbsent(req)
-
 	// Initialize
 	barrierConfig := &vault.SealConfig{
 		SecretShares:    req.SecretShares,
@@ -146,22 +143,6 @@ const (
 	defRecoveryThreshold = 3
 )
 
-// Set default values for shares and threshold if absent in init request
-func setDefaultIfAbsent(req InitRequest) InitRequest {
-	if req.SecretShares == 0 {
-		req.SecretShares = defKeyShares
-	}
-	if req.SecretThreshold == 0 {
-		req.SecretThreshold = defKeyThreshold
-	}
-	if req.RecoveryShares == 0 {
-		req.RecoveryShares = defRecoveryShares
-	}
-	if req.RecoveryThreshold == 0 {
-		req.RecoveryThreshold = defRecoveryThreshold
-	}
-	return req
-}
 
 // Validates if the right parameters are used based on AutoUnseal
 func validateInitParameters(core *vault.Core, req InitRequest) error {
