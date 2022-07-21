@@ -144,6 +144,21 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 		keysAllowed = false
 		pemBundle = certificate
 	}
+	if len(pemBundle) < 75 {
+		// It is almost nearly impossible to store a complete certificate in
+		// less than 75 bytes. It is definitely impossible to do so when PEM
+		// encoding has been applied. Detect this and give a better warning
+		// than "provided PEM block contained no data" in this case. This is
+		// because the PEM headers contain 5*4 + 6 + 4 + 2 + 2 = 34 characters
+		// minimum (five dashes, "BEGIN" + space + at least one character
+		// identifier, "END" + space + at least one character identifier, and
+		// a pair of new lines). That would leave 41 bytes for Base64 data,
+		// meaning at most a 30-byte DER certificate.
+		//
+		// However, < 75 bytes is probably a good length for a file path so
+		// suggest that is the case.
+		return logical.ErrorResponse("provided data for import was too short; perhaps a path was passed to the API rather than the contents of a PEM file"), nil
+	}
 
 	var createdKeys []string
 	var createdIssuers []string
@@ -186,9 +201,11 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 		return logical.ErrorResponse("private keys found in the PEM bundle but not allowed by the path; use /issuers/import/bundle"), nil
 	}
 
+	sc := b.makeStorageContext(ctx, req.Storage)
+
 	for keyIndex, keyPem := range keys {
 		// Handle import of private key.
-		key, existing, err := importKeyFromBytes(ctx, b, req.Storage, keyPem, "")
+		key, existing, err := importKeyFromBytes(sc, keyPem, "")
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("Error parsing key %v: %v", keyIndex, err)), nil
 		}
@@ -199,7 +216,7 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	}
 
 	for certIndex, certPem := range issuers {
-		cert, existing, err := importIssuer(ctx, b, req.Storage, certPem, "")
+		cert, existing, err := sc.importIssuer(certPem, "")
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("Error parsing issuer %v: %v\n%v", certIndex, err, certPem)), nil
 		}
@@ -229,7 +246,7 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	// do this unconditionally if the issuer or key was modified, so the admin
 	// is always warned. But if unrelated key material was imported, we do
 	// not warn.
-	config, err := getIssuersConfig(ctx, req.Storage)
+	config, err := sc.getIssuersConfig()
 	if err == nil && len(config.DefaultIssuerId) > 0 {
 		// We can use the mapping above to check the issuer mapping.
 		if keyId, ok := issuerKeyMap[string(config.DefaultIssuerId)]; ok && len(keyId) == 0 {

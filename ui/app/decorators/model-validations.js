@@ -30,6 +30,7 @@ import { get } from '@ember/object';
  * import Model from '@ember-data/model';
  * import withModelValidations from 'vault/decorators/model-validations';
  *
+ * Notes: all messages need to have a period at the end of them.
  * const validations = { foo: [{ type: 'presence', message: 'foo is a required field.' }] };
  * @withModelValidations(validations)
  * class SomeModel extends Model { foo = null; }
@@ -50,7 +51,11 @@ import { get } from '@ember/object';
  * const { isValid, state } = model.validate();
  * -> isValid = false;
  * -> state.foo.isValid = false;
- * -> state.foo.errors = ['foo is required if bar includes test'];
+ * -> state.foo.errors = ['foo is required if bar includes test.'];
+ *
+ * *** example adding class in hbs file
+ * all form-validations need to have a red border around them. Add this by adding a conditional class 'has-error-border'
+ * class="input field {{if this.errors.name.errors 'has-error-border'}}"
  */
 
 export function withModelValidations(validations) {

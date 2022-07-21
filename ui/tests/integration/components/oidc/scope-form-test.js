@@ -37,7 +37,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
     await click('[data-test-oidc-scope-save]');
     assert
       .dom('[data-test-inline-error-message]')
-      .hasText('Name is required', 'Validation message is shown for name');
+      .hasText('Name is required.', 'Validation message is shown for name');
     // json editor has test coverage so let's just confirm that it renders
     assert
       .dom('[data-test-input="template"] [data-test-component="json-editor-toolbar"]')

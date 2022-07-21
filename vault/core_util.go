@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -69,16 +68,6 @@ func (c *Core) barrierViewForNamespace(namespaceId string) (*BarrierView, error)
 	}
 
 	return c.systemBarrierView, nil
-}
-
-// GetCoreConfigInternal returns the server configuration
-// in struct format.
-func (c *Core) GetCoreConfigInternal() *server.Config {
-	conf := c.rawConfig.Load()
-	if conf == nil {
-		return nil
-	}
-	return conf.(*server.Config)
 }
 
 func (c *Core) teardownReplicationResolverHandler() {}
@@ -177,7 +166,7 @@ func (c *Core) quotaLeaseWalker(ctx context.Context, callback func(request *quot
 	return nil
 }
 
-func (c *Core) quotasHandleLeases(ctx context.Context, action quotas.LeaseAction, leaseIDs []string) error {
+func (c *Core) quotasHandleLeases(ctx context.Context, action quotas.LeaseAction, leases []*quotas.QuotaLeaseInformation) error {
 	return nil
 }
 
