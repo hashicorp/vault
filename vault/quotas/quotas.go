@@ -527,7 +527,7 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 	// Request paths which match the resulting glob (i.e. share the same prefix prior to the glob) are in scope for the quota
 	for i := 0; i <= len(pathSuffix); i++ {
 		trimmedSuffixWithGlob := pathSuffix[:len(pathSuffix)-i] + "*"
-		// Check to see if aa quota exists with this particular pattern
+		// Check to see if a quota exists with this particular pattern
 		quota, err = quotaFetchFunc(indexNamespaceMountPath, req.NamespacePath, req.MountPath, trimmedSuffixWithGlob, false)
 		if err != nil {
 			return nil, err
