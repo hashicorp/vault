@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"sync"
@@ -76,13 +75,15 @@ func NewJWTAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		return nil, errors.New("could not convert 'role' config value to string")
 	}
 
-	removeJWTAfterReadingRaw, ok := conf.Config["remove_jwt_after_reading"]
-	if ok {
+	if removeJWTAfterReadingRaw, ok := conf.Config["remove_jwt_after_reading"]; ok {
 		removeJWTAfterReading, err := parseutil.ParseBool(removeJWTAfterReadingRaw)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing 'remove_jwt_after_reading' value: %w", err)
 		}
 		j.removeJWTAfterReading = removeJWTAfterReading
+	} else {
+		// Default to true for maximum backwards compatibility.
+		j.removeJWTAfterReading = true
 	}
 
 	switch {
@@ -92,7 +93,14 @@ func NewJWTAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		return nil, errors.New("'role' value is empty")
 	}
 
-	j.ticker = time.NewTicker(500 * time.Millisecond)
+	// If we don't delete the JWT after reading, use a slower reload period,
+	// otherwise we would re-read the whole file every 500ms, instead of just
+	// doing a stat on the file every 500ms.
+	readPeriod := 1 * time.Minute
+	if j.removeJWTAfterReading {
+		readPeriod = 500 * time.Millisecond
+	}
+	j.ticker = time.NewTicker(readPeriod)
 
 	go j.runWatcher()
 
@@ -176,7 +184,7 @@ func (j *jwtMethod) ingressToken() {
 
 	// Check that the path refers to a file.
 	// If it's a symlink, it could still be a symlink to a directory,
-	// but ioutil.ReadFile below will return a descriptive error.
+	// but os.ReadFile below will return a descriptive error.
 	switch mode := fi.Mode(); {
 	case mode.IsRegular():
 		// regular file
@@ -187,7 +195,7 @@ func (j *jwtMethod) ingressToken() {
 		return
 	}
 
-	token, err := ioutil.ReadFile(j.path)
+	token, err := os.ReadFile(j.path)
 	if err != nil {
 		j.logger.Error("failed to read jwt file", "error", err)
 		return
