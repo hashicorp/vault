@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/hashicorp/vault/vault"
 )
@@ -138,25 +139,42 @@ type InitStatusResponse struct {
 
 // Validates if the right parameters are used based on AutoUnseal
 func validateInitParameters(core *vault.Core, req InitRequest) error {
-	var recoveryFlagsPresent bool
-	var barrierFlagsPresent bool
+	recoveryFlags := make([]string, 0)
+	barrierFlags := make([]string, 0)
 
-	if req.SecretShares != 0 || req.SecretThreshold != 0 || req.StoredShares != 0 || len(req.PGPKeys) != 0 {
-		barrierFlagsPresent = true
+	if req.SecretShares != 0 {
+		barrierFlags = append(barrierFlags, "secret_shares")
+
 	}
+	if req.SecretThreshold != 0 {
+		barrierFlags = append(barrierFlags, "secret_threshold")
 
-	if req.RecoveryShares != 0 || req.RecoveryThreshold != 0 || len(req.RecoveryPGPKeys) != 0 {
-		recoveryFlagsPresent = true
+	}
+	if len(req.PGPKeys) !=0{
+		barrierFlags = append(barrierFlags, "pgp_keys")
+
+	}
+	if req.RecoveryShares != 0 {
+		recoveryFlags = append(recoveryFlags, "recovery_shares")
+
+	}
+	if req.RecoveryThreshold != 0 {
+		recoveryFlags = append(recoveryFlags, "recovery_threshold")
+
+	}
+	if len(req.RecoveryPGPKeys) !=0{
+		recoveryFlags = append(recoveryFlags, "recovery_pgp_keys")
+
 	}
 
 	switch core.SealAccess().RecoveryKeySupported() {
 	case true:
-		if barrierFlagsPresent {
-			return fmt.Errorf("parameters not specific to auto unseal seals present")
+		if len(barrierFlags)>0{
+			return fmt.Errorf("parameters %s not applicable to seal type %s", strings.Join(barrierFlags,","), core.SealAccess().BarrierType())
 		}
 	default:
-		if recoveryFlagsPresent {
-			return fmt.Errorf("parameters specific to auto unseal seals present")
+		if len(recoveryFlags)>0 {
+			return fmt.Errorf("parameters %s not applicable to seal type %s", strings.Join(recoveryFlags,","), core.SealAccess().BarrierType())
 		}
 
 	}

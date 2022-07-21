@@ -138,7 +138,7 @@ func TestSysInit_Put_ValidateParams(t *testing.T) {
 	testResponseStatus(t, resp, http.StatusBadRequest)
 	body := map[string][]string{}
 	testResponseBody(t, resp, &body)
-	if body["errors"][0] != "parameters specific to auto unseal seals present" {
+	if body["errors"][0] != "parameters recovery_shares,recovery_threshold not applicable to seal type shamir" {
 		t.Fatal(body)
 	}
 }
