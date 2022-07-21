@@ -516,7 +516,7 @@ and consider if they're appropriate for your deployment.
       Default mode of the mounted files.
 
     ```yaml
-    Volumes:
+    extraVolumes:
       - type: 'secret'
         name: 'vault-certs'
         path: '/etc/pki'
