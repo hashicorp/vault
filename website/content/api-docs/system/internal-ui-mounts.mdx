@@ -36,28 +36,21 @@ $ curl \
 
 ```json
 {
-  "request_id": "1bb9e4ce-c636-9d64-07d6-fb11f85822b7",
-  "lease_id": "",
-  "lease_duration": 0,
-  "renewable": false,
-  "data": {
-    "auth": {
-      "github/": {
-        "description": "GitHub auth",
-        "type": "github"
-      }
-    },
-    "secret": {
-      "custom-secrets/": {
-        "description": "Custom secrets",
-        "options": {
-          "version": "2"
-        },
-        "type": "kv"
-      }
+  "auth": {
+    "github/": {
+      "description": "GitHub auth",
+      "type": "github"
     }
   },
-  "warnings": null
+  "secret": {
+    "custom-secrets/": {
+      "description": "Custom secrets",
+      "options": {
+        "version": "2"
+      },
+      "type": "kv"
+    }
+  }
 }
 ```
 
@@ -85,26 +78,19 @@ $ curl \
 
 ```json
 {
-  "request_id": "59026900-c9cc-6540-da40-8c6c8afb5b25",
-  "lease_id": "",
-  "lease_duration": 0,
-  "renewable": false,
-  "data": {
-    "accessor": "cubbyhole_50fbe8d2",
-    "config": {
-      "default_lease_ttl": 0,
-      "force_no_cache": false,
-      "max_lease_ttl": 0
-    },
-    "description": "per-token private secret storage",
-    "external_entropy_access": false,
-    "local": true,
-    "options": null,
-    "path": "cubbyhole/",
-    "seal_wrap": false,
-    "type": "cubbyhole",
-    "uuid": "4bb40403-d9ba-d2ee-087a-4c6d371db5f2"
+  "accessor": "cubbyhole_50fbe8d2",
+  "config": {
+    "default_lease_ttl": 0,
+    "force_no_cache": false,
+    "max_lease_ttl": 0
   },
-  "warnings": null
+  "description": "per-token private secret storage",
+  "external_entropy_access": false,
+  "local": true,
+  "options": null,
+  "path": "cubbyhole/",
+  "seal_wrap": false,
+  "type": "cubbyhole",
+  "uuid": "4bb40403-d9ba-d2ee-087a-4c6d371db5f2"
 }
 ```
