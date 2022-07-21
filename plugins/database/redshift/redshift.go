@@ -8,13 +8,13 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/lib/pq"
+	"github.com/hashicorp/vault/sdk/helper/template"
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
 const (
@@ -23,7 +23,7 @@ const (
 	middlewareTypeName = "redshift"
 
 	// This allows us to use the postgres database driver.
-	sqlTypeName = "postgres"
+	sqlTypeName = "pgx"
 
 	defaultRenewSQL = `
 ALTER USER "{{name}}" VALID UNTIL '{{expiration}}';
@@ -31,6 +31,7 @@ ALTER USER "{{name}}" VALID UNTIL '{{expiration}}';
 	defaultRotateRootCredentialsSQL = `
 ALTER USER "{{name}}" WITH PASSWORD '{{password}}';
 `
+	defaultUserNameTemplate = `{{ printf "v-%s-%s-%s-%s" (.DisplayName | truncate 8) (.RoleName | truncate 8) (random 20) (unix_time) | truncate 63 | lowercase }}`
 )
 
 var _ dbplugin.Database = (*RedShift)(nil)
@@ -58,6 +59,8 @@ func newRedshift() *RedShift {
 
 type RedShift struct {
 	*connutil.SQLConnectionProducer
+
+	usernameProducer template.StringTemplate
 }
 
 func (r *RedShift) secretValues() map[string]string {
@@ -76,6 +79,25 @@ func (r *RedShift) Initialize(ctx context.Context, req dbplugin.InitializeReques
 	conf, err := r.Init(ctx, req.Config, req.VerifyConnection)
 	if err != nil {
 		return dbplugin.InitializeResponse{}, fmt.Errorf("error initializing db: %w", err)
+	}
+
+	usernameTemplate, err := strutil.GetString(req.Config, "username_template")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve username_template: %w", err)
+	}
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
+	}
+
+	up, err := template.NewTemplate(template.Template(usernameTemplate))
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("unable to initialize username template: %w", err)
+	}
+	r.usernameProducer = up
+
+	_, err = r.usernameProducer.Generate(dbplugin.UsernameMetadata{})
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template: %w", err)
 	}
 
 	return dbplugin.InitializeResponse{
@@ -105,15 +127,7 @@ func (r *RedShift) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (db
 	r.Lock()
 	defer r.Unlock()
 
-	usernameOpts := []credsutil.UsernameOpt{
-		credsutil.DisplayName(req.UsernameConfig.DisplayName, 8),
-		credsutil.RoleName(req.UsernameConfig.RoleName, 8),
-		credsutil.MaxLength(63),
-		credsutil.Separator("-"),
-		credsutil.ToLower(),
-	}
-
-	username, err := credsutil.GenerateUsername(usernameOpts...)
+	username, err := r.usernameProducer.Generate(req.UsernameConfig)
 	if err != nil {
 		return dbplugin.NewUserResponse{}, err
 	}
@@ -150,7 +164,7 @@ func (r *RedShift) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (db
 				"password":   password,
 				"expiration": expirationStr,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return dbplugin.NewUserResponse{}, err
 			}
 		}
@@ -232,7 +246,7 @@ func updateUserExpiration(ctx context.Context, req dbplugin.UpdateUserRequest, t
 				"username":   req.Username,
 				"expiration": expirationStr,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return err
 			}
 		}
@@ -279,7 +293,7 @@ func updateUserPassword(ctx context.Context, req dbplugin.UpdateUserRequest, tx 
 				"username": username,
 				"password": password,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return err
 			}
 		}
@@ -327,7 +341,7 @@ func (r *RedShift) customDeleteUser(ctx context.Context, req dbplugin.DeleteUser
 				"name":     req.Username,
 				"username": req.Username,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return dbplugin.DeleteUserResponse{}, err
 			}
 		}
@@ -384,23 +398,23 @@ func (r *RedShift) defaultDeleteUser(ctx context.Context, req dbplugin.DeleteUse
 		}
 		revocationStmts = append(revocationStmts, fmt.Sprintf(
 			`REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA %s FROM %s;`,
-			pq.QuoteIdentifier(schema),
-			pq.QuoteIdentifier(username)))
+			dbutil.QuoteIdentifier(schema),
+			dbutil.QuoteIdentifier(username)))
 
 		revocationStmts = append(revocationStmts, fmt.Sprintf(
 			`REVOKE USAGE ON SCHEMA %s FROM %s;`,
-			pq.QuoteIdentifier(schema),
-			pq.QuoteIdentifier(username)))
+			dbutil.QuoteIdentifier(schema),
+			dbutil.QuoteIdentifier(username)))
 	}
 
 	// for good measure, revoke all privileges and usage on schema public
 	revocationStmts = append(revocationStmts, fmt.Sprintf(
 		`REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM %s;`,
-		pq.QuoteIdentifier(username)))
+		dbutil.QuoteIdentifier(username)))
 
 	revocationStmts = append(revocationStmts, fmt.Sprintf(
 		"REVOKE USAGE ON SCHEMA public FROM %s;",
-		pq.QuoteIdentifier(username)))
+		dbutil.QuoteIdentifier(username)))
 
 	// get the current database name so we can issue a REVOKE CONNECT for
 	// this username
@@ -438,7 +452,7 @@ $$;`)
 	// many permissions as possible right now
 	var lastStmtError *multierror.Error // error
 	for _, query := range revocationStmts {
-		if err := dbtxn.ExecuteDBQuery(ctx, db, nil, query); err != nil {
+		if err := dbtxn.ExecuteDBQueryDirect(ctx, db, nil, query); err != nil {
 			lastStmtError = multierror.Append(lastStmtError, err)
 		}
 	}
@@ -453,7 +467,7 @@ $$;`)
 
 	// Drop this user
 	stmt, err = db.PrepareContext(ctx, fmt.Sprintf(
-		`DROP USER IF EXISTS %s;`, pq.QuoteIdentifier(username)))
+		`DROP USER IF EXISTS %s;`, dbutil.QuoteIdentifier(username)))
 	if err != nil {
 		return dbplugin.DeleteUserResponse{}, err
 	}

@@ -8,10 +8,6 @@ import (
 
 var NamespaceByID func(context.Context, string, *Core) (*namespace.Namespace, error) = namespaceByID
 
-const (
-	mountTypeNSCubbyhole = "ns_cubbyhole"
-)
-
 func namespaceByID(ctx context.Context, nsID string, c *Core) (*namespace.Namespace, error) {
 	if nsID == namespace.RootNamespaceID {
 		return namespace.RootNamespace, nil

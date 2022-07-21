@@ -1,4 +1,4 @@
-// +build !enterprise
+//go:build !enterprise
 
 package vault
 
@@ -42,7 +42,7 @@ func forward(ctx context.Context, c *Core, req *logical.Request) (*logical.Respo
 	panic("forward called in OSS Vault")
 }
 
-func getLeaseRegisterFunc(c *Core) (func(context.Context, *logical.Request, *logical.Response) (string, error), error) {
+func getLeaseRegisterFunc(c *Core) (func(context.Context, *logical.Request, *logical.Response, string) (string, error), error) {
 	return c.expiration.Register, nil
 }
 
@@ -50,6 +50,21 @@ func getAuthRegisterFunc(c *Core) (RegisterAuthFunc, error) {
 	return c.RegisterAuth, nil
 }
 
-func possiblyForwardAliasCreation(ctx context.Context, c *Core, inErr error, auth *logical.Auth, entity *identity.Entity) (*identity.Entity, error) {
+func possiblyForwardAliasCreation(ctx context.Context, c *Core, inErr error, auth *logical.Auth, entity *identity.Entity) (*identity.Entity, bool, error) {
+	return entity, false, inErr
+}
+
+var errCreateEntityUnimplemented = "create entity unimplemented in the server"
+
+func possiblyForwardEntityCreation(ctx context.Context, c *Core, inErr error, auth *logical.Auth, entity *identity.Entity) (*identity.Entity, error) {
 	return entity, inErr
+}
+
+func possiblyForwardSaveCachedAuthResponse(ctx context.Context, c *Core, respAuth *MFACachedAuthResponse) error {
+	err := c.SaveMFAResponseAuth(respAuth)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

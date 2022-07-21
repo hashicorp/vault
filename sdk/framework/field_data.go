@@ -10,9 +10,9 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -243,6 +243,12 @@ func (d *FieldData) getPrimitive(k string, schema *FieldSchema) (interface{}, bo
 
 	case TypeCommaIntSlice:
 		var result []int
+
+		jsonIn, ok := raw.(json.Number)
+		if ok {
+			raw = jsonIn.String()
+		}
+
 		config := &mapstructure.DecoderConfig{
 			Result:           &result,
 			WeaklyTypedInput: true,

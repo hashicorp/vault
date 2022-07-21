@@ -5,10 +5,10 @@ import (
 	"io/ioutil"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/hcl/hcl/token"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 )
 
 // SharedConfig contains some shared values

@@ -29,7 +29,8 @@ that can either be a namespace or mount.
   `userpass` in `namespace1`. Updating this field on an existing quota can have
   "moving" effects. For example, updating `auth/userpass` to
   `namespace1/auth/userpass` moves this quota from being a global mount quota to a
-  namespace specific mount quota.
+  namespace specific mount quota. Quotas on a non-root namespace are not inherited by child
+  namespaces.
 - `max_leases` `(int: 0)` - Maximum number of leases allowed by the quota rule.
 
 ### Sample Payload
@@ -102,3 +103,39 @@ $ curl \
   "warnings": null
 }
 ```
+
+## List Lease Count Quotas
+
+This endpoint returns a list of all the lease count quotas. A 404 response will
+be returned if no lease count quota has been created.
+
+| Method | Path                      |
+| :----- | :------------------------ |
+| `LIST` | `/sys/quotas/lease-count` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --request LIST \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/quotas/lease-count
+```
+
+### Sample Response
+
+```json
+{
+  "auth": null,
+  "data": {
+    "keys": ["global-lease-count-quota"]
+  },
+  "lease_duration": 0,
+  "lease_id": "",
+  "renewable": false,
+  "request_id": "ab633ee1-a692-ba03-083b-f1bd91c51c28",
+  "warnings": null,
+  "wrap_info": null
+}
+```
+

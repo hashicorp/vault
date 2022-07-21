@@ -40,10 +40,10 @@ export default ApplicationAdapter.extend({
   findRecord(store, type, id, snapshot) {
     let fetches = {
       health: this.health(),
-      sealStatus: this.sealStatus().catch(e => e),
+      sealStatus: this.sealStatus().catch((e) => e),
     };
     if (this.version.isEnterprise && this.namespaceService.inRootNamespace) {
-      fetches.replicationStatus = this.replicationStatus().catch(e => e);
+      fetches.replicationStatus = this.replicationStatus().catch((e) => e);
     }
     return hash(fetches).then(({ health, sealStatus, replicationStatus }) => {
       let ret = {
@@ -124,6 +124,19 @@ export default ApplicationAdapter.extend({
     }
 
     return this.ajax(url, verb, options);
+  },
+
+  mfaValidate({ mfa_request_id, mfa_constraints }) {
+    const options = {
+      data: {
+        mfa_request_id,
+        mfa_payload: mfa_constraints.reduce((obj, { selectedMethod, passcode }) => {
+          obj[selectedMethod.id] = passcode ? [passcode] : [];
+          return obj;
+        }, {}),
+      },
+    };
+    return this.ajax('/v1/sys/mfa/validate', 'POST', options);
   },
 
   urlFor(endpoint) {

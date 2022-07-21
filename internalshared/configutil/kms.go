@@ -17,9 +17,9 @@ import (
 	"github.com/hashicorp/go-kms-wrapping/wrappers/ocikms"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/transit"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 

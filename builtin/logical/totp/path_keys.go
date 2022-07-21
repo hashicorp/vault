@@ -375,6 +375,10 @@ func (b *backend) pathKeyCreate(ctx context.Context, req *logical.Request, data 
 			return logical.ErrorResponse("the key value is required"), nil
 		}
 
+		if i := len(keyString) % 8; i != 0 {
+			keyString += strings.Repeat("=", 8-i)
+		}
+
 		_, err := base32.StdEncoding.DecodeString(strings.ToUpper(keyString))
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(

@@ -32,7 +32,7 @@ func TestIngressToken(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = os.WriteFile(path.Join(testDir, file), []byte("test"), 0644)
+		err = os.WriteFile(path.Join(testDir, file), []byte("test"), 0o644)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -40,7 +40,7 @@ func TestIngressToken(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = os.Mkdir(path.Join(testDir, dir), 0755)
+		err = os.Mkdir(path.Join(testDir, dir), 0o755)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -131,7 +131,7 @@ func TestDeleteAfterReading(t *testing.T) {
 		}
 		defer os.RemoveAll(rootDir)
 		tokenPath := path.Join(rootDir, "token")
-		err = os.WriteFile(tokenPath, []byte("test"), 0644)
+		err = os.WriteFile(tokenPath, []byte("test"), 0o644)
 		if err != nil {
 			t.Fatal(err)
 		}

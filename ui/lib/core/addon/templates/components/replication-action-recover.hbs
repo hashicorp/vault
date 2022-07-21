@@ -12,7 +12,7 @@
     <button
       type="button"
       class="button is-secondary"
-      onclick={{action (mut isModalActive) true}}
+      onclick={{action (mut this.isModalActive) true}}
       data-test-replication-action-trigger
     >
       Recover
@@ -22,8 +22,8 @@
 
 <Modal
   @title="Begin recovery?"
-  @onClose={{action (mut isModalActive) false}}
-  @isActive={{isModalActive}}
+  @onClose={{action (mut this.isModalActive) false}}
+  @isActive={{this.isModalActive}}
   @type="warning"
   @showCloseButton={{true}}
 >
@@ -33,19 +33,15 @@
     </p>
   </section>
   <footer class="modal-card-foot modal-card-foot-outlined">
-    <button
-      type="button"
-      class="button is-primary"
-      onclick={{action "onSubmit" "recover"}}
-      data-test-recover-confirm-button
-    >
+    <button type="button" class="button is-primary" onclick={{action "onSubmit" "recover"}} data-test-recover-confirm-button>
       Recover
     </button>
     <button
       type="button"
       class="button is-secondary"
-      onclick={{action (mut isModalActive) false}}
-      data-test-recover-cancel-button>
+      onclick={{action (mut this.isModalActive) false}}
+      data-test-recover-cancel-button
+    >
       Cancel
     </button>
   </footer>

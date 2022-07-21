@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/fatih/structs"
+	"github.com/hashicorp/go-secure-stdlib/password"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/pgpkeys"
-	"github.com/hashicorp/vault/sdk/helper/password"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -51,7 +51,7 @@ Usage: vault operator rekey [options] [KEY]
 
   Generates a new set of unseal keys. This can optionally change the total
   number of key shares or the required threshold of those key shares to
-  reconstruct the master key. This operation is zero downtime, but it requires
+  reconstruct the root key. This operation is zero downtime, but it requires
   the Vault is unsealed and a quorum of existing unseal keys are provided.
 
   An unseal key may be provided directly on the command line as an argument to
@@ -129,7 +129,7 @@ func (c *OperatorRekeyCommand) Flags() *FlagSets {
 		Target:     &c.flagKeyShares,
 		Default:    5,
 		Completion: complete.PredictAnything,
-		Usage: "Number of key shares to split the generated master key into. " +
+		Usage: "Number of key shares to split the generated root key into. " +
 			"This is the number of \"unseal keys\" to generate.",
 	})
 
@@ -139,7 +139,7 @@ func (c *OperatorRekeyCommand) Flags() *FlagSets {
 		Target:     &c.flagKeyThreshold,
 		Default:    3,
 		Completion: complete.PredictAnything,
-		Usage: "Number of key shares required to reconstruct the master key. " +
+		Usage: "Number of key shares required to reconstruct the root key. " +
 			"This must be less than or equal to -key-shares.",
 	})
 
@@ -177,7 +177,7 @@ func (c *OperatorRekeyCommand) Flags() *FlagSets {
 		Value:      (*pgpkeys.PubKeyFilesFlag)(&c.flagPGPKeys),
 		Completion: complete.PredictAnything,
 		Usage: "Comma-separated list of paths to files on disk containing " +
-			"public GPG keys OR a comma-separated list of Keybase usernames using " +
+			"public PGP keys OR a comma-separated list of Keybase usernames using " +
 			"the format \"keybase:<username>\". When supplied, the generated " +
 			"unseal keys will be encrypted and base64-encoded in the order " +
 			"specified in this list.",
@@ -404,13 +404,13 @@ func (c *OperatorRekeyCommand) provide(client *api.Client, key string) int {
 	var started bool
 	var nonce string
 
-	switch status.(type) {
+	switch status := status.(type) {
 	case *api.RekeyStatusResponse:
-		stat := status.(*api.RekeyStatusResponse)
+		stat := status
 		started = stat.Started
 		nonce = stat.Nonce
 	case *api.RekeyVerificationStatusResponse:
-		stat := status.(*api.RekeyVerificationStatusResponse)
+		stat := status
 		started = stat.Started
 		nonce = stat.Nonce
 	default:
@@ -489,12 +489,12 @@ func (c *OperatorRekeyCommand) provide(client *api.Client, key string) int {
 	var complete bool
 	var mightContainUnsealKeys bool
 
-	switch resp.(type) {
+	switch resp := resp.(type) {
 	case *api.RekeyUpdateResponse:
-		complete = resp.(*api.RekeyUpdateResponse).Complete
+		complete = resp.Complete
 		mightContainUnsealKeys = true
 	case *api.RekeyVerificationUpdateResponse:
-		complete = resp.(*api.RekeyVerificationUpdateResponse).Complete
+		complete = resp.Complete
 	default:
 		c.UI.Error("Unknown update response type")
 		return 1
@@ -608,9 +608,9 @@ func (c *OperatorRekeyCommand) printStatus(in interface{}) int {
 	out := []string{}
 	out = append(out, "Key | Value")
 
-	switch in.(type) {
+	switch in := in.(type) {
 	case *api.RekeyStatusResponse:
-		status := in.(*api.RekeyStatusResponse)
+		status := in
 		out = append(out, fmt.Sprintf("Nonce | %s", status.Nonce))
 		out = append(out, fmt.Sprintf("Started | %t", status.Started))
 		if status.Started {
@@ -631,7 +631,7 @@ func (c *OperatorRekeyCommand) printStatus(in interface{}) int {
 			out = append(out, fmt.Sprintf("Backup | %t", status.Backup))
 		}
 	case *api.RekeyVerificationStatusResponse:
-		status := in.(*api.RekeyVerificationStatusResponse)
+		status := in
 		out = append(out, fmt.Sprintf("Started | %t", status.Started))
 		out = append(out, fmt.Sprintf("New Shares | %d", status.N))
 		out = append(out, fmt.Sprintf("New Threshold | %d", status.T))

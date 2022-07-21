@@ -17,7 +17,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
@@ -84,17 +84,29 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	}
 
 	var environment azure.Environment
+	var URL *url.URL
 	var err error
 
-	if environmentURL != "" {
-		environment, err = azure.EnvironmentFromURL(environmentURL)
-		if err != nil {
-			return nil, fmt.Errorf("failed to look up Azure environment descriptor for URL %q: %w", environmentURL, err)
+	testHost := conf["testHost"]
+	switch {
+	case testHost != "":
+		URL = &url.URL{Scheme: "http", Host: testHost, Path: fmt.Sprintf("/%s/%s", accountName, name)}
+	default:
+		if environmentURL != "" {
+			environment, err = azure.EnvironmentFromURL(environmentURL)
+			if err != nil {
+				return nil, fmt.Errorf("failed to look up Azure environment descriptor for URL %q: %w", environmentURL, err)
+			}
+		} else {
+			environment, err = azure.EnvironmentFromName(environmentName)
+			if err != nil {
+				return nil, fmt.Errorf("failed to look up Azure environment descriptor for name %q: %w", environmentName, err)
+			}
 		}
-	} else {
-		environment, err = azure.EnvironmentFromName(environmentName)
+		URL, err = url.Parse(
+			fmt.Sprintf("https://%s.blob.%s/%s", accountName, environment.StorageEndpointSuffix, name))
 		if err != nil {
-			return nil, fmt.Errorf("failed to look up Azure environment descriptor for name %q: %w", environmentName, err)
+			return nil, fmt.Errorf("failed to create Azure client: %w", err)
 		}
 	}
 
@@ -129,12 +141,6 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		if err != nil {
 			return nil, fmt.Errorf("failed to create Azure client: %w", err)
 		}
-	}
-
-	URL, err := url.Parse(
-		fmt.Sprintf("https://%s.blob.%s/%s", accountName, environment.StorageEndpointSuffix, name))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Azure client: %w", err)
 	}
 
 	p := azblob.NewPipeline(credential, azblob.PipelineOptions{})
@@ -206,7 +212,9 @@ func (a *AzureBackend) Get(ctx context.Context, key string) (*physical.Entry, er
 	defer a.permitPool.Release()
 
 	blobURL := a.container.NewBlockBlobURL(key)
-	res, err := blobURL.Download(ctx, 0, azblob.CountToEnd, azblob.BlobAccessConditions{}, false)
+	clientOptions := azblob.ClientProvidedKeyOptions{}
+
+	res, err := blobURL.Download(ctx, 0, azblob.CountToEnd, azblob.BlobAccessConditions{}, false, clientOptions)
 	if err != nil {
 		var e azblob.StorageError
 		if errors.As(err, &e) {

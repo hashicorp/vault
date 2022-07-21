@@ -6,7 +6,7 @@ import (
 	"text/template"
 
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/sdk/helper/base62"
+	"github.com/hashicorp/go-secure-stdlib/base62"
 )
 
 type Opt func(*StringTemplate) error

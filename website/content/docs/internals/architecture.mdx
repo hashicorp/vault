@@ -17,67 +17,6 @@ spelunking through the source code. However, if you're an operator of Vault, we
 recommend learning about the architecture due to the importance of Vault in an
 environment.
 
-# Glossary
-
-Before describing the architecture, we provide a glossary of terms to help
-clarify what is being discussed:
-
-- **Storage Backend** - A storage backend is responsible for durable storage of
-  _encrypted_ data. Backends are not trusted by Vault and are only expected to
-  provide durability. The storage backend is configured when starting the Vault
-  server.
-
-- **Barrier** - The barrier is cryptographic steel and concrete around the
-  Vault. All data that flows between Vault and the storage backend passes
-  through the barrier. The barrier ensures that only encrypted data is written
-  out, and that data is verified and decrypted on the way in. Much like a bank
-  vault, the barrier must be "unsealed" before anything inside can be accessed.
-
-- **Secrets Engine** - A secrets engine is responsible for managing secrets.
-  Simple secrets engines like the "kv" secrets engine simply return the same
-  secret when queried. Some secrets engines support using policies to
-  dynamically generate a secret each time they are queried. This allows for
-  unique secrets to be used which allows Vault to do fine-grained revocation and
-  policy updates. As an example, a MySQL secrets engine could be configured with
-  a "web" policy. When the "web" secret is read, a new MySQL user/password pair
-  will be generated with a limited set of privileges for the web server.
-
-- **Audit Device** - An audit device is responsible for managing audit logs.
-  Every request to Vault and response from Vault goes through the configured
-  audit devices. This provides a simple way to integrate Vault with multiple
-  audit logging destinations of different types.
-
-- **Auth Method** - An auth method is used to authenticate users or applications
-  which are connecting to Vault. Once authenticated, the auth method returns the
-  list of applicable policies which should be applied. Vault takes an
-  authenticated user and returns a client token that can be used for future
-  requests. As an example, the `userpass` auth method uses a username and
-  password to authenticate the user. Alternatively, the `github` auth method
-  allows users to authenticate via GitHub.
-
-- **Client Token** - A client token (aka "Vault Token") is conceptually
-  similar to a session cookie on a web site. Once a user authenticates, Vault
-  returns a client token which is used for future requests. The token is used by
-  Vault to verify the identity of the client and to enforce the applicable ACL
-  policies. This token is passed via HTTP headers.
-
-- **Secret** - A secret is the term for anything returned by Vault which
-  contains confidential or cryptographic material. Not everything returned by
-  Vault is a secret, for example system configuration, status information, or
-  policies are not considered secrets. Secrets always have an associated lease.
-  This means clients cannot assume that the secret contents can be used
-  indefinitely. Vault will revoke a secret at the end of the lease, and an
-  operator may intervene to revoke the secret before the lease is over. This
-  contract between Vault and its clients is critical, as it allows for changes
-  in keys and policies without manual intervention.
-
-- **Server** - Vault depends on a long-running instance which operates as a
-  server. The Vault server provides an API which clients interact with and
-  manages the interaction between all the secrets engines, ACL enforcement, and
-  secret lease revocation. Having a server based architecture decouples clients
-  from the security keys and policies, enables centralized audit logging and
-  simplifies administration for operators.
-
 # High-Level Overview
 
 A very high level overview of Vault looks like this:
@@ -94,23 +33,32 @@ When the Vault server is started, it must be provided with a storage backend so
 that data is available across restarts. The HTTP API similarly must be started
 by the Vault server on start so that clients can interact with it.
 
-Once started, the Vault is in a _sealed_ state. Before any operation can be
-performed on the Vault it must be unsealed. This is done by providing the unseal
-keys. When the Vault is initialized it generates an encryption key which is used
-to protect all the data. That key is protected by a master key. By default,
-Vault uses a technique known as [Shamir's secret sharing
-algorithm](https://en.wikipedia.org/wiki/Shamir's_Secret_Sharing) to split the
-master key into 5 shares, any 3 of which are required to reconstruct the master
-key.
+When a Vault server is started, it starts in a _sealed_ state. Before any
+operation can be performed on the Vault, it must be _unsealed_. This is done by
+providing the unseal keys. When the Vault is initialized, it generates an
+encryption key which is used to protect all Vault data. This key is protected by
+a root key. The root key is stored alongside all other Vault data, but is encrypted by yet another mechanism: the unseal key.
+By default, Vault uses [Shamir's Secret
+Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing) to split the
+unseal key into a configured number of shards (referred as key shares or unseal
+keys). A certain threshold of shards is required to reconstruct the unseal key,
+which is then used to decrypt the Vault's root key.
 
-[![Vault Shamir Secret Sharing Algorithm](/img/vault-shamir-secret-sharing.svg)](/img/vault-shamir-secret-sharing.svg)
+![Unseal keys](/img/vault-shamir-seal.png)
+
+Refer to the [Seal/Unseal](/docs/concepts/seal#seal-unseal) documentation for
+further details.
 
 The number of shares and the minimum threshold required can both be specified.
-Shamir's technique can be disabled, and the master key used directly for
+Shamir's technique can be disabled, and the root key can be used directly for
 unsealing. Once Vault retrieves the encryption key, it is able to decrypt the
 data in the storage backend, and enters the _unsealed_ state. Once unsealed,
 Vault loads all of the configured audit devices, auth methods, and secrets
 engines.
+
+-> The default Vault configuration uses a Shamir seal; however, Vault can be [auto
+unseal](/docs/concepts/seal#auto-unseal) by a trusted cloud key management
+system (KMS) or hardware security module (HSM) to increase security.
 
 The configuration of those audit devices, auth methods, and secrets engines must
 be stored in Vault since they are security sensitive. Only users with the
@@ -169,5 +117,5 @@ within the core and is not user visible.
 This has been a brief high-level overview of the architecture of Vault. There
 are more details available for each of the sub-systems.
 
-For other details, either consult the code, ask in IRC or reach out to the
+For other details, either consult the code or reach out to the
 mailing list.

@@ -7,13 +7,14 @@ import (
 	"time"
 
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/hclutil"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
 )
 
@@ -26,6 +27,7 @@ const (
 	ListCapability   = "list"
 	SudoCapability   = "sudo"
 	RootCapability   = "root"
+	PatchCapability  = "patch"
 
 	// Backwards compatibility
 	OldDenyPathPolicy  = "deny"
@@ -42,6 +44,7 @@ const (
 	DeleteCapabilityInt
 	ListCapabilityInt
 	SudoCapabilityInt
+	PatchCapabilityInt
 )
 
 // Error constants for testing
@@ -83,6 +86,7 @@ var cap2Int = map[string]uint32{
 	DeleteCapability: DeleteCapabilityInt,
 	ListCapability:   ListCapabilityInt,
 	SudoCapability:   SudoCapabilityInt,
+	PatchCapability:  PatchCapabilityInt,
 }
 
 type egpPath struct {
@@ -158,14 +162,15 @@ type IdentityFactor struct {
 }
 
 type ACLPermissions struct {
-	CapabilitiesBitmap uint32
-	MinWrappingTTL     time.Duration
-	MaxWrappingTTL     time.Duration
-	AllowedParameters  map[string][]interface{}
-	DeniedParameters   map[string][]interface{}
-	RequiredParameters []string
-	MFAMethods         []string
-	ControlGroup       *ControlGroup
+	CapabilitiesBitmap  uint32
+	MinWrappingTTL      time.Duration
+	MaxWrappingTTL      time.Duration
+	AllowedParameters   map[string][]interface{}
+	DeniedParameters    map[string][]interface{}
+	RequiredParameters  []string
+	MFAMethods          []string
+	ControlGroup        *ControlGroup
+	GrantingPoliciesMap map[uint32][]logical.PolicyInfo
 }
 
 func (p *ACLPermissions) Clone() (*ACLPermissions, error) {
@@ -222,7 +227,41 @@ func (p *ACLPermissions) Clone() (*ACLPermissions, error) {
 		ret.ControlGroup = clonedControlGroup.(*ControlGroup)
 	}
 
+	switch {
+	case p.GrantingPoliciesMap == nil:
+	case len(p.GrantingPoliciesMap) == 0:
+		ret.GrantingPoliciesMap = make(map[uint32][]logical.PolicyInfo)
+	default:
+		clonedGrantingPoliciesMap, err := copystructure.Copy(p.GrantingPoliciesMap)
+		if err != nil {
+			return nil, err
+		}
+		ret.GrantingPoliciesMap = clonedGrantingPoliciesMap.(map[uint32][]logical.PolicyInfo)
+	}
+
 	return ret, nil
+}
+
+func addGrantingPoliciesToMap(m map[uint32][]logical.PolicyInfo, policy *Policy, capabilitiesBitmap uint32) map[uint32][]logical.PolicyInfo {
+	if m == nil {
+		m = make(map[uint32][]logical.PolicyInfo)
+	}
+
+	// For all possible policies, check if the provided capabilities include
+	// them
+	for _, capability := range cap2Int {
+		if capabilitiesBitmap&capability == 0 {
+			continue
+		}
+
+		m[capability] = append(m[capability], logical.PolicyInfo{
+			Name:        policy.Name,
+			NamespaceId: policy.namespace.ID,
+			Type:        "acl",
+		})
+	}
+
+	return m
 }
 
 // ParseACLPolicy is used to parse the specified ACL rules into an
@@ -390,7 +429,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 				pc.Capabilities = []string{DenyCapability}
 				pc.Permissions.CapabilitiesBitmap = DenyCapabilityInt
 				goto PathFinished
-			case CreateCapability, ReadCapability, UpdateCapability, DeleteCapability, ListCapability, SudoCapability:
+			case CreateCapability, ReadCapability, UpdateCapability, DeleteCapability, ListCapability, SudoCapability, PatchCapability:
 				pc.Permissions.CapabilitiesBitmap |= cap2Int[cap]
 			default:
 				return fmt.Errorf("path %q: invalid capability %q", key, cap)

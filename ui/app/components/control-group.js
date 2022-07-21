@@ -21,18 +21,18 @@ export default Component.extend({
 
   currentUserEntityId: alias('auth.authData.entity_id'),
 
-  currentUserIsRequesting: computed('currentUserEntityId', 'model.requestEntity.id', function() {
+  currentUserIsRequesting: computed('currentUserEntityId', 'model.requestEntity.id', function () {
     if (!this.model.requestEntity) return false;
     return this.currentUserEntityId === this.model.requestEntity.id;
   }),
 
-  currentUserHasAuthorized: computed('currentUserEntityId', 'model.authorizations.@each.id', function() {
+  currentUserHasAuthorized: computed('currentUserEntityId', 'model.authorizations.@each.id', function () {
     let authorizations = this.model.authorizations || [];
     return Boolean(authorizations.findBy('id', this.currentUserEntityId));
   }),
 
   isSuccess: or('currentUserHasAuthorized', 'model.approved'),
-  requestorName: computed('currentUserIsRequesting', 'model.requestEntity', function() {
+  requestorName: computed('currentUserIsRequesting', 'model.requestEntity', function () {
     let entity = this.model.requestEntity;
 
     if (this.currentUserIsRequesting) {
@@ -44,7 +44,7 @@ export default Component.extend({
     return 'Someone';
   }),
 
-  bannerPrefix: computed('model.approved', 'currentUserHasAuthorized', function() {
+  bannerPrefix: computed('model.approved', 'currentUserHasAuthorized', function () {
     if (this.currentUserHasAuthorized) {
       return 'Thanks!';
     }
@@ -54,7 +54,7 @@ export default Component.extend({
     return 'Locked';
   }),
 
-  bannerText: computed('model.approved', 'currentUserIsRequesting', 'currentUserHasAuthorized', function() {
+  bannerText: computed('model.approved', 'currentUserIsRequesting', 'currentUserHasAuthorized', function () {
     let isApproved = this.model.approved;
     let { currentUserHasAuthorized, currentUserIsRequesting } = this;
     if (currentUserHasAuthorized) {
@@ -72,7 +72,7 @@ export default Component.extend({
     return 'Someone is requesting access to a path locked by a Control Group';
   }),
 
-  refresh: task(function*() {
+  refresh: task(function* () {
     try {
       yield this.model.reload();
     } catch (e) {
@@ -80,7 +80,7 @@ export default Component.extend({
     }
   }).drop(),
 
-  authorize: task(function*() {
+  authorize: task(function* () {
     try {
       yield this.model.save();
       yield this.refresh.perform();

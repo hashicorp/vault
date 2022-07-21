@@ -1,98 +1,117 @@
 <div class="box is-fullwidth is-bottomless is-sideless">
-  <MessageError @model={{model}} />
-  <div class="control-group-header {{if isSuccess 'is-success'}}">
+  <MessageError @model={{this.model}} />
+  <div class="control-group-header {{if this.isSuccess 'is-success'}}">
     <p>
-      <Icon @glyph={{if isSuccess "check-circle-fill" "lock-closed"}} />
-      <strong data-test-banner-prefix>{{bannerPrefix}}</strong>
-      <span data-test-banner-text>{{bannerText}}</span>
+      <Icon @name={{if this.isSuccess "check-circle-fill" "lock-fill"}} />
+      <strong data-test-banner-prefix>{{this.bannerPrefix}}</strong>
+      <span data-test-banner-text>{{this.bannerText}}</span>
     </p>
   </div>
-  {{#if (and model.approved (not currentUserHasAuthorized) (or (not model.requestEntity) currentUserIsRequesting))}}
-    <ControlGroupSuccess data-test-control-group-success @model={{model}} @controlGroupResponse={{controlGroupResponse}} />
+  {{#if
+    (and
+      this.model.approved
+      (not this.currentUserHasAuthorized)
+      (or (not this.model.requestEntity) this.currentUserIsRequesting)
+    )
+  }}
+    <ControlGroupSuccess
+      data-test-control-group-success
+      @model={{this.model}}
+      @controlGroupResponse={{this.controlGroupResponse}}
+    />
   {{else}}
     <div class="control-group">
       <div data-test-requestor-text>
-        {{#if model.requestEntity.canRead}}
-          <LinkTo @route="vault.cluster.access.identity.show" @models={{array 'entities' model.requestEntity.id 'details'}}>
-            {{requestorName}}
+        {{#if this.model.requestEntity.canRead}}
+          <LinkTo
+            @route="vault.cluster.access.identity.show"
+            @models={{array "entities" this.model.requestEntity.id "details"}}
+          >
+            {{this.requestorName}}
           </LinkTo>
         {{else}}
-          {{requestorName}}
+          {{this.requestorName}}
         {{/if}}
-        {{#if currentUserIsRequesting}}are{{else}}is{{/if}}
-        {{#if model.approved}}
-          authorized to access <code>{{model.requestPath}}</code>
+        {{#if this.currentUserIsRequesting}}are{{else}}is{{/if}}
+        {{#if this.model.approved}}
+          authorized to access
+          <code>{{this.model.requestPath}}</code>
         {{else}}
-          requesting access to <code>{{model.requestPath}}</code>
+          requesting access to
+          <code>{{this.model.requestPath}}</code>
         {{/if}}
       </div>
 
-      {{#if (or (not model.requestEntity) currentUserIsRequesting)}}
+      {{#if (or (not this.model.requestEntity) this.currentUserIsRequesting)}}
         <div class="message is-list is-highlight has-copy-button" tabindex="-1" data-test-accessor-callout>
-          <HoverCopyButton @alwaysShow=true @copyValue={{model.id}} />
+          <HoverCopyButton @alwaysShow={{true}} @copyValue={{this.model.id}} />
           <div class="message-body">
             <h4 class="title is-7 is-marginless">
               Accessor
             </h4>
-            <code class="is-word-break" data-test-accessor-value>{{model.id}}</code>
+            <code class="is-word-break" data-test-accessor-value>{{this.model.id}}</code>
           </div>
         </div>
       {{/if}}
 
       <div class="authorizations" data-test-authorizations>
-        {{#if (gt model.authorizations.length 0)}}
-        <span class="has-text-success">
-          <Icon @glyph="check-circle-outline" />
-        </span>
+        {{#if (gt this.model.authorizations.length 0)}}
+          <span class="has-text-success">
+            <Icon @name="check-circle" />
+          </span>
           Already approved by
-          {{#each model.authorizations as |authorization index|}}
+          {{#each this.model.authorizations as |authorization index|}}
             {{~#if authorization.canRead~}}
-            <LinkTo @route="vault.cluster.access.identity.show" @models={{array 'entities' authorization.id 'details'}}>{{authorization.name}}</LinkTo>
-              {{~else~}}
+              <LinkTo @route="vault.cluster.access.identity.show" @models={{array "entities" authorization.id "details"}}>
+                {{authorization.name}}
+              </LinkTo>
+            {{~else~}}
               {{authorization.name}}
-            {{~/if~}}{{#if (lt (inc index) model.authorizations.length)}},{{/if}}
+            {{~/if~}}{{#if (lt (inc index) this.model.authorizations.length)}},{{/if}}
           {{/each}}
         {{else}}
           <span class="has-text-grey">
-            <Icon @glyph="check-circle-outline" />
+            <Icon @name="check-circle" />
           </span>
           Awaiting authorization.
         {{/if}}
       </div>
     </div>
   {{/if}}
-    {{#if controlGroupResponse.token}}
-      <p class="control-group-token-text" data-test-token>
-        We’ve saved your request token, but you may want to copy it just in case:
-        <span class="tag has-font-monospaced" data-test-token-value>{{controlGroupResponse.token}}</span>
-        <HoverCopyButton @alwaysShow=true @copyValue={{controlGroupResponse.token}} />
-      </p>
-    {{/if}}
 
-  {{#unless (and model.approved (or (not model.requestEntity) currentUserIsRequesting))}}
+  {{#if this.controlGroupResponse.token}}
+    <p class="control-group-token-text" data-test-token>
+      We’ve saved your request token, but you may want to copy it just in case:
+      <span class="tag has-font-monospaced" data-test-token-value>{{this.controlGroupResponse.token}}</span>
+      <HoverCopyButton @alwaysShow={{true}} @copyValue={{this.controlGroupResponse.token}} />
+    </p>
+  {{/if}}
+  {{! template-lint-configure simple-unless "warn" }}
+  {{#unless (and this.model.approved (or (not this.model.requestEntity) this.currentUserIsRequesting))}}
     <div class="field is-grouped box is-fullwidth is-bottomless">
-      {{#if model.canAuthorize}}
-        {{#if (or model.approved currentUserHasAuthorized)}}
+      {{#if this.model.canAuthorize}}
+        {{#if (or this.model.approved this.currentUserHasAuthorized)}}
           <LinkTo @route="vault.cluster.access.control-groups" class="button" data-test-back-link={{true}}>
-            <Chevron @direction="left" /> Back
+            <Chevron @direction="left" />
+            Back
           </LinkTo>
         {{else}}
           <button
             type="button"
-            class="button is-primary {{if authorize.isRunning 'is-loading'}}"
-            {{action (perform authorize)}}
+            class="button is-primary {{if this.authorize.isRunning 'is-loading'}}"
+            {{action (perform this.authorize)}}
             data-test-authorize-button
-            >
+          >
             Authorize
           </button>
         {{/if}}
       {{else}}
         <button
           type="button"
-          class="button is-primary {{if refresh.isRunning 'is-loading'}}"
-          {{action (perform refresh)}}
+          class="button is-primary {{if this.refresh.isRunning 'is-loading'}}"
+          {{action (perform this.refresh)}}
           data-test-refresh-button
-          >
+        >
           Refresh
         </button>
       {{/if}}

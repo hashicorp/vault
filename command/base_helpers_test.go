@@ -150,7 +150,7 @@ func TestTruncateToSeconds(t *testing.T) {
 	for _, tc := range cases {
 		tc := tc
 
-		t.Run(fmt.Sprintf("%s", tc.d), func(t *testing.T) {
+		t.Run(tc.d.String(), func(t *testing.T) {
 			t.Parallel()
 
 			act := truncateToSeconds(tc.d)

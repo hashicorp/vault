@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/database: Update MSSQL dependency github.com/denisenkom/go-mssqldb to v0.11.0 and include support for contained databases in MSSQL plugin
+```

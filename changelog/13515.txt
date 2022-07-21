@@ -1,0 +1,3 @@
+```release-note:improvement
+api: Allow cloning `api.Client` tokens via `api.Config.CloneToken` or `api.Client.SetCloneToken()`.
+```

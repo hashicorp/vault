@@ -11,6 +11,13 @@ description: |-
 This page contains the list of deprecations and important or breaking changes
 for Vault 0.7.0 compared to the most recent release. Please read it carefully.
 
+## Rename of `backend` config key to `storage`
+
+When configuring Vault, the `backend` key previously used to configure
+storage has now been renamed to `storage`. Vault will alias the old key to the
+new path, though users are encouraged to update their configuration to ensure
+minimal disruption in the future when the alias is removed.
+
 ## List Operations Always Use Trailing Slash
 
 Any list operation, whether via the `GET` or `LIST` HTTP verb, will now

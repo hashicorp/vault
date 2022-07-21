@@ -1,75 +1,63 @@
 <PageHeader as |p|>
   <p.top>
-    <KeyValueHeader @baseKey={{model}} @path="vault.cluster.secrets.backend.list" @mode={{mode}} @root={{root}} @showCurrent={{true}} />
+    <KeyValueHeader
+      @baseKey={{this.model}}
+      @path="vault.cluster.secrets.backend.list"
+      @mode={{this.mode}}
+      @root={{this.root}}
+      @showCurrent={{true}}
+    />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
-      {{#if (eq mode "create") }}
+      {{#if (eq this.mode "create")}}
         Create transformation
-      {{else if (eq mode 'edit')}}
+      {{else if (eq this.mode "edit")}}
         Edit transformation
       {{else}}
-        Transformation <code>{{model.id}}</code>
+        Transformation
+        <code>{{this.model.id}}</code>
       {{/if}}
     </h1>
   </p.levelLeft>
 </PageHeader>
 
-{{#if (eq mode "show")}}
+{{#if (eq this.mode "show")}}
   <Toolbar>
     <ToolbarActions>
-      {{#if (or capabilities.canUpdate capabilities.canDelete)}}
-        <div class="toolbar-separator" />
-      {{/if}}
-      {{#if capabilities.canDelete}}
-        {{#if (gt model.allowed_roles.length 0)}}
-          <ToolTip
-            @verticalPosition="above"
-            @horizontalPosition="center"
-            as |T|>
-            <T.trigger @tabindex="-1">
-              <button
-              class="toolbar-link"
-              aria-disabled="true"
-              type="button"
-              disabled
-              >
+      {{#if this.capabilities.canDelete}}
+        {{#if (gt this.model.allowed_roles.length 0)}}
+          <ToolTip @verticalPosition="above" @horizontalPosition="center" as |T|>
+            <T.Trigger @tabindex="-1">
+              <button class="toolbar-link" aria-disabled="true" type="button" disabled>
                 Delete transformation
               </button>
-            </T.trigger>
-            <T.content @class="tool-tip">
+            </T.Trigger>
+            <T.Content @defaultClass="tool-tip">
               <div class="box">
                 This transformation is in use by a role and can’t be deleted.
               </div>
-            </T.content>
+            </T.Content>
           </ToolTip>
         {{else}}
-        <button
-          class="toolbar-link"
-          onclick={{action (mut isDeleteModalActive) true}}
-          type="button"
-        >
-          Delete transformation
-        </button>
+          <button class="toolbar-link" onclick={{action (mut this.isDeleteModalActive) true}} type="button">
+            Delete transformation
+          </button>
         {{/if}}
+        <div class="toolbar-separator"></div>
       {{/if}}
-      {{#if capabilities.canUpdate }}
-        {{#if (gt model.allowed_roles.length 0)}}
+      {{#if this.capabilities.canUpdate}}
+        {{#if (gt this.model.allowed_roles.length 0)}}
           <button
             class="toolbar-link"
-            onclick={{action (mut isEditModalActive) true}}
+            onclick={{action (mut this.isEditModalActive) true}}
             type="button"
             data-test-edit-link
           >
             Edit transformation
           </button>
         {{else}}
-          <ToolbarSecretLink
-            @secret={{model.id}}
-            @mode="edit"
-            @data-test-edit-link=true
-            @replace=true
-          >
+          <ToolbarSecretLink @secret={{this.model.id}} @mode="edit" data-test-edit-link={{true}} @replace={{true}}>
             Edit transformation
           </ToolbarSecretLink>
         {{/if}}
@@ -78,51 +66,54 @@
   </Toolbar>
 {{/if}}
 
-{{#if (eq mode 'edit')}}
-  <TransformEditForm @mode={{mode}} @model={{model}} />
-{{else if (eq mode 'create')}}
-  <TransformCreateForm @mode={{mode}} @model={{model}} />
+{{#if (eq this.mode "edit")}}
+  <TransformEditForm @mode={{this.mode}} @model={{this.model}} />
+{{else if (eq this.mode "create")}}
+  <TransformCreateForm @mode={{this.mode}} @model={{this.model}} />
 {{else}}
-  <TransformShowTransformation
-    @model={{model}}
-  />
+  <TransformShowTransformation @model={{this.model}} />
 {{/if}}
 
 <ConfirmationModal
   @title="Delete transformation"
-  @onClose={{action (mut isDeleteModalActive) false}}
-  @isActive={{isDeleteModalActive}}
-  @confirmText={{model.name}}
-  @toConfirmMsg="Type {{model.name}} to confirm deleting the transformation."
+  @onClose={{action (mut this.isDeleteModalActive) false}}
+  @isActive={{this.isDeleteModalActive}}
+  @confirmText={{this.model.name}}
+  @toConfirmMsg="deleting the transformation."
   @onConfirm={{action "delete"}}
 >
   <p class="has-bottom-margin-m">
-    Deleting the <strong>{{model.name}}</strong> transformation means that the underlying keys are lost and the data encoded by the transformation are unrecoverable and cannot be decoded.
+    Deleting the
+    <strong>{{this.model.name}}</strong>
+    transformation means that the underlying keys are lost and the data encoded by the transformation are unrecoverable and
+    cannot be decoded.
   </p>
-  <MessageError @model={{model}} @errorMessage={{error}} />
+  <MessageError @model={{this.model}} @errorMessage={{this.error}} />
 </ConfirmationModal>
 
 <Modal
   @title="Edit transformation"
-  @onClose={{action (mut isEditModalActive) false}}
-  @isActive={{isEditModalActive}}
+  @onClose={{action (mut this.isEditModalActive) false}}
+  @isActive={{this.isEditModalActive}}
   @type="warning"
   @showCloseButton={{true}}
 >
   <section class="modal-card-body">
     <p>
-      You’re editing a transformation that is in use by at least one role. Editing it may mean that encode and decode operations stop working. Are you sure?
+      You’re editing a transformation that is in use by at least one role. Editing it may mean that encode and decode
+      operations stop working. Are you sure?
     </p>
   </section>
   <footer class="modal-card-foot modal-card-foot-outlined">
-    <LinkTo @route="vault.cluster.secrets.backend.edit" @model={{model.id}} @tagName="button" class="button is-primary" data-test-edit-confirm-button={{true}}>
+    <LinkTo
+      @route="vault.cluster.secrets.backend.edit"
+      @model={{this.model.id}}
+      class="button is-primary"
+      data-test-edit-confirm-button={{true}}
+    >
       Confirm
     </LinkTo>
-    <button
-      type="button"
-      class="button is-secondary"
-      onclick={{action (mut isEditModalActive) false}}
-    >
+    <button type="button" class="button is-secondary" onclick={{action (mut this.isEditModalActive) false}}>
       Cancel
     </button>
   </footer>

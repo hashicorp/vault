@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -13,14 +14,14 @@ import (
 	"sync/atomic"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-raftchunking"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 	bolt "go.etcd.io/bbolt"
@@ -154,13 +155,22 @@ func (f *FSM) openDBFile(dbPath string) error {
 		return errors.New("can not open empty filename")
 	}
 
-	freelistType, noFreelistSync := freelistOptions()
+	st, err := os.Stat(dbPath)
+	switch {
+	case err != nil && os.IsNotExist(err):
+	case err != nil:
+		return fmt.Errorf("error checking raft FSM db file %q: %v", dbPath, err)
+	default:
+		perms := st.Mode() & os.ModePerm
+		if perms&0o077 != 0 {
+			f.logger.Warn("raft FSM db file has wider permissions than needed",
+				"needed", os.FileMode(0o600), "existing", perms)
+		}
+	}
+
+	opts := boltOptions(dbPath)
 	start := time.Now()
-	boltDB, err := bolt.Open(dbPath, 0o666, &bolt.Options{
-		Timeout:        1 * time.Second,
-		FreelistType:   freelistType,
-		NoFreelistSync: noFreelistSync,
-	})
+	boltDB, err := bolt.Open(dbPath, 0o600, opts)
 	if err != nil {
 		return err
 	}
@@ -768,13 +778,21 @@ func (f *FSM) SetNoopRestore(enabled bool) {
 func (f *FSM) Restore(r io.ReadCloser) error {
 	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "restore_snapshot"}, time.Now())
 
-	if f.noopRestore == true {
+	if f.noopRestore {
 		return nil
 	}
 
 	snapshotInstaller, ok := r.(*boltSnapshotInstaller)
 	if !ok {
-		return errors.New("expected snapshot installer object")
+		wrapper, ok := r.(raft.ReadCloserWrapper)
+		if !ok {
+			return fmt.Errorf("expected ReadCloserWrapper object, got: %T", r)
+		}
+		snapshotInstallerRaw := wrapper.WrappedReadCloser()
+		snapshotInstaller, ok = snapshotInstallerRaw.(*boltSnapshotInstaller)
+		if !ok {
+			return fmt.Errorf("expected snapshot installer object, got: %T", snapshotInstallerRaw)
+		}
 	}
 
 	f.l.Lock()

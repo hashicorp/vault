@@ -9,29 +9,26 @@ import kvObjectEditor from '../../pages/components/kv-object-editor';
 import sinon from 'sinon';
 const component = create(kvObjectEditor);
 
-module('Integration | Component | kv object editor', function(hooks) {
+module('Integration | Component | kv-object-editor', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders with no initial value', async function(assert) {
-    let spy = sinon.spy();
-    this.set('onChange', spy);
-    await render(hbs`{{kv-object-editor onChange=onChange}}`);
+  hooks.beforeEach(function () {
+    this.spy = sinon.spy();
+  });
+
+  test('it renders with no initial value', async function (assert) {
+    await render(hbs`{{kv-object-editor onChange=this.spy}}`);
     assert.equal(component.rows.length, 1, 'renders a single row');
     await component.addRow();
     assert.equal(component.rows.length, 1, 'will only render row with a blank key');
   });
 
-  test('it calls onChange when the val changes', async function(assert) {
-    let spy = sinon.spy();
-    this.set('onChange', spy);
-    await render(hbs`{{kv-object-editor onChange=onChange}}`);
-    await component.rows
-      .objectAt(0)
-      .kvKey('foo')
-      .kvVal('bar');
-    assert.equal(spy.callCount, 2, 'calls onChange each time change is triggered');
+  test('it calls onChange when the val changes', async function (assert) {
+    await render(hbs`{{kv-object-editor onChange=this.spy}}`);
+    await component.rows.objectAt(0).kvKey('foo').kvVal('bar');
+    assert.equal(this.spy.callCount, 2, 'calls onChange each time change is triggered');
     assert.deepEqual(
-      spy.lastCall.args[0],
+      this.spy.lastCall.args[0],
       { foo: 'bar' },
       'calls onChange with the JSON respresentation of the data'
     );
@@ -39,7 +36,7 @@ module('Integration | Component | kv object editor', function(hooks) {
     assert.equal(component.rows.length, 2, 'adds a row when there is no blank one');
   });
 
-  test('it renders passed data', async function(assert) {
+  test('it renders passed data', async function (assert) {
     let metadata = { foo: 'bar', baz: 'bop' };
     this.set('value', metadata);
     await render(hbs`{{kv-object-editor value=value}}`);
@@ -50,30 +47,43 @@ module('Integration | Component | kv object editor', function(hooks) {
     );
   });
 
-  test('it deletes a row', async function(assert) {
-    let spy = sinon.spy();
-    this.set('onChange', spy);
-    await render(hbs`{{kv-object-editor onChange=onChange}}`);
-    await component.rows
-      .objectAt(0)
-      .kvKey('foo')
-      .kvVal('bar');
+  test('it deletes a row', async function (assert) {
+    await render(hbs`{{kv-object-editor onChange=this.spy}}`);
+    await component.rows.objectAt(0).kvKey('foo').kvVal('bar');
     await component.addRow();
     assert.equal(component.rows.length, 2);
-    assert.equal(spy.callCount, 2, 'calls onChange for editing');
+    assert.equal(this.spy.callCount, 2, 'calls onChange for editing');
     await component.rows.objectAt(0).deleteRow();
 
     assert.equal(component.rows.length, 1, 'only the blank row left');
-    assert.equal(spy.callCount, 3, 'calls onChange deleting row');
-    assert.deepEqual(spy.lastCall.args[0], {}, 'last call to onChange is an empty object');
+    assert.equal(this.spy.callCount, 3, 'calls onChange deleting row');
+    assert.deepEqual(this.spy.lastCall.args[0], {}, 'last call to onChange is an empty object');
   });
 
-  test('it shows a warning if there are duplicate keys', async function(assert) {
+  test('it shows a warning if there are duplicate keys', async function (assert) {
     let metadata = { foo: 'bar', baz: 'bop' };
     this.set('value', metadata);
-    await render(hbs`{{kv-object-editor value=value}}`);
+    await render(hbs`{{kv-object-editor value=value onChange=this.spy}}`);
     await component.rows.objectAt(0).kvKey('foo');
 
     assert.ok(component.showsDuplicateError, 'duplicate keys are allowed but an error message is shown');
+  });
+
+  test('it supports custom placeholders', async function (assert) {
+    await render(hbs`<KvObjectEditor @keyPlaceholder="foo" @valuePlaceholder="bar" />`);
+    assert.dom('input').hasAttribute('placeholder', 'foo', 'Placeholder applied to key input');
+    assert.dom('textarea').hasAttribute('placeholder', 'bar', 'Placeholder applied to value input');
+  });
+
+  test('it yields block in place of value input', async function (assert) {
+    await render(
+      hbs`
+        <KvObjectEditor>
+          <span data-test-yield></span>
+        </KvObjectEditor>
+      `
+    );
+    assert.dom('textarea').doesNotExist('Value input hidden when block is provided');
+    assert.dom('[data-test-yield]').exists('Component yields block');
   });
 });

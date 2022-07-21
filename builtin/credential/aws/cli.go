@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/awsutil"
 )
 
 type CLIHandler struct{}
@@ -44,8 +44,14 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	}
 
 	region := m["region"]
-	if region == "" {
+	switch region {
+	case "":
+		// The CLI has always defaulted to "us-east-1" if a region is not provided.
 		region = awsutil.DefaultRegion
+	case "auto":
+		// Beginning in 1.10 we also accept the "auto" value, which uses the region detection logic in
+		// awsutil.GetRegion() to determine the region. That behavior is triggered when region = "".
+		region = ""
 	}
 
 	loginData, err := awsutil.GenerateLoginData(creds, headerValue, region, hlogger)
@@ -73,8 +79,8 @@ func (h *CLIHandler) Help() string {
 Usage: vault login -method=aws [CONFIG K=V...]
 
   The AWS auth method allows users to authenticate with AWS IAM
-  credentials. The AWS IAM credentials may be specified in a number of ways,
-  listed in order of precedence below:
+  credentials. The AWS IAM credentials, and optionally the AWS region, may be 
+  specified in a number of ways, listed in order of precedence below:
 
     1. Explicitly via the command line (not recommended)
 
@@ -111,6 +117,11 @@ Configuration:
       via the -path flag in the "vault login" command, but it can be specified
       here as well. If specified here, it takes precedence over the value for
       -path. The default value is "aws".
+
+  region=<string>
+      Explicit AWS region to reach out to for authentication request signing. A value
+      of "auto" enables auto-detection of region based on the precedence described above.
+      Defaults to "us-east-1" if not specified.
 
   role=<string>
       Name of the role to request a token against

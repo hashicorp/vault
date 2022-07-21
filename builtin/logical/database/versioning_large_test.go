@@ -24,6 +24,7 @@ func TestPlugin_lifecycle(t *testing.T) {
 
 	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "mock-v4-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_MockV4", []string{}, "")
 	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "mock-v5-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_MockV5", []string{}, "")
+	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "mock-v6-database-plugin-muxed", consts.PluginTypeDatabase, "TestBackend_PluginMain_MockV6Multiplexed", []string{}, "")
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -81,8 +82,12 @@ func TestPlugin_lifecycle(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			cleanupReqs := []*logical.Request{}
-			defer cleanup(t, b, cleanupReqs)
+			var cleanupReqs []*logical.Request
+			defer func() {
+				// Do not defer cleanup directly so that we can populate the
+				// slice before the function gets executed.
+				cleanup(t, b, cleanupReqs)
+			}()
 
 			// /////////////////////////////////////////////////////////////////
 			// Configure
@@ -173,7 +178,7 @@ func TestPlugin_lifecycle(t *testing.T) {
 			// Create static role
 			staticRoleName := "static-role"
 			req = &logical.Request{
-				Operation: logical.UpdateOperation,
+				Operation: logical.CreateOperation,
 				Path:      fmt.Sprintf("static-roles/%s", staticRoleName),
 				Storage:   config.StorageView,
 				Data: map[string]interface{}{
@@ -255,6 +260,14 @@ func TestBackend_PluginMain_MockV5(t *testing.T) {
 	}
 
 	RunV5()
+}
+
+func TestBackend_PluginMain_MockV6Multiplexed(t *testing.T) {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
+		return
+	}
+
+	RunV6Multiplexed()
 }
 
 func assertNoRespData(t *testing.T, resp *logical.Response) {

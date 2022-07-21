@@ -14,7 +14,7 @@ This endpoint retrieve lease metadata.
 
 | Method | Path                 |
 | :----- | :------------------- |
-| `PUT`  | `/sys/leases/lookup` |
+| `POST` | `/sys/leases/lookup` |
 
 ### Parameters
 
@@ -33,7 +33,7 @@ This endpoint retrieve lease metadata.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/leases/lookup
 ```
@@ -87,12 +87,14 @@ cannot be renewed using this endpoint, use instead the auth/token/renew endpoint
 
 | Method | Path                |
 | :----- | :------------------ |
-| `PUT`  | `/sys/leases/renew` |
+| `POST` | `/sys/leases/renew` |
 
 ### Parameters
 
-- `lease_id` `(string: <required>)` – Specifies the ID of the lease to extend.
-  This can be specified as part of the URL or as part of the request body.
+- `lease_id` `(string: <required>)` – Specifies the ID of the lease to extend. This 
+  parameter can either be specified in a json request, as shown below, or provided as
+  a path parameter to the endpoint, like /sys/leases/revoke/:lease_id. If both are 
+  provided, the leaseID in the request json takes precedence.
 
 - `increment` `(int: 0)` – Specifies the requested amount of time (in seconds)
   to extend the lease.
@@ -111,7 +113,7 @@ cannot be renewed using this endpoint, use instead the auth/token/renew endpoint
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/leases/renew
 ```
@@ -132,11 +134,14 @@ This endpoint revokes a lease immediately.
 
 | Method | Path                 |
 | :----- | :------------------- |
-| `PUT`  | `/sys/leases/revoke` |
+| `POST` | `/sys/leases/revoke` |
 
 ### Parameters
 
-- `lease_id` `(string: <required>)` – Specifies the ID of the lease to revoke.
+- `lease_id` `(string: <required>)` – Specifies the ID of the lease to revoke. This 
+  parameter can either be specified in a json request, as shown below, or provided as
+  a path parameter to the endpoint, like /sys/leases/revoke/:lease_id. If both are 
+  provided, the leaseID in the request json takes precedence.
 - `sync` `(bool: false)` - Instead of the default behaviour of queueing the lease
   revocation, sync=true will revoke the lease immediately and only return once
   complete.
@@ -154,7 +159,7 @@ This endpoint revokes a lease immediately.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/leases/revoke
 ```
@@ -175,7 +180,7 @@ this endpoint should be tightly controlled.
 
 | Method | Path                               |
 | :----- | :--------------------------------- |
-| `PUT`  | `/sys/leases/revoke-force/:prefix` |
+| `POST` | `/sys/leases/revoke-force/:prefix` |
 
 ### Parameters
 
@@ -187,7 +192,7 @@ this endpoint should be tightly controlled.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     http://127.0.0.1:8200/v1/sys/leases/revoke-force/aws/creds
 ```
 
@@ -202,7 +207,7 @@ used to revoke very large numbers of secrets/tokens at once.
 
 | Method | Path                                |
 | :----- | :---------------------------------- |
-| `PUT`  | `/sys/leases/revoke-prefix/:prefix` |
+| `POST` | `/sys/leases/revoke-prefix/:prefix` |
 
 ### Parameters
 
@@ -217,7 +222,7 @@ used to revoke very large numbers of secrets/tokens at once.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     http://127.0.0.1:8200/v1/sys/leases/revoke-prefix/aws/creds
 ```
 

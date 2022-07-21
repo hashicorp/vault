@@ -7,7 +7,7 @@ export default ArrayProxy.extend({
     if (json && typeOf(json) !== 'object') {
       throw new Error('Vault expects data to be formatted as an JSON object.');
     }
-    let contents = Object.keys(json || []).map(key => {
+    let contents = Object.keys(json || []).map((key) => {
       let obj = {
         name: key,
         value: json[key],
@@ -49,6 +49,6 @@ export default ArrayProxy.extend({
   },
 
   isAdvanced() {
-    return this.any(item => typeof item.value !== 'string');
+    return this.any((item) => typeof item.value !== 'string');
   },
 });

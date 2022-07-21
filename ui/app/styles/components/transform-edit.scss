@@ -6,3 +6,9 @@
     padding: 14px;
   }
 }
+.transform-pattern-text div:not(:first-child) {
+  font-family: $family-monospace;
+}
+.transform-decode-formats:not(:last-child) {
+  margin-bottom: $spacing-s;
+}
