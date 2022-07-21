@@ -144,37 +144,31 @@ func validateInitParameters(core *vault.Core, req InitRequest) error {
 
 	if req.SecretShares != 0 {
 		barrierFlags = append(barrierFlags, "secret_shares")
-
 	}
 	if req.SecretThreshold != 0 {
 		barrierFlags = append(barrierFlags, "secret_threshold")
-
 	}
-	if len(req.PGPKeys) !=0{
+	if len(req.PGPKeys) != 0 {
 		barrierFlags = append(barrierFlags, "pgp_keys")
-
 	}
 	if req.RecoveryShares != 0 {
 		recoveryFlags = append(recoveryFlags, "recovery_shares")
-
 	}
 	if req.RecoveryThreshold != 0 {
 		recoveryFlags = append(recoveryFlags, "recovery_threshold")
-
 	}
-	if len(req.RecoveryPGPKeys) !=0{
+	if len(req.RecoveryPGPKeys) != 0 {
 		recoveryFlags = append(recoveryFlags, "recovery_pgp_keys")
-
 	}
 
 	switch core.SealAccess().RecoveryKeySupported() {
 	case true:
-		if len(barrierFlags)>0{
-			return fmt.Errorf("parameters %s not applicable to seal type %s", strings.Join(barrierFlags,","), core.SealAccess().BarrierType())
+		if len(barrierFlags) > 0 {
+			return fmt.Errorf("parameters %s not applicable to seal type %s", strings.Join(barrierFlags, ","), core.SealAccess().BarrierType())
 		}
 	default:
-		if len(recoveryFlags)>0 {
-			return fmt.Errorf("parameters %s not applicable to seal type %s", strings.Join(recoveryFlags,","), core.SealAccess().BarrierType())
+		if len(recoveryFlags) > 0 {
+			return fmt.Errorf("parameters %s not applicable to seal type %s", strings.Join(recoveryFlags, ","), core.SealAccess().BarrierType())
 		}
 
 	}
