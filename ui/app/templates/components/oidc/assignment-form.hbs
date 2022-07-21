@@ -43,9 +43,12 @@
         <AlertInline @type="danger" @message={{join ", " this.modelValidations.name.errors}} />
       {{/if}}
       <SearchSelect
-        @subLabel="Entities"
+        @id="entities"
+        @label="Entities"
+        @labelClass="is-label"
         @placeholder="Search"
         @models={{array "identity/entity"}}
+        @inputValue={{map-by "id" @model.entity_ids}}
         @shouldRenderName={{true}}
         @onChange={{this.onEntitiesSelect}}
         @fallbackComponent="string-list"
@@ -53,7 +56,9 @@
         data-test-search-select="entities"
       />
       <SearchSelect
-        @subLabel="Groups"
+        @id="groups"
+        @label="Groups"
+        @labelClass="is-label"
         @placeholder="Search"
         @models={{array "identity/group"}}
         @shouldRenderName={{true}}

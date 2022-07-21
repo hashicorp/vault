@@ -41,6 +41,8 @@ export default class OidcAssignmentFormComponent extends Component {
     this.flattenTargets();
     // eagerly fetch identity groups and entities for use as search select options
     this.resetTargetState();
+    // make sure you have a list of the entities and groups already selected. Will need to display them if you're in the edit view.
+    this.fetchEntitiesAndGroups();
   }
   // ARG TODO these functions are similar to the one used in MFA. Making a ticket to turn into a util/helper.
   async flattenTargets() {
@@ -67,6 +69,12 @@ export default class OidcAssignmentFormComponent extends Component {
       }
       this.searchSelectOptions = options;
     }
+  }
+
+  async fetchEntitiesAndGroups() {
+    return (await this.args.model.entity_ids).toArray().mapBy('id');
+    // (await this.args.model.entity_ids).toArray().mapBy('id');
+    // (await this.args.model.group_ids).toArray().mapBy('id');
   }
 
   get selectedTarget() {
@@ -104,14 +112,21 @@ export default class OidcAssignmentFormComponent extends Component {
   }
 
   @action
-  onEntitiesSelect(selectedIds) {
-    const entityIds = this.args.model.entity_ids;
+  async onEntitiesSelect(selectedIds) {
+    const entityIds = await this.args.model.entity_ids;
     handleHasManySelection(selectedIds, entityIds, this.store, 'identity/entity');
   }
 
   @action
-  onGroupsSelect(selectedIds) {
-    const groupIds = this.args.model.groupIds;
+  async onGroupsSelect(selectedIds) {
+    const groupIds = await this.args.model.groupIds;
     handleHasManySelection(selectedIds, groupIds, this.store, 'identity/group');
+  }
+
+  @action
+  removeTarget(target) {
+    this.targets.removeObject(target);
+    // remove target from appropriate model property
+    this.args.model[target.key].removeObject(target.value);
   }
 }
