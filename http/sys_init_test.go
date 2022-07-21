@@ -124,44 +124,21 @@ func TestSysInit_put(t *testing.T) {
 	}
 }
 
-// func TestSysInit_put_autounseal(t *testing.T) {
-// 	core := vault.TestCore(t)
-// 	testSeal := seal.NewTestSeal(nil)
-// 	ln, addr := TestServer(t, core)
-// 	defer ln.Close()
+func TestSysInit_Put_ValidateParams(t *testing.T) {
+	core := vault.TestCore(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
 
-// 	autoSeal := vault.NewAutoSeal(testSeal)
-// 	autoSeal.SetCore(core)
-
-// 	resp := testHttpPut(t, "", addr+"/v1/sys/init", map[string]interface{}{
-// 		"recovery_shares":    5,
-// 		"recovery_threshold": 3,
-// 	})
-
-// 	var actual map[string]interface{}
-// 	testResponseStatus(t, resp, 200)
-// 	testResponseBody(t, resp, &actual)
-// 	keysRaw, ok := actual["keys"]
-// 	if !ok {
-// 		t.Fatalf("no keys: %#v", actual)
-// 	}
-
-// 	if _, ok := actual["root_token"]; !ok {
-// 		t.Fatal("no root token")
-// 	}
-
-// 	for _, key := range keysRaw.([]interface{}) {
-// 		keySlice, err := hex.DecodeString(key.(string))
-// 		if err != nil {
-// 			t.Fatalf("bad: %s", err)
-// 		}
-
-// 		if _, err := core.Unseal(keySlice); err != nil {
-// 			t.Fatalf("bad: %s", err)
-// 		}
-// 	}
-
-// 	if core.Sealed() {
-// 		t.Fatal("should not be sealed")
-// 	}
-// }
+	resp := testHttpPut(t, "", addr+"/v1/sys/init", map[string]interface{}{
+		"secret_shares":      5,
+		"secret_threshold":   3,
+		"recovery_shares":    5,
+		"recovery_threshold": 3,
+	})
+	testResponseStatus(t, resp, http.StatusBadRequest)
+	body := map[string][]string{}
+	testResponseBody(t, resp, &body)
+	if body["errors"][0] != "parameters specific to auto unseal seals present" {
+		t.Fatal(body)
+	}
+}
