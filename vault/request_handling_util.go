@@ -60,6 +60,10 @@ func possiblyForwardEntityCreation(ctx context.Context, c *Core, inErr error, au
 	return entity, inErr
 }
 
+func updateLocalAlias(ctx context.Context, c *Core, auth *logical.Auth, entity *identity.Entity) error {
+	return nil
+}
+
 func possiblyForwardSaveCachedAuthResponse(ctx context.Context, c *Core, respAuth *MFACachedAuthResponse) error {
 	err := c.SaveMFAResponseAuth(respAuth)
 	if err != nil {
