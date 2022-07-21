@@ -119,7 +119,7 @@ export default class OidcAssignmentFormComponent extends Component {
 
   @action
   async onGroupsSelect(selectedIds) {
-    const groupIds = await this.args.model.groupIds;
+    const groupIds = await this.args.model.group_ids;
     handleHasManySelection(selectedIds, groupIds, this.store, 'identity/group');
   }
 
