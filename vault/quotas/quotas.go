@@ -168,6 +168,17 @@ type Manager struct {
 	lock       *sync.RWMutex
 }
 
+// QuotaLeaseInformation contains all of the information lease-count quotas require
+// from a lease to uniquely identify the lease-count quota to increment/decrement
+type QuotaLeaseInformation struct {
+	// We can determine path and namespace from leaseId
+	LeaseId string
+
+	// We need the role as it's not part of the leaseId, and is required
+	// to uniquely identify a lease count quota
+	Role string
+}
+
 // Quota represents the common properties of every quota type
 type Quota interface {
 	// allow checks the if the request is allowed by the quota type implementation.

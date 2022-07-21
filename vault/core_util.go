@@ -166,7 +166,7 @@ func (c *Core) quotaLeaseWalker(ctx context.Context, callback func(request *quot
 	return nil
 }
 
-func (c *Core) quotasHandleLeases(ctx context.Context, action quotas.LeaseAction, leaseIDs []string) error {
+func (c *Core) quotasHandleLeases(ctx context.Context, action quotas.LeaseAction, leases []*quotas.QuotaLeaseInformation) error {
 	return nil
 }
 

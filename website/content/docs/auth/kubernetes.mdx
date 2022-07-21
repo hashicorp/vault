@@ -166,7 +166,7 @@ injected service account tokens to a year to help smooth the transition to
 short-lived tokens. If you would like to disable this, set
 [--service-account-extend-token-expiration=false][k8s-extended-tokens] for
 `kube-apiserver` or specify your own `serviceAccountToken` volume mount. See
-[here](/docs/auth/jwt/oidc_providers#specifying-ttl-and-audience) for an example.
+[here](/docs/auth/jwt/oidc-providers/kubernetes#specifying-ttl-and-audience) for an example.
 
 [k8s-extended-tokens]: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/#options
 
@@ -239,7 +239,7 @@ JWT tokens Kubernetes generates can also be verified using Kubernetes as an OIDC
 provider. The JWT auth method documentation has [instructions][k8s-jwt-auth] for
 setting up JWT auth with Kubernetes as the OIDC provider.
 
-[k8s-jwt-auth]: /docs/auth/jwt/oidc_providers#kubernetes
+[k8s-jwt-auth]: /docs/auth/jwt/oidc-providers/kubernetes
 
 This solution allows you to use short-lived tokens for all clients and removes
 the need for a reviewer JWT. However, the client tokens cannot be revoked before
@@ -339,7 +339,7 @@ import (
 	"os"
 
 	vault "github.com/hashicorp/vault/api"
-  auth "github.com/hashicorp/vault/api-docs/auth/kubernetes"
+  auth "github.com/hashicorp/vault/api/auth/kubernetes"
 )
 
 // Fetches a key-value secret (kv-v2) after authenticating to Vault with a Kubernetes service account.

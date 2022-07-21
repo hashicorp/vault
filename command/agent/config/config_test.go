@@ -372,9 +372,9 @@ func TestLoadConfigFile_Bad_AgentCache_InconsisentAutoAuth(t *testing.T) {
 }
 
 func TestLoadConfigFile_Bad_AgentCache_ForceAutoAuthNoMethod(t *testing.T) {
-	_, err := LoadConfig("./test-fixtures/bad-config-cache-inconsistent-auto_auth.hcl")
+	_, err := LoadConfig("./test-fixtures/bad-config-cache-force-auto_auth.hcl")
 	if err == nil {
-		t.Fatal("LoadConfig should return an error when use_auto_auth_token=true and no auto_auth section present")
+		t.Fatal("LoadConfig should return an error when use_auto_auth_token=force and no auto_auth section present")
 	}
 }
 
@@ -728,6 +728,10 @@ func TestLoadConfigFile_Template(t *testing.T) {
 					Perms:          pointerutil.FileModePtr(0o655),
 					RightDelim:     pointerutil.StringPtr(">>"),
 					SandboxPath:    pointerutil.StringPtr("/path/on/disk/where"),
+					Exec: &ctconfig.ExecConfig{
+						Command: []string{"foo"},
+						Timeout: pointerutil.TimeDurationPtr("10s"),
+					},
 
 					Wait: &ctconfig.WaitConfig{
 						Min: pointerutil.TimeDurationPtr("10s"),
