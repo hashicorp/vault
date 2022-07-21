@@ -14,7 +14,8 @@ The `/sys/quotas/lease-count` endpoint is used to create, edit and delete lease 
 
 This endpoint is used to create a lease count quota with an identifier, `name`.
 A lease count quota must include a `max_leases` value with an optional `path`
-that can either be a namespace or mount, or a full path to restrict one specific endpoint.
+that can either be a namespace or mount, and can optionally include a path suffix following
+the mount to restrict more specific API paths.
 
 | Method | Path                            |
 | :----- | :------------------------------ |
@@ -27,7 +28,10 @@ that can either be a namespace or mount, or a full path to restrict one specific
   A blank path configures a global lease count quota. For example `namespace1/`
   adds a quota to a full namespace, `namespace1/auth/userpass` adds a quota to
   `userpass` in `namespace1`, and `namespace1/kv-v2/data/foo/bar` adds a quota to
-  a specific secret on a K/V v2 mount in `namespace1`. Updating this field on an existing
+  a specific secret on a K/V v2 mount in `namespace1`. A trailing glob (`*`) can also
+  be added as part of the path after the mount to match paths that share the same prefix
+  prior to the glob. `namespace1/kv-v2/data/foo/*` would match both `namespace1/kv-v2/data/foo/bar`
+  and `namespace1/kv-v2/data/foo/baz`. Updating this field on an existing
   quota can have "moving" effects. For example, updating `namespace1` to
   `namespace1/auth/userpass` moves this quota from being a namespace quota to a
   namespace specific mount quota. Non-global quotas are not inherited by child
