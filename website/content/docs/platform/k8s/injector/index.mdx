@@ -20,6 +20,19 @@ the request. This functionality is provided by the [vault-k8s](https://github.co
 project and can be automatically installed and configured using the
 [Vault Helm](https://github.com/hashicorp/vault-helm) chart.
 
+## Supported Kubernetes Versions
+
+Each Vault Agent Injector release supports running on a rolling set of the most
+recent [Kubernetes minor releases][k8s-releases]. The following table documents
+the versions tested. Each version of the injector may work with other versions
+of Kubernetes, but those are not supported.
+
+Vault Agent Injector versions | Kubernetes minor versions tested
+------------------------------|-----------------------------------
+0.16.1                        | 1.19, 1.20, 1.21, 1.22, 1.23, 1.24
+
+[k8s-releases]: https://kubernetes.io/releases/
+
 ## Overview
 
 The Vault Agent Injector works by intercepting pod `CREATE` and `UPDATE`
