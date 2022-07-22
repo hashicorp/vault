@@ -494,7 +494,7 @@ func TestActivityLog_StoreAndReadHyperloglog(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error storing hyperloglog in storage: %v", err)
 	}
-	fetchedHll := a.CreateOrFetchHyperlogLog(ctx, currentMonth)
+	fetchedHll, err := a.CreateOrFetchHyperlogLog(ctx, currentMonth)
 	// check the distinct count stored from hll
 	if fetchedHll.Estimate() != 4 {
 		t.Fatalf("wrong number of distinct elements: expected: 5 actual: %v", fetchedHll.Estimate())

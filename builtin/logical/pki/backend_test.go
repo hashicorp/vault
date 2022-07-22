@@ -2486,6 +2486,40 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 	}
 }
 
+func TestBackend_ConsulSignLeafWithLegacyRole(t *testing.T) {
+	// create the backend
+	b, s := createBackendWithStorage(t)
+
+	// generate root
+	data, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "myvault.com",
+	})
+	require.NoError(t, err, "failed generating internal root cert")
+	rootCaPem := data.Data["certificate"].(string)
+
+	// Create a signing role like Consul did with the default args prior to Vault 1.10
+	_, err = CBWrite(b, s, "roles/test", map[string]interface{}{
+		"allow_any_name":         true,
+		"allowed_serial_numbers": []string{"MySerialNumber"},
+		"key_type":               "any",
+		"key_bits":               "2048",
+		"signature_bits":         "256",
+	})
+	require.NoError(t, err, "failed creating legacy role")
+
+	_, csrPem := generateTestCsr(t, certutil.ECPrivateKey, 256)
+	data, err = CBWrite(b, s, "sign/test", map[string]interface{}{
+		"csr": csrPem,
+	})
+	require.NoError(t, err, "failed signing csr")
+	certAsPem := data.Data["certificate"].(string)
+
+	signedCert := parseCert(t, certAsPem)
+	rootCert := parseCert(t, rootCaPem)
+	requireSignedBy(t, signedCert, rootCert.PublicKey)
+}
+
 func TestBackend_SignSelfIssued(t *testing.T) {
 	// create the backend
 	b, storage := createBackendWithStorage(t)
@@ -2602,7 +2636,8 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signingBundle, err := fetchCAInfo(context.Background(), b, &logical.Request{Storage: storage}, defaultRef, ReadOnlyUsage)
+	sc := b.makeStorageContext(context.Background(), storage)
+	signingBundle, err := sc.fetchCAInfo(defaultRef, ReadOnlyUsage)
 	if err != nil {
 		t.Fatal(err)
 	}

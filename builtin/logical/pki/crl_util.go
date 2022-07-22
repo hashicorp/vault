@@ -113,8 +113,10 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 	var err error
 	var issuers []issuerID
 
+	sc := b.makeStorageContext(ctx, req.Storage)
+
 	if !b.useLegacyBundleCaStorage() {
-		issuers, err = listIssuers(ctx, req.Storage)
+		issuers, err = sc.listIssuers()
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("could not fetch issuers list: %v", err)), nil
 		}
@@ -125,7 +127,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 	}
 
 	for _, issuer := range issuers {
-		_, bundle, caErr := fetchCertBundleByIssuerId(ctx, req.Storage, issuer, false)
+		_, bundle, caErr := sc.fetchCertBundleByIssuerId(issuer, false)
 		if caErr != nil {
 			switch caErr.(type) {
 			case errutil.UserError:
@@ -285,8 +287,10 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 	var err error
 	var issuers []issuerID
 	var wasLegacy bool
+	sc := b.makeStorageContext(ctx, req.Storage)
+
 	if !b.useLegacyBundleCaStorage() {
-		issuers, err = listIssuers(ctx, req.Storage)
+		issuers, err = sc.listIssuers()
 		if err != nil {
 			return fmt.Errorf("error building CRL: while listing issuers: %v", err)
 		}
@@ -298,7 +302,7 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 		wasLegacy = true
 	}
 
-	config, err := getIssuersConfig(ctx, req.Storage)
+	config, err := sc.getIssuersConfig()
 	if err != nil {
 		return fmt.Errorf("error building CRLs: while getting the default config: %v", err)
 	}
@@ -315,7 +319,7 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 	for _, issuer := range issuers {
 		// We don't strictly need this call, but by requesting the bundle, the
 		// legacy path is automatically ignored.
-		thisEntry, _, err := fetchCertBundleByIssuerId(ctx, req.Storage, issuer, false)
+		thisEntry, _, err := sc.fetchCertBundleByIssuerId(issuer, false)
 		if err != nil {
 			return fmt.Errorf("error building CRLs: unable to fetch specified issuer (%v): %v", issuer, err)
 		}
@@ -347,7 +351,7 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 
 	// Fetch the cluster-local CRL mapping so we know where to write the
 	// CRLs.
-	crlConfig, err := getLocalCRLConfig(ctx, req.Storage)
+	crlConfig, err := sc.getLocalCRLConfig()
 	if err != nil {
 		return fmt.Errorf("error building CRLs: unable to fetch cluster-local CRL configuration: %v", err)
 	}
@@ -413,7 +417,7 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 			crlConfig.CRLNumberMap[crlIdentifier] += 1
 
 			// Lastly, build the CRL.
-			if err := buildCRL(ctx, b, req, forceNew, representative, revokedCerts, crlIdentifier, crlNumber); err != nil {
+			if err := buildCRL(sc, forceNew, representative, revokedCerts, crlIdentifier, crlNumber); err != nil {
 				return fmt.Errorf("error building CRLs: unable to build CRL for issuer (%v): %v", representative, err)
 			}
 		}
@@ -462,7 +466,7 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 	// Finally, persist our potentially updated local CRL config. Only do this
 	// if we didn't have a legacy CRL bundle.
 	if !wasLegacy {
-		if err := setLocalCRLConfig(ctx, req.Storage, crlConfig); err != nil {
+		if err := sc.setLocalCRLConfig(crlConfig); err != nil {
 			return fmt.Errorf("error building CRLs: unable to persist updated cluster-local CRL config: %v", err)
 		}
 	}
@@ -569,13 +573,13 @@ func getRevokedCertEntries(ctx context.Context, req *logical.Request, issuerIDCe
 
 // Builds a CRL by going through the list of revoked certificates and building
 // a new CRL with the stored revocation times and serial numbers.
-func buildCRL(ctx context.Context, b *backend, req *logical.Request, forceNew bool, thisIssuerId issuerID, revoked []pkix.RevokedCertificate, identifier crlID, crlNumber int64) error {
-	crlInfo, err := b.CRL(ctx, req.Storage)
+func buildCRL(sc *storageContext, forceNew bool, thisIssuerId issuerID, revoked []pkix.RevokedCertificate, identifier crlID, crlNumber int64) error {
+	crlInfo, err := sc.Backend.CRL(sc.Context, sc.Storage)
 	if err != nil {
 		return errutil.InternalError{Err: fmt.Sprintf("error fetching CRL config information: %s", err)}
 	}
 
-	crlLifetime := b.crlLifetime
+	crlLifetime := sc.Backend.crlLifetime
 	var revokedCerts []pkix.RevokedCertificate
 
 	if crlInfo.Expiry != "" {
@@ -603,7 +607,7 @@ func buildCRL(ctx context.Context, b *backend, req *logical.Request, forceNew bo
 	revokedCerts = revoked
 
 WRITE:
-	signingBundle, caErr := fetchCAInfoByIssuerId(ctx, b, req, thisIssuerId, CRLSigningUsage)
+	signingBundle, caErr := sc.fetchCAInfoByIssuerId(thisIssuerId, CRLSigningUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -632,7 +636,7 @@ WRITE:
 		writePath = legacyCRLPath
 	}
 
-	err = req.Storage.Put(ctx, &logical.StorageEntry{
+	err = sc.Storage.Put(sc.Context, &logical.StorageEntry{
 		Key:   writePath,
 		Value: crlBytes,
 	})

@@ -62,11 +62,9 @@ del /f "%_GO_ENV_TMP_FILE%" 2>nul
 :build
 REM Build!
 echo ==^> Building...
-gox^
- -os="%_XC_OS%"^
- -arch="%_XC_ARCH%"^
+go build^
  -ldflags "-X github.com/hashicorp/vault/sdk/version.GitCommit=%_GIT_COMMIT%%_GIT_DIRTY% -X github.com/hashicorp/vault/sdk/version.BuildDate=%_BUILD_DATE%"^
- -output "pkg/{{.OS}}_{{.Arch}}/vault"^
+ -o "bin/vault.exe"^
  .
 
 if %ERRORLEVEL% equ 1 set %_EXITCODE%=1
@@ -86,14 +84,6 @@ del /f "%_GO_ENV_TMP_FILE%" 2>nul
 go env GOOS >"%_GO_ENV_TMP_FILE%"
 set /p _GOOS=<"%_GO_ENV_TMP_FILE%"
 del /f "%_GO_ENV_TMP_FILE%" 2>nul
-
-REM Copy our OS/Arch to the bin/ directory
-set _DEV_PLATFORM=pkg\%_GOOS%_%_GOARCH%
-
-for /r %%f in (%_DEV_PLATFORM%) do (
-	copy /b /y %%f bin\ >nul
-	copy /b /y %%f %_GOPATH%\bin\ >nul
-)
 
 REM TODO(ceh): package dist
 
