@@ -80,9 +80,9 @@ Consul version.
 
 ### Parameters for Consul versions 1.11 and above
 
-- `partition` `(string: "default")` - Specifies the Consul admin partition in which the token is generated.
+- `partition` `(string: "")` - Specifies the Consul admin partition in which the token is generated.
   The partition must exist, and the Consul policies or roles assigned to the
-  Vault role must also exist inside the given partition. If it's not provided, the partition `default`
+  Vault role must also exist inside the given partition. If not provided, the partition `default`
   is used.
 
 To create a client token within a particular Consul admin partition:
@@ -95,21 +95,8 @@ To create a client token within a particular Consul admin partition:
 
 ### Parameters for Consul versions 1.8 and above
 
-- `consul_namespace` `(string: "default")` - Specifies the Consul namespace in which the token is generated.
-  The namespace must exist, and the Consul policies or roles assigned
-  to the Vault role must also exist inside the given Consul namespace. If not provided, the
-  namespace `default` is used.
-
 - `node_identities` `(list: <node identity or identities>)` - The list of node identities to assign to the generated
   token. This may be a comma-separated list to attach multiple node identities to a token.
-
-To create a client token within a particular Consul namespace:
-
-```json
-{
-  "consul_namespace": "ns1"
-}
-```
 
 To create a client token with node identities attached:
 
@@ -119,6 +106,20 @@ To create a client token with node identities attached:
       "client-1:dc1",
       "client-2:dc1"
     ]
+}
+```
+
+### Parameters for Consul versions 1.7 and above
+
+- `consul_namespace` `(string: "")` - Specifies the Consul namespace in which the token is generated.
+  The namespace must exist, and the Consul policies or roles assigned to the Vault role must also exist
+  inside the given Consul namespace. If not provided, the namespace `default` is used.
+
+To create a client token within a particular Consul namespace:
+
+```json
+{
+  "consul_namespace": "ns1"
 }
 ```
 

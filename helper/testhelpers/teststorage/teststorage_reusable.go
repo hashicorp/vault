@@ -18,7 +18,6 @@ import (
 // seal migration, wherein a given physical backend must be re-used as several
 // test clusters are sequentially created, tested, and discarded.
 type ReusableStorage struct {
-
 	// IsRaft specifies whether the storage is using a raft backend.
 	IsRaft bool
 
@@ -169,9 +168,11 @@ func makeRaftDir(t testing.T) string {
 func makeReusableRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, raftDir string, addressProvider raftlib.ServerAddressProvider, ha bool) *vault.PhysicalBackendBundle {
 	nodeID := fmt.Sprintf("core-%d", coreIdx)
 	conf := map[string]string{
-		"path":                   raftDir,
-		"node_id":                nodeID,
-		"performance_multiplier": "8",
+		"path":                         raftDir,
+		"node_id":                      nodeID,
+		"performance_multiplier":       "8",
+		"autopilot_reconcile_interval": "300ms",
+		"autopilot_update_interval":    "100ms",
 	}
 
 	backend, err := raft.NewRaftBackend(conf, logger)

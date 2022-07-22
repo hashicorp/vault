@@ -45,11 +45,20 @@ func pathLogin(b *backend) *framework.Path {
 }
 
 func (b *backend) pathLoginResolveRole(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	certRole := data.Get("name").(string)
-	if certRole == "" {
-		return logical.ErrorResponse("Role not present in this request"), nil
+	var matched *ParsedCert
+	if verifyResp, resp, err := b.verifyCredentials(ctx, req, data); err != nil {
+		return nil, err
+	} else if resp != nil {
+		return resp, nil
+	} else {
+		matched = verifyResp
 	}
-	return logical.ResolveRoleResponse(certRole)
+
+	if matched == nil {
+		return logical.ErrorResponse("no certificate was matched by this request"), nil
+	}
+
+	return logical.ResolveRoleResponse(matched.Entry.Name)
 }
 
 func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {

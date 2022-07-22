@@ -83,6 +83,8 @@ e is 65537 (0x10001)
 
 3. Create the certificate
 
+   ~> **Important Note:** If you are using EKS, certificate signing requirements have changed.  As per the AWS [certificate signing](https://docs.aws.amazon.com/eks/latest/userguide/cert-signing.html) documentation, EKS version `1.22` and later now requires the `signerName` to be `beta.eks.amazonaws.com/app-serving`, otherwise, the CSR will be approved but the certificate will not be issued.
+
    1. Create a file `${TMPDIR}/csr.yaml` with the following contents:
 
       ```bash

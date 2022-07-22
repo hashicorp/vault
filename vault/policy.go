@@ -472,9 +472,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 		}
 		if pc.MFAMethodsHCL != nil {
 			pc.Permissions.MFAMethods = make([]string, len(pc.MFAMethodsHCL))
-			for idx, item := range pc.MFAMethodsHCL {
-				pc.Permissions.MFAMethods[idx] = item
-			}
+			copy(pc.Permissions.MFAMethods, pc.MFAMethodsHCL)
 		}
 		if pc.ControlGroupHCL != nil {
 			pc.Permissions.ControlGroup = new(ControlGroup)
