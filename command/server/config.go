@@ -214,7 +214,6 @@ ui = true
 }
 
 func CleanupTLS(dir string) {
-
 }
 
 // Storage is the underlying storage configuration for the server.
