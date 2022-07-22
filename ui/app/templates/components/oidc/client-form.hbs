@@ -57,17 +57,19 @@
         />
       </div>
       {{#if (eq this.radioCardGroupValue "limited")}}
-        <SearchSelect
+        <SearchSelectWithModal
           @id="assignments"
-          @label="Assignment name"
+          @label="assignment"
           @labelClass="is-label"
           @subText="Search for an existing assignment, or type a new name to create it."
-          @models={{array "oidc/assignment"}}
+          @model="oidc/assignment"
           @inputValue={{map-by "id" @model.assignments}}
           @onChange={{this.handleSearchSelect}}
           {{! since this is the "limited" radio select option we do not want to include 'allow_all' }}
           @removeOptions={{array "allow_all"}}
           @fallbackComponent="string-list"
+          @modalFormComponent="oidc/assignment-form"
+          @modalSubtext="Use assignment to specify which Vault entities and groups are allowed to authenticate."
         />
       {{/if}}
     {{/if}}

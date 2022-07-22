@@ -38,7 +38,8 @@ export default class OidcClientForm extends Component {
       assignmentIds.length === 0 || assignmentIds.includes('allow_all') ? 'allow_all' : 'limited';
   }
 
-  @action handleSearchSelect(selectedIds) {
+  @action
+  handleSearchSelect(selectedIds) {
     this.selectedAssignments = this.radioCardGroupValue === 'allow_all' ? ['allow_all'] : selectedIds;
   }
 
@@ -53,9 +54,9 @@ export default class OidcClientForm extends Component {
         this.args.model
       );
     } else {
-      // search select hasn't queried the assignments unless the "limit" radio select has been interacted with
+      // search select hasn't queried the assignments unless the "limit" radio button is selected
       // so need to make a network request to fetch allow_all record
-      // move to init?
+      // move to init, within conditional if model isNew?
       const allowAllRecord = await this.store.findRecord('oidc/assignment', 'allow_all');
       modelAssignments.addObject(allowAllRecord);
       this.args.model.save();

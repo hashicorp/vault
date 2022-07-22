@@ -74,7 +74,7 @@ export default class OidcAssignmentFormComponent extends Component {
   }
 
   @task
-  *save() {
+  *save(event) {
     event.preventDefault();
     try {
       const { isValid, state } = this.args.model.validate();
@@ -82,7 +82,9 @@ export default class OidcAssignmentFormComponent extends Component {
       if (isValid) {
         yield this.args.model.save();
         this.flashMessages.success('Successfully created an assignment');
-        this.args.onSave();
+        // this form is sometimes used inline, so we want to pass the model back to the
+        // parent component
+        this.args.onSave(this.args.model);
       }
     } catch (error) {
       const message = error.errors ? error.errors.join('. ') : error.message;

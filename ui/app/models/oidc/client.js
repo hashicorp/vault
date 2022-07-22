@@ -42,7 +42,6 @@ export default class OidcClientModel extends Model {
 
   // >> MORE OPTIONS TOGGLE <<
 
-  // might be a good candidate for using @belongsTo relationship?
   @attr('string', {
     label: 'Signing key',
     subText: 'Add a key to sign and verify the JSON web tokens (JWT). This cannot be edited later.',
