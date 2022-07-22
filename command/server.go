@@ -260,6 +260,8 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Name:    "dev-tls-cert-dir",
 		Target:  &c.flagDevTLSCertDir,
 		Default: "",
+		Usage: "Directory where generated TLS files are created if `-dev-tls` is " +
+			"specified. If left unset, files are generated in a temporary directory.",
 	})
 
 	f.StringVar(&StringVar{
