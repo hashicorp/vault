@@ -6,7 +6,7 @@ steps:
       working_directory: ~/
       name: Setup Semgrep
       command: |
-        apk add --no-cache python3 py3-pip make
+        apk add --no-cache python3 python3-dev py3-pip make gcc g++
         python3 -m pip install --user semgrep==0.106.0
         export PATH="$HOME/.local/bin:$PATH"
 
