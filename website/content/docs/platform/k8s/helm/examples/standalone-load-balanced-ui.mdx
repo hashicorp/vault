@@ -10,14 +10,9 @@ description: |-
 
 ~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3.6+ with this chart.
 
-The below `values.yaml` or Terraform configuration can be used to set up a single server Vault cluster with a LoadBalancer to allow external access to the UI and API.
-
-<CodeTabs>
-
-<CodeBlockConfig>
+The below `values.yaml` can be used to set up a single server Vault cluster with a LoadBalancer to allow external access to the UI and API.
 
 ```yaml
-# values.yaml
 server:
   standalone:
     enabled: true
@@ -46,70 +41,3 @@ ui:
   enabled: true
   serviceType: LoadBalancer
 ```
-
-</CodeBlockConfig>
-
-<CodeBlockConfig>
-
-```hcl
-resource "helm_release" "vault" {
-  name       = "vault"
-  repository = "https://helm.releases.hashicorp.com"
-  chart      = "vault"
-
-  set {
-    name  = "server.standalone.enabled"
-    value = "true"
-  }
-  set {
-    name = "server.standalone.config"
-    value = <<EOT
-ui = true
-
-listener "tcp" {
-  tls_disable = 1
-  address = "[::]:8200"
-  cluster_address = "[::]:8201"
-}
-storage "file" {
-  path = "/vault/data"
-}
-EOT
-  }
-
-  set {
-    name  = "server.service.enabled"
-    value = "true"
-  }
-
-  set {
-    name  = "server.dataStorage.enabled"
-    value = "true"
-  }
-  set {
-    name  = "server.dataStorage.size"
-    value = "10Gi"
-  }
-  set {
-    name  = "server.dataStorage.storageClass"
-    value = "null"
-  }
-  set {
-    name  = "server.dataStorage.accessMode"
-    value = "ReadWriteOnce"
-  }
-
-  set {
-    name  = "ui.enabled"
-    value = "true"
-  }
-  set {
-    name  = "ui.serviceType"
-    value = "LoadBalancer"
-  }
-}
-```
-
-</CodeBlockConfig>
-
-</CodeTabs>
