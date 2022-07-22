@@ -239,9 +239,7 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 				if existingPerms.MFAMethods == nil {
 					existingPerms.MFAMethods = pc.Permissions.MFAMethods
 				} else {
-					for _, method := range pc.Permissions.MFAMethods {
-						existingPerms.MFAMethods = append(existingPerms.MFAMethods, method)
-					}
+					existingPerms.MFAMethods = append(existingPerms.MFAMethods, pc.Permissions.MFAMethods...)
 				}
 				existingPerms.MFAMethods = strutil.RemoveDuplicates(existingPerms.MFAMethods, false)
 			}
@@ -253,9 +251,7 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 					if existingPerms.ControlGroup == nil {
 						existingPerms.ControlGroup = pc.Permissions.ControlGroup
 					} else {
-						for _, authz := range pc.Permissions.ControlGroup.Factors {
-							existingPerms.ControlGroup.Factors = append(existingPerms.ControlGroup.Factors, authz)
-						}
+						existingPerms.ControlGroup.Factors = append(existingPerms.ControlGroup.Factors, pc.Permissions.ControlGroup.Factors...)
 					}
 				}
 			}
