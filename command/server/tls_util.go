@@ -6,16 +6,15 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"fmt"
 	"math/big"
 	"net"
 	"os"
-	"strings"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 )
 
 type CaCert struct {
@@ -38,6 +37,11 @@ func GenerateCert(caCertTemplate *x509.Certificate, caSigner crypto.Signer) (str
 		return "", "", err
 	}
 
+	signerKeyId, err := certutil.GetSubjKeyID(signer)
+	if err != nil {
+		return "", "", err
+	}
+
 	hostname, err := os.Hostname()
 	if err != nil {
 		return "", "", err
@@ -49,15 +53,16 @@ func GenerateCert(caCertTemplate *x509.Certificate, caSigner crypto.Signer) (str
 
 	// Create the leaf cert
 	template := x509.Certificate{
-		SerialNumber:          sn,
-		Subject:               pkix.Name{CommonName: hostname},
-		BasicConstraintsValid: true,
-		KeyUsage:              x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
-		NotAfter:              time.Now().Add(365 * 24 * time.Hour),
-		NotBefore:             time.Now().Add(-1 * time.Minute),
-		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
-		DNSNames:              []string{"localhost", "localhost4", "localhost6", "localhost.localdomain"},
+		SerialNumber:   sn,
+		Subject:        pkix.Name{CommonName: hostname},
+		KeyUsage:       x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:    []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
+		NotAfter:       time.Now().Add(365 * 24 * time.Hour),
+		NotBefore:      time.Now().Add(-1 * time.Minute),
+		IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
+		DNSNames:       []string{"localhost", "localhost4", "localhost6", "localhost.localdomain"},
+		AuthorityKeyId: caCertTemplate.AuthorityKeyId,
+		SubjectKeyId:   signerKeyId,
 	}
 
 	bs, err := x509.CreateCertificate(
@@ -84,13 +89,13 @@ func GenerateCA() (*CaCert, error) {
 		return nil, err
 	}
 
-	// The serial number for the cert
-	sn, err := serialNumber()
+	signerKeyId, err := certutil.GetSubjKeyID(signer)
 	if err != nil {
 		return nil, err
 	}
 
-	signerKeyId, err := keyId(signer.Public())
+	// The serial number for the cert
+	sn, err := serialNumber()
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +103,7 @@ func GenerateCA() (*CaCert, error) {
 	// Create the CA cert
 	template := x509.Certificate{
 		SerialNumber:          sn,
-		Subject:               pkix.Name{CommonName: "Vault CA"},
+		Subject:               pkix.Name{CommonName: "Vault Dev CA"},
 		BasicConstraintsValid: true,
 		KeyUsage:              x509.KeyUsageCertSign,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
@@ -153,26 +158,4 @@ func privateKey() (crypto.Signer, string, error) {
 // serialNumber generates a new random serial number.
 func serialNumber() (*big.Int, error) {
 	return rand.Int(rand.Reader, (&big.Int{}).Exp(big.NewInt(2), big.NewInt(159), nil))
-}
-
-// keyId returns a x509 KeyId from the given signing key. The key must be
-// an *ecdsa.PublicKey currently, but may support more types in the future.
-func keyId(raw interface{}) ([]byte, error) {
-	switch raw.(type) {
-	case *ecdsa.PublicKey:
-	default:
-		return nil, fmt.Errorf("invalid key type: %T", raw)
-	}
-
-	// This is not standard; RFC allows any unique identifier as long as they
-	// match in subject/authority chains but suggests specific hashing of DER
-	// bytes of public key including DER tags.
-	bs, err := x509.MarshalPKIXPublicKey(raw)
-	if err != nil {
-		return nil, err
-	}
-
-	// String formatted
-	kID := sha256.Sum256(bs)
-	return []byte(strings.Replace(fmt.Sprintf("% x", kID), " ", ":", -1)), nil
 }
