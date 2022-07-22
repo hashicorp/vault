@@ -213,9 +213,6 @@ ui = true
 	return parsed, nil
 }
 
-func CleanupTLS(dir string) {
-}
-
 // Storage is the underlying storage configuration for the server.
 type Storage struct {
 	Type              string
