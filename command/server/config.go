@@ -151,6 +151,67 @@ ui = true
 	return parsed, nil
 }
 
+// DevTLSConfig is a Config that is used for dev tls mode of Vault.
+func DevTLSConfig(storageType string) (*Config, string, error) {
+	dir, err := os.MkdirTemp("", "vault-tls")
+	if err != nil {
+		return nil, "", err
+	}
+
+	ca, err := GenerateCA()
+	if err != nil {
+		return nil, "", err
+	}
+
+	cert, key, err := GenerateCert(ca.Template, ca.Signer)
+	if err != nil {
+		return nil, "", err
+	}
+
+	if err := os.WriteFile(fmt.Sprintf("%s/vault-ca.pem", dir), []byte(ca.PEM), 0o644); err != nil {
+		return nil, "", err
+	}
+
+	if err := os.WriteFile(fmt.Sprintf("%s/vault-cert.pem", dir), []byte(cert), 0o644); err != nil {
+		return nil, "", err
+	}
+
+	if err := os.WriteFile(fmt.Sprintf("%s/vault-key.pem", dir), []byte(key), 0o644); err != nil {
+		return nil, "", err
+	}
+
+	hclStr := `
+disable_mlock = true
+
+listener "tcp" {
+	address = "[::]:8200"
+	tls_cert_file = "%s/vault-cert.pem"
+	tls_key_file = "%s/vault-key.pem"
+	proxy_protocol_behavior = "allow_authorized"
+	proxy_protocol_authorized_addrs = "[::]:8200"
+}
+
+telemetry {
+	prometheus_retention_time = "24h"
+	disable_hostname = true
+}
+enable_raw_endpoint = true
+
+storage "%s" {
+}
+
+ui = true
+`
+
+	hclStr = fmt.Sprintf(hclStr, dir, dir, storageType)
+	parsed, err := ParseConfig(hclStr, "")
+	if err != nil {
+		return nil, "", err
+	}
+
+	return parsed, dir, nil
+}
+
 // Storage is the underlying storage configuration for the server.
 type Storage struct {
 	Type              string
