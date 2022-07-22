@@ -257,11 +257,9 @@ func (c *ServerCommand) Flags() *FlagSets {
 	})
 
 	f.StringVar(&StringVar{
-		Name:       "dev-tls-cert-dir",
-		Target:     &c.flagDevTLSCertDir,
-		Default:    "",
-		Completion: complete.PredictDirs("*"),
-		Hidden:     true,
+		Name:    "dev-tls-cert-dir",
+		Target:  &c.flagDevTLSCertDir,
+		Default: "",
 	})
 
 	f.StringVar(&StringVar{
