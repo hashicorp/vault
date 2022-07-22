@@ -1116,17 +1116,17 @@ func (c *ServerCommand) Run(args []string) int {
 			config, err = server.DevTLSConfig(devStorageType, certDir)
 
 			defer func() {
-				err := os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultCAFilename))
+				err := os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevCAFilename))
 				if err != nil {
 					c.UI.Error(err.Error())
 				}
 
-				err = os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultCertFilename))
+				err = os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevCertFilename))
 				if err != nil {
 					c.UI.Error(err.Error())
 				}
 
-				err = os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultKeyFilename))
+				err = os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevKeyFilename))
 				if err != nil {
 					c.UI.Error(err.Error())
 				}
