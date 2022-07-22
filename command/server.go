@@ -1100,7 +1100,7 @@ func (c *ServerCommand) Run(args []string) int {
 		if c.flagDevTLS {
 			if c.flagDevTLSCertDir != "" {
 				_, err := os.Stat(c.flagDevTLSCertDir)
-				if err != nil && !os.IsNotExist(err) {
+				if err != nil {
 					c.UI.Error(err.Error())
 					return 1
 				}
@@ -1115,9 +1115,23 @@ func (c *ServerCommand) Run(args []string) int {
 			}
 			config, err = server.DevTLSConfig(devStorageType, certDir)
 
-			defer os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultCAFilename))
-			defer os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultCertFilename))
-			defer os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultKeyFilename))
+			defer func() {
+				err := os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultCAFilename))
+				if err != nil {
+					c.UI.Error(err.Error())
+				}
+
+				err = os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultCertFilename))
+				if err != nil {
+					c.UI.Error(err.Error())
+				}
+
+				err = os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultKeyFilename))
+				if err != nil {
+					c.UI.Error(err.Error())
+				}
+			}()
+
 		} else {
 			config, err = server.DevConfig(devStorageType)
 		}
