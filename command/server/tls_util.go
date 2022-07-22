@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"math/big"
 	"net"
+	"os"
 	"strings"
 	"time"
 )
@@ -37,16 +38,26 @@ func GenerateCert(caCertTemplate *x509.Certificate, caSigner crypto.Signer) (str
 		return "", "", err
 	}
 
+	hostname, err := os.Hostname()
+	if err != nil {
+		return "", "", err
+	}
+
+	if hostname == "" {
+		hostname = "localhost"
+	}
+
 	// Create the leaf cert
 	template := x509.Certificate{
 		SerialNumber:          sn,
-		Subject:               pkix.Name{CommonName: "Vault server"},
+		Subject:               pkix.Name{CommonName: hostname},
 		BasicConstraintsValid: true,
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		KeyUsage:              x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 		NotAfter:              time.Now().Add(365 * 24 * time.Hour),
 		NotBefore:             time.Now().Add(-1 * time.Minute),
 		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
+		DNSNames:              []string{"localhost", "localhost4", "localhost6", "localhost.localdomain"},
 	}
 
 	bs, err := x509.CreateCertificate(
@@ -89,8 +100,8 @@ func GenerateCA() (*CaCert, error) {
 		SerialNumber:          sn,
 		Subject:               pkix.Name{CommonName: "Vault CA"},
 		BasicConstraintsValid: true,
-		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		KeyUsage:              x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 		IsCA:                  true,
 		NotAfter:              time.Now().Add(10 * 365 * 24 * time.Hour),
 		NotBefore:             time.Now().Add(-1 * time.Minute),
