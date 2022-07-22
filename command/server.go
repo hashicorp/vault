@@ -118,6 +118,7 @@ type ServerCommand struct {
 	flagRecovery           bool
 	flagDev                bool
 	flagDevTLS             bool
+	flagDevTLSCertDir      string
 	flagDevRootTokenID     string
 	flagDevListenAddr      string
 	flagDevNoStoreToken    bool
@@ -253,6 +254,14 @@ func (c *ServerCommand) Flags() *FlagSets {
 			"starts unsealed, with a generated TLS CA, certificate and key. " +
 			"As the name implies, do not run \"dev-tls\" mode in " +
 			"production.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:       "dev-tls-cert-dir",
+		Target:     &c.flagDevTLSCertDir,
+		Default:    "",
+		Completion: complete.PredictDirs("*"),
+		Hidden:     true,
 	})
 
 	f.StringVar(&StringVar{
@@ -1089,7 +1098,26 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 
 		if c.flagDevTLS {
-			config, certDir, err = server.DevTLSConfig(devStorageType)
+			if c.flagDevTLSCertDir != "" {
+				_, err := os.Stat(c.flagDevTLSCertDir)
+				if err != nil && !os.IsNotExist(err) {
+					c.UI.Error(err.Error())
+					return 1
+				}
+
+				certDir = c.flagDevTLSCertDir
+			} else {
+				certDir, err = os.MkdirTemp("", "vault-tls")
+				if err != nil {
+					c.UI.Error(err.Error())
+					return 1
+				}
+			}
+			config, err = server.DevTLSConfig(devStorageType, certDir)
+
+			defer os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultCAFilename))
+			defer os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultCertFilename))
+			defer os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultKeyFilename))
 		} else {
 			config, err = server.DevConfig(devStorageType)
 		}

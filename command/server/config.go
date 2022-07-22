@@ -22,6 +22,12 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
+const (
+	VaultCAFilename   = "vault-ca.pem"
+	VaultCertFilename = "vault-cert.pem"
+	VaultKeyFilename  = "vault-key.pem"
+)
+
 var entConfigValidate = func(_ *Config, _ string) []configutil.ConfigError {
 	return nil
 }
@@ -152,32 +158,27 @@ ui = true
 }
 
 // DevTLSConfig is a Config that is used for dev tls mode of Vault.
-func DevTLSConfig(storageType string) (*Config, string, error) {
-	dir, err := os.MkdirTemp("", "vault-tls")
-	if err != nil {
-		return nil, "", err
-	}
-
+func DevTLSConfig(storageType, certDir string) (*Config, error) {
 	ca, err := GenerateCA()
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
 	cert, key, err := GenerateCert(ca.Template, ca.Signer)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
-	if err := os.WriteFile(fmt.Sprintf("%s/vault-ca.pem", dir), []byte(ca.PEM), 0o444); err != nil {
-		return nil, "", err
+	if err := os.WriteFile(fmt.Sprintf("%s/%s", certDir, VaultCAFilename), []byte(ca.PEM), 0o444); err != nil {
+		return nil, err
 	}
 
-	if err := os.WriteFile(fmt.Sprintf("%s/vault-cert.pem", dir), []byte(cert), 0o400); err != nil {
-		return nil, "", err
+	if err := os.WriteFile(fmt.Sprintf("%s/%s", certDir, VaultCertFilename), []byte(cert), 0o400); err != nil {
+		return nil, err
 	}
 
-	if err := os.WriteFile(fmt.Sprintf("%s/vault-key.pem", dir), []byte(key), 0o400); err != nil {
-		return nil, "", err
+	if err := os.WriteFile(fmt.Sprintf("%s/%s", certDir, VaultKeyFilename), []byte(key), 0o400); err != nil {
+		return nil, err
 	}
 
 	hclStr := `
@@ -203,13 +204,17 @@ storage "%s" {
 ui = true
 `
 
-	hclStr = fmt.Sprintf(hclStr, dir, dir, storageType)
+	hclStr = fmt.Sprintf(hclStr, certDir, certDir, storageType)
 	parsed, err := ParseConfig(hclStr, "")
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
-	return parsed, dir, nil
+	return parsed, nil
+}
+
+func CleanupTLS(dir string) {
+
 }
 
 // Storage is the underlying storage configuration for the server.
