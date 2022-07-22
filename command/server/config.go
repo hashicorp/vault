@@ -168,15 +168,15 @@ func DevTLSConfig(storageType string) (*Config, string, error) {
 		return nil, "", err
 	}
 
-	if err := os.WriteFile(fmt.Sprintf("%s/vault-ca.pem", dir), []byte(ca.PEM), 0o644); err != nil {
+	if err := os.WriteFile(fmt.Sprintf("%s/vault-ca.pem", dir), []byte(ca.PEM), 0o444); err != nil {
 		return nil, "", err
 	}
 
-	if err := os.WriteFile(fmt.Sprintf("%s/vault-cert.pem", dir), []byte(cert), 0o644); err != nil {
+	if err := os.WriteFile(fmt.Sprintf("%s/vault-cert.pem", dir), []byte(cert), 0o400); err != nil {
 		return nil, "", err
 	}
 
-	if err := os.WriteFile(fmt.Sprintf("%s/vault-key.pem", dir), []byte(key), 0o644); err != nil {
+	if err := os.WriteFile(fmt.Sprintf("%s/vault-key.pem", dir), []byte(key), 0o400); err != nil {
 		return nil, "", err
 	}
 
