@@ -1130,6 +1130,14 @@ func (c *ServerCommand) Run(args []string) int {
 				if err != nil {
 					c.UI.Error(err.Error())
 				}
+
+				// Only delete temp directories we made.
+				if c.flagDevTLSCertDir == "" {
+					err = os.Remove(certDir)
+					if err != nil {
+						c.UI.Error(err.Error())
+					}
+				}
 			}()
 
 		} else {
