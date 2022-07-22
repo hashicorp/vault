@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"net"
 	"os"
@@ -28,23 +29,23 @@ func GenerateCert(caCertTemplate *x509.Certificate, caSigner crypto.Signer) (str
 	// Create the private key
 	signer, keyPEM, err := privateKey()
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("error generating private key for server certificate: %v", err)
 	}
 
 	// The serial number for the cert
 	sn, err := serialNumber()
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("error generating serial number: %v", err)
 	}
 
 	signerKeyId, err := certutil.GetSubjKeyID(signer)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("error getting subject key id from key: %v", err)
 	}
 
 	hostname, err := os.Hostname()
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("error getting hostname: %v", err)
 	}
 
 	if hostname == "" {
@@ -68,12 +69,12 @@ func GenerateCert(caCertTemplate *x509.Certificate, caSigner crypto.Signer) (str
 	bs, err := x509.CreateCertificate(
 		rand.Reader, &template, caCertTemplate, signer.Public(), caSigner)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("error creating server certificate: %v", err)
 	}
 	var buf bytes.Buffer
 	err = pem.Encode(&buf, &pem.Block{Type: "CERTIFICATE", Bytes: bs})
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("error encoding server certificate: %v", err)
 	}
 
 	return buf.String(), keyPEM, nil
@@ -86,18 +87,18 @@ func GenerateCA() (*CaCert, error) {
 	// Create the private key we'll use for this CA cert.
 	signer, _, err := privateKey()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error generating private key for CA: %v", err)
 	}
 
 	signerKeyId, err := certutil.GetSubjKeyID(signer)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting subject key id from key: %v", err)
 	}
 
 	// The serial number for the cert
 	sn, err := serialNumber()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error generating serial number: %v", err)
 	}
 
 	// Create the CA cert
@@ -118,13 +119,13 @@ func GenerateCA() (*CaCert, error) {
 	bs, err := x509.CreateCertificate(
 		rand.Reader, &template, &template, signer.Public(), signer)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating CA certificate: %v", err)
 	}
 
 	var buf bytes.Buffer
 	err = pem.Encode(&buf, &pem.Block{Type: "CERTIFICATE", Bytes: bs})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error encoding CA certificate: %v", err)
 	}
 	return &CaCert{
 		PEM:      buf.String(),
