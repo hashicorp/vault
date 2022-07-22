@@ -82,7 +82,7 @@ export default class OidcAssignmentFormComponent extends Component {
   }
 
   @task
-  *save() {
+  *save(event) {
     event.preventDefault();
     try {
       const { isValid, state } = this.args.model.validate();
