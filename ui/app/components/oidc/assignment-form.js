@@ -41,11 +41,12 @@ export default class OidcAssignmentFormComponent extends Component {
     this.flattenTargets();
     // eagerly fetch identity groups and entities for use as search select options
     this.resetTargetState();
-    // make sure you have a list of the entities and groups already selected. Will need to display them if you're in the edit view.
-    this.fetchEntitiesAndGroups();
   }
   // ARG TODO these functions are similar to the one used in MFA. Making a ticket to turn into a util/helper.
   async flattenTargets() {
+    if (!this.args.model) {
+      return;
+    }
     for (let { label, key } of this.targetTypes) {
       const targetArray = await this.args.model[key];
       if (typeof targetArray !== 'object') {
@@ -69,12 +70,6 @@ export default class OidcAssignmentFormComponent extends Component {
       }
       this.searchSelectOptions = options;
     }
-  }
-
-  async fetchEntitiesAndGroups() {
-    return (await this.args.model.entity_ids).toArray().mapBy('id');
-    // (await this.args.model.entity_ids).toArray().mapBy('id');
-    // (await this.args.model.group_ids).toArray().mapBy('id');
   }
 
   get selectedTarget() {
