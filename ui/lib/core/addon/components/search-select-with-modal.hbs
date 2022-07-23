@@ -93,7 +93,13 @@
           {{yield}}
         {{else}}
           {{! dynamically render passed in form component }}
-          {{component @modalFormComponent model=this.newModelRecord onSave=this.resetModal onCancel=this.resetModal}}
+          {{component
+            @modalFormComponent
+            model=this.newModelRecord
+            onSave=this.resetModal
+            onCancel=this.resetModal
+            isInline=true
+          }}
         {{/if}}
       </section>
     </Modal>

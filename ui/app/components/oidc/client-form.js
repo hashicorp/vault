@@ -45,15 +45,7 @@ export default class OidcClientForm extends Component {
 
   async selectModelAssignments() {
     const modelAssignments = await this.args.model.assignments;
-    if (this.radioCardGroupValue === 'limited') {
-      handleHasManySelection(
-        this.selectedAssignments,
-        modelAssignments,
-        this.store,
-        'oidc/assignment',
-        this.args.model
-      );
-    } else {
+    if (this.radioCardGroupValue === 'allow_all') {
       // search select hasn't queried the assignments unless the "limit" radio button is selected
       // so need to make a network request to fetch allow_all record
       // move to init, within conditional if model isNew?
@@ -61,6 +53,14 @@ export default class OidcClientForm extends Component {
       modelAssignments.addObject(allowAllRecord);
       this.args.model.save();
     }
+    // TODO for some reason the other assignments are moving when allow_all is selected - need to revisit
+    handleHasManySelection(
+      this.selectedAssignments,
+      modelAssignments,
+      this.store,
+      'oidc/assignment',
+      this.args.model
+    );
   }
 
   @task

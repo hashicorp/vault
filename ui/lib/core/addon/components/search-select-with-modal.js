@@ -81,7 +81,7 @@ export default class SearchSelectWithModal extends Component {
     try {
       let queryOptions = {};
       let options = await this.store.query(this.args.model, queryOptions);
-      this.allOptions = this.formatOptions(options);
+      this.formatOptions(options);
     } catch (err) {
       if (err.httpStatus === 404) {
         if (!this.allOptions) {
@@ -120,7 +120,7 @@ export default class SearchSelectWithModal extends Component {
         };
       });
     }
-    return options;
+    this.allOptions = options;
   }
 
   handleChange() {
