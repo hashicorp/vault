@@ -1,6 +1,5 @@
 {{! TODO remove div, add unless @isInline conditional for header }}
 {{#unless @isInline}}
-
   <PageHeader as |p|>
     <p.top>
       <nav class="breadcrumb" aria-label="breadcrumbs">
@@ -44,25 +43,46 @@
     {{#if this.modelValidations.name.errors}}
       <AlertInline @type="danger" @message={{join ", " this.modelValidations.name.errors}} />
     {{/if}}
-    <SearchSelect
-      @subLabel="Entities"
-      @placeholder="Search"
-      @models={{array "identity/entity"}}
-      @shouldRenderName={{true}}
-      @onChange={{this.onEntitiesSelect}}
-      @fallbackComponent="string-list"
-      @disallowNewItems={{true}}
-      data-test-search-select="entities"
-    />
-    <SearchSelect
-      @subLabel="Groups"
-      @placeholder="Search"
-      @models={{array "identity/group"}}
-      @shouldRenderName={{true}}
-      @onChange={{this.onGroupsSelect}}
-      @fallbackComponent="string-list"
-      @disallowNewItems={{true}}
-    />
+    {{#if (or @model.canListEntities @model.canListGroups)}}
+      {{#if @model.entity_ids.isFulfilled}}
+        <SearchSelect
+          @id="entities"
+          @label="Entities"
+          @labelClass="is-label"
+          @placeholder="Search"
+          @models={{array "identity/entity"}}
+          @inputValue={{map-by "id" @model.entity_ids}}
+          @shouldRenderName={{true}}
+          @onChange={{this.onEntitiesSelect}}
+          @disallowNewItems={{true}}
+          data-test-search-select="entities"
+        />
+      {{/if}}
+      {{#if @model.group_ids.isFulfilled}}
+        <SearchSelect
+          @id="groups"
+          @label="Groups"
+          @labelClass="is-label"
+          @placeholder="Search"
+          @models={{array "identity/group"}}
+          @inputValue={{map-by "id" @model.group_ids}}
+          @shouldRenderName={{true}}
+          @onChange={{this.onGroupsSelect}}
+          @disallowNewItems={{true}}
+        />
+      {{/if}}
+    {{else}}
+      <EmptyState
+        @title="Permissions error"
+        @icon="skip"
+        @message="It is possible you don't have permissions to list entities or groups."
+        @bottomBorder={{true}}
+      >
+        <DocLink @path="/docs/concepts/identity#identity">
+          Learn more
+        </DocLink>
+      </EmptyState>
+    {{/if}}
   </div>
   <div class="has-top-padding-s">
     {{#if this.modelValidations.targets.errors}}
