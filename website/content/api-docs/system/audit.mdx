@@ -54,7 +54,7 @@ single word name or a more complex, nested path.
 
 | Method | Path               |
 | :----- | :----------------- |
-| `PUT`  | `/sys/audit/:path` |
+| `POST` | `/sys/audit/:path` |
 
 ### Parameters
 
@@ -91,7 +91,7 @@ relevant functionality is only supported in Vault Enterprise:
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/audit/example-audit
 ```

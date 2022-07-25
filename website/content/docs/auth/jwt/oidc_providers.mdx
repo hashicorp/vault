@@ -31,12 +31,14 @@ Reference: [Azure Active Directory v2.0 and the OpenID Connect protocol](https:/
 
 1. Add Redirect URIs with the "Web" type. You may include two redirect URIs,
    one for CLI access another one for Vault UI access.
+
    - `http://localhost:8250/oidc/callback`
    - `https://hostname:port_number/ui/vault/auth/oidc/oidc/callback`
 
 1. Record the "Application (client) ID" as you will need it as the `oidc_client_id`.
 
 1. Under **Endpoints**, copy the OpenID Connect metadata document URL, omitting the `/well-known...` portion.
+
    - The endpoint URL (`oidc_discovery_url`) will look like: https://login.microsoftonline.com/tenant-guid-dead-beef-aaaa-aaaa/v2.0
 
 1. Under **Certificates & secrets**,
@@ -62,6 +64,7 @@ You should set up a [Vault policy](https://learn.hashicorp.com/tutorials/vault/p
 
 1. Configure the OIDC auth method with the `oidc_client_id` (application ID), `oidc_client_secret`
    (client secret), and `oidc_discovery_url` (endpoint URL) you recorded from Azure.
+
    ```shell
    vault write auth/oidc/config \
       oidc_client_id="your_client_id" \
@@ -70,11 +73,13 @@ You should set up a [Vault policy](https://learn.hashicorp.com/tutorials/vault/p
       oidc_discovery_url="https://login.microsoftonline.com/tenant_id/v2.0"
    ```
 
-1. Configure the [OIDC Role](/api/auth/jwt#create-role) with the following:
+1. Configure the [OIDC Role](/api-docs/auth/jwt#create-role) with the following:
+
    - `user_claim` should be `"email"`.
    - `allowed_redirect_uris` should be the two redirect URIs for Vault CLI and UI access.
    - `groups_claim` should be set to `"groups"`.
    - `oidc_scopes` should be set to `"https://graph.microsoft.com/.default"`.
+
    ```shell
    vault write auth/oidc/role/your_default_role \
       user_claim="email" \
@@ -84,16 +89,16 @@ You should set up a [Vault policy](https://learn.hashicorp.com/tutorials/vault/p
       policies=default
    ```
 
-1. In Vault, create the [external group](/api/secret/identity/group).
+1. In Vault, create the [external group](/api-docs/secret/identity/group).
    Record the group ID as you will need it for the group alias.
 
-1. From Vault, retrieve the [OIDC accessor ID](/api/system/auth#list-auth-methods)
+1. From Vault, retrieve the [OIDC accessor ID](/api-docs/system/auth#list-auth-methods)
    from the OIDC auth method as you will need it for the group alias's `mount_accessor`.
 
 1. Go to the Azure AD Group you want to attach to Vault's external group. Record the `objectId`
    as you will need it as the group alias name in Vault.
 
-1. In Vault, create a [group alias](/api/secret/identity/group-alias)
+1. In Vault, create a [group alias](/api-docs/secret/identity/group-alias)
    for the external group and set the `objectId` as the group alias name.
    ```shell
    vault write identity/group-alias \
@@ -108,9 +113,11 @@ If a user is a member of more than 200 groups (directly or indirectly), extra co
 is required so that Vault can fetch the groups properly.
 
 - In Azure, under the applications **API Permissions**, grant the following permissions:
-   - Microsoft Graph API permission [Directory.Read.All](https://docs.microsoft.com/en-us/graph/permissions-reference#application-permissions-19)
+
+  - Microsoft Graph API permission [Directory.Read.All](https://docs.microsoft.com/en-us/graph/permissions-reference#application-permissions-19)
 
 - In Vault, set `"provider_config"` to Azure.
+
   ```shell
   vault write auth/oidc/config -<<"EOH"
   {
@@ -165,10 +172,10 @@ Main reference: [Using OAuth 2.0 to Access Google APIs](https://developers.googl
 ### Optional Google-specific Configuration
 
 Google-specific configuration is available when using Google as an identity provider from the
-Vault JWT/OIDC auth method. The configuration allows Vault to obtain G Suite group membership and
-user information during the JWT/OIDC authentication flow. The group membership obtained from G Suite
-may be used for Identity group alias association. The user information obtained from G Suite can be
-used to copy claims data into resulting auth token and alias metadata via [claim_mappings](/api/auth/jwt#claim_mappings).
+Vault JWT/OIDC auth method. The configuration allows Vault to obtain Google Workspace group membership and
+user information during the JWT/OIDC authentication flow. The group membership obtained from Google Workspace
+may be used for Identity group alias association. The user information obtained from Google Workspace can be
+used to copy claims data into resulting auth token and alias metadata via [claim_mappings](/api-docs/auth/jwt#claim_mappings).
 
 #### Setup
 
@@ -208,8 +215,8 @@ host that Vault is running on.
 - `fetch_groups` `(bool: false)` - If set to true, groups will be fetched from G Suite.
 - `fetch_user_info` `(bool: false)` - If set to true, user info will be fetched from G Suite using the configured [user_custom_schemas](#user_custom_schemas).
 - `groups_recurse_max_depth` `(int: <optional>)` - Group membership recursion max depth. Defaults to 0, which means don't recurse.
-- `user_custom_schemas` `(string: <optional>)` - Comma-separated list of G Suite [custom schemas](https://developers.google.com/admin-sdk/directory/v1/guides/manage-schemas).
-  Values set for G Suite users using custom schema fields will be fetched and made available as claims that can be used with [claim_mappings](/api/auth/jwt#claim_mappings). Required if [fetch_user_info](#fetch_user_info) is set to true.
+- `user_custom_schemas` `(string: <optional>)` - Comma-separated list of Google Workspace [custom schemas](https://developers.google.com/admin-sdk/directory/v1/guides/manage-schemas).
+  Values set for Google Workspace users using custom schema fields will be fetched and made available as claims that can be used with [claim_mappings](/api-docs/auth/jwt#claim_mappings). Required if [fetch_user_info](#fetch_user_info) is set to true.
 
 Example configuration:
 
@@ -275,12 +282,12 @@ Kubernetes cluster meets the requirements.
 
 Kubernetes cluster requirements:
 
-* [`ServiceAccountIssuerDiscovery`][k8s-sa-issuer-discovery] feature enabled.
-   * Present from 1.18, defaults to enabled from 1.20.
-* kube-apiserver's `--service-account-issuer` flag is set to a URL that is
+- [`ServiceAccountIssuerDiscovery`][k8s-sa-issuer-discovery] feature enabled.
+  - Present from 1.18, defaults to enabled from 1.20.
+- kube-apiserver's `--service-account-issuer` flag is set to a URL that is
   reachable from Vault. Public by default for most managed Kubernetes solutions.
-* Must use short-lived service account tokens when logging in.
-   * Tokens mounted into pods default to short-lived from 1.21.
+- Must use short-lived service account tokens when logging in.
+  - Tokens mounted into pods default to short-lived from 1.21.
 
 Configuration steps:
 
@@ -317,8 +324,8 @@ Configuration steps:
    1. Alternatively, if Vault is _not_ running in Kubernetes:
 
       -> **Note:** When Vault is outside the cluster, the `$ISSUER` endpoint below may
-         or may not be reachable. If not, you can configure JWT auth using
-         [`jwt_validation_pubkeys`](#using-jwt-validation-public-keys) instead.
+      or may not be reachable. If not, you can configure JWT auth using
+      [`jwt_validation_pubkeys`](#using-jwt-validation-public-keys) instead.
 
       ```bash
       vault auth enable jwt
@@ -337,14 +344,14 @@ by chaining their public signing keys.
 
 Kubernetes cluster requirements:
 
-* [`ServiceAccountIssuerDiscovery`][k8s-sa-issuer-discovery] feature enabled.
-   * Present from 1.18, defaults to enabled from 1.20.
-   * This requirement can be avoided if you can access the Kubernetes master
-      nodes to read the public signing key directly from disk at
-      `/etc/kubernetes/pki/sa.pub`. In this case, you can skip the steps to
-      retrieve and then convert the key as it will already be in PEM format.
-* Must use short-lived service account tokens when logging in.
-   * Tokens mounted into pods default to short-lived from 1.21.
+- [`ServiceAccountIssuerDiscovery`][k8s-sa-issuer-discovery] feature enabled.
+  - Present from 1.18, defaults to enabled from 1.20.
+  - This requirement can be avoided if you can access the Kubernetes master
+    nodes to read the public signing key directly from disk at
+    `/etc/kubernetes/pki/sa.pub`. In this case, you can skip the steps to
+    retrieve and then convert the key as it will already be in PEM format.
+- Must use short-lived service account tokens when logging in.
+  - Tokens mounted into pods default to short-lived from 1.21.
 
 Configuration steps:
 
@@ -410,7 +417,7 @@ log in.
    # OR equivalent to:
    curl \
       --fail \
-      --request PUT \
+      --request POST \
       --header "X-Vault-Request: true" \
       --data '{"jwt":"<JWT-TOKEN-HERE>","role":"my-role"}' \
       "${VAULT_ADDR}/v1/auth/jwt/login"
@@ -442,28 +449,28 @@ spec:
     - name: nginx
       image: nginx
       volumeMounts:
-      - name: custom-token
-        mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        - name: custom-token
+          mountPath: /var/run/secrets/kubernetes.io/serviceaccount
   volumes:
-  - name: custom-token
-    projected:
-      defaultMode: 420
-      sources:
-      - serviceAccountToken:
-          path: token
-          expirationSeconds: 600 # 10 minutes is the minimum TTL
-          audience: vault
-      - configMap:
-          name: kube-root-ca.crt
-          items:
-          - key: ca.crt
-            path: ca.crt
-      - downwardAPI:
-          items:
-          - fieldRef:
-              apiVersion: v1
-              fieldPath: metadata.namespace
-            path: namespace
+    - name: custom-token
+      projected:
+        defaultMode: 420
+        sources:
+          - serviceAccountToken:
+              path: token
+              expirationSeconds: 600 # 10 minutes is the minimum TTL
+              audience: vault
+          - configMap:
+              name: kube-root-ca.crt
+              items:
+                - key: ca.crt
+                  path: ca.crt
+          - downwardAPI:
+              items:
+                - fieldRef:
+                    apiVersion: v1
+                    fieldPath: metadata.namespace
+                  path: namespace
 ```
 
 [k8s-extended-tokens]: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/#options

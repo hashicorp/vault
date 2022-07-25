@@ -1002,7 +1002,7 @@ func (c *Core) loadMounts(ctx context.Context) error {
 			return err
 		}
 		if localMountTable != nil && len(localMountTable.Entries) > 0 {
-			c.tableMetrics(len(localMountTable.Entries), true, false, raw.Value)
+			c.tableMetrics(len(localMountTable.Entries), true, false, rawLocal.Value)
 			c.mounts.Entries = append(c.mounts.Entries, localMountTable.Entries...)
 		}
 	}

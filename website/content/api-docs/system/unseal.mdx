@@ -20,7 +20,7 @@ Either the `key` or `reset` parameter must be provided; if both are provided,
 
 | Method | Path          |
 | :----- | :------------ |
-| `PUT`  | `/sys/unseal` |
+| `POST` | `/sys/unseal` |
 
 ### Parameters
 
@@ -46,7 +46,7 @@ Either the `key` or `reset` parameter must be provided; if both are provided,
 
 ```shell-session
 $ curl \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/unseal
 ```

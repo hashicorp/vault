@@ -11,14 +11,14 @@ export default Route.extend(ModelBoundaryRoute, {
   console: service(),
   permissions: service(),
   namespaceService: service('namespace'),
+  router: service(),
 
   modelTypes: computed(function() {
     return ['secret', 'secret-engine'];
   }),
 
-  beforeModel() {
+  beforeModel({ to: { queryParams } }) {
     const authType = this.auth.getAuthType();
-    const baseUrl = window.location.origin;
     const ns = this.namespaceService.path;
     this.auth.deleteCurrentToken();
     this.controlGroup.deleteTokens();
@@ -27,15 +27,17 @@ export default Route.extend(ModelBoundaryRoute, {
     this.console.clearLog(true);
     this.flashMessages.clearMessages();
     this.permissions.reset();
+
+    queryParams.with = authType;
+    if (ns) {
+      queryParams.namespace = ns;
+    }
     if (Ember.testing) {
       // Don't redirect on the test
-      this.replaceWith('vault.cluster.auth', { queryParams: { with: authType } });
+      this.replaceWith('vault.cluster.auth', { queryParams });
     } else {
-      let params = `?with=${authType}`;
-      if (ns) {
-        params = `${params}&namespace=${ns}`;
-      }
-      location.assign(`${baseUrl}/ui/vault/auth${params}`);
+      const { cluster_name } = this.paramsFor('vault.cluster');
+      location.assign(this.router.urlFor('vault.cluster.auth', cluster_name, { queryParams }));
     }
   },
 });
