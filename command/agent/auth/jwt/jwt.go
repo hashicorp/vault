@@ -81,9 +81,6 @@ func NewJWTAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 			return nil, fmt.Errorf("error parsing 'remove_jwt_after_reading' value: %w", err)
 		}
 		j.removeJWTAfterReading = removeJWTAfterReading
-	} else {
-		// Default to true for maximum backwards compatibility.
-		j.removeJWTAfterReading = true
 	}
 
 	switch {
