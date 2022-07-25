@@ -6,4 +6,4 @@ on:
 jobs:
   test-reusable:
     name: 'test reusable'
-    uses: hashicorp/tf-developer-productivity-workflows/.github/workflows/notify.yml@v0.4.2
+    uses: hashicorp/tf-developer-productivity-workflows/.github/workflows/notify.yml@main
