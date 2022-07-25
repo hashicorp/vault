@@ -738,20 +738,10 @@ jobs:
     - GO_TAGS: ''
   semgrep:
     docker:
-    - image: docker.mirror.hashicorp.services/alpine:3.13
+    - image: docker.mirror.hashicorp.services/returntocorp/semgrep:0.106.0
     shell: /bin/sh
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
-    - run:
-        command: |
-          apk add --no-cache python3 python3-dev py3-pip make gcc g++
-          python3 -m pip install --user semgrep==0.106.0
-          export PATH="$HOME/.local/bin:$PATH"
-
-          echo "$ semgrep --version"
-          semgrep --version
-        name: Setup Semgrep
-        working_directory: ~/
     - checkout
     - attach_workspace:
         at: .
