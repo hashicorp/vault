@@ -1,10 +1,12 @@
 package command
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -205,6 +207,53 @@ func TestParseFlagFile(t *testing.T) {
 
 			if content != tc.exp {
 				t.Fatalf("expected %s to be %s", content, tc.exp)
+			}
+		})
+	}
+}
+
+func TestArgWarnings(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		args     []string
+		expected string
+	}{
+		{
+			[]string{"a", "b", "c"},
+			"",
+		},
+		{
+			[]string{"a", "-b"},
+			"-b",
+		},
+		{
+			[]string{"a", "--b"},
+			"--b",
+		},
+		{
+			[]string{"a-b", "-c"},
+			"-c",
+		},
+		{
+			[]string{"a", "-b-c"},
+			"-b-c",
+		},
+		{
+			[]string{"-a", "b"},
+			"-a",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.expected, func(t *testing.T) {
+			var out bytes.Buffer
+
+			printArgsWarningIfAny(&out, tc.args)
+			if !strings.Contains(out.String(), tc.expected) {
+				t.Fatalf("expected %s to contain %s", out.String(), tc.expected)
 			}
 		})
 	}

@@ -292,3 +292,16 @@ func parseFlagFile(raw string) (string, error) {
 
 	return raw, nil
 }
+
+func printArgsWarningIfAny(w io.Writer, args []string) {
+	var trailingFlags []string
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "-") {
+			trailingFlags = append(trailingFlags, arg)
+		}
+	}
+
+	if len(trailingFlags) > 0 {
+		fmt.Fprintf(w, "Warning, flag(s) provided as argument(s): %s", trailingFlags)
+	}
+}

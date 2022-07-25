@@ -73,7 +73,7 @@ Usage: vault operator migrate [options]
 }
 
 func (c *OperatorMigrateCommand) Flags() *FlagSets {
-	set := NewFlagSets(c.UI)
+	set := NewFlagSets()
 	f := set.NewFlagSet("Command Options")
 
 	f.StringVar(&StringVar{

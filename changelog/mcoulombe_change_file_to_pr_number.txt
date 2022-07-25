@@ -1,0 +1,3 @@
+```release-note:improvement
+base: Added a small utility method to display a warning if flags are passed after arguments in a command.
+```

@@ -89,7 +89,7 @@ Usage: vault operator diagnose
 }
 
 func (c *OperatorDiagnoseCommand) Flags() *FlagSets {
-	set := NewFlagSets(c.UI)
+	set := NewFlagSets()
 	f := set.NewFlagSet("Command Options")
 
 	f.StringSliceVar(&StringSliceVar{
