@@ -44,6 +44,9 @@ export default class OidcAssignmentFormComponent extends Component {
   }
   // ARG TODO these functions are similar to the one used in MFA. Making a ticket to turn into a util/helper.
   async flattenTargets() {
+    if (!this.args.model) {
+      return;
+    }
     for (let { label, key } of this.targetTypes) {
       const targetArray = await this.args.model[key];
       if (typeof targetArray !== 'object') {
@@ -74,7 +77,7 @@ export default class OidcAssignmentFormComponent extends Component {
   }
 
   @task
-  *save() {
+  *save(event) {
     event.preventDefault();
     try {
       const { isValid, state } = this.args.model.validate();
@@ -104,14 +107,21 @@ export default class OidcAssignmentFormComponent extends Component {
   }
 
   @action
-  onEntitiesSelect(selectedIds) {
-    const entityIds = this.args.model.entity_ids;
+  async onEntitiesSelect(selectedIds) {
+    const entityIds = await this.args.model.entity_ids;
     handleHasManySelection(selectedIds, entityIds, this.store, 'identity/entity');
   }
 
   @action
-  onGroupsSelect(selectedIds) {
-    const groupIds = this.args.model.groupIds;
+  async onGroupsSelect(selectedIds) {
+    const groupIds = await this.args.model.group_ids;
     handleHasManySelection(selectedIds, groupIds, this.store, 'identity/group');
+  }
+
+  @action
+  removeTarget(target) {
+    this.targets.removeObject(target);
+    // remove target from appropriate model property
+    this.args.model[target.key].removeObject(target.value);
   }
 }
