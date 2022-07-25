@@ -13,7 +13,7 @@
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      {{this.model.name}}
+      {{this.model.details.name}}
     </h1>
   </p.levelLeft>
 </PageHeader>
@@ -21,7 +21,7 @@
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs" aria-label="tabs">
     <ul>
-      <LinkTo @route="vault.cluster.access.oidc.assignments.assignment.details" @model={{this.model}}>
+      <LinkTo @route="vault.cluster.access.oidc.assignments.assignment.details" @model={{this.model.details}}>
         Details
       </LinkTo>
     </ul>
@@ -30,7 +30,7 @@
 
 <Toolbar>
   <ToolbarActions>
-    {{#if this.model.canDelete}}
+    {{#if this.model.details.canDelete}}
       <ConfirmAction
         @buttonClasses="toolbar-link"
         @onConfirmAction={{this.delete}}
@@ -41,8 +41,8 @@
         Delete assignment
       </ConfirmAction>
     {{/if}}
-    {{#if this.model.canEdit}}
-      <ToolbarLink @params={{array "vault.cluster.access.oidc.assignments.assignment.edit" this.model.name}}>
+    {{#if this.model.details.canEdit}}
+      <ToolbarLink @params={{array "vault.cluster.access.oidc.assignments.assignment.edit" this.model.details.name}}>
         Edit assignment
       </ToolbarLink>
     {{/if}}
@@ -50,6 +50,16 @@
 </Toolbar>
 
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-  <InfoTableRow @label="Name" @value={{this.model.name}} />
+  <InfoTableRow @label="Name" @value={{this.model.details.name}} />
   {{! ARG TODO here is the search select, see database with multiple. }}
+  {{!-- <InfoTableRow
+    @alwaysRender={{true}}
+    @defaultShown="Check with Yankun ARG TODO"
+    @label="Entities"
+    @value={{this.model.entities}}
+    @isLink={{true}}
+    @queryParam="role"
+    @type="array"
+  /> --}}
+
 </div>
