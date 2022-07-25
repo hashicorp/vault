@@ -29,7 +29,7 @@ import layout from '../templates/components/search-select';
  * @param {string} [wildcardLabel] - when you want the searchSelect component to return a count on the model for options returned when using a wildcard you must provide a label of the count e.g. role.  Should be singular.
  * @param {string} [placeholder] - text you wish to replace the default "search" with
  * @param {boolean} [displayInherit] - if you need the search select component to display inherit instead of box.
- * @param {array} [removeOptions] - array of strings containing option names or model ids to filter from the dropdown (ex: 'allow_all)
+ * @param {array} [excludeOptions] - array of strings containing option names or model ids to filter from the dropdown (ex: 'allow_all)
  *
  * @param {Array} options - *Advanced usage* - `options` can be passed directly from the outside to the
  * power-select component. If doing this, `models` should not also be passed as that will overwrite the
@@ -53,7 +53,7 @@ export default Component.extend({
   allOptions: null, // list of options including matched
   selectedOptions: null, // list of selected options
   options: null, // all possible options
-  removeOptions: null, // array of strings passed as an arg to remove from dropdown
+  excludeOptions: null, // array of strings passed as an arg to remove from dropdown
   shouldUseFallback: false,
   shouldRenderName: false,
   disallowNewItems: false,
@@ -75,8 +75,8 @@ export default Component.extend({
   },
   formatOptions: function (options) {
     options = options.toArray();
-    if (this.removeOptions && this.removeOptions.length > 0) {
-      options = options.filter((o) => !this.removeOptions.includes(o.id));
+    if (this.excludeOptions && this.excludeOptions.length > 0) {
+      options = options.filter((o) => !this.excludeOptions.includes(o.id));
     }
     options = options.map((option) => {
       option.searchText = `${option.name} ${option.id}`;
@@ -97,8 +97,8 @@ export default Component.extend({
     });
     this.set('selectedOptions', formattedOptions);
     if (this.options) {
-      if (this.removeOptions && this.removeOptions.length > 0) {
-        options = this.options.filter((o) => !this.removeOptions.includes(o.id));
+      if (this.excludeOptions && this.excludeOptions.length > 0) {
+        options = this.options.filter((o) => !this.excludeOptions.includes(o.id));
       }
       options = this.options.concat(options).uniq();
     }

@@ -20,7 +20,7 @@ import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-ut
  *         @inputValue={{map-by "id" @model.assignments}}
  *         @onChange={{this.handleSearchSelect}}
  *         {{! since this is the "limited" radio select option we do not want to include 'allow_all' }}
- *         @removeOptions={{array "allow_all"}}
+ *         @excludeOptions={{array "allow_all"}}
  *         @fallbackComponent="string-list"
  *         @modalFormComponent="oidc/assignment-form"
  *         @modalSubtext="Use assignment to specify which Vault entities and groups are allowed to authenticate."
@@ -38,7 +38,7 @@ import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-ut
  * @param {string} [subText] - Text to be displayed below the label
  * @param {string} [subLabel] - a smaller label below the main Label
  * @param {string} [placeholder] - placeholder text to override the default text of "Search"
- * @param {array} [removeOptions] - array of strings containing option names or model ids to filter from the dropdown (ex: ['allow_all'])
+ * @param {array} [excludeOptions] - array of strings containing model ids to filter from the dropdown (ex: ['allow_all'])
  * @param {function} search - *Advanced usage* - Customizes how the power-select component searches for matches -
  * see the power-select docs for more information.
  *
@@ -50,6 +50,7 @@ export default class SearchSelectWithModal extends Component {
   @tracked allOptions = null; // all possible options
   @tracked showModal = false;
   @tracked newModelRecord = null;
+  @tracked shouldUseFallback;
 
   constructor() {
     super(...arguments);
@@ -64,12 +65,8 @@ export default class SearchSelectWithModal extends Component {
     return this.args.shouldRenderName || false;
   }
 
-  get shouldUseFallback() {
-    return this.args.shouldUseFallback || false;
-  }
-
-  get removeOptions() {
-    return this.args.removeOptions || null;
+  get excludeOptions() {
+    return this.args.excludeOptions || null;
   }
 
   get passObject() {
@@ -101,8 +98,8 @@ export default class SearchSelectWithModal extends Component {
   }
   formatOptions(options) {
     options = options.toArray();
-    if (this.removeOptions) {
-      options = options.filter((o) => !this.removeOptions.includes(o.id));
+    if (this.excludeOptions) {
+      options = options.filter((o) => !this.excludeOptions.includes(o.id));
     }
     options = options.map((option) => {
       option.searchText = `${option.name} ${option.id}`;

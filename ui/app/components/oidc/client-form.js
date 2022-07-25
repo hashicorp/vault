@@ -25,42 +25,45 @@ export default class OidcClientForm extends Component {
 
   @tracked modelValidations;
   @tracked radioCardGroupValue = 'allow_all';
-  @tracked selectedAssignments = ['allow_all']; // default is 'allow_all' so no selected assignments
+  @tracked selectedAssignments;
 
   constructor() {
     super(...arguments);
-    this.fetchAssignments();
+    this.fetchAndSetAssignments();
   }
 
-  async fetchAssignments() {
+  async fetchAndSetAssignments() {
     const assignmentIds = (await this.args.model.assignments).toArray().mapBy('id');
+    this.selectedAssignments = assignmentIds;
     this.radioCardGroupValue =
       assignmentIds.length === 0 || assignmentIds.includes('allow_all') ? 'allow_all' : 'limited';
   }
 
   @action
-  handleSearchSelect(selectedIds) {
-    this.selectedAssignments = this.radioCardGroupValue === 'allow_all' ? ['allow_all'] : selectedIds;
+  // handle radio buttons and search-select changes here
+  async handleAssignmentSelection(selection) {
+    const modelAssignments = await this.args.model.assignments;
+    if (typeof selection === 'string') {
+      // handle radio buttons
+      this.radioCardGroupValue = selection;
+      // clear out selected assignments, do not set it to ['allow_all']
+      // because it will appear in the search select if the user toggles back to "limited"
+      this.selectedAssignments = [];
+    }
+    if (Array.isArray(selection)) {
+      // handle search select
+      this.selectedAssignments = selection;
+    }
+    handleHasManySelection(this.selectedAssignments, modelAssignments, this.store, 'oidc/assignment');
   }
 
-  async selectModelAssignments() {
+  @action
+  async allowAllAssignments() {
     const modelAssignments = await this.args.model.assignments;
-    if (this.radioCardGroupValue === 'allow_all') {
-      // search select hasn't queried the assignments unless the "limit" radio button is selected
-      // so need to make a network request to fetch allow_all record
-      // move to init, within conditional if model isNew?
-      const allowAllRecord = await this.store.findRecord('oidc/assignment', 'allow_all');
-      modelAssignments.addObject(allowAllRecord);
-      this.args.model.save();
-    }
-    // TODO for some reason the other assignments are moving when allow_all is selected - need to revisit
-    handleHasManySelection(
-      this.selectedAssignments,
-      modelAssignments,
-      this.store,
-      'oidc/assignment',
-      this.args.model
-    );
+    const allowAllModel = await this.store.findRecord('oidc/assignment', 'allow_all');
+    modelAssignments.addObject(allowAllModel);
+    this.selectedAssignments = ['allow_all'];
+    handleHasManySelection(this.selectedAssignments, modelAssignments, this.store, 'oidc/assignment');
   }
 
   @task
@@ -70,7 +73,12 @@ export default class OidcClientForm extends Component {
       const { isValid, state } = this.args.model.validate();
       this.modelValidations = isValid ? null : state;
       if (isValid) {
-        this.selectModelAssignments();
+        if (this.radioCardGroupValue === 'allow_all') {
+          // the backend permits 'allow_all' AND other assignments, though 'allow_all' will take precedence
+          // this is slightly awkward UX when 'allow_all' appears in the "limited" search-select dropdown
+          // so the UI limits the config by allowing either 'allow_all' OR a list of other assignments
+          yield this.allowAllAssignments();
+        }
         yield this.args.model.save();
         this.flashMessages.success(
           `Successfully ${this.args.model.isNew ? 'created an' : 'updated'} application`

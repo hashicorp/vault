@@ -15,7 +15,7 @@
  * @param modelRecord string passed to peekRecord
  */
 
-export default function handleHasManySelection(selectedIds, modelCollection, store, modelRecord, model) {
+export default function handleHasManySelection(selectedIds, modelCollection, store, modelRecord) {
   // first check for existing models that have been removed from selection
   modelCollection.forEach((model) => {
     const modelAttr = model?.id || model?.name;
@@ -23,6 +23,7 @@ export default function handleHasManySelection(selectedIds, modelCollection, sto
       modelCollection.removeObject(model);
     }
   });
+
   // now check for selected items that don't exist and add them to the model
   const modelIds = modelCollection.mapBy('id');
   selectedIds.forEach((id) => {
@@ -31,7 +32,4 @@ export default function handleHasManySelection(selectedIds, modelCollection, sto
       modelCollection.addObject(model);
     }
   });
-  if (model) {
-    model.save();
-  }
 }
