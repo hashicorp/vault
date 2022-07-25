@@ -119,6 +119,21 @@ which may not be known at modification time (such as with PKCS#11 managed
 RSA keys).`,
 		Default: "",
 	}
+	fields["issuing_certificates"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `Comma-separated list of URLs to be used
+for the issuing certificate attribute. See also RFC 5280 Section 4.2.2.1.`,
+	}
+	fields["crl_distribution_points"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `Comma-separated list of URLs to be used
+for the CRL distribution points attribute. See also RFC 5280 Section 4.2.1.13.`,
+	}
+	fields["ocsp_servers"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `Comma-separated list of URLs to be used
+for the OCSP servers attribute. See also RFC 5280 Section 4.2.2.1.`,
+	}
 
 	return &framework.Path{
 		// Returns a JSON entry.
@@ -208,11 +223,20 @@ func respondReadIssuer(issuer *issuerEntry) (*logical.Response, error) {
 		"usage":                          issuer.Usage.Names(),
 		"revocation_signature_algorithm": revSigAlgStr,
 		"revoked":                        issuer.Revoked,
+		"issuing_certificates":           []string{},
+		"crl_distribution_points":        []string{},
+		"ocsp_servers":                   []string{},
 	}
 
 	if issuer.Revoked {
 		data["revocation_time"] = issuer.RevocationTime
 		data["revocation_time_rfc3339"] = issuer.RevocationTimeUTC.Format(time.RFC3339Nano)
+	}
+
+	if issuer.AIAURIs != nil {
+		data["issuing_certificates"] = issuer.AIAURIs.IssuingCertificates
+		data["crl_distribution_points"] = issuer.AIAURIs.CRLDistributionPoints
+		data["ocsp_servers"] = issuer.AIAURIs.OCSPServers
 	}
 
 	return &logical.Response{
@@ -302,6 +326,20 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		return nil, err
 	}
 
+	// AIA access changes
+	issuerCertificates := data.Get("issuing_certificates").([]string)
+	if badURL := validateURLs(issuerCertificates); badURL != "" {
+		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in issuing certificates: %s", badURL)), nil
+	}
+	crlDistributionPoints := data.Get("crl_distribution_points").([]string)
+	if badURL := validateURLs(crlDistributionPoints); badURL != "" {
+		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in CRL distribution points: %s", badURL)), nil
+	}
+	ocspServers := data.Get("ocsp_servers").([]string)
+	if badURL := validateURLs(ocspServers); badURL != "" {
+		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in OCSP servers: %s", badURL)), nil
+	}
+
 	modified := false
 
 	var oldName string
@@ -331,6 +369,55 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		modified = true
 	}
 
+	if issuer.AIAURIs == nil && (len(issuerCertificates) > 0 || len(crlDistributionPoints) > 0 || len(ocspServers) > 0) {
+		issuer.AIAURIs = &certutil.URLEntries{}
+	}
+	if issuer.AIAURIs != nil {
+		if len(issuerCertificates) != len(issuer.AIAURIs.IssuingCertificates) {
+			modified = true
+			issuer.AIAURIs.IssuingCertificates = issuerCertificates
+		} else {
+			for index, value := range issuer.AIAURIs.IssuingCertificates {
+				if len(issuerCertificates) < index+1 || issuerCertificates[index] != value {
+					modified = true
+					issuer.AIAURIs.IssuingCertificates = issuerCertificates
+					break
+				}
+			}
+		}
+		if len(crlDistributionPoints) != len(issuer.AIAURIs.CRLDistributionPoints) {
+			modified = true
+			issuer.AIAURIs.CRLDistributionPoints = crlDistributionPoints
+		} else {
+			for index, value := range issuer.AIAURIs.CRLDistributionPoints {
+				if len(crlDistributionPoints) < index+1 || crlDistributionPoints[index] != value {
+					modified = true
+					issuer.AIAURIs.CRLDistributionPoints = crlDistributionPoints
+					break
+				}
+			}
+		}
+		if len(ocspServers) != len(issuer.AIAURIs.OCSPServers) {
+			modified = true
+			issuer.AIAURIs.OCSPServers = ocspServers
+		} else {
+			for index, value := range issuer.AIAURIs.OCSPServers {
+				if len(ocspServers) < index+1 || ocspServers[index] != value {
+					modified = true
+					issuer.AIAURIs.OCSPServers = ocspServers
+					break
+				}
+			}
+		}
+
+		if len(issuer.AIAURIs.IssuingCertificates) == 0 && len(issuer.AIAURIs.CRLDistributionPoints) == 0 && len(issuer.AIAURIs.OCSPServers) == 0 {
+			issuer.AIAURIs = nil
+		}
+	}
+
+	// Updating the chain should be the last modification as there's a chance
+	// it'll write it out to disk for us. We'd hate to then modify the issuer
+	// again and write it a second time.
 	var updateChain bool
 	var constructedChain []issuerID
 	for index, newPathRef := range newPath {
@@ -509,6 +596,74 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 			issuer.RevocationSigAlg = revSigAlg
 			modified = true
 		}
+	}
+
+	// AIA access changes.
+	if issuer.AIAURIs == nil {
+		issuer.AIAURIs = &certutil.URLEntries{}
+	}
+	rawIssuerCertificates, ok := data.GetOk("issuing_certificates")
+	if ok {
+		issuerCertificates := rawIssuerCertificates.([]string)
+		if badURL := validateURLs(issuerCertificates); badURL != "" {
+			return logical.ErrorResponse(fmt.Sprintf("invalid URL found in issuing certificates: %s", badURL)), nil
+		}
+
+		if len(issuerCertificates) != len(issuer.AIAURIs.IssuingCertificates) {
+			modified = true
+			issuer.AIAURIs.IssuingCertificates = issuerCertificates
+		} else {
+			for index, value := range issuer.AIAURIs.IssuingCertificates {
+				if len(issuerCertificates) < index+1 || issuerCertificates[index] != value {
+					modified = true
+					issuer.AIAURIs.IssuingCertificates = issuerCertificates
+					break
+				}
+			}
+		}
+	}
+	rawCrlDistributionPoints, ok := data.GetOk("crl_distribution_points")
+	if ok {
+		crlDistributionPoints := rawCrlDistributionPoints.([]string)
+		if badURL := validateURLs(crlDistributionPoints); badURL != "" {
+			return logical.ErrorResponse(fmt.Sprintf("invalid URL found in CRL distribution points: %s", badURL)), nil
+		}
+
+		if len(crlDistributionPoints) != len(issuer.AIAURIs.CRLDistributionPoints) {
+			modified = true
+			issuer.AIAURIs.CRLDistributionPoints = crlDistributionPoints
+		} else {
+			for index, value := range issuer.AIAURIs.CRLDistributionPoints {
+				if len(crlDistributionPoints) < index+1 || crlDistributionPoints[index] != value {
+					modified = true
+					issuer.AIAURIs.CRLDistributionPoints = crlDistributionPoints
+					break
+				}
+			}
+		}
+	}
+	rawOcspServers, ok := data.GetOk("ocsp_servers")
+	if ok {
+		ocspServers := rawOcspServers.([]string)
+		if badURL := validateURLs(ocspServers); badURL != "" {
+			return logical.ErrorResponse(fmt.Sprintf("invalid URL found in OCSP servers: %s", badURL)), nil
+		}
+
+		if len(ocspServers) != len(issuer.AIAURIs.OCSPServers) {
+			modified = true
+			issuer.AIAURIs.OCSPServers = ocspServers
+		} else {
+			for index, value := range issuer.AIAURIs.OCSPServers {
+				if len(ocspServers) < index+1 || ocspServers[index] != value {
+					modified = true
+					issuer.AIAURIs.OCSPServers = ocspServers
+					break
+				}
+			}
+		}
+	}
+	if len(issuer.AIAURIs.IssuingCertificates) == 0 && len(issuer.AIAURIs.CRLDistributionPoints) == 0 && len(issuer.AIAURIs.OCSPServers) == 0 {
+		issuer.AIAURIs = nil
 	}
 
 	// Manual Chain Changes

@@ -141,7 +141,7 @@ func (sc *storageContext) fetchCAInfoByIssuerId(issuerId issuerID, usage issuerU
 		RevocationSigAlg:     entry.RevocationSigAlg,
 	}
 
-	entries, err := getURLs(sc.Context, sc.Storage)
+	entries, err := entry.GetAIAURLs(sc)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
 	}
@@ -674,7 +674,8 @@ func generateCert(sc *storageContext,
 		data.Params.PermittedDNSDomains = input.apiData.Get("permitted_dns_domains").([]string)
 
 		if data.SigningBundle == nil {
-			// Generating a self-signed root certificate
+			// Generating a self-signed root certificate. Since we have no
+			// issuer entry yet, we default to the global URLs.
 			entries, err := getURLs(ctx, sc.Storage)
 			if err != nil {
 				return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
