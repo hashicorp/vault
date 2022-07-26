@@ -1,3 +1,3 @@
-```release-node:improvement
+```release-note:improvement
 activity: Added new clients unit tests to test accuracy of estimates
 ```
