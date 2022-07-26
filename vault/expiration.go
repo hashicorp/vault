@@ -1881,7 +1881,7 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 		m.pending.Store(le.LeaseID, pending)
 	}
 
-	if leaseCreated {
+	if leaseCreated && !m.inRestoreMode() {
 		m.leaseCount++
 		// Avoid nil pointer dereference. Without cachedLeaseInfo we do not have enough information to
 		// accurately update quota lease information.
