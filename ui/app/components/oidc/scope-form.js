@@ -5,7 +5,7 @@ import { task } from 'ember-concurrency';
 import { inject as service } from '@ember/service';
 
 /**
- * @module OidcScopeFormComponent
+ * @module OidcScopeForm
  * Oidc scope form components are used to create and edit oidc scopes
  *
  * @example

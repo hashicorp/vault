@@ -23,7 +23,6 @@ export default function handleHasManySelection(selectedIds, modelCollection, sto
       modelCollection.removeObject(model);
     }
   });
-
   // now check for selected items that don't exist and add them to the model
   const modelIds = modelCollection.mapBy('id');
   selectedIds.forEach((id) => {

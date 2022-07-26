@@ -92,9 +92,6 @@ export default Component.extend({
 
     this.set('selectedOptions', formattedOptions);
     if (this.options) {
-      if (this.excludeOptions && this.excludeOptions.length > 0) {
-        options = this.options.filter((o) => !this.excludeOptions.includes(o.id));
-      }
       options = this.options.concat(options).uniq();
     }
     this.set('options', options);
