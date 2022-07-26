@@ -106,6 +106,11 @@ previous month to the start of 12 months prior to that date.
 - As of 1.11, this behavior has been modified to return all available data within 
 the specified billing period.
 
+- As of 1.12, the `end_time` can be the current month, so long as the `start_time`
+is not also the current month. To get client count information solely for a billing 
+period consisting of the current month, please use the 
+`/sys/internal/counters/activity/monthly` endpoint. 
+
 - The response contains the total activity for the billing period and the
 attributions of the total activity against specific components in Vault. This
 helps in understanding the total activity better by knowing which components in
@@ -256,6 +261,52 @@ information, it will not be added to the API response.
 - The response includes the actual time period covered, which may not exactly
 match the query parameters due to the month granularity of data or missing
 months in the requested time range.
+
+- Note that if the `end_date` specified is the current month (available as of 1.12), 
+the last element in the `months` response stanza, signifying the current month, will
+not have namespace attribution for both the `new_clients`
+stanza and the top level `by_namespace` stanza. Furthermore, the `new_clients` counts returned
+for the current month will be an approximation. That is to say, the response will appear as follows.
+
+```json
+{
+   "months":[ // ROY
+      // accurate months for the non-current month,
+      {
+         "timestamp":"2021-05-01T00:00:00Z",
+         "counts":{
+            "distinct_entities":10,
+            "entity_clients":10,
+            "non_entity_tokens":10,
+            "non_entity_clients":10,
+            "clients":20
+         },
+         "namespaces": [], // 
+         "new_clients":{
+            "counts":{},
+            "namespaces":[
+               {
+                  "namespace_id":"root",
+                  "namespace_path":"",
+                  "counts":{},
+                  "mounts":[
+                     {
+                        "path":"auth/up2/",
+                        "counts":{}
+                     },
+                     {
+                        "path":"auth/up1/",
+                        "counts":{}
+                     }
+                  ]
+               }
+            ]
+         }
+      }
+   ],
+}
+```
+
 
 Please visit the [client count](/docs/concepts/client-count) concepts page for
 more information on how clients map to these client IDs and how they are
