@@ -28,7 +28,7 @@ export default function handleHasManySelection(selectedIds, modelCollection, sto
   const modelIds = modelCollection.mapBy('id');
   selectedIds.forEach((id) => {
     if (!modelIds.includes(id)) {
-      let model = store.peekRecord(modelRecord, id);
+      const model = store.peekRecord(modelRecord, id);
       modelCollection.addObject(model);
     }
   });

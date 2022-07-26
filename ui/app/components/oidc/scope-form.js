@@ -5,7 +5,7 @@ import { task } from 'ember-concurrency';
 import { inject as service } from '@ember/service';
 
 /**
- * @module OidcScopeForm
+ * @module OidcScopeFormComponent
  * Oidc scope form components are used to create and edit oidc scopes
  *
  * @example
@@ -19,7 +19,7 @@ import { inject as service } from '@ember/service';
  * @param {onSave} onSave - callback triggered on save success
  */
 
-export default class OidcScopeForm extends Component {
+export default class OidcScopeFormComponent extends Component {
   @service flashMessages;
 
   @tracked modelValidations;

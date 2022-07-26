@@ -20,9 +20,4 @@ export const number = (value, { nullable = false } = {}) => {
   return !isNaN(value);
 };
 
-export const containsWhiteSpace = (value) => {
-  let validation = new RegExp('\\s', 'g'); // search for whitespace
-  return !validation.test(value);
-};
-
-export default { presence, length, number, containsWhiteSpace };
+export default { presence, length, number };
