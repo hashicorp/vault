@@ -196,6 +196,7 @@
     </Toggle>
   {{else if (eq @attr.options.editType "stringArray")}}
     <StringList
+      data-test-input={{@attr.name}}
       @label={{this.labelString}}
       @warning={{@attr.options.warning}}
       @helpText={{@attr.options.helpText}}
