@@ -302,6 +302,6 @@ func printArgsWarningIfAny(w io.Writer, args []string) {
 	}
 
 	if len(trailingFlags) > 0 {
-		fmt.Fprintf(w, "Warning, flag(s) provided as argument(s): %s", trailingFlags)
+		fmt.Fprintf(w, "Flag(s) must be provided before positional argument(s): %s", trailingFlags)
 	}
 }

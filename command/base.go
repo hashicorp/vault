@@ -312,7 +312,7 @@ const (
 // command to save performance on future calls.
 func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 	c.flagsOnce.Do(func() {
-		set := NewFlagSets()
+		set := NewFlagSets(c.UI)
 
 		// These flag sets will apply to all leaf subcommands.
 		// TODO: Optional, but FlagSetHTTP can be safely removed from the individual
@@ -549,10 +549,11 @@ type FlagSets struct {
 	mainSet     *flag.FlagSet
 	hiddens     map[string]struct{}
 	completions complete.Flags
+	ui          cli.Ui
 }
 
 // NewFlagSets creates a new flag sets.
-func NewFlagSets() *FlagSets {
+func NewFlagSets(ui cli.Ui) *FlagSets {
 	mainSet := flag.NewFlagSet("", flag.ContinueOnError)
 
 	// Errors and usage are controlled by the CLI.
@@ -564,6 +565,7 @@ func NewFlagSets() *FlagSets {
 		mainSet:     mainSet,
 		hiddens:     make(map[string]struct{}),
 		completions: complete.Flags{},
+		ui:          ui,
 	}
 }
 
@@ -589,7 +591,7 @@ func (f *FlagSets) Parse(args []string) error {
 	var out bytes.Buffer
 	printArgsWarningIfAny(&out, f.Args())
 	if out.String() != "" {
-		fmt.Printf("%s\n", out.String())
+		f.ui.Warn(out.String())
 	}
 
 	return err
