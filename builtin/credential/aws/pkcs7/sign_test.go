@@ -127,7 +127,7 @@ func TestDSASignAndVerifyWithOpenSSL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("test case: cannot initialize signed data: %s", err)
 	}
-	// DSA only supports SHA1 for our 1024-bit DSA key
+	// openssl DSA only supports SHA1 for our 1024-bit DSA key, since that is all the standard officially supports
 	toBeSigned.digestOid = OIDDigestAlgorithmSHA1
 	if err := toBeSigned.SignWithoutAttr(signerCert, &priv, SignerInfoConfig{}); err != nil {
 		t.Fatalf("Cannot add signer: %s", err)
