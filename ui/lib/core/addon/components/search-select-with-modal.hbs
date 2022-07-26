@@ -1,4 +1,4 @@
-<div {{did-insert this.fetchOptions}} ...attributes>
+<div {{did-insert this.fetchOptions}} ...attributes data-test-input={{or @id @label}}>
   {{#if this.shouldUseFallback}}
     {{component
       @fallbackComponent
@@ -12,7 +12,7 @@
     }}
   {{else}}
     {{#if @label}}
-      <label class="is-label" data-test-field-label>
+      <label for={{or @id @label}} class="is-label">
         {{capitalize @label}}
         name
         {{#if @helpText}}

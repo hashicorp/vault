@@ -51,7 +51,7 @@ export default class OidcClientModel extends Model {
     defaultValue() {
       return ['default'];
     },
-    fallbackComponent: 'string-list',
+    fallbackComponent: 'input-search',
     selectLimit: 1,
     models: ['oidc/key'],
   })

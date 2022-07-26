@@ -1,5 +1,5 @@
 {{! template-lint-configure simple-unless "warn" }}
-<div class="field" data-test-field>
+<div class="field" data-test-field={{or @attr.name true}}>
   {{#unless
     (or
       (eq @attr.type "boolean")
@@ -196,7 +196,6 @@
     </Toggle>
   {{else if (eq @attr.options.editType "stringArray")}}
     <StringList
-      data-test-input={{@attr.name}}
       @label={{this.labelString}}
       @warning={{@attr.options.warning}}
       @helpText={{@attr.options.helpText}}

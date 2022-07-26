@@ -3,12 +3,12 @@
   data-test-component="string-list"
   {{did-insert this.autoSize}}
   {{did-update this.autoSizeUpdate}}
-  data-test-input
+  data-test-input={{or @id @label}}
   ...attributes
 >
   {{#if @label}}
     <label class="title is-label" data-test-string-list-label="true">
-      {{@label}}
+      {{capitalize @label}}
       {{#if this.helpText}}
         <InfoTooltip>{{this.helpText}}</InfoTooltip>
       {{/if}}
