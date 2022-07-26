@@ -12,17 +12,29 @@ description: >-
 
 This page describes common Vault use cases and provides related resources that you can use to create Vault configurations and workflows. Please note that not all use cases may be listed.
 
-#### General Secret Storage
+## General Secret Storage
 
 Vault provides a secure way to store sensitive environment variables, database credentials, API keys, etc. Currently, these variables are stored in plaintext, configuration management, and databases. Vault adds a layer of protection by allowing you to query using `vault read` or the API. This approach protects the plaintext version of these secrets, and all records access with the Vault audit log.
 
-#### Employee Credential Storage
+### Resources
+
+- Try our [Static Secrets: Key/Value Secrets Engine](https://learn.hashicorp.com/tutorials/vault/static-secrets?in=vault/secrets-management) tutorial to learn the basic steps to store secrets using Vault.
+
+- Try our [Versioned Key/Vault Secrets Engine](https://learn.hashicorp.com/tutorials/vault/versioned-kv?in=vault/secrets-management) tutorial and learn how versioned key-value secrets engine works to portect your data from accidental deletion.
+
+For more tutorials on secret storage, refer to the [Secrets Management](https://learn.hashicorp.com/collections/vault/secrets-management) tutorial series.
+
+## Employee Credential Storage
 
 Vault provides a secure solution for storing employee credentials. With Vault, employees may share access to web services securely.
 
 Vault's audit logs gather and list all secret accessed by users (employees). Audit logs make it effortless to manage and roll keys to keep secrets secure.
 
-#### API Key Generation for Scripts
+### Resources
+
+TBD
+
+## API Key Generation for Scripts
 
 The dynamic secrets feature of Vault is ideal for scripts: an AWS
 access key can be generated for the duration of a script, and then revoked.
@@ -30,8 +42,20 @@ The keypair exists only while the script runs; consequently, the keys are logged
 
 Dynamic secrets add a layer of security beyond Identity and Access Management (IAM) solutions by hard-coding limited-access access tokens in various locations.
 
-#### Data Encryption
+### Resources
+
+Try our [Dynamic Secrets: Database Secrets Engine](https://learn.hashicorp.com/tutorials/vault/database-secrets) tutorial how to generatew dynamic AWS credentials.
+
+For more tutorials on dynamic secrets, refer to the [Database Credentials](https://learn.hashicorp.com/collections/vault/db-credentials) tutorial series.
+
+## Data Encryption
 
 In addition to storing secrets, Vault can be used to
 encrypt/decrypt data that is stored elsewhere, essentially allowing applications to encrypt their data while still storing it in the
 primary data store. This provides a benefit to developers since the responsibility of encryption lies within the Vault's security team to manage, and thereby, allowing developers to solely focus on encrypting/decrypting data as needed.
+
+### Resources
+
+Try our [Encrypting Data with Transform Secrets Engine](https://learn.hashicorp.com/tutorials/vault/transform-code-example?in=vault/adp) to learn the basic workings of the Transform secrets engine and understand how an application may leverage the Tranform secrets engine.
+
+For more tutorials on data encryption, refer to the [Advanced Data Protection](https://learn.hashicorp.com/collections/vault/adp) tutorial series. 
