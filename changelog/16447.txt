@@ -1,0 +1,3 @@
+```release-note:bug
+activity: Add timestamp to current month calculation and remove deduplication for current month
+```

@@ -76,7 +76,7 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 	// client data is stored. The path at which the hyperloglog for a month is stored containes this timestamp.
 	hllMonthlyTimestamp := timeutil.StartOfMonth(startTime)
 	billingPeriodHLL := hyperloglog.New()
-	for hllMonthlyTimestamp.Before(timeutil.StartOfMonth(endTime)) || hllMonthlyTimestamp.Equal(timeutil.StartOfMonth(endTime)) {
+	for hllMonthlyTimestamp.Before(timeutil.StartOfMonth(endTime)) {
 		monthSketch, err := hllGetFunc(ctx, hllMonthlyTimestamp)
 		// If there's an error with the hyperloglog fetch, we should still deduplicate on
 		// the hlls that we have so we will warn that we couldn't find a hll for the month
@@ -146,6 +146,7 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 	currentMonthNewNonEntities := billingPeriodHLLWithCurrentMonthNonEntityClients.Estimate() - billingPeriodHLL.Estimate()
 
 	return &activity.MonthRecord{
+		Timestamp:  timeutil.StartOfMonth(endTime).UTC().Unix(),
 		NewClients: &activity.NewClientRecord{Counts: &activity.CountsRecord{EntityClients: int(currentMonthNewEntities), NonEntityClients: int(currentMonthNewNonEntities)}},
 		Counts:     &activity.CountsRecord{EntityClients: totalEntities, NonEntityClients: totalNonEntities},
 	}, nil
