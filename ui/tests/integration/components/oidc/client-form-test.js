@@ -40,9 +40,17 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     });
     this.server.get('/identity/oidc/assignment', () => {
       return {
-        request_id: 'some-list-id',
+        request_id: 'assignment-list-id',
         data: {
           keys: ['allow_all'],
+        },
+      };
+    });
+    this.server.get('/identity/oidc/key', () => {
+      return {
+        request_id: 'key-list-id',
+        data: {
+          keys: ['default'],
         },
       };
     });
@@ -83,7 +91,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
 
     await click('[data-test-toggle-group="More options"]');
     await click('label[for=limited]');
-    assert.dom('[data-test-input="assignment"]').exists('Radio toggle shows assignments input');
+    assert.dom('[data-test-input="assignments"]').exists('Radio toggle shows assignments input');
 
     // check form fields exist
     for (const attr of CLIENT_MODEL_ATTRS) {
