@@ -184,7 +184,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	if len(parsedBundle.Certificate.OCSPServer) == 0 && len(parsedBundle.Certificate.IssuingCertificateURL) == 0 && len(parsedBundle.Certificate.CRLDistributionPoints) == 0 {
 		// If the operator hasn't configured any of the URLs prior to
 		// generating this issuer, we should add a warning to the response,
-		// informing them they might want to do so and re-generate the issuer.
+		// informing them they might want to do so prior to issuing leaves.
 		resp.AddWarning("This mount hasn't configured any authority access information fields; this may make it harder for systems to find missing certificates in the chain or to validate revocation status of certificates. Consider updating /config/urls with this information.")
 	}
 

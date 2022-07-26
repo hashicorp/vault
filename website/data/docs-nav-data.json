@@ -1583,6 +1583,10 @@
           {
             "title": "Troubleshooting",
             "path": "platform/mssql/troubleshooting"
+          },
+          {
+            "title": "Release Notes",
+            "path": "platform/mssql/changelog"
           }
         ]
       },
