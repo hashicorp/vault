@@ -39,7 +39,8 @@ the mount to restrict more specific API paths.
 - `max_leases` `(int: 0)` - Maximum number of leases allowed by the quota rule.
 - `role` `(string: "")` - If set on a quota where `path` is set to an auth mount with a
   concept of roles (such as `/auth/approle/`), this will make the quota restrict login
-  requests to that mount that are made with the specified role.
+  requests to that mount that are made with the specified role. The request will fail if
+  the auth mount does not have a concept of roles, or `path` is not an auth mount.
 
 ### Sample Payload
 
