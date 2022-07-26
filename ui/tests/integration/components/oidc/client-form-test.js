@@ -57,7 +57,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
   });
 
   test('it should save new client', async function (assert) {
-    assert.expect(13);
+    assert.expect(14);
 
     this.server.post('/identity/oidc/client/some-app', (schema, req) => {
       assert.ok(true, 'Request made to save client');
@@ -91,6 +91,9 @@ module('Integration | Component | oidc/client-form', function (hooks) {
 
     await click('[data-test-toggle-group="More options"]');
     await click('label[for=limited]');
+    assert
+      .dom('[data-test-selected-option="true"]')
+      .hasText('default', 'Search select has default key selected');
     assert.dom('[data-test-input="assignments"]').exists('Radio toggle shows assignments input');
 
     // check form fields exist
@@ -101,7 +104,6 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     }
 
     await fillIn('[data-test-input="name"]', 'some-app');
-    await fillIn('[data-test-input="key"]', 'default');
     await click('[data-test-oidc-client-save]');
   });
 
