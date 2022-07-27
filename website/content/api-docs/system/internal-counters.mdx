@@ -271,26 +271,25 @@ for the current month will be an approximation. That is to say, the response wil
 ```json
 {
    "months":[
-      // accurate months for the non-current month,
       {
          "timestamp":"current_month_timestamp",
-         "counts":{ // the following block contains accurate counts
-            "distinct_entities":10,
-            "entity_clients":10,
-            "non_entity_tokens":10,
-            "non_entity_clients":10,
-            "clients":20
+         "counts":{ 
+            "distinct_entities":"exact int value",
+            "entity_clients":"exact int value",
+            "non_entity_tokens":"exact int value",
+            "non_entity_clients":"exact int value",
+            "clients":"exact int value"
          },
-         "namespaces": [], // this will be empty
+         "namespaces": [],
          "new_clients":{
-            "counts":{ // this block will contain estimated counts, not exact counts
-               "distinct_entities":5,
-               "entity_clients":5,
-               "non_entity_tokens":5,
-               "non_entity_clients":5,
-               "clients":10
+            "counts":{
+               "distinct_entities":"approx int value",
+               "entity_clients":"approx int value",
+               "non_entity_tokens":"approx int value",
+               "non_entity_clients":"approx int value",
+               "clients":"approx int value"
             },
-            "namespaces":[] // this will be empty
+            "namespaces":[]
          }
       }
    ],
