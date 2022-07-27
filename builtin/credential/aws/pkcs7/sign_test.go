@@ -151,7 +151,7 @@ func TestDSASignAndVerifyWithOpenSSL(t *testing.T) {
 		"-content", tmpContentFile.Name())
 	out, err := opensslCMD.CombinedOutput()
 	if err != nil {
-		t.Errorf("Command: openssl smime -verify -noverify -in %s -inform PEM -content %s", tmpSignatureFile.Name(), tmpContentFile.Name())
+		t.Errorf("Command: %s", opensslCMD.Args)
 		t.Fatalf("test case: openssl command failed with %s: %s", err, out)
 	}
 	os.Remove(tmpSignatureFile.Name())  // clean up
