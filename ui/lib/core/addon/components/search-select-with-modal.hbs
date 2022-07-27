@@ -1,4 +1,4 @@
-<div {{did-insert this.fetchOptions}} ...attributes data-test-input={{or @id @label}}>
+<div {{did-insert this.fetchOptions}} ...attributes data-test-search-select-with-modal>
   {{#if this.shouldUseFallback}}
     {{component
       @fallbackComponent
@@ -12,7 +12,7 @@
     }}
   {{else}}
     {{#if @label}}
-      <label for={{or @id @label}} class="is-label">
+      <label for={{or @id @label}} class="is-label" data-test-field-label>
         {{capitalize @label}}
         name
         {{#if @helpText}}
@@ -86,7 +86,7 @@
       @showCloseButton={{false}}
     >
       <section class="modal-card-body">
-        <p class="has-bottom-margin-s">
+        <p class="has-bottom-margin-s" data-test-modal-subtext>
           {{@modalSubtext}}
         </p>
         {{#if (has-block)}}
