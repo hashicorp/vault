@@ -756,6 +756,24 @@ func (c *Client) MaxIdleConnections() int {
 	return c.config.HttpClient.Transport.(*http.Transport).MaxIdleConns
 }
 
+func (c *Client) SetDisableKeepAlives(disable bool) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.HttpClient.Transport.(*http.Transport).DisableKeepAlives = disable
+}
+
+func (c *Client) DisableKeepAlives() bool {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	return c.config.HttpClient.Transport.(*http.Transport).DisableKeepAlives
+}
+
 func (c *Client) MaxRetries() int {
 	c.modifyLock.RLock()
 	defer c.modifyLock.RUnlock()
