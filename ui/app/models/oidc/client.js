@@ -4,11 +4,7 @@ import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import fieldToAttrs from '../../utils/field-to-attrs';
 
 export default class OidcClientModel extends Model {
-  @attr('string', {
-    label: 'Application name',
-  })
-  name;
-
+  @attr('string', { label: 'Application name' }) name;
   @attr('string', {
     label: 'Type',
     subText: 'Specify whether the application type is confidential or public. The public type must use PKCE.',
@@ -27,12 +23,17 @@ export default class OidcClientModel extends Model {
 
   // >> MORE OPTIONS TOGGLE <<
 
-  // might be a good candidate for using @belongsTo relationship?
   @attr('string', {
     label: 'Signing key',
     subText: 'Add a key to sign and verify the JSON web tokens (JWT). This cannot be edited later.',
     editType: 'searchSelect',
-    fallbackComponent: 'string-list',
+    editDisabled: true,
+    disallowNewItems: true,
+    defaultValue() {
+      return ['default'];
+    },
+    fallbackComponent: 'input-search',
+    selectLimit: 1,
     models: ['oidc/key'],
   })
   key;
@@ -41,6 +42,7 @@ export default class OidcClientModel extends Model {
     label: 'Access Token TTL',
     editType: 'ttl',
     helperTextDisabled: 'Vault will use the default lease duration',
+    setDefault: false,
   })
   accessTokenTtl;
 
@@ -48,35 +50,22 @@ export default class OidcClientModel extends Model {
     label: 'ID Token TTL',
     editType: 'ttl',
     helperTextDisabled: 'Vault will use the default lease duration',
+    setDefault: false,
   })
   idTokenTtl;
 
   // >> END MORE OPTIONS TOGGLE <<
 
-  // form has a radio option to allow_all (default), or limit access to selected 'assignment'
-  // if limited, expose search-select to select or create new and add via modal
-  @attr('array', {
-    label: 'Assign access',
-    editType: 'searchSelect',
-  })
-  assignments; // might be a good candidate for @hasMany relationship instead of @attr
+  @attr('array', { label: 'Assign access' }) assignments; // no editType because does not use form-field component
+  @attr('string', { label: 'Client ID' }) clientId;
+  @attr('string') clientSecret;
 
-  @attr('string', {
-    label: 'Client ID',
-  })
-  clientId;
+  // TODO API WIP - attr TBD, current PR proposes the following:
+  // $ curl -H "X-Vault-Token: ..." -X LIST http://127.0.0.1:8200/v1/identity/oidc/provider?allowed_client_id="<client_id>"
+  // add to model on route? or query from tab in UI?
+  @attr('string', { label: 'Providers' }) providers;
 
-  @attr('string', {
-    label: 'Client Secret',
-  })
-  clientSecret;
-
-  // API WIP - param TBD
-  @attr('string', {
-    label: 'Providers',
-  })
-  provider_ds; // might be a good candidate for @hasMany relationship instead of @attr
-
+  // CAPABILITIES //
   @lazyCapabilities(apiPath`identity/oidc/client/${'name'}`, 'name') clientPath;
   @lazyCapabilities(apiPath`identity/oidc/client`) clientsPath;
   get canCreate() {

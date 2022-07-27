@@ -42,33 +42,30 @@
         <AlertInline @type="danger" @message={{join ", " this.modelValidations.name.errors}} />
       {{/if}}
       {{#if (or @model.canListEntities @model.canListGroups)}}
-        {{#if @model.entity_ids.isFulfilled}}
-          <SearchSelect
-            @id="entities"
-            @label="Entities"
-            @labelClass="is-label"
-            @placeholder="Search"
-            @models={{array "identity/entity"}}
-            @inputValue={{map-by "id" @model.entity_ids}}
-            @shouldRenderName={{true}}
-            @onChange={{this.onEntitiesSelect}}
-            @disallowNewItems={{true}}
-            data-test-search-select="entities"
-          />
-        {{/if}}
-        {{#if @model.group_ids.isFulfilled}}
-          <SearchSelect
-            @id="groups"
-            @label="Groups"
-            @labelClass="is-label"
-            @placeholder="Search"
-            @models={{array "identity/group"}}
-            @inputValue={{map-by "id" @model.group_ids}}
-            @shouldRenderName={{true}}
-            @onChange={{this.onGroupsSelect}}
-            @disallowNewItems={{true}}
-          />
-        {{/if}}
+        <SearchSelect
+          @id="entities"
+          @label="Entities"
+          @labelClass="is-label"
+          @placeholder="Search"
+          @models={{array "identity/entity"}}
+          @inputValue={{@model.entityIds}}
+          @shouldRenderName={{true}}
+          @onChange={{this.onEntitiesSelect}}
+          @disallowNewItems={{true}}
+          data-test-search-select="entities"
+        />
+        <SearchSelect
+          @id="groups"
+          @label="Groups"
+          @labelClass="is-label"
+          @placeholder="Search"
+          @models={{array "identity/group"}}
+          @inputValue={{@model.groupIds}}
+          @shouldRenderName={{true}}
+          @onChange={{this.onGroupsSelect}}
+          @disallowNewItems={{true}}
+          data-test-search-select="groups"
+        />
       {{else}}
         <EmptyState
           @title="Permissions error"

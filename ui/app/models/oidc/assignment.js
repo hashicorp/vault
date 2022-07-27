@@ -1,6 +1,4 @@
-import Model, { attr, hasMany } from '@ember-data/model';
-import ArrayProxy from '@ember/array/proxy';
-import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
+import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { isPresent } from '@ember/utils';
@@ -8,7 +6,6 @@ import { isPresent } from '@ember/utils';
 const validations = {
   name: [
     { type: 'presence', message: 'Name is required.' },
-    // ARG TODO add in after Claire pushes her branch
     // {
     //   type: 'containsWhiteSpace',
     //   message: 'Name cannot contain whitespace.',
@@ -17,9 +14,7 @@ const validations = {
   targets: [
     {
       validator(model) {
-        const entityIds = model.hasMany('entity_ids').ids();
-        const groupIds = model.hasMany('group_ids').ids();
-        return isPresent(entityIds) || isPresent(groupIds);
+        return isPresent(model.entityIds) || isPresent(model.groupIds);
       },
       message: 'At least one entity or group is required.',
     },
@@ -29,33 +24,12 @@ const validations = {
 @withModelValidations(validations)
 export default class OidcAssignmentModel extends Model {
   @attr('string') name;
-  @hasMany('identity/entity') entity_ids;
-  @hasMany('identity/group') group_ids;
+  @attr('array') entityIds;
+  @attr('array') groupIds;
 
+  // CAPABILITIES
   @lazyCapabilities(apiPath`identity/oidc/assignment/${'name'}`, 'name') assignmentPath;
   @lazyCapabilities(apiPath`identity/oidc/assignment`) assignmentsPath;
-
-  get targets() {
-    return ArrayProxy.extend(PromiseProxyMixin).create({
-      promise: this.prepareTargets(),
-    });
-  }
-
-  async prepareTargets() {
-    const targets = [];
-
-    for (const key of ['entity_ids', 'group_ids']) {
-      (await this[key]).forEach((model) => {
-        targets.addObject({
-          key,
-          title: model.name,
-          subTitle: model.id,
-        });
-      });
-    }
-
-    return targets;
-  }
 
   get canCreate() {
     return this.assignmentPath.get('canCreate');
