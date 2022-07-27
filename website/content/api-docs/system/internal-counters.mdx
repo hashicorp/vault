@@ -261,9 +261,9 @@ months in the requested time range.
 
 - Note that if the `end_date` specified is the current month (available as of 1.12), 
 the last element in the `months` response stanza, signifying the current month, will
-not have namespace attribution for both the `new_clients`
-stanza and the top level `by_namespace` stanza. Furthermore, the `new_clients` counts returned
-for the current month will be an approximation. That is to say, the response will appear as follows.
+not have namespace attribution for the `new_clients` stanza. Furthermore, the 
+`new_clients` counts returned for the current month will be an approximation. 
+That is to say, the response will appear as follows.
 
 ```json
 {
@@ -277,7 +277,31 @@ for the current month will be an approximation. That is to say, the response wil
             "non_entity_clients":"exact int value",
             "clients":"exact int value"
          },
-         "namespaces": [],
+         "namespaces": [
+               {
+                  "namespace_id":"root",
+                  "namespace_path":"path",
+                  "counts":{ 
+                     "distinct_entities":"exact int value",
+                     "entity_clients":"exact int value",
+                     "non_entity_tokens":"exact int value",
+                     "non_entity_clients":"exact int value",
+                     "clients":"exact int value"
+                  },
+                  "mounts":[
+                     {
+                        "path":"auth/up2/",
+                        "counts":{ 
+                           "distinct_entities":"exact int value",
+                           "entity_clients":"exact int value",
+                           "non_entity_tokens":"exact int value",
+                           "non_entity_clients":"exact int value",
+                           "clients":"exact int value"
+                        },
+                     },
+                  ]
+               },
+         ],
          "new_clients":{
             "counts":{
                "distinct_entities":"approx int value",
