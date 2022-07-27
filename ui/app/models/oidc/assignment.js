@@ -1,4 +1,4 @@
-import Model, { attr, hasMany } from '@ember-data/model';
+import Model, { attr } from '@ember-data/model';
 import ArrayProxy from '@ember/array/proxy';
 import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
@@ -8,11 +8,10 @@ import { isPresent } from '@ember/utils';
 const validations = {
   name: [
     { type: 'presence', message: 'Name is required.' },
-    // ARG TODO add in after Claire pushes her branch
-    // {
-    //   type: 'containsWhiteSpace',
-    //   message: 'Name cannot contain whitespace.',
-    // },
+    {
+      type: 'containsWhiteSpace',
+      message: 'Name cannot contain whitespace.',
+    },
   ],
   targets: [
     {
@@ -29,17 +28,8 @@ const validations = {
 @withModelValidations(validations)
 export default class OidcAssignmentModel extends Model {
   @attr('string') name;
-  @hasMany('identity/entity') entity_ids;
-  @hasMany('identity/group') group_ids;
-
-  @lazyCapabilities(apiPath`identity/oidc/assignment/${'name'}`, 'name') assignmentPath;
-  @lazyCapabilities(apiPath`identity/oidc/assignment`) assignmentsPath;
-
-  get targets() {
-    return ArrayProxy.extend(PromiseProxyMixin).create({
-      promise: this.prepareTargets(),
-    });
-  }
+  @attr('identity/entity') entity_ids;
+  @attr('identity/group') group_ids;
 
   async prepareTargets() {
     const targets = [];
@@ -56,6 +46,16 @@ export default class OidcAssignmentModel extends Model {
 
     return targets;
   }
+
+  get targets() {
+    return ArrayProxy.extend(PromiseProxyMixin).create({
+      promise: this.prepareTargets(),
+    });
+  }
+
+  // CAPABILITIES
+  @lazyCapabilities(apiPath`identity/oidc/assignment/${'name'}`, 'name') assignmentPath;
+  @lazyCapabilities(apiPath`identity/oidc/assignment`) assignmentsPath;
 
   get canCreate() {
     return this.assignmentPath.get('canCreate');
