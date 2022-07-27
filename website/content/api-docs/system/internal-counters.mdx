@@ -270,37 +270,27 @@ for the current month will be an approximation. That is to say, the response wil
 
 ```json
 {
-   "months":[ // ROY
+   "months":[
       // accurate months for the non-current month,
       {
-         "timestamp":"2021-05-01T00:00:00Z",
-         "counts":{
+         "timestamp":"current_month_timestamp",
+         "counts":{ // the following block contains accurate counts
             "distinct_entities":10,
             "entity_clients":10,
             "non_entity_tokens":10,
             "non_entity_clients":10,
             "clients":20
          },
-         "namespaces": [], // 
+         "namespaces": [], // this will be empty
          "new_clients":{
-            "counts":{},
-            "namespaces":[
-               {
-                  "namespace_id":"root",
-                  "namespace_path":"",
-                  "counts":{},
-                  "mounts":[
-                     {
-                        "path":"auth/up2/",
-                        "counts":{}
-                     },
-                     {
-                        "path":"auth/up1/",
-                        "counts":{}
-                     }
-                  ]
-               }
-            ]
+            "counts":{ // this block will contain estimated counts, not exact counts
+               "distinct_entities":5,
+               "entity_clients":5,
+               "non_entity_tokens":5,
+               "non_entity_clients":5,
+               "clients":10
+            },
+            "namespaces":[] // this will be empty
          }
       }
    ],
@@ -310,7 +300,8 @@ for the current month will be an approximation. That is to say, the response wil
 
 Please visit the [client count](/docs/concepts/client-count) concepts page for
 more information on how clients map to these client IDs and how they are
-counted.
+counted, or for more information about how the new clients for the current month 
+are estimated in a billing period.
 
 The response will include all child namespaces of the namespace in which the
 request was made. If some namespace has subsequently been deleted, its path will
