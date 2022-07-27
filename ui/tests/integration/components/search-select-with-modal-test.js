@@ -13,7 +13,6 @@ module('Integration | Component | search select with modal', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
     this.server.get('identity/entity/id', () => {
       return {
         request_id: 'entity-list-id',
