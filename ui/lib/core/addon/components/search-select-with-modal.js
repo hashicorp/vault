@@ -9,14 +9,15 @@ import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-ut
 /**
  * @module SearchSelectWithModal
  * The `SearchSelectWithModal` is an implementation of the [ember-power-select](https://github.com/cibernox/ember-power-select) used for form elements where options come dynamically from the API. It can only accept a single model.
- * It renders a passed in form component so records can be created inline, via a modal that pops up after clicking "Add new <record>" from the dropdown menu
+ * It renders a passed in form component so records can be created inline, via a modal that pops up after clicking "Create new <id>" from the dropdown menu.
+ * **!! NOTE: any form passed must be able to receive an @onSave and @onCancel arg so that the modal will close properly. See `oidc/client-form.hbs` that renders a modal for the `oidc/assignment-form.hbs` as an example.
  * @example
  * <SearchSelectWithModal
  *         @id="assignments"
- *         @label="assignment"
+ *         @model="oidc/assignment"
+ *         @label="assignment name"
  *         @labelClass="is-label"
  *         @subText="Search for an existing assignment, or type a new name to create it."
- *         @model="oidc/assignment"
  *         @inputValue={{map-by "id" @model.assignments}}
  *         @onChange={{this.handleSearchSelect}}
  *         {{! since this is the "limited" radio select option we do not want to include 'allow_all' }}
@@ -26,18 +27,17 @@ import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-ut
  *         @modalSubtext="Use assignment to specify which Vault entities and groups are allowed to authenticate."
  *       />
  *
- * @param {string} id - The name of the form field
+ * @param {string} id - the model's attribute for the form field, will be interpolated into create new text: `Create new ${singularize(this.args.id)}`
  * @param {Array} model - model type to fetch from API (can only be a single model)
+ * @param {string} label - Label that appears above the form field
+ * @param {string} [helpText] - Text to be displayed in the info tooltip for this form field
+ * @param {string} [subText] - Text to be displayed below the label
+ * @param {string} [placeholder] - placeholder text to override the default text of "Search"
  * @param {function} onChange - The onchange action for this form field. ** SEE UTIL ** search-select-has-many.js if selecting models from a hasMany relationship
  * @param {string | Array} inputValue -  A comma-separated string or an array of strings -- array of ids for models.
- * @param {string} label - Label for this form field
  * @param {string} fallbackComponent - name of component to be rendered if the API returns a 403s
  * @param {boolean} [passObject=false] - When true, the onChange callback returns an array of objects with id (string) and isNew (boolean)
- * @param {string} [helpText] - Text to be displayed in the info tooltip for this form field
  * @param {number} [selectLimit] - A number that sets the limit to how many select options they can choose
- * @param {string} [subText] - Text to be displayed below the label
- * @param {string} [subLabel] - a smaller label below the main Label
- * @param {string} [placeholder] - placeholder text to override the default text of "Search"
  * @param {array} [excludeOptions] - array of strings containing model ids to filter from the dropdown (ex: ['allow_all'])
  * @param {function} search - *Advanced usage* - Customizes how the power-select component searches for matches -
  * see the power-select docs for more information.
@@ -50,7 +50,7 @@ export default class SearchSelectWithModal extends Component {
   @tracked allOptions = null; // all possible options
   @tracked showModal = false;
   @tracked newModelRecord = null;
-  @tracked shouldUseFallback;
+  @tracked shouldUseFallback = false;
 
   constructor() {
     super(...arguments);
@@ -144,7 +144,7 @@ export default class SearchSelectWithModal extends Component {
   //----- adapted from ember-power-select-with-create
   addCreateOption(term, results) {
     if (this.shouldShowCreate(term, results)) {
-      const name = `Create new ${singularize(this.args.label)}: ${term}`;
+      const name = `Create new ${singularize(this.args.id)}: ${term}`;
       const suggestion = {
         __isSuggestion__: true,
         __value__: term,

@@ -12,16 +12,12 @@
     }}
   {{else}}
     {{#if @label}}
-      <label for={{or @id @label}} class="is-label" data-test-field-label>
-        {{capitalize @label}}
-        name
+      <label for={{@id}} class="is-label" data-test-field-label>
+        {{@label}}
         {{#if @helpText}}
           <InfoTooltip>{{@helpText}}</InfoTooltip>
         {{/if}}
       </label>
-    {{/if}}
-    {{#if @subLabel}}
-      <p class="is-label">{{@subLabel}}</p>
     {{/if}}
     {{#if @subText}}
       <p class="sub-text">{{@subText}}</p>
@@ -79,7 +75,7 @@
   {{/if}}
   {{#if this.newModelRecord}}
     <Modal
-      @title="Create new {{@label}}"
+      @title="Create new {{@id}}"
       @onClose={{action (mut this.showModal) false}}
       @isActive={{this.showModal}}
       @type="info"
@@ -93,6 +89,7 @@
           {{yield}}
         {{else}}
           {{! dynamically render passed in form component }}
+          {{! form must receive an @onSave and @onCancel arg that executes the callback}}
           {{component
             @modalFormComponent
             model=this.newModelRecord
