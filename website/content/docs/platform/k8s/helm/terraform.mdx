@@ -185,7 +185,7 @@ resource "helm_release" "vault" {
   }
   set {
     name  = "server.volumes[0].secret.defaultMode"
-    value = 420
+    value = "420"
   }
   set {
     name  = "server.volumes[0].secret.secretName"
