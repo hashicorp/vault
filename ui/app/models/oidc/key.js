@@ -10,11 +10,7 @@ export default class OidcKeyModel extends Model {
   })
   algorithm;
 
-  @attr({
-    editType: 'ttl',
-    helperTextDisabled: 'Vault will use the default lease duration',
-  })
-  rotationPeriod;
+  @attr({ editType: 'ttl', helperTextDisabled: 'Vault will use the default lease duration' }) rotationPeriod;
 
   @attr({
     label: 'Verification TTL',
@@ -24,11 +20,7 @@ export default class OidcKeyModel extends Model {
   })
   verificationTtl;
 
-  @attr('array', {
-    label: 'Allowed applications',
-    editType: 'stringArray',
-  })
-  allowedClientIds;
+  @attr('array', { label: 'Allowed applications' }) allowedClientIds; // no editType because does not use form-field component
 
   @lazyCapabilities(apiPath`identity/oidc/key/${'name'}`, 'name') keyPath;
   @lazyCapabilities(apiPath`identity/oidc/key`) keysPath;

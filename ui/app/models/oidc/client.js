@@ -1,4 +1,4 @@
-import Model, { attr, hasMany } from '@ember-data/model';
+import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
@@ -16,13 +16,7 @@ const validations = {
 
 @withModelValidations(validations)
 export default class OidcClientModel extends Model {
-  @hasMany('oidc/assignment') assignments;
-  @attr('string', {
-    label: 'Application name',
-    editDisabled: true,
-  })
-  name;
-
+  @attr('string', { label: 'Application name' }) name;
   @attr('string', {
     label: 'Type',
     subText: 'Specify whether the application type is confidential or public. The public type must use PKCE.',
@@ -73,23 +67,17 @@ export default class OidcClientModel extends Model {
   idTokenTtl;
 
   // >> END MORE OPTIONS TOGGLE <<
-  @attr('string', {
-    label: 'Client ID',
-  })
-  clientId;
 
-  @attr('string', {
-    label: 'Client Secret',
-  })
-  clientSecret;
+  @attr('array', { label: 'Assign access' }) assignments; // no editType because does not use form-field component
+  @attr('string', { label: 'Client ID' }) clientId;
+  @attr('string') clientSecret;
 
-  // API WIP - param TBD
-  @attr('string', {
-    label: 'Providers',
-  })
-  providerIds; // might be a good candidate for @hasMany relationship instead of @attr
+  // TODO API WIP - attr TBD, current PR proposes the following:
+  // $ curl -H "X-Vault-Token: ..." -X LIST http://127.0.0.1:8200/v1/identity/oidc/provider?allowed_client_id="<client_id>"
+  // add to model on route? or query from tab in UI?
+  @attr('string', { label: 'Providers' }) providers;
 
-  // PERMISSIONS //
+  // CAPABILITIES //
   @lazyCapabilities(apiPath`identity/oidc/client/${'name'}`, 'name') clientPath;
   @lazyCapabilities(apiPath`identity/oidc/client`) clientsPath;
   get canCreate() {

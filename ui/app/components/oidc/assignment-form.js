@@ -3,7 +3,6 @@ import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
-import handleHasManySelection from 'core/utils/search-select-has-many';
 
 /**
  * @module Oidc::AssignmentForm
@@ -26,55 +25,7 @@ import handleHasManySelection from 'core/utils/search-select-has-many';
 export default class OidcAssignmentFormComponent extends Component {
   @service store;
   @service flashMessages;
-
-  targetTypes = [
-    { label: 'Entity', type: 'identity/entity', key: 'entity_ids' },
-    { label: 'Group', type: 'identity/group', key: 'groups_ids' },
-  ];
-
   @tracked modelValidations;
-  @tracked targets = [];
-
-  constructor() {
-    super(...arguments);
-    // aggregate different target array properties on model into flat list
-    this.flattenTargets();
-    // eagerly fetch identity groups and entities for use as search select options
-    this.resetTargetState();
-  }
-  // ARG TODO these functions are similar to the one used in MFA. Making a ticket to turn into a util/helper.
-  async flattenTargets() {
-    if (!this.args.model) {
-      return;
-    }
-    for (let { label, key } of this.targetTypes) {
-      const targetArray = await this.args.model[key];
-      if (typeof targetArray !== 'object') {
-        return;
-      }
-      const targets = targetArray.map((value) => ({ label, key, value }));
-      this.targets.addObjects(targets);
-    }
-  }
-  async resetTargetState() {
-    this.selectedTargetValue = null;
-    const options = this.searchSelectOptions || {};
-    if (!this.searchSelectOptions) {
-      const types = ['identity/group', 'identity/entity'];
-      for (const type of types) {
-        try {
-          options[type] = (await this.store.query(type, {})).toArray();
-        } catch (error) {
-          options[type] = [];
-        }
-      }
-      this.searchSelectOptions = options;
-    }
-  }
-
-  get selectedTarget() {
-    return this.targetTypes.findBy('type', this.selectedTargetType);
-  }
 
   @task
   *save(event) {
@@ -103,27 +54,17 @@ export default class OidcAssignmentFormComponent extends Component {
   }
 
   @action
-  handleOperation(e) {
-    const value = e.target.value;
-    this.args.model.name = value;
+  handleOperation({ target }) {
+    this.args.model.name = target.value;
   }
 
   @action
-  async onEntitiesSelect(selectedIds) {
-    const entityIds = await this.args.model.entity_ids;
-    handleHasManySelection(selectedIds, entityIds, this.store, 'identity/entity');
+  onEntitiesSelect(selectedIds) {
+    this.args.model.entityIds = selectedIds;
   }
 
   @action
-  async onGroupsSelect(selectedIds) {
-    const groupIds = await this.args.model.group_ids;
-    handleHasManySelection(selectedIds, groupIds, this.store, 'identity/group');
-  }
-
-  @action
-  removeTarget(target) {
-    this.targets.removeObject(target);
-    // remove target from appropriate model property
-    this.args.model[target.key].removeObject(target.value);
+  onGroupsSelect(selectedIds) {
+    this.args.model.groupIds = selectedIds;
   }
 }

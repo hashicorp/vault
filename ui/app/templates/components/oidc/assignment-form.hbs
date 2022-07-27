@@ -57,18 +57,42 @@
           data-test-search-select="entities"
         />
       {{/if}}
-      {{#if @model.group_ids.isFulfilled}}
+      {{#if (or @model.canListEntities @model.canListGroups)}}
+        <SearchSelect
+          @id="entities"
+          @label="Entities"
+          @labelClass="is-label"
+          @placeholder="Search"
+          @models={{array "identity/entity"}}
+          @inputValue={{@model.entityIds}}
+          @shouldRenderName={{true}}
+          @onChange={{this.onEntitiesSelect}}
+          @disallowNewItems={{true}}
+          data-test-search-select="entities"
+        />
         <SearchSelect
           @id="groups"
           @label="Groups"
           @labelClass="is-label"
           @placeholder="Search"
           @models={{array "identity/group"}}
-          @inputValue={{map-by "id" @model.group_ids}}
+          @inputValue={{@model.groupIds}}
           @shouldRenderName={{true}}
           @onChange={{this.onGroupsSelect}}
           @disallowNewItems={{true}}
+          data-test-search-select="groups"
         />
+      {{else}}
+        <EmptyState
+          @title="Permissions error"
+          @icon="skip"
+          @message="It is possible you don't have permissions to list entities or groups."
+          @bottomBorder={{true}}
+        >
+          <DocLink @path="/docs/concepts/identity#identity">
+            Learn more
+          </DocLink>
+        </EmptyState>
       {{/if}}
     {{else}}
       <EmptyState
