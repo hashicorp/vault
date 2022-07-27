@@ -1,6 +1,4 @@
 import Model, { attr } from '@ember-data/model';
-import ArrayProxy from '@ember/array/proxy';
-import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { isPresent } from '@ember/utils';
@@ -8,17 +6,15 @@ import { isPresent } from '@ember/utils';
 const validations = {
   name: [
     { type: 'presence', message: 'Name is required.' },
-    {
-      type: 'containsWhiteSpace',
-      message: 'Name cannot contain whitespace.',
-    },
+    // {
+    //   type: 'containsWhiteSpace',
+    //   message: 'Name cannot contain whitespace.',
+    // },
   ],
   targets: [
     {
       validator(model) {
-        const entityIds = model.hasMany('entity_ids').ids();
-        const groupIds = model.hasMany('group_ids').ids();
-        return isPresent(entityIds) || isPresent(groupIds);
+        return isPresent(model.entityIds) || isPresent(model.groupIds);
       },
       message: 'At least one entity or group is required.',
     },
@@ -28,30 +24,8 @@ const validations = {
 @withModelValidations(validations)
 export default class OidcAssignmentModel extends Model {
   @attr('string') name;
-  @attr('identity/entity') entity_ids;
-  @attr('identity/group') group_ids;
-
-  async prepareTargets() {
-    const targets = [];
-
-    for (const key of ['entity_ids', 'group_ids']) {
-      (await this[key]).forEach((model) => {
-        targets.addObject({
-          key,
-          title: model.name,
-          subTitle: model.id,
-        });
-      });
-    }
-
-    return targets;
-  }
-
-  get targets() {
-    return ArrayProxy.extend(PromiseProxyMixin).create({
-      promise: this.prepareTargets(),
-    });
-  }
+  @attr('array') entityIds;
+  @attr('array') groupIds;
 
   // CAPABILITIES
   @lazyCapabilities(apiPath`identity/oidc/assignment/${'name'}`, 'name') assignmentPath;
