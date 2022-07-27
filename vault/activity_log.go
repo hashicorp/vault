@@ -1570,6 +1570,19 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 		if err != nil {
 			return nil, err
 		}
+		// Add the namespace attribution for the current month to the newly computed current month value. Note
+		// that transformMonthBreakdowns calculates a superstruct of the required namespace struct due to its
+		// primary use-case being for precomputedQueryWorker, but we will reuse this code for brevity and extract
+		// the namespaces from it.
+		currentMonthNamespaceAttribution := a.transformMonthBreakdowns(partialByMonth)
+		// Ensure that there is only one element in this list -- if not, warn.
+		if len(currentMonthNamespaceAttribution) != 1 {
+			a.logger.Warn("more than one month worth of namespace and mount attribution calculated for "+
+				"current month values", "number of months", len(currentMonthNamespaceAttribution))
+		}
+		if len(currentMonthNamespaceAttribution) > 0 {
+			currentMonth.Namespaces = currentMonthNamespaceAttribution[0].Namespaces
+		}
 		pq.Months = append(pq.Months, currentMonth)
 		distinctEntitiesResponse += pq.Months[len(pq.Months)-1].NewClients.Counts.EntityClients
 	}
