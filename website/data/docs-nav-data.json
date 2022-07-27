@@ -1447,6 +1447,10 @@
                 "path": "platform/k8s/helm/configuration"
               },
               {
+                "title": "Terraform",
+                "path": "platform/k8s/helm/terraform"
+              },
+              {
                 "title": "Examples",
                 "routes": [
                   {
