@@ -588,10 +588,9 @@ func (f *FlagSets) Completions() complete.Flags {
 func (f *FlagSets) Parse(args []string) error {
 	err := f.mainSet.Parse(args)
 
-	var out bytes.Buffer
-	printArgsWarningIfAny(&out, f.Args())
-	if out.String() != "" {
-		f.ui.Warn(out.String())
+	warnings := generateFlagWarnings(f.Args())
+	if warnings != "" {
+		f.ui.Warn(warnings)
 	}
 
 	return err

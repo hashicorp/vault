@@ -293,7 +293,7 @@ func parseFlagFile(raw string) (string, error) {
 	return raw, nil
 }
 
-func printArgsWarningIfAny(w io.Writer, args []string) {
+func generateFlagWarnings(args []string) string {
 	var trailingFlags []string
 	for _, arg := range args {
 		if strings.HasPrefix(arg, "-") {
@@ -302,6 +302,9 @@ func printArgsWarningIfAny(w io.Writer, args []string) {
 	}
 
 	if len(trailingFlags) > 0 {
-		fmt.Fprintf(w, "Flag(s) must be provided before positional argument(s): %s", trailingFlags)
+		return fmt.Sprintf("Flags must be provided before positional arguments. "+
+			"The following arguments will not be parsed as flags: [%s]", strings.Join(trailingFlags, ","))
+	} else {
+		return ""
 	}
 }

@@ -1,3 +1,3 @@
 ```release-note:improvement
-base: Added a small utility method to display a warning if flags are passed after arguments in a command.
+cli: CLI commands will print a warning if flags will be ignored because they are passed after positional arguments.
 ```

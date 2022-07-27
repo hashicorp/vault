@@ -1,7 +1,6 @@
 package command
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -249,11 +248,9 @@ func TestArgWarnings(t *testing.T) {
 		tc := tc
 
 		t.Run(tc.expected, func(t *testing.T) {
-			var out bytes.Buffer
-
-			printArgsWarningIfAny(&out, tc.args)
-			if !strings.Contains(out.String(), tc.expected) {
-				t.Fatalf("expected %s to contain %s", out.String(), tc.expected)
+			warnings := generateFlagWarnings(tc.args)
+			if !strings.Contains(warnings, tc.expected) {
+				t.Fatalf("expected %s to contain %s", warnings, tc.expected)
 			}
 		})
 	}
