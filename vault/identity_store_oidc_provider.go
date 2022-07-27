@@ -372,8 +372,8 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"allowed_client_id": {
 					Type: framework.TypeString,
-					Description: "Filters the set of returned OIDC providers to those " +
-						"that allow the given value in their set of allowed_client_ids.",
+					Description: "Filters the list of OIDC providers to those " +
+						"that allow the given client ID in their set of allowed_client_ids.",
 					Query: true,
 				},
 			},
