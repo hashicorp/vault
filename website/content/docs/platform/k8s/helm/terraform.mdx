@@ -144,6 +144,7 @@ seal "awskms" {
 }
 EOT
   }
+}
 ```
 
 </CodeBlockConfig>
@@ -179,7 +180,7 @@ resource "helm_release" "vault" {
   chart      = "vault"
 
   set {
-    name  = "server.volumes[0].name
+    name  = "server.volumes[0].name"
     value = "userconfig-my-gcp-iam"
   }
   set {
@@ -203,6 +204,7 @@ resource "helm_release" "vault" {
     name  = "server.volumeMounts[0].readOnly"
     value = "true"
   }
+}
 ```
 
 </CodeBlockConfig>
