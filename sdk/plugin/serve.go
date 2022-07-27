@@ -37,13 +37,12 @@ func Serve(opts *ServeOpts) error {
 		})
 	}
 
-	// pluginSets is the map of plugins we can dispense.
+	// pluginMap is the map of plugins we can dispense.
 	pluginSets := map[int]plugin.PluginSet{
 		// Version 3 used to supports both protocols. We want to keep it around
 		// since it's possible old plugins built against this version will still
 		// work with gRPC. There is currently no difference between version 3
 		// and version 4.
-		// AutoMTLS is not supported by versions lower than 5.
 		3: {
 			"backend": &GRPCBackendPlugin{
 				Factory: opts.BackendFactoryFunc,
@@ -54,13 +53,6 @@ func Serve(opts *ServeOpts) error {
 			"backend": &GRPCBackendPlugin{
 				Factory: opts.BackendFactoryFunc,
 				Logger:  logger,
-			},
-		},
-		5: {
-			"backend": &GRPCBackendPlugin{
-				Factory:           opts.BackendFactoryFunc,
-				Logger:            logger,
-				AutoMTLSSupported: true,
 			},
 		},
 	}

@@ -110,7 +110,7 @@ func (c *AuditEnableCommand) Run(args []string) int {
 
 	args = f.Args()
 	if len(args) < 1 {
-		c.UI.Error("Missing TYPE!")
+		c.UI.Error("Error enabling audit device: audit type missing. Valid types include 'file', 'socket' and 'syslog'.")
 		return 1
 	}
 
