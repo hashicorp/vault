@@ -48,7 +48,7 @@
           @labelClass="is-label"
           @placeholder="Search"
           @models={{array "identity/entity"}}
-          @inputValue={{map-by "id" @model.entityIds}}
+          @inputValue={{@model.entityIds}}
           @shouldRenderName={{true}}
           @onChange={{this.onEntitiesSelect}}
           @disallowNewItems={{true}}
@@ -60,10 +60,11 @@
           @labelClass="is-label"
           @placeholder="Search"
           @models={{array "identity/group"}}
-          @inputValue={{map-by "id" @model.groupIds}}
+          @inputValue={{@model.groupIds}}
           @shouldRenderName={{true}}
           @onChange={{this.onGroupsSelect}}
           @disallowNewItems={{true}}
+          data-test-search-select="groups"
         />
       {{else}}
         <EmptyState

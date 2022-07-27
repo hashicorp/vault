@@ -60,11 +60,13 @@ module('Integration | Component | oidc/assignment-form', function (hooks) {
   });
 
   test('it should populate fields with model data on edit view and update an assignment', async function (assert) {
-    assert.expect(5);
+    assert.expect(6);
 
     this.store.pushPayload('oidc/assignment', {
       modelName: 'oidc/assignment',
       name: 'test',
+      entity_ids: ['1234-12345'],
+      group_ids: ['abcdef-123'],
     });
     this.model = this.store.peekRecord('oidc/assignment', 'test');
     // override capability getters
@@ -72,8 +74,6 @@ module('Integration | Component | oidc/assignment-form', function (hooks) {
       canListGroups: { value: true },
       canListEntities: { value: true },
     });
-    const [group] = (await this.store.query('identity/group', {})).toArray();
-    this.model.group_ids.addObject(group);
     await render(hbs`
       <Oidc::AssignmentForm
         @model={{this.model}}
@@ -86,10 +86,12 @@ module('Integration | Component | oidc/assignment-form', function (hooks) {
     assert.dom('[data-test-oidc-assignment-save]').hasText('Update', 'Save button has correct label');
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
     assert.dom('[data-test-input="name"]').hasValue('test', 'Name input is populated with model value');
-    assert.dom('[data-test-smaller-id="true"]').hasText('abcdef-123', 'group id renders in selected option');
-
-    await click('[data-test-component="search-select"] .ember-basic-dropdown-trigger');
-    await click('.ember-power-select-option');
+    assert
+      .dom('[data-test-search-select="entities"] [data-test-smaller-id="true"]')
+      .hasText('1234-12345', 'entity id renders in selected option');
+    assert
+      .dom('[data-test-search-select="groups"] [data-test-smaller-id="true"]')
+      .hasText('abcdef-123', 'group id renders in selected option');
   });
 
   test('it should not show an error message if permissions shows at least entities or groups', async function (assert) {
