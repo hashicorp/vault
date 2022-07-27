@@ -8,15 +8,15 @@
 
 {{#each this.model as |model|}}
   <LinkedBlock
-    class={{concat "list-item-row" (if (eq model.name "allow_all") " is-disabled")}}
+    class="list-item-row {{if (eq model.name 'allow_all') 'is-disabled'}}"
     @params={{array "vault.cluster.access.oidc.assignments.assignment.details" model.name}}
-    @disabled={{(eq model.name "allow_all")}}
+    @disabled={{eq model.name "allow_all"}}
   >
     <div class="level is-mobile">
       <div class="level-left">
         <div>
           <Icon @name="users" class="has-text-grey-light" />
-          <span class={{concat "has-text-weight-semibold" (if (not-eq model.name "allow_all") " is-underline")}}>
+          <span class="has-text-weight-semibold {{if (not-eq model.name 'allow_all') 'is-underline'}}">
             {{model.name}}
           </span>
           {{#if (eq model.name "allow_all")}}
