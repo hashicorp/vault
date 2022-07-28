@@ -19,7 +19,7 @@ import { isWildcardString } from 'vault/helpers/is-wildcard-string';
  *
  * @param displayArray=null {array} - This array of data to be displayed.  If there are more than 10 items in the array only five will show and a count of the other number in the array will show.
  * @param [isLink=true] {Boolean} - Indicates if the item should contain a link-to component.  Only setup for arrays, but this could be changed if needed.
- * @param [modelType=null] {string} - Tells what model you want data for the allOptions to be returned from.  Used in conjunction with the the isLink.
+ * @param [modelType] {string} - Tells which model you want data for the allOptions to be returned from.  Used in conjunction with the the isLink.
  * @param [wildcardLabel] {String} - when you want the component to return a count on the model for options returned when using a wildcard you must provide a label of the count e.g. role.  Should be singular.
  * @param [queryParam] {String} - If you want to specific a tab for the View All XX to display to.  Ex: role
  * @param [backend] {String} - To specify which backend to point the link to.
@@ -54,14 +54,14 @@ export default class InfoTableItemArray extends Component {
   }
 
   @task *fetchOptions() {
-    if (this.isLink && this.modelType) {
+    if (this.args.isLink && this.args.modelType) {
       let queryOptions = {};
 
       if (this.backend) {
         queryOptions = { backend: this.backend };
       }
 
-      let options = yield this.store.query(this.modelType, queryOptions);
+      let options = yield this.store.query(this.args.modelType, queryOptions);
       this.formatOptions(options);
     }
     this.checkWildcardInArray.perform();
