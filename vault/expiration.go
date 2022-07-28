@@ -1881,6 +1881,10 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 		m.pending.Store(le.LeaseID, pending)
 	}
 
+	// If we're in restore mode, Vault is still starting. While we may get leases created, it is likely
+	// 'catching up' on old creates, and will count these leases from the restore process instead.
+	// There is no way for a user to create real leases while we're still in restore mode, so the
+	// !m.inRestoreMode() prevents double counting.
 	if leaseCreated && !m.inRestoreMode() {
 		m.leaseCount++
 		// Avoid nil pointer dereference. Without cachedLeaseInfo we do not have enough information to
