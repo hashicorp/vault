@@ -1094,7 +1094,7 @@ func (i *IdentityStore) CreateEntity(ctx context.Context) (*identity.Entity, err
 			nsLabel,
 		})
 
-	return entity, nil
+	return entity.Clone()
 }
 
 // CreateOrFetchEntity creates a new entity. This is used by core to
