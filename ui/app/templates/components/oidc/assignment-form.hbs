@@ -42,43 +42,32 @@
     {{#if this.modelValidations.name.errors}}
       <AlertInline @type="danger" @message={{join ", " this.modelValidations.name.errors}} />
     {{/if}}
-    {{#if (or @model.canListEntities @model.canListGroups)}}
-      <SearchSelect
-        @id="entities"
-        @label="Entities"
-        @labelClass="is-label"
-        @placeholder="Search"
-        @models={{array "identity/entity"}}
-        @inputValue={{@model.entityIds}}
-        @shouldRenderName={{true}}
-        @onChange={{this.onEntitiesSelect}}
-        @disallowNewItems={{true}}
-        data-test-search-select="entities"
-      />
-      <SearchSelect
-        @id="groups"
-        @label="Groups"
-        @labelClass="is-label"
-        @placeholder="Search"
-        @models={{array "identity/group"}}
-        @inputValue={{@model.groupIds}}
-        @shouldRenderName={{true}}
-        @onChange={{this.onGroupsSelect}}
-        @disallowNewItems={{true}}
-        data-test-search-select="groups"
-      />
-    {{else}}
-      <EmptyState
-        @title="Permissions error"
-        @icon="skip"
-        @message="It is possible you don't have permissions to list entities or groups."
-        @bottomBorder={{true}}
-      >
-        <DocLink @path="/docs/concepts/identity#identity">
-          Learn more
-        </DocLink>
-      </EmptyState>
-    {{/if}}
+    <SearchSelect
+      @id="entities"
+      @label="Entities"
+      @labelClass="is-label"
+      @placeholder="Search"
+      @models={{array "identity/entity"}}
+      @inputValue={{@model.entityIds}}
+      @shouldRenderName={{true}}
+      @onChange={{this.onEntitiesSelect}}
+      @disallowNewItems={{true}}
+      @fallbackComponent="string-list"
+      data-test-search-select="entities"
+    />
+    <SearchSelect
+      @id="groups"
+      @label="Groups"
+      @labelClass="is-label"
+      @placeholder="Search"
+      @models={{array "identity/group"}}
+      @inputValue={{@model.groupIds}}
+      @shouldRenderName={{true}}
+      @onChange={{this.onGroupsSelect}}
+      @disallowNewItems={{true}}
+      @fallbackComponent="string-list"
+      data-test-search-select="groups"
+    />
   </div>
   <div class="has-top-padding-s">
     {{#if this.modelValidations.targets.errors}}
