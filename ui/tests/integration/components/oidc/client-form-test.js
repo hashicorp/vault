@@ -7,9 +7,8 @@ import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { overrideMirageResponse } from 'vault/tests/helpers/oidc-config';
-// import ENV from 'vault/config/environment';
-const searchSelect = create(ss);
 
+const searchSelect = create(ss);
 const CLIENT_FIELD_ATTRS = [
   { name: 'name', isFormField: true },
   { name: 'clientType', isFormField: true },
@@ -18,6 +17,7 @@ const CLIENT_FIELD_ATTRS = [
   { name: 'accessTokenTtl', isFormField: true },
   { name: 'idTokenTtl', isFormField: true },
 ];
+
 module('Integration | Component | oidc/client-form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);

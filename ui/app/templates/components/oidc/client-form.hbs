@@ -44,7 +44,6 @@
         @icon="org"
         @value="allow_all"
         @groupValue={{this.radioCardGroupValue}}
-        {{!-- @onChange={{this.handleAssignmentSelection}} --}}
         @onChange={{fn (mut this.radioCardGroupValue)}}
       />
       <RadioCard
@@ -54,7 +53,6 @@
         @value="limited"
         @groupValue={{this.radioCardGroupValue}}
         @onChange={{fn (mut this.radioCardGroupValue)}}
-        {{!-- @onChange={{this.handleAssignmentSelection}} --}}
       />
     </div>
     {{#if (eq this.radioCardGroupValue "limited")}}
