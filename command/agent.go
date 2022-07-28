@@ -379,6 +379,10 @@ func (c *AgentCommand) Run(args []string) int {
 			sinkClient.SetMaxIdleConnections(-1)
 		}
 
+		if config.DisableKeepAlivesAutoAuth {
+			sinkClient.SetDisableKeepAlives(true)
+		}
+
 		for _, sc := range config.AutoAuth.Sinks {
 			switch sc.Type {
 			case "file":
@@ -507,8 +511,12 @@ func (c *AgentCommand) Run(args []string) int {
 			return 1
 		}
 
-		if config.DisableIdleConnsAutoAuth {
+		if config.DisableIdleConnsCaching {
 			proxyClient.SetMaxIdleConnections(-1)
+		}
+
+		if config.DisableKeepAlivesCaching {
+			proxyClient.SetDisableKeepAlives(true)
 		}
 
 		// Create the API proxier
@@ -822,6 +830,10 @@ func (c *AgentCommand) Run(args []string) int {
 
 		if config.DisableIdleConnsAutoAuth {
 			ahClient.SetMaxIdleConnections(-1)
+		}
+
+		if config.DisableKeepAlivesAutoAuth {
+			ahClient.SetDisableKeepAlives(true)
 		}
 
 		ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
