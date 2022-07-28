@@ -768,8 +768,8 @@ func (c *Client) SetDisableKeepAlives(disable bool) {
 func (c *Client) DisableKeepAlives() bool {
 	c.modifyLock.RLock()
 	defer c.modifyLock.RUnlock()
-	c.config.modifyLock.Lock()
-	defer c.config.modifyLock.Unlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
 
 	return c.config.HttpClient.Transport.(*http.Transport).DisableKeepAlives
 }
