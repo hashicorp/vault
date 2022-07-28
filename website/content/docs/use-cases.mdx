@@ -14,17 +14,28 @@ This page describes common Vault use cases and provides related resources that c
 
 ## Secrets Management
 
-In today's dynamic environments, applications and systems are ever-changing. With changing systems, standard static IP-based solutions that store, access, and distribute secrets to applications and systems do not scale well. IP-based static solutions may also pose challenges when organizations require complex and redundant systems to manage their secret sprawl. For example, the more complex the solution to manage secrets across applications, systems, and infrastructure, the more likelihood of an increase in threat surface. Vault's [secret management](/docs/secrets) solution centrally manages and enforces access to secrets and systems based on trusted sources of application and user identity.  Rather than use credentials to grant access, Vault uses tokens to balance and manage access privilege with security and break glass functionality.
+The adoption of Cloud means organizations shift away from static infrastructure to now provisioning and managing dynamic infrastructure. This implies distribution of services, embracing ephemerality and immutability, and the ability to deploy onto multiple target environments. 
+
+Managing secrets in the cloud can add complexity as organizations look to adopt more modern
+security practices and posture. When choosing the right secrets management solution there are several options available depending on security and deployment requirements for workflows, teams, systems and infrastructure.
+
+Vault's [secret management](/docs/secrets) solution centrally manages and enforces access to secrets and systems based on trusted sources of application and user identity. Rather than use credentials to grant access, Vault uses tokens to balance and manage access privilege with security and break glass functionality.
 
 Further, secrets management also includes the ability to distribute dynamic secrets where sensitive information is protected in transit and stored.
 
-### Resources
+### Static Secrets
 
-- Try our [Static Secrets: Key/Value Secrets Engine](https://learn.hashicorp.com/tutorials/vault/static-secrets?in=vault/secrets-management) tutorial to learn the basic steps of storing secrets using Vault.
+Vault safely store credentials, keys, and other types of secrets without deplying and managing a complex key management infrastructure.
 
-- Try our [Versioned Key/Vault Secrets Engine](https://learn.hashicorp.com/tutorials/vault/versioned-kv?in=vault/secrets-management) tutorial and learn how a versioned key-value secrets engine protects your data from accidental deletion.
+- Read the [Versioned Key/Vault Secrets Engine](https://learn.hashicorp.com/tutorials/vault/versioned-kv?in=vault/secrets-management) tutorial and learn how a versioned key-value secrets engine protects your static secrets.
 
-For more tutorials on secrets management, refer to the [Secrets Management](https://learn.hashicorp.com/collections/vault/secrets-management) tutorial series.
+### Dynamic Secrets
+
+Secrets in plain text may accidentally be left in an application or with an individual long after the intended period of access. Vault provides a unique ability to create, rotate, and revoke secrets dynamically.
+
+- Read the [Dynamic Secrets: Database Secrets Engine](https://learn.hashicorp.com/tutorials/vault/database-secrets) tutorial and learn how Vault can dynamically manage your database credentials.
+
+In addition to database credential management, Vault can manage your Active Directory accounts, SSH keys, PKI certificates and more. Visit the [Secrets Management](https://learn.hashicorp.com/collections/vault/secrets-management) tutorial series to learn more about secrets management using Vault. 
 
 ## Data Encryption
 
@@ -32,9 +43,9 @@ Many organizations seek solutions to encrypt/decrypt application data within a c
 
 ### Resources
 
-Try our [Encryption as a Service: Transit Secrets Engine](https://learn.hashicorp.com/collections/vault/encryption-as-a-service) to learn the essential workings of the Transform secrets engine and understand how an application may leverage the Transform secrets engine.
+Try our [Encryption as a Service: Transit Secrets Engine](https://learn.hashicorp.com/collections/vault/encryption-as-a-service) to learn the essential workings of the Transit secrets engine handles cryptographic functions on data in-transit.
 
-For more tutorials on data encryption, refer to the [Advanced Data Protection](https://learn.hashicorp.com/collections/vault/adp) tutorial series.
+For more advanced data protection, refer to the [Advanced Data Protection](https://learn.hashicorp.com/collections/vault/adp) tutorial series. Vault's Transform secrets engine handles secure data transformation and tokenization against provided input value. 
 
 
 ## Identity-Based Access
@@ -43,4 +54,6 @@ Organizations need a way to manage identity sprawl with the proliferation of dif
 
 ### Resources
 
-Try our [Identity: Entities and Groups](https://learn.hashicorp.com/tutorials/vault/identity) tutorial to learn how to work with Vault Identities.
+Try our [Identity: Entities and Groups](https://learn.hashicorp.com/tutorials/vault/identity) tutorial to learn how Vault's unified identity system works.
+
+Follow the [Policies](https://learn.hashicorp.com/collections/vault/policies) tutorial series to learn how Vault encrorces role-based access control (RBAC) across multiple cloud environments.
