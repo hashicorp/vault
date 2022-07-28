@@ -11,13 +11,17 @@
               {{if (eq wildcardCount 1) @wildcardLabel (pluralize @wildcardLabel)}}
             </span>
             {{#if (eq this.displayArrayAmended.lastObject name)}}
-              <LinkTo @route={{@rootRoute}} @query={{hash tab=@queryParam}}>
+              <LinkTo @route={{this.rootRoute}} @query={{hash tab=@queryParam}}>
                 <span data-test-view-all={{@viewAll}}>View all {{@viewAll}}</span>
               </LinkTo>
             {{/if}}
           {{/let}}
         {{else}}
-          <LinkTo @route={{@itemRoute}} @model={{if @queryParam (concat @queryParam "/" name) name}} data-test-item={{name}}>
+          <LinkTo
+            @route={{this.itemRoute}}
+            @model={{if @queryParam (concat @queryParam "/" name) name}}
+            data-test-item={{name}}
+          >
             <span>{{name}}</span>
           </LinkTo>
         {{/if}}
@@ -37,7 +41,7 @@
           </span>
         {{/if}}
         {{#if (and (eq name this.displayArrayAmended.lastObject) (gte this.displayArray.length 10))}}
-          <LinkTo @route={{@rootRoute}} @query={{hash tab=@queryParam}}>
+          <LinkTo @route={{this.rootRoute}} @query={{hash tab=@queryParam}}>
             <span data-test-view-all={{this.viewAll}}>View all {{this.viewAll}} </span>
           </LinkTo>
         {{/if}}
