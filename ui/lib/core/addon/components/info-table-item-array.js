@@ -1,8 +1,7 @@
-import { computed } from '@ember/object';
-import Component from '@ember/component';
+import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
-import layout from '../templates/components/info-table-item-array';
 import { isWildcardString } from 'vault/helpers/is-wildcard-string';
 
 /**
@@ -26,36 +25,35 @@ import { isWildcardString } from 'vault/helpers/is-wildcard-string';
  * @param [backend] {String} - To specify which backend to point the link to.
  * @param [viewAll] {String} - Specify the word at the end of the link View all xx.
  */
-export default Component.extend({
-  layout,
-  'data-test-info-table-item-array': true,
-  attributeBindings: ['data-test-info-table-item-array'],
-  allOptions: null,
-  displayArray: null,
-  wildcardInDisplayArray: false,
-  store: service(),
-  displayArrayAmended: computed('displayArray', function () {
+export default class InfoTableItemArray extends Component {
+  @tracked allOptions = null;
+  @tracked wildcardInDisplayArray = false;
+  @service store;
+
+  get displayArray() {
+    return this.args.displayArray || null;
+  }
+
+  get displayArrayAmended() {
     let { displayArray } = this;
-    if (!displayArray) {
-      return;
-    }
+    if (!displayArray) return null;
     if (displayArray.length >= 10) {
       // if array greater than 10 in length only display the first 5
       displayArray = displayArray.slice(0, 5);
     }
-
     return displayArray;
-  }),
+  }
 
-  checkWildcardInArray: task(function* () {
+  @task *checkWildcardInArray() {
     if (!this.displayArray) {
       return;
     }
     let filteredArray = yield this.displayArray.filter((item) => isWildcardString(item));
-    this.set('wildcardInDisplayArray', filteredArray.length > 0 ? true : false);
-  }).on('didInsertElement'),
 
-  fetchOptions: task(function* () {
+    this.wildcardInDisplayArray = filteredArray.length > 0 ? true : false;
+  }
+
+  @task *fetchOptions() {
     if (this.isLink && this.modelType) {
       let queryOptions = {};
 
@@ -66,12 +64,13 @@ export default Component.extend({
       let options = yield this.store.query(this.modelType, queryOptions);
       this.formatOptions(options);
     }
-  }).on('didInsertElement'),
+    this.checkWildcardInArray.perform();
+  }
 
-  formatOptions: function (options) {
+  formatOptions(options) {
     let allOptions = options.toArray().map((option) => {
       return option.id;
     });
-    this.set('allOptions', allOptions);
-  },
-});
+    this.allOptions = allOptions;
+  }
+}
