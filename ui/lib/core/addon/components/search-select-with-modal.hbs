@@ -75,7 +75,7 @@
   {{/if}}
   {{#if this.newModelRecord}}
     <Modal
-      @title="Create new {{@id}}"
+      @title="Create new {{singularize @id}}"
       @onClose={{action (mut this.showModal) false}}
       @isActive={{this.showModal}}
       @type="info"

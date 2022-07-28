@@ -36,7 +36,9 @@ export default class OidcAssignmentFormComponent extends Component {
       if (isValid) {
         yield this.args.model.save();
         this.flashMessages.success('Successfully created an assignment');
-        this.args.onSave();
+        // this form is sometimes used in modal, passing the model notifies
+        // the parent if the save was successful
+        this.args.onSave(this.args.model);
       }
     } catch (error) {
       const message = error.errors ? error.errors.join('. ') : error.message;

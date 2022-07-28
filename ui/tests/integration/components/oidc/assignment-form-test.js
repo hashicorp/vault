@@ -3,6 +3,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn, click, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { overrideMirageResponse } from 'vault/tests/helpers/oidc-config';
 
 module('Integration | Component | oidc/assignment-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -10,6 +11,7 @@ module('Integration | Component | oidc/assignment-form', function (hooks) {
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
+    this.server.post('/sys/capabilities-self', () => {});
     this.server.get('/identity/entity/id', () => ({
       data: {
         key_info: { '1234-12345': { name: 'test-entity' } },
@@ -30,11 +32,6 @@ module('Integration | Component | oidc/assignment-form', function (hooks) {
     this.server.post('/identity/oidc/assignment/test', (schema, req) => {
       assert.ok(true, 'Request made to save assignment');
       return JSON.parse(req.requestBody);
-    });
-    // override capability getters
-    Object.defineProperties(this.model, {
-      canListGroups: { value: true },
-      canListEntities: { value: true },
     });
     this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
 
@@ -69,11 +66,7 @@ module('Integration | Component | oidc/assignment-form', function (hooks) {
       group_ids: ['abcdef-123'],
     });
     this.model = this.store.peekRecord('oidc/assignment', 'test');
-    // override capability getters
-    Object.defineProperties(this.model, {
-      canListGroups: { value: true },
-      canListEntities: { value: true },
-    });
+
     await render(hbs`
       <Oidc::AssignmentForm
         @model={{this.model}}
@@ -94,14 +87,11 @@ module('Integration | Component | oidc/assignment-form', function (hooks) {
       .hasText('abcdef-123', 'group id renders in selected option');
   });
 
-  test('it should not show an error message if permissions shows at least entities or groups', async function (assert) {
-    assert.expect(1);
+  test('it should use fallback component on create if no permissions for entities or groups', async function (assert) {
+    assert.expect(2);
     this.model = this.store.createRecord('oidc/assignment');
-
-    Object.defineProperties(this.model, {
-      canListGroups: { value: false },
-      canListEntities: { value: true },
-    });
+    this.server.get('/identity/entity/id', () => overrideMirageResponse(403));
+    this.server.get('/identity/group/id', () => overrideMirageResponse(403));
 
     await render(hbs`
       <Oidc::AssignmentForm
@@ -111,26 +101,66 @@ module('Integration | Component | oidc/assignment-form', function (hooks) {
       />
     `);
 
-    assert.dom('[data-test-empty-state-title]').doesNotExist();
+    assert
+      .dom('[data-test-component="search-select"]#entities [data-test-component="string-list"]')
+      .exists('entities string list fallback component exists');
+    assert
+      .dom('[data-test-component="search-select"]#groups [data-test-component="string-list"]')
+      .exists('groups string list fallback component exists');
   });
 
-  test('it should show error message if permissions do not show group and entity', async function (assert) {
-    assert.expect(1);
-    this.model = this.store.createRecord('oidc/assignment');
-
-    Object.defineProperties(this.model, {
-      canListGroups: { value: false },
-      canListEntities: { value: false },
+  test('it should use fallback component on edit if no permissions for entities or groups', async function (assert) {
+    assert.expect(8);
+    this.store.pushPayload('oidc/assignment', {
+      modelName: 'oidc/assignment',
+      name: 'test',
+      entity_ids: ['1234-12345'],
+      group_ids: ['abcdef-123'],
     });
+    this.model = this.store.peekRecord('oidc/assignment', 'test');
+    this.server.get('/identity/entity/id', () => overrideMirageResponse(403));
+    this.server.get('/identity/group/id', () => overrideMirageResponse(403));
 
     await render(hbs`
-      <Oidc::AssignmentForm
-        @model={{this.model}}
-        @onCancel={{this.onCancel}}
-        @onSave={{this.onSave}}
-      />
-    `);
+    <Oidc::AssignmentForm
+      @model={{this.model}}
+      @onCancel={{this.onCancel}}
+      @onSave={{this.onSave}}
+    />
+  `);
 
-    assert.dom('[data-test-empty-state-title]').hasText('Permissions error');
+    assert
+      .dom('[data-test-component="search-select"]#entities [data-test-component="string-list"]')
+      .exists('entities string list fallback component exists');
+    assert
+      .dom('[data-test-component="search-select"]#entities [data-test-string-list-input="0"]')
+      .hasValue('1234-12345', 'first row pre-populated with model entity');
+    assert
+      .dom(
+        '[data-test-component="search-select"]#entities [data-test-string-list-row="0"] [data-test-string-list-button="delete"]'
+      )
+      .exists('first row renders delete icon');
+    assert
+      .dom(
+        '[data-test-component="search-select"]#entities [data-test-string-list-row="1"] [data-test-string-list-button="add"]'
+      )
+      .exists('second row renders add icon');
+
+    assert
+      .dom('[data-test-component="search-select"]#groups [data-test-component="string-list"]')
+      .exists('groups string list fallback component exists');
+    assert
+      .dom('[data-test-component="search-select"]#groups [data-test-string-list-input="0"]')
+      .hasValue('abcdef-123', 'first row pre-populated with model group');
+    assert
+      .dom(
+        '[data-test-component="search-select"]#groups [data-test-string-list-row="0"] [data-test-string-list-button="delete"]'
+      )
+      .exists('first row renders delete icon');
+    assert
+      .dom(
+        '[data-test-component="search-select"]#groups [data-test-string-list-row="1"] [data-test-string-list-button="add"]'
+      )
+      .exists('second row renders add icon');
   });
 });

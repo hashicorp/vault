@@ -1,1 +1,7 @@
-<input ...attributes checked={{eq @value @groupValue}} type="radio" {{on "change" (fn @onChange @value)}} />
+<input
+  ...attributes
+  checked={{eq @value @groupValue}}
+  type="radio"
+  {{on "change" (fn @onChange @value)}}
+  aria-checked={{eq @value @groupValue}}
+/>

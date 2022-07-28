@@ -1,14 +1,27 @@
 import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-import fieldToAttrs from '../../utils/field-to-attrs';
+import fieldToAttrs from 'vault/utils/field-to-attrs';
+import { withModelValidations } from 'vault/decorators/model-validations';
 
+const validations = {
+  name: [
+    { type: 'presence', message: 'Name is required.' },
+    {
+      type: 'containsWhiteSpace',
+      message: 'Name cannot contain whitespace.',
+    },
+  ],
+};
+
+@withModelValidations(validations)
 export default class OidcClientModel extends Model {
-  @attr('string', { label: 'Application name' }) name;
+  @attr('string', { label: 'Application name', editDisabled: true }) name;
   @attr('string', {
     label: 'Type',
     subText: 'Specify whether the application type is confidential or public. The public type must use PKCE.',
     editType: 'radio',
+    defaultValue: 'confidential',
     possibleValues: ['confidential', 'public'],
   })
   clientType;
@@ -37,7 +50,6 @@ export default class OidcClientModel extends Model {
     models: ['oidc/key'],
   })
   key;
-
   @attr({
     label: 'Access Token TTL',
     editType: 'ttl',
@@ -98,31 +110,29 @@ export default class OidcClientModel extends Model {
     return this.assignmentsPath.get('canList');
   }
 
-  @lazyCapabilities(apiPath`identity/oidc/${'name'}/provider`, 'backend', 'name') clientProvidersPath; // API is WIP
   // API WIP
+  @lazyCapabilities(apiPath`identity/oidc/${'name'}/provider`, 'backend', 'name') clientProvidersPath; // API is WIP
   get canListProviders() {
     return this.clientProvidersPath.get('canList');
   }
 
-  // fieldGroups was behaving buggy so may not use
-  get fieldGroups() {
-    const groups = [
-      { default: ['name', 'clientType', 'redirectUris'] },
-      { 'More options': ['key', 'idTokenTtl', 'accessTokenTtl'] },
-    ];
-    return fieldToAttrs(this, groups);
+  // TODO refactor when field-to-attrs util is refactored as decorator
+  _attributeMeta = null; // cache initial result of expandAttributeMeta in getter and return
+  get formFields() {
+    if (!this._attributeMeta) {
+      this._attributeMeta = expandAttributeMeta(this, ['name', 'clientType', 'redirectUris']);
+    }
+    return this._attributeMeta;
   }
 
-  // WIP
-  get fieldAttrs() {
-    return expandAttributeMeta(this, [
-      'name',
-      'clientType',
-      'redirectUris',
-      'key',
-      'idTokenTtl',
-      'accessTokenTtl',
-      'assignments',
-    ]);
+  _fieldToAttrsGroups = null;
+  // more options fields
+  get fieldGroups() {
+    if (!this._fieldToAttrsGroups) {
+      this._fieldToAttrsGroups = fieldToAttrs(this, [
+        { 'More options': ['key', 'idTokenTtl', 'accessTokenTtl'] },
+      ]);
+    }
+    return this._fieldToAttrsGroups;
   }
 }

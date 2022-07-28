@@ -11,7 +11,7 @@
   }}
 {{else}}
   {{#if this.label}}
-    <label class={{if this.labelClass this.labelClass "title is-4"}} data-test-field-label>
+    <label for={{this.id}} class={{if this.labelClass this.labelClass "title is-4"}} data-test-field-label>
       {{this.label}}
       {{#if this.helpText}}
         <InfoTooltip>{{this.helpText}}</InfoTooltip>

@@ -22,7 +22,7 @@ import { get } from '@ember/object';
  * state represents the error state of the properties defined in the validations object
  * const { isValid, errors } = state[propertyKeyName];
  * isValid represents the validity of the property
- * errors will be populated with messages defined in the validations object when validations fail
+ * errors will be populated with messages defined in the validations object when validations fail. message must be a complete sentence (and include punctuation)
  * since a property can have multiple validations, errors is always returned as an array
  *
  *** basic example

@@ -1,5 +1,5 @@
 {{! template-lint-configure simple-unless "warn" }}
-<div class="field" data-test-field>
+<div class="field" data-test-field={{or @attr.name true}}>
   {{#unless
     (or
       (eq @attr.type "boolean")
@@ -21,9 +21,9 @@
   {{/unless}}
   {{#if @attr.options.possibleValues}}
     {{#if (eq @attr.options.editType "radio")}}
-      <div class="control columns is-gapless" data-test-radio-input>
+      <div class="control columns" data-test-radio-input>
         {{#each (path-or-array @attr.options.possibleValues @model) as |val|}}
-          <div class="column is-1 is-flex-center has-text-grey" data-test-input={{@attr.name}}>
+          <div class="column is-narrow is-flex-center has-text-grey has-right-margin-s" data-test-input={{@attr.name}}>
             <RadioButton
               class="radio"
               name={{@attr.name}}
