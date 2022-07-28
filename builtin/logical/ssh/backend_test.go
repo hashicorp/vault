@@ -404,7 +404,7 @@ func TestBackend_DefaultUserTemplateFalse_AllowedUsersTemplateTrue(t *testing.T)
 		t.Errorf("signing request should fail when default_user is not in the allowed_users list, because allowed_users_template is true and default_user_template is not")
 	}
 
-	expectedErrStr := ":TKTKT"
+	expectedErrStr := "{{identity.entity.metadata.ssh_username}} is not a valid value for valid_principals"
 	if !strings.Contains(err.Error(), expectedErrStr) {
 		t.Errorf("expected error to include %q but it was: %q", expectedErrStr, err.Error())
 	}
@@ -2034,7 +2034,6 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 	return cluster, userpassToken
 }
 
-// TKTK
 func testDefaultUserTemplate(t *testing.T, testDefaultUserTemplate string,
 	expectedValidPrincipal string, testEntityMetadata map[string]string,
 ) {
