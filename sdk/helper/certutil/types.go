@@ -796,6 +796,9 @@ type CreationParameters struct {
 
 	// The duration the certificate will use NotBefore
 	NotBeforeDuration time.Duration
+
+	// The explicit SKID to use; especially useful for cross-signing.
+	SKID []byte
 }
 
 type CreationBundle struct {

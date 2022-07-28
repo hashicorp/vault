@@ -10,6 +10,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -1340,6 +1341,24 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		}
 	}
 
+	// Parse SKID from the request for cross-signing.
+	var skid []byte
+	{
+		if rawSKIDValue, ok := data.apiData.GetOk("skid"); ok {
+			var err error
+			skidValue := rawSKIDValue.(string)
+
+			// Handle removing common separators to make copy/paste from tool
+			// output easier.
+			skidNoColonsSeparators := strings.ReplaceAll(skidValue, ":", "")
+			skidNoSeparators := strings.ReplaceAll(skidNoColonsSeparators, "-", "")
+			skid, err = hex.DecodeString(skidNoSeparators)
+			if err != nil {
+				return nil, errutil.UserError{Err: fmt.Sprintf("cannot parse requested SKID value as hex: %v", err)}
+			}
+		}
+	}
+
 	creation := &certutil.CreationBundle{
 		Params: &certutil.CreationParameters{
 			Subject:                       subject,
@@ -1359,6 +1378,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			BasicConstraintsValidForNonCA: data.role.BasicConstraintsValidForNonCA,
 			NotBeforeDuration:             data.role.NotBeforeDuration,
 			ForceAppendCaChain:            caSign != nil,
+			SKID:                          skid,
 		},
 		SigningBundle: caSign,
 		CSR:           csr,

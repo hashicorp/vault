@@ -7,15 +7,15 @@ import (
 
 func pathIssuerSignIntermediate(b *backend) *framework.Path {
 	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/sign-intermediate"
-	return pathIssuerSignIntermediateRaw(b, pattern)
+	return buildPathIssuerSignIntermediateRaw(b, pattern)
 }
 
 func pathSignIntermediate(b *backend) *framework.Path {
 	pattern := "root/sign-intermediate"
-	return pathIssuerSignIntermediateRaw(b, pattern)
+	return buildPathIssuerSignIntermediateRaw(b, pattern)
 }
 
-func pathIssuerSignIntermediateRaw(b *backend, pattern string) *framework.Path {
+func buildPathIssuerSignIntermediateRaw(b *backend, pattern string) *framework.Path {
 	fields := addIssuerRefField(map[string]*framework.FieldSchema{})
 	path := &framework.Path{
 		Pattern: pattern,
@@ -64,6 +64,24 @@ SHA-2-512. Defaults to 0 to automatically detect based on key length
 (SHA-2-256 for RSA keys, and matching the curve size for NIST P-Curves).`,
 		DisplayAttrs: &framework.DisplayAttributes{
 			Value: 0,
+		},
+	}
+
+	fields["skid"] = &framework.FieldSchema{
+		Type:    framework.TypeString,
+		Default: 0,
+		Description: `Value for the Subject Key Identifier field
+(RFC 5280 Section 4.2.1.2). This value should ONLY be used when
+cross-signing to mimic the existing certificate's SKID value; this
+is necessary to allow certain TLS implementations (such as OpenSSL)
+which use SKID/AKID matches in chain building to restrict possible
+valid chains.
+
+Specified as a string in hex format. Default is empty, allowing
+Vault to automatically calculate the SKID according to method one
+in the above RFC section.`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Value: "",
 		},
 	}
 

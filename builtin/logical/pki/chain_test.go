@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"strconv"
@@ -113,6 +114,7 @@ type CBGenerateIntermediate struct {
 	Existing           bool
 	Name               string
 	CommonName         string
+	SKID               string
 	Parent             string
 	ImportErrorMessage string
 }
@@ -151,6 +153,14 @@ func (c CBGenerateIntermediate) Run(t testing.TB, b *backend, s logical.Storage,
 	if len(c.CommonName) > 0 {
 		data["common_name"] = c.CommonName
 	}
+	if len(c.SKID) > 0 {
+		// Copy the SKID from an existing, already-issued cert.
+		otherPEM := knownCerts[c.SKID]
+		otherCert := ToCertificate(t, otherPEM)
+
+		data["skid"] = hex.EncodeToString(otherCert.SubjectKeyId)
+	}
+
 	resp, err = CBWrite(b, s, url, data)
 	if err != nil {
 		t.Fatalf("failed to sign CSR for issuer (%v): %v / body: %v", c.Name, err, data)
@@ -829,6 +839,7 @@ var chainBuildingTestCases = []CBTestScenario{
 				Existing:   true,
 				Name:       "cross-old-new",
 				CommonName: "root-new",
+				SKID:       "root-new-a",
 				// Which old issuer is used here doesn't matter as they have
 				// the same CN and key.
 				Parent: "root-old-a",
@@ -887,6 +898,7 @@ var chainBuildingTestCases = []CBTestScenario{
 				Existing:   true,
 				Name:       "cross-new-old",
 				CommonName: "root-old",
+				SKID:       "root-old-a",
 				// Which new issuer is used here doesn't matter as they have
 				// the same CN and key.
 				Parent: "root-new-a",
