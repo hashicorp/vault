@@ -11,17 +11,13 @@
               {{if (eq wildcardCount 1) @wildcardLabel (pluralize @wildcardLabel)}}
             </span>
             {{#if (eq this.displayArrayAmended.lastObject name)}}
-              <LinkTo @route="vault.cluster.secrets.backend.list-root" @query={{hash tab=@queryParam}}>
+              <LinkTo @route={{@rootRoute}} @query={{hash tab=@queryParam}}>
                 <span data-test-view-all={{@viewAll}}>View all {{@viewAll}}</span>
               </LinkTo>
             {{/if}}
           {{/let}}
         {{else}}
-          <LinkTo
-            @route="vault.cluster.secrets.backend.show"
-            @model={{if @queryParam (concat @queryParam "/" name) name}}
-            data-test-item="array"
-          >
+          <LinkTo @route={{@itemRoute}} @model={{if @queryParam (concat @queryParam "/" name) name}} data-test-item={{name}}>
             <span>{{name}}</span>
           </LinkTo>
         {{/if}}
@@ -41,7 +37,7 @@
           </span>
         {{/if}}
         {{#if (and (eq name this.displayArrayAmended.lastObject) (gte this.displayArray.length 10))}}
-          <LinkTo @route="vault.cluster.secrets.backend.list-root" @query={{hash tab=@queryParam}}>
+          <LinkTo @route={{@rootRoute}} @query={{hash tab=@queryParam}}>
             <span data-test-view-all={{this.viewAll}}>View all {{this.viewAll}} </span>
           </LinkTo>
         {{/if}}

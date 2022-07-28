@@ -61,6 +61,8 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
     await render(hbs`<InfoTableItemArray
       @displayArray={{this.displayArray}}
       @isLink={{this.isLink}}
+      @rootRoute="vault.cluster.secrets.backend.list-root"
+      @itemRoute="vault.cluster.secrets.backend.show"
       @modelType={{this.modelType}}
       @queryParam={{this.queryParam}}
       @backend={{this.backend}}
