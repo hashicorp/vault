@@ -41,7 +41,7 @@ export default class OidcClientModel extends Model {
     subText: 'Add a key to sign and verify the JSON web tokens (JWT). This cannot be edited later.',
     editType: 'searchSelect',
     editDisabled: true,
-    disallowNewItems: true,
+    onlyAllowExisting: true,
     defaultValue() {
       return ['default'];
     },

@@ -51,14 +51,6 @@ module('Integration | Component | oidc/client-form', function (hooks) {
         },
       };
     });
-    this.server.get('/identity/oidc/key', () => {
-      return {
-        request_id: 'key-list-id',
-        data: {
-          keys: ['default'],
-        },
-      };
-    });
   });
 
   test('it should save new client', async function (assert) {
