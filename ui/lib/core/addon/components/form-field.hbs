@@ -291,7 +291,7 @@
           value={{or (get @model this.valuePath) @attr.options.defaultValue}}
           onchange={{this.onChangeWithEvent}}
           onkeyup={{this.handleKeyUp}}
-          class="input {{if this.validationError 'has-error-border'}}"
+          class="input {{if this.validationError 'has-error-border'}} "
           maxLength={{@attr.options.characterLimit}}
         />
         {{#if @attr.options.validationAttr}}

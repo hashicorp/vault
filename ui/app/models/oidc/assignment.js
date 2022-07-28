@@ -6,10 +6,10 @@ import { isPresent } from '@ember/utils';
 const validations = {
   name: [
     { type: 'presence', message: 'Name is required.' },
-    // {
-    //   type: 'containsWhiteSpace',
-    //   message: 'Name cannot contain whitespace.',
-    // },
+    {
+      type: 'containsWhiteSpace',
+      message: 'Name cannot contain whitespace.',
+    },
   ],
   targets: [
     {

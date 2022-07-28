@@ -18,8 +18,7 @@
 export default function handleHasManySelection(selectedIds, modelCollection, store, modelRecord) {
   // first check for existing models that have been removed from selection
   modelCollection.forEach((model) => {
-    const modelAttr = model?.id || model?.name;
-    if (!selectedIds.includes(modelAttr)) {
+    if (!selectedIds.includes(model.id)) {
       modelCollection.removeObject(model);
     }
   });

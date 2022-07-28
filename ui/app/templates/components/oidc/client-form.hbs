@@ -36,40 +36,40 @@
   </div>
   {{! RADIO CARD + SEARCH SELECT }}
   <div class="box is-sideless is-fullwidth is-marginless has-top-padding-xxl">
-    {{#if @model.assignments.isFulfilled}}
-      <h4 class="title is-4">Assign access</h4>
-      <div class="is-flex-row">
-        <RadioCard
-          @title="Allow everyone to access existing"
-          @description="All Vault entities can authenticate through this application."
-          @icon="org"
-          @value="allow_all"
-          @groupValue={{this.radioCardGroupValue}}
-          @onChange={{this.handleAssignmentSelection}}
-        />
-        <RadioCard
-          @title="Limit access to selected users"
-          @description="Choose or create an assignment to give access to selected entities."
-          @icon="users"
-          @value="limited"
-          @groupValue={{this.radioCardGroupValue}}
-          @onChange={{this.handleAssignmentSelection}}
-        />
-      </div>
-      {{#if (eq this.radioCardGroupValue "limited")}}
-        <SearchSelectWithModal
-          @id="assignments"
-          @label="assignment"
-          @subText="Search for an existing assignment, or type a new name to create it."
-          @model="oidc/assignment"
-          @inputValue={{map-by "id" @model.assignments}}
-          @onChange={{this.handleAssignmentSelection}}
-          @excludeOptions={{array "allow_all"}}
-          @fallbackComponent="string-list"
-          @modalFormComponent="oidc/assignment-form"
-          @modalSubtext="Use assignment to specify which Vault entities and groups are allowed to authenticate."
-        />
-      {{/if}}
+    <h4 class="title is-4">Assign access</h4>
+    <div class="is-flex-row">
+      <RadioCard
+        @title="Allow everyone to access existing"
+        @description="All Vault entities can authenticate through this application."
+        @icon="org"
+        @value="allow_all"
+        @groupValue={{this.radioCardGroupValue}}
+        {{!-- @onChange={{this.handleAssignmentSelection}} --}}
+        @onChange={{fn (mut this.radioCardGroupValue)}}
+      />
+      <RadioCard
+        @title="Limit access to selected users"
+        @description="Choose or create an assignment to give access to selected entities."
+        @icon="users"
+        @value="limited"
+        @groupValue={{this.radioCardGroupValue}}
+        @onChange={{fn (mut this.radioCardGroupValue)}}
+        {{!-- @onChange={{this.handleAssignmentSelection}} --}}
+      />
+    </div>
+    {{#if (eq this.radioCardGroupValue "limited")}}
+      <SearchSelectWithModal
+        @id="assignments"
+        @label="Assignment name"
+        @subText="Search for an existing assignment, or type a new name to create it."
+        @model="oidc/assignment"
+        @inputValue={{@model.assignments}}
+        @onChange={{this.handleAssignmentSelection}}
+        @excludeOptions={{array "allow_all"}}
+        @fallbackComponent="string-list"
+        @modalFormComponent="oidc/assignment-form"
+        @modalSubtext="Use assignment to specify which Vault entities and groups are allowed to authenticate."
+      />
     {{/if}}
   </div>
   <div class="field box is-fullwidth is-bottomless">

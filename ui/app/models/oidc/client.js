@@ -16,7 +16,7 @@ const validations = {
 
 @withModelValidations(validations)
 export default class OidcClientModel extends Model {
-  @attr('string', { label: 'Application name' }) name;
+  @attr('string', { label: 'Application name', editDisabled: true }) name;
   @attr('string', {
     label: 'Type',
     subText: 'Specify whether the application type is confidential or public. The public type must use PKCE.',
