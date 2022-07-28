@@ -26,18 +26,18 @@ For more tutorials on secrets management, refer to the [Secrets Management](http
 
 ## Data Encryption
 
-Many organizations seek solutions to encrypt/decrypt application data but deploying cryptography and maintaining a complex key management infrastructure can be expensive and difficult to develop against, especially within a cloud or multi-datacenter environment.  Vault provides encryption as a service with centralized key management to simplify encrypting data in transit and at rest across clouds and datacenters. Vault can be encrypt/decrypt data stored elsewhere, essentially allowing applications to encrypt their data while still storing it in the primary data store. This benefits developers since the responsibility of encryption lie within the Vault's security team to manage, allowing developers to focus solely on encrypting/decrypting data as needed.
+Many organizations seek solutions to encrypt/decrypt application data but deploying cryptography and maintaining a complex key management infrastructure can be expensive and difficult to develop against, especially within a cloud or multi-datacenter environment.  Vault provides [encryption as a service](/docs/secrets/transit) with centralized key management to simplify encrypting data in transit and at rest across clouds and datacenters. Vault can encrypt/decrypt data stored elsewhere, essentially allowing applications to encrypt their data while still storing it in the primary data store. This benefits developers since the responsibility of encryption lie within the Vault's security team to manage, allowing developers to focus solely on encrypting/decrypting data as needed.
 
 ### Resources
 
-Try our [Encrypting Data with Transform Secrets Engine](https://learn.hashicorp.com/tutorials/vault/transform-code-example?in=vault/adp) to learn the essential workings of the Transform secrets engine and understand how an application may leverage the Transform secrets engine.
+Try our [Encryption as a Service: Transit Secrets Engine](https://learn.hashicorp.com/collections/vault/encryption-as-a-service) to learn the essential workings of the Transform secrets engine and understand how an application may leverage the Transform secrets engine.
 
 For more tutorials on data encryption, refer to the [Advanced Data Protection](https://learn.hashicorp.com/collections/vault/adp) tutorial series.
 
 
 ## Identity-Based Access
 
-Organizations need a way to manage identity sprawl with the proliferation of different clouds, services, and systems- all with their own identity providers. The risk of compromising an organization's security infrastructure increases as organizations are forced to manage multiple identity management systems as they try to implement solutions to unify a single logical identity across multiple cloud platforms. Different platforms support different methods and constructs for identity, which makes it difficult to recognize one user or identity across multiple forms of credentials. Vault solves this challenge by using a unified ACL system to broker access to systems and secrets and merge identities across providers. With identity-based access, organizations can leverage any trusted resource of identity to enforce system and application access and authenticate across different clouds, systems, and endpoints.
+Organizations need a way to manage identity sprawl with the proliferation of different clouds, services, and systems- all with their own identity providers. The risk of compromising an organization's security infrastructure increases as organizations are forced to manage multiple identity management systems as they try to implement solutions to unify a single logical identity across multiple cloud platforms. Different platforms support different methods and constructs for identity, which makes it difficult to recognize one user or identity across multiple forms of credentials. Vault solves this challenge by using a unified ACL system to broker access to systems and secrets and merge identities across providers. With [identity-based access](/docs/secrets/identity), organizations can leverage any trusted resource of identity to enforce system and application access and authenticate across different clouds, systems, and endpoints.
 
 ### Resources
 
