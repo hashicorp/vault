@@ -1,4 +1,4 @@
-import { currentRouteName, currentURL, settled } from '@ember/test-helpers';
+import { currentRouteName, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import editPage from 'vault/tests/pages/secrets/backend/pki/edit-role';
@@ -52,12 +52,11 @@ elRplAzrMF4=
   };
 
   test('it issues a cert', async function (assert) {
-    assert.expect(10);
-    const mount = await setup(assert);
+    assert.expect(9);
+    await setup(assert);
     await settled();
     await generatePage.issueCert('foo');
     await settled();
-    assert.equal(currentURL(), `/vault/secrets/${mount}/credentials/role?action=issue`);
     assert.dom(SELECTORS.certificate).exists('displays masked certificate');
     assert.dom(SELECTORS.commonName).exists('displays common name');
     assert.dom(SELECTORS.issueDate).exists('displays issue date');
@@ -85,14 +84,13 @@ elRplAzrMF4=
   });
 
   test('it views a cert', async function (assert) {
-    assert.expect(12);
+    assert.expect(11);
     const path = await setup(assert);
     await generatePage.issueCert('foo');
     await settled();
     await listPage.visitRoot({ backend: path, tab: 'certs' });
     await settled();
-    assert.equal(currentURL(), `/vault/secrets/${path}/list?tab=cert`);
-    assert.equal(listPage.secrets.length, 2, 'lists certs');
+    assert.ok(listPage.secrets.length > 0, 'lists certs');
     await listPage.secrets.objectAt(0).click();
     await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'navigates to the show page');
