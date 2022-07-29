@@ -2,6 +2,7 @@ package pki
 
 import (
 	"context"
+	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"strings"
@@ -106,6 +107,17 @@ this issuer; valid values are "read-only", "issuing-certificates", and
 and always set.`,
 		Default: []string{"read-only", "issuing-certificates", "crl-signing"},
 	}
+	fields["revocation_signature_algorithm"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Which x509.SignatureAlgorithm name to use for
+signing CRLs. This parameter allows differentiation between PKCS#1v1.5
+and PSS keys and choice of signature hash algorithm. The default (empty
+string) value is for Go to select the signature algorithm. This can fail
+if the underlying key does not support the requested signature algorithm,
+which may not be known at modification time (such as with PKCS#11 managed
+RSA keys).`,
+		Default: "",
+	}
 
 	return &framework.Path{
 		// Returns a JSON entry.
@@ -181,14 +193,15 @@ func respondReadIssuer(issuer *issuerEntry) (*logical.Response, error) {
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"issuer_id":               issuer.ID,
-			"issuer_name":             issuer.Name,
-			"key_id":                  issuer.KeyID,
-			"certificate":             issuer.Certificate,
-			"manual_chain":            respManualChain,
-			"ca_chain":                issuer.CAChain,
-			"leaf_not_after_behavior": issuer.LeafNotAfterBehavior.String(),
-			"usage":                   issuer.Usage.Names(),
+			"issuer_id":                      issuer.ID,
+			"issuer_name":                    issuer.Name,
+			"key_id":                         issuer.KeyID,
+			"certificate":                    issuer.Certificate,
+			"manual_chain":                   respManualChain,
+			"ca_chain":                       issuer.CAChain,
+			"leaf_not_after_behavior":        issuer.LeafNotAfterBehavior.String(),
+			"usage":                          issuer.Usage.Names(),
+			"revocation_signature_algorithm": issuer.RevocationSigAlg,
 		},
 	}, nil
 }
@@ -258,6 +271,23 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse(fmt.Sprintf("Unable to parse specified usages: %v - valid values are %v", rawUsage, AllIssuerUsages.Names())), nil
 	}
 
+	// Revocation signature algorithm changes
+	revSigAlgStr := data.Get("revocation_signature_algorithm").(string)
+	revSigAlg, present := certutil.SignatureAlgorithmNames[revSigAlgStr]
+	if !present && revSigAlgStr != "" {
+		var knownAlgos []string
+		for algoName := range certutil.SignatureAlgorithmNames {
+			knownAlgos = append(knownAlgos, algoName)
+		}
+
+		return logical.ErrorResponse(fmt.Sprintf("Unknown signature algorithm value: %v - valid values are %v", revSigAlg, strings.Join(knownAlgos, ", "))), nil
+	} else if revSigAlgStr == "" {
+		revSigAlg = x509.UnknownSignatureAlgorithm
+	}
+	if err := issuer.CanMaybeSignWithAlgo(revSigAlg); err != nil {
+		return nil, err
+	}
+
 	modified := false
 
 	var oldName string
@@ -274,6 +304,11 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 
 	if newUsage != issuer.Usage {
 		issuer.Usage = newUsage
+		modified = true
+	}
+
+	if revSigAlg != issuer.RevocationSigAlg {
+		issuer.RevocationSigAlg = revSigAlg
 		modified = true
 	}
 
@@ -422,6 +457,32 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 		}
 		if newUsage != issuer.Usage {
 			issuer.Usage = newUsage
+			modified = true
+		}
+	}
+
+	// Revocation signature algorithm changes
+	rawRevSigAlg, ok := data.GetOk("revocation_signature_algorithm")
+	if ok {
+		revSigAlgStr := rawRevSigAlg.(string)
+		revSigAlg, present := certutil.SignatureAlgorithmNames[revSigAlgStr]
+		if !present && revSigAlgStr != "" {
+			var knownAlgos []string
+			for algoName := range certutil.SignatureAlgorithmNames {
+				knownAlgos = append(knownAlgos, algoName)
+			}
+
+			return logical.ErrorResponse(fmt.Sprintf("Unknown signature algorithm value: %v - valid values are %v", revSigAlg, strings.Join(knownAlgos, ", "))), nil
+		} else if revSigAlgStr == "" {
+			revSigAlg = x509.UnknownSignatureAlgorithm
+		}
+
+		if err := issuer.CanMaybeSignWithAlgo(revSigAlg); err != nil {
+			return nil, err
+		}
+
+		if revSigAlg != issuer.RevocationSigAlg {
+			issuer.RevocationSigAlg = revSigAlg
 			modified = true
 		}
 	}

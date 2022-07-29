@@ -49,6 +49,21 @@ var expectedNISTPCurveHashBits = map[int]int{
 	521: 512,
 }
 
+// Mapping of constant names<->constant values for SignatureAlgorithm
+var SignatureAlgorithmNames = map[string]x509.SignatureAlgorithm{
+	"SHA256WithRSA":    x509.SHA256WithRSA,
+	"SHA384WithRSA":    x509.SHA384WithRSA,
+	"SHA512WithRSA":    x509.SHA512WithRSA,
+	"ECDSAWithSHA256":  x509.ECDSAWithSHA256,
+	"ECDSAWithSHA384":  x509.ECDSAWithSHA384,
+	"ECDSAWithSHA512":  x509.ECDSAWithSHA512,
+	"SHA256WithRSAPSS": x509.SHA256WithRSAPSS,
+	"SHA384WithRSAPSS": x509.SHA384WithRSAPSS,
+	"SHA512WithRSAPSS": x509.SHA512WithRSAPSS,
+	"PureEd25519":      x509.PureEd25519,
+	"Ed25519":          x509.PureEd25519, // Duplicated for clarity; most won't expect the "Pure" prefix.
+}
+
 // GetHexFormatted returns the byte buffer formatted in hex with
 // the specified separator between bytes.
 func GetHexFormatted(buf []byte, sep string) string {

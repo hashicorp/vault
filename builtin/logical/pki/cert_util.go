@@ -138,6 +138,7 @@ func (sc *storageContext) fetchCAInfoByIssuerId(issuerId issuerID, usage issuerU
 		ParsedCertBundle:     *parsedBundle,
 		URLs:                 nil,
 		LeafNotAfterBehavior: entry.LeafNotAfterBehavior,
+		RevocationSigAlg:     entry.RevocationSigAlg,
 	}
 
 	entries, err := getURLs(sc.Context, sc.Storage)

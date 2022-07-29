@@ -710,6 +710,7 @@ type CAInfoBundle struct {
 	ParsedCertBundle
 	URLs                 *URLEntries
 	LeafNotAfterBehavior NotAfterBehavior
+	RevocationSigAlg     x509.SignatureAlgorithm
 }
 
 func (b *CAInfoBundle) GetCAChain() []*CertBlock {
