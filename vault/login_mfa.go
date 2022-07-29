@@ -475,16 +475,22 @@ func (i *IdentityStore) handleLoginMFAGenerateCommon(ctx context.Context, req *l
 	}
 }
 
+func (i *IdentityStore) handleLoginMFADestroyUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleLoginMFADestroyCommon(ctx, req, d.Get("method_id").(string), req.EntityID)
+}
+
 func (i *IdentityStore) handleLoginMFAAdminDestroyUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleLoginMFADestroyCommon(ctx, req, d.Get("method_id").(string), d.Get("entity_id").(string))
+}
+
+func (i *IdentityStore) handleLoginMFADestroyCommon(ctx context.Context, req *logical.Request, methodID, entityID string) (*logical.Response, error) {
 	var entity *identity.Entity
 	var err error
 
-	methodID := d.Get("method_id").(string)
 	if methodID == "" {
 		return logical.ErrorResponse("missing method ID"), nil
 	}
 
-	entityID := d.Get("entity_id").(string)
 	if entityID == "" {
 		return logical.ErrorResponse("missing entity ID"), nil
 	}
@@ -2789,6 +2795,12 @@ var mfaHelp = map[string][2]string{
 		`This endpoint generates an MFA secret based on the
 		configuration tied to the method name and stores it in the entity of
 		the token making this request.`,
+	},
+	"totp-destroy": {
+		`Deletes the TOTP secret for the given method name on the entity of the
+		calling token.`,
+		`This endpoint removes the secret belonging to method name from the
+		entity regardless of the secret type.`,
 	},
 	"totp-admin-generate": {
 		`Generates a TOTP secret for the given method name on the given entity.`,

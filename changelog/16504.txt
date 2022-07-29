@@ -1,0 +1,4 @@
+```release-note:improvment
+mfa/totp: Add non-administrative destory endpoint
+ui: Use non-administratives endpoints for MFA setup
+```

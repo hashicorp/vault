@@ -5,13 +5,13 @@ import { tracked } from '@glimmer/tracking';
 
 /**
  * @module MfaSetupStepOne
- * MfaSetupStepOne component is a child component used in the end user setup for MFA. It records the UUID (aka method_id) and sends a admin-generate request.
+ * MfaSetupStepOne component is a child component used in the end user setup for MFA. It records the UUID (aka method_id) and sends a generate request.
  *
  * @param {string} entityId - the entityId of the user. This comes from the auth service which records it on loading of the cluster. A root user does not have an entityId.
- * @param {function} isUUIDVerified - a function that consumes a boolean. Is true if the admin-generate is successful and false if it throws a warning or error.
+ * @param {function} isUUIDVerified - a function that consumes a boolean. Is true if the generate is successful and false if it throws a warning or error.
  * @param {boolean} restartFlow - a boolean that is true that is true if the user should proceed to step two or false if they should stay on step one.
  * @param {function} saveUUIDandQrCode - A function that sends the inputted UUID and return qrCode from step one to the parent.
- * @param {boolean} showWarning - whether a warning is returned from the admin-generate query. Needs to be passed to step two.
+ * @param {boolean} showWarning - whether a warning is returned from the generate query. Needs to be passed to step two.
  */
 
 export default class MfaSetupStepOne extends Component {
@@ -29,7 +29,7 @@ export default class MfaSetupStepOne extends Component {
   @action
   async verifyUUID(evt) {
     evt.preventDefault();
-    let response = await this.postAdminGenerate();
+    let response = await this.postGenerate();
 
     if (response === 'stop_progress') {
       this.args.isUUIDVerified(false);
@@ -40,15 +40,14 @@ export default class MfaSetupStepOne extends Component {
     }
   }
 
-  async postAdminGenerate() {
+  async postGenerate() {
     this.error = '';
     this.warning = '';
     let adapter = this.store.adapterFor('mfa-setup');
     let response;
 
     try {
-      response = await adapter.adminGenerate({
-        entity_id: this.args.entityId,
+      response = await adapter.generate({
         method_id: this.UUID, // comes from value on the input
       });
       this.args.saveUUIDandQrCode(this.UUID, response.data?.url);

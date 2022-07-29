@@ -252,6 +252,22 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 			},
 		},
 		{
+			Pattern: "mfa/method/totp/destroy$",
+			Fields: map[string]*framework.FieldSchema{
+				"method_id": {
+					Type:        framework.TypeString,
+					Description: "The unique identifier for this MFA method.",
+					Required:    true,
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleLoginMFADestroyUpdate,
+					Summary:  "Destroys a TOTP secret for the given MFA method ID on the given entity",
+				},
+			},
+		},
+		{
 			Pattern: "mfa/method/totp/admin-generate$",
 			Fields: map[string]*framework.FieldSchema{
 				"method_id": {
