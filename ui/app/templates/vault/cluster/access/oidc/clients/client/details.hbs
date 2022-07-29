@@ -21,42 +21,51 @@
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs" aria-label="tabs">
     <ul>
-      <LinkTo @route="vault.cluster.access.oidc.clients.client.details" @model={{this.model}}>
+      <LinkTo @route="vault.cluster.access.oidc.clients.client.details" @query={{hash tab="details"}}>
         Details
+      </LinkTo>
+      <LinkTo @route="vault.cluster.access.oidc.clients.client.details" @query={{hash tab="providers"}}>
+        Available providers
       </LinkTo>
     </ul>
   </nav>
 </div>
 
 <Toolbar>
-  <ToolbarActions>
-    {{#if this.model.canDelete}}
-      <ConfirmAction
-        @buttonClasses="toolbar-link"
-        @onConfirmAction={{this.delete}}
-        @confirmTitle="Delete application?"
-        @confirmMessage="This application will be permanently deleted. You will need to re-create it to use it again."
-        @confirmButtonText="Delete"
-      >
-        Delete client
-      </ConfirmAction>
-    {{/if}}
-    {{#if this.model.canEdit}}
-      <ToolbarLink @params={{array "vault.cluster.access.oidc.clients.client.edit" this.model.name}}>
-        Edit client
-      </ToolbarLink>
-    {{/if}}
-  </ToolbarActions>
+  {{#if (eq this.tab "details")}}
+    <ToolbarActions>
+      {{#if this.model.canDelete}}
+        <ConfirmAction
+          @buttonClasses="toolbar-link"
+          @onConfirmAction={{this.delete}}
+          @confirmTitle="Delete application?"
+          @confirmMessage="This application will be permanently deleted. You will need to re-create it to use it again."
+          @confirmButtonText="Delete"
+        >
+          Delete client
+        </ConfirmAction>
+      {{/if}}
+      {{#if this.model.canEdit}}
+        <ToolbarLink @params={{array "vault.cluster.access.oidc.clients.client.edit" this.model.name}}>
+          Edit client
+        </ToolbarLink>
+      {{/if}}
+    </ToolbarActions>
+  {{/if}}
 </Toolbar>
 
-<div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-  <InfoTableRow @label="Name" @value={{this.model.name}} />
-  <InfoTableRow @label="Assignment" @value={{this.model.assignments}} />
-  <InfoTableRow @label="Key" @value={{this.model.key}} />
-  <InfoTableRow @label="Client ID" @value={{this.model.clientId}} @addCopyButton={{true}} />
-  <InfoTableRow @label="Client Secret">
-    <MaskedInput @value={{this.model.clientSecret}} @displayOnly={{true}} @allowCopy={{true}} />
-  </InfoTableRow>
-  <InfoTableRow @label="ID Token TTL" @value={{format-duration this.model.idTokenTtl}} />
-  <InfoTableRow @label="Access Token TTL" @value={{format-duration this.model.accessTokenTtl}} />
-</div>
+{{#if (eq this.tab "providers")}}
+  <Oidc::ProviderList @model={{this.model.providers}} />
+{{else}}
+  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    <InfoTableRow @label="Name" @value={{this.model.name}} />
+    <InfoTableRow @label="Assignment" @value={{this.model.assignments}} />
+    <InfoTableRow @label="Key" @value={{this.model.key}} />
+    <InfoTableRow @label="Client ID" @value={{this.model.clientId}} @addCopyButton={{true}} />
+    <InfoTableRow @label="Client Secret">
+      <MaskedInput @value={{this.model.clientSecret}} @displayOnly={{true}} @allowCopy={{true}} />
+    </InfoTableRow>
+    <InfoTableRow @label="ID Token TTL" @value={{format-duration this.model.idTokenTtl}} />
+    <InfoTableRow @label="Access Token TTL" @value={{format-duration this.model.accessTokenTtl}} />
+  </div>
+{{/if}}

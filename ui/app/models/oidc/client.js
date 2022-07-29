@@ -72,11 +72,6 @@ export default class OidcClientModel extends Model {
   @attr('string', { label: 'Client ID' }) clientId;
   @attr('string') clientSecret;
 
-  // TODO API WIP - attr TBD, current PR proposes the following:
-  // $ curl -H "X-Vault-Token: ..." -X LIST http://127.0.0.1:8200/v1/identity/oidc/provider?allowed_client_id="<client_id>"
-  // add to model on route? or query from tab in UI?
-  @attr('string', { label: 'Providers' }) providers;
-
   // CAPABILITIES //
   @lazyCapabilities(apiPath`identity/oidc/client/${'name'}`, 'name') clientPath;
   @lazyCapabilities(apiPath`identity/oidc/client`) clientsPath;
