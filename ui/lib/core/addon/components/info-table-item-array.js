@@ -62,11 +62,11 @@ export default class InfoTableItemArray extends Component {
     return displayArray;
   }
 
-  @task *checkWildcardInArray() {
+  async checkWildcardInArray() {
     if (!this.displayArray) {
       return;
     }
-    let filteredArray = yield this.displayArray.filter((item) => isWildcardString(item));
+    let filteredArray = await this.displayArray.filter((item) => isWildcardString(item));
 
     this.wildcardInDisplayArray = filteredArray.length > 0 ? true : false;
   }
@@ -82,13 +82,10 @@ export default class InfoTableItemArray extends Component {
       let options = yield this.store.query(this.args.modelType, queryOptions);
       this.formatOptions(options);
     }
-    this.checkWildcardInArray.perform();
+    this.checkWildcardInArray();
   }
 
   formatOptions(options) {
-    let allOptions = options.toArray().map((option) => {
-      return option.id;
-    });
-    this.allOptions = allOptions;
+    this.allOptions = options.mapBy('id');
   }
 }
