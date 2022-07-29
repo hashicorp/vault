@@ -669,7 +669,7 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 		return nil, false, fmt.Errorf("bad issuer: potentially multiple PEM blobs in one certificate storage entry:\n%v", result.Certificate)
 	}
 
-	result.SerialNumber = strings.TrimSpace(certutil.GetHexFormatted(issuerCert.SerialNumber.Bytes(), ":"))
+	result.SerialNumber = serialFromCert(issuerCert)
 
 	// Before we return below, we need to iterate over _all_ keys and see if
 	// one of them a public key matching this certificate, and if so, update our
