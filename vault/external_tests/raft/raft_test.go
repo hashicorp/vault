@@ -208,8 +208,6 @@ func TestRaft_Retry_Join(t *testing.T) {
 	{
 		testhelpers.EnsureCoreSealed(t, leaderCore)
 		leaderCore.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		cluster.UnsealCore(t, leaderCore)
-		vault.TestWaitActive(t, leaderCore.Core)
 	}
 
 	leaderInfos := []*raft.LeaderJoinInfo{
@@ -220,31 +218,25 @@ func TestRaft_Retry_Join(t *testing.T) {
 		},
 	}
 
-	{
-		core := cluster.Cores[1]
-		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		time.Sleep(2 * time.Second)
-
-		cluster.UnsealCore(t, core)
+	for _, clusterCore := range cluster.Cores[1:] {
+		go func(t *testing.T, core *vault.TestClusterCore) {
+			t.Helper()
+			core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+			_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			time.Sleep(20 * time.Second)
+			cluster.UnsealCore(t, core)
+		}(t, clusterCore)
 	}
 
-	{
-		core := cluster.Cores[2]
-		core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
-		_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
-		if err != nil {
-			t.Fatal(err)
-		}
+	t.Log("finished creating nodes. unsealing leader core.")
 
-		time.Sleep(2 * time.Second)
+	cluster.UnsealCore(t, leaderCore)
+	vault.TestWaitActive(t, leaderCore.Core)
 
-		cluster.UnsealCore(t, core)
-	}
+	time.Sleep(30 * time.Second)
 
 	testhelpers.VerifyRaftPeers(t, cluster.Cores[0].Client, map[string]bool{
 		"core-0": true,
