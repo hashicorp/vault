@@ -24,7 +24,7 @@ export default class OidcClientDetailsRoute extends Route {
   }
 
   // Reset query params to default since query param values in Ember are "sticky"
-  // and the latest query param is preserved,
+  // and the most recent query param will otherwise be preserved
   resetController(controller, isExiting) {
     if (isExiting) {
       // isExiting is false if only the route's model was changing

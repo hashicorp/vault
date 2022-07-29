@@ -34,7 +34,7 @@ export default class NamedPathAdapter extends ApplicationAdapter {
     });
   }
   // GET request with list=true as query param
-  async query(store, type, query) {
+  query(store, type, query) {
     const url = this.urlForQuery(query, type.modelName);
     return this.ajax(url, 'GET', { data: { list: true } });
   }
