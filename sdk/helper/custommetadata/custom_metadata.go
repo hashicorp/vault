@@ -7,10 +7,6 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 )
 
-// CustomMetadata should be arbitrary user-provided key-value pairs meant to
-// provide supplemental information about a resource.
-type CustomMetadata map[string]string
-
 // The following constants are used by Validate and are meant to be imposed
 // broadly for consistency.
 const (
@@ -20,7 +16,9 @@ const (
 	validationErrorPrefix = "custom_metadata validation failed"
 )
 
-// Validate will perform input validation for custom metadata. If the key count
+// Validate will perform input validation for custom metadata.
+// CustomMetadata should be arbitrary user-provided key-value pairs meant to
+// provide supplemental information about a resource. If the key count
 // exceeds maxKeys, the validation will be short-circuited to prevent
 // unnecessary (and potentially costly) validation to be run. If the key count
 // falls at or below maxKeys, multiple checks will be made per key and value.
@@ -28,7 +26,7 @@ const (
 //   - 0 < length of key <= maxKeyLength
 //   - 0 < length of value <= maxValueLength
 //   - keys and values cannot include unprintable characters
-func Validate(cm CustomMetadata) error {
+func Validate(cm map[string]string) error {
 	var errs *multierror.Error
 
 	if keyCount := len(cm); keyCount > maxKeys {

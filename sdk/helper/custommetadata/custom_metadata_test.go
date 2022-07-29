@@ -9,12 +9,12 @@ import (
 func TestValidate(t *testing.T) {
 	cases := []struct {
 		name       string
-		input      CustomMetadata
+		input      map[string]string
 		shouldPass bool
 	}{
 		{
 			"valid",
-			CustomMetadata{
+			map[string]string{
 				"foo": "abc",
 				"bar": "def",
 				"baz": "ghi",
@@ -23,8 +23,8 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			"too_many_keys",
-			func() CustomMetadata {
-				cm := make(CustomMetadata)
+			func() map[string]string {
+				cm := make(map[string]string)
 
 				for i := 0; i < maxKeyLength+1; i++ {
 					s := strconv.Itoa(i)
@@ -37,28 +37,28 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			"key_too_long",
-			CustomMetadata{
+			map[string]string{
 				strings.Repeat("a", maxKeyLength+1): "abc",
 			},
 			false,
 		},
 		{
 			"value_too_long",
-			CustomMetadata{
+			map[string]string{
 				"foo": strings.Repeat("a", maxValueLength+1),
 			},
 			false,
 		},
 		{
 			"unprintable_key",
-			CustomMetadata{
+			map[string]string{
 				"unprint\u200bable": "abc",
 			},
 			false,
 		},
 		{
 			"unprintable_value",
-			CustomMetadata{
+			map[string]string{
 				"foo": "unprint\u200bable",
 			},
 			false,
