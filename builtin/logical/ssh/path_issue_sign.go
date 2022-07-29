@@ -74,7 +74,7 @@ func (b *backend) pathSignIssueCertificateHelper(ctx context.Context, req *logic
 		if role.DefaultUserTemplate {
 			defaultPrincipal, err = b.renderPrincipal(role.DefaultUser, req)
 			if err != nil {
-				return logical.ErrorResponse(err.Error()), nil
+				return nil, err
 			}
 		}
 		parsedPrincipals, err = b.calculateValidPrincipals(data, req, role, defaultPrincipal, role.AllowedUsers, strutil.StrListContains)
@@ -176,7 +176,7 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, req *logic
 		if role.AllowedUsersTemplate {
 			rendered, err := b.renderPrincipal(principal, req)
 			if err != nil {
-				return nil, fmt.Errorf("template '%s' could not be rendered -> %s", principal, err)
+				return nil, err
 			}
 			// Template returned a principal
 			allowedPrincipals = append(allowedPrincipals, rendered)
