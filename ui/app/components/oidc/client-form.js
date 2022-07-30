@@ -23,7 +23,6 @@ export default class OidcClientForm extends Component {
   @service flashMessages;
 
   @tracked modelValidations;
-  @tracked selectedAssignments;
   @tracked radioCardGroupValue =
     !this.args.model.assignments || this.args.model.assignments.includes('allow_all')
       ? 'allow_all'
@@ -31,9 +30,25 @@ export default class OidcClientForm extends Component {
 
   @action
   handleAssignmentSelection(selection) {
-    this.selectedAssignments = this.radioCardGroupValue === 'allow_all' ? [] : selection;
+    // if array then coming from search-select component, set selection as model assignments
+    if (Array.isArray(selection)) {
+      this.args.model.assignments = selection;
+    } else {
+      // otherwise update radio button value and reset assignments so
+      // UI always reflects a user's selection (including when no assignments are selected)
+      this.radioCardGroupValue = selection;
+      this.args.model.assignments = [];
+    }
   }
 
+  get modelAssignments() {
+    const { assignments } = this.args.model;
+    if (assignments.includes('allow_all') && assignments.length === 1) {
+      return [];
+    } else {
+      return assignments;
+    }
+  }
   @task
   *save(event) {
     event.preventDefault();
@@ -43,12 +58,9 @@ export default class OidcClientForm extends Component {
       if (isValid) {
         if (this.radioCardGroupValue === 'allow_all') {
           // the backend permits 'allow_all' AND other assignments, though 'allow_all' will take precedence
-          // to avoid having 'allow_all' appear in the "limited" search-select dropdown
           // the UI limits the config by allowing either 'allow_all' OR a list of other assignments
           // note: when editing the UI removes any additional assignments previously configured via CLI
           this.args.model.assignments = ['allow_all'];
-        } else {
-          this.args.model.assignments = this.selectedAssignments;
         }
         yield this.args.model.save();
         this.flashMessages.success(

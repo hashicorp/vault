@@ -44,7 +44,7 @@
         @icon="org"
         @value="allow_all"
         @groupValue={{this.radioCardGroupValue}}
-        @onChange={{fn (mut this.radioCardGroupValue)}}
+        @onChange={{this.handleAssignmentSelection}}
       />
       <RadioCard
         @title="Limit access to selected users"
@@ -52,7 +52,7 @@
         @icon="users"
         @value="limited"
         @groupValue={{this.radioCardGroupValue}}
-        @onChange={{fn (mut this.radioCardGroupValue)}}
+        @onChange={{this.handleAssignmentSelection}}
       />
     </div>
     {{#if (eq this.radioCardGroupValue "limited")}}
@@ -61,7 +61,7 @@
         @label="Assignment name"
         @subText="Search for an existing assignment, or type a new name to create it."
         @model="oidc/assignment"
-        @inputValue={{@model.assignments}}
+        @inputValue={{this.modelAssignments}}
         @onChange={{this.handleAssignmentSelection}}
         @excludeOptions={{array "allow_all"}}
         @fallbackComponent="string-list"
