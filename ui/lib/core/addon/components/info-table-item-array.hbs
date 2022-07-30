@@ -1,0 +1,59 @@
+<div data-test-info-table-item-array {{did-insert (perform this.fetchOptions)}}>
+  {{#if @isLink}}
+    <div data-test-row-value={{@label}}>
+      {{#each this.displayArrayAmended as |name|}}
+        {{#if (is-wildcard-string name)}}
+          {{#let (filter-wildcard name this.allOptions) as |wildcardCount|}}
+            <span>{{name}}</span>
+            <span class="tag is-light has-text-grey-dark" data-test-count="{{if wildcardCount wildcardCount 0}}">
+              includes
+              {{if wildcardCount wildcardCount 0}}
+              {{if (eq wildcardCount 1) @wildcardLabel (pluralize @wildcardLabel)}}
+            </span>
+            {{#if (eq this.displayArrayAmended.lastObject name)}}
+              <LinkTo @route={{this.rootRoute}} @query={{hash tab=@queryParam}}>
+                <span data-test-view-all={{@viewAll}}>View all {{@viewAll}}</span>
+              </LinkTo>
+            {{/if}}
+          {{/let}}
+        {{else}}
+          <LinkTo
+            @route={{this.itemRoute}}
+            @model={{if @queryParam (concat @queryParam "/" name) name}}
+            data-test-item={{name}}
+          >
+            <span>{{name}}</span>
+          </LinkTo>
+        {{/if}}
+        {{#if
+          (or
+            (and (not-eq name this.displayArrayAmended.lastObject) this.wildcardInDisplayArray)
+            (not-eq name this.displayArrayAmended.lastObject)
+          )
+        }}
+          ,&nbsp;
+        {{/if}}
+        {{#if (and (eq name this.displayArrayAmended.lastObject) (gte this.displayArray.length 10))}}
+          <span data-test-and={{dec 5 this.displayArray.length}}>
+            &nbsp;and
+            {{dec 5 this.displayArray.length}}
+            others.&nbsp;
+          </span>
+        {{/if}}
+        {{#if (and (eq name this.displayArrayAmended.lastObject) (gte this.displayArray.length 10))}}
+          <LinkTo @route={{this.rootRoute}} @query={{hash tab=@queryParam}}>
+            <span data-test-view-all={{this.viewAll}}>View all {{this.viewAll}} </span>
+          </LinkTo>
+        {{/if}}
+      {{/each}}
+    </div>
+  {{else}}
+    <code class="is-word-break has-text-black" data-test-row-value={{@label}}>
+      {{if
+        (gte this.displayArray.length 10)
+        (concat this.displayArray ", and " (dec 5 this.displayArray.length) " more.")
+        this.displayArray
+      }}
+    </code>
+  {{/if}}
+</div>
