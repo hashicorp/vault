@@ -1,11 +1,11 @@
-{{#each @model as |model|}}
-  <LinkedBlock class="list-item-row" @params={{array "vault.cluster.access.oidc.providers.provider.details" model.name}}>
+{{#each @model as |provider|}}
+  <LinkedBlock class="list-item-row" @params={{array "vault.cluster.access.oidc.providers.provider.details" provider.name}}>
     <div class="level is-mobile">
       <div class="level-left">
         <div>
           <Icon @name="provider" class="has-text-grey-light" />
           <span class="has-text-weight-semibold is-underline">
-            {{model.name}}
+            {{provider.name}}
           </span>
         </div>
       </div>
@@ -17,8 +17,8 @@
                 <li>
                   <LinkTo
                     @route="vault.cluster.access.oidc.providers.provider.details"
-                    @model={{model.name}}
-                    @disabled={{not model.canRead}}
+                    @model={{provider.name}}
+                    @disabled={{not provider.canRead}}
                   >
                     Details
                   </LinkTo>
@@ -26,8 +26,8 @@
                 <li>
                   <LinkTo
                     @route="vault.cluster.access.oidc.providers.provider.edit"
-                    @model={{model.name}}
-                    @disabled={{not model.canEdit}}
+                    @model={{provider.name}}
+                    @disabled={{not provider.canEdit}}
                   >
                     Edit
                   </LinkTo>
