@@ -6,6 +6,7 @@ import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import ENV from 'vault/config/environment';
 import { overrideMirageResponse } from 'vault/tests/helpers/oidc-config';
 
 const searchSelect = create(ss);
@@ -22,35 +23,16 @@ module('Integration | Component | oidc/client-form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
+  hooks.before(function () {
+    ENV['ember-cli-mirage'].handler = 'oidcConfig';
+  });
+
+  hooks.after(function () {
+    ENV['ember-cli-mirage'].handler = null;
+  });
+
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-    this.server.post('/sys/capabilities-self', () => {});
-    this.server.get('/identity/oidc/assignment/allow_all', () => {
-      return {
-        request_id: 'allow-all-id',
-        data: {
-          entity_ids: ['*'],
-          group_ids: ['*'],
-        },
-      };
-    });
-    this.server.get('/identity/oidc/assignment/assignment-1', () => {
-      return {
-        request_id: 'some-assign-id',
-        data: {
-          entity_ids: ['test'],
-          group_ids: ['test'],
-        },
-      };
-    });
-    this.server.get('/identity/oidc/assignment', () => {
-      return {
-        request_id: 'assignment-list-id',
-        data: {
-          keys: ['allow_all', 'assignment-1'],
-        },
-      };
-    });
   });
 
   test('it should save new client', async function (assert) {
