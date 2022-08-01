@@ -4,15 +4,17 @@ import { tracked } from '@glimmer/tracking';
 
 export default class OidcClientController extends Controller {
   @service router;
-  @tracked showHeader = true;
+  @tracked isEditRoute;
 
   constructor() {
     super(...arguments);
-    this.router.on('routeDidChange', (transition) => this.showOrHideHeader(transition));
+    this.router.on('routeDidChange', ({ targetName }) => {
+      return (this.isEditRoute = targetName.includes('edit') ? true : false);
+    });
   }
 
-  showOrHideHeader({ targetName }) {
-    // hide header when rendering the edit form (client-form component has separate header)
-    this.showHeader = targetName.includes('edit') ? false : true;
+  get showHeader() {
+    // hide header when rendering the edit form
+    return !this.isEditRoute;
   }
 }
