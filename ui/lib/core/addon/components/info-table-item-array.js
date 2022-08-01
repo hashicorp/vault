@@ -80,7 +80,6 @@ export default class InfoTableItemArray extends Component {
       }
 
       let options = yield this.store.query(this.args.modelType, queryOptions);
-      console.log(options);
       this.formatOptions(options);
     }
     this.checkWildcardInArray();
