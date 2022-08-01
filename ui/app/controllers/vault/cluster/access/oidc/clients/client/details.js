@@ -6,9 +6,6 @@ export default class OidcClientDetailsController extends Controller {
   @service router;
   @service flashMessages;
 
-  queryParams = ['tab'];
-  tab = 'details';
-
   @action
   async delete() {
     try {
