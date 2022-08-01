@@ -31,9 +31,9 @@ import { isWildcardString } from 'vault/helpers/is-wildcard-string';
  * @param [itemRoute=vault.cluster.secrets.backend.show] - {string} - Tells what route the link should go to when selecting the individual item.
  * @param [modelType] {string} - Tells which model you want data for the allOptions to be returned from.  Used in conjunction with the the isLink.
  * @param [wildcardLabel] {String} - when you want the component to return a count on the model for options returned when using a wildcard you must provide a label of the count e.g. role.  Should be singular.
- * @param [queryParam] {String} - If you want to specific a tab for the View All XX to display to.  Ex: role
+ * @param [modelObject] {String || Array} - If you want to specific a tab for the View All XX to display to.  Ex: role. Otherwise you can also pass an Array if you have more than one model object. https://guides.emberjs.com/release/routing/linking-between-routes/#toc_multiple-dynamic-segments
  * @param [backend] {String} - To specify which backend to point the link to.
- * @param [viewAll] {String} - Specify the word at the end of the link View all xx.
+ * @param [viewAll] {String} - Specify the word at the end of the link View all "roles".
  */
 export default class InfoTableItemArray extends Component {
   @tracked allOptions = null;

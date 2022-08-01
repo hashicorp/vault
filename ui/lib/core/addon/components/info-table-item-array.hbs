@@ -17,13 +17,19 @@
             {{/if}}
           {{/let}}
         {{else}}
-          <LinkTo
-            @route={{this.itemRoute}}
-            @model={{if @queryParam (concat @queryParam "/" name) name}}
-            data-test-item={{name}}
-          >
-            <span>{{name}}</span>
-          </LinkTo>
+          {{#if (is-array @modelObject)}}
+            <LinkTo @route={{this.itemRoute}} @models={{array (get @modelObject "0") name (get @modelObject "1")}}>
+              {{name}}
+            </LinkTo>
+          {{else}}
+            <LinkTo
+              @route={{this.itemRoute}}
+              @model={{if @queryParam (concat @queryParam "/" name) name}}
+              data-test-item={{name}}
+            >
+              <span>{{name}}</span>
+            </LinkTo>
+          {{/if}}
         {{/if}}
         {{#if
           (or
