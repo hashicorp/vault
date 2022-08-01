@@ -236,6 +236,23 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	resp.Data["key_id"] = myKey.ID
 	resp.Data["key_name"] = myKey.Name
 
+	// Update the issuer to reflect the PSS status here for revocation; this
+	// allows CRL building to succeed if the root is using a managed key with
+	// only PSS support.
+	if input.role.KeyType == "rsa" && *input.role.UsePSS {
+		myIssuer.RevocationSigAlg = x509.SHA256WithRSAPSS
+		switch input.role.SignatureBits {
+		case 384:
+			myIssuer.RevocationSigAlg = x509.SHA384WithRSAPSS
+		case 512:
+			myIssuer.RevocationSigAlg = x509.SHA512WithRSAPSS
+		}
+
+		if err := sc.writeIssuer(myIssuer); err != nil {
+			return nil, fmt.Errorf("unable to store PSS-updated issuer: %v", err)
+		}
+	}
+
 	// Also store it as just the certificate identified by serial number, so it
 	// can be revoked
 	err = req.Storage.Put(ctx, &logical.StorageEntry{
