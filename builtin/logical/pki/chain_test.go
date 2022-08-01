@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"bytes"
 	"context"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -167,6 +168,17 @@ func (c CBGenerateIntermediate) Run(t testing.TB, b *backend, s logical.Storage,
 	}
 
 	knownCerts[c.Name] = strings.TrimSpace(resp.Data["certificate"].(string))
+
+	// Verify SKID if one was requested.
+	if len(c.SKID) > 0 {
+		otherPEM := knownCerts[c.SKID]
+		otherCert := ToCertificate(t, otherPEM)
+		ourCert := ToCertificate(t, knownCerts[c.Name])
+
+		if !bytes.Equal(otherCert.SubjectKeyId, ourCert.SubjectKeyId) {
+			t.Fatalf("Expected two certs to have equal SKIDs but differed: them: %v vs us: %v", otherCert.SubjectKeyId, ourCert.SubjectKeyId)
+		}
+	}
 
 	// Set the signed intermediate
 	url = "intermediate/set-signed"

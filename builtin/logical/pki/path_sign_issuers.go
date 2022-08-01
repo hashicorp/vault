@@ -69,7 +69,7 @@ SHA-2-512. Defaults to 0 to automatically detect based on key length
 
 	fields["skid"] = &framework.FieldSchema{
 		Type:    framework.TypeString,
-		Default: 0,
+		Default: "",
 		Description: `Value for the Subject Key Identifier field
 (RFC 5280 Section 4.2.1.2). This value should ONLY be used when
 cross-signing to mimic the existing certificate's SKID value; this

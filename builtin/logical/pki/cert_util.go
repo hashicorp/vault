@@ -1351,7 +1351,8 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			// Handle removing common separators to make copy/paste from tool
 			// output easier.
 			skidNoColonsSeparators := strings.ReplaceAll(skidValue, ":", "")
-			skidNoSeparators := strings.ReplaceAll(skidNoColonsSeparators, "-", "")
+			skidNoSpaceSeparators := strings.ReplaceAll(skidNoColonsSeparators, " ", "")
+			skidNoSeparators := strings.ReplaceAll(skidNoSpaceSeparators, "-", "")
 			skid, err = hex.DecodeString(skidNoSeparators)
 			if err != nil {
 				return nil, errutil.UserError{Err: fmt.Sprintf("cannot parse requested SKID value as hex: %v", err)}
