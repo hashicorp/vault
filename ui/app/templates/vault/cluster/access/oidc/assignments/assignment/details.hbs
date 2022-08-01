@@ -58,10 +58,9 @@
     @isLink={{true}}
     @label="Entities"
     @modelType="oidc/assignment"
-    @viewAll="entities"
-    @rootRoute="vault.cluster.access.identity.index"
-    @itemRoute="vault.cluster.access.identity.show"
-    @modelObject={{(array "entities" "details")}}
+    @viewAll="entities."
+    @rootRoute={{(array "vault.cluster.access.identity.index" "entities")}}
+    @itemRoute={{(array "vault.cluster.access.identity.show" "entities" "details")}}
     @alwaysRender={{true}}
   />
   <InfoTableRow
@@ -71,10 +70,9 @@
     @isLink={{true}}
     @label="Groups"
     @modelType="oidc/assignment"
-    @viewAll="groups"
-    @rootRoute="vault.cluster.access.identity.index"
-    @itemRoute="vault.cluster.access.identity.show"
-    @modelObject={{(array "groups" "details")}}
+    @viewAll="groups."
+    @rootRoute={{(array "vault.cluster.access.identity.index" "groups")}}
+    @itemRoute={{(array "vault.cluster.access.identity.show" "groups" "details")}}
     @alwaysRender={{true}}
   />
 </div>

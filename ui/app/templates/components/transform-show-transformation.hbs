@@ -11,7 +11,7 @@
         @value={{get this.model attr.name}}
         @type={{attr.type}}
         @isLink={{eq attr.name "allowed_roles"}}
-        @modelObject="role"
+        @queryParam="role"
         @modelType="transform/role"
         @wildcardLabel={{attr.options.wildcardLabel}}
         @viewAll="roles"

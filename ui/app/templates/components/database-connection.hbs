@@ -329,7 +329,7 @@
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
           @value={{get @model attr.name}}
           @isLink={{true}}
-          @modelObject="role"
+          @queryParam="role"
           @type={{attr.type}}
         />
       {{else}}

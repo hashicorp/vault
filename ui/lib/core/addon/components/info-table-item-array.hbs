@@ -17,8 +17,11 @@
             {{/if}}
           {{/let}}
         {{else}}
-          {{#if (is-array @modelObject)}}
-            <LinkTo @route={{this.itemRoute}} @models={{array (get @modelObject "0") name (get @modelObject "1")}}>
+          {{#if (is-array this.itemRoute)}}
+            <LinkTo
+              @route={{(get this.itemRoute "0")}}
+              @models={{array (get this.itemRoute "1") name (get this.itemRoute "2")}}
+            >
               {{name}}
             </LinkTo>
           {{else}}
@@ -47,9 +50,15 @@
           </span>
         {{/if}}
         {{#if (and (eq name this.displayArrayAmended.lastObject) (gte this.displayArray.length 10))}}
-          <LinkTo @route={{this.rootRoute}} @query={{hash tab=@queryParam}}>
-            <span data-test-view-all={{this.viewAll}}>View all {{this.viewAll}} </span>
-          </LinkTo>
+          {{#if (is-array @rootRoute)}}
+            <LinkTo @route={{(get @rootRoute "0")}} @model={{(get @rootRoute "1")}}>
+              <span data-test-view-all={{this.viewAll}}>View all {{this.viewAll}} </span>
+            </LinkTo>
+          {{else}}
+            <LinkTo @route={{this.rootRoute}} @query={{hash tab=@queryParam}}>
+              <span data-test-view-all={{this.viewAll}}>View all {{this.viewAll}} </span>
+            </LinkTo>
+          {{/if}}
         {{/if}}
       {{/each}}
     </div>
