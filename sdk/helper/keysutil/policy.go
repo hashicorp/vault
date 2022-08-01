@@ -308,7 +308,7 @@ type Policy struct {
 	writeLocked bool
 	// Stores whether it's been deleted. This acts as a guard for operations
 	// that may write data, e.g. if one request rotates and that request is
-	// served after a delete.
+	// served after a delete operation.
 	deleted uint32
 
 	Name string      `json:"name"`
@@ -366,7 +366,7 @@ type Policy struct {
 	AllowPlaintextBackup bool `json:"allow_plaintext_backup"`
 
 	// VersionTemplate is used to prefix the ciphertext with information about
-	// the key version. It must inclide {{version}} and a delimiter between the
+	// the key version. It must include {{version}} and a delimiter between the
 	// version prefix and the ciphertext.
 	VersionTemplate string `json:"version_template"`
 
@@ -377,6 +377,10 @@ type Policy struct {
 	// AutoRotatePeriod defines how frequently the key should automatically
 	// rotate. Setting this to zero disables automatic rotation for the key.
 	AutoRotatePeriod time.Duration `json:"auto_rotate_period"`
+
+	// DistributedTime defines the moment when the key was distributed
+	// to an external key management system
+	DistributedTime *time.Time `json:"distribution_time,omitempty"`
 
 	// versionPrefixCache stores caches of version prefix strings and the split
 	// version template.
