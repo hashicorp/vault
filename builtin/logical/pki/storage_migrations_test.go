@@ -12,6 +12,7 @@ import (
 )
 
 func Test_migrateStorageEmptyStorage(t *testing.T) {
+	t.Parallel()
 	startTime := time.Now()
 	ctx := context.Background()
 	b, s := createBackendWithStorage(t)
@@ -60,6 +61,7 @@ func Test_migrateStorageEmptyStorage(t *testing.T) {
 }
 
 func Test_migrateStorageSimpleBundle(t *testing.T) {
+	t.Parallel()
 	startTime := time.Now()
 	ctx := context.Background()
 	b, s := createBackendWithStorage(t)
@@ -167,6 +169,7 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 }
 
 func TestExpectedOpsWork_PreMigration(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	b, s := createBackendWithStorage(t)
 	// Reset the version the helper above set to 1.
