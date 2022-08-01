@@ -95,7 +95,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-azure v0.10.0
 	github.com/hashicorp/vault-plugin-auth-centrify v0.11.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.11.0
-	github.com/hashicorp/vault-plugin-auth-gcp v0.12.1
+	github.com/hashicorp/vault-plugin-auth-gcp v0.12.2
 	github.com/hashicorp/vault-plugin-auth-jwt v0.12.1
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.6.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.12.1
