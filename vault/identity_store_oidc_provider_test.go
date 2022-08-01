@@ -3185,7 +3185,7 @@ func TestOIDC_Path_OIDCProvider_DuplicateTemplateKeys(t *testing.T) {
 }
 
 // TestOIDC_Path_OIDCProvider_DeDuplication tests that a
-// provider doensn't have duplicate scopes or client IDs
+// provider doesn't have duplicate scopes or client IDs
 func TestOIDC_Path_OIDCProvider_Deduplication(t *testing.T) {
 	redirectAddr := "http://localhost:8200"
 	conf := &CoreConfig{
@@ -3299,11 +3299,13 @@ func TestOIDC_Path_OIDCProvider_Update(t *testing.T) {
 	}
 }
 
-// TestOIDC_Path_OIDC_ProviderList tests the List operation for providers
+// TestOIDC_Path_OIDC_Provider_List tests the List operation for providers
 func TestOIDC_Path_OIDC_Provider_List(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
-	storage := &logical.InmemStorage{}
+	// Use the identity store's storage view so that the default provider will
+	// show up in the test
+	storage := c.identityStore.view
 
 	// Prepare two providers, test-provider1 and test-provider2
 	c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -3327,7 +3329,7 @@ func TestOIDC_Path_OIDC_Provider_List(t *testing.T) {
 	expectSuccess(t, respListProviders, listErr)
 
 	// validate list response
-	expectedStrings := map[string]interface{}{"test-provider1": true, "test-provider2": true}
+	expectedStrings := map[string]interface{}{"default": true, "test-provider1": true, "test-provider2": true}
 	expectStrings(t, respListProviders.Data["keys"].([]string), expectedStrings)
 
 	// delete test-provider2
