@@ -52,11 +52,11 @@
         {{#if (and (eq name this.displayArrayAmended.lastObject) (gte this.displayArray.length 10))}}
           {{#if (is-array @rootRoute)}}
             <LinkTo @route={{(get @rootRoute "0")}} @model={{(get @rootRoute "1")}}>
-              <span data-test-view-all={{this.viewAll}}>View all {{this.viewAll}} </span>
+              <span data-test-view-all={{@viewAll}}>View all {{@viewAll}} </span>
             </LinkTo>
           {{else}}
             <LinkTo @route={{this.rootRoute}} @query={{hash tab=@queryParam}}>
-              <span data-test-view-all={{this.viewAll}}>View all {{this.viewAll}} </span>
+              <span data-test-view-all={{@viewAll}}>View all {{@viewAll}} </span>
             </LinkTo>
           {{/if}}
         {{/if}}
