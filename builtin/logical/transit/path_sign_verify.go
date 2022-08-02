@@ -131,6 +131,12 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 				Default:     "asn1",
 				Description: `The method by which to marshal the signature. The default is 'asn1' which is used by openssl and X.509. It can also be set to 'jws' which is used for JWT signatures; setting it to this will also cause the encoding of the signature to be url-safe base64 instead of using standard base64 encoding. Currently only valid for ECDSA P-256 key types".`,
 			},
+
+			"salt_length": {
+				Type: framework.TypeString,
+				Description: `The salt length used for signing. Currently only applies to the RSA PSS signature scheme.
+Options are 'auto' or 'hash'. Defaults to 'auto'`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -217,6 +223,12 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 				Default:     "asn1",
 				Description: `The method by which to unmarshal the signature when verifying. The default is 'asn1' which is used by openssl and X.509; can also be set to 'jws' which is used for JWT signatures in which case the signature is also expected to be url-safe base64 encoding instead of standard base64 encoding. Currently only valid for ECDSA P-256 key types".`,
 			},
+
+			"salt_length": {
+				Type: framework.TypeString,
+				Description: `The salt length used for signing. Currently only applies to the RSA PSS signature scheme.
+Options are 'auto' or 'hash'. Defaults to 'auto'`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -252,6 +264,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 
 	prehashed := d.Get("prehashed").(bool)
 	sigAlgorithm := d.Get("signature_algorithm").(string)
+	saltLength := d.Get("salt_length").(string)
 
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
@@ -330,7 +343,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 			}
 		}
 
-		sig, err := p.Sign(ver, context, input, hashAlgorithm, sigAlgorithm, marshaling)
+		sig, err := p.Sign(ver, context, input, hashAlgorithm, sigAlgorithm, saltLength, marshaling)
 		if err != nil {
 			if batchInputRaw != nil {
 				response[i].Error = err.Error()
@@ -470,6 +483,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 
 	prehashed := d.Get("prehashed").(bool)
 	sigAlgorithm := d.Get("signature_algorithm").(string)
+	saltLength := d.Get("salt_length").(string)
 
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
@@ -533,7 +547,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 			}
 		}
 
-		valid, err := p.VerifySignature(context, input, hashAlgorithm, sigAlgorithm, marshaling, sig)
+		valid, err := p.VerifySignature(context, input, hashAlgorithm, sigAlgorithm, saltLength, marshaling, sig)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:
