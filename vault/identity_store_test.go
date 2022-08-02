@@ -81,6 +81,11 @@ func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
+	err = AddTestCredentialBackend("userpass", credUserpass.Factory)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
 	c, unsealKey, root := TestCoreUnsealed(t)
 
 	meGH := &MountEntry{
@@ -91,6 +96,18 @@ func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 	}
 
 	err = c.enableCredential(namespace.RootContext(nil), meGH)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	meUP := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "userpass/",
+		Type:        "userpass",
+		Description: "userpass auth",
+	}
+
+	err = c.enableCredential(namespace.RootContext(nil), meUP)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,9 +139,9 @@ func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 	alias2 := &identity.Alias{
 		ID:             "alias2",
 		CanonicalID:    "entity2",
-		MountType:      "github",
-		MountAccessor:  meGH.Accessor,
-		Name:           "GITHUBUSER",
+		MountType:      "userpass",
+		MountAccessor:  meUP.Accessor,
+		Name:           "USERPASSUSER",
 		LocalBucketKey: c.identityStore.localAliasPacker.BucketKey("entity2"),
 	}
 	entity2 := &identity.Entity{
@@ -537,7 +554,6 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-
 	c, _, _ := TestCoreUnsealed(t)
 
 	meGH := &MountEntry{

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	"k8s.io/utils/strings/slices"
+
 	"github.com/golang/protobuf/ptypes"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -126,11 +128,15 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"from_entity_ids": {
 					Type:        framework.TypeCommaStringSlice,
-					Description: "Entity IDs which needs to get merged",
+					Description: "Entity IDs which need to get merged",
 				},
 				"to_entity_id": {
 					Type:        framework.TypeString,
 					Description: "Entity ID into which all the other entities need to get merged",
+				},
+				"conflicting_alias_ids_to_keep": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: "Alias IDs to keep in case of conflicting aliases. Ignored if no conflicting aliases found",
 				},
 				"force": {
 					Type:        framework.TypeBool,
@@ -160,6 +166,8 @@ func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 			return logical.ErrorResponse("missing entity ids to merge from"), nil
 		}
 
+		conflictingAliasIDsToKeep := d.Get("conflicting_alias_ids_to_keep").([]string)
+
 		force := d.Get("force").(bool)
 
 		// Create a MemDB transaction to merge entities
@@ -174,7 +182,7 @@ func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 			return nil, err
 		}
 
-		userErr, intErr := i.mergeEntity(ctx, txn, toEntity, fromEntityIDs, force, false, false, true)
+		userErr, intErr := i.mergeEntity(ctx, txn, toEntity, fromEntityIDs, conflictingAliasIDsToKeep, force, false, false, true, false)
 		if userErr != nil {
 			return logical.ErrorResponse(userErr.Error()), nil
 		}
@@ -717,7 +725,16 @@ func (i *IdentityStore) handlePathEntityListCommon(ctx context.Context, req *log
 	return logical.ListResponseWithInfo(keys, entityInfo), nil
 }
 
-func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntity *identity.Entity, fromEntityIDs []string, force, grabLock, mergePolicies, persist bool) (error, error) {
+// A small type to help error reporting during entity alias clashes
+type aliasClashInformation struct {
+	toEntityId    string
+	fromEntityId  string
+	toAliasId     string
+	fromAliasId   string
+	mountAccessor string
+}
+
+func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntity *identity.Entity, fromEntityIDs, conflictingAliasIDsToKeep []string, force, grabLock, mergePolicies, persist, forceMergeAliases bool) (error, error) {
 	if grabLock {
 		i.lock.Lock()
 		defer i.lock.Unlock()
@@ -737,7 +754,12 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 
 	sanitizedFromEntityIDs := strutil.RemoveDuplicates(fromEntityIDs, false)
 
-	// Merge the MFA secrets
+	// A map to check if there are any clashes between mount accessors for any of the sanitizedFromEntityIDs
+	fromEntityAccessors := make(map[string]string)
+
+	// A list detailing clashes between all entity aliases
+	aliasClashes := make([]aliasClashInformation, 0)
+
 	for _, fromEntityID := range sanitizedFromEntityIDs {
 		if fromEntityID == toEntity.ID {
 			return errors.New("to_entity_id should not be present in from_entity_ids"), nil
@@ -756,6 +778,33 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 			return errors.New("entity id to merge from does not belong to this namespace"), nil
 		}
 
+		// If we're not resolving a conflict, we check to see if
+		// any aliases conflict between the toEntity and this fromEntity:
+		if !forceMergeAliases && len(conflictingAliasIDsToKeep) == 0 {
+			for _, toAlias := range toEntity.Aliases {
+				for _, fromAlias := range fromEntity.Aliases {
+					// First, check to see if this alias clashes with an alias from any of the other fromEntities:
+					id, mountAccessorInAnotherFromEntity := fromEntityAccessors[fromAlias.MountAccessor]
+					if mountAccessorInAnotherFromEntity && (id != fromEntityID) {
+						return fmt.Errorf("mount accessor %s found in multiple fromEntities, merge should be done with one fromEntity at a time", fromAlias.MountAccessor), nil
+					}
+
+					fromEntityAccessors[fromAlias.MountAccessor] = fromEntityID
+
+					// If it doesn't, check if it clashes with the to Entities
+					if toAlias.MountAccessor == fromAlias.MountAccessor {
+						aliasClashes = append(aliasClashes, aliasClashInformation{
+							toEntityId:    toEntity.ID,
+							fromEntityId:  fromEntityID,
+							toAliasId:     toAlias.ID,
+							fromAliasId:   fromAlias.ID,
+							mountAccessor: toAlias.MountAccessor,
+						})
+					}
+				}
+			}
+		}
+
 		for configID, configSecret := range fromEntity.MFASecrets {
 			_, ok := toEntity.MFASecrets[configID]
 			if ok && !force {
@@ -769,15 +818,26 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		}
 	}
 
+	// Check alias clashes after validating each fromEntity so we have a full list of errors
+	if len(aliasClashes) != 0 {
+		var conflictingAliasesInformation string
+		for _, clash := range aliasClashes {
+			clashString := fmt.Sprintf("\ntoEntity ID: %s, fromEntity ID: %s, conflicting toEntity alias ID: %s, conflicting fromEntity alias ID: %s, mountAccessor: %s",
+				clash.toEntityId, clash.fromEntityId, clash.toAliasId, clash.fromAliasId, clash.mountAccessor)
+			conflictingAliasesInformation = conflictingAliasesInformation + clashString
+		}
+		return fmt.Errorf("conflicting alias mount accessors between toEntity and fromEntity, clashes:%s", conflictingAliasesInformation), nil
+	}
+
 	isPerfSecondaryOrStandby := i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) ||
 		i.localNode.HAState() == consts.PerfStandby
 	var fromEntityGroups []*identity.Group
 
-	toEntityAccessors := make(map[string]struct{})
+	toEntityAccessors := make(map[string]string)
 
 	for _, alias := range toEntity.Aliases {
 		if _, ok := toEntityAccessors[alias.MountAccessor]; !ok {
-			toEntityAccessors[alias.MountAccessor] = struct{}{}
+			toEntityAccessors[alias.MountAccessor] = alias.ID
 		}
 	}
 
@@ -800,14 +860,26 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		}
 
 		for _, alias := range fromEntity.Aliases {
-			if _, ok := toEntityAccessors[alias.MountAccessor]; ok {
-				i.logger.Warn("Deleting from_entity alias during entity merge as to_entity has an alias with its accessor to prevent orphan", "from_entity", fromEntityID, "skipped_alias", alias.ID)
-				// Delete aliases that won't get merged over, else they will be orphaned
-				err := i.MemDBDeleteAliasByIDInTxn(txn, alias.ID, false)
-				if err != nil {
-					return nil, fmt.Errorf("failed to delete orphaned alias during merge: %w", err)
+			if aliasId, ok := toEntityAccessors[alias.MountAccessor]; ok {
+				// Handle conflicts (conflict = both aliases share the same mount accessor)
+				if slices.Contains(conflictingAliasIDsToKeep, aliasId) {
+					i.logger.Info("Deleting from_entity alias during entity merge", "from_entity", fromEntityID, "deleted_alias", alias.ID)
+					err := i.MemDBDeleteAliasByIDInTxn(txn, alias.ID, false)
+					if err != nil {
+						return nil, fmt.Errorf("failed to delete orphaned alias during merge: %w", err)
+					}
+
+					// Continue to next alias, as there's no alias to merge left in the from_entity
+					continue
+				} else if forceMergeAliases || slices.Contains(conflictingAliasIDsToKeep, alias.ID) {
+					i.logger.Info("Deleting to_entity alias during entity merge", "to_entity", fromEntityID, "deleted_alias", aliasId)
+					err := i.MemDBDeleteAliasByIDInTxn(txn, aliasId, false)
+					if err != nil {
+						return nil, fmt.Errorf("failed to delete orphaned alias during merge: %w", err)
+					}
+				} else {
+					return fmt.Errorf("conflicting mount accessors in following alias IDs and neither were present in conflicting_alias_ids_to_keep: %s, %s", alias.ID, aliasId), nil
 				}
-				continue
 			}
 
 			// Set the desired canonical ID
