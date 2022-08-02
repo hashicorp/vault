@@ -184,9 +184,12 @@ func TestRaft_RetryAutoJoin(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	testhelpers.VerifyRaftPeers(t, cluster.Cores[0].Client, map[string]bool{
+	err := testhelpers.VerifyRaftPeers(t, cluster.Cores[0].Client, map[string]bool{
 		"core-0": true,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestRaft_Retry_Join(t *testing.T) {
@@ -226,7 +229,6 @@ func TestRaft_Retry_Join(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			time.Sleep(20 * time.Second)
 			cluster.UnsealCore(t, core)
 		}(t, clusterCore)
 	}
@@ -236,12 +238,12 @@ func TestRaft_Retry_Join(t *testing.T) {
 	cluster.UnsealCore(t, leaderCore)
 	vault.TestWaitActive(t, leaderCore.Core)
 
-	time.Sleep(30 * time.Second)
-
-	testhelpers.VerifyRaftPeers(t, cluster.Cores[0].Client, map[string]bool{
-		"core-0": true,
-		"core-1": true,
-		"core-2": true,
+	vault.RetryUntil(t, 20*time.Second, func() error {
+		return testhelpers.VerifyRaftPeers(t, cluster.Cores[0].Client, map[string]bool{
+			"core-0": true,
+			"core-1": true,
+			"core-2": true,
+		})
 	})
 }
 
@@ -321,23 +323,29 @@ func TestRaft_RemovePeer(t *testing.T) {
 
 	client := cluster.Cores[0].Client
 
-	testhelpers.VerifyRaftPeers(t, client, map[string]bool{
+	err := testhelpers.VerifyRaftPeers(t, client, map[string]bool{
 		"core-0": true,
 		"core-1": true,
 		"core-2": true,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	_, err := client.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
+	_, err = client.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
 		"server_id": "core-2",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	testhelpers.VerifyRaftPeers(t, client, map[string]bool{
+	err = testhelpers.VerifyRaftPeers(t, client, map[string]bool{
 		"core-0": true,
 		"core-1": true,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	_, err = client.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
 		"server_id": "core-1",
@@ -346,9 +354,12 @@ func TestRaft_RemovePeer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testhelpers.VerifyRaftPeers(t, client, map[string]bool{
+	err = testhelpers.VerifyRaftPeers(t, client, map[string]bool{
 		"core-0": true,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestRaft_NodeIDHeader(t *testing.T) {
