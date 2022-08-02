@@ -12,7 +12,7 @@ These are general upgrade instructions for Vault for both non-HA and HA setups.
 _Please ensure that you also read any version-specific upgrade notes which can be
 found in the sidebar._
 
-!> **IMPORTANT NOTE:** Always back up your data before upgrading! Vault does not
+!> **Important Note:** Always back up your data before upgrading! Vault does not
 make backward-compatibility guarantees for its data store. Simply replacing the
 newly-installed Vault binary with the previous version will not cleanly
 downgrade Vault, as upgrades may perform changes to the underlying data
@@ -25,10 +25,16 @@ supported. The upgrade notes for each intervening version must be reviewed. The
 upgrade notes may describe additional steps or configuration to update before,
 during, or after the upgrade.
 
-## Tutorial
+### Integrated Storage Autopilot
 
-Refer to the [Vault Upgrade Standard Procedure](https://learn.hashicorp.com/tutorials/vault/sop-upgrade)
-tutorial to learn how to upgrade Vault Enterprise.
+Vault 1.11 introduced [automated
+upgrades](/docs/concepts/integrated-storage/autopilot#automated-upgrades) as 
+part of the Integrated Storage Autopilot feature. If your Vault environment is
+configured to use Integrated Storage, consider leveraging this new feature. 
+
+-> **Tutorial:** See the [Automate Upgrades with Vault
+ Enterprise](https://learn.hashicorp.com/tutorials/vault/raft-upgrade-automation)
+ tutorial for more details. 
 
 ## Agent
 
