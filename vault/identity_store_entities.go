@@ -752,6 +752,10 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		return errors.New("entity id to merge into does not belong to the request's namespace"), nil
 	}
 
+	if len(fromEntityIDs) > 1 && len(conflictingAliasIDsToKeep) > 1 {
+		return errors.New("aliases conflicts cannot be resolved with multiple from entity ids - merge one entity at a time"), nil
+	}
+
 	sanitizedFromEntityIDs := strutil.RemoveDuplicates(fromEntityIDs, false)
 
 	// A map to check if there are any clashes between mount accessors for any of the sanitizedFromEntityIDs
