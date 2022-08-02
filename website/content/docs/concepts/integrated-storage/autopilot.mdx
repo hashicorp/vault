@@ -67,6 +67,14 @@ behavior. Autopilot gets initialized with the following default values.
 
 - `server_stabilization_time` - `10s`
 
+
+~> **Note**: Autopilot in Vault does similar things to what autopilot does in
+[Consul](https://www.consul.io/). However, the configuration in these 2 systems
+differ in terms of default values and thresholds; some additional parameters
+might also show up in Vault in comparison to Consul as well. Autopilot in Vault
+and Consul use different technical underpinnings requiring these differences, to
+provide the autopilot functionality.
+
 ## Automated Upgrades
 
 Automated Upgrades lets you automatically upgrade a cluster of Vault nodes to a new version as
@@ -99,6 +107,9 @@ authorization.
 
 ## Tutorial
 
-Refer to [Integrated Storage
-Autopilot](https://learn.hashicorp.com/tutorials/vault/raft-autopilot) for a
-step-by-step tutorial.
+Refer to the following tutorials to learn more.
+
+- [Integrated Storage Autopilot](https://learn.hashicorp.com/tutorials/vault/raft-autopilot)
+- [Fault Tolerance with Redundancy Zones](https://learn.hashicorp.com/tutorials/vault/raft-redundancy-zones)
+- [Automate Upgrades with Vault Enterprise](https://learn.hashicorp.com/tutorials/vault/raft-upgrade-automation)
+

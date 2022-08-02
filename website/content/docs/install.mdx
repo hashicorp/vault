@@ -5,49 +5,45 @@ description: |-
   Download a precompiled binary, compile from source, or use a package.
 ---
 
-# Install Vault
+# Installing Vault
 
-There are several approaches to installing Vault:
+There are several options to install Vault:
 
-1. Install from a [Package Manager](#package-manager)
+1. Install from a [Package Manager](#package-manager).
 
-1. Use a [precompiled binary](#precompiled-binaries)
+1. Use a [precompiled binary](#precompiled-binaries).
 
-1. Install [from source](#compiling-from-source)
+1. Install [from source](#compiling-from-source).
 
 1. [Helm for Kubernetes](https://www.vaultproject.io/docs/platform/k8s/helm)
 
-Installing a Linux package is the easiest. If you develop or deploy on another
-platform, the precompiled binary will be easiest. We provide downloads over TLS
-along with SHA256 sums to verify the binary. We also distribute a PGP signature
-with the SHA256 sums that can be verified.
 
 ## Package Manager
 
-We build and sign official packages for Ubuntu, Debian, Fedora, RHEL, Amazon
+HashiCorp manages packages for Ubuntu, Debian, Fedora, RHEL, Amazon
 Linux, and other distributions. Follow the instructions at [HashiCorp
-Tutorials][learn-vault-install] to add our PGP key, add our repository, and
+Tutorials][learn-vault-install] to add our PGP key, add a repository, and
 install.
 
 ## Precompiled Binaries
 
-To install the precompiled binary, [download](/downloads) the appropriate
-package for your system. Vault is currently packaged as a zip file.
+To install the precompiled binary, [download](/downloads) the applicable
+package for your system. Vault is packaged as a zip file.
 
-Once the zip is downloaded, unzip it into any directory. The `vault` binary
+Once the zip is downloaded, unzip the file into your designated directory. The `vault` binary
 inside is all that is necessary to run Vault (or `vault.exe` for Windows). No
 additional files are required to run Vault.
 
-Copy the binary to anywhere on your system. If you intend to access it from the
-command-line, make sure to place it somewhere on your `PATH`.
+Copy the binary to your system. If you intend to access it from the
+command-line, ensure that you place the binary somewhere on your `PATH`.
 
-Continue on to [HashiCorp Tutorials][learn-vault-dev-server] to start a server, `put`
+Refer to the [HashiCorp Tutorials][learn-vault-dev-server] to start a server, `put`
 your first secret, and use other features of Vault.
 
 ## Compiling from Source
 
 To compile from source, you will need [Go](https://golang.org) installed and
-configured properly (including a `GOPATH` environment variable set), as well as
+properly configured (including a `GOPATH` environment variable set), as well as
 a copy of [`git`](https://www.git-scm.com/) in your `PATH`.
 
 Clone the Vault repository from GitHub into your `GOPATH`:
@@ -75,9 +71,9 @@ $ make dev
 
 ## Verifying the Installation
 
-To verify Vault is properly installed, run `vault -h` on your system. You should
-see help output. If you are executing it from the command line, make sure it is
-on your PATH or you may get an error about Vault not being found.
+To verify Vault is installed, run `vault -h` on your system. You should
+see the help output. If you are executing it from the command line, ensure it is
+on your `PATH` to avoid receiving an error that Vault is not found.
 
 ```shell-session
 $ vault -h

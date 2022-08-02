@@ -14,6 +14,7 @@ import (
 var ctx = context.Background()
 
 func Test_ConfigsRoundTrip(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
@@ -49,6 +50,7 @@ func Test_ConfigsRoundTrip(t *testing.T) {
 }
 
 func Test_IssuerRoundTrip(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 	issuer1, key1 := genIssuerAndKey(t, b, s)
@@ -94,6 +96,7 @@ func Test_IssuerRoundTrip(t *testing.T) {
 }
 
 func Test_KeysIssuerImport(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 

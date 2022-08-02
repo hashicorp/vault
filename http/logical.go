@@ -178,6 +178,8 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 			path += "/"
 		}
 
+		data = parseQuery(r.URL.Query())
+
 	case "OPTIONS", "HEAD":
 	default:
 		return nil, nil, http.StatusMethodNotAllowed, nil
