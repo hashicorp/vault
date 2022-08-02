@@ -657,6 +657,8 @@ func VerifyRaftPeers(t testing.T, client *api.Client, expected map[string]bool) 
 	if len(expected) != 0 {
 		return fmt.Errorf("failed to read configuration successfully, expected peers not found in configuration list: %v", expected)
 	}
+
+	return nil
 }
 
 func TestMetricSinkProvider(gaugeInterval time.Duration) func(string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper) {
