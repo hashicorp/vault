@@ -29,7 +29,7 @@ A quota that is defined in the `root` namespace with no specified path is inheri
 Essentially, it applies to the entire Vault API unless a more specific quota has been defined
 for a specific API path.
 
-Lease count quotas defined on a namespace will take precedence over the global
+Lease count quotas defined on a namespace take precedence over the global
 quotas. Lease count quotas defined for a mount will take precedence over global
 and namespace quotas. Lease count quotas defined for a specific path will take precedence
 over global, namespace, and mount quotas. Lease count quotas defined with a login role for
