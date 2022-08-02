@@ -935,7 +935,7 @@ func TestIdentityStore_MergeEntities_SameMountAccessor_ThenUseAlias(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	loginResp, err = client.Auth().Login(context.TODO(), userpassAuth)
+	loginResp, err = client.Auth().Login(context.Background(), userpassAuth)
 	if err != nil {
 		t.Fatalf("err:%v resp:%#v", err, loginResp)
 	}

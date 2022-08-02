@@ -818,12 +818,12 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		}
 	}
 
-	// Check alias clashes after validating each fromEntity so we have a full list of errors
+	// Check alias clashes after validating every fromEntity, so that we have a full list of errors
 	if len(aliasClashes) != 0 {
 		var conflictingAliasesInformation string
 		for _, clash := range aliasClashes {
-			clashString := fmt.Sprintf("\ntoEntity ID: %s, fromEntity ID: %s, conflicting toEntity alias ID: %s, conflicting fromEntity alias ID: %s, mountAccessor: %s",
-				clash.toEntityId, clash.fromEntityId, clash.toAliasId, clash.fromAliasId, clash.mountAccessor)
+			clashString := fmt.Sprintf("\nmountAccessor: %s, toEntity ID: %s, fromEntity ID: %s, conflicting toEntity alias ID: %s, conflicting fromEntity alias ID: %s",
+				clash.mountAccessor, clash.toEntityId, clash.fromEntityId, clash.toAliasId, clash.fromAliasId)
 			conflictingAliasesInformation = conflictingAliasesInformation + clashString
 		}
 		return fmt.Errorf("conflicting alias mount accessors between toEntity and fromEntity, clashes:%s", conflictingAliasesInformation), nil
