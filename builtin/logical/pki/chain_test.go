@@ -1572,6 +1572,7 @@ var chainBuildingTestCases = []CBTestScenario{
 }
 
 func Test_CAChainBuilding(t *testing.T) {
+	t.Parallel()
 	for testIndex, testCase := range chainBuildingTestCases {
 		b, s := createBackendWithStorage(t)
 
