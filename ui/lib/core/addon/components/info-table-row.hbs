@@ -29,7 +29,19 @@
         <Icon @name="minus" />
       {{/if}}
     </div>
-    <div class="column is-flex foobar" data-test-value-div={{@label}}>
+    <div class="column is-flex" data-test-value-div={{@label}}>
+      {{#if @addCopyButton}}
+        <div class="display-only">
+          <CopyButton
+            @clipboardText={{@value}}
+            @success={{action (set-flash-message "Data copied!")}}
+            class="button copy-button is-compact"
+            data-test-copy-button
+          >
+            <Icon @name="clipboard-copy" aria-hidden="Copy value" />
+          </CopyButton>
+        </div>
+      {{/if}}
       {{#if (has-block)}}
         {{yield}}
       {{else if this.valueIsBoolean}}
