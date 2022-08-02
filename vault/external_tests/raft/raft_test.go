@@ -221,24 +221,32 @@ func TestRaft_Retry_Join(t *testing.T) {
 		},
 	}
 
+	var wg sync.WaitGroup
 	for _, clusterCore := range cluster.Cores[1:] {
+		wg.Add(1)
 		go func(t *testing.T, core *vault.TestClusterCore) {
 			t.Helper()
+			defer wg.Done()
 			core.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
 			_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), leaderInfos, false)
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err)
 			}
-			cluster.UnsealCore(t, core)
+
+			// Handle potential racy behavior with unseals. Retry the unseal until it succeeds.
+			vault.RetryUntil(t, 10*time.Second, func() error {
+				return cluster.AttemptUnsealCore(core)
+			})
 		}(t, clusterCore)
 	}
 
-	t.Log("finished creating nodes. unsealing leader core.")
-
+	// Unseal the leader and wait for the other cores to unseal
 	cluster.UnsealCore(t, leaderCore)
+	wg.Wait()
+
 	vault.TestWaitActive(t, leaderCore.Core)
 
-	vault.RetryUntil(t, 20*time.Second, func() error {
+	vault.RetryUntil(t, 10*time.Second, func() error {
 		return testhelpers.VerifyRaftPeers(t, cluster.Cores[0].Client, map[string]bool{
 			"core-0": true,
 			"core-1": true,
