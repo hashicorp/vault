@@ -84,6 +84,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 				"issuer/+/der",
 				"issuer/+/json",
 				"issuers",
+				"revoke-with-key",
 			},
 
 			LocalStorage: []string{
@@ -121,6 +122,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathIssue(&b),
 			pathRotateCRL(&b),
 			pathRevoke(&b),
+			pathRevokeWithKey(&b),
 			pathTidy(&b),
 			pathTidyStatus(&b),
 
