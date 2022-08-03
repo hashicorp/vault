@@ -240,14 +240,16 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	// allows CRL building to succeed if the root is using a managed key with
 	// only PSS support.
 	if input.role.KeyType == "rsa" && input.role.UsePSS {
-		myIssuer.RevocationSigAlg = x509.SHA256WithRSAPSS
-		switch input.role.SignatureBits {
-		case 384:
-			myIssuer.RevocationSigAlg = x509.SHA384WithRSAPSS
-		case 512:
-			myIssuer.RevocationSigAlg = x509.SHA512WithRSAPSS
-		}
-
+		// The one time that it is safe (and good) to copy the
+		// SignatureAlgorithm field off the certificate (for the purposes of
+		// detecting PSS support) is when we've freshly generated it AND it
+		// is a root (exactly this endpoint).
+		//
+		// For intermediates, this doesn't hold (not this endpoint) as that
+		// reflects the parent key's preferences. For imports, this doesn't
+		// hold as the old system might've allowed other signature types that
+		// the new system (whether Vault or a managed key) doesn't.
+		myIssuer.RevocationSigAlg = parsedBundle.Certificate.SignatureAlgorithm
 		if err := sc.writeIssuer(myIssuer); err != nil {
 			return nil, fmt.Errorf("unable to store PSS-updated issuer: %v", err)
 		}
