@@ -122,8 +122,8 @@ func decoratePath(path string) ([]byte, error) {
 
 // Turn a decorated byte array back into a path string
 func undecoratePath(decoratedPath []byte) string {
-	ret := strings.Replace(string(decoratedPath), dirPathMarker, "/", -1)
-	ret = strings.Replace(ret, dirEntryMarker, "/", -1)
+	ret := strings.ReplaceAll(string(decoratedPath), dirPathMarker, "/")
+	ret = strings.ReplaceAll(ret, dirEntryMarker, "/")
 
 	return strings.TrimLeft(ret, "/")
 }
