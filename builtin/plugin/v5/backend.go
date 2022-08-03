@@ -136,3 +136,10 @@ func (b *backend) HandleExistenceCheck(ctx context.Context, req *logical.Request
 	}
 	return checkFound, exists, err
 }
+
+// InvalidateKey is a thin wrapper used to ensure we grab the lock for race purposes
+func (b *backend) InvalidateKey(ctx context.Context, key string) {
+	b.RLock()
+	defer b.RUnlock()
+	b.Backend.InvalidateKey(ctx, key)
+}
