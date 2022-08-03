@@ -366,7 +366,7 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 
 // getPluginTypeFromUnknown will attempt to run the plugin to determine the
 // type. It will first attempt to run as a database plugin then a backend
-// plugin. Both of these will be run in metadata mode.
+// plugin.
 func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log.Logger, plugin *pluginutil.PluginRunner) (consts.PluginType, error) {
 	merr := &multierror.Error{}
 	err := c.isDatabasePlugin(ctx, plugin)

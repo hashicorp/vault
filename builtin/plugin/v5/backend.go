@@ -54,8 +54,9 @@ func (b *backend) reloadBackend(ctx context.Context) error {
 
 	b.Logger().Trace("plugin: reloading plugin backend", "plugin", pluginName)
 
-	// Ensure proper cleanup of the backend (i.e. call client.Kill())
-	b.Backend.Cleanup(ctx)
+	// Ensure proper cleanup of the backend
+	reloadCtx := context.WithValue(ctx, v5.ContextKeyPluginReload, "reload")
+	b.Backend.Cleanup(reloadCtx)
 
 	nb, err := v5.NewBackend(ctx, pluginName, pluginType, b.config.System, b.config, false)
 	if err != nil {
