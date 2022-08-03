@@ -1345,15 +1345,17 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 	var skid []byte
 	{
 		if rawSKIDValue, ok := data.apiData.GetOk("skid"); ok {
+			// Handle removing common separators to make copy/paste from tool
+			// output easier. Chromium uses space, OpenSSL uses colons, and at
+			// one point, Vault had preferred dash as a separator for hex
+			// strings.
 			var err error
 			skidValue := rawSKIDValue.(string)
+			for _, separator := range []string{":", "-", " "} {
+				skidValue = strings.ReplaceAll(skidValue, separator, "")
+			}
 
-			// Handle removing common separators to make copy/paste from tool
-			// output easier.
-			skidNoColonsSeparators := strings.ReplaceAll(skidValue, ":", "")
-			skidNoSpaceSeparators := strings.ReplaceAll(skidNoColonsSeparators, " ", "")
-			skidNoSeparators := strings.ReplaceAll(skidNoSpaceSeparators, "-", "")
-			skid, err = hex.DecodeString(skidNoSeparators)
+			skid, err = hex.DecodeString(skidValue)
 			if err != nil {
 				return nil, errutil.UserError{Err: fmt.Sprintf("cannot parse requested SKID value as hex: %v", err)}
 			}
