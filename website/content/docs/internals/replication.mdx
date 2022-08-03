@@ -183,7 +183,7 @@ it logs the line `"replication: successful heartbeat"`, which includes the
 ### Secondary RPC address resolution
 
 gRPC is given a list of target addresses for it to use in performing RPC
-requests.  gRPC will discover that perf standbys can't service most RPCs, and
+requests.  gRPC will discover that performance standbys can't service most RPCs, and
 will quickly weed out all but the active node cluster address.  If the primary
 active node changes, gRPC will learn that its address is no longer viable and
 will automatically fail over to the new active node, assuming it's one of the
