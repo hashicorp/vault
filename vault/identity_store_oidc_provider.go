@@ -321,6 +321,14 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "oidc/client/?$",
+			Fields: map[string]*framework.FieldSchema{
+				"detailed": {
+					Type:        framework.TypeBool,
+					Description: "Returns additional provider fields in the list response if true.",
+					Default:     false,
+					Query:       true,
+				},
+			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.pathOIDCListClient,
@@ -374,7 +382,14 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 					Type: framework.TypeString,
 					Description: "Filters the list of OIDC providers to those " +
 						"that allow the given client ID in their set of allowed_client_ids.",
-					Query: true,
+					Default: "",
+					Query:   true,
+				},
+				"detailed": {
+					Type:        framework.TypeBool,
+					Description: "Returns additional provider fields in the list response if true.",
+					Default:     false,
+					Query:       true,
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -1118,6 +1133,30 @@ func (i *IdentityStore) pathOIDCCreateUpdateClient(ctx context.Context, req *log
 
 // pathOIDCListClient is used to list clients
 func (i *IdentityStore) pathOIDCListClient(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	// If list is detailed, return additional client fields
+	if detailed := d.Get("detailed").(bool); detailed {
+		clients, err := i.listClients(ctx, req.Storage)
+		if err != nil {
+			return nil, err
+		}
+
+		data := make(map[string]interface{})
+		for _, client := range clients {
+			data[client.Name] = map[string]interface{}{
+				"redirect_uris":    client.RedirectURIs,
+				"assignments":      client.Assignments,
+				"key":              client.Key,
+				"id_token_ttl":     int64(client.IDTokenTTL.Seconds()),
+				"access_token_ttl": int64(client.AccessTokenTTL.Seconds()),
+				"client_type":      client.Type.String(),
+				"client_id":        client.ClientID,
+				// client_secret is intentionally omitted
+			}
+		}
+
+		return &logical.Response{Data: data}, nil
+	}
+
 	clients, err := req.Storage.List(ctx, clientPath)
 	if err != nil {
 		return nil, err
@@ -1323,34 +1362,57 @@ func (i *IdentityStore) pathOIDCListProvider(ctx context.Context, req *logical.R
 		return nil, err
 	}
 
+	// Return the list of names if there are no filters or details requested
+	detailed := d.Get("detailed").(bool)
+	clientID := d.Get("allowed_client_id").(string)
+	if !detailed && clientID == "" {
+		return logical.ListResponse(providers), nil
+	}
+
+	// Build a map from provider name to provider struct
+	providerMap := make(map[string]*provider)
+	for _, name := range providers {
+		provider, err := i.getOIDCProvider(ctx, req.Storage, name)
+		if err != nil {
+			return nil, err
+		}
+		if provider == nil {
+			continue
+		}
+		providerMap[name] = provider
+	}
+
 	// If allowed_client_id is provided as a query parameter, filter the set of
 	// returned OIDC providers to those that allow the given value in their set
 	// of allowed_client_ids.
-	if clientIDRaw, ok := d.GetOk("allowed_client_id"); ok {
-		clientID := clientIDRaw.(string)
-		if clientID == "" {
-			return logical.ListResponse(providers), nil
-		}
-
-		filtered := make([]string, 0)
-		for _, name := range providers {
-			provider, err := i.getOIDCProvider(ctx, req.Storage, name)
-			if err != nil {
-				return nil, err
-			}
-			if provider == nil {
-				continue
-			}
-
-			if provider.allowedClientID(clientID) {
-				filtered = append(filtered, name)
+	if clientID != "" {
+		for name, provider := range providerMap {
+			if !provider.allowedClientID(clientID) {
+				delete(providerMap, name)
 			}
 		}
-
-		providers = filtered
 	}
 
-	return logical.ListResponse(providers), nil
+	// If list is detailed, return additional provider fields
+	if detailed {
+		data := make(map[string]interface{})
+		for name, provider := range providerMap {
+			data[name] = map[string]interface{}{
+				"issuer":             provider.effectiveIssuer,
+				"allowed_client_ids": provider.AllowedClientIDs,
+				"scopes_supported":   provider.ScopesSupported,
+			}
+		}
+		return &logical.Response{Data: data}, nil
+	}
+
+	// Collect the list of filtered provider names to return
+	providerNames := make([]string, 0, len(providerMap))
+	for name := range providerMap {
+		providerNames = append(providerNames, name)
+	}
+
+	return logical.ListResponse(providerNames), nil
 }
 
 // pathOIDCReadProvider is used to read an existing provider
