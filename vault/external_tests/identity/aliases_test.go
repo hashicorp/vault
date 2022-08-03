@@ -6,9 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	auth "github.com/hashicorp/vault/api/auth/userpass"
-
 	"github.com/hashicorp/vault/api"
+	auth "github.com/hashicorp/vault/api/auth/userpass"
 	"github.com/hashicorp/vault/builtin/credential/github"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	vaulthttp "github.com/hashicorp/vault/http"
