@@ -202,7 +202,7 @@ goes through its loop, and when gRPC asks for a forced ResolveNow, which seems
 to happen when it's unable to perform RPCs on any of its target addresses.  In
 both these cases, the resolver goroutine issues a special RemoteResolve RPC to
 the primary.  This RPC is special because unlike all the other replication
-RPCs, it can be serviced by perf standbys as well as the active node.  In
+RPCs, it can be serviced by performance standbys as well as the active node.  In
 either case the node will return the `primary_cluster_addr` stored in the
 primary's cluster definition, if any, or failing that the current active node's
 cluster address.  The result of the RemoteResolve call gets included in the
