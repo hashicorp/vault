@@ -191,6 +191,11 @@ func respondReadIssuer(issuer *issuerEntry) (*logical.Response, error) {
 		respManualChain = append(respManualChain, string(entity))
 	}
 
+	revSigAlgStr := issuer.RevocationSigAlg.String()
+	if issuer.RevocationSigAlg == x509.UnknownSignatureAlgorithm {
+		revSigAlgStr = ""
+	}
+
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"issuer_id":                      issuer.ID,
@@ -201,7 +206,7 @@ func respondReadIssuer(issuer *issuerEntry) (*logical.Response, error) {
 			"ca_chain":                       issuer.CAChain,
 			"leaf_not_after_behavior":        issuer.LeafNotAfterBehavior.String(),
 			"usage":                          issuer.Usage.Names(),
-			"revocation_signature_algorithm": issuer.RevocationSigAlg,
+			"revocation_signature_algorithm": revSigAlgStr,
 		},
 	}, nil
 }
