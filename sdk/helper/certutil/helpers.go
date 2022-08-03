@@ -87,6 +87,16 @@ func GetSubjKeyID(privateKey crypto.Signer) ([]byte, error) {
 	return getSubjectKeyID(privateKey.Public())
 }
 
+// Returns the explicit SKID when used for cross-signing, else computes a new
+// SKID from the key itself.
+func getSubjectKeyIDFromBundle(data *CreationBundle) ([]byte, error) {
+	if len(data.Params.SKID) > 0 {
+		return data.Params.SKID, nil
+	}
+
+	return getSubjectKeyID(data.CSR.PublicKey)
+}
+
 func getSubjectKeyID(pub interface{}) ([]byte, error) {
 	var publicKeyBytes []byte
 	switch pub := pub.(type) {
@@ -1066,7 +1076,7 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		return nil, err
 	}
 
-	subjKeyID, err := getSubjectKeyID(data.CSR.PublicKey)
+	subjKeyID, err := getSubjectKeyIDFromBundle(data)
 	if err != nil {
 		return nil, err
 	}
