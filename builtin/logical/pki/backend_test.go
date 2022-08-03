@@ -101,6 +101,7 @@ OzQeADTSCn5VidOfjDkIst9UXjMlrFfV9/oJEw5Eiqa6lkNPCGDhfA8=
 )
 
 func TestPKI_RequireCN(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -176,6 +177,7 @@ func TestPKI_RequireCN(t *testing.T) {
 }
 
 func TestPKI_DeviceCert(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -244,6 +246,7 @@ func TestPKI_DeviceCert(t *testing.T) {
 }
 
 func TestBackend_InvalidParameter(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -265,6 +268,7 @@ func TestBackend_InvalidParameter(t *testing.T) {
 }
 
 func TestBackend_CSRValues(t *testing.T) {
+	t.Parallel()
 	initTest.Do(setCerts)
 	b, _ := createBackendWithStorage(t)
 
@@ -281,6 +285,7 @@ func TestBackend_CSRValues(t *testing.T) {
 }
 
 func TestBackend_URLsCRUD(t *testing.T) {
+	t.Parallel()
 	initTest.Do(setCerts)
 	b, _ := createBackendWithStorage(t)
 
@@ -299,6 +304,7 @@ func TestBackend_URLsCRUD(t *testing.T) {
 // Generates and tests steps that walk through the various possibilities
 // of role flags to ensure that they are properly restricted
 func TestBackend_Roles(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name      string
 		key, cert *string
@@ -1715,6 +1721,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 }
 
 func TestRolesAltIssuer(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	// Create two issuers.
@@ -1812,6 +1819,7 @@ func TestRolesAltIssuer(t *testing.T) {
 }
 
 func TestBackend_PathFetchValidRaw(t *testing.T) {
+	t.Parallel()
 	b, storage := createBackendWithStorage(t)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -1942,6 +1950,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 }
 
 func TestBackend_PathFetchCertList(t *testing.T) {
+	t.Parallel()
 	// create the backend
 	b, storage := createBackendWithStorage(t)
 
@@ -2067,6 +2076,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 }
 
 func TestBackend_SignVerbatim(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		testName string
 		keyType  string
@@ -2077,6 +2087,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 		{testName: "Any", keyType: "any"},
 	}
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.testName, func(t *testing.T) {
 			runTestSignVerbatim(t, tc.keyType)
 		})
@@ -2316,6 +2327,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 }
 
 func TestBackend_Root_Idempotency(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	// This is a change within 1.11, we are no longer idempotent across generate/internal calls.
@@ -2420,6 +2432,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 }
 
 func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
+	t.Parallel()
 	b_root, s_root := createBackendWithStorage(t)
 	b_int, s_int := createBackendWithStorage(t)
 	var err error
@@ -2487,6 +2500,7 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 }
 
 func TestBackend_ConsulSignLeafWithLegacyRole(t *testing.T) {
+	t.Parallel()
 	// create the backend
 	b, s := createBackendWithStorage(t)
 
@@ -2521,6 +2535,7 @@ func TestBackend_ConsulSignLeafWithLegacyRole(t *testing.T) {
 }
 
 func TestBackend_SignSelfIssued(t *testing.T) {
+	t.Parallel()
 	// create the backend
 	b, storage := createBackendWithStorage(t)
 
@@ -2661,6 +2676,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 // TestBackend_SignSelfIssued_DifferentTypes tests the functionality of the
 // require_matching_certificate_algorithms flag.
 func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
+	t.Parallel()
 	// create the backend
 	b, storage := createBackendWithStorage(t)
 
@@ -2786,6 +2802,7 @@ func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 // here into the form at that site as it will do the right thing so it's pretty
 // easy to validate.
 func TestBackend_OID_SANs(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	var err error
@@ -3008,6 +3025,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 }
 
 func TestBackend_AllowedSerialNumbers(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	var err error
@@ -3114,6 +3132,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 }
 
 func TestBackend_URI_SANs(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	var err error
@@ -3207,6 +3226,7 @@ func TestBackend_URI_SANs(t *testing.T) {
 }
 
 func TestBackend_AllowedURISANsTemplate(t *testing.T) {
+	t.Parallel()
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
 			"userpass": userpass.Factory,
@@ -3331,6 +3351,7 @@ func TestBackend_AllowedURISANsTemplate(t *testing.T) {
 }
 
 func TestBackend_AllowedDomainsTemplate(t *testing.T) {
+	t.Parallel()
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
 			"userpass": userpass.Factory,
@@ -3462,6 +3483,7 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 }
 
 func TestReadWriteDeleteRoles(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
@@ -3689,6 +3711,8 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	// that we have to deal with more than one interval.
 	// InMemSink rounds down to an interval boundary rather than
 	// starting one at the time of initialization.
+	//
+	// This test is not parallelizable.
 	inmemSink := metrics.NewInmemSink(
 		1000000*time.Hour,
 		2000000*time.Hour)
@@ -3928,6 +3952,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 }
 
 func TestBackend_Root_FullCAChain(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		testName string
 		keyType  string
@@ -3937,6 +3962,7 @@ func TestBackend_Root_FullCAChain(t *testing.T) {
 		{testName: "EC", keyType: "ec"},
 	}
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.testName, func(t *testing.T) {
 			runFullCAChainTest(t, tc.keyType)
 		})
@@ -4223,6 +4249,7 @@ func RoleIssuanceRegressionHelper(t *testing.T, b *backend, s logical.Storage, i
 }
 
 func TestBackend_Roles_IssuanceRegression(t *testing.T) {
+	t.Parallel()
 	// Regression testing of role's issuance policy.
 	testCases := []IssuanceRegression{
 		// allowed, bare, glob, subdomains, localhost, wildcards, cn, issued
@@ -4509,6 +4536,7 @@ func RoleKeySizeRegressionHelper(t *testing.T, b *backend, s logical.Storage, in
 }
 
 func TestBackend_Roles_KeySizeRegression(t *testing.T) {
+	t.Parallel()
 	// Regression testing of role's issuance policy.
 	testCases := []KeySizeRegression{
 		// RSA with default parameters should fail to issue smaller RSA keys
@@ -4557,6 +4585,7 @@ func TestBackend_Roles_KeySizeRegression(t *testing.T) {
 }
 
 func TestRootWithExistingKey(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 	var err error
 
@@ -4689,6 +4718,7 @@ func TestRootWithExistingKey(t *testing.T) {
 }
 
 func TestIntermediateWithExistingKey(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	var err error
@@ -4753,6 +4783,7 @@ func TestIntermediateWithExistingKey(t *testing.T) {
 }
 
 func TestIssuanceTTLs(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -4827,6 +4858,7 @@ func TestIssuanceTTLs(t *testing.T) {
 }
 
 func TestSealWrappedStorageConfigured(t *testing.T) {
+	t.Parallel()
 	b, _ := createBackendWithStorage(t)
 	wrappedEntries := b.Backend.PathsSpecial.SealWrapStorage
 

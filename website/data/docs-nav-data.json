@@ -1455,6 +1455,10 @@
                 "path": "platform/k8s/helm/configuration"
               },
               {
+                "title": "Terraform",
+                "path": "platform/k8s/helm/terraform"
+              },
+              {
                 "title": "Examples",
                 "routes": [
                   {
@@ -1583,6 +1587,10 @@
           {
             "title": "Troubleshooting",
             "path": "platform/mssql/troubleshooting"
+          },
+          {
+            "title": "Release Notes",
+            "path": "platform/mssql/changelog"
           }
         ]
       },

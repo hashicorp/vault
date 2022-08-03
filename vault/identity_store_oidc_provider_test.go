@@ -3185,7 +3185,7 @@ func TestOIDC_Path_OIDCProvider_DuplicateTemplateKeys(t *testing.T) {
 }
 
 // TestOIDC_Path_OIDCProvider_DeDuplication tests that a
-// provider doensn't have duplicate scopes or client IDs
+// provider doesn't have duplicate scopes or client IDs
 func TestOIDC_Path_OIDCProvider_Deduplication(t *testing.T) {
 	redirectAddr := "http://localhost:8200"
 	conf := &CoreConfig{
@@ -3299,11 +3299,13 @@ func TestOIDC_Path_OIDCProvider_Update(t *testing.T) {
 	}
 }
 
-// TestOIDC_Path_OIDC_ProviderList tests the List operation for providers
+// TestOIDC_Path_OIDC_Provider_List tests the List operation for providers
 func TestOIDC_Path_OIDC_Provider_List(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
-	storage := &logical.InmemStorage{}
+	// Use the identity store's storage view so that the default provider will
+	// show up in the test
+	storage := c.identityStore.view
 
 	// Prepare two providers, test-provider1 and test-provider2
 	c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -3327,7 +3329,7 @@ func TestOIDC_Path_OIDC_Provider_List(t *testing.T) {
 	expectSuccess(t, respListProviders, listErr)
 
 	// validate list response
-	expectedStrings := map[string]interface{}{"test-provider1": true, "test-provider2": true}
+	expectedStrings := map[string]interface{}{"default": true, "test-provider1": true, "test-provider2": true}
 	expectStrings(t, respListProviders.Data["keys"].([]string), expectedStrings)
 
 	// delete test-provider2
@@ -3348,6 +3350,89 @@ func TestOIDC_Path_OIDC_Provider_List(t *testing.T) {
 	// validate list response
 	delete(expectedStrings, "test-provider2")
 	expectStrings(t, respListProvidersAfterDelete.Data["keys"].([]string), expectedStrings)
+}
+
+func TestOIDC_Path_OIDC_Provider_List_Filter(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+
+	// Create providers with different allowed_client_ids values
+	providers := []struct {
+		name             string
+		allowedClientIDs []string
+	}{
+		{name: "p0", allowedClientIDs: []string{"*"}},
+		{name: "p1", allowedClientIDs: []string{"abc"}},
+		{name: "p2", allowedClientIDs: []string{"abc", "def"}},
+		{name: "p3", allowedClientIDs: []string{"abc", "def", "ghi"}},
+		{name: "p4", allowedClientIDs: []string{"ghi"}},
+		{name: "p5", allowedClientIDs: []string{"jkl"}},
+	}
+	for _, p := range providers {
+		resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+			Path:      "oidc/provider/" + p.name,
+			Operation: logical.CreateOperation,
+			Storage:   c.identityStore.view,
+			Data: map[string]interface{}{
+				"allowed_client_ids": p.allowedClientIDs,
+			},
+		})
+		expectSuccess(t, resp, err)
+	}
+
+	tests := []struct {
+		name              string
+		clientIDFilter    string
+		expectedProviders []string
+	}{
+		{
+			name:              "list providers with client_id filter subset 1",
+			clientIDFilter:    "abc",
+			expectedProviders: []string{"default", "p0", "p1", "p2", "p3"},
+		},
+		{
+			name:              "list providers with client_id filter subset 2",
+			clientIDFilter:    "def",
+			expectedProviders: []string{"default", "p0", "p2", "p3"},
+		},
+		{
+			name:              "list providers with client_id filter subset 3",
+			clientIDFilter:    "ghi",
+			expectedProviders: []string{"default", "p0", "p3", "p4"},
+		},
+		{
+			name:              "list providers with client_id filter subset 4",
+			clientIDFilter:    "jkl",
+			expectedProviders: []string{"default", "p0", "p5"},
+		},
+		{
+			name:              "list providers with client_id filter only matching glob",
+			clientIDFilter:    "globmatch_only",
+			expectedProviders: []string{"default", "p0"},
+		},
+		{
+			name:              "list providers with empty client_id filter returns all",
+			clientIDFilter:    "",
+			expectedProviders: []string{"default", "p0", "p1", "p2", "p3", "p4", "p5"},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// List providers with the allowed_client_id query parameter
+			resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+				Path:      "oidc/provider",
+				Operation: logical.ListOperation,
+				Storage:   c.identityStore.view,
+				Data: map[string]interface{}{
+					"allowed_client_id": tc.clientIDFilter,
+				},
+			})
+			expectSuccess(t, resp, err)
+
+			// Assert the filtered set of providers is returned
+			require.Equal(t, tc.expectedProviders, resp.Data["keys"])
+		})
+	}
 }
 
 // TestOIDC_Path_OpenIDProviderConfig tests read operations for the

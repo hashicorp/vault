@@ -1454,15 +1454,20 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			if err != nil {
 				switch auth.Alias.Local {
 				case true:
-					entity, err = possiblyForwardEntityCreation(ctx, c, err, auth, entity)
-					if err != nil && strings.Contains(err.Error(), errCreateEntityUnimplemented) {
-						resp.AddWarning("primary cluster doesn't yet issue entities for local auth mounts; falling back to not issuing entities for local auth mounts")
-						goto CREATE_TOKEN
+					// Only create a new entity if the error was a readonly error and the creation flag is true
+					// i.e the entity was in the middle of being created
+					if entityCreated && errors.Is(err, logical.ErrReadOnly) {
+						entity, err = possiblyForwardEntityCreation(ctx, c, err, auth, nil)
+						if err != nil {
+							if strings.Contains(err.Error(), errCreateEntityUnimplemented) {
+								resp.AddWarning("primary cluster doesn't yet issue entities for local auth mounts; falling back to not issuing entities for local auth mounts")
+								goto CREATE_TOKEN
+							} else {
+								return nil, nil, err
+							}
+						}
 					}
-					// If the entity creation via forwarding was successful, update the bool flag
-					if entity != nil && err == nil {
-						entityCreated = true
-					}
+					err = updateLocalAlias(ctx, c, auth, entity)
 				default:
 					entity, entityCreated, err = possiblyForwardAliasCreation(ctx, c, err, auth, entity)
 				}

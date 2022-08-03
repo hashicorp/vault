@@ -354,3 +354,39 @@ func TestAppRole_RoleResolve(t *testing.T) {
 		t.Fatalf("Role was not as expected. Expected %s, received %s", role, resp.Data["role"])
 	}
 }
+
+func TestAppRole_RoleDoesNotExist(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	roleID := "roleDoesNotExist"
+
+	loginData := map[string]interface{}{
+		"role_id":   roleID,
+		"secret_id": "secret",
+	}
+	loginReq := &logical.Request{
+		Operation: logical.ResolveRoleOperation,
+		Path:      "login",
+		Storage:   storage,
+		Data:      loginData,
+		Connection: &logical.Connection{
+			RemoteAddr: "127.0.0.1",
+		},
+	}
+
+	resp, err = b.HandleRequest(context.Background(), loginReq)
+	if resp == nil && !resp.IsError() {
+		t.Fatalf("Response was not an error: err:%v resp:%#v", err, resp)
+	}
+
+	errString, ok := resp.Data["error"].(string)
+	if !ok {
+		t.Fatal("Error not part of response.")
+	}
+
+	if !strings.Contains(errString, "invalid role ID") {
+		t.Fatalf("Error was not due to invalid role ID. Error: %s", errString)
+	}
+}
