@@ -710,6 +710,7 @@ type CAInfoBundle struct {
 	ParsedCertBundle
 	URLs                 *URLEntries
 	LeafNotAfterBehavior NotAfterBehavior
+	RevocationSigAlg     x509.SignatureAlgorithm
 }
 
 func (b *CAInfoBundle) GetCAChain() []*CertBlock {
@@ -782,6 +783,7 @@ type CreationParameters struct {
 	PolicyIdentifiers             []string
 	BasicConstraintsValidForNonCA bool
 	SignatureBits                 int
+	UsePSS                        bool
 	ForceAppendCaChain            bool
 
 	// Only used when signing a CA cert

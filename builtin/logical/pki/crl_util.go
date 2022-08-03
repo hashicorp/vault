@@ -622,6 +622,7 @@ WRITE:
 		Number:              big.NewInt(crlNumber),
 		ThisUpdate:          time.Now(),
 		NextUpdate:          time.Now().Add(crlLifetime),
+		SignatureAlgorithm:  signingBundle.RevocationSigAlg,
 	}
 
 	crlBytes, err := x509.CreateRevocationList(rand.Reader, revocationListTemplate, signingBundle.Certificate, signingBundle.PrivateKey)
