@@ -861,41 +861,41 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 			return errors.New("entity id to merge from does not belong to this namespace"), nil
 		}
 
-		for _, alias := range fromEntity.Aliases {
-			if aliasId, ok := toEntityAccessors[alias.MountAccessor]; ok {
+		for _, fromAlias := range fromEntity.Aliases {
+			if toAliasId, ok := toEntityAccessors[fromAlias.MountAccessor]; ok {
 				// Handle conflicts (conflict = both aliases share the same mount accessor)
-				if strutil.StrListContains(conflictingAliasIDsToKeep, aliasId) {
-					i.logger.Info("Deleting from_entity alias during entity merge", "from_entity", fromEntityID, "deleted_alias", alias.ID)
-					err := i.MemDBDeleteAliasByIDInTxn(txn, alias.ID, false)
+				if strutil.StrListContains(conflictingAliasIDsToKeep, toAliasId) {
+					i.logger.Info("Deleting from_entity alias during entity merge", "from_entity", fromEntityID, "deleted_alias", fromAlias.ID)
+					err := i.MemDBDeleteAliasByIDInTxn(txn, fromAlias.ID, false)
 					if err != nil {
 						return nil, fmt.Errorf("failed to delete orphaned alias during merge: %w", err)
 					}
 
 					// Continue to next alias, as there's no alias to merge left in the from_entity
 					continue
-				} else if forceMergeAliases || strutil.StrListContains(conflictingAliasIDsToKeep, alias.ID) {
-					i.logger.Info("Deleting to_entity alias during entity merge", "to_entity", fromEntityID, "deleted_alias", aliasId)
-					err := i.MemDBDeleteAliasByIDInTxn(txn, aliasId, false)
+				} else if forceMergeAliases || strutil.StrListContains(conflictingAliasIDsToKeep, fromAlias.ID) {
+					i.logger.Info("Deleting to_entity alias during entity merge", "to_entity", toEntity.ID, "deleted_alias", toAliasId)
+					err := i.MemDBDeleteAliasByIDInTxn(txn, toAliasId, false)
 					if err != nil {
 						return nil, fmt.Errorf("failed to delete orphaned alias during merge: %w", err)
 					}
 				} else {
-					return fmt.Errorf("conflicting mount accessors in following alias IDs and neither were present in conflicting_alias_ids_to_keep: %s, %s", alias.ID, aliasId), nil
+					return fmt.Errorf("conflicting mount accessors in following alias IDs and neither were present in conflicting_alias_ids_to_keep: %s, %s", fromAlias.ID, toAliasId), nil
 				}
 			}
 
 			// Set the desired canonical ID
-			alias.CanonicalID = toEntity.ID
+			fromAlias.CanonicalID = toEntity.ID
 
-			alias.MergedFromCanonicalIDs = append(alias.MergedFromCanonicalIDs, fromEntity.ID)
+			fromAlias.MergedFromCanonicalIDs = append(fromAlias.MergedFromCanonicalIDs, fromEntity.ID)
 
-			err = i.MemDBUpsertAliasInTxn(txn, alias, false)
+			err = i.MemDBUpsertAliasInTxn(txn, fromAlias, false)
 			if err != nil {
 				return nil, fmt.Errorf("failed to update alias during merge: %w", err)
 			}
 
 			// Add the alias to the desired entity
-			toEntity.Aliases = append(toEntity.Aliases, alias)
+			toEntity.Aliases = append(toEntity.Aliases, fromAlias)
 		}
 
 		// If told to, merge policies
