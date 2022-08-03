@@ -781,6 +781,29 @@ func CreateCertificateWithKeyGenerator(data *CreationBundle, randReader io.Reade
 	return createCertificate(data, randReader, keyGenerator)
 }
 
+// Set correct correct RSA sig algo
+func certTemplateSetSigAlgo(certTemplate *x509.Certificate, data *CreationBundle) {
+	if data.Params.UsePSS {
+		switch data.Params.SignatureBits {
+		case 256:
+			certTemplate.SignatureAlgorithm = x509.SHA256WithRSAPSS
+		case 384:
+			certTemplate.SignatureAlgorithm = x509.SHA384WithRSAPSS
+		case 512:
+			certTemplate.SignatureAlgorithm = x509.SHA512WithRSAPSS
+		}
+	} else {
+		switch data.Params.SignatureBits {
+		case 256:
+			certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
+		case 384:
+			certTemplate.SignatureAlgorithm = x509.SHA384WithRSA
+		case 512:
+			certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
+		}
+	}
+}
+
 func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGenerator KeyGenerator) (*ParsedCertBundle, error) {
 	var err error
 	result := &ParsedCertBundle{}
@@ -849,25 +872,7 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 	if data.SigningBundle != nil {
 		switch data.SigningBundle.PrivateKeyType {
 		case RSAPrivateKey:
-			if data.Params.UsePSS {
-				switch data.Params.SignatureBits {
-				case 256:
-					certTemplate.SignatureAlgorithm = x509.SHA256WithRSAPSS
-				case 384:
-					certTemplate.SignatureAlgorithm = x509.SHA384WithRSAPSS
-				case 512:
-					certTemplate.SignatureAlgorithm = x509.SHA512WithRSAPSS
-				}
-			} else {
-				switch data.Params.SignatureBits {
-				case 256:
-					certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
-				case 384:
-					certTemplate.SignatureAlgorithm = x509.SHA384WithRSA
-				case 512:
-					certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
-				}
-			}
+			certTemplateSetSigAlgo(certTemplate, data)
 		case Ed25519PrivateKey:
 			certTemplate.SignatureAlgorithm = x509.PureEd25519
 		case ECPrivateKey:
@@ -889,25 +894,7 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 
 		switch data.Params.KeyType {
 		case "rsa":
-			if data.Params.UsePSS {
-				switch data.Params.SignatureBits {
-				case 256:
-					certTemplate.SignatureAlgorithm = x509.SHA256WithRSAPSS
-				case 384:
-					certTemplate.SignatureAlgorithm = x509.SHA384WithRSAPSS
-				case 512:
-					certTemplate.SignatureAlgorithm = x509.SHA512WithRSAPSS
-				}
-			} else {
-				switch data.Params.SignatureBits {
-				case 256:
-					certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
-				case 384:
-					certTemplate.SignatureAlgorithm = x509.SHA384WithRSA
-				case 512:
-					certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
-				}
-			}
+			certTemplateSetSigAlgo(certTemplate, data)
 		case "ed25519":
 			certTemplate.SignatureAlgorithm = x509.PureEd25519
 		case "ec":
@@ -1134,25 +1121,7 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 
 	switch data.SigningBundle.PrivateKeyType {
 	case RSAPrivateKey:
-		if data.Params.UsePSS {
-			switch data.Params.SignatureBits {
-			case 256:
-				certTemplate.SignatureAlgorithm = x509.SHA256WithRSAPSS
-			case 384:
-				certTemplate.SignatureAlgorithm = x509.SHA384WithRSAPSS
-			case 512:
-				certTemplate.SignatureAlgorithm = x509.SHA512WithRSAPSS
-			}
-		} else {
-			switch data.Params.SignatureBits {
-			case 256:
-				certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
-			case 384:
-				certTemplate.SignatureAlgorithm = x509.SHA384WithRSA
-			case 512:
-				certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
-			}
-		}
+		certTemplateSetSigAlgo(certTemplate, data)
 	case ECPrivateKey:
 		switch data.Params.SignatureBits {
 		case 256:
