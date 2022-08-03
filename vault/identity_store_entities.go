@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"k8s.io/utils/strings/slices"
-
 	"github.com/golang/protobuf/ptypes"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -866,7 +864,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		for _, alias := range fromEntity.Aliases {
 			if aliasId, ok := toEntityAccessors[alias.MountAccessor]; ok {
 				// Handle conflicts (conflict = both aliases share the same mount accessor)
-				if slices.Contains(conflictingAliasIDsToKeep, aliasId) {
+				if strutil.StrListContains(conflictingAliasIDsToKeep, aliasId) {
 					i.logger.Info("Deleting from_entity alias during entity merge", "from_entity", fromEntityID, "deleted_alias", alias.ID)
 					err := i.MemDBDeleteAliasByIDInTxn(txn, alias.ID, false)
 					if err != nil {
@@ -875,7 +873,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 
 					// Continue to next alias, as there's no alias to merge left in the from_entity
 					continue
-				} else if forceMergeAliases || slices.Contains(conflictingAliasIDsToKeep, alias.ID) {
+				} else if forceMergeAliases || strutil.StrListContains(conflictingAliasIDsToKeep, alias.ID) {
 					i.logger.Info("Deleting to_entity alias during entity merge", "to_entity", fromEntityID, "deleted_alias", aliasId)
 					err := i.MemDBDeleteAliasByIDInTxn(txn, aliasId, false)
 					if err != nil {
