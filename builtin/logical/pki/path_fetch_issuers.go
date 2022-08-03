@@ -273,7 +273,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 
 	// Revocation signature algorithm changes
 	revSigAlgStr := data.Get("revocation_signature_algorithm").(string)
-	revSigAlg, present := certutil.SignatureAlgorithmNames[revSigAlgStr]
+	revSigAlg, present := certutil.SignatureAlgorithmNames[strings.ToLower(revSigAlgStr)]
 	if !present && revSigAlgStr != "" {
 		var knownAlgos []string
 		for algoName := range certutil.SignatureAlgorithmNames {
@@ -465,7 +465,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	rawRevSigAlg, ok := data.GetOk("revocation_signature_algorithm")
 	if ok {
 		revSigAlgStr := rawRevSigAlg.(string)
-		revSigAlg, present := certutil.SignatureAlgorithmNames[revSigAlgStr]
+		revSigAlg, present := certutil.SignatureAlgorithmNames[strings.ToLower(revSigAlgStr)]
 		if !present && revSigAlgStr != "" {
 			var knownAlgos []string
 			for algoName := range certutil.SignatureAlgorithmNames {
