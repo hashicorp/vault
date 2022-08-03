@@ -198,8 +198,8 @@ simply concatenates `known_primary_cluster_addrs` with the
 `primary_cluster_addr` in the cluster definition in storage.
 
 There are two exceptions to that normal behaviour: the first time the goroutine
-goes through its loop, and when gRPC asks for a forced ResolveNow, which seems
-to happen when it's unable to perform RPCs on any of its target addresses.  In
+goes through its loop, and when gRPC asks for a forced ResolveNow, which
+happens when it's unable to perform RPCs on any of its target addresses.  In
 both these cases, the resolver goroutine issues a special RemoteResolve RPC to
 the primary.  This RPC is special because unlike all the other replication
 RPCs, it can be serviced by performance standbys as well as the active node.  In
