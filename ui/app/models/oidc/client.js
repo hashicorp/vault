@@ -19,8 +19,10 @@ export default class OidcClientModel extends Model {
   @attr('string', { label: 'Application name', editDisabled: true }) name;
   @attr('string', {
     label: 'Type',
-    subText: 'Specify whether the application type is confidential or public. The public type must use PKCE.',
+    subText:
+      'Specify whether the application type is confidential or public. The public type must use PKCE. This cannot be edited later.',
     editType: 'radio',
+    editDisabled: true,
     defaultValue: 'confidential',
     possibleValues: ['confidential', 'public'],
   })
