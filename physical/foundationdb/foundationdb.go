@@ -233,12 +233,12 @@ func NewFDBBackend(conf map[string]string, logger log.Logger) (physical.Backend,
 
 	db, err := fdb.Open(fdbClusterFile, []byte("DB"))
 	if err != nil {
-		return nil, fmt.Errorf("failed to open database with cluster file '%s': %w", fdbClusterFile, err)
+		return nil, fmt.Errorf("failed to open database with cluster file %q: %w", fdbClusterFile, err)
 	}
 
 	topDir, err := directory.CreateOrOpen(db, dirPath, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create/open top-level directory '%s': %w", path, err)
+		return nil, fmt.Errorf("failed to create/open top-level directory %q: %w", path, err)
 	}
 
 	// Setup the backend
