@@ -623,11 +623,22 @@ func TestIdentityStore_MergeEntities_SameMountAccessor_ThenUseAlias(t *testing.T
 	_, entityIdAlice, _ := createEntityAndAlias(client, mountAccessor, "alice-smith", "alice", t)
 
 	// Try and login with alias 2 (alice) pre-merge
+	userpassAuth, err := auth.NewUserpassAuth("alice", &auth.Password{FromString: "testpassword"})
+	if err != nil {
+		t.Fatal(err)
+	}
 	loginResp, err := client.Logical().Write("auth/userpass/login/alice", map[string]interface{}{
 		"password": "testpassword",
 	})
 	if err != nil {
 		t.Fatalf("err:%v resp:%#v", err, loginResp)
+	}
+	if loginResp.Auth == nil {
+		t.Fatalf("Request auth is nil, something has gone wrong - resp:%#v", loginResp)
+	}
+	loginEntityId := loginResp.Auth.EntityID
+	if loginEntityId != entityIdAlice {
+		t.Fatalf("Login entity ID is not Alice. loginEntityId:%s aliceEntityId:%s", loginEntityId, entityIdAlice)
 	}
 
 	// Perform entity merge
@@ -647,13 +658,15 @@ func TestIdentityStore_MergeEntities_SameMountAccessor_ThenUseAlias(t *testing.T
 	}
 
 	// Try and login with alias 2 (alice) post-merge
-	userpassAuth, err := auth.NewUserpassAuth("alice", &auth.Password{FromString: "testpassword"})
-	if err != nil {
-		t.Fatal(err)
-	}
 	loginResp, err = client.Auth().Login(context.Background(), userpassAuth)
 	if err != nil {
 		t.Fatalf("err:%v resp:%#v", err, loginResp)
+	}
+	if loginResp.Auth == nil {
+		t.Fatalf("Request auth is nil, something has gone wrong - resp:%#v", loginResp)
+	}
+	if loginEntityId != entityIdAlice {
+		t.Fatalf("Login entity ID is not Alice. loginEntityId:%s aliceEntityId:%s", loginEntityId, entityIdAlice)
 	}
 }
 
