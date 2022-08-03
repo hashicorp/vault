@@ -828,7 +828,7 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 				clash.mountAccessor, clash.toEntityId, clash.fromEntityId, clash.toAliasId, clash.fromAliasId)
 			conflictingAliasesInformation = conflictingAliasesInformation + clashString
 		}
-		return fmt.Errorf("conflicting alias mount accessors between toEntity and fromEntity, clashes:%s", conflictingAliasesInformation), nil
+		return fmt.Errorf("toEntity and at least one fromEntity have aliases with the same mount accessor, repeat the merge request specifying exactly one fromEntity, clashes:%s", conflictingAliasesInformation), nil
 	}
 
 	isPerfSecondaryOrStandby := i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) ||

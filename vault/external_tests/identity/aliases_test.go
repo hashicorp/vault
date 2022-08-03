@@ -374,7 +374,7 @@ func TestIdentityStore_MergeEntities_FailsDueToClash(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected error upon merge. Resp:%#v", mergeResp)
 	}
-	if !strings.Contains(err.Error(), "conflicting alias mount accessors between toEntity and fromEntity") {
+	if !strings.Contains(err.Error(), "toEntity and at least one fromEntity have aliases with the same mount accessor") {
 		t.Fatalf("Error was not due to conflicting alias mount accessors. Error: %v", err)
 	}
 	if !strings.Contains(err.Error(), entityIdAlice) {
@@ -760,7 +760,7 @@ func TestIdentityStore_MergeEntities_FailsDueToDoubleClash(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected error upon merge. Resp:%#v", mergeResp)
 	}
-	if !strings.Contains(err.Error(), "conflicting alias mount accessors between toEntity and fromEntity") {
+	if !strings.Contains(err.Error(), "toEntity and at least one fromEntity have aliases with the same mount accessor") {
 		t.Fatalf("Error was not due to conflicting alias mount accessors. Error: %v", err)
 	}
 	if !strings.Contains(err.Error(), entityIdAlice) {
