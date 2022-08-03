@@ -300,34 +300,7 @@ func TestIdentityStore_MergeEntities_FailsDueToClash(t *testing.T) {
 		t.Fatal("did not find userpass accessor")
 	}
 
-	// Now create an entity and alias for bob
-	entityRespBob, err := client.Logical().Write("identity/entity", map[string]interface{}{
-		"name": "bob-smith",
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, entityRespBob)
-	}
-	if entityRespBob == nil {
-		t.Fatalf("expected a non-nil response")
-	}
-	entityIdBob := entityRespBob.Data["id"].(string)
-	if entityIdBob == "" {
-		t.Fatal("EntityID not present in response")
-	}
-
-	aliasResp, err := client.Logical().Write("identity/entity-alias", map[string]interface{}{
-		"name":           "bob",
-		"canonical_id":   entityIdBob,
-		"mount_accessor": mountAccessor,
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, aliasResp)
-	}
-
-	aliasIdBob := aliasResp.Data["id"].(string)
-	if aliasIdBob == "" {
-		t.Fatal("Alias ID not present in response")
-	}
+	_, entityIdBob, aliasIdBob := createEntityAndAlias(client, mountAccessor, "bob-smith", "bob", t)
 
 	// Create userpass login for alice
 	_, err = client.Logical().Write("auth/userpass/users/alice", map[string]interface{}{
@@ -337,34 +310,7 @@ func TestIdentityStore_MergeEntities_FailsDueToClash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Now create a new unrelated entity and alias, alice-smith
-	entityRespAlice, err := client.Logical().Write("identity/entity", map[string]interface{}{
-		"name": "alice-smith",
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, entityRespAlice)
-	}
-	if entityRespAlice == nil {
-		t.Fatalf("expected a non-nil response")
-	}
-	entityIdAlice := entityRespAlice.Data["id"].(string)
-	if entityIdAlice == "" {
-		t.Fatal("EntityID not present in response")
-	}
-
-	aliasResp, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
-		"name":           "alice",
-		"canonical_id":   entityIdAlice,
-		"mount_accessor": mountAccessor,
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, aliasResp)
-	}
-
-	aliasIdAlice := aliasResp.Data["id"].(string)
-	if aliasIdAlice == "" {
-		t.Fatal("Alias ID not present in response")
-	}
+	_, entityIdAlice, aliasIdAlice := createEntityAndAlias(client, mountAccessor, "alice-smith", "alice", t)
 
 	// Perform entity merge
 	mergeResp, err := client.Logical().Write("identity/entity/merge", map[string]interface{}{
@@ -457,108 +403,9 @@ func TestIdentityStore_MergeEntities_FailsDueToClashInFromEntities(t *testing.T)
 		t.Fatal("did not find github accessor")
 	}
 
-	// Now create an entity and alias for bob
-	entityRespBob, err := client.Logical().Write("identity/entity", map[string]interface{}{
-		"name": "bob-smith",
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, entityRespBob)
-	}
-	if entityRespBob == nil {
-		t.Fatalf("expected a non-nil response")
-	}
-	entityIdBob := entityRespBob.Data["id"].(string)
-	if entityIdBob == "" {
-		t.Fatal("EntityID not present in response")
-	}
-
-	aliasResp, err := client.Logical().Write("identity/entity-alias", map[string]interface{}{
-		"name":           "bob",
-		"canonical_id":   entityIdBob,
-		"mount_accessor": mountAccessor,
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, aliasResp)
-	}
-
-	aliasIdBob := aliasResp.Data["id"].(string)
-	if aliasIdBob == "" {
-		t.Fatal("Alias ID not present in response")
-	}
-
-	// Create userpass login for alice
-	_, err = client.Logical().Write("auth/userpass/users/alice", map[string]interface{}{
-		"password": "training",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Now create a new unrelated entity and alias, alice-smith
-	entityRespAlice, err := client.Logical().Write("identity/entity", map[string]interface{}{
-		"name": "alice-smith",
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, entityRespAlice)
-	}
-	if entityRespAlice == nil {
-		t.Fatalf("expected a non-nil response")
-	}
-	entityIdAlice := entityRespAlice.Data["id"].(string)
-	if entityIdAlice == "" {
-		t.Fatal("EntityID not present in response")
-	}
-
-	aliasResp, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
-		"name":           "alice",
-		"canonical_id":   entityIdAlice,
-		"mount_accessor": mountAccessorGitHub,
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, aliasResp)
-	}
-
-	aliasIdAlice := aliasResp.Data["id"].(string)
-	if aliasIdAlice == "" {
-		t.Fatal("Alias ID not present in response")
-	}
-
-	// Create userpass login for alice
-	_, err = client.Logical().Write("auth/userpass/users/alice", map[string]interface{}{
-		"password": "training",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Now create a new unrelated entity and alias, clara-smith
-	entityRespClara, err := client.Logical().Write("identity/entity", map[string]interface{}{
-		"name": "clara-smith",
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, entityRespAlice)
-	}
-	if entityRespClara == nil {
-		t.Fatalf("expected a non-nil response")
-	}
-	entityIdClara := entityRespClara.Data["id"].(string)
-	if entityIdClara == "" {
-		t.Fatal("EntityID not present in response")
-	}
-
-	aliasResp, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
-		"name":           "clara",
-		"canonical_id":   entityIdClara,
-		"mount_accessor": mountAccessorGitHub,
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, aliasResp)
-	}
-
-	aliasIdClara := aliasResp.Data["id"].(string)
-	if aliasIdClara == "" {
-		t.Fatal("Alias ID not present in response")
-	}
+	_, entityIdBob, _ := createEntityAndAlias(client, mountAccessor, "bob-smith", "bob", t)
+	_, entityIdAlice, _ := createEntityAndAlias(client, mountAccessorGitHub, "alice-smith", "alice", t)
+	_, entityIdClara, _ := createEntityAndAlias(client, mountAccessorGitHub, "clara-smith", "clara", t)
 
 	// Perform entity merge
 	mergeResp, err := client.Logical().Write("identity/entity/merge", map[string]interface{}{
@@ -643,36 +490,9 @@ func TestIdentityStore_MergeEntities_FailsDueToDoubleClash(t *testing.T) {
 		t.Fatal("did not find github accessor")
 	}
 
-	// Now create an entity and alias for bob
-	entityRespBob, err := client.Logical().Write("identity/entity", map[string]interface{}{
-		"name": "bob-smith",
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, entityRespBob)
-	}
-	if entityRespBob == nil {
-		t.Fatalf("expected a non-nil response")
-	}
-	entityIdBob := entityRespBob.Data["id"].(string)
-	if entityIdBob == "" {
-		t.Fatal("EntityID not present in response")
-	}
+	_, entityIdBob, aliasIdBob := createEntityAndAlias(client, mountAccessor, "bob-smith", "bob", t)
 
 	aliasResp, err := client.Logical().Write("identity/entity-alias", map[string]interface{}{
-		"name":           "bob",
-		"canonical_id":   entityIdBob,
-		"mount_accessor": mountAccessor,
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, aliasResp)
-	}
-
-	aliasIdBob := aliasResp.Data["id"].(string)
-	if aliasIdBob == "" {
-		t.Fatal("Alias ID not present in response")
-	}
-
-	aliasResp, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
 		"name":           "bob-github",
 		"canonical_id":   entityIdBob,
 		"mount_accessor": mountAccessorGitHub,
@@ -694,63 +514,8 @@ func TestIdentityStore_MergeEntities_FailsDueToDoubleClash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Now create a new unrelated entity and alias, alice-smith
-	entityRespAlice, err := client.Logical().Write("identity/entity", map[string]interface{}{
-		"name": "alice-smith",
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, entityRespAlice)
-	}
-	if entityRespAlice == nil {
-		t.Fatalf("expected a non-nil response")
-	}
-	entityIdAlice := entityRespAlice.Data["id"].(string)
-	if entityIdAlice == "" {
-		t.Fatal("EntityID not present in response")
-	}
-
-	aliasResp, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
-		"name":           "alice",
-		"canonical_id":   entityIdAlice,
-		"mount_accessor": mountAccessor,
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, aliasResp)
-	}
-
-	aliasIdAlice := aliasResp.Data["id"].(string)
-	if aliasIdAlice == "" {
-		t.Fatal("Alias ID not present in response")
-	}
-
-	// Now create a new unrelated entity and alias, clara-smith
-	entityRespClara, err := client.Logical().Write("identity/entity", map[string]interface{}{
-		"name": "clara-smith",
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, entityRespAlice)
-	}
-	if entityRespClara == nil {
-		t.Fatalf("expected a non-nil response")
-	}
-	entityIdClara := entityRespClara.Data["id"].(string)
-	if entityIdClara == "" {
-		t.Fatal("EntityID not present in response")
-	}
-
-	aliasResp, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
-		"name":           "clara",
-		"canonical_id":   entityIdClara,
-		"mount_accessor": mountAccessorGitHub,
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, aliasResp)
-	}
-
-	aliasIdClara := aliasResp.Data["id"].(string)
-	if aliasIdClara == "" {
-		t.Fatal("Alias ID not present in response")
-	}
+	_, entityIdAlice, aliasIdAlice := createEntityAndAlias(client, mountAccessor, "alice-smith", "alice", t)
+	_, entityIdClara, aliasIdClara := createEntityAndAlias(client, mountAccessorGitHub, "clara-smith", "clara", t)
 
 	// Perform entity merge
 	mergeResp, err := client.Logical().Write("identity/entity/merge", map[string]interface{}{
@@ -811,13 +576,13 @@ func TestIdentityStore_MergeEntities_SameMountAccessor_ThenUseAlias(t *testing.T
 	}
 
 	_, err = client.Logical().Write("auth/userpass/users/bob", map[string]interface{}{
-		"password": "training",
+		"password": "testpassword",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	_, err = client.Logical().Write("auth/userpass/login/bob", map[string]interface{}{
-		"password": "training",
+		"password": "testpassword",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -839,76 +604,27 @@ func TestIdentityStore_MergeEntities_SameMountAccessor_ThenUseAlias(t *testing.T
 		t.Fatal("did not find userpass accessor")
 	}
 
-	// Now create an entity and alias for bob
-	entityRespBob, err := client.Logical().Write("identity/entity", map[string]interface{}{
-		"name": "bob-smith",
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, entityRespBob)
-	}
-	if entityRespBob == nil {
-		t.Fatalf("expected a non-nil response")
-	}
-	entityIdBob := entityRespBob.Data["id"].(string)
-	if entityIdBob == "" {
-		t.Fatal("EntityID not present in response")
-	}
-
-	aliasResp, err := client.Logical().Write("identity/entity-alias", map[string]interface{}{
-		"name":           "bob",
-		"canonical_id":   entityIdBob,
-		"mount_accessor": mountAccessor,
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, aliasResp)
-	}
-
-	aliasIdBob := aliasResp.Data["id"].(string)
-	if aliasIdBob == "" {
-		t.Fatal("Alias ID not present in response")
-	}
+	_, entityIdBob, aliasIdBob := createEntityAndAlias(client, mountAccessor, "bob-smith", "bob", t)
 
 	// Create userpass login for alice
 	_, err = client.Logical().Write("auth/userpass/users/alice", map[string]interface{}{
-		"password": "training",
+		"password": "testpassword",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	_, err = client.Logical().Write("auth/userpass/login/alice", map[string]interface{}{
-		"password": "training",
+		"password": "testpassword",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Now create a new unrelated entity and alias, alice-smith
-	entityRespAlice, err := client.Logical().Write("identity/entity", map[string]interface{}{
-		"name": "alice-smith",
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, entityRespAlice)
-	}
-	if entityRespAlice == nil {
-		t.Fatalf("expected a non-nil response")
-	}
-	entityIdAlice := entityRespAlice.Data["id"].(string)
-	if entityIdAlice == "" {
-		t.Fatal("EntityID not present in response")
-	}
-
-	aliasResp, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
-		"name":           "alice",
-		"canonical_id":   entityIdAlice,
-		"mount_accessor": mountAccessor,
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, aliasResp)
-	}
+	_, entityIdAlice, _ := createEntityAndAlias(client, mountAccessor, "alice-smith", "alice", t)
 
 	// Try and login with alias 2 (alice) pre-merge
 	loginResp, err := client.Logical().Write("auth/userpass/login/alice", map[string]interface{}{
-		"password": "training",
+		"password": "testpassword",
 	})
 	if err != nil {
 		t.Fatalf("err:%v resp:%#v", err, loginResp)
@@ -931,7 +647,7 @@ func TestIdentityStore_MergeEntities_SameMountAccessor_ThenUseAlias(t *testing.T
 	}
 
 	// Try and login with alias 2 (alice) post-merge
-	userpassAuth, err := auth.NewUserpassAuth("alice", &auth.Password{FromString: "training"})
+	userpassAuth, err := auth.NewUserpassAuth("alice", &auth.Password{FromString: "testpassword"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -971,14 +687,14 @@ func TestIdentityStore_MergeEntities_FailsDueToMultipleClashMergesAttempted(t *t
 	}
 
 	_, err = client.Logical().Write("auth/userpass/users/bob", map[string]interface{}{
-		"password": "training",
+		"password": "testpassword",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	_, err = client.Logical().Write("auth/userpass/users/bob-github", map[string]interface{}{
-		"password": "training",
+		"password": "testpassword",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -1011,36 +727,8 @@ func TestIdentityStore_MergeEntities_FailsDueToMultipleClashMergesAttempted(t *t
 		t.Fatal("did not find github accessor")
 	}
 
-	// Now create an entity and alias for bob
-	entityRespBob, err := client.Logical().Write("identity/entity", map[string]interface{}{
-		"name": "bob-smith",
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, entityRespBob)
-	}
-	if entityRespBob == nil {
-		t.Fatalf("expected a non-nil response")
-	}
-	entityIdBob := entityRespBob.Data["id"].(string)
-	if entityIdBob == "" {
-		t.Fatal("EntityID not present in response")
-	}
-
+	_, entityIdBob, _ := createEntityAndAlias(client, mountAccessor, "bob-smith", "bob", t)
 	aliasResp, err := client.Logical().Write("identity/entity-alias", map[string]interface{}{
-		"name":           "bob",
-		"canonical_id":   entityIdBob,
-		"mount_accessor": mountAccessor,
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, aliasResp)
-	}
-
-	aliasIdBob := aliasResp.Data["id"].(string)
-	if aliasIdBob == "" {
-		t.Fatal("Alias ID not present in response")
-	}
-
-	aliasResp, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
 		"name":           "bob-github",
 		"canonical_id":   entityIdBob,
 		"mount_accessor": mountAccessorGitHub,
@@ -1056,69 +744,14 @@ func TestIdentityStore_MergeEntities_FailsDueToMultipleClashMergesAttempted(t *t
 
 	// Create userpass login for alice
 	_, err = client.Logical().Write("auth/userpass/users/alice", map[string]interface{}{
-		"password": "training",
+		"password": "testpassword",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Now create a new unrelated entity and alias, alice-smith
-	entityRespAlice, err := client.Logical().Write("identity/entity", map[string]interface{}{
-		"name": "alice-smith",
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, entityRespAlice)
-	}
-	if entityRespAlice == nil {
-		t.Fatalf("expected a non-nil response")
-	}
-	entityIdAlice := entityRespAlice.Data["id"].(string)
-	if entityIdAlice == "" {
-		t.Fatal("EntityID not present in response")
-	}
-
-	aliasResp, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
-		"name":           "alice",
-		"canonical_id":   entityIdAlice,
-		"mount_accessor": mountAccessor,
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, aliasResp)
-	}
-
-	aliasIdAlice := aliasResp.Data["id"].(string)
-	if aliasIdAlice == "" {
-		t.Fatal("Alias ID not present in response")
-	}
-
-	// Now create a new unrelated entity and alias, clara-smith
-	entityRespClara, err := client.Logical().Write("identity/entity", map[string]interface{}{
-		"name": "clara-smith",
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, entityRespAlice)
-	}
-	if entityRespClara == nil {
-		t.Fatalf("expected a non-nil response")
-	}
-	entityIdClara := entityRespClara.Data["id"].(string)
-	if entityIdClara == "" {
-		t.Fatal("EntityID not present in response")
-	}
-
-	aliasResp, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
-		"name":           "clara",
-		"canonical_id":   entityIdClara,
-		"mount_accessor": mountAccessorGitHub,
-	})
-	if err != nil {
-		t.Fatalf("err:%v resp:%#v", err, aliasResp)
-	}
-
-	aliasIdClara := aliasResp.Data["id"].(string)
-	if aliasIdClara == "" {
-		t.Fatal("Alias ID not present in response")
-	}
+	_, entityIdAlice, aliasIdAlice := createEntityAndAlias(client, mountAccessor, "alice-smith", "alice", t)
+	_, entityIdClara, aliasIdClara := createEntityAndAlias(client, mountAccessorGitHub, "clara-smith", "alice", t)
 
 	// Perform entity merge
 	mergeResp, err := client.Logical().Write("identity/entity/merge", map[string]interface{}{

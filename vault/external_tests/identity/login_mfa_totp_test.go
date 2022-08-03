@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func createEntityAndAlias(client *api.Client, mountAccessor, entityName, aliasName string, t *testing.T) (*api.Client, string) {
+func createEntityAndAlias(client *api.Client, mountAccessor, entityName, aliasName string, t *testing.T) (*api.Client, string, string) {
 	_, err := client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("auth/userpass/users/%s", aliasName), map[string]interface{}{
 		"password": "testpassword",
 	})
@@ -40,7 +40,7 @@ func createEntityAndAlias(client *api.Client, mountAccessor, entityName, aliasNa
 	}
 	entityID := resp.Data["id"].(string)
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "identity/entity-alias", map[string]interface{}{
+	aliasResp, err := client.Logical().WriteWithContext(context.Background(), "identity/entity-alias", map[string]interface{}{
 		"name":           aliasName,
 		"canonical_id":   entityID,
 		"mount_accessor": mountAccessor,
@@ -48,7 +48,12 @@ func createEntityAndAlias(client *api.Client, mountAccessor, entityName, aliasNa
 	if err != nil {
 		t.Fatalf("failed to create an entity alias:%v", err)
 	}
-	return userClient, entityID
+
+	aliasID := aliasResp.Data["id"].(string)
+	if aliasID == "" {
+		t.Fatal("Alias ID not present in response")
+	}
+	return userClient, entityID, aliasID
 }
 
 func registerEntityInTOTPEngine(client *api.Client, entityID, methodID string, t *testing.T) string {
@@ -162,8 +167,8 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	}
 
 	// Creating two users in the userpass auth mount
-	userClient1, entityID1 := createEntityAndAlias(client, mountAccessor, "entity1", "testuser1", t)
-	userClient2, entityID2 := createEntityAndAlias(client, mountAccessor, "entity2", "testuser2", t)
+	userClient1, entityID1, _ := createEntityAndAlias(client, mountAccessor, "entity1", "testuser1", t)
+	userClient2, entityID2, _ := createEntityAndAlias(client, mountAccessor, "entity2", "testuser2", t)
 
 	// configure TOTP secret engine
 	var methodID string
