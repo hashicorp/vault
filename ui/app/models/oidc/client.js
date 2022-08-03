@@ -55,16 +55,16 @@ export default class OidcClientModel extends Model {
   @attr({
     label: 'Access Token TTL',
     editType: 'ttl',
+    defaultValue: '24h',
     helperTextDisabled: 'Vault will use the default lease duration',
-    setDefault: false,
   })
   accessTokenTtl;
 
   @attr({
     label: 'ID Token TTL',
     editType: 'ttl',
+    defaultValue: '24h',
     helperTextDisabled: 'Vault will use the default lease duration',
-    setDefault: false,
   })
   idTokenTtl;
 
