@@ -151,7 +151,7 @@ definition to storage, under `core/cluster/replicated/info` or
 `core/cluster/replicated-dr/info`.  An optional field of the cluster definition
 is `primary_cluster_addr`, which may be provided in the enable request.
 
-Perf standbys regularly issue heartbeat RPC requests to the active node, and
+Performance standbys regularly issue heartbeat RPC requests to the active node, and
 one of the arguments to the RPC is the local node's `cluster_addr`.  The
 primary active node retains these cluster addresses received from its peers in
 an in-memory cache named `clusterPeerClusterAddrsCache` with a 15s expiry time.
