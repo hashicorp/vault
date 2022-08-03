@@ -794,7 +794,8 @@ LOOP:
 }
 
 // processRestore takes a lease and restores it in the expiration manager if it has
-// not already been seen
+// not already been seen.
+// Once we load the lease, we also update the quotas that are keeping track of those leases
 func (m *ExpirationManager) processRestore(ctx context.Context, leaseID string) error {
 	m.restoreRequestLock.RLock()
 	defer m.restoreRequestLock.RUnlock()
@@ -813,9 +814,20 @@ func (m *ExpirationManager) processRestore(ctx context.Context, leaseID string) 
 	}
 
 	// Load lease and restore expiration timer
-	_, err := m.loadEntryInternal(ctx, leaseID, true, false)
+	le, err := m.loadEntryInternal(ctx, leaseID, true, false)
 	if err != nil {
 		return err
+	}
+
+	// Update quotas with relevant lease information
+	if le != nil {
+		leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: le.LeaseID, Role: le.LoginRole}
+		if err := m.core.quotasHandleLeases(context.Background(), quotas.LeaseActionLoaded, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
+			// We don't want to fail the start-up due to leases not being able
+			// to be loaded into the quota manager. When the leases get loaded,
+			// quota manager will be updated individually too.
+			m.logger.Error("failed to load lease into the quota sub-system", "LeaseID:", leaseID, "LoginRole", le.LoginRole, "error", err)
+		}
 	}
 
 	return nil
@@ -1869,7 +1881,11 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 		m.pending.Store(le.LeaseID, pending)
 	}
 
-	if leaseCreated {
+	// If we're in restore mode, Vault is still starting. While we may get leases created, it is likely
+	// 'catching up' on old creates, and will count these leases from the restore process instead.
+	// There is no way for a user to create real leases while we're still in restore mode, so the
+	// !m.inRestoreMode() prevents double counting.
+	if leaseCreated && !m.inRestoreMode() {
 		m.leaseCount++
 		// Avoid nil pointer dereference. Without cachedLeaseInfo we do not have enough information to
 		// accurately update quota lease information.
