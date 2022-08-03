@@ -47,6 +47,11 @@ var (
 		"transit":        transit.Factory,
 		"kv":             kv.Factory,
 	}
+
+	defaultTestClusterOptions = &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1, // Default is 3, but we don't need that many
+	}
 )
 
 // assertNoTabs asserts the CLI help has no tab characters.
@@ -67,6 +72,13 @@ func testVaultServer(tb testing.TB) (*api.Client, func()) {
 	return client, closer
 }
 
+func testVaultServerWithKVVersion(tb testing.TB, kvVersion string) (*api.Client, func()) {
+	tb.Helper()
+
+	client, _, closer := testVaultServerUnsealWithKVVersion(tb, kvVersion)
+	return client, closer
+}
+
 func testVaultServerAllBackends(tb testing.TB) (*api.Client, func()) {
 	tb.Helper()
 
@@ -78,13 +90,17 @@ func testVaultServerAllBackends(tb testing.TB) (*api.Client, func()) {
 		AuditBackends:      auditBackends,
 		LogicalBackends:    logicalBackends,
 		BuiltinRegistry:    builtinplugins.Registry,
-	})
+	}, defaultTestClusterOptions)
 	return client, closer
 }
 
 // testVaultServerUnseal creates a test vault cluster and returns a configured
 // API client, list of unseal keys (as strings), and a closer function.
 func testVaultServerUnseal(tb testing.TB) (*api.Client, []string, func()) {
+	return testVaultServerUnsealWithKVVersion(tb, "1")
+}
+
+func testVaultServerUnsealWithKVVersion(tb testing.TB, kvVersion string) (*api.Client, []string, func()) {
 	tb.Helper()
 	logger := log.NewInterceptLogger(&log.LoggerOptions{
 		Output:     log.DefaultOutput,
@@ -100,6 +116,10 @@ func testVaultServerUnseal(tb testing.TB) (*api.Client, []string, func()) {
 		AuditBackends:      defaultVaultAuditBackends,
 		LogicalBackends:    defaultVaultLogicalBackends,
 		BuiltinRegistry:    builtinplugins.Registry,
+	}, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
+		KVVersion:   kvVersion,
 	})
 }
 
@@ -118,18 +138,15 @@ func testVaultServerPluginDir(tb testing.TB, pluginDir string) (*api.Client, []s
 		LogicalBackends:    defaultVaultLogicalBackends,
 		PluginDirectory:    pluginDir,
 		BuiltinRegistry:    builtinplugins.Registry,
-	})
+	}, defaultTestClusterOptions)
 }
 
 // testVaultServerCoreConfig creates a new vault cluster with the given core
 // configuration. This is a lower-level test helper.
-func testVaultServerCoreConfig(tb testing.TB, coreConfig *vault.CoreConfig) (*api.Client, []string, func()) {
+func testVaultServerCoreConfig(tb testing.TB, coreConfig *vault.CoreConfig, opts *vault.TestClusterOptions) (*api.Client, []string, func()) {
 	tb.Helper()
 
-	cluster := vault.NewTestCluster(benchhelpers.TBtoT(tb), coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		NumCores:    1, // Default is 3, but we don't need that many
-	})
+	cluster := vault.NewTestCluster(benchhelpers.TBtoT(tb), coreConfig, opts)
 	cluster.Start()
 
 	// Make it easy to get access to the active

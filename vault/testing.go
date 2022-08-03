@@ -1154,6 +1154,7 @@ type TestClusterOptions struct {
 	// this stores the vault version that should be used for each core config
 	VersionMap        map[int]string
 	RedundancyZoneMap map[int]string
+	KVVersion         string
 }
 
 var DefaultNumCores = 3
@@ -2041,7 +2042,7 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 			"path":        "secret/",
 			"description": "key/value secret storage",
 			"options": map[string]string{
-				"version": "1",
+				"version": opts.KVVersion,
 			},
 		},
 	}
