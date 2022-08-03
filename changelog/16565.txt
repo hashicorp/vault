@@ -1,3 +1,0 @@
-```release-note:bug
-storage/raft: Make Core.raftInfo atomic to fix races.
-```
