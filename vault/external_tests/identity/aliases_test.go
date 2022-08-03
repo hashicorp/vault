@@ -657,6 +657,7 @@ func TestIdentityStore_MergeEntities_SameMountAccessor_ThenUseAlias(t *testing.T
 	}
 
 	// Try and login with alias 2 (alice) post-merge
+	// Notably, this login method sets the client token, which is why we didn't use it above
 	loginResp, err = client.Auth().Login(context.Background(), userpassAuth)
 	if err != nil {
 		t.Fatalf("err:%v resp:%#v", err, loginResp)
