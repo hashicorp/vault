@@ -443,9 +443,8 @@ export default Service.extend({
   }),
 
   getOktaNumberChallengeAnswer(nonce, mount) {
-    let namespace = this.namespaceService.path;
     const url = `/v1/auth/${mount}/verify/${nonce}`;
-    return this.ajax(url, 'GET', { namespace }).then(
+    return this.ajax(url, 'GET', {}).then(
       (resp) => {
         return resp.data.correct_answer;
       },
