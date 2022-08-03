@@ -594,13 +594,6 @@ func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*ro
 		modified = true
 	}
 
-	// Update PSS usage to be the present default; false.
-	if result.UsePSS == nil {
-		result.UsePSS = new(bool)
-		*result.UsePSS = false
-		modified = true
-	}
-
 	// Ensure the role is valid after updating.
 	_, err = validateRole(b, &result, ctx, s)
 	if err != nil {
@@ -687,7 +680,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		KeyType:                       data.Get("key_type").(string),
 		KeyBits:                       data.Get("key_bits").(int),
 		SignatureBits:                 data.Get("signature_bits").(int),
-		UsePSS:                        new(bool),
+		UsePSS:                        data.Get("use_pss").(bool),
 		UseCSRCommonName:              data.Get("use_csr_common_name").(bool),
 		UseCSRSANs:                    data.Get("use_csr_sans").(bool),
 		KeyUsage:                      data.Get("key_usage").([]string),
@@ -732,12 +725,6 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		allowWildcardCertificates = true
 	}
 	*entry.AllowWildcardCertificates = allowWildcardCertificates.(bool)
-
-	usePSS, present := data.GetOk("use_pss")
-	if !present {
-		usePSS = false
-	}
-	*entry.UsePSS = usePSS.(bool)
 
 	warning := ""
 	// no_store implies generate_lease := false
@@ -890,7 +877,7 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 		KeyType:                       getWithExplicitDefault(data, "key_type", oldEntry.KeyType).(string),
 		KeyBits:                       getWithExplicitDefault(data, "key_bits", oldEntry.KeyBits).(int),
 		SignatureBits:                 getWithExplicitDefault(data, "signature_bits", oldEntry.SignatureBits).(int),
-		UsePSS:                        new(bool),
+		UsePSS:                        getWithExplicitDefault(data, "use_pss", oldEntry.UsePSS).(bool),
 		UseCSRCommonName:              getWithExplicitDefault(data, "use_csr_common_name", oldEntry.UseCSRCommonName).(bool),
 		UseCSRSANs:                    getWithExplicitDefault(data, "use_csr_sans", oldEntry.UseCSRSANs).(bool),
 		KeyUsage:                      getWithExplicitDefault(data, "key_usage", oldEntry.KeyUsage).([]string),
@@ -937,12 +924,6 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 		allowWildcardCertificates = *oldEntry.AllowWildcardCertificates
 	}
 	*entry.AllowWildcardCertificates = allowWildcardCertificates.(bool)
-
-	usePSS, present := data.GetOk("use_pss")
-	if !present {
-		usePSS = *oldEntry.UsePSS
-	}
-	*entry.UsePSS = usePSS.(bool)
 
 	warning := ""
 	generateLease, ok := data.GetOk("generate_lease")
@@ -1091,7 +1072,7 @@ type roleEntry struct {
 	UseCSRSANs                    bool          `json:"use_csr_sans"`
 	KeyType                       string        `json:"key_type"`
 	KeyBits                       int           `json:"key_bits"`
-	UsePSS                        *bool         `json:"use_pss"`
+	UsePSS                        bool          `json:"use_pss"`
 	SignatureBits                 int           `json:"signature_bits"`
 	MaxPathLength                 *int          `json:",omitempty"`
 	KeyUsageOld                   string        `json:"key_usage,omitempty"`

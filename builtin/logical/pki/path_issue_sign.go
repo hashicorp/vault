@@ -218,17 +218,11 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 		ExtKeyUsage:               data.Get("ext_key_usage").([]string),
 		ExtKeyUsageOIDs:           data.Get("ext_key_usage_oids").([]string),
 		SignatureBits:             data.Get("signature_bits").(int),
-		UsePSS:                    new(bool),
+		UsePSS:                    data.Get("use_pss").(bool),
 	}
 	*entry.AllowWildcardCertificates = true
 
 	*entry.GenerateLease = false
-
-	usePSS, present := data.GetOk("use_pss")
-	if !present {
-		usePSS = false
-	}
-	*entry.UsePSS = usePSS.(bool)
 
 	if role != nil {
 		if role.TTL > 0 {

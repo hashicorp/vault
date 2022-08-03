@@ -239,7 +239,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	// Update the issuer to reflect the PSS status here for revocation; this
 	// allows CRL building to succeed if the root is using a managed key with
 	// only PSS support.
-	if input.role.KeyType == "rsa" && *input.role.UsePSS {
+	if input.role.KeyType == "rsa" && input.role.UsePSS {
 		myIssuer.RevocationSigAlg = x509.SHA256WithRSAPSS
 		switch input.role.SignatureBits {
 		case 384:
@@ -307,7 +307,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		EnforceHostnames:          false,
 		KeyType:                   "any",
 		SignatureBits:             data.Get("signature_bits").(int),
-		UsePSS:                    new(bool),
+		UsePSS:                    data.Get("use_pss").(bool),
 		AllowedOtherSANs:          []string{"*"},
 		AllowedSerialNumbers:      []string{"*"},
 		AllowedURISANs:            []string{"*"},
@@ -316,12 +316,6 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		CNValidations:             []string{"disabled"},
 	}
 	*role.AllowWildcardCertificates = true
-
-	usePSS, present := data.GetOk("use_pss")
-	if !present {
-		usePSS = false
-	}
-	*role.UsePSS = usePSS.(bool)
 
 	if cn := data.Get("common_name").(string); len(cn) == 0 {
 		role.UseCSRCommonName = true
