@@ -161,6 +161,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 	response = &logical.Response{
 		Data: map[string]interface{}{},
 	}
+	sc := b.makeStorageContext(ctx, req.Storage)
 
 	// Some of these need to return raw and some non-raw;
 	// this is basically handled by setting contentType or not.
@@ -182,8 +183,6 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		}
 	case req.Path == "crl" || req.Path == "crl/pem" || req.Path == "crl/delta" || req.Path == "crl/delta/pem":
 		if hasHeader(headerIfModifiedSince, req) {
-            // Maybe a sc declared at the top of function?
-		    sc := b.makeStorageContext(ctx, req.Storage)
 			before, err := isIfModifiedSinceBeforeLastModified(sc, req, responseHeaders)
 			if err != nil || before {
 				retErr = err
@@ -227,7 +226,6 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 
 	// Prefer fetchCAInfo to fetchCertBySerial for CA certificates.
 	if serial == "ca_chain" || serial == "ca" {
-		sc := b.makeStorageContext(ctx, req.Storage)
 		caInfo, err := sc.fetchCAInfo(defaultRef, ReadOnlyUsage)
 		if err != nil {
 			switch err.(type) {
@@ -350,10 +348,10 @@ reply:
 			Data: map[string]interface{}{
 				logical.HTTPContentType: contentType,
 				logical.HTTPRawBody:     certificate,
+				logical.HTTPStatusCode:  httpStatusCode,
 			},
 		}
 		retErr = nil
-		response.Data[logical.HTTPStatusCode] = httpStatusCode
 		switch {
 		case httpStatusCode == 304:
 			response.Headers = responseHeaders

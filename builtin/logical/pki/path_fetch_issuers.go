@@ -913,7 +913,29 @@ func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, da
 		return nil, err
 	}
 
+	var certificate []byte
+	var contentType string
+
 	sc := b.makeStorageContext(ctx, req.Storage)
+	// tmp
+	responseHeaders := map[string][]string{}
+	if hasHeader(headerIfModifiedSince, req) {
+		before, err := isIfModifiedSinceBeforeLastModified(sc, req, responseHeaders)
+		if err != nil {
+			return nil, err // errorResponse, nil or nil, err?
+		}
+		if before {
+			return &logical.Response{
+				Data: map[string]interface{}{
+					logical.HTTPContentType: contentType,
+					logical.HTTPRawBody:     certificate,
+					logical.HTTPStatusCode:  304,
+				},
+				Headers: responseHeaders,
+			}, nil
+		}
+	}
+	// tmp
 	crlPath, err := sc.resolveIssuerCRLPath(issuerName)
 	if err != nil {
 		return nil, err
@@ -928,12 +950,10 @@ func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, da
 		return nil, err
 	}
 
-	var certificate []byte
 	if crlEntry != nil && len(crlEntry.Value) > 0 {
 		certificate = []byte(crlEntry.Value)
 	}
 
-	var contentType string
 	if strings.HasSuffix(req.Path, "/der") {
 		contentType = "application/pkix-crl"
 	} else if strings.HasSuffix(req.Path, "/pem") {
