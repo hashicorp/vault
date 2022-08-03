@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/textproto"
+	"regexp"
 	"strings"
 	"time"
 
@@ -166,6 +167,7 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 			l.Type = strings.ToLower(l.Type)
 			switch l.Type {
 			case "tcp", "unix":
+				result.found(l.Type, l.Type)
 			default:
 				return multierror.Prefix(fmt.Errorf("unsupported listener type %q", l.Type), fmt.Sprintf("listeners.%d:", i))
 			}
@@ -410,7 +412,14 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 
 // ParseSingleIPTemplate is used as a helper function to parse out a single IP
 // address from a config parameter.
+// If the input doesn't appear to contain the 'template' format,
+// it will return the specified input unchanged.
 func ParseSingleIPTemplate(ipTmpl string) (string, error) {
+	r := regexp.MustCompile("{{.*?}}")
+	if !r.MatchString(ipTmpl) {
+		return ipTmpl, nil
+	}
+
 	out, err := template.Parse(ipTmpl)
 	if err != nil {
 		return "", fmt.Errorf("unable to parse address template %q: %v", ipTmpl, err)

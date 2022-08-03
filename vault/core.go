@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -35,6 +36,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/osutil"
@@ -173,7 +175,7 @@ func (e *ErrInvalidKey) Error() string {
 	return fmt.Sprintf("invalid key: %v", e.Reason)
 }
 
-type RegisterAuthFunc func(context.Context, time.Duration, string, *logical.Auth) error
+type RegisterAuthFunc func(context.Context, time.Duration, string, *logical.Auth, string) error
 
 type activeAdvertisement struct {
 	RedirectAddr     string                     `json:"redirect_addr"`
@@ -405,6 +407,9 @@ type Core struct {
 	// e.g. testing
 	baseLogger log.Logger
 	logger     log.Logger
+
+	// log level provided by config, CLI flag, or env
+	logLevel string
 
 	// Disables the trace display for Sentinel checks
 	sentinelTraceDisabled bool
@@ -663,6 +668,8 @@ type CoreConfig struct {
 
 	SecureRandomReader io.Reader
 
+	LogLevel string
+
 	Logger log.Logger
 
 	// Disables the trace display for Sentinel checks
@@ -846,6 +853,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		standbyStopCh:        new(atomic.Value),
 		baseLogger:           conf.Logger,
 		logger:               conf.Logger.Named("core"),
+		logLevel:             conf.LogLevel,
 
 		defaultLeaseTTL:                conf.DefaultLeaseTTL,
 		maxLeaseTTL:                    conf.MaxLeaseTTL,
@@ -890,6 +898,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		mountMigrationTracker:          &sync.Map{},
 		disableSSCTokens:               conf.DisableSSCTokens,
 	}
+
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)
 	c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 0, nil)
@@ -1030,6 +1039,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	c.loginMFABackend = NewLoginMFABackend(c, conf.Logger)
+
+	if c.loginMFABackend.mfaLogger != nil {
+		c.AddLogger(c.loginMFABackend.mfaLogger)
+	}
 
 	logicalBackends := make(map[string]logical.Factory)
 	for k, f := range conf.LogicalBackends {
@@ -2139,7 +2152,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupQuotas(ctx, false); err != nil {
 		return err
 	}
-	c.setupCachedMFAResponseAuth()
 
 	if err := c.setupHeaderHMACKey(ctx, false); err != nil {
 		return err
@@ -2161,9 +2173,14 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.loadIdentityStoreArtifacts(ctx); err != nil {
 			return err
 		}
-		if err := loadMFAConfigs(ctx, c); err != nil {
+		if err := loadPolicyMFAConfigs(ctx, c); err != nil {
 			return err
 		}
+		c.setupCachedMFAResponseAuth()
+		if err := c.loadLoginMFAConfigs(ctx); err != nil {
+			return err
+		}
+
 		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
 			return err
 		}
@@ -2325,10 +2342,6 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
 	c.stopActivityLog()
-	// Clear any cached auth response
-	c.mfaResponseAuthQueueLock.Lock()
-	c.mfaResponseAuthQueue = nil
-	c.mfaResponseAuthQueueLock.Unlock()
 
 	if err := c.teardownCredentials(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down credentials: %w", err))
@@ -2356,10 +2369,13 @@ func (c *Core) preSeal() error {
 		seal.StopHealthCheck()
 	}
 
-	c.loginMFABackend.usedCodes = nil
 	if c.systemBackend != nil && c.systemBackend.mfaBackend != nil {
 		c.systemBackend.mfaBackend.usedCodes = nil
 	}
+	if err := c.teardownLoginMFA(); err != nil {
+		result = multierror.Append(result, fmt.Errorf("error tearing down login MFA, error: %w", err))
+	}
+
 	preSealPhysical(c)
 
 	c.logger.Info("pre-seal teardown complete")
@@ -2810,6 +2826,19 @@ func (c *Core) SetLogLevel(level log.Level) {
 	}
 }
 
+func (c *Core) SetLogLevelByName(name string, level log.Level) error {
+	c.allLoggersLock.RLock()
+	defer c.allLoggersLock.RUnlock()
+	for _, logger := range c.allLoggers {
+		if logger.Name() == name {
+			logger.SetLevel(level)
+			return nil
+		}
+	}
+
+	return fmt.Errorf("logger %q does not exist", name)
+}
+
 // SetConfig sets core's config object to the newly provided config.
 func (c *Core) SetConfig(conf *server.Config) {
 	c.rawConfig.Store(conf)
@@ -3073,6 +3102,31 @@ type LicenseState struct {
 	Terminated bool
 }
 
+func (c *Core) loadLoginMFAConfigs(ctx context.Context) error {
+	eConfigs := make([]*mfa.MFAEnforcementConfig, 0)
+	allNamespaces := c.collectNamespaces()
+	for _, ns := range allNamespaces {
+		err := c.loginMFABackend.loadMFAMethodConfigs(ctx, ns)
+		if err != nil {
+			return fmt.Errorf("error loading MFA method Config, namespaceid %s, error: %w", ns.ID, err)
+		}
+
+		loadedConfigs, err := c.loginMFABackend.loadMFAEnforcementConfigs(ctx, ns)
+		if err != nil {
+			return fmt.Errorf("error loading MFA enforcement Config, namespaceid %s, error: %w", ns.ID, err)
+		}
+
+		eConfigs = append(eConfigs, loadedConfigs...)
+	}
+
+	for _, conf := range eConfigs {
+		if err := c.loginMFABackend.loginMFAMethodExistenceCheck(conf); err != nil {
+			c.loginMFABackend.mfaLogger.Error("failed to find all MFA methods that exist in MFA enforcement configs", "configID", conf.ID, "namespaceID", conf.NamespaceID, "error", err.Error())
+		}
+	}
+	return nil
+}
+
 type MFACachedAuthResponse struct {
 	CachedAuth            *logical.Auth
 	RequestPath           string
@@ -3222,7 +3276,10 @@ type PeerNode struct {
 	Hostname       string    `json:"hostname"`
 	APIAddress     string    `json:"api_address"`
 	ClusterAddress string    `json:"cluster_address"`
+	Version        string    `json:"version"`
 	LastEcho       time.Time `json:"last_echo"`
+	UpgradeVersion string    `json:"upgrade_version,omitempty"`
+	RedundancyZone string    `json:"redundancy_zone,omitempty"`
 }
 
 // GetHAPeerNodesCached returns the nodes that've sent us Echo requests recently.
@@ -3235,13 +3292,25 @@ func (c *Core) GetHAPeerNodesCached() []PeerNode {
 			APIAddress:     info.nodeInfo.ApiAddr,
 			ClusterAddress: itemClusterAddr,
 			LastEcho:       info.lastHeartbeat,
+			Version:        info.version,
+			UpgradeVersion: info.upgradeVersion,
+			RedundancyZone: info.redundancyZone,
 		})
 	}
 	return nodes
 }
 
 func (c *Core) CheckPluginPerms(pluginName string) (err error) {
-	if c.pluginDirectory != "" && os.Getenv(consts.VaultDisableFilePermissionsCheckEnv) != "true" {
+	var enableFilePermissionsCheck bool
+	if enableFilePermissionsCheckEnv := os.Getenv(consts.VaultEnableFilePermissionsCheckEnv); enableFilePermissionsCheckEnv != "" {
+		var err error
+		enableFilePermissionsCheck, err = strconv.ParseBool(enableFilePermissionsCheckEnv)
+		if err != nil {
+			return errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
+		}
+	}
+
+	if c.pluginDirectory != "" && enableFilePermissionsCheck {
 		err = osutil.OwnerPermissionsMatch(c.pluginDirectory, c.pluginFileUid, c.pluginFilePermissions)
 		if err != nil {
 			return err
@@ -3253,4 +3322,41 @@ func (c *Core) CheckPluginPerms(pluginName string) (err error) {
 		}
 	}
 	return err
+}
+
+// DetermineRoleFromLoginRequestFromBytes will determine the role that should be applied to a quota for a given
+// login request, accepting a byte payload
+func (c *Core) DetermineRoleFromLoginRequestFromBytes(mountPoint string, payload []byte, ctx context.Context) string {
+	data := make(map[string]interface{})
+	err := jsonutil.DecodeJSON(payload, &data)
+	if err != nil {
+		// Cannot discern a role from a request we cannot parse
+		return ""
+	}
+
+	return c.DetermineRoleFromLoginRequest(mountPoint, data, ctx)
+}
+
+// DetermineRoleFromLoginRequest will determine the role that should be applied to a quota for a given
+// login request
+func (c *Core) DetermineRoleFromLoginRequest(mountPoint string, data map[string]interface{}, ctx context.Context) string {
+	c.authLock.RLock()
+	defer c.authLock.RUnlock()
+	matchingBackend := c.router.MatchingBackend(ctx, mountPoint)
+	if matchingBackend == nil || matchingBackend.Type() != logical.TypeCredential {
+		// Role based quotas do not apply to this request
+		return ""
+	}
+
+	resp, err := matchingBackend.HandleRequest(ctx, &logical.Request{
+		MountPoint: mountPoint,
+		Path:       "login",
+		Operation:  logical.ResolveRoleOperation,
+		Data:       data,
+		Storage:    c.router.MatchingStorageByAPIPath(ctx, mountPoint+"login"),
+	})
+	if err != nil || resp.Data["role"] == nil {
+		return ""
+	}
+	return resp.Data["role"].(string)
 }

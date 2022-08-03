@@ -141,7 +141,7 @@ $ curl \
 
 ## Disable Performance Primary
 
-This endpoint disables performance replication entirely on the cluster. Any
+This endpoint disables Performance Replication entirely on the cluster. Any
 performance secondaries will no longer be able to connect. Caution: re-enabling
 this node as a primary or secondary will change its cluster ID; in the secondary
 case this means a wipe of the underlying storage when connected to a primary,
@@ -426,7 +426,7 @@ $ curl \
 
 ## Enable Performance Secondary
 
-This endpoint enables performance replication on a secondary using a secondary activation
+This endpoint enables Performance Replication on a secondary using a secondary activation
 token.
 
 !> This will immediately clear all data in the secondary cluster!
@@ -511,7 +511,7 @@ $ curl \
 
 ## Disable Performance Secondary
 
-This endpoint disables performance replication entirely on the cluster. The cluster will no
+This endpoint disables Performance Replication entirely on the cluster. The cluster will no
 longer be able to connect to the performance primary.
 
 !> Re-enabling this node as a performance primary or secondary will change its cluster ID;

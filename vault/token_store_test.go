@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/benchhelpers"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -329,7 +330,7 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		NamespaceID:    namespace.RootNamespaceID,
 	}
 
-	if err := ts.expiration.RegisterAuth(namespace.RootContext(nil), registryEntry, auth); err != nil {
+	if err := ts.expiration.RegisterAuth(namespace.RootContext(nil), registryEntry, auth, ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -374,7 +375,7 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		},
 		ClientToken: ent.ID,
 	}
-	if err := ts.expiration.RegisterAuth(namespace.RootContext(nil), ent, auth); err != nil {
+	if err := ts.expiration.RegisterAuth(namespace.RootContext(nil), ent, auth, ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -419,7 +420,7 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		},
 		ClientToken: ent.ID,
 	}
-	if err := ts.expiration.RegisterAuth(namespace.RootContext(nil), ent, auth); err != nil {
+	if err := ts.expiration.RegisterAuth(namespace.RootContext(nil), ent, auth, ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -461,7 +462,7 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		},
 		ClientToken: ent.ID,
 	}
-	if err := ts.expiration.RegisterAuth(namespace.RootContext(nil), ent, auth); err != nil {
+	if err := ts.expiration.RegisterAuth(namespace.RootContext(nil), ent, auth, ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -495,7 +496,7 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		},
 		ClientToken: ent.ID,
 	}
-	if err := ts.expiration.RegisterAuth(namespace.RootContext(nil), ent, auth); err != nil {
+	if err := ts.expiration.RegisterAuth(namespace.RootContext(nil), ent, auth, ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -525,7 +526,7 @@ func testMakeServiceTokenViaBackend(t testing.TB, ts *TokenStore, root, client, 
 
 func testMakeTokenViaBackend(t testing.TB, ts *TokenStore, root, client, ttl string, policy []string, batch bool) {
 	t.Helper()
-	req := logical.TestRequest(t, logical.UpdateOperation, "create")
+	req := logical.TestRequest(benchhelpers.TBtoT(t), logical.UpdateOperation, "create")
 	req.ClientToken = root
 	if batch {
 		req.Data["type"] = "batch"
@@ -571,7 +572,7 @@ func testMakeTokenViaRequestContext(t testing.TB, ctx context.Context, ts *Token
 	}
 
 	if resp.Auth.TokenType != logical.TokenTypeBatch {
-		if err := ts.expiration.RegisterAuth(ctx, te, resp.Auth); err != nil {
+		if err := ts.expiration.RegisterAuth(ctx, te, resp.Auth, ""); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -617,7 +618,7 @@ func testMakeTokenDirectly(t testing.TB, ts *TokenStore, te *logical.TokenEntry)
 		CreationPath:   te.Path,
 		TokenType:      te.Type,
 	}
-	err := ts.expiration.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err := ts.expiration.RegisterAuth(namespace.RootContext(nil), te, auth, "")
 	switch err {
 	case nil:
 		if te.Type == logical.TokenTypeBatch {
@@ -635,7 +636,7 @@ func testMakeServiceTokenViaCore(t testing.TB, c *Core, root, client, ttl string
 }
 
 func testMakeTokenViaCore(t testing.TB, c *Core, root, client, ttl, period string, policy []string, batch bool, outAuth *logical.Auth) {
-	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/create")
+	req := logical.TestRequest(benchhelpers.TBtoT(t), logical.UpdateOperation, "auth/token/create")
 	req.ClientToken = root
 	if batch {
 		req.Data["type"] = "batch"
@@ -860,7 +861,7 @@ func TestTokenStore_HandleRequest_Renew_Revoke_Accessor(t *testing.T) {
 		t.Fatal("token entry was nil")
 	}
 
-	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1321,7 +1322,7 @@ func TestTokenStore_Revoke_Leases(t *testing.T) {
 			"secret_key": "abcd",
 		},
 	}
-	leaseID, err := ts.expiration.Register(namespace.RootContext(nil), req, resp)
+	leaseID, err := ts.expiration.Register(namespace.RootContext(nil), req, resp, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1394,7 +1395,7 @@ func TestTokenStore_RevokeTree(t *testing.T) {
 // Revokes a given Token Store tree non recursively.
 // The second parameter refers to the depth of the tree.
 func testTokenStore_RevokeTree_NonRecursive(t testing.TB, depth uint64, injectCycles bool) {
-	c, _, _ := TestCoreUnsealed(t)
+	c, _, _ := TestCoreUnsealed(benchhelpers.TBtoT(t))
 	ts := c.tokenStore
 	root, children := buildTokenTree(t, ts, depth)
 
@@ -2207,7 +2208,7 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 			Renewable: true,
 		},
 	}
-	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2229,7 +2230,7 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 			Renewable: true,
 		},
 	}
-	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2622,7 +2623,7 @@ func TestTokenStore_HandleRequest_Renew(t *testing.T) {
 			Renewable: true,
 		},
 	}
-	err = exp.RegisterAuth(namespace.RootContext(nil), root, auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), root, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -3112,7 +3113,7 @@ func TestTokenStore_HandleRequest_RenewSelf(t *testing.T) {
 			Renewable: true,
 		},
 	}
-	err = exp.RegisterAuth(namespace.RootContext(nil), root, auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), root, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -5786,7 +5787,7 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 		NamespaceID: namespace.RootNamespaceID,
 	}
 
-	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -5819,7 +5820,7 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	leases := []string{}
 
 	for i := 0; i < 10; i++ {
-		leaseID, err := exp.Register(namespace.RootContext(nil), req, resp)
+		leaseID, err := exp.Register(namespace.RootContext(nil), req, resp, "")
 		if err != nil {
 			t.Fatal(err)
 		}

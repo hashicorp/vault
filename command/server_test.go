@@ -18,7 +18,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/physical"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/mitchellh/cli"
@@ -116,7 +115,6 @@ func TestServer_ReloadListener(t *testing.T) {
 	defer os.RemoveAll(td)
 
 	wg := &sync.WaitGroup{}
-	os.Setenv(consts.VaultDisableFilePermissionsCheckEnv, "true")
 	// Setup initial certs
 	inBytes, _ := ioutil.ReadFile(wd + "reload_foo.pem")
 	ioutil.WriteFile(td+"/reload_cert.pem", inBytes, 0o777)

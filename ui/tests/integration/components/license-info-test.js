@@ -49,31 +49,6 @@ module('Integration | Component | license info', function (hooks) {
     assert.equal(row.rowValue, 'Autoloaded', 'Shows autoloaded status');
   });
 
-  test('it renders properly for stored license', async function (assert) {
-    const now = Date.now();
-    this.set('licenseId', 'test');
-    this.set('expirationTime', addMinutes(now, 30));
-    this.set('autoloaded', false);
-    this.set('startTime', now);
-    this.set('features', ['HSM', 'Namespaces']);
-    await render(
-      hbs`<LicenseInfo
-        @licenseId={{this.licenseId}}
-        @expirationTime={{this.expirationTime}}
-        @startTime={{this.startTime}}
-        @features={{this.features}}
-        @autoloaded={{false}}
-      />`
-    );
-    let row = component.detailRows.filterBy('rowName', 'License state')[0];
-    assert.ok(
-      row.rowValue.includes(
-        'Stored licenses will be deprecated in a future version of Vault. We recommend autoloading your license.'
-      ),
-      'Stored license includes recommendation to autoload'
-    );
-  });
-
   test('it renders Performance Standby as inactive if count is 0', async function (assert) {
     const now = Date.now();
     this.set('licenseId', 'temporary');

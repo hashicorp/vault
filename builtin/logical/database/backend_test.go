@@ -14,9 +14,6 @@ import (
 
 	"github.com/go-test/deep"
 	mongodbatlas "github.com/hashicorp/vault-plugin-database-mongodbatlas"
-	"github.com/lib/pq"
-	"github.com/mitchellh/mapstructure"
-
 	"github.com/hashicorp/vault/helper/namespace"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -30,6 +27,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	_ "github.com/jackc/pgx/v4"
+	"github.com/mitchellh/mapstructure"
 )
 
 func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
@@ -1462,6 +1461,91 @@ func TestBackend_ConnectionURL_redacted(t *testing.T) {
 	}
 }
 
+type hangingPlugin struct{}
+
+func (h hangingPlugin) Initialize(_ context.Context, req v5.InitializeRequest) (v5.InitializeResponse, error) {
+	return v5.InitializeResponse{
+		Config: req.Config,
+	}, nil
+}
+
+func (h hangingPlugin) NewUser(_ context.Context, _ v5.NewUserRequest) (v5.NewUserResponse, error) {
+	return v5.NewUserResponse{}, nil
+}
+
+func (h hangingPlugin) UpdateUser(_ context.Context, _ v5.UpdateUserRequest) (v5.UpdateUserResponse, error) {
+	return v5.UpdateUserResponse{}, nil
+}
+
+func (h hangingPlugin) DeleteUser(_ context.Context, _ v5.DeleteUserRequest) (v5.DeleteUserResponse, error) {
+	return v5.DeleteUserResponse{}, nil
+}
+
+func (h hangingPlugin) Type() (string, error) {
+	return "hanging", nil
+}
+
+func (h hangingPlugin) Close() error {
+	time.Sleep(1000 * time.Second)
+	return nil
+}
+
+var _ v5.Database = (*hangingPlugin)(nil)
+
+func TestBackend_PluginMain_Hanging(t *testing.T) {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
+		return
+	}
+	v5.Serve(&hangingPlugin{})
+}
+
+func TestBackend_AsyncClose(t *testing.T) {
+	// Test that having a plugin that takes a LONG time to close will not cause the cleanup function to take
+	// longer than 750ms.
+	cluster, sys := getCluster(t)
+	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "hanging-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Hanging", []string{}, "")
+	t.Cleanup(cluster.Cleanup)
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = sys
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Configure a connection
+	data := map[string]interface{}{
+		"connection_url": "doesn't matter",
+		"plugin_name":    "hanging-plugin",
+		"allowed_roles":  []string{"plugin-role-test"},
+	}
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/hang",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	_, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	timeout := time.NewTimer(750 * time.Millisecond)
+	done := make(chan bool)
+	go func() {
+		b.Cleanup(context.Background())
+		// check that clean can be called twice safely
+		b.Cleanup(context.Background())
+		done <- true
+	}()
+	select {
+	case <-timeout.C:
+		t.Error("Hanging plugin caused Close() to take longer than 750ms")
+	case <-done:
+	}
+}
+
 func testCredsExist(t *testing.T, resp *logical.Response, connURL string) bool {
 	t.Helper()
 	var d struct {
@@ -1472,14 +1556,8 @@ func testCredsExist(t *testing.T, resp *logical.Response, connURL string) bool {
 		t.Fatal(err)
 	}
 	log.Printf("[TRACE] Generated credentials: %v", d)
-	conn, err := pq.ParseURL(connURL)
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	conn += " timezone=utc"
-
-	db, err := sql.Open("postgres", conn)
+	db, err := sql.Open("pgx", connURL+"&timezone=utc")
 	if err != nil {
 		t.Fatal(err)
 	}

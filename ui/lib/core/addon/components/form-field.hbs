@@ -20,22 +20,43 @@
     {{/unless}}
   {{/unless}}
   {{#if @attr.options.possibleValues}}
-    <div class="control is-expanded">
-      <div class="select is-fullwidth">
-        <select name={{@attr.name}} id={{@attr.name}} onchange={{this.onChangeWithEvent}} data-test-input={{@attr.name}}>
-          {{#if @attr.options.noDefault}}
-            <option value="">
-              Select one
-            </option>
-          {{/if}}
-          {{#each (path-or-array @attr.options.possibleValues @model) as |val|}}
-            <option selected={{eq (get @model this.valuePath) (or val.value val)}} value={{or val.value val}}>
-              {{or val.displayName val}}
-            </option>
-          {{/each}}
-        </select>
+    {{#if (eq @attr.options.editType "radio")}}
+      <div class="control columns is-gapless" data-test-radio-input>
+        {{#each (path-or-array @attr.options.possibleValues @model) as |val|}}
+          <div class="column is-1 is-flex-center has-text-grey" data-test-input={{@attr.name}}>
+            <RadioButton
+              class="radio"
+              name={{@attr.name}}
+              id={{or val.value val}}
+              value={{or val.value val}}
+              @value={{or val.value val}}
+              @onChange={{this.setAndBroadcast}}
+              @groupValue={{(get @model this.valuePath)}}
+            />
+            <label for={{or val.value val}} class="has-left-margin-xs">
+              {{or val.value val}}
+            </label>
+          </div>
+        {{/each}}
       </div>
-    </div>
+    {{else}}
+      <div class="control is-expanded">
+        <div class="select is-fullwidth">
+          <select name={{@attr.name}} id={{@attr.name}} onchange={{this.onChangeWithEvent}} data-test-input={{@attr.name}}>
+            {{#if @attr.options.noDefault}}
+              <option value="">
+                Select one
+              </option>
+            {{/if}}
+            {{#each (path-or-array @attr.options.possibleValues @model) as |val|}}
+              <option selected={{eq (get @model this.valuePath) (or val.value val)}} value={{or val.value val}}>
+                {{or val.displayName val}}
+              </option>
+            {{/each}}
+          </select>
+        </div>
+      </div>
+    {{/if}}
   {{else if (and (eq @attr.type "string") (eq @attr.options.editType "boolean"))}}
     <div class="b-checkbox">
       <input
@@ -76,7 +97,6 @@
     <MountAccessorSelect
       @name={{@attr.name}}
       @label={{this.labelString}}
-      @warning={{@attr.options.warning}}
       @helpText={{@attr.options.helpText}}
       @value={{get @model this.valuePath}}
       @onChange={{this.setAndBroadcast}}
@@ -107,6 +127,7 @@
     <div class="field">
       {{#let (or (get @model this.valuePath) @attr.options.setDefault) as |initialValue|}}
         <TtlPicker2
+          data-test-input={{@attr.name}}
           @onChange={{this.setAndBroadcastTtl}}
           @label={{this.labelString}}
           @helperTextDisabled={{or @attr.options.helperTextDisabled "Vault will use the default lease duration."}}
@@ -114,6 +135,7 @@
           @description={{@attr.helpText}}
           @initialValue={{initialValue}}
           @initialEnabled={{if (eq initialValue "0s") false initialValue}}
+          @hideToggle={{@attr.options.hideToggle}}
         />
       {{/let}}
     </div>
@@ -174,12 +196,13 @@
     </Toggle>
   {{else if (eq @attr.options.editType "stringArray")}}
     <StringList
-      @data-test-input={{@attr.name}}
+      data-test-input={{@attr.name}}
       @label={{this.labelString}}
       @warning={{@attr.options.warning}}
       @helpText={{@attr.options.helpText}}
       @inputValue={{get @model this.valuePath}}
       @onChange={{this.setAndBroadcast}}
+      @attrName={{@attr.name}}
     />
   {{else if (eq @attr.options.sensitive true)}}
     {{! Masked Input }}

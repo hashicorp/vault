@@ -107,6 +107,7 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	// configuration
 	var runnerConfig *ctconfig.Config
 	var runnerConfigErr error
+
 	if runnerConfig, runnerConfigErr = newRunnerConfig(ts.config, templates); runnerConfigErr != nil {
 		return fmt.Errorf("template server failed to runner generate config: %w", runnerConfigErr)
 	}
@@ -244,6 +245,15 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 		conf.Vault.DefaultLeaseDuration = &sc.AgentConfig.TemplateConfig.StaticSecretRenderInt
 	}
 
+	if sc.AgentConfig.DisableIdleConnsTemplating {
+		idleConns := -1
+		conf.Vault.Transport.MaxIdleConns = &idleConns
+	}
+
+	if sc.AgentConfig.DisableKeepAlivesTemplating {
+		conf.Vault.Transport.DisableKeepAlives = pointerutil.BoolPtr(true)
+	}
+
 	conf.Vault.SSL = &ctconfig.SSLConfig{
 		Enabled:    pointerutil.BoolPtr(false),
 		Verify:     pointerutil.BoolPtr(false),
@@ -309,6 +319,19 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 	conf.Vault.Retry = &ctconfig.RetryConfig{
 		Attempts: &attempts,
 		Enabled:  &enabled,
+	}
+
+	// Sync Consul Template's retry with user set auto-auth initial backoff value.
+	// This is helpful if Auto Auth cannot get a new token and CT is trying to fetch
+	// secrets.
+	if sc.AgentConfig.AutoAuth != nil && sc.AgentConfig.AutoAuth.Method != nil {
+		if sc.AgentConfig.AutoAuth.Method.MinBackoff > 0 {
+			conf.Vault.Retry.Backoff = &sc.AgentConfig.AutoAuth.Method.MinBackoff
+		}
+
+		if sc.AgentConfig.AutoAuth.Method.MaxBackoff > 0 {
+			conf.Vault.Retry.MaxBackoff = &sc.AgentConfig.AutoAuth.Method.MaxBackoff
+		}
 	}
 
 	conf.Finalize()

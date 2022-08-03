@@ -215,7 +215,7 @@ func TestSystem_GRPC_pluginEnv(t *testing.T) {
 	sys.PluginEnvironment = &logical.PluginEnvironment{
 		VaultVersion:           "0.10.42",
 		VaultVersionPrerelease: "dev",
-		VaultVersionMetadata:   "prem",
+		VaultVersionMetadata:   "ent",
 	}
 	client, _ := plugin.TestGRPCConn(t, func(s *grpc.Server) {
 		pb.RegisterSystemViewServer(s, &gRPCSystemViewServer{

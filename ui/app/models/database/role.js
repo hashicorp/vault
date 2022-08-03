@@ -3,7 +3,7 @@ import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-import { getRoleFields } from '../../utils/database-helpers';
+import { getRoleFields } from 'vault/utils/database-helpers';
 
 export default Model.extend({
   idPrefix: 'role/',
@@ -91,7 +91,11 @@ export default Model.extend({
 
   get showFields() {
     let fields = ['name', 'database', 'type'];
-    fields = fields.concat(getRoleFields(this.type)).concat(['creation_statements', 'revocation_statements']);
+    fields = fields.concat(getRoleFields(this.type)).concat(['creation_statements']);
+    // elasticsearch does not support revocation statements: https://www.vaultproject.io/api-docs/secret/databases/elasticdb#parameters-1
+    if (this.database[0] !== 'elasticsearch') {
+      fields = fields.concat(['revocation_statements']);
+    }
     return expandAttributeMeta(this, fields);
   },
 

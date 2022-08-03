@@ -35,7 +35,7 @@ reference`,
 	}
 }
 
-func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	if req.Secret == nil {
 		return nil, fmt.Errorf("secret is nil in request")
 	}

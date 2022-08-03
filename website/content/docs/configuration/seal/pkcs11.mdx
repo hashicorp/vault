@@ -152,6 +152,10 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   variable. This key is mainly to work around a limitation within AWS's CloudHSM v5
   pkcs11 implementation.
 
+- `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
+
+Refer to the [Seal Migration](/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
+  
 ### Mechanism Specific Flags
 
 - `rsa_encrypt_local` `(string: "false")`: For HSMs that do not support encryption

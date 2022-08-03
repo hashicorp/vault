@@ -148,7 +148,7 @@ func PrepareTestContainer(t *testing.T, version string, isEnterprise bool, boots
 			currVersion, _ := goversion.NewVersion(version)
 			roleVersion, _ := goversion.NewVersion("1.5")
 			if currVersion.GreaterThanOrEqual(roleVersion) {
-				ACLList := []*consulapi.ACLLink{{Name: "test"}}
+				ACLList := []*consulapi.ACLTokenRoleLink{{Name: "test"}}
 
 				role := &consulapi.ACLRole{
 					Name:        "role-test",

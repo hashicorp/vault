@@ -1,4 +1,5 @@
 import { format } from 'd3-format';
+import { mean } from 'd3-array';
 
 // COLOR THEME:
 export const LIGHT_AND_DARK_BLUE = ['#BFD4FF', '#1563FF'];
@@ -24,4 +25,13 @@ export function formatTooltipNumber(value) {
   }
   // formats a number according to the locale
   return new Intl.NumberFormat().format(value);
+}
+
+export function calculateAverage(dataset, objectKey) {
+  if (!Array.isArray(dataset) || dataset?.length === 0) return null;
+  // if an array of objects, objectKey of the integer we want to calculate, ex: 'entity_clients'
+  // if d[objectKey] is undefined there is no value, so return 0
+  const getIntegers = objectKey ? dataset?.map((d) => (d[objectKey] ? d[objectKey] : 0)) : dataset;
+  let checkIntegers = getIntegers.every((n) => Number.isInteger(n)); // decimals will be false
+  return checkIntegers ? Math.round(mean(getIntegers)) : null;
 }

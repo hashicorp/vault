@@ -1019,165 +1019,164 @@ func TestOIDC_SignIDToken_NilSigningKey(t *testing.T) {
 	expectStrings(t, []string{err.Error()}, expectedStrings)
 }
 
+func testNamedKey(name string) *namedKey {
+	return &namedKey{
+		name:            name,
+		Algorithm:       "RS256",
+		VerificationTTL: 1 * time.Second,
+		RotationPeriod:  2 * time.Second,
+		KeyRing:         nil,
+		SigningKey:      nil,
+		NextSigningKey:  nil,
+		NextRotation:    time.Now(),
+	}
+}
+
 // TestOIDC_PeriodicFunc tests timing logic for running key
 // rotations and expiration actions.
 func TestOIDC_PeriodicFunc(t *testing.T) {
-	// Prepare a storage to run through periodicFunc
-	c, _, _ := TestCoreUnsealed(t)
-	ctx := namespace.RootContext(nil)
-
-	cyclePeriod := 2 * time.Second
-
+	type testCase struct {
+		cycle         int
+		numKeys       int
+		numPublicKeys int
+	}
 	testSets := []struct {
 		namedKey          *namedKey
 		expectedKeyCount  int
 		setSigningKey     bool
 		setNextSigningKey bool
-		cycles            int
+		testCases         []testCase
 	}{
 		{
-			namedKey: &namedKey{
-				name:            "test-key",
-				Algorithm:       "RS256",
-				VerificationTTL: 1 * cyclePeriod,
-				RotationPeriod:  1 * cyclePeriod,
-				KeyRing:         nil,
-				SigningKey:      nil,
-				NextSigningKey:  nil,
-				NextRotation:    time.Now(),
-			},
-			expectedKeyCount:  3,
+			namedKey:          testNamedKey("test-key"),
 			setSigningKey:     true,
 			setNextSigningKey: true,
-			cycles:            4,
+			testCases: []testCase{
+				{1, 2, 2},
+				{2, 2, 4},
+				{3, 2, 4},
+				{4, 2, 4},
+			},
 		},
 		{
 			// don't set SigningKey to ensure its non-existence can be handled
-			namedKey: &namedKey{
-				name:            "test-key-nil-signing-key",
-				Algorithm:       "RS256",
-				VerificationTTL: 1 * cyclePeriod,
-				RotationPeriod:  1 * cyclePeriod,
-				KeyRing:         nil,
-				SigningKey:      nil,
-				NextSigningKey:  nil,
-				NextRotation:    time.Now(),
-			},
-			expectedKeyCount:  2,
+			namedKey:          testNamedKey("test-key-nil-signing-key"),
 			setSigningKey:     false,
 			setNextSigningKey: true,
-			cycles:            2,
+			testCases: []testCase{
+				{1, 1, 2},
+				{2, 2, 4},
+			},
 		},
 		{
 			// don't set NextSigningKey to ensure its non-existence can be handled
-			namedKey: &namedKey{
-				name:            "test-key-nil-next-signing-key",
-				Algorithm:       "RS256",
-				VerificationTTL: 1 * cyclePeriod,
-				RotationPeriod:  1 * cyclePeriod,
-				KeyRing:         nil,
-				SigningKey:      nil,
-				NextSigningKey:  nil,
-				NextRotation:    time.Now(),
-			},
-			expectedKeyCount:  2,
+			namedKey:          testNamedKey("test-key-nil-next-signing-key"),
 			setSigningKey:     true,
 			setNextSigningKey: false,
-			cycles:            2,
+			testCases: []testCase{
+				{1, 1, 2},
+				{2, 2, 4},
+			},
 		},
 		{
 			// don't set keys to ensure non-existence can be handled
-			namedKey: &namedKey{
-				name:            "test-key-nil-signing-and-next-signing-key",
-				Algorithm:       "RS256",
-				VerificationTTL: 1 * cyclePeriod,
-				RotationPeriod:  1 * cyclePeriod,
-				KeyRing:         nil,
-				SigningKey:      nil,
-				NextSigningKey:  nil,
-				NextRotation:    time.Now(),
-			},
-			expectedKeyCount:  2,
+			namedKey:          testNamedKey("test-key-nil-signing-and-next-signing-key"),
 			setSigningKey:     false,
 			setNextSigningKey: false,
-			cycles:            2,
+			testCases: []testCase{
+				{1, 0, 2},
+				{2, 2, 4},
+			},
 		},
 	}
 
 	for _, testSet := range testSets {
-		storage := c.router.MatchingStorageByAPIPath(ctx, "identity/oidc")
-		if testSet.setSigningKey {
-			if err := testSet.namedKey.generateAndSetKey(ctx, hclog.NewNullLogger(), storage); err != nil {
-				t.Fatalf("failed to set signing key")
-			}
-		}
-		if testSet.setNextSigningKey {
-			if err := testSet.namedKey.generateAndSetNextKey(ctx, hclog.NewNullLogger(), storage); err != nil {
-				t.Fatalf("failed to set next signing key")
-			}
-		}
-		// Store namedKey
-		entry, _ := logical.StorageEntryJSON(namedKeyConfigPath+testSet.namedKey.name, testSet.namedKey)
-		if err := storage.Put(ctx, entry); err != nil {
-			t.Fatalf("writing to in mem storage failed")
-		}
+		testSet := testSet
+		t.Run(testSet.namedKey.name, func(t *testing.T) {
+			t.Parallel()
 
-		currentCycle := 0
-		lastCycle := testSet.cycles - 1
-		namedKeySamples := make([]*logical.StorageEntry, testSet.cycles)
-		publicKeysSamples := make([][]string, testSet.cycles)
+			// Prepare a storage to run through periodicFunc
+			c, _, _ := TestCoreUnsealed(t)
+			ctx := namespace.RootContext(nil)
+			storage := c.router.MatchingStorageByAPIPath(ctx, "identity/oidc")
 
-		i := 0
-		for currentCycle <= lastCycle {
-			c.identityStore.oidcPeriodicFunc(ctx)
-			if currentCycle == i {
-				namedKeyEntry, _ := storage.Get(ctx, namedKeyConfigPath+testSet.namedKey.name)
-				publicKeysEntry, _ := storage.List(ctx, publicKeysConfigPath)
-				namedKeySamples[i] = namedKeyEntry
-				publicKeysSamples[i] = publicKeysEntry
-				i = i + 1
+			if testSet.setSigningKey {
+				if err := testSet.namedKey.generateAndSetKey(ctx, hclog.NewNullLogger(), storage); err != nil {
+					t.Fatalf("failed to set signing key")
+				}
 			}
-			currentCycle = currentCycle + 1
+			if testSet.setNextSigningKey {
+				if err := testSet.namedKey.generateAndSetNextKey(ctx, hclog.NewNullLogger(), storage); err != nil {
+					t.Fatalf("failed to set next signing key")
+				}
+			}
+			testSet.namedKey.NextRotation = time.Now().Add(testSet.namedKey.RotationPeriod)
 
-			// sleep until we are in the next cycle - where a next run will happen
-			v, _, _ := c.identityStore.oidcCache.Get(noNamespace, "nextRun")
-			nextRun := v.(time.Time)
-			now := time.Now()
-			diff := nextRun.Sub(now)
-			if now.Before(nextRun) {
-				time.Sleep(diff)
+			// Store namedKey
+			entry, _ := logical.StorageEntryJSON(namedKeyConfigPath+testSet.namedKey.name, testSet.namedKey)
+			if err := storage.Put(ctx, entry); err != nil {
+				t.Fatalf("writing to in mem storage failed")
 			}
-		}
 
-		// measure collected samples
-		for i := 0; i < testSet.cycles; i++ {
-			cycle := i + 1
-			namedKeySamples[i].DecodeJSON(&testSet.namedKey)
-			actualKeyRingLen := len(testSet.namedKey.KeyRing)
-			if actualKeyRingLen < testSet.expectedKeyCount {
-				t.Errorf(
-					"For key: %s at cycle: %d expected namedKey's KeyRing to be at least of length %d but was: %d",
-					testSet.namedKey.name,
-					cycle,
-					testSet.expectedKeyCount,
-					actualKeyRingLen,
-				)
-			}
-			actualPubKeysLen := len(publicKeysSamples[i])
-			if actualPubKeysLen < testSet.expectedKeyCount {
-				t.Errorf(
-					"For key: %s at cycle: %d expected public keys to be at least of length %d but was: %d",
-					testSet.namedKey.name,
-					cycle,
-					testSet.expectedKeyCount,
-					actualPubKeysLen,
-				)
-			}
-		}
+			currentCycle := 1
+			numCases := len(testSet.testCases)
+			lastCycle := testSet.testCases[numCases-1].cycle
+			namedKeySamples := make([]*logical.StorageEntry, numCases)
+			publicKeysSamples := make([][]string, numCases)
 
-		if err := storage.Delete(ctx, namedKeyConfigPath+testSet.namedKey.name); err != nil {
-			t.Fatalf("deleting from in mem storage failed")
-		}
+			i := 0
+			for currentCycle <= lastCycle {
+				c.identityStore.oidcPeriodicFunc(ctx)
+				if currentCycle == testSet.testCases[i].cycle {
+					namedKeyEntry, _ := storage.Get(ctx, namedKeyConfigPath+testSet.namedKey.name)
+					publicKeysEntry, _ := storage.List(ctx, publicKeysConfigPath)
+					namedKeySamples[i] = namedKeyEntry
+					publicKeysSamples[i] = publicKeysEntry
+					i = i + 1
+				}
+				currentCycle = currentCycle + 1
+
+				// sleep until we are in the next cycle - where a next run will happen
+				v, _, _ := c.identityStore.oidcCache.Get(noNamespace, "nextRun")
+				nextRun := v.(time.Time)
+				now := time.Now()
+				diff := nextRun.Sub(now)
+				if now.Before(nextRun) {
+					time.Sleep(diff)
+				}
+			}
+
+			// measure collected samples
+			for i := range testSet.testCases {
+				expectedKeyCount := testSet.testCases[i].numKeys
+				namedKeySamples[i].DecodeJSON(&testSet.namedKey)
+				actualKeyRingLen := len(testSet.namedKey.KeyRing)
+				if actualKeyRingLen < expectedKeyCount {
+					t.Errorf(
+						"For key: %s at cycle: %d expected namedKey's KeyRing to be at least of length %d but was: %d",
+						testSet.namedKey.name,
+						testSet.testCases[i].cycle,
+						expectedKeyCount,
+						actualKeyRingLen,
+					)
+				}
+				expectedPublicKeyCount := testSet.testCases[i].numPublicKeys
+				actualPubKeysLen := len(publicKeysSamples[i])
+				if actualPubKeysLen < expectedPublicKeyCount {
+					t.Errorf(
+						"For key: %s at cycle: %d expected public keys to be at least of length %d but was: %d",
+						testSet.namedKey.name,
+						testSet.testCases[i].cycle,
+						expectedPublicKeyCount,
+						actualPubKeysLen,
+					)
+				}
+			}
+
+			if err := storage.Delete(ctx, namedKeyConfigPath+testSet.namedKey.name); err != nil {
+				t.Fatalf("deleting from in mem storage failed")
+			}
+		})
 	}
 }
 

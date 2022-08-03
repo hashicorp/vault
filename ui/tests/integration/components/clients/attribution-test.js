@@ -17,7 +17,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
       { label: 'non-entity clients', key: 'non_entity_clients' },
     ]);
     this.set('totalUsageCounts', { clients: 15, entity_clients: 10, non_entity_clients: 5 });
-    this.set('totalClientsData', [
+    this.set('totalClientAttribution', [
       { label: 'second', clients: 10, entity_clients: 7, non_entity_clients: 3 },
       { label: 'first', clients: 5, entity_clients: 3, non_entity_clients: 2 },
     ]);
@@ -46,7 +46,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
       <div id="modal-wormhole"></div>
       <Clients::Attribution 
         @chartLegend={{chartLegend}}
-        @totalClientsData={{totalClientsData}} 
+        @totalClientAttribution={{totalClientAttribution}} 
         @totalUsageCounts={{totalUsageCounts}} 
         @timestamp={{timestamp}} 
         @selectedNamespace={{selectedNamespace}}
@@ -68,7 +68,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
         'The total clients in the namespace for this date range. This number is useful for identifying overall usage volume.'
       );
     assert.dom('[data-test-top-attribution]').includesText('namespace').includesText('second');
-    assert.dom('[data-test-top-counts]').includesText('namespace').includesText('10');
+    assert.dom('[data-test-attribution-clients]').includesText('namespace').includesText('10');
   });
 
   test('it renders correct text for a single month', async function (assert) {
@@ -77,7 +77,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
       <div id="modal-wormhole"></div>
       <Clients::Attribution 
         @chartLegend={{chartLegend}}
-        @totalClientsData={{totalClientsData}} 
+        @totalClientAttribution={{totalClientAttribution}} 
         @totalUsageCounts={{totalUsageCounts}} 
         @timestamp={{timestamp}} 
         @selectedNamespace={{selectedNamespace}}
@@ -130,7 +130,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
       <div id="modal-wormhole"></div>
       <Clients::Attribution 
         @chartLegend={{chartLegend}}
-        @totalClientsData={{namespaceMountsData}} 
+        @totalClientAttribution={{namespaceMountsData}} 
         @totalUsageCounts={{totalUsageCounts}} 
         @timestamp={{timestamp}} 
         @selectedNamespace={{selectedNamespace}}
@@ -152,7 +152,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
         'The total clients used by the auth method for this date range. This number is useful for identifying overall usage volume.'
       );
     assert.dom('[data-test-top-attribution]').includesText('auth method').includesText('auth1/');
-    assert.dom('[data-test-top-counts]').includesText('auth method').includesText('3');
+    assert.dom('[data-test-attribution-clients]').includesText('auth method').includesText('3');
   });
 
   test('it renders modal', async function (assert) {
@@ -160,7 +160,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
       <div id="modal-wormhole"></div>
       <Clients::Attribution 
         @chartLegend={{chartLegend}}
-        @totalClientsData={{namespaceMountsData}} 
+        @totalClientAttribution={{namespaceMountsData}} 
         @timestamp={{timestamp}} 
         @startTimeDisplay={{"January 2022"}}
         @endTimeDisplay={{"February 2022"}}

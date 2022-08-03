@@ -259,7 +259,7 @@ func (b *backend) role(ctx context.Context, s logical.Storage, roleName string) 
 	return b.roleInternal(ctx, s, roleName)
 }
 
-// roleInternal does not perform locking, and rechecks the cache, going to disk if necessar
+// roleInternal does not perform locking, and rechecks the cache, going to disk if necessary
 func (b *backend) roleInternal(ctx context.Context, s logical.Storage, roleName string) (*awsRoleEntry, error) {
 	// Check cache again now that we have the lock
 	roleEntryRaw, found := b.roleCache.Get(roleName)

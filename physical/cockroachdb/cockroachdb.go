@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 
 	// CockroachDB uses the Postgres SQL driver
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
 // Verify CockroachDBBackend satisfies the correct interfaces
@@ -91,7 +91,7 @@ func NewCockroachDBBackend(conf map[string]string, logger log.Logger) (physical.
 	}
 
 	// Create CockroachDB handle for the database.
-	db, err := sql.Open("postgres", connURL)
+	db, err := sql.Open("pgx", connURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to cockroachdb: %w", err)
 	}

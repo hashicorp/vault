@@ -63,6 +63,11 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   May also be specified in the `AZURE_AD_RESOURCE` environment variable.
   Needs to be changed to connect to Azure's Managed HSM KeyVault instance type.
 
+- `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
+
+Refer to the [Seal Migration](/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
+
+
 ## Authentication
 
 Authentication-related values must be provided, either as environment

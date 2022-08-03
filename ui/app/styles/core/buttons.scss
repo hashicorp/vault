@@ -183,6 +183,10 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
     font-weight: $font-weight-semibold;
   }
 
+  &.has-text-danger {
+    border: 1px solid $red-500;
+  }
+
   &.tool-tip-trigger {
     color: $grey-dark;
     min-width: auto;

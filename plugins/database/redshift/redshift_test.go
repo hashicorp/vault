@@ -14,7 +14,6 @@ import (
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
-	"github.com/lib/pq"
 	"github.com/stretchr/testify/require"
 )
 
@@ -368,7 +367,7 @@ func testCredsExist(t testing.TB, url, username, password string) error {
 	t.Helper()
 
 	connURL := interpolateConnectionURL(url, username, password)
-	db, err := sql.Open("postgres", connURL)
+	db, err := sql.Open("pgx", connURL)
 	if err != nil {
 		return err
 	}
@@ -512,12 +511,8 @@ ALTER USER "{{name}}" WITH PASSWORD '{{password}}';
 // helper file in the future.
 func createTestPGUser(t *testing.T, connURL string, username, password, query string) {
 	t.Helper()
-	conn, err := pq.ParseURL(connURL)
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	db, err := sql.Open("postgres", conn)
+	db, err := sql.Open("pgx", connURL)
 	defer db.Close()
 	if err != nil {
 		t.Fatal(err)

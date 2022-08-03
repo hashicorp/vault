@@ -86,6 +86,15 @@ func Format(ui cli.Ui) string {
 	return format
 }
 
+func Detailed(ui cli.Ui) bool {
+	switch ui := ui.(type) {
+	case *VaultUI:
+		return ui.detailed
+	}
+
+	return false
+}
+
 // An output formatter for json output of an object
 type JsonFormatter struct{}
 
@@ -98,6 +107,20 @@ func (j JsonFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) e
 	if err != nil {
 		return err
 	}
+
+	if secret != nil {
+		shouldListWithInfo := Detailed(ui)
+
+		// Show the raw JSON of the LIST call, rather than only the
+		// list of keys.
+		if shouldListWithInfo {
+			b, err = j.Format(secret)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	ui.Output(string(b))
 	return nil
 }
@@ -148,29 +171,24 @@ func formatServer(srv *api.AutopilotServer) string {
 	var buffer bytes.Buffer
 
 	buffer.WriteString(fmt.Sprintf("   %s\n", srv.ID))
-	buffer.WriteString(fmt.Sprintf("      Name:            %s\n", srv.Name))
-	buffer.WriteString(fmt.Sprintf("      Address:         %s\n", srv.Address))
-	buffer.WriteString(fmt.Sprintf("      Status:          %s\n", srv.Status))
-	buffer.WriteString(fmt.Sprintf("      Node Status:     %s\n", srv.NodeStatus))
-	buffer.WriteString(fmt.Sprintf("      Healthy:         %t\n", srv.Healthy))
-	buffer.WriteString(fmt.Sprintf("      Last Contact:    %s\n", srv.LastContact))
-	buffer.WriteString(fmt.Sprintf("      Last Term:       %d\n", srv.LastTerm))
-	buffer.WriteString(fmt.Sprintf("      Last Index:      %d\n", srv.LastIndex))
+	buffer.WriteString(fmt.Sprintf("      Name:              %s\n", srv.Name))
+	buffer.WriteString(fmt.Sprintf("      Address:           %s\n", srv.Address))
+	buffer.WriteString(fmt.Sprintf("      Status:            %s\n", srv.Status))
+	buffer.WriteString(fmt.Sprintf("      Node Status:       %s\n", srv.NodeStatus))
+	buffer.WriteString(fmt.Sprintf("      Healthy:           %t\n", srv.Healthy))
+	buffer.WriteString(fmt.Sprintf("      Last Contact:      %s\n", srv.LastContact))
+	buffer.WriteString(fmt.Sprintf("      Last Term:         %d\n", srv.LastTerm))
+	buffer.WriteString(fmt.Sprintf("      Last Index:        %d\n", srv.LastIndex))
+	buffer.WriteString(fmt.Sprintf("      Version:           %s\n", srv.Version))
 
-	if len(srv.Meta) > 0 {
-		buffer.WriteString("      Meta\n")
-		var outputs []mapOutput
-		for k, v := range srv.Meta {
-			outputs = append(outputs, mapOutput{key: k, value: fmt.Sprintf("         %q: %q\n", k, v)})
-		}
-
-		sort.Slice(outputs, func(i, j int) bool {
-			return outputs[i].key < outputs[j].key
-		})
-
-		for _, output := range outputs {
-			buffer.WriteString(output.value)
-		}
+	if srv.UpgradeVersion != "" {
+		buffer.WriteString(fmt.Sprintf("      Upgrade Version:   %s\n", srv.UpgradeVersion))
+	}
+	if srv.RedundancyZone != "" {
+		buffer.WriteString(fmt.Sprintf("      Redundancy Zone:   %s\n", srv.RedundancyZone))
+	}
+	if srv.NodeType != "" {
+		buffer.WriteString(fmt.Sprintf("      Node Type:         %s\n", srv.NodeType))
 	}
 
 	return buffer.String()
@@ -180,9 +198,9 @@ func (p PrettyFormatter) OutputAutopilotState(ui cli.Ui, data interface{}) {
 	state := data.(*api.AutopilotState)
 
 	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("Healthy:                      %t\n", state.Healthy))
-	buffer.WriteString(fmt.Sprintf("Failure Tolerance:            %d\n", state.FailureTolerance))
-	buffer.WriteString(fmt.Sprintf("Leader:                       %s\n", state.Leader))
+	buffer.WriteString(fmt.Sprintf("Healthy:                         %t\n", state.Healthy))
+	buffer.WriteString(fmt.Sprintf("Failure Tolerance:               %d\n", state.FailureTolerance))
+	buffer.WriteString(fmt.Sprintf("Leader:                          %s\n", state.Leader))
 	buffer.WriteString("Voters:\n")
 	outputStringSlice(&buffer, "   ", state.Voters)
 
@@ -191,18 +209,64 @@ func (p PrettyFormatter) OutputAutopilotState(ui cli.Ui, data interface{}) {
 		outputStringSlice(&buffer, "   ", state.NonVoters)
 	}
 
+	if state.OptimisticFailureTolerance > 0 {
+		buffer.WriteString(fmt.Sprintf("Optimistic Failure Tolerance:    %d\n", state.OptimisticFailureTolerance))
+	}
+
+	// Servers
 	buffer.WriteString("Servers:\n")
 	var outputs []mapOutput
 	for id, srv := range state.Servers {
 		outputs = append(outputs, mapOutput{key: id, value: formatServer(srv)})
 	}
-
 	sort.Slice(outputs, func(i, j int) bool {
 		return outputs[i].key < outputs[j].key
 	})
-
 	for _, output := range outputs {
 		buffer.WriteString(output.value)
+	}
+
+	// Redundancy Zones
+	if len(state.RedundancyZones) > 0 {
+		buffer.WriteString("Redundancy Zones:\n")
+		zoneList := make([]string, 0, len(state.RedundancyZones))
+		for z := range state.RedundancyZones {
+			zoneList = append(zoneList, z)
+		}
+		sort.Strings(zoneList)
+		for _, zoneName := range zoneList {
+			zone := state.RedundancyZones[zoneName]
+			servers := zone.Servers
+			voters := zone.Voters
+			sort.Strings(servers)
+			sort.Strings(voters)
+			buffer.WriteString(fmt.Sprintf("   %s\n", zoneName))
+			buffer.WriteString(fmt.Sprintf("      Servers: %s\n", strings.Join(servers, ", ")))
+			buffer.WriteString(fmt.Sprintf("      Voters: %s\n", strings.Join(voters, ", ")))
+			buffer.WriteString(fmt.Sprintf("      Failure Tolerance: %d\n", zone.FailureTolerance))
+		}
+	}
+
+	// Upgrade Info
+	if state.Upgrade != nil {
+		buffer.WriteString("Upgrade Info:\n")
+		buffer.WriteString(fmt.Sprintf("   Status: %s\n", state.Upgrade.Status))
+		buffer.WriteString(fmt.Sprintf("   Target Version: %s\n", state.Upgrade.TargetVersion))
+		buffer.WriteString(fmt.Sprintf("   Target Version Voters: %s\n", strings.Join(state.Upgrade.TargetVersionVoters, ", ")))
+		buffer.WriteString(fmt.Sprintf("   Target Version Non-Voters: %s\n", strings.Join(state.Upgrade.TargetVersionNonVoters, ", ")))
+		buffer.WriteString(fmt.Sprintf("   Other Version Voters: %s\n", strings.Join(state.Upgrade.OtherVersionVoters, ", ")))
+		buffer.WriteString(fmt.Sprintf("   Other Version Non-Voters: %s\n", strings.Join(state.Upgrade.OtherVersionNonVoters, ", ")))
+
+		if len(state.Upgrade.RedundancyZones) > 0 {
+			buffer.WriteString("   Redundancy Zones:\n")
+			for zoneName, zoneVersion := range state.Upgrade.RedundancyZones {
+				buffer.WriteString(fmt.Sprintf("      %s\n", zoneName))
+				buffer.WriteString(fmt.Sprintf("         Target Version Voters: %s\n", strings.Join(zoneVersion.TargetVersionVoters, ", ")))
+				buffer.WriteString(fmt.Sprintf("         Target Version Non-Voters: %s\n", strings.Join(zoneVersion.TargetVersionNonVoters, ", ")))
+				buffer.WriteString(fmt.Sprintf("         Other Version Voters: %s\n", strings.Join(zoneVersion.OtherVersionVoters, ", ")))
+				buffer.WriteString(fmt.Sprintf("         Other Version Non-Voters: %s\n", strings.Join(zoneVersion.OtherVersionNonVoters, ", ")))
+			}
+		}
 	}
 
 	ui.Output(buffer.String())
@@ -320,6 +384,15 @@ func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, da
 func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface{}) error {
 	t.printWarnings(ui, secret)
 
+	// Determine if we have additional information from a ListResponseWithInfo endpoint.
+	var additionalInfo map[string]interface{}
+	if secret != nil {
+		shouldListWithInfo := Detailed(ui)
+		if additional, ok := secret.Data["key_info"]; shouldListWithInfo && ok && len(additional.(map[string]interface{})) > 0 {
+			additionalInfo = additional.(map[string]interface{})
+		}
+	}
+
 	switch data := data.(type) {
 	case []interface{}:
 	case []string:
@@ -342,10 +415,71 @@ func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface
 		}
 		sort.Strings(keys)
 
-		// Prepend the header
-		keys = append([]string{"Keys"}, keys...)
+		// If we have a ListResponseWithInfo endpoint, we'll need to show
+		// additional headers. To satisfy the table outputter, we'll need
+		// to concat them with the deliminator.
+		var headers []string
+		header := "Keys"
+		if len(additionalInfo) > 0 {
+			seenHeaders := make(map[string]bool)
+			for key, rawValues := range additionalInfo {
+				// Most endpoints use the well-behaved ListResponseWithInfo.
+				// However, some use a hand-rolled equivalent, where the
+				// returned "keys" doesn't match the key of the "key_info"
+				// member (namely, /sys/policies/egp). We seek to exclude
+				// headers only visible from "non-visitable" key_info rows,
+				// to make table output less confusing. These non-visitable
+				// rows will still be visible in the JSON output.
+				index := sort.SearchStrings(keys, key)
+				if index < len(keys) && keys[index] != key {
+					continue
+				}
 
-		ui.Output(tableOutput(keys, &columnize.Config{
+				values := rawValues.(map[string]interface{})
+				for key := range values {
+					seenHeaders[key] = true
+				}
+			}
+
+			for key := range seenHeaders {
+				headers = append(headers, key)
+			}
+			sort.Strings(headers)
+
+			header = header + hopeDelim + strings.Join(headers, hopeDelim)
+		}
+
+		// Finally, if we have a ListResponseWithInfo, we'll need to update
+		// the returned rows to not just have the keys (in the sorted order),
+		// but also have the values for each header (in their sorted order).
+		rows := keys
+		if len(additionalInfo) > 0 && len(headers) > 0 {
+			for index, row := range rows {
+				formatted := []string{row}
+				if rawValues, ok := additionalInfo[row]; ok {
+					values := rawValues.(map[string]interface{})
+					for _, header := range headers {
+						if rawValue, ok := values[header]; ok {
+							if looksLikeDuration(header) {
+								rawValue = humanDurationInt(rawValue)
+							}
+
+							formatted = append(formatted, fmt.Sprintf("%v", rawValue))
+						} else {
+							// Show a default empty n/a when this field is
+							// missing from the additional information.
+							formatted = append(formatted, "n/a")
+						}
+					}
+				}
+
+				rows[index] = strings.Join(formatted, hopeDelim)
+			}
+		}
+
+		// Prepend the header to the formatted rows.
+		output := append([]string{header}, rows...)
+		ui.Output(tableOutput(output, &columnize.Config{
 			Delim: hopeDelim,
 		}))
 	}
@@ -385,21 +519,32 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 	}
 
 	if secret.Auth != nil {
-		out = append(out, fmt.Sprintf("token %s %s", hopeDelim, secret.Auth.ClientToken))
-		out = append(out, fmt.Sprintf("token_accessor %s %s", hopeDelim, secret.Auth.Accessor))
-		// If the lease duration is 0, it's likely a root token, so output the
-		// duration as "infinity" to clear things up.
-		if secret.Auth.LeaseDuration == 0 {
-			out = append(out, fmt.Sprintf("token_duration %s %s", hopeDelim, "∞"))
-		} else {
-			out = append(out, fmt.Sprintf("token_duration %s %v", hopeDelim, humanDurationInt(secret.Auth.LeaseDuration)))
-		}
-		out = append(out, fmt.Sprintf("token_renewable %s %t", hopeDelim, secret.Auth.Renewable))
-		out = append(out, fmt.Sprintf("token_policies %s %q", hopeDelim, secret.Auth.TokenPolicies))
-		out = append(out, fmt.Sprintf("identity_policies %s %q", hopeDelim, secret.Auth.IdentityPolicies))
-		out = append(out, fmt.Sprintf("policies %s %q", hopeDelim, secret.Auth.Policies))
-		for k, v := range secret.Auth.Metadata {
-			out = append(out, fmt.Sprintf("token_meta_%s %s %v", k, hopeDelim, v))
+		if secret.Auth.MFARequirement != nil {
+			out = append(out, fmt.Sprintf("mfa_request_id %s %s", hopeDelim, secret.Auth.MFARequirement.MFARequestID))
+
+			for k, constraintSet := range secret.Auth.MFARequirement.MFAConstraints {
+				for _, constraint := range constraintSet.Any {
+					out = append(out, fmt.Sprintf("mfa_constraint_%s_%s_id %s %s", k, constraint.Type, hopeDelim, constraint.ID))
+					out = append(out, fmt.Sprintf("mfa_constraint_%s_%s_uses_passcode %s %t", k, constraint.Type, hopeDelim, constraint.UsesPasscode))
+				}
+			}
+		} else { // Token information only makes sense if no further MFA requirement (i.e. if we actually have a token)
+			out = append(out, fmt.Sprintf("token %s %s", hopeDelim, secret.Auth.ClientToken))
+			out = append(out, fmt.Sprintf("token_accessor %s %s", hopeDelim, secret.Auth.Accessor))
+			// If the lease duration is 0, it's likely a root token, so output the
+			// duration as "infinity" to clear things up.
+			if secret.Auth.LeaseDuration == 0 {
+				out = append(out, fmt.Sprintf("token_duration %s %s", hopeDelim, "∞"))
+			} else {
+				out = append(out, fmt.Sprintf("token_duration %s %v", hopeDelim, humanDurationInt(secret.Auth.LeaseDuration)))
+			}
+			out = append(out, fmt.Sprintf("token_renewable %s %t", hopeDelim, secret.Auth.Renewable))
+			out = append(out, fmt.Sprintf("token_policies %s %q", hopeDelim, secret.Auth.TokenPolicies))
+			out = append(out, fmt.Sprintf("identity_policies %s %q", hopeDelim, secret.Auth.IdentityPolicies))
+			out = append(out, fmt.Sprintf("policies %s %q", hopeDelim, secret.Auth.Policies))
+			for k, v := range secret.Auth.Metadata {
+				out = append(out, fmt.Sprintf("token_meta_%s %s %v", k, hopeDelim, v))
+			}
 		}
 	}
 

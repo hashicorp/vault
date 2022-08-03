@@ -61,6 +61,10 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   and decryption. May also be specified by the `VAULT_ALICLOUDKMS_SEAL_KEY_ID`
   environment variable.
 
+- `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
+
+Refer to the [Seal Migration](/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
+
 ## Authentication
 
 Authentication-related values must be provided, either as environment
