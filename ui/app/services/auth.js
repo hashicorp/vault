@@ -443,7 +443,7 @@ export default Service.extend({
   }),
 
   getOktaNumberChallengeAnswer(nonce, mount) {
-    let namespace = 'undefined';
+    let namespace = this.namespaceService.path;
     const url = `/v1/auth/${mount}/verify/${nonce}`;
     return this.ajax(url, 'GET', { namespace }).then(
       (resp) => {

@@ -317,6 +317,10 @@ export default Component.extend(DEFAULTS, {
       // add nonce field for okta backend
       if (backend.id == 'okta') {
         data.nonce = crypto.randomUUID();
+        // add a default path of okta if it doesn't exist to be used for Okta Number Challenge
+        if (!data.path) {
+          data.path = 'okta';
+        }
       }
       return this.authenticate.unlinked().perform(backend.type, data);
     },
