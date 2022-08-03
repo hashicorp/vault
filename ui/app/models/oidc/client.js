@@ -106,7 +106,7 @@ export default class OidcClientModel extends Model {
   }
 
   // API WIP
-  @lazyCapabilities(apiPath`identity/oidc/${'name'}/provider`, 'backend', 'name') clientProvidersPath; // API is WIP
+  @lazyCapabilities(apiPath`identity/oidc/${'name'}/provider`, 'backend', 'name') clientProvidersPath;
   get canListProviders() {
     return this.clientProvidersPath.get('canList');
   }

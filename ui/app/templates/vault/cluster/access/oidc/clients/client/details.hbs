@@ -2,6 +2,7 @@
   <ToolbarActions>
     {{#if this.model.canDelete}}
       <ConfirmAction
+        data-test-client-delete
         @buttonClasses="toolbar-link"
         @onConfirmAction={{this.delete}}
         @confirmTitle="Delete application?"
@@ -21,6 +22,8 @@
 
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
   <InfoTableRow @label="Name" @value={{this.model.name}} />
+  <InfoTableRow @label="Client Type" @value={{this.model.type}} />
+  <InfoTableRow @label="Redirect URI" @value={{this.model.redirectUri}} />
   <InfoTableRow @label="Assignment" @value={{this.model.assignments}} />
   <InfoTableRow @label="Key">
     <LinkTo @route="vault.cluster.access.oidc.keys.key.details" @model={{this.model.key}}>

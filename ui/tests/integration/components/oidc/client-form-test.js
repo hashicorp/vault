@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, fillIn, click } from '@ember/test-helpers';
+import { render, fillIn, click, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
@@ -10,14 +10,6 @@ import ENV from 'vault/config/environment';
 import { overrideMirageResponse } from 'vault/tests/helpers/oidc-config';
 
 const searchSelect = create(ss);
-const CLIENT_FIELD_ATTRS = [
-  { name: 'name', isFormField: true },
-  { name: 'clientType', isFormField: true },
-  { name: 'redirectUris', isFormField: true },
-  { name: 'key', isFormField: true },
-  { name: 'accessTokenTtl', isFormField: true },
-  { name: 'idTokenTtl', isFormField: true },
-];
 
 module('Integration | Component | oidc/client-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -76,12 +68,9 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     assert
       .dom('[data-test-search-select-with-modal]')
       .exists('Limited radio button shows assignments search select');
-    // check form fields exist
-    for (const attr of CLIENT_FIELD_ATTRS) {
-      if (attr.isFormField) {
-        assert.dom(`[data-test-field="${attr.name}"`).exists(`${attr.name} form field exists`);
-      }
-    }
+
+    assert.equal(findAll('[data-test-field]').length, 6);
+
     await clickTrigger();
     assert.dom('li.ember-power-select-option').hasText('assignment-1', 'dropdown renders assignments');
     await fillIn('[data-test-input="name"]', 'some-app');
