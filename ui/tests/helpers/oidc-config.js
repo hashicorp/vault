@@ -9,8 +9,6 @@ export const SELECTORS = {
   oidcLandingImg: '[data-test-oidc-img]',
   confirmDeleteButton: '[data-test-confirm-button="true"]',
   // client route
-  clientHeaderBreadcrumb: '[data-test-oidc-client-breadcrumb]',
-  clientFormBreadcrumb: '[data-test-oidc-client-form-breadcrumb]',
   clientSaveButton: '[data-test-oidc-client-save]',
   clientCancelButton: '[data-test-oidc-client-cancel]',
   clientDeleteButton: '[data-test-oidc-client-delete] button',
@@ -34,4 +32,21 @@ export function overrideMirageResponse(httpStatus, data) {
     return new Response(204, { 'Content-Type': 'application/json' });
   }
   return new Response(200, { 'Content-Type': 'application/json' }, JSON.stringify(data));
+}
+
+export function overrideCapabilities(requestPath, capabilitiesArray) {
+  // sample of capabilitiesArray: ['read', 'update']
+  return {
+    request_id: '40f7e44d-af5c-9b60-bd20-df72eb17e294',
+    lease_id: '',
+    renewable: false,
+    lease_duration: 0,
+    data: {
+      capabilities: capabilitiesArray,
+      [requestPath]: capabilitiesArray,
+    },
+    wrap_info: null,
+    warnings: null,
+    auth: null,
+  };
 }

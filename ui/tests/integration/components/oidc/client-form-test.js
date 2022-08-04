@@ -25,6 +25,24 @@ module('Integration | Component | oidc/client-form', function (hooks) {
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
+    this.server.post('/sys/capabilities-self', () => {});
+    server.get('/identity/oidc/assignment', () => {
+      return {
+        request_id: 'assignment-list-id',
+        data: {
+          keys: ['allow_all', 'assignment-1'],
+        },
+      };
+    });
+    server.get('/identity/oidc/assignment/assignment-1', () => {
+      return {
+        request_id: 'assignment-1-id',
+        data: {
+          entity_ids: ['1234-12345'],
+          group_ids: ['abcdef-123'],
+        },
+      };
+    });
   });
 
   test('it should save new client', async function (assert) {
@@ -69,8 +87,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
       .dom('[data-test-search-select-with-modal]')
       .exists('Limited radio button shows assignments search select');
 
-    assert.equal(findAll('[data-test-field]').length, 6);
-
+    assert.equal(findAll('[data-test-field]').length, 6, 'renders all attribute fields');
     await clickTrigger();
     assert.dom('li.ember-power-select-option').hasText('assignment-1', 'dropdown renders assignments');
     await fillIn('[data-test-input="name"]', 'some-app');

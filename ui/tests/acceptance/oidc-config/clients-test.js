@@ -1,5 +1,5 @@
 import { module, test } from 'qunit';
-import { visit, currentURL, click, fillIn, findAll, currentRouteName, find } from '@ember/test-helpers';
+import { visit, currentURL, click, fillIn, findAll, currentRouteName } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
@@ -10,6 +10,7 @@ import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
 import fm from 'vault/tests/pages/components/flash-message';
+import { overrideCapabilities, overrideMirageResponse } from '../../helpers/oidc-config';
 const searchSelect = create(ss);
 const flashMessage = create(fm);
 // in congruency with backend verbiage 'applications' are referred to as 'clients
@@ -30,38 +31,17 @@ module('Acceptance | oidc-config/clients', function (hooks) {
   });
 
   hooks.afterEach(async function () {
-    this.store.findRecord('oidc/client', 'some-app').then((model) => {
-      if (model) model.destroyRecord();
-      this.store.findRecord('oidc/assignment', 'assignment-1').then((record) => {
-        if (record)
-          record.destroyRecord().then(() => {
-            console.log(`destroyed ${record}!`);
-          });
-      });
-      this.store.findRecord('oidc/assignment', 'assignment-2').then((record) => {
-        if (record)
-          record.destroyRecord().then(() => {
-            console.log(`destroyed ${record}!`);
-          });
-      });
-      return logout.visit();
-    });
+    return logout.visit();
   });
 
   hooks.after(function () {
     ENV['ember-cli-mirage'].handler = null;
   });
 
-  test('it saves a new client with defaults and edits to limit assignments', async function (assert) {
-    assert.expect(28);
+  test('it renders empty state when no clients are configured', async function (assert) {
+    assert.expect(5);
     await visit(OIDC_BASE_URL);
-    if (find('[data-test-oidc-client-linked-block]')) {
-      await click('[data-test-oidc-client-linked-block]');
-      await click(SELECTORS.clientDeleteButton);
-      await click(SELECTORS.confirmDeleteButton);
-    }
     assert.equal(currentURL(), '/vault/access/oidc');
-    // check empty state
     assert.dom('h1.title.is-3').hasText('OIDC Provider');
     assert.dom(SELECTORS.oidcHeader).hasText(
       `Configure Vault to act as an OIDC identity provider, and offer Vault’s various authentication
@@ -72,13 +52,14 @@ module('Acceptance | oidc-config/clients', function (hooks) {
     assert
       .dom(SELECTORS.oidcLandingImg)
       .hasAttribute('src', '/ui/images/oidc-landing.png', 'image renders image when no clients configured');
+  });
 
+  test('it creates, updates and deletes a client', async function (assert) {
+    assert.expect(20);
+    await visit(OIDC_BASE_URL);
     // create a new application
     await click(SELECTORS.oidcClientCreateButton);
     assert.equal(currentRouteName(), 'vault.cluster.access.oidc.clients.create', 'navigates to create form');
-    assert
-      .dom(SELECTORS.clientFormBreadcrumb + ' a')
-      .hasText('Applications', 'create form breadcrumb links back to applications');
     await fillIn('[data-test-input="name"]', 'some-app');
     await click('[data-test-toggle-group="More options"]');
     // toggle ttls to false, testing it sets correct default duration
@@ -95,13 +76,8 @@ module('Acceptance | oidc-config/clients', function (hooks) {
       'vault.cluster.access.oidc.clients.client.details',
       'navigates to detail view after save'
     );
-    assert.dom('[data-test-oidc-client-header]').hasText('some-app', 'renders application name as title');
-    assert.dom(SELECTORS.clientDetailsTab).hasClass('active', 'details tab is active');
-    assert.dom(SELECTORS.clientDeleteButton).exists('toolbar renders delete option');
-    assert.dom(SELECTORS.clientEditButton).exists('toolbar renders edit button');
 
-    // assert default values in details view are as expected
-    assert.equal(findAll('[data-test-component="info-table-row"]').length, 9, 'renders all info rows');
+    // assert default values in details view are correct
     assert.dom('[data-test-value-div="Assignment"]').hasText('allow_all', 'client allows all assignments');
     assert.dom('[data-test-value-div="Type"]').hasText('confidential', 'type defaults to confidential');
     assert
@@ -120,18 +96,7 @@ module('Acceptance | oidc-config/clients', function (hooks) {
       .dom('[data-test-value-div="Access Token TTL"]')
       .hasText('1 day', 'access token ttl toggled off sets default of 24h');
 
-    await click(SELECTORS.clientProvidersTab);
-    assert.equal(
-      currentRouteName(),
-      'vault.cluster.access.oidc.clients.client.providers',
-      'navigates to client providers route'
-    );
-    assert.dom(SELECTORS.clientProvidersTab).hasClass('active', 'providers tab is active');
-    assert.dom('[data-test-oidc-provider="default"]').exists('default provider shows');
-    assert.dom(SELECTORS.clientDeleteButton).doesNotExist('provider tab does not have delete option');
-    assert.dom(SELECTORS.clientEditButton).doesNotExist('provider tab does not have edit button');
-
-    // since we have a separate form component test, just test navigation
+    // edit client
     await click(SELECTORS.clientDetailsTab);
     await click(SELECTORS.clientEditButton);
     assert.equal(
@@ -140,7 +105,6 @@ module('Acceptance | oidc-config/clients', function (hooks) {
       'navigates to edit page from details'
     );
 
-    // edit client
     await fillIn('[data-test-input="redirectUris"] [data-test-string-list-input="0"]', 'some-url.com');
     // limit & create new assignment
     await click('label[for=limited]');
@@ -171,68 +135,7 @@ module('Acceptance | oidc-config/clients', function (hooks) {
     assert.dom('[data-test-value-div="Redirect URI"]').hasText('some-url.com', 'shows updated attribute');
     assert.dom('[data-test-value-div="Assignment"]').hasText('assignment-1', 'updated to limited assignment');
 
-    // reset state
-    const assign1 = this.store.peekRecord('oidc/assignment', 'assignment-1');
-    assign1.destroyRecord();
-    await click(SELECTORS.clientDeleteButton);
-    await click(SELECTORS.confirmDeleteButton);
-    assert.equal(
-      flashMessage.latestMessage,
-      'Successfully deleted client',
-      'renders success flash upon deleting client'
-    );
-    assert.equal(
-      currentRouteName(),
-      'vault.cluster.access.oidc.clients',
-      'navigates back to list view after delete'
-    );
-  });
-
-  test('it saves a new client with limited assignments and edits to allow_all', async function (assert) {
-    assert.expect(6);
-    await visit(OIDC_BASE_URL);
-    if (find('[data-test-oidc-client-linked-block]')) {
-      await click('[data-test-oidc-client-linked-block]');
-      await click(SELECTORS.clientDeleteButton);
-      await click(SELECTORS.confirmDeleteButton);
-    }
-    assert.equal(currentURL(), '/vault/access/oidc');
-
-    // create a new client
-    await click(SELECTORS.oidcClientCreateButton);
-    assert.equal(currentURL(), '/vault/access/oidc/clients/create');
-    await fillIn('[data-test-input="name"]', 'some-app');
-    await click('label[for=limited]');
-
-    // create a new assignment
-    await clickTrigger();
-    await fillIn('.ember-power-select-search input', 'assignment-1');
-    await searchSelect.options.objectAt(0).click();
-    await click('[data-test-search-select="entities"] .ember-basic-dropdown-trigger');
-    await searchSelect.options.objectAt(0).click();
-    await click('[data-test-search-select="groups"] .ember-basic-dropdown-trigger');
-    await searchSelect.options.objectAt(0).click();
-    await click(SELECTORS.assignSaveButton);
-    // create second assignment
-    await clickTrigger();
-    await fillIn('.ember-power-select-search input', 'assignment-2');
-    await searchSelect.options.objectAt(0).click();
-    await click('[data-test-search-select="entities"] .ember-basic-dropdown-trigger');
-    await searchSelect.options.objectAt(0).click();
-    await click('[data-test-search-select="groups"] .ember-basic-dropdown-trigger');
-    await searchSelect.options.objectAt(0).click();
-    await click(SELECTORS.assignSaveButton);
-    await click(SELECTORS.clientSaveButton);
-    assert.equal(
-      currentRouteName(),
-      'vault.cluster.access.oidc.clients.client.details',
-      'navigates back to details on save'
-    );
-    assert
-      .dom('[data-test-row-value="Assignment"]')
-      .hasText('assignment-1,assignment-2', 'lists both assignments');
-
-    // edit client to allow all assignments
+    // edit back to allow_all
     await click(SELECTORS.clientEditButton);
     assert.dom(SELECTORS.clientSaveButton).hasText('Update', 'form button renders correct text');
     await click('label[for=allow-all]');
@@ -241,49 +144,80 @@ module('Acceptance | oidc-config/clients', function (hooks) {
       .dom('[data-test-value-div="Assignment"]')
       .hasText('allow_all', 'client updated to allow all assignments');
 
-    // reset state
+    // delete client
     await click(SELECTORS.clientDeleteButton);
     await click(SELECTORS.confirmDeleteButton);
-  });
-
-  test('it renders client list when clients exist', async function (assert) {
-    assert.expect(3);
-    await visit(OIDC_BASE_URL);
-    assert.equal(currentURL(), '/vault/access/oidc');
-
-    // create a new client
-    await click(SELECTORS.oidcClientCreateButton);
-    await fillIn('[data-test-input="name"]', 'some-app');
-    await click(SELECTORS.clientSaveButton);
-
-    // navigate to list view
-    await click(SELECTORS.clientHeaderBreadcrumb);
+    assert.equal(
+      flashMessage.latestMessage,
+      'Application deleted successfully',
+      'renders success flash upon deleting client'
+    );
     assert.equal(
       currentRouteName(),
       'vault.cluster.access.oidc.clients.index',
-      'navigates to clients index route'
+      'navigates back to list view after delete'
+    );
+
+    // reset state
+    const assign1 = await this.store.peekRecord('oidc/assignment', 'assignment-1');
+    if (assign1) assign1.destroyRecord();
+  });
+
+  test('it renders client list when clients exist', async function (assert) {
+    assert.expect(7);
+    this.server.get('/identity/oidc/client', () => {
+      return {
+        request_id: '8b89adf5-d086-5fe5-5876-59b0aaf5c0c3',
+        lease_id: '',
+        renewable: false,
+        lease_duration: 0,
+        data: {
+          keys: ['some-app'],
+        },
+        wrap_info: null,
+        warnings: null,
+        auth: null,
+      };
+    });
+    this.server.get('/identity/oidc/client/some-app', () => {
+      return {
+        request_id: 'some-app-id',
+        data: {
+          access_token_ttl: 0,
+          assignments: ['allow_all'],
+          client_id: 'whaT7KB0C3iBH1l3rXhd5HPf0n6vXU0s',
+          client_secret: 'hvo_secret_nkJSTu2NVYqylXwFbFijsTxJHg4Ic4gqSJw7uOZ4FbSXcObngDkKoVsvyndrf2O8',
+          client_type: 'confidential',
+          id_token_ttl: 0,
+          key: 'default',
+          redirect_uris: [],
+        },
+      };
+    });
+    await visit(OIDC_BASE_URL);
+    assert.equal(
+      currentRouteName(),
+      'vault.cluster.access.oidc.clients.index',
+      'redirects to clients index route when clients exist'
     );
     assert
       .dom('[data-test-oidc-client-linked-block]')
       .hasText('some-app', 'displays linked block for client');
-    // navigate to create from index page
+
+    // navigates to/from create, edit, detail views from list view
     await click('[data-test-oidc-client-create]');
     assert.equal(
       currentRouteName(),
       'vault.cluster.access.oidc.clients.create',
       'clients index toolbar navigates to create form'
     );
-    assert
-      .dom(SELECTORS.clientFormBreadcrumb + ' a')
-      .hasText('Applications', 'create form breadcrumb has correct text');
     await click(SELECTORS.clientCancelButton);
     assert.equal(
       currentRouteName(),
-      'vault.cluster.access.oidc.clients.client.index',
+      'vault.cluster.access.oidc.clients.index',
       'create form navigates back to index on cancel'
     );
 
-    // navigate to edit from index page
     await click('[data-test-popup-menu-trigger]');
     await click('[data-test-oidc-client-menu-link="edit"]');
     assert.equal(
@@ -291,21 +225,15 @@ module('Acceptance | oidc-config/clients', function (hooks) {
       'vault.cluster.access.oidc.clients.client.edit',
       'linked block popup menu navigates to edit'
     );
-    assert
-      .dom(SELECTORS.clientFormBreadcrumb + ' a')
-      .hasText('Details', 'edit form breadcrumb has correct text');
     await click(SELECTORS.clientCancelButton);
     assert.equal(
       currentRouteName(),
       'vault.cluster.access.oidc.clients.client.details',
       'edit form navigates back to details on cancel'
     );
-    assert
-      .dom(SELECTORS.clientHeaderBreadcrumb + ' a')
-      .hasText('Applications', 'details breadcrumb has correct text');
-    await click(SELECTORS.clientHeaderBreadcrumb);
 
     // navigate to details from index page
+    await click('[data-test-link="oidc"]');
     await click('[data-test-popup-menu-trigger]');
     await click('[data-test-oidc-client-menu-link="details"]');
     assert.equal(
@@ -313,9 +241,100 @@ module('Acceptance | oidc-config/clients', function (hooks) {
       'vault.cluster.access.oidc.clients.client.details',
       'popup menu navigates to details'
     );
+  });
 
-    // reset state
-    await click(SELECTORS.clientDeleteButton);
-    await click(SELECTORS.confirmDeleteButton);
+  test('it renders client details and providers', async function (assert) {
+    assert.expect(10);
+    this.server.get('/identity/oidc/client', () => {
+      return {
+        request_id: '8b89adf5-d086-5fe5-5876-59b0aaf5c0c3',
+        lease_id: '',
+        renewable: false,
+        lease_duration: 0,
+        data: {
+          keys: ['some-app'],
+        },
+        wrap_info: null,
+        warnings: null,
+        auth: null,
+      };
+    });
+    this.server.get('/identity/oidc/client/some-app', () => {
+      return {
+        request_id: 'some-app-id',
+        data: {
+          access_token_ttl: 86400,
+          assignments: ['allow_all'],
+          client_id: 'whaT7KB0C3iBH1l3rXhd5HPf0n6vXU0s',
+          client_secret: 'hvo_secret_nkJSTu2NVYqylXwFbFijsTxJHg4Ic4gqSJw7uOZ4FbSXcObngDkKoVsvyndrf2O8',
+          client_type: 'confidential',
+          id_token_ttl: 86400,
+          key: 'default',
+          redirect_uris: [],
+        },
+      };
+    });
+    await visit(OIDC_BASE_URL);
+    await click('[data-test-oidc-client-linked-block]');
+    assert.dom('[data-test-oidc-client-header]').hasText('some-app', 'renders application name as title');
+    assert.dom(SELECTORS.clientDetailsTab).hasClass('active', 'details tab is active');
+    assert.dom(SELECTORS.clientDeleteButton).exists('toolbar renders delete option');
+    assert.dom(SELECTORS.clientEditButton).exists('toolbar renders edit button');
+    assert.equal(findAll('[data-test-component="info-table-row"]').length, 9, 'renders all info rows');
+
+    await click(SELECTORS.clientProvidersTab);
+    assert.equal(
+      currentRouteName(),
+      'vault.cluster.access.oidc.clients.client.providers',
+      'navigates to client providers route'
+    );
+    assert.dom(SELECTORS.clientProvidersTab).hasClass('active', 'providers tab is active');
+    assert.dom('[data-test-oidc-provider="default"]').exists('default provider shows');
+    assert.dom(SELECTORS.clientDeleteButton).doesNotExist('provider tab does not have delete option');
+    assert.dom(SELECTORS.clientEditButton).doesNotExist('provider tab does not have edit button');
+  });
+
+  test('it hides delete and edit when no permission', async function (assert) {
+    assert.expect(5);
+    this.server.get('/identity/oidc/client', () => {
+      return {
+        request_id: '8b89adf5-d086-5fe5-5876-59b0aaf5c0c3',
+        lease_id: '',
+        renewable: false,
+        lease_duration: 0,
+        data: {
+          keys: ['some-app'],
+        },
+        wrap_info: null,
+        warnings: null,
+        auth: null,
+      };
+    });
+    this.server.get('/identity/oidc/client/some-app', () => {
+      return {
+        request_id: 'some-app-id',
+        data: {
+          access_token_ttl: 86400,
+          assignments: ['allow_all'],
+          client_id: 'whaT7KB0C3iBH1l3rXhd5HPf0n6vXU0s',
+          client_secret: 'hvo_secret_nkJSTu2NVYqylXwFbFijsTxJHg4Ic4gqSJw7uOZ4FbSXcObngDkKoVsvyndrf2O8',
+          client_type: 'confidential',
+          id_token_ttl: 86400,
+          key: 'default',
+          redirect_uris: [],
+        },
+      };
+    });
+    this.server.post('/sys/capabilities-self', () =>
+      overrideCapabilities(OIDC_BASE_URL + '/client/some-app', ['read'])
+    );
+
+    await visit(OIDC_BASE_URL);
+    await click('[data-test-oidc-client-linked-block]');
+    assert.dom('[data-test-oidc-client-header]').hasText('some-app', 'renders application name as title');
+    assert.dom(SELECTORS.clientDetailsTab).hasClass('active', 'details tab is active');
+    assert.dom(SELECTORS.clientDeleteButton).doesNotExist('delete option is hidden');
+    assert.dom(SELECTORS.clientEditButton).doesNotExist('edit button is hidden');
+    assert.equal(findAll('[data-test-component="info-table-row"]').length, 9, 'renders all info rows');
   });
 });
