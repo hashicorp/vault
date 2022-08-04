@@ -22,7 +22,7 @@ When the Vault server starts, a storage backend is provided, making its data ava
 
 When a Vault server is started, it begins in a _sealed_ state. Before any
 operation can be performed on Vault, it must be _unsealed_. This is done by
-providing the unseal keys. Once Vault is initialized, it generates an
+providing the unseal keys. During the Vault initialization, it generates an
 encryption key, which is used to protect all Vault data. This key is protected by
 a root key that is stored alongside all other Vault data, but is encrypted by another mechanism: the unseal key.
 
