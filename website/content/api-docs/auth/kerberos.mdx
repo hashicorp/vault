@@ -35,7 +35,7 @@ for verifying inbound SPNEGO tokens.
 - `service_account` `(string: <required>)` – The service account associated
   with both the keytab entry and an LDAP service account created for Vault. Ex.:
   `"vault_svc"`.
-- `remove_instance_name` is for removing any instance names from a Kerberos service
+- `remove_instance_name` - Removes any instance names from a Kerberos service
   principal name when parsing the keytab file. For example when this is set to true,
   if a keytab has the service principal name `foo/localhost@example.com`, Vault
   will strip the service principal name to just be `foo@example.com`. 
