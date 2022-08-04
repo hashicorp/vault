@@ -16,9 +16,7 @@ The diagram below illustrates the intricacies and distinct components of Vault.
 
 [![Architecture Overview](/img/layers.png)](/img/layers.png)
 
-Components are separated and considered as either inside or outside of the security barrier. The storage backend and HTTP API are outside of the security barrier, while all other components reside inside the barrier.
-
-When the Vault server starts, a storage backend is provided, making its data available across restarts. The storage backend, outside the barrier, stores encrypted data durably and is considered untrusted. The HTTP API must start similarly by the Vault server so that clients can interact with it.
+Vault’s encryption layer, referred to as the barrier, is responsible for encrypting and decrypting Vault data. When the Vault server starts, it writes data to its storage backend. Since the storage backend resides outside the barrier, it’s considered untrusted so Vault will encrypt the data before it sends them to the storage backend. This mechanism ensures that if an unauthorized attacker attempts to access the storage backend, the data cannot be compromised since it remains encrypted, until Vault decrypts the data. The storage backend provides a durable data persistent layer where data is secured and available across server restarts.
 
 When a Vault server is started, it begins in a _sealed_ state. Before any
 operation can be performed on Vault, it must be _unsealed_. This is done by
@@ -65,7 +63,7 @@ associated policies.
 Policies are just a named ACL rule. For example, the "root" policy is built-in
 and permits access to all resources. You may create any number of named policies
 with fine-grained control over paths. Vault operates in an allowed-access mode, meaning the action is not allowed unless access is granted via a policy explicitly. Since a user may have multiple policies associated, actions are allowed when policy permits. Policies are stored and managed by an internal
-policy store. This internal store is affectedthrough the system backend,
+policy store. This internal store is affected through the system backend,
 which is always mounted at `sys/`.
 
 Once authentication takes place and an auth method provides a set of applicable
