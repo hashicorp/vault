@@ -482,7 +482,7 @@ func containsMultilineStatement(stmt string) bool {
 	}
 	stmtWithoutLiterals := stmt
 	for _, literal := range literals {
-		stmtWithoutLiterals = strings.Replace(stmt, literal, "", -1)
+		stmtWithoutLiterals = strings.ReplaceAll(stmt, literal, "")
 	}
 	// Now look for the word "END" specifically. This will miss any
 	// representations of END that aren't surrounded by spaces, but

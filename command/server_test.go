@@ -121,7 +121,7 @@ func TestServer_ReloadListener(t *testing.T) {
 	inBytes, _ = ioutil.ReadFile(wd + "reload_foo.key")
 	ioutil.WriteFile(td+"/reload_key.pem", inBytes, 0o777)
 
-	relhcl := strings.Replace(reloadHCL, "TMPDIR", td, -1)
+	relhcl := strings.ReplaceAll(reloadHCL, "TMPDIR", td)
 	ioutil.WriteFile(td+"/reload.hcl", []byte(relhcl), 0o777)
 
 	inBytes, _ = ioutil.ReadFile(wd + "reload_ca.pem")
@@ -172,7 +172,7 @@ func TestServer_ReloadListener(t *testing.T) {
 		t.Fatalf("certificate name didn't check out: %s", err)
 	}
 
-	relhcl = strings.Replace(reloadHCL, "TMPDIR", td, -1)
+	relhcl = strings.ReplaceAll(reloadHCL, "TMPDIR", td)
 	inBytes, _ = ioutil.ReadFile(wd + "reload_bar.pem")
 	ioutil.WriteFile(td+"/reload_cert.pem", inBytes, 0o777)
 	inBytes, _ = ioutil.ReadFile(wd + "reload_bar.key")

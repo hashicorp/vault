@@ -1052,7 +1052,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndAccessListIdentity(t *testing
 		// This test case should be run only when certain env vars are set and
 		// executed as an acceptance test.
 		if os.Getenv(logicaltest.TestEnvVar) == "" {
-			t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
+			t.Skip(fmt.Sprintf("Acceptance tests skipped unless env %q set", logicaltest.TestEnvVar))
 			return
 		}
 
@@ -1515,7 +1515,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	// This test case should be run only when certain env vars are set and
 	// executed as an acceptance test.
 	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env %q set", logicaltest.TestEnvVar))
 		return
 	}
 
