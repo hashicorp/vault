@@ -1,15 +1,25 @@
 import { Response } from 'miragejs';
 
-export const BASE_URL = `/vault/access/oidc`;
+export const OIDC_BASE_URL = `/vault/access/oidc`;
 
 export const SELECTORS = {
   oidcHeader: '[data-test-oidc-header]',
   oidcClientCreateButton: '[data-test-oidc-configure]',
   oidcRouteTabs: '[data-test-oidc-tabs]',
   oidcLandingImg: '[data-test-oidc-img]',
-  clientSaveButton: '[data-test-oidc-client-save]',
-  clientDeleteButton: '[data-test-client-delete] button',
   confirmDeleteButton: '[data-test-confirm-button="true"]',
+  // client route
+  clientHeaderBreadcrumb: '[data-test-oidc-client-breadcrumb]',
+  clientFormBreadcrumb: '[data-test-oidc-client-form-breadcrumb]',
+  clientSaveButton: '[data-test-oidc-client-save]',
+  clientCancelButton: '[data-test-oidc-client-cancel]',
+  clientDeleteButton: '[data-test-oidc-client-delete] button',
+  clientEditButton: '[data-test-oidc-client-edit]',
+  clientDetailsTab: '[data-test-oidc-client-details]',
+  clientProvidersTab: '[data-test-oidc-client-providers]',
+
+  // assignment route
+  assignSaveButton: '[data-test-oidc-assignment-save]',
 };
 
 export function overrideMirageResponse(httpStatus, data) {

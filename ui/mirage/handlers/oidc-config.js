@@ -33,25 +33,6 @@ export default function (server) {
     };
   });
 
-  server.get('/identity/oidc/assignment/assignment-1', () => {
-    return {
-      request_id: 'assignment-1-id',
-      data: {
-        entity_ids: ['1234-12345'],
-        group_ids: ['abcdef-123'],
-      },
-    };
-  });
-
-  server.get('/identity/oidc/assignment', () => {
-    return {
-      request_id: 'assignment-list-id',
-      data: {
-        keys: ['allow_all', 'assignment-1'],
-      },
-    };
-  });
-
   server.get('/identity/oidc/key', () => {
     return {
       request_id: 'key-list-id',
