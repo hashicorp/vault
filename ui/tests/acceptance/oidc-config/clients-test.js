@@ -33,16 +33,19 @@ module('Acceptance | oidc-config/clients', function (hooks) {
     this.store.findRecord('oidc/client', 'some-app').then((model) => {
       if (model) model.destroyRecord();
       this.store.findRecord('oidc/assignment', 'assignment-1').then((record) => {
-        if (record) record.destroyRecord().then(() => {
-          console.log(`destroyed ${record}!`)
-        })
+        if (record)
+          record.destroyRecord().then(() => {
+            console.log(`destroyed ${record}!`);
+          });
       });
       this.store.findRecord('oidc/assignment', 'assignment-2').then((record) => {
-        if (record) record.destroyRecord().then( () => {
-        console.log(`destroyed ${record}!`)
+        if (record)
+          record.destroyRecord().then(() => {
+            console.log(`destroyed ${record}!`);
+          });
       });
+      return logout.visit();
     });
-    return logout.visit();
   });
 
   hooks.after(function () {
