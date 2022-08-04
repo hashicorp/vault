@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -2180,7 +2179,7 @@ func TestOIDC_Path_OIDC_ProviderClient_List(t *testing.T) {
 	expectStrings(t, respListClientAfterDelete.Data["keys"].([]string), expectedStrings)
 }
 
-func TestOIDC_Path_OIDC_Client_List_Detailed(t *testing.T) {
+func TestOIDC_Path_OIDC_Client_List_KeyInfo(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
 
@@ -2214,62 +2213,38 @@ func TestOIDC_Path_OIDC_Client_List_Detailed(t *testing.T) {
 		expectSuccess(t, resp, err)
 	}
 
-	tests := []struct {
-		name     string
-		detailed string
-	}{
-		{
-			name:     "list clients with detailed=true",
-			detailed: "true",
-		},
-		{
-			name:     "list clients with detailed=false",
-			detailed: "false",
-		},
-		{
-			name:     "list clients with detailed not provided",
-			detailed: "",
-		},
+	// List clients
+	req := &logical.Request{
+		Path:      "oidc/client",
+		Operation: logical.ListOperation,
+		Storage:   c.identityStore.view,
+		Data:      make(map[string]interface{}),
 	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			// List clients using the detailed parameter
-			req := &logical.Request{
-				Path:      "oidc/client",
-				Operation: logical.ListOperation,
-				Storage:   c.identityStore.view,
-				Data:      make(map[string]interface{}),
-			}
-			var detailed bool
-			if tc.detailed != "" {
-				detailed, _ = strconv.ParseBool(tc.detailed)
-				req.Data["detailed"] = detailed
-			}
-			resp, err := c.identityStore.HandleRequest(ctx, req)
-			expectSuccess(t, resp, err)
+	resp, err := c.identityStore.HandleRequest(ctx, req)
+	expectSuccess(t, resp, err)
+	require.NotNil(t, resp.Data["key_info"])
+	require.NotNil(t, resp.Data["keys"])
+	keys := resp.Data["keys"].([]string)
+	keyInfo := resp.Data["key_info"].(map[string]interface{})
+	require.Equal(t, len(keys), len(keyInfo))
 
-			// Assert the clients returned have additional details
-			for name, details := range resp.Data {
-				if detailed {
-					actual, _ := details.(map[string]interface{})
-					require.NotNil(t, clients[name])
-					expected := clients[name].(map[string]interface{})
+	// Assert the clients returned have additional key info
+	for name, details := range keyInfo {
+		actual, _ := details.(map[string]interface{})
+		require.NotNil(t, clients[name])
+		expected := clients[name].(map[string]interface{})
+		require.Contains(t, keys, name)
 
-					idTokenTTL, _ := time.ParseDuration(expected["id_token_ttl"].(string))
-					accessTokenTTL, _ := time.ParseDuration(expected["access_token_ttl"].(string))
-					require.EqualValues(t, idTokenTTL.Seconds(), actual["id_token_ttl"])
-					require.EqualValues(t, accessTokenTTL.Seconds(), actual["access_token_ttl"])
-					require.Equal(t, expected["redirect_uris"], actual["redirect_uris"])
-					require.Equal(t, expected["assignments"], actual["assignments"])
-					require.Equal(t, expected["key"], actual["key"])
-					require.Equal(t, expected["client_type"], actual["client_type"])
-					require.NotEmpty(t, actual["client_id"])
-					require.Empty(t, actual["client_secret"])
-				} else {
-					expectStrings(t, resp.Data["keys"].([]string), clients)
-				}
-			}
-		})
+		idTokenTTL, _ := time.ParseDuration(expected["id_token_ttl"].(string))
+		accessTokenTTL, _ := time.ParseDuration(expected["access_token_ttl"].(string))
+		require.EqualValues(t, idTokenTTL.Seconds(), actual["id_token_ttl"])
+		require.EqualValues(t, accessTokenTTL.Seconds(), actual["access_token_ttl"])
+		require.Equal(t, expected["redirect_uris"], actual["redirect_uris"])
+		require.Equal(t, expected["assignments"], actual["assignments"])
+		require.Equal(t, expected["key"], actual["key"])
+		require.Equal(t, expected["client_type"], actual["client_type"])
+		require.NotEmpty(t, actual["client_id"])
+		require.Empty(t, actual["client_secret"])
 	}
 }
 
@@ -3434,7 +3409,7 @@ func TestOIDC_Path_OIDC_Provider_List(t *testing.T) {
 	expectStrings(t, respListProvidersAfterDelete.Data["keys"].([]string), expectedStrings)
 }
 
-func TestOIDC_Path_OIDC_Provider_List_Detailed(t *testing.T) {
+func TestOIDC_Path_OIDC_Provider_List_KeyInfo(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
 
@@ -3475,57 +3450,32 @@ func TestOIDC_Path_OIDC_Provider_List_Detailed(t *testing.T) {
 		expectSuccess(t, resp, err)
 	}
 
-	tests := []struct {
-		name     string
-		detailed string
-	}{
-		{
-			name:     "list providers with detailed=true",
-			detailed: "true",
-		},
-		{
-			name:     "list providers with detailed=false",
-			detailed: "false",
-		},
-		{
-			name:     "list providers with detailed not provided",
-			detailed: "",
-		},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			// List providers using the detailed parameter
-			req := &logical.Request{
-				Path:      "oidc/provider",
-				Operation: logical.ListOperation,
-				Storage:   c.identityStore.view,
-				Data:      make(map[string]interface{}),
-			}
-			var detailed bool
-			if tc.detailed != "" {
-				detailed, _ = strconv.ParseBool(tc.detailed)
-				req.Data["detailed"] = detailed
-			}
-			resp, err := c.identityStore.HandleRequest(ctx, req)
-			expectSuccess(t, resp, err)
+	// List providers
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/provider",
+		Operation: logical.ListOperation,
+		Storage:   c.identityStore.view,
+		Data:      make(map[string]interface{}),
+	})
+	expectSuccess(t, resp, err)
+	require.NotNil(t, resp.Data["key_info"])
+	require.NotNil(t, resp.Data["keys"])
+	keys := resp.Data["keys"].([]string)
+	keyInfo := resp.Data["key_info"].(map[string]interface{})
+	require.Equal(t, len(keys), len(keyInfo))
 
-			// Assert the providers returned have additional details
-			for name, details := range resp.Data {
-				if detailed {
-					actual, _ := details.(map[string]interface{})
-					require.NotNil(t, providers[name])
-					expected := providers[name].(map[string]interface{})
+	// Assert the providers returned have additional key info
+	for name, details := range keyInfo {
+		actual, _ := details.(map[string]interface{})
+		require.NotNil(t, providers[name])
+		expected := providers[name].(map[string]interface{})
+		require.Contains(t, keys, name)
 
-					expectedIssuer := fmt.Sprintf("%s%s%s", expected["issuer"],
-						"/v1/identity/oidc/provider/", name)
-					require.Equal(t, expectedIssuer, actual["issuer"])
-					require.Equal(t, expected["allowed_client_ids"], actual["allowed_client_ids"])
-					require.Equal(t, expected["scopes_supported"], actual["scopes_supported"])
-				} else {
-					expectStrings(t, resp.Data["keys"].([]string), providers)
-				}
-			}
-		})
+		expectedIssuer := fmt.Sprintf("%s%s%s", expected["issuer"],
+			"/v1/identity/oidc/provider/", name)
+		require.Equal(t, expectedIssuer, actual["issuer"])
+		require.Equal(t, expected["allowed_client_ids"], actual["allowed_client_ids"])
+		require.Equal(t, expected["scopes_supported"], actual["scopes_supported"])
 	}
 }
 
