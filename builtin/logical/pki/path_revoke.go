@@ -71,6 +71,11 @@ func (b *backend) pathRevokeWriteHandleCertificate(ctx context.Context, req *log
 	// write out to disk, and an error if one occurred.
 	//
 	// First start by parsing the certificate.
+	if len(certPem) < 75 {
+		// See note in pathImportIssuers about this check.
+		return "", nil, errutil.UserError{Err: "provided certificate data was too short; perhaps a path was passed to the API rather than the contents of a PEM file"}
+	}
+
 	pemBlock, _ := pem.Decode([]byte(certPem))
 	if pemBlock == nil {
 		return "", nil, errutil.UserError{Err: "certificate contains no PEM data"}
