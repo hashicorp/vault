@@ -623,6 +623,10 @@ func GenerateDebugLogs(t testing.T, client *api.Client) chan struct{} {
 	return stopCh
 }
 
+// VerifyRaftPeers verifies that the raft configuration contains a given set of peers.
+// The `expected` argument is a map consisting of the nodeId string (key) and a
+// boolean representing peer existence (value).
+// For example: { "core-0": true, "core-1": false, "core-2": true }
 func VerifyRaftPeers(t testing.T, client *api.Client, expected map[string]bool) error {
 	t.Helper()
 
