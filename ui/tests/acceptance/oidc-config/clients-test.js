@@ -10,7 +10,7 @@ import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
 import fm from 'vault/tests/pages/components/flash-message';
-import { overrideCapabilities, overrideMirageResponse } from '../../helpers/oidc-config';
+import { overrideCapabilities } from '../../helpers/oidc-config';
 const searchSelect = create(ss);
 const flashMessage = create(fm);
 // in congruency with backend verbiage 'applications' are referred to as 'clients

@@ -46,7 +46,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
   });
 
   test('it should save new client', async function (assert) {
-    assert.expect(15);
+    assert.expect(10);
 
     this.server.post('/identity/oidc/client/some-app', (schema, req) => {
       assert.ok(true, 'Request made to save client');
@@ -95,7 +95,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
   });
 
   test('it should update client', async function (assert) {
-    assert.expect(9);
+    assert.expect(10);
 
     this.server.post('/identity/oidc/client/some-app', (schema, req) => {
       assert.ok(true, 'Request made to save client');
@@ -125,7 +125,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     assert.dom('[data-test-input="name"]').hasValue('some-app', 'Name input is populated with model value');
     assert.dom('[data-test-input="key"]').isDisabled('Signing key input is disabled');
     assert.dom('[data-test-input="key"]').hasValue('default', 'Key input populated with default');
-    assert.dom('[data-test-input="clientType"]').isDisabled('client type input is disabled on edit');
+    assert.dom('[data-test-input="clientType"] input').isDisabled('client type input is disabled on edit');
     assert
       .dom('[data-test-input="clientType"] input#confidential')
       .isChecked('Correct radio button is selected');
@@ -152,6 +152,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
       modelName: 'oidc/client',
       name: 'some-app',
       assignments: ['allow_all'],
+      redirectUris: [],
     });
     this.model = this.store.peekRecord('oidc/client', 'some-app');
 
@@ -163,9 +164,10 @@ module('Integration | Component | oidc/client-form', function (hooks) {
       />
     `);
 
-    await click('[data-test-input="clientType"] input[id="public"]');
+    await fillIn('[data-test-input="redirectUris"] [data-test-string-list-input="0"]', 'some-url.com');
+    await click('[data-test-string-list-button="add"]');
     await click(SELECTORS.clientCancelButton);
-    assert.equal(this.model.clientType, 'confidential', 'Model attributes rolled back on cancels');
+    assert.equal(this.model.redirectUris, undefined, 'Model attributes rolled back on cancels');
   });
 
   test('it should show create assignment modal', async function (assert) {
