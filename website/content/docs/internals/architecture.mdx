@@ -70,7 +70,7 @@ which is always mounted at `sys/`.
 
 Once authentication takes place and an auth method provides a set of applicable
 policies, a new client token is generated and managed by the token store. This
-client token is returned to the client and is used to make future requests.
+client token is used to make future requests.
 This token method is similar to a cookie sent by a website when a user logs in. Depending on the auth method configuration, the client
 token may have a lease associated with it, and may need to be renewed periodically to avoid invalidation.
 
