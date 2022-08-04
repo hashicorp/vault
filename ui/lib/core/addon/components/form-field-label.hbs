@@ -12,10 +12,9 @@
   <p class="sub-text" data-test-label-subtext>
     {{@subText}}
     {{#if @docLink}}
-      <a href={{@docLink}} target="_blank" rel="noopener noreferrer">
-        See our documentation
-      </a>
-      for help.
+      <DocLink @path={{@docLink}}>
+        Learn more
+      </DocLink>
     {{/if}}
   </p>
 {{/if}}
