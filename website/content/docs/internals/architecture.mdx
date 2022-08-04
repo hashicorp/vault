@@ -16,7 +16,7 @@ The diagram below illustrates the intricacies and distinct components of Vault.
 
 [![Architecture Overview](/img/layers.png)](/img/layers.png)
 
-Vault’s encryption layer, referred to as the barrier, is responsible for encrypting and decrypting Vault data. When the Vault server starts, it writes data to its storage backend. Since the storage backend resides outside the barrier, it’s considered untrusted so Vault will encrypt the data before it sends them to the storage backend. This mechanism ensures that if an unauthorized attacker attempts to access the storage backend, the data cannot be compromised since it remains encrypted, until Vault decrypts the data. The storage backend provides a durable data persistent layer where data is secured and available across server restarts.
+Vault’s encryption layer, referred to as the _barrier_, is responsible for encrypting and decrypting Vault data. When the Vault server starts, it writes data to its storage backend. Since the storage backend resides outside the barrier, it’s considered untrusted so Vault will encrypt the data before it sends them to the storage backend. This mechanism ensures that if an unauthorized attacker attempts to access the storage backend, the data cannot be compromised since it remains encrypted, until Vault decrypts the data. The storage backend provides a durable data persistent layer where data is secured and available across server restarts.
 
 When a Vault server is started, it begins in a _sealed_ state. Before any
 operation can be performed on Vault, it must be _unsealed_. This is done by
