@@ -39,7 +39,7 @@ module('Acceptance | oidc-config/clients', function (hooks) {
       });
       this.store.findRecord('oidc/assignment', 'assignment-2').then((record) => {
         if (record) record.destroyRecord().then( () => {
-        console.log(`destroyed ${record}!`)}
+        console.log(`destroyed ${record}!`)
       });
     });
     return logout.visit();
