@@ -82,6 +82,7 @@ with Active Directory Certificate Services.`,
 	// signed certificate's bits (that's on the /sign-intermediate
 	// endpoints). Remove it from the list of fields to avoid confusion.
 	delete(ret.Fields, "signature_bits")
+	delete(ret.Fields, "use_pss")
 
 	return ret
 }
@@ -238,6 +239,13 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	if len(createdIssuers) > 0 {
 		err := b.crlBuilder.rebuild(ctx, b, req, true)
 		if err != nil {
+			// Before returning, check if the error message includes the
+			// string "PSS". If so, it indicates we might've wanted to modify
+			// this issuer, so convert the error to a warning.
+			if strings.Contains(err.Error(), "PSS") || strings.Contains(err.Error(), "pss") {
+				err = fmt.Errorf("Rebuilding the CRL failed with a message relating to the PSS signature algorithm. This likely means the revocation_signature_algorithm needs to be set on the newly imported issuer(s) because a managed key supports only the PSS algorithm; by default PKCS#1v1.5 was used to build the CRLs. CRLs will not be generated until this has been addressed, however the import was successful. The original error is reproduced below:\n\n\t%v", err)
+			}
+
 			return nil, err
 		}
 	}

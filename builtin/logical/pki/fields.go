@@ -319,6 +319,13 @@ SHA-2-512. Defaults to 0 to automatically detect based on key length
 		},
 	}
 
+	fields["use_pss"] = &framework.FieldSchema{
+		Type:    framework.TypeBool,
+		Default: false,
+		Description: `Whether or not to use PSS signatures when using a
+RSA key-type issuer. Defaults to false.`,
+	}
+
 	fields["key_type"] = &framework.FieldSchema{
 		Type:    framework.TypeString,
 		Default: "rsa",

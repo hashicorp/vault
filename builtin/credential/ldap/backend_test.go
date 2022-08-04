@@ -783,27 +783,27 @@ func TestBackend_configDefaultsAfterUpdate(t *testing.T) {
 					cfg := resp.Data
 					defaultGroupFilter := "(|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))"
 					if cfg["groupfilter"] != defaultGroupFilter {
-						t.Errorf("Default mismatch: groupfilter. Expected: '%s', received :'%s'", defaultGroupFilter, cfg["groupfilter"])
+						t.Errorf("Default mismatch: groupfilter. Expected: %q, received :%q", defaultGroupFilter, cfg["groupfilter"])
 					}
 
 					defaultGroupAttr := "cn"
 					if cfg["groupattr"] != defaultGroupAttr {
-						t.Errorf("Default mismatch: groupattr. Expected: '%s', received :'%s'", defaultGroupAttr, cfg["groupattr"])
+						t.Errorf("Default mismatch: groupattr. Expected: %q, received :%q", defaultGroupAttr, cfg["groupattr"])
 					}
 
 					defaultUserAttr := "cn"
 					if cfg["userattr"] != defaultUserAttr {
-						t.Errorf("Default mismatch: userattr. Expected: '%s', received :'%s'", defaultUserAttr, cfg["userattr"])
+						t.Errorf("Default mismatch: userattr. Expected: %q, received :%q", defaultUserAttr, cfg["userattr"])
 					}
 
 					defaultUserFilter := "({{.UserAttr}}={{.Username}})"
 					if cfg["userfilter"] != defaultUserFilter {
-						t.Errorf("Default mismatch: userfilter. Expected: '%s', received :'%s'", defaultUserFilter, cfg["userfilter"])
+						t.Errorf("Default mismatch: userfilter. Expected: %q, received :%q", defaultUserFilter, cfg["userfilter"])
 					}
 
 					defaultDenyNullBind := true
 					if cfg["deny_null_bind"] != defaultDenyNullBind {
-						t.Errorf("Default mismatch: deny_null_bind. Expected: '%t', received :'%s'", defaultDenyNullBind, cfg["deny_null_bind"])
+						t.Errorf("Default mismatch: deny_null_bind. Expected: '%t', received :%q", defaultDenyNullBind, cfg["deny_null_bind"])
 					}
 
 					return nil

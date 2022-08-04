@@ -2732,7 +2732,7 @@ func TestTokenStore_HandleRequest_CreateToken_ExistingEntityAlias(t *testing.T) 
 		t.Fatal("expected a response")
 	}
 	if resp.Auth.EntityID != entityID {
-		t.Fatalf("expected '%s' got '%s'", entityID, resp.Auth.EntityID)
+		t.Fatalf("expected %q got %q", entityID, resp.Auth.EntityID)
 	}
 
 	policyFound := false
@@ -2742,7 +2742,7 @@ func TestTokenStore_HandleRequest_CreateToken_ExistingEntityAlias(t *testing.T) 
 		}
 	}
 	if !policyFound {
-		t.Fatalf("Policy '%s' not derived by entity but should be. Auth %#v", testPolicyName, resp.Auth)
+		t.Fatalf("Policy %q not derived by entity but should be. Auth %#v", testPolicyName, resp.Auth)
 	}
 }
 
@@ -2822,7 +2822,7 @@ func TestTokenStore_HandleRequest_CreateToken_ExistingEntityAliasMixedCase(t *te
 		t.Fatalf("error handling request: %v", err)
 	}
 	if respMixedCase.Auth.EntityID != entityID {
-		t.Fatalf("expected '%s' got '%s'", entityID, respMixedCase.Auth.EntityID)
+		t.Fatalf("expected %q got %q", entityID, respMixedCase.Auth.EntityID)
 	}
 
 	// lowercase entity alias should match a mixed case alias
@@ -2841,7 +2841,7 @@ func TestTokenStore_HandleRequest_CreateToken_ExistingEntityAliasMixedCase(t *te
 	// A token created with the mixed case alias should return the same entity
 	// id as the normal case response.
 	if respLowerCase.Auth.EntityID != entityID {
-		t.Fatalf("expected '%s' got '%s'", entityID, respLowerCase.Auth.EntityID)
+		t.Fatalf("expected %q got %q", entityID, respLowerCase.Auth.EntityID)
 	}
 }
 
@@ -2905,7 +2905,7 @@ func TestTokenStore_HandleRequest_CreateToken_NonExistingEntityAlias(t *testing.
 
 	// Validate
 	if alias.Name != entityAliasName {
-		t.Fatalf("alias name should be '%s' but is '%s'", entityAliasName, alias.Name)
+		t.Fatalf("alias name should be %q but is %q", entityAliasName, alias.Name)
 	}
 }
 
@@ -2992,7 +2992,7 @@ func TestTokenStore_HandleRequest_CreateToken_GlobPatternWildcardEntityAlias(t *
 
 			// Validate
 			if alias.Name != test.aliasName {
-				t.Fatalf("alias name should be '%s' but is '%s'", test.aliasName, alias.Name)
+				t.Fatalf("alias name should be %q but is %q", test.aliasName, alias.Name)
 			}
 		})
 	}
@@ -3403,7 +3403,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		t.Fatalf("unexpected number of keys: %d", len(keys))
 	}
 	if keys[0] != "test" {
-		t.Fatalf("expected \"test\", got \"%s\"", keys[0])
+		t.Fatalf("expected \"test\", got %q", keys[0])
 	}
 
 	req.Operation = logical.DeleteOperation

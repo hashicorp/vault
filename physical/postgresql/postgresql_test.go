@@ -106,7 +106,7 @@ func TestPostgreSQLBackendMaxIdleConnectionsParameter(t *testing.T) {
 	}
 	expectedErrStr := "failed parsing max_idle_connections parameter: strconv.Atoi: parsing \"bad param\": invalid syntax"
 	if err.Error() != expectedErrStr {
-		t.Errorf("Expected: \"%s\" but found \"%s\"", expectedErrStr, err.Error())
+		t.Errorf("Expected: %q but found %q", expectedErrStr, err.Error())
 	}
 }
 
@@ -165,7 +165,7 @@ func TestConnectionURL(t *testing.T) {
 			got := connectionURL(tt.input.conf)
 
 			if got != tt.want {
-				t.Errorf("connectionURL(%s): want '%s', got '%s'", tt.input, tt.want, got)
+				t.Errorf("connectionURL(%s): want %q, got %q", tt.input, tt.want, got)
 			}
 		})
 	}

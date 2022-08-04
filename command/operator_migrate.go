@@ -332,11 +332,11 @@ func (c *OperatorMigrateCommand) loadMigratorConfig(path string) (*migratorConfi
 	for _, stanza := range []string{"storage_source", "storage_destination"} {
 		o := list.Filter(stanza)
 		if len(o.Items) != 1 {
-			return nil, fmt.Errorf("exactly one '%s' block is required", stanza)
+			return nil, fmt.Errorf("exactly one %q block is required", stanza)
 		}
 
 		if err := parseStorage(&result, o, stanza); err != nil {
-			return nil, fmt.Errorf("error parsing '%s': %w", stanza, err)
+			return nil, fmt.Errorf("error parsing %q: %w", stanza, err)
 		}
 	}
 	return &result, nil

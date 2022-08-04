@@ -1413,7 +1413,7 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 
 // Register is used to take a request and response with an associated
 // lease. The secret gets assigned a LeaseID and the management of
-// of lease is assumed by the expiration manager.
+// the lease is assumed by the expiration manager.
 func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, resp *logical.Response, loginRole string) (id string, retErr error) {
 	defer metrics.MeasureSince([]string{"expire", "register"}, time.Now())
 
@@ -1880,21 +1880,23 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 		pending.cachedLeaseInfo = m.inMemoryLeaseInfo(le)
 		m.pending.Store(le.LeaseID, pending)
 	}
-
-	// If we're in restore mode, Vault is still starting. While we may get leases created, it is likely
-	// 'catching up' on old creates, and will count these leases from the restore process instead.
-	// There is no way for a user to create real leases while we're still in restore mode, so the
-	// !m.inRestoreMode() prevents double counting.
-	if leaseCreated && !m.inRestoreMode() {
+	if leaseCreated {
 		m.leaseCount++
-		// Avoid nil pointer dereference. Without cachedLeaseInfo we do not have enough information to
-		// accurately update quota lease information.
-		// Note that cachedLeaseInfo should never be nil under normal operation.
-		if pending.cachedLeaseInfo != nil {
-			leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: le.LeaseID, Role: le.LoginRole}
-			if err := m.core.quotasHandleLeases(m.quitContext, quotas.LeaseActionCreated, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
-				m.logger.Error("failed to update quota on lease creation", "error", err)
-				return
+
+		// If we're in restore mode, Vault is still starting. While we may get leases created, it is likely
+		// 'catching up' on old creates. There will be a core.quotasHandleLeases call to register these leases in
+		// restore process instead - in other words, !m.inRestoreMode() prevents double counting for quotas.
+		// We keep m.leaseCount++ out of this check as it is not called in processRestore
+		if !m.inRestoreMode() {
+			// Avoid nil pointer dereference. Without cachedLeaseInfo we do not have enough information to
+			// accurately update quota lease information.
+			// Note that cachedLeaseInfo should never be nil under normal operation.
+			if pending.cachedLeaseInfo != nil {
+				leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: le.LeaseID, Role: le.LoginRole}
+				if err := m.core.quotasHandleLeases(m.quitContext, quotas.LeaseActionCreated, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
+					m.logger.Error("failed to update quota on lease creation", "error", err)
+					return
+				}
 			}
 		}
 	}

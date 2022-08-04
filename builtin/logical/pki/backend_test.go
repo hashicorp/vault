@@ -12,6 +12,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
@@ -583,6 +584,8 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				"signature_bits":      512,
 				"format":              "der",
 				"not_before_duration": "2h",
+				// Let's Encrypt -- R3 SKID
+				"skid": "14:2E:B3:17:B7:58:56:CB:AE:50:09:40:E6:1F:AF:9D:8B:14:C2:C6",
 			},
 			Check: func(resp *logical.Response) error {
 				certString := resp.Data["certificate"].(string)
@@ -602,6 +605,8 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				}
 				cert := certs[0]
 
+				skid, _ := hex.DecodeString("142EB317B75856CBAE500940E61FAF9D8B14C2C6")
+
 				switch {
 				case !reflect.DeepEqual(expected.IssuingCertificates, cert.IssuingCertificateURL):
 					return fmt.Errorf("IssuingCertificateURL:\nexpected\n%#v\ngot\n%#v\n", expected.IssuingCertificates, cert.IssuingCertificateURL)
@@ -613,6 +618,8 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 					return fmt.Errorf("DNSNames\nexpected\n%#v\ngot\n%#v\n", []string{"intermediate.cert.com"}, cert.DNSNames)
 				case !reflect.DeepEqual(x509.SHA512WithRSA, cert.SignatureAlgorithm):
 					return fmt.Errorf("Signature Algorithm:\nexpected\n%#v\ngot\n%#v\n", x509.SHA512WithRSA, cert.SignatureAlgorithm)
+				case !reflect.DeepEqual(skid, cert.SubjectKeyId):
+					return fmt.Errorf("SKID:\nexpected\n%#v\ngot\n%#v\n", skid, cert.SubjectKeyId)
 				}
 
 				if math.Abs(float64(time.Now().Add(-2*time.Hour).Unix()-cert.NotBefore.Unix())) > 10 {
@@ -3545,6 +3552,7 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 		"allowed_serial_numbers":             []interface{}{},
 		"generate_lease":                     false,
 		"signature_bits":                     json.Number("256"),
+		"use_pss":                            false,
 		"allowed_domains":                    []interface{}{},
 		"allowed_uri_sans_template":          false,
 		"enforce_hostnames":                  true,
@@ -4452,6 +4460,7 @@ type KeySizeRegression struct {
 
 	// Signature Bits presently is only specified on the role.
 	RoleSignatureBits []int
+	RoleUsePSS        bool
 
 	// These are tuples; must be of the same length.
 	TestKeyTypes []string
@@ -4495,6 +4504,7 @@ func RoleKeySizeRegressionHelper(t *testing.T, b *backend, s logical.Storage, in
 						"key_type":       test.RoleKeyType,
 						"key_bits":       roleKeyBits,
 						"signature_bits": roleSignatureBits,
+						"use_pss":        test.RoleUsePSS,
 					})
 					if err != nil {
 						t.Fatal(err)
@@ -4520,6 +4530,15 @@ func RoleKeySizeRegressionHelper(t *testing.T, b *backend, s logical.Storage, in
 							t.Fatalf("key size regression test [%d] failed: haveErr: %v, expectErr: %v, err: %v, resp: %v, test case: %v, caKeyType: %v, caKeyBits: %v, role: %v, keyType: %v, keyBits: %v", index, haveErr, test.ExpectError, err, resp, test, caKeyType, caKeyBits, role, keyType, keyBits)
 						}
 
+						if resp != nil && test.RoleUsePSS && caKeyType == "rsa" {
+							leafCert := parseCert(t, resp.Data["certificate"].(string))
+							switch leafCert.SignatureAlgorithm {
+							case x509.SHA256WithRSAPSS, x509.SHA384WithRSAPSS, x509.SHA512WithRSAPSS:
+							default:
+								t.Fatalf("key size regression test [%d] failed on role %v: unexpected signature algorithm; expected RSA-type CA to sign a leaf cert with PSS algorithm; got %v", index, role, leafCert.SignatureAlgorithm.String())
+							}
+						}
+
 						tested += 1
 					}
 				}
@@ -4541,36 +4560,41 @@ func TestBackend_Roles_KeySizeRegression(t *testing.T) {
 	testCases := []KeySizeRegression{
 		// RSA with default parameters should fail to issue smaller RSA keys
 		// and any size ECDSA/Ed25519 keys.
-		/*  0 */ {"rsa", []int{0, 2048}, []int{0, 256, 384, 512}, []string{"rsa", "ec", "ec", "ec", "ec", "ed25519"}, []int{1024, 224, 256, 384, 521, 0}, true},
+		/*  0 */ {"rsa", []int{0, 2048}, []int{0, 256, 384, 512}, false, []string{"rsa", "ec", "ec", "ec", "ec", "ed25519"}, []int{1024, 224, 256, 384, 521, 0}, true},
 		// But it should work to issue larger RSA keys.
-		/*  1 */ {"rsa", []int{0, 2048}, []int{0, 256, 384, 512}, []string{"rsa", "rsa"}, []int{2048, 3072}, false},
+		/*  1 */ {"rsa", []int{0, 2048}, []int{0, 256, 384, 512}, false, []string{"rsa", "rsa"}, []int{2048, 3072}, false},
 
 		// EC with default parameters should fail to issue smaller EC keys
 		// and any size RSA/Ed25519 keys.
-		/*  2 */ {"ec", []int{0}, []int{0}, []string{"rsa", "ec", "ed25519"}, []int{2048, 224, 0}, true},
+		/*  2 */ {"ec", []int{0}, []int{0}, false, []string{"rsa", "ec", "ed25519"}, []int{2048, 224, 0}, true},
 		// But it should work to issue larger EC keys. Note that we should be
 		// independent of signature bits as that's computed from the issuer
 		// type (for EC based issuers).
-		/*  3 */ {"ec", []int{224}, []int{0, 256, 384, 521}, []string{"ec", "ec", "ec", "ec"}, []int{224, 256, 384, 521}, false},
-		/*  4 */ {"ec", []int{0, 256}, []int{0, 256, 384, 521}, []string{"ec", "ec", "ec"}, []int{256, 384, 521}, false},
-		/*  5 */ {"ec", []int{384}, []int{0, 256, 384, 521}, []string{"ec", "ec"}, []int{384, 521}, false},
-		/*  6 */ {"ec", []int{521}, []int{0, 256, 384, 512}, []string{"ec"}, []int{521}, false},
+		/*  3 */ {"ec", []int{224}, []int{0, 256, 384, 521}, false, []string{"ec", "ec", "ec", "ec"}, []int{224, 256, 384, 521}, false},
+		/*  4 */ {"ec", []int{0, 256}, []int{0, 256, 384, 521}, false, []string{"ec", "ec", "ec"}, []int{256, 384, 521}, false},
+		/*  5 */ {"ec", []int{384}, []int{0, 256, 384, 521}, false, []string{"ec", "ec"}, []int{384, 521}, false},
+		/*  6 */ {"ec", []int{521}, []int{0, 256, 384, 512}, false, []string{"ec"}, []int{521}, false},
 
 		// Ed25519 should reject RSA and EC keys.
-		/*  7 */ {"ed25519", []int{0}, []int{0}, []string{"rsa", "ec", "ec"}, []int{2048, 256, 521}, true},
+		/*  7 */ {"ed25519", []int{0}, []int{0}, false, []string{"rsa", "ec", "ec"}, []int{2048, 256, 521}, true},
 		// But it should work to issue Ed25519 keys.
-		/*  8 */ {"ed25519", []int{0}, []int{0}, []string{"ed25519"}, []int{0}, false},
+		/*  8 */ {"ed25519", []int{0}, []int{0}, false, []string{"ed25519"}, []int{0}, false},
 
 		// Any key type should reject insecure RSA key sizes.
-		/*  9 */ {"any", []int{0}, []int{0, 256, 384, 512}, []string{"rsa", "rsa"}, []int{512, 1024}, true},
+		/*  9 */ {"any", []int{0}, []int{0, 256, 384, 512}, false, []string{"rsa", "rsa"}, []int{512, 1024}, true},
 		// But work for everything else.
-		/* 10 */ {"any", []int{0}, []int{0, 256, 384, 512}, []string{"rsa", "rsa", "ec", "ec", "ec", "ec", "ed25519"}, []int{2048, 3072, 224, 256, 384, 521, 0}, false},
+		/* 10 */ {"any", []int{0}, []int{0, 256, 384, 512}, false, []string{"rsa", "rsa", "ec", "ec", "ec", "ec", "ed25519"}, []int{2048, 3072, 224, 256, 384, 521, 0}, false},
 
 		// RSA with larger than default key size should reject smaller ones.
-		/* 11 */ {"rsa", []int{3072}, []int{0, 256, 384, 512}, []string{"rsa"}, []int{2048}, true},
+		/* 11 */ {"rsa", []int{3072}, []int{0, 256, 384, 512}, false, []string{"rsa"}, []int{2048}, true},
+
+		// We should be able to sign with PSS with any CA key type.
+		/* 12 */ {"rsa", []int{0}, []int{0, 256, 384, 512}, true, []string{"rsa"}, []int{2048}, false},
+		/* 13 */ {"ec", []int{0}, []int{0}, true, []string{"ec"}, []int{256}, false},
+		/* 14 */ {"ed25519", []int{0}, []int{0}, true, []string{"ed25519"}, []int{0}, false},
 	}
 
-	if len(testCases) != 12 {
+	if len(testCases) != 15 {
 		t.Fatalf("misnumbered test case entries will make it hard to find bugs: %v", len(testCases))
 	}
 

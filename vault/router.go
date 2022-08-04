@@ -538,7 +538,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	if !existenceCheck {
 		defer metrics.MeasureSince([]string{
 			"route", string(req.Operation),
-			strings.Replace(mount, "/", "-", -1),
+			strings.ReplaceAll(mount, "/", "-"),
 		}, time.Now())
 	}
 	re := raw.(*routeEntry)
