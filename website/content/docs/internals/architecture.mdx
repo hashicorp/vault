@@ -64,7 +64,7 @@ associated policies.
 
 Policies are just a named ACL rule. For example, the "root" policy is built-in
 and permits access to all resources. You may create any number of named policies
-with fine-grained control over paths. Vault operates exclusively in an allowed-access mode, meaning the action is not allowed unless access is granted via a policy explicitly. Since a user may have multiple policies associated, actions are allowed when policy permits. Policies are stored and managed by an internal
+with fine-grained control over paths. Vault operates in an allowed-access mode, meaning the action is not allowed unless access is granted via a policy explicitly. Since a user may have multiple policies associated, actions are allowed when policy permits. Policies are stored and managed by an internal
 policy store. This internal store is affectedthrough the system backend,
 which is always mounted at `sys/`.
 
