@@ -1007,6 +1007,9 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				if err == nil {
 					return nil
 				}
+			} else {
+				// Return an error so we can retry_join
+				err = fmt.Errorf("failed to get raft challenge")
 			}
 		}
 		return err
