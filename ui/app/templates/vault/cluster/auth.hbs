@@ -109,7 +109,7 @@
         @onSuccess={{action "onMfaSuccess"}}
         @onError={{fn (mut this.mfaErrors)}}
       />
-    {{else if (eq this.authMethod "okta/")}}
+    {{else}}
       <AuthForm
         @wrappedToken={{this.wrappedToken}}
         @cluster={{this.model}}
@@ -121,15 +121,6 @@
         @waitingForOktaNumberChallenge={{this.waitingForOktaNumberChallenge}}
         @setCancellingAuth={{fn (mut this.cancelAuth)}}
         @cancelAuthForOktaNumberChallenge={{this.cancelAuth}}
-      />
-    {{else}}
-      <AuthForm
-        @wrappedToken={{this.wrappedToken}}
-        @cluster={{this.model}}
-        @namespace={{this.namespaceQueryParam}}
-        @redirectTo={{this.redirectTo}}
-        @selectedAuth={{this.authMethod}}
-        @onSuccess={{action "onAuthResponse"}}
       />
     {{/if}}
   </Page.content>
