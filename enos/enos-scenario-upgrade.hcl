@@ -120,7 +120,7 @@ scenario "upgrade" {
     ]
 
     providers = {
-      enos = provider.enos.ubuntu
+      enos = local.enos_provider[matrix.distro]
     }
 
     variables {
@@ -137,7 +137,7 @@ scenario "upgrade" {
     ]
 
     providers = {
-      enos = provider.enos.ubuntu
+      enos = local.enos_provider[matrix.distro]
     }
 
     variables {
