@@ -788,9 +788,12 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 
 					// If it doesn't, check if it clashes with the toEntities
 					if toAlias.MountAccessor == fromAlias.MountAccessor {
-						aliasClashError = multierror.Append(fmt.Errorf("mountAccessor: %s, toEntity ID: %s, fromEntity ID: %s, conflicting toEntity alias ID: %s, conflicting fromEntity alias ID: %s",
-							toAlias.MountAccessor, toEntity.ID, fromEntityID, toAlias.ID, fromAlias.ID),
-							aliasClashError)
+						if aliasClashError == nil {
+							aliasClashError = multierror.Append(aliasClashError, fmt.Errorf("toEntity and at least one fromEntity have aliases with the same mount accessor, repeat the merge request specifying exactly one fromEntity, clashes: "))
+						}
+						aliasClashError = multierror.Append(aliasClashError,
+							fmt.Errorf("mountAccessor: %s, toEntity ID: %s, fromEntity ID: %s, conflicting toEntity alias ID: %s, conflicting fromEntity alias ID: %s",
+								toAlias.MountAccessor, toEntity.ID, fromEntityID, toAlias.ID, fromAlias.ID))
 					}
 				}
 			}
@@ -811,7 +814,6 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 
 	// Check alias clashes after validating every fromEntity, so that we have a full list of errors
 	if aliasClashError != nil {
-		aliasClashError = multierror.Append(fmt.Errorf("toEntity and at least one fromEntity have aliases with the same mount accessor, repeat the merge request specifying exactly one fromEntity, clashes:"), aliasClashError)
 		return aliasClashError, nil
 	}
 
