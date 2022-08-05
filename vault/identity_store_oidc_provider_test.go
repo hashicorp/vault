@@ -3614,6 +3614,7 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		UserinfoEndpoint:      basePath + "/userinfo",
 		GrantTypes:            []string{"authorization_code"},
 		AuthMethods:           []string{"none", "client_secret_basic"},
+		RequestParameter:      false,
 		RequestURIParameter:   false,
 	}
 	discoveryResp := &providerDiscovery{}
@@ -3668,6 +3669,7 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		UserinfoEndpoint:      basePath + "/userinfo",
 		GrantTypes:            []string{"authorization_code"},
 		AuthMethods:           []string{"none", "client_secret_basic"},
+		RequestParameter:      false,
 		RequestURIParameter:   false,
 	}
 	discoveryResp = &providerDiscovery{}
