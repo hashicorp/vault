@@ -66,6 +66,8 @@ module('Integration | Component | oidc/client-form', function (hooks) {
       .dom('[data-test-oidc-client-title]')
       .hasText('Create application', 'Form title renders correct text');
     assert.dom(SELECTORS.clientSaveButton).hasText('Create', 'Save button has correct text');
+    assert.equal(findAll('[data-test-field]').length, 6, 'renders all attribute fields');
+    assert.dom('input#allow-all').isChecked('Allow all radio button selected by default');
 
     // check validation errors
     await click(SELECTORS.clientSaveButton);
@@ -87,7 +89,6 @@ module('Integration | Component | oidc/client-form', function (hooks) {
       .dom('[data-test-search-select-with-modal]')
       .exists('Limited radio button shows assignments search select');
 
-    assert.equal(findAll('[data-test-field]').length, 6, 'renders all attribute fields');
     await clickTrigger();
     assert.dom('li.ember-power-select-option').hasText('assignment-1', 'dropdown renders assignments');
     await fillIn('[data-test-input="name"]', 'some-app');
@@ -129,6 +130,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     assert
       .dom('[data-test-input="clientType"] input#confidential')
       .isChecked('Correct radio button is selected');
+    assert.dom('input#allow-all').isChecked('Allow all radio button is selected');
     await click(SELECTORS.clientSaveButton);
   });
 
@@ -167,7 +169,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     await fillIn('[data-test-input="redirectUris"] [data-test-string-list-input="0"]', 'some-url.com');
     await click('[data-test-string-list-button="add"]');
     await click(SELECTORS.clientCancelButton);
-    assert.equal(this.model.redirectUris, undefined, 'Model attributes rolled back on cancels');
+    assert.equal(this.model.redirectUris, undefined, 'Model attributes rolled back on cancel');
   });
 
   test('it should show create assignment modal', async function (assert) {
