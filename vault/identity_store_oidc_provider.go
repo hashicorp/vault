@@ -448,7 +448,6 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 				"state": {
 					Type:        framework.TypeString,
 					Description: "The value used to maintain state between the authentication request and client.",
-					Required:    true,
 				},
 				"nonce": {
 					Type:        framework.TypeString,
@@ -1609,11 +1608,7 @@ func (i *IdentityStore) keyIDsReferencedByTargetClientIDs(ctx context.Context, s
 }
 
 func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	// Validate the state
 	state := d.Get("state").(string)
-	if state == "" {
-		return authResponse("", "", ErrAuthInvalidRequest, "state parameter is required")
-	}
 
 	// Get the namespace
 	ns, err := namespace.FromContext(ctx)
