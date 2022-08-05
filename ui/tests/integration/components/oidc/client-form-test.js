@@ -46,7 +46,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
   });
 
   test('it should save new client', async function (assert) {
-    assert.expect(10);
+    assert.expect(13);
 
     this.server.post('/identity/oidc/client/some-app', (schema, req) => {
       assert.ok(true, 'Request made to save client');
@@ -62,12 +62,15 @@ module('Integration | Component | oidc/client-form', function (hooks) {
         @onSave={{this.onSave}}
       />
     `);
+    await click('[data-test-toggle-group="More options"]');
     assert
       .dom('[data-test-oidc-client-title]')
       .hasText('Create application', 'Form title renders correct text');
     assert.dom(SELECTORS.clientSaveButton).hasText('Create', 'Save button has correct text');
     assert.equal(findAll('[data-test-field]').length, 6, 'renders all attribute fields');
     assert.dom('input#allow-all').isChecked('Allow all radio button selected by default');
+    assert.dom('[data-test-ttl-value="ID Token TTL"]').hasValue('1', 'ttl defaults to 24h');
+    assert.dom('[data-test-ttl-value="Access Token TTL"]').hasValue('1', 'ttl defaults to 24h');
 
     // check validation errors
     await click(SELECTORS.clientSaveButton);
@@ -80,7 +83,6 @@ module('Integration | Component | oidc/client-form', function (hooks) {
       .dom('[data-test-inline-error-message]')
       .hasText('Name cannot contain whitespace.', 'Validation message is shown whitespace');
 
-    await click('[data-test-toggle-group="More options"]');
     await click('label[for=limited]');
     assert
       .dom('[data-test-selected-option="true"]')
@@ -96,7 +98,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
   });
 
   test('it should update client', async function (assert) {
-    assert.expect(10);
+    assert.expect(11);
 
     this.server.post('/identity/oidc/client/some-app', (schema, req) => {
       assert.ok(true, 'Request made to save client');
