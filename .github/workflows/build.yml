@@ -24,10 +24,9 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v2
       - name: Determine Go version
+        id: get-go-version
         run: |
-          go mod edit -json | jq .Go
-          VERSION=$(go mod edit -json | jq .Go)
-          echo "::set-output name=go-version::${VERSION}"
+          echo "::set-output name=go-version::$(go mod edit -json | jq .Go)"
       - name: Get product version
         id: get-product-version
         run: |
