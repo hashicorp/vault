@@ -10,17 +10,36 @@ terraform {
   }
 }
 
-variable "ami_id" {}
-variable "common_tags" {}
-variable "consul_license" {}
-variable "consul_release" {}
-variable "environment" {}
-variable "instance_type" {}
-variable "kms_key_arn" {}
-variable "project_name" {}
-variable "ssh_aws_keypair" {}
-variable "vpc_id" {}
-variable "common_tags" {}
+variable "ami_id" {
+  default = null
+}
+variable "common_tags" {
+  default = null
+}
+variable "consul_license" {
+  default = null
+}
+variable "consul_release" {
+  default = null
+}
+variable "environment" {
+  default = null
+}
+variable "instance_type" {
+  default = null
+}
+variable "kms_key_arn" {
+  default = null
+}
+variable "project_name" {
+  default = null
+}
+variable "ssh_aws_keypair" {
+  default = null
+}
+variable "vpc_id" {
+  default = null
+}
 
 output "consul_cluster_tag" {
   value = null
