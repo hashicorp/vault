@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/go-multierror"
+
 	"github.com/golang/protobuf/ptypes"
 	memdb "github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -723,15 +725,6 @@ func (i *IdentityStore) handlePathEntityListCommon(ctx context.Context, req *log
 	return logical.ListResponseWithInfo(keys, entityInfo), nil
 }
 
-// A small type to help error reporting during entity alias clashes
-type aliasClashInformation struct {
-	toEntityId    string
-	fromEntityId  string
-	toAliasId     string
-	fromAliasId   string
-	mountAccessor string
-}
-
 func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntity *identity.Entity, fromEntityIDs, conflictingAliasIDsToKeep []string, force, grabLock, mergePolicies, persist, forceMergeAliases bool) (error, error) {
 	if grabLock {
 		i.lock.Lock()
@@ -759,8 +752,8 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 	// A map to check if there are any clashes between mount accessors for any of the sanitizedFromEntityIDs
 	fromEntityAccessors := make(map[string]string)
 
-	// A list detailing clashes between all entity aliases
-	aliasClashes := make([]aliasClashInformation, 0)
+	// An error detailing if any alias clashes happen (shared mount accessor)
+	var aliasClashError error
 
 	for _, fromEntityID := range sanitizedFromEntityIDs {
 		if fromEntityID == toEntity.ID {
@@ -793,15 +786,11 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 
 					fromEntityAccessors[fromAlias.MountAccessor] = fromEntityID
 
-					// If it doesn't, check if it clashes with the to Entities
+					// If it doesn't, check if it clashes with the toEntities
 					if toAlias.MountAccessor == fromAlias.MountAccessor {
-						aliasClashes = append(aliasClashes, aliasClashInformation{
-							toEntityId:    toEntity.ID,
-							fromEntityId:  fromEntityID,
-							toAliasId:     toAlias.ID,
-							fromAliasId:   fromAlias.ID,
-							mountAccessor: toAlias.MountAccessor,
-						})
+						aliasClashError = multierror.Append(fmt.Errorf("mountAccessor: %s, toEntity ID: %s, fromEntity ID: %s, conflicting toEntity alias ID: %s, conflicting fromEntity alias ID: %s",
+							toAlias.MountAccessor, toEntity.ID, fromEntityID, toAlias.ID, fromAlias.ID),
+							aliasClashError)
 					}
 				}
 			}
@@ -821,14 +810,9 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 	}
 
 	// Check alias clashes after validating every fromEntity, so that we have a full list of errors
-	if len(aliasClashes) != 0 {
-		var conflictingAliasesInformation string
-		for _, clash := range aliasClashes {
-			clashString := fmt.Sprintf("\nmountAccessor: %s, toEntity ID: %s, fromEntity ID: %s, conflicting toEntity alias ID: %s, conflicting fromEntity alias ID: %s",
-				clash.mountAccessor, clash.toEntityId, clash.fromEntityId, clash.toAliasId, clash.fromAliasId)
-			conflictingAliasesInformation = conflictingAliasesInformation + clashString
-		}
-		return fmt.Errorf("toEntity and at least one fromEntity have aliases with the same mount accessor, repeat the merge request specifying exactly one fromEntity, clashes:%s", conflictingAliasesInformation), nil
+	if aliasClashError != nil {
+		aliasClashError = multierror.Append(fmt.Errorf("toEntity and at least one fromEntity have aliases with the same mount accessor, repeat the merge request specifying exactly one fromEntity, clashes:"), aliasClashError)
+		return aliasClashError, nil
 	}
 
 	isPerfSecondaryOrStandby := i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) ||
