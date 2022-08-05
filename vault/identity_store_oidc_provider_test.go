@@ -55,7 +55,7 @@ func TestOIDC_Path_OIDC_Cross_Provider_Exchange(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, json.Unmarshal(resp.Data["http_raw_body"].([]byte), &authRes))
 	require.Regexp(t, authCodeRegex, authRes.Code)
-	require.NotEmpty(t, authRes.State)
+	require.Equal(t, req.Data["state"], authRes.State)
 
 	// Assert that the authorization code cannot be exchanged using the second provider
 	var tokenRes struct {
@@ -477,7 +477,7 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 			}
 			require.NoError(t, json.Unmarshal(resp.Data["http_raw_body"].([]byte), &authRes))
 			require.Regexp(t, authCodeRegex, authRes.Code)
-			require.NotEmpty(t, authRes.State)
+			require.Equal(t, tt.args.authorizeReq.Data["state"], authRes.State)
 
 			// Update the assignment
 			tt.args.assignmentReq.Operation = logical.UpdateOperation
@@ -741,21 +741,6 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 			wantErr: ErrAuthInvalidRedirectURI,
 		},
 		{
-			name: "invalid authorize request with missing state",
-			args: args{
-				entityID:      entityID,
-				clientReq:     testClientReq(s),
-				providerReq:   testProviderReq(s, clientID),
-				assignmentReq: testAssignmentReq(s, entityID, groupID),
-				authorizeReq: func() *logical.Request {
-					req := testAuthorizeReq(s, clientID)
-					req.Data["state"] = ""
-					return req
-				}(),
-			},
-			wantErr: ErrAuthInvalidRequest,
-		},
-		{
 			name: "invalid authorize request with request parameter provided",
 			args: args{
 				entityID:      entityID,
@@ -906,6 +891,20 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				authorizeReq: func() *logical.Request {
 					req := testAuthorizeReq(s, clientID)
 					delete(req.Data, "nonce")
+					return req
+				}(),
+			},
+		},
+		{
+			name: "valid authorize request with empty state",
+			args: args{
+				entityID:      entityID,
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["state"] = ""
 					return req
 				}(),
 			},
@@ -1143,7 +1142,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 			expectSuccess(t, resp, err)
 			require.Equal(t, http.StatusOK, resp.Data[logical.HTTPStatusCode].(int))
 			require.Regexp(t, authCodeRegex, authRes.Code)
-			require.NotEmpty(t, authRes.State)
+			require.Equal(t, tt.args.authorizeReq.Data["state"], authRes.State)
 			require.Empty(t, authRes.Error)
 			require.Empty(t, authRes.ErrorDescription)
 		})
