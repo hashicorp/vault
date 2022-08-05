@@ -591,12 +591,9 @@ func TestPluginClientConfig(c *Core, pluginType consts.PluginType, pluginName st
 			PluginSets:      backendpluginv5.PluginSet,
 			HandshakeConfig: backendplugin.HandshakeConfig,
 			Logger:          log.NewNullLogger(),
-			AutoMTLS:        false,
-
-			// TODO: once AutoMTLS is enabled for secrets/auth plugins we
-			// should be able to set IsMetadataMode to false and remove Wrapper
-			IsMetadataMode: true,
-			Wrapper:        dsv,
+			AutoMTLS:        true,
+			IsMetadataMode:  false,
+			Wrapper:         dsv,
 		}
 	case consts.PluginTypeDatabase:
 		return pluginutil.PluginClientConfig{
