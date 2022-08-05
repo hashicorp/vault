@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -146,6 +147,9 @@ type issuerEntry struct {
 	LeafNotAfterBehavior certutil.NotAfterBehavior `json:"not_after_behavior"`
 	Usage                issuerUsage               `json:"usage"`
 	RevocationSigAlg     x509.SignatureAlgorithm   `json:"revocation_signature_algorithm"`
+	Revoked              bool                      `json:"revoked"`
+	RevocationTime       int64                     `json:"revocation_time"`
+	RevocationTimeUTC    time.Time                 `json:"revocation_time_utc"`
 }
 
 type localCRLConfigEntry struct {

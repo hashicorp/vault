@@ -6,8 +6,10 @@ import (
 	"encoding/pem"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -316,5 +318,169 @@ certificates.
 Depending on the value of :type, the pem_bundle request parameter can
 either take PEM-formatted certificates, and, if :type="bundle", unencrypted
 secret-keys.
+`
+)
+
+func pathRevokeIssuer(b *backend) *framework.Path {
+	fields := addIssuerRefField(map[string]*framework.FieldSchema{})
+
+	return &framework.Path{
+		Pattern: "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/revoke",
+		Fields:  fields,
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathRevokeIssuer,
+				// Read more about why these flags are set in backend.go
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
+		},
+
+		HelpSynopsis:    pathRevokeIssuerHelpSyn,
+		HelpDescription: pathRevokeIssuerHelpDesc,
+	}
+}
+
+func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Since we're planning on updating issuers here, grab the lock so we've
+	// got a consistent view.
+	b.issuersLock.Lock()
+	defer b.issuersLock.Unlock()
+
+	// Issuer revocation can't work on the legacy cert bundle.
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("cannot revoke issuer until migration has completed"), nil
+	}
+
+	issuerName := getIssuerRef(data)
+	if len(issuerName) == 0 {
+		return logical.ErrorResponse("missing issuer reference"), nil
+	}
+
+	// Fetch the issuer.
+	sc := b.makeStorageContext(ctx, req.Storage)
+	ref, err := sc.resolveIssuerReference(issuerName)
+	if err != nil {
+		return nil, err
+	}
+	if ref == "" {
+		return logical.ErrorResponse("unable to resolve issuer id for reference: " + issuerName), nil
+	}
+
+	issuer, err := sc.fetchIssuerById(ref)
+	if err != nil {
+		return nil, err
+	}
+
+	// If its already been revoked, just return the read results sans warnings
+	// like we would otherwise.
+	if issuer.Revoked {
+		return respondReadIssuer(issuer)
+	}
+
+	// When revoking, we want to forbid new certificate issuance. We allow
+	// new revocations of leaves issued by this issuer to trigger a CRL
+	// rebuild still.
+	issuer.Revoked = true
+	if issuer.Usage.HasUsage(IssuanceUsage) {
+		issuer.Usage.ToggleUsage(IssuanceUsage)
+	}
+
+	currTime := time.Now()
+	issuer.RevocationTime = currTime.Unix()
+	issuer.RevocationTimeUTC = currTime.UTC()
+
+	err = sc.writeIssuer(issuer)
+	if err != nil {
+		return nil, err
+	}
+
+	// Rebuild the CRL to include the newly revoked issuer.
+	crlErr := b.crlBuilder.rebuild(ctx, b, req, false)
+	if crlErr != nil {
+		switch crlErr.(type) {
+		case errutil.UserError:
+			return logical.ErrorResponse(fmt.Sprintf("Error during CRL building: %s", crlErr)), nil
+		default:
+			return nil, fmt.Errorf("error encountered during CRL building: %w", crlErr)
+		}
+	}
+
+	// Finally, respond with the issuer's updated data.
+	response, err := respondReadIssuer(issuer)
+	if err != nil {
+		// Impossible.
+		return nil, err
+	}
+
+	// For sanity, we'll add a warning message here if there's no other
+	// issuer which verifies this issuer.
+	ourCert, err := issuer.GetCertificate()
+	if err != nil {
+		return nil, err
+	}
+
+	allIssuers, err := sc.listIssuers()
+	if err != nil {
+		return nil, err
+	}
+
+	isSelfSigned := false
+	haveOtherIssuer := false
+	for _, candidateID := range allIssuers {
+		candidate, err := sc.fetchIssuerById(candidateID)
+		if err != nil {
+			return nil, err
+		}
+
+		candidateCert, err := candidate.GetCertificate()
+		if err != nil {
+			// Returning this error is fine because more things will fail
+			// if this issuer can't parse.
+			return nil, err
+		}
+
+		if err := ourCert.CheckSignatureFrom(candidateCert); err == nil {
+			// Signature verification is a success. This means we have a
+			// parent for this cert. But notice above we didn't filter out
+			// ourselves: we want to see if this is a self-signed cert. So
+			// check that now.
+			if candidate.ID == issuer.ID {
+				isSelfSigned = true
+			} else {
+				haveOtherIssuer = true
+			}
+		}
+
+		// If we have both possible warning candidates, no sense continuing
+		// to check signatures; exit.
+		if isSelfSigned && haveOtherIssuer {
+			break
+		}
+	}
+
+	if isSelfSigned {
+		response.AddWarning("This issuer is a self-signed (potentially root) certificate. This means it may not be considered revoked if there is not an external, cross-signed variant of this certificate. This issuer's serial number will not appear on its own CRL.")
+	}
+
+	if !haveOtherIssuer {
+		response.AddWarning("This issuer lacks another parent issuer within the mount. This means it will not appear on any other CRLs and may not be considered revoked by clients. Consider adding this issuer to its issuer's CRL as well if it is not self-signed.")
+	}
+
+	return response, nil
+}
+
+const (
+	pathRevokeIssuerHelpSyn  = `Revoke the specified issuer certificate.`
+	pathRevokeIssuerHelpDesc = `
+This endpoint allows revoking the specified issuer certificates.
+
+This is useful when the issuer and its parent exist within the same PKI
+mount point (utilizing the multi-issuer functionality). If no suitable
+parent is found, this revocation may not appear on any CRL in this mount.
+
+Once revoked, issuers cannot be unrevoked and may not be used to sign any
+more certificates.
 `
 )

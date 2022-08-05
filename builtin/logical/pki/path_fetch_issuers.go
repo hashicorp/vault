@@ -196,18 +196,26 @@ func respondReadIssuer(issuer *issuerEntry) (*logical.Response, error) {
 		revSigAlgStr = ""
 	}
 
+	data := map[string]interface{}{
+		"issuer_id":                      issuer.ID,
+		"issuer_name":                    issuer.Name,
+		"key_id":                         issuer.KeyID,
+		"certificate":                    issuer.Certificate,
+		"manual_chain":                   respManualChain,
+		"ca_chain":                       issuer.CAChain,
+		"leaf_not_after_behavior":        issuer.LeafNotAfterBehavior.String(),
+		"usage":                          issuer.Usage.Names(),
+		"revocation_signature_algorithm": revSigAlgStr,
+		"revoked":                        issuer.Revoked,
+	}
+
+	if issuer.Revoked {
+		data["revocation_time"] = issuer.RevocationTime
+		data["revocation_time_utc"] = issuer.RevocationTimeUTC
+	}
+
 	return &logical.Response{
-		Data: map[string]interface{}{
-			"issuer_id":                      issuer.ID,
-			"issuer_name":                    issuer.Name,
-			"key_id":                         issuer.KeyID,
-			"certificate":                    issuer.Certificate,
-			"manual_chain":                   respManualChain,
-			"ca_chain":                       issuer.CAChain,
-			"leaf_not_after_behavior":        issuer.LeafNotAfterBehavior.String(),
-			"usage":                          issuer.Usage.Names(),
-			"revocation_signature_algorithm": revSigAlgStr,
-		},
+		Data: data,
 	}, nil
 }
 
@@ -308,6 +316,11 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	if newUsage != issuer.Usage {
+		if issuer.Revoked && newUsage.HasUsage(IssuanceUsage) {
+			// Forbid allowing cert signing on its usage.
+			return logical.ErrorResponse(fmt.Sprintf("This issuer was revoked; unable to modify its usage to include certificate signing again. Reissue this certificate (preferably with a new key) and modify that entry instead.")), nil
+		}
+
 		issuer.Usage = newUsage
 		modified = true
 	}
@@ -461,6 +474,11 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 			return logical.ErrorResponse(fmt.Sprintf("Unable to parse specified usages: %v - valid values are %v", rawUsage, AllIssuerUsages.Names())), nil
 		}
 		if newUsage != issuer.Usage {
+			if issuer.Revoked && newUsage.HasUsage(IssuanceUsage) {
+				// Forbid allowing cert signing on its usage.
+				return logical.ErrorResponse(fmt.Sprintf("This issuer was revoked; unable to modify its usage to include certificate signing again. Reissue this certificate (preferably with a new key) and modify that entry instead.")), nil
+			}
+
 			issuer.Usage = newUsage
 			modified = true
 		}
