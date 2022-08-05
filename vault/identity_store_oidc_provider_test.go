@@ -434,6 +434,22 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 			},
 		},
 		{
+			name: "valid token request with client_secret_post client authentication method",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq:  testAuthorizeReq(s, clientID),
+				tokenReq: func() *logical.Request {
+					req := testTokenReq(s, "", clientID, clientSecret)
+					req.Headers = nil
+					req.Data["client_id"] = clientID
+					req.Data["client_secret"] = clientSecret
+					return req
+				}(),
+			},
+		},
+		{
 			name: "valid token request",
 			args: args{
 				clientReq:     testClientReq(s),

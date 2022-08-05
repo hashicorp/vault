@@ -510,8 +510,8 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 					Description: "The code verifier associated with the authorization code.",
 				},
 				// For confidential clients, the client_id and client_secret are provided to
-				// the token endpoint via the 'client_secret_basic' authentication method, which
-				// uses the HTTP Basic authentication scheme. See the OIDC spec for details at:
+				// the token endpoint via the 'client_secret_basic' or 'client_secret_post'
+				// authentication methods. See the OIDC spec for details at:
 				// https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication
 
 				// For public clients, the client_id is required and a client_secret does
@@ -521,6 +521,10 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 				"client_id": {
 					Type:        framework.TypeString,
 					Description: "The ID of the requesting client.",
+				},
+				"client_secret": {
+					Type:        framework.TypeString,
+					Description: "The secret of the requesting client.",
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -1482,6 +1486,7 @@ func (i *IdentityStore) pathOIDCProviderDiscovery(ctx context.Context, req *logi
 			// PKCE is required for auth method "none"
 			"none",
 			"client_secret_basic",
+			"client_secret_post",
 		},
 	}
 
@@ -1859,13 +1864,15 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 		return tokenResponse(nil, ErrTokenInvalidRequest, "provider not found")
 	}
 
-	// Get the client ID
+	// client_secret_basic - Check for client credentials in the Authorization header
 	clientID, clientSecret, okBasicAuth := basicAuth(req)
 	if !okBasicAuth {
+		// client_secret_post - Check for client credentials in the request body
 		clientID = d.Get("client_id").(string)
 		if clientID == "" {
 			return tokenResponse(nil, ErrTokenInvalidRequest, "client_id parameter is required")
 		}
+		clientSecret = d.Get("client_secret").(string)
 	}
 	client, err := i.clientByID(ctx, req.Storage, clientID)
 	if err != nil {
@@ -1876,8 +1883,7 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 		return tokenResponse(nil, ErrTokenInvalidClient, "client failed to authenticate")
 	}
 
-	// Authenticate the client using the client_secret_basic authentication method if it's a
-	// confidential client. The authentication method uses the HTTP Basic authentication scheme.
+	// Authenticate the client if it's a confidential client type.
 	// Details at https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication
 	if client.Type == confidential &&
 		subtle.ConstantTimeCompare([]byte(client.ClientSecret), []byte(clientSecret)) == 0 {
