@@ -154,6 +154,7 @@ type providerDiscovery struct {
 	AuthorizationEndpoint string   `json:"authorization_endpoint"`
 	TokenEndpoint         string   `json:"token_endpoint"`
 	UserinfoEndpoint      string   `json:"userinfo_endpoint"`
+	RequestParameter      bool     `json:"request_parameter_supported"`
 	RequestURIParameter   bool     `json:"request_uri_parameter_supported"`
 	IDTokenAlgs           []string `json:"id_token_signing_alg_values_supported"`
 	ResponseTypes         []string `json:"response_types_supported"`
@@ -448,7 +449,6 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 				"state": {
 					Type:        framework.TypeString,
 					Description: "The value used to maintain state between the authentication request and client.",
-					Required:    true,
 				},
 				"nonce": {
 					Type:        framework.TypeString,
@@ -1478,6 +1478,7 @@ func (i *IdentityStore) pathOIDCProviderDiscovery(ctx context.Context, req *logi
 		UserinfoEndpoint:      p.effectiveIssuer + "/userinfo",
 		IDTokenAlgs:           supportedAlgs,
 		Scopes:                scopes,
+		RequestParameter:      false,
 		RequestURIParameter:   false,
 		ResponseTypes:         []string{"code"},
 		Subjects:              []string{"public"},
@@ -1614,11 +1615,7 @@ func (i *IdentityStore) keyIDsReferencedByTargetClientIDs(ctx context.Context, s
 }
 
 func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	// Validate the state
 	state := d.Get("state").(string)
-	if state == "" {
-		return authResponse("", "", ErrAuthInvalidRequest, "state parameter is required")
-	}
 
 	// Get the namespace
 	ns, err := namespace.FromContext(ctx)
