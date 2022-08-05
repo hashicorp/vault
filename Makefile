@@ -185,8 +185,8 @@ proto: bootstrap
 	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/helper/pluginutil/*.proto
 
 	# No additional sed expressions should be added to this list. Going forward
-	# we should just use the variable names choosen by protobuf. These are left
-	# here for backwards compatability, namely for SDK compilation.
+	# we should just use the variable names chosen by protobuf. These are left
+	# here for backwards compatibility, namely for SDK compilation.
 	sed -i -e 's/Id/ID/' vault/request_forwarding_service.pb.go
 	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go sdk/plugin/pb/backend.pb.go sdk/logical/identity.pb.go vault/activity/activity_log.pb.go
 

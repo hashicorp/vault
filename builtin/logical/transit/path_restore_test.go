@@ -95,7 +95,7 @@ func TestTransit_Restore(t *testing.T) {
 		// The error we expect, if any
 		ExpectedErr error
 
-		// RestoreName is used to restore the key to a differnt name
+		// RestoreName is used to restore the key to a different name
 		RestoreName string
 	}{
 		{

@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	vlttesting "github.com/hashicorp/vault/helper/testhelpers/logical"
@@ -633,7 +632,7 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 	}
 
 	if resp.Data["role_id"] == nil {
-		t.Fatal("role_id not found in repsonse")
+		t.Fatal("role_id not found in response")
 	}
 	expected["role_id"] = resp.Data["role_id"]
 	if diff := deep.Equal(expected, resp.Data); diff != nil {

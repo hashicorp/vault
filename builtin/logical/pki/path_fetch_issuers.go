@@ -432,7 +432,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	}
 
 	// Leaf Not After Changes
-	rawLeafBehaviorData, ok := data.GetOk("leaf_not_after_behaivor")
+	rawLeafBehaviorData, ok := data.GetOk("leaf_not_after_behavior")
 	if ok {
 		rawLeafBehavior := rawLeafBehaviorData.(string)
 		var newLeafBehavior certutil.NotAfterBehavior
