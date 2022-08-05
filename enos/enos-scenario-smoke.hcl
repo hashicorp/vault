@@ -24,6 +24,11 @@ scenario "smoke" {
       rhel   = provider.enos.rhel
       ubuntu = provider.enos.ubuntu
     }
+    tags = merge({
+      "Project Name" : var.project_name
+      "Project" : "Enos",
+      "Environment" : "ci"
+    }, var.tags)
   }
 
   step "build_vault" {
@@ -52,7 +57,7 @@ scenario "smoke" {
     variables {
       ami_architectures  = [matrix.arch]
       availability_zones = step.find_azs.availability_zones
-      common_tags        = var.tags
+      common_tags        = local.tags
     }
   }
 
@@ -70,14 +75,14 @@ scenario "smoke" {
     depends_on = [step.create_vpc]
 
     providers = {
-      enos = local.enos_provider[matrix.distro]
+      enos = provider.enos.ubuntu
     }
 
     variables {
-      ami_id      = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
-      common_tags = var.tags
+      ami_id      = step.create_vpc.ami_ids["ubuntu"][matrix.arch]
+      common_tags = local.tags
       consul_release = {
-        edition = "oss"
+        edition = var.backend_edition
         version = matrix.consul_version
       }
       instance_type = var.backend_instance_type
@@ -99,7 +104,7 @@ scenario "smoke" {
 
     variables {
       ami_id                    = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
-      common_tags               = var.tags
+      common_tags               = local.tags
       consul_cluster_tag        = step.create_backend_cluster.consul_cluster_tag
       enos_transport_user       = local.enos_provider[matrix.distro].config.attrs.transport.ssh.user
       instance_count            = var.vault_instance_count

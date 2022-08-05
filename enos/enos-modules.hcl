@@ -5,13 +5,13 @@ module "az_finder" {
 module "backend_consul" {
   source = "app.terraform.io/hashicorp-qti/aws-consul/enos"
 
-  project_name    = "qti-enos-provider"
+  project_name    = var.project_name
   environment     = "ci"
   common_tags     = var.tags
   ssh_aws_keypair = var.aws_ssh_keypair_name
 
   # Set this to a real license vault if using an Enterprise edition of Consul
-  consul_license = "none"
+  consul_license = var.backend_license_path == null ? "none" : file(abspath(var.backend_license_path))
 }
 
 module "backend_raft" {
@@ -29,7 +29,7 @@ module "build_local" {
 module "create_vpc" {
   source = "app.terraform.io/hashicorp-qti/aws-infra/enos"
 
-  project_name      = "qti-enos-provider"
+  project_name      = var.project_name
   environment       = "ci"
   common_tags       = var.tags
   ami_architectures = ["amd64", "arm64"]
@@ -42,7 +42,7 @@ module "read_license" {
 module "vault_cluster" {
   source = "app.terraform.io/hashicorp-qti/aws-vault/enos"
 
-  project_name    = "vault-enos-integration"
+  project_name    = var.project_name
   environment     = "ci"
   common_tags     = var.tags
   ssh_aws_keypair = var.aws_ssh_keypair_name

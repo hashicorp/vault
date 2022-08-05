@@ -16,20 +16,34 @@ variable "aws_ssh_private_key_path" {
   default     = "./support/private_key.pem"
 }
 
+variable "backend_edition" {
+  description = "The backend release edition if applicable"
+  type = string
+  default = "oss"
+}
+
 variable "backend_instance_type" {
   description = "The instance type to use for the Vault backend"
   type        = string
   default     = "t3.small"
 }
 
+variable "backend_license_path" {
+  description = "The license for the backend if applicable (Consul Enterprise)"
+  type        = string
+  default     = null
+}
+
+variable "project_name" {
+  description = "The description of the project"
+  type        = string
+  default     = "vault-enos-integration"
+}
+
 variable "tags" {
   description = "Tags that will be applied to infrastructure resources that support tagging"
   type        = map(string)
-  default = {
-    "Project Name" : "vault-enos-integration",
-    "Project" : "Enos",
-    "Environment" : "ci"
-  }
+  default     = null
 }
 
 variable "terraform_plugin_cache_dir" {
