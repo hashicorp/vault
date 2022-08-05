@@ -55,7 +55,7 @@
     </div>
     {{#if (eq this.radioCardGroupValue "limited")}}
       <SearchSelect
-        @id="clients"
+        @id="allowedClientIds"
         @subLabel="Application name"
         @models={{array "oidc/client"}}
         @inputValue={{@model.allowedClientIds}}

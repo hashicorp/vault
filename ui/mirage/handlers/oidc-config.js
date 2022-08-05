@@ -44,6 +44,37 @@ export default function (server) {
     };
   });
 
+  // LIST ENDPOINTS
+  server.get('/identity/oidc/client', () => {
+    return {
+      request_id: 'client-list-id',
+      lease_id: '',
+      renewable: false,
+      lease_duration: 0,
+      data: {
+        keys: ['some-app'],
+      },
+      wrap_info: null,
+      warnings: null,
+      auth: null,
+    };
+  });
+
+  server.get('/identity/oidc/scope', () => {
+    return {
+      request_id: 'scope-list-id',
+      lease_id: '',
+      renewable: false,
+      lease_duration: 0,
+      data: {
+        keys: ['test-scope'],
+      },
+      wrap_info: null,
+      warnings: null,
+      auth: null,
+    };
+  });
+
   server.get('/identity/oidc/assignment', () => {
     return {
       request_id: 'assignment-list-id',
@@ -68,6 +99,7 @@ export default function (server) {
       keys: ['1234-12345'],
     },
   }));
+
   server.get('/identity/group/id', () => ({
     data: {
       key_info: { 'abcdef-123': { name: 'test-group' } },

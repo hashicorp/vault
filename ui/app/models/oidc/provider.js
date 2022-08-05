@@ -4,7 +4,13 @@ import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { withModelValidations } from 'vault/decorators/model-validations';
 
 const validations = {
-  name: [{ type: 'presence', message: 'Name is required.' }],
+  name: [
+    { type: 'presence', message: 'Name is required.' },
+    {
+      type: 'containsWhiteSpace',
+      message: 'Name cannot contain whitespace.',
+    },
+  ],
 };
 
 @withModelValidations(validations)
@@ -16,13 +22,16 @@ export default class OidcProviderModel extends Model {
     docLink: '/api-docs/secret/identity/oidc-provider#create-or-update-a-provider',
   })
   issuer;
+
   @attr('array', {
     label: 'Supported scopes',
     subText: 'Scopes define information about a user and the OIDC service. Optional.',
     editType: 'searchSelect',
     models: ['oidc/scope'],
+    fallbackComponent: 'string-list',
   })
   scopesSupported;
+
   @attr('array', { label: 'Allowed applications' }) allowedClientIds; // no editType because does not use form-field component
 
   // TODO refactor when field-to-attrs is refactored as decorator
