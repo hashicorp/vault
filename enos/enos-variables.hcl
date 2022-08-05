@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "aws_ssh_keypair_name" {
   description = "The AWS keypair to use for SSH"
   type        = string
-  default     = "enos-ci-ssh-keypair"
+  default     = "enos-ci-ssh-key"
 }
 
 variable "aws_ssh_private_key_path" {

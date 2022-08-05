@@ -70,7 +70,7 @@ jobs:
             goarch: arm
       fail-fast: true
 
-    name: Go ${{ needs.product-metadata.outputs.go-version }} ${{ matrix.goos }} ${{ matrix.goarch }} build
+    name: Go ${{ matrix.goos }} ${{ matrix.goarch }} build
 
     steps:
       - uses: actions/checkout@v2
@@ -114,7 +114,7 @@ jobs:
         goarch: ["arm", "arm64", "386", "amd64"]
       fail-fast: true
 
-    name: Go ${{ needs.product-metadata.outputs.go-version }} ${{ matrix.goos }} ${{ matrix.goarch }} build
+    name: Go ${{ matrix.goos }} ${{ matrix.goarch }} build
 
     steps:
       - uses: actions/checkout@v2
@@ -189,7 +189,7 @@ jobs:
         goos: [ darwin ]
         goarch: [ "amd64", "arm64" ]
       fail-fast: true
-    name: Go ${{ needs.product-metadata.outputs.go-version }} ${{ matrix.goos }} ${{ matrix.goarch }} build
+    name: Go ${{ matrix.goos }} ${{ matrix.goarch }} build
     steps:
       - uses: actions/checkout@v2
 

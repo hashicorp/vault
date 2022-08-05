@@ -56,7 +56,7 @@ jobs:
       - name: Set up AWS SSH private key
         run: |
           mkdir -p ./enos/support
-          echo "${{ secrets.ENOS_CI_SSH_KEYPAIR }}" > ./enos/support/private_key.pem
+          echo "${{ secrets.ENOS_CI_SSH_KEY }}" > ./enos/support/private_key.pem
           chmod 600 ./enos/support/private_key.pem
       - name: Download Linux AMD64 Vault bundle
         id: download
@@ -75,7 +75,7 @@ jobs:
         continue-on-error: true
         env:
           ENOS_VAR_aws_region: ${{ matrix.aws_region }}
-          ENOS_VAR_aws_ssh_keypair_name: enos-ci-ssh-keypair
+          ENOS_VAR_aws_ssh_keypair_name: enos-ci-ssh-key
           ENOS_VAR_aws_ssh_private_key_path: ./support/private_key.pem
           ENOS_VAR_tfc_api_token: ${{ secrets.TF_API_TOKEN }}
           ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache
@@ -88,7 +88,7 @@ jobs:
         if: steps.run.outcome == 'failure'
         env:
           ENOS_VAR_aws_region: ${{ matrix.aws_region }}
-          ENOS_VAR_aws_ssh_keypair_name: enos-ci-ssh-keypair
+          ENOS_VAR_aws_ssh_keypair_name: enos-ci-ssh-key
           ENOS_VAR_aws_ssh_private_key_path: ./support/private_key.pem
           ENOS_VAR_tfc_api_token: ${{ secrets.TF_API_TOKEN }}
           ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache
@@ -100,7 +100,7 @@ jobs:
         if: ${{ always() }}
         env:
           ENOS_VAR_aws_region: ${{ matrix.aws_region }}
-          ENOS_VAR_aws_ssh_keypair_name: enos-ci-ssh-keypair
+          ENOS_VAR_aws_ssh_keypair_name: enos-ci-ssh-key
           ENOS_VAR_aws_ssh_private_key_path: ./support/private_key.pem
           ENOS_VAR_tfc_api_token: ${{ secrets.TF_API_TOKEN }}
           ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache
