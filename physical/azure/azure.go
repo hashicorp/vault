@@ -44,7 +44,7 @@ var _ physical.Backend = (*AzureBackend)(nil)
 // from the environment, via HCL or by using managed identities.
 func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
 	name := os.Getenv("AZURE_BLOB_CONTAINER")
-	useMSI := false
+	keyAuth := true
 
 	if name == "" {
 		name = conf["container"]
@@ -66,7 +66,7 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		accountKey = conf["accountKey"]
 		if accountKey == "" {
 			logger.Info("accountKey not set, using managed identity auth")
-			useMSI = true
+			keyAuth = false
 		}
 	}
 
@@ -111,10 +111,26 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	}
 
 	var credential azblob.Credential
-	if useMSI {
-		authToken, err := getAuthTokenFromIMDS(environment.ResourceIdentifiers.Storage)
+	if keyAuth {
+		credential, err = azblob.NewSharedKeyCredential(accountName, accountKey)
 		if err != nil {
-			return nil, fmt.Errorf("failed to obtain auth token from IMDS %q: %w", environmentName, err)
+			return nil, fmt.Errorf("failed to create Azure client: %w", err)
+		}
+	} else {
+		var authToken *adal.ServicePrincipalToken
+		jwtBytes, err := ioutil.ReadFile(os.Getenv("AZURE_FEDERATED_TOKEN_FILE"))
+
+		if err == nil {
+			logger.Debug("found Azure federated token file - attempting OIDC auth")
+			authToken, err = getAuthTokenViaAzWorkloadIdentity(string(jwtBytes), environment.ResourceIdentifiers.Storage)
+			if err != nil {
+				return nil, fmt.Errorf("failed to obtain auth token via Azure Workload Identity %q: %w", environmentName, err)
+			}
+		} else {
+			authToken, err = getAuthTokenFromIMDS(environment.ResourceIdentifiers.Storage)
+			if err != nil {
+				return nil, fmt.Errorf("failed to obtain auth token from IMDS %q: %w", environmentName, err)
+			}
 		}
 
 		credential = azblob.NewTokenCredential(authToken.OAuthToken(), func(c azblob.TokenCredential) time.Duration {
@@ -136,11 +152,6 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 			// tokens are valid for 23h59m (86399s) by default, refresh after ~21h
 			return time.Duration(int(float64(expIn)*0.9)) * time.Second
 		})
-	} else {
-		credential, err = azblob.NewSharedKeyCredential(accountName, accountKey)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create Azure client: %w", err)
-		}
 	}
 
 	p := azblob.NewPipeline(credential, azblob.PipelineOptions{})
@@ -321,6 +332,33 @@ func getAuthTokenFromIMDS(resource string) (*adal.ServicePrincipalToken, error) 
 	token := spt.Token()
 	if token.IsZero() {
 		return nil, err
+	}
+
+	return spt, nil
+}
+
+func getAuthTokenViaAzWorkloadIdentity(jwt string, resource string) (*adal.ServicePrincipalToken, error) {
+	azClientId := os.Getenv("AZURE_CLIENT_ID")
+	azTenantId := os.Getenv("AZURE_TENANT_ID")
+	azAuthorityHost := os.Getenv("AZURE_AUTHORITY_HOST")
+
+	oauthConfig, err := adal.NewOAuthConfig(azAuthorityHost, azTenantId)
+	if err != nil {
+		return nil, err
+	}
+
+	spt, err := adal.NewServicePrincipalTokenFromFederatedToken(*oauthConfig, azClientId, jwt, resource)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := spt.Refresh(); err != nil {
+		return nil, err
+	}
+
+	token := spt.Token()
+	if token.IsZero() {
+		return nil, errors.New("could not get oauth token")
 	}
 
 	return spt, nil
