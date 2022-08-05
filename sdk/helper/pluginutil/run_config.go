@@ -22,8 +22,7 @@ type PluginClientConfig struct {
 	IsMetadataMode  bool
 	AutoMTLS        bool
 	MLock           bool
-	// TODO(JM): remove in favor of automtls?
-	Wrapper RunnerUtil
+	Wrapper         RunnerUtil
 }
 
 type runConfig struct {
