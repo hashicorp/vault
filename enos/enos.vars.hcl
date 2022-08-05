@@ -3,7 +3,7 @@
 # aws_region = "us-west-1"
 
 # aws_ssh_keypair_name is the AWS keypair to use for SSH
-# aws_ssh_keypair_name = "enos-ci-ssh-keypair"
+# aws_ssh_keypair_name = "enos-ci-ssh-key"
 
 # aws_ssh_private_key_path is the path to the AWS keypair private key
 # aws_ssh_private_key_path = "./support/private_key.pem"

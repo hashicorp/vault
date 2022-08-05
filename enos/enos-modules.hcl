@@ -8,7 +8,7 @@ module "backend_consul" {
   project_name    = "qti-enos-provider"
   environment     = "ci"
   common_tags     = var.tags
-  ssh_aws_keypair = "enos-ci-ssh-keypair"
+  ssh_aws_keypair = var.aws_ssh_keypair_name
 
   # Set this to a real license vault if using an Enterprise edition of Consul
   consul_license = "none"
@@ -45,7 +45,7 @@ module "vault_cluster" {
   project_name    = "vault-enos-integration"
   environment     = "ci"
   common_tags     = var.tags
-  ssh_aws_keypair = "enos-ci-ssh-keypair"
+  ssh_aws_keypair = var.aws_ssh_keypair_name
 }
 
 

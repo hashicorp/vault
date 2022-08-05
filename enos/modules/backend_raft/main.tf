@@ -11,9 +11,14 @@ terraform {
 }
 
 variable "ami_id" {}
+variable "common_tags" {}
+variable "consul_license" {}
 variable "consul_release" {}
+variable "environment" {}
 variable "instance_type" {}
 variable "kms_key_arn" {}
+variable "project_name" {}
+variable "ssh_aws_keypair" {}
 variable "vpc_id" {}
 variable "common_tags" {}
 

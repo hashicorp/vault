@@ -286,6 +286,5 @@ jobs:
       - build-linux
     uses: ./.github/workflows/enos-run.yml
     with:
-      # TODO: confirm this the artifact name structure we expect here
       artifact-name: "vault_${{ needs.product-metadata.outputs.product-version }}_linux_amd64.zip"
     secrets: inherit
