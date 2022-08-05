@@ -1646,8 +1646,7 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 	if provider == nil {
 		return authResponse("", state, ErrAuthInvalidRequest, "provider not found")
 	}
-	if !strutil.StrListContains(provider.AllowedClientIDs, "*") &&
-		!strutil.StrListContains(provider.AllowedClientIDs, clientID) {
+	if !provider.allowedClientID(clientID) {
 		return authResponse("", state, ErrAuthUnauthorizedClient, "client is not authorized to use the provider")
 	}
 
