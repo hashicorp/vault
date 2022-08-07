@@ -94,7 +94,7 @@ issuer's computed CAChain field, when non-empty.`,
 		Description: `Behavior of leaf's NotAfter fields: "err" to error
 if the computed NotAfter date exceeds that of this issuer; "truncate" to
 silently truncate to that of this issuer; or "permit" to allow this
-issuance to succeed (with NotAfter exceeding that of an issuer). Note that
+        issuance to succeed (with NotAfter exceeding that of an issuer). Note that
 not all values will results in certificates that can be validated through
 the entire validity period. It is suggested to use "truncate" for
 intermediate CAs and "permit" only for root CAs.`,
@@ -344,8 +344,10 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 
 	var oldName string
 	if newName != issuer.Name {
+		// If name is updated, we update issuerEntry LastModified?
 		oldName = issuer.Name
 		issuer.Name = newName
+		issuer.LastModified = time.Now().In(time.FixedZone("GMT", 0))
 		modified = true
 	}
 
@@ -530,8 +532,10 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 			return logical.ErrorResponse("new key name outside of valid character limits"), nil
 		}
 		if newName != issuer.Name {
+			// Diff between update and patch?
 			oldName = issuer.Name
 			issuer.Name = newName
+			issuer.LastModified = time.Now().In(time.FixedZone("GMT", 0))
 			modified = true
 		}
 	}
@@ -743,9 +747,31 @@ func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, da
 		return nil, err
 	}
 
-	certificate := []byte(issuer.Certificate)
-
 	var contentType string
+	var certificate []byte
+
+	// tmp
+	responseHeaders := map[string][]string{}
+	if hasHeader(headerIfModifiedSince, req) {
+		before, err := isIfModifiedSinceBeforeLastModified(sc, req, responseHeaders)
+		if err != nil {
+			return nil, err // errorResponse, nil or nil, err?
+		}
+		if before {
+			return &logical.Response{
+				Data: map[string]interface{}{
+					logical.HTTPContentType: contentType,
+					logical.HTTPRawBody:     certificate,
+					logical.HTTPStatusCode:  304,
+				},
+				Headers: responseHeaders,
+			}, nil
+		}
+	}
+	// tmp
+
+	certificate = []byte(issuer.Certificate)
+
 	if strings.HasSuffix(req.Path, "/pem") {
 		contentType = "application/pem-certificate-chain"
 	} else if strings.HasSuffix(req.Path, "/der") {

@@ -170,6 +170,17 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 
 	switch {
 	case req.Path == "ca" || req.Path == "ca/pem":
+		if hasHeader(headerIfModifiedSince, req) {
+			before, err := isIfModifiedSinceBeforeLastModified(sc, req, responseHeaders)
+			if err != nil || before {
+				retErr = err
+				if before {
+					httpStatusCode = 304
+				}
+				goto reply
+			}
+		}
+
 		serial = "ca"
 		contentType = "application/pkix-cert"
 		if req.Path == "ca/pem" {

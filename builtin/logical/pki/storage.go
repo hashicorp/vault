@@ -161,6 +161,7 @@ type issuerEntry struct {
 	RevocationTime       int64                     `json:"revocation_time"`
 	RevocationTimeUTC    time.Time                 `json:"revocation_time_utc"`
 	AIAURIs              *certutil.URLEntries      `json:"aia_uris,omitempty"`
+	LastModified         time.Time                 `json:"last_modified"`
 	Version              uint                      `json:"version"`
 }
 
@@ -627,6 +628,9 @@ func (sc *storageContext) upgradeIssuerIfRequired(issuer *issuerEntry) *issuerEn
 
 func (sc *storageContext) writeIssuer(issuer *issuerEntry) error {
 	issuerId := issuer.ID
+	if issuer.LastModified.IsZero() {
+		issuer.LastModified = time.Now().In(time.FixedZone("GMT", 0))
+	}
 
 	json, err := logical.StorageEntryJSON(issuerPrefix+issuerId.String(), issuer)
 	if err != nil {

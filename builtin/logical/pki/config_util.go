@@ -2,6 +2,7 @@ package pki
 
 import (
 	"strings"
+	"time"
 )
 
 func (sc *storageContext) isDefaultKeySet() (bool, error) {
@@ -44,9 +45,17 @@ func (sc *storageContext) updateDefaultIssuerId(id issuerID) error {
 	}
 
 	if config.DefaultIssuerId != id {
-		return sc.setIssuersConfig(&issuerConfigEntry{
+		err := sc.setIssuersConfig(&issuerConfigEntry{
 			DefaultIssuerId: id,
 		})
+
+		if err != nil {
+			return err
+		}
+
+		// Can we assume that this fetch won't raise an error?
+		issuer, _ := sc.fetchIssuerById(id)
+		issuer.LastModified = time.Now().In(time.FixedZone("GMT", 0))
 	}
 
 	return nil
