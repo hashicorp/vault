@@ -28,6 +28,7 @@ import (
 const (
 	testIP              = "127.0.0.1"
 	testUserName        = "vaultssh"
+	testMultiUserName   = "vaultssh,otherssh"
 	testAdminUser       = "vaultssh"
 	testCaKeyType       = "ca"
 	testOTPKeyType      = "otp"
@@ -352,6 +353,15 @@ func TestBackend_AllowedUsersTemplate(t *testing.T) {
 		"{{ identity.entity.metadata.ssh_username }}",
 		testUserName, map[string]string{
 			"ssh_username": testUserName,
+		},
+	)
+}
+
+func TestBackend_MultipleAllowedUsersTemplate(t *testing.T) {
+	testAllowedUsersTemplate(t,
+		"{{ identity.entity.metadata.ssh_username }}",
+		testUserName, map[string]string{
+			"ssh_username": testMultiUserName,
 		},
 	)
 }
