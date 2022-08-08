@@ -135,6 +135,19 @@ type provider struct {
 	effectiveIssuer string
 }
 
+// allowedClientID returns true if the given client ID is in
+// the provider's set of allowed client IDs or its allowed client
+// IDs contains the wildcard "*" char.
+func (p *provider) allowedClientID(clientID string) bool {
+	for _, allowedID := range p.AllowedClientIDs {
+		switch allowedID {
+		case "*", clientID:
+			return true
+		}
+	}
+	return false
+}
+
 type providerDiscovery struct {
 	Issuer                string   `json:"issuer"`
 	Keys                  string   `json:"jwks_uri"`
@@ -1542,10 +1555,26 @@ func (i *IdentityStore) keyIDsReferencedByTargetClientIDs(ctx context.Context, s
 func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	state := d.Get("state").(string)
 
-	// Get the namespace
-	ns, err := namespace.FromContext(ctx)
+	// Validate the client ID
+	clientID := d.Get("client_id").(string)
+	if clientID == "" {
+		return authResponse("", state, ErrAuthInvalidClientID, "client_id parameter is required")
+	}
+	client, err := i.clientByID(ctx, req.Storage, clientID)
 	if err != nil {
 		return authResponse("", state, ErrAuthServerError, err.Error())
+	}
+	if client == nil {
+		return authResponse("", state, ErrAuthInvalidClientID, "client with client_id not found")
+	}
+
+	// Validate the redirect URI
+	redirectURI := d.Get("redirect_uri").(string)
+	if redirectURI == "" {
+		return authResponse("", state, ErrAuthInvalidRequest, "redirect_uri parameter is required")
+	}
+	if !validRedirect(redirectURI, client.RedirectURIs) {
+		return authResponse("", state, ErrAuthInvalidRedirectURI, "redirect_uri is not allowed for the client")
 	}
 
 	// Get the OIDC provider
@@ -1556,6 +1585,20 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 	}
 	if provider == nil {
 		return authResponse("", state, ErrAuthInvalidRequest, "provider not found")
+	}
+	if !provider.allowedClientID(clientID) {
+		return authResponse("", state, ErrAuthUnauthorizedClient, "client is not authorized to use the provider")
+	}
+
+	// We don't support the request or request_uri parameters. If they're provided,
+	// the appropriate errors must be returned. For details, see the spec at:
+	// https://openid.net/specs/openid-connect-core-1_0.html#RequestObject
+	// https://openid.net/specs/openid-connect-core-1_0.html#RequestUriParameter
+	if _, ok := d.Raw["request"]; ok {
+		return authResponse("", "", ErrAuthRequestNotSupported, "request parameter is not supported")
+	}
+	if _, ok := d.Raw["request_uri"]; ok {
+		return authResponse("", "", ErrAuthRequestURINotSupported, "request_uri parameter is not supported")
 	}
 
 	// Validate that a scope parameter is present and contains the openid scope value
@@ -1580,44 +1623,6 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 	}
 	if responseType != "code" {
 		return authResponse("", state, ErrAuthUnsupportedResponseType, "unsupported response_type value")
-	}
-
-	// Validate the client ID
-	clientID := d.Get("client_id").(string)
-	if clientID == "" {
-		return authResponse("", state, ErrAuthInvalidClientID, "client_id parameter is required")
-	}
-	client, err := i.clientByID(ctx, req.Storage, clientID)
-	if err != nil {
-		return authResponse("", state, ErrAuthServerError, err.Error())
-	}
-	if client == nil {
-		return authResponse("", state, ErrAuthInvalidClientID, "client with client_id not found")
-	}
-	if !strutil.StrListContains(provider.AllowedClientIDs, "*") &&
-		!strutil.StrListContains(provider.AllowedClientIDs, clientID) {
-		return authResponse("", state, ErrAuthUnauthorizedClient, "client is not authorized to use the provider")
-	}
-
-	// Validate the redirect URI
-	redirectURI := d.Get("redirect_uri").(string)
-	if redirectURI == "" {
-		return authResponse("", state, ErrAuthInvalidRequest, "redirect_uri parameter is required")
-	}
-
-	if !validRedirect(redirectURI, client.RedirectURIs) {
-		return authResponse("", state, ErrAuthInvalidRedirectURI, "redirect_uri is not allowed for the client")
-	}
-
-	// We don't support the request or request_uri parameters. If they're provided,
-	// the appropriate errors must be returned. For details, see the spec at:
-	// https://openid.net/specs/openid-connect-core-1_0.html#RequestObject
-	// https://openid.net/specs/openid-connect-core-1_0.html#RequestUriParameter
-	if _, ok := d.Raw["request"]; ok {
-		return authResponse("", state, ErrAuthRequestNotSupported, "request parameter is not supported")
-	}
-	if _, ok := d.Raw["request_uri"]; ok {
-		return authResponse("", state, ErrAuthRequestURINotSupported, "request_uri parameter is not supported")
 	}
 
 	// Validate that there is an identity entity associated with the request
@@ -1723,6 +1728,12 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 		return authResponse("", state, ErrAuthServerError, err.Error())
 	}
 
+	// Get the namespace
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return authResponse("", state, ErrAuthServerError, err.Error())
+	}
+
 	// Cache the authorization code for a subsequent token exchange
 	if err := i.oidcAuthCodeCache.SetDefault(ns, code, authCodeEntry); err != nil {
 		return authResponse("", state, ErrAuthServerError, err.Error())
@@ -1815,8 +1826,7 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 	}
 
 	// Validate that the client is authorized to use the provider
-	if !strutil.StrListContains(provider.AllowedClientIDs, "*") &&
-		!strutil.StrListContains(provider.AllowedClientIDs, clientID) {
+	if !provider.allowedClientID(clientID) {
 		return tokenResponse(nil, ErrTokenInvalidClient, "client is not authorized to use the provider")
 	}
 
@@ -2136,8 +2146,7 @@ func (i *IdentityStore) pathOIDCUserInfo(ctx context.Context, req *logical.Reque
 	}
 
 	// Validate that the client is authorized to use the provider
-	if !strutil.StrListContains(provider.AllowedClientIDs, "*") &&
-		!strutil.StrListContains(provider.AllowedClientIDs, clientID) {
+	if !provider.allowedClientID(clientID) {
 		return userInfoResponse(nil, ErrUserInfoAccessDenied, "client is not authorized to use the provider")
 	}
 
