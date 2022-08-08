@@ -29,6 +29,7 @@ export default class OidcProviderModel extends Model {
     editType: 'searchSelect',
     models: ['oidc/scope'],
     fallbackComponent: 'string-list',
+    onlyAllowExisting: true,
   })
   scopesSupported;
 
