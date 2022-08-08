@@ -1,10 +1,16 @@
 import Controller from '@ember/controller';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
-
+import { tracked } from '@glimmer/tracking';
 export default class OidcAssignmentDetailsController extends Controller {
   @service router;
   @service flashMessages;
+
+  queryParams = ['listEntities', 'listGroups'];
+
+  @tracked listEntities = null;
+  @tracked listGroups = null;
+  @tracked model; // ARG TODO following example, but try without once have working
 
   @action
   async delete() {
