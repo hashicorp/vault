@@ -156,19 +156,27 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 // pathEntityMergeID merges two or more entities into a single entity
 func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-		toEntityID := d.Get("to_entity_id").(string)
-		if toEntityID == "" {
+		toEntityIDInterface, ok := d.GetOk("to_entity_id")
+		if !ok || toEntityIDInterface == "" {
 			return logical.ErrorResponse("missing entity id to merge to"), nil
 		}
+		toEntityID := toEntityIDInterface.(string)
 
-		fromEntityIDs := d.Get("from_entity_ids").([]string)
-		if len(fromEntityIDs) == 0 {
+		fromEntityIDsInterface, ok := d.GetOk("from_entity_ids")
+		if !ok || len(fromEntityIDsInterface.([]string)) == 0 {
 			return logical.ErrorResponse("missing entity ids to merge from"), nil
 		}
+		fromEntityIDs := fromEntityIDsInterface.([]string)
 
-		conflictingAliasIDsToKeep := d.Get("conflicting_alias_ids_to_keep").([]string)
+		var conflictingAliasIDsToKeep []string
+		if conflictingAliasIDsToKeepInterface, ok := d.GetOk("conflicting_alias_ids_to_keep"); ok {
+			conflictingAliasIDsToKeep = conflictingAliasIDsToKeepInterface.([]string)
+		}
 
-		force := d.Get("force").(bool)
+		var force bool
+		if forceInterface, ok := d.GetOk("force"); ok {
+			force = forceInterface.(bool)
+		}
 
 		// Create a MemDB transaction to merge entities
 		i.lock.Lock()
@@ -725,6 +733,10 @@ func (i *IdentityStore) handlePathEntityListCommon(ctx context.Context, req *log
 	return logical.ListResponseWithInfo(keys, entityInfo), nil
 }
 
+func (i *IdentityStore) mergeEntityAsPartOfUpsert(ctx context.Context, txn *memdb.Txn, toEntity *identity.Entity, fromEntityID string, persist bool) (error, error) {
+	return i.mergeEntity(ctx, txn, toEntity, []string{fromEntityID}, []string{}, true, false, true, persist, true)
+}
+
 func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntity *identity.Entity, fromEntityIDs, conflictingAliasIDsToKeep []string, force, grabLock, mergePolicies, persist, forceMergeAliases bool) (error, error) {
 	if grabLock {
 		i.lock.Lock()
@@ -821,11 +833,17 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		i.localNode.HAState() == consts.PerfStandby
 	var fromEntityGroups []*identity.Group
 
-	toEntityAccessors := make(map[string]string)
+	toEntityAccessors := make(map[string][]string)
 
 	for _, alias := range toEntity.Aliases {
-		if _, ok := toEntityAccessors[alias.MountAccessor]; !ok {
-			toEntityAccessors[alias.MountAccessor] = alias.ID
+		if accessors, ok := toEntityAccessors[alias.MountAccessor]; !ok {
+			// While it is not supported to have multiple aliases with the same mount accessor in one entity
+			// we do not strictly enforce the invariant. Thus, we account for multiple just to be safe
+			if accessors == nil {
+				toEntityAccessors[alias.MountAccessor] = []string{alias.ID}
+			} else {
+				toEntityAccessors[alias.MountAccessor] = append(accessors, alias.ID)
+			}
 		}
 	}
 
@@ -848,25 +866,37 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		}
 
 		for _, fromAlias := range fromEntity.Aliases {
-			if toAliasId, ok := toEntityAccessors[fromAlias.MountAccessor]; ok {
-				// Handle conflicts (conflict = both aliases share the same mount accessor)
-				if strutil.StrListContains(conflictingAliasIDsToKeep, toAliasId) {
-					i.logger.Info("Deleting from_entity alias during entity merge", "from_entity", fromEntityID, "deleted_alias", fromAlias.ID)
-					err := i.MemDBDeleteAliasByIDInTxn(txn, fromAlias.ID, false)
-					if err != nil {
-						return nil, fmt.Errorf("failed to delete orphaned alias during merge: %w", err)
-					}
+			// If true, we need to handle conflicts (conflict = both aliases share the same mount accessor)
+			if toAliasIds, ok := toEntityAccessors[fromAlias.MountAccessor]; ok {
+				for _, toAliasId := range toAliasIds {
+					// When forceMergeAliases is true (as part of the merge-during-upsert case), we make the decision
+					// for the user, and keep the to_entity alias, merging the from_entity
+					// This case's code is the same as when the user selects to keep the from_entity alias
+					// but is kept separate for clarity
+					if forceMergeAliases {
+						i.logger.Info("Deleting to_entity alias during entity merge", "to_entity", toEntity.ID, "deleted_alias", toAliasId)
+						err := i.MemDBDeleteAliasByIDInTxn(txn, toAliasId, false)
+						if err != nil {
+							return nil, fmt.Errorf("failed to delete orphaned alias during merge: %w", err)
+						}
+					} else if strutil.StrListContains(conflictingAliasIDsToKeep, toAliasId) {
+						i.logger.Info("Deleting from_entity alias during entity merge", "from_entity", fromEntityID, "deleted_alias", fromAlias.ID)
+						err := i.MemDBDeleteAliasByIDInTxn(txn, fromAlias.ID, false)
+						if err != nil {
+							return nil, fmt.Errorf("failed to delete orphaned alias during merge: %w", err)
+						}
 
-					// Continue to next alias, as there's no alias to merge left in the from_entity
-					continue
-				} else if forceMergeAliases || strutil.StrListContains(conflictingAliasIDsToKeep, fromAlias.ID) {
-					i.logger.Info("Deleting to_entity alias during entity merge", "to_entity", toEntity.ID, "deleted_alias", toAliasId)
-					err := i.MemDBDeleteAliasByIDInTxn(txn, toAliasId, false)
-					if err != nil {
-						return nil, fmt.Errorf("failed to delete orphaned alias during merge: %w", err)
+						// Continue to next alias, as there's no alias to merge left in the from_entity
+						continue
+					} else if strutil.StrListContains(conflictingAliasIDsToKeep, fromAlias.ID) {
+						i.logger.Info("Deleting to_entity alias during entity merge", "to_entity", toEntity.ID, "deleted_alias", toAliasId)
+						err := i.MemDBDeleteAliasByIDInTxn(txn, toAliasId, false)
+						if err != nil {
+							return nil, fmt.Errorf("failed to delete orphaned alias during merge: %w", err)
+						}
+					} else {
+						return fmt.Errorf("conflicting mount accessors in following alias IDs and neither were present in conflicting_alias_ids_to_keep: %s, %s", fromAlias.ID, toAliasId), nil
 					}
-				} else {
-					return fmt.Errorf("conflicting mount accessors in following alias IDs and neither were present in conflicting_alias_ids_to_keep: %s, %s", fromAlias.ID, toAliasId), nil
 				}
 			}
 
