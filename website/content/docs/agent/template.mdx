@@ -38,16 +38,28 @@ The template output content can be provided directly as part of the `contents`
 option in a `template` stanza or as a separate `.ctmpl` file and specified in
 the `source` option of a `template` stanza.
 
+In order to fetch secrets from Vault, whether those are static secrets, dynamic
+credentials, or certificates, Vault Agent templates require the use of the
+`secret`
+[function](https://github.com/hashicorp/consul-template/blob/master/docs/templating-language.md#secret)
+or `pkiCert`
+[function](https://github.com/hashicorp/consul-template/blob/main/docs/templating-language.md#pkicert)
+from Consul Template.
+
+The `secret` function works for all types of secrets and depending on the type
+of secret that's being rendered by this function, template will have different
+renewal behavior as detailed in the [Renewals
+section](#renewals-and-updating-secrets). The `pkiCert` function is intended to
+work specifically for certificates issued by the [PKI Secrets
+Engine](/docs/secrets/pki). Refer to the [Certificates](#certificates) section
+for differences in certificate renewal behavior between `secret` and `pkiCert`.
+
 The following links contain additional resources for the templating language used by Vault Agent templating.
 
 - [Consul Templating Documentation][consul-templating-language]
 - [Go Templating Language Documentation](https://pkg.go.dev/text/template#pkg-overview)
 
 ### Template Language Example
-
-Template with Vault Agent requires the use of the `secret` [function](https://github.com/hashicorp/consul-template/blob/master/docs/templating-language.md#secret)
-or `pkiCert` [function](https://github.com/hashicorp/consul-template/blob/main/docs/templating-language.md#pkicert)
-from Consul Template.
 
 The following is an example of a template that retrieves a generic secret from Vault's
 KV store:
