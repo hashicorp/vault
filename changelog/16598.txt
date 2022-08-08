@@ -1,0 +1,3 @@
+```release-note:improvement
+identity/oidc: Adds the `client_secret_post` token endpoint authentication method.
+```
