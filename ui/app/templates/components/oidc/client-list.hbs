@@ -1,0 +1,42 @@
+{{#each @model as |client|}}
+  <LinkedBlock class="list-item-row" @params={{array "vault.cluster.access.oidc.clients.client.details" client.name}}>
+    <div class="level is-mobile">
+      <div class="level-left">
+        <div>
+          <Icon @name="code" class="has-text-grey-light" />
+          <span class="has-text-weight-semibold is-underline">
+            {{client.name}}
+          </span>
+        </div>
+      </div>
+      <div class="level-right is-flex is-paddingless is-marginless">
+        <div class="level-item">
+          <PopupMenu>
+            <nav class="menu">
+              <ul class="menu-list">
+                <li>
+                  <LinkTo
+                    @route="vault.cluster.access.oidc.clients.client.details"
+                    @model={{client.name}}
+                    @disabled={{not client.canRead}}
+                  >
+                    Details
+                  </LinkTo>
+                </li>
+                <li>
+                  <LinkTo
+                    @route="vault.cluster.access.oidc.clients.client.edit"
+                    @model={{client.name}}
+                    @disabled={{not client.canEdit}}
+                  >
+                    Edit
+                  </LinkTo>
+                </li>
+              </ul>
+            </nav>
+          </PopupMenu>
+        </div>
+      </div>
+    </div>
+  </LinkedBlock>
+{{/each}}
