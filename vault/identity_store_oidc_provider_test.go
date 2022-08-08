@@ -434,6 +434,22 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 			},
 		},
 		{
+			name: "valid token request with client_secret_post client authentication method",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq:  testAuthorizeReq(s, clientID),
+				tokenReq: func() *logical.Request {
+					req := testTokenReq(s, "", clientID, clientSecret)
+					req.Headers = nil
+					req.Data["client_id"] = clientID
+					req.Data["client_secret"] = clientSecret
+					return req
+				}(),
+			},
+		},
+		{
 			name: "valid token request",
 			args: args{
 				clientReq:     testClientReq(s),
@@ -3399,7 +3415,7 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		TokenEndpoint:         basePath + "/token",
 		UserinfoEndpoint:      basePath + "/userinfo",
 		GrantTypes:            []string{"authorization_code"},
-		AuthMethods:           []string{"none", "client_secret_basic"},
+		AuthMethods:           []string{"none", "client_secret_basic", "client_secret_post"},
 		RequestParameter:      false,
 		RequestURIParameter:   false,
 	}
@@ -3454,7 +3470,7 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		TokenEndpoint:         basePath + "/token",
 		UserinfoEndpoint:      basePath + "/userinfo",
 		GrantTypes:            []string{"authorization_code"},
-		AuthMethods:           []string{"none", "client_secret_basic"},
+		AuthMethods:           []string{"none", "client_secret_basic", "client_secret_post"},
 		RequestParameter:      false,
 		RequestURIParameter:   false,
 	}
