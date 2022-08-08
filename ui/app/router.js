@@ -135,6 +135,7 @@ Router.map(function () {
             this.route('create');
             this.route('provider', { path: '/:name' }, function () {
               this.route('details');
+              this.route('clients');
               this.route('edit');
             });
           });
