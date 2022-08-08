@@ -51,8 +51,8 @@ enos scenario run smoke builder:local
 enos scenario run upgrade builder:local
 # To run the same scenario variants that are run in CI, refer to the scenarios listed
 # in .github/workflows/enos-run.yml under `jobs.enos.strategy.matrix.include`,
-# adding `builder:local` to run locally.
-enos scenario run smoke backend:consul consul_version:1.12.3 distro:ubuntu unseal_method:aws_kms builder:local
+# adding `builder:local` to run locally, and `arch:amd64` and `edition:<current_edition>`.
+enos scenario run smoke backend:consul consul_version:1.12.3 distro:ubuntu unseal_method:aws_kms
 # Launch an individual scenario but leave infrastructure up after execution
 enos scenario launch smoke builder:local
 # Check an individual scenario for validity. This is useful during scenario
@@ -94,16 +94,10 @@ verifies the Vault version.
 # Variants
 
 Both scenarios support a matrix of variants. In order to achieve broad coverage while
-keeping test run time reasonable, the Github Actions workflow currently tests the 
-following combinations of variants using `builder:crt`:
-- `smoke` scenario:
-  - `arch:amd64 backend:consul  builder:crt consul_version:1.12.3 distro:ubuntu edition:oss unseal_method:aws_kms`
-  - `arch:amd64 backend:raft    builder:crt consul_version:1.12.3 distro:ubuntu edition:oss unseal_method:aws_kms`
-- `upgrade` scenario:
-  - `upgrade arch:amd64 backend:consul builder:crt consul_version:1.11.7 distro:rhel edition:oss unseal_method:shamir`
-  - `upgrade arch:amd64 backend:consul builder:crt consul_version:1.12.3 distro:rhel edition:oss unseal_method:shamir`
-
-However, you can run any combination of variants locally using `builder:local`.
+keeping test run time reasonable, the Github Actions workflow currently tests a few
+pre-selected combinations of variants. You can find these listed in
+[`.github/workflows/enos-run.yml`](../.github/workflows/enos-run.yml), under `jobs.enos.strategy.matrix.include`. You can
+ also run any combination of variants locally using `builder:local`.
 
 ## `builder:crt`
 
