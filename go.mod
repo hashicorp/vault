@@ -1,6 +1,6 @@
 module github.com/hashicorp/vault
 
-go 1.17
+go 1.18
 
 replace github.com/hashicorp/vault/api => ./api
 
@@ -58,7 +58,7 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/google/tink/go v1.6.1
-	github.com/hashicorp/cap v0.2.1-0.20220502204956-9a9f4a9d6e61
+	github.com/hashicorp/cap v0.2.1-0.20220727210936-60cd1534e220
 	github.com/hashicorp/consul-template v0.29.1
 	github.com/hashicorp/consul/api v1.12.0
 	github.com/hashicorp/errwrap v1.1.0
@@ -87,7 +87,7 @@ require (
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/go-syslog v1.0.0
 	github.com/hashicorp/go-uuid v1.0.3
-	github.com/hashicorp/go-version v1.5.0
+	github.com/hashicorp/go-version v1.6.0
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/hashicorp/hcl v1.0.1-vault-3
 	github.com/hashicorp/nomad/api v0.0.0-20220407202126-2eba643965c4
@@ -100,7 +100,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-centrify v0.12.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.12.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.13.2-0.20220722185016-9e4fddb995e5
-	github.com/hashicorp/vault-plugin-auth-jwt v0.7.2-0.20220627215329-c817ca9185c2
+	github.com/hashicorp/vault-plugin-auth-jwt v0.13.2-0.20220728183411-0edf6ecc0b37
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.7.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.13.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.11.0

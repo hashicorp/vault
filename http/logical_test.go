@@ -555,10 +555,23 @@ func TestLogical_AuditPort(t *testing.T) {
 		},
 	}
 
-	resp, err := c.Logical().Write("kv/data/foo", writeData)
-	if err != nil {
-		t.Fatalf("write request failed, err: %#v, resp: %#v\n", err, resp)
-	}
+	// workaround kv-v2 initialization upgrade errors
+	numFailures := 0
+	vault.RetryUntil(t, 10*time.Second, func() error {
+		resp, err := c.Logical().Write("kv/data/foo", writeData)
+		if err != nil {
+			if strings.Contains(err.Error(), "Upgrading from non-versioned to versioned data") {
+				t.Logf("Retrying fetch KV data due to upgrade error")
+				time.Sleep(100 * time.Millisecond)
+				numFailures += 1
+				return err
+			}
+
+			t.Fatalf("write request failed, err: %#v, resp: %#v\n", err, resp)
+		}
+
+		return nil
+	})
 
 	decoder := json.NewDecoder(auditLogFile)
 
@@ -579,7 +592,7 @@ func TestLogical_AuditPort(t *testing.T) {
 		}
 
 		if _, ok := auditRequest["remote_address"].(string); !ok {
-			t.Fatalf("remote_port should be a number, not %T", auditRequest["remote_address"])
+			t.Fatalf("remote_address should be a string, not %T", auditRequest["remote_address"])
 		}
 
 		if _, ok := auditRequest["remote_port"].(float64); !ok {
@@ -587,8 +600,12 @@ func TestLogical_AuditPort(t *testing.T) {
 		}
 	}
 
-	if count != 4 {
-		t.Fatalf("wrong number of audit entries: %d", count)
+	// We expect the following items in the audit log:
+	// audit log header + an entry for updating sys/audit/file
+	// + request/response per failure (if any) + request/response for creating kv
+	numExpectedEntries := (numFailures * 2) + 4
+	if count != numExpectedEntries {
+		t.Fatalf("wrong number of audit entries expected: %d got: %d", numExpectedEntries, count)
 	}
 }
 

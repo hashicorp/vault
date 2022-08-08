@@ -113,6 +113,7 @@ Router.map(function () {
             this.route('create');
             this.route('client', { path: '/:name' }, function () {
               this.route('details');
+              this.route('providers');
               this.route('edit');
             });
           });

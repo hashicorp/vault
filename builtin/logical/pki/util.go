@@ -26,11 +26,11 @@ var (
 )
 
 func normalizeSerial(serial string) string {
-	return strings.Replace(strings.ToLower(serial), ":", "-", -1)
+	return strings.ReplaceAll(strings.ToLower(serial), ":", "-")
 }
 
 func denormalizeSerial(serial string) string {
-	return strings.Replace(strings.ToLower(serial), "-", ":", -1)
+	return strings.ReplaceAll(strings.ToLower(serial), "-", ":")
 }
 
 func kmsRequested(input *inputBundle) bool {

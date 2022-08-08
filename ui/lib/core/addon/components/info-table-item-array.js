@@ -19,10 +19,10 @@ import { isWildcardString } from 'vault/helpers/is-wildcard-string';
  * @isLink={{true}}
  * @rootRoute="vault.cluster.secrets.backend.list-root"
  * @itemRoute="vault.cluster.secrets.backend.show"
- * @modelType="transform/role"/
+ * @modelType="transform/role"
  * @queryParam="role"
  * @backend="transform"
- * viewAll="roles">
+ * viewAll="roles"/>
  * ```
  *
  * @param displayArray=null {array} - This array of data to be displayed.  If there are more than 10 items in the array only five will show and a count of the other number in the array will show.

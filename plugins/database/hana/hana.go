@@ -106,7 +106,7 @@ func (h *HANA) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (respon
 	}
 
 	// HANA does not allow hyphens in usernames, and highly prefers capital letters
-	username = strings.Replace(username, "-", "_", -1)
+	username = strings.ReplaceAll(username, "-", "_")
 	username = strings.ToUpper(username)
 
 	// If expiration is in the role SQL, HANA will deactivate the user when time is up,
