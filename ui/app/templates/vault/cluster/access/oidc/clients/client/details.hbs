@@ -10,6 +10,7 @@
       >
         Delete client
       </ConfirmAction>
+      <div class="toolbar-separator"></div>
     {{/if}}
     {{#if this.model.canEdit}}
       <ToolbarLink @params={{array "vault.cluster.access.oidc.clients.client.edit" this.model.name}}>
