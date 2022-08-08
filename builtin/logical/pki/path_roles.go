@@ -735,6 +735,9 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		}
 	} else {
 		*entry.GenerateLease = data.Get("generate_lease").(bool)
+		if *entry.GenerateLease {
+			warning = "it is encouraged to disable generate_lease and rely on PKI's native capabilities when possible; this option can cause Vault-wide issues with large numbers of issued certificates"
+		}
 	}
 
 	resp, err := validateRole(b, entry, ctx, req.Storage)
@@ -938,6 +941,10 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 			*entry.GenerateLease = data.Get("generate_lease").(bool)
 		} else {
 			entry.GenerateLease = oldEntry.GenerateLease
+		}
+
+		if *entry.GenerateLease {
+			warning = "it is encouraged to disable generate_lease and rely on PKI's native capabilities when possible; this option can cause Vault-wide issues with large numbers of issued certificates"
 		}
 	}
 
