@@ -753,7 +753,7 @@ func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, da
 	// tmp
 	responseHeaders := map[string][]string{}
 	if hasHeader(headerIfModifiedSince, req) {
-		before, err := isIfModifiedSinceBeforeLastModified(sc, req, responseHeaders)
+		before, err := sc.isIfModifiedSinceBeforeIssuerLastModified, ref, responseHeaders)
 		if err != nil {
 			return nil, err // errorResponse, nil or nil, err?
 		}
@@ -946,7 +946,7 @@ func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, da
 	// tmp
 	responseHeaders := map[string][]string{}
 	if hasHeader(headerIfModifiedSince, req) {
-		before, err := isIfModifiedSinceBeforeLastModified(sc, req, responseHeaders)
+		before, err := sc.isIfModifiedSinceBeforeCRLConfigLastModified(req, responseHeaders)
 		if err != nil {
 			return nil, err // errorResponse, nil or nil, err?
 		}

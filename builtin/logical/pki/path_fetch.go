@@ -171,7 +171,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 	switch {
 	case req.Path == "ca" || req.Path == "ca/pem":
 		if hasHeader(headerIfModifiedSince, req) {
-			before, err := isIfModifiedSinceBeforeLastModified(sc, req, responseHeaders)
+			before, err := sc.isIfModifiedSinceBeforeIssuerLastModified(req, defaultRef, responseHeaders)
 			if err != nil || before {
 				retErr = err
 				if before {
@@ -194,7 +194,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		}
 	case req.Path == "crl" || req.Path == "crl/pem" || req.Path == "crl/delta" || req.Path == "crl/delta/pem":
 		if hasHeader(headerIfModifiedSince, req) {
-			before, err := isIfModifiedSinceBeforeLastModified(sc, req, responseHeaders)
+			before, err := sc.isIfModifiedSinceBeforeCRLConfigLastModified(req, responseHeaders)
 			if err != nil || before {
 				retErr = err
 				if before {

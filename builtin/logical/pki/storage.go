@@ -1184,7 +1184,7 @@ func parseIfNotModifiedSince(req *logical.Request) (time.Time, error) {
 	return headerTimeValue, nil
 }
 
-func isIfModifiedSinceBeforeLastModified(sc *storageContext, req *logical.Request, responseHeaders map[string][]string) (bool, error) {
+func (sc *storageContext) isIfModifiedSinceBeforeCRLConfigLastModified(req *logical.Request, responseHeaders map[string][]string) (bool, error) {
 	var before bool
 	ifModifiedSince, err := parseIfNotModifiedSince(req)
 	if err != nil {
@@ -1197,6 +1197,27 @@ func isIfModifiedSinceBeforeLastModified(sc *storageContext, req *logical.Reques
 	}
 
 	lastModified := crlConfig.LastModified
+	if !lastModified.IsZero() && lastModified.Before(ifModifiedSince) {
+		before = true
+		responseHeaders[headerLastModified] = []string{lastModified.Format(http.TimeFormat)}
+	}
+
+	return before, nil
+}
+
+func (sc *storageContext) isIfModifiedSinceBeforeIssuerLastModified(req *logical.Request, issuerId issuerID, responseHeaders map[string][]string) (bool, error) {
+	var before bool
+	ifModifiedSince, err := parseIfNotModifiedSince(req)
+	if err != nil {
+		return before, err
+	}
+
+	issuer, err := sc.fetchIssuerById(issuerId)
+	if err != nil {
+		return before, err
+	}
+
+	lastModified := issuer.LastModified
 	if !lastModified.IsZero() && lastModified.Before(ifModifiedSince) {
 		before = true
 		responseHeaders[headerLastModified] = []string{lastModified.Format(http.TimeFormat)}
