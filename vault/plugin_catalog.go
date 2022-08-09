@@ -403,7 +403,7 @@ func (c *PluginCatalog) getBackendPluginType(ctx context.Context, pluginRunner *
 	pc, err := c.newPluginClient(ctx, pluginRunner, config)
 	if err == nil {
 		// dispense the plugin so we can get its type
-		client, err = backendpluginv5.Dispense(ctx, pc.ClientProtocol, pc)
+		client, err = backendpluginv5.Dispense(pc.ClientProtocol, pc)
 		if err != nil {
 			merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as backend v5: %w", err))
 		} else {
@@ -414,7 +414,7 @@ func (c *PluginCatalog) getBackendPluginType(ctx context.Context, pluginRunner *
 		c.logger.Debug("failed to dispense v5 backend plugin", "name", pluginRunner.Name, "error", err)
 		config.AutoMTLS = false
 		config.IsMetadataMode = true
-		// attemtp to run as a v4 backend plugin
+		// attempt to run as a v4 backend plugin
 		client, err = backendplugin.NewPluginClient(ctx, nil, pluginRunner, log.NewNullLogger(), true)
 		if err != nil {
 			c.logger.Debug("failed to dispense v4 backend plugin", "name", pluginRunner.Name, "error", err)

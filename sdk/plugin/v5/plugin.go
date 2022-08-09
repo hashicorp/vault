@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/hashicorp/errwrap"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -62,7 +61,7 @@ func NewBackend(ctx context.Context, pluginName string, pluginType consts.Plugin
 		// from the pluginRunner. Then cast it to logical.Factory.
 		rawFactory, err := pluginRunner.BuiltinFactory()
 		if err != nil {
-			return nil, errwrap.Wrapf("error getting plugin type: {{err}}", err)
+			return nil, fmt.Errorf("error getting plugin type: %q", err)
 		}
 
 		if factory, ok := rawFactory.(logical.Factory); !ok {
@@ -110,7 +109,7 @@ var PluginSet = map[int]plugin.PluginSet{
 	},
 }
 
-func Dispense(ctx context.Context, rpcClient plugin.ClientProtocol, pluginClient pluginutil.PluginClient) (logical.Backend, error) {
+func Dispense(rpcClient plugin.ClientProtocol, pluginClient pluginutil.PluginClient) (logical.Backend, error) {
 	// Request the plugin
 	raw, err := rpcClient.Dispense("backend")
 	if err != nil {
