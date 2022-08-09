@@ -5,6 +5,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
 import { overrideMirageResponse } from 'vault/tests/helpers/oidc-config';
+import parseURL from 'core/utils/parse-url';
 
 const ISSUER_URL = 'http://127.0.0.1:8200/v1/identity/oidc/provider/test-provider';
 
@@ -25,7 +26,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
   });
 
   test('it should save new provider', async function (assert) {
-    assert.expect(11);
+    assert.expect(12);
     this.server.post('/identity/oidc/provider/test-provider', (schema, req) => {
       assert.ok(true, 'Request made to save provider');
       return JSON.parse(req.requestBody);
@@ -44,6 +45,9 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       .dom('[data-test-oidc-provider-title]')
       .hasText('Create provider', 'Form title renders correct text');
     assert.dom('[data-test-oidc-provider-save]').hasText('Create', 'Save button has correct text');
+    assert
+      .dom('[data-test-input="issuer"]')
+      .hasAttribute('placeholder', 'e.g. https://example.com:8200', 'issuer placeholder text is correct');
     assert.equal(findAll('[data-test-field]').length, 3, 'renders all input fields');
     await click('[data-test-component="search-select"]#scopesSupported .ember-basic-dropdown-trigger');
     assert.dom('li.ember-power-select-option').hasText('test-scope', 'dropdown renders scopes');
@@ -110,7 +114,8 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       .hasValue('test-provider', 'Name input is populated with model value');
     assert
       .dom('[data-test-input="issuer"]')
-      .hasValue(ISSUER_URL, 'issuer url input is populated with model value');
+      .hasValue(parseURL(ISSUER_URL).origin, 'issuer value is just scheme://host:port portion of full URL');
+
     assert.dom('[data-test-selected-option="true"]').hasText('test-scope', 'model scope is selected');
     assert.dom('input#allow-all').isChecked('Allow all radio button is selected');
     await click('[data-test-oidc-provider-save]');

@@ -17,9 +17,11 @@ const validations = {
 export default class OidcProviderModel extends Model {
   @attr('string', { editDisabled: true }) name;
   @attr('string', {
-    label: 'Issuer URL',
-    subText: 'The issuer URL parameter is necessary for the validation of ID tokens by applications.',
+    subText:
+      'The scheme, host, and optional port for your issuer. This will be used to build the URL that validates ID tokens.',
+    placeholderText: 'e.g. https://example.com:8200',
     docLink: '/api-docs/secret/identity/oidc-provider#create-or-update-a-provider',
+    helpText: `Optional. This defaults to a URL with Vault's api_addr`,
   })
   issuer;
 

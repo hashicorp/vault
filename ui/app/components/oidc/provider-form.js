@@ -3,6 +3,7 @@ import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
+import parseURL from 'core/utils/parse-url';
 
 /**
  * @module OidcProviderForm
@@ -28,6 +29,10 @@ export default class OidcProviderForm extends Component {
     !this.args.model.allowedClientIds || this.args.model.allowedClientIds.includes('*')
       ? 'allow_all'
       : 'limited';
+
+  get parseUrlOrigin() {
+    return this.args.model.isNew ? '' : parseURL(this.args.model.issuer).origin;
+  }
 
   @action
   handleClientSelection(selection) {
