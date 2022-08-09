@@ -50,7 +50,8 @@ jobs:
               - 'ui/app/components/auth-jwt.js'
               - 'ui/app/routes/vault/cluster/oidc-*.js'
             devex:
-              - 'website/content/**'
+              - 'api/**'
+              - 'sdk/**'
             ui:
               - 'ui/**'
 
@@ -64,6 +65,7 @@ jobs:
         run: echo "PROJECT=176" >> $GITHUB_ENV
       - if: steps.changes.outputs.ui == 'true'
         run: echo "PROJECT=171" >> $GITHUB_ENV
+
       - uses: actions/add-to-project@v0.3.0
         with:
           project-url: https://github.com/orgs/hashicorp/projects/${{ env.PROJECT }}
