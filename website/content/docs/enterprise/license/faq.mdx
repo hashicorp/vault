@@ -35,7 +35,7 @@ Per the [feature deprecation plans](/docs/deprecation), Vault will no longer sup
 Vault 1.12 will also introduce different termination behavior for evaluation licenses versus non-evaluation licenses. An [evaluation](https://www.hashicorp.com/products/vault/trial) license will include a 30-day trial period after which a running Vault server will terminate. Vault servers using a non-evaluation license will not terminate.
 
 ### Q: How do the license termination changes affect upgrades?
-Vault 1.12 will introduce changes to license termination behavior. Upgrades when using expired licenses will now be limited.
+Vault 1.12 will introduce changes to the license termination behavior. Upgrades when using expired licenses will now be limited.
 Vault will not startup if the build date of the binary is _after_ the expiration date of a license. License expiration date and binary build date compatibility can be verified using the [Check for Autoloaded License](/docs/commands/operator/diagnose#check-for-autoloaded-license) check performed by the `vault operator diagnose` command.
 The build date of a binary can also be found using the [vault version](/docs/commands/version#version) command.
 
