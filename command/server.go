@@ -34,6 +34,7 @@ import (
 	config2 "github.com/hashicorp/vault/command/config"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/builtinplugins"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -41,6 +42,7 @@ import (
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -74,8 +76,9 @@ const (
 
 	// Even though there are more types than the ones below, the following consts
 	// are declared internally for value comparison and reusability.
-	storageTypeRaft   = "raft"
-	storageTypeConsul = "consul"
+	storageTypeRaft            = "raft"
+	storageTypeConsul          = "consul"
+	disableStorageTypeCheckEnv = "VAULT_DISABLE_SUPPORTED_STORAGE_CHECK"
 )
 
 type ServerCommand struct {
@@ -114,6 +117,8 @@ type ServerCommand struct {
 	flagLogFormat          string
 	flagRecovery           bool
 	flagDev                bool
+	flagDevTLS             bool
+	flagDevTLSCertDir      string
 	flagDevRootTokenID     string
 	flagDevListenAddr      string
 	flagDevNoStoreToken    bool
@@ -240,6 +245,23 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Usage: "Enable development mode. In this mode, Vault runs in-memory and " +
 			"starts unsealed. As the name implies, do not run \"dev\" mode in " +
 			"production.",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:   "dev-tls",
+		Target: &c.flagDevTLS,
+		Usage: "Enable TLS development mode. In this mode, Vault runs in-memory and " +
+			"starts unsealed, with a generated TLS CA, certificate and key. " +
+			"As the name implies, do not run \"dev-tls\" mode in " +
+			"production.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "dev-tls-cert-dir",
+		Target:  &c.flagDevTLSCertDir,
+		Default: "",
+		Usage: "Directory where generated TLS files are created if `-dev-tls` is " +
+			"specified. If left unset, files are generated in a temporary directory.",
 	})
 
 	f.StringVar(&StringVar{
@@ -424,6 +446,12 @@ func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError,
 			config = config.Merge(current)
 		}
 	}
+
+	if config != nil && config.Entropy != nil && config.Entropy.Mode == configutil.EntropyAugmentation && constants.IsFIPS() {
+		c.UI.Warn("WARNING: Entropy Augmentation is not supported in FIPS 140-2 Inside mode; disabling from server configuration!\n")
+		config.Entropy = nil
+	}
+
 	return config, configErrors, nil
 }
 
@@ -451,8 +479,9 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	c.logger = hclog.NewInterceptLogger(&hclog.LoggerOptions{
-		Output: c.gatedWriter,
-		Level:  level,
+		Output:            c.gatedWriter,
+		Level:             level,
+		IndependentLevels: true,
 		// Note that if logFormat is either unspecified or standard, then
 		// the resulting logger's format will be standard.
 		JSONFormat: logFormat == logging.JSONFormat,
@@ -583,6 +612,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		Physical:     backend,
 		StorageType:  config.Storage.Type,
 		Seal:         barrierSeal,
+		LogLevel:     logLevelString,
 		Logger:       c.logger,
 		DisableMlock: config.DisableMlock,
 		RecoveryMode: c.flagRecovery,
@@ -1015,7 +1045,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Automatically enable dev mode if other dev flags are provided.
-	if c.flagDevConsul || c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal || c.flagDevKVV1 {
+	if c.flagDevConsul || c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal || c.flagDevKVV1 || c.flagDevTLS {
 		c.flagDev = true
 	}
 
@@ -1051,6 +1081,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// Load the configuration
 	var config *server.Config
 	var err error
+	var certDir string
 	if c.flagDev {
 		var devStorageType string
 		switch {
@@ -1065,11 +1096,59 @@ func (c *ServerCommand) Run(args []string) int {
 		default:
 			devStorageType = "inmem"
 		}
-		config, err = server.DevConfig(devStorageType)
+
+		if c.flagDevTLS {
+			if c.flagDevTLSCertDir != "" {
+				_, err := os.Stat(c.flagDevTLSCertDir)
+				if err != nil {
+					c.UI.Error(err.Error())
+					return 1
+				}
+
+				certDir = c.flagDevTLSCertDir
+			} else {
+				certDir, err = os.MkdirTemp("", "vault-tls")
+				if err != nil {
+					c.UI.Error(err.Error())
+					return 1
+				}
+			}
+			config, err = server.DevTLSConfig(devStorageType, certDir)
+
+			defer func() {
+				err := os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevCAFilename))
+				if err != nil {
+					c.UI.Error(err.Error())
+				}
+
+				err = os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevCertFilename))
+				if err != nil {
+					c.UI.Error(err.Error())
+				}
+
+				err = os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevKeyFilename))
+				if err != nil {
+					c.UI.Error(err.Error())
+				}
+
+				// Only delete temp directories we made.
+				if c.flagDevTLSCertDir == "" {
+					err = os.Remove(certDir)
+					if err != nil {
+						c.UI.Error(err.Error())
+					}
+				}
+			}()
+
+		} else {
+			config, err = server.DevConfig(devStorageType)
+		}
+
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 1
 		}
+
 		if c.flagDevListenAddr != "" {
 			config.Listeners[0].Address = c.flagDevListenAddr
 		}
@@ -1107,14 +1186,16 @@ func (c *ServerCommand) Run(args []string) int {
 
 	if c.flagDevThreeNode || c.flagDevFourCluster {
 		c.logger = hclog.NewInterceptLogger(&hclog.LoggerOptions{
-			Mutex:  &sync.Mutex{},
-			Output: c.gatedWriter,
-			Level:  hclog.Trace,
+			Mutex:             &sync.Mutex{},
+			Output:            c.gatedWriter,
+			Level:             hclog.Trace,
+			IndependentLevels: true,
 		})
 	} else {
 		c.logger = hclog.NewInterceptLogger(&hclog.LoggerOptions{
-			Output: c.gatedWriter,
-			Level:  level,
+			Output:            c.gatedWriter,
+			Level:             level,
+			IndependentLevels: true,
 			// Note that if logFormat is either unspecified or standard, then
 			// the resulting logger's format will be standard.
 			JSONFormat: logFormat == logging.JSONFormat,
@@ -1317,6 +1398,24 @@ func (c *ServerCommand) Run(args []string) int {
 	// Apply any enterprise configuration onto the coreConfig.
 	adjustCoreConfigForEnt(config, &coreConfig)
 
+	if !c.flagDev && os.Getenv(disableStorageTypeCheckEnv) == "" {
+		inMemStorageTypes := []string{
+			"inmem", "inmem_ha", "inmem_transactional", "inmem_transactional_ha",
+		}
+
+		if strutil.StrListContains(inMemStorageTypes, coreConfig.StorageType) {
+			c.UI.Warn("")
+			c.UI.Warn(wrapAtLength(fmt.Sprintf("WARNING: storage configured to use %q which should NOT be used in production", coreConfig.StorageType)))
+			c.UI.Warn("")
+		} else {
+			err = checkStorageTypeForEnt(&coreConfig)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Invalid storage type: %s", err))
+				return 1
+			}
+		}
+	}
+
 	// Initialize the core
 	core, newCoreError := vault.NewCore(&coreConfig)
 	if newCoreError != nil {
@@ -1464,7 +1563,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// If we're in Dev mode, then initialize the core
-	err = initDevCore(c, &coreConfig, config, core)
+	err = initDevCore(c, &coreConfig, config, core, certDir)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
@@ -2054,7 +2153,8 @@ func (c *ServerCommand) addPlugin(path, token string, core *vault.Core) error {
 
 // detectRedirect is used to attempt redirect address detection
 func (c *ServerCommand) detectRedirect(detect physical.RedirectDetect,
-	config *server.Config) (string, error) {
+	config *server.Config,
+) (string, error) {
 	// Get the hostname
 	host, err := detect.DetectHostAddr()
 	if err != nil {
@@ -2410,7 +2510,11 @@ func determineRedirectAddr(c *ServerCommand, coreConfig *vault.CoreConfig, confi
 		}
 	}
 	if coreConfig.RedirectAddr == "" && c.flagDev {
-		coreConfig.RedirectAddr = fmt.Sprintf("http://%s", config.Listeners[0].Address)
+		protocol := "http"
+		if c.flagDevTLS {
+			protocol = "https"
+		}
+		coreConfig.RedirectAddr = fmt.Sprintf("%s://%s", protocol, config.Listeners[0].Address)
 	}
 	return retErr
 }
@@ -2499,7 +2603,8 @@ func runUnseal(c *ServerCommand, core *vault.Core, ctx context.Context) {
 }
 
 func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.Backend, configSR sr.ServiceRegistration, barrierSeal, unwrapSeal vault.Seal,
-	metricsHelper *metricsutil.MetricsHelper, metricSink *metricsutil.ClusterMetricSink, secureRandomReader io.Reader) vault.CoreConfig {
+	metricsHelper *metricsutil.MetricsHelper, metricSink *metricsutil.ClusterMetricSink, secureRandomReader io.Reader,
+) vault.CoreConfig {
 	coreConfig := &vault.CoreConfig{
 		RawConfig:                      config,
 		Physical:                       backend,
@@ -2571,7 +2676,7 @@ func runListeners(c *ServerCommand, coreConfig *vault.CoreConfig, config *server
 	return nil
 }
 
-func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.Config, core *vault.Core) error {
+func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.Config, core *vault.Core, certDir string) error {
 	if c.flagDev && !c.flagDevSkipInit {
 
 		init, err := c.enableDev(core, coreConfig)
@@ -2622,10 +2727,15 @@ func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.
 							"token is already authenticated to the CLI, so you can immediately " +
 							"begin using Vault."))
 					c.UI.Warn("")
-					c.UI.Warn("You may need to set the following environment variable:")
+					c.UI.Warn("You may need to set the following environment variables:")
 					c.UI.Warn("")
 
-					endpointURL := "http://" + config.Listeners[0].Address
+					protocol := "http://"
+					if c.flagDevTLS {
+						protocol = "https://"
+					}
+
+					endpointURL := protocol + config.Listeners[0].Address
 					if runtime.GOOS == "windows" {
 						c.UI.Warn("PowerShell:")
 						c.UI.Warn(fmt.Sprintf("    $env:VAULT_ADDR=\"%s\"", endpointURL))
@@ -2633,6 +2743,18 @@ func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.
 						c.UI.Warn(fmt.Sprintf("    set VAULT_ADDR=%s", endpointURL))
 					} else {
 						c.UI.Warn(fmt.Sprintf("    $ export VAULT_ADDR='%s'", endpointURL))
+					}
+
+					if c.flagDevTLS {
+						if runtime.GOOS == "windows" {
+							c.UI.Warn("PowerShell:")
+							c.UI.Warn(fmt.Sprintf("    $env:VAULT_CACERT=\"%s/vault-ca.pem\"", certDir))
+							c.UI.Warn("cmd.exe:")
+							c.UI.Warn(fmt.Sprintf("    set VAULT_CACERT=%s/vault-ca.pem", certDir))
+						} else {
+							c.UI.Warn(fmt.Sprintf("    $ export VAULT_CACERT='%s/vault-ca.pem'", certDir))
+						}
+						c.UI.Warn("")
 					}
 
 					// Unseal key is not returned if stored shares is supported

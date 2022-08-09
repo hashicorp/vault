@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -20,11 +21,11 @@ const (
 )
 
 type legacyBundleMigrationLog struct {
-	Hash             string    `json:"hash" structs:"hash" mapstructure:"hash"`
-	Created          time.Time `json:"created" structs:"created" mapstructure:"created"`
-	CreatedIssuer    issuerID  `json:"issuer_id" structs:"issuer_id" mapstructure:"issuer_id"`
-	CreatedKey       keyID     `json:"key_id" structs:"key_id" mapstructure:"key_id"`
-	MigrationVersion int       `json:"migrationVersion" structs:"migrationVersion" mapstructure:"migrationVersion"`
+	Hash             string    `json:"hash"`
+	Created          time.Time `json:"created"`
+	CreatedIssuer    issuerID  `json:"issuer_id"`
+	CreatedKey       keyID     `json:"key_id"`
+	MigrationVersion int       `json:"migrationVersion"`
 }
 
 type migrationInfo struct {
@@ -83,8 +84,13 @@ func migrateStorage(ctx context.Context, b *backend, s logical.Storage) error {
 	var issuerIdentifier issuerID
 	var keyIdentifier keyID
 	if migrationInfo.legacyBundle != nil {
+		// Generate a unique name for the migrated items in case things were to be re-migrated again
+		// for some weird reason in the future...
+		migrationName := fmt.Sprintf("current-%d", time.Now().Unix())
+
 		b.Logger().Info("performing PKI migration to new keys/issuers layout")
-		anIssuer, aKey, err := writeCaBundle(ctx, b, s, migrationInfo.legacyBundle, "current", "current")
+		sc := b.makeStorageContext(ctx, s)
+		anIssuer, aKey, err := sc.writeCaBundle(migrationInfo.legacyBundle, migrationName, migrationName)
 		if err != nil {
 			return err
 		}

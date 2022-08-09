@@ -68,7 +68,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
         'The total clients in the namespace for this date range. This number is useful for identifying overall usage volume.'
       );
     assert.dom('[data-test-top-attribution]').includesText('namespace').includesText('second');
-    assert.dom('[data-test-top-counts]').includesText('namespace').includesText('10');
+    assert.dom('[data-test-attribution-clients]').includesText('namespace').includesText('10');
   });
 
   test('it renders correct text for a single month', async function (assert) {
@@ -152,7 +152,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
         'The total clients used by the auth method for this date range. This number is useful for identifying overall usage volume.'
       );
     assert.dom('[data-test-top-attribution]').includesText('auth method').includesText('auth1/');
-    assert.dom('[data-test-top-counts]').includesText('auth method').includesText('3');
+    assert.dom('[data-test-attribution-clients]').includesText('auth method').includesText('3');
   });
 
   test('it renders modal', async function (assert) {

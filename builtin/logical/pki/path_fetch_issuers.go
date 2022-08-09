@@ -2,6 +2,7 @@ package pki
 
 import (
 	"context"
+	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"strings"
@@ -34,12 +35,13 @@ func (b *backend) pathListIssuersHandler(ctx context.Context, req *logical.Reque
 	var responseKeys []string
 	responseInfo := make(map[string]interface{})
 
-	entries, err := listIssuers(ctx, req.Storage)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	entries, err := sc.listIssuers()
 	if err != nil {
 		return nil, err
 	}
 
-	config, err := getIssuersConfig(ctx, req.Storage)
+	config, err := sc.getIssuersConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +50,7 @@ func (b *backend) pathListIssuersHandler(ctx context.Context, req *logical.Reque
 	// listIssuers), but also the name of the issuer. This means we have to
 	// fetch the actual issuer object as well.
 	for _, identifier := range entries {
-		issuer, err := fetchIssuerById(ctx, req.Storage, identifier)
+		issuer, err := sc.fetchIssuerById(identifier)
 		if err != nil {
 			return nil, err
 		}
@@ -105,6 +107,17 @@ this issuer; valid values are "read-only", "issuing-certificates", and
 and always set.`,
 		Default: []string{"read-only", "issuing-certificates", "crl-signing"},
 	}
+	fields["revocation_signature_algorithm"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Which x509.SignatureAlgorithm name to use for
+signing CRLs. This parameter allows differentiation between PKCS#1v1.5
+and PSS keys and choice of signature hash algorithm. The default (empty
+string) value is for Go to select the signature algorithm. This can fail
+if the underlying key does not support the requested signature algorithm,
+which may not be known at modification time (such as with PKCS#11 managed
+RSA keys).`,
+		Default: "",
+	}
 
 	return &framework.Path{
 		// Returns a JSON entry.
@@ -123,6 +136,12 @@ and always set.`,
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathDeleteIssuer,
+				// Read more about why these flags are set in backend.go.
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
+			logical.PatchOperation: &framework.PathOperation{
+				Callback: b.pathPatchIssuer,
 				// Read more about why these flags are set in backend.go.
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
@@ -149,7 +168,8 @@ func (b *backend) pathGetIssuer(ctx context.Context, req *logical.Request, data 
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
 
-	ref, err := resolveIssuerReference(ctx, req.Storage, issuerName)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	ref, err := sc.resolveIssuerReference(issuerName)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +177,7 @@ func (b *backend) pathGetIssuer(ctx context.Context, req *logical.Request, data 
 		return logical.ErrorResponse("unable to resolve issuer id for reference: " + issuerName), nil
 	}
 
-	issuer, err := fetchIssuerById(ctx, req.Storage, ref)
+	issuer, err := sc.fetchIssuerById(ref)
 	if err != nil {
 		return nil, err
 	}
@@ -171,16 +191,22 @@ func respondReadIssuer(issuer *issuerEntry) (*logical.Response, error) {
 		respManualChain = append(respManualChain, string(entity))
 	}
 
+	revSigAlgStr := issuer.RevocationSigAlg.String()
+	if issuer.RevocationSigAlg == x509.UnknownSignatureAlgorithm {
+		revSigAlgStr = ""
+	}
+
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"issuer_id":               issuer.ID,
-			"issuer_name":             issuer.Name,
-			"key_id":                  issuer.KeyID,
-			"certificate":             issuer.Certificate,
-			"manual_chain":            respManualChain,
-			"ca_chain":                issuer.CAChain,
-			"leaf_not_after_behavior": issuer.LeafNotAfterBehavior.String(),
-			"usage":                   issuer.Usage.Names(),
+			"issuer_id":                      issuer.ID,
+			"issuer_name":                    issuer.Name,
+			"key_id":                         issuer.KeyID,
+			"certificate":                    issuer.Certificate,
+			"manual_chain":                   respManualChain,
+			"ca_chain":                       issuer.CAChain,
+			"leaf_not_after_behavior":        issuer.LeafNotAfterBehavior.String(),
+			"usage":                          issuer.Usage.Names(),
+			"revocation_signature_algorithm": revSigAlgStr,
 		},
 	}, nil
 }
@@ -200,7 +226,8 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
 
-	ref, err := resolveIssuerReference(ctx, req.Storage, issuerName)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	ref, err := sc.resolveIssuerReference(issuerName)
 	if err != nil {
 		return nil, err
 	}
@@ -208,12 +235,12 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("unable to resolve issuer id for reference: " + issuerName), nil
 	}
 
-	issuer, err := fetchIssuerById(ctx, req.Storage, ref)
+	issuer, err := sc.fetchIssuerById(ref)
 	if err != nil {
 		return nil, err
 	}
 
-	newName, err := getIssuerName(ctx, req.Storage, data)
+	newName, err := getIssuerName(sc, data)
 	if err != nil && err != errIssuerNameInUse {
 		// If the error is name already in use, and the new name is the
 		// old name for this issuer, we're not actually updating the
@@ -224,6 +251,9 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	if err == errIssuerNameInUse && issuer.Name != newName {
 		// When the new name is in use but isn't this name, throw an error.
 		return logical.ErrorResponse(err.Error()), nil
+	}
+	if len(newName) > 0 && !nameMatcher.MatchString(newName) {
+		return logical.ErrorResponse("new key name outside of valid character limits"), nil
 	}
 
 	newPath := data.Get("manual_chain").([]string)
@@ -246,6 +276,23 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse(fmt.Sprintf("Unable to parse specified usages: %v - valid values are %v", rawUsage, AllIssuerUsages.Names())), nil
 	}
 
+	// Revocation signature algorithm changes
+	revSigAlgStr := data.Get("revocation_signature_algorithm").(string)
+	revSigAlg, present := certutil.SignatureAlgorithmNames[strings.ToLower(revSigAlgStr)]
+	if !present && revSigAlgStr != "" {
+		var knownAlgos []string
+		for algoName := range certutil.SignatureAlgorithmNames {
+			knownAlgos = append(knownAlgos, algoName)
+		}
+
+		return logical.ErrorResponse(fmt.Sprintf("Unknown signature algorithm value: %v - valid values are %v", revSigAlg, strings.Join(knownAlgos, ", "))), nil
+	} else if revSigAlgStr == "" {
+		revSigAlg = x509.UnknownSignatureAlgorithm
+	}
+	if err := issuer.CanMaybeSignWithAlgo(revSigAlg); err != nil {
+		return nil, err
+	}
+
 	modified := false
 
 	var oldName string
@@ -265,6 +312,11 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		modified = true
 	}
 
+	if revSigAlg != issuer.RevocationSigAlg {
+		issuer.RevocationSigAlg = revSigAlg
+		modified = true
+	}
+
 	var updateChain bool
 	var constructedChain []issuerID
 	for index, newPathRef := range newPath {
@@ -273,7 +325,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 			newPathRef = string(ref)
 		}
 
-		resolvedId, err := resolveIssuerReference(ctx, req.Storage, newPathRef)
+		resolvedId, err := sc.resolveIssuerReference(newPathRef)
 		if err != nil {
 			return nil, err
 		}
@@ -298,14 +350,14 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		// Building the chain will write the issuer to disk; no need to do it
 		// twice.
 		modified = false
-		err := rebuildIssuersChains(ctx, req.Storage, issuer)
+		err := sc.rebuildIssuersChains(issuer)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	if modified {
-		err := writeIssuer(ctx, req.Storage, issuer)
+		err := sc.writeIssuer(issuer)
 		if err != nil {
 			return nil, err
 		}
@@ -313,7 +365,187 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 
 	response, err := respondReadIssuer(issuer)
 	if newName != oldName {
-		addWarningOnDereferencing(oldName, response, ctx, req.Storage)
+		addWarningOnDereferencing(sc, oldName, response)
+	}
+
+	return response, err
+}
+
+func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Since we're planning on updating issuers here, grab the lock so we've
+	// got a consistent view.
+	b.issuersLock.Lock()
+	defer b.issuersLock.Unlock()
+
+	if b.useLegacyBundleCaStorage() {
+		return logical.ErrorResponse("Can not patch issuer until migration has completed"), nil
+	}
+
+	// First we fetch the issuer
+	issuerName := getIssuerRef(data)
+	if len(issuerName) == 0 {
+		return logical.ErrorResponse("missing issuer reference"), nil
+	}
+
+	sc := b.makeStorageContext(ctx, req.Storage)
+	ref, err := sc.resolveIssuerReference(issuerName)
+	if err != nil {
+		return nil, err
+	}
+	if ref == "" {
+		return logical.ErrorResponse("unable to resolve issuer id for reference: " + issuerName), nil
+	}
+
+	issuer, err := sc.fetchIssuerById(ref)
+	if err != nil {
+		return nil, err
+	}
+
+	// Now We are Looking at What (Might) Have Changed
+	modified := false
+
+	// Name Changes First
+	_, ok := data.GetOk("issuer_name") // Don't check for conflicts if we aren't updating the name
+	var oldName string
+	var newName string
+	if ok {
+		newName, err = getIssuerName(sc, data)
+		if err != nil && err != errIssuerNameInUse {
+			// If the error is name already in use, and the new name is the
+			// old name for this issuer, we're not actually updating the
+			// issuer name (or causing a conflict) -- so don't err out. Other
+			// errs should still be surfaced, however.
+			return logical.ErrorResponse(err.Error()), nil
+		}
+		if err == errIssuerNameInUse && issuer.Name != newName {
+			// When the new name is in use but isn't this name, throw an error.
+			return logical.ErrorResponse(err.Error()), nil
+		}
+		if len(newName) > 0 && !nameMatcher.MatchString(newName) {
+			return logical.ErrorResponse("new key name outside of valid character limits"), nil
+		}
+		if newName != issuer.Name {
+			oldName = issuer.Name
+			issuer.Name = newName
+			modified = true
+		}
+	}
+
+	// Leaf Not After Changes
+	rawLeafBehaviorData, ok := data.GetOk("leaf_not_after_behaivor")
+	if ok {
+		rawLeafBehavior := rawLeafBehaviorData.(string)
+		var newLeafBehavior certutil.NotAfterBehavior
+		switch rawLeafBehavior {
+		case "err":
+			newLeafBehavior = certutil.ErrNotAfterBehavior
+		case "truncate":
+			newLeafBehavior = certutil.TruncateNotAfterBehavior
+		case "permit":
+			newLeafBehavior = certutil.PermitNotAfterBehavior
+		default:
+			return logical.ErrorResponse("Unknown value for field `leaf_not_after_behavior`. Possible values are `err`, `truncate`, and `permit`."), nil
+		}
+		if newLeafBehavior != issuer.LeafNotAfterBehavior {
+			issuer.LeafNotAfterBehavior = newLeafBehavior
+			modified = true
+		}
+	}
+
+	// Usage Changes
+	rawUsageData, ok := data.GetOk("usage")
+	if ok {
+		rawUsage := rawUsageData.([]string)
+		newUsage, err := NewIssuerUsageFromNames(rawUsage)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("Unable to parse specified usages: %v - valid values are %v", rawUsage, AllIssuerUsages.Names())), nil
+		}
+		if newUsage != issuer.Usage {
+			issuer.Usage = newUsage
+			modified = true
+		}
+	}
+
+	// Revocation signature algorithm changes
+	rawRevSigAlg, ok := data.GetOk("revocation_signature_algorithm")
+	if ok {
+		revSigAlgStr := rawRevSigAlg.(string)
+		revSigAlg, present := certutil.SignatureAlgorithmNames[strings.ToLower(revSigAlgStr)]
+		if !present && revSigAlgStr != "" {
+			var knownAlgos []string
+			for algoName := range certutil.SignatureAlgorithmNames {
+				knownAlgos = append(knownAlgos, algoName)
+			}
+
+			return logical.ErrorResponse(fmt.Sprintf("Unknown signature algorithm value: %v - valid values are %v", revSigAlg, strings.Join(knownAlgos, ", "))), nil
+		} else if revSigAlgStr == "" {
+			revSigAlg = x509.UnknownSignatureAlgorithm
+		}
+
+		if err := issuer.CanMaybeSignWithAlgo(revSigAlg); err != nil {
+			return nil, err
+		}
+
+		if revSigAlg != issuer.RevocationSigAlg {
+			issuer.RevocationSigAlg = revSigAlg
+			modified = true
+		}
+	}
+
+	// Manual Chain Changes
+	newPathData, ok := data.GetOk("manual_chain")
+	if ok {
+		newPath := newPathData.([]string)
+		var updateChain bool
+		var constructedChain []issuerID
+		for index, newPathRef := range newPath {
+			// Allow self for the first entry.
+			if index == 0 && newPathRef == "self" {
+				newPathRef = string(ref)
+			}
+
+			resolvedId, err := sc.resolveIssuerReference(newPathRef)
+			if err != nil {
+				return nil, err
+			}
+
+			if index == 0 && resolvedId != ref {
+				return logical.ErrorResponse(fmt.Sprintf("expected first cert in chain to be a self-reference, but was: %v/%v", newPathRef, resolvedId)), nil
+			}
+
+			constructedChain = append(constructedChain, resolvedId)
+			if len(issuer.ManualChain) < len(constructedChain) || constructedChain[index] != issuer.ManualChain[index] {
+				updateChain = true
+			}
+		}
+
+		if len(issuer.ManualChain) != len(constructedChain) {
+			updateChain = true
+		}
+
+		if updateChain {
+			issuer.ManualChain = constructedChain
+
+			// Building the chain will write the issuer to disk; no need to do it
+			// twice.
+			modified = false
+			err := sc.rebuildIssuersChains(issuer)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if modified {
+		err := sc.writeIssuer(issuer)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	response, err := respondReadIssuer(issuer)
+	if newName != oldName {
+		addWarningOnDereferencing(sc, oldName, response)
 	}
 
 	return response, err
@@ -329,7 +561,8 @@ func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
 
-	ref, err := resolveIssuerReference(ctx, req.Storage, issuerName)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	ref, err := sc.resolveIssuerReference(issuerName)
 	if err != nil {
 		return nil, err
 	}
@@ -337,7 +570,7 @@ func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("unable to resolve issuer id for reference: " + issuerName), nil
 	}
 
-	issuer, err := fetchIssuerById(ctx, req.Storage, ref)
+	issuer, err := sc.fetchIssuerById(ref)
 	if err != nil {
 		return nil, err
 	}
@@ -398,39 +631,40 @@ func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
 
-	ref, err := resolveIssuerReference(ctx, req.Storage, issuerName)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	ref, err := sc.resolveIssuerReference(issuerName)
 	if err != nil {
+		// Return as if we deleted it if we fail to lookup the issuer.
+		if ref == IssuerRefNotFound {
+			return &logical.Response{}, nil
+		}
 		return nil, err
 	}
-	if ref == "" {
-		return logical.ErrorResponse("unable to resolve issuer id for reference: " + issuerName), nil
-	}
 
-	var response *logical.Response
-	response = &logical.Response{}
+	response := &logical.Response{}
 
-	issuer, err := fetchIssuerById(ctx, req.Storage, ref)
+	issuer, err := sc.fetchIssuerById(ref)
 	if err != nil {
 		return nil, err
 	}
 	if issuer.Name != "" {
-		addWarningOnDereferencing(issuer.Name, response, ctx, req.Storage)
+		addWarningOnDereferencing(sc, issuer.Name, response)
 	}
-	addWarningOnDereferencing(string(issuer.ID), response, ctx, req.Storage)
+	addWarningOnDereferencing(sc, string(issuer.ID), response)
 
-	wasDefault, err := deleteIssuer(ctx, req.Storage, ref)
+	wasDefault, err := sc.deleteIssuer(ref)
 	if err != nil {
 		return nil, err
 	}
 	if wasDefault {
 		response.AddWarning(fmt.Sprintf("Deleted issuer %v (via issuer_ref %v); this was configured as the default issuer. Operations without an explicit issuer will not work until a new default is configured.", ref, issuerName))
-		addWarningOnDereferencing(defaultRef, response, ctx, req.Storage)
+		addWarningOnDereferencing(sc, defaultRef, response)
 	}
 
 	// Since we've deleted an issuer, the chains might've changed. Call the
 	// rebuild code. We shouldn't technically err (as the issuer was deleted
 	// successfully), but log a warning (and to the response) if this fails.
-	if err := rebuildIssuersChains(ctx, req.Storage, nil); err != nil {
+	if err := sc.rebuildIssuersChains(nil); err != nil {
 		msg := fmt.Sprintf("Failed to rebuild remaining issuers' chains: %v", err)
 		b.Logger().Error(msg)
 		response.AddWarning(msg)
@@ -439,8 +673,8 @@ func (b *backend) pathDeleteIssuer(ctx context.Context, req *logical.Request, da
 	return response, nil
 }
 
-func addWarningOnDereferencing(name string, resp *logical.Response, ctx context.Context, s logical.Storage) {
-	timeout, inUseBy, err := checkForRolesReferencing(name, ctx, s)
+func addWarningOnDereferencing(sc *storageContext, name string, resp *logical.Response) {
+	timeout, inUseBy, err := sc.checkForRolesReferencing(name)
 	if err != nil || timeout {
 		if inUseBy == 0 {
 			resp.AddWarning(fmt.Sprint("Unable to check if any roles referenced this issuer by ", name))
@@ -511,7 +745,8 @@ func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, da
 		return nil, err
 	}
 
-	crlPath, err := resolveIssuerCRLPath(ctx, b, req.Storage, issuerName)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	crlPath, err := sc.resolveIssuerCRLPath(issuerName)
 	if err != nil {
 		return nil, err
 	}

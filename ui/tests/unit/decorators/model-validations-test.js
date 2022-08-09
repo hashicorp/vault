@@ -12,6 +12,7 @@ const createClass = (validations) => {
   const foo = Foo.extend({
     modelName: 'bar',
     foo: null,
+    integer: null,
   });
   return new foo();
 };
@@ -80,5 +81,33 @@ module('Unit | Decorators | ModelValidations', function (hooks) {
       { foo: { isValid: true, errors: [] } },
       'Correct state returned when property is valid'
     );
+  });
+
+  test('invalid form message has correct error count', function (assert) {
+    const message = 'This field is required';
+    const messageII = 'This field must be a number';
+    const validations = {
+      foo: [{ type: 'presence', message }],
+      integer: [{ type: 'number', messageII }],
+    };
+    const fooClass = createClass(validations);
+    const v1 = fooClass.validate();
+    assert.equal(
+      v1.invalidFormMessage,
+      'There are 2 errors with this form.',
+      'error message says form as 2 errors'
+    );
+
+    fooClass.integer = 9;
+    const v2 = fooClass.validate();
+    assert.equal(
+      v2.invalidFormMessage,
+      'There is an error with this form.',
+      'error message says form has an error'
+    );
+
+    fooClass.foo = true;
+    const v3 = fooClass.validate();
+    assert.equal(v3.invalidFormMessage, null, 'invalidFormMessage is null when form is valid');
   });
 });

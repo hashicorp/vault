@@ -71,7 +71,7 @@ and consider if they're appropriate for your deployment.
 
     - `repository` (`string: "hashicorp/vault-k8s"`) - The name of the Docker image for Vault Agent Injector.
 
-    - `tag` (`string: "0.16.0"`) - The tag of the Docker image for the Vault Agent Injector. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
+    - `tag` (`string: "0.16.1"`) - The tag of the Docker image for the Vault Agent Injector. **This should be pinned to a specific version when running in production.** Otherwise, other changes to the chart may inadvertently upgrade your admission controller.
 
     - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists.
 
@@ -769,7 +769,7 @@ and consider if they're appropriate for your deployment.
     - `apiAddr`: (`string: "{}"`) -
       Set the API address configuration for a Vault cluster. If set to an empty string, the pod IP address is used.
 
-    - `clusterAddr` (`string: null`) - Set the [`cluster_addr`](https://www.vaultproject.io/docs/configuration#cluster_addr) confuguration for Vault HA.
+    - `clusterAddr` (`string: null`) - Set the [`cluster_addr`](https://www.vaultproject.io/docs/configuration#cluster_addr) configuration for Vault HA.
       If null, defaults to `https://$(HOSTNAME).{{ template "vault.fullname" . }}-internal:8201`.
 
     - `raft` - This configures `raft` integrated storage mode for the Vault server.
@@ -808,7 +808,7 @@ and consider if they're appropriate for your deployment.
       }
 
       storage "consul" {
-          path = "vault"
+          path = "vault/"
           address = "HOST_IP:8500"
       }
     ```
@@ -1016,4 +1016,4 @@ and consider if they're appropriate for your deployment.
 
   - `debug` (`bool: false`) - When set to true, enables debug logging on the Vault CSI Provider daemonset.
 
-  - `extraArgs` (`string: array`) - The extra arguments to be applied to the CSI pod startup command.
+  - `extraArgs` (`string: array`) - The extra arguments to be applied to the CSI pod startup command. See [here](/docs/platform/k8s/csi/configurations#command-line-arguments) for available flags.

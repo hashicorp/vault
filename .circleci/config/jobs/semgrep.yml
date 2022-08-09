@@ -1,7 +1,6 @@
 ---
-executor: alpine 
+executor: semgrep
 steps:
-  - setup-semgrep
   - checkout
   - attach_workspace:
       at: .

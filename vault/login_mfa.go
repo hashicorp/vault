@@ -384,12 +384,28 @@ func (i *IdentityStore) handleMFAMethodPingIDUpdate(ctx context.Context, req *lo
 	return i.handleMFAMethodUpdateCommon(ctx, req, d, mfaMethodTypePingID)
 }
 
-func (i *IdentityStore) handleMFAMethodDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) handleMFAMethodTOTPDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleMFAMethodDeleteCommon(ctx, req, d, mfaMethodTypeTOTP)
+}
+
+func (i *IdentityStore) handleMFAMethodOKTADelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleMFAMethodDeleteCommon(ctx, req, d, mfaMethodTypeOkta)
+}
+
+func (i *IdentityStore) handleMFAMethodDUODelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleMFAMethodDeleteCommon(ctx, req, d, mfaMethodTypeDuo)
+}
+
+func (i *IdentityStore) handleMFAMethodPingIDDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleMFAMethodDeleteCommon(ctx, req, d, mfaMethodTypePingID)
+}
+
+func (i *IdentityStore) handleMFAMethodDeleteCommon(ctx context.Context, req *logical.Request, d *framework.FieldData, methodType string) (*logical.Response, error) {
 	methodID := d.Get("method_id").(string)
 	if methodID == "" {
 		return logical.ErrorResponse("missing method ID"), nil
 	}
-	return nil, i.mfaBackend.deleteMFAConfigByMethodID(ctx, methodID, memDBLoginMFAConfigsTable, loginMFAConfigPrefix)
+	return nil, i.mfaBackend.deleteMFAConfigByMethodID(ctx, methodID, methodType, memDBLoginMFAConfigsTable, loginMFAConfigPrefix)
 }
 
 func (i *IdentityStore) handleLoginMFAGenerateUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -700,7 +716,7 @@ func (b *LoginMFABackend) handleMFALoginValidate(ctx context.Context, req *logic
 	}
 
 	// MFA validation has passed. Let's generate the token
-	resp, err := b.Core.LoginMFACreateToken(ctx, cachedResponseAuth.RequestPath, cachedResponseAuth.CachedAuth)
+	resp, err := b.Core.LoginMFACreateToken(ctx, cachedResponseAuth.RequestPath, cachedResponseAuth.CachedAuth, req.Data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a token. error: %v", err)
 	}
@@ -726,7 +742,7 @@ func (c *Core) teardownLoginMFA() error {
 
 // LoginMFACreateToken creates a token after the login MFA is validated.
 // It also applies the lease quotas on the original login request path.
-func (c *Core) LoginMFACreateToken(ctx context.Context, reqPath string, cachedAuth *logical.Auth) (*logical.Response, error) {
+func (c *Core) LoginMFACreateToken(ctx context.Context, reqPath string, cachedAuth *logical.Auth, loginRequestData map[string]interface{}) (*logical.Response, error) {
 	auth := cachedAuth
 	resp := &logical.Response{
 		Auth: auth,
@@ -745,6 +761,7 @@ func (c *Core) LoginMFACreateToken(ctx context.Context, reqPath string, cachedAu
 	quotaResp, quotaErr := c.applyLeaseCountQuota(ctx, &quotas.Request{
 		Path:          reqPath,
 		MountPath:     strings.TrimPrefix(mountPoint, ns.Path),
+		Role:          c.DetermineRoleFromLoginRequest(mountPoint, loginRequestData, ctx),
 		NamespacePath: ns.Path,
 	})
 
@@ -764,7 +781,7 @@ func (c *Core) LoginMFACreateToken(ctx context.Context, reqPath string, cachedAu
 	// note that we don't need to handle the error for the following function right away.
 	// The function takes the response as in input variable and modify it. So, the returned
 	// arguments are resp and err.
-	leaseGenerated, resp, err := c.LoginCreateToken(ctx, ns, reqPath, mountPoint, resp)
+	leaseGenerated, resp, err := c.LoginCreateToken(ctx, ns, reqPath, mountPoint, resp, loginRequestData)
 
 	if quotaResp.Access != nil {
 		quotaAckErr := c.ackLeaseQuota(quotaResp.Access, leaseGenerated)
@@ -1722,13 +1739,13 @@ func formatUsername(format string, alias *identity.Alias, entity *identity.Entit
 	}
 
 	username := format
-	username = strings.Replace(username, "{{alias.name}}", alias.Name, -1)
-	username = strings.Replace(username, "{{entity.name}}", entity.Name, -1)
+	username = strings.ReplaceAll(username, "{{alias.name}}", alias.Name)
+	username = strings.ReplaceAll(username, "{{entity.name}}", entity.Name)
 	for k, v := range alias.Metadata {
-		username = strings.Replace(username, fmt.Sprintf("{{alias.metadata.%s}}", k), v, -1)
+		username = strings.ReplaceAll(username, fmt.Sprintf("{{alias.metadata.%s}}", k), v)
 	}
 	for k, v := range entity.Metadata {
-		username = strings.Replace(username, fmt.Sprintf("{{entity.metadata.%s}}", k), v, -1)
+		username = strings.ReplaceAll(username, fmt.Sprintf("{{entity.metadata.%s}}", k), v)
 	}
 	return username
 }
@@ -2559,7 +2576,7 @@ func (b *LoginMFABackend) MemDBDeleteMFALoginEnforcementConfigByNameAndNamespace
 	return nil
 }
 
-func (b *LoginMFABackend) deleteMFAConfigByMethodID(ctx context.Context, configID, tableName, prefix string) error {
+func (b *LoginMFABackend) deleteMFAConfigByMethodID(ctx context.Context, configID, methodType, tableName, prefix string) error {
 	var err error
 
 	if configID == "" {
@@ -2599,6 +2616,10 @@ func (b *LoginMFABackend) deleteMFAConfigByMethodID(ctx context.Context, configI
 
 	if mConfig == nil {
 		return nil
+	}
+
+	if mConfig.Type != methodType {
+		return fmt.Errorf("method type does not match the MFA config type")
 	}
 
 	mfaNs, err := b.Core.NamespaceByID(ctx, mConfig.NamespaceID)

@@ -198,7 +198,7 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 		return nil, errors.New("the import path cannot be used with an existing key; use import-version to rotate an existing imported key")
 	}
 
-	ciphertext, err := base64.RawURLEncoding.DecodeString(ciphertextString)
+	ciphertext, err := base64.StdEncoding.DecodeString(ciphertextString)
 	if err != nil {
 		return nil, err
 	}
@@ -251,7 +251,7 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 	}
 	defer p.Unlock()
 
-	ciphertext, err := base64.RawURLEncoding.DecodeString(ciphertextString)
+	ciphertext, err := base64.StdEncoding.DecodeString(ciphertextString)
 	if err != nil {
 		return nil, err
 	}

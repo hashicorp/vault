@@ -44,7 +44,7 @@ func TestBackend_RotateRootCredentials_WAL_rollback(t *testing.T) {
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
-	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)
+	connURL = strings.ReplaceAll(connURL, "postgres:secret", "{{username}}:{{password}}")
 
 	// Configure a connection to the database
 	data := map[string]interface{}{
@@ -183,7 +183,7 @@ func TestBackend_RotateRootCredentials_WAL_no_rollback_1(t *testing.T) {
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
-	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)
+	connURL = strings.ReplaceAll(connURL, "postgres:secret", "{{username}}:{{password}}")
 
 	// Configure a connection to the database
 	data := map[string]interface{}{
@@ -291,7 +291,7 @@ func TestBackend_RotateRootCredentials_WAL_no_rollback_2(t *testing.T) {
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
-	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)
+	connURL = strings.ReplaceAll(connURL, "postgres:secret", "{{username}}:{{password}}")
 
 	// Configure a connection to the database
 	data := map[string]interface{}{

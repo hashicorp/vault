@@ -17,7 +17,10 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/asn1"
+	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
@@ -707,6 +710,7 @@ type CAInfoBundle struct {
 	ParsedCertBundle
 	URLs                 *URLEntries
 	LeafNotAfterBehavior NotAfterBehavior
+	RevocationSigAlg     x509.SignatureAlgorithm
 }
 
 func (b *CAInfoBundle) GetCAChain() []*CertBlock {
@@ -779,6 +783,7 @@ type CreationParameters struct {
 	PolicyIdentifiers             []string
 	BasicConstraintsValidForNonCA bool
 	SignatureBits                 int
+	UsePSS                        bool
 	ForceAppendCaChain            bool
 
 	// Only used when signing a CA cert
@@ -793,6 +798,9 @@ type CreationParameters struct {
 
 	// The duration the certificate will use NotBefore
 	NotBeforeDuration time.Duration
+
+	// The explicit SKID to use; especially useful for cross-signing.
+	SKID []byte
 }
 
 type CreationBundle struct {
@@ -893,4 +901,115 @@ func (p *KeyBundle) ToPrivateKeyPemString() (string, error) {
 	}
 
 	return "", errutil.InternalError{Err: "No Private Key Bytes to Wrap"}
+}
+
+// PolicyIdentifierWithQualifierEntry Structure for Internal Storage
+type PolicyIdentifierWithQualifierEntry struct {
+	PolicyIdentifierOid string `json:"oid",mapstructure:"oid"`
+	CPS                 string `json:"cps,omitempty",mapstructure:"cps"`
+	Notice              string `json:"notice,omitempty",mapstructure:"notice"`
+}
+
+// GetPolicyIdentifierFromString parses out the internal structure of a Policy Identifier
+func GetPolicyIdentifierFromString(policyIdentifier string) (*PolicyIdentifierWithQualifierEntry, error) {
+	if policyIdentifier == "" {
+		return nil, nil
+	}
+	entry := &PolicyIdentifierWithQualifierEntry{}
+	// Either a OID, or a JSON Entry: First check OID:
+	_, err := StringToOid(policyIdentifier)
+	if err == nil {
+		entry.PolicyIdentifierOid = policyIdentifier
+		return entry, nil
+	}
+	// Now Check If JSON Entry
+	jsonErr := json.Unmarshal([]byte(policyIdentifier), &entry)
+	if jsonErr != nil { // Neither, if we got here
+		return entry, errors.New(fmt.Sprintf("Policy Identifier %q is neither a valid OID: %s, Nor JSON Policy Identifier: %s", policyIdentifier, err.Error(), jsonErr.Error()))
+	}
+	return entry, nil
+}
+
+// Policy Identifier with Qualifier Structure for ASN Marshalling:
+
+var policyInformationOid = asn1.ObjectIdentifier{2, 5, 29, 32}
+
+type policyInformation struct {
+	PolicyIdentifier asn1.ObjectIdentifier
+	Qualifiers       []interface{} `asn1:"tag:optional,omitempty"`
+}
+
+var cpsPolicyQualifierID = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 2, 1}
+
+type cpsUrlPolicyQualifier struct {
+	PolicyQualifierID asn1.ObjectIdentifier
+	Qualifier         string `asn1:"tag:optional,ia5"`
+}
+
+var userNoticePolicyQualifierID = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 2, 2}
+
+type userNoticePolicyQualifier struct {
+	PolicyQualifierID asn1.ObjectIdentifier
+	Qualifier         userNotice
+}
+
+type userNotice struct {
+	ExplicitText string `asn1:"tag:optional,utf8"`
+}
+
+func createPolicyIdentifierWithQualifier(entry PolicyIdentifierWithQualifierEntry) (*policyInformation, error) {
+	// Each Policy is Identified by a Unique ID, as designated here:
+	policyOid, err := StringToOid(entry.PolicyIdentifierOid)
+	if err != nil {
+		return nil, err
+	}
+	pi := policyInformation{
+		PolicyIdentifier: policyOid,
+	}
+	if entry.CPS != "" {
+		qualifier := cpsUrlPolicyQualifier{
+			PolicyQualifierID: cpsPolicyQualifierID,
+			Qualifier:         entry.CPS,
+		}
+		pi.Qualifiers = append(pi.Qualifiers, qualifier)
+	}
+	if entry.Notice != "" {
+		qualifier := userNoticePolicyQualifier{
+			PolicyQualifierID: userNoticePolicyQualifierID,
+			Qualifier: userNotice{
+				ExplicitText: entry.Notice,
+			},
+		}
+		pi.Qualifiers = append(pi.Qualifiers, qualifier)
+	}
+	return &pi, nil
+}
+
+// CreatePolicyInformationExtensionFromStorageStrings parses the stored policyIdentifiers, which might be JSON Policy
+// Identifier with Qualifier Entries or String OIDs, and returns an extension if everything parsed correctly, and an
+// error if constructing
+func CreatePolicyInformationExtensionFromStorageStrings(policyIdentifiers []string) (*pkix.Extension, error) {
+	var policyInformationList []policyInformation
+	for _, policyIdentifierStr := range policyIdentifiers {
+		policyIdentifierEntry, err := GetPolicyIdentifierFromString(policyIdentifierStr)
+		if err != nil {
+			return nil, err
+		}
+		if policyIdentifierEntry != nil { // Okay to skip empty entries if there is no error
+			policyInformationStruct, err := createPolicyIdentifierWithQualifier(*policyIdentifierEntry)
+			if err != nil {
+				return nil, err
+			}
+			policyInformationList = append(policyInformationList, *policyInformationStruct)
+		}
+	}
+	asn1Bytes, err := asn1.Marshal(policyInformationList)
+	if err != nil {
+		return nil, err
+	}
+	return &pkix.Extension{
+		Id:       policyInformationOid,
+		Critical: false,
+		Value:    asn1Bytes,
+	}, nil
 }

@@ -4,7 +4,7 @@ import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 const TOTAL = 15;
-const CARD_TITLE = 'Tokens';
+const CARD_TITLE = 'Connections';
 
 module('Integration | Component selectable-card', function (hooks) {
   setupRenderingTest(hooks);
@@ -21,10 +21,9 @@ module('Integration | Component selectable-card', function (hooks) {
     assert.equal(titleNumber, 15);
   });
 
-  test('it returns non-plural version of card title if total is 1, ', async function (assert) {
+  test('it returns card title, ', async function (assert) {
     await render(hbs`<SelectableCard @total={{1}} @cardTitle={{cardTitle}}/>`);
     let titleText = this.element.querySelector('.title').innerText;
-
-    assert.equal(titleText, 'Token');
+    assert.equal(titleText, 'Connections');
   });
 });

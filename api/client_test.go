@@ -19,7 +19,6 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
@@ -70,16 +69,62 @@ func TestClientNilConfig(t *testing.T) {
 	}
 }
 
+func TestClientDefaultHttpClient_unixSocket(t *testing.T) {
+	os.Setenv("VAULT_AGENT_ADDR", "unix:///var/run/vault.sock")
+	defer os.Setenv("VAULT_AGENT_ADDR", "")
+
+	client, err := NewClient(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if client == nil {
+		t.Fatal("expected a non-nil client")
+	}
+	if client.addr.Scheme != "http" {
+		t.Fatalf("bad: %s", client.addr.Scheme)
+	}
+	if client.addr.Host != "/var/run/vault.sock" {
+		t.Fatalf("bad: %s", client.addr.Host)
+	}
+}
+
 func TestClientSetAddress(t *testing.T) {
 	client, err := NewClient(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Start with TCP address using HTTP
 	if err := client.SetAddress("http://172.168.2.1:8300"); err != nil {
 		t.Fatal(err)
 	}
 	if client.addr.Host != "172.168.2.1:8300" {
 		t.Fatalf("bad: expected: '172.168.2.1:8300' actual: %q", client.addr.Host)
+	}
+	// Test switching to Unix Socket address from TCP address
+	if err := client.SetAddress("unix:///var/run/vault.sock"); err != nil {
+		t.Fatal(err)
+	}
+	if client.addr.Scheme != "http" {
+		t.Fatalf("bad: expected: 'http' actual: %q", client.addr.Scheme)
+	}
+	if client.addr.Host != "/var/run/vault.sock" {
+		t.Fatalf("bad: expected: '/var/run/vault.sock' actual: %q", client.addr.Host)
+	}
+	if client.addr.Path != "" {
+		t.Fatalf("bad: expected '' actual: %q", client.addr.Path)
+	}
+	if client.config.HttpClient.Transport.(*http.Transport).DialContext == nil {
+		t.Fatal("bad: expected DialContext to not be nil")
+	}
+	// Test switching to TCP address from Unix Socket address
+	if err := client.SetAddress("http://172.168.2.1:8300"); err != nil {
+		t.Fatal(err)
+	}
+	if client.addr.Host != "172.168.2.1:8300" {
+		t.Fatalf("bad: expected: '172.168.2.1:8300' actual: %q", client.addr.Host)
+	}
+	if client.addr.Scheme != "http" {
+		t.Fatalf("bad: expected: 'http' actual: %q", client.addr.Scheme)
 	}
 }
 
@@ -254,7 +299,7 @@ func TestDefaulRetryPolicy(t *testing.T) {
 				t.Fatalf("expected to retry request: '%t', but actual result was: '%t'", test.expect, retry)
 			}
 			if err != test.expectErr {
-				t.Fatalf("expected error from retry policy: '%s', but actual result was: '%s'", err, test.expectErr)
+				t.Fatalf("expected error from retry policy: %q, but actual result was: %q", err, test.expectErr)
 			}
 		})
 	}
@@ -424,6 +469,20 @@ func TestClientNonTransportRoundTripper(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestClientNonTransportRoundTripperUnixAddress(t *testing.T) {
+	client := &http.Client{
+		Transport: roundTripperFunc(http.DefaultTransport.RoundTrip),
+	}
+
+	_, err := NewClient(&Config{
+		HttpClient: client,
+		Address:    "unix:///var/run/vault.sock",
+	})
+	if err == nil {
+		t.Fatal("bad: expected error got nil")
 	}
 }
 
@@ -1160,7 +1219,7 @@ func TestClientWithNamespace(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	if ns != ogNS {
-		t.Fatalf("Expected namespace: \"%s\", got \"%s\"", ogNS, ns)
+		t.Fatalf("Expected namespace: %q, got %q", ogNS, ns)
 	}
 
 	// make a call with a temporary namespace
@@ -1172,7 +1231,7 @@ func TestClientWithNamespace(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	if ns != newNS {
-		t.Fatalf("Expected new namespace: \"%s\", got \"%s\"", newNS, ns)
+		t.Fatalf("Expected new namespace: %q, got %q", newNS, ns)
 	}
 	// ensure client has not been modified
 	_, err = client.rawRequestWithContext(
@@ -1182,7 +1241,7 @@ func TestClientWithNamespace(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	if ns != ogNS {
-		t.Fatalf("Expected original namespace: \"%s\", got \"%s\"", ogNS, ns)
+		t.Fatalf("Expected original namespace: %q, got %q", ogNS, ns)
 	}
 
 	// make call with empty ns
@@ -1193,11 +1252,117 @@ func TestClientWithNamespace(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	if ns != "" {
-		t.Fatalf("Expected no namespace, got \"%s\"", ns)
+		t.Fatalf("Expected no namespace, got %q", ns)
 	}
 
 	// ensure client has not been modified
 	if client.Namespace() != ogNS {
-		t.Fatalf("Expected original namespace: \"%s\", got \"%s\"", ogNS, client.Namespace())
+		t.Fatalf("Expected original namespace: %q, got %q", ogNS, client.Namespace())
+	}
+}
+
+func TestVaultProxy(t *testing.T) {
+	const NoProxy string = "NO_PROXY"
+
+	tests := map[string]struct {
+		name                     string
+		vaultHttpProxy           string
+		vaultProxyAddr           string
+		noProxy                  string
+		requestUrl               string
+		expectedResolvedProxyUrl string
+	}{
+		"VAULT_HTTP_PROXY used when NO_PROXY env var doesn't include request host": {
+			vaultHttpProxy: "https://hashicorp.com",
+			vaultProxyAddr: "",
+			noProxy:        "terraform.io",
+			requestUrl:     "https://vaultproject.io",
+		},
+		"VAULT_HTTP_PROXY used when NO_PROXY env var includes request host": {
+			vaultHttpProxy: "https://hashicorp.com",
+			vaultProxyAddr: "",
+			noProxy:        "terraform.io,vaultproject.io",
+			requestUrl:     "https://vaultproject.io",
+		},
+		"VAULT_PROXY_ADDR used when NO_PROXY env var doesn't include request host": {
+			vaultHttpProxy: "",
+			vaultProxyAddr: "https://hashicorp.com",
+			noProxy:        "terraform.io",
+			requestUrl:     "https://vaultproject.io",
+		},
+		"VAULT_PROXY_ADDR used when NO_PROXY env var includes request host": {
+			vaultHttpProxy: "",
+			vaultProxyAddr: "https://hashicorp.com",
+			noProxy:        "terraform.io,vaultproject.io",
+			requestUrl:     "https://vaultproject.io",
+		},
+		"VAULT_PROXY_ADDR used when VAULT_HTTP_PROXY env var also supplied": {
+			vaultHttpProxy:           "https://hashicorp.com",
+			vaultProxyAddr:           "https://terraform.io",
+			noProxy:                  "",
+			requestUrl:               "https://vaultproject.io",
+			expectedResolvedProxyUrl: "https://terraform.io",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			if tc.vaultHttpProxy != "" {
+				oldVaultHttpProxy := os.Getenv(EnvHTTPProxy)
+				os.Setenv(EnvHTTPProxy, tc.vaultHttpProxy)
+				defer os.Setenv(EnvHTTPProxy, oldVaultHttpProxy)
+			}
+
+			if tc.vaultProxyAddr != "" {
+				oldVaultProxyAddr := os.Getenv(EnvVaultProxyAddr)
+				os.Setenv(EnvVaultProxyAddr, tc.vaultProxyAddr)
+				defer os.Setenv(EnvVaultProxyAddr, oldVaultProxyAddr)
+			}
+
+			if tc.noProxy != "" {
+				oldNoProxy := os.Getenv(NoProxy)
+				os.Setenv(NoProxy, tc.noProxy)
+				defer os.Setenv(NoProxy, oldNoProxy)
+			}
+
+			c := DefaultConfig()
+			if c.Error != nil {
+				t.Fatalf("Expected no error reading config, found error %v", c.Error)
+			}
+
+			r, _ := http.NewRequest("GET", tc.requestUrl, nil)
+			proxyUrl, err := c.HttpClient.Transport.(*http.Transport).Proxy(r)
+			if err != nil {
+				t.Fatalf("Expected no error resolving proxy, found error %v", err)
+			}
+			if proxyUrl == nil || proxyUrl.String() == "" {
+				t.Fatalf("Expected proxy to be resolved but no proxy returned")
+			}
+			if tc.expectedResolvedProxyUrl != "" && proxyUrl.String() != tc.expectedResolvedProxyUrl {
+				t.Fatalf("Expected resolved proxy URL to be %v but was %v", tc.expectedResolvedProxyUrl, proxyUrl.String())
+			}
+		})
+	}
+}
+
+func TestParseAddressWithUnixSocket(t *testing.T) {
+	address := "unix:///var/run/vault.sock"
+	config := DefaultConfig()
+
+	u, err := config.ParseAddress(address)
+	if err != nil {
+		t.Fatal("Error not expected")
+	}
+	if u.Scheme != "http" {
+		t.Fatal("Scheme not changed to http")
+	}
+	if u.Host != "/var/run/vault.sock" {
+		t.Fatal("Host not changed to socket name")
+	}
+	if u.Path != "" {
+		t.Fatal("Path expected to be blank")
+	}
+	if config.HttpClient.Transport.(*http.Transport).DialContext == nil {
+		t.Fatal("DialContext function not set in config.HttpClient.Transport")
 	}
 }

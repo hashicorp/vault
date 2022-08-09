@@ -18,19 +18,19 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
-<form {{action (perform this.mountBackend) on="submit"}}>
+<form {{on "submit" (perform this.mountBackend)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="enable" @noun={{if (eq this.mountType "auth") "Auth Method" "Secret Engine"}} />
     <MessageError @model={{this.model}} @errorMessage={{this.errorMessage}} @errors={{this.errors}} />
     {{#if this.showEnable}}
       <FormFieldGroups
         @model={{this.mountModel}}
-        @onChange={{action "onTypeChange"}}
+        @onChange={{this.onTypeChange}}
         @renderGroup="default"
         @modelValidations={{this.modelValidations}}
-        @onKeyUp={{action "onKeyUp"}}
+        @onKeyUp={{this.onKeyUp}}
       />
-      <FormFieldGroups @model={{this.mountModel}} @onChange={{action "onTypeChange"}} @renderGroup="Method Options" />
+      <FormFieldGroups @model={{this.mountModel}} @onChange={{this.onTypeChange}} @renderGroup="Method Options" />
     {{else}}
       {{#each (array "generic" "cloud" "infra") as |category|}}
         <h3 class="title box-radio-header">
@@ -44,9 +44,8 @@
               @glyph={{or type.glyph type.type}}
               @groupValue={{this.mountModel.type}}
               @groupName="mount-type"
-              @onRadioChange={{queue (action (mut this.mountModel.type)) (action "onTypeChange" "type")}}
+              @onRadioChange={{queue (fn (mut this.mountModel.type)) (fn this.onTypeChange "type")}}
               @disabled={{if type.requiredFeature (not (has-feature type.requiredFeature)) false}}
-              {{! TODO: verify that keymgmt is in the ADP module }}
               @tooltipMessage={{if
                 (or (eq type.type "transform") (eq type.type "kmip") (eq type.type "keymgmt"))
                 (concat
@@ -68,7 +67,7 @@
           type="submit"
           data-test-mount-submit="true"
           class="button is-primary {{if this.mountBackend.isRunning 'loading'}}"
-          disabled={{or this.mountBackend.isRunning this.isFormInvalid}}
+          disabled={{this.mountBackend.isRunning}}
         >
           {{#if (eq this.mountType "auth")}}
             Enable Method
@@ -78,16 +77,21 @@
         </button>
       </div>
       <div class="control">
-        <button data-test-mount-back type="button" class="button" onclick={{action "toggleShowEnable" false}}>
+        <button data-test-mount-back type="button" class="button" {{on "click" (fn this.toggleShowEnable false)}}>
           Back
         </button>
       </div>
+      {{#if this.invalidFormAlert}}
+        <div class="control">
+          <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />
+        </div>
+      {{/if}}
     {{else}}
       <button
         data-test-mount-next
         type="button"
         class="button is-primary"
-        onclick={{action "toggleShowEnable" true}}
+        {{on "click" (fn this.toggleShowEnable true)}}
         disabled={{not this.mountModel.type}}
       >
         Next

@@ -22,6 +22,12 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
+const (
+	VaultDevCAFilename   = "vault-ca.pem"
+	VaultDevCertFilename = "vault-cert.pem"
+	VaultDevKeyFilename  = "vault-key.pem"
+)
+
 var entConfigValidate = func(_ *Config, _ string) []configutil.ConfigError {
 	return nil
 }
@@ -148,6 +154,62 @@ ui = true
 	if err != nil {
 		return nil, fmt.Errorf("error parsing dev config: %w", err)
 	}
+	return parsed, nil
+}
+
+// DevTLSConfig is a Config that is used for dev tls mode of Vault.
+func DevTLSConfig(storageType, certDir string) (*Config, error) {
+	ca, err := GenerateCA()
+	if err != nil {
+		return nil, err
+	}
+
+	cert, key, err := GenerateCert(ca.Template, ca.Signer)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := os.WriteFile(fmt.Sprintf("%s/%s", certDir, VaultDevCAFilename), []byte(ca.PEM), 0o444); err != nil {
+		return nil, err
+	}
+
+	if err := os.WriteFile(fmt.Sprintf("%s/%s", certDir, VaultDevCertFilename), []byte(cert), 0o400); err != nil {
+		return nil, err
+	}
+
+	if err := os.WriteFile(fmt.Sprintf("%s/%s", certDir, VaultDevKeyFilename), []byte(key), 0o400); err != nil {
+		return nil, err
+	}
+
+	hclStr := `
+disable_mlock = true
+
+listener "tcp" {
+	address = "[::]:8200"
+	tls_cert_file = "%s/vault-cert.pem"
+	tls_key_file = "%s/vault-key.pem"
+	proxy_protocol_behavior = "allow_authorized"
+	proxy_protocol_authorized_addrs = "[::]:8200"
+}
+
+telemetry {
+	prometheus_retention_time = "24h"
+	disable_hostname = true
+}
+enable_raw_endpoint = true
+
+storage "%s" {
+}
+
+ui = true
+`
+
+	hclStr = fmt.Sprintf(hclStr, certDir, certDir, storageType)
+	parsed, err := ParseConfig(hclStr, "")
+	if err != nil {
+		return nil, err
+	}
+
 	return parsed, nil
 }
 
@@ -802,9 +864,23 @@ func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 		key = item.Keys[0].Token.Value().(string)
 	}
 
-	var m map[string]string
-	if err := hcl.DecodeObject(&m, item.Val); err != nil {
+	var config map[string]interface{}
+	if err := hcl.DecodeObject(&config, item.Val); err != nil {
 		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", name, key))
+	}
+
+	m := make(map[string]string)
+	for key, val := range config {
+		valStr, ok := val.(string)
+		if ok {
+			m[key] = valStr
+			continue
+		}
+		valBytes, err := json.Marshal(val)
+		if err != nil {
+			return err
+		}
+		m[key] = string(valBytes)
 	}
 
 	// Pull out the redirect address since it's common to all backends

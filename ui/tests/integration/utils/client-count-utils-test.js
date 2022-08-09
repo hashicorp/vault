@@ -587,10 +587,25 @@ module('Integration | Util | client count utils', function (hooks) {
     },
   ];
 
+  const EMPTY_MONTHS = [
+    {
+      timestamp: '2021-06-01T00:00:00Z',
+      counts: null,
+      namespaces: null,
+      new_clients: null,
+    },
+    {
+      timestamp: '2021-07-01T00:00:00Z',
+      counts: null,
+      namespaces: null,
+      new_clients: null,
+    },
+  ];
+
   const SOME_OBJECT = { foo: 'bar' };
 
   test('formatByMonths: formats the months array', async function (assert) {
-    assert.expect(101);
+    assert.expect(103);
     const keyNameAssertions = (object, objectName) => {
       const objectKeys = Object.keys(object);
       assert.false(objectKeys.includes('counts'), `${objectName} doesn't include 'counts' key`);
@@ -638,7 +653,34 @@ module('Integration | Util | client count utils', function (hooks) {
       );
     });
 
+    // method fails gracefully
+    let expected = [
+      {
+        counts: null,
+        month: '6/21',
+        namespaces: [],
+        namespaces_by_key: {},
+        new_clients: {
+          month: '6/21',
+          namespaces: [],
+        },
+        timestamp: '2021-06-01T00:00:00Z',
+      },
+      {
+        counts: null,
+        month: '7/21',
+        namespaces: [],
+        namespaces_by_key: {},
+        new_clients: {
+          month: '7/21',
+          namespaces: [],
+        },
+        timestamp: '2021-07-01T00:00:00Z',
+      },
+    ];
     assert.equal(formatByMonths(SOME_OBJECT), SOME_OBJECT, 'it returns if arg is not an array');
+    assert.propEqual(expected, formatByMonths(EMPTY_MONTHS), 'it does not error with null months');
+    assert.ok(formatByMonths([...EMPTY_MONTHS, ...MONTHS]), 'it does not error with combined data');
   });
 
   test('formatByNamespace: formats namespace arrays with and without mounts', async function (assert) {
@@ -749,7 +791,7 @@ module('Integration | Util | client count utils', function (hooks) {
   });
 
   test('flattenDataset: removes the counts key and flattens the dataset', async function (assert) {
-    assert.expect(18);
+    assert.expect(22);
     const flattenedNamespace = flattenDataset(BY_NAMESPACE[0]);
     const flattenedMount = flattenDataset(BY_NAMESPACE[0].mounts[0]);
     const flattenedMonth = flattenDataset(MONTHS[0]);
@@ -783,10 +825,27 @@ module('Integration | Util | client count utils', function (hooks) {
       objectNullCounts,
       'it returns original object if counts are null'
     );
+
+    assert.propEqual(
+      ['some array'],
+      flattenDataset(['some array']),
+      'it fails gracefully if an array is passed in'
+    );
+    assert.equal(flattenDataset(null), null, 'it fails gracefully if null is passed in');
+    assert.equal(
+      flattenDataset('some string'),
+      'some string',
+      'it fails gracefully if a string is passed in'
+    );
+    assert.propEqual(
+      new Object(),
+      flattenDataset(new Object()),
+      'it fails gracefully if an empty object is passed in'
+    );
   });
 
   test('sortMonthsByTimestamp: sorts timestamps chronologically, oldest to most recent', async function (assert) {
-    assert.expect(3);
+    assert.expect(4);
     const sortedMonths = sortMonthsByTimestamp(MONTHS);
     assert.ok(
       isBefore(parseAPITimestamp(sortedMonths[0].timestamp), parseAPITimestamp(sortedMonths[1].timestamp)),
@@ -796,11 +855,12 @@ module('Integration | Util | client count utils', function (hooks) {
       isAfter(parseAPITimestamp(sortedMonths[2].timestamp), parseAPITimestamp(sortedMonths[1].timestamp)),
       'third timestamp date is later second'
     );
-    assert.notEqual(sortedMonths, MONTHS, 'it does not modify original array');
+    assert.notEqual(sortedMonths[1], MONTHS[1], 'it does not modify original array');
+    assert.equal(sortedMonths[0], MONTHS[0], 'it does not modify original array');
   });
 
   test('namespaceArrayToObject: transforms data without modifying original', async function (assert) {
-    assert.expect(29);
+    assert.expect(30);
 
     const assertClientCounts = (object, originalObject) => {
       let valuesToCheck = ['clients', 'entity_clients', 'non_entity_clients'];
@@ -853,5 +913,11 @@ module('Integration | Util | client count utils', function (hooks) {
         assertClientCounts(newNsObject.mounts_by_key[mKey].new_clients, mountData);
       });
     });
+
+    assert.propEqual(
+      {},
+      namespaceArrayToObject(null, null, '10/21'),
+      'returns an empty object when totalClientsByNamespace = null'
+    );
   });
 });

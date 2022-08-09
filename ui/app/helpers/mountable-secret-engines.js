@@ -21,7 +21,7 @@ export const KEYMGMT = {
   value: 'keymgmt',
   type: 'keymgmt',
   glyph: 'key',
-  category: 'generic',
+  category: 'cloud',
   requiredFeature: 'Key Management Secrets Engine',
 };
 

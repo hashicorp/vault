@@ -85,7 +85,7 @@ export default class FormFieldComponent extends Component {
   get validationError() {
     const validations = this.args.modelValidations || {};
     const state = validations[this.valuePath];
-    return state && !state.isValid ? state.errors.join('. ') : null;
+    return state && !state.isValid ? state.errors.join(' ') : null;
   }
 
   onChange() {

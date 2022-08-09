@@ -33,6 +33,9 @@ func pathLogin(b *backend) *framework.Path {
 			logical.AliasLookaheadOperation: &framework.PathOperation{
 				Callback: b.pathLoginUpdateAliasLookahead,
 			},
+			logical.ResolveRoleOperation: &framework.PathOperation{
+				Callback: b.pathLoginResolveRole,
+			},
 		},
 		HelpSynopsis:    pathLoginHelpSys,
 		HelpDescription: pathLoginHelpDesc,
@@ -52,6 +55,39 @@ func (b *backend) pathLoginUpdateAliasLookahead(ctx context.Context, req *logica
 			},
 		},
 	}, nil
+}
+
+func (b *backend) pathLoginResolveRole(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// RoleID must be supplied during every login
+	roleID := strings.TrimSpace(data.Get("role_id").(string))
+	if roleID == "" {
+		return logical.ErrorResponse("missing role_id"), nil
+	}
+
+	// Look for the storage entry that maps the roleID to role
+	roleIDIndex, err := b.roleIDEntry(ctx, req.Storage, roleID)
+	if err != nil {
+		return nil, err
+	}
+	if roleIDIndex == nil {
+		return logical.ErrorResponse("invalid role ID"), nil
+	}
+
+	roleName := roleIDIndex.Name
+
+	roleLock := b.roleLock(roleName)
+	roleLock.RLock()
+
+	role, err := b.roleEntry(ctx, req.Storage, roleName)
+	roleLock.RUnlock()
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return logical.ErrorResponse("invalid role ID"), nil
+	}
+
+	return logical.ResolveRoleResponse(roleName)
 }
 
 // Returns the Auth object indicating the authentication and authorization information

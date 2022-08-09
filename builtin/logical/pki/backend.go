@@ -267,7 +267,7 @@ func (b *backend) metricsWrap(callType string, roleMode int, ofunc roleOperation
 			if err != nil {
 				return nil, err
 			}
-			if role == nil && roleMode == roleRequired {
+			if role == nil && (roleMode == roleRequired || len(roleName) > 0) {
 				return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", roleName)), nil
 			}
 			labels = []metrics.Label{{"role", roleName}}

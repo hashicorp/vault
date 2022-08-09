@@ -1,0 +1,3 @@
+```release-note:change
+secrets/kubernetes: Split `additional_metadata` into `extra_annotations` and `extra_labels` parameters
+```

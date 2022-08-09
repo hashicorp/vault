@@ -59,7 +59,7 @@ func connectPostgres(password string) docker.ServiceAdapter {
 			RawQuery: "sslmode=disable",
 		}
 
-		db, err := sql.Open("postgres", u.String())
+		db, err := sql.Open("pgx", u.String())
 		if err != nil {
 			return nil, err
 		}

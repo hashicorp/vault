@@ -10,10 +10,10 @@ project "vault" {
     repository = "vault"
     release_branches = [
       "main",
-      "release/1.7.x",
       "release/1.8.x",
       "release/1.9.x",
       "release/1.10.x",
+      "release/1.11.x",
     ]
   }
 }
@@ -250,6 +250,19 @@ event "promote-production-packaging" {
     organization = "hashicorp"
     repository = "crt-workflows-common"
     workflow = "promote-production-packaging"
+  }
+
+  notification {
+    on = "always"
+  }
+}
+
+event "post-publish-website" {
+  depends = ["promote-production-packaging"]
+  action "post-publish-website" {
+    organization = "hashicorp"
+    repository = "crt-workflows-common"
+    workflow = "post-publish-website"
   }
 
   notification {

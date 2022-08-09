@@ -23,6 +23,7 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
  * @param {Object} [queryParams=null] - queryParams can be passed via this property. It needs to be an object.
  * @param {String} [linkPrefix=null] - Overwrite the params with custom route.  See KMIP.
  * @param {Boolean} [encode=false] - Encode the path.
+ * @param {boolean} [disabled] - disable the link -- prevents on click and removes linked-block hover styling
  */
 
 export default class LinkedBlockComponent extends Component {
@@ -30,32 +31,34 @@ export default class LinkedBlockComponent extends Component {
 
   @action
   onClick(event) {
-    const $target = event.target;
-    const isAnchorOrButton =
-      $target.tagName === 'A' ||
-      $target.tagName === 'BUTTON' ||
-      $target.closest('button') ||
-      $target.closest('a');
-    if (!isAnchorOrButton) {
-      let params = this.args.params;
-      if (this.args.encode) {
-        params = params.map((param, index) => {
-          if (index === 0 || typeof param !== 'string') {
-            return param;
-          }
-          return encodePath(param);
-        });
+    if (!this.args.disabled) {
+      const $target = event.target;
+      const isAnchorOrButton =
+        $target.tagName === 'A' ||
+        $target.tagName === 'BUTTON' ||
+        $target.closest('button') ||
+        $target.closest('a');
+      if (!isAnchorOrButton) {
+        let params = this.args.params;
+        if (this.args.encode) {
+          params = params.map((param, index) => {
+            if (index === 0 || typeof param !== 'string') {
+              return param;
+            }
+            return encodePath(param);
+          });
+        }
+        const queryParams = this.args.queryParams;
+        if (queryParams) {
+          params.push({ queryParams });
+        }
+        if (this.args.linkPrefix) {
+          let targetRoute = this.args.params[0];
+          targetRoute = `${this.args.linkPrefix}.${targetRoute}`;
+          this.args.params[0] = targetRoute;
+        }
+        this.router.transitionTo(...params);
       }
-      const queryParams = this.args.queryParams;
-      if (queryParams) {
-        params.push({ queryParams });
-      }
-      if (this.args.linkPrefix) {
-        let targetRoute = this.args.params[0];
-        targetRoute = `${this.args.linkPrefix}.${targetRoute}`;
-        this.args.params[0] = targetRoute;
-      }
-      this.router.transitionTo(...params);
     }
   }
 }
