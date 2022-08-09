@@ -1,6 +1,6 @@
 # Open Source Community Workflows
 
-name: Create issues and PRs in projects
+name: Project triage
 on:
   pull_request:
     types: [opened, reopened]
