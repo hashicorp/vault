@@ -2,7 +2,7 @@
   <label class="is-label" ...attributes>
     {{@label}}
     {{#if @helpText}}
-      <InfoTooltip {{on "click" this.preventSubmit}}>
+      <InfoTooltip>
         <span data-test-help-text>{{@helpText}}</span>
       </InfoTooltip>
     {{/if}}

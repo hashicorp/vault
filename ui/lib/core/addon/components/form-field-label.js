@@ -1,5 +1,4 @@
-import Component from '@glimmer/component';
-import { action } from '@ember/object';
+import templateOnly from '@ember/component/template-only';
 
 /**
  * @module FormFieldLabel
@@ -15,9 +14,4 @@ import { action } from '@ember/object';
  * @param {string} [docLink] - url to documentation rendered after the subText
  */
 
-export default class FormFieldLabel extends Component {
-  @action
-  preventSubmit(e) {
-    e.preventDefault();
-  }
-}
+export default templateOnly();
