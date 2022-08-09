@@ -8,8 +8,8 @@ export default class OidcAssignmentDetailsController extends Controller {
 
   queryParams = ['listEntities', 'listGroups'];
 
-  @tracked listEntities = null;
-  @tracked listGroups = null;
+  @tracked listEntities = 'false';
+  @tracked listGroups = 'false';
   @tracked model; // ARG TODO following example, but try without once have working
 
   @action

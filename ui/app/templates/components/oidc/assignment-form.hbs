@@ -11,7 +11,11 @@
               </LinkTo>
             {{else}}
               {{! You're editing in this view }}
-              <LinkTo @route={{"vault.cluster.access.oidc.assignments.assignment.details"}} @model={{@model.name}}>
+              <LinkTo
+                @route={{"vault.cluster.access.oidc.assignments.assignment.details"}}
+                @model={{@model.name}}
+                @query={{hash listEntities=false listGroups=false}}
+              >
                 Details
               </LinkTo>
             {{/if}}

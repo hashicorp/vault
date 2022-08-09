@@ -13,7 +13,7 @@
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      {{@model.name}}
+      {{this.model.name}}
     </h1>
   </p.levelLeft>
 </PageHeader>
@@ -49,7 +49,7 @@
 <Toolbar>
   {{#if (or (not-eq this.listEntities) (not-eq this.listGroups))}}
     <ToolbarActions>
-      {{#if @model.canDelete}}
+      {{#if this.model.canDelete}}
         <ConfirmAction
           @buttonClasses="toolbar-link"
           @onConfirmAction={{this.delete}}
@@ -60,8 +60,8 @@
           Delete assignment
         </ConfirmAction>
       {{/if}}
-      {{#if @model.canEdit}}
-        <ToolbarLink @params={{array "vault.cluster.access.oidc.assignments.assignment.edit" @model.name}}>
+      {{#if this.model.canEdit}}
+        <ToolbarLink @params={{array "vault.cluster.access.oidc.assignments.assignment.edit" this.model.name}}>
           Edit assignment
         </ToolbarLink>
       {{/if}}
@@ -72,11 +72,11 @@
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
   {{! queryParams come in as strings so much check against value of string not boolean }}
   {{#if (and (eq this.listEntities "false") (eq this.listGroups "false"))}}
-    <InfoTableRow @label="Name" @value={{@model.name}} />
+    <InfoTableRow @label="Name" @value={{this.model.name}} />
   {{/if}}
   {{#if (eq this.listEntities "true")}}
     {{! ARG TODO need this to be an array of objects with name and id }}
-    {{#each @model.entityIds as |entity|}}
+    {{#each this.model.entityIds as |entity|}}
       <LinkedBlock
         class="list-item-row {{if (eq entity.name 'allow_all') 'is-disabled'}}"
         @params={{array "vault.cluster.access.oidc.assignments.assignment.details" entity.name}}
@@ -104,7 +104,7 @@
     {{/each}}
   {{/if}}
   {{#if (eq this.listGroups "true")}}
-    {{#each @model.groupIds as |group|}}
+    {{#each this.model.groupIds as |group|}}
       <LinkedBlock
         class="list-item-row {{if (eq group.name 'allow_all') 'is-disabled'}}"
         @params={{array "vault.cluster.access.oidc.assignments.assignment.details" group.name}}
