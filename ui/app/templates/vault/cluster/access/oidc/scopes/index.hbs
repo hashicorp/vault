@@ -1,6 +1,6 @@
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink @type="add" @params={{array "vault.cluster.access.oidc.scopes.create"}}>
+    <ToolbarLink @type="add" @params={{array "vault.cluster.access.oidc.scopes.create"}} data-test-oidc-scope-create>
       Create scope
     </ToolbarLink>
   </ToolbarActions>
@@ -50,7 +50,7 @@
     </LinkedBlock>
   {{/each}}
 {{else}}
-  <EmptyState @title="No scopes yet">
+  <EmptyState @title="No scopes yet" data-test-oidc-scope-empty-state>
     <div>
       <p>Use scope to define identity information about the authenticated user.
         <DocLink @path="/docs/concepts/oidc-provider#scopes">
@@ -58,7 +58,7 @@
         </DocLink>
       </p>
       <div class="has-top-margin-m">
-        <LinkTo @route="vault.cluster.access.oidc.scopes.create">
+        <LinkTo @route="vault.cluster.access.oidc.scopes.create" data-test-oidc-scope-create-empty-state>
           Create scope
         </LinkTo>
       </div>

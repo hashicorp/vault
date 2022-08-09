@@ -32,6 +32,7 @@
   <ToolbarActions>
     {{#if this.model.canDelete}}
       <ConfirmAction
+        data-test-oidc-scope-delete
         @buttonClasses="toolbar-link"
         @onConfirmAction={{this.delete}}
         @confirmTitle="Delete scope?"
@@ -42,7 +43,9 @@
       </ConfirmAction>
     {{/if}}
     {{#if this.model.canEdit}}
-      <ToolbarLink @params={{array "vault.cluster.access.oidc.scopes.scope.edit" this.model.name}}>
+      <ToolbarLink 
+        data-test-oidc-scope-edit
+        @params={{array "vault.cluster.access.oidc.scopes.scope.edit" this.model.name}}>
         Edit scope
       </ToolbarLink>
     {{/if}}
