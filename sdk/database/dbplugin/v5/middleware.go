@@ -264,11 +264,11 @@ func (mw DatabaseErrorSanitizerMiddleware) sanitize(err error) error {
 		// error while changing the actual error message
 		s, ok := status.FromError(err)
 		if ok {
-			err = status.Error(s.Code(), strings.Replace(s.Message(), find, replace, -1))
+			err = status.Error(s.Code(), strings.ReplaceAll(s.Message(), find, replace))
 			continue
 		}
 
-		err = errors.New(strings.Replace(err.Error(), find, replace, -1))
+		err = errors.New(strings.ReplaceAll(err.Error(), find, replace))
 	}
 	return err
 }

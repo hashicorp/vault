@@ -40,6 +40,7 @@ type sshRole struct {
 	KeyBits                    int               `mapstructure:"key_bits" json:"key_bits"`
 	AdminUser                  string            `mapstructure:"admin_user" json:"admin_user"`
 	DefaultUser                string            `mapstructure:"default_user" json:"default_user"`
+	DefaultUserTemplate        bool              `mapstructure:"default_user_template" json:"default_user_template"`
 	CIDRList                   string            `mapstructure:"cidr_list" json:"cidr_list"`
 	ExcludeCIDRList            string            `mapstructure:"exclude_cidr_list" json:"exclude_cidr_list"`
 	Port                       int               `mapstructure:"port" json:"port"`
@@ -121,6 +122,15 @@ func pathRoles(b *backend) *framework.Path {
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Default Username",
 				},
+			},
+			"default_user_template": {
+				Type: framework.TypeBool,
+				Description: `
+				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
+				If set, Default user can be specified using identity template policies.
+				Non-templated users are also permitted.
+				`,
+				Default: false,
 			},
 			"cidr_list": {
 				Type: framework.TypeString,
@@ -558,6 +568,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser, signer string, data *f
 		AllowedUsersTemplate:      data.Get("allowed_users_template").(bool),
 		AllowedDomains:            data.Get("allowed_domains").(string),
 		DefaultUser:               defaultUser,
+		DefaultUserTemplate:       data.Get("default_user_template").(bool),
 		AllowBareDomains:          data.Get("allow_bare_domains").(bool),
 		AllowSubdomains:           data.Get("allow_subdomains").(bool),
 		AllowUserKeyIDs:           data.Get("allow_user_key_ids").(bool),
@@ -740,6 +751,7 @@ func (b *backend) parseRole(role *sshRole) (map[string]interface{}, error) {
 			"allowed_users_template":      role.AllowedUsersTemplate,
 			"allowed_domains":             role.AllowedDomains,
 			"default_user":                role.DefaultUser,
+			"default_user_template":       role.DefaultUserTemplate,
 			"ttl":                         int64(ttl.Seconds()),
 			"max_ttl":                     int64(maxTTL.Seconds()),
 			"allowed_critical_options":    role.AllowedCriticalOptions,

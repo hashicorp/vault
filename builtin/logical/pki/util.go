@@ -1,15 +1,12 @@
 package pki
 
 import (
-	"context"
 	"crypto"
 	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
-
-	"github.com/hashicorp/vault/sdk/logical"
 
 	"github.com/hashicorp/vault/sdk/framework"
 
@@ -29,11 +26,11 @@ var (
 )
 
 func normalizeSerial(serial string) string {
-	return strings.Replace(strings.ToLower(serial), ":", "-", -1)
+	return strings.ReplaceAll(strings.ToLower(serial), ":", "-")
 }
 
 func denormalizeSerial(serial string) string {
-	return strings.Replace(strings.ToLower(serial), "-", ":", -1)
+	return strings.ReplaceAll(strings.ToLower(serial), "-", ":")
 }
 
 func kmsRequested(input *inputBundle) bool {
@@ -141,7 +138,7 @@ func getManagedKeyNameOrUUID(data *framework.FieldData) (name string, UUID strin
 	return keyName, keyUUID, nil
 }
 
-func getIssuerName(ctx context.Context, s logical.Storage, data *framework.FieldData) (string, error) {
+func getIssuerName(sc *storageContext, data *framework.FieldData) (string, error) {
 	issuerName := ""
 	issuerNameIface, ok := data.GetOk("issuer_name")
 	if ok {
@@ -154,7 +151,7 @@ func getIssuerName(ctx context.Context, s logical.Storage, data *framework.Field
 		if !nameMatcher.MatchString(issuerName) {
 			return issuerName, errutil.UserError{Err: "issuer name contained invalid characters"}
 		}
-		issuerId, err := resolveIssuerReference(ctx, s, issuerName)
+		issuerId, err := sc.resolveIssuerReference(issuerName)
 		if err == nil {
 			return issuerName, errIssuerNameInUse
 		}
@@ -166,7 +163,7 @@ func getIssuerName(ctx context.Context, s logical.Storage, data *framework.Field
 	return issuerName, nil
 }
 
-func getKeyName(ctx context.Context, s logical.Storage, data *framework.FieldData) (string, error) {
+func getKeyName(sc *storageContext, data *framework.FieldData) (string, error) {
 	keyName := ""
 	keyNameIface, ok := data.GetOk(keyNameParam)
 	if ok {
@@ -179,7 +176,7 @@ func getKeyName(ctx context.Context, s logical.Storage, data *framework.FieldDat
 		if !nameMatcher.MatchString(keyName) {
 			return "", errutil.UserError{Err: "key name contained invalid characters"}
 		}
-		keyId, err := resolveKeyReference(ctx, s, keyName)
+		keyId, err := sc.resolveKeyReference(keyName)
 		if err == nil {
 			return "", errKeyNameInUse
 		}

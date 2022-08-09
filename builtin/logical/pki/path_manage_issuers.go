@@ -82,6 +82,7 @@ with Active Directory Certificate Services.`,
 	// signed certificate's bits (that's on the /sign-intermediate
 	// endpoints). Remove it from the list of fields to avoid confusion.
 	delete(ret.Fields, "signature_bits")
+	delete(ret.Fields, "use_pss")
 
 	return ret
 }
@@ -201,9 +202,11 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 		return logical.ErrorResponse("private keys found in the PEM bundle but not allowed by the path; use /issuers/import/bundle"), nil
 	}
 
+	sc := b.makeStorageContext(ctx, req.Storage)
+
 	for keyIndex, keyPem := range keys {
 		// Handle import of private key.
-		key, existing, err := importKeyFromBytes(ctx, b, req.Storage, keyPem, "")
+		key, existing, err := importKeyFromBytes(sc, keyPem, "")
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("Error parsing key %v: %v", keyIndex, err)), nil
 		}
@@ -214,7 +217,7 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	}
 
 	for certIndex, certPem := range issuers {
-		cert, existing, err := importIssuer(ctx, b, req.Storage, certPem, "")
+		cert, existing, err := sc.importIssuer(certPem, "")
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("Error parsing issuer %v: %v\n%v", certIndex, err, certPem)), nil
 		}
@@ -236,6 +239,13 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	if len(createdIssuers) > 0 {
 		err := b.crlBuilder.rebuild(ctx, b, req, true)
 		if err != nil {
+			// Before returning, check if the error message includes the
+			// string "PSS". If so, it indicates we might've wanted to modify
+			// this issuer, so convert the error to a warning.
+			if strings.Contains(err.Error(), "PSS") || strings.Contains(err.Error(), "pss") {
+				err = fmt.Errorf("Rebuilding the CRL failed with a message relating to the PSS signature algorithm. This likely means the revocation_signature_algorithm needs to be set on the newly imported issuer(s) because a managed key supports only the PSS algorithm; by default PKCS#1v1.5 was used to build the CRLs. CRLs will not be generated until this has been addressed, however the import was successful. The original error is reproduced below:\n\n\t%v", err)
+			}
+
 			return nil, err
 		}
 	}
@@ -244,7 +254,7 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	// do this unconditionally if the issuer or key was modified, so the admin
 	// is always warned. But if unrelated key material was imported, we do
 	// not warn.
-	config, err := getIssuersConfig(ctx, req.Storage)
+	config, err := sc.getIssuersConfig()
 	if err == nil && len(config.DefaultIssuerId) > 0 {
 		// We can use the mapping above to check the issuer mapping.
 		if keyId, ok := issuerKeyMap[string(config.DefaultIssuerId)]; ok && len(keyId) == 0 {
@@ -276,6 +286,13 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 				b.Logger().Error(msg)
 			}
 		}
+	}
+
+	// Also while we're here, we should let the user know the next steps.
+	// In particular, if there's no default AIA URLs configuration, we should
+	// tell the user that's probably next.
+	if entries, err := getURLs(ctx, req.Storage); err == nil && len(entries.IssuingCertificates) == 0 && len(entries.CRLDistributionPoints) == 0 && len(entries.OCSPServers) == 0 {
+		response.AddWarning("This mount hasn't configured any authority access information fields; this may make it harder for systems to find missing certificates in the chain or to validate revocation status of certificates. Consider updating /config/urls with this information.")
 	}
 
 	return response, nil

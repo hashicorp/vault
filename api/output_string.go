@@ -60,19 +60,19 @@ func (d *OutputStringError) buildCurlString() (string, error) {
 		finalCurlString = fmt.Sprintf("%s-X %s ", finalCurlString, d.Request.Method)
 	}
 	if d.ClientCACert != "" {
-		clientCACert := strings.Replace(d.ClientCACert, "'", "'\"'\"'", -1)
+		clientCACert := strings.ReplaceAll(d.ClientCACert, "'", "'\"'\"'")
 		finalCurlString = fmt.Sprintf("%s--cacert '%s' ", finalCurlString, clientCACert)
 	}
 	if d.ClientCAPath != "" {
-		clientCAPath := strings.Replace(d.ClientCAPath, "'", "'\"'\"'", -1)
+		clientCAPath := strings.ReplaceAll(d.ClientCAPath, "'", "'\"'\"'")
 		finalCurlString = fmt.Sprintf("%s--capath '%s' ", finalCurlString, clientCAPath)
 	}
 	if d.ClientCert != "" {
-		clientCert := strings.Replace(d.ClientCert, "'", "'\"'\"'", -1)
+		clientCert := strings.ReplaceAll(d.ClientCert, "'", "'\"'\"'")
 		finalCurlString = fmt.Sprintf("%s--cert '%s' ", finalCurlString, clientCert)
 	}
 	if d.ClientKey != "" {
-		clientKey := strings.Replace(d.ClientKey, "'", "'\"'\"'", -1)
+		clientKey := strings.ReplaceAll(d.ClientKey, "'", "'\"'\"'")
 		finalCurlString = fmt.Sprintf("%s--key '%s' ", finalCurlString, clientKey)
 	}
 	for k, v := range d.Request.Header {
@@ -87,7 +87,7 @@ func (d *OutputStringError) buildCurlString() (string, error) {
 	if len(body) > 0 {
 		// We need to escape single quotes since that's what we're using to
 		// quote the body
-		escapedBody := strings.Replace(string(body), "'", "'\"'\"'", -1)
+		escapedBody := strings.ReplaceAll(string(body), "'", "'\"'\"'")
 		finalCurlString = fmt.Sprintf("%s-d '%s' ", finalCurlString, escapedBody)
 	}
 

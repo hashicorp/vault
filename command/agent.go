@@ -379,6 +379,10 @@ func (c *AgentCommand) Run(args []string) int {
 			sinkClient.SetMaxIdleConnections(-1)
 		}
 
+		if config.DisableKeepAlivesAutoAuth {
+			sinkClient.SetDisableKeepAlives(true)
+		}
+
 		for _, sc := range config.AutoAuth.Sinks {
 			switch sc.Type {
 			case "file":
@@ -507,8 +511,12 @@ func (c *AgentCommand) Run(args []string) int {
 			return 1
 		}
 
-		if config.DisableIdleConnsAutoAuth {
+		if config.DisableIdleConnsCaching {
 			proxyClient.SetMaxIdleConnections(-1)
+		}
+
+		if config.DisableKeepAlivesCaching {
+			proxyClient.SetDisableKeepAlives(true)
 		}
 
 		// Create the API proxier
@@ -824,6 +832,10 @@ func (c *AgentCommand) Run(args []string) int {
 			ahClient.SetMaxIdleConnections(-1)
 		}
 
+		if config.DisableKeepAlivesAutoAuth {
+			ahClient.SetDisableKeepAlives(true)
+		}
+
 		ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
 			Logger:                       c.logger.Named("auth.handler"),
 			Client:                       ahClient,
@@ -950,7 +962,7 @@ func verifyRequestHeader(handler http.Handler) http.Handler {
 		if val, ok := r.Header[consts.RequestHeaderName]; !ok || len(val) != 1 || val[0] != "true" {
 			logical.RespondError(w,
 				http.StatusPreconditionFailed,
-				fmt.Errorf("missing '%s' header", consts.RequestHeaderName))
+				fmt.Errorf("missing %q header", consts.RequestHeaderName))
 			return
 		}
 

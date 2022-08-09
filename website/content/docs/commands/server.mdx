@@ -66,6 +66,12 @@ flags](/docs/commands) included on all commands.
   in-memory and starts unsealed. As the name implies, do not run "dev" mode in
   production.
 
+- `-dev-tls` `(bool: false)` - Enable TLS development mode. In this mode, Vault runs
+  in-memory and starts unsealed with a generated TLS CA, certificate and key. 
+  As the name implies, do not run "dev" mode in production.
+
+- `-dev-tls-cert-dir` `(string: "")` - Directory where generated TLS files are created if `-dev-tls` is specified. If left unset, files are generated in a temporary directory.
+
 - `-dev-listen-address` `(string: "127.0.0.1:8200")` - Address to bind to in
   "dev" mode. This can also be specified via the `VAULT_DEV_LISTEN_ADDRESS`
   environment variable.

@@ -168,6 +168,17 @@ type Manager struct {
 	lock       *sync.RWMutex
 }
 
+// QuotaLeaseInformation contains all of the information lease-count quotas require
+// from a lease to uniquely identify the lease-count quota to increment/decrement
+type QuotaLeaseInformation struct {
+	// We can determine path and namespace from leaseId
+	LeaseId string
+
+	// We need the role as it's not part of the leaseId, and is required
+	// to uniquely identify a lease count quota
+	Role string
+}
+
 // Quota represents the common properties of every quota type
 type Quota interface {
 	// allow checks the if the request is allowed by the quota type implementation.
@@ -510,6 +521,20 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 	}
 	if quota != nil {
 		return quota, nil
+	}
+
+	// Fetch path suffix quotas with globbing
+	// Request paths which match the resulting glob (i.e. share the same prefix prior to the glob) are in scope for the quota
+	for i := 0; i <= len(pathSuffix); i++ {
+		trimmedSuffixWithGlob := pathSuffix[:len(pathSuffix)-i] + "*"
+		// Check to see if a quota exists with this particular pattern
+		quota, err = quotaFetchFunc(indexNamespaceMountPath, req.NamespacePath, req.MountPath, trimmedSuffixWithGlob, false)
+		if err != nil {
+			return nil, err
+		}
+		if quota != nil {
+			return quota, nil
+		}
 	}
 
 	// Fetch mount quota

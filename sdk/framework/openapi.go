@@ -213,9 +213,9 @@ var (
 )
 
 // documentPaths parses all paths in a framework.Backend into OpenAPI paths.
-func documentPaths(backend *Backend, requestResponsePrefix string, doc *OASDocument) error {
+func documentPaths(backend *Backend, requestResponsePrefix string, genericMountPaths bool, doc *OASDocument) error {
 	for _, p := range backend.Paths {
-		if err := documentPath(p, backend.SpecialPaths(), requestResponsePrefix, backend.BackendType, doc); err != nil {
+		if err := documentPath(p, backend.SpecialPaths(), requestResponsePrefix, genericMountPaths, backend.BackendType, doc); err != nil {
 			return err
 		}
 	}
@@ -224,7 +224,7 @@ func documentPaths(backend *Backend, requestResponsePrefix string, doc *OASDocum
 }
 
 // documentPath parses a framework.Path into one or more OpenAPI paths.
-func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix string, backendType logical.BackendType, doc *OASDocument) error {
+func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix string, genericMountPaths bool, backendType logical.BackendType, doc *OASDocument) error {
 	var sudoPaths []string
 	var unauthPaths []string
 
@@ -262,6 +262,21 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 		// Process path and header parameters, which are common to all operations.
 		// Body fields will be added to individual operations.
 		pathFields, bodyFields := splitFields(p.Fields, path)
+
+		if genericMountPaths && requestResponsePrefix != "system" && requestResponsePrefix != "identity" {
+			// Add mount path as a parameter
+			p := OASParameter{
+				Name:        "mountPath",
+				Description: "Path that the backend was mounted at",
+				In:          "path",
+				Schema: &OASSchema{
+					Type: "string",
+				},
+				Required: true,
+			}
+
+			pi.Parameters = append(pi.Parameters, p)
+		}
 
 		for name, field := range pathFields {
 			location := "path"
@@ -538,7 +553,7 @@ func expandPattern(pattern string) []string {
 	if start != -1 && end != -1 && end > start {
 		regexToRemove = base[start+1 : end]
 	}
-	pattern = strings.Replace(pattern, regexToRemove, "", -1)
+	pattern = strings.ReplaceAll(pattern, regexToRemove, "")
 
 	// Simplify named fields that have limited options, e.g. (?P<foo>a|b|c) -> (<P<foo>.+)
 	pattern = altFieldsGroupRe.ReplaceAllStringFunc(pattern, func(s string) string {
@@ -752,7 +767,7 @@ func (d *OASDocument) CreateOperationIDs(context string) {
 			// Space-split on non-words, title case everything, recombine
 			opID := nonWordRe.ReplaceAllString(strings.ToLower(path), " ")
 			opID = strings.Title(opID)
-			opID = method + strings.Replace(opID, " ", "", -1)
+			opID = method + strings.ReplaceAll(opID, " ", "")
 
 			// deduplicate operationIds. This is a safeguard, since generated IDs should
 			// already be unique given our current path naming conventions.
