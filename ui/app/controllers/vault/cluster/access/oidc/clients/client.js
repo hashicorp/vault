@@ -8,10 +8,10 @@ export default class OidcClientController extends Controller {
 
   constructor() {
     super(...arguments);
-    this.router.on('routeDidChange', ({ targetName }) => {
-      console.log(targetName);
-      return (this.isEditRoute = targetName.includes('edit') ? true : false);
-    });
+    this.router.on(
+      'routeDidChange',
+      ({ targetName }) => (this.isEditRoute = targetName.includes('edit') ? true : false)
+    );
   }
 
   get showHeader() {
