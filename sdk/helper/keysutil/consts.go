@@ -32,6 +32,14 @@ const (
 	MarshalingTypeJWS
 )
 
+type SaltLengthType uint32
+
+const (
+	_                                 = iota
+	SaltLengthTypeAuto SaltLengthType = iota
+	SaltLengthTypeHash
+)
+
 var (
 	HashTypeMap = map[string]HashType{
 		"sha1":     HashTypeSHA1,
@@ -60,5 +68,10 @@ var (
 	MarshalingTypeMap = map[string]MarshalingType{
 		"asn1": MarshalingTypeASN1,
 		"jws":  MarshalingTypeJWS,
+	}
+
+	SaltLengthTypeMap = map[string]SaltLengthType{
+		"auto": SaltLengthTypeAuto,
+		"hash": SaltLengthTypeHash,
 	}
 )

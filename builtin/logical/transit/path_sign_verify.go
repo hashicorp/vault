@@ -133,7 +133,8 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 			},
 
 			"salt_length": {
-				Type: framework.TypeString,
+				Type:    framework.TypeString,
+				Default: "auto",
 				Description: `The salt length used for signing. Currently only applies to the RSA PSS signature scheme.
 Options are 'auto' or 'hash'. Defaults to 'auto'`,
 			},
@@ -225,7 +226,8 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 			},
 
 			"salt_length": {
-				Type: framework.TypeString,
+				Type:    framework.TypeString,
+				Default: "auto",
 				Description: `The salt length used for signing. Currently only applies to the RSA PSS signature scheme.
 Options are 'auto' or 'hash'. Defaults to 'auto'`,
 			},
@@ -264,7 +266,12 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 
 	prehashed := d.Get("prehashed").(bool)
 	sigAlgorithm := d.Get("signature_algorithm").(string)
-	saltLength := d.Get("salt_length").(string)
+
+	saltLengthStr := d.Get("salt_length").(string)
+	saltLength, ok := keysutil.SaltLengthTypeMap[saltLengthStr]
+	if !ok {
+		return logical.ErrorResponse(fmt.Sprintf("invalid salt length %q", saltLengthStr)), logical.ErrInvalidRequest
+	}
 
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
@@ -343,7 +350,12 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 			}
 		}
 
-		sig, err := p.Sign(ver, context, input, hashAlgorithm, sigAlgorithm, saltLength, marshaling)
+		sig, err := p.SignWithOptions(ver, context, input, keysutil.SigningOptions{
+			HashAlgorithm: hashAlgorithm,
+			Marshaling:    marshaling,
+			SaltLength:    saltLength,
+			SigAlgorithm:  sigAlgorithm,
+		})
 		if err != nil {
 			if batchInputRaw != nil {
 				response[i].Error = err.Error()
@@ -483,7 +495,12 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 
 	prehashed := d.Get("prehashed").(bool)
 	sigAlgorithm := d.Get("signature_algorithm").(string)
-	saltLength := d.Get("salt_length").(string)
+
+	saltLengthStr := d.Get("salt_length").(string)
+	saltLength, ok := keysutil.SaltLengthTypeMap[saltLengthStr]
+	if !ok {
+		return logical.ErrorResponse(fmt.Sprintf("invalid salt length %q", saltLengthStr)), logical.ErrInvalidRequest
+	}
 
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
@@ -547,7 +564,12 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 			}
 		}
 
-		valid, err := p.VerifySignature(context, input, hashAlgorithm, sigAlgorithm, saltLength, marshaling, sig)
+		valid, err := p.VerifySignatureWithOptions(context, input, sig, keysutil.SigningOptions{
+			HashAlgorithm: hashAlgorithm,
+			Marshaling:    marshaling,
+			SaltLength:    saltLength,
+			SigAlgorithm:  sigAlgorithm,
+		})
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:

@@ -80,6 +80,13 @@ type BackupInfo struct {
 	Version int       `json:"version"`
 }
 
+type SigningOptions struct {
+	HashAlgorithm HashType
+	Marshaling    MarshalingType
+	SaltLength    SaltLengthType
+	SigAlgorithm  string
+}
+
 type SigningResult struct {
 	Signature string
 	PublicKey []byte
@@ -1025,7 +1032,16 @@ func (p *Policy) HMACKey(version int) ([]byte, error) {
 	return keyEntry.HMACKey, nil
 }
 
-func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, sigAlgorithm string, saltLength string, marshaling MarshalingType) (*SigningResult, error) {
+func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, sigAlgorithm string, marshaling MarshalingType) (*SigningResult, error) {
+	return p.SignWithOptions(ver, context, input, SigningOptions{
+		HashAlgorithm: hashAlgorithm,
+		Marshaling:    marshaling,
+		SaltLength:    SaltLengthTypeAuto,
+		SigAlgorithm:  sigAlgorithm,
+	})
+}
+
+func (p *Policy) SignWithOptions(ver int, context, input []byte, options SigningOptions) (*SigningResult, error) {
 	if !p.Type.SigningSupported() {
 		return nil, fmt.Errorf("message signing not supported for key type %v", p.Type)
 	}
@@ -1048,6 +1064,11 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 	if err != nil {
 		return nil, err
 	}
+
+	hashAlgorithm := options.HashAlgorithm
+	marshaling := options.Marshaling
+	saltLength := options.SaltLength
+	sigAlgorithm := options.SigAlgorithm
 
 	switch p.Type {
 	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
@@ -1169,17 +1190,13 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 
 		switch sigAlgorithm {
 		case "pss":
-			if saltLength == "" {
-				saltLength = "auto"
-			}
-
 			switch saltLength {
-			case "auto":
+			case SaltLengthTypeAuto:
 				sig, err = rsa.SignPSS(rand.Reader, key, algo, input, &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthAuto})
-			case "hash":
+			case SaltLengthTypeHash:
 				sig, err = rsa.SignPSS(rand.Reader, key, algo, input, &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash})
 			default:
-				err = errutil.InternalError{Err: fmt.Sprintf("unsupported rsa pss salt length %s", saltLength)}
+				err = errutil.InternalError{Err: "unsupported rsa pss salt length"}
 			}
 
 			if err != nil {
@@ -1214,7 +1231,16 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 	return res, nil
 }
 
-func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, sigAlgorithm string, saltLength string, marshaling MarshalingType, sig string) (bool, error) {
+func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, sigAlgorithm string, marshaling MarshalingType, sig string) (bool, error) {
+	return p.VerifySignatureWithOptions(context, input, sig, SigningOptions{
+		HashAlgorithm: hashAlgorithm,
+		Marshaling:    marshaling,
+		SaltLength:    SaltLengthTypeAuto,
+		SigAlgorithm:  sigAlgorithm,
+	})
+}
+
+func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, options SigningOptions) (bool, error) {
 	if !p.Type.SigningSupported() {
 		return false, errutil.UserError{Err: fmt.Sprintf("message verification not supported for key type %v", p.Type)}
 	}
@@ -1246,6 +1272,11 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 	if p.MinDecryptionVersion > 0 && ver < p.MinDecryptionVersion {
 		return false, errutil.UserError{Err: ErrTooOld}
 	}
+
+	hashAlgorithm := options.HashAlgorithm
+	marshaling := options.Marshaling
+	saltLength := options.SaltLength
+	sigAlgorithm := options.SigAlgorithm
 
 	var sigBytes []byte
 	switch marshaling {
@@ -1360,17 +1391,13 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 
 		switch sigAlgorithm {
 		case "pss":
-			if saltLength == "" {
-				saltLength = "auto"
-			}
-
 			switch saltLength {
-			case "auto":
+			case SaltLengthTypeAuto:
 				err = rsa.VerifyPSS(&key.PublicKey, algo, input, sigBytes, &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthAuto})
-			case "hash":
+			case SaltLengthTypeHash:
 				err = rsa.VerifyPSS(&key.PublicKey, algo, input, sigBytes, &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash})
 			default:
-				err = errutil.InternalError{Err: fmt.Sprintf("unsupported rsa pss salt length %s", saltLength)}
+				err = errutil.InternalError{Err: "unsupported rsa pss salt length"}
 			}
 		case "pkcs1v15":
 			err = rsa.VerifyPKCS1v15(&key.PublicKey, algo, input, sigBytes)
