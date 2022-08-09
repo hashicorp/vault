@@ -3,6 +3,7 @@ import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
+
 /**
  * @module OidcProviderForm
  * OidcProviderForm components are used to create and update OIDC providers
@@ -51,9 +52,11 @@ export default class OidcProviderForm extends Component {
         if (this.radioCardGroupValue === 'allow_all') {
           this.args.model.allowedClientIds = ['*'];
         }
+        const { isNew, name } = this.args.model;
         yield this.args.model.save();
         this.flashMessages.success(
-          `Successfully ${this.args.model.isNew ? 'created an' : 'updated'} application`
+          `Successfully ${isNew ? 'created' : 'updated'} the OIDC provider 
+          ${name}.`
         );
         this.args.onSave();
       }
