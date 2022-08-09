@@ -69,7 +69,7 @@ jobs:
       - uses: actions/add-to-project@v0.3.0
         with:
           project-url: https://github.com/orgs/hashicorp/projects/${{ env.PROJECT }}
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          github-token: ${{ secrets.TRIAGE_GITHUB_TOKEN }}
 
   # example of something more complicated: deleting an issue or PR automatically (though this is done in the project workflows already)
   # we have to use the GraphQL API for anything involving projects.
@@ -84,7 +84,7 @@ jobs:
   #     - id: get-project
   #       name: Get project data
   #       env:
-  #         GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+  #         GITHUB_TOKEN: ${{ secrets.TRIAGE_GITHUB_TOKEN }}
   #         ORGANIZATION: hashicorp
   #         PROJECT_NUMBER: 169
   #       run: |
@@ -106,7 +106,7 @@ jobs:
   #   steps:
   #     - name: Remove issue or PR
   #       env:
-  #         GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+  #         GITHUB_TOKEN: ${{ secrets.TRIAGE_GITHUB_TOKEN }}
   #       run: |
   #         PROJECT_ID=${{ needs.get-project.outputs.project_id }}
   #         item_id=${{ github.event.issue.node_id }}
