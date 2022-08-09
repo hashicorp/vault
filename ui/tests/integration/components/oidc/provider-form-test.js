@@ -15,7 +15,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
   hooks.before(function () {
     ENV['ember-cli-mirage'].handler = 'oidcConfig';
   });
-  ``;
+
   hooks.after(function () {
     ENV['ember-cli-mirage'].handler = null;
   });
