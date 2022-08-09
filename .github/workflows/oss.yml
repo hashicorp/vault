@@ -51,6 +51,7 @@ jobs:
               - 'ui/app/routes/vault/cluster/oidc-*.js'
             devex:
               - 'api/**'
+              - 'command/**'
             ui:
               - 'ui/**'
 
