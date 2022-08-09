@@ -24,7 +24,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 
 	sys := conf.System
 
-	raw, err := v5.NewBackend(ctx, name, pluginType, sys, conf, false)
+	raw, err := v5.NewBackend(ctx, name, pluginType, sys, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +58,7 @@ func (b *backend) reloadBackend(ctx context.Context) error {
 	reloadCtx := context.WithValue(ctx, v5.ContextKeyPluginReload, "reload")
 	b.Backend.Cleanup(reloadCtx)
 
-	nb, err := v5.NewBackend(ctx, pluginName, pluginType, b.config.System, b.config, false)
+	nb, err := v5.NewBackend(ctx, pluginName, pluginType, b.config.System, b.config)
 	if err != nil {
 		return err
 	}
