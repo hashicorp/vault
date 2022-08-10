@@ -8,14 +8,18 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"errors"
+	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"golang.org/x/crypto/ed25519"
 
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
@@ -751,6 +755,166 @@ func BenchmarkSymmetric(b *testing.B) {
 		})
 		if !bytes.Equal(pt, pt2) {
 			b.Fail()
+		}
+	}
+}
+
+func saltOptions(options SigningOptions, saltLength int) SigningOptions {
+	return SigningOptions{
+		HashAlgorithm: options.HashAlgorithm,
+		Marshaling:    options.Marshaling,
+		SaltLength:    saltLength,
+		SigAlgorithm:  options.SigAlgorithm,
+	}
+}
+
+func manualVerify(depth int, t *testing.T, p *Policy, input []byte, sig *SigningResult, options SigningOptions) {
+	tabs := strings.Repeat("\t", depth)
+	t.Log(tabs, "Manually verifying signature with options:", options)
+
+	tabs = strings.Repeat("\t", depth+1)
+	verified, err := p.VerifySignatureWithOptions(nil, input, sig.Signature, &options)
+	if err != nil {
+		t.Fatal(tabs, "❌ Failed to manually verify signature:", err)
+	}
+	if !verified {
+		t.Fatal(tabs, "❌ Failed to manually verify signature")
+	}
+}
+
+func autoVerify(depth int, t *testing.T, p *Policy, input []byte, sig *SigningResult, options SigningOptions) {
+	tabs := strings.Repeat("\t", depth)
+	t.Log(tabs, "Automatically verifying signature with options:", options)
+
+	tabs = strings.Repeat("\t", depth+1)
+	verified, err := p.VerifySignature(nil, input, options.HashAlgorithm, options.SigAlgorithm, options.Marshaling, sig.Signature)
+	if err != nil {
+		t.Fatal(tabs, "❌ Failed to automatically verify signature:", err)
+	}
+	if !verified {
+		t.Fatal(tabs, "❌ Failed to automatically verify signature")
+	}
+}
+
+func Test_RSA_PSS(t *testing.T) {
+	t.Log("Testing RSA PSS")
+	var userError errutil.UserError
+	ctx := context.Background()
+	lm, _ := NewLockManager(true, 0)
+	storage := &logical.InmemStorage{}
+	input := []byte("the ancients say the longer the salt, the more provable the security")
+	keyTypes := map[KeyType]int{KeyType_RSA2048: 2048, KeyType_RSA3072: 3072, KeyType_RSA4096: 4096}
+	marshalingType := MarshalingTypeASN1
+	sigAlgorithm := "pss"
+	minSaltLength := -1
+	tabs := make(map[int]string)
+	for i := 1; i <= 5; i++ {
+		tabs[i] = strings.Repeat("\t", i)
+	}
+
+	// 1. For each standard RSA key size 2048, 3072, and 4096...
+	for keyType, bitLen := range keyTypes {
+		t.Log("Key size: ", keyType)
+		p, _, err := lm.GetPolicy(ctx, PolicyRequest{
+			Upsert:  true,
+			Storage: storage,
+			KeyType: keyType,
+			Name:    fmt.Sprint("rsa-", bitLen), // NOTE: crucial to create a new key per key size!
+		}, rand.Reader)
+		if err != nil {
+			t.Fatal(tabs[1], "❌ Failed to create key:", err)
+		}
+		if p == nil {
+			t.Fatal(tabs[1], "❌ nil policy")
+		}
+
+		// 1.1. For each hash algorithm...
+		for hashAlgorithm, hashType := range HashTypeMap {
+			t.Log(tabs[1], "Hash algorithm:", hashAlgorithm)
+			unsaltedOptions := SigningOptions{
+				HashAlgorithm: hashType,
+				Marshaling:    marshalingType,
+				SigAlgorithm:  sigAlgorithm,
+			}
+			hash := HashFuncMap[hashType]()
+			// https://cs.opensource.google/go/go/+/refs/tags/go1.19:src/crypto/rsa/pss.go;l=288
+			maxSaltLength := (bitLen-1+7)/8 - 2 - hash.Size()
+			hash.Write(input)
+			input = hash.Sum(nil)
+
+			// 1.1.1. Make an "automatic" signature with the given key size and hash algorithm,
+			// but an automatically chosen salt length.
+			t.Log(tabs[2], "Make an automatic signature")
+			sig, err := p.Sign(0, nil, input, hashType, sigAlgorithm, marshalingType)
+			if err != nil {
+				t.Fatal(tabs[3], "❌ Failed to automatically sign:", err)
+			}
+
+			// 1.1.1.1 Verify this automatic signature using the *inferred* salt length.
+			autoVerify(3, t, p, input, sig, unsaltedOptions)
+
+			// 1.1.1.2. Verify this automatic signature using the *correct, given* salt length.
+			manualVerify(3, t, p, input, sig, saltOptions(unsaltedOptions, maxSaltLength))
+
+			// 1.1.1.3. Try to verify this automatic signature using *incorrect, given* salt lengths.
+			t.Log(tabs[3], "Test incorrect salt lengths")
+			incorrectSaltLengths := []int{hash.Size(), maxSaltLength - 1}
+			for _, saltLength := range incorrectSaltLengths {
+				t.Log(tabs[4], "Salt length:", saltLength)
+				saltedOptions := saltOptions(unsaltedOptions, saltLength)
+
+				verified, err := p.VerifySignatureWithOptions(nil, input, sig.Signature, &saltedOptions)
+				if err == nil || verified {
+					t.Fatal(tabs[5], "❌ Failed to verify signature:", err)
+				}
+			}
+
+			// 1.1.2. Rule out boundary, invalid salt lengths.
+			t.Log(tabs[2], "Test invalid salt lengths")
+			invalidSaltLengths := []int{minSaltLength - 1, maxSaltLength + 1}
+			for _, saltLength := range invalidSaltLengths {
+				t.Log(tabs[3], "Salt length:", saltLength)
+				saltedOptions := saltOptions(unsaltedOptions, saltLength)
+
+				// 1.1.2.1. Fail to sign.
+				t.Log(tabs[4], "Try to make a manual signature")
+				_, err := p.SignWithOptions(0, nil, input, &saltedOptions)
+				if !errors.As(err, &userError) {
+					// https://cs.opensource.google/go/go/+/refs/tags/go1.19:src/crypto/rsa/pss.go;l=52
+					if err.Error() != "crypto/rsa: key size too small for PSS signature" {
+						t.Fatal(tabs[5], "❌ Failed to reject invalid salt length:", err)
+					}
+				}
+
+				// 1.1.2.2. Fail to verify.
+				t.Log(tabs[4], "Try to verify an automatic signature using an invalid salt length")
+				verified, err := p.VerifySignatureWithOptions(nil, input, sig.Signature, &saltedOptions)
+				if !errors.As(err, &userError) {
+					if verified {
+						t.Fatal(tabs[5], "❌ Failed to reject invalid salt length:", err)
+					}
+				}
+			}
+
+			// 1.1.3. For each valid salt length...
+			t.Log(tabs[2], "Test all valid salt lengths")
+			for saltLength := minSaltLength; saltLength <= maxSaltLength; saltLength++ {
+				t.Log(tabs[3], "Salt length:", saltLength)
+				saltedOptions := saltOptions(unsaltedOptions, saltLength)
+
+				// 1.1.3.1. Make a "manual" signature with the given key size, hash algorithm, and salt length.
+				t.Log(tabs[4], "Make a manual signature")
+				sig, err := p.SignWithOptions(0, nil, input, &saltedOptions)
+				if err != nil {
+					t.Fatal(tabs[5], "❌ Failed to manually sign:", err)
+				}
+
+				// 1.1.3.2. Verify this manual signature using the *correct, given* salt length.
+				manualVerify(5, t, p, input, sig, saltedOptions)
+
+				// 1.1.3.3. Verify this manual signature using the *inferred* salt length.
+				autoVerify(5, t, p, input, sig, unsaltedOptions)
+			}
 		}
 	}
 }

@@ -133,10 +133,9 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 			},
 
 			"salt_length": {
-				Type:    framework.TypeString,
-				Default: "auto",
-				Description: `The salt length used for signing. Currently only applies to the RSA PSS signature scheme.
-Options are 'auto' or 'hash'. Defaults to 'auto'`,
+				Type: framework.TypeInt,
+				Description: `The salt length used to sign. Currently only applies to the RSA PSS signature scheme.
+Options are everything permitted by crypto/rsa.PSSOptions.SaltLength. Defaults to 0 (crypto/rsa.PSSSaltLengthAuto).`,
 			},
 		},
 
@@ -226,10 +225,9 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 			},
 
 			"salt_length": {
-				Type:    framework.TypeString,
-				Default: "auto",
-				Description: `The salt length used for signing. Currently only applies to the RSA PSS signature scheme.
-Options are 'auto' or 'hash'. Defaults to 'auto'`,
+				Type: framework.TypeInt,
+				Description: `The salt length used to sign and now verify. Currently only applies to the RSA PSS signature scheme.
+Options are everything permitted by crypto/rsa.PSSOptions.SaltLength. Defaults to 0 (crypto/rsa.PSSSaltLengthAuto).`,
 			},
 		},
 
@@ -266,12 +264,8 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 
 	prehashed := d.Get("prehashed").(bool)
 	sigAlgorithm := d.Get("signature_algorithm").(string)
-
-	saltLengthStr := d.Get("salt_length").(string)
-	saltLength, ok := keysutil.SaltLengthTypeMap[saltLengthStr]
-	if !ok {
-		return logical.ErrorResponse(fmt.Sprintf("invalid salt length %q", saltLengthStr)), logical.ErrInvalidRequest
-	}
+	// NOTE: If not explicitly set, the salt length is 0, which coincides with rsa.PSSSaltLengthAuto.
+	saltLength := d.Get("salt_length").(int)
 
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
@@ -350,7 +344,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 			}
 		}
 
-		sig, err := p.SignWithOptions(ver, context, input, keysutil.SigningOptions{
+		sig, err := p.SignWithOptions(ver, context, input, &keysutil.SigningOptions{
 			HashAlgorithm: hashAlgorithm,
 			Marshaling:    marshaling,
 			SaltLength:    saltLength,
@@ -495,12 +489,8 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 
 	prehashed := d.Get("prehashed").(bool)
 	sigAlgorithm := d.Get("signature_algorithm").(string)
-
-	saltLengthStr := d.Get("salt_length").(string)
-	saltLength, ok := keysutil.SaltLengthTypeMap[saltLengthStr]
-	if !ok {
-		return logical.ErrorResponse(fmt.Sprintf("invalid salt length %q", saltLengthStr)), logical.ErrInvalidRequest
-	}
+	// NOTE: If not explicitly set, the salt length is 0, which coincides with rsa.PSSSaltLengthAuto.
+	saltLength := d.Get("salt_length").(int)
 
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
@@ -564,7 +554,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 			}
 		}
 
-		valid, err := p.VerifySignatureWithOptions(context, input, sig, keysutil.SigningOptions{
+		valid, err := p.VerifySignatureWithOptions(context, input, sig, &keysutil.SigningOptions{
 			HashAlgorithm: hashAlgorithm,
 			Marshaling:    marshaling,
 			SaltLength:    saltLength,
