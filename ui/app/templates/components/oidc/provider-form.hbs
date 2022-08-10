@@ -28,15 +28,39 @@
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-bottomless">
     <MessageError @errorMessage={{this.error}} class="has-top-margin-s" />
-    {{#each @model.formFields as |attr|}}
-      <FormField
-        data-test-field={{true}}
-        @attr={{attr}}
-        @model={{@model}}
-        @modelValidations={{this.modelValidations}}
-        @overrideEditValue={{if (eq attr.name "issuer") this.parseUrlOrigin}}
+    {{! name field }}
+    <FormField
+      data-test-field={{true}}
+      @attr={{get @model.formFields "0"}}
+      @model={{@model}}
+      @modelValidations={{this.modelValidations}}
+    />
+    {{#let (get @model.formFields "1") as |attr|}}
+      <FormFieldLabel
+        for={{attr.name}}
+        @label="Issuer"
+        @helpText={{attr.options.helpText}}
+        @subText={{attr.options.subText}}
+        @docLink={{attr.options.docLink}}
       />
-    {{/each}}
+      <Input
+        data-test-input={{attr.name}}
+        id={{attr.name}}
+        autocomplete="off"
+        spellcheck="false"
+        @value={{@model.issuer}}
+        class="input {{if this.validationError 'has-error-border'}}"
+        placeholder={{attr.options.placeholderText}}
+      />
+    {{/let}}
+    {{! scopesSupported field }}
+    <FormField
+      data-test-field={{true}}
+      @attr={{get @model.formFields "2"}}
+      @model={{@model}}
+      @modelValidations={{this.modelValidations}}
+      @labelClass="is-label"
+    />
   </div>
   {{! RADIO CARD + SEARCH SELECT }}
   <div class="box is-sideless is-fullwidth is-marginless has-top-padding-xxl">

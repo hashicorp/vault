@@ -91,6 +91,7 @@
         @selectLimit={{@attr.options.selectLimit}}
         @backend={{@model.backend}}
         @disallowNewItems={{@attr.options.onlyAllowExisting}}
+        @labelClass={{@labelClass}}
       />
     </div>
   {{else if (eq @attr.options.editType "mountAccessor")}}
@@ -288,12 +289,11 @@
           disabled={{and @attr.options.editDisabled (not @model.isNew)}}
           autocomplete="off"
           spellcheck="false"
-          value={{or @overrideEditValue (or (get @model this.valuePath) @attr.options.defaultValue)}}
+          value={{or (get @model this.valuePath) @attr.options.defaultValue}}
           onchange={{this.onChangeWithEvent}}
           onkeyup={{this.handleKeyUp}}
           class="input {{if this.validationError 'has-error-border'}}"
           maxLength={{@attr.options.characterLimit}}
-          placeholder={{@attr.options.placeholderText}}
         />
         {{#if @attr.options.validationAttr}}
           {{#if (and (get @model this.valuePath) (not (get @model @attr.options.validationAttr)))}}

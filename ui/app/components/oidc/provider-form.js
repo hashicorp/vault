@@ -30,8 +30,10 @@ export default class OidcProviderForm extends Component {
       ? 'allow_all'
       : 'limited';
 
-  get parseUrlOrigin() {
-    return this.args.model.isNew ? '' : parseURL(this.args.model.issuer).origin;
+  constructor() {
+    super(...arguments);
+    const { model } = this.args;
+    model.issuer = model.isNew ? '' : parseURL(model.issuer).origin;
   }
 
   @action
