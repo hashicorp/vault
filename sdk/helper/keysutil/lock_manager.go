@@ -36,6 +36,7 @@ type PolicyRequest struct {
 	// The key type
 	KeyType KeyType
 
+	// The key size for variable key size algorithms
 	KeySize int
 
 	// Whether it should be derived

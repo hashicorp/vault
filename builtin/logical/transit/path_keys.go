@@ -189,7 +189,7 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		if polReq.KeyType != keysutil.KeyType_HMAC {
 			return logical.ErrorResponse(fmt.Sprintf("key_size is not valid for algorithm %v", polReq.KeyType)), logical.ErrInvalidRequest
 		}
-		if keySize < 16 || keySize > 1024 {
+		if keySize < 16 || keySize > 512 {
 			return logical.ErrorResponse(fmt.Sprintf("invalid key_size %d", keySize)), logical.ErrInvalidRequest
 		}
 		polReq.KeySize = keySize
