@@ -26,6 +26,7 @@ export default class OidcProviderForm extends Component {
 
   @tracked modelValidations;
   @tracked radioCardGroupValue =
+    // If "*" is provided, all clients are allowed: https://www.vaultproject.io/api-docs/secret/identity/oidc-provider#parameters
     !this.args.model.allowedClientIds || this.args.model.allowedClientIds.includes('*')
       ? 'allow_all'
       : 'limited';
@@ -49,6 +50,13 @@ export default class OidcProviderForm extends Component {
     }
   }
 
+  @action
+  cancel() {
+    const method = this.args.model.isNew ? 'unloadRecord' : 'rollbackAttributes';
+    this.args.model[method]();
+    this.args.onCancel();
+  }
+
   @task
   *save(event) {
     event.preventDefault();
@@ -56,10 +64,10 @@ export default class OidcProviderForm extends Component {
       const { isValid, state } = this.args.model.validate();
       this.modelValidations = isValid ? null : state;
       if (isValid) {
+        const { isNew, name } = this.args.model;
         if (this.radioCardGroupValue === 'allow_all') {
           this.args.model.allowedClientIds = ['*'];
         }
-        const { isNew, name } = this.args.model;
         yield this.args.model.save();
         this.flashMessages.success(
           `Successfully ${isNew ? 'created' : 'updated'} the OIDC provider 
@@ -71,12 +79,5 @@ export default class OidcProviderForm extends Component {
       const message = error.errors ? error.errors.join('. ') : error.message;
       this.flashMessages.danger(message);
     }
-  }
-
-  @action
-  cancel() {
-    const method = this.args.model.isNew ? 'unloadRecord' : 'rollbackAttributes';
-    this.args.model[method]();
-    this.args.onCancel();
   }
 }
