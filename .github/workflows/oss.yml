@@ -18,8 +18,10 @@ jobs:
     name: Add issue or PR to projects
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: dorny/paths-filter@v2
+      - if: github.event.pull_request != null
+        uses: actions/checkout@v3
+      - if: github.event.pull_request != null
+        uses: dorny/paths-filter@v2
         id: changes
         with:
           # derived from CODEOWNERS
@@ -57,13 +59,13 @@ jobs:
 
       - name: "Default to core board"
         run: echo "PROJECT=170" >> $GITHUB_ENV
-      - if: steps.changes.outputs.cryptosec == 'true'
+      - if: github.event.pull_request != null && steps.changes.outputs.cryptosec == 'true'
         run: echo "PROJECT=172" >> $GITHUB_ENV
-      - if: steps.changes.outputs.ecosystem == 'true'
+      - if: github.event.pull_request != null && steps.changes.outputs.ecosystem == 'true'
         run: echo "PROJECT=169" >> $GITHUB_ENV
-      - if: steps.changes.outputs.devex == 'true'
+      - if: github.event.pull_request != null && steps.changes.outputs.devex == 'true'
         run: echo "PROJECT=176" >> $GITHUB_ENV
-      - if: steps.changes.outputs.ui == 'true'
+      - if: github.event.pull_request != null && steps.changes.outputs.ui == 'true'
         run: echo "PROJECT=171" >> $GITHUB_ENV
 
       - uses: actions/add-to-project@v0.3.0
