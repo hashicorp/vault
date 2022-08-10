@@ -238,21 +238,10 @@ this by inspecting the secret's time-to-live (TTL).
 
 ### Certificates
 
-#### Rendering using the `secret` template function
-
-If a [certificate](/docs/secrets/pki) is rendered using the `secret` template
-function, Vault Agent template will have the following fetching and re-rendering
-behaviors on certificates:
-
-- Fetches a new certificate on Agent startup, even if previously rendered
-certificates are still valid.
-- If `generate_lease` is unset or set to `false`, it uses the certificate's
-`validTo` field to determine re-fetch interval.
-- If `generate_lease` is set to `true`, apply the non-renewable, leased secret
-rules.
-- On Agent's auto-auth re-authentication, due to a token expiry for example, it
-fetches and re-renders a new certificate even if the existing certificate is
-valid.
+As of Vault 1.11, certificates can be rendered using either `pkiCert` or
+`secret` template functions, although it is recommended to use `pkiCert` to
+avoid unnecessarily generating certificates whenever Agent restarts or
+re-authenticates.
 
 #### Rendering using the `pkiCert` template function
 
@@ -264,6 +253,22 @@ behaviors on certificates:
 rendered or the current rendered one has expired.
 - On Agent's auto-auth re-authentication, due to a token expiry for example,
 skip fetching unless the current rendered one has expired.
+
+#### Rendering using the `secret` template function
+
+If a [certificate](/docs/secrets/pki) is rendered using the `secret` template
+function, Vault Agent template will have the following fetching and re-rendering
+behaviors on certificates:
+
+- Fetches a new certificate on Agent startup, even if previously rendered
+  certificates are still valid.
+- If `generate_lease` is unset or set to `false`, it uses the certificate's
+  `validTo` field to determine re-fetch interval.
+- If `generate_lease` is set to `true`, apply the non-renewable, leased secret
+  rules.
+- On Agent's auto-auth re-authentication, due to a token expiry for example, it
+  fetches and re-renders a new certificate even if the existing certificate is
+  valid.
 
 ## Templating Configuration Example
 
