@@ -30,6 +30,7 @@ var keyTypes = []string{
 	"rsa-2048",
 	"rsa-3072",
 	"rsa-4096",
+	"hmac",
 }
 
 var hashFns = []string{
@@ -600,7 +601,7 @@ func generateKey(keyType string) (interface{}, error) {
 	switch keyType {
 	case "aes128-gcm96":
 		return uuid.GenerateRandomBytes(16)
-	case "aes256-gcm96":
+	case "aes256-gcm96", "hmac":
 		return uuid.GenerateRandomBytes(32)
 	case "chacha20-poly1305":
 		return uuid.GenerateRandomBytes(32)
