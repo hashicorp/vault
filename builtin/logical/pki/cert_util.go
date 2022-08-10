@@ -213,6 +213,8 @@ func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, pr
 
 	// Update old-style paths to new-style paths
 	certEntry.Key = path
+	b.certsCountedLock.RLock() // Make sure we don't double count a cert for metrics during this path-update
+	defer b.certsCountedLock.RUnlock()
 	if err = req.Storage.Put(ctx, certEntry); err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error saving certificate with serial %s to new location", serial)}
 	}

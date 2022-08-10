@@ -3456,7 +3456,7 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Issue certificate for foobar.com to verify allowed_domain_templae doesnt break plain domains.
+	// Issue certificate for foobar.com to verify allowed_domain_template doesn't break plain domains.
 	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"common_name": "foobar.com"})
 	if err != nil {
 		t.Fatal(err)
@@ -3731,7 +3731,10 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	metricsConf.EnableServiceLabel = false
 	metricsConf.EnableTypePrefix = false
 
-	metrics.NewGlobal(metricsConf, inmemSink)
+	_, err := metrics.NewGlobal(metricsConf, inmemSink)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Enable PKI secret engine
 	coreConfig := &vault.CoreConfig{
@@ -3747,8 +3750,6 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	cores := cluster.Cores
 	vault.TestWaitActive(t, cores[0].Core)
 	client := cores[0].Client
-
-	var err error
 
 	// Mount /pki as a root CA
 	err = client.Sys().Mount("pki", &api.MountInput{
@@ -3817,6 +3818,21 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// Check the cert-count metrics
+	expectedCertCountGaugeMetrics := map[string]float32{
+		"secrets.pki.total_revoked_certificates_stored": 1,
+		"secrets.pki.total_certificates_stored":         1,
+	}
+	mostRecentInterval := inmemSink.Data()[len(inmemSink.Data())-1]
+	for gauge, value := range expectedCertCountGaugeMetrics {
+		if _, ok := mostRecentInterval.Gauges[gauge]; !ok {
+			t.Fatalf("Expected metrics to include a value for gauge %s", gauge)
+		}
+		if value != mostRecentInterval.Gauges[gauge].Value {
+			t.Fatalf("Expected value metric %s to be %f but got %f", gauge, value, mostRecentInterval.Gauges[gauge].Value)
+		}
 	}
 
 	// Revoke adds a fixed 2s buffer, so we sleep for a bit longer to ensure
@@ -3902,13 +3918,15 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	}
 	// Check the tidy metrics
 	{
-		// Map of gagues to expected value
+		// Map of gauges to expected value
 		expectedGauges := map[string]float32{
-			"secrets.pki.tidy.cert_store_current_entry":   0,
-			"secrets.pki.tidy.cert_store_total_entries":   1,
-			"secrets.pki.tidy.revoked_cert_current_entry": 0,
-			"secrets.pki.tidy.revoked_cert_total_entries": 1,
-			"secrets.pki.tidy.start_time_epoch":           0,
+			"secrets.pki.tidy.cert_store_current_entry":     0,
+			"secrets.pki.tidy.cert_store_total_entries":     1,
+			"secrets.pki.tidy.revoked_cert_current_entry":   0,
+			"secrets.pki.tidy.revoked_cert_total_entries":   1,
+			"secrets.pki.tidy.start_time_epoch":             0,
+			"secrets.pki.total_certificates_stored":         0,
+			"secrets.pki.total_revoked_certificates_stored": 0,
 		}
 		// Map of counters to the sum of the metrics for that counter
 		expectedCounters := map[string]float64{
@@ -3918,7 +3936,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			// Note that "secrets.pki.tidy.failure" won't be in the captured metrics
 		}
 
-		// If the metrics span mnore than one interval, skip the checks
+		// If the metrics span more than one interval, skip the checks
 		intervals := inmemSink.Data()
 		if len(intervals) == 1 {
 			interval := inmemSink.Data()[0]

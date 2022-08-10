@@ -301,7 +301,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 		resp.Data["time_finished"] = b.tidyStatus.timeFinished
 		resp.Data["error"] = b.tidyStatus.err.Error()
 		// Don't clear the message so that it serves as a hint about when
-		// the error ocurred.
+		// the error occurred.
 	}
 
 	return resp, nil
@@ -358,6 +358,11 @@ func (b *backend) tidyStatusIncCertStoreCount() {
 	defer b.tidyStatusLock.Unlock()
 
 	b.tidyStatus.certStoreDeletedCount++
+
+	b.certsCountedLock.RLock()
+	defer b.certsCountedLock.RUnlock()
+
+	b.decrementTotalCertificatesCount()
 }
 
 func (b *backend) tidyStatusIncRevokedCertCount() {
@@ -365,6 +370,11 @@ func (b *backend) tidyStatusIncRevokedCertCount() {
 	defer b.tidyStatusLock.Unlock()
 
 	b.tidyStatus.revokedCertDeletedCount++
+
+	b.certsCountedLock.RLock()
+	defer b.certsCountedLock.RUnlock()
+
+	b.decrementTotalRevokedCertificatesCount()
 }
 
 const pathTidyHelpSyn = `

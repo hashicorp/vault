@@ -408,6 +408,8 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	}
 
 	if !role.NoStore {
+		b.certsCountedLock.RLock() // Don't store a certificate while initial count is occurring
+		defer b.certsCountedLock.RUnlock()
 		err = req.Storage.Put(ctx, &logical.StorageEntry{
 			Key:   "certs/" + normalizeSerial(cb.SerialNumber),
 			Value: parsedBundle.CertificateBytes,
@@ -415,6 +417,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		if err != nil {
 			return nil, fmt.Errorf("unable to store certificate locally: %w", err)
 		}
+		b.incrementTotalCertificatesCount()
 	}
 
 	if useCSR {

@@ -177,6 +177,10 @@ func Backend(conf *logical.BackendConfig) *backend {
 	b.pkiStorageVersion.Store(0)
 
 	b.crlBuilder = &crlBuilder{}
+
+	b.certCount = new(uint32)
+	b.revokedCertCount = new(uint32)
+
 	return &b
 }
 
@@ -191,6 +195,10 @@ type backend struct {
 
 	tidyStatusLock sync.RWMutex
 	tidyStatus     *tidyStatus
+
+	certCount        *uint32
+	revokedCertCount *uint32
+	certsCountedLock sync.RWMutex
 
 	pkiStorageVersion atomic.Value
 	crlBuilder        *crlBuilder
@@ -293,6 +301,21 @@ func (b *backend) metricsWrap(callType string, roleMode int, ofunc roleOperation
 
 // initialize is used to perform a possible PKI storage migration if needed
 func (b *backend) initialize(ctx context.Context, _ *logical.InitializationRequest) error {
+	err := b.initializePKIIssuersStorage(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Initialize also needs to populate our certificate and revoked certificate count
+	err = b.initializeStoredCertificateCounts(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *backend) initializePKIIssuersStorage(ctx context.Context) error {
 	// Grab the lock prior to the updating of the storage lock preventing us flipping
 	// the storage flag midway through the request stream of other requests.
 	b.issuersLock.Lock()
@@ -376,4 +399,43 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 
 func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) error {
 	return b.crlBuilder.rebuildIfForced(ctx, b, request)
+}
+
+func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
+	b.certsCountedLock.Lock()
+	defer b.certsCountedLock.Unlock()
+
+	entries, err := b.storage.List(ctx, "certs/")
+	if err != nil {
+		return err
+	}
+	atomic.StoreUint32(b.certCount, uint32(len(entries)))
+	metrics.SetGauge([]string{"secrets", "pki", "total_certificates_stored"}, float32(*b.certCount))
+	entries, err = b.storage.List(ctx, "revoked/")
+	if err != nil {
+		return err
+	}
+	atomic.StoreUint32(b.revokedCertCount, uint32(len(entries)))
+	metrics.SetGauge([]string{"secrets", "pki", "total_revoked_certificates_stored"}, float32(*b.revokedCertCount))
+	return nil
+}
+
+func (b *backend) incrementTotalCertificatesCount() {
+	atomic.AddUint32(b.certCount, 1)
+	metrics.SetGauge([]string{"secrets", "pki", "total_certificates_stored"}, float32(*b.certCount))
+}
+
+func (b *backend) decrementTotalCertificatesCount() {
+	atomic.AddUint32(b.certCount, ^uint32(0))
+	metrics.SetGauge([]string{"secrets", "pki", "total_certificates_stored"}, float32(*b.certCount))
+}
+
+func (b *backend) incrementTotalRevokedCertificatesCount() {
+	atomic.AddUint32(b.revokedCertCount, 1)
+	metrics.SetGauge([]string{"secrets", "pki", "total_revoked_certificates_stored"}, float32(*b.revokedCertCount))
+}
+
+func (b *backend) decrementTotalRevokedCertificatesCount() {
+	atomic.AddUint32(b.revokedCertCount, ^uint32(0))
+	metrics.SetGauge([]string{"secrets", "pki", "total_revoked_certificates_stored"}, float32(*b.revokedCertCount))
 }
