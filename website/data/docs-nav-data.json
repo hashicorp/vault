@@ -1209,7 +1209,16 @@
       },
       {
         "title": "Transit",
-        "path": "secrets/transit"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/transit"
+          },
+          {
+            "title": "Import Key Wrapping Guide",
+            "path": "secrets/transit/key-wrapping-guide"
+          }
+        ]
       },
       {
         "title": "Venafi (Certificates)",
