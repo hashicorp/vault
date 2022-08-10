@@ -32,6 +32,7 @@
               @value={{or val.value val}}
               @onChange={{this.setAndBroadcast}}
               @groupValue={{(get @model this.valuePath)}}
+              @disabled={{and @attr.options.editDisabled (not @model.isNew)}}
             />
             <label for={{or val.value val}} class="has-left-margin-xs">
               {{or val.value val}}

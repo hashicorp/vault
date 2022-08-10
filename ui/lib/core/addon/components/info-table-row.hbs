@@ -52,7 +52,7 @@
           <Icon @name="x-square" class="icon-false" data-test-boolean-false />
           No
         {{/if}}
-        {{! alwaysRender is still true }}
+        {{! @alwaysRender (this.isVisible) is still true }}
       {{else if this.valueIsEmpty}}
         {{#if @defaultShown}}
           <span data-test-row-value={{@label}}>{{@defaultShown}}</span>

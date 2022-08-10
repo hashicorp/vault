@@ -20,6 +20,7 @@ module('Integration | Component | oidc/assignment-form', function (hooks) {
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
+    this.server.post('/sys/capabilities-self', () => {});
   });
 
   test('it should save new assignment', async function (assert) {

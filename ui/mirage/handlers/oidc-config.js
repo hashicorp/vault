@@ -1,5 +1,4 @@
 export default function (server) {
-  server.post('/sys/capabilities-self', () => {});
   server.get('/identity/oidc/key/default', () => {
     return {
       request_id: '5eeb2a46-8726-7336-76ee-8daea2860624',
@@ -31,25 +30,6 @@ export default function (server) {
       wrap_info: null,
       warnings: null,
       auth: null,
-    };
-  });
-
-  server.get('/identity/oidc/assignment/assignment-1', () => {
-    return {
-      request_id: 'assignment-1-id',
-      data: {
-        entity_ids: ['1234-12345'],
-        group_ids: ['abcdef-123'],
-      },
-    };
-  });
-
-  server.get('/identity/oidc/assignment', () => {
-    return {
-      request_id: 'assignment-list-id',
-      data: {
-        keys: ['allow_all', 'assignment-1'],
-      },
     };
   });
 
