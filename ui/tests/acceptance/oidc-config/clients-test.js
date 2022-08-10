@@ -1,5 +1,5 @@
 import { module, test } from 'qunit';
-import { visit, currentURL, click, fillIn, findAll, currentRouteName, settled } from '@ember/test-helpers';
+import { visit, currentURL, click, fillIn, findAll, currentRouteName } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
@@ -10,7 +10,7 @@ import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
 import fm from 'vault/tests/pages/components/flash-message';
-import { overrideCapabilities } from '../../helpers/oidc-config';
+import { clearRecord, overrideCapabilities } from '../../helpers/oidc-config';
 const searchSelect = create(ss);
 const flashMessage = create(fm);
 // in congruency with backend verbiage 'applications' are referred to as 'clients
@@ -18,9 +18,6 @@ const flashMessage = create(fm);
 
 // OIDC_BASE_URL = '/vault/access/oidc'
 
-const deleteModelRecord = async (model) => {
-  await model.destroyRecord();
-};
 module('Acceptance | oidc-config/clients', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
@@ -45,15 +42,8 @@ module('Acceptance | oidc-config/clients', function (hooks) {
   test('it renders empty state when no clients are configured', async function (assert) {
     assert.expect(5);
 
-    //* ensure clean test state
-    await this.store
-      .findRecord('oidc/client', 'some-app')
-      .then((model) => {
-        deleteModelRecord(model);
-      })
-      .catch(() => {
-        // swallow error
-      });
+    //* clear out test state
+    await clearRecord(this.store, 'oidc/client', 'some-app');
 
     await visit(OIDC_BASE_URL);
     assert.equal(currentURL(), '/vault/access/oidc');
@@ -72,15 +62,8 @@ module('Acceptance | oidc-config/clients', function (hooks) {
   test('it creates, updates and deletes a client', async function (assert) {
     assert.expect(20);
 
-    //* ensure clean test state
-    await this.store
-      .findRecord('oidc/client', 'some-app')
-      .then((model) => {
-        deleteModelRecord(model);
-      })
-      .catch(() => {
-        // swallow error
-      });
+    //* clear out test state
+    await clearRecord(this.store, 'oidc/client', 'some-app');
 
     await visit(OIDC_BASE_URL);
     // create a new application
@@ -92,6 +75,7 @@ module('Acceptance | oidc-config/clients', function (hooks) {
     await click('[data-test-input="idTokenTtl"]');
     await click('[data-test-input="accessTokenTtl"]');
     await click(SELECTORS.clientSaveButton);
+
     assert.equal(
       flashMessage.latestMessage,
       'Successfully created an application',
@@ -183,17 +167,8 @@ module('Acceptance | oidc-config/clients', function (hooks) {
       'navigates back to list view after delete'
     );
 
-    // reset state
-
-    //* ensure clean test state
-    await this.store
-      .findRecord('oidc/assignment', 'assignment-1')
-      .then((model) => {
-        deleteModelRecord(model);
-      })
-      .catch(() => {
-        // swallow error
-      });
+    //* clear out test state
+    await clearRecord(this.store, 'oidc/assignment', 'assignment-1');
   });
 
   test('it renders client list when clients exist', async function (assert) {
