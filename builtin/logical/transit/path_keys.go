@@ -106,7 +106,7 @@ key.`,
 			"key_size": {
 				Type:        framework.TypeInt,
 				Default:     0,
-				Description: `The key size in bytes for the algorithm.  Only applies to HMAC and must be no fewer than 16 bytes and no more than 128`,
+				Description: fmt.Sprintf("The key size in bytes for the algorithm.  Only applies to HMAC and must be no fewer than %d bytes and no more than %d", keysutil.HmacMinKeySize, keysutil.HmacMaxKeySize),
 			},
 		},
 
@@ -189,7 +189,7 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		if polReq.KeyType != keysutil.KeyType_HMAC {
 			return logical.ErrorResponse(fmt.Sprintf("key_size is not valid for algorithm %v", polReq.KeyType)), logical.ErrInvalidRequest
 		}
-		if keySize < 16 || keySize > 512 {
+		if keySize < keysutil.HmacMinKeySize || keySize > keysutil.HmacMaxKeySize {
 			return logical.ErrorResponse(fmt.Sprintf("invalid key_size %d", keySize)), logical.ErrInvalidRequest
 		}
 		polReq.KeySize = keySize

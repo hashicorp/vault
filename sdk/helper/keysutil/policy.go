@@ -45,6 +45,9 @@ import (
 const (
 	Kdf_hmac_sha256_counter = iota // built-in helper
 	Kdf_hkdf_sha256                // golang.org/x/crypto/hkdf
+
+	HmacMinKeySize = 256 / 8
+	HmacMaxKeySize = 4096 / 8
 )
 
 // Or this one...we need the default of zero to be the original AES256-GCM96
@@ -1386,13 +1389,13 @@ func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte
 
 	if (p.Type == KeyType_AES128_GCM96 && len(key) != 16) ||
 		((p.Type == KeyType_AES256_GCM96 || p.Type == KeyType_ChaCha20_Poly1305) && len(key) != 32) ||
-		(p.Type == KeyType_HMAC && len(key) < 16) {
+		(p.Type == KeyType_HMAC && len(key) < HmacMinKeySize || len(key) > HmacMaxKeySize) {
 		return fmt.Errorf("invalid key size %d bytes for key type %s", len(key), p.Type)
 	}
 
 	if p.Type == KeyType_AES128_GCM96 || p.Type == KeyType_AES256_GCM96 || p.Type == KeyType_ChaCha20_Poly1305 || p.Type == KeyType_HMAC {
 		entry.Key = key
-		if p.Type == KeyType_HMAC && len(key) != 16 {
+		if p.Type == KeyType_HMAC {
 			p.KeySize = len(key)
 		}
 	} else {
@@ -1550,8 +1553,11 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 		numBytes := 32
 		if p.Type == KeyType_AES128_GCM96 {
 			numBytes = 16
-		} else if p.Type == KeyType_HMAC && p.KeySize > 32 {
-			numBytes = p.KeySize
+		} else if p.Type == KeyType_HMAC {
+			numBytes := p.KeySize
+			if numBytes < HmacMinKeySize || numBytes > HmacMaxKeySize {
+				return fmt.Errorf("invalid key size for HMAC key, must be between %d and %d bytes", HmacMinKeySize, HmacMaxKeySize)
+			}
 		}
 		newKey, err := uuid.GenerateRandomBytesWithReader(numBytes, randReader)
 		if err != nil {
