@@ -544,7 +544,7 @@ func wrapTargetKeyForImport(t *testing.T, wrappingKey *rsa.PublicKey, targetKey 
 	var ok bool
 	var err error
 	switch targetKeyType {
-	case "aes128-gcm96", "aes256-gcm96", "chacha20-poly1305":
+	case "aes128-gcm96", "aes256-gcm96", "chacha20-poly1305", "hmac":
 		preppedTargetKey, ok = targetKey.([]byte)
 		if !ok {
 			t.Fatal("failed to wrap target key for import: symmetric key not provided in byte format")
