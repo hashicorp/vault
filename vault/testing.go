@@ -39,7 +39,6 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
-	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -2190,7 +2189,12 @@ func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (fu
 	}
 
 	if name == "postgresql-database-plugin" {
-		return dbPostgres.New, true
+		return toFunc(func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+			b := new(framework.Backend)
+			b.Setup(ctx, config)
+			b.BackendType = logical.TypeLogical
+			return b, nil
+		}), true
 	}
 	return dbMysql.New(dbMysql.DefaultUserNameTemplate), true
 }
