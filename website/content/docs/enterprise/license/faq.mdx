@@ -6,8 +6,9 @@ description: An overview of license.
 
 # License FAQ
 
-This FAQ section is for the license changes introduced in Vault Enterprise 1.11.
-- [Q: What is the product behavior change introduced by the licensing changes?](#q-what-is-the-product-behavior-change-introduced-by-the-licensing-changes)
+This FAQ section is for license changes and updates introduced for Vault Enterprise.
+- [Q: How do the license termination changes affect upgrades?](#q-how-do-the-license-termination-changes-affect-upgrades)
+- [Q: What impact on upgrades do the license termination behavior changes pose?](#q-what-impact-on-upgrades-do-the-license-termination-behavior-changes-pose)
 - [Q: Will these license changes impact HCP Vault?](#q-will-these-license-changes-impact-hcp-vault)
 - [Q: Do these license changes impact all Vault customers/licenses?](#q-do-these-license-changes-impact-all-vault-customers-licenses)
 - [Q: What is the product behavior change introduced by the licensing changes?](#q-what-is-the-product-behavior-change-introduced-by-the-licensing-changes)
@@ -31,6 +32,35 @@ This FAQ section is for the license changes introduced in Vault Enterprise 1.11.
 
 Per the [feature deprecation plans](/docs/deprecation), Vault will no longer support licenses in storage. An [auto-loaded license](/docs/enterprise/license/autoloading) must be used instead. If you are using stored licenses, you must migrate to auto-loaded licenses prior to upgrading to Vault 1.11
 
+Vault 1.12 will also introduce different termination behavior for evaluation licenses versus non-evaluation licenses. An [evaluation](https://www.hashicorp.com/products/vault/trial) license will include a 30-day trial period after which a running Vault server will terminate. Vault servers using a non-evaluation license will not terminate.
+
+### Q: How do the license termination changes affect upgrades?
+Vault 1.12 will introduce changes to the license termination behavior. Upgrades when using expired licenses will now be limited.
+Vault will not startup if the build date of the binary is _after_ the expiration date of a license. License expiration date and binary build date compatibility can be verified using the [Check for Autoloaded License](/docs/commands/operator/diagnose#check-for-autoloaded-license) check performed by the `vault operator diagnose` command.
+The build date of a binary can also be found using the [vault version](/docs/commands/version#version) command.
+
+A user can expect the following to occur based on the following scenarios:
+
+**Evaluation or non-evaluation license is valid:**
+Vault will start normally
+
+**Evaluation or non-evaluation license is expired, binary build date _before_ license expiry date:**
+Vault will start normally
+
+**Evaluation or non-evaluation license is expired, binary build date _after_ license expiry date:**
+Vault will not start
+
+**Evaluation license is terminated:**
+Vault will not start independent of the binary’s build date
+
+**Non-evaluation license is terminated, binary build date _before_ license expiry date:**
+Vault will start normally
+
+**Non-evaluation license is terminated, binary build date _after_ license expiry date:**
+Vault will not start
+
+The Vault support team can issue you a temporary evaluation license to allow for security upgrades if your license has expired.
+
 ### Q: Will these license changes impact HCP Vault?
 
 No, these changes will not impact HCP Vault.
@@ -51,9 +81,16 @@ With Vault 1.11, the use of an [auto-loaded license](/docs/enterprise/license/au
 When a license expires, Vault continues to function until the license terminates. This behavior exists today and remains unchanged in Vault 1.11. The grace period, defined as the time between license expiration and license termination, is one day for evaluation licenses (as of 1.8), and ten years for non-evaluation licenses.
 Customers must provide a valid license before the grace period expires. This license is required to be [auto-loaded](/docs/enterprise/license/autoloading). When license terminates (upon grace period expiry), Vault will seal itself and customers will need a valid license in order to successfully bring-up Vault. If a valid license was not installed after license expiry, customers will need to provide one, and this license will need to be auto-loaded.
 
+Vault 1.12 changes the license expiration and termination behavior. Evaluation licenses include a 30-day trial period after which a running Vault server will terminate. Non-evaluation licenses, however, will no longer terminate. When a non-evaluation license expires, Vault will continue to function but upgrades will be limited. The build date of the upgrade binary must be before the expiration date of the license.
+Vault will not start when attempting to use an expired license and binary with a build date _after_ the license expiration date. Attempting to [reload](/api-docs/system/config-reload#reload-license-file) an expired license will result in an error if the build date of the running Vault server is _after_ the license expiration date.
+
+License expiration date and binary build date compatibility can be verified using the [Check for Autoloaded License](/docs/commands/operator/diagnose#check-for-autoloaded-license) check performed by the `vault operator diagnose` command. The build date of a binary can also be found using the [vault version](/docs/commands/version#version) command.
+
 ### Q: What is the impact on evaluation licenses due to this change?
 
 As of Vault 1.8, any Vault cluster deployed must have a valid [auto-loaded](/docs/enterprise/license/autoloading) license.
+
+Vault 1.12 introduces [expiration and termination behavior changes](#q-how-will-vault-behave-at-startup-when-a-license-expires-or-terminates) for non-evaluation licenses. Evaluation licenses will continue to have a 1-day grace period upon license expiry after which they will terminate. Vault will seal itself and shutdown once an evaluation license terminates.
 
 ### Q: Are there any changes to existing methods for manual license loading (API or CLI)?
 
