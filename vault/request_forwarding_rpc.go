@@ -98,6 +98,7 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 			AppliedIndex:    in.RaftAppliedIndex,
 			Term:            in.RaftTerm,
 			DesiredSuffrage: in.RaftDesiredSuffrage,
+			SDKVersion:      in.SdkVersion,
 			UpgradeVersion:  in.RaftUpgradeVersion,
 			RedundancyZone:  in.RaftRedundancyZone,
 		})

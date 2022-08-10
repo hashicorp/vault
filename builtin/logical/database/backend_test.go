@@ -711,7 +711,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 
 	// Replace connection url with templated version
 	req.Operation = logical.UpdateOperation
-	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)
+	connURL = strings.ReplaceAll(connURL, "postgres:secret", "{{username}}:{{password}}")
 	data["connection_url"] = connURL
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -1267,7 +1267,7 @@ func TestBackend_RotateRootCredentials(t *testing.T) {
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "13.4-buster")
 	defer cleanup()
 
-	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)
+	connURL = strings.ReplaceAll(connURL, "postgres:secret", "{{username}}:{{password}}")
 
 	// Configure a connection
 	data := map[string]interface{}{
@@ -1458,6 +1458,91 @@ func TestBackend_ConnectionURL_redacted(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+type hangingPlugin struct{}
+
+func (h hangingPlugin) Initialize(_ context.Context, req v5.InitializeRequest) (v5.InitializeResponse, error) {
+	return v5.InitializeResponse{
+		Config: req.Config,
+	}, nil
+}
+
+func (h hangingPlugin) NewUser(_ context.Context, _ v5.NewUserRequest) (v5.NewUserResponse, error) {
+	return v5.NewUserResponse{}, nil
+}
+
+func (h hangingPlugin) UpdateUser(_ context.Context, _ v5.UpdateUserRequest) (v5.UpdateUserResponse, error) {
+	return v5.UpdateUserResponse{}, nil
+}
+
+func (h hangingPlugin) DeleteUser(_ context.Context, _ v5.DeleteUserRequest) (v5.DeleteUserResponse, error) {
+	return v5.DeleteUserResponse{}, nil
+}
+
+func (h hangingPlugin) Type() (string, error) {
+	return "hanging", nil
+}
+
+func (h hangingPlugin) Close() error {
+	time.Sleep(1000 * time.Second)
+	return nil
+}
+
+var _ v5.Database = (*hangingPlugin)(nil)
+
+func TestBackend_PluginMain_Hanging(t *testing.T) {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
+		return
+	}
+	v5.Serve(&hangingPlugin{})
+}
+
+func TestBackend_AsyncClose(t *testing.T) {
+	// Test that having a plugin that takes a LONG time to close will not cause the cleanup function to take
+	// longer than 750ms.
+	cluster, sys := getCluster(t)
+	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "hanging-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Hanging", []string{}, "")
+	t.Cleanup(cluster.Cleanup)
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = sys
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Configure a connection
+	data := map[string]interface{}{
+		"connection_url": "doesn't matter",
+		"plugin_name":    "hanging-plugin",
+		"allowed_roles":  []string{"plugin-role-test"},
+	}
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/hang",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	_, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	timeout := time.NewTimer(750 * time.Millisecond)
+	done := make(chan bool)
+	go func() {
+		b.Cleanup(context.Background())
+		// check that clean can be called twice safely
+		b.Cleanup(context.Background())
+		done <- true
+	}()
+	select {
+	case <-timeout.C:
+		t.Error("Hanging plugin caused Close() to take longer than 750ms")
+	case <-done:
 	}
 }
 

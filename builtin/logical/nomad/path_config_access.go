@@ -95,6 +95,8 @@ func (b *backend) pathConfigAccessRead(ctx context.Context, req *logical.Request
 		Data: map[string]interface{}{
 			"address":               conf.Address,
 			"max_token_name_length": conf.MaxTokenNameLength,
+			"ca_cert":               conf.CACert,
+			"client_cert":           conf.ClientCert,
 		},
 	}, nil
 }

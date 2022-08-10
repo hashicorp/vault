@@ -16,6 +16,7 @@ import (
 )
 
 func TestPKI_PathManageKeys_GenerateInternalKeys(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	tests := []struct {
@@ -33,6 +34,7 @@ func TestPKI_PathManageKeys_GenerateInternalKeys(t *testing.T) {
 		{"error-bad-type", "dskjfkdsfjdkf", []int{0}, true},
 	}
 	for _, tt := range tests {
+		tt := tt
 		for _, keyBitParam := range tt.keyBits {
 			keyName := fmt.Sprintf("%s-%d", tt.name, keyBitParam)
 			t.Run(keyName, func(t *testing.T) {
@@ -79,6 +81,7 @@ func TestPKI_PathManageKeys_GenerateInternalKeys(t *testing.T) {
 }
 
 func TestPKI_PathManageKeys_GenerateExportedKeys(t *testing.T) {
+	t.Parallel()
 	// We tested a lot of the logic above within the internal test, so just make sure we honor the exported contract
 	b, s := createBackendWithStorage(t)
 
@@ -111,6 +114,7 @@ func TestPKI_PathManageKeys_GenerateExportedKeys(t *testing.T) {
 }
 
 func TestPKI_PathManageKeys_ImportKeyBundle(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	bundle1, err := certutil.CreateKeyBundle("ec", 224, rand.Reader)
@@ -243,6 +247,7 @@ func TestPKI_PathManageKeys_ImportKeyBundle(t *testing.T) {
 }
 
 func TestPKI_PathManageKeys_DeleteDefaultKeyWarns(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -270,6 +275,7 @@ func TestPKI_PathManageKeys_DeleteDefaultKeyWarns(t *testing.T) {
 }
 
 func TestPKI_PathManageKeys_DeleteUsedKeyFails(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -296,6 +302,7 @@ func TestPKI_PathManageKeys_DeleteUsedKeyFails(t *testing.T) {
 }
 
 func TestPKI_PathManageKeys_UpdateKeyDetails(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -348,6 +355,7 @@ func TestPKI_PathManageKeys_UpdateKeyDetails(t *testing.T) {
 }
 
 func TestPKI_PathManageKeys_ImportKeyBundleBadData(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -381,6 +389,7 @@ func TestPKI_PathManageKeys_ImportKeyBundleBadData(t *testing.T) {
 }
 
 func TestPKI_PathManageKeys_ImportKeyRejectsMultipleKeys(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	bundle1, err := certutil.CreateKeyBundle("ec", 224, rand.Reader)
@@ -409,9 +418,10 @@ func TestPKI_PathManageKeys_ImportKeyRejectsMultipleKeys(t *testing.T) {
 	require.True(t, resp.IsError(), "should have received an error response importing a pem bundle with more than 1 key")
 
 	ctx := context.Background()
-	keys, _ := listKeys(ctx, s)
+	sc := b.makeStorageContext(ctx, s)
+	keys, _ := sc.listKeys()
 	for _, keyId := range keys {
-		id, _ := fetchKeyById(ctx, s, keyId)
+		id, _ := sc.fetchKeyById(keyId)
 		t.Logf("%s:%s", id.ID, id.Name)
 	}
 }

@@ -49,7 +49,7 @@ Since K/V secrets engine is a commonly used feature, Vault CLI provides the
 path using the `kv` CLI command:
 
 ```shell-session
-$ vault kv get secret/customers
+$ vault kv get -mount=secret customers
 ```
 
 -> **Comparison:** All three commands retrieve the same data, but display the

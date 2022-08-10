@@ -24,6 +24,7 @@ import (
 
 var (
 	errDuplicateIdentityName = errors.New("duplicate identity name")
+	errCycleDetectedPrefix   = "cyclic relationship detected for member group ID"
 	tmpSuffix                = ".tmp"
 )
 
@@ -594,7 +595,7 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 		default:
 			i.logger.Warn("alias is already tied to a different entity; these entities are being merged", "alias_id", alias.ID, "other_entity_id", aliasByFactors.CanonicalID, "entity_aliases", entity.Aliases, "alias_by_factors", aliasByFactors)
 
-			respErr, intErr := i.mergeEntity(ctx, txn, entity, []string{aliasByFactors.CanonicalID}, true, false, true, persist)
+			respErr, intErr := i.mergeEntityAsPartOfUpsert(ctx, txn, entity, aliasByFactors.CanonicalID, persist)
 			switch {
 			case respErr != nil:
 				return respErr
@@ -603,7 +604,7 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 			}
 
 			// The entity and aliases will be loaded into memdb and persisted
-			// as a result of the merge so we are done here
+			// as a result of the merge, so we are done here
 			return nil
 		}
 
@@ -1472,19 +1473,23 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 	}
 
 	// Remove duplicate entity IDs and check if all IDs are valid
-	group.MemberEntityIDs = strutil.RemoveDuplicates(group.MemberEntityIDs, false)
-	for _, entityID := range group.MemberEntityIDs {
-		entity, err := i.MemDBEntityByID(entityID, false)
-		if err != nil {
-			return fmt.Errorf("failed to validate entity ID %q: %w", entityID, err)
-		}
-		if entity == nil {
-			return fmt.Errorf("invalid entity ID %q", entityID)
+	if group.MemberEntityIDs != nil {
+		group.MemberEntityIDs = strutil.RemoveDuplicates(group.MemberEntityIDs, false)
+		for _, entityID := range group.MemberEntityIDs {
+			entity, err := i.MemDBEntityByID(entityID, false)
+			if err != nil {
+				return fmt.Errorf("failed to validate entity ID %q: %w", entityID, err)
+			}
+			if entity == nil {
+				return fmt.Errorf("invalid entity ID %q", entityID)
+			}
 		}
 	}
 
 	// Remove duplicate policies
-	group.Policies = strutil.RemoveDuplicates(group.Policies, false)
+	if group.Policies != nil {
+		group.Policies = strutil.RemoveDuplicates(group.Policies, false)
+	}
 
 	txn := i.db.Txn(true)
 	defer txn.Abort()
@@ -1578,7 +1583,7 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 				return fmt.Errorf("failed to perform cyclic relationship detection for member group ID %q", memberGroupID)
 			}
 			if cycleDetected {
-				return fmt.Errorf("cyclic relationship detected for member group ID %q", memberGroupID)
+				return fmt.Errorf("%s %q", errCycleDetectedPrefix, memberGroupID)
 			}
 		}
 
@@ -2157,7 +2162,7 @@ func (i *IdentityStore) detectCycleDFS(visited map[string]bool, startingGroupID,
 			return false, fmt.Errorf("failed to perform cycle detection at member group ID %q", memberGroup.ID)
 		}
 		if cycleDetected {
-			return true, fmt.Errorf("cycle detected at member group ID %q", memberGroup.ID)
+			return true, nil
 		}
 	}
 

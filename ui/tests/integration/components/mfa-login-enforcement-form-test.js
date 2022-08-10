@@ -26,7 +26,7 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
 
   test('it should render correct fields', async function (assert) {
     await render(hbs`
-      <MfaLoginEnforcementForm
+      <Mfa::MfaLoginEnforcementForm
         @model={{this.model}}
         @onClose={{fn (mut this.didClose)}}
         @onSave={{fn (mut this.didSave)}}
@@ -65,7 +65,7 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
   test('it should render inline', async function (assert) {
     this.errors = this.model.validate().state;
     await render(hbs`
-      <MfaLoginEnforcementForm
+      <Mfa::MfaLoginEnforcementForm
         @model={{this.model}}
         @isInline={{true}}
         @modelErrors={{this.errors}}
@@ -82,7 +82,7 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
 
   test('it should display field validation errors on save', async function (assert) {
     await render(hbs`
-      <MfaLoginEnforcementForm
+      <Mfa::MfaLoginEnforcementForm
         @model={{this.model}}
         @onClose={{fn (mut this.didClose)}}
         @onSave={{fn (mut this.didSave)}}
@@ -110,7 +110,7 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
     });
 
     await render(hbs`
-      <MfaLoginEnforcementForm
+      <Mfa::MfaLoginEnforcementForm
         @model={{this.model}}
         @onClose={{fn (mut this.didClose)}}
         @onSave={{fn (mut this.didSave) true}}
@@ -140,7 +140,7 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
     this.model.auth_method_accessors.addObject('auth_userpass_1234');
 
     await render(hbs`
-      <MfaLoginEnforcementForm
+      <Mfa::MfaLoginEnforcementForm
         @model={{this.model}}
         @onClose={{fn (mut this.didClose)}}
         @onSave={{fn (mut this.didSave) true}}
@@ -198,7 +198,7 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
     this.model.identity_groups.addObject(group);
 
     await render(hbs`
-      <MfaLoginEnforcementForm
+      <Mfa::MfaLoginEnforcementForm
         @model={{this.model}}
         @onClose={{fn (mut this.didClose)}}
         @onSave={{fn (mut this.didSave) true}}

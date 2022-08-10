@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/axiomhq/hyperloglog"
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/vault/helper/constants"
@@ -470,6 +471,64 @@ func TestActivityLog_SaveEntitiesToStorage(t *testing.T) {
 		t.Fatalf("could not unmarshal protobuf: %v", err)
 	}
 	expectedEntityIDs(t, out, ids)
+}
+
+// Test to check store hyperloglog and fetch hyperloglog from storage
+func TestActivityLog_StoreAndReadHyperloglog(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	ctx := context.Background()
+
+	a := core.activityLog
+	a.SetStandbyEnable(ctx, true)
+	a.SetStartTimestamp(time.Now().Unix()) // set a nonzero segment
+	currentMonth := timeutil.StartOfMonth(time.Now())
+	currentMonthHll := hyperloglog.New()
+	currentMonthHll.Insert([]byte("a"))
+	currentMonthHll.Insert([]byte("a"))
+	currentMonthHll.Insert([]byte("b"))
+	currentMonthHll.Insert([]byte("c"))
+	currentMonthHll.Insert([]byte("d"))
+	currentMonthHll.Insert([]byte("d"))
+
+	err := a.StoreHyperlogLog(ctx, currentMonth, currentMonthHll)
+	if err != nil {
+		t.Fatalf("error storing hyperloglog in storage: %v", err)
+	}
+	fetchedHll, err := a.CreateOrFetchHyperlogLog(ctx, currentMonth)
+	// check the distinct count stored from hll
+	if fetchedHll.Estimate() != 4 {
+		t.Fatalf("wrong number of distinct elements: expected: 5 actual: %v", fetchedHll.Estimate())
+	}
+}
+
+func TestModifyResponseMonthsNilAppend(t *testing.T) {
+	end := time.Now().UTC()
+	start := timeutil.StartOfMonth(end).AddDate(0, -5, 0)
+	responseMonthTimestamp := timeutil.StartOfMonth(end).AddDate(0, -3, 0).Format(time.RFC3339)
+	responseMonths := []*ResponseMonth{{Timestamp: responseMonthTimestamp}}
+	months := modifyResponseMonths(responseMonths, start, end)
+	if len(months) != 5 {
+		t.Fatal("wrong number of months padded")
+	}
+	for _, m := range months {
+		ts, err := time.Parse(time.RFC3339, m.Timestamp)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !ts.Equal(start) {
+			t.Fatalf("incorrect time in month sequence timestamps: expected %+v, got %+v", start, ts)
+		}
+		start = timeutil.StartOfMonth(start).AddDate(0, 1, 0)
+	}
+	// The following is a redundant check, but for posterity and readability I've
+	// made it explicit.
+	lastMonth, err := time.Parse(time.RFC3339, months[4].Timestamp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if timeutil.IsCurrentMonth(lastMonth, time.Now().UTC()) {
+		t.Fatalf("do not include current month timestamp in nil padding for months")
+	}
 }
 
 func TestActivityLog_ReceivedFragment(t *testing.T) {

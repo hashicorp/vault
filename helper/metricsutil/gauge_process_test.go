@@ -147,10 +147,13 @@ func TestGauge_StartDelay(t *testing.T) {
 	sink := BlackholeSink()
 	sink.GaugeInterval = 2 * time.Hour
 
-	p, err := sink.newGaugeCollectionProcessWithClock(
+	p, err := newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		c.EmptyCollectionFunction,
+		sink,
+		sink.GaugeInterval,
+		sink.MaxGaugeCardinality,
 		log.Default(),
 		s,
 	)
@@ -209,10 +212,13 @@ func TestGauge_StoppedDuringInitialDelay(t *testing.T) {
 	sink := BlackholeSink()
 	sink.GaugeInterval = 2 * time.Hour
 
-	p, err := sink.newGaugeCollectionProcessWithClock(
+	p, err := newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		c.EmptyCollectionFunction,
+		sink,
+		sink.GaugeInterval,
+		sink.MaxGaugeCardinality,
 		log.Default(),
 		s,
 	)
@@ -235,10 +241,13 @@ func TestGauge_StoppedAfterInitialDelay(t *testing.T) {
 	sink := BlackholeSink()
 	sink.GaugeInterval = 2 * time.Hour
 
-	p, err := sink.newGaugeCollectionProcessWithClock(
+	p, err := newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		c.EmptyCollectionFunction,
+		sink,
+		sink.GaugeInterval,
+		sink.MaxGaugeCardinality,
 		log.Default(),
 		s,
 	)
@@ -274,10 +283,13 @@ func TestGauge_Backoff(t *testing.T) {
 		return []GaugeLabelValues{}, nil
 	}
 
-	p, err := sink.newGaugeCollectionProcessWithClock(
+	p, err := newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		f,
+		sink,
+		sink.GaugeInterval,
+		sink.MaxGaugeCardinality,
 		log.Default(),
 		s,
 	)
@@ -300,10 +312,13 @@ func TestGauge_RestartTimer(t *testing.T) {
 	sink := BlackholeSink()
 	sink.GaugeInterval = 2 * time.Hour
 
-	p, err := sink.newGaugeCollectionProcessWithClock(
+	p, err := newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		c.EmptyCollectionFunction,
+		sink,
+		sink.GaugeInterval,
+		sink.MaxGaugeCardinality,
 		log.Default(),
 		s,
 	)
@@ -370,10 +385,13 @@ func TestGauge_InterruptedStreaming(t *testing.T) {
 	sink.MaxGaugeCardinality = 500
 	sink.GaugeInterval = 2 * time.Hour
 
-	p, err := sink.newGaugeCollectionProcessWithClock(
+	p, err := newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		nil, // shouldn't be called
+		sink,
+		sink.GaugeInterval,
+		sink.MaxGaugeCardinality,
 		log.Default(),
 		s,
 	)
@@ -445,10 +463,13 @@ func TestGauge_MaximumMeasurements(t *testing.T) {
 
 	// Advance time by 0.5% of duration
 	advance := time.Duration(int(0.005 * float32(sink.GaugeInterval)))
-	p, err := sink.newGaugeCollectionProcessWithClock(
+	p, err := newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		c.makeFunctionForValues(values, s, advance),
+		sink,
+		sink.GaugeInterval,
+		sink.MaxGaugeCardinality,
 		log.Default(),
 		s,
 	)
@@ -524,10 +545,13 @@ func TestGauge_MeasurementError(t *testing.T) {
 		return values, errors.New("test error")
 	}
 
-	p, err := sink.newGaugeCollectionProcessWithClock(
+	p, err := newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		f,
+		sink,
+		sink.GaugeInterval,
+		sink.MaxGaugeCardinality,
 		log.Default(),
 		s,
 	)

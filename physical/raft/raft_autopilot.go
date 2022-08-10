@@ -195,6 +195,7 @@ type EchoRequestUpdate struct {
 	Term            uint64
 	DesiredSuffrage string
 	UpgradeVersion  string
+	SDKVersion      string
 	RedundancyZone  string
 }
 
@@ -212,7 +213,7 @@ func NewFollowerStates() *FollowerStates {
 	}
 }
 
-// Update the peer information in the follower states
+// Update the peer information in the follower states. Note that this function runs on the active node.
 func (s *FollowerStates) Update(req *EchoRequestUpdate) {
 	s.l.Lock()
 	defer s.l.Unlock()
@@ -230,7 +231,7 @@ func (s *FollowerStates) Update(req *EchoRequestUpdate) {
 	state.LastTerm = req.Term
 	state.DesiredSuffrage = req.DesiredSuffrage
 	state.LastHeartbeat = time.Now()
-	state.Version = version.GetVersion().Version
+	state.Version = req.SDKVersion
 	state.UpgradeVersion = req.UpgradeVersion
 	state.RedundancyZone = req.RedundancyZone
 }

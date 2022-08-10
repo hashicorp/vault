@@ -537,7 +537,6 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-
 	c, _, _ := TestCoreUnsealed(t)
 
 	meGH := &MountEntry{

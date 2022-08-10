@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"fmt"
 	"reflect"
 	"sort"
 	"strings"
@@ -1252,7 +1253,7 @@ func TestIdentityStore_GroupHierarchyCases(t *testing.T) {
 	groupUpdateReq.Data = kubeGroupData
 	kubeGroupData["member_group_ids"] = []string{engGroupID}
 	resp, err = is.HandleRequest(ctx, groupUpdateReq)
-	if err == nil {
+	if err != nil || resp == nil || !resp.IsError() {
 		t.Fatalf("expected an error response")
 	}
 
@@ -1389,5 +1390,93 @@ func TestIdentityStore_GroupHierarchyCases(t *testing.T) {
 	}
 	if len(inheritedGroups) != 0 {
 		t.Fatalf("bad: length of inheritedGroups; expected: 0, actual: %d", len(inheritedGroups))
+	}
+}
+
+func TestIdentityStore_GroupCycleDetection(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+
+	group1Name := "group1"
+	group2Name := "group2"
+	group3Name := "group3"
+
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name": group1Name,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("failed to create group %q, err: %v, resp: %#v", group1Name, err, resp)
+	}
+
+	group1Id := resp.Data["id"].(string)
+
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name": group2Name,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("failed to create group %q, err: %v, resp: %#v", group2Name, err, resp)
+	}
+
+	group2Id := resp.Data["id"].(string)
+
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name": group3Name,
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("failed to create group %q, err: %v, resp: %#v", group3Name, err, resp)
+	}
+
+	group3Id := resp.Data["id"].(string)
+
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name":             group1Name,
+			"member_group_ids": []string{},
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("failed to update group %q, err: %v, resp: %#v", group1Name, err, resp)
+	}
+
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name":             group2Name,
+			"member_group_ids": []string{group3Id},
+		},
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("failed to update group %q, err: %v, resp: %#v", group2Name, err, resp)
+	}
+
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "group",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"name":             group3Name,
+			"member_group_ids": []string{group1Id, group2Id},
+		},
+	})
+
+	if err != nil || resp == nil {
+		t.Fatalf("unexpected group update error for group %q, err: %v, resp: %#v", group3Name, err, resp)
+	}
+	if !resp.IsError() || resp.Error().Error() != fmt.Sprintf("%s %q", errCycleDetectedPrefix, group2Id) {
+		t.Fatalf("expected update to group %q to fail due to cycle, resp: %#v", group3Id, resp)
 	}
 }

@@ -135,14 +135,14 @@ These are common configuration values that live within the `method` block:
   automatically reauthenticate when it expires. Rather than a simple string,
   the written value will be a JSON-encoded
   [SecretWrapInfo](https://godoc.org/github.com/hashicorp/vault/api#SecretWrapInfo)
-  structure. Values can be an integer number of seconds or a stringish value
-  like `5m`.
+  structure. Uses [duration format strings](/docs/concepts/duration-format).
 
 - `min_backoff` `(string or integer: "1s")` - The minimum backoff time Agent
   will delay before retrying after a failed auth attempt. The backoff will start
   at the configured value and double (with some randomness) after successive
   failures, capped by `max_backoff.` If Agent templating is being used, this
   value is also used as the min backoff time for the templating server.
+  Uses [duration format strings](/docs/concepts/duration-format).
 
 - `max_backoff` `(string or integer: "5m")` - The maximum time Agent will delay
   before retrying after a failed auth attempt. The backoff will start at
@@ -150,7 +150,7 @@ These are common configuration values that live within the `method` block:
   capped by `max_backoff.` If Agent templating is being used, this value is also
   used as the max backoff time for the templating server. `max_backoff` is the
   duration between retries, and **not** the duration that retries will be
-  performed before giving up.
+  performed before giving up. Uses [duration format strings](/docs/concepts/duration-format).
 
 - `config` `(object: required)` - Configuration of the method itself. See the
   sidebar for information about each method.
@@ -168,8 +168,7 @@ These configuration values are common to all Sinks:
   reauthenticate when it expires. Rather than a simple string, the written
   value will be a JSON-encoded
   [SecretWrapInfo](https://godoc.org/github.com/hashicorp/vault/api#SecretWrapInfo)
-  structure. Values can be an integer number of seconds or a stringish value
-  like `5m`.
+  structure. Uses [duration format strings](/docs/concepts/duration-format).
 
 - `dh_type` `(string: optional)` - If specified, the type of Diffie-Hellman exchange to
   perform, meaning, which ciphers and/or curves. Currently only `curve25519` is

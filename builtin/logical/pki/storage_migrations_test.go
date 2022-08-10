@@ -12,9 +12,11 @@ import (
 )
 
 func Test_migrateStorageEmptyStorage(t *testing.T) {
+	t.Parallel()
 	startTime := time.Now()
 	ctx := context.Background()
 	b, s := createBackendWithStorage(t)
+	sc := b.makeStorageContext(ctx, s)
 
 	// Reset the version the helper above set to 1.
 	b.pkiStorageVersion.Store(0)
@@ -24,11 +26,11 @@ func Test_migrateStorageEmptyStorage(t *testing.T) {
 	err := b.initialize(ctx, request)
 	require.NoError(t, err)
 
-	issuerIds, err := listIssuers(ctx, s)
+	issuerIds, err := sc.listIssuers()
 	require.NoError(t, err)
 	require.Empty(t, issuerIds)
 
-	keyIds, err := listKeys(ctx, s)
+	keyIds, err := sc.listKeys()
 	require.NoError(t, err)
 	require.Empty(t, keyIds)
 
@@ -59,9 +61,12 @@ func Test_migrateStorageEmptyStorage(t *testing.T) {
 }
 
 func Test_migrateStorageSimpleBundle(t *testing.T) {
+	t.Parallel()
 	startTime := time.Now()
 	ctx := context.Background()
 	b, s := createBackendWithStorage(t)
+	sc := b.makeStorageContext(ctx, s)
+
 	// Reset the version the helper above set to 1.
 	b.pkiStorageVersion.Store(0)
 	require.True(t, b.useLegacyBundleCaStorage(), "pre migration we should have been told to use legacy storage.")
@@ -77,11 +82,11 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, err)
 
-	issuerIds, err := listIssuers(ctx, s)
+	issuerIds, err := sc.listIssuers()
 	require.NoError(t, err)
 	require.Equal(t, 1, len(issuerIds))
 
-	keyIds, err := listKeys(ctx, s)
+	keyIds, err := sc.listKeys()
 	require.NoError(t, err)
 	require.Equal(t, 1, len(keyIds))
 
@@ -98,14 +103,16 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 
 	issuerId := issuerIds[0]
 	keyId := keyIds[0]
-	issuer, err := fetchIssuerById(ctx, s, issuerId)
+	issuer, err := sc.fetchIssuerById(issuerId)
 	require.NoError(t, err)
-	require.Equal(t, "current", issuer.Name) // RFC says we should import with Name=current
+	require.True(t, strings.HasPrefix(issuer.Name, "current-"),
+		"expected issuer name to start with current- was %s", issuer.Name)
 	require.Equal(t, certutil.ErrNotAfterBehavior, issuer.LeafNotAfterBehavior)
 
-	key, err := fetchKeyById(ctx, s, keyId)
+	key, err := sc.fetchKeyById(keyId)
 	require.NoError(t, err)
-	require.Equal(t, "current", key.Name) // RFC says we should import with Name=current
+	require.True(t, strings.HasPrefix(key.Name, "current-"),
+		"expected key name to start with current- was %s", key.Name)
 
 	require.Equal(t, issuerId, issuer.ID)
 	require.Equal(t, bundle.SerialNumber, issuer.SerialNumber)
@@ -126,11 +133,11 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 	require.Equal(t, bundle, certBundle)
 
 	// Make sure we setup the default values
-	keysConfig, err := getKeysConfig(ctx, s)
+	keysConfig, err := sc.getKeysConfig()
 	require.NoError(t, err)
 	require.Equal(t, &keyConfigEntry{DefaultKeyId: keyId}, keysConfig)
 
-	issuersConfig, err := getIssuersConfig(ctx, s)
+	issuersConfig, err := sc.getIssuersConfig()
 	require.NoError(t, err)
 	require.Equal(t, &issuerConfigEntry{DefaultIssuerId: issuerId}, issuersConfig)
 
@@ -145,9 +152,24 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 	require.Equal(t, logEntry.Hash, logEntry2.Hash)
 
 	require.False(t, b.useLegacyBundleCaStorage(), "post migration we are still told to use legacy storage")
+
+	// Make sure we can re-process a migration from scratch for whatever reason
+	err = s.Delete(ctx, legacyMigrationBundleLogKey)
+	require.NoError(t, err)
+
+	err = migrateStorage(ctx, b, s)
+	require.NoError(t, err)
+
+	logEntry3, err := getLegacyBundleMigrationLog(ctx, s)
+	require.NoError(t, err)
+	require.NotNil(t, logEntry3)
+
+	require.NotEqual(t, logEntry.Created, logEntry3.Created)
+	require.Equal(t, logEntry.Hash, logEntry3.Hash)
 }
 
 func TestExpectedOpsWork_PreMigration(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	b, s := createBackendWithStorage(t)
 	// Reset the version the helper above set to 1.

@@ -81,8 +81,17 @@ func (c gRPCClient) NewUser(ctx context.Context, req NewUserRequest) (NewUserRes
 }
 
 func newUserReqToProto(req NewUserRequest) (*proto.NewUserRequest, error) {
-	if req.Password == "" {
-		return nil, fmt.Errorf("missing password")
+	switch req.CredentialType {
+	case CredentialTypePassword:
+		if req.Password == "" {
+			return nil, fmt.Errorf("missing password credential")
+		}
+	case CredentialTypeRSAPrivateKey:
+		if len(req.PublicKey) == 0 {
+			return nil, fmt.Errorf("missing public key credential")
+		}
+	default:
+		return nil, fmt.Errorf("unknown credential type")
 	}
 
 	expiration, err := ptypes.TimestampProto(req.Expiration)

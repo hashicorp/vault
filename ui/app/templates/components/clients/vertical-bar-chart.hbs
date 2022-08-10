@@ -8,9 +8,7 @@
   >
   </svg>
 {{else}}
-  <div class="chart-empty-state">
-    <EmptyState @title={{@noDataTitle}} @subTitle={{or @noDataMessage "No data to display"}} @bottomBorder={{true}} />
-  </div>
+  <EmptyState @title={{@noDataTitle}} @subTitle={{or @noDataMessage "No data to display"}} @bottomBorder={{true}} />
 {{/if}}
 
 {{! TOOLTIP }}
@@ -24,7 +22,7 @@
     tetherTarget=this.tooltipTarget
     targetAttachment="bottom middle"
     attachment="bottom middle"
-    offset="40px 0"
+    offset="10px 0"
   }}
     <div class="chart-tooltip vertical-chart">
       <p>{{this.tooltipTotal}}</p>

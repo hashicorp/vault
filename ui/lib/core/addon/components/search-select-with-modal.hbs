@@ -1,0 +1,104 @@
+<div {{did-insert this.fetchOptions}} ...attributes data-test-search-select-with-modal>
+  {{#if this.shouldUseFallback}}
+    {{component
+      @fallbackComponent
+      label=(or @label @subLabel)
+      subText=@subText
+      onChange=@onChange
+      inputValue=@inputValue
+      helpText=@helpText
+      placeHolder=@placeHolder
+      id=@id
+    }}
+  {{else}}
+    {{#if @label}}
+      <label for={{@id}} class="is-label" data-test-field-label>
+        {{@label}}
+        {{#if @helpText}}
+          <InfoTooltip>{{@helpText}}</InfoTooltip>
+        {{/if}}
+      </label>
+    {{/if}}
+    {{#if @subText}}
+      <p class="sub-text">{{@subText}}</p>
+    {{/if}}
+    {{! template-lint-configure simple-unless "warn" }}
+    {{#unless (gte this.selectedOptions.length @selectLimit)}}
+      <PowerSelect
+        @eventType="click"
+        @placeholder={{@placeholder}}
+        @searchEnabled={{true}}
+        @search={{this.searchAndSuggest}}
+        @options={{this.allOptions}}
+        @onChange={{this.selectOrCreate}}
+        @placeholderComponent={{component "search-select-placeholder"}}
+        @verticalPosition="below"
+        as |option|
+      >
+        {{#if this.shouldRenderName}}
+          {{option.name}}
+          <small class="search-select-list-key" data-test-smaller-id="true">
+            {{option.id}}
+          </small>
+        {{else}}
+          {{option.id}}
+        {{/if}}
+      </PowerSelect>
+    {{/unless}}
+    <ul class="search-select-list">
+      {{#each this.selectedOptions as |selected|}}
+        <li class="search-select-list-item" data-test-selected-option="true">
+          {{#if this.shouldRenderName}}
+            {{selected.name}}
+            <small class="search-select-list-key" data-test-smaller-id="true">
+              {{selected.id}}
+            </small>
+          {{else}}
+            <div>
+              {{selected.id}}
+            </div>
+          {{/if}}
+          <div class="control">
+            <button
+              type="button"
+              class="button is-ghost"
+              data-test-selected-list-button="delete"
+              {{on "click" (fn this.discardSelection selected)}}
+            >
+              <Icon @name="trash" class="has-text-grey" />
+            </button>
+          </div>
+        </li>
+      {{/each}}
+    </ul>
+
+  {{/if}}
+  {{#if this.newModelRecord}}
+    <Modal
+      @title="Create new {{@id}}"
+      @onClose={{action (mut this.showModal) false}}
+      @isActive={{this.showModal}}
+      @type="info"
+      @showCloseButton={{false}}
+    >
+      <section class="modal-card-body">
+        <p class="has-bottom-margin-s" data-test-modal-subtext>
+          {{@modalSubtext}}
+        </p>
+        {{#if (has-block)}}
+          {{yield}}
+        {{else}}
+          {{! dynamically render passed in form component }}
+          {{! form must receive an @onSave and @onCancel arg that executes the callback}}
+          {{component
+            @modalFormComponent
+            model=this.newModelRecord
+            onSave=this.resetModal
+            onCancel=this.resetModal
+            isInline=true
+          }}
+        {{/if}}
+      </section>
+    </Modal>
+  {{/if}}
+</div>

@@ -4030,6 +4030,8 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 	// be received from plugin backends.
 	doc := framework.NewOASDocument()
 
+	genericMountPaths, _ := d.Get("generic_mount_paths").(bool)
+
 	procMountGroup := func(group, mountPrefix string) error {
 		for mount, entry := range resp.Data[group].(map[string]interface{}) {
 
@@ -4047,7 +4049,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 			req := &logical.Request{
 				Operation: logical.HelpOperation,
 				Storage:   req.Storage,
-				Data:      map[string]interface{}{"requestResponsePrefix": pluginType},
+				Data:      map[string]interface{}{"requestResponsePrefix": pluginType, "genericMountPaths": genericMountPaths},
 			}
 
 			resp, err := backend.HandleRequest(ctx, req)
@@ -4101,7 +4103,12 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 					}
 				}
 
-				doc.Paths["/"+mountPrefix+mount+path] = obj
+				if genericMountPaths && mount != "sys/" && mount != "identity/" {
+					s := fmt.Sprintf("/%s{mountPath}/%s", mountPrefix, path)
+					doc.Paths[s] = obj
+				} else {
+					doc.Paths["/"+mountPrefix+mount+path] = obj
+				}
 			}
 
 			// Merge backend schema components
@@ -4434,6 +4441,112 @@ func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logic
 	}
 
 	return logical.ListResponseWithInfo(respKeys, respKeyInfo), nil
+}
+
+// getLogLevel returns the hclog.Level that corresponds with the provided level string.
+// This differs hclog.LevelFromString in that it supports additional level strings so
+// that in remains consistent with the handling found in the "vault server" command.
+func getLogLevel(logLevel string) (log.Level, error) {
+	var level log.Level
+
+	switch logLevel {
+	case "trace":
+		level = log.Trace
+	case "debug":
+		level = log.Debug
+	case "notice", "info", "":
+		level = log.Info
+	case "warn", "warning":
+		level = log.Warn
+	case "err", "error":
+		level = log.Error
+	default:
+		return level, fmt.Errorf("unrecognized log level %q", logLevel)
+	}
+
+	return level, nil
+}
+
+func (b *SystemBackend) handleLoggersWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	logLevelRaw, ok := d.GetOk("level")
+
+	if !ok {
+		return logical.ErrorResponse("level is required"), nil
+	}
+
+	logLevel := logLevelRaw.(string)
+	if logLevel == "" {
+		return logical.ErrorResponse("level is empty"), nil
+	}
+
+	level, err := getLogLevel(logLevel)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("invalid level provided: %s", err.Error())), nil
+	}
+
+	b.Core.SetLogLevel(level)
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handleLoggersDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	level, err := getLogLevel(b.Core.logLevel)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("log level from config is invalid: %s", err.Error())), nil
+	}
+
+	b.Core.SetLogLevel(level)
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handleLoggersByNameWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	nameRaw, nameOk := d.GetOk("name")
+	if !nameOk {
+		return logical.ErrorResponse("name is required"), nil
+	}
+
+	logLevelRaw, logLevelOk := d.GetOk("level")
+
+	if !logLevelOk {
+		return logical.ErrorResponse("level is required"), nil
+	}
+
+	logLevel := logLevelRaw.(string)
+	if logLevel == "" {
+		return logical.ErrorResponse("level is empty"), nil
+	}
+
+	level, err := getLogLevel(logLevel)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("invalid level provided: %s", err.Error())), nil
+	}
+
+	err = b.Core.SetLogLevelByName(nameRaw.(string), level)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("invalid params: %s", err.Error())), nil
+	}
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handleLoggersByNameDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	nameRaw, ok := d.GetOk("name")
+	if !ok {
+		return logical.ErrorResponse("name is required"), nil
+	}
+
+	level, err := getLogLevel(b.Core.logLevel)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("log level from config is invalid: %s", err.Error())), nil
+	}
+
+	err = b.Core.SetLogLevelByName(nameRaw.(string), level)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("invalid params: %s", err.Error())), nil
+	}
+
+	return nil, nil
 }
 
 func sanitizePath(path string) string {
@@ -5149,7 +5262,7 @@ This path responds to the following HTTP methods.
 		"This function can be used to generate high-entropy random bytes.",
 	},
 	"listing_visibility": {
-		"Determines the visibility of the mount in the UI-specific listing endpoint. Accepted value are 'unauth' and ''.",
+		"Determines the visibility of the mount in the UI-specific listing endpoint. Accepted value are 'unauth' and 'hidden', with the empty default ('') behaving like 'hidden'.",
 		"",
 	},
 	"passthrough_request_headers": {

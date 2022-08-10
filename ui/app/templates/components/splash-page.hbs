@@ -7,13 +7,13 @@
     </Nav.home>
     <Nav.items>
       <div class="navbar-item status-indicator-button" data-status={{if this.activeCluster.unsealed "good" "bad"}}>
-        <StatusMenu @label="Status" @onLinkClick={{action Nav.closeDrawer}} />
+        <StatusMenu @label="Status" @onLinkClick={{Nav.closeDrawer}} />
       </div>
     </Nav.items>
   </NavHeader>
 {{/if}}
 {{! bypass UiWizard and container styling }}
-{{#if this.hasAltContent}}
+{{#if @hasAltContent}}
   {{yield (hash altContent=(component "splash-page/splash-content"))}}
 {{else}}
   <UiWizard>

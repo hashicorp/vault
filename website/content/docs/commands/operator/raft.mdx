@@ -83,6 +83,8 @@ The following flags are available for the `operator raft join` command.
 - `-retry` `(bool: false)` - Continuously retry joining the Raft cluster upon
   failures. The default is false.
 
+~> **Note:** Please be aware that the content (not the path to the file) of the certificate or key is expected for these parameters: `-leader-ca-cert`, `-leader-client-cert`, `-leader-client-key`.
+
 ## list-peers
 
 This command is used to list the full set of peers in the Raft cluster.
@@ -254,6 +256,39 @@ Servers:
       Last Term:       3
       Last Index:      38
 ```
+Vault Enterprise will include additional output related to automated upgrades and redundancy zones.
+
+#### Example Vault Enterprise Output
+
+```text
+Redundancy Zones:
+   a
+      Servers: vault_1, vault_2, vault_5
+      Voters: vault_1
+      Failure Tolerance: 2
+   b
+      Servers: vault_3, vault_4
+      Voters: vault_3
+      Failure Tolerance: 1
+Upgrade Info:
+   Status: await-new-voters
+   Target Version: 1.12.0
+   Target Version Voters:
+   Target Version Non-Voters: vault_5
+   Other Version Voters: vault_1, vault_3
+   Other Version Non-Voters: vault_2, vault_4
+   Redundancy Zones:
+      a
+         Target Version Voters:
+         Target Version Non-Voters: vault_5
+         Other Version Voters: vault_1
+         Other Version Non-Voters: vault_2
+      b
+         Target Version Voters:
+         Target Version Non-Voters:
+         Other Version Voters: vault_3
+         Other Version Non-Voters: vault_4
+```
 
 ### autopilot get-config
 
@@ -301,3 +336,6 @@ Flags applicable to this command are the following:
   voting nodes.
 
 - `server-stabilization-time` `(string)` - Minimum amount of time a server must be in a stable, healthy state before it can become a voter. Until that happens, it will be visible as a peer in the cluster, but as a non-voter, meaning it won't contribute to quorum.
+-
+- `disable-upgrade-migration` `(bool)` - Controls whether to disable automated
+  upgrade migrations, an Enterprise-only feature. The default is `false`.

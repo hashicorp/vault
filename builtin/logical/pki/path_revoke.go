@@ -68,7 +68,7 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 
 	// We store and identify by lowercase colon-separated hex, but other
 	// utilities use dashes and/or uppercase, so normalize
-	serial = strings.Replace(strings.ToLower(serial), "-", ":", -1)
+	serial = strings.ReplaceAll(strings.ToLower(serial), "-", ":")
 
 	b.revokeStorageLock.Lock()
 	defer b.revokeStorageLock.Unlock()

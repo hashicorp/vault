@@ -17,7 +17,7 @@ export const ARRAY_OF_MONTHS = [
 
 // convert API timestamp ( '2021-03-21T00:00:00Z' ) to date object, optionally format
 export const parseAPITimestamp = (timestamp, style) => {
-  if (!timestamp) return;
+  if (typeof timestamp !== 'string') return;
   let date = parseISO(timestamp.split('T')[0]);
   if (!style) return date;
   return format(date, style);
@@ -34,7 +34,7 @@ export const parseRFC3339 = (timestamp) => {
   return date ? [`${date.getFullYear()}`, date.getMonth()] : null;
 };
 
-// convert MM/yy (format of dates in charts) to 'Month yyyy' (format in tooltip)
+// convert M/yy (format of dates in charts) to 'Month yyyy' (format in tooltip)
 export function formatChartDate(date) {
   let array = date.split('/');
   array.splice(1, 0, '01');

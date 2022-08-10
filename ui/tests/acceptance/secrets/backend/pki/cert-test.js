@@ -1,4 +1,4 @@
-import { currentRouteName, settled } from '@ember/test-helpers';
+import { currentRouteName, currentURL, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import editPage from 'vault/tests/pages/secrets/backend/pki/edit-role';
@@ -9,7 +9,7 @@ import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import authPage from 'vault/tests/pages/auth';
 import { SELECTORS } from 'vault/tests/helpers/pki';
 
-module('Acceptance | secrets/pki/list?tab=certs', function (hooks) {
+module('Acceptance | secrets/pki/list?tab=cert', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
@@ -52,11 +52,12 @@ elRplAzrMF4=
   };
 
   test('it issues a cert', async function (assert) {
-    assert.expect(9);
-    await setup(assert);
+    assert.expect(10);
+    const mount = await setup(assert);
     await settled();
     await generatePage.issueCert('foo');
     await settled();
+    assert.equal(currentURL(), `/vault/secrets/${mount}/credentials/role?action=issue`);
     assert.dom(SELECTORS.certificate).exists('displays masked certificate');
     assert.dom(SELECTORS.commonName).exists('displays common name');
     assert.dom(SELECTORS.issueDate).exists('displays issue date');
@@ -84,13 +85,14 @@ elRplAzrMF4=
   });
 
   test('it views a cert', async function (assert) {
-    assert.expect(11);
+    assert.expect(12);
     const path = await setup(assert);
     await generatePage.issueCert('foo');
     await settled();
-    await listPage.visitRoot({ backend: path, tab: 'certs' });
+    await listPage.visitRoot({ backend: path, tab: 'cert' });
     await settled();
-    assert.ok(listPage.secrets.length > 0, 'lists certs');
+    assert.equal(currentURL(), `/vault/secrets/${path}/list?tab=cert`);
+    assert.equal(listPage.secrets.length, 2, 'lists certs');
     await listPage.secrets.objectAt(0).click();
     await settled();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'navigates to the show page');

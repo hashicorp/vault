@@ -13,6 +13,7 @@ This page provides frequently asked questions concerning decisions made about Va
 - [Q: What is the impact on anyone using the legacy MFA feature?](#q-what-is-the-impact-on-anyone-using-the-legacy-mfa-feature)
 - [Q: I'm currently using the Etcd storage backend feature. How does the deprecation impact me?](#q-i-m-currently-using-the-etcd-storage-backend-feature-how-does-the-deprecation-impact-me)
 - [Q: What should I do if I use Mount Filters, AppID, or any of the standalone DB engines?](#q-what-should-i-do-if-i-use-mount-filters-appid-or-any-of-the-standalone-db-engines)
+- [Q: What is the impact of removing support for X.509 certificates with signatures that use SHA-1?](#q-what-is-the-impact-of-removing-support-for-x-509-certificates-with-signatures-that-use-sha-1)
 
 ### Q: What is the impact on anyone using the legacy MFA feature?
 
@@ -39,13 +40,48 @@ These features were deprecated in prior releases of Vault. We are targeting the 
 ### Q: What is the impact of removing support for X.509 certificates with signatures that use SHA-1?
 
 Starting with Vault 1.12.0, Vault will be built with Go 1.18.
-The Go 1.18 standard library [rejects X.509 certificates](https://tip.golang.org/doc/go1.18#sha1) whose signatures use a SHA-1 hash.
+The Go 1.18 standard library X.509 signature validation [rejects signatures](https://go.dev/doc/go1.18#sha1) that use a SHA-1 hash.
 
 If this issue impacts your usage of Vault, you can temporarily work around it by deploying Vault with the environment variable `GODEBUG=x509sha1=1` set.
 This workaround will fail in a future version of Go, however, the Go team has not said when they will remove this workaround.
 
+If you want to check whether a certificate or CA contains a problematic signature, you can use the OpenSSL CLI:
+
+```shell-session
+$ openssl x509 -text -noout -in somecert.pem | grep sha1
+
+    Signature Algorithm: sha1WithRSAEncryption
+    Signature Algorithm: sha1WithRSAEncryption
+```
+
+Any signature algorithms that contain `sha1` will be potentially problematic.
+
 Here are the use cases that may still use certificates with SHA-1:
 
-- AWS Credential Plugin: [AWS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html) can use SHA-1-based PKCS7 signatures for DSA key pairs.
+#### Auth Methods
 
-We will update this list as we do further research.
+- [AWS Auth Method](/docs/auth/aws): [AWS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html) can use SHA-1-based PKCS7 signatures for DSA key pairs.
+- [Cloud Foundry (CF) Auth Method ](/docs/auth/cf)
+- [Kerberos Auth Method](/docs/auth/kerberos)
+- [Kubernetes Auth Method](/docs/auth/kubernetes)
+- [LDAP Auth Method](/docs/auth/ldap)
+- [JWT/OIDC Auth Method](/docs/auth/jwt/)
+- [TLS Certificates Auth Method](/docs/auth/cert)
+
+#### Database Secrets Engines
+
+- [Cassandra Database Secrets Engine](/docs/secrets/databases/cassandra)
+- [Couchbase Database Secrets Engine](/docs/secrets/databases/couchbase)
+- [Elasticsearch Database Secrets Engine](/docs/secrets/databases/elasticdb)
+- [InfluxDB Database Secrets Engine](/docs/secrets/databases/influxdb)
+- [MongoDB Database Secrets Engine](/docs/secrets/databases/mongodb)
+- [MySQL/MariaDB Database Secrets Engine](/docs/secrets/databases/mysql-maria)
+
+#### Secrets Engines
+
+- [Active Directory Secrets Engine](/docs/secrets/ad)
+- [Consul Secrets Engine](/docs/secrets/consul)
+- [Kubernetes Secrets Engine](/docs/secrets/kubernetes)
+- [Nomad Secrets Engine](/docs/secrets/nomad)
+- [OpenLDAP Secrets Engine](/docs/secrets/openldap)
+- [PKI Secrets Engine](/docs/secrets/pki/)

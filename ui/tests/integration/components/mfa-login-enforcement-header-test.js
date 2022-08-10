@@ -9,7 +9,7 @@ module('Integration | Component | mfa-login-enforcement-header', function (hooks
   setupMirage(hooks);
 
   test('it renders heading', async function (assert) {
-    await render(hbs`<MfaLoginEnforcementHeader @heading="New enforcement" />`);
+    await render(hbs`<Mfa::MfaLoginEnforcementHeader @heading="New enforcement" />`);
 
     assert.dom('[data-test-mleh-title]').includesText('New enforcement');
     assert.dom('[data-test-mleh-title] svg').hasClass('flight-icon-lock', 'Lock icon renders');
@@ -38,7 +38,7 @@ module('Integration | Component | mfa-login-enforcement-header', function (hooks
     });
 
     await render(hbs`
-      <MfaLoginEnforcementHeader
+      <Mfa::MfaLoginEnforcementHeader
         @isInline={{true}}
         @radioCardGroupValue={{this.value}}
         @onRadioCardSelect={{fn (mut this.value)}}

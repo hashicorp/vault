@@ -221,7 +221,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Summary:  "Update or create a configuration for the given MFA method",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodDelete,
+					Callback: i.handleMFAMethodTOTPDelete,
 					Summary:  "Delete a configuration for the given MFA method",
 				},
 			},
@@ -335,7 +335,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Summary:  "Update or create a configuration for the given MFA method",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodDelete,
+					Callback: i.handleMFAMethodOKTADelete,
 					Summary:  "Delete a configuration for the given MFA method",
 				},
 			},
@@ -391,7 +391,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Summary:  "Update or create a configuration for the given MFA method",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodDelete,
+					Callback: i.handleMFAMethodDUODelete,
 					Summary:  "Delete a configuration for the given MFA method",
 				},
 			},
@@ -431,7 +431,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Summary:  "Update or create a configuration for the given MFA method",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodDelete,
+					Callback: i.handleMFAMethodPingIDDelete,
 					Summary:  "Delete a configuration for the given MFA method",
 				},
 			},
@@ -1094,7 +1094,7 @@ func (i *IdentityStore) CreateEntity(ctx context.Context) (*identity.Entity, err
 			nsLabel,
 		})
 
-	return entity, nil
+	return entity.Clone()
 }
 
 // CreateOrFetchEntity creates a new entity. This is used by core to
@@ -1209,7 +1209,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 	// Update MemDB and persist entity object
 	err = i.upsertEntityInTxn(ctx, txn, entity, nil, true)
 	if err != nil {
-		return nil, false, err
+		return entity, entityCreated, err
 	}
 
 	txn.Commit()

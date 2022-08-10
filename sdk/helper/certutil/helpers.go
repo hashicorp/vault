@@ -49,6 +49,21 @@ var expectedNISTPCurveHashBits = map[int]int{
 	521: 512,
 }
 
+// Mapping of constant names<->constant values for SignatureAlgorithm
+var SignatureAlgorithmNames = map[string]x509.SignatureAlgorithm{
+	"sha256withrsa":    x509.SHA256WithRSA,
+	"sha384withrsa":    x509.SHA384WithRSA,
+	"sha512withrsa":    x509.SHA512WithRSA,
+	"ecdsawithsha256":  x509.ECDSAWithSHA256,
+	"ecdsawithsha384":  x509.ECDSAWithSHA384,
+	"ecdsawithsha512":  x509.ECDSAWithSHA512,
+	"sha256withrsapss": x509.SHA256WithRSAPSS,
+	"sha384withrsapss": x509.SHA384WithRSAPSS,
+	"sha512withrsapss": x509.SHA512WithRSAPSS,
+	"pureed25519":      x509.PureEd25519,
+	"ed25519":          x509.PureEd25519, // Duplicated for clarity; most won't expect the "Pure" prefix.
+}
+
 // GetHexFormatted returns the byte buffer formatted in hex with
 // the specified separator between bytes.
 func GetHexFormatted(buf []byte, sep string) string {
@@ -85,6 +100,16 @@ func GetSubjKeyID(privateKey crypto.Signer) ([]byte, error) {
 		return nil, errutil.InternalError{Err: "passed-in private key is nil"}
 	}
 	return getSubjectKeyID(privateKey.Public())
+}
+
+// Returns the explicit SKID when used for cross-signing, else computes a new
+// SKID from the key itself.
+func getSubjectKeyIDFromBundle(data *CreationBundle) ([]byte, error) {
+	if len(data.Params.SKID) > 0 {
+		return data.Params.SKID, nil
+	}
+
+	return getSubjectKeyID(data.CSR.PublicKey)
 }
 
 func getSubjectKeyID(pub interface{}) ([]byte, error) {
@@ -446,18 +471,30 @@ func ParsePublicKeyPEM(data []byte) (interface{}, error) {
 	return nil, errors.New("data does not contain any valid public keys")
 }
 
-// addPolicyIdentifiers adds certificate policies extension
-//
+// AddPolicyIdentifiers adds certificate policies extension, based on CreationBundle
 func AddPolicyIdentifiers(data *CreationBundle, certTemplate *x509.Certificate) {
-	for _, oidstr := range data.Params.PolicyIdentifiers {
-		oid, err := StringToOid(oidstr)
+	oidOnly := true
+	for _, oidStr := range data.Params.PolicyIdentifiers {
+		oid, err := StringToOid(oidStr)
 		if err == nil {
 			certTemplate.PolicyIdentifiers = append(certTemplate.PolicyIdentifiers, oid)
+		}
+		if err != nil {
+			oidOnly = false
+		}
+	}
+	if !oidOnly { // Because all policy information is held in the same extension, when we use an extra extension to
+		// add policy qualifier information, that overwrites any information in the PolicyIdentifiers field on the Cert
+		// Template, so we need to reparse all the policy identifiers here
+		extension, err := CreatePolicyInformationExtensionFromStorageStrings(data.Params.PolicyIdentifiers)
+		if err == nil {
+			// If this errors out, don't add it, rely on the OIDs parsed into PolicyIdentifiers above
+			certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, *extension)
 		}
 	}
 }
 
-// addExtKeyUsageOids adds custom extended key usage OIDs to certificate
+// AddExtKeyUsageOids adds custom extended key usage OIDs to certificate
 func AddExtKeyUsageOids(data *CreationBundle, certTemplate *x509.Certificate) {
 	for _, oidstr := range data.Params.ExtKeyUsageOIDs {
 		oid, err := StringToOid(oidstr)
@@ -744,6 +781,29 @@ func CreateCertificateWithKeyGenerator(data *CreationBundle, randReader io.Reade
 	return createCertificate(data, randReader, keyGenerator)
 }
 
+// Set correct correct RSA sig algo
+func certTemplateSetSigAlgo(certTemplate *x509.Certificate, data *CreationBundle) {
+	if data.Params.UsePSS {
+		switch data.Params.SignatureBits {
+		case 256:
+			certTemplate.SignatureAlgorithm = x509.SHA256WithRSAPSS
+		case 384:
+			certTemplate.SignatureAlgorithm = x509.SHA384WithRSAPSS
+		case 512:
+			certTemplate.SignatureAlgorithm = x509.SHA512WithRSAPSS
+		}
+	} else {
+		switch data.Params.SignatureBits {
+		case 256:
+			certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
+		case 384:
+			certTemplate.SignatureAlgorithm = x509.SHA384WithRSA
+		case 512:
+			certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
+		}
+	}
+}
+
 func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGenerator KeyGenerator) (*ParsedCertBundle, error) {
 	var err error
 	result := &ParsedCertBundle{}
@@ -812,14 +872,7 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 	if data.SigningBundle != nil {
 		switch data.SigningBundle.PrivateKeyType {
 		case RSAPrivateKey:
-			switch data.Params.SignatureBits {
-			case 256:
-				certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
-			case 384:
-				certTemplate.SignatureAlgorithm = x509.SHA384WithRSA
-			case 512:
-				certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
-			}
+			certTemplateSetSigAlgo(certTemplate, data)
 		case Ed25519PrivateKey:
 			certTemplate.SignatureAlgorithm = x509.PureEd25519
 		case ECPrivateKey:
@@ -841,14 +894,7 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 
 		switch data.Params.KeyType {
 		case "rsa":
-			switch data.Params.SignatureBits {
-			case 256:
-				certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
-			case 384:
-				certTemplate.SignatureAlgorithm = x509.SHA384WithRSA
-			case 512:
-				certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
-			}
+			certTemplateSetSigAlgo(certTemplate, data)
 		case "ed25519":
 			certTemplate.SignatureAlgorithm = x509.PureEd25519
 		case "ec":
@@ -1054,7 +1100,7 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		return nil, err
 	}
 
-	subjKeyID, err := getSubjectKeyID(data.CSR.PublicKey)
+	subjKeyID, err := getSubjectKeyIDFromBundle(data)
 	if err != nil {
 		return nil, err
 	}
@@ -1075,14 +1121,7 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 
 	switch data.SigningBundle.PrivateKeyType {
 	case RSAPrivateKey:
-		switch data.Params.SignatureBits {
-		case 256:
-			certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
-		case 384:
-			certTemplate.SignatureAlgorithm = x509.SHA384WithRSA
-		case 512:
-			certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
-		}
+		certTemplateSetSigAlgo(certTemplate, data)
 	case ECPrivateKey:
 		switch data.Params.SignatureBits {
 		case 256:

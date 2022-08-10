@@ -25,6 +25,11 @@ export default {
   hasTooltip: isPresent('[data-test-component=info-tooltip]'),
   tooltipTrigger: focusable('[data-test-tool-tip-trigger]'),
   tooltipContent: text('[data-test-help-text]'),
+  hasRadio: isPresent('[data-test-radio-input]'),
+  radioButtons: collection('input[type=radio]', {
+    select: clickable(),
+    id: attribute('id'),
+  }),
 
   fields: collection('[data-test-field]', {
     clickLabel: clickable('label'),
@@ -41,6 +46,9 @@ export default {
     inputChecked: attribute('checked', 'input[type=checkbox]'),
     selectValue: value('select'),
   }),
+  selectRadioInput: async function (value) {
+    return this.radioButtons.filterBy('id', value)[0].select();
+  },
   fillInTextarea: async function (name, value) {
     return this.fields
       .filter((field) => {

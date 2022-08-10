@@ -1,8 +1,7 @@
-import { computed } from '@ember/object';
-import Component from '@ember/component';
+import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
-import layout from '../templates/components/info-table-item-array';
 import { isWildcardString } from 'vault/helpers/is-wildcard-string';
 
 /**
@@ -15,63 +14,78 @@ import { isWildcardString } from 'vault/helpers/is-wildcard-string';
  *
  * @example
  * ```js
- * <InfoTableItemArray @displayArray={{['test-1','test-2','test-3']}} @isLink={{true}} @modelType="transform/role"/ @queryParam="role" @backend="transform" viewAll="roles">
+ * <InfoTableItemArray
+ * @displayArray={{['test-1','test-2','test-3']}}
+ * @isLink={{true}}
+ * @rootRoute="vault.cluster.secrets.backend.list-root"
+ * @itemRoute="vault.cluster.secrets.backend.show"
+ * @modelType="transform/role"/
+ * @queryParam="role"
+ * @backend="transform"
+ * viewAll="roles">
  * ```
  *
  * @param displayArray=null {array} - This array of data to be displayed.  If there are more than 10 items in the array only five will show and a count of the other number in the array will show.
- * @param [isLink=true] {Boolean} - Indicates if the item should contain a link-to component.  Only setup for arrays, but this could be changed if needed.
- * @param [modelType=null] {string} - Tells what model you want data for the allOptions to be returned from.  Used in conjunction with the the isLink.
+ * @param [isLink] {Boolean} - Indicates if the item should contain a link-to component.  Only setup for arrays, but this could be changed if needed.
+ * @param [rootRoute="vault.cluster.secrets.backend.list-root"] - {string} - Tells what route the link should go to when selecting "view all".
+ * @param [itemRoute=vault.cluster.secrets.backend.show] - {string} - Tells what route the link should go to when selecting the individual item.
+ * @param [modelType] {string} - Tells which model you want data for the allOptions to be returned from.  Used in conjunction with the the isLink.
  * @param [wildcardLabel] {String} - when you want the component to return a count on the model for options returned when using a wildcard you must provide a label of the count e.g. role.  Should be singular.
  * @param [queryParam] {String} - If you want to specific a tab for the View All XX to display to.  Ex: role
  * @param [backend] {String} - To specify which backend to point the link to.
  * @param [viewAll] {String} - Specify the word at the end of the link View all xx.
  */
-export default Component.extend({
-  layout,
-  'data-test-info-table-item-array': true,
-  attributeBindings: ['data-test-info-table-item-array'],
-  allOptions: null,
-  displayArray: null,
-  wildcardInDisplayArray: false,
-  store: service(),
-  displayArrayAmended: computed('displayArray', function () {
+export default class InfoTableItemArray extends Component {
+  @tracked allOptions = null;
+  @tracked wildcardInDisplayArray = false;
+  @service store;
+
+  get rootRoute() {
+    return this.args.rootRoute || 'vault.cluster.secrets.backend.list-root';
+  }
+
+  get itemRoute() {
+    return this.args.itemRoute || 'vault.cluster.secrets.backend.show';
+  }
+
+  get displayArray() {
+    return this.args.displayArray || null;
+  }
+
+  get displayArrayAmended() {
     let { displayArray } = this;
-    if (!displayArray) {
-      return;
-    }
+    if (!displayArray) return null;
     if (displayArray.length >= 10) {
       // if array greater than 10 in length only display the first 5
       displayArray = displayArray.slice(0, 5);
     }
-
     return displayArray;
-  }),
+  }
 
-  checkWildcardInArray: task(function* () {
+  async checkWildcardInArray() {
     if (!this.displayArray) {
       return;
     }
-    let filteredArray = yield this.displayArray.filter((item) => isWildcardString(item));
-    this.set('wildcardInDisplayArray', filteredArray.length > 0 ? true : false);
-  }).on('didInsertElement'),
+    let filteredArray = await this.displayArray.filter((item) => isWildcardString(item));
 
-  fetchOptions: task(function* () {
-    if (this.isLink && this.modelType) {
+    this.wildcardInDisplayArray = filteredArray.length > 0 ? true : false;
+  }
+
+  @task *fetchOptions() {
+    if (this.args.isLink && this.args.modelType) {
       let queryOptions = {};
 
-      if (this.backend) {
-        queryOptions = { backend: this.backend };
+      if (this.args.backend) {
+        queryOptions = { backend: this.args.backend };
       }
 
-      let options = yield this.store.query(this.modelType, queryOptions);
+      let options = yield this.store.query(this.args.modelType, queryOptions);
       this.formatOptions(options);
     }
-  }).on('didInsertElement'),
+    this.checkWildcardInArray();
+  }
 
-  formatOptions: function (options) {
-    let allOptions = options.toArray().map((option) => {
-      return option.id;
-    });
-    this.set('allOptions', allOptions);
-  },
-});
+  formatOptions(options) {
+    this.allOptions = options.mapBy('id');
+  }
+}

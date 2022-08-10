@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fixed bug where red spellcheck underline appears in sensitive/secret kv values when it should not appear
+```

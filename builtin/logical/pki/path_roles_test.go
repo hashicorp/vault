@@ -2,17 +2,22 @@ package pki
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/asn1"
+	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"testing"
-	"time"
 
+	"github.com/go-errors/errors"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/mitchellh/mapstructure"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestPki_RoleGenerateLease(t *testing.T) {
+	t.Parallel()
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
@@ -53,22 +58,21 @@ func TestPki_RoleGenerateLease(t *testing.T) {
 		t.Fatalf("generate_lease should not be set by default")
 	}
 
-	// Update values due to switching of ttl type
-	resp.Data["ttl_duration"] = resp.Data["ttl"]
-	resp.Data["ttl"] = (time.Duration(resp.Data["ttl"].(int64)) * time.Second).String()
-	resp.Data["max_ttl_duration"] = resp.Data["max_ttl"]
-	resp.Data["max_ttl"] = (time.Duration(resp.Data["max_ttl"].(int64)) * time.Second).String()
-	// role.GenerateLease will be nil after the decode
-	var role roleEntry
-	err = mapstructure.Decode(resp.Data, &role)
-	if err != nil {
+	// To test upgrade of generate_lease, we read the storage entry,
+	// modify it to remove generate_lease, and rewrite it.
+	entry, err := storage.Get(context.Background(), "role/testrole")
+	if err != nil || entry == nil {
 		t.Fatal(err)
 	}
 
-	// Make it explicit
+	var role roleEntry
+	if err := entry.DecodeJSON(&role); err != nil {
+		t.Fatal(err)
+	}
+
 	role.GenerateLease = nil
 
-	entry, err := logical.StorageEntryJSON("role/testrole", role)
+	entry, err = logical.StorageEntryJSON("role/testrole", role)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,6 +122,7 @@ func TestPki_RoleGenerateLease(t *testing.T) {
 }
 
 func TestPki_RoleKeyUsage(t *testing.T) {
+	t.Parallel()
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
@@ -151,26 +156,23 @@ func TestPki_RoleKeyUsage(t *testing.T) {
 		t.Fatalf("key_usage should have 2 values")
 	}
 
-	// Update values due to switching of ttl type
-	resp.Data["ttl_duration"] = resp.Data["ttl"]
-	resp.Data["ttl"] = (time.Duration(resp.Data["ttl"].(int64)) * time.Second).String()
-	resp.Data["max_ttl_duration"] = resp.Data["max_ttl"]
-	resp.Data["max_ttl"] = (time.Duration(resp.Data["max_ttl"].(int64)) * time.Second).String()
-	// Check that old key usage value is nil
-	var role roleEntry
-	err = mapstructure.Decode(resp.Data, &role)
-	if err != nil {
+	// To test the upgrade of KeyUsageOld into KeyUsage, we read
+	// the storage entry, modify it to set KUO and unset KU, and
+	// rewrite it.
+	entry, err := storage.Get(context.Background(), "role/testrole")
+	if err != nil || entry == nil {
 		t.Fatal(err)
 	}
-	if role.KeyUsageOld != "" {
-		t.Fatalf("old key usage storage value should be blank")
+
+	var role roleEntry
+	if err := entry.DecodeJSON(&role); err != nil {
+		t.Fatal(err)
 	}
 
-	// Make it explicit
 	role.KeyUsageOld = "KeyEncipherment,DigitalSignature"
 	role.KeyUsage = nil
 
-	entry, err := logical.StorageEntryJSON("role/testrole", role)
+	entry, err = logical.StorageEntryJSON("role/testrole", role)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,6 +213,7 @@ func TestPki_RoleKeyUsage(t *testing.T) {
 }
 
 func TestPki_RoleOUOrganizationUpgrade(t *testing.T) {
+	t.Parallel()
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
@@ -249,31 +252,23 @@ func TestPki_RoleOUOrganizationUpgrade(t *testing.T) {
 		t.Fatalf("organization should have 2 values")
 	}
 
-	// Update values due to switching of ttl type
-	resp.Data["ttl_duration"] = resp.Data["ttl"]
-	resp.Data["ttl"] = (time.Duration(resp.Data["ttl"].(int64)) * time.Second).String()
-	resp.Data["max_ttl_duration"] = resp.Data["max_ttl"]
-	resp.Data["max_ttl"] = (time.Duration(resp.Data["max_ttl"].(int64)) * time.Second).String()
-	// Check that old key usage value is nil
-	var role roleEntry
-	err = mapstructure.Decode(resp.Data, &role)
-	if err != nil {
+	// To test upgrade of O/OU, we read the storage entry, modify it to set
+	// the old O/OU value over the new one, and rewrite it.
+	entry, err := storage.Get(context.Background(), "role/testrole")
+	if err != nil || entry == nil {
 		t.Fatal(err)
 	}
-	if role.OUOld != "" {
-		t.Fatalf("old ou storage value should be blank")
-	}
-	if role.OrganizationOld != "" {
-		t.Fatalf("old organization storage value should be blank")
-	}
 
-	// Make it explicit
+	var role roleEntry
+	if err := entry.DecodeJSON(&role); err != nil {
+		t.Fatal(err)
+	}
 	role.OUOld = "abc,123"
 	role.OU = nil
 	role.OrganizationOld = "org1,org2"
 	role.Organization = nil
 
-	entry, err := logical.StorageEntryJSON("role/testrole", role)
+	entry, err = logical.StorageEntryJSON("role/testrole", role)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -324,6 +319,7 @@ func TestPki_RoleOUOrganizationUpgrade(t *testing.T) {
 }
 
 func TestPki_RoleAllowedDomains(t *testing.T) {
+	t.Parallel()
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
@@ -356,26 +352,21 @@ func TestPki_RoleAllowedDomains(t *testing.T) {
 		t.Fatalf("allowed_domains should have 2 values")
 	}
 
-	// Update values due to switching of ttl type
-	resp.Data["ttl_duration"] = resp.Data["ttl"]
-	resp.Data["ttl"] = (time.Duration(resp.Data["ttl"].(int64)) * time.Second).String()
-	resp.Data["max_ttl_duration"] = resp.Data["max_ttl"]
-	resp.Data["max_ttl"] = (time.Duration(resp.Data["max_ttl"].(int64)) * time.Second).String()
-	// Check that old key usage value is nil
-	var role roleEntry
-	err = mapstructure.Decode(resp.Data, &role)
-	if err != nil {
+	// To test upgrade of allowed_domains, we read the storage entry,
+	// set the old one, and rewrite it.
+	entry, err := storage.Get(context.Background(), "role/testrole")
+	if err != nil || entry == nil {
 		t.Fatal(err)
 	}
-	if role.AllowedDomainsOld != "" {
-		t.Fatalf("old allowed_domains storage value should be blank")
-	}
 
-	// Make it explicit
+	var role roleEntry
+	if err := entry.DecodeJSON(&role); err != nil {
+		t.Fatal(err)
+	}
 	role.AllowedDomainsOld = "foobar.com,*example.com"
 	role.AllowedDomains = nil
 
-	entry, err := logical.StorageEntryJSON("role/testrole", role)
+	entry, err = logical.StorageEntryJSON("role/testrole", role)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -416,6 +407,7 @@ func TestPki_RoleAllowedDomains(t *testing.T) {
 }
 
 func TestPki_RoleAllowedURISANs(t *testing.T) {
+	t.Parallel()
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
@@ -450,6 +442,7 @@ func TestPki_RoleAllowedURISANs(t *testing.T) {
 }
 
 func TestPki_RolePkixFields(t *testing.T) {
+	t.Parallel()
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
@@ -541,6 +534,7 @@ func TestPki_RolePkixFields(t *testing.T) {
 }
 
 func TestPki_RoleNoStore(t *testing.T) {
+	t.Parallel()
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
@@ -661,6 +655,7 @@ func TestPki_RoleNoStore(t *testing.T) {
 }
 
 func TestPki_CertsLease(t *testing.T) {
+	t.Parallel()
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
@@ -742,6 +737,7 @@ func TestPki_CertsLease(t *testing.T) {
 }
 
 func TestPki_RolePatch(t *testing.T) {
+	t.Parallel()
 	type TestCase struct {
 		Field   string
 		Before  interface{}
@@ -928,8 +924,8 @@ func TestPki_RolePatch(t *testing.T) {
 		},
 		{
 			Field:   "policy_identifiers",
-			Before:  []string{"1.2.3.4.5"},
-			Patched: []string{"5.4.3.2.1"},
+			Before:  []string{"1.3.6.1.4.1.1.1"},
+			Patched: []string{"1.3.6.1.4.1.1.2"},
 		},
 		{
 			Field:   "basic_constraints_valid_for_non_ca",
@@ -1018,4 +1014,143 @@ func TestPki_RolePatch(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestPKI_RolePolicyInformation_Flat(t *testing.T) {
+	t.Parallel()
+	type TestCase struct {
+		Input   interface{}
+		ASN     interface{}
+		OidList []string
+	}
+
+	expectedSimpleAsnExtension := "MBYwCQYHKwYBBAEBATAJBgcrBgEEAQEC"
+	expectedSimpleOidList := append(*new([]string), "1.3.6.1.4.1.1.1", "1.3.6.1.4.1.1.2")
+
+	testCases := []TestCase{
+		{
+			Input:   "1.3.6.1.4.1.1.1,1.3.6.1.4.1.1.2",
+			ASN:     expectedSimpleAsnExtension,
+			OidList: expectedSimpleOidList,
+		},
+		{
+			Input:   "[{\"oid\":\"1.3.6.1.4.1.1.1\"},{\"oid\":\"1.3.6.1.4.1.1.2\"}]",
+			ASN:     expectedSimpleAsnExtension,
+			OidList: expectedSimpleOidList,
+		},
+		{
+			Input:   "[{\"oid\":\"1.3.6.1.4.1.7.8\",\"notice\":\"I am a user Notice\"},{\"oid\":\"1.3.6.1.44947.1.2.4\",\"cps\":\"https://example.com\"}]",
+			ASN:     "MF8wLQYHKwYBBAEHCDAiMCAGCCsGAQUFBwICMBQMEkkgYW0gYSB1c2VyIE5vdGljZTAuBgkrBgGC3xMBAgQwITAfBggrBgEFBQcCARYTaHR0cHM6Ly9leGFtcGxlLmNvbQ==",
+			OidList: append(*new([]string), "1.3.6.1.4.1.7.8", "1.3.6.1.44947.1.2.4"),
+		},
+	}
+
+	b, storage := createBackendWithStorage(t)
+
+	caData := map[string]interface{}{
+		"common_name": "myvault.com",
+		"ttl":         "5h",
+		"ip_sans":     "127.0.0.1",
+	}
+	caReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/generate/internal",
+		Storage:   storage,
+		Data:      caData,
+	}
+	caResp, err := b.HandleRequest(context.Background(), caReq)
+	if err != nil || (caResp != nil && caResp.IsError()) {
+		t.Fatalf("bad: err: %v resp: %#v", err, caResp)
+	}
+
+	for index, testCase := range testCases {
+		var roleResp *logical.Response
+		var issueResp *logical.Response
+		var err error
+
+		// Create/update the role
+		roleData := map[string]interface{}{}
+		roleData[policyIdentifiersParam] = testCase.Input
+
+		roleReq := &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "roles/testrole",
+			Storage:   storage,
+			Data:      roleData,
+		}
+
+		roleResp, err = b.HandleRequest(context.Background(), roleReq)
+		if err != nil || (roleResp != nil && roleResp.IsError()) {
+			t.Fatalf("bad [%d], setting policy identifier %v err: %v resp: %#v", index, testCase.Input, err, roleResp)
+		}
+
+		// Issue Using this role
+		issueData := map[string]interface{}{}
+		issueData["common_name"] = "localhost"
+		issueData["ttl"] = "2s"
+
+		issueReq := &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "issue/testrole",
+			Storage:   storage,
+			Data:      issueData,
+		}
+
+		issueResp, err = b.HandleRequest(context.Background(), issueReq)
+		if err != nil || (issueResp != nil && issueResp.IsError()) {
+			t.Fatalf("bad [%d], setting policy identifier %v err: %v resp: %#v", index, testCase.Input, err, issueResp)
+		}
+
+		// Validate the OIDs
+		policyIdentifiers, err := getPolicyIdentifiersOffCertificate(*issueResp)
+		if err != nil {
+			t.Fatalf("bad [%d], getting policy identifier from %v err: %v resp: %#v", index, testCase.Input, err, issueResp)
+		}
+		if len(policyIdentifiers) != len(testCase.OidList) {
+			t.Fatalf("bad [%d], wrong certificate policy identifier from %v len expected: %d got %d", index, testCase.Input, len(testCase.OidList), len(policyIdentifiers))
+		}
+		for i, identifier := range policyIdentifiers {
+			if identifier != testCase.OidList[i] {
+				t.Fatalf("bad [%d], wrong certificate policy identifier from %v expected: %v got %v", index, testCase.Input, testCase.OidList[i], policyIdentifiers[i])
+			}
+		}
+		// Validate the ASN
+		certificateAsn, err := getPolicyInformationExtensionOffCertificate(*issueResp)
+		if err != nil {
+			t.Fatalf("bad [%d], getting extension from %v err: %v resp: %#v", index, testCase.Input, err, issueResp)
+		}
+		certificateB64 := make([]byte, len(certificateAsn)*2)
+		base64.StdEncoding.Encode(certificateB64, certificateAsn)
+		certificateString := string(certificateB64[:])
+		assert.Contains(t, certificateString, testCase.ASN)
+	}
+}
+
+func getPolicyIdentifiersOffCertificate(resp logical.Response) ([]string, error) {
+	stringCertificate := resp.Data["certificate"].(string)
+	block, _ := pem.Decode([]byte(stringCertificate))
+	certificate, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	policyIdentifierStrings := make([]string, len(certificate.PolicyIdentifiers))
+	for index, asnOid := range certificate.PolicyIdentifiers {
+		policyIdentifierStrings[index] = asnOid.String()
+	}
+	return policyIdentifierStrings, nil
+}
+
+func getPolicyInformationExtensionOffCertificate(resp logical.Response) ([]byte, error) {
+	stringCertificate := resp.Data["certificate"].(string)
+	block, _ := pem.Decode([]byte(stringCertificate))
+	certificate, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	for _, extension := range certificate.Extensions {
+		if extension.Id.Equal(asn1.ObjectIdentifier{2, 5, 29, 32}) {
+			return extension.Value, nil
+		}
+	}
+	return *new([]byte), errors.New("No Policy Information Extension Found")
 }

@@ -5,7 +5,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { fillIn, click, waitUntil } from '@ember/test-helpers';
 import { _cancelTimers as cancelTimers, later } from '@ember/runloop';
-import { TOTP_VALIDATION_ERROR } from 'vault/components/mfa-form';
+import { TOTP_VALIDATION_ERROR } from 'vault/components/mfa/mfa-form';
 
 module('Integration | Component | mfa-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -39,7 +39,7 @@ module('Integration | Component | mfa-form', function (hooks) {
     }).mfa_requirement;
 
     await render(
-      hbs`<MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} @onError={{fn (mut this.error)}} />`
+      hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} @onError={{fn (mut this.error)}} />`
     );
     assert
       .dom('[data-test-mfa-description]')
@@ -54,7 +54,7 @@ module('Integration | Component | mfa-form', function (hooks) {
     }).mfa_requirement;
 
     await render(
-      hbs`<MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} @onError={{fn (mut this.error)}} />`
+      hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} @onError={{fn (mut this.error)}} />`
     );
     assert
       .dom('[data-test-mfa-description]')
@@ -69,7 +69,7 @@ module('Integration | Component | mfa-form', function (hooks) {
     }).mfa_requirement;
 
     await render(
-      hbs`<MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} @onError={{fn (mut this.error)}} />`
+      hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} @onError={{fn (mut this.error)}} />`
     );
     assert
       .dom('[data-test-mfa-description]')
@@ -119,7 +119,7 @@ module('Integration | Component | mfa-form', function (hooks) {
       assert.equal(resp, 'test response', 'Response is returned in onSuccess callback');
 
     await render(hbs`
-      <MfaForm
+      <Mfa::MfaForm
         @clusterId={{this.clusterId}}
         @authData={{this.mfaAuthData}}
         @onSuccess={{this.onSuccess}}
@@ -160,7 +160,7 @@ module('Integration | Component | mfa-form', function (hooks) {
       assert.equal(resp, 'test response', 'Response is returned in onSuccess callback');
 
     await render(hbs`
-      <MfaForm
+      <Mfa::MfaForm
         @clusterId={{this.clusterId}}
         @authData={{this.mfaAuthData}}
         @onSuccess={{this.onSuccess}}
@@ -184,7 +184,7 @@ module('Integration | Component | mfa-form', function (hooks) {
         },
       });
       await render(hbs`
-        <MfaForm
+        <Mfa::MfaForm
           @clusterId={{this.clusterId}}
           @authData={{this.mfaAuthData}}
         />
@@ -212,7 +212,7 @@ module('Integration | Component | mfa-form', function (hooks) {
       },
     });
     await render(hbs`
-      <MfaForm
+      <Mfa::MfaForm
         @clusterId={{this.clusterId}}
         @authData={{this.mfaAuthData}}
       />
