@@ -106,7 +106,7 @@ key.`,
 			"key_size": {
 				Type:        framework.TypeInt,
 				Default:     0,
-				Description: `The key size in bytes for the algorithm.  Only applies to HMAC and must be no fewer than 16 bytes and no more than 128`,
+				Description: `The key size in bytes for the algorithm.  Only applies to HMAC and must be no fewer than 16 bytes and no more than 512`,
 			},
 		},
 
