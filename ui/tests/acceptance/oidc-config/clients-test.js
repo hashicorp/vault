@@ -1,5 +1,5 @@
 import { module, test } from 'qunit';
-import { visit, currentURL, click, fillIn, findAll, currentRouteName } from '@ember/test-helpers';
+import { visit, currentURL, click, fillIn, findAll, currentRouteName, settled } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
@@ -10,7 +10,7 @@ import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
 import fm from 'vault/tests/pages/components/flash-message';
-import { overrideCapabilities, overrideMirageResponse } from '../../helpers/oidc-config';
+import { overrideCapabilities } from '../../helpers/oidc-config';
 const searchSelect = create(ss);
 const flashMessage = create(fm);
 // in congruency with backend verbiage 'applications' are referred to as 'clients
@@ -31,7 +31,7 @@ module('Acceptance | oidc-config/clients', function (hooks) {
     return authPage.login();
   });
 
-  hooks.afterEach(async function () {
+  hooks.afterEach(function () {
     return logout.visit();
   });
 
@@ -41,7 +41,16 @@ module('Acceptance | oidc-config/clients', function (hooks) {
 
   test('it renders empty state when no clients are configured', async function (assert) {
     assert.expect(5);
-    this.server.get('/identity/oidc/client', () => overrideMirageResponse(200));
+
+    // * ENSURE CLEAN TEST STATE
+    try {
+      const model = await this.store.findRecord('oidc/client', 'some-app');
+      model.destroyRecord();
+    } catch (e) {
+      // swallow error
+    }
+    await settled();
+
     await visit(OIDC_BASE_URL);
     assert.equal(currentURL(), '/vault/access/oidc');
     assert.dom('h1.title.is-3').hasText('OIDC Provider');
@@ -58,6 +67,16 @@ module('Acceptance | oidc-config/clients', function (hooks) {
 
   test('it creates, updates and deletes a client', async function (assert) {
     assert.expect(20);
+
+    // * ENSURE CLEAN TEST STATE
+    try {
+      const model = await this.store.findRecord('oidc/client', 'some-app');
+      model.destroyRecord();
+    } catch (e) {
+      // swallow error
+    }
+    await settled();
+
     await visit(OIDC_BASE_URL);
     // create a new application
     await click(SELECTORS.oidcClientCreateButton);
@@ -78,7 +97,6 @@ module('Acceptance | oidc-config/clients', function (hooks) {
       'vault.cluster.access.oidc.clients.client.details',
       'navigates to detail view after save'
     );
-
     // assert default values in details view are correct
     assert.dom('[data-test-value-div="Assignment"]').hasText('allow_all', 'client allows all assignments');
     assert.dom('[data-test-value-div="Type"]').hasText('confidential', 'type defaults to confidential');
