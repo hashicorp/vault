@@ -18,6 +18,9 @@ const flashMessage = create(fm);
 
 // OIDC_BASE_URL = '/vault/access/oidc'
 
+const deleteModelRecord = async (model) => {
+  await model.destroyRecord();
+};
 module('Acceptance | oidc-config/clients', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
@@ -42,14 +45,15 @@ module('Acceptance | oidc-config/clients', function (hooks) {
   test('it renders empty state when no clients are configured', async function (assert) {
     assert.expect(5);
 
-    // * ENSURE CLEAN TEST STATE
-    try {
-      const model = await this.store.findRecord('oidc/client', 'some-app');
-      model.destroyRecord();
-    } catch (e) {
-      // swallow error
-    }
-    await settled();
+    //* ensure clean test state
+    await this.store
+      .findRecord('oidc/client', 'some-app')
+      .then((model) => {
+        deleteModelRecord(model);
+      })
+      .catch(() => {
+        // swallow error
+      });
 
     await visit(OIDC_BASE_URL);
     assert.equal(currentURL(), '/vault/access/oidc');
@@ -68,14 +72,15 @@ module('Acceptance | oidc-config/clients', function (hooks) {
   test('it creates, updates and deletes a client', async function (assert) {
     assert.expect(20);
 
-    // * ENSURE CLEAN TEST STATE
-    try {
-      const model = await this.store.findRecord('oidc/client', 'some-app');
-      model.destroyRecord();
-    } catch (e) {
-      // swallow error
-    }
-    await settled();
+    //* ensure clean test state
+    await this.store
+      .findRecord('oidc/client', 'some-app')
+      .then((model) => {
+        deleteModelRecord(model);
+      })
+      .catch(() => {
+        // swallow error
+      });
 
     await visit(OIDC_BASE_URL);
     // create a new application
@@ -179,8 +184,16 @@ module('Acceptance | oidc-config/clients', function (hooks) {
     );
 
     // reset state
-    const assign1 = await this.store.peekRecord('oidc/assignment', 'assignment-1');
-    if (assign1) assign1.destroyRecord();
+
+    //* ensure clean test state
+    await this.store
+      .findRecord('oidc/assignment', 'assignment-1')
+      .then((model) => {
+        deleteModelRecord(model);
+      })
+      .catch(() => {
+        // swallow error
+      });
   });
 
   test('it renders client list when clients exist', async function (assert) {
