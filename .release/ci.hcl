@@ -8,7 +8,10 @@ project "vault" {
   github {
     organization = "hashicorp"
     repository = "vault"
-    release_branches = ["release/1.11.x"]
+    release_branches = [
+      "main",
+      "release/**",
+    ]
   }
 }
 
