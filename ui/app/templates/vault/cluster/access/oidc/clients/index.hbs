@@ -1,12 +1,16 @@
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink @type="add" @params={{array "vault.cluster.access.oidc.clients.create"}}>
+    <ToolbarLink data-test-oidc-client-create @type="add" @params={{array "vault.cluster.access.oidc.clients.create"}}>
       Create application
     </ToolbarLink>
   </ToolbarActions>
 </Toolbar>
 {{#each this.model as |model|}}
-  <LinkedBlock class="list-item-row" @params={{array "vault.cluster.access.oidc.clients.client.details" model.name}}>
+  <LinkedBlock
+    class="list-item-row"
+    @params={{array "vault.cluster.access.oidc.clients.client.details" model.name}}
+    data-test-oidc-client-linked-block
+  >
     <div class="level is-mobile">
       <div class="level-left">
         <div>
@@ -26,6 +30,7 @@
                     @route="vault.cluster.access.oidc.clients.client.details"
                     @model={{model.name}}
                     @disabled={{not model.canRead}}
+                    data-test-oidc-client-menu-link="details"
                   >
                     Details
                   </LinkTo>
@@ -35,6 +40,7 @@
                     @route="vault.cluster.access.oidc.clients.client.edit"
                     @model={{model.name}}
                     @disabled={{not model.canEdit}}
+                    data-test-oidc-client-menu-link="edit"
                   >
                     Edit
                   </LinkTo>

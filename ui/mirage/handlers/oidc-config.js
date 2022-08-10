@@ -1,5 +1,4 @@
 export default function (server) {
-  server.post('/sys/capabilities-self', () => {});
   server.get('/identity/oidc/key/default', () => {
     return {
       request_id: '5eeb2a46-8726-7336-76ee-8daea2860624',
