@@ -1,66 +1,72 @@
-<div data-test-info-table-item-array {{did-insert (perform this.fetchOptions)}}>
+{{! the class linkable-item is needed for the read-more component }}
+<div data-test-info-table-item-array {{did-insert (perform this.fetchOptions)}} class="linkable-item">
   {{#if @isLink}}
     <div data-test-row-value={{@label}}>
-      {{#each this.displayArrayAmended as |name|}}
-        {{#if (is-wildcard-string name)}}
-          {{#let (filter-wildcard name this.allOptions) as |wildcardCount|}}
-            <span>{{name}}</span>
-            <span class="tag is-light has-text-grey-dark" data-test-count="{{if wildcardCount wildcardCount 0}}">
-              includes
-              {{if wildcardCount wildcardCount 0}}
-              {{if (eq wildcardCount 1) @wildcardLabel (pluralize @wildcardLabel)}}
-            </span>
-            {{#if (eq this.displayArrayAmended.lastObject name)}}
-              <LinkTo @route={{this.rootRoute}} @query={{hash tab=@queryParam}}>
-                <span data-test-view-all={{@viewAll}}>View all {{@viewAll}}</span>
+      <ReadMore>
+        {{#each this.displayArrayAmended as |name|}}
+          {{#if (is-wildcard-string name)}}
+            {{#let (filter-wildcard name this.allOptions) as |wildcardCount|}}
+              <span>{{name}}</span>
+              <span class="tag is-light has-text-grey-dark" data-test-count="{{if wildcardCount wildcardCount 0}}">
+                includes
+                {{if wildcardCount wildcardCount 0}}
+                {{if (eq wildcardCount 1) @wildcardLabel (pluralize @wildcardLabel)}}
+              </span>
+              {{#if (eq this.displayArrayAmended.lastObject name)}}
+                <LinkTo @route={{this.rootRoute}} @query={{hash tab=@queryParam}}>
+                  <span data-test-view-all={{@viewAll}}>View all {{@viewAll}}</span>
+                </LinkTo>
+              {{/if}}
+            {{/let}}
+          {{else}}
+            {{#if (is-array this.itemRoute)}}
+              <LinkTo
+                @route={{(get this.itemRoute "0")}}
+                @models={{array (get this.itemRoute "1") name (get this.itemRoute "2")}}
+              >
+                {{name}}
+              </LinkTo>
+            {{else}}
+              <LinkTo
+                @route={{this.itemRoute}}
+                @model={{if @queryParam (concat @queryParam "/" name) name}}
+                data-test-item={{name}}
+              >
+                <span>{{name}}</span>
               </LinkTo>
             {{/if}}
-          {{/let}}
-        {{else}}
-          {{#if (is-array this.itemRoute)}}
-            <LinkTo
-              @route={{(get this.itemRoute "0")}}
-              @models={{array (get this.itemRoute "1") name (get this.itemRoute "2")}}
-            >
-              {{name}}
-            </LinkTo>
-          {{else}}
-            <LinkTo
-              @route={{this.itemRoute}}
-              @model={{if @queryParam (concat @queryParam "/" name) name}}
-              data-test-item={{name}}
-            >
-              <span>{{name}}</span>
-            </LinkTo>
           {{/if}}
-        {{/if}}
-        {{#if
-          (or
-            (and (not-eq name this.displayArrayAmended.lastObject) this.wildcardInDisplayArray)
-            (not-eq name this.displayArrayAmended.lastObject)
-          )
-        }}
-          ,&nbsp;
-        {{/if}}
-        {{#if (and (eq name this.displayArrayAmended.lastObject) (gte this.displayArray.length 10))}}
-          <span data-test-and={{dec 5 this.displayArray.length}}>
-            &nbsp;and
-            {{dec 5 this.displayArray.length}}
-            others.&nbsp;
-          </span>
-        {{/if}}
-        {{#if (and (eq name this.displayArrayAmended.lastObject) (gte this.displayArray.length 10))}}
-          {{#if (is-array @rootRoute)}}
-            <LinkTo @route={{(get @rootRoute "0")}} @model={{(get @rootRoute "1")}}>
-              <span data-test-view-all={{@viewAll}}>View all {{@viewAll}} </span>
-            </LinkTo>
-          {{else}}
-            <LinkTo @route={{this.rootRoute}} @query={{hash tab=@queryParam}}>
-              <span data-test-view-all={{@viewAll}}>View all {{@viewAll}} </span>
-            </LinkTo>
+          {{#if
+            (or
+              (and (not-eq name this.displayArrayAmended.lastObject) this.wildcardInDisplayArray)
+              (not-eq name this.displayArrayAmended.lastObject)
+            )
+          }}
+            ,&nbsp;
           {{/if}}
-        {{/if}}
-      {{/each}}
+          {{#unless this.doNotTruncate}}
+            {{#if (and (eq name this.displayArrayAmended.lastObject) (gte this.displayArray.length 10))}}
+              {{! dec is a math helper that decrements by 5 the length of the array ex: 11-5 = "and 6 others."}}
+              <span data-test-and={{dec 5 this.displayArray.length}}>
+                &nbsp;and
+                {{dec 5 this.displayArray.length}}
+                others.&nbsp;
+              </span>
+            {{/if}}
+            {{#if (and (eq name this.displayArrayAmended.lastObject) (gte this.displayArray.length 10))}}
+              {{#if (is-array @rootRoute)}}
+                <LinkTo @route={{(get @rootRoute "0")}} @model={{(get @rootRoute "1")}}>
+                  <span data-test-view-all={{@viewAll}}>View all {{@viewAll}} </span>
+                </LinkTo>
+              {{else}}
+                <LinkTo @route={{this.rootRoute}} @query={{hash tab=@queryParam}}>
+                  <span data-test-view-all={{@viewAll}}>View all {{@viewAll}} </span>
+                </LinkTo>
+              {{/if}}
+            {{/if}}
+          {{/unless}}
+        {{/each}}
+      </ReadMore>
     </div>
   {{else}}
     <code class="is-word-break has-text-black" data-test-row-value={{@label}}>

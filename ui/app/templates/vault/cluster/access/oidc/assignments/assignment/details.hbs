@@ -59,9 +59,9 @@
     @label="Entities"
     @modelType="oidc/assignment"
     @viewAll="entities."
-    @rootRoute={{(array "vault.cluster.access.identity.index" "entities")}}
     @itemRoute={{(array "vault.cluster.access.identity.show" "entities" "details")}}
     @alwaysRender={{true}}
+    @toggleViewAll={{true}}
   />
   <InfoTableRow
     @type="array"
@@ -71,9 +71,8 @@
     @label="Groups"
     @modelType="oidc/assignment"
     @viewAll="groups."
-    @rootRoute={{(array "vault.cluster.access.identity.index" "groups")}}
     @itemRoute={{(array "vault.cluster.access.identity.show" "groups" "details")}}
     @alwaysRender={{true}}
+    @doNotTruncate={{true}}
   />
 </div>
-{{! ARG TODO empty state }}
