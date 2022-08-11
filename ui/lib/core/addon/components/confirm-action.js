@@ -15,11 +15,13 @@ import { action } from '@ember/object';
  *  </ConfirmAction>
  * ```
  *
- * @property {Func} [onConfirmAction=null] - The action to take upon confirming.
- * @property {String} [confirmTitle=Delete this?] - The title to display when confirming.
- * @property {String} [confirmMessage=You will not be able to recover it later.] - The message to display when confirming.
- * @property {String} [confirmButtonText=Delete] - The confirm button text.
- * @property {String} [cancelButtonText=Cancel] - The cancel button text.
+ * @param {Func} [onConfirmAction=null] - The action to take upon confirming.
+ * @param {String} [confirmTitle=Delete this?] - The title to display when confirming.
+ * @param {String} [confirmMessage=You will not be able to recover it later.] - The message to display when confirming.
+ * @param {String} [confirmButtonText=Delete] - The confirm button text.
+ * @param {String} [cancelButtonText=Cancel] - The cancel button text.
+ * @param {String} [buttonClasses] - A string to indicate the button class.
+ *
  *
  */
 
