@@ -18,7 +18,7 @@
                   <LinkTo
                     @route="vault.cluster.access.oidc.clients.client.details"
                     @model={{client.name}}
-                    @disabled={{not client.canRead}}
+                    @disabled={{eq client.canRead false}}
                   >
                     Details
                   </LinkTo>
@@ -27,7 +27,7 @@
                   <LinkTo
                     @route="vault.cluster.access.oidc.clients.client.edit"
                     @model={{client.name}}
-                    @disabled={{not client.canEdit}}
+                    @disabled={{eq client.canEdit false}}
                   >
                     Edit
                   </LinkTo>

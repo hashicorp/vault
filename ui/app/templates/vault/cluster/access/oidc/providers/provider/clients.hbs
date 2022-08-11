@@ -3,7 +3,7 @@
 {{#if (gt this.model.length 0)}}
   <Oidc::ClientList @model={{this.model}} />
 {{else}}
-  <EmptyState @title="No applications allowed" @message="There is no application that is permitted to use this provider.">
+  <EmptyState @title="No applications allowed" @message="There is no application permitted to use this provider.">
     <LinkTo @route="vault.cluster.access.oidc.providers.provider.edit">
       Edit provider
     </LinkTo>
