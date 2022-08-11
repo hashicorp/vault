@@ -22,7 +22,6 @@ import { action } from '@ember/object';
  * @param {String} [cancelButtonText=Cancel] - The cancel button text.
  * @param {String} [buttonClasses] - A string to indicate the button class.
  *
- *
  */
 
 export default class ConfirmActionComponent extends Component {
