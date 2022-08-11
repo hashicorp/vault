@@ -256,7 +256,6 @@ event "promote-production" {
 }
 
 event "post-publish-website" {
-  depends = ["promote-production-packaging"]
   action "post-publish-website" {
     organization = "hashicorp"
     repository = "crt-workflows-common"
