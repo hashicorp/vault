@@ -29,6 +29,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -38,6 +39,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
@@ -399,11 +401,13 @@ func (b *SystemBackend) handlePluginCatalogTypedList(ctx context.Context, req *l
 	if err != nil {
 		return nil, err
 	}
+	sort.Strings(plugins)
 	return logical.ListResponse(plugins), nil
 }
 
-func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	pluginsByType := make(map[string]interface{})
+func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	data := make(map[string]interface{})
+	var versionedPlugins []pluginutil.VersionedPlugin
 	for _, pluginType := range consts.PluginTypes {
 		plugins, err := b.Core.pluginCatalog.List(ctx, pluginType)
 		if err != nil {
@@ -411,15 +415,43 @@ func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, req 
 		}
 		if len(plugins) > 0 {
 			sort.Strings(plugins)
-			pluginsByType[pluginType.String()] = plugins
+			data[pluginType.String()] = plugins
 		}
+
+		versioned, err := b.Core.pluginCatalog.ListVersionedPlugins(ctx, pluginType)
+		if err != nil {
+			return nil, err
+		}
+
+		// Sort for consistent ordering
+		sort.SliceStable(versionedPlugins, func(i, j int) bool {
+			left, right := versionedPlugins[i], versionedPlugins[j]
+			if left.Type != right.Type {
+				return left.Type < right.Type
+			}
+			if left.Name != right.Name {
+				return left.Name < right.Name
+			}
+			if left.Version != right.Version {
+				return right.SemanticVersion.GreaterThan(left.SemanticVersion)
+			}
+
+			return true
+		})
+
+		versionedPlugins = append(versionedPlugins, versioned...)
 	}
+
+	if len(versionedPlugins) != 0 {
+		data["detailed"] = versionedPlugins
+	}
+
 	return &logical.Response{
-		Data: pluginsByType,
+		Data: data,
 	}, nil
 }
 
-func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginName := d.Get("name").(string)
 	if pluginName == "" {
 		return logical.ErrorResponse("missing plugin name"), nil
@@ -434,6 +466,11 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logi
 	pluginType, err := consts.ParsePluginType(pluginTypeStr)
 	if err != nil {
 		return nil, err
+	}
+
+	pluginVersion, err := getVersion(d)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	sha256 := d.Get("sha256").(string)
@@ -472,7 +509,7 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logi
 		return logical.ErrorResponse("Could not decode SHA-256 value from Hex"), err
 	}
 
-	err = b.Core.pluginCatalog.Set(ctx, pluginName, pluginType, parts[0], args, env, sha256Bytes)
+	err = b.Core.pluginCatalog.Set(ctx, pluginName, pluginType, pluginVersion, parts[0], args, env, sha256Bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -480,7 +517,7 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logi
 	return nil, nil
 }
 
-func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginName := d.Get("name").(string)
 	if pluginName == "" {
 		return logical.ErrorResponse("missing plugin name"), nil
@@ -501,7 +538,12 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, req *logica
 		return nil, err
 	}
 
-	plugin, err := b.Core.pluginCatalog.Get(ctx, pluginName, pluginType)
+	pluginVersion, err := getVersion(d)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	plugin, err := b.Core.pluginCatalog.Get(ctx, pluginName, pluginType, pluginVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -530,10 +572,15 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, req *logica
 	}, nil
 }
 
-func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginName := d.Get("name").(string)
 	if pluginName == "" {
 		return logical.ErrorResponse("missing plugin name"), nil
+	}
+
+	pluginVersion, err := getVersion(d)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	var resp *logical.Response
@@ -552,11 +599,26 @@ func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, req *logi
 	if err != nil {
 		return nil, err
 	}
-	if err := b.Core.pluginCatalog.Delete(ctx, pluginName, pluginType); err != nil {
+	if err := b.Core.pluginCatalog.Delete(ctx, pluginName, pluginType, pluginVersion); err != nil {
 		return nil, err
 	}
 
 	return resp, nil
+}
+
+func getVersion(d *framework.FieldData) (string, error) {
+	version := d.Get("version").(string)
+	if version != "" {
+		semanticVersion, err := semver.NewSemver(version)
+		if err != nil {
+			return "", fmt.Errorf("version %q is not a valid semantic version: %w", version, err)
+		}
+
+		// Canonicalize the version string.
+		version = semanticVersion.String()
+	}
+
+	return version, nil
 }
 
 func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -5219,6 +5281,10 @@ plugin directory.`,
 	"plugin-catalog_env": {
 		`The environment variables passed to plugin command.
 Each entry is of the form "key=value".`,
+		"",
+	},
+	"plugin-catalog_version": {
+		"The semantic version of the plugin to use.",
 		"",
 	},
 	"leases": {
