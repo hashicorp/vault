@@ -1,5 +1,4 @@
 import Component from '@glimmer/component';
-import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 
 /**
@@ -21,16 +20,29 @@ import { action } from '@ember/object';
  * @param {String} [confirmButtonText=Delete] - The confirm button text.
  * @param {String} [cancelButtonText=Cancel] - The cancel button text.
  * @param {String} [buttonClasses] - A string to indicate the button class.
+ * @param {String} [horizontalPosition=auto-right] - For the position of the dropdown.
+ * @param {String} [verticalPosition=below] - For the position of the dropdown.
+ * @param {Boolean} [isRunning=false] - If action is still running disable the confirm.
+ * @param {Boolean} [disable=false] - To disable the confirm action.
  *
  */
 
 export default class ConfirmActionComponent extends Component {
-  @tracked supportsDataTestProperties = true;
-  @tracked horizontalPosition = 'auto-right';
-  @tracked verticalPosition = 'below';
-  @tracked isRunning = false;
-  @tracked disabled = false;
-  @tracked showConfirm = false;
+  get horizontalPosition() {
+    return this.args.horizontalPosition || 'auto-right';
+  }
+
+  get verticalPosition() {
+    return this.args.verticalPosition || 'below';
+  }
+
+  get isRunning() {
+    return this.args.isRunning || false;
+  }
+
+  get disabled() {
+    return this.args.disabled || false;
+  }
 
   get confirmTitle() {
     return this.args.confirmTitle || 'Delete this?';
