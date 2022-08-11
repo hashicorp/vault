@@ -18,6 +18,7 @@ project "vault" {
 event "merge" {
   // "entrypoint" to use if build is not run automatically
   // i.e. send "merge" complete signal to orchestrator to trigger build
+  // new line test
 }
 
 event "build" {
