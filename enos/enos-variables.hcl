@@ -18,8 +18,8 @@ variable "aws_ssh_private_key_path" {
 
 variable "backend_edition" {
   description = "The backend release edition if applicable"
-  type = string
-  default = "oss"
+  type        = string
+  default     = "oss"
 }
 
 variable "backend_instance_type" {

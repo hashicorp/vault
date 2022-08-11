@@ -40,7 +40,8 @@ module "read_license" {
 }
 
 module "vault_cluster" {
-  source = "app.terraform.io/hashicorp-qti/aws-vault/enos"
+  source  = "app.terraform.io/hashicorp-qti/aws-vault/enos"
+  version = ">= 0.7.0"
 
   project_name    = var.project_name
   environment     = "ci"
@@ -59,4 +60,16 @@ module "vault_verify_version" {
   source = "./modules/vault_verify_version"
 
   vault_install_dir = var.vault_install_dir
+}
+
+module "get_vault_version" {
+  source = "./modules/get_vault_version"
+}
+
+module "vault_autopilot_upgrade_storageconfig" {
+  source = "./modules/vault_autopilot_upgrade_storageconfig"
+}
+
+module "verify_autopilot" {
+  source = "./modules/vault_verify_autopilot"
 }
