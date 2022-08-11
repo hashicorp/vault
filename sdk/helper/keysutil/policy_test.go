@@ -863,9 +863,9 @@ func Test_RSA_PSS(t *testing.T) {
 				t.Log(tabs[4], "Salt length:", saltLength)
 				saltedOptions := saltOptions(unsaltedOptions, saltLength)
 
-				verified, err := p.VerifySignatureWithOptions(nil, input, sig.Signature, &saltedOptions)
-				if err == nil || verified {
-					t.Fatal(tabs[5], "❌ Failed to verify signature:", err)
+				verified, _ := p.VerifySignatureWithOptions(nil, input, sig.Signature, &saltedOptions)
+				if verified {
+					t.Fatal(tabs[5], "❌ Failed to invalidate", verified, "signature using incorrect salt length:", err)
 				}
 			}
 
