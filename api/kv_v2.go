@@ -149,7 +149,7 @@ func (kv *KVv2) GetVersion(ctx context.Context, secretPath string, version int) 
 		return nil, err
 	}
 	if secret == nil {
-		return nil, fmt.Errorf("%w: for version %d at %s", err, version, pathToRead)
+		return nil, fmt.Errorf("%w: for version %d at %s", ErrSecretNotFound, version, pathToRead)
 	}
 
 	kvSecret, err := extractDataAndVersionMetadata(secret)
