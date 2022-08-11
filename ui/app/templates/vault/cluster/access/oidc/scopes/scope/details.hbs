@@ -4,7 +4,7 @@
       <ul>
         <li>
           <span class="sep">&#x0002f;</span>
-          <LinkTo @route="vault.cluster.access.oidc.scopes">
+          <LinkTo @route="vault.cluster.access.oidc.scopes" data-test-oidc-scope-return-to-index>
             Scopes
           </LinkTo>
         </li>
@@ -12,7 +12,7 @@
     </nav>
   </p.top>
   <p.levelLeft>
-    <h1 class="title is-3">
+    <h1 class="title is-3" data-test-oidc-scope-header>
       {{this.model.name}}
     </h1>
   </p.levelLeft>
@@ -21,7 +21,7 @@
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs" aria-label="tabs">
     <ul>
-      <LinkTo @route="vault.cluster.access.oidc.scopes.scope.details" @model={{this.model}}>
+      <LinkTo @route="vault.cluster.access.oidc.scopes.scope.details" @model={{this.model}} data-test-oidc-scope-details>
         Details
       </LinkTo>
     </ul>
@@ -61,5 +61,6 @@
     @value={{this.model.template}}
     @readOnly={{true}}
     class="has-top-margin-xl has-bottom-margin-xl"
+    data-test-oidc-scope-json
   />
 </div>
