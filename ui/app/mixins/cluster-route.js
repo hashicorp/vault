@@ -1,19 +1,19 @@
 import { inject as service } from '@ember/service';
 import Mixin from '@ember/object/mixin';
 import RSVP from 'rsvp';
-const INIT = 'vault.cluster.init';
-const UNSEAL = 'vault.cluster.unseal';
-const AUTH = 'vault.cluster.auth';
-const CLUSTER = 'vault.cluster';
-const CLUSTER_INDEX = 'vault.cluster.index';
-const OIDC_CALLBACK = 'vault.cluster.oidc-callback';
-const OIDC_PROVIDER = 'vault.cluster.oidc-provider';
-const NS_OIDC_PROVIDER = 'vault.cluster.oidc-provider-ns';
-const DR_REPLICATION_SECONDARY = 'vault.cluster.replication-dr-promote';
-const DR_REPLICATION_SECONDARY_DETAILS = 'vault.cluster.replication-dr-promote.details';
-const EXCLUDED_REDIRECT_URLS = ['/vault/logout'];
-
-export { INIT, UNSEAL, AUTH, CLUSTER, CLUSTER_INDEX, DR_REPLICATION_SECONDARY };
+import {
+  INIT,
+  UNSEAL,
+  AUTH,
+  CLUSTER,
+  CLUSTER_INDEX,
+  OIDC_CALLBACK,
+  OIDC_PROVIDER,
+  NS_OIDC_PROVIDER,
+  DR_REPLICATION_SECONDARY,
+  DR_REPLICATION_SECONDARY_DETAILS,
+  EXCLUDED_REDIRECT_URLS,
+} from '../lib/route-paths';
 
 export default Mixin.create({
   auth: service(),

@@ -1,14 +1,7 @@
 import { assign } from '@ember/polyfills';
 import EmberObject from '@ember/object';
 import ClusterRouteMixin from 'vault/mixins/cluster-route';
-import {
-  INIT,
-  UNSEAL,
-  AUTH,
-  CLUSTER,
-  CLUSTER_INDEX,
-  DR_REPLICATION_SECONDARY,
-} from 'vault/mixins/cluster-route';
+import { INIT, UNSEAL, AUTH, CLUSTER, CLUSTER_INDEX, DR_REPLICATION_SECONDARY } from 'vault/lib/route-paths';
 import { module, test } from 'qunit';
 import sinon from 'sinon';
 
