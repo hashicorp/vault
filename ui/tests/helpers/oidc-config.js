@@ -22,7 +22,7 @@ export const SELECTORS = {
   // scope routes
   scopeSaveButton: '[data-test-oidc-scope-save]',
   scopeCancelButton: '[data-test-oidc-scope-cancel]',
-  scopeDeleteButton: '[data-test-scope-delete]',
+  scopeDeleteButton: '[data-test-oidc-scope-delete] button',
   scopeEditButton: '[data-test-oidc-scope-edit]',
   scopeDetailsTab: '[data-test-oidc-scope-details]',
   scopeEmptyState: '[data-test-oidc-scope-empty-state]',

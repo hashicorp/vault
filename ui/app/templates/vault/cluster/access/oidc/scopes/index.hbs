@@ -12,8 +12,8 @@
       <div class="level is-mobile">
         <div class="level-left">
           <div>
-            <Icon @name="file" />
-            <span class="has-text-weight-semibold has-text-black">
+            <Icon @name="file" class="has-text-grey-light" />
+            <span class="has-text-weight-semibold is-underline">
               {{model.name}}
             </span>
           </div>
@@ -28,6 +28,7 @@
                       @route="vault.cluster.access.oidc.scopes.scope.details"
                       @model={{model.name}}
                       @disabled={{not model.canRead}}
+                      data-test-oidc-scope-details
                     >
                       Details
                     </LinkTo>
@@ -36,7 +37,8 @@
                     <LinkTo
                       @route="vault.cluster.access.oidc.scopes.scope.edit"
                       @model={{model.name}}
-                      @disabled={{not model.canEdit}}
+                      @disabled={{not model.canEdit}}                      
+                      data-test-oidc-scope-edit
                     >
                       Edit
                     </LinkTo>
