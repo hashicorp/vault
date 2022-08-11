@@ -11,7 +11,7 @@ export default create({
     await this.logout();
     await settled();
     // clear session storage to ensure we have a clean state
-    window.sessionStorage.clear();
+    window.localStorage.clear();
     await this.visit({ with: 'token' });
     await settled();
     if (token) {

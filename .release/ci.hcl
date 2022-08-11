@@ -8,7 +8,10 @@ project "vault" {
   github {
     organization = "hashicorp"
     repository = "vault"
-    release_branches = ["release/1.10.x"]
+    release_branches = [
+      "main",
+      "release/**",
+    ]
   }
 }
 
@@ -244,6 +247,19 @@ event "promote-production-packaging" {
     organization = "hashicorp"
     repository = "crt-workflows-common"
     workflow = "promote-production-packaging"
+  }
+
+  notification {
+    on = "always"
+  }
+}
+
+event "post-publish-website" {
+  depends = ["promote-production-packaging"]
+  action "post-publish-website" {
+    organization = "hashicorp"
+    repository = "crt-workflows-common"
+    workflow = "post-publish-website"
   }
 
   notification {

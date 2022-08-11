@@ -479,6 +479,10 @@
         "path": "system/license"
       },
       {
+        "title": "<code>/sys/loggers</code>",
+        "path": "system/loggers"
+      },
+      {
         "title": "<code>/sys/managed-keys <sup>ENT</sup></code>",
         "path": "system/managed-keys"
       },
