@@ -115,7 +115,7 @@ func (kv *KVv2) Get(ctx context.Context, secretPath string) (*KVSecret, error) {
 		return nil, fmt.Errorf("error encountered while reading secret at %s: %w", pathToRead, err)
 	}
 	if secret == nil {
-		return nil, fmt.Errorf("no secret found at %s", pathToRead)
+		return nil, fmt.Errorf("%w: at %s", ErrSecretNotFound, pathToRead)
 	}
 
 	kvSecret, err := extractDataAndVersionMetadata(secret)
@@ -149,7 +149,7 @@ func (kv *KVv2) GetVersion(ctx context.Context, secretPath string, version int) 
 		return nil, err
 	}
 	if secret == nil {
-		return nil, fmt.Errorf("no secret with version %d found at %s", version, pathToRead)
+		return nil, fmt.Errorf("%w: for version %d at %s", err, version, pathToRead)
 	}
 
 	kvSecret, err := extractDataAndVersionMetadata(secret)
@@ -175,7 +175,7 @@ func (kv *KVv2) GetVersionsAsList(ctx context.Context, secretPath string) ([]KVV
 		return nil, err
 	}
 	if secret == nil || secret.Data == nil {
-		return nil, fmt.Errorf("no secret metadata found at %s", pathToRead)
+		return nil, fmt.Errorf("%w: no metadata at %s", ErrSecretNotFound, pathToRead)
 	}
 
 	md, err := extractFullMetadata(secret)
@@ -202,7 +202,7 @@ func (kv *KVv2) GetMetadata(ctx context.Context, secretPath string) (*KVMetadata
 		return nil, err
 	}
 	if secret == nil || secret.Data == nil {
-		return nil, fmt.Errorf("no secret metadata found at %s", pathToRead)
+		return nil, fmt.Errorf("%w: no metadata at %s", ErrSecretNotFound, pathToRead)
 	}
 
 	md, err := extractFullMetadata(secret)
@@ -244,7 +244,7 @@ func (kv *KVv2) Put(ctx context.Context, secretPath string, data map[string]inte
 		return nil, fmt.Errorf("error writing secret to %s: %w", pathToWriteTo, err)
 	}
 	if secret == nil {
-		return nil, fmt.Errorf("no secret was written to %s", pathToWriteTo)
+		return nil, fmt.Errorf("%w: after writing to %s", ErrSecretNotFound, pathToWriteTo)
 	}
 
 	metadata, err := extractVersionMetadata(secret)
@@ -291,9 +291,12 @@ func (kv *KVv2) PutMetadata(ctx context.Context, secretPath string, metadata KVM
 	metadataMap[casRequiredKey] = metadata.CASRequired
 	metadataMap[customMetadataKey] = metadata.CustomMetadata
 
-	_, err := kv.c.Logical().WriteWithContext(ctx, pathToWriteTo, metadataMap)
+	secret, err := kv.c.Logical().WriteWithContext(ctx, pathToWriteTo, metadataMap)
 	if err != nil {
 		return fmt.Errorf("error writing secret metadata to %s: %w", pathToWriteTo, err)
+	}
+	if secret == nil {
+		return fmt.Errorf("%w: after writing to %s", ErrSecretNotFound, pathToWriteTo)
 	}
 
 	return nil
@@ -357,9 +360,12 @@ func (kv *KVv2) PatchMetadata(ctx context.Context, secretPath string, metadata K
 		return fmt.Errorf("unable to create map for JSON merge patch request: %w", err)
 	}
 
-	_, err = kv.c.Logical().JSONMergePatch(ctx, pathToWriteTo, md)
+	secret, err := kv.c.Logical().JSONMergePatch(ctx, pathToWriteTo, md)
 	if err != nil {
 		return fmt.Errorf("error patching metadata at %s: %w", pathToWriteTo, err)
+	}
+	if secret == nil {
+		return fmt.Errorf("%w: after patching metadata at %s", ErrSecretNotFound, pathToWriteTo)
 	}
 
 	return nil
@@ -427,9 +433,12 @@ func (kv *KVv2) Undelete(ctx context.Context, secretPath string, versions []int)
 		"versions": versions,
 	}
 
-	_, err := kv.c.Logical().WriteWithContext(ctx, pathToUndelete, data)
+	secret, err := kv.c.Logical().WriteWithContext(ctx, pathToUndelete, data)
 	if err != nil {
 		return fmt.Errorf("error undeleting secret metadata at %s: %w", pathToUndelete, err)
+	}
+	if secret == nil {
+		return fmt.Errorf("%w: after undeleting secret at %s", ErrSecretNotFound, pathToUndelete)
 	}
 
 	return nil
@@ -478,7 +487,7 @@ func (kv *KVv2) Rollback(ctx context.Context, secretPath string, toVersion int) 
 	// Now run it again and read the version we want to roll back to
 	rollbackVersion, err := kv.GetVersion(ctx, secretPath, toVersion)
 	if err != nil {
-		return nil, fmt.Errorf("unable to get previous version %d of secret: %s", toVersion, err)
+		return nil, fmt.Errorf("unable to get previous version %d of secret: %w", toVersion, err)
 	}
 
 	err = validateRollbackVersion(rollbackVersion)
@@ -698,7 +707,10 @@ func mergePatch(ctx context.Context, client *Client, mountPath string, secretPat
 			return nil, fmt.Errorf("received 403 from Vault server; please ensure that token's policy has \"patch\" capability: %w", err)
 		}
 
-		return nil, fmt.Errorf("error performing merge patch to %s: %s", pathToMergePatch, err)
+		return nil, fmt.Errorf("error performing merge patch to %s: %w", pathToMergePatch, err)
+	}
+	if secret == nil {
+		return nil, fmt.Errorf("%w: performing merge patch at %s", ErrSecretNotFound, pathToMergePatch)
 	}
 
 	metadata, err := extractVersionMetadata(secret)
