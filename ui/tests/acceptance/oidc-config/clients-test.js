@@ -10,7 +10,7 @@ import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
 import fm from 'vault/tests/pages/components/flash-message';
-import { overrideCapabilities, overrideMirageResponse } from '../../helpers/oidc-config';
+import { clearRecord, overrideCapabilities } from '../../helpers/oidc-config';
 const searchSelect = create(ss);
 const flashMessage = create(fm);
 // in congruency with backend verbiage 'applications' are referred to as 'clients
@@ -31,7 +31,7 @@ module('Acceptance | oidc-config/clients', function (hooks) {
     return authPage.login();
   });
 
-  hooks.afterEach(async function () {
+  hooks.afterEach(function () {
     return logout.visit();
   });
 
@@ -41,7 +41,10 @@ module('Acceptance | oidc-config/clients', function (hooks) {
 
   test('it renders empty state when no clients are configured', async function (assert) {
     assert.expect(5);
-    this.server.get('/identity/oidc/client', () => overrideMirageResponse(200));
+
+    //* clear out test state
+    await clearRecord(this.store, 'oidc/client', 'some-app');
+
     await visit(OIDC_BASE_URL);
     assert.equal(currentURL(), '/vault/access/oidc');
     assert.dom('h1.title.is-3').hasText('OIDC Provider');
@@ -58,6 +61,10 @@ module('Acceptance | oidc-config/clients', function (hooks) {
 
   test('it creates, updates and deletes a client', async function (assert) {
     assert.expect(20);
+
+    //* clear out test state
+    await clearRecord(this.store, 'oidc/client', 'some-app');
+
     await visit(OIDC_BASE_URL);
     // create a new application
     await click(SELECTORS.oidcClientCreateButton);
@@ -68,6 +75,7 @@ module('Acceptance | oidc-config/clients', function (hooks) {
     await click('[data-test-input="idTokenTtl"]');
     await click('[data-test-input="accessTokenTtl"]');
     await click(SELECTORS.clientSaveButton);
+
     assert.equal(
       flashMessage.latestMessage,
       'Successfully created an application',
@@ -78,7 +86,6 @@ module('Acceptance | oidc-config/clients', function (hooks) {
       'vault.cluster.access.oidc.clients.client.details',
       'navigates to detail view after save'
     );
-
     // assert default values in details view are correct
     assert.dom('[data-test-value-div="Assignment"]').hasText('allow_all', 'client allows all assignments');
     assert.dom('[data-test-value-div="Type"]').hasText('confidential', 'type defaults to confidential');
@@ -160,9 +167,8 @@ module('Acceptance | oidc-config/clients', function (hooks) {
       'navigates back to list view after delete'
     );
 
-    // reset state
-    const assign1 = await this.store.peekRecord('oidc/assignment', 'assignment-1');
-    if (assign1) assign1.destroyRecord();
+    //* clear out test state
+    await clearRecord(this.store, 'oidc/assignment', 'assignment-1');
   });
 
   test('it renders client list when clients exist', async function (assert) {

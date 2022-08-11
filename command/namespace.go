@@ -36,6 +36,10 @@ Usage: vault namespace <subcommand> [options] [args]
 
       $ vault namespace create
 
+  Patch an existing namespace:
+
+      $ vault namespace patch
+
   Delete an existing namespace:
 
       $ vault namespace delete

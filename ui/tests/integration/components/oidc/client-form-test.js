@@ -26,7 +26,15 @@ module('Integration | Component | oidc/client-form', function (hooks) {
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
     this.server.post('/sys/capabilities-self', () => {});
-    server.get('/identity/oidc/assignment', () => {
+    this.server.get('/identity/oidc/key', () => {
+      return {
+        request_id: 'key-list-id',
+        data: {
+          keys: ['default'],
+        },
+      };
+    });
+    this.server.get('/identity/oidc/assignment', () => {
       return {
         request_id: 'assignment-list-id',
         data: {
@@ -34,7 +42,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
         },
       };
     });
-    server.get('/identity/oidc/assignment/assignment-1', () => {
+    this.server.get('/identity/oidc/assignment/assignment-1', () => {
       return {
         request_id: 'assignment-1-id',
         data: {
