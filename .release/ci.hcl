@@ -242,7 +242,7 @@ event "promote-production-docker" {
   }
 }
 
-event "promote-production-packaging" {
+event "promote-production" {
   depends = ["promote-production-docker"]
   action "promote-production-packaging" {
     organization = "hashicorp"
