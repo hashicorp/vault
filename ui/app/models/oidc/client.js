@@ -19,8 +19,10 @@ export default class OidcClientModel extends Model {
   @attr('string', { label: 'Application name', editDisabled: true }) name;
   @attr('string', {
     label: 'Type',
-    subText: 'Specify whether the application type is confidential or public. The public type must use PKCE.',
+    subText:
+      'Specify whether the application type is confidential or public. The public type must use PKCE. This cannot be edited later.',
     editType: 'radio',
+    editDisabled: true,
     defaultValue: 'confidential',
     possibleValues: ['confidential', 'public'],
   })
@@ -53,16 +55,16 @@ export default class OidcClientModel extends Model {
   @attr({
     label: 'Access Token TTL',
     editType: 'ttl',
+    defaultValue: '24h',
     helperTextDisabled: 'Vault will use the default lease duration',
-    setDefault: false,
   })
   accessTokenTtl;
 
   @attr({
     label: 'ID Token TTL',
     editType: 'ttl',
+    defaultValue: '24h',
     helperTextDisabled: 'Vault will use the default lease duration',
-    setDefault: false,
   })
   idTokenTtl;
 
@@ -106,7 +108,7 @@ export default class OidcClientModel extends Model {
   }
 
   // API WIP
-  @lazyCapabilities(apiPath`identity/oidc/${'name'}/provider`, 'backend', 'name') clientProvidersPath; // API is WIP
+  @lazyCapabilities(apiPath`identity/oidc/${'name'}/provider`, 'backend', 'name') clientProvidersPath;
   get canListProviders() {
     return this.clientProvidersPath.get('canList');
   }

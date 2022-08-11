@@ -25,15 +25,15 @@ import { isWildcardString } from 'vault/helpers/is-wildcard-string';
  * viewAll="roles"/>
  * ```
  *
- * @param displayArray=null {array} - This array of data to be displayed.  If there are more than 10 items in the array only five will show and a count of the other number in the array will show.
+ * @param displayArray=null {array} - The array of data to be displayed.  If there are more than 10 items in the array only five will show and a count of the other number in the array will show.
  * @param [isLink] {Boolean} - Indicates if the item should contain a link-to component.  Only setup for arrays, but this could be changed if needed.
- * @param [rootRoute="vault.cluster.secrets.backend.list-root"] - {string} - Tells what route the link should go to when selecting "view all".
- * @param [itemRoute=vault.cluster.secrets.backend.show] - {string} - Tells what route the link should go to when selecting the individual item.
+ * @param [rootRoute="vault.cluster.secrets.backend.list-root"] - {string || array} - Tells what route the link should go to when selecting "view all". If the route requires more than one dynamic param, insert an array.
+ * @param [itemRoute=vault.cluster.secrets.backend.show] - {string || array} - Tells what route the link should go to when selecting the individual item. If the route requires more than one dynamic param, insert an array.
  * @param [modelType] {string} - Tells which model you want data for the allOptions to be returned from.  Used in conjunction with the the isLink.
  * @param [wildcardLabel] {String} - when you want the component to return a count on the model for options returned when using a wildcard you must provide a label of the count e.g. role.  Should be singular.
- * @param [queryParam] {String} - If you want to specific a tab for the View All XX to display to.  Ex: role
  * @param [backend] {String} - To specify which backend to point the link to.
- * @param [viewAll] {String} - Specify the word at the end of the link View all xx.
+ * @param [viewAll] {String} - Specify the word at the end of the link View all "roles".
+ * @param [doNotTruncate=false] {Boolean} - Determines whether to show the View all "roles" link.
  */
 export default class InfoTableItemArray extends Component {
   @tracked allOptions = null;
@@ -52,10 +52,14 @@ export default class InfoTableItemArray extends Component {
     return this.args.displayArray || null;
   }
 
+  get doNotTruncate() {
+    return this.args.doNotTruncate || false;
+  }
+
   get displayArrayAmended() {
     let { displayArray } = this;
     if (!displayArray) return null;
-    if (displayArray.length >= 10) {
+    if ((displayArray.length >= 10) & !this.args.doNotTruncate) {
       // if array greater than 10 in length only display the first 5
       displayArray = displayArray.slice(0, 5);
     }

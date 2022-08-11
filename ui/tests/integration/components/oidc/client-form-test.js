@@ -1,23 +1,15 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, fillIn, click } from '@ember/test-helpers';
+import { render, fillIn, click, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
-import { overrideMirageResponse } from 'vault/tests/helpers/oidc-config';
+import { SELECTORS, overrideMirageResponse } from 'vault/tests/helpers/oidc-config';
 
 const searchSelect = create(ss);
-const CLIENT_FIELD_ATTRS = [
-  { name: 'name', isFormField: true },
-  { name: 'clientType', isFormField: true },
-  { name: 'redirectUris', isFormField: true },
-  { name: 'key', isFormField: true },
-  { name: 'accessTokenTtl', isFormField: true },
-  { name: 'idTokenTtl', isFormField: true },
-];
 
 module('Integration | Component | oidc/client-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -33,10 +25,36 @@ module('Integration | Component | oidc/client-form', function (hooks) {
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
+    this.server.post('/sys/capabilities-self', () => {});
+    this.server.get('/identity/oidc/key', () => {
+      return {
+        request_id: 'key-list-id',
+        data: {
+          keys: ['default'],
+        },
+      };
+    });
+    this.server.get('/identity/oidc/assignment', () => {
+      return {
+        request_id: 'assignment-list-id',
+        data: {
+          keys: ['allow_all', 'assignment-1'],
+        },
+      };
+    });
+    this.server.get('/identity/oidc/assignment/assignment-1', () => {
+      return {
+        request_id: 'assignment-1-id',
+        data: {
+          entity_ids: ['1234-12345'],
+          group_ids: ['abcdef-123'],
+        },
+      };
+    });
   });
 
   test('it should save new client', async function (assert) {
-    assert.expect(15);
+    assert.expect(13);
 
     this.server.post('/identity/oidc/client/some-app', (schema, req) => {
       assert.ok(true, 'Request made to save client');
@@ -52,23 +70,27 @@ module('Integration | Component | oidc/client-form', function (hooks) {
         @onSave={{this.onSave}}
       />
     `);
+    await click('[data-test-toggle-group="More options"]');
     assert
       .dom('[data-test-oidc-client-title]')
       .hasText('Create application', 'Form title renders correct text');
-    assert.dom('[data-test-oidc-client-save]').hasText('Create', 'Save button has correct text');
+    assert.dom(SELECTORS.clientSaveButton).hasText('Create', 'Save button has correct text');
+    assert.equal(findAll('[data-test-field]').length, 6, 'renders all attribute fields');
+    assert.dom('input#allow-all').isChecked('Allow all radio button selected by default');
+    assert.dom('[data-test-ttl-value="ID Token TTL"]').hasValue('1', 'ttl defaults to 24h');
+    assert.dom('[data-test-ttl-value="Access Token TTL"]').hasValue('1', 'ttl defaults to 24h');
 
     // check validation errors
-    await click('[data-test-oidc-client-save]');
+    await click(SELECTORS.clientSaveButton);
     assert
       .dom('[data-test-inline-error-message]')
       .hasText('Name is required.', 'Validation message is shown for name');
     await fillIn('[data-test-input="name"]', 'test space');
-    await click('[data-test-oidc-client-save]');
+    await click(SELECTORS.clientSaveButton);
     assert
       .dom('[data-test-inline-error-message]')
       .hasText('Name cannot contain whitespace.', 'Validation message is shown whitespace');
 
-    await click('[data-test-toggle-group="More options"]');
     await click('label[for=limited]');
     assert
       .dom('[data-test-selected-option="true"]')
@@ -76,20 +98,15 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     assert
       .dom('[data-test-search-select-with-modal]')
       .exists('Limited radio button shows assignments search select');
-    // check form fields exist
-    for (const attr of CLIENT_FIELD_ATTRS) {
-      if (attr.isFormField) {
-        assert.dom(`[data-test-field="${attr.name}"`).exists(`${attr.name} form field exists`);
-      }
-    }
+
     await clickTrigger();
     assert.dom('li.ember-power-select-option').hasText('assignment-1', 'dropdown renders assignments');
     await fillIn('[data-test-input="name"]', 'some-app');
-    await click('[data-test-oidc-client-save]');
+    await click(SELECTORS.clientSaveButton);
   });
 
   test('it should update client', async function (assert) {
-    assert.expect(9);
+    assert.expect(11);
 
     this.server.post('/identity/oidc/client/some-app', (schema, req) => {
       assert.ok(true, 'Request made to save client');
@@ -114,15 +131,17 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     `);
     await click('[data-test-toggle-group="More options"]');
     assert.dom('[data-test-oidc-client-title]').hasText('Edit application', 'Title renders correct text');
-    assert.dom('[data-test-oidc-client-save]').hasText('Update', 'Save button has correct text');
+    assert.dom(SELECTORS.clientSaveButton).hasText('Update', 'Save button has correct text');
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
     assert.dom('[data-test-input="name"]').hasValue('some-app', 'Name input is populated with model value');
     assert.dom('[data-test-input="key"]').isDisabled('Signing key input is disabled');
     assert.dom('[data-test-input="key"]').hasValue('default', 'Key input populated with default');
+    assert.dom('[data-test-input="clientType"] input').isDisabled('client type input is disabled on edit');
     assert
       .dom('[data-test-input="clientType"] input#confidential')
       .isChecked('Correct radio button is selected');
-    await click('[data-test-oidc-client-save]');
+    assert.dom('input#allow-all').isChecked('Allow all radio button is selected');
+    await click(SELECTORS.clientSaveButton);
   });
 
   test('it should rollback attributes or unload record on cancel', async function (assert) {
@@ -138,13 +157,14 @@ module('Integration | Component | oidc/client-form', function (hooks) {
       />
     `);
 
-    await click('[data-test-oidc-client-cancel]');
+    await click(SELECTORS.clientCancelButton);
     assert.true(this.model.isDestroyed, 'New model is unloaded on cancel');
 
     this.store.pushPayload('oidc/client', {
       modelName: 'oidc/client',
       name: 'some-app',
       assignments: ['allow_all'],
+      redirectUris: [],
     });
     this.model = this.store.peekRecord('oidc/client', 'some-app');
 
@@ -156,9 +176,10 @@ module('Integration | Component | oidc/client-form', function (hooks) {
       />
     `);
 
-    await click('[data-test-input="clientType"] input[id="public"]');
-    await click('[data-test-oidc-client-cancel]');
-    assert.equal(this.model.clientType, 'confidential', 'Model attributes rolled back on cancels');
+    await fillIn('[data-test-input="redirectUris"] [data-test-string-list-input="0"]', 'some-url.com');
+    await click('[data-test-string-list-button="add"]');
+    await click(SELECTORS.clientCancelButton);
+    assert.equal(this.model.redirectUris, undefined, 'Model attributes rolled back on cancel');
   });
 
   test('it should show create assignment modal', async function (assert) {

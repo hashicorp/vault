@@ -1,5 +1,9 @@
 {{#each @model as |client|}}
-  <LinkedBlock class="list-item-row" @params={{array "vault.cluster.access.oidc.clients.client.details" client.name}}>
+  <LinkedBlock
+    class="list-item-row"
+    @params={{array "vault.cluster.access.oidc.clients.client.details" client.name}}
+    data-test-oidc-client-linked-block
+  >
     <div class="level is-mobile">
       <div class="level-left">
         <div>
@@ -19,6 +23,7 @@
                     @route="vault.cluster.access.oidc.clients.client.details"
                     @model={{client.name}}
                     @disabled={{eq client.canRead false}}
+                    data-test-oidc-client-menu-link="details"
                   >
                     Details
                   </LinkTo>
@@ -28,6 +33,7 @@
                     @route="vault.cluster.access.oidc.clients.client.edit"
                     @model={{client.name}}
                     @disabled={{eq client.canEdit false}}
+                    data-test-oidc-client-menu-link="edit"
                   >
                     Edit
                   </LinkTo>

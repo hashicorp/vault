@@ -62,10 +62,14 @@ export default class OidcClientForm extends Component {
           // note: when editing the UI removes any additional assignments previously configured via CLI
           this.args.model.assignments = ['allow_all'];
         }
+        // if TTL components are toggled off, set to default lease duration
+        const { idTokenTtl, accessTokenTtl } = this.args.model;
+        // value returned from API is a number, and string when from form action
+        if (Number(idTokenTtl) === 0) this.args.model.idTokenTtl = '24h';
+        if (Number(accessTokenTtl) === 0) this.args.model.accessTokenTtl = '24h';
+        const { isNew } = this.args.model;
         yield this.args.model.save();
-        this.flashMessages.success(
-          `Successfully ${this.args.model.isNew ? 'created an' : 'updated'} application`
-        );
+        this.flashMessages.success(`Successfully ${isNew ? 'created an' : 'updated'} application`);
         this.args.onSave();
       }
     } catch (error) {

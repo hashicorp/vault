@@ -28,7 +28,7 @@
   <div class="box is-sideless is-fullwidth is-bottomless">
     <MessageError @errorMessage={{this.error}} class="has-top-margin-s" />
     {{#each @model.formFields as |attr|}}
-      <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+      <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
     {{/each}}
 
     {{! MORE OPTIONS TOGGLE }}
