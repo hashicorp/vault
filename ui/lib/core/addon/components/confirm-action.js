@@ -1,5 +1,6 @@
-import Component from '@ember/component';
-import layout from '../templates/components/confirm-action';
+import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
 
 /**
  * @module ConfirmAction
@@ -22,36 +23,51 @@ import layout from '../templates/components/confirm-action';
  *
  */
 
-export default Component.extend({
-  layout,
-  tagName: '',
-  supportsDataTestProperties: true,
-  buttonText: 'Delete',
-  confirmTitle: 'Delete this?',
-  confirmMessage: 'You will not be able to recover it later.',
-  confirmButtonText: 'Delete',
-  cancelButtonText: 'Cancel',
-  horizontalPosition: 'auto-right',
-  verticalPosition: 'below',
-  isRunning: false,
-  disabled: false,
-  showConfirm: false,
-  onConfirmAction: null,
+export default class ConfirmActionComponent extends Component {
+  @tracked supportsDataTestProperties = true;
+  @tracked horizontalPosition = 'auto-right';
+  @tracked verticalPosition = 'below';
+  @tracked isRunning = false;
+  @tracked disabled = false;
+  @tracked showConfirm = false;
 
-  actions: {
-    toggleConfirm() {
-      this.toggleProperty('showConfirm');
-    },
+  get confirmTitle() {
+    return this.args.confirmTitle || 'Delete this?';
+  }
 
-    onConfirm() {
-      const confirmAction = this.onConfirmAction;
+  get confirmMessage() {
+    return this.args.confirmMessage || 'You will not be able to recover it later.';
+  }
 
-      if (typeof confirmAction !== 'function') {
-        throw new Error('confirm-action components expects `onConfirmAction` attr to be a function');
-      } else {
-        confirmAction();
-        this.toggleProperty('showConfirm');
-      }
-    },
-  },
-});
+  get confirmButtonText() {
+    return this.args.confirmButtonText || 'Delete';
+  }
+
+  get cancelButtonText() {
+    return this.args.cancelButtonText || 'Cancel';
+  }
+
+  @action
+  closeButton(d) {
+    d.actions.close();
+  }
+
+  @action
+  toggleConfirm() {
+    // toggle
+    this.showConfirm = !this.showConfirm;
+  }
+
+  @action
+  onConfirm() {
+    const confirmAction = this.args.onConfirmAction;
+
+    if (typeof confirmAction !== 'function') {
+      throw new Error('confirm-action components expects `onConfirmAction` attr to be a function');
+    } else {
+      confirmAction();
+      // toggle
+      this.showConfirm = !this.showConfirm;
+    }
+  }
+}

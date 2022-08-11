@@ -2,8 +2,8 @@
   <BasicDropdown
     @horizontalPosition={{this.horizontalPosition}}
     @verticalPosition={{this.verticalPosition}}
-    @onOpen={{action "toggleConfirm"}}
-    @onClose={{action "toggleConfirm"}}
+    @onOpen={{this.toggleConfirm}}
+    @onClose={{this.toggleConfirm}}
     as |d|
   >
     <d.Trigger
@@ -35,7 +35,7 @@
             disabled={{or this.disabled this.isRunning}}
             class="link is-destroy"
             data-test-confirm-button="true"
-            {{action "onConfirm"}}
+            {{on "click" this.onConfirm}}
           >
             {{#if this.isRunning}}
               <span class="loader is-inline-block"></span>
@@ -43,7 +43,7 @@
               {{this.confirmButtonText}}
             {{/if}}
           </button>
-          <button type="button" class="link" data-test-confirm-cancel-button="true" {{action d.actions.close}}>
+          <button type="button" class="link" data-test-confirm-cancel-button="true" {{on "click" (fn this.closeButton d)}}>
             {{this.cancelButtonText}}
           </button>
         </div>
