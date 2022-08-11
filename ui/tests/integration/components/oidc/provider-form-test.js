@@ -23,6 +23,34 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
+    this.server.get('/identity/oidc/scope', () => {
+      return {
+        request_id: 'scope-list-id',
+        lease_id: '',
+        renewable: false,
+        lease_duration: 0,
+        data: {
+          keys: ['test-scope'],
+        },
+        wrap_info: null,
+        warnings: null,
+        auth: null,
+      };
+    });
+    server.get('/identity/oidc/client', () => {
+      return {
+        request_id: 'client-list-id',
+        lease_id: '',
+        renewable: false,
+        lease_duration: 0,
+        data: {
+          keys: ['some-app'],
+        },
+        wrap_info: null,
+        warnings: null,
+        auth: null,
+      };
+    });
   });
 
   test('it should save new provider', async function (assert) {
