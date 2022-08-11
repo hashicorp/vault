@@ -114,11 +114,12 @@ module('Unit | Adapter | cluster', function (hooks) {
       'ldap:userpass options OK'
     );
 
+    data = { password: 'password', username: 'username', nonce: 'uuid' };
     adapter.authenticate({ backend: 'okta', data });
     assert.equal(url, '/v1/auth/okta/login/username', 'okta:userpass url OK');
     assert.equal(method, 'POST', 'ldap:userpass method OK');
     assert.deepEqual(
-      { data: { password: 'password' }, unauthenticated: true },
+      { data: { password: 'password', nonce: 'uuid' }, unauthenticated: true },
       options,
       'okta:userpass options OK'
     );
@@ -132,6 +133,7 @@ module('Unit | Adapter | cluster', function (hooks) {
     adapter.authenticate({ backend: 'LDAP', data });
     assert.equal(url, '/v1/auth/path/login/username', 'auth:LDAP with path url OK');
 
+    data = { password: 'password', username: 'username', path: 'path', nonce: 'uuid' };
     adapter.authenticate({ backend: 'Okta', data });
     assert.equal(url, '/v1/auth/path/login/username', 'auth:Okta with path url OK');
   });
