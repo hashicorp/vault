@@ -1400,7 +1400,7 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 			return false, errutil.InternalError{Err: fmt.Sprintf("unsupported rsa signature algorithm %s", sigAlgorithm)}
 		}
 
-		return err == nil, err
+		return err == nil, nil
 
 	default:
 		return false, errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
