@@ -1,11 +1,13 @@
-import Component from '@ember/component';
+import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
-import layout from '../templates/components/header-credentials';
 
-export default Component.extend({
-  layout,
-  tagName: '',
-  secretMountPath: service(),
-  scope: null,
-  role: null,
-});
+export default class HeaderCredentialsComponent extends Component {
+  @service secretMountPath;
+
+  get scope() {
+    return this.args.scope || null;
+  }
+  get role() {
+    return this.args.role || null;
+  }
+}
