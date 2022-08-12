@@ -112,6 +112,16 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			},
 		},
 
+		"upnattribute": {
+			Type:        framework.TypeString,
+			Description: "Sets the name of the UPN attribute (default: userPrincipalName)",
+			Default:     "userPrincipalName",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name:  "User Principal (UPN) Domain Attribute",
+				Value: "userPrincipalName",
+			},
+		},
+
 		"username_as_alias": {
 			Type:        framework.TypeBool,
 			Default:     false,
@@ -302,6 +312,10 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 		cfg.UPNDomain = d.Get("upndomain").(string)
 	}
 
+	if _, ok := d.Raw["upnattribute"]; ok || !hadExisting {
+		cfg.UPNAttribute = d.Get("upnattribute").(string)
+	}
+
 	if _, ok := d.Raw["certificate"]; ok || !hadExisting {
 		certificate := d.Get("certificate").(string)
 		if certificate != "" {
@@ -403,6 +417,7 @@ type ConfigEntry struct {
 	GroupFilter              string `json:"groupfilter"`
 	GroupAttr                string `json:"groupattr"`
 	UPNDomain                string `json:"upndomain"`
+	UPNAttribute             string `json:"upnattribute"`
 	UsernameAsAlias          bool   `json:"username_as_alias"`
 	UserFilter               string `json:"userfilter"`
 	UserAttr                 string `json:"userattr"`
@@ -443,6 +458,7 @@ func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
 		"groupattr":              c.GroupAttr,
 		"userfilter":             c.UserFilter,
 		"upndomain":              c.UPNDomain,
+		"upnattribute":           c.UPNAttribute,
 		"userattr":               c.UserAttr,
 		"certificate":            c.Certificate,
 		"insecure_tls":           c.InsecureTLS,

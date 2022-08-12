@@ -1223,6 +1223,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			GroupAttr:                cfg.GroupAttr,
 			BindDN:                   cfg.BindDN,
 			BindPassword:             cfg.BindPassword,
+			UPNAttribute:             defParams.UPNAttribute,
 			GroupFilter:              defParams.GroupFilter,
 			DenyNullBind:             defParams.DenyNullBind,
 			TLSMinVersion:            defParams.TLSMinVersion,
