@@ -64,6 +64,26 @@ func kvPutWithRetry(t *testing.T, client *api.Client, args []string) (int, strin
 	})
 }
 
+func kvRetryLogicalWrite(t *testing.T, client *api.Client, path string, data map[string]interface{}) (*api.Secret, error) {
+	t.Helper()
+
+	maxRetries := int(5 * time.Second / 100 * time.Millisecond)
+	var resp *api.Secret
+	var err error
+
+	for i := 0; i < maxRetries; i++ {
+		resp, err = client.Logical().Write(path, data)
+		if err != nil && strings.Contains(err.Error(), "Upgrading from non-versioned to versioned data") {
+			t.Logf("Retrying write KV data due to upgrade error")
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+
+		break
+	}
+	return resp, err
+}
+
 func kvPatchWithRetry(t *testing.T, client *api.Client, args []string, stdin *io.PipeReader) (int, string) {
 	t.Helper()
 
@@ -510,13 +530,13 @@ func TestKVGetCommand(t *testing.T) {
 				// Give time for the upgrade code to run/finish
 				time.Sleep(time.Second)
 
-				if _, err := client.Logical().Write("secret/read/foo", map[string]interface{}{
+				if _, err := kvRetryLogicalWrite(t, client, "secret/read/foo", map[string]interface{}{
 					"foo": "bar",
 				}); err != nil {
 					t.Fatal(err)
 				}
 
-				if _, err := client.Logical().Write("kv/data/read/foo", map[string]interface{}{
+				if _, err := kvRetryLogicalWrite(t, client, "kv/data/read/foo", map[string]interface{}{
 					"data": map[string]interface{}{
 						"foo": "bar",
 					},
@@ -635,7 +655,7 @@ func TestKVMetadataGetCommand(t *testing.T) {
 				// Give time for the upgrade code to run/finish
 				time.Sleep(time.Second)
 
-				if _, err := client.Logical().Write("kv/data/foo", map[string]interface{}{
+				if _, err := kvRetryLogicalWrite(t, client, "kv/data/foo", map[string]interface{}{
 					"data": map[string]interface{}{
 						"foo": "bar",
 					},
@@ -764,7 +784,7 @@ func TestKVPatchCommand_StdinFull(t *testing.T) {
 		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
 	}
 
-	if _, err := client.Logical().Write("kv/data/patch/foo", map[string]interface{}{
+	if _, err := kvRetryLogicalWrite(t, client, "kv/data/patch/foo", map[string]interface{}{
 		"data": map[string]interface{}{
 			"foo": "a",
 		},
@@ -831,7 +851,7 @@ func TestKVPatchCommand_StdinValue(t *testing.T) {
 		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
 	}
 
-	if _, err := client.Logical().Write("kv/data/patch/foo", map[string]interface{}{
+	if _, err := kvRetryLogicalWrite(t, client, "kv/data/patch/foo", map[string]interface{}{
 		"data": map[string]interface{}{
 			"foo": "a",
 		},
@@ -924,7 +944,7 @@ func TestKVPatchCommand_RWMethodSucceeds(t *testing.T) {
 		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
 	}
 
-	if _, err := client.Logical().Write("kv/data/patch/foo", map[string]interface{}{
+	if _, err := kvRetryLogicalWrite(t, client, "kv/data/patch/foo", map[string]interface{}{
 		"data": map[string]interface{}{
 			"foo": "a",
 			"bar": "b",
@@ -1029,7 +1049,7 @@ func TestKVPatchCommand_CAS(t *testing.T) {
 
 			kvClient.SetToken(secretAuth.ClientToken)
 
-			_, err = kvClient.Logical().Write("kv/data/foo", map[string]interface{}{"data": map[string]interface{}{"bar": "baz"}})
+			_, err = kvRetryLogicalWrite(t, client, "kv/data/foo", map[string]interface{}{"data": map[string]interface{}{"bar": "baz"}})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1108,7 +1128,7 @@ func TestKVPatchCommand_Methods(t *testing.T) {
 
 			kvClient.SetToken(secretAuth.ClientToken)
 
-			_, err = kvClient.Logical().Write("kv/data/foo", map[string]interface{}{"data": map[string]interface{}{"bar": "baz"}})
+			_, err = kvRetryLogicalWrite(t, client, "kv/data/foo", map[string]interface{}{"data": map[string]interface{}{"bar": "baz"}})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1183,7 +1203,7 @@ func TestKVPatchCommand_403Fallback(t *testing.T) {
 			kvClient.SetToken(secretAuth.ClientToken)
 
 			// Write a value then attempt to patch it
-			_, err = kvClient.Logical().Write("kv/data/foo", map[string]interface{}{"data": map[string]interface{}{"bar": "baz"}})
+			_, err = kvRetryLogicalWrite(t, client, "kv/data/foo", map[string]interface{}{"data": map[string]interface{}{"bar": "baz"}})
 			if err != nil {
 				t.Fatal(err)
 			}
