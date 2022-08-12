@@ -1,0 +1,3 @@
+```release-note:improvement
+sdk/helper/ldaputil: Add configuration option for UPN attribute
+```

@@ -133,9 +133,10 @@ There are two alternate methods of resolving the user object used to authenticat
 
 @include 'ldap-auth-userfilter-warning.mdx'
 
-#### Binding - User Principal Name (AD)
+#### Binding - User Principal Name
 
 - `upndomain` (string, optional) - userPrincipalDomain used to construct the UPN string for the authenticating user. The constructed UPN will appear as `[username]@UPNDomain`. Example: `example.com`, which will cause vault to bind as `username@example.com`.
+- `upnattribute` (string, optional) - attribute to check the UPN against. The default is `userPrincipalName`.
 
 ### Group Membership Resolution
 
