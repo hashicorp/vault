@@ -14,13 +14,13 @@ export default class VaultClusterRedirectRoute extends Route {
 
     if (isAuthed && queryParams.redirect_to) {
       // if authenticated and redirect exists, redirect to that place
-      transition = this.router.transitionTo(queryParams.redirect_to);
+      transition = this.router.replaceWith(queryParams.redirect_to);
     } else if (isAuthed) {
       // if authed no redirect, go to cluster
-      transition = this.router.transitionTo(CLUSTER);
+      transition = this.router.replaceWith(CLUSTER);
     } else {
       // default go to Auth
-      transition = this.router.transitionTo(AUTH);
+      transition = this.router.replaceWith(AUTH);
     }
     transition.followRedirects().then(() => {
       controller.set('redirectTo', '');

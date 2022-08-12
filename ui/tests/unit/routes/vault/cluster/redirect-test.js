@@ -8,7 +8,7 @@ module('Unit | Route | vault/cluster/redirect', function (hooks) {
   hooks.beforeEach(function () {
     this.router = this.owner.lookup('service:router');
     this.originalTransition = this.router.transitionTo;
-    this.router.transitionTo = sinon.stub().returns({
+    this.router.replaceWith = sinon.stub().returns({
       followRedirects: function () {
         return {
           then: function (callback) {
