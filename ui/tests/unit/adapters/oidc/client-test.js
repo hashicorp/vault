@@ -56,22 +56,22 @@ module('Unit | Adapter | oidc/client', function (hooks) {
 
     let testQuery = ['*', 'client-1'];
     await this.store
-      .query(this.modelName, { clientIds: testQuery })
+      .query(this.modelName, { filterIds: testQuery })
       .then((resp) => assert.equal(resp.content.length, 3, 'returns all clients when ids include glob (*)'));
 
     testQuery = ['*'];
     await this.store
-      .query(this.modelName, { clientIds: testQuery })
+      .query(this.modelName, { filterIds: testQuery })
       .then((resp) => assert.equal(resp.content.length, 3, 'returns all clients when glob (*) is only id'));
 
     testQuery = ['client-2'];
-    await this.store.query(this.modelName, { clientIds: testQuery }).then((resp) => {
+    await this.store.query(this.modelName, { filterIds: testQuery }).then((resp) => {
       assert.equal(resp.content.length, 1, 'filters response and returns only matching id');
       assert.equal(resp.firstObject.name, 'client-2', 'response contains correct model');
     });
 
     testQuery = ['client-2', 'client-3'];
-    await this.store.query(this.modelName, { clientIds: testQuery }).then((resp) => {
+    await this.store.query(this.modelName, { filterIds: testQuery }).then((resp) => {
       assert.equal(resp.content.length, 2, 'filters response when passed multiple ids');
     });
   });
