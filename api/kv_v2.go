@@ -690,6 +690,7 @@ func mergePatch(ctx context.Context, client *Client, mountPath string, secretPat
 	secret, err := client.Logical().JSONMergePatch(ctx, pathToMergePatch, wrappedData)
 	if err != nil {
 		var re *ResponseError
+
 		if errors.As(err, &re) {
 			switch re.StatusCode {
 			// 403
@@ -710,9 +711,6 @@ func mergePatch(ctx context.Context, client *Client, mountPath string, secretPat
 		}
 
 		return nil, fmt.Errorf("error performing merge patch to %s: %w", pathToMergePatch, err)
-	}
-	if secret == nil {
-		return nil, fmt.Errorf("%w: performing merge patch to %s", ErrSecretNotFound, pathToMergePatch)
 	}
 
 	metadata, err := extractVersionMetadata(secret)
