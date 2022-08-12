@@ -2,7 +2,9 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"sort"
 	"strconv"
 	"time"
@@ -291,12 +293,9 @@ func (kv *KVv2) PutMetadata(ctx context.Context, secretPath string, metadata KVM
 	metadataMap[casRequiredKey] = metadata.CASRequired
 	metadataMap[customMetadataKey] = metadata.CustomMetadata
 
-	secret, err := kv.c.Logical().WriteWithContext(ctx, pathToWriteTo, metadataMap)
+	_, err := kv.c.Logical().WriteWithContext(ctx, pathToWriteTo, metadataMap)
 	if err != nil {
 		return fmt.Errorf("error writing secret metadata to %s: %w", pathToWriteTo, err)
-	}
-	if secret == nil {
-		return fmt.Errorf("%w: after writing to %s", ErrSecretNotFound, pathToWriteTo)
 	}
 
 	return nil
@@ -328,19 +327,19 @@ func (kv *KVv2) Patch(ctx context.Context, secretPath string, newData map[string
 	// Determine which kind of patch to use,
 	// the newer HTTP Patch style or the older read-then-write style
 	var kvs *KVSecret
-	var perr error
+	var err error
 	switch patchMethod {
 	case "rw":
-		kvs, perr = readThenWrite(ctx, kv.c, kv.mountPath, secretPath, newData)
+		kvs, err = readThenWrite(ctx, kv.c, kv.mountPath, secretPath, newData)
 	case "patch":
-		kvs, perr = mergePatch(ctx, kv.c, kv.mountPath, secretPath, newData, opts...)
+		kvs, err = mergePatch(ctx, kv.c, kv.mountPath, secretPath, newData, opts...)
 	case "":
-		kvs, perr = mergePatch(ctx, kv.c, kv.mountPath, secretPath, newData, opts...)
+		kvs, err = mergePatch(ctx, kv.c, kv.mountPath, secretPath, newData, opts...)
 	default:
 		return nil, fmt.Errorf("unsupported patch method provided; value for patch method should be string \"rw\" or \"patch\"")
 	}
-	if perr != nil {
-		return nil, fmt.Errorf("unable to perform patch: %w", perr)
+	if err != nil {
+		return nil, fmt.Errorf("unable to perform patch: %w", err)
 	}
 	if kvs == nil {
 		return nil, fmt.Errorf("no secret was written to %s", secretPath)
@@ -360,12 +359,9 @@ func (kv *KVv2) PatchMetadata(ctx context.Context, secretPath string, metadata K
 		return fmt.Errorf("unable to create map for JSON merge patch request: %w", err)
 	}
 
-	secret, err := kv.c.Logical().JSONMergePatch(ctx, pathToWriteTo, md)
+	_, err = kv.c.Logical().JSONMergePatch(ctx, pathToWriteTo, md)
 	if err != nil {
 		return fmt.Errorf("error patching metadata at %s: %w", pathToWriteTo, err)
-	}
-	if secret == nil {
-		return fmt.Errorf("%w: after patching metadata at %s", ErrSecretNotFound, pathToWriteTo)
 	}
 
 	return nil
@@ -433,12 +429,9 @@ func (kv *KVv2) Undelete(ctx context.Context, secretPath string, versions []int)
 		"versions": versions,
 	}
 
-	secret, err := kv.c.Logical().WriteWithContext(ctx, pathToUndelete, data)
+	_, err := kv.c.Logical().WriteWithContext(ctx, pathToUndelete, data)
 	if err != nil {
 		return fmt.Errorf("error undeleting secret metadata at %s: %w", pathToUndelete, err)
-	}
-	if secret == nil {
-		return fmt.Errorf("%w: after undeleting secret at %s", ErrSecretNotFound, pathToUndelete)
 	}
 
 	return nil
@@ -696,21 +689,30 @@ func mergePatch(ctx context.Context, client *Client, mountPath string, secretPat
 
 	secret, err := client.Logical().JSONMergePatch(ctx, pathToMergePatch, wrappedData)
 	if err != nil {
-		// If it's a 405, that probably means the server is running a pre-1.9
-		// Vault version that doesn't support the HTTP PATCH method.
-		// Fall back to the old way of doing it.
-		if re, ok := err.(*ResponseError); ok && re.StatusCode == 405 {
-			return readThenWrite(ctx, client, mountPath, secretPath, newData)
-		}
+		var re *ResponseError
+		if errors.As(err, &re) {
+			switch re.StatusCode {
+			// 403
+			case http.StatusForbidden:
+				return nil, fmt.Errorf("received 403 from Vault server; please ensure that token's policy has \"patch\" capability: %w", err)
 
-		if re, ok := err.(*ResponseError); ok && re.StatusCode == 403 {
-			return nil, fmt.Errorf("received 403 from Vault server; please ensure that token's policy has \"patch\" capability: %w", err)
+			// 404
+			case http.StatusNotFound:
+				return nil, fmt.Errorf("%w: performing merge patch to %s", ErrSecretNotFound, pathToMergePatch)
+
+			// 405
+			case http.StatusMethodNotAllowed:
+				// If it's a 405, that probably means the server is running a pre-1.9
+				// Vault version that doesn't support the HTTP PATCH method.
+				// Fall back to the old way of doing it.
+				return readThenWrite(ctx, client, mountPath, secretPath, newData)
+			}
 		}
 
 		return nil, fmt.Errorf("error performing merge patch to %s: %w", pathToMergePatch, err)
 	}
 	if secret == nil {
-		return nil, fmt.Errorf("%w: performing merge patch at %s", ErrSecretNotFound, pathToMergePatch)
+		return nil, fmt.Errorf("%w: performing merge patch to %s", ErrSecretNotFound, pathToMergePatch)
 	}
 
 	metadata, err := extractVersionMetadata(secret)
@@ -742,7 +744,7 @@ func readThenWrite(ctx context.Context, client *Client, mountPath string, secret
 
 	// Make sure the secret already exists
 	if existingVersion == nil || existingVersion.Data == nil {
-		return nil, fmt.Errorf("no existing secret was found at %s when doing read-then-write patch operation: %w", secretPath, err)
+		return nil, fmt.Errorf("%w: at %s as part of read-then-write patch operation", ErrSecretNotFound, secretPath)
 	}
 
 	// Verify existing secret has metadata
