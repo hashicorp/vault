@@ -13,7 +13,8 @@ import {
   DR_REPLICATION_SECONDARY,
   DR_REPLICATION_SECONDARY_DETAILS,
   EXCLUDED_REDIRECT_URLS,
-} from '../lib/route-paths';
+  REDIRECT,
+} from 'vault/lib/route-paths';
 
 export default Mixin.create({
   auth: service(),
@@ -96,10 +97,13 @@ export default Mixin.create({
     if (
       (!cluster.needsInit && this.routeName === INIT) ||
       (!cluster.sealed && this.routeName === UNSEAL) ||
-      (!cluster?.dr?.isSecondary && this.routeName === DR_REPLICATION_SECONDARY) ||
-      (isAuthed && this.routeName === AUTH)
+      (!cluster?.dr?.isSecondary && this.routeName === DR_REPLICATION_SECONDARY)
     ) {
       return CLUSTER;
+    }
+    if (isAuthed && this.routeName === AUTH) {
+      // if you're already authed and you wanna go to auth, you probably want to redirect
+      return REDIRECT;
     }
     return null;
   },
