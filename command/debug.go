@@ -1080,7 +1080,7 @@ func (c *DebugCommand) writeLogs(ctx context.Context) {
 	for {
 		select {
 		case log := <-logCh:
-			if len(log) >0 {
+			if len(log) > 0 {
 				if !strings.HasSuffix(log, "\n") {
 					log += "\n"
 				}
