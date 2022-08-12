@@ -1,6 +1,6 @@
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink @type="add" @params={{array "vault.cluster.access.oidc.scopes.create"}}>
+    <ToolbarLink @type="add" @params={{array "vault.cluster.access.oidc.scopes.create"}} data-test-oidc-scope-create>
       Create scope
     </ToolbarLink>
   </ToolbarActions>
@@ -8,12 +8,16 @@
 
 {{#if (gt this.model.length 0)}}
   {{#each this.model as |model|}}
-    <LinkedBlock class="list-item-row" @params={{array "vault.cluster.access.oidc.scopes.scope.details" model.name}}>
+    <LinkedBlock
+      class="list-item-row"
+      @params={{array "vault.cluster.access.oidc.scopes.scope.details" model.name}}
+      data-test-oidc-scope-linked-block
+    >
       <div class="level is-mobile">
         <div class="level-left">
           <div>
-            <Icon @name="file" />
-            <span class="has-text-weight-semibold has-text-black">
+            <Icon @name="file" class="has-text-grey-light" />
+            <span class="has-text-weight-semibold is-underline">
               {{model.name}}
             </span>
           </div>
@@ -28,6 +32,7 @@
                       @route="vault.cluster.access.oidc.scopes.scope.details"
                       @model={{model.name}}
                       @disabled={{not model.canRead}}
+                      data-test-oidc-scope-menu-link="details"
                     >
                       Details
                     </LinkTo>
@@ -37,6 +42,7 @@
                       @route="vault.cluster.access.oidc.scopes.scope.edit"
                       @model={{model.name}}
                       @disabled={{not model.canEdit}}
+                      data-test-oidc-scope-menu-link="edit"
                     >
                       Edit
                     </LinkTo>
@@ -50,7 +56,7 @@
     </LinkedBlock>
   {{/each}}
 {{else}}
-  <EmptyState @title="No scopes yet">
+  <EmptyState @title="No scopes yet" data-test-oidc-scope-empty-state>
     <div>
       <p>Use scope to define identity information about the authenticated user.
         <DocLink @path="/docs/concepts/oidc-provider#scopes">
@@ -58,7 +64,7 @@
         </DocLink>
       </p>
       <div class="has-top-margin-m">
-        <LinkTo @route="vault.cluster.access.oidc.scopes.create">
+        <LinkTo @route="vault.cluster.access.oidc.scopes.create" data-test-oidc-scope-create-empty-state>
           Create scope
         </LinkTo>
       </div>

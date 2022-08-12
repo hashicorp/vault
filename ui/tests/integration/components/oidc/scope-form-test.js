@@ -3,6 +3,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { SELECTORS } from 'vault/tests/helpers/oidc-config';
 
 module('Integration | Component | oidc/scope-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -33,8 +34,8 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
     `);
 
     assert.dom('[data-test-oidc-scope-title]').hasText('Create scope', 'Form title renders');
-    assert.dom('[data-test-oidc-scope-save]').hasText('Create', 'Save button has correct label');
-    await click('[data-test-oidc-scope-save]');
+    assert.dom(SELECTORS.scopeSaveButton).hasText('Create', 'Save button has correct label');
+    await click(SELECTORS.scopeSaveButton);
     assert
       .dom('[data-test-inline-error-message]')
       .hasText('Name is required.', 'Validation message is shown for name');
@@ -48,7 +49,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
 
     await fillIn('[data-test-input="name"]', 'test');
     await fillIn('[data-test-input="description"]', 'this is a test');
-    await click('[data-test-oidc-scope-save]');
+    await click(SELECTORS.scopeSaveButton);
   });
 
   test('it should update scope', async function (assert) {
@@ -77,7 +78,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
     `);
 
     assert.dom('[data-test-oidc-scope-title]').hasText('Edit scope', 'Form title renders');
-    assert.dom('[data-test-oidc-scope-save]').hasText('Update', 'Save button has correct label');
+    assert.dom(SELECTORS.scopeSaveButton).hasText('Update', 'Save button has correct label');
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
     assert.dom('[data-test-input="name"]').hasValue('test', 'Name input is populated with model value');
     assert
@@ -92,7 +93,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
       .exists('Code mirror renders');
 
     await fillIn('[data-test-input="description"]', 'this is an edit test');
-    await click('[data-test-oidc-scope-save]');
+    await click(SELECTORS.scopeSaveButton);
   });
 
   test('it should rollback attributes or unload record on cancel', async function (assert) {
@@ -111,7 +112,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
       <div id="modal-wormhole"></div>
     `);
 
-    await click('[data-test-oidc-scope-cancel]');
+    await click(SELECTORS.scopeCancelButton);
     assert.true(this.model.isDestroyed, 'New model is unloaded on cancel');
 
     this.store.pushPayload('oidc/scope', {
@@ -131,7 +132,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
   `);
 
     await fillIn('[data-test-input="description"]', 'changed description attribute');
-    await click('[data-test-oidc-scope-cancel]');
+    await click(SELECTORS.scopeCancelButton);
     assert.equal(this.model.description, 'this is a test', 'Model attributes are rolled back on cancel');
   });
 

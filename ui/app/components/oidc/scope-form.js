@@ -40,8 +40,9 @@ export default class OidcScopeFormComponent extends Component {
       const { isValid, state } = this.args.model.validate();
       this.modelValidations = isValid ? null : state;
       if (isValid) {
+        const { isNew } = this.args.model;
         yield this.args.model.save();
-        this.flashMessages.success('Successfully created a scope');
+        this.flashMessages.success(`Successfully ${isNew ? 'created a' : 'updated'} scope`);
         this.args.onSave();
       }
     } catch (error) {

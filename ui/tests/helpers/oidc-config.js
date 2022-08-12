@@ -18,6 +18,16 @@ export const SELECTORS = {
 
   // assignment route
   assignSaveButton: '[data-test-oidc-assignment-save]',
+
+  // scope routes
+  scopeSaveButton: '[data-test-oidc-scope-save]',
+  scopeCancelButton: '[data-test-oidc-scope-cancel]',
+  scopeDeleteButton: '[data-test-oidc-scope-delete] button',
+  scopeEditButton: '[data-test-oidc-scope-edit]',
+  scopeDetailsTab: '[data-test-oidc-scope-details]',
+  scopeEmptyState: '[data-test-oidc-scope-empty-state]',
+  scopeCreateButtonEmptyState: '[data-test-oidc-scope-create-empty-state]',
+  scopeCreateButton: '[data-test-oidc-scope-create]',
 };
 
 export function overrideMirageResponse(httpStatus, data) {
