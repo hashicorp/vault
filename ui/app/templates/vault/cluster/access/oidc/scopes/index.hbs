@@ -8,7 +8,11 @@
 
 {{#if (gt this.model.length 0)}}
   {{#each this.model as |model|}}
-    <LinkedBlock class="list-item-row" @params={{array "vault.cluster.access.oidc.scopes.scope.details" model.name}} data-test-oidc-scope-linked-block>
+    <LinkedBlock
+      class="list-item-row"
+      @params={{array "vault.cluster.access.oidc.scopes.scope.details" model.name}}
+      data-test-oidc-scope-linked-block
+    >
       <div class="level is-mobile">
         <div class="level-left">
           <div>
@@ -37,7 +41,7 @@
                     <LinkTo
                       @route="vault.cluster.access.oidc.scopes.scope.edit"
                       @model={{model.name}}
-                      @disabled={{not model.canEdit}}                      
+                      @disabled={{not model.canEdit}}
                       data-test-oidc-scope-menu-link="edit"
                     >
                       Edit

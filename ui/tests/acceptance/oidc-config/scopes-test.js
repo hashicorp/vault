@@ -1,5 +1,5 @@
 import { module, test } from 'qunit';
-import { visit, currentURL, click, fillIn, findAll, pauseTest, currentRouteName } from '@ember/test-helpers';
+import { visit, currentURL, click, fillIn, findAll, currentRouteName } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
@@ -38,10 +38,12 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
     assert.equal(currentURL(), '/vault/access/oidc/scopes');
 
     // check empty state
-    assert.dom(SELECTORS.scopeEmptyState).hasText(
-      `No scopes yet Use scope to define identity information about the authenticated user. Learn more. Create scope`,
-      'renders empty state no scopes are configured'
-    );
+    assert
+      .dom(SELECTORS.scopeEmptyState)
+      .hasText(
+        `No scopes yet Use scope to define identity information about the authenticated user. Learn more. Create scope`,
+        'renders empty state no scopes are configured'
+      );
   });
 
   test('it creates a scope from empty state create scope button', async function (assert) {
@@ -49,7 +51,11 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
     await visit(SCOPES_URL);
     // create a new scope
     await click(SELECTORS.scopeCreateButtonEmptyState);
-    assert.equal(currentRouteName(), 'vault.cluster.access.oidc.scopes.create', 'navigates to create form in empty state');
+    assert.equal(
+      currentRouteName(),
+      'vault.cluster.access.oidc.scopes.create',
+      'navigates to create form in empty state'
+    );
     await fillIn('[data-test-input="name"]', 'test-scope');
     await click(SELECTORS.scopeSaveButton);
     assert.equal(
@@ -84,11 +90,9 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
       'vault.cluster.access.oidc.scopes.scope.details',
       'navigates to detail view after save'
     );
-      
+
     // assert values for new scope is correct
-    assert
-      .dom('[data-test-value-div="Name"]')
-      .hasText('test-scope', 'has correct created name');
+    assert.dom('[data-test-value-div="Name"]').hasText('test-scope', 'has correct created name');
     assert
       .dom('[data-test-value-div="Description"]')
       .hasText('this is a test', 'has correct created description');
@@ -113,8 +117,8 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
       'navigates back to details on update'
     );
     assert
-    .dom('[data-test-value-div="Description"]')
-    .hasText('this is an edit test', 'has correct edited description');
+      .dom('[data-test-value-div="Description"]')
+      .hasText('this is an edit test', 'has correct edited description');
 
     // delete scope
     await click(SELECTORS.scopeDeleteButton);
@@ -148,11 +152,11 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
       };
     });
     this.server.get('/identity/oidc/scope/test-scope', () => {
-      return {      
+      return {
         request_id: 'test-id',
         data: {
-          description:'this is a test',
-          template:'{ test }',
+          description: 'this is a test',
+          template: '{ test }',
         },
       };
     });
@@ -162,9 +166,7 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
       'vault.cluster.access.oidc.scopes.index',
       'redirects to scopes index route when scopes exist'
     );
-    assert
-      .dom('[data-test-oidc-scope-linked-block]')
-      .hasText('test-scope', 'displays linked block for test');
+    assert.dom('[data-test-oidc-scope-linked-block]').hasText('test-scope', 'displays linked block for test');
 
     // navigates to/from create, edit, detail views from list view
     await click(SELECTORS.scopeCreateButton);
@@ -209,17 +211,14 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
     assert.dom(SELECTORS.scopeEditButton).exists('toolbar renders edit button');
     assert.equal(findAll('[data-test-component="info-table-row"]').length, 2, 'renders all info rows');
     // check JSON code renders
-    assert
-    .dom('[data-test-component="code-mirror-modifier"]')
-    .containsText('test', 'Code mirror renders');
+    assert.dom('[data-test-component="code-mirror-modifier"]').containsText('test', 'Code mirror renders');
   });
 
   test('it throws error when trying to delete when scope is currently being associated with any provider', async function (assert) {
     assert.expect(5);
-
     this.server.get('/identity/oidc/scope', () => {
       return {
-        request_id: '8b89adf5-d086-5fe5-5876-59b0aaf5c0c3',
+        request_id: '8b89adf5-d086-5fe5-5876-59b0aaf5c0c2',
         lease_id: '',
         renewable: false,
         lease_duration: 0,
@@ -232,18 +231,17 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
       };
     });
     this.server.get('/identity/oidc/scope/test-scope', () => {
-      return {      
+      return {
         request_id: 'test-scope-id',
         data: {
-          description:'this is a test',
-          template:'{ test }',
+          description: 'this is a test',
+          template: '{ test }',
         },
       };
     });
-
     this.server.get('/identity/oidc/provider', () => {
       return {
-        request_id: '8b89adf5-d086-5fe5-5876-59b0aaf5c0c2',
+        request_id: 'cb878e41-3708-0a97-84b4-c4b803f4376f',
         lease_id: '',
         renewable: false,
         lease_duration: 0,
@@ -256,31 +254,38 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
       };
     });
     this.server.get('/identity/oidc/provider/test-provider', () => {
-      return {  
+      return {
         request_id: 'test-provider-id',
         data: {
-          allowed_client_ids:['*'],
-          issuer:'',
-          scopes_supported:['test-scope'],
+          allowed_client_ids: ['*'],
+          scopes_supported: ['test-scope'],
         },
       };
     });
+    // throw error when trying to delete test-scope since it is associated to test-provider
+    this.server.delete(
+      '/identity/oidc/scope/test-scope',
+      () => ({
+        errors: [
+          'unable to delete scope "test-scope" because it is currently referenced by these providers: test-provider',
+        ],
+      }),
+      400
+    );
     await visit(SCOPES_URL);
     await click('[data-test-oidc-scope-linked-block]');
     assert.dom('[data-test-oidc-scope-header]').hasText('test-scope', 'renders scope name');
     assert.dom(SELECTORS.scopeDetailsTab).hasClass('active', 'details tab is active');
+
     // try to delete scope
-    await pauseTest()
     await click(SELECTORS.scopeDeleteButton);
-    // assert.equal(
-    //   flashMessage.latestMessage,
-    //   'error',
-    //   'renders error flash upon scope deletion'
-    // );
+    await click(SELECTORS.confirmDeleteButton);
+    assert.equal(
+      flashMessage.latestMessage,
+      'unable to delete scope "test-scope" because it is currently referenced by these providers: test-provider',
+      'renders error flash upon scope deletion'
+    );
     assert.equal(findAll('[data-test-component="info-table-row"]').length, 2, 'renders all info rows');
-    assert
-    .dom('[data-test-component="code-mirror-modifier"]')
-    .containsText('test', 'Code mirror renders');
+    assert.dom('[data-test-component="code-mirror-modifier"]').containsText('test', 'Code mirror renders');
   });
- 
 });
