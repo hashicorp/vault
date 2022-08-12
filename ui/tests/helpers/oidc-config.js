@@ -41,7 +41,19 @@ export function overrideMirageResponse(httpStatus, data) {
   if (httpStatus === 204) {
     return new Response(204, { 'Content-Type': 'application/json' });
   }
-  return new Response(200, { 'Content-Type': 'application/json' }, JSON.stringify(data));
+  if (httpStatus === 200) {
+    return new Response(200, { 'Content-Type': 'application/json' }, JSON.stringify(data));
+  }
+  return {
+    request_id: crypto.randomUUID(),
+    lease_id: '',
+    renewable: false,
+    lease_duration: 0,
+    wrap_info: null,
+    warnings: null,
+    auth: null,
+    data: { ...data },
+  };
 }
 
 export function overrideCapabilities(requestPath, capabilitiesArray) {
@@ -74,4 +86,32 @@ export async function clearRecord(store, modelType, id) {
 
 const deleteModelRecord = async (model) => {
   await model.destroyRecord();
+};
+
+// MOCK RESPONSES:
+
+export const CLIENT_LIST_RESPONSE = {
+  keys: ['some-app'],
+  key_info: {
+    'some-app': {
+      assignments: ['allow_all'],
+      client_id: 'whaT7KB0C3iBH1l3rXhd5HPf0n6vXU0s',
+      client_secret: 'hvo_secret_nkJSTu2NVYqylXwFbFijsTxJHg4Ic4gqSJw7uOZ4FbSXcObngDkKoVsvyndrf2O8',
+      client_type: 'confidential',
+      id_token_ttl: 0,
+      key: 'default',
+      redirect_uris: [],
+    },
+  },
+};
+
+export const CLIENT_DATA_RESPONSE = {
+  access_token_ttl: 0,
+  assignments: ['allow_all'],
+  client_id: 'whaT7KB0C3iBH1l3rXhd5HPf0n6vXU0s',
+  client_secret: 'hvo_secret_nkJSTu2NVYqylXwFbFijsTxJHg4Ic4gqSJw7uOZ4FbSXcObngDkKoVsvyndrf2O8',
+  client_type: 'confidential',
+  id_token_ttl: 0,
+  key: 'default',
+  redirect_uris: [],
 };

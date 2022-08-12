@@ -11,12 +11,12 @@ module('Unit | Adapter | oidc/client', function (hooks) {
     this.store = this.owner.lookup('service:store');
     this.modelName = 'oidc/client';
     this.data = {
-      name: 'foo-client',
+      name: 'client-1',
       key: 'test-key',
       access_token_ttl: '30m',
       id_token_ttl: '1h',
     };
-    this.path = '/identity/oidc/client/foo-client';
+    this.path = '/identity/oidc/client/client-1';
   });
 
   testHelper(test);
