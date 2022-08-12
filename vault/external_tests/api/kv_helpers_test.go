@@ -142,12 +142,22 @@ func TestKVHelpers(t *testing.T) {
 	})
 
 	t.Run("kv v2: get secret that does not exist", func(t *testing.T) {
+		teardownTest, _ := setupKVv2Test(t)
+		defer teardownTest(t)
+
 		_, err = client.KVv2(v1MountPath).Get(context.Background(), "does/not/exist")
-		if err == nil {
-			t.Fatalf("KVv2.Get is expected to return an error for a missing secret")
-		}
 		if !errors.Is(err, api.ErrSecretNotFound) {
 			t.Fatalf("KVv2.Get is expected to return an api.ErrSecretNotFound wrapped error for a missing secret; got %v", err)
+		}
+
+		_, err = client.KVv2(v1MountPath).GetMetadata(context.Background(), "does/not/exist")
+		if !errors.Is(err, api.ErrSecretNotFound) {
+			t.Fatalf("KVv2.GetMetadata is expected to return an api.ErrSecretNotFound wrapped error for a missing secret; got %v", err)
+		}
+
+		_, err = client.KVv2(v1MountPath).GetVersion(context.Background(), secretPath, 99)
+		if !errors.Is(err, api.ErrSecretNotFound) {
+			t.Fatalf("KVv2.GetVersion is expected to return an api.ErrSecretNotFound wrapped error for a missing secret version; got %v", err)
 		}
 	})
 
