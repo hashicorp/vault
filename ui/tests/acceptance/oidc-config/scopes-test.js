@@ -214,7 +214,7 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
     .containsText('test', 'Code mirror renders');
   });
 
-  test('it hides delete when scope is currently being associated with any provider', async function (assert) {
+  test('it throws error when trying to delete when scope is currently being associated with any provider', async function (assert) {
     assert.expect(5);
 
     this.server.get('/identity/oidc/scope', () => {
@@ -233,30 +233,50 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
     });
     this.server.get('/identity/oidc/scope/test-scope', () => {
       return {      
-        request_id: 'test-id',
+        request_id: 'test-scope-id',
         data: {
           description:'this is a test',
           template:'{ test }',
         },
       };
     });
-    this.server.get('/identity/oidc/provider/test-provider', () => {
-      return {      
-        request_id: 'test-id',
+
+    this.server.get('/identity/oidc/provider', () => {
+      return {
+        request_id: '8b89adf5-d086-5fe5-5876-59b0aaf5c0c2',
+        lease_id: '',
+        renewable: false,
+        lease_duration: 0,
         data: {
-          name: 'test-provider',
-          allowed_client_ids: ['*'],
-          issuer: ISSUER_URL,
-          scopes_supported: ['test-scope'],
+          keys: ['test-provider'],
+        },
+        wrap_info: null,
+        warnings: null,
+        auth: null,
+      };
+    });
+    this.server.get('/identity/oidc/provider/test-provider', () => {
+      return {  
+        request_id: 'test-provider-id',
+        data: {
+          allowed_client_ids:['*'],
+          issuer:'',
+          scopes_supported:['test-scope'],
         },
       };
     });
-
     await visit(SCOPES_URL);
     await click('[data-test-oidc-scope-linked-block]');
     assert.dom('[data-test-oidc-scope-header]').hasText('test-scope', 'renders scope name');
     assert.dom(SELECTORS.scopeDetailsTab).hasClass('active', 'details tab is active');
-    //assert.dom(SELECTORS.scopeDeleteButton).doesNotExist('delete option is hidden');
+    // try to delete scope
+    await pauseTest()
+    await click(SELECTORS.scopeDeleteButton);
+    // assert.equal(
+    //   flashMessage.latestMessage,
+    //   'error',
+    //   'renders error flash upon scope deletion'
+    // );
     assert.equal(findAll('[data-test-component="info-table-row"]').length, 2, 'renders all info rows');
     assert
     .dom('[data-test-component="code-mirror-modifier"]')
