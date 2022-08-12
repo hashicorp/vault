@@ -450,7 +450,7 @@ func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendCo
 			}
 
 			walID, err := framework.PutWAL(ctx, conf.StorageView, staticWALKey, &setCredentialsWAL{RoleName: "vault-readonlytest"})
-			if walID != "" {
+			if walID != "" && err == nil {
 				defer framework.DeleteWAL(ctx, conf.StorageView, walID)
 			}
 			switch {
