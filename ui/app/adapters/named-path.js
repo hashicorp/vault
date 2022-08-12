@@ -34,8 +34,18 @@ export default class NamedPathAdapter extends ApplicationAdapter {
     });
   }
   // GET request with list=true as query param
-  query(store, type, query) {
+  async query(store, type, query) {
     const url = this.urlForQuery(query, type.modelName);
-    return this.ajax(url, 'GET', { data: { list: true } });
+    const { clientIds } = query;
+    const response = await this.ajax(url, 'GET', { data: { list: true } });
+
+    // filter LIST response for queried client ids
+    if (clientIds && !clientIds.includes('*')) {
+      let { keys, key_info } = response.data;
+      let filteredKeys = keys.filter((k) => clientIds.includes(k));
+      let filteredKeyInfo = Object.fromEntries(filteredKeys.map((key) => [key, key_info[key]]));
+      return { ...response, data: { keys: filteredKeys, key_info: filteredKeyInfo } };
+    }
+    return response;
   }
 }
