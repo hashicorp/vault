@@ -151,6 +151,7 @@ var jsonConfigDefault = []byte(`
   "groupfilter": "(|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))",
   "groupattr": "cn",
   "upndomain": "",
+  "upnattribute": "userPrincipalName",
   "userattr": "cn",
   "userfilter": "({{.UserAttr}}={{.Username}})",
   "certificate": "",
