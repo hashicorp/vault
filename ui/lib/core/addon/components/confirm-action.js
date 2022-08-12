@@ -1,5 +1,6 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
+import { assert } from '@ember/debug';
 
 /**
  * @module ConfirmAction
@@ -76,7 +77,7 @@ export default class ConfirmActionComponent extends Component {
     const confirmAction = this.args.onConfirmAction;
 
     if (typeof confirmAction !== 'function') {
-      throw new Error('confirm-action components expects `onConfirmAction` attr to be a function');
+      assert('confirm-action components expects `onConfirmAction` attr to be a function');
     } else {
       confirmAction();
       // toggle
