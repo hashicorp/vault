@@ -154,6 +154,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 						b.tidyStatusIncCertStoreCount()
 					}
 				}
+				metrics.SetGauge([]string{"secrets", "pki", "tidy", "cert_store_total_entries_remaining"}, float32(uint(serialCount)-b.tidyStatus.certStoreDeletedCount))
 			}
 
 			if tidyRevokedCerts || tidyRevocationList {
@@ -223,7 +224,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 						b.tidyStatusIncRevokedCertCount()
 					}
 				}
-
+				metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_total_entries_remaining"}, float32(uint(revokedSerialsCount)-b.tidyStatus.revokedCertDeletedCount))
 				if rebuildCRL {
 					if err := b.crlBuilder.rebuild(ctx, b, req, false); err != nil {
 						return err
@@ -301,7 +302,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 		resp.Data["time_finished"] = b.tidyStatus.timeFinished
 		resp.Data["error"] = b.tidyStatus.err.Error()
 		// Don't clear the message so that it serves as a hint about when
-		// the error ocurred.
+		// the error occurred.
 	}
 
 	return resp, nil
