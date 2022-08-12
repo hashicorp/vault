@@ -230,7 +230,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 			return nil, fmt.Errorf("error creating revocation entry")
 		}
 
-		b.certsCountedLock.RLock() // Moving certs from /certs to /revoke during the initial count could result in double-counting
+		b.certsCountedLock.RLock() // Writing to /revoke during the initial count could result in a miscount
 		defer b.certsCountedLock.RUnlock()
 		err = req.Storage.Put(ctx, revEntry)
 		if err != nil {
