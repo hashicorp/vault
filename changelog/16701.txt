@@ -1,0 +1,3 @@
+```release-note:bug
+agent: set bool flag values correctly from environment
+```
