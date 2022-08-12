@@ -10,7 +10,13 @@ import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
 import fm from 'vault/tests/pages/components/flash-message';
-import { clearRecord, overrideCapabilities } from '../../helpers/oidc-config';
+import {
+  clearRecord,
+  overrideCapabilities,
+  overrideMirageResponse,
+  CLIENT_LIST_RESPONSE,
+  CLIENT_DATA_RESPONSE,
+} from '../../helpers/oidc-config';
 const searchSelect = create(ss);
 const flashMessage = create(fm);
 // in congruency with backend verbiage 'applications' are referred to as 'clients
@@ -173,35 +179,10 @@ module('Acceptance | oidc-config/clients', function (hooks) {
 
   test('it renders client list when clients exist', async function (assert) {
     assert.expect(7);
-    this.server.get('/identity/oidc/client', () => {
-      return {
-        request_id: '8b89adf5-d086-5fe5-5876-59b0aaf5c0c3',
-        lease_id: '',
-        renewable: false,
-        lease_duration: 0,
-        data: {
-          keys: ['some-app'],
-        },
-        wrap_info: null,
-        warnings: null,
-        auth: null,
-      };
-    });
-    this.server.get('/identity/oidc/client/some-app', () => {
-      return {
-        request_id: 'some-app-id',
-        data: {
-          access_token_ttl: 0,
-          assignments: ['allow_all'],
-          client_id: 'whaT7KB0C3iBH1l3rXhd5HPf0n6vXU0s',
-          client_secret: 'hvo_secret_nkJSTu2NVYqylXwFbFijsTxJHg4Ic4gqSJw7uOZ4FbSXcObngDkKoVsvyndrf2O8',
-          client_type: 'confidential',
-          id_token_ttl: 0,
-          key: 'default',
-          redirect_uris: [],
-        },
-      };
-    });
+    this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
+    this.server.get('/identity/oidc/client/some-app', () =>
+      overrideMirageResponse(null, CLIENT_DATA_RESPONSE)
+    );
     await visit(OIDC_BASE_URL);
     assert.equal(
       currentRouteName(),
@@ -253,35 +234,10 @@ module('Acceptance | oidc-config/clients', function (hooks) {
 
   test('it renders client details and providers', async function (assert) {
     assert.expect(10);
-    this.server.get('/identity/oidc/client', () => {
-      return {
-        request_id: '8b89adf5-d086-5fe5-5876-59b0aaf5c0c3',
-        lease_id: '',
-        renewable: false,
-        lease_duration: 0,
-        data: {
-          keys: ['some-app'],
-        },
-        wrap_info: null,
-        warnings: null,
-        auth: null,
-      };
-    });
-    this.server.get('/identity/oidc/client/some-app', () => {
-      return {
-        request_id: 'some-app-id',
-        data: {
-          access_token_ttl: 86400,
-          assignments: ['allow_all'],
-          client_id: 'whaT7KB0C3iBH1l3rXhd5HPf0n6vXU0s',
-          client_secret: 'hvo_secret_nkJSTu2NVYqylXwFbFijsTxJHg4Ic4gqSJw7uOZ4FbSXcObngDkKoVsvyndrf2O8',
-          client_type: 'confidential',
-          id_token_ttl: 86400,
-          key: 'default',
-          redirect_uris: [],
-        },
-      };
-    });
+    this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
+    this.server.get('/identity/oidc/client/some-app', () =>
+      overrideMirageResponse(null, CLIENT_DATA_RESPONSE)
+    );
     await visit(OIDC_BASE_URL);
     await click('[data-test-oidc-client-linked-block]');
     assert.dom('[data-test-oidc-client-header]').hasText('some-app', 'renders application name as title');
@@ -304,35 +260,10 @@ module('Acceptance | oidc-config/clients', function (hooks) {
 
   test('it hides delete and edit when no permission', async function (assert) {
     assert.expect(5);
-    this.server.get('/identity/oidc/client', () => {
-      return {
-        request_id: '8b89adf5-d086-5fe5-5876-59b0aaf5c0c3',
-        lease_id: '',
-        renewable: false,
-        lease_duration: 0,
-        data: {
-          keys: ['some-app'],
-        },
-        wrap_info: null,
-        warnings: null,
-        auth: null,
-      };
-    });
-    this.server.get('/identity/oidc/client/some-app', () => {
-      return {
-        request_id: 'some-app-id',
-        data: {
-          access_token_ttl: 86400,
-          assignments: ['allow_all'],
-          client_id: 'whaT7KB0C3iBH1l3rXhd5HPf0n6vXU0s',
-          client_secret: 'hvo_secret_nkJSTu2NVYqylXwFbFijsTxJHg4Ic4gqSJw7uOZ4FbSXcObngDkKoVsvyndrf2O8',
-          client_type: 'confidential',
-          id_token_ttl: 86400,
-          key: 'default',
-          redirect_uris: [],
-        },
-      };
-    });
+    this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
+    this.server.get('/identity/oidc/client/some-app', () =>
+      overrideMirageResponse(null, CLIENT_DATA_RESPONSE)
+    );
     this.server.post('/sys/capabilities-self', () =>
       overrideCapabilities(OIDC_BASE_URL + '/client/some-app', ['read'])
     );

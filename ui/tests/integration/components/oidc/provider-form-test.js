@@ -6,6 +6,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
 import { overrideMirageResponse } from 'vault/tests/helpers/oidc-config';
 import parseURL from 'core/utils/parse-url';
+import { CLIENT_LIST_RESPONSE } from '../../../helpers/oidc-config';
 
 const ISSUER_URL = 'http://127.0.0.1:8200/v1/identity/oidc/provider/test-provider';
 
@@ -37,20 +38,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
         auth: null,
       };
     });
-    server.get('/identity/oidc/client', () => {
-      return {
-        request_id: 'client-list-id',
-        lease_id: '',
-        renewable: false,
-        lease_duration: 0,
-        data: {
-          keys: ['some-app'],
-        },
-        wrap_info: null,
-        warnings: null,
-        auth: null,
-      };
-    });
+    this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
   });
 
   test('it should save new provider', async function (assert) {
