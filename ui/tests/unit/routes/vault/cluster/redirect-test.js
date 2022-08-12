@@ -6,28 +6,24 @@ module('Unit | Route | vault/cluster/redirect', function (hooks) {
   setupTest(hooks);
 
   hooks.beforeEach(function () {
-    // this.owner.register('service:router', routerService);
     this.router = this.owner.lookup('service:router');
-    this.router.reopen({
-      transitionTo: sinon.stub().returns({
-        followRedirects: function () {
-          return {
-            then: function (callback) {
-              callback();
-            },
-          };
-        },
-      }),
-      urlFor: sinon.stub().returns('/ui/vault/foo'),
+    this.originalTransition = this.router.transitionTo;
+    this.router.transitionTo = sinon.stub().returns({
+      followRedirects: function () {
+        return {
+          then: function (callback) {
+            callback();
+          },
+        };
+      },
     });
-    // this.routerStub = this.owner.lookup('service:router');
   });
 
   hooks.afterEach(function () {
-    // this.owner.unregister('service:router');
+    this.router.transitionTo = this.originalTransition;
   });
 
-  test('it calls ', function (assert) {
+  test('it calls route', function (assert) {
     let route = this.owner.lookup('route:vault/cluster/redirect');
     assert.ok(route);
   });
