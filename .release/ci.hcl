@@ -254,6 +254,8 @@ event "promote-production-packaging" {
   }
 }
 
+# The post-publish-website event should not be merged into the enterprise repo.
+# It is for OSS use only. 
 event "post-publish-website" {
   depends = ["promote-production-packaging"]
   action "post-publish-website" {
