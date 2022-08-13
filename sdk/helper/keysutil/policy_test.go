@@ -702,6 +702,26 @@ func generateTestKeys() (map[KeyType][]byte, error) {
 	}
 	keyMap[KeyType_RSA2048] = rsaKeyBytes
 
+	rsaKey, err = rsa.GenerateKey(rand.Reader, 3072)
+	if err != nil {
+		return nil, err
+	}
+	rsaKeyBytes, err = x509.MarshalPKCS8PrivateKey(rsaKey)
+	if err != nil {
+		return nil, err
+	}
+	keyMap[KeyType_RSA3072] = rsaKeyBytes
+
+	rsaKey, err = rsa.GenerateKey(rand.Reader, 4096)
+	if err != nil {
+		return nil, err
+	}
+	rsaKeyBytes, err = x509.MarshalPKCS8PrivateKey(rsaKey)
+	if err != nil {
+		return nil, err
+	}
+	keyMap[KeyType_RSA4096] = rsaKeyBytes
+
 	ecdsaKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, err
@@ -798,35 +818,45 @@ func autoVerify(depth int, t *testing.T, p *Policy, input []byte, sig *SigningRe
 
 func Test_RSA_PSS(t *testing.T) {
 	t.Log("Testing RSA PSS")
+
 	var userError errutil.UserError
 	ctx := context.Background()
-	lm, _ := NewLockManager(true, 0)
 	storage := &logical.InmemStorage{}
+	// https://crypto.stackexchange.com/a/1222
 	input := []byte("the ancients say the longer the salt, the more provable the security")
-	keyTypes := map[KeyType]int{KeyType_RSA2048: 2048, KeyType_RSA3072: 3072, KeyType_RSA4096: 4096}
 	marshalingType := MarshalingTypeASN1
 	sigAlgorithm := "pss"
-	minSaltLength := -1
+
+	rsaKeyTypes := []KeyType{KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096}
+	testKeys, err := generateTestKeys()
+	if err != nil {
+		t.Fatalf("error generating test keys: %s", err)
+	}
+
 	tabs := make(map[int]string)
 	for i := 1; i <= 5; i++ {
 		tabs[i] = strings.Repeat("\t", i)
 	}
 
 	// 1. For each standard RSA key size 2048, 3072, and 4096...
-	for keyType, bitLen := range keyTypes {
-		t.Log("Key size: ", keyType)
-		p, _, err := lm.GetPolicy(ctx, PolicyRequest{
-			Upsert:  true,
-			Storage: storage,
-			KeyType: keyType,
-			Name:    fmt.Sprint("rsa-", bitLen), // NOTE: crucial to create a new key per key size!
-		}, rand.Reader)
+	for _, rsaKeyType := range rsaKeyTypes {
+		t.Log("Key size: ", rsaKeyType)
+		p := &Policy{
+			Name: fmt.Sprint(rsaKeyType), // NOTE: crucial to create a new key per key size
+			Type: rsaKeyType,
+		}
+		minSaltLength := p.minRSAPSSSaltLength()
+
+		rsaKeyBytes := testKeys[rsaKeyType]
+		err := p.Import(ctx, storage, rsaKeyBytes, rand.Reader)
 		if err != nil {
-			t.Fatal(tabs[1], "❌ Failed to create key:", err)
+			t.Fatal(tabs[1], "❌ Failed to import key:", err)
 		}
-		if p == nil {
-			t.Fatal(tabs[1], "❌ nil policy")
+		rsaKeyAny, err := x509.ParsePKCS8PrivateKey(rsaKeyBytes)
+		if err != nil {
+			t.Fatalf("error parsing test keys: %s", err)
 		}
+		rsaKey := rsaKeyAny.(*rsa.PrivateKey)
 
 		// 1.1. For each hash algorithm...
 		for hashAlgorithm, hashType := range HashTypeMap {
@@ -836,9 +866,9 @@ func Test_RSA_PSS(t *testing.T) {
 				Marshaling:    marshalingType,
 				SigAlgorithm:  sigAlgorithm,
 			}
-			hash := HashFuncMap[hashType]()
-			// https://cs.opensource.google/go/go/+/refs/tags/go1.19:src/crypto/rsa/pss.go;l=288
-			maxSaltLength := (bitLen-1+7)/8 - 2 - hash.Size()
+			cryptoHash := CryptoHashMap[hashType]
+			maxSaltLength := p.maxRSAPSSSaltLength(rsaKey, cryptoHash)
+			hash := cryptoHash.New()
 			hash.Write(input)
 			input = hash.Sum(nil)
 
@@ -858,7 +888,7 @@ func Test_RSA_PSS(t *testing.T) {
 
 			// 1.1.1.3. Try to verify this automatic signature using *incorrect, given* salt lengths.
 			t.Log(tabs[3], "Test incorrect salt lengths")
-			incorrectSaltLengths := []int{hash.Size(), maxSaltLength - 1}
+			incorrectSaltLengths := []int{minSaltLength, maxSaltLength - 1}
 			for _, saltLength := range incorrectSaltLengths {
 				t.Log(tabs[4], "Salt length:", saltLength)
 				saltedOptions := saltOptions(unsaltedOptions, saltLength)
@@ -880,19 +910,14 @@ func Test_RSA_PSS(t *testing.T) {
 				t.Log(tabs[4], "Try to make a manual signature")
 				_, err := p.SignWithOptions(0, nil, input, &saltedOptions)
 				if !errors.As(err, &userError) {
-					// https://cs.opensource.google/go/go/+/refs/tags/go1.19:src/crypto/rsa/pss.go;l=52
-					if err.Error() != "crypto/rsa: key size too small for PSS signature" {
-						t.Fatal(tabs[5], "❌ Failed to reject invalid salt length:", err)
-					}
+					t.Fatal(tabs[5], "❌ Failed to reject invalid salt length:", err)
 				}
 
 				// 1.1.2.2. Fail to verify.
 				t.Log(tabs[4], "Try to verify an automatic signature using an invalid salt length")
-				verified, err := p.VerifySignatureWithOptions(nil, input, sig.Signature, &saltedOptions)
+				_, err = p.VerifySignatureWithOptions(nil, input, sig.Signature, &saltedOptions)
 				if !errors.As(err, &userError) {
-					if verified {
-						t.Fatal(tabs[5], "❌ Failed to reject invalid salt length:", err)
-					}
+					t.Fatal(tabs[5], "❌ Failed to reject invalid salt length:", err)
 				}
 			}
 

@@ -1041,6 +1041,20 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 	})
 }
 
+func (p *Policy) minRSAPSSSaltLength() int {
+	// https://cs.opensource.google/go/go/+/refs/tags/go1.19:src/crypto/rsa/pss.go;l=247
+	return rsa.PSSSaltLengthEqualsHash
+}
+
+func (p *Policy) maxRSAPSSSaltLength(priv *rsa.PrivateKey, hash crypto.Hash) int {
+	// https://cs.opensource.google/go/go/+/refs/tags/go1.19:src/crypto/rsa/pss.go;l=288
+	return (priv.N.BitLen()-1+7)/8 - 2 - hash.Size()
+}
+
+func (p *Policy) validRSAPSSSaltLength(priv *rsa.PrivateKey, hash crypto.Hash, saltLength int) bool {
+	return p.minRSAPSSSaltLength() <= saltLength && saltLength <= p.maxRSAPSSSaltLength(priv, hash)
+}
+
 func (p *Policy) SignWithOptions(ver int, context, input []byte, options *SigningOptions) (*SigningResult, error) {
 	if !p.Type.SigningSupported() {
 		return nil, fmt.Errorf("message signing not supported for key type %v", p.Type)
@@ -1160,27 +1174,8 @@ func (p *Policy) SignWithOptions(ver int, context, input []byte, options *Signin
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		key := keyParams.RSAKey
 
-		var algo crypto.Hash
-		switch hashAlgorithm {
-		case HashTypeSHA1:
-			algo = crypto.SHA1
-		case HashTypeSHA2224:
-			algo = crypto.SHA224
-		case HashTypeSHA2256:
-			algo = crypto.SHA256
-		case HashTypeSHA2384:
-			algo = crypto.SHA384
-		case HashTypeSHA2512:
-			algo = crypto.SHA512
-		case HashTypeSHA3224:
-			algo = crypto.SHA3_224
-		case HashTypeSHA3256:
-			algo = crypto.SHA3_256
-		case HashTypeSHA3384:
-			algo = crypto.SHA3_384
-		case HashTypeSHA3512:
-			algo = crypto.SHA3_512
-		default:
+		algo, ok := CryptoHashMap[hashAlgorithm]
+		if !ok {
 			return nil, errutil.InternalError{Err: "unsupported hash algorithm"}
 		}
 
@@ -1190,9 +1185,7 @@ func (p *Policy) SignWithOptions(ver int, context, input []byte, options *Signin
 
 		switch sigAlgorithm {
 		case "pss":
-			// At the time of writing, this constant has the lowest sentinel value:
-			// https://cs.opensource.google/go/go/+/refs/tags/go1.19:src/crypto/rsa/pss.go;l=247
-			if saltLength < rsa.PSSSaltLengthEqualsHash {
+			if !p.validRSAPSSSaltLength(key, algo, saltLength) {
 				return nil, errutil.UserError{Err: fmt.Sprintf("requested salt length %d is invalid", saltLength)}
 			}
 			sig, err = rsa.SignPSS(rand.Reader, key, algo, input, &rsa.PSSOptions{SaltLength: saltLength})
@@ -1358,27 +1351,8 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 
 		key := keyEntry.RSAKey
 
-		var algo crypto.Hash
-		switch hashAlgorithm {
-		case HashTypeSHA1:
-			algo = crypto.SHA1
-		case HashTypeSHA2224:
-			algo = crypto.SHA224
-		case HashTypeSHA2256:
-			algo = crypto.SHA256
-		case HashTypeSHA2384:
-			algo = crypto.SHA384
-		case HashTypeSHA2512:
-			algo = crypto.SHA512
-		case HashTypeSHA3224:
-			algo = crypto.SHA3_224
-		case HashTypeSHA3256:
-			algo = crypto.SHA3_256
-		case HashTypeSHA3384:
-			algo = crypto.SHA3_384
-		case HashTypeSHA3512:
-			algo = crypto.SHA3_512
-		default:
+		algo, ok := CryptoHashMap[hashAlgorithm]
+		if !ok {
 			return false, errutil.InternalError{Err: "unsupported hash algorithm"}
 		}
 
@@ -1388,9 +1362,7 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 
 		switch sigAlgorithm {
 		case "pss":
-			// At the time of writing, this constant has the lowest sentinel value:
-			// https://cs.opensource.google/go/go/+/refs/tags/go1.19:src/crypto/rsa/pss.go;l=247
-			if saltLength < rsa.PSSSaltLengthEqualsHash {
+			if !p.validRSAPSSSaltLength(key, algo, saltLength) {
 				return false, errutil.UserError{Err: fmt.Sprintf("requested salt length %d is invalid", saltLength)}
 			}
 			err = rsa.VerifyPSS(&key.PublicKey, algo, input, sigBytes, &rsa.PSSOptions{SaltLength: saltLength})
