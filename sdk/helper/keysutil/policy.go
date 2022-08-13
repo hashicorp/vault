@@ -1355,7 +1355,14 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 			return false, errutil.InternalError{Err: fmt.Sprintf("unsupported rsa signature algorithm %s", sigAlgorithm)}
 		}
 
-		return err == nil, nil
+		if err != nil {
+			// Don't send back verification errors to caller, only misuse errors.
+			if errors.Is(err, rsa.ErrVerification) {
+				return false, nil
+			}
+			return false, errutil.InternalError{Err: err.Error()}
+		}
+		return true, nil
 
 	default:
 		return false, errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
