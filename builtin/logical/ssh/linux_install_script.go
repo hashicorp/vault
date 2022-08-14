@@ -4,7 +4,7 @@ const (
 	// This is a constant representing a script to install and uninstall public
 	// key in remote hosts.
 	DefaultPublicKeyInstallScript = `
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # This is a default script which installs or uninstalls an RSA public key to/from
 # authorized_keys file in a typical linux machine.
