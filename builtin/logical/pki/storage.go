@@ -1042,3 +1042,36 @@ func (sc *storageContext) checkForRolesReferencing(issuerId string) (timeout boo
 
 	return false, inUseBy, nil
 }
+
+func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
+	entry, err := sc.Storage.Get(sc.Context, "config/crl")
+	if err != nil {
+		return nil, err
+	}
+
+	var result crlConfig
+	result.Expiry = sc.Backend.crlLifetime.String()
+	result.Disable = false
+
+	if entry == nil {
+		return &result, nil
+	}
+
+	if err := entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (sc *storageContext) writeRevocationConfig(config *crlConfig) error {
+	entry, err := logical.StorageEntryJSON("config/crl", config)
+	if err != nil {
+		return err
+	}
+	err = sc.Storage.Put(sc.Context, entry)
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -49,29 +49,9 @@ valid; defaults to 72 hours`,
 	}
 }
 
-func (b *backend) CRL(ctx context.Context, s logical.Storage) (*crlConfig, error) {
-	entry, err := s.Get(ctx, "config/crl")
-	if err != nil {
-		return nil, err
-	}
-
-	var result crlConfig
-	result.Expiry = b.crlLifetime.String()
-	result.Disable = false
-
-	if entry == nil {
-		return &result, nil
-	}
-
-	if err := entry.DecodeJSON(&result); err != nil {
-		return nil, err
-	}
-
-	return &result, nil
-}
-
 func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	config, err := b.CRL(ctx, req.Storage)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	config, err := sc.getRevocationConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +65,8 @@ func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, _ *fram
 }
 
 func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	config, err := b.CRL(ctx, req.Storage)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	config, err := sc.getRevocationConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -105,11 +86,7 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		config.Disable = disableRaw.(bool)
 	}
 
-	entry, err := logical.StorageEntryJSON("config/crl", config)
-	if err != nil {
-		return nil, err
-	}
-	err = req.Storage.Put(ctx, entry)
+	err = sc.writeRevocationConfig(config)
 	if err != nil {
 		return nil, err
 	}
