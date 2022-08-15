@@ -436,7 +436,7 @@ func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, _ *l
 				return right.SemanticVersion.GreaterThan(left.SemanticVersion)
 			}
 
-			return true
+			return false
 		})
 
 		versionedPlugins = append(versionedPlugins, versioned...)
