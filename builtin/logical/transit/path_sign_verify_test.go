@@ -700,3 +700,202 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 	outcome[1].valid = false
 	verifyRequest(req, false, outcome, "bar", goodsig, true)
 }
+
+func TestTransit_SignVerify_RSA_PSS(t *testing.T) {
+	t.Run("2048", func(t *testing.T) {
+		testTransit_SignVerify_RSA_PSS(t, 2048)
+	})
+	t.Run("3072", func(t *testing.T) {
+		testTransit_SignVerify_RSA_PSS(t, 3072)
+	})
+	t.Run("4096", func(t *testing.T) {
+		testTransit_SignVerify_RSA_PSS(t, 4096)
+	})
+}
+
+func testTransit_SignVerify_RSA_PSS(t *testing.T, bits int) {
+	b, storage := createBackendWithSysView(t)
+
+	// First create a key
+	req := &logical.Request{
+		Storage:   storage,
+		Operation: logical.UpdateOperation,
+		Path:      "keys/foo",
+		Data: map[string]interface{}{
+			"type": fmt.Sprintf("rsa-%d", bits),
+		},
+	}
+	_, err := b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Data = map[string]interface{}{
+		"input":               "dGhlIHF1aWNrIGJyb3duIGZveA==",
+		"signature_algorithm": "pss",
+	}
+
+	signRequest := func(req *logical.Request, errExpected bool, postpath string) string {
+		t.Helper()
+		req.Path = "sign/foo" + postpath
+		resp, err := b.HandleRequest(context.Background(), req)
+		if err != nil && !errExpected {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if errExpected {
+			if !resp.IsError() {
+				t.Fatalf("bad: should have gotten error response: %#v", *resp)
+			}
+			return ""
+		}
+		if resp.IsError() {
+			t.Fatalf("bad: got error response: %#v", *resp)
+		}
+		value, ok := resp.Data["signature"]
+		if !ok {
+			t.Fatalf("no signature key found in returned data, got resp data %#v", resp.Data)
+		}
+		return value.(string)
+	}
+
+	verifyRequest := func(req *logical.Request, errExpected bool, postpath, sig string) {
+		t.Helper()
+		req.Path = "verify/foo" + postpath
+		req.Data["signature"] = sig
+		resp, err := b.HandleRequest(context.Background(), req)
+		if err != nil {
+			if errExpected {
+				return
+			}
+			t.Fatalf("got error: %v, sig was %v", err, sig)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if resp.IsError() {
+			if errExpected {
+				return
+			}
+			t.Fatalf("bad: got error response: %#v", *resp)
+		}
+		value, ok := resp.Data["valid"]
+		if !ok {
+			t.Fatalf("no valid key found in returned data, got resp data %#v", resp.Data)
+		}
+		if !value.(bool) && !errExpected {
+			t.Fatalf("verification failed; req was %#v, resp is %#v", *req, *resp)
+		} else if value.(bool) && errExpected {
+			t.Fatalf("expected error and didn't get one; req was %#v, resp is %#v", *req, *resp)
+		}
+	}
+
+	signAndVerifyRequest := func(req *logical.Request, hashAlgorithm string, signSaltLength string, signErrExpected bool, verifySaltLength string, verifyErrExpected bool) {
+		t.Log("\t\t", signSaltLength, "/", verifySaltLength)
+		req.Data["hash_algorithm"] = hashAlgorithm
+
+		req.Data["salt_length"] = signSaltLength
+		sig := signRequest(req, signErrExpected, "")
+
+		req.Data["salt_length"] = verifySaltLength
+		verifyRequest(req, verifyErrExpected, "", sig)
+	}
+
+	hashAlgorithms := []string{"sha1", "sha2-224", "sha2-256", "sha2-384", "sha2-512", "sha3-224", "sha3-256", "sha3-384", "sha3-512"}
+	t.Log("hashAlgorithms:", hashAlgorithms)
+
+	invalidSaltLengths := []string{"bar", "-2"}
+	t.Log("invalidSaltLengths:", invalidSaltLengths)
+
+	autoSaltLengths := []string{"auto", "0"}
+	t.Log("autoSaltLengths:", autoSaltLengths)
+
+	hashSaltLengths := []string{"hash", "-1"}
+	t.Log("hashSaltLengths:", hashSaltLengths)
+
+	positiveSaltLengths := []string{"1"}
+	t.Log("positiveSaltLengths:", positiveSaltLengths)
+
+	nonAutoSaltLengths := append(hashSaltLengths, positiveSaltLengths...)
+	t.Log("nonAutoSaltLengths:", nonAutoSaltLengths)
+
+	validSaltLengths := append(autoSaltLengths, nonAutoSaltLengths...)
+	t.Log("validSaltLengths:", validSaltLengths)
+
+	for _, hashAlgorithm := range hashAlgorithms {
+		t.Log("Hash algorithm:", hashAlgorithm)
+
+		t.Log("\t", "valid", "/", "invalid salt lengths")
+		for _, validSaltLength := range validSaltLengths {
+			for _, invalidSaltLength := range invalidSaltLengths {
+				signAndVerifyRequest(req, hashAlgorithm, validSaltLength, false, invalidSaltLength, true)
+			}
+		}
+
+		t.Log("\t", "invalid", "/", "invalid salt lengths")
+		for _, invalidSaltLength1 := range invalidSaltLengths {
+			for _, invalidSaltLength2 := range invalidSaltLengths {
+				signAndVerifyRequest(req, hashAlgorithm, invalidSaltLength1, true, invalidSaltLength2, true)
+			}
+		}
+
+		t.Log("\t", "invalid", "/", "valid salt lengths")
+		for _, invalidSaltLength := range invalidSaltLengths {
+			for _, validSaltLength := range validSaltLengths {
+				signAndVerifyRequest(req, hashAlgorithm, invalidSaltLength, true, validSaltLength, true)
+			}
+		}
+
+		t.Log("\t", "valid", "/", "valid salt lengths")
+		for _, validSaltLength := range validSaltLengths {
+			signAndVerifyRequest(req, hashAlgorithm, validSaltLength, false, validSaltLength, false)
+		}
+
+		t.Log("\t", "hash", "/", "hash salt lengths")
+		for _, hashSaltLength1 := range hashSaltLengths {
+			for _, hashSaltLength2 := range hashSaltLengths {
+				if hashSaltLength1 != hashSaltLength2 {
+					signAndVerifyRequest(req, hashAlgorithm, hashSaltLength1, false, hashSaltLength2, false)
+				}
+			}
+		}
+
+		t.Log("\t", "hash", "/", "positive salt lengths")
+		for _, hashSaltLength := range hashSaltLengths {
+			for _, positiveSaltLength := range positiveSaltLengths {
+				signAndVerifyRequest(req, hashAlgorithm, hashSaltLength, false, positiveSaltLength, true)
+			}
+		}
+
+		t.Log("\t", "positive", "/", "hash salt lengths")
+		for _, positiveSaltLength := range positiveSaltLengths {
+			for _, hashSaltLength := range hashSaltLengths {
+				signAndVerifyRequest(req, hashAlgorithm, positiveSaltLength, false, hashSaltLength, true)
+			}
+		}
+
+		t.Log("\t", "auto", "/", "auto salt lengths")
+		for _, autoSaltLength1 := range autoSaltLengths {
+			for _, autoSaltLength2 := range autoSaltLengths {
+				if autoSaltLength1 != autoSaltLength2 {
+					signAndVerifyRequest(req, hashAlgorithm, autoSaltLength1, false, autoSaltLength2, false)
+				}
+			}
+		}
+
+		t.Log("\t", "auto", "/", "non-auto salt lengths")
+		for _, autoSaltLength := range autoSaltLengths {
+			for _, nonAutoSaltLength := range nonAutoSaltLengths {
+				signAndVerifyRequest(req, hashAlgorithm, autoSaltLength, false, nonAutoSaltLength, true)
+			}
+		}
+
+		t.Log("\t", "non-auto", "/", "auto salt lengths")
+		for _, nonAutoSaltLength := range nonAutoSaltLengths {
+			for _, autoSaltLength := range autoSaltLengths {
+				signAndVerifyRequest(req, hashAlgorithm, nonAutoSaltLength, false, autoSaltLength, false)
+			}
+		}
+	}
+}

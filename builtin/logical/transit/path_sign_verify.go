@@ -2,8 +2,11 @@ package transit
 
 import (
 	"context"
+	"crypto/rsa"
 	"encoding/base64"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -133,9 +136,10 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 			},
 
 			"salt_length": {
-				Type: framework.TypeInt,
+				Type:    framework.TypeString,
+				Default: "auto",
 				Description: `The salt length used to sign. Currently only applies to the RSA PSS signature scheme.
-Options are everything permitted by crypto/rsa.PSSOptions.SaltLength. Defaults to 0 (crypto/rsa.PSSSaltLengthAuto).`,
+Options are 'auto' (crypto/rsa.PSSSaltLengthAuto), 'hash' (crypto/rsa.PSSSaltLengthEqualsHash), or a number of bytes. Defaults to 'auto'.`,
 			},
 		},
 
@@ -225,9 +229,10 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 			},
 
 			"salt_length": {
-				Type: framework.TypeInt,
-				Description: `The salt length used to sign and now verify. Currently only applies to the RSA PSS signature scheme.
-Options are everything permitted by crypto/rsa.PSSOptions.SaltLength. Defaults to 0 (crypto/rsa.PSSSaltLengthAuto).`,
+				Type:    framework.TypeString,
+				Default: "auto",
+				Description: `The salt length used to sign. Currently only applies to the RSA PSS signature scheme.
+Options are 'auto' (crypto/rsa.PSSSaltLengthAuto), 'hash' (crypto/rsa.PSSSaltLengthEqualsHash), or a number of bytes. Defaults to 'auto'.`,
 			},
 		},
 
@@ -237,6 +242,33 @@ Options are everything permitted by crypto/rsa.PSSOptions.SaltLength. Defaults t
 
 		HelpSynopsis:    pathVerifyHelpSyn,
 		HelpDescription: pathVerifyHelpDesc,
+	}
+}
+
+func (b *backend) getSaltLength(d *framework.FieldData) (int, error) {
+	rawSaltLength, ok := d.GetOk("salt_length")
+	// This should only happen when something is wrong with the schema,
+	// so this is a reasonable default.
+	if !ok {
+		return rsa.PSSSaltLengthAuto, nil
+	}
+
+	rawSaltLengthStr := rawSaltLength.(string)
+	lowerSaltLengthStr := strings.ToLower(rawSaltLengthStr)
+	switch lowerSaltLengthStr {
+	case "auto":
+		return rsa.PSSSaltLengthAuto, nil
+	case "hash":
+		return rsa.PSSSaltLengthEqualsHash, nil
+	default:
+		saltLengthInt, err := strconv.Atoi(lowerSaltLengthStr)
+		if err != nil {
+			return rsa.PSSSaltLengthEqualsHash - 1, fmt.Errorf("salt length neither 'auto', 'hash', nor an int: %s", rawSaltLength)
+		}
+		if saltLengthInt < rsa.PSSSaltLengthEqualsHash {
+			return rsa.PSSSaltLengthEqualsHash - 1, fmt.Errorf("salt length is invalid: %d", saltLengthInt)
+		}
+		return saltLengthInt, nil
 	}
 }
 
@@ -264,8 +296,10 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 
 	prehashed := d.Get("prehashed").(bool)
 	sigAlgorithm := d.Get("signature_algorithm").(string)
-	// NOTE: If not explicitly set, the salt length is 0, which coincides with rsa.PSSSaltLengthAuto.
-	saltLength := d.Get("salt_length").(int)
+	saltLength, err := b.getSaltLength(d)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
 
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
@@ -489,8 +523,10 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 
 	prehashed := d.Get("prehashed").(bool)
 	sigAlgorithm := d.Get("signature_algorithm").(string)
-	// NOTE: If not explicitly set, the salt length is 0, which coincides with rsa.PSSSaltLengthAuto.
-	saltLength := d.Get("salt_length").(int)
+	saltLength, err := b.getSaltLength(d)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
 
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
