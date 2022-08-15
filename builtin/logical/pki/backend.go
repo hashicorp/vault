@@ -84,7 +84,6 @@ func Backend(conf *logical.BackendConfig) *backend {
 				"issuer/+/der",
 				"issuer/+/json",
 				"issuers",
-				"revoke-with-key",
 			},
 
 			LocalStorage: []string{
