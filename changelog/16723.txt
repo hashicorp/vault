@@ -1,0 +1,3 @@
+```release-note:feature
+secrets/pki: Add an OCSP responder that implements a subset of RFC6960 that can answer single serial number OCSP requests
+```
