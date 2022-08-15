@@ -15,7 +15,7 @@ const validations = {
 
 @withModelValidations(validations)
 export default class OidcKeyModel extends Model {
-  @attr('string') name;
+  @attr('string', { editDisabled: true }) name;
 
   @attr('string', {
     defaultValue: 'RS256',
@@ -23,13 +23,18 @@ export default class OidcKeyModel extends Model {
   })
   algorithm;
 
-  @attr({ editType: 'ttl', helperTextDisabled: 'Vault will use the default lease duration' }) rotationPeriod;
+  @attr({
+    editType: 'ttl',
+    defaultValue: '24h',
+    helperTextDisabled: 'Vault will use the default lease duration',
+  })
+  rotationPeriod;
 
   @attr({
     label: 'Verification TTL',
     editType: 'ttl',
+    defaultValue: '24h',
     helperTextDisabled: 'Vault will use the default lease duration',
-    hideToggle: true,
   })
   verificationTtl;
 
