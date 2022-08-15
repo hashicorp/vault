@@ -329,15 +329,15 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	// AIA access changes
 	issuerCertificates := data.Get("issuing_certificates").([]string)
 	if badURL := validateURLs(issuerCertificates); badURL != "" {
-		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in issuing certificates: %s", badURL)), nil
+		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in AIA URLs parameter issuing_certificates: %s", badURL)), nil
 	}
 	crlDistributionPoints := data.Get("crl_distribution_points").([]string)
 	if badURL := validateURLs(crlDistributionPoints); badURL != "" {
-		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in CRL distribution points: %s", badURL)), nil
+		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in AIA URLs parameter crl_distribution_points: %s", badURL)), nil
 	}
 	ocspServers := data.Get("ocsp_servers").([]string)
 	if badURL := validateURLs(ocspServers); badURL != "" {
-		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in OCSP servers: %s", badURL)), nil
+		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in AIA URLs parameter ocsp_servers: %s", badURL)), nil
 	}
 
 	modified := false
@@ -626,7 +626,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 		if ok {
 			urlsValue := rawURLsValue.([]string)
 			if badURL := validateURLs(urlsValue); badURL != "" {
-				return logical.ErrorResponse(fmt.Sprintf("invalid URL found in %v: %s", pair.Source, badURL)), nil
+				return logical.ErrorResponse(fmt.Sprintf("invalid URL found in AIA URLs parameter %v: %s", pair.Source, badURL)), nil
 			}
 
 			if isStringArrayDifferent(urlsValue, *pair.Dest) {
