@@ -424,20 +424,7 @@ func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, _ *l
 		}
 
 		// Sort for consistent ordering
-		sort.SliceStable(versionedPlugins, func(i, j int) bool {
-			left, right := versionedPlugins[i], versionedPlugins[j]
-			if left.Type != right.Type {
-				return left.Type < right.Type
-			}
-			if left.Name != right.Name {
-				return left.Name < right.Name
-			}
-			if left.Version != right.Version {
-				return right.SemanticVersion.GreaterThan(left.SemanticVersion)
-			}
-
-			return false
-		})
+		sortVersionedPlugins(versionedPlugins)
 
 		versionedPlugins = append(versionedPlugins, versioned...)
 	}
@@ -449,6 +436,23 @@ func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, _ *l
 	return &logical.Response{
 		Data: data,
 	}, nil
+}
+
+func sortVersionedPlugins(versionedPlugins []pluginutil.VersionedPlugin) {
+	sort.SliceStable(versionedPlugins, func(i, j int) bool {
+		left, right := versionedPlugins[i], versionedPlugins[j]
+		if left.Type != right.Type {
+			return left.Type < right.Type
+		}
+		if left.Name != right.Name {
+			return left.Name < right.Name
+		}
+		if left.Version != right.Version {
+			return right.SemanticVersion.GreaterThan(left.SemanticVersion)
+		}
+
+		return false
+	})
 }
 
 func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {

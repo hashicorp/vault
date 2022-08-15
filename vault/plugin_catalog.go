@@ -761,13 +761,8 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 }
 
 func isPluginType(s string) bool {
-	for _, t := range consts.PluginTypes {
-		if s == t.String() {
-			return true
-		}
-	}
-
-	return false
+	_, err := consts.ParsePluginType(s)
+	return err == nil
 }
 
 func (c *PluginCatalog) getBuiltinVersion(pluginType consts.PluginType, pluginName string) string {

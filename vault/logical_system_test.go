@@ -18,6 +18,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
+	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/audit"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/builtinplugins"
@@ -28,6 +29,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
@@ -4874,6 +4876,67 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 						t.Errorf("expected level of logger %q to match original config", logger.Name())
 					}
 				}
+			}
+		})
+	}
+}
+
+func TestSortVersionedPlugins(t *testing.T) {
+	versionedPlugin := func(typ consts.PluginType, name string, version string) pluginutil.VersionedPlugin {
+		return pluginutil.VersionedPlugin{
+			Type:            typ.String(),
+			Name:            name,
+			Version:         version,
+			SHA256:          "",
+			Builtin:         false,
+			SemanticVersion: semver.Must(semver.NewVersion(version)),
+		}
+	}
+
+	differingTypes := []pluginutil.VersionedPlugin{
+		versionedPlugin(consts.PluginTypeSecrets, "c", "1.0.0"),
+		versionedPlugin(consts.PluginTypeDatabase, "c", "1.0.0"),
+		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0"),
+	}
+	differingNames := []pluginutil.VersionedPlugin{
+		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0"),
+		versionedPlugin(consts.PluginTypeCredential, "b", "1.0.0"),
+		versionedPlugin(consts.PluginTypeCredential, "a", "1.0.0"),
+	}
+	differingVersions := []pluginutil.VersionedPlugin{
+		versionedPlugin(consts.PluginTypeCredential, "c", "10.0.0"),
+		versionedPlugin(consts.PluginTypeCredential, "c", "2.0.1"),
+		versionedPlugin(consts.PluginTypeCredential, "c", "2.1.0"),
+	}
+
+	for name, tc := range map[string][]pluginutil.VersionedPlugin{
+		"ascending types":    differingTypes,
+		"ascending names":    differingNames,
+		"ascending versions": differingVersions,
+		// Include differing versions twice so we can test out equality too.
+		"all types": append(differingTypes,
+			append(differingNames,
+				append(differingVersions, differingVersions...)...)...),
+	} {
+		t.Run(name, func(t *testing.T) {
+			sortVersionedPlugins(tc)
+			for i := 1; i < len(tc); i++ {
+				previous := tc[i-1]
+				current := tc[i]
+				if current.Type > previous.Type {
+					continue
+				}
+				if current.Name > previous.Name {
+					continue
+				}
+				if current.SemanticVersion.GreaterThan(previous.SemanticVersion) {
+					continue
+				}
+				if current.Type == previous.Type && current.Name == previous.Name && current.SemanticVersion.Equal(previous.SemanticVersion) {
+					continue
+				}
+
+				t.Fatalf("versioned plugins at index %d and %d were not properly sorted: %+v, %+v", i-1, i, previous, current)
 			}
 		})
 	}
