@@ -191,7 +191,7 @@ module('Acceptance | oidc-config/clients', function (hooks) {
     );
     assert
       .dom('[data-test-oidc-client-linked-block]')
-      .hasText('some-app', 'displays linked block for client');
+      .hasText('some-app Client ID: whaT7KB0C3iBH1l3rXhd5HPf0n6vXU0s', 'displays linked block for client');
 
     // navigates to/from create, edit, detail views from list view
     await click('[data-test-oidc-client-create]');
