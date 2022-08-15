@@ -2,6 +2,7 @@ package pki
 
 import (
 	"crypto"
+	"crypto/x509"
 	"fmt"
 	"regexp"
 	"strings"
@@ -24,6 +25,10 @@ var (
 	errIssuerNameInUse = errutil.UserError{Err: "issuer name already in use"}
 	errKeyNameInUse    = errutil.UserError{Err: "key name already in use"}
 )
+
+func serialFromCert(cert *x509.Certificate) string {
+	return strings.TrimSpace(certutil.GetHexFormatted(cert.SerialNumber.Bytes(), ":"))
+}
 
 func normalizeSerial(serial string) string {
 	return strings.ReplaceAll(strings.ToLower(serial), ":", "-")

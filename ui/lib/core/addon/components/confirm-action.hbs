@@ -2,19 +2,19 @@
   <BasicDropdown
     @horizontalPosition={{this.horizontalPosition}}
     @verticalPosition={{this.verticalPosition}}
-    @onOpen={{action "toggleConfirm"}}
-    @onClose={{action "toggleConfirm"}}
+    @onOpen={{this.toggleConfirm}}
+    @onClose={{this.toggleConfirm}}
     as |d|
   >
     <d.Trigger
       @htmlTag="button"
-      class={{concat this.buttonClasses " popup-menu-trigger" (if d.isOpen " is-active")}}
+      class={{concat @buttonClasses " popup-menu-trigger" (if d.isOpen " is-active")}}
       type="button"
       disabled={{this.disabled}}
       data-test-confirm-action-trigger="true"
     >
       {{yield}}
-      {{#if (eq this.buttonClasses "toolbar-link")}}
+      {{#if (eq @buttonClasses "toolbar-link")}}
         <Chevron @direction={{if this.showConfirm "up" "down"}} />
       {{/if}}
     </d.Trigger>
@@ -35,7 +35,7 @@
             disabled={{or this.disabled this.isRunning}}
             class="link is-destroy"
             data-test-confirm-button="true"
-            {{action "onConfirm"}}
+            {{on "click" this.onConfirm}}
           >
             {{#if this.isRunning}}
               <span class="loader is-inline-block"></span>
@@ -43,7 +43,7 @@
               {{this.confirmButtonText}}
             {{/if}}
           </button>
-          <button type="button" class="link" data-test-confirm-cancel-button="true" {{action d.actions.close}}>
+          <button type="button" class="link" data-test-confirm-cancel-button="true" {{on "click" (fn this.closeButton d)}}>
             {{this.cancelButtonText}}
           </button>
         </div>

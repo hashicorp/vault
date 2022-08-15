@@ -15,7 +15,6 @@ import (
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
 
-	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -151,7 +150,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		}
 
 		colonSerial := strings.ReplaceAll(strings.ToLower(serial), "-", ":")
-		if colonSerial == certutil.GetHexFormatted(parsedBundle.Certificate.SerialNumber.Bytes(), ":") {
+		if colonSerial == serialFromCert(parsedBundle.Certificate) {
 			return logical.ErrorResponse(fmt.Sprintf("adding issuer (id: %v) to its own CRL is not allowed", issuer)), nil
 		}
 	}
