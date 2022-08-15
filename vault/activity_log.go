@@ -1576,11 +1576,13 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 		// the namespaces from it.
 		currentMonthNamespaceAttribution := a.transformMonthBreakdowns(partialByMonth)
 		// Ensure that there is only one element in this list -- if not, warn.
-		if len(currentMonthNamespaceAttribution) != 1 {
+		if len(currentMonthNamespaceAttribution) > 1 {
 			a.logger.Warn("more than one month worth of namespace and mount attribution calculated for "+
 				"current month values", "number of months", len(currentMonthNamespaceAttribution))
 		}
-		if len(currentMonthNamespaceAttribution) > 0 {
+		if len(currentMonthNamespaceAttribution) == 0 {
+			a.logger.Warn("no month data found, returning query with no namespace attribution for current month")
+		} else {
 			currentMonth.Namespaces = currentMonthNamespaceAttribution[0].Namespaces
 		}
 		pq.Months = append(pq.Months, currentMonth)
