@@ -168,6 +168,90 @@ func Test_migrateStorageSimpleBundle(t *testing.T) {
 	require.Equal(t, logEntry.Hash, logEntry3.Hash)
 }
 
+func TestOcspUsageAdded(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	b, s := createBackendWithStorage(t)
+	sc := b.makeStorageContext(ctx, s)
+
+	// Reset the version the helper above set to 1.
+	b.pkiStorageVersion.Store(0)
+	require.True(t, b.useLegacyBundleCaStorage(), "pre migration we should have been told to use legacy storage.")
+
+	bundle := genCertBundle(t, b, s)
+	json, err := logical.StorageEntryJSON(legacyCertBundlePath, bundle)
+	require.NoError(t, err)
+	err = s.Put(ctx, json)
+	require.NoError(t, err)
+
+	err = b.initialize(ctx, &logical.InitializationRequest{Storage: s})
+	require.NoError(t, err)
+
+	// Now reset the migration state as if it were a 1.11 backend, so migration version 1
+	logEntry, err := getLegacyBundleMigrationLog(ctx, s)
+	require.NoError(t, err)
+	require.NotNil(t, logEntry)
+	logEntry.MigrationVersion = 1
+	err = setLegacyBundleMigrationLog(ctx, s, logEntry)
+	require.NoError(t, err)
+
+	issuerIds, err := sc.listIssuers()
+	require.NoError(t, err)
+	require.Equal(t, 1, len(issuerIds))
+
+	// Remove any OCSPSigningUsage flag from our existing issuer
+	migratedIssuerId := issuerIds[0]
+	issuer, err := sc.fetchIssuerById(migratedIssuerId)
+	require.NoError(t, err)
+	if issuer.Usage.HasUsage(OCSPSigningUsage) {
+		issuer.Usage.ToggleUsage(OCSPSigningUsage)
+		err := sc.writeIssuer(issuer)
+		require.NoError(t, err)
+	}
+	require.False(t, issuer.Usage.HasUsage(OCSPSigningUsage))
+
+	// Add another issuer that has CRLSigning usage disabled
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_type":    "rsa",
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+	requireFieldsSetInResp(t, resp, "issuer_id")
+	newIssuerId := resp.Data["issuer_id"].(issuerID)
+
+	issuer, err = sc.fetchIssuerById(newIssuerId)
+	require.NoError(t, err)
+	for _, usage := range []issuerUsage{CRLSigningUsage, OCSPSigningUsage} {
+		if issuer.Usage.HasUsage(usage) {
+			issuer.Usage.ToggleUsage(usage)
+			err := sc.writeIssuer(issuer)
+			require.NoError(t, err)
+		}
+	}
+	require.False(t, issuer.Usage.HasUsage(OCSPSigningUsage))
+	require.False(t, issuer.Usage.HasUsage(CRLSigningUsage))
+
+	// Call migrate storage again to simulate an existing system that was migrated before
+	// and needs just the new OCSP issuer migration
+	err = migrateStorage(ctx, b, s)
+	require.NoError(t, err)
+
+	issuer, err = sc.fetchIssuerById(migratedIssuerId)
+	require.NoError(t, err)
+	require.True(t, issuer.Usage.HasUsage(OCSPSigningUsage),
+		"expected OCSPSigningUsage to be added to existing issuer from migration")
+
+	issuer, err = sc.fetchIssuerById(newIssuerId)
+	require.NoError(t, err)
+	require.False(t, issuer.Usage.HasUsage(OCSPSigningUsage),
+		"second issuer since it did not have CRLSigning should not have OCSPSigning added")
+
+	logEntry2, err := getLegacyBundleMigrationLog(ctx, s)
+	require.NoError(t, err)
+
+	require.Equal(t, 2, logEntry2.MigrationVersion)
+}
+
 func TestExpectedOpsWork_PreMigration(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

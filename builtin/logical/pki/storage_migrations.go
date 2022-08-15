@@ -15,7 +15,7 @@ import (
 // in case we find out in the future that something was horribly wrong with the migration,
 // and we need to perform it again...
 const (
-	latestMigrationVersion = 1
+	latestMigrationVersion = 2
 	legacyBundleShimID     = issuerID("legacy-entry-shim-id")
 	legacyBundleShimKeyID  = keyID("legacy-entry-shim-key-id")
 )
@@ -36,7 +36,7 @@ type migrationInfo struct {
 }
 
 func getMigrationInfo(ctx context.Context, s logical.Storage) (migrationInfo, error) {
-	migrationInfo := migrationInfo{
+	info := migrationInfo{
 		isRequired:       false,
 		legacyBundle:     nil,
 		legacyBundleHash: "",
@@ -44,80 +44,140 @@ func getMigrationInfo(ctx context.Context, s logical.Storage) (migrationInfo, er
 	}
 
 	var err error
-	_, migrationInfo.legacyBundle, err = getLegacyCertBundle(ctx, s)
+	_, info.legacyBundle, err = getLegacyCertBundle(ctx, s)
 	if err != nil {
-		return migrationInfo, err
+		return info, err
 	}
 
-	migrationInfo.migrationLog, err = getLegacyBundleMigrationLog(ctx, s)
+	info.migrationLog, err = getLegacyBundleMigrationLog(ctx, s)
 	if err != nil {
-		return migrationInfo, err
+		return info, err
 	}
 
-	migrationInfo.legacyBundleHash, err = computeHashOfLegacyBundle(migrationInfo.legacyBundle)
+	info.legacyBundleHash, err = computeHashOfLegacyBundle(info.legacyBundle)
 	if err != nil {
-		return migrationInfo, err
+		return info, err
 	}
 
 	// Even if there isn't anything to migrate, we always want to write out the log entry
 	// as that will trigger the secondary clusters to toggle/wake up
-	if (migrationInfo.migrationLog == nil) ||
-		(migrationInfo.migrationLog.Hash != migrationInfo.legacyBundleHash) ||
-		(migrationInfo.migrationLog.MigrationVersion != latestMigrationVersion) {
-		migrationInfo.isRequired = true
+	if info.migrationLog == nil {
+		// No migration information at all, set to v0
+		info.isRequired = true
+		info.migrationLog = &legacyBundleMigrationLog{MigrationVersion: 0}
 	}
 
-	return migrationInfo, nil
+	if info.migrationLog.Hash != info.legacyBundleHash {
+		// There was an existing migration log but the legacy bundle and the logged hash do not match
+		// so restart the migration from scratch.
+		info.isRequired = true
+		info.migrationLog.MigrationVersion = 0
+		return info, nil
+	}
+
+	if info.migrationLog.MigrationVersion != latestMigrationVersion {
+		// We aren't at the latest version of the migration
+		info.isRequired = true
+		return info, nil
+	}
+
+	// no migration required
+	return info, nil
 }
 
 func migrateStorage(ctx context.Context, b *backend, s logical.Storage) error {
-	migrationInfo, err := getMigrationInfo(ctx, s)
+	info, err := getMigrationInfo(ctx, s)
 	if err != nil {
 		return err
 	}
 
-	if !migrationInfo.isRequired {
+	if !info.isRequired {
 		// No migration was deemed to be required.
 		return nil
 	}
 
-	var issuerIdentifier issuerID
-	var keyIdentifier keyID
+	sc := b.makeStorageContext(ctx, s)
+	migrationLog := info.migrationLog
+
+	if info.migrationLog == nil || info.migrationLog.MigrationVersion == 0 {
+		issuerIdentifier, keyIdentifier, err := migrateLegacyBundle(sc, info)
+		if err != nil {
+			return err
+		}
+		migrationLog = &legacyBundleMigrationLog{
+			Hash:             info.legacyBundleHash,
+			Created:          time.Now(),
+			CreatedIssuer:    issuerIdentifier,
+			CreatedKey:       keyIdentifier,
+			MigrationVersion: 1,
+		}
+	}
+
+	if info.migrationLog.MigrationVersion <= 1 {
+		err = migrateOcspIssuerUsage(sc)
+		if err != nil {
+			return err
+		}
+	}
+
+	migrationLog.MigrationVersion = latestMigrationVersion
+
+	// We always want to write out this log entry as the secondary clusters leverage this path to wake up
+	// if they were upgraded prior to the primary cluster's migration occurred.
+	return setLegacyBundleMigrationLog(ctx, s, migrationLog)
+}
+
+// Upgrade existing issuers to include the new OCSPSigningUsage added in 1.12 if
+// it previously contained CRLSigningUsage.
+func migrateOcspIssuerUsage(sc *storageContext) error {
+	issuerIds, err := sc.listIssuers()
+	if err != nil {
+		return fmt.Errorf("failed listing issuers in ocsp issuer usage migration: %v", err)
+	}
+	for _, issuerId := range issuerIds {
+		issuer, err := sc.fetchIssuerById(issuerId)
+		if err != nil {
+			return fmt.Errorf("failed fetching issuer in ocsp issuer usage migration: %v", err)
+		}
+
+		// If the existing issuer had CRL signing, grant them OCSP usage privileges if missing.
+		if issuer.Usage.HasUsage(CRLSigningUsage) && !issuer.Usage.HasUsage(OCSPSigningUsage) {
+			issuer.Usage.ToggleUsage(OCSPSigningUsage)
+			err := sc.writeIssuer(issuer)
+			if err != nil {
+				return fmt.Errorf("failed updating issuer in ocsp issuer usage migration: %v", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// Migrate the existing CA bundle that contains 1 or more certificates along with a private key in a single
+// storage entry, into the new separated format of a private key entry and 1 or more issuer entries.
+func migrateLegacyBundle(sc *storageContext, migrationInfo migrationInfo) (issuerID, keyID, error) {
 	if migrationInfo.legacyBundle != nil {
 		// Generate a unique name for the migrated items in case things were to be re-migrated again
 		// for some weird reason in the future...
 		migrationName := fmt.Sprintf("current-%d", time.Now().Unix())
 
-		b.Logger().Info("performing PKI migration to new keys/issuers layout")
-		sc := b.makeStorageContext(ctx, s)
+		sc.Backend.Logger().Info("performing PKI migration to new keys/issuers layout")
 		anIssuer, aKey, err := sc.writeCaBundle(migrationInfo.legacyBundle, migrationName, migrationName)
 		if err != nil {
-			return err
+			return "", "", err
 		}
-		b.Logger().Info("Migration generated the following ids and set them as defaults",
+		sc.Backend.Logger().Info("Migration generated the following ids and set them as defaults",
 			"issuer id", anIssuer.ID, "key id", aKey.ID)
-		issuerIdentifier = anIssuer.ID
-		keyIdentifier = aKey.ID
+		issuerIdentifier := anIssuer.ID
+		keyIdentifier := aKey.ID
 
 		// Since we do not have all the mount information available we must schedule
 		// the CRL to be rebuilt at a later time.
-		b.crlBuilder.requestRebuildIfActiveNode(b)
-	}
+		sc.Backend.crlBuilder.requestRebuildIfActiveNode(sc.Backend)
 
-	// We always want to write out this log entry as the secondary clusters leverage this path to wake up
-	// if they were upgraded prior to the primary cluster's migration occurred.
-	err = setLegacyBundleMigrationLog(ctx, s, &legacyBundleMigrationLog{
-		Hash:             migrationInfo.legacyBundleHash,
-		Created:          time.Now(),
-		CreatedIssuer:    issuerIdentifier,
-		CreatedKey:       keyIdentifier,
-		MigrationVersion: latestMigrationVersion,
-	})
-	if err != nil {
-		return err
+		return issuerIdentifier, keyIdentifier, nil
 	}
-
-	return nil
+	return "", "", nil
 }
 
 func computeHashOfLegacyBundle(bundle *certutil.CertBundle) (string, error) {
@@ -193,7 +253,7 @@ func getLegacyCertBundle(ctx context.Context, s logical.Storage) (*issuerEntry, 
 		SerialNumber:         cb.SerialNumber,
 		LeafNotAfterBehavior: certutil.ErrNotAfterBehavior,
 	}
-	issuer.Usage.ToggleUsage(IssuanceUsage, CRLSigningUsage)
+	issuer.Usage.ToggleUsage(IssuanceUsage, CRLSigningUsage, OCSPSigningUsage)
 
 	return issuer, cb, nil
 }

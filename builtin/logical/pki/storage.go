@@ -77,20 +77,22 @@ func (e keyEntry) isManagedPrivateKey() bool {
 type issuerUsage uint
 
 const (
-	ReadOnlyUsage   issuerUsage = iota
-	IssuanceUsage   issuerUsage = 1 << iota
-	CRLSigningUsage issuerUsage = 1 << iota
+	ReadOnlyUsage    issuerUsage = iota
+	IssuanceUsage    issuerUsage = 1 << iota
+	CRLSigningUsage  issuerUsage = 1 << iota
+	OCSPSigningUsage issuerUsage = 1 << iota
 
 	// When adding a new usage in the future, we'll need to create a usage
 	// mask field on the IssuerEntry and handle migrations to a newer mask,
 	// inferring a value for the new bits.
-	AllIssuerUsages issuerUsage = ReadOnlyUsage | IssuanceUsage | CRLSigningUsage
+	AllIssuerUsages issuerUsage = ReadOnlyUsage | IssuanceUsage | CRLSigningUsage | OCSPSigningUsage
 )
 
 var namedIssuerUsages = map[string]issuerUsage{
 	"read-only":            ReadOnlyUsage,
 	"issuing-certificates": IssuanceUsage,
 	"crl-signing":          CRLSigningUsage,
+	"ocsp-signing":         OCSPSigningUsage,
 }
 
 func (i *issuerUsage) ToggleUsage(usages ...issuerUsage) {
@@ -679,7 +681,7 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 	result.Name = issuerName
 	result.Certificate = certValue
 	result.LeafNotAfterBehavior = certutil.ErrNotAfterBehavior
-	result.Usage.ToggleUsage(IssuanceUsage, CRLSigningUsage)
+	result.Usage.ToggleUsage(IssuanceUsage, CRLSigningUsage, OCSPSigningUsage)
 
 	// We shouldn't add CSRs or multiple certificates in this
 	countCertificates := strings.Count(result.Certificate, "-BEGIN ")
