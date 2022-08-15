@@ -18,6 +18,11 @@ export const SELECTORS = {
 
   // assignment route
   assignSaveButton: '[data-test-oidc-assignment-save]',
+  assignCreateButton: '[data-test-oidc-assignment-create]',
+  assignmentEditButton: '[data-test-oidc-assignment-edit]',
+  assignmentDeleteButton: '[data-test-oidc-assignment-delete] button',
+  assignmentCancelButton: '[data-test-oidc-assignment-cancel]',
+  assignmentDetailsTab: '[data-test-oidc-assignment-details]',
 
   // scope routes
   scopeSaveButton: '[data-test-oidc-scope-save]',
@@ -114,4 +119,13 @@ export const CLIENT_DATA_RESPONSE = {
   id_token_ttl: 0,
   key: 'default',
   redirect_uris: [],
+};
+
+export const ASSIGNMENT_LIST_RESPONSE = {
+  keys: ['test-assignment'],
+};
+
+export const ASSIGNMENT_DATA_RESPONSE = {
+  group_ids: ['262ca5b9-7b69-0a84-446a-303dc7d778af'],
+  entity_ids: ['b6094ac6-baf4-6520-b05a-2bd9f07c66da'],
 };
