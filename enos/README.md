@@ -80,7 +80,7 @@ enos scenario run upgrade builder:local
 # To run the same scenario variants that are run in CI, refer to the scenarios listed
 # in .github/workflows/enos-run.yml under `jobs.enos.strategy.matrix.include`,
 # adding `builder:local` to run locally.
-enos scenario run smoke backend:consul consul_version:1.12.3 distro:ubuntu seal_type:awskms builder:local arch:amd64 edition:oss
+enos scenario run smoke backend:consul consul_version:1.12.3 distro:ubuntu seal:awskms builder:local arch:amd64 edition:oss
 # Launch an individual scenario but leave infrastructure up after execution
 enos scenario launch smoke builder:local
 # Check an individual scenario for validity. This is useful during scenario
@@ -116,6 +116,15 @@ the version specified in `vault_upgrade_initial_release`, with the backend speci
 by the `backend` variant (`raft` or `consul`). Next, it upgrades the Vault binary
 that is determined by the `builder` variant. After the upgrade, it verifies that
 cluster is at the desired version, along with additional verifications.
+
+
+## Autopilot
+The [`autopilot` scenario](./enos-scenario-autopilot.hcl) creates a Vault cluster using
+the version specified in `vault_upgrade_initial_release`. Next, it creates additional
+nodes with the candiate version of Vault as determined by the `builder` variant.
+The module uses AWS auto-join to handle discovery and unseals with auto-unseal
+or Shamir depending on the `seal` variant. After the new nodes have joined and been
+unsealed, it waits for Autopilot to upgrade the new nodes and demote the old nodes.
 
 # Variants
 Both scenarios support a matrix of variants. In order to achieve broad coverage while

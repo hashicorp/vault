@@ -57,6 +57,14 @@ variable "tfc_api_token" {
   type        = string
 }
 
+variable "vault_autopilot_initial_release" {
+  description = "The Vault release to deploy before upgrading with autopilot"
+  default = {
+    edition = "ent"
+    version = "1.11.0"
+  }
+}
+
 variable "vault_bundle_path" {
   description = "Path to CRT generated or local vault.zip bundle"
   type        = string
@@ -72,7 +80,7 @@ variable "vault_install_dir" {
 variable "vault_instance_type" {
   description = "The instance type to use for the Vault backend"
   type        = string
-  default     = "t3.small"
+  default     = null
 }
 
 variable "vault_instance_count" {
@@ -84,6 +92,12 @@ variable "vault_instance_count" {
 variable "vault_license_path" {
   description = "The path to a valid Vault enterprise edition license. This is only required for non-oss editions"
   type        = string
+  default     = null
+}
+
+variable "vault_local_build_tags" {
+  description = "The build tags to pass to the Go compiler for builder:local variants"
+  type        = list(string)
   default     = null
 }
 
