@@ -655,9 +655,9 @@ and consider if they're appropriate for your deployment.
 
     - `nodePort` (`int:`) - When type is set to `NodePort`, the bound node port can be configured using this value. A random port will be assigned if this is left blank.
 
-    - `activeNodePort` (int:`) - (When HA mode is enabled) If type is set to "NodePort", a specific nodePort value can be configured for the `active` service, and will be random if left blank.
+    - `activeNodePort` (`int:`) - (When HA mode is enabled) If type is set to "NodePort", a specific nodePort value can be configured for the `active` service, and will be random if left blank.
 
-    - `standbyNodePort` (int:`) - (When HA mode is enabled) If type is set to "NodePort", a specific nodePort value can be configured for the `standby` service, will be random if left blank.
+    - `standbyNodePort` (`int:`) - (When HA mode is enabled) If type is set to "NodePort", a specific nodePort value can be configured for the `standby` service, will be random if left blank.
 
     - `publishNotReadyAddresses` (`boolean: true`) - If true, do not wait for server pods to be ready before adding them to the service pool.
 
