@@ -420,6 +420,148 @@ func TestBYOC(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestPoP(t *testing.T) {
+	b, s := createBackendWithStorage(t)
+
+	// Create a root CA.
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root example.com",
+		"issuer_name": "root",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data["certificate"])
+	oldRoot := resp.Data["certificate"].(string)
+
+	// Create a role for issuance.
+	_, err = CBWrite(b, s, "roles/local-testing", map[string]interface{}{
+		"allow_any_name":    true,
+		"enforce_hostnames": false,
+		"key_type":          "ec",
+		"ttl":               "75s",
+		"no_store":          "true",
+	})
+	require.NoError(t, err)
+
+	// Issue a leaf cert and ensure we can revoke it with the private key and
+	// an explicit certificate.
+	resp, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
+		"common_name": "testing1",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data["certificate"])
+
+	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+		"certificate": resp.Data["certificate"],
+		"private_key": resp.Data["private_key"],
+	})
+	require.NoError(t, err)
+
+	// Issue a second leaf, but hold onto it for now.
+	resp, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
+		"common_name": "testing2",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data["certificate"])
+	notStoredCert := resp.Data["certificate"].(string)
+	notStoredKey := resp.Data["private_key"].(string)
+
+	// Update the role to make things stored and issue another cert.
+	_, err = CBWrite(b, s, "roles/stored-testing", map[string]interface{}{
+		"allow_any_name":    true,
+		"enforce_hostnames": false,
+		"key_type":          "ec",
+		"ttl":               "75s",
+		"no_store":          "false",
+	})
+	require.NoError(t, err)
+
+	// Issue a leaf and ensure we can revoke it via serial number and private key.
+	resp, err = CBWrite(b, s, "issue/stored-testing", map[string]interface{}{
+		"common_name": "testing3",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data["certificate"])
+	require.NotEmpty(t, resp.Data["serial_number"])
+	require.NotEmpty(t, resp.Data["private_key"])
+
+	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+		"serial_number": resp.Data["serial_number"],
+		"private_key":   resp.Data["private_key"],
+	})
+	require.NoError(t, err)
+
+	// Issue a leaf cert and ensure we can revoke it after removing its root;
+	// hold onto it for now.
+	resp, err = CBWrite(b, s, "issue/stored-testing", map[string]interface{}{
+		"common_name": "testing4",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data["certificate"])
+	storedCert := resp.Data["certificate"].(string)
+	storedKey := resp.Data["private_key"].(string)
+
+	// Delete the root and regenerate a new one.
+	_, err = CBDelete(b, s, "issuer/default")
+	require.NoError(t, err)
+
+	resp, err = CBList(b, s, "issuers")
+	require.NoError(t, err)
+	require.Equal(t, len(resp.Data), 0)
+
+	_, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root2 example.com",
+		"issuer_name": "root2",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+
+	// Issue a new leaf and revoke that one.
+	resp, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
+		"common_name": "testing5",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data["certificate"])
+
+	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+		"certificate": resp.Data["certificate"],
+		"private_key": resp.Data["private_key"],
+	})
+	require.NoError(t, err)
+
+	// Now attempt to revoke the earlier leaves. The first should fail since
+	// we deleted its issuer, but the stored one should succeed.
+	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+		"certificate": notStoredCert,
+		"private_key": notStoredKey,
+	})
+	require.Error(t, err)
+
+	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+		"certificate": storedCert,
+		"private_key": storedKey,
+	})
+	require.NoError(t, err)
+
+	// Import the old root again and revoke the no stored leaf should work.
+	_, err = CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
+		"pem_bundle": oldRoot,
+	})
+	require.NoError(t, err)
+
+	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+		"certificate": notStoredCert,
+		"private_key": notStoredKey,
+	})
+	require.NoError(t, err)
+}
+
 func requestCrlFromBackend(t *testing.T, s logical.Storage, b *backend) *logical.Response {
 	crlReq := &logical.Request{
 		Operation: logical.ReadOperation,
