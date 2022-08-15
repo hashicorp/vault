@@ -124,21 +124,21 @@ func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *
 		entries.IssuingCertificates = urlsInt.([]string)
 		if badURL := validateURLs(entries.IssuingCertificates); badURL != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"invalid URL found in issuing certificates: %s", badURL)), nil
+				"invalid URL found in Authority Information Access (AIA) parameter issuing_certificates: %s", badURL)), nil
 		}
 	}
 	if urlsInt, ok := data.GetOk("crl_distribution_points"); ok {
 		entries.CRLDistributionPoints = urlsInt.([]string)
 		if badURL := validateURLs(entries.CRLDistributionPoints); badURL != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"invalid URL found in CRL distribution points: %s", badURL)), nil
+				"invalid URL found in Authority Information Access (AIA) parameter crl_distribution_points: %s", badURL)), nil
 		}
 	}
 	if urlsInt, ok := data.GetOk("ocsp_servers"); ok {
 		entries.OCSPServers = urlsInt.([]string)
 		if badURL := validateURLs(entries.OCSPServers); badURL != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"invalid URL found in OCSP servers: %s", badURL)), nil
+				"invalid URL found in Authority Information Access (AIA) parameter ocsp_servers: %s", badURL)), nil
 		}
 	}
 
