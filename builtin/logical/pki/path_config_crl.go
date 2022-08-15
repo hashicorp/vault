@@ -12,8 +12,9 @@ import (
 
 // CRLConfig holds basic CRL configuration information
 type crlConfig struct {
-	Expiry  string `json:"expiry"`
-	Disable bool   `json:"disable"`
+	Expiry      string `json:"expiry"`
+	Disable     bool   `json:"disable"`
+	OcspDisable bool   `json:"ocsp_disable"`
 }
 
 func pathConfigCRL(b *backend) *framework.Path {
@@ -29,6 +30,10 @@ valid; defaults to 72 hours`,
 			"disable": {
 				Type:        framework.TypeBool,
 				Description: `If set to true, disables generating the CRL entirely.`,
+			},
+			"ocsp_disable": {
+				Type:        framework.TypeBool,
+				Description: `If set to true, ocsp unauthorized responses will be returned.`,
 			},
 		},
 
@@ -58,8 +63,9 @@ func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, _ *fram
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"expiry":  config.Expiry,
-			"disable": config.Disable,
+			"expiry":       config.Expiry,
+			"disable":      config.Disable,
+			"ocsp_disable": config.OcspDisable,
 		},
 	}, nil
 }
@@ -84,6 +90,10 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 	if disableRaw, ok := d.GetOk("disable"); ok {
 		oldDisable = config.Disable
 		config.Disable = disableRaw.(bool)
+	}
+
+	if ocspDisableRaw, ok := d.GetOk("ocsp_disable"); ok {
+		config.OcspDisable = ocspDisableRaw.(bool)
 	}
 
 	err = sc.writeRevocationConfig(config)
