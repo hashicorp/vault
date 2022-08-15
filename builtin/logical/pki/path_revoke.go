@@ -69,7 +69,14 @@ func (b *backend) pathRevokeWriteHandleCertificate(ctx context.Context, req *log
 	//
 	// We return the parsed serial number, an optionally-nil byte array to
 	// write out to disk, and an error if one occurred.
-	//
+	if b.useLegacyBundleCaStorage() {
+		// We require listing all issuers from the 1.11 method. If we're
+		// still using the legacy CA bundle but with the newer certificate
+		// attribute, we err and require the operator to upgrade and migrate
+		// prior to servicing new requests.
+		return "", nil, errutil.UserError{Err: "unable to process BYOC revocation until CA issuer migration has completed"}
+	}
+
 	// First start by parsing the certificate.
 	if len(certPem) < 75 {
 		// See note in pathImportIssuers about this check.
