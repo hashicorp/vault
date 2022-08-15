@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"net"
 	"net/url"
 	"regexp"
@@ -148,6 +149,11 @@ func (sc *storageContext) fetchCAInfoByIssuerId(issuerId issuerID, usage issuerU
 	caInfo.URLs = entries
 
 	return caInfo, nil
+}
+
+func fetchCertBySerialBigInt(ctx context.Context, b *backend, req *logical.Request,
+	prefix string, serial *big.Int) (*logical.StorageEntry, error) {
+	return fetchCertBySerial(ctx, b, req, prefix, certutil.GetHexFormatted(serial.Bytes(), ":"))
 }
 
 // Allows fetching certificates from the backend; it handles the slightly

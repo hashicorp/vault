@@ -92,7 +92,9 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		config.Disable = disableRaw.(bool)
 	}
 
+	var oldOcspDisable bool
 	if ocspDisableRaw, ok := d.GetOk("ocsp_disable"); ok {
+		oldOcspDisable = config.OcspDisable
 		config.OcspDisable = ocspDisableRaw.(bool)
 	}
 
@@ -112,6 +114,10 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 				return nil, fmt.Errorf("error encountered during CRL building: %w", crlErr)
 			}
 		}
+	}
+
+	if oldOcspDisable != config.OcspDisable {
+		setOcspStatus(b, ctx)
 	}
 
 	return nil, nil
