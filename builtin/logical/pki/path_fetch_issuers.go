@@ -373,43 +373,37 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		issuer.AIAURIs = &certutil.URLEntries{}
 	}
 	if issuer.AIAURIs != nil {
-		if len(issuerCertificates) != len(issuer.AIAURIs.IssuingCertificates) {
-			modified = true
-			issuer.AIAURIs.IssuingCertificates = issuerCertificates
-		} else {
-			for index, value := range issuer.AIAURIs.IssuingCertificates {
-				if len(issuerCertificates) < index+1 || issuerCertificates[index] != value {
-					modified = true
-					issuer.AIAURIs.IssuingCertificates = issuerCertificates
-					break
-				}
-			}
+		// Associative mapping from data source to destination on the
+		// backing issuer object.
+		type aiaPair struct {
+			Source *[]string
+			Dest   *[]string
 		}
-		if len(crlDistributionPoints) != len(issuer.AIAURIs.CRLDistributionPoints) {
-			modified = true
-			issuer.AIAURIs.CRLDistributionPoints = crlDistributionPoints
-		} else {
-			for index, value := range issuer.AIAURIs.CRLDistributionPoints {
-				if len(crlDistributionPoints) < index+1 || crlDistributionPoints[index] != value {
-					modified = true
-					issuer.AIAURIs.CRLDistributionPoints = crlDistributionPoints
-					break
-				}
-			}
+		pairs := []aiaPair{
+			{
+				Source: &issuerCertificates,
+				Dest:   &issuer.AIAURIs.IssuingCertificates,
+			},
+			{
+				Source: &crlDistributionPoints,
+				Dest:   &issuer.AIAURIs.CRLDistributionPoints,
+			},
+			{
+				Source: &ocspServers,
+				Dest:   &issuer.AIAURIs.OCSPServers,
+			},
 		}
-		if len(ocspServers) != len(issuer.AIAURIs.OCSPServers) {
-			modified = true
-			issuer.AIAURIs.OCSPServers = ocspServers
-		} else {
-			for index, value := range issuer.AIAURIs.OCSPServers {
-				if len(ocspServers) < index+1 || ocspServers[index] != value {
-					modified = true
-					issuer.AIAURIs.OCSPServers = ocspServers
-					break
-				}
+
+		// For each pair, if it is different on the object, update it.
+		for _, pair := range pairs {
+			if isStringArrayDifferent(*pair.Source, *pair.Dest) {
+				*pair.Dest = *pair.Source
+				modified = true
 			}
 		}
 
+		// If no AIA URLs exist on the issuer, set the AIA URLs entry to nil
+		// to ease usage later.
 		if len(issuer.AIAURIs.IssuingCertificates) == 0 && len(issuer.AIAURIs.CRLDistributionPoints) == 0 && len(issuer.AIAURIs.OCSPServers) == 0 {
 			issuer.AIAURIs = nil
 		}
@@ -602,66 +596,48 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	if issuer.AIAURIs == nil {
 		issuer.AIAURIs = &certutil.URLEntries{}
 	}
-	rawIssuerCertificates, ok := data.GetOk("issuing_certificates")
-	if ok {
-		issuerCertificates := rawIssuerCertificates.([]string)
-		if badURL := validateURLs(issuerCertificates); badURL != "" {
-			return logical.ErrorResponse(fmt.Sprintf("invalid URL found in issuing certificates: %s", badURL)), nil
-		}
 
-		if len(issuerCertificates) != len(issuer.AIAURIs.IssuingCertificates) {
-			modified = true
-			issuer.AIAURIs.IssuingCertificates = issuerCertificates
-		} else {
-			for index, value := range issuer.AIAURIs.IssuingCertificates {
-				if len(issuerCertificates) < index+1 || issuerCertificates[index] != value {
-					modified = true
-					issuer.AIAURIs.IssuingCertificates = issuerCertificates
-					break
-				}
+	// Associative mapping from data source to destination on the
+	// backing issuer object. For PATCH requests, we use the source
+	// data parameter as we still need to validate them and process
+	// it into a string list.
+	type aiaPair struct {
+		Source string
+		Dest   *[]string
+	}
+	pairs := []aiaPair{
+		{
+			Source: "issuing_certificates",
+			Dest:   &issuer.AIAURIs.IssuingCertificates,
+		},
+		{
+			Source: "crl_distribution_points",
+			Dest:   &issuer.AIAURIs.CRLDistributionPoints,
+		},
+		{
+			Source: "ocsp_servers",
+			Dest:   &issuer.AIAURIs.OCSPServers,
+		},
+	}
+
+	// For each pair, if it is different on the object, update it.
+	for _, pair := range pairs {
+		rawURLsValue, ok := data.GetOk(pair.Source)
+		if ok {
+			urlsValue := rawURLsValue.([]string)
+			if badURL := validateURLs(urlsValue); badURL != "" {
+				return logical.ErrorResponse(fmt.Sprintf("invalid URL found in %v: %s", pair.Source, badURL)), nil
+			}
+
+			if isStringArrayDifferent(urlsValue, *pair.Dest) {
+				modified = true
+				*pair.Dest = urlsValue
 			}
 		}
 	}
-	rawCrlDistributionPoints, ok := data.GetOk("crl_distribution_points")
-	if ok {
-		crlDistributionPoints := rawCrlDistributionPoints.([]string)
-		if badURL := validateURLs(crlDistributionPoints); badURL != "" {
-			return logical.ErrorResponse(fmt.Sprintf("invalid URL found in CRL distribution points: %s", badURL)), nil
-		}
 
-		if len(crlDistributionPoints) != len(issuer.AIAURIs.CRLDistributionPoints) {
-			modified = true
-			issuer.AIAURIs.CRLDistributionPoints = crlDistributionPoints
-		} else {
-			for index, value := range issuer.AIAURIs.CRLDistributionPoints {
-				if len(crlDistributionPoints) < index+1 || crlDistributionPoints[index] != value {
-					modified = true
-					issuer.AIAURIs.CRLDistributionPoints = crlDistributionPoints
-					break
-				}
-			}
-		}
-	}
-	rawOcspServers, ok := data.GetOk("ocsp_servers")
-	if ok {
-		ocspServers := rawOcspServers.([]string)
-		if badURL := validateURLs(ocspServers); badURL != "" {
-			return logical.ErrorResponse(fmt.Sprintf("invalid URL found in OCSP servers: %s", badURL)), nil
-		}
-
-		if len(ocspServers) != len(issuer.AIAURIs.OCSPServers) {
-			modified = true
-			issuer.AIAURIs.OCSPServers = ocspServers
-		} else {
-			for index, value := range issuer.AIAURIs.OCSPServers {
-				if len(ocspServers) < index+1 || ocspServers[index] != value {
-					modified = true
-					issuer.AIAURIs.OCSPServers = ocspServers
-					break
-				}
-			}
-		}
-	}
+	// If no AIA URLs exist on the issuer, set the AIA URLs entry to nil to
+	// ease usage later.
 	if len(issuer.AIAURIs.IssuingCertificates) == 0 && len(issuer.AIAURIs.CRLDistributionPoints) == 0 && len(issuer.AIAURIs.OCSPServers) == 0 {
 		issuer.AIAURIs = nil
 	}

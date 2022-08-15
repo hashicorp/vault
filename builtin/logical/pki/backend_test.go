@@ -4982,7 +4982,7 @@ func TestPerIssuerAIA(t *testing.T) {
 
 	// Now come back and remove the local modifications and ensure we get
 	// the defaults again.
-	_, err = CBWrite(b, s, "issuer/default", map[string]interface{}{
+	_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
 		"issuing_certificates": []string{},
 	})
 	require.NoError(t, err)
