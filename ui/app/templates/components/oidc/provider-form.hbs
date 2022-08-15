@@ -89,10 +89,13 @@
         @id="allowedClientIds"
         @subLabel="Application name"
         @models={{array "oidc/client"}}
-        @inputValue={{@model.allowedClientIds}}
+        @inputValue={{this.modelClientIds}}
+        {{!-- @inputValue={{@model.allowedClientIds}} --}}
         @onChange={{this.handleClientSelection}}
         @disallowNewItems={{true}}
         @fallbackComponent="string-list"
+        @passObject={{true}}
+        @objectKeys={{array "clientId"}}
       />
     {{/if}}
   </div>

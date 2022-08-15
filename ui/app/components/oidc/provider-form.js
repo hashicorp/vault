@@ -24,6 +24,7 @@ export default class OidcProviderForm extends Component {
   @service store;
   @service flashMessages;
 
+  @tracked modelClientIds;
   @tracked modelValidations;
   @tracked radioCardGroupValue =
     // If "*" is provided, all clients are allowed: https://www.vaultproject.io/api-docs/secret/identity/oidc-provider#parameters
@@ -35,13 +36,18 @@ export default class OidcProviderForm extends Component {
     super(...arguments);
     const { model } = this.args;
     model.issuer = model.isNew ? '' : parseURL(model.issuer).origin;
+    this.store
+      .query('oidc/client', {
+        filterIds: this.args.model.allowedClientIds,
+      })
+      .then((resp) => (this.modelClientIds = resp));
   }
 
   @action
   handleClientSelection(selection) {
     // if array then coming from search-select component, set selection as model clients
     if (Array.isArray(selection)) {
-      this.args.model.allowedClientIds = selection;
+      this.args.model.allowedClientIds = selection.map((client) => client.clientId);
     } else {
       // otherwise update radio button value and reset clients so
       // UI always reflects a user's selection (including when no clients are selected)

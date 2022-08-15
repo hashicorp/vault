@@ -22,6 +22,7 @@ import layout from '../templates/components/search-select';
  * @param {string} [backend] - name of the backend if the query for options needs additional information (eg. secret backend)
  * @param {boolean} [disallowNewItems=false] - Controls whether or not the user can add a new item if none found
  * @param {boolean} [passObject=false] - When true, the onChange callback returns an array of objects with id (string) and isNew (boolean)
+ * @param {array} [objectKeys=null] - When passObject=true and you want to configure the object returned by search-select by passing an array of attributes to add to the option object
  * @param {string} [helpText] - Text to be displayed in the info tooltip for this form field
  * @param {number} [selectLimit] - A number that sets the limit to how many select options they can choose
  * @param {string} [subText] - Text to be displayed below the label
@@ -54,6 +55,7 @@ export default Component.extend({
   options: null, // all possible options
   shouldUseFallback: false,
   shouldRenderName: false,
+  objectKeys: null,
   disallowNewItems: false,
   passObject: false,
 
@@ -136,7 +138,8 @@ export default Component.extend({
   handleChange() {
     if (this.selectedOptions.length && typeof this.selectedOptions.firstObject === 'object') {
       if (this.passObject) {
-        this.onChange(Array.from(this.selectedOptions, (option) => ({ id: option.id, isNew: !!option.new })));
+        // return array of objects instead of array of strings
+        this.onChange(Array.from(this.selectedOptions, (option) => this.configureObject(option)));
       } else {
         this.onChange(Array.from(this.selectedOptions, (option) => option.id));
       }
@@ -172,7 +175,16 @@ export default Component.extend({
     return filterOptions(options || [], searchText, matcher);
   },
   // -----
-
+  configureObject(option) {
+    // if the LIST endpoint has key_info then we can pass search-select an array of keys
+    // to add to a selected option (object), and subsequently pass back to the parent
+    let additionalKeys = this.objectKeys
+      ? Object.fromEntries(this.objectKeys.map((key) => [key, option[key]]))
+      : // otherwise return isNew and have the parent handle creating or finding the record
+        // see component/keymgmt/distribute.js for an example
+        { isNew: !!option.new };
+    return { id: option.id, ...additionalKeys };
+  },
   actions: {
     onChange(val) {
       this.onChange(val);
