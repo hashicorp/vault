@@ -9,6 +9,9 @@ import logout from 'vault/tests/pages/logout';
 import { create } from 'ember-cli-page-object';
 import fm from 'vault/tests/pages/components/flash-message';
 const flashMessage = create(fm);
+import {
+  clearRecord,
+} from '../../helpers/oidc-config';
 const SCOPES_URL = OIDC_BASE_URL.concat('/scopes');
 
 module('Acceptance | oidc-config/scopes', function (hooks) {
@@ -34,6 +37,9 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
 
   test('it renders empty state when no scopes are configured', async function (assert) {
     assert.expect(2);
+    //* clear out test state
+    await clearRecord(this.store, 'oidc/scope', 'test-scope');
+
     await visit(SCOPES_URL);
     assert.equal(currentURL(), '/vault/access/oidc/scopes');
 
@@ -48,6 +54,10 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
 
   test('it creates a scope from empty state create scope button', async function (assert) {
     assert.expect(3);
+
+    //* clear out test state
+    await clearRecord(this.store, 'oidc/scope', 'test-scope');
+    
     await visit(SCOPES_URL);
     // create a new scope
     await click(SELECTORS.scopeCreateButtonEmptyState);
@@ -72,6 +82,10 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
 
   test('it creates, updates and deletes a scope', async function (assert) {
     assert.expect(11);
+
+    //* clear out test state
+    await clearRecord(this.store, 'oidc/scope', 'test-scope');
+
     await visit(SCOPES_URL);
     // create a new scope
     await click(SELECTORS.scopeCreateButton);
@@ -133,6 +147,9 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
       'vault.cluster.access.oidc.scopes.index',
       'navigates back to list view after delete'
     );
+
+    //* clear out test state
+    await clearRecord(this.store, 'oidc/scope', 'test-scope');
   });
 
   test('it renders scope list when scopes exist', async function (assert) {
