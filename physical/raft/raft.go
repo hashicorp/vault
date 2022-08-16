@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -15,21 +16,25 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/go-raftchunking"
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-uuid"
+	goversion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/raft"
+	autopilot "github.com/hashicorp/raft-autopilot"
+	raftboltdb "github.com/hashicorp/raft-boltdb/v2"
 	snapshot "github.com/hashicorp/raft-snapshot"
-	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
+	bolt "go.etcd.io/bbolt"
 )
 
 // EnvVaultRaftNodeID is used to fetch the Raft node ID from the environment.
@@ -38,11 +43,15 @@ const EnvVaultRaftNodeID = "VAULT_RAFT_NODE_ID"
 // EnvVaultRaftPath is used to fetch the path where Raft data is stored from the environment.
 const EnvVaultRaftPath = "VAULT_RAFT_PATH"
 
+var getMmapFlags = func(string) int { return 0 }
+
 // Verify RaftBackend satisfies the correct interfaces
-var _ physical.Backend = (*RaftBackend)(nil)
-var _ physical.Transactional = (*RaftBackend)(nil)
-var _ physical.HABackend = (*RaftBackend)(nil)
-var _ physical.Lock = (*RaftLock)(nil)
+var (
+	_ physical.Backend       = (*RaftBackend)(nil)
+	_ physical.Transactional = (*RaftBackend)(nil)
+	_ physical.HABackend     = (*RaftBackend)(nil)
+	_ physical.Lock          = (*RaftLock)(nil)
+)
 
 var (
 	// raftLogCacheSize is the maximum number of logs to cache in-memory.
@@ -120,11 +129,64 @@ type RaftBackend struct {
 	// It is suggested to use a value of 2x the Raft chunking size for optimal
 	// performance.
 	maxEntrySize uint64
+
+	// autopilot is the instance of raft-autopilot library implementation of the
+	// autopilot features. This will be instantiated in both leader and followers.
+	// However, only active node will have a "running" autopilot.
+	autopilot *autopilot.Autopilot
+
+	// autopilotConfig represents the configuration required to instantiate autopilot.
+	autopilotConfig *AutopilotConfig
+
+	// followerStates represents the information about all the peers of the raft
+	// leader. This is used to track some state of the peers and as well as used
+	// to see if the peers are "alive" using the heartbeat received from them.
+	followerStates *FollowerStates
+
+	// followerHeartbeatTicker is used to compute dead servers using follower
+	// state heartbeats.
+	followerHeartbeatTicker *time.Ticker
+
+	// disableAutopilot if set will not put autopilot implementation to use. The
+	// fallback will be to interact with the raft instance directly. This can only
+	// be set during startup via the environment variable
+	// VAULT_RAFT_AUTOPILOT_DISABLE during startup and can't be updated once the
+	// node is up and running.
+	disableAutopilot bool
+
+	// autopilotReconcileInterval is how long between rounds of performing promotions, demotions
+	// and leadership transfers.
+	autopilotReconcileInterval time.Duration
+
+	// autopilotUpdateInterval is the time between the periodic state updates. These periodic
+	// state updates take in known servers from the delegate, request Raft stats be
+	// fetched and pull in other inputs such as the Raft configuration to create
+	// an updated view of the Autopilot State.
+	autopilotUpdateInterval time.Duration
+
+	// upgradeVersion is used to override the Vault SDK version when performing an autopilot automated upgrade.
+	upgradeVersion string
+
+	// redundancyZone specifies a redundancy zone for autopilot.
+	redundancyZone string
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
 // follower to an existing raft cluster
 type LeaderJoinInfo struct {
+	// AutoJoin defines any cloud auto-join metadata. If supplied, Vault will
+	// attempt to automatically discover peers in addition to what can be provided
+	// via 'leader_api_addr'.
+	AutoJoin string `json:"auto_join"`
+
+	// AutoJoinScheme defines the optional URI protocol scheme for addresses
+	// discovered via auto-join.
+	AutoJoinScheme string `json:"auto_join_scheme"`
+
+	// AutoJoinPort defines the optional port used for addressed discovered via
+	// auto-join.
+	AutoJoinPort uint `json:"auto_join_port"`
+
 	// LeaderAPIAddr is the address of the leader node to connect to
 	LeaderAPIAddr string `json:"leader_api_addr"`
 
@@ -153,6 +215,10 @@ type LeaderJoinInfo struct {
 	// only be provided via Vault's configuration file.
 	LeaderClientKeyFile string `json:"leader_client_key_file"`
 
+	// LeaderTLSServerName is the optional ServerName to expect in the leader's
+	// certificate, instead of the host/IP we're actually connecting to.
+	LeaderTLSServerName string `json:"leader_tls_servername"`
+
 	// Retry indicates if the join process should automatically be retried
 	Retry bool `json:"-"`
 
@@ -171,18 +237,26 @@ func (b *RaftBackend) JoinConfig() ([]*LeaderJoinInfo, error) {
 	var leaderInfos []*LeaderJoinInfo
 	err := jsonutil.DecodeJSON([]byte(config), &leaderInfos)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to decode retry_join config: {{err}}", err)
+		return nil, fmt.Errorf("failed to decode retry_join config: %w", err)
 	}
 
 	if len(leaderInfos) == 0 {
 		return nil, errors.New("invalid retry_join config")
 	}
 
-	for _, info := range leaderInfos {
+	for i, info := range leaderInfos {
+		if len(info.AutoJoin) != 0 && len(info.LeaderAPIAddr) != 0 {
+			return nil, errors.New("cannot provide both a leader_api_addr and auto_join")
+		}
+
+		if info.AutoJoinScheme != "" && (info.AutoJoinScheme != "http" && info.AutoJoinScheme != "https") {
+			return nil, fmt.Errorf("invalid scheme %q; must either be http or https", info.AutoJoinScheme)
+		}
+
 		info.Retry = true
 		info.TLSConfig, err = parseTLSInfo(info)
 		if err != nil {
-			return nil, errwrap.Wrapf(fmt.Sprintf("failed to create tls config to communicate with leader node %q: {{err}}", info.LeaderAPIAddr), err)
+			return nil, fmt.Errorf("failed to create tls config to communicate with leader node (retry_join index: %d): %w", i, err)
 		}
 	}
 
@@ -205,6 +279,9 @@ func parseTLSInfo(leaderInfo *LeaderJoinInfo) (*tls.Config, error) {
 			return nil, err
 		}
 	}
+	if tlsConfig != nil {
+		tlsConfig.ServerName = leaderInfo.LeaderTLSServerName
+	}
 
 	return tlsConfig, nil
 }
@@ -214,12 +291,11 @@ func EnsurePath(path string, dir bool) error {
 	if !dir {
 		path = filepath.Dir(path)
 	}
-	return os.MkdirAll(path, 0755)
+	return os.MkdirAll(path, 0o700)
 }
 
 // NewRaftBackend constructs a RaftBackend using the given directory
 func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
-
 	path := os.Getenv(EnvVaultRaftPath)
 	if path == "" {
 		pathFromConfig, ok := conf["path"]
@@ -227,53 +303,6 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 			return nil, fmt.Errorf("'path' must be set")
 		}
 		path = pathFromConfig
-	}
-
-	// Create the FSM.
-	fsm, err := NewFSM(path, logger.Named("fsm"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create fsm: %v", err)
-	}
-
-	// Build an all in-memory setup for dev mode, otherwise prepare a full
-	// disk-based setup.
-	var log raft.LogStore
-	var stable raft.StableStore
-	var snap raft.SnapshotStore
-
-	var devMode bool
-	if devMode {
-		store := raft.NewInmemStore()
-		stable = store
-		log = store
-		snap = raft.NewInmemSnapshotStore()
-	} else {
-		// Create the base raft path.
-		path := filepath.Join(path, raftState)
-		if err := EnsurePath(path, true); err != nil {
-			return nil, err
-		}
-
-		// Create the backend raft store for logs and stable storage.
-		store, err := raftboltdb.NewBoltStore(filepath.Join(path, "raft.db"))
-		if err != nil {
-			return nil, err
-		}
-		stable = store
-
-		// Wrap the store in a LogCache to improve performance.
-		cacheStore, err := raft.NewLogCache(raftLogCacheSize, store)
-		if err != nil {
-			return nil, err
-		}
-		log = cacheStore
-
-		// Create the snapshot store.
-		snapshots, err := NewBoltSnapshotStore(path, logger.Named("snapshot"), fsm)
-		if err != nil {
-			return nil, err
-		}
-		snap = snapshots
 	}
 
 	var localID string
@@ -310,12 +339,83 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 				return nil, err
 			}
 
-			if err := ioutil.WriteFile(filepath.Join(path, "node-id"), []byte(id), 0600); err != nil {
+			if err := ioutil.WriteFile(filepath.Join(path, "node-id"), []byte(id), 0o600); err != nil {
 				return nil, err
 			}
 
 			localID = id
 		}
+	}
+
+	// Create the FSM.
+	fsm, err := NewFSM(path, localID, logger.Named("fsm"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create fsm: %v", err)
+	}
+
+	if delayRaw, ok := conf["apply_delay"]; ok {
+		delay, err := time.ParseDuration(delayRaw)
+		if err != nil {
+			return nil, fmt.Errorf("apply_delay does not parse as a duration: %w", err)
+		}
+		fsm.applyCallback = func() {
+			time.Sleep(delay)
+		}
+	}
+
+	// Build an all in-memory setup for dev mode, otherwise prepare a full
+	// disk-based setup.
+	var log raft.LogStore
+	var stable raft.StableStore
+	var snap raft.SnapshotStore
+
+	var devMode bool
+	if devMode {
+		store := raft.NewInmemStore()
+		stable = store
+		log = store
+		snap = raft.NewInmemSnapshotStore()
+	} else {
+		// Create the base raft path.
+		path := filepath.Join(path, raftState)
+		if err := EnsurePath(path, true); err != nil {
+			return nil, err
+		}
+
+		// Create the backend raft store for logs and stable storage.
+		dbPath := filepath.Join(path, "raft.db")
+		opts := boltOptions(dbPath)
+		raftOptions := raftboltdb.Options{
+			Path:        dbPath,
+			BoltOptions: opts,
+		}
+		store, err := raftboltdb.New(raftOptions)
+		if err != nil {
+			return nil, err
+		}
+		stable = store
+
+		// Wrap the store in a LogCache to improve performance.
+		cacheStore, err := raft.NewLogCache(raftLogCacheSize, store)
+		if err != nil {
+			return nil, err
+		}
+		log = cacheStore
+
+		// Create the snapshot store.
+		snapshots, err := NewBoltSnapshotStore(path, logger.Named("snapshot"), fsm)
+		if err != nil {
+			return nil, err
+		}
+		snap = snapshots
+	}
+
+	if delayRaw, ok := conf["snapshot_delay"]; ok {
+		delay, err := time.ParseDuration(delayRaw)
+		if err != nil {
+			return nil, fmt.Errorf("snapshot_delay does not parse as a duration: %w", err)
+		}
+		snap = newSnapshotStoreDelay(snap, delay, logger)
 	}
 
 	maxEntrySize := defaultMaxEntrySize
@@ -328,19 +428,95 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		maxEntrySize = uint64(i)
 	}
 
+	var reconcileInterval time.Duration
+	if interval := conf["autopilot_reconcile_interval"]; interval != "" {
+		interval, err := time.ParseDuration(interval)
+		if err != nil {
+			return nil, fmt.Errorf("autopilot_reconcile_interval does not parse as a duration: %w", err)
+		}
+		reconcileInterval = interval
+	}
+
+	var updateInterval time.Duration
+	if interval := conf["autopilot_update_interval"]; interval != "" {
+		interval, err := time.ParseDuration(interval)
+		if err != nil {
+			return nil, fmt.Errorf("autopilot_update_interval does not parse as a duration: %w", err)
+		}
+		updateInterval = interval
+	}
+
+	effectiveReconcileInterval := autopilot.DefaultReconcileInterval
+	effectiveUpdateInterval := autopilot.DefaultUpdateInterval
+
+	if reconcileInterval != 0 {
+		effectiveReconcileInterval = reconcileInterval
+	}
+	if updateInterval != 0 {
+		effectiveUpdateInterval = updateInterval
+	}
+
+	if effectiveReconcileInterval < effectiveUpdateInterval {
+		return nil, fmt.Errorf("autopilot_reconcile_interval (%v) should be larger than autopilot_update_interval (%v)", effectiveReconcileInterval, effectiveUpdateInterval)
+	}
+
+	var upgradeVersion string
+	if uv, ok := conf["autopilot_upgrade_version"]; ok && uv != "" {
+		upgradeVersion = uv
+		_, err := goversion.NewVersion(upgradeVersion)
+		if err != nil {
+			return nil, fmt.Errorf("autopilot_upgrade_version does not parse as a semantic version: %w", err)
+		}
+	}
+
 	return &RaftBackend{
-		logger:       logger,
-		fsm:          fsm,
-		raftInitCh:   make(chan struct{}),
-		conf:         conf,
-		logStore:     log,
-		stableStore:  stable,
-		snapStore:    snap,
-		dataDir:      path,
-		localID:      localID,
-		permitPool:   physical.NewPermitPool(physical.DefaultParallelOperations),
-		maxEntrySize: maxEntrySize,
+		logger:                     logger,
+		fsm:                        fsm,
+		raftInitCh:                 make(chan struct{}),
+		conf:                       conf,
+		logStore:                   log,
+		stableStore:                stable,
+		snapStore:                  snap,
+		dataDir:                    path,
+		localID:                    localID,
+		permitPool:                 physical.NewPermitPool(physical.DefaultParallelOperations),
+		maxEntrySize:               maxEntrySize,
+		followerHeartbeatTicker:    time.NewTicker(time.Second),
+		autopilotReconcileInterval: reconcileInterval,
+		autopilotUpdateInterval:    updateInterval,
+		redundancyZone:             conf["autopilot_redundancy_zone"],
+		upgradeVersion:             upgradeVersion,
 	}, nil
+}
+
+type snapshotStoreDelay struct {
+	logger  log.Logger
+	wrapped raft.SnapshotStore
+	delay   time.Duration
+}
+
+func (s snapshotStoreDelay) Create(version raft.SnapshotVersion, index, term uint64, configuration raft.Configuration, configurationIndex uint64, trans raft.Transport) (raft.SnapshotSink, error) {
+	s.logger.Trace("delaying before creating snapshot", "delay", s.delay)
+	time.Sleep(s.delay)
+	return s.wrapped.Create(version, index, term, configuration, configurationIndex, trans)
+}
+
+func (s snapshotStoreDelay) List() ([]*raft.SnapshotMeta, error) {
+	return s.wrapped.List()
+}
+
+func (s snapshotStoreDelay) Open(id string) (*raft.SnapshotMeta, io.ReadCloser, error) {
+	return s.wrapped.Open(id)
+}
+
+var _ raft.SnapshotStore = &snapshotStoreDelay{}
+
+func newSnapshotStoreDelay(snap raft.SnapshotStore, delay time.Duration, logger log.Logger) *snapshotStoreDelay {
+	return &snapshotStoreDelay{
+		logger:  logger,
+		wrapped: snap,
+		delay:   delay,
+	}
 }
 
 // Close is used to gracefully close all file resources.  N.B. This method
@@ -359,6 +535,68 @@ func (b *RaftBackend) Close() error {
 	}
 
 	return nil
+}
+
+func (b *RaftBackend) RedundancyZone() string {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	return b.redundancyZone
+}
+
+func (b *RaftBackend) EffectiveVersion() string {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.upgradeVersion != "" {
+		return b.upgradeVersion
+	}
+
+	return version.GetVersion().Version
+}
+
+// DisableUpgradeMigration returns the state of the DisableUpgradeMigration config flag and whether it was set or not
+func (b *RaftBackend) DisableUpgradeMigration() (bool, bool) {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.autopilotConfig == nil {
+		return false, false
+	}
+
+	return b.autopilotConfig.DisableUpgradeMigration, true
+}
+
+func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
+	b.l.RLock()
+	logstoreStats := b.stableStore.(*raftboltdb.BoltStore).Stats()
+	fsmStats := b.fsm.db.Stats()
+	b.l.RUnlock()
+	b.collectMetricsWithStats(logstoreStats, sink, "logstore")
+	b.collectMetricsWithStats(fsmStats, sink, "fsm")
+}
+
+func (b *RaftBackend) collectMetricsWithStats(stats bolt.Stats, sink *metricsutil.ClusterMetricSink, database string) {
+	txstats := stats.TxStats
+	labels := []metricsutil.Label{{"database", database}}
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "free_pages"}, float32(stats.FreePageN), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "pending_pages"}, float32(stats.PendingPageN), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "allocated_bytes"}, float32(stats.FreeAlloc), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "freelist", "used_bytes"}, float32(stats.FreelistInuse), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "transaction", "started_read_transactions"}, float32(stats.TxN), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "transaction", "currently_open_read_transactions"}, float32(stats.OpenTxN), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "page", "count"}, float32(txstats.PageCount), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "page", "bytes_allocated"}, float32(txstats.PageAlloc), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "cursor", "count"}, float32(txstats.CursorCount), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "node", "count"}, float32(txstats.NodeCount), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "node", "dereferences"}, float32(txstats.NodeDeref), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "rebalance", "count"}, float32(txstats.Rebalance), labels)
+	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "rebalance", "time"}, float32(txstats.RebalanceTime.Milliseconds()), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "split", "count"}, float32(txstats.Split), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "spill", "count"}, float32(txstats.Spill), labels)
+	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "spill", "time"}, float32(txstats.SpillTime.Milliseconds()), labels)
+	sink.SetGaugeWithLabels([]string{"raft_storage", "bolt", "write", "count"}, float32(txstats.Write), labels)
+	sink.AddSampleWithLabels([]string{"raft_storage", "bolt", "write", "time"}, float32(txstats.WriteTime.Milliseconds()), labels)
 }
 
 // RaftServer has information about a server in the Raft configuration
@@ -392,8 +630,9 @@ type RaftConfigurationResponse struct {
 
 // Peer defines the ID and Address for a given member of the raft cluster.
 type Peer struct {
-	ID      string `json:"id"`
-	Address string `json:"address"`
+	ID       string `json:"id"`
+	Address  string `json:"address"`
+	Suffrage int    `json:"suffrage"`
 }
 
 // NodeID returns the identifier of the node
@@ -448,8 +687,9 @@ func (b *RaftBackend) Bootstrap(peers []Peer) error {
 
 	for i, p := range peers {
 		raftConfig.Servers[i] = raft.Server{
-			ID:      raft.ServerID(p.ID),
-			Address: raft.ServerAddress(p.Address),
+			ID:       raft.ServerID(p.ID),
+			Address:  raft.ServerAddress(p.Address),
+			Suffrage: raft.ServerSuffrage(p.Suffrage),
 		}
 	}
 
@@ -477,9 +717,9 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 			return err
 		}
 	}
-	config.ElectionTimeout = config.ElectionTimeout * time.Duration(multiplier)
-	config.HeartbeatTimeout = config.HeartbeatTimeout * time.Duration(multiplier)
-	config.LeaderLeaseTimeout = config.LeaderLeaseTimeout * time.Duration(multiplier)
+	config.ElectionTimeout *= time.Duration(multiplier)
+	config.HeartbeatTimeout *= time.Duration(multiplier)
+	config.LeaderLeaseTimeout *= time.Duration(multiplier)
 
 	snapThresholdRaw, ok := b.conf["snapshot_threshold"]
 	if ok {
@@ -500,10 +740,25 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 		}
 		config.TrailingLogs = uint64(trailingLogs)
 	}
+	snapshotIntervalRaw, ok := b.conf["snapshot_interval"]
+	if ok {
+		var err error
+		snapshotInterval, err := time.ParseDuration(snapshotIntervalRaw)
+		if err != nil {
+			return err
+		}
+		config.SnapshotInterval = snapshotInterval
+	}
 
 	config.NoSnapshotRestoreOnStart = true
 	config.MaxAppendEntries = 64
 
+	// Setting BatchApplyCh allows the raft library to enqueue up to
+	// MaxAppendEntries into each raft apply rather than relying on the
+	// scheduler.
+	config.BatchApplyCh = true
+
+	b.logger.Trace("applying raft config", "inputs", b.conf)
 	return nil
 }
 
@@ -586,6 +841,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		return false
 	}
 
+	var initialTimeoutMultiplier time.Duration
 	switch {
 	case opts.TLSKeyring == nil && listenerIsNil(opts.ClusterListener):
 		// If we don't have a provided network we use an in-memory one.
@@ -597,6 +853,19 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	case listenerIsNil(opts.ClusterListener):
 		return errors.New("no cluster listener provided")
 	default:
+		initialTimeoutMultiplier = 3
+		if !opts.StartAsLeader {
+			electionTimeout, heartbeatTimeout := raftConfig.ElectionTimeout, raftConfig.HeartbeatTimeout
+			// Use bigger values for first election
+			raftConfig.ElectionTimeout *= initialTimeoutMultiplier
+			raftConfig.HeartbeatTimeout *= initialTimeoutMultiplier
+			b.logger.Trace("using larger timeouts for raft at startup",
+				"initial_election_timeout", raftConfig.ElectionTimeout,
+				"initial_heartbeat_timeout", raftConfig.HeartbeatTimeout,
+				"normal_election_timeout", electionTimeout,
+				"normal_heartbeat_timeout", heartbeatTimeout)
+		}
+
 		// Set the local address and localID in the streaming layer and the raft config.
 		streamLayer, err := NewRaftLayer(b.logger.Named("stream"), opts.TLSKeyring, opts.ClusterListener)
 		if err != nil {
@@ -607,6 +876,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 			MaxPool:               3,
 			Timeout:               10 * time.Second,
 			ServerAddressProvider: b.serverAddressProvider,
+			Logger:                b.logger.Named("raft-net"),
 		}
 		transport := raft.NewNetworkTransportWithConfig(transConfig)
 
@@ -643,7 +913,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 
 		recoveryConfig, err := raft.ReadConfigJSON(peersFile)
 		if err != nil {
-			return errwrap.Wrapf("raft recovery failed to parse peers.json: {{err}}", err)
+			return fmt.Errorf("raft recovery failed to parse peers.json: %w", err)
 		}
 
 		// Non-voting servers are only allowed in enterprise. If Suffrage is disabled,
@@ -658,12 +928,12 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 
 		err = raft.RecoverCluster(raftConfig, b.fsm, b.logStore, b.stableStore, b.snapStore, b.raftTransport, recoveryConfig)
 		if err != nil {
-			return errwrap.Wrapf("raft recovery failed: {{err}}", err)
+			return fmt.Errorf("raft recovery failed: %w", err)
 		}
 
 		err = os.Remove(peersFile)
 		if err != nil {
-			return errwrap.Wrapf("raft recovery failed to delete peers.json; please delete manually: {{err}}", err)
+			return fmt.Errorf("raft recovery failed to delete peers.json; please delete manually: %w", err)
 		}
 		b.logger.Info("raft recovery deleted peers.json")
 	}
@@ -671,10 +941,11 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	if opts.RecoveryModeConfig != nil {
 		err = raft.RecoverCluster(raftConfig, b.fsm, b.logStore, b.stableStore, b.snapStore, b.raftTransport, *opts.RecoveryModeConfig)
 		if err != nil {
-			return errwrap.Wrapf("recovering raft cluster failed: {{err}}", err)
+			return fmt.Errorf("recovering raft cluster failed: %w", err)
 		}
 	}
 
+	b.logger.Info("creating Raft", "config", fmt.Sprintf("%#v", raftConfig))
 	raftObj, err := raft.NewRaft(raftConfig, b.fsm.chunker, b.logStore, b.stableStore, b.snapStore, b.raftTransport)
 	b.fsm.SetNoopRestore(false)
 	if err != nil {
@@ -686,26 +957,36 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	// StartAsLeader is only set during init, recovery mode, storage migration,
 	// and tests.
 	if opts.StartAsLeader {
+		// ticker is used to prevent memory leak of using time.After in
+		// for - select pattern.
+		ticker := time.NewTicker(10 * time.Millisecond)
+		defer ticker.Stop()
 		for {
 			if raftObj.State() == raft.Leader {
 				break
 			}
 
+			ticker.Reset(10 * time.Millisecond)
 			select {
 			case <-ctx.Done():
 				future := raftObj.Shutdown()
 				if future.Error() != nil {
-					return errwrap.Wrapf("shutdown while waiting for leadership: {{err}}", future.Error())
+					return fmt.Errorf("shutdown while waiting for leadership: %w", future.Error())
 				}
 
 				return errors.New("shutdown while waiting for leadership")
-			case <-time.After(10 * time.Millisecond):
+			case <-ticker.C:
 			}
 		}
 	}
 
 	b.raft = raftObj
 	b.raftNotifyCh = raftNotifyCh
+
+	if err := b.fsm.upgradeLocalNodeConfig(); err != nil {
+		b.logger.Error("failed to upgrade local node configuration")
+		return err
+	}
 
 	if b.streamLayer != nil {
 		// Add Handler to the cluster.
@@ -717,6 +998,63 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 
 	// Close the init channel to signal setup has been completed
 	close(b.raftInitCh)
+
+	reloadConfig := func() {
+		newCfg := raft.ReloadableConfig{
+			TrailingLogs:      raftConfig.TrailingLogs,
+			SnapshotInterval:  raftConfig.SnapshotInterval,
+			SnapshotThreshold: raftConfig.SnapshotThreshold,
+			HeartbeatTimeout:  raftConfig.HeartbeatTimeout / initialTimeoutMultiplier,
+			ElectionTimeout:   raftConfig.ElectionTimeout / initialTimeoutMultiplier,
+		}
+		err := raftObj.ReloadConfig(newCfg)
+		if err != nil {
+			b.logger.Error("failed to reload raft config to set lower timeouts", "error", err)
+		} else {
+			b.logger.Trace("reloaded raft config to set lower timeouts", "config", fmt.Sprintf("%#v", newCfg))
+		}
+	}
+	confFuture := raftObj.GetConfiguration()
+	numServers := 0
+	if err := confFuture.Error(); err != nil {
+		// This should probably never happen, but just in case we'll log the error.
+		// We'll default in this case to the multi-node behaviour.
+		b.logger.Error("failed to read raft configuration", "error", err)
+	} else {
+		clusterConf := confFuture.Configuration()
+		numServers = len(clusterConf.Servers)
+	}
+	if initialTimeoutMultiplier != 0 {
+		if numServers == 1 {
+			reloadConfig()
+		} else {
+			go func() {
+				ticker := time.NewTicker(50 * time.Millisecond)
+				// Emulate the random timeout used in Raft lib, to ensure that
+				// if all nodes are brought up simultaneously, they don't all
+				// call for an election at once.
+				extra := time.Duration(rand.Int63()) % raftConfig.HeartbeatTimeout
+				timeout := time.NewTimer(raftConfig.HeartbeatTimeout + extra)
+				for {
+					select {
+					case <-ticker.C:
+						switch raftObj.State() {
+						case raft.Candidate, raft.Leader:
+							b.logger.Trace("triggering raft config reload due to being candidate or leader")
+							reloadConfig()
+							return
+						case raft.Shutdown:
+							return
+						}
+					case <-timeout.C:
+						b.logger.Trace("triggering raft config reload due to initial timeout")
+						reloadConfig()
+						return
+					}
+				}
+			}()
+		}
+	}
 
 	b.logger.Trace("finished setting up raft cluster")
 	return nil
@@ -768,11 +1106,29 @@ func (b *RaftBackend) AppliedIndex() uint64 {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
-	if b.raft == nil {
+	if b.fsm == nil {
 		return 0
 	}
 
-	return b.raft.AppliedIndex()
+	// We use the latest index that the FSM has seen here, which may be behind
+	// raft.AppliedIndex() due to the async nature of the raft library.
+	indexState, _ := b.fsm.LatestState()
+	return indexState.Index
+}
+
+// Term returns the raft term of this node.
+func (b *RaftBackend) Term() uint64 {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.fsm == nil {
+		return 0
+	}
+
+	// We use the latest index that the FSM has seen here, which may be behind
+	// raft.AppliedIndex() due to the async nature of the raft library.
+	indexState, _ := b.fsm.LatestState()
+	return indexState.Term
 }
 
 // RemovePeer removes the given peer ID from the raft cluster. If the node is
@@ -781,16 +1137,70 @@ func (b *RaftBackend) RemovePeer(ctx context.Context, peerID string) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
-	if b.raft == nil {
-		return errors.New("raft storage is not initialized")
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 
-	future := b.raft.RemoveServer(raft.ServerID(peerID), 0, 0)
+	if b.disableAutopilot {
+		if b.raft == nil {
+			return errors.New("raft storage is not initialized")
+		}
+		b.logger.Trace("removing server from raft", "id", peerID)
+		future := b.raft.RemoveServer(raft.ServerID(peerID), 0, 0)
+		return future.Error()
+	}
 
-	return future.Error()
+	if b.autopilot == nil {
+		return errors.New("raft storage autopilot is not initialized")
+	}
+
+	b.logger.Trace("removing server from raft via autopilot", "id", peerID)
+	return b.autopilot.RemoveServer(raft.ServerID(peerID))
+}
+
+// GetConfigurationOffline is used to read the stale, last known raft
+// configuration to this node. It accesses the last state written into the
+// FSM. When a server is online use GetConfiguration instead.
+func (b *RaftBackend) GetConfigurationOffline() (*RaftConfigurationResponse, error) {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	if b.raft != nil {
+		return nil, errors.New("raft storage is initialized, used GetConfiguration instead")
+	}
+
+	if b.fsm == nil {
+		return nil, nil
+	}
+
+	state, configuration := b.fsm.LatestState()
+	config := &RaftConfigurationResponse{
+		Index: state.Index,
+	}
+
+	if configuration == nil || configuration.Servers == nil {
+		return config, nil
+	}
+
+	for _, server := range configuration.Servers {
+		entry := &RaftServer{
+			NodeID:  server.Id,
+			Address: server.Address,
+			// Since we are offline no node is the leader.
+			Leader: false,
+			Voter:  raft.ServerSuffrage(server.Suffrage) == raft.Voter,
+		}
+		config.Servers = append(config.Servers, entry)
+	}
+
+	return config, nil
 }
 
 func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationResponse, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -817,6 +1227,7 @@ func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationR
 			Voter:           server.Suffrage == raft.Voter,
 			ProtocolVersion: strconv.Itoa(raft.ProtocolVersionMax),
 		}
+
 		config.Servers = append(config.Servers, entry)
 	}
 
@@ -825,26 +1236,47 @@ func (b *RaftBackend) GetConfiguration(ctx context.Context) (*RaftConfigurationR
 
 // AddPeer adds a new server to the raft cluster
 func (b *RaftBackend) AddPeer(ctx context.Context, peerID, clusterAddr string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	b.l.RLock()
 	defer b.l.RUnlock()
 
-	if b.raft == nil {
-		return errors.New("raft storage is not initialized")
+	if b.disableAutopilot {
+		if b.raft == nil {
+			return errors.New("raft storage is not initialized")
+		}
+		b.logger.Trace("adding server to raft", "id", peerID)
+		future := b.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(clusterAddr), 0, 0)
+		return future.Error()
 	}
 
-	b.logger.Debug("adding raft peer", "node_id", peerID, "cluster_addr", clusterAddr)
+	if b.autopilot == nil {
+		return errors.New("raft storage autopilot is not initialized")
+	}
 
-	future := b.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(clusterAddr), 0, 0)
-	return future.Error()
+	b.logger.Trace("adding server to raft via autopilot", "id", peerID)
+	return b.autopilot.AddServer(&autopilot.Server{
+		ID:          raft.ServerID(peerID),
+		Name:        peerID,
+		Address:     raft.ServerAddress(clusterAddr),
+		RaftVersion: raft.ProtocolVersionMax,
+		NodeType:    autopilot.NodeVoter,
+	})
 }
 
 // Peers returns all the servers present in the raft cluster
 func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	b.l.RLock()
 	defer b.l.RUnlock()
 
 	if b.raft == nil {
-		return nil, errors.New("raft storage backend is not initialized")
+		return nil, errors.New("raft storage is not initialized")
 	}
 
 	future := b.raft.GetConfiguration()
@@ -855,23 +1287,33 @@ func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
 	ret := make([]Peer, len(future.Configuration().Servers))
 	for i, s := range future.Configuration().Servers {
 		ret[i] = Peer{
-			ID:      string(s.ID),
-			Address: string(s.Address),
+			ID:       string(s.ID),
+			Address:  string(s.Address),
+			Suffrage: int(s.Suffrage),
 		}
 	}
 
 	return ret, nil
 }
 
+// SnapshotHTTP is a wrapper for Snapshot that sends the snapshot as an HTTP
+// response.
+func (b *RaftBackend) SnapshotHTTP(out *logical.HTTPResponseWriter, access *seal.Access) error {
+	out.Header().Add("Content-Disposition", "attachment")
+	out.Header().Add("Content-Type", "application/gzip")
+
+	return b.Snapshot(out, access)
+}
+
 // Snapshot takes a raft snapshot, packages it into a archive file and writes it
 // to the provided writer. Seal access is used to encrypt the SHASUM file so we
-// can validate the snapshot was taken using the same master keys or not.
-func (b *RaftBackend) Snapshot(out *logical.HTTPResponseWriter, access *seal.Access) error {
+// can validate the snapshot was taken using the same root keys or not.
+func (b *RaftBackend) Snapshot(out io.Writer, access *seal.Access) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
 	if b.raft == nil {
-		return errors.New("raft storage backend is sealed")
+		return errors.New("raft storage is sealed")
 	}
 
 	// If we have access to the seal create a sealer object
@@ -882,32 +1324,13 @@ func (b *RaftBackend) Snapshot(out *logical.HTTPResponseWriter, access *seal.Acc
 		}
 	}
 
-	snap, err := snapshot.NewWithSealer(b.logger.Named("snapshot"), b.raft, s)
-	if err != nil {
-		return err
-	}
-	defer snap.Close()
-
-	size, err := snap.Size()
-	if err != nil {
-		return err
-	}
-
-	out.Header().Add("Content-Disposition", "attachment")
-	out.Header().Add("Content-Length", fmt.Sprintf("%d", size))
-	out.Header().Add("Content-Type", "application/gzip")
-	_, err = io.Copy(out, snap)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return snapshot.Write(b.logger.Named("snapshot"), b.raft, s, out)
 }
 
 // WriteSnapshotToTemp reads a snapshot archive off the provided reader,
 // extracts the data and writes the snapshot to a temporary file. The seal
 // access is used to decrypt the SHASUM file in the archive to ensure this
-// snapshot has the same master key as the running instance. If the provided
+// snapshot has the same root key as the running instance. If the provided
 // access is nil then it will skip that validation.
 func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access *seal.Access) (*os.File, func(), raft.SnapshotMeta, error) {
 	b.l.RLock()
@@ -915,7 +1338,7 @@ func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access *seal.Access)
 
 	var metadata raft.SnapshotMeta
 	if b.raft == nil {
-		return nil, nil, metadata, errors.New("raft storage backend is sealed")
+		return nil, nil, metadata, errors.New("raft storage is sealed")
 	}
 
 	// If we have access to the seal create a sealer object
@@ -933,6 +1356,10 @@ func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access *seal.Access)
 // RestoreSnapshot applies the provided snapshot metadata and snapshot data to
 // raft.
 func (b *RaftBackend) RestoreSnapshot(ctx context.Context, metadata raft.SnapshotMeta, snap io.Reader) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -950,7 +1377,7 @@ func (b *RaftBackend) RestoreSnapshot(ctx context.Context, metadata raft.Snapsho
 	// snapshot applied to a quorum of nodes.
 	command := &LogData{
 		Operations: []*LogOperation{
-			&LogOperation{
+			{
 				OpType: restoreCallbackOp,
 			},
 		},
@@ -967,9 +1394,14 @@ func (b *RaftBackend) RestoreSnapshot(ctx context.Context, metadata raft.Snapsho
 // Delete inserts an entry in the log to delete the given path
 func (b *RaftBackend) Delete(ctx context.Context, path string) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "delete"}, time.Now())
+
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	command := &LogData{
 		Operations: []*LogOperation{
-			&LogOperation{
+			{
 				OpType: deleteOp,
 				Key:    path,
 			},
@@ -991,17 +1423,23 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 		return nil, errors.New("raft: fsm not configured")
 	}
 
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
+
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 
 	entry, err := b.fsm.Get(ctx, path)
 	if entry != nil {
 		valueLen := len(entry.Value)
 		if uint64(valueLen) > b.maxEntrySize {
-			b.logger.Warn(
-				"retrieved entry value is too large; see https://www.vaultproject.io/docs/configuration/storage/raft#raft-parameters",
-				"size", valueLen, "suggested", b.maxEntrySize,
-			)
+			b.logger.Warn("retrieved entry value is too large, has raft's max_entry_size been reduced?",
+				"size", valueLen, "max_entry_size", b.maxEntrySize)
 		}
 	}
 
@@ -1013,9 +1451,17 @@ func (b *RaftBackend) Get(ctx context.Context, path string) (*physical.Entry, er
 // or if the call to applyLog fails.
 func (b *RaftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "put"}, time.Now())
+	if len(entry.Key) > bolt.MaxKeySize {
+		return fmt.Errorf("%s, max key size for integrated storage is %d", physical.ErrKeyTooLarge, bolt.MaxKeySize)
+	}
+
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	command := &LogData{
 		Operations: []*LogOperation{
-			&LogOperation{
+			{
 				OpType: putOp,
 				Key:    entry.Key,
 				Value:  entry.Value,
@@ -1039,8 +1485,16 @@ func (b *RaftBackend) List(ctx context.Context, prefix string) ([]string, error)
 		return nil, errors.New("raft: fsm not configured")
 	}
 
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	b.permitPool.Acquire()
 	defer b.permitPool.Release()
+
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 
 	return b.fsm.List(ctx, prefix)
 }
@@ -1049,6 +1503,11 @@ func (b *RaftBackend) List(ctx context.Context, prefix string) ([]string, error)
 // applies it.
 func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
 	defer metrics.MeasureSince([]string{"raft-storage", "transaction"}, time.Now())
+
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	command := &LogData{
 		Operations: make([]*LogOperation, len(txns)),
 	}
@@ -1056,6 +1515,9 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 		op := &LogOperation{}
 		switch txn.Operation {
 		case physical.PutOperation:
+			if len(txn.Entry.Key) > bolt.MaxKeySize {
+				return fmt.Errorf("%s, max key size for integrated storage is %d", physical.ErrKeyTooLarge, bolt.MaxKeySize)
+			}
 			op.OpType = putOp
 			op.Key = txn.Entry.Key
 			op.Value = txn.Entry.Value
@@ -1083,7 +1545,10 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 // persisted to the local FSM. Caller should hold the backend's read lock.
 func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 	if b.raft == nil {
-		return errors.New("raft storage backend is not initialized")
+		return errors.New("raft storage is not initialized")
+	}
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 
 	commandBytes, err := proto.Marshal(command)
@@ -1155,6 +1620,32 @@ func (b *RaftBackend) LockWith(key, value string) (physical.Lock, error) {
 	}, nil
 }
 
+// SetDesiredSuffrage sets a field in the fsm indicating the suffrage intent for
+// this node.
+func (b *RaftBackend) SetDesiredSuffrage(nonVoter bool) error {
+	b.l.Lock()
+	defer b.l.Unlock()
+
+	var desiredSuffrage string
+	switch nonVoter {
+	case true:
+		desiredSuffrage = "non-voter"
+	default:
+		desiredSuffrage = "voter"
+	}
+
+	err := b.fsm.recordSuffrage(desiredSuffrage)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *RaftBackend) DesiredSuffrage() string {
+	return b.fsm.DesiredSuffrage()
+}
+
 // RaftLock implements the physical Lock interface and enables HA for this
 // backend. The Lock uses the raftNotifyCh for receiving leadership edge
 // triggers. Vault's active duty matches raft's leadership.
@@ -1200,7 +1691,6 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 		case <-stopCh:
 			return nil, nil
 		}
-
 	}
 
 	l.b.l.RLock()
@@ -1218,7 +1708,7 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	if l.b.raft.State() == raft.Leader {
 		err := l.b.applyLog(context.Background(), &LogData{
 			Operations: []*LogOperation{
-				&LogOperation{
+				{
 					OpType: putOp,
 					Key:    l.key,
 					Value:  l.value,
@@ -1242,7 +1732,7 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 				l.b.l.RLock()
 				err := l.b.applyLog(context.Background(), &LogData{
 					Operations: []*LogOperation{
-						&LogOperation{
+						{
 							OpType: putOp,
 							Key:    l.key,
 							Value:  l.value,
@@ -1260,8 +1750,6 @@ func (l *RaftLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 			return nil, nil
 		}
 	}
-
-	return nil, nil
 }
 
 // Unlock gives up leadership.
@@ -1320,4 +1808,42 @@ func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
 	}
 
 	return s.access.Decrypt(ctx, &eblob, nil)
+}
+
+// boltOptions returns a bolt.Options struct, suitable for passing to
+// bolt.Open(), pre-configured with all of our preferred defaults.
+func boltOptions(path string) *bolt.Options {
+	o := &bolt.Options{
+		Timeout:        1 * time.Second,
+		FreelistType:   bolt.FreelistMapType,
+		NoFreelistSync: true,
+		MmapFlags:      getMmapFlags(path),
+	}
+
+	if os.Getenv("VAULT_RAFT_FREELIST_TYPE") == "array" {
+		o.FreelistType = bolt.FreelistArrayType
+	}
+
+	if os.Getenv("VAULT_RAFT_FREELIST_SYNC") != "" {
+		o.NoFreelistSync = false
+	}
+
+	// By default, we want to set InitialMmapSize to 100GB, but only on 64bit platforms.
+	// Otherwise, we set it to whatever the value of VAULT_RAFT_INITIAL_MMAP_SIZE
+	// is, assuming it can be parsed as an int. Bolt itself sets this to 0 by default,
+	// so if users are wanting to turn this off, they can also set it to 0. Setting it
+	// to a negative value is the same as not setting it at all.
+	if os.Getenv("VAULT_RAFT_INITIAL_MMAP_SIZE") == "" {
+		o.InitialMmapSize = initialMmapSize
+	} else {
+		imms, err := strconv.Atoi(os.Getenv("VAULT_RAFT_INITIAL_MMAP_SIZE"))
+
+		// If there's an error here, it means they passed something that's not convertible to
+		// a number. Rather than fail startup, just ignore it.
+		if err == nil && imms > 0 {
+			o.InitialMmapSize = imms
+		}
+	}
+
+	return o
 }

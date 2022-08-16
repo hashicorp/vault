@@ -1,0 +1,101 @@
+<LinkedBlock
+  @params={{array (concat "vault.cluster.secrets.backend." "credentials" (unless @item.id "-root")) @item.backend @item.id}}
+  @queryParams={{hash action="issue"}}
+  class="list-item-row"
+  data-test-secret-link={{@item.id}}
+  @encode={{true}}
+>
+  <div class="columns is-mobile">
+    <div class="column is-10">
+      <LinkTo
+        @route={{concat "vault.cluster.secrets.backend." "credentials" (unless @item.id "-root")}}
+        @model={{@item.id}}
+        @query={{hash action="issue"}}
+        class="has-text-black has-text-weight-semibold"
+      >
+        <Icon @name="user" class="has-text-grey-light is-pulled-left" />
+        <div class="role-item-details">
+          <span class="is-underline">{{if (eq @item.id " ") "(self)" (or @item.keyWithoutParent @item.id)}}</span>
+        </div>
+      </LinkTo>
+    </div>
+    <div class="column has-text-right">
+      <PopupMenu @name="role-aws-nav">
+        <Confirm as |c|>
+          <nav class="menu">
+            {{#if (or @item.generatePath.isPending @item.signPath.isPending)}}
+              <ul class="menu-list">
+                <li class="action">
+                  <button disabled type="button" class="link button is-loading is-transparent">
+                    loading
+                  </button>
+                </li>
+              </ul>
+            {{else if (or @item.canGenerate @item.canSign)}}
+              <ul class="menu-list">
+                {{#if @item.canGenerate}}
+                  <li class="action">
+                    <LinkTo
+                      @route="vault.cluster.secrets.backend.credentials"
+                      @model={{@item.id}}
+                      @query={{hash action="issue"}}
+                      data-test-role-pki-link="generate-certificate"
+                    >
+                      Generate certificate
+                    </LinkTo>
+                  </li>
+                {{/if}}
+                {{#if @item.canSign}}
+                  <li class="action">
+                    <LinkTo
+                      @route="vault.cluster.secrets.backend.credentials"
+                      @model={{@item.id}}
+                      @query={{hash action="sign"}}
+                      data-test-role-pki-link="sign-certificate"
+                    >
+                      Sign certificate
+                    </LinkTo>
+                  </li>
+                {{/if}}
+              </ul>
+            {{/if}}
+            <ul class="menu-list">
+              {{#if @item.updatePath.isPending}}
+                <li class="action">
+                  <button disabled type="button" class="link button is-loading is-transparent">
+                    loading
+                  </button>
+                </li>
+                <li class="action">
+                  <button disabled type="button" class="link button is-loading is-transparent">
+                    loading
+                  </button>
+                </li>
+              {{else}}
+                {{#if @item.canRead}}
+                  <li class="action">
+                    <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@item.id}} data-test-role-pki-link="show">
+                      Details
+                    </LinkTo>
+                  </li>
+                {{/if}}
+                {{#if @item.canEdit}}
+                  <li class="action">
+                    <LinkTo @route="vault.cluster.secrets.backend.edit" @model={{@item.id}} data-test-role-pki-link="edit">
+                      Edit
+                    </LinkTo>
+                  </li>
+                {{/if}}
+                {{#if @item.canDelete}}
+                  <li class="action">
+                    <c.Message @id={{@item.id}} @onConfirm={{@delete}} data-test-pki-role-delete={{@item.id}} />
+                  </li>
+                {{/if}}
+              {{/if}}
+            </ul>
+          </nav>
+        </Confirm>
+      </PopupMenu>
+    </div>
+  </div>
+</LinkedBlock>

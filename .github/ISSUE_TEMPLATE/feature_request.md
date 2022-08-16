@@ -1,6 +1,9 @@
 ---
 name: Feature request
 about: Suggest something!
+title: ''
+labels: ''
+assignees: ''
 
 ---
 

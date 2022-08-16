@@ -32,7 +32,6 @@ func (l *LoggerServer) Error(args *LoggerArgs, reply *LoggerReply) error {
 }
 
 func (l *LoggerServer) Log(args *LoggerArgs, _ *struct{}) error {
-
 	switch translateLevel(args.Level) {
 
 	case hclog.Trace:
@@ -107,7 +106,6 @@ type LoggerReply struct {
 }
 
 func translateLevel(logxiLevel int) hclog.Level {
-
 	switch logxiLevel {
 
 	case 1000, 10:

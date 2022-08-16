@@ -7,6 +7,7 @@ const (
 	TypeInvalid FieldType = 0
 	TypeString  FieldType = iota
 	TypeInt
+	TypeInt64
 	TypeBool
 	TypeMap
 
@@ -56,6 +57,12 @@ const (
 
 	// TypeFloat parses both float32 and float64 values
 	TypeFloat
+
+	// TypeTime represents absolute time. It accepts an RFC3999-formatted
+	// string (with or without fractional seconds), or an epoch timestamp
+	// formatted as a string or a number. The resulting time.Time
+	// is converted to UTC.
+	TypeTime
 )
 
 func (t FieldType) String() string {
@@ -82,6 +89,8 @@ func (t FieldType) String() string {
 		return "header"
 	case TypeFloat:
 		return "float"
+	case TypeTime:
+		return "time"
 	default:
 		return "unknown type"
 	}

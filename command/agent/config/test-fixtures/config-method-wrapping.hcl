@@ -7,6 +7,7 @@ auto_auth {
 		config = {
 			role = "foobar"
 		}
+		max_backoff = "2m"
 	}
 
 	sink {

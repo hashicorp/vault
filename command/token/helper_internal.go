@@ -65,7 +65,7 @@ func (i *InternalTokenHelper) Get() (string, error) {
 func (i *InternalTokenHelper) Store(input string) error {
 	i.populateTokenPath()
 	tmpFile := i.tokenPath + ".tmp"
-	f, err := os.OpenFile(tmpFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+	f, err := os.OpenFile(tmpFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 	if err != nil {
 		return err
 	}

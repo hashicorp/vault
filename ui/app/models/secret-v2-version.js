@@ -1,22 +1,21 @@
-import Secret from './secret';
-import DS from 'ember-data';
-import { computed } from '@ember/object';
+import { belongsTo, attr } from '@ember-data/model';
+import SecretModel from './secret';
 
-const { attr, belongsTo } = DS;
+export default class SecretV2VersionModel extends SecretModel {
+  @attr('boolean') failedServerRead;
+  @attr('number') version;
+  @attr('string') path;
+  @attr('string') deletionTime;
+  @attr('string') createdTime;
+  @attr('boolean') destroyed;
+  @attr('number') currentVersion;
+  @belongsTo('secret-v2') secret;
 
-export default Secret.extend({
-  failedServerRead: attr('boolean'),
-  pathAttr: 'path',
-  version: attr('number'),
-  secret: belongsTo('secret-v2'),
-  path: attr('string'),
-  deletionTime: attr('string'),
-  createdTime: attr('string'),
-  deleted: computed('deletionTime', function() {
-    const deletionTime = new Date(this.get('deletionTime'));
+  pathAttr = 'path';
+
+  get deleted() {
+    const deletionTime = new Date(this.deletionTime);
     const now = new Date();
     return deletionTime <= now;
-  }),
-  destroyed: attr('boolean'),
-  currentVersion: attr('number'),
-});
+  }
+}

@@ -20,38 +20,36 @@ export default Controller.extend(CONFIG_ATTRS, {
   flashMessages: service(),
   loading: false,
   reset() {
-    this.get('model').rollbackAttributes();
+    this.model.rollbackAttributes();
     this.setProperties(CONFIG_ATTRS);
   },
   actions: {
     saveConfig(options = { delete: false }) {
       const isDelete = options.delete;
-      if (this.get('model.type') === 'ssh') {
+      if (this.model.type === 'ssh') {
         this.set('loading', true);
-        this.get('model')
-          .saveCA({ isDelete })
-          .then(() => {
-            this.set('loading', false);
-            this.send('refreshRoute');
-            this.set('configured', !isDelete);
-            if (isDelete) {
-              this.get('flashMessages').success('SSH Certificate Authority Configuration deleted!');
-            } else {
-              this.get('flashMessages').success('SSH Certificate Authority Configuration saved!');
-            }
-          });
+        this.model.saveCA({ isDelete }).then(() => {
+          this.set('loading', false);
+          this.send('refreshRoute');
+          this.set('configured', !isDelete);
+          if (isDelete) {
+            this.flashMessages.success('SSH Certificate Authority Configuration deleted!');
+          } else {
+            this.flashMessages.success('SSH Certificate Authority Configuration saved!');
+          }
+        });
       }
     },
 
     save(method, data) {
       this.set('loading', true);
-      const hasData = Object.keys(data).some(key => {
+      const hasData = Object.keys(data).some((key) => {
         return isPresent(data[key]);
       });
       if (!hasData) {
         return;
       }
-      this.get('model')
+      this.model
         .save({
           adapterOptions: {
             adapterMethod: method,
@@ -59,9 +57,9 @@ export default Controller.extend(CONFIG_ATTRS, {
           },
         })
         .then(() => {
-          this.get('model').send('pushedData');
+          this.model.send('pushedData');
           this.reset();
-          this.get('flashMessages').success('The backend configuration saved successfully!');
+          this.flashMessages.success('The backend configuration saved successfully!');
         })
         .finally(() => {
           this.set('loading', false);

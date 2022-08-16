@@ -1,15 +1,14 @@
+// DEPRECATED: this has been moved to go-secure-stdlib and will be removed
 package mlock
 
-// This should be set by the OS-specific packages to tell whether LockMemory
-// is supported or not.
-var supported bool
+import (
+	extmlock "github.com/hashicorp/go-secure-stdlib/mlock"
+)
 
-// Supported returns true if LockMemory is functional on this system.
 func Supported() bool {
-	return supported
+	return extmlock.Supported()
 }
 
-// LockMemory prevents any memory from being swapped to disk.
 func LockMemory() error {
-	return lockMemory()
+	return extmlock.LockMemory()
 }

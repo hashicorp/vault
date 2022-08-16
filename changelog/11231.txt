@@ -1,0 +1,3 @@
+```release-note:feature
+ui: Add database secret engine support for MSSQL
+```

@@ -1,0 +1,3 @@
+```release-note:feature
+secret/rabbitmq: Add ability to customize dynamic usernames
+```

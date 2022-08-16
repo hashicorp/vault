@@ -43,7 +43,7 @@ export default Component.extend({
   recalculationTimeout: 5000,
   recalculateSeconds: false,
   errorMessage: null,
-  unitOptions: computed(function() {
+  unitOptions: computed(function () {
     return [
       { label: 'seconds', value: 's' },
       { label: 'minutes', value: 'm' },
@@ -52,7 +52,7 @@ export default Component.extend({
     ];
   }),
   handleChange() {
-    let { time, unit, seconds } = this.getProperties('time', 'unit', 'seconds');
+    let { time, unit, seconds } = this;
     const ttl = {
       seconds,
       timeString: time + unit,
@@ -66,7 +66,7 @@ export default Component.extend({
       unit: newUnit,
     });
   },
-  updateTime: task(function*(newTime) {
+  updateTime: task(function* (newTime) {
     this.set('errorMessage', '');
     let parsedTime;
     parsedTime = parseInt(newTime, 10);
@@ -87,7 +87,7 @@ export default Component.extend({
     this.set('recalculateSeconds', false);
   }).restartable(),
 
-  seconds: computed('time', 'unit', function() {
+  seconds: computed('time', 'unit', function () {
     return convertToSeconds(this.time, this.unit);
   }),
 

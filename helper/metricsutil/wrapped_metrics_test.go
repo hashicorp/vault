@@ -107,5 +107,4 @@ func TestClusterLabelPresent(t *testing.T) {
 	if !isLabelPresent(clusterLabel, s.Labels) {
 		t.Error("Sample label", s.Labels, "does not include", clusterLabel)
 	}
-
 }

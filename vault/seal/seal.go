@@ -15,7 +15,7 @@ const (
 	StoredKeysInvalid StoredKeysSupport = iota
 	StoredKeysNotSupported
 	StoredKeysSupportedGeneric
-	StoredKeysSupportedShamirMaster
+	StoredKeysSupportedShamirRoot
 )
 
 func (s StoredKeysSupport) String() string {
@@ -24,7 +24,7 @@ func (s StoredKeysSupport) String() string {
 		return "Old-style Shamir"
 	case StoredKeysSupportedGeneric:
 		return "AutoUnseal"
-	case StoredKeysSupportedShamirMaster:
+	case StoredKeysSupportedShamirRoot:
 		return "New-style Shamir"
 	default:
 		return "Invalid StoredKeys type"
@@ -49,6 +49,7 @@ func (a *Access) Type() string {
 	return a.Wrapper.Type()
 }
 
+// Encrypt uses the underlying seal to encrypt the plaintext and returns it.
 func (a *Access) Encrypt(ctx context.Context, plaintext, aad []byte) (blob *wrapping.EncryptedBlobInfo, err error) {
 	defer func(now time.Time) {
 		metrics.MeasureSince([]string{"seal", "encrypt", "time"}, now)
@@ -66,6 +67,9 @@ func (a *Access) Encrypt(ctx context.Context, plaintext, aad []byte) (blob *wrap
 	return a.Wrapper.Encrypt(ctx, plaintext, aad)
 }
 
+// Decrypt uses the underlying seal to decrypt the cryptotext and returns it.
+// Note that it is possible depending on the wrapper used that both pt and err
+// are populated.
 func (a *Access) Decrypt(ctx context.Context, data *wrapping.EncryptedBlobInfo, aad []byte) (pt []byte, err error) {
 	defer func(now time.Time) {
 		metrics.MeasureSince([]string{"seal", "decrypt", "time"}, now)

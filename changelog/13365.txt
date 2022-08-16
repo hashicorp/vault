@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/jwt: The Authorization Code flow makes use of the Proof Key for Code Exchange (PKCE) extension.
+```

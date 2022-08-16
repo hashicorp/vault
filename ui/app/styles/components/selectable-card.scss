@@ -5,6 +5,20 @@
   padding: $spacing-l 0 $spacing-l $spacing-l;
   line-height: 0;
 
+  &.no-flex {
+    padding: $spacing-l;
+    display: initial;
+    line-height: initial;
+
+    .title-number {
+      padding-top: $spacing-s;
+    }
+
+    .search-label {
+      margin-bottom: -$spacing-xs;
+    }
+  }
+
   &:hover {
     box-shadow: 0 0 0 1px $grey-light, $box-shadow-middle;
   }
@@ -13,19 +27,18 @@
     text-decoration: none;
   }
 
+  .button {
+    &:disabled {
+      border-color: $vault-gray-300;
+    }
+  }
+
   .card-details {
     grid-column-start: 2;
     grid-row-start: 3;
     align-self: center;
     justify-self: right;
     padding-right: $spacing-l;
-  }
-
-  .http-requests-bar-chart-simple {
-    grid-column: 1 / span 2;
-    grid-row-start: 2;
-    align-self: end;
-    min-width: 100%; // necessary for Firefox
   }
 
   .change-metric {

@@ -1,0 +1,34 @@
+---
+layout: docs
+page_title: Upgrading to Vault 1.4.1 - Guides
+description: |-
+  This page contains the list of deprecations and important or breaking changes
+  for Vault 1.4.1. Please read it carefully.
+---
+
+# Overview
+
+This page contains the list of deprecations and important or breaking changes
+for Vault 1.4.1 compared to 1.4.0. Please read it carefully.
+
+## AWS Auth Metadata
+
+The metadata handling for AWS Auth logins has changed:
+
+The default set of metadata fields has been changed to `account_id` and `auth_type`. If your
+application relies on fields that were removed, they may be added back via the AWS Auth identity
+configuration endpoint (see example below).
+
+## Known Issues
+
+The AWS metadata changes have caused an issue preventing renewal of tokens issued via AWS Auth.
+This has been fixed in Vault 1.4.2. The issue may be addressed in Vault 1.4.1 by configuring the
+required metadata explicitly:
+
+```
+vault write auth/aws/config/identity \
+  ec2_metadata=account_id,auth_type,instance_id,region \
+  iam_metadata=account_id,auth_type,client_user_id,canonical_arn,inferred_entity_id,inferred_aws_region
+```
+
+@include 'ldap-upndomain-issue.mdx'

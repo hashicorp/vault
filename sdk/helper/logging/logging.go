@@ -42,16 +42,16 @@ func NewVaultLogger(level log.Level) log.Logger {
 // writer and a Vault formatter
 func NewVaultLoggerWithWriter(w io.Writer, level log.Level) log.Logger {
 	opts := &log.LoggerOptions{
-		Level:      level,
-		Output:     w,
-		JSONFormat: ParseEnvLogFormat() == JSONFormat,
+		Level:             level,
+		IndependentLevels: true,
+		Output:            w,
+		JSONFormat:        ParseEnvLogFormat() == JSONFormat,
 	}
 	return log.New(opts)
 }
 
 // ParseLogFormat parses the log format from the provided string.
 func ParseLogFormat(format string) (LogFormat, error) {
-
 	switch strings.ToLower(strings.TrimSpace(format)) {
 	case "":
 		return UnspecifiedFormat, nil
