@@ -36,11 +36,6 @@ export default class OidcProviderForm extends Component {
     super(...arguments);
     const { model } = this.args;
     model.issuer = model.isNew ? '' : parseURL(model.issuer).origin;
-    this.store
-      .query('oidc/client', {
-        filterIds: this.args.model.allowedClientIds,
-      })
-      .then((resp) => (this.modelClientIds = resp));
   }
 
   @action
