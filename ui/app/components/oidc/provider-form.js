@@ -24,7 +24,6 @@ export default class OidcProviderForm extends Component {
   @service store;
   @service flashMessages;
 
-  @tracked modelClientIds;
   @tracked modelValidations;
   @tracked radioCardGroupValue =
     // If "*" is provided, all clients are allowed: https://www.vaultproject.io/api-docs/secret/identity/oidc-provider#parameters

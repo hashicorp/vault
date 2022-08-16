@@ -36,20 +36,24 @@ export default class NamedPathAdapter extends ApplicationAdapter {
   // GET request with list=true as query param
   async query(store, type, query) {
     const url = this.urlForQuery(query, type.modelName);
-    const { filterIds } = query;
+    const { key, filterFor } = query;
     const response = await this.ajax(url, 'GET', { data: { list: true } });
-
-    // filter LIST response when key_info and filterIds exist
-    if (response.data.key_info && filterIds && !filterIds.includes('*')) {
-      const data = this.filterListResponse(filterIds, response.data.keys, response.data.key_info);
+    // filter LIST response when key_info and filterFor exist
+    if (response.data.key_info && filterFor && !filterFor.includes('*')) {
+      const data = this.filterListResponse(key, filterFor, response.data.key_info);
       return { ...response, data };
     }
     return response;
   }
 
-  filterListResponse(matchKeys, keys, key_info) {
-    let filteredKeys = keys.filter((k) => matchKeys.includes(k));
-    let filteredKeyInfo = { key_info: Object.fromEntries(filteredKeys.map((key) => [key, key_info[key]])) };
+  filterListResponse(filterKey, matchValues, key_info) {
+    const keyInfoAsArray = Object.entries(key_info);
+    const filtered = keyInfoAsArray.filter(([key, value]) => {
+      // value is the object of model attributes
+      return matchValues.includes(value[filterKey]);
+    });
+    const filteredKeyInfo = Object.fromEntries(filtered);
+    const filteredKeys = Object.keys(filteredKeyInfo);
     return { keys: filteredKeys, key_info: filteredKeyInfo };
   }
 }
