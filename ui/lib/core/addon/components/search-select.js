@@ -22,8 +22,7 @@ import layout from '../templates/components/search-select';
  * @param {string} [backend] - name of the backend if the query for options needs additional information (eg. secret backend)
  * @param {boolean} [disallowNewItems=false] - Controls whether or not the user can add a new item if none found
  * @param {boolean} [passObject=false] - When true, the onChange callback returns an array of objects with id (string) and isNew (boolean)
- * @param {array} [objectKeys=null] - When passObject=true and you want to configure the object returned by search-select by passing an array of attributes to add to the option object
- * @param {string} [helpText] - Text to be displayed in the info tooltip for this form field
+ * @param {array} [objectKeys=null] - Array of strings that correlate to model attrs. When passObject=true and you want to customize the object rendered and returned by search-select, passed in objectKeys will be added to the option object. NOTE: the first string in the array sets the dynamic idKey
  * @param {number} [selectLimit] - A number that sets the limit to how many select options they can choose
  * @param {string} [subText] - Text to be displayed below the label
  * @param {string} [subLabel] - a smaller label below the main Label
@@ -60,7 +59,7 @@ export default Component.extend({
   objectKeys: null,
   idKey: computed('objectKeys', function () {
     // if objectKeys exists, then use the first element of the array as the identifier
-    // e.g. 'clientId' otherwise use 'id'
+    // pass 'id' as the first element in objectKeys if you do not want to override the default of 'id'
     return this.objectKeys ? this.objectKeys[0] : 'id';
   }),
   init() {
@@ -93,8 +92,8 @@ export default Component.extend({
         id: option,
         name: matchingOption ? matchingOption.name : option,
         searchText: matchingOption ? matchingOption.searchText : option,
-        // conditionally spread configured object if we've passed in a dynamic param
-        ...(this.idKey !== 'id' && this.configureObject(matchingOption)),
+        // conditionally spread configured object if we're using the dynamic idKey
+        ...(this.idKey !== 'id' && this.customizeObject(matchingOption)),
       };
     });
     this.set('selectedOptions', formattedOptions);
@@ -142,12 +141,7 @@ export default Component.extend({
   }).on('didInsertElement'),
   handleChange() {
     if (this.selectedOptions.length && typeof this.selectedOptions.firstObject === 'object') {
-      if (this.passObject) {
-        // return array of objects instead of array of strings
-        this.onChange(Array.from(this.selectedOptions, (option) => this.configureObject(option)));
-      } else {
-        this.onChange(Array.from(this.selectedOptions, (option) => option.id));
-      }
+      this.onChange(Array.from(this.selectedOptions, (option) => this.customizeObject(option)));
     } else {
       this.onChange(this.selectedOptions);
     }
@@ -180,15 +174,20 @@ export default Component.extend({
     return filterOptions(options || [], searchText, matcher);
   },
   // -----
-  configureObject(option) {
-    // if the LIST endpoint has key_info then we can pass search-select an array of keys
-    // to add to a selected option (object), and subsequently pass back to the parent
-    let additionalKeys = this.objectKeys
-      ? Object.fromEntries(this.objectKeys.map((key) => [key, option[key]]))
-      : // otherwise return isNew and have the parent handle creating or finding the record
-        // see component/keymgmt/distribute.js for an example
-        { isNew: !!option.new };
-    return { id: option.id, ...additionalKeys };
+  customizeObject(option) {
+    // if passObject=true return array of objects, instead of array of strings
+    if (this.passObject) {
+      let additionalKeys = this.objectKeys
+        ? // if the LIST endpoint has key_info then we can pass search-select an array of keys
+          // to add to a selected option (object), and then pass the customized selected option back to the parent
+          Object.fromEntries(this.objectKeys.map((key) => [key, option[key]]))
+        : // otherwise return isNew and have the parent handle creating or finding the record
+          // see component/keymgmt/distribute.js for an example
+          { isNew: !!option.new };
+      return { id: option.id, ...additionalKeys };
+    } else {
+      return option.id;
+    }
   },
   actions: {
     onChange(val) {
