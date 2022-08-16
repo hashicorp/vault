@@ -165,9 +165,10 @@ These are the currently-available general configuration option:
 There can at most be one top level `vault` block and it has the following
 configuration entries:
 
-- `address` `(string: <optional>)` - The address of the Vault server. This should
-  be a complete URL such as `https://127.0.0.1:8200`. This value can be
-  overridden by setting the `VAULT_ADDR` environment variable.
+- `address` `(string: <optional>)` - The address of the Vault server to connect.
+  This should be a complete URL such as `https://vault.example.org:8200` or
+  `https://172.16.9.8:8200`. This value can be overridden by setting the
+  `VAULT_ADDR` environment variable.
 
 - `ca_cert` `(string: <optional>)` - Path on the local disk to a single PEM-encoded
   CA certificate to verify the Vault server's SSL certificate. This value can
@@ -301,7 +302,7 @@ An example configuration, with very contrived values, follows:
 pid_file = "./pidfile"
 
 vault {
-  address = "https://127.0.0.1:8200"
+  address = "https://vault.example.org:8200"
   retry {
     num_retries = 5
   }
