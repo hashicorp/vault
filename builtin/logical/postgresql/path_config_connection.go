@@ -7,38 +7,38 @@ import (
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
 func pathConfigConnection(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/connection",
 		Fields: map[string]*framework.FieldSchema{
-			"connection_url": &framework.FieldSchema{
+			"connection_url": {
 				Type:        framework.TypeString,
 				Description: "DB connection string",
 			},
 
-			"value": &framework.FieldSchema{
+			"value": {
 				Type: framework.TypeString,
 				Description: `DB connection string. Use 'connection_url' instead.
 This will be deprecated.`,
 			},
 
-			"verify_connection": &framework.FieldSchema{
+			"verify_connection": {
 				Type:        framework.TypeBool,
 				Default:     true,
 				Description: `If set, connection_url is verified by actually connecting to the database`,
 			},
 
-			"max_open_connections": &framework.FieldSchema{
+			"max_open_connections": {
 				Type: framework.TypeInt,
 				Description: `Maximum number of open connections to the database;
 a zero uses the default value of two and a
 negative value means unlimited`,
 			},
 
-			"max_idle_connections": &framework.FieldSchema{
+			"max_idle_connections": {
 				Type: framework.TypeInt,
 				Description: `Maximum number of idle connections to the database;
 a zero uses the value of max_open_connections
@@ -109,7 +109,7 @@ func (b *backend) pathConnectionWrite(ctx context.Context, req *logical.Request,
 	verifyConnection := data.Get("verify_connection").(bool)
 	if verifyConnection {
 		// Verify the string
-		db, err := sql.Open("postgres", connURL)
+		db, err := sql.Open("pgx", connURL)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"Error validating connection info: %s", err)), nil

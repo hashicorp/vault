@@ -8,8 +8,10 @@ import (
 	"testing"
 	"time"
 
+	metrics "github.com/armon/go-metrics"
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -40,19 +42,90 @@ func TestMount_ReadOnlyViewDuringMount(t *testing.T) {
 	}
 }
 
+func TestLogicalMountMetrics(t *testing.T) {
+	c, _, _, _ := TestCoreUnsealedWithMetrics(t)
+	c.logicalBackends["noop"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+		return &NoopBackend{
+			BackendType: logical.TypeLogical,
+		}, nil
+	}
+	mountKeyName := "core.mount_table.num_entries.type|logical||local|false||"
+	mountMetrics := &c.metricsHelper.LoopMetrics.Metrics
+	loadMetric, ok := mountMetrics.Load(mountKeyName)
+	var numEntriesMetric metricsutil.GaugeMetric = loadMetric.(metricsutil.GaugeMetric)
+
+	// 3 default nonlocal logical backends
+	if !ok || numEntriesMetric.Value != 3 {
+		t.Fatalf("Auth values should be: %+v", numEntriesMetric)
+	}
+	me := &MountEntry{
+		Table: mountTableType,
+		Path:  "foo",
+		Type:  "noop",
+	}
+	err := c.mount(namespace.RootContext(nil), me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	mountMetrics = &c.metricsHelper.LoopMetrics.Metrics
+	loadMetric, ok = mountMetrics.Load(mountKeyName)
+	numEntriesMetric = loadMetric.(metricsutil.GaugeMetric)
+	if !ok || numEntriesMetric.Value != 4 {
+		t.Fatalf("mount metrics for num entries do not match true values")
+	}
+	if len(numEntriesMetric.Key) != 3 ||
+		numEntriesMetric.Key[0] != "core" ||
+		numEntriesMetric.Key[1] != "mount_table" ||
+		numEntriesMetric.Key[2] != "num_entries" {
+		t.Fatalf("mount metrics for num entries have wrong key")
+	}
+	if len(numEntriesMetric.Labels) != 2 ||
+		numEntriesMetric.Labels[0].Name != "type" ||
+		numEntriesMetric.Labels[0].Value != "logical" ||
+		numEntriesMetric.Labels[1].Name != "local" ||
+		numEntriesMetric.Labels[1].Value != "false" {
+		t.Fatalf("mount metrics for num entries have wrong labels")
+	}
+	mountSizeKeyName := "core.mount_table.size.type|logical||local|false||"
+	loadMetric, ok = mountMetrics.Load(mountSizeKeyName)
+	sizeMetric := loadMetric.(metricsutil.GaugeMetric)
+
+	if !ok {
+		t.Fatalf("mount metrics for size do not match exist")
+	}
+	if len(sizeMetric.Key) != 3 ||
+		sizeMetric.Key[0] != "core" ||
+		sizeMetric.Key[1] != "mount_table" ||
+		sizeMetric.Key[2] != "size" {
+		t.Fatalf("mount metrics for size have wrong key")
+	}
+	if len(sizeMetric.Labels) != 2 ||
+		sizeMetric.Labels[0].Name != "type" ||
+		sizeMetric.Labels[0].Value != "logical" ||
+		sizeMetric.Labels[1].Name != "local" ||
+		sizeMetric.Labels[1].Value != "false" {
+		t.Fatalf("mount metrics for size have wrong labels")
+	}
+}
+
 func TestCore_DefaultMountTable(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
 	verifyDefaultTable(t, c.mounts, 4)
 
 	// Start a second core with same physical
+	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
 	conf := &CoreConfig{
-		Physical:     c.physical,
-		DisableMlock: true,
+		Physical:        c.physical,
+		DisableMlock:    true,
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
+		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
 	c2, err := NewCore(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer c2.Shutdown()
 	for i, key := range keys {
 		unseal, err := TestCoreUnseal(c2, key)
 		if err != nil {
@@ -85,14 +158,67 @@ func TestCore_Mount(t *testing.T) {
 		t.Fatalf("missing mount")
 	}
 
+	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
 	conf := &CoreConfig{
-		Physical:     c.physical,
-		DisableMlock: true,
+		Physical:        c.physical,
+		DisableMlock:    true,
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
+		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
 	c2, err := NewCore(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer c2.Shutdown()
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c2, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("should be unsealed")
+		}
+	}
+
+	// Verify matching mount tables
+	if diff := deep.Equal(c.mounts.sortEntriesByPath(), c2.mounts.sortEntriesByPath()); len(diff) > 0 {
+		t.Fatalf("mismatch: %v", diff)
+	}
+}
+
+// TestCore_Mount_kv_generic tests that we can successfully mount kv using the
+// kv alias "generic"
+func TestCore_Mount_kv_generic(t *testing.T) {
+	c, keys, _ := TestCoreUnsealed(t)
+	me := &MountEntry{
+		Table: mountTableType,
+		Path:  "foo",
+		Type:  "generic",
+	}
+	err := c.mount(namespace.RootContext(nil), me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	match := c.router.MatchingMount(namespace.RootContext(nil), "foo/bar")
+	if match != "foo/" {
+		t.Fatalf("missing mount")
+	}
+
+	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
+	conf := &CoreConfig{
+		Physical:        c.physical,
+		DisableMlock:    true,
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
+		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
+	}
+	c2, err := NewCore(conf)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	defer c2.Shutdown()
 	for i, key := range keys {
 		unseal, err := TestCoreUnseal(c2, key)
 		if err != nil {
@@ -118,7 +244,7 @@ func TestCore_Mount_Local(t *testing.T) {
 	c.mounts = &MountTable{
 		Type: mountTableType,
 		Entries: []*MountEntry{
-			&MountEntry{
+			{
 				Table:            mountTableType,
 				Path:             "noop/",
 				Type:             "kv",
@@ -128,7 +254,7 @@ func TestCore_Mount_Local(t *testing.T) {
 				NamespaceID:      namespace.RootNamespaceID,
 				namespace:        namespace.RootNamespace,
 			},
-			&MountEntry{
+			{
 				Table:            mountTableType,
 				Path:             "noop2/",
 				Type:             "kv",
@@ -211,6 +337,77 @@ func TestCore_Mount_Local(t *testing.T) {
 	}
 }
 
+func TestCore_FindOps(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	uuid1 := "80DA741F-3997-4179-B531-EBD7371DFA86"
+	uuid2 := "0178594D-F267-445A-89A3-5B5DFC4A4C0F"
+	path1 := "kv1"
+	path2 := "kv2"
+
+	c.mounts = &MountTable{
+		Type: mountTableType,
+		Entries: []*MountEntry{
+			{
+				Table:            mountTableType,
+				Path:             path1,
+				Type:             "kv",
+				UUID:             "abcd",
+				Accessor:         "kv-abcd",
+				BackendAwareUUID: uuid1,
+				NamespaceID:      namespace.RootNamespaceID,
+				namespace:        namespace.RootNamespace,
+			},
+			{
+				Table:            mountTableType,
+				Path:             path2,
+				Type:             "kv",
+				UUID:             "bcde",
+				Accessor:         "kv-bcde",
+				BackendAwareUUID: uuid2,
+				NamespaceID:      namespace.RootNamespaceID,
+				namespace:        namespace.RootNamespace,
+			},
+		},
+	}
+
+	// Both should set up successfully
+	if err := c.setupMounts(namespace.RootContext(nil)); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(c.mounts.Entries) != 2 {
+		t.Fatalf("expected two entries, got %d", len(c.mounts.Entries))
+	}
+
+	// Unknown uuids/paths should return nil, nil
+	entry, err := c.mounts.findByBackendUUID(namespace.RootContext(nil), "unknown")
+	if err != nil || entry != nil {
+		t.Fatalf("expected no errors nor matches got, error: %#v entry: %#v", err, entry)
+	}
+	entry, err = c.mounts.find(namespace.RootContext(nil), "unknown")
+	if err != nil || entry != nil {
+		t.Fatalf("expected no errors nor matches got, error: %#v entry: %#v", err, entry)
+	}
+
+	// Find our entry by its uuid
+	entry, err = c.mounts.findByBackendUUID(namespace.RootContext(nil), uuid1)
+	if err != nil || entry == nil {
+		t.Fatalf("failed finding entry by uuid error: %#v entry: %#v", err, entry)
+	}
+	if entry.Path != path1 {
+		t.Fatalf("found incorrect entry by uuid, entry should had a path of '%s': %#v", path1, entry)
+	}
+
+	// Find another entry by its path
+	entry, err = c.mounts.find(namespace.RootContext(nil), path2)
+	if err != nil || entry == nil {
+		t.Fatalf("failed finding entry by path error: %#v entry: %#v", err, entry)
+	}
+	if entry.BackendAwareUUID != uuid2 {
+		t.Fatalf("found incorrect entry by path, entry should had a uuid of '%s': %#v", uuid2, entry)
+	}
+}
+
 func TestCore_Unmount(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
 	err := c.unmount(namespace.RootContext(nil), "secret")
@@ -223,14 +420,19 @@ func TestCore_Unmount(t *testing.T) {
 		t.Fatalf("backend present")
 	}
 
+	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
 	conf := &CoreConfig{
-		Physical:     c.physical,
-		DisableMlock: true,
+		Physical:        c.physical,
+		DisableMlock:    true,
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
+		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
 	c2, err := NewCore(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer c2.Shutdown()
 	for i, key := range keys {
 		unseal, err := TestCoreUnseal(c2, key)
 		if err != nil {
@@ -363,7 +565,7 @@ func testCore_Unmount_Cleanup(t *testing.T, causeFailure bool) {
 
 func TestCore_Remount(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
-	err := c.remount(namespace.RootContext(nil), "secret", "foo", true)
+	err := c.remountSecretsEngineCurrentNamespace(namespace.RootContext(nil), "secret", "foo", true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -373,16 +575,9 @@ func TestCore_Remount(t *testing.T) {
 		t.Fatalf("failed remount")
 	}
 
-	conf := &CoreConfig{
-		Physical:     c.physical,
-		DisableMlock: true,
-	}
-	c2, err := NewCore(conf)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
+	c.sealInternal()
 	for i, key := range keys {
-		unseal, err := TestCoreUnseal(c2, key)
+		unseal, err := TestCoreUnseal(c, key)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -391,20 +586,9 @@ func TestCore_Remount(t *testing.T) {
 		}
 	}
 
-	// Verify matching mount tables
-	if c.mounts.Type != c2.mounts.Type {
-		t.Fatal("types don't match")
-	}
-	cMountMap := map[string]interface{}{}
-	for _, v := range c.mounts.Entries {
-		cMountMap[v.Path] = v
-	}
-	c2MountMap := map[string]interface{}{}
-	for _, v := range c2.mounts.Entries {
-		c2MountMap[v.Path] = v
-	}
-	if diff := deep.Equal(cMountMap, c2MountMap); diff != nil {
-		t.Fatal(diff)
+	match = c.router.MatchingMount(namespace.RootContext(nil), "foo/bar")
+	if match != "foo/" {
+		t.Fatalf("failed remount")
 	}
 }
 
@@ -466,7 +650,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 	}
 
 	// Remount, this should cleanup
-	if err := c.remount(namespace.RootContext(nil), "test/", "new/", true); err != nil {
+	if err := c.remountSecretsEngineCurrentNamespace(namespace.RootContext(nil), "test/", "new/", true); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -495,7 +679,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 
 func TestCore_Remount_Protected(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	err := c.remount(namespace.RootContext(nil), "sys", "foo", true)
+	err := c.remountSecretsEngineCurrentNamespace(namespace.RootContext(nil), "sys", "foo", true)
 	if err.Error() != `cannot remount "sys/"` {
 		t.Fatalf("err: %v", err)
 	}
@@ -550,8 +734,8 @@ func TestCore_MountTable_UpgradeToTyped(t *testing.T) {
 func testCore_MountTable_UpgradeToTyped_Common(
 	t *testing.T,
 	c *Core,
-	testType string) {
-
+	testType string,
+) {
 	var path string
 	var mt *MountTable
 	switch testType {
@@ -637,6 +821,9 @@ func testCore_MountTable_UpgradeToTyped_Common(
 	if err != nil {
 		t.Fatal(err)
 	}
+	if entry == nil {
+		t.Fatal("nil value")
+	}
 
 	decompressedBytes, uncompressed, err := compressutil.Decompress(entry.Value)
 	if err != nil {
@@ -692,6 +879,9 @@ func verifyDefaultTable(t *testing.T, table *MountTable, expected int) {
 			if entry.Type != "system" {
 				t.Fatalf("bad: %v", entry)
 			}
+			if !entry.SealWrap {
+				t.Fatalf("expected SealWrap to be enabled: %v", entry)
+			}
 		case "identity/":
 			if entry.Type != "identity" {
 				t.Fatalf("bad: %v", entry)
@@ -741,7 +931,8 @@ func TestCore_MountInitialize(t *testing.T) {
 		backend := &InitializableBackend{
 			&NoopBackend{
 				BackendType: logical.TypeLogical,
-			}, false}
+			}, false,
+		}
 
 		c, _, _ := TestCoreUnsealed(t)
 		c.logicalBackends["initable"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
@@ -766,7 +957,8 @@ func TestCore_MountInitialize(t *testing.T) {
 		backend := &InitializableBackend{
 			&NoopBackend{
 				BackendType: logical.TypeLogical,
-			}, false}
+			}, false,
+		}
 
 		c, _, _ := TestCoreUnsealed(t)
 		c.logicalBackends["initable"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
@@ -776,7 +968,7 @@ func TestCore_MountInitialize(t *testing.T) {
 		c.mounts = &MountTable{
 			Type: mountTableType,
 			Entries: []*MountEntry{
-				&MountEntry{
+				{
 					Table:            mountTableType,
 					Path:             "foo/",
 					Type:             "initable",

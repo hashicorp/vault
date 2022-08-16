@@ -8,8 +8,8 @@ export default Route.extend(ClusterRoute, ListRoute, {
   wizard: service(),
 
   activate() {
-    if (this.get('wizard.featureState') === 'details') {
-      this.get('wizard').transitionFeatureMachine('details', 'CONTINUE', this.policyType());
+    if (this.wizard.featureState === 'details') {
+      this.wizard.transitionFeatureMachine('details', 'CONTINUE', this.policyType());
     }
   },
 
@@ -19,7 +19,7 @@ export default Route.extend(ClusterRoute, ListRoute, {
 
   model(params) {
     let policyType = this.policyType();
-    if (this.shouldReturnEmptyModel(policyType, this.get('version'))) {
+    if (this.shouldReturnEmptyModel(policyType, this.version)) {
       return;
     }
     return this.store
@@ -28,7 +28,7 @@ export default Route.extend(ClusterRoute, ListRoute, {
         pageFilter: params.pageFilter,
         responsePath: 'data.keys',
       })
-      .catch(err => {
+      .catch((err) => {
         // acls will never be empty, but sentinel policies can be
         if (err.httpStatus === 404 && this.policyType() !== 'acl') {
           return [];

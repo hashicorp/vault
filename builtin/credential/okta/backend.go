@@ -3,13 +3,20 @@ package okta
 import (
 	"context"
 	"fmt"
+	"net/textproto"
 	"time"
 
-	"github.com/hashicorp/vault/helper/mfa"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/okta/okta-sdk-golang/okta"
+	"github.com/okta/okta-sdk-golang/v2/okta"
+	"github.com/patrickmn/go-cache"
+)
+
+const (
+	mfaPushMethod = "push"
+	mfaTOTPMethod = "token:software:totp"
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -26,38 +33,39 @@ func Backend() *backend {
 		Help: backendHelp,
 
 		PathsSpecial: &logical.Paths{
-			Root: mfa.MFARootPaths(),
-
 			Unauthenticated: []string{
 				"login/*",
+				"verify/*",
 			},
 			SealWrapStorage: []string{
 				"config",
 			},
 		},
 
-		Paths: append([]*framework.Path{
+		Paths: []*framework.Path{
 			pathConfig(&b),
 			pathUsers(&b),
 			pathGroups(&b),
 			pathUsersList(&b),
 			pathGroupsList(&b),
+			pathLogin(&b),
+			pathVerify(&b),
 		},
-			mfa.MFAPaths(b.Backend, pathLogin(&b))...,
-		),
 
 		AuthRenew:   b.pathLoginRenew,
 		BackendType: logical.TypeCredential,
 	}
+	b.verifyCache = cache.New(5*time.Minute, time.Minute)
 
 	return &b
 }
 
 type backend struct {
 	*framework.Backend
+	verifyCache *cache.Cache
 }
 
-func (b *backend) Login(ctx context.Context, req *logical.Request, username string, password string) ([]string, *logical.Response, []string, error) {
+func (b *backend) Login(ctx context.Context, req *logical.Request, username, password, totp, nonce, preferredProvider string) ([]string, *logical.Response, []string, error) {
 	cfg, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, nil, nil, err
@@ -77,7 +85,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		}
 	}
 
-	shim, err := cfg.OktaClient()
+	shim, err := cfg.OktaClient(ctx)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -86,11 +94,17 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		Id       string `json:"id"`
 		Type     string `json:"factorType"`
 		Provider string `json:"provider"`
+		Embedded struct {
+			Challenge struct {
+				CorrectAnswer *int `json:"correctAnswer"`
+			} `json:"challenge"`
+		} `json:"_embedded"`
 	}
 
 	type embeddedResult struct {
 		User    okta.User   `json:"user"`
 		Factors []mfaFactor `json:"factors"`
+		Factor  *mfaFactor  `json:"factor"`
 	}
 
 	type authResult struct {
@@ -160,33 +174,64 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		// active factor enrollment). This bypass removes visibility
 		// into the authenticating user's password expiry, but still ensures the
 		// credentials are valid and the user is not locked out.
+		//
+		// API reference: https://developer.okta.com/docs/reference/api/authn/#verify-factor
 		if cfg.BypassOktaMFA {
 			result.Status = "SUCCESS"
 			break
 		}
 
-		factorAvailable := false
+		var selectedFactor, totpFactor, pushFactor *mfaFactor
 
-		var selectedFactor mfaFactor
-		// only okta push is currently supported
+		// Scan for available factors
 		for _, v := range result.Embedded.Factors {
-			if v.Type == "push" && v.Provider == "OKTA" {
-				factorAvailable = true
-				selectedFactor = v
+			v := v // create a new copy since we'll be taking the address later
+
+			if preferredProvider != "" && preferredProvider != v.Provider {
+				continue
+			}
+
+			if !strutil.StrListContains(b.getSupportedProviders(), v.Provider) {
+				continue
+			}
+
+			switch v.Type {
+			case mfaTOTPMethod:
+				totpFactor = &v
+			case mfaPushMethod:
+				pushFactor = &v
 			}
 		}
 
-		if !factorAvailable {
-			return nil, logical.ErrorResponse("Okta Verify Push factor is required in order to perform MFA"), nil, nil
+		// Okta push and totp, and Google totp are currently supported.
+		// If a totp passcode is provided during login and is supported,
+		// that will be the preferred method.
+		switch {
+		case totpFactor != nil && totp != "":
+			selectedFactor = totpFactor
+		case pushFactor != nil && pushFactor.Provider == oktaProvider:
+			selectedFactor = pushFactor
+		case totpFactor != nil && totp == "":
+			return nil, logical.ErrorResponse("'totp' passcode parameter is required to perform MFA"), nil, nil
+		default:
+			return nil, logical.ErrorResponse("Okta Verify Push or TOTP or Google TOTP factor is required in order to perform MFA"), nil, nil
 		}
 
 		requestPath := fmt.Sprintf("authn/factors/%s/verify", selectedFactor.Id)
+
 		payload := map[string]interface{}{
 			"stateToken": result.StateToken,
 		}
+		if selectedFactor.Type == mfaTOTPMethod {
+			payload["passCode"] = totp
+		}
+
 		verifyReq, err := shim.NewRequest("POST", requestPath, payload)
 		if err != nil {
 			return nil, nil, nil, err
+		}
+		if len(req.Headers["X-Forwarded-For"]) > 0 {
+			verifyReq.Header.Set("X-Forwarded-For", req.Headers[textproto.CanonicalMIMEHeaderKey("X-Forwarded-For")][0])
 		}
 
 		rsp, err := shim.Do(verifyReq, &result)
@@ -204,6 +249,17 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 					return nil, logical.ErrorResponse(fmt.Sprintf("okta auth failed creating verify request: %v", err)), nil, nil
 				}
 				rsp, err := shim.Do(verifyReq, &result)
+
+				// Store number challenge if found
+				numberChallenge := result.Embedded.Factor.Embedded.Challenge.CorrectAnswer
+				if numberChallenge != nil {
+					if nonce == "" {
+						return nil, logical.ErrorResponse("nonce must be provided during login request when presented with number challenge"), nil, nil
+					}
+
+					b.verifyCache.SetDefault(nonce, *numberChallenge)
+				}
+
 				if err != nil {
 					return nil, logical.ErrorResponse(fmt.Sprintf("Okta auth failed checking loop: %v", err)), nil, nil
 				}
@@ -212,7 +268,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 				}
 
 				select {
-				case <-time.After(500 * time.Millisecond):
+				case <-time.After(1 * time.Second):
 					// Continue
 				case <-ctx.Done():
 					return nil, logical.ErrorResponse("exiting pending mfa challenge"), nil, nil
@@ -258,9 +314,9 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 
 	var allGroups []string
 	// Only query the Okta API for group membership if we have a token
-	client := shim.Client()
+	client, oktactx := shim.Client()
 	if client != nil {
-		oktaGroups, err := b.getOktaGroups(client, &result.Embedded.User)
+		oktaGroups, err := b.getOktaGroups(oktactx, client, &result.Embedded.User)
 		if err != nil {
 			return nil, logical.ErrorResponse(fmt.Sprintf("okta failure retrieving groups: %v", err)), nil, nil
 		}
@@ -308,14 +364,24 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	return policies, oktaResponse, allGroups, nil
 }
 
-func (b *backend) getOktaGroups(client *okta.Client, user *okta.User) ([]string, error) {
-	groups, _, err := client.User.ListUserGroups(user.Id, nil)
+func (b *backend) getOktaGroups(ctx context.Context, client *okta.Client, user *okta.User) ([]string, error) {
+	groups, resp, err := client.User.ListUserGroups(ctx, user.Id)
 	if err != nil {
 		return nil, err
 	}
 	oktaGroups := make([]string, 0, len(groups))
 	for _, group := range groups {
 		oktaGroups = append(oktaGroups, group.Profile.Name)
+	}
+	for resp.HasNextPage() {
+		var nextGroups []*okta.Group
+		resp, err = resp.Next(ctx, &nextGroups)
+		if err != nil {
+			return nil, err
+		}
+		for _, group := range nextGroups {
+			oktaGroups = append(oktaGroups, group.Profile.Name)
+		}
 	}
 	if b.Logger().IsDebug() {
 		b.Logger().Debug("Groups fetched from Okta", "num_groups", len(oktaGroups), "groups", fmt.Sprintf("%#v", oktaGroups))

@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/gcp: Truncate ServiceAccount display names longer than 100 characters.
+```

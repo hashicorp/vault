@@ -5,30 +5,29 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"math/big"
 	mathrand "math/rand"
+	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
+	"reflect"
+	"testing"
+	"time"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-sockaddr"
 
 	"golang.org/x/net/http2"
-
-	"crypto/rsa"
-	"crypto/tls"
-	"crypto/x509"
-	"crypto/x509/pkix"
-	"fmt"
-	"io"
-	"io/ioutil"
-	"math/big"
-	"net"
-	"os"
-	"reflect"
-	"testing"
-	"time"
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
@@ -98,7 +97,7 @@ func generateTestCertAndConnState(t *testing.T, template *x509.Certificate) (str
 		Type:  "CERTIFICATE",
 		Bytes: caBytes,
 	}
-	err = ioutil.WriteFile(filepath.Join(tempDir, "ca_cert.pem"), pem.EncodeToMemory(caCertPEMBlock), 0755)
+	err = ioutil.WriteFile(filepath.Join(tempDir, "ca_cert.pem"), pem.EncodeToMemory(caCertPEMBlock), 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +109,7 @@ func generateTestCertAndConnState(t *testing.T, template *x509.Certificate) (str
 		Type:  "EC PRIVATE KEY",
 		Bytes: marshaledCAKey,
 	}
-	err = ioutil.WriteFile(filepath.Join(tempDir, "ca_key.pem"), pem.EncodeToMemory(caKeyPEMBlock), 0755)
+	err = ioutil.WriteFile(filepath.Join(tempDir, "ca_key.pem"), pem.EncodeToMemory(caKeyPEMBlock), 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +126,7 @@ func generateTestCertAndConnState(t *testing.T, template *x509.Certificate) (str
 		Type:  "CERTIFICATE",
 		Bytes: certBytes,
 	}
-	err = ioutil.WriteFile(filepath.Join(tempDir, "cert.pem"), pem.EncodeToMemory(certPEMBlock), 0755)
+	err = ioutil.WriteFile(filepath.Join(tempDir, "cert.pem"), pem.EncodeToMemory(certPEMBlock), 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,7 +138,7 @@ func generateTestCertAndConnState(t *testing.T, template *x509.Certificate) (str
 		Type:  "EC PRIVATE KEY",
 		Bytes: marshaledKey,
 	}
-	err = ioutil.WriteFile(filepath.Join(tempDir, "key.pem"), pem.EncodeToMemory(keyPEMBlock), 0755)
+	err = ioutil.WriteFile(filepath.Join(tempDir, "key.pem"), pem.EncodeToMemory(keyPEMBlock), 0o755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1108,6 +1107,10 @@ func TestBackend_ext_singleCert(t *testing.T) {
 			testAccStepLoginInvalid(t, connState),
 			testAccStepCert(t, "web", ca, "foo", allowed{names: "invalid", ext: "2.1.1.1:*,2.1.1.2:The Wrong Value"}, false),
 			testAccStepLoginInvalid(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{metadata_ext: "2.1.1.1,1.2.3.45"}, false),
+			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{"2-1-1-1": "A UTF8String Extension"}),
+			testAccStepCert(t, "web", ca, "foo", allowed{metadata_ext: "1.2.3.45"}, false),
+			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{}),
 		},
 	})
 }
@@ -1378,6 +1381,9 @@ func TestBackend_validCIDR(t *testing.T) {
 	}
 
 	readResult, err := b.HandleRequest(context.Background(), readCertReq)
+	if err != nil {
+		t.Fatal(err)
+	}
 	cidrsResult := readResult.Data["bound_cidrs"].([]*sockaddr.SockAddrMarshaler)
 
 	if cidrsResult[0].String() != boundCIDRs[0] ||
@@ -1554,6 +1560,40 @@ func testAccStepLoginDefaultLease(t *testing.T, connState tls.ConnectionState) l
 	}
 }
 
+func testAccStepLoginWithMetadata(t *testing.T, connState tls.ConnectionState, certName string, metadata map[string]string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation:       logical.UpdateOperation,
+		Path:            "login",
+		Unauthenticated: true,
+		ConnState:       &connState,
+		Check: func(resp *logical.Response) error {
+			// Check for fixed metadata too
+			metadata["cert_name"] = certName
+			metadata["common_name"] = connState.PeerCertificates[0].Subject.CommonName
+			metadata["serial_number"] = connState.PeerCertificates[0].SerialNumber.String()
+			metadata["subject_key_id"] = certutil.GetHexFormatted(connState.PeerCertificates[0].SubjectKeyId, ":")
+			metadata["authority_key_id"] = certutil.GetHexFormatted(connState.PeerCertificates[0].AuthorityKeyId, ":")
+
+			for key, expected := range metadata {
+				value, ok := resp.Auth.Metadata[key]
+				if !ok {
+					t.Fatalf("missing metadata key: %s", key)
+				}
+
+				if value != expected {
+					t.Fatalf("expected metadata key %s to equal %s, but got: %s", key, expected, value)
+				}
+			}
+
+			fn := logicaltest.TestCheckAuth([]string{"default", "foo"})
+			return fn(resp)
+		},
+		Data: map[string]interface{}{
+			"metadata": metadata,
+		},
+	}
+}
+
 func testAccStepLoginInvalid(t *testing.T, connState tls.ConnectionState) logicaltest.TestStep {
 	return testAccStepLoginWithNameInvalid(t, connState, "")
 }
@@ -1580,7 +1620,7 @@ func testAccStepLoginWithNameInvalid(t *testing.T, connState tls.ConnectionState
 func testAccStepListCerts(
 	t *testing.T, certs []string) []logicaltest.TestStep {
 	return []logicaltest.TestStep{
-		logicaltest.TestStep{
+		{
 			Operation: logical.ListOperation,
 			Path:      "certs",
 			Check: func(resp *logical.Response) error {
@@ -1599,7 +1639,7 @@ func testAccStepListCerts(
 				}
 				return nil
 			},
-		}, logicaltest.TestStep{
+		}, {
 			Operation: logical.ListOperation,
 			Path:      "certs/",
 			Check: func(resp *logical.Response) error {
@@ -1631,6 +1671,7 @@ type allowed struct {
 	uris                 string // allowed uris in SAN extension of the certificate
 	organizational_units string // allowed OUs in the certificate
 	ext                  string // required extensions in the certificate
+	metadata_ext         string // allowed metadata extensions to add to identity alias
 }
 
 func testAccStepCert(
@@ -1650,6 +1691,7 @@ func testAccStepCert(
 			"allowed_uri_sans":             testData.uris,
 			"allowed_organizational_units": testData.organizational_units,
 			"required_extensions":          testData.ext,
+			"allowed_metadata_extensions":  testData.metadata_ext,
 			"lease":                        1000,
 		},
 		Check: func(resp *logical.Response) error {
@@ -1973,7 +2015,7 @@ func TestBackend_CertUpgrade(t *testing.T) {
 		Period:     time.Second,
 		TTL:        time.Second,
 		MaxTTL:     time.Second,
-		BoundCIDRs: []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
+		BoundCIDRs: []*sockaddr.SockAddrMarshaler{{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
 	}
 
 	entry, err := logical.StorageEntryJSON("cert/foo", foo)
@@ -1995,13 +2037,13 @@ func TestBackend_CertUpgrade(t *testing.T) {
 		Period:     time.Second,
 		TTL:        time.Second,
 		MaxTTL:     time.Second,
-		BoundCIDRs: []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
+		BoundCIDRs: []*sockaddr.SockAddrMarshaler{{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
 		TokenParams: tokenutil.TokenParams{
 			TokenPolicies:   []string{"foo"},
 			TokenPeriod:     time.Second,
 			TokenTTL:        time.Second,
 			TokenMaxTTL:     time.Second,
-			TokenBoundCIDRs: []*sockaddr.SockAddrMarshaler{&sockaddr.SockAddrMarshaler{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
+			TokenBoundCIDRs: []*sockaddr.SockAddrMarshaler{{SockAddr: sockaddr.MustIPAddr("127.0.0.1")}},
 		},
 	}
 	if diff := deep.Equal(certEntry, exp); diff != nil {

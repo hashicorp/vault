@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"net/http"
+	"os"
 	"runtime"
 	"sync/atomic"
 	"time"
@@ -10,15 +11,18 @@ import (
 	"github.com/hashicorp/vault/helper/forwarding"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault/replication"
 )
 
 type forwardedRequestRPCServer struct {
+	UnimplementedRequestForwardingServer
+
 	core                  *Core
 	handler               http.Handler
 	perfStandbySlots      chan struct{}
 	perfStandbyRepCluster *replication.Cluster
-	raftFollowerStates    *raftFollowerStates
+	raftFollowerStates    *raft.FollowerStates
 }
 
 func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *forwarding.Request) (*forwarding.Response, error) {
@@ -68,13 +72,36 @@ func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *fo
 	return resp, nil
 }
 
+type nodeHAConnectionInfo struct {
+	nodeInfo       *NodeInformation
+	lastHeartbeat  time.Time
+	version        string
+	upgradeVersion string
+	redundancyZone string
+}
+
 func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (*EchoReply, error) {
+	incomingNodeConnectionInfo := nodeHAConnectionInfo{
+		nodeInfo:       in.NodeInfo,
+		lastHeartbeat:  time.Now(),
+		version:        in.SdkVersion,
+		upgradeVersion: in.RaftUpgradeVersion,
+		redundancyZone: in.RaftRedundancyZone,
+	}
 	if in.ClusterAddr != "" {
-		s.core.clusterPeerClusterAddrsCache.Set(in.ClusterAddr, nil, 0)
+		s.core.clusterPeerClusterAddrsCache.Set(in.ClusterAddr, incomingNodeConnectionInfo, 0)
 	}
 
 	if in.RaftAppliedIndex > 0 && len(in.RaftNodeID) > 0 && s.raftFollowerStates != nil {
-		s.raftFollowerStates.update(in.RaftNodeID, in.RaftAppliedIndex)
+		s.raftFollowerStates.Update(&raft.EchoRequestUpdate{
+			NodeID:          in.RaftNodeID,
+			AppliedIndex:    in.RaftAppliedIndex,
+			Term:            in.RaftTerm,
+			DesiredSuffrage: in.RaftDesiredSuffrage,
+			SDKVersion:      in.SdkVersion,
+			UpgradeVersion:  in.RaftUpgradeVersion,
+			RedundancyZone:  in.RaftRedundancyZone,
+		})
 	}
 
 	reply := &EchoReply{
@@ -82,9 +109,9 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 		ReplicationState: uint32(s.core.ReplicationState()),
 	}
 
-	if raftStorage, ok := s.core.underlyingPhysical.(*raft.RaftBackend); ok {
-		reply.RaftAppliedIndex = raftStorage.AppliedIndex()
-		reply.RaftNodeID = raftStorage.NodeID()
+	if raftBackend := s.core.getRaftBackend(); raftBackend != nil {
+		reply.RaftAppliedIndex = raftBackend.AppliedIndex()
+		reply.RaftNodeID = raftBackend.NodeID()
 	}
 
 	return reply, nil
@@ -92,9 +119,7 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 
 type forwardingClient struct {
 	RequestForwardingClient
-
-	core *Core
-
+	core        *Core
 	echoTicker  *time.Ticker
 	echoContext context.Context
 }
@@ -103,17 +128,28 @@ type forwardingClient struct {
 // with these requests it's useful to keep this as well
 func (c *forwardingClient) startHeartbeat() {
 	go func() {
+		clusterAddr := c.core.ClusterAddr()
+		hostname, _ := os.Hostname()
+		ni := NodeInformation{
+			ApiAddr:  c.core.redirectAddr,
+			Hostname: hostname,
+			Mode:     "standby",
+		}
 		tick := func() {
-			clusterAddr := c.core.ClusterAddr()
-
 			req := &EchoRequest{
 				Message:     "ping",
 				ClusterAddr: clusterAddr,
+				NodeInfo:    &ni,
+				SdkVersion:  version.GetVersion().Version,
 			}
 
-			if raftStorage, ok := c.core.underlyingPhysical.(*raft.RaftBackend); ok {
-				req.RaftAppliedIndex = raftStorage.AppliedIndex()
-				req.RaftNodeID = raftStorage.NodeID()
+			if raftBackend := c.core.getRaftBackend(); raftBackend != nil {
+				req.RaftAppliedIndex = raftBackend.AppliedIndex()
+				req.RaftNodeID = raftBackend.NodeID()
+				req.RaftTerm = raftBackend.Term()
+				req.RaftDesiredSuffrage = raftBackend.DesiredSuffrage()
+				req.RaftRedundancyZone = raftBackend.RedundancyZone()
+				req.RaftUpgradeVersion = raftBackend.EffectiveVersion()
 			}
 
 			ctx, cancel := context.WithTimeout(c.echoContext, 2*time.Second)

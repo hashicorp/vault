@@ -1,0 +1,3 @@
+```release-note:feature
+core: Add a darwin/arm64 binary release supporting the Apple M1 CPU
+```

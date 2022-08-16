@@ -1,0 +1,3 @@
+{{- define "note" -}}
+{{.Body}}{{if not (stringHasPrefix .Issue "_")}} [[GH-{{- .Issue -}}](https://github.com/hashicorp/vault/pull/{{- .Issue -}})]{{end}}
+{{- end -}}

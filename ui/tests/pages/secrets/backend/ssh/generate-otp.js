@@ -11,9 +11,7 @@ export default create({
   commonNameValue: value('[data-test-input="commonName"]'),
   submit: clickable('[data-test-secret-generate]'),
   back: clickable('[data-test-secret-generate-back]'),
-  generateOTP: async function() {
-    await this.user('admin')
-      .ip('192.168.1.1')
-      .submit();
+  generateOTP: async function () {
+    await this.user('admin').ip('192.168.1.1').submit();
   },
 });

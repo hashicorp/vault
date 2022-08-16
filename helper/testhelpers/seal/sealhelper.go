@@ -2,6 +2,7 @@ package sealhelper
 
 import (
 	"path"
+	"strconv"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
@@ -20,7 +21,7 @@ type TransitSealServer struct {
 	*vault.TestCluster
 }
 
-func NewTransitSealServer(t testing.T) *TransitSealServer {
+func NewTransitSealServer(t testing.T, idx int) *TransitSealServer {
 	conf := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"transit": transit.Factory,
@@ -29,7 +30,7 @@ func NewTransitSealServer(t testing.T) *TransitSealServer {
 	opts := &vault.TestClusterOptions{
 		NumCores:    1,
 		HandlerFunc: http.Handler,
-		Logger:      logging.NewVaultLogger(hclog.Trace).Named(t.Name()).Named("transit"),
+		Logger:      logging.NewVaultLogger(hclog.Trace).Named(t.Name()).Named("transit-seal" + strconv.Itoa(idx)),
 	}
 	teststorage.InmemBackendSetup(conf, opts)
 	cluster := vault.NewTestCluster(t, conf, opts)

@@ -1,4 +1,4 @@
-// +build !enterprise
+//go:build !enterprise
 
 package vault
 
@@ -33,8 +33,10 @@ func NewSealUnwrapper(underlying physical.Backend, logger log.Logger) physical.B
 	return ret
 }
 
-var _ physical.Backend = (*sealUnwrapper)(nil)
-var _ physical.Transactional = (*transactionalSealUnwrapper)(nil)
+var (
+	_ physical.Backend       = (*sealUnwrapper)(nil)
+	_ physical.Transactional = (*transactionalSealUnwrapper)(nil)
+)
 
 type sealUnwrapper struct {
 	underlying   physical.Backend

@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -14,14 +14,14 @@ import (
 	"sync/atomic"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-raftchunking"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 	bolt "go.etcd.io/bbolt"
@@ -32,22 +32,26 @@ const (
 	putOp
 	restoreCallbackOp
 
-	chunkingPrefix = "raftchunking/"
+	chunkingPrefix   = "raftchunking/"
+	databaseFilename = "vault.db"
 )
 
 var (
 	// dataBucketName is the value we use for the bucket
-	dataBucketName   = []byte("data")
-	configBucketName = []byte("config")
-	latestIndexKey   = []byte("latest_indexes")
-	latestConfigKey  = []byte("latest_config")
+	dataBucketName     = []byte("data")
+	configBucketName   = []byte("config")
+	latestIndexKey     = []byte("latest_indexes")
+	latestConfigKey    = []byte("latest_config")
+	localNodeConfigKey = []byte("local_node_config")
 )
 
 // Verify FSM satisfies the correct interfaces
-var _ physical.Backend = (*FSM)(nil)
-var _ physical.Transactional = (*FSM)(nil)
-var _ raft.FSM = (*FSM)(nil)
-var _ raft.BatchingFSM = (*FSM)(nil)
+var (
+	_ physical.Backend       = (*FSM)(nil)
+	_ physical.Transactional = (*FSM)(nil)
+	_ raft.FSM               = (*FSM)(nil)
+	_ raft.BatchingFSM       = (*FSM)(nil)
+)
 
 type restoreCallback func(context.Context) error
 
@@ -57,7 +61,7 @@ type FSMApplyResponse struct {
 	Success bool
 }
 
-// FSM is Vault's primary state storage. It writes updates to an bolt db file
+// FSM is Vault's primary state storage. It writes updates to a bolt db file
 // that lives on local disk. FSM implements raft.FSM and physical.Backend
 // interfaces.
 type FSM struct {
@@ -76,37 +80,22 @@ type FSM struct {
 	logger      log.Logger
 	noopRestore bool
 
+	// applyCallback is used to control the pace of applies in tests
+	applyCallback func()
+
 	db *bolt.DB
 
 	// retoreCb is called after we've restored a snapshot
 	restoreCb restoreCallback
 
-	// This is just used in tests to disable to storing the latest indexes and
-	// configs so we can conform to the standard backend tests, which expect to
-	// additional state in the backend.
-	storeLatestState bool
-
 	chunker *raftchunking.ChunkingBatchingFSM
 
-	// testSnapshotRestoreError is used in tests to simulate an error while
-	// restoring a snapshot.
-	testSnapshotRestoreError bool
+	localID         string
+	desiredSuffrage string
 }
 
 // NewFSM constructs a FSM using the given directory
-func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
-	path, ok := conf["path"]
-	if !ok {
-		return nil, fmt.Errorf("'path' must be set")
-	}
-
-	dbPath := filepath.Join(path, "vault.db")
-
-	boltDB, err := bolt.Open(dbPath, 0666, &bolt.Options{Timeout: 1 * time.Second})
-	if err != nil {
-		return nil, err
-	}
-
+func NewFSM(path string, localID string, logger log.Logger) (*FSM, error) {
 	// Initialize the latest term, index, and config values
 	latestTerm := new(uint64)
 	latestIndex := new(uint64)
@@ -114,6 +103,80 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 	atomic.StoreUint64(latestTerm, 0)
 	atomic.StoreUint64(latestIndex, 0)
 	latestConfig.Store((*ConfigurationValue)(nil))
+
+	f := &FSM{
+		path:   path,
+		logger: logger,
+
+		latestTerm:   latestTerm,
+		latestIndex:  latestIndex,
+		latestConfig: latestConfig,
+		// Assume that the default intent is to join as as voter. This will be updated
+		// when this node joins a cluster with a different suffrage, or during cluster
+		// setup if this is already part of a cluster with a desired suffrage.
+		desiredSuffrage: "voter",
+		localID:         localID,
+	}
+
+	f.chunker = raftchunking.NewChunkingBatchingFSM(f, &FSMChunkStorage{
+		f:   f,
+		ctx: context.Background(),
+	})
+
+	dbPath := filepath.Join(path, databaseFilename)
+	if err := f.openDBFile(dbPath); err != nil {
+		return nil, fmt.Errorf("failed to open bolt file: %w", err)
+	}
+
+	return f, nil
+}
+
+func (f *FSM) getDB() *bolt.DB {
+	f.l.RLock()
+	defer f.l.RUnlock()
+
+	return f.db
+}
+
+// SetFSMDelay adds a delay to the FSM apply. This is used in tests to simulate
+// a slow apply.
+func (r *RaftBackend) SetFSMDelay(delay time.Duration) {
+	r.SetFSMApplyCallback(func() { time.Sleep(delay) })
+}
+
+func (r *RaftBackend) SetFSMApplyCallback(f func()) {
+	r.fsm.l.Lock()
+	r.fsm.applyCallback = f
+	r.fsm.l.Unlock()
+}
+
+func (f *FSM) openDBFile(dbPath string) error {
+	if len(dbPath) == 0 {
+		return errors.New("can not open empty filename")
+	}
+
+	st, err := os.Stat(dbPath)
+	switch {
+	case err != nil && os.IsNotExist(err):
+	case err != nil:
+		return fmt.Errorf("error checking raft FSM db file %q: %v", dbPath, err)
+	default:
+		perms := st.Mode() & os.ModePerm
+		if perms&0o077 != 0 {
+			f.logger.Warn("raft FSM db file has wider permissions than needed",
+				"needed", os.FileMode(0o600), "existing", perms)
+		}
+	}
+
+	opts := boltOptions(dbPath)
+	start := time.Now()
+	boltDB, err := bolt.Open(dbPath, 0o600, opts)
+	if err != nil {
+		return err
+	}
+	elapsed := time.Now().Sub(start)
+	f.logger.Debug("time to open database", "elapsed", elapsed, "path", dbPath)
+	metrics.MeasureSince([]string{"raft_storage", "fsm", "open_db_file"}, start)
 
 	err = boltDB.Update(func(tx *bolt.Tx) error {
 		// make sure we have the necessary buckets created
@@ -125,6 +188,7 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 		if err != nil {
 			return fmt.Errorf("failed to create bucket: %v", err)
 		}
+
 		// Read in our latest index and term and populate it inmemory
 		val := b.Get(latestIndexKey)
 		if val != nil {
@@ -134,8 +198,8 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 				return err
 			}
 
-			atomic.StoreUint64(latestTerm, latest.Term)
-			atomic.StoreUint64(latestIndex, latest.Index)
+			atomic.StoreUint64(f.latestTerm, latest.Term)
+			atomic.StoreUint64(f.latestIndex, latest.Index)
 		}
 
 		// Read in our latest config and populate it inmemory
@@ -147,64 +211,31 @@ func NewFSM(conf map[string]string, logger log.Logger) (*FSM, error) {
 				return err
 			}
 
-			latestConfig.Store(&latest)
+			f.latestConfig.Store(&latest)
 		}
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	storeLatestState := true
-	if _, ok := conf["doNotStoreLatestState"]; ok {
-		storeLatestState = false
-	}
-
-	f := &FSM{
-		path:   conf["path"],
-		logger: logger,
-
-		db:               boltDB,
-		latestTerm:       latestTerm,
-		latestIndex:      latestIndex,
-		latestConfig:     latestConfig,
-		storeLatestState: storeLatestState,
-	}
-
-	f.chunker = raftchunking.NewChunkingBatchingFSM(f, &FSMChunkStorage{
-		f:   f,
-		ctx: context.Background(),
-	})
-
-	return f, nil
+	f.db = boltDB
+	return nil
 }
 
-// LatestState returns the latest index and configuration values we have seen on
-// this FSM.
-func (f *FSM) LatestState() (*IndexValue, *ConfigurationValue) {
-	return &IndexValue{
-		Term:  atomic.LoadUint64(f.latestTerm),
-		Index: atomic.LoadUint64(f.latestIndex),
-	}, f.latestConfig.Load().(*ConfigurationValue)
+func (f *FSM) Close() error {
+	f.l.RLock()
+	defer f.l.RUnlock()
+
+	return f.db.Close()
 }
 
-func (f *FSM) witnessIndex(i *IndexValue) {
-	seen, _ := f.LatestState()
-	if seen.Index < i.Index {
-		atomic.StoreUint64(f.latestIndex, i.Index)
-		atomic.StoreUint64(f.latestTerm, i.Term)
+func writeSnapshotMetaToDB(metadata *raft.SnapshotMeta, db *bolt.DB) error {
+	latestIndex := &IndexValue{
+		Term:  metadata.Term,
+		Index: metadata.Index,
 	}
-}
-
-func (f *FSM) witnessSnapshot(metadata *raft.SnapshotMeta) error {
-	var indexBytes []byte
-	latestIndex, _ := f.LatestState()
-
-	latestIndex.Index = metadata.Index
-	latestIndex.Term = metadata.Term
-
-	var err error
-	indexBytes, err = proto.Marshal(latestIndex)
+	indexBytes, err := proto.Marshal(latestIndex)
 	if err != nil {
 		return err
 	}
@@ -215,31 +246,172 @@ func (f *FSM) witnessSnapshot(metadata *raft.SnapshotMeta) error {
 		return err
 	}
 
-	if f.storeLatestState {
-		err = f.db.Update(func(tx *bolt.Tx) error {
-			b := tx.Bucket(configBucketName)
-			err := b.Put(latestConfigKey, configBytes)
-			if err != nil {
-				return err
-			}
-
-			err = b.Put(latestIndexKey, indexBytes)
-			if err != nil {
-				return err
-			}
-
-			return nil
-		})
+	err = db.Update(func(tx *bolt.Tx) error {
+		b, err := tx.CreateBucketIfNotExists(configBucketName)
 		if err != nil {
 			return err
 		}
+
+		err = b.Put(latestConfigKey, configBytes)
+		if err != nil {
+			return err
+		}
+
+		err = b.Put(latestIndexKey, indexBytes)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (f *FSM) localNodeConfig() (*LocalNodeConfigValue, error) {
+	var configBytes []byte
+	if err := f.db.View(func(tx *bolt.Tx) error {
+		value := tx.Bucket(configBucketName).Get(localNodeConfigKey)
+		if value != nil {
+			configBytes = make([]byte, len(value))
+			copy(configBytes, value)
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	if configBytes == nil {
+		return nil, nil
+	}
+
+	var lnConfig LocalNodeConfigValue
+	if configBytes != nil {
+		err := proto.Unmarshal(configBytes, &lnConfig)
+		if err != nil {
+			return nil, err
+		}
+		f.desiredSuffrage = lnConfig.DesiredSuffrage
+		return &lnConfig, nil
+	}
+
+	return nil, nil
+}
+
+func (f *FSM) DesiredSuffrage() string {
+	f.l.RLock()
+	defer f.l.RUnlock()
+
+	return f.desiredSuffrage
+}
+
+func (f *FSM) upgradeLocalNodeConfig() error {
+	f.l.Lock()
+	defer f.l.Unlock()
+
+	// Read the local node config
+	lnConfig, err := f.localNodeConfig()
+	if err != nil {
+		return err
+	}
+
+	// Entry is already present. Get the suffrage value.
+	if lnConfig != nil {
+		f.desiredSuffrage = lnConfig.DesiredSuffrage
+		return nil
+	}
+
+	//
+	// This is the upgrade case where there is no entry
+	//
+
+	lnConfig = &LocalNodeConfigValue{}
+
+	// Refer to the persisted latest raft config
+	config := f.latestConfig.Load().(*ConfigurationValue)
+
+	// If there is no config, then this is a fresh node coming up. This could end up
+	// being a voter or non-voter. But by default assume that this is a voter. It
+	// will be changed if this node joins the cluster as a non-voter.
+	if config == nil {
+		f.desiredSuffrage = "voter"
+		lnConfig.DesiredSuffrage = f.desiredSuffrage
+		return f.persistDesiredSuffrage(lnConfig)
+	}
+
+	// Get the last known suffrage of the node and assume that it is the desired
+	// suffrage. There is no better alternative here.
+	for _, srv := range config.Servers {
+		if srv.Id == f.localID {
+			switch srv.Suffrage {
+			case int32(raft.Nonvoter):
+				lnConfig.DesiredSuffrage = "non-voter"
+			default:
+				lnConfig.DesiredSuffrage = "voter"
+			}
+			// Bring the intent to the fsm instance.
+			f.desiredSuffrage = lnConfig.DesiredSuffrage
+			break
+		}
+	}
+
+	return f.persistDesiredSuffrage(lnConfig)
+}
+
+// recordSuffrage is called when a node successfully joins the cluster. This
+// intent should land in the stored configuration. If the config isn't available
+// yet, we still go ahead and store the intent in the fsm. During the next
+// update to the configuration, this intent will be persisted.
+func (f *FSM) recordSuffrage(desiredSuffrage string) error {
+	f.l.Lock()
+	defer f.l.Unlock()
+
+	if err := f.persistDesiredSuffrage(&LocalNodeConfigValue{
+		DesiredSuffrage: desiredSuffrage,
+	}); err != nil {
+		return err
+	}
+
+	f.desiredSuffrage = desiredSuffrage
+	return nil
+}
+
+func (f *FSM) persistDesiredSuffrage(lnconfig *LocalNodeConfigValue) error {
+	dsBytes, err := proto.Marshal(lnconfig)
+	if err != nil {
+		return err
+	}
+
+	return f.db.Update(func(tx *bolt.Tx) error {
+		return tx.Bucket(configBucketName).Put(localNodeConfigKey, dsBytes)
+	})
+}
+
+func (f *FSM) witnessSnapshot(metadata *raft.SnapshotMeta) error {
+	f.l.RLock()
+	defer f.l.RUnlock()
+
+	err := writeSnapshotMetaToDB(metadata, f.db)
+	if err != nil {
+		return err
 	}
 
 	atomic.StoreUint64(f.latestIndex, metadata.Index)
 	atomic.StoreUint64(f.latestTerm, metadata.Term)
-	f.latestConfig.Store(protoConfig)
+	f.latestConfig.Store(raftConfigurationToProtoConfiguration(metadata.ConfigurationIndex, metadata.Configuration))
 
 	return nil
+}
+
+// LatestState returns the latest index and configuration values we have seen on
+// this FSM.
+func (f *FSM) LatestState() (*IndexValue, *ConfigurationValue) {
+	return &IndexValue{
+		Term:  atomic.LoadUint64(f.latestTerm),
+		Index: atomic.LoadUint64(f.latestIndex),
+	}, f.latestConfig.Load().(*ConfigurationValue)
 }
 
 // Delete deletes the given key from the bolt file.
@@ -291,7 +463,6 @@ func (f *FSM) Get(ctx context.Context, path string) (*physical.Entry, error) {
 	var found bool
 
 	err := f.db.View(func(tx *bolt.Tx) error {
-
 		value := tx.Bucket(dataBucketName).Get([]byte(path))
 		if value != nil {
 			found = true
@@ -351,7 +522,9 @@ func (f *FSM) List(ctx context.Context, prefix string) ([]string, error) {
 				keys = append(keys, key)
 			} else {
 				// Add truncated 'folder' paths
-				keys = strutil.AppendIfMissing(keys, string(key[:i+1]))
+				if len(keys) == 0 || keys[len(keys)-1] != key[:i+1] {
+					keys = append(keys, string(key[:i+1]))
+				}
 			}
 		}
 
@@ -367,7 +540,6 @@ func (f *FSM) Transaction(ctx context.Context, txns []*physical.TxnEntry) error 
 	f.l.RLock()
 	defer f.l.RUnlock()
 
-	// TODO: should this be a Batch?
 	// Start a write transaction.
 	err := f.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(dataBucketName)
@@ -446,6 +618,10 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 	f.l.RLock()
 	defer f.l.RUnlock()
 
+	if f.applyCallback != nil {
+		f.applyCallback()
+	}
+
 	err = f.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(dataBucketName)
 		for _, commandRaw := range commands {
@@ -483,7 +659,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 			}
 		}
 
-		if f.storeLatestState && len(logIndex) > 0 {
+		if len(logIndex) > 0 {
 			b := tx.Bucket(configBucketName)
 			err = b.Put(latestIndexKey, logIndex)
 			if err != nil {
@@ -596,99 +772,75 @@ func (f *FSM) SetNoopRestore(enabled bool) {
 	f.l.Unlock()
 }
 
-// Restore reads data from the provided reader and writes it into the FSM. It
-// first deletes the existing bucket to clear all existing data, then recreates
-// it so we can copy in the snapshot.
+// Restore installs a new snapshot from the provided reader. It does an atomic
+// rename of the snapshot file into the database filepath. While a restore is
+// happening the FSM is locked and no writes or reads can be performed.
 func (f *FSM) Restore(r io.ReadCloser) error {
 	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "restore_snapshot"}, time.Now())
 
-	if f.noopRestore == true {
+	if f.noopRestore {
 		return nil
 	}
 
-	snapMeta := r.(*boltSnapshotMetadataReader).Metadata()
-
-	protoReader := NewDelimitedReader(r, math.MaxInt32)
-	defer protoReader.Close()
+	snapshotInstaller, ok := r.(*boltSnapshotInstaller)
+	if !ok {
+		wrapper, ok := r.(raft.ReadCloserWrapper)
+		if !ok {
+			return fmt.Errorf("expected ReadCloserWrapper object, got: %T", r)
+		}
+		snapshotInstallerRaw := wrapper.WrappedReadCloser()
+		snapshotInstaller, ok = snapshotInstallerRaw.(*boltSnapshotInstaller)
+		if !ok {
+			return fmt.Errorf("expected snapshot installer object, got: %T", snapshotInstallerRaw)
+		}
+	}
 
 	f.l.Lock()
 	defer f.l.Unlock()
 
-	// Delete the existing data bucket and create a new one.
-	f.logger.Debug("snapshot restore: deleting bucket")
-	err := f.db.Update(func(tx *bolt.Tx) error {
-		err := tx.DeleteBucket(dataBucketName)
-		if err != nil {
-			return err
-		}
-
-		_, err = tx.CreateBucket(dataBucketName)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
+	// Cache the local node config before closing the db file
+	lnConfig, err := f.localNodeConfig()
 	if err != nil {
-		f.logger.Error("could not restore snapshot: could not clear existing bucket", "error", err)
 		return err
 	}
 
-	// If we are testing a failed snapshot error here.
-	if f.testSnapshotRestoreError {
-		return errors.New("Test error")
+	// Close the db file
+	if err := f.db.Close(); err != nil {
+		f.logger.Error("failed to close database file", "error", err)
+		return err
 	}
 
-	f.logger.Debug("snapshot restore: deleting bucket done")
-	f.logger.Debug("snapshot restore: writing keys")
+	dbPath := filepath.Join(f.path, databaseFilename)
 
-	var done bool
-	var keys int
-	for !done {
-		err := f.db.Update(func(tx *bolt.Tx) error {
-			b := tx.Bucket(dataBucketName)
-			s := new(pb.StorageEntry)
+	f.logger.Info("installing snapshot to FSM")
 
-			// Commit in batches of 50k. Bolt holds all the data in memory and
-			// doesn't split the pages until commit so we do incremental writes.
-			// This is safe since we have a write lock on the fsm's lock.
-			for i := 0; i < 50000; i++ {
-				err := protoReader.ReadMsg(s)
-				if err != nil {
-					if err == io.EOF {
-						done = true
-						return nil
-					}
-					return err
-				}
+	// Install the new boltdb file
+	var retErr *multierror.Error
+	if err := snapshotInstaller.Install(dbPath); err != nil {
+		f.logger.Error("failed to install snapshot", "error", err)
+		retErr = multierror.Append(retErr, fmt.Errorf("failed to install snapshot database: %w", err))
+	} else {
+		f.logger.Info("snapshot installed")
+	}
 
-				err = b.Put([]byte(s.Key), s.Value)
-				if err != nil {
-					return err
-				}
-				keys += 1
-			}
+	// Open the db file. We want to do this regardless of if the above install
+	// worked. If the install failed we should try to open the old DB file.
+	if err := f.openDBFile(dbPath); err != nil {
+		f.logger.Error("failed to open new database file", "error", err)
+		retErr = multierror.Append(retErr, fmt.Errorf("failed to open new bolt file: %w", err))
+	}
 
-			return nil
-		})
-		if err != nil {
-			f.logger.Error("could not restore snapshot", "error", err)
-			return err
+	// Handle local node config restore. lnConfig should not be nil here, but
+	// adding the nil check anyways for safety.
+	if lnConfig != nil {
+		// Persist the local node config on the restored fsm.
+		if err := f.persistDesiredSuffrage(lnConfig); err != nil {
+			f.logger.Error("failed to persist local node config from before the restore", "error", err)
+			retErr = multierror.Append(retErr, fmt.Errorf("failed to persist local node config from before the restore: %w", err))
 		}
-
-		f.logger.Trace("snapshot restore: writing keys", "num_written", keys)
 	}
 
-	f.logger.Debug("snapshot restore: writing keys done")
-
-	// Write the metadata after we have applied all the snapshot data
-	f.logger.Debug("snapshot restore: writing metadata")
-	if err := f.witnessSnapshot(snapMeta); err != nil {
-		f.logger.Error("could not write metadata", "error", err)
-		return err
-	}
-
-	return nil
+	return retErr.ErrorOrNil()
 }
 
 // noopSnapshotter implements the fsm.Snapshot interface. It doesn't do anything
@@ -764,7 +916,7 @@ func (f *FSMChunkStorage) chunkPaths(chunk *raftchunking.ChunkInfo) (string, str
 func (f *FSMChunkStorage) StoreChunk(chunk *raftchunking.ChunkInfo) (bool, error) {
 	b, err := jsonutil.EncodeJSON(chunk)
 	if err != nil {
-		return false, errwrap.Wrapf("error encoding chunk info: {{err}}", err)
+		return false, fmt.Errorf("error encoding chunk info: %w", err)
 	}
 
 	prefix, key := f.chunkPaths(chunk)
@@ -781,7 +933,7 @@ func (f *FSMChunkStorage) StoreChunk(chunk *raftchunking.ChunkInfo) (bool, error
 	done := new(bool)
 	if err := f.f.db.Update(func(tx *bolt.Tx) error {
 		if err := tx.Bucket(dataBucketName).Put([]byte(entry.Key), entry.Value); err != nil {
-			return errwrap.Wrapf("error storing chunk info: {{err}}", err)
+			return fmt.Errorf("error storing chunk info: %w", err)
 		}
 
 		// Assume bucket exists and has keys
@@ -814,12 +966,12 @@ func (f *FSMChunkStorage) StoreChunk(chunk *raftchunking.ChunkInfo) (bool, error
 func (f *FSMChunkStorage) FinalizeOp(opNum uint64) ([]*raftchunking.ChunkInfo, error) {
 	ret, err := f.chunksForOpNum(opNum)
 	if err != nil {
-		return nil, errwrap.Wrapf("error getting chunks for op keys: {{err}}", err)
+		return nil, fmt.Errorf("error getting chunks for op keys: %w", err)
 	}
 
 	prefix, _ := f.chunkPaths(&raftchunking.ChunkInfo{OpNum: opNum})
 	if err := f.f.DeletePrefix(f.ctx, prefix); err != nil {
-		return nil, errwrap.Wrapf("error deleting prefix after op finalization: {{err}}", err)
+		return nil, fmt.Errorf("error deleting prefix after op finalization: %w", err)
 	}
 
 	return ret, nil
@@ -830,7 +982,7 @@ func (f *FSMChunkStorage) chunksForOpNum(opNum uint64) ([]*raftchunking.ChunkInf
 
 	opChunkKeys, err := f.f.List(f.ctx, prefix)
 	if err != nil {
-		return nil, errwrap.Wrapf("error fetching op chunk keys: {{err}}", err)
+		return nil, fmt.Errorf("error fetching op chunk keys: %w", err)
 	}
 
 	if len(opChunkKeys) == 0 {
@@ -842,17 +994,17 @@ func (f *FSMChunkStorage) chunksForOpNum(opNum uint64) ([]*raftchunking.ChunkInf
 	for _, v := range opChunkKeys {
 		seqNum, err := strconv.ParseInt(v, 10, 64)
 		if err != nil {
-			return nil, errwrap.Wrapf("error converting seqnum to integer: {{err}}", err)
+			return nil, fmt.Errorf("error converting seqnum to integer: %w", err)
 		}
 
 		entry, err := f.f.Get(f.ctx, prefix+v)
 		if err != nil {
-			return nil, errwrap.Wrapf("error fetching chunkinfo: {{err}}", err)
+			return nil, fmt.Errorf("error fetching chunkinfo: %w", err)
 		}
 
 		var ci raftchunking.ChunkInfo
 		if err := jsonutil.DecodeJSON(entry.Value, &ci); err != nil {
-			return nil, errwrap.Wrapf("error decoding chunkinfo json: {{err}}", err)
+			return nil, fmt.Errorf("error decoding chunkinfo json: %w", err)
 		}
 
 		if ret == nil {
@@ -868,7 +1020,7 @@ func (f *FSMChunkStorage) chunksForOpNum(opNum uint64) ([]*raftchunking.ChunkInf
 func (f *FSMChunkStorage) GetChunks() (raftchunking.ChunkMap, error) {
 	opNums, err := f.f.List(f.ctx, chunkingPrefix)
 	if err != nil {
-		return nil, errwrap.Wrapf("error doing recursive list for chunk saving: {{err}}", err)
+		return nil, fmt.Errorf("error doing recursive list for chunk saving: %w", err)
 	}
 
 	if len(opNums) == 0 {
@@ -879,12 +1031,12 @@ func (f *FSMChunkStorage) GetChunks() (raftchunking.ChunkMap, error) {
 	for _, opNumStr := range opNums {
 		opNum, err := strconv.ParseInt(opNumStr, 10, 64)
 		if err != nil {
-			return nil, errwrap.Wrapf("error parsing op num during chunk saving: {{err}}", err)
+			return nil, fmt.Errorf("error parsing op num during chunk saving: %w", err)
 		}
 
 		opChunks, err := f.chunksForOpNum(uint64(opNum))
 		if err != nil {
-			return nil, errwrap.Wrapf("error getting chunks for op keys during chunk saving: {{err}}", err)
+			return nil, fmt.Errorf("error getting chunks for op keys during chunk saving: %w", err)
 		}
 
 		ret[uint64(opNum)] = opChunks
@@ -895,7 +1047,7 @@ func (f *FSMChunkStorage) GetChunks() (raftchunking.ChunkMap, error) {
 
 func (f *FSMChunkStorage) RestoreChunks(chunks raftchunking.ChunkMap) error {
 	if err := f.f.DeletePrefix(f.ctx, chunkingPrefix); err != nil {
-		return errwrap.Wrapf("error deleting prefix for chunk restoration: {{err}}", err)
+		return fmt.Errorf("error deleting prefix for chunk restoration: %w", err)
 	}
 	if len(chunks) == 0 {
 		return nil
@@ -910,7 +1062,7 @@ func (f *FSMChunkStorage) RestoreChunks(chunks raftchunking.ChunkMap) error {
 				return errors.New("unexpected op number in chunk")
 			}
 			if _, err := f.StoreChunk(chunk); err != nil {
-				return errwrap.Wrapf("error storing chunk during restoration: {{err}}", err)
+				return fmt.Errorf("error storing chunk during restoration: %w", err)
 			}
 		}
 	}

@@ -8,8 +8,10 @@ import (
 	"unicode/utf8"
 )
 
-var ErrNonUTF8 = errors.New("key contains invalid UTF-8 characters")
-var ErrNonPrintable = errors.New("key contains non-printable characters")
+var (
+	ErrNonUTF8      = errors.New("key contains invalid UTF-8 characters")
+	ErrNonPrintable = errors.New("key contains non-printable characters")
+)
 
 // StorageEncoding is used to add errors into underlying physical requests
 type StorageEncoding struct {
@@ -24,8 +26,10 @@ type TransactionalStorageEncoding struct {
 }
 
 // Verify StorageEncoding satisfies the correct interfaces
-var _ Backend = (*StorageEncoding)(nil)
-var _ Transactional = (*TransactionalStorageEncoding)(nil)
+var (
+	_ Backend       = (*StorageEncoding)(nil)
+	_ Transactional = (*TransactionalStorageEncoding)(nil)
+)
 
 // NewStorageEncoding returns a wrapped physical backend and verifies the key
 // encoding

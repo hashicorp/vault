@@ -19,7 +19,7 @@ func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 	}
 
 	switch opts.StoredKeys {
-	case seal.StoredKeysSupportedShamirMaster:
+	case seal.StoredKeysSupportedShamirRoot:
 		newSeal := NewDefaultSeal(&seal.Access{
 			Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
 				Logger: opts.Logger,

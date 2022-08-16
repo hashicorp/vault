@@ -1,0 +1,5 @@
+```release-note:improvement
+auth/okta: Add support for performing [the number
+challenge](https://help.okta.com/en-us/Content/Topics/Mobile/ov-admin-config.htm?cshid=csh-okta-verify-number-challenge-v1#enable-number-challenge)
+during an Okta Verify push challenge
+```

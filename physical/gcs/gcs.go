@@ -13,7 +13,6 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/helper/useragent"
@@ -71,15 +70,23 @@ type Backend struct {
 	// chunkSize is the chunk size to use for requests.
 	chunkSize int
 
-	// client is the underlying API client for talking to gcs.
-	client *storage.Client
+	// client is the API client and permitPool is the allowed concurrent uses of
+	// the client.
+	client     *storage.Client
+	permitPool *physical.PermitPool
 
 	// haEnabled indicates if HA is enabled.
 	haEnabled bool
 
-	// logger and permitPool are internal constructs
-	logger     log.Logger
-	permitPool *physical.PermitPool
+	// haClient is the API client. This is managed separately from the main client
+	// because a flood of requests should not block refreshing the TTLs on the
+	// lock.
+	//
+	// This value will be nil if haEnabled is false.
+	haClient *storage.Client
+
+	// logger is an internal logger.
+	logger log.Logger
 }
 
 // NewBackend constructs a Google Cloud Storage backend with the given
@@ -108,13 +115,14 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 	}
 	chunkSize, err := strconv.Atoi(chunkSizeStr)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to parse chunk_size: {{err}}", err)
+		return nil, fmt.Errorf("failed to parse chunk_size: %w", err)
 	}
 
 	// Values are specified as kb, but the API expects them as bytes.
 	chunkSize = chunkSize * 1024
 
 	// HA configuration
+	haClient := (*storage.Client)(nil)
 	haEnabled := false
 	haEnabledStr := os.Getenv(envHAEnabled)
 	if haEnabledStr == "" {
@@ -124,14 +132,23 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		var err error
 		haEnabled, err = strconv.ParseBool(haEnabledStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to parse HA enabled: {{err}}", err)
+			return nil, fmt.Errorf("failed to parse HA enabled: %w", err)
+		}
+	}
+	if haEnabled {
+		logger.Debug("creating client")
+		var err error
+		ctx := context.Background()
+		haClient, err = storage.NewClient(ctx, option.WithUserAgent(useragent.String()))
+		if err != nil {
+			return nil, fmt.Errorf("failed to create HA storage client: %w", err)
 		}
 	}
 
 	// Max parallel
 	maxParallel, err := extractInt(c["max_parallel"])
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to parse max_parallel: {{err}}", err)
+		return nil, fmt.Errorf("failed to parse max_parallel: %w", err)
 	}
 
 	logger.Debug("configuration",
@@ -140,30 +157,24 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		"ha_enabled", haEnabled,
 		"max_parallel", maxParallel,
 	)
+
 	logger.Debug("creating client")
-
-	// Client
-	opts := []option.ClientOption{option.WithUserAgent(useragent.String())}
-	if credentialsFile := c["credentials_file"]; credentialsFile != "" {
-		logger.Warn("specifying credentials_file as an option is " +
-			"deprecated. Please use the GOOGLE_APPLICATION_CREDENTIALS environment " +
-			"variable or instance credentials instead.")
-		opts = append(opts, option.WithCredentialsFile(credentialsFile))
-	}
-
 	ctx := context.Background()
-	client, err := storage.NewClient(ctx, opts...)
+	client, err := storage.NewClient(ctx, option.WithUserAgent(useragent.String()))
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to create storage client: {{err}}", err)
+		return nil, fmt.Errorf("failed to create storage client: %w", err)
 	}
 
 	return &Backend{
 		bucket:     bucket,
-		haEnabled:  haEnabled,
 		chunkSize:  chunkSize,
 		client:     client,
 		permitPool: physical.NewPermitPool(maxParallel),
-		logger:     logger,
+
+		haEnabled: haEnabled,
+		haClient:  haClient,
+
+		logger: logger,
 	}, nil
 }
 
@@ -183,12 +194,12 @@ func (b *Backend) Put(ctx context.Context, entry *physical.Entry) (retErr error)
 	defer func() {
 		closeErr := w.Close()
 		if closeErr != nil {
-			retErr = multierror.Append(retErr, errwrap.Wrapf("error closing connection: {{err}}", closeErr))
+			retErr = multierror.Append(retErr, fmt.Errorf("error closing connection: %w", closeErr))
 		}
 	}()
 
 	if _, err := w.Write(entry.Value); err != nil {
-		return errwrap.Wrapf("failed to put data: {{err}}", err)
+		return fmt.Errorf("failed to put data: %w", err)
 	}
 	return nil
 }
@@ -207,19 +218,19 @@ func (b *Backend) Get(ctx context.Context, key string) (retEntry *physical.Entry
 		return nil, nil
 	}
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to read value for %q: {{err}}", key), err)
+		return nil, fmt.Errorf("failed to read value for %q: %w", key, err)
 	}
 
 	defer func() {
 		closeErr := r.Close()
 		if closeErr != nil {
-			retErr = multierror.Append(retErr, errwrap.Wrapf("error closing connection: {{err}}", closeErr))
+			retErr = multierror.Append(retErr, fmt.Errorf("error closing connection: %w", closeErr))
 		}
 	}()
 
 	value, err := ioutil.ReadAll(r)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to read value into a string: {{err}}", err)
+		return nil, fmt.Errorf("failed to read value into a string: %w", err)
 	}
 
 	return &physical.Entry{
@@ -239,7 +250,7 @@ func (b *Backend) Delete(ctx context.Context, key string) error {
 	// Delete
 	err := b.client.Bucket(b.bucket).Object(key).Delete(ctx)
 	if err != nil && err != storage.ErrObjectNotExist {
-		return errwrap.Wrapf(fmt.Sprintf("failed to delete key %q: {{err}}", key), err)
+		return fmt.Errorf("failed to delete key %q: %w", key, err)
 	}
 	return nil
 }
@@ -267,7 +278,7 @@ func (b *Backend) List(ctx context.Context, prefix string) ([]string, error) {
 			break
 		}
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to read object: {{err}}", err)
+			return nil, fmt.Errorf("failed to read object: %w", err)
 		}
 
 		var path string

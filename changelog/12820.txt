@@ -1,0 +1,3 @@
+```release-note:feature
+Add ClientID to Token With Entities in Activity Log: Vault tokens without entities are now tracked with client IDs and deduplicated in the Activity Log
+```

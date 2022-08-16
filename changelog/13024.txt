@@ -1,0 +1,3 @@
+```release-note:feature
+**Report in-flight requests**: Adding a trace capability to show in-flight requests, and a new gauge metric to show the total number of in-flight requests
+```

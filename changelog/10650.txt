@@ -1,0 +1,4 @@
+```release-note:bug
+core: Make the response to an unauthenticated request to sys/internal endpoints consistent regardless of mount existence.
+```
+

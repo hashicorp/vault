@@ -56,10 +56,11 @@
 .replication-actions-grid-item {
   flex-basis: 50%;
   padding: $spacing-s;
+  display: flex;
+  width: 100%;
 }
 
 .replication-actions-grid-item .action-block {
-  height: 100%;
   width: 100%;
   @include until($tablet) {
     height: inherit;

@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -89,6 +88,10 @@ derivation is enabled; currently only available with ed25519 keys.`,
 * sha2-256
 * sha2-384
 * sha2-512
+* sha3-224
+* sha3-256
+* sha3-384
+* sha3-512
 
 Defaults to "sha2-256". Not valid for all key types,
 including ed25519.`,
@@ -143,7 +146,7 @@ func (b *backend) pathVerify() *framework.Path {
 	return &framework.Path{
 		Pattern: "verify/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("urlalgorithm"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "The key to use",
 			},
@@ -184,6 +187,10 @@ derivation is enabled; currently only available with ed25519 keys.`,
 * sha2-256
 * sha2-384
 * sha2-512
+* sha3-224
+* sha3-256
+* sha3-384
+* sha3-512
 
 Defaults to "sha2-256". Not valid for all key types.`,
 			},
@@ -247,7 +254,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	sigAlgorithm := d.Get("signature_algorithm").(string)
 
 	// Get the policy
-	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
 	}, b.GetRandomReader())
@@ -272,7 +279,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		err = mapstructure.Decode(batchInputRaw, &batchInputItems)
 		if err != nil {
 			p.Unlock()
-			return nil, errwrap.Wrapf("failed to parse batch input: {{err}}", err)
+			return nil, fmt.Errorf("failed to parse batch input: %w", err)
 		}
 
 		if len(batchInputItems) == 0 {
@@ -307,7 +314,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 
 		if p.Type.HashSignatureInput() && !prehashed {
-			var hf = keysutil.HashFuncMap[hashAlgorithm]()
+			hf := keysutil.HashFuncMap[hashAlgorithm]()
 			hf.Write(input)
 			input = hf.Sum(nil)
 		}
@@ -379,7 +386,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	if batchInputRaw != nil {
 		err := mapstructure.Decode(batchInputRaw, &batchInputItems)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to parse batch input: {{err}}", err)
+			return nil, fmt.Errorf("failed to parse batch input: %w", err)
 		}
 
 		if len(batchInputItems) == 0 {
@@ -465,7 +472,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	sigAlgorithm := d.Get("signature_algorithm").(string)
 
 	// Get the policy
-	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
 	}, b.GetRandomReader())

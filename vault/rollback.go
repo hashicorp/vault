@@ -117,7 +117,6 @@ func (m *RollbackManager) run() {
 
 // triggerRollbacks is used to trigger the rollbacks across all the backends
 func (m *RollbackManager) triggerRollbacks() {
-
 	backends := m.backends()
 
 	for _, e := range backends {
@@ -165,7 +164,7 @@ func (m *RollbackManager) startOrLookupRollback(ctx context.Context, fullPath st
 
 // attemptRollback invokes a RollbackOperation for the given path
 func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, rs *rollbackState, grabStatelock bool) (err error) {
-	defer metrics.MeasureSince([]string{"rollback", "attempt", strings.Replace(fullPath, "/", "-", -1)}, time.Now())
+	defer metrics.MeasureSince([]string{"rollback", "attempt", strings.ReplaceAll(fullPath, "/", "-")}, time.Now())
 
 	defer func() {
 		rs.lastError = err

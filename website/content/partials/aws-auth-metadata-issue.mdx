@@ -1,0 +1,51 @@
+## The AWS Auth Engine
+
+Users of the AWS Auth Engine should be cautious with this upgrade, because in
+1.3.2 we began adding metadata to tokens issued with this method. While the
+metadata does help with tying tokens to a particular person or machine, it
+also can also take a performance toll.
+
+Whether there's a performance toll depends on if and how you've configured the
+`auth/aws/config/identity` endpoint. To determine if you could be effected:
+
+- Read your identity configuration: `$ vault read auth/aws/config/identity`
+- Determine what Vault is using for identity (`role_id` if unconfigured)
+- Determine what role type(s) you're using (`iam` and/or `ec2`)
+- Consider the rate of change of the metadata fields for each role type
+
+Metadata fields for `iam` roles:
+
+- `client_arn`
+- `canonical_arn`
+- `client_user_id`
+- `auth_type`
+- `inferred_entity_type`
+- `inferred_entity_id`
+- `inferred_aws_region`
+- `account_id`
+
+Metadata fields for `ec2` roles:
+
+- `instance_id`
+- `region`
+- `account_id`
+- `ami_id`
+
+For example, if you use `role_id` for identity and only `iam` roles, and
+_many_ machines use the same role, you would conclude that the `client_arn`
+for the machines logging in would have a high rate of change, and so you'd
+see a new storage write each time a new machine logged in under that role.
+
+If you use `role_id` for identity and only `iam` roles, and
+and only _one_ long-lived machine used the role, you would conclude that the
+`client_arn` for the machines logging in would have a low rate of change.
+Unless you added the optional "role-session" to its ARN, in which case you
+could still have a higher rate of change.
+
+However, if you had configured identity to use an `iam_alias` of the `full_arn`,
+or an `ec2_alias` of `instance_id`, you would be likely to see a lower rate of
+change for all fields.
+
+For users seeing a performance issue, we recommend implementing one of the
+aliases above, or waiting until a patch is released providing greater
+flexibility around whether to use this functionality.

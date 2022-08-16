@@ -9,13 +9,13 @@
 # dependencies
 /bower_components/
 /node_modules/
-/.storybook/
 /.yarn/
-/stories/
-/storybook-static/
 
 # misc
 /coverage/
+!.*
+.*/
+.eslintcache
 
 # ember-try
 /.node_modules.ember-try/

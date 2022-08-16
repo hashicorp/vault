@@ -99,9 +99,11 @@ func (r *reversingWrapper) Encrypt(_ context.Context, input []byte, _ []byte) (*
 		Ciphertext: r.reverse(input),
 	}, nil
 }
+
 func (r *reversingWrapper) Decrypt(_ context.Context, input *wrapping.EncryptedBlobInfo, _ []byte) ([]byte, error) {
 	return r.reverse(input.Ciphertext), nil
 }
+
 func (r *reversingWrapper) reverse(input []byte) []byte {
 	output := make([]byte, len(input))
 	for i, j := 0, len(input)-1; i < j; i, j = i+1, j-1 {

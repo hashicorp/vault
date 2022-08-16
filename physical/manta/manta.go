@@ -13,7 +13,6 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/physical"
 	triton "github.com/joyent/triton-go"
@@ -63,7 +62,7 @@ func NewMantaBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	}
 	signer, err := authentication.NewSSHAgentSigner(input)
 	if err != nil {
-		return nil, errwrap.Wrapf("Error Creating SSH Agent Signer: {{err}}", err)
+		return nil, fmt.Errorf("Error Creating SSH Agent Signer: %w", err)
 	}
 
 	maxParStr, ok := conf["max_parallel"]
@@ -71,7 +70,7 @@ func NewMantaBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	if ok {
 		maxParInt, err = strconv.Atoi(maxParStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_parallel set", "max_parallel", maxParInt)
@@ -86,7 +85,7 @@ func NewMantaBackend(conf map[string]string, logger log.Logger) (physical.Backen
 
 	client, err := storage.NewClient(config)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed initialising Storage client: {{err}}", err)
+		return nil, fmt.Errorf("failed initialising Storage client: %w", err)
 	}
 
 	return &MantaBackend{
@@ -233,8 +232,8 @@ func (m *MantaBackend) List(ctx context.Context, prefix string) ([]string, error
 				}
 			}
 
-			//We need to check to see if there is something more than just the `value` file
-			//if the length of the children is:
+			// We need to check to see if there is something more than just the `value` file
+			// if the length of the children is:
 			// > 1 and includes the value `index` then we need to add foo and foo/
 			// = 1 and the value is `index` then we need to add foo
 			// = 1 and the value is not `index` then we need to add foo/
