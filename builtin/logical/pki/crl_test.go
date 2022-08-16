@@ -543,6 +543,14 @@ func TestPoP(t *testing.T) {
 	})
 	require.Error(t, err)
 
+	// Incorrect combination (stored with not stored key) should fail.
+	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+		"certificate": storedCert,
+		"private_key": notStoredKey,
+	})
+	require.Error(t, err)
+
+	// Correct combination (stored with stored) should succeed.
 	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
 		"certificate": storedCert,
 		"private_key": storedKey,
@@ -555,6 +563,14 @@ func TestPoP(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	// Incorrect combination (not stored with stored key) should fail.
+	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+		"certificate": notStoredCert,
+		"private_key": storedKey,
+	})
+	require.Error(t, err)
+
+	// Correct combination (not stored with not stored) should succeed.
 	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
 		"certificate": notStoredCert,
 		"private_key": notStoredKey,
