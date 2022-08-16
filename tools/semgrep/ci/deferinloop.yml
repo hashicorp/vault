@@ -7,6 +7,10 @@ rules:
           for ... {
             ...
           }
+      - pattern-not-inside: |
+          func() {
+            ...
+          }()
 
     message: "defer within for loop"
     languages: [go]
