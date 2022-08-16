@@ -103,8 +103,8 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		bufferedBody := newBufferedReader(r.Body)
 		r.Body = bufferedBody
 
-		// If we are uploading a snapshot or receiving an ocsp-request which
-		// is der encoded we don't want to parse it. Instead, we will simply
+		// If we are uploading a snapshot or receiving an ocsp-request (which
+		// is der encoded) we don't want to parse it. Instead, we will simply
 		// add the HTTP request to the logical request object for later consumption.
 		contentType := r.Header.Get("Content-Type")
 		if path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" || isOcspRequest(contentType) {

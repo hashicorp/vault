@@ -183,6 +183,8 @@ func genIssuerAndKey(t *testing.T, b *backend, s logical.Storage) (issuerEntry, 
 		Certificate:  strings.TrimSpace(certBundle.Certificate) + "\n",
 		CAChain:      certBundle.CAChain,
 		SerialNumber: certBundle.SerialNumber,
+		Usage:        AllIssuerUsages,
+		Version:      latestIssuerVersion,
 	}
 
 	return pkiIssuer, pkiKey

@@ -151,8 +151,7 @@ func (sc *storageContext) fetchCAInfoByIssuerId(issuerId issuerID, usage issuerU
 	return caInfo, nil
 }
 
-func fetchCertBySerialBigInt(ctx context.Context, b *backend, req *logical.Request,
-	prefix string, serial *big.Int) (*logical.StorageEntry, error) {
+func fetchCertBySerialBigInt(ctx context.Context, b *backend, req *logical.Request, prefix string, serial *big.Int) (*logical.StorageEntry, error) {
 	return fetchCertBySerial(ctx, b, req, prefix, certutil.GetHexFormatted(serial.Bytes(), ":"))
 }
 

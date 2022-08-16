@@ -98,7 +98,11 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		config.OcspDisable = ocspDisableRaw.(bool)
 	}
 
-	err = sc.writeRevocationConfig(config)
+	entry, err := logical.StorageEntryJSON("config/crl", config)
+	if err != nil {
+		return nil, err
+	}
+	err = sc.Storage.Put(sc.Context, entry)
 	if err != nil {
 		return nil, err
 	}

@@ -31,6 +31,8 @@ const (
 
 	maxRolesToScanOnIssuerChange = 100
 	maxRolesToFindOnIssuerChange = 10
+
+	latestIssuerVersion = 1
 )
 
 type keyID string
@@ -85,7 +87,7 @@ const (
 	// When adding a new usage in the future, we'll need to create a usage
 	// mask field on the IssuerEntry and handle migrations to a newer mask,
 	// inferring a value for the new bits.
-	AllIssuerUsages issuerUsage = ReadOnlyUsage | IssuanceUsage | CRLSigningUsage | OCSPSigningUsage
+	AllIssuerUsages = ReadOnlyUsage | IssuanceUsage | CRLSigningUsage | OCSPSigningUsage
 )
 
 var namedIssuerUsages = map[string]issuerUsage{
@@ -153,6 +155,8 @@ type issuerEntry struct {
 	RevocationTime       int64                     `json:"revocation_time"`
 	RevocationTimeUTC    time.Time                 `json:"revocation_time_utc"`
 	AIAURIs              *certutil.URLEntries      `json:"aia_uris,omitempty"`
+	Version              uint                      `json:"version"`
+	Dirty                bool                      `json:"-"`
 }
 
 type localCRLConfigEntry struct {
@@ -206,7 +210,6 @@ func (sc *storageContext) fetchKeyById(keyId keyID) (*keyEntry, error) {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki key: %v", err)}
 	}
 	if entry == nil {
-		// FIXME: Dedicated/specific error for this?
 		return nil, errutil.UserError{Err: fmt.Sprintf("pki key id %s does not exist", keyId.String())}
 	}
 
@@ -563,7 +566,6 @@ func (sc *storageContext) fetchIssuerById(issuerId issuerID) (*issuerEntry, erro
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki issuer: %v", err)}
 	}
 	if entry == nil {
-		// FIXME: Dedicated/specific error for this?
 		return nil, errutil.UserError{Err: fmt.Sprintf("pki issuer id %s does not exist", issuerId.String())}
 	}
 
@@ -572,7 +574,27 @@ func (sc *storageContext) fetchIssuerById(issuerId issuerID) (*issuerEntry, erro
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode pki issuer with id %s: %v", issuerId.String(), err)}
 	}
 
-	return &issuer, nil
+	return sc.upgradeIssuerIfRequired(&issuer), nil
+}
+
+func (sc *storageContext) upgradeIssuerIfRequired(issuer *issuerEntry) *issuerEntry {
+	// *NOTE*: Don't attempt to write out the issuer here as it may cause ErrReadOnly that will direct the
+	// request all the way up to the primary cluster which would be horrible for local cluster operations such
+	// as generating a leaf cert or a revoke.
+	if issuer.Version == latestIssuerVersion {
+		return issuer
+	}
+
+	if issuer.Version == 0 {
+		// handle our new OCSPSigning usage flag for earlier versions
+		if issuer.Usage.HasUsage(CRLSigningUsage) && !issuer.Usage.HasUsage(OCSPSigningUsage) {
+			issuer.Usage.ToggleUsage(OCSPSigningUsage)
+		}
+	}
+
+	issuer.Version = latestIssuerVersion
+	issuer.Dirty = true
+	return issuer
 }
 
 func (sc *storageContext) writeIssuer(issuer *issuerEntry) error {
@@ -681,7 +703,8 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 	result.Name = issuerName
 	result.Certificate = certValue
 	result.LeafNotAfterBehavior = certutil.ErrNotAfterBehavior
-	result.Usage.ToggleUsage(IssuanceUsage, CRLSigningUsage, OCSPSigningUsage)
+	result.Usage.ToggleUsage(AllIssuerUsages)
+	result.Version = latestIssuerVersion
 
 	// We shouldn't add CSRs or multiple certificates in this
 	countCertificates := strings.Count(result.Certificate, "-BEGIN ")
@@ -1052,28 +1075,14 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 	}
 
 	var result crlConfig
-	result.Expiry = sc.Backend.crlLifetime.String()
-	result.Disable = false
-
 	if entry == nil {
+		result.Expiry = sc.Backend.crlLifetime.String()
 		return &result, nil
 	}
 
-	if err := entry.DecodeJSON(&result); err != nil {
+	if err = entry.DecodeJSON(&result); err != nil {
 		return nil, err
 	}
 
 	return &result, nil
-}
-
-func (sc *storageContext) writeRevocationConfig(config *crlConfig) error {
-	entry, err := logical.StorageEntryJSON("config/crl", config)
-	if err != nil {
-		return err
-	}
-	err = sc.Storage.Put(sc.Context, entry)
-	if err != nil {
-		return err
-	}
-	return nil
 }
