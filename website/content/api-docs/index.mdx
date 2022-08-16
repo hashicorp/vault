@@ -21,12 +21,6 @@ is, `sys/` routes) change very infrequently, but various secrets engines/auth
 methods/etc. sometimes have minor changes to accommodate new features as
 they're developed.
 
-## KV Engine V2
-
-For KV Engine V2, request path needs to include `/data`. 
-Example:
-`http://127.0.0.1:8200/v1/secret/data/foo`
-
 ## Transport
 
 The API is expected to be accessed over a TLS connection at all times, with a
@@ -41,8 +35,8 @@ A user may have a client token sent to them. The client token must be sent as
 either the `X-Vault-Token` HTTP Header or as `Authorization` HTTP Header using
 the `Bearer <token>` scheme.
 
-Otherwise, a client token can be retrieved via [authentication
-backends](/docs/auth).
+Otherwise, a client token can be retrieved using an [authentication
+engine](/docs/auth).
 
 Each auth method has one or more unauthenticated login endpoints. These
 endpoints can be reached without any authentication, and are used for
@@ -60,16 +54,18 @@ in periods. Otherwise, Vault will return a 404 unsupported path error.
 
 ## Namespaces
 
-If using the [Namespaces](/docs/enterprise/namespaces) feature, API
-operations are relative to the namespace value passed in via the
-`X-Vault-Namespace` header. For instance, if the request path is to
-`secret/foo`, and the header is set to `ns1/ns2/`, the final request path Vault
-uses will be `ns1/ns2/secret/foo`. Note that it is semantically equivalent to
-use a full path rather than the `X-Vault-Namespace` header, as the operation in
-Vault will always look up the correct namespace based on the final given path.
-Thus, it would be equivalent to the above example to set `X-Vault-Namespace` to
-`ns1/` and a request path of `ns2/secret/foo`, or to not set
-`X-Vault-Namespace` at all and use a request path of `ns1/ns2/secret/foo`.
+When using [Namespaces](/docs/enterprise/namespaces) the final path of the API 
+request is determined relative to the `X-Vault-Namespace` header. For instance, 
+if a request is to the URI `secret/foo` with the `X-Vault-Namespace` header set 
+to `ns1/ns2/`, then the resulting request path to Vault will be 
+`ns1/ns2/secret/foo`. 
+
+Note that it is semantically equivalent to using the full path rather than the 
+`X-Vault-Namespace` header, Vault will match the corresponding namespace 
+based on correlating user input. Similar results of a path may be achieved if 
+`X-Vault-Namespace` is set to `ns1/` with the request path of `ns2/secret/foo` 
+as well, or otherwise if `X-Vault-Namespace` omitted entirely and instead a 
+complete path is provided such as: `ns1/ns2/secret/foo`.
 
 For example, the following two commands result in equivalent requests:
 
@@ -90,14 +86,21 @@ $ curl \
 
 ## API Operations
 
-With few documented exceptions, all request body data and response data from
-Vault is via JSON. Vault will set the `Content-Type` header appropriately but
-does not require that clients set it.
+All request data, body and response data to and from Vault is JSON except in a 
+few exceptional cases that are documented. Vault sets the `Content-Type` header 
+appropriately with its response and does not require it from the clients 
+request.
 
-Different plugins implement different APIs according to their functionality.
-The examples below are created with the `KVv1` backend, which acts like a very
-simple Key/Value store. Read the documentation for a particular backend for
-detailed information on its API; this simply provides a general overview.
+Authentication and Secret engines, that are also refer to as backends or 
+mounts, differ in their implementation of APIs according to functionality and 
+how they're authored.
+
+The demonstration below are using the `KVv1` secrets engine, which is a 
+simple Key/Value store. Please read the API documentation of secret engine or 
+authentication engine for detailed information on their use. 
+
+There are documented difference in the path schemes as well as other 
+functionality which may be applicable as for example with [`KVv2` compared to `KVv1`].
 
 For `KVv1`, reading a secret via the HTTP API is done by issuing a GET:
 
@@ -123,9 +126,9 @@ endpoints that consume parameters use `POST` instead and put the parameters in
 the request body.
 
 You can list secrets as well. To do this, either issue a GET with the query
-parameter `list=true`, or you can use the `LIST` HTTP verb. For the `kv`
-backend, listing is allowed on directories only, and returns the keys in the
-given directory:
+parameter `list=true`, or you use the `LIST` HTTP verb. For the `kv` secrets 
+engine, listing is allowed on directories only, which returns the keys at the 
+requested path:
 
 ```shell-session
 $ curl \
@@ -163,7 +166,7 @@ $ curl \
 ```
 
 Vault currently considers `PUT` and `POST` to be synonyms. Rather than trust a
-client's stated intentions, Vault backends can implement an existence check to
+client's stated intentions, Vault engines can implement an existence check to
 discover whether an operation is actually a create or update operation based on
 the data already stored within Vault. This makes permission management via ACLs
 more flexible.
@@ -192,12 +195,15 @@ addition, the Vault SDK always adds this header to every request.
 
 ## Help
 
-To retrieve the help for any API within Vault, including mounted backends, auth
+To retrieve the help for any API within Vault, including mounted engine, auth
 methods, etc. then append `?help=1` to any URL. If you have valid permission to
-access the path, then the help text will be return a markdown-formatted block in the `help` attribute of the response.
+access the path, then the help text will be return a markdown-formatted block 
+in the `help` attribute of the response.
 
 Additionally, with the [OpenAPI generation](/api/system/internal-specs-openapi) in Vault, you will get back a small
-OpenAPI document in the `openapi` attribute. This document is relevant for the path you're looking up and any paths under it - also note paths in the OpenAPI document are relative to the initial path queried.
+OpenAPI document in the `openapi` attribute. This document is relevant for the 
+path you're looking up and any paths under it - also note paths in the OpenAPI 
+document are relative to the initial path queried.
 
 Example request:
 
@@ -305,3 +311,4 @@ with arbitrarily large requests; this can be tuned per `listener` block in
 Vault's server configuration file.
 
 [agent]: /docs/agent#listener-stanza
+[`KVv2` compared to `KVv1`]: /api-docs/secret/kv
