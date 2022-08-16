@@ -165,10 +165,10 @@ These are the currently-available general configuration option:
 There can at most be one top level `vault` block and it has the following
 configuration entries:
 
-- `address` `(string: <optional>)` - The address of the Vault server to connect.
-  This should be a complete URL such as `https://vault-fqdn:8200` or
-  `https://172.16.9.8:8200`. This value can be overridden by setting the
-  `VAULT_ADDR` environment variable.
+- `address` `(string: <optional>)` - The address of the Vault server to 
+  connect to. This should be a Fully Qualified Domain Name (FQDN) such as 
+  `https://vault-fqdn:8200` or `https://172.16.9.8:8200`. This value can 
+  be overridden by setting the `VAULT_ADDR` environment variable.
 
 - `ca_cert` `(string: <optional>)` - Path on the local disk to a single PEM-encoded
   CA certificate to verify the Vault server's SSL certificate. This value can
