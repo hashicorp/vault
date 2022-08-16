@@ -484,6 +484,16 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"transit import": func() (cli.Command, error) {
+			return &TransitImportCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"transit import_version": func() (cli.Command, error) {
+			return &TransitImportVersionCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"path-help": func() (cli.Command, error) {
 			return &PathHelpCommand{
 				BaseCommand: getBaseCommand(),
