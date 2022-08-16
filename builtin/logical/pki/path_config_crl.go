@@ -102,7 +102,7 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 	if err != nil {
 		return nil, err
 	}
-	err = sc.Storage.Put(sc.Context, entry)
+	err = req.Storage.Put(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
