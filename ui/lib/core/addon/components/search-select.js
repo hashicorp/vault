@@ -55,10 +55,14 @@ export default Component.extend({
   options: null, // all possible options
   shouldUseFallback: false,
   shouldRenderName: false,
-  objectKeys: null,
   disallowNewItems: false,
   passObject: false,
-
+  objectKeys: null,
+  idKey: computed('objectKeys', function () {
+    // if objectKeys exists, then use the first element of the array as the identifier
+    // e.g. 'clientId' otherwise use 'id'
+    return this.objectKeys ? this.objectKeys[0] : 'id';
+  }),
   init() {
     this._super(...arguments);
     this.set('selectedOptions', this.inputValue || []);
@@ -75,7 +79,7 @@ export default Component.extend({
   },
   formatOptions: function (options) {
     options = options.toArray().map((option) => {
-      option.searchText = `${option.name} ${option.id}`;
+      option.searchText = `${option.name} ${option[this.idKey]}`;
       return option;
     });
     let allOptions = options.toArray().map((option) => {
@@ -83,7 +87,7 @@ export default Component.extend({
     });
     this.set('allOptions', allOptions); // used by filter-wildcard helper
     let formattedOptions = this.selectedOptions.map((option) => {
-      let matchingOption = options.findBy('id', option);
+      let matchingOption = options.findBy(this.idKey, option);
       options.removeObject(matchingOption);
       return {
         id: option,
@@ -91,7 +95,7 @@ export default Component.extend({
         searchText: matchingOption ? matchingOption.searchText : option,
       };
     });
-
+    console.log(formattedOptions);
     this.set('selectedOptions', formattedOptions);
     if (this.options) {
       options = this.options.concat(options).uniq();
@@ -106,7 +110,7 @@ export default Component.extend({
       return;
     }
     for (let modelType of this.models) {
-      if (modelType.includes('identity')) {
+      if (modelType.includes('identity') || modelType.includes('oidc/client')) {
         this.set('shouldRenderName', true);
       }
       try {
