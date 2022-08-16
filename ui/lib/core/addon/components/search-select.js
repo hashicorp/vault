@@ -21,8 +21,8 @@ import layout from '../templates/components/search-select';
  * @param {string} fallbackComponent - name of component to be rendered if the API call 403s
  * @param {string} [backend] - name of the backend if the query for options needs additional information (eg. secret backend)
  * @param {boolean} [disallowNewItems=false] - Controls whether or not the user can add a new item if none found
- * @param {boolean} [passObject=false] - When true, the onChange callback returns an array of objects with id (string) and isNew (boolean)
- * @param {array} [objectKeys=null] - Array of strings that correlate to model attrs. When passObject=true and you want to customize the object rendered and returned by search-select, passed in objectKeys will be added to the option object. NOTE: the first string in the array sets the dynamic idKey
+ * @param {boolean} [passObject=false] - When true, the onChange callback returns an array of objects with id (string) and isNew (boolean) (instead of an array of id strings)
+ * @param {array} [objectKeys=null] - Array of strings that correlate to model attrs. When passObject=true, objectKeys are added to the passed object. NOTE: make 'id' as the first element in objectKeys if you do not want to override the default of 'id'
  * @param {number} [selectLimit] - A number that sets the limit to how many select options they can choose
  * @param {string} [subText] - Text to be displayed below the label
  * @param {string} [subLabel] - a smaller label below the main Label
@@ -59,7 +59,6 @@ export default Component.extend({
   objectKeys: null,
   idKey: computed('objectKeys', function () {
     // if objectKeys exists, then use the first element of the array as the identifier
-    // pass 'id' as the first element in objectKeys if you do not want to override the default of 'id'
     return this.objectKeys ? this.objectKeys[0] : 'id';
   }),
   init() {
