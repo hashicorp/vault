@@ -52,6 +52,7 @@
       <li class="search-select-list-item" data-test-selected-option="true">
         {{#if this.shouldRenderName}}
           {{selected.name}}
+          {{log "SELECTED" selected}}
           <small class="search-select-list-key" data-test-smaller-id="true">
             {{get selected this.idKey}}
           </small>

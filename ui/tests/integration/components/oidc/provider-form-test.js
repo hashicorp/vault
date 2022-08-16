@@ -84,7 +84,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       .dom('[data-test-component="search-select"]#allowedClientIds')
       .exists('Limited radio button shows clients search select');
     await click('[data-test-component="search-select"]#allowedClientIds .ember-basic-dropdown-trigger');
-    assert.dom('li.ember-power-select-option').hasText('some-app', 'dropdown renders clients');
+    assert.dom('li.ember-power-select-option').hasTextContaining('some-app', 'dropdown renders client name');
 
     await click('label[for=allow-all]');
     assert

@@ -93,9 +93,10 @@ export default Component.extend({
         id: option,
         name: matchingOption ? matchingOption.name : option,
         searchText: matchingOption ? matchingOption.searchText : option,
+        // conditionally spread configured object if we've passed in a dynamic param
+        ...(this.idKey !== 'id' && this.configureObject(matchingOption)),
       };
     });
-    console.log(formattedOptions);
     this.set('selectedOptions', formattedOptions);
     if (this.options) {
       options = this.options.concat(options).uniq();
