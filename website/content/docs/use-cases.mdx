@@ -12,28 +12,35 @@ description: >-
 
 This page describes common Vault use cases and provides related resources that can be used to create Vault configurations and workflows. Please note that not all use cases may be listed.
 
-## Secrets Management
+## General Secret Storage
 
-The adoption of the cloud means organizations shift away from static infrastructure to now provisioning and managing dynamic infrastructure. This implies distribution of services, embracing ephemerality and immutability, and the ability to deploy onto multiple target environments.
-
-Managing secrets in the cloud can add complexity as organizations look to adopt more modern
-security practices and posture. When choosing the right secrets management solution there are several options available depending on security and deployment requirements for workflows, teams, systems and infrastructure.
-
-Vault's [secret management](/docs/secrets) solution centrally manages and enforces access to secrets and systems based on trusted sources of application and user identity.
+As workloads become more and more ephemeral and short-lived, having long-lived static credentials pose a big security threat vector. What if credentials are accidentally leaked, or an employee leaves with their post it notes that contain the AWS access key, or someone checks their S3 access token to a public GH repo?
+With Vault, you can generate short-lived, just-in-time credentials that are automatically revoked when their time expires. This means users and security teams do not have to worry about manually revoking or changing these credentials.
 
 ### Static Secrets
 
-Vault safely stores credentials, keys, and other types of secrets without deploying and managing a complex key management infrastructure.
+Credentials can be long-lived and static, where they don't change or are changed infrequently. Vault can store these secrets bedhind its cryptographic barrier, and clients can request them to use in their applications.
 
 - Refer to the [Versioned Key/Vault Secrets Engine](https://learn.hashicorp.com/tutorials/vault/versioned-kv?in=vault/secrets-management) tutorial and learn how a versioned key-value secrets engine protects your static secrets.
 
 ### Dynamic Secrets
 
-Secrets in plain text may accidentally be left in an application or with an individual long after the intended period of access. Vault provides a unique ability to create, rotate, and revoke secrets dynamically.
+The key value with secrets storage is the ability to dynamically generate credentials. These credentials are created when clients need them. Vault can also manage the lifecycle of these credentials, including but not limited to, deleting them after a defined period of time.
 
 - Refer to the [Dynamic Secrets: Database Secrets Engine](https://learn.hashicorp.com/tutorials/vault/database-secrets) tutorial and learn how Vault can dynamically manage your database credentials.
 
 In addition to database credential management, Vault can manage your Active Directory accounts, SSH keys, PKI certificates and more. Visit the [Secrets Management](https://learn.hashicorp.com/collections/vault/secrets-management) tutorial series to learn more about secrets management using Vault.
+
+## Key Management
+
+Working with cloud providers requires that you use their security features, which involve encryption keys issued and stored by the provider in its own key management system (KMS). You may also have a requirement to maintain root of trust and control of the encryption key lifecycle, both within and outside of the cloud. The Vault [Key Management Secrets Engine](https://www.vaultproject.io/docs/secrets/key-management) provides a consistent workflow for distribution and lifecycle management features for cloud provider keys, thereby, allowing organizations to maintain a centralized control of their keys in Vault while leveraging the cryptographic capabilities native to the KMS providers.
+
+### Resources
+
+- Try our [Key Management Secrets Engine with Azure Key Vault](https://learn.hashicorp.com/tutorials/vault/key-management-secrets-engine-azure-key-vault?in=vault/adp) to enable management of the Key Vault key with the Key Management secrets engine.
+
+- Try our [Key Management Secrets Engine with GCP Cloud KMS](https://learn.hashicorp.com/tutorials/vault/key-management-secrets-engine-azure-key-vault?in=vault/adp) to enable management of the Key Value key with the Key Management secrets engine.
+
 
 ## Data Encryption
 
@@ -41,9 +48,9 @@ Many organizations seek solutions to encrypt/decrypt application data within a c
 
 ### Resources
 
-Try our [Encryption as a Service: Transit Secrets Engine](https://learn.hashicorp.com/collections/vault/encryption-as-a-service) tutorial to learn the essential workings of the Transit secrets engine handles cryptographic functions on data in-transit.
+- Try our [Encryption as a Service: Transit Secrets Engine](https://learn.hashicorp.com/collections/vault/encryption-as-a-service) to learn the essential workings of the Transit secrets engine handles cryptographic functions on data in-transit.
 
-For more advanced data protection, refer to the [Advanced Data Protection](https://learn.hashicorp.com/collections/vault/adp) tutorial series. Vault's Transform secrets engine handles secure data transformation and tokenization against provided input value.
+- For more advanced data protection, refer to the [Advanced Data Protection](https://learn.hashicorp.com/collections/vault/adp) tutorial series. Vault's Transform secrets engine handles secure data transformation and tokenization against provided input value.
 
 
 ## Identity-Based Access
@@ -52,6 +59,6 @@ Organizations need a way to manage identity sprawl with the proliferation of dif
 
 ### Resources
 
-Try our [Identity: Entities and Groups](https://learn.hashicorp.com/tutorials/vault/identity) tutorial to learn how Vault's unified identity system works.
+- Try our [Identity: Entities and Groups](https://learn.hashicorp.com/tutorials/vault/identity) tutorial to learn how Vault's unified identity system works.
 
-Follow the [Policies](https://learn.hashicorp.com/collections/vault/policies) tutorial series to learn how Vault enforces role-based access control (RBAC) across multiple cloud environments.
+- Follow the [Policies](https://learn.hashicorp.com/collections/vault/policies) tutorial series to learn how Vault enforces role-based access control (RBAC) across multiple cloud environments.
