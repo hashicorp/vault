@@ -225,8 +225,20 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 				}
 
 				if rebuildCRL {
-					if err := b.crlBuilder.rebuild(ctx, b, req, false); err != nil {
+					// Expired certificates isn't generally an important
+					// reason to trigger a CRL rebuild for. Check if
+					// automatic CRL rebuilds have been enabled and defer
+					// the rebuild if so.
+					sc := b.makeStorageContext(ctx, req.Storage)
+					config, err := sc.getRevocationConfig()
+					if err != nil {
 						return err
+					}
+
+					if !config.AutoRebuild {
+						if err := b.crlBuilder.rebuild(ctx, b, req, false); err != nil {
+							return err
+						}
 					}
 				}
 			}
