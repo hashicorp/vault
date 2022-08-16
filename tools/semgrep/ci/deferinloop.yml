@@ -1,0 +1,13 @@
+rules:
+  - id: defer-in-loop 
+    patterns:
+      - pattern: |
+            defer $FUNC(...)
+      - pattern-inside: |
+          for ... {
+            ...
+          }
+
+    message: "defer within for loop"
+    languages: [go]
+    severity: WARNING
