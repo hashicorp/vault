@@ -166,7 +166,7 @@ There can at most be one top level `vault` block and it has the following
 configuration entries:
 
 - `address` `(string: <optional>)` - The address of the Vault server to connect.
-  This should be a complete URL such as `https://vault.example.org:8200` or
+  This should be a complete URL such as `https://vault-fqdn:8200` or
   `https://172.16.9.8:8200`. This value can be overridden by setting the
   `VAULT_ADDR` environment variable.
 
@@ -302,7 +302,7 @@ An example configuration, with very contrived values, follows:
 pid_file = "./pidfile"
 
 vault {
-  address = "https://vault.example.org:8200"
+  address = "https://vault-fqdn:8200"
   retry {
     num_retries = 5
   }
