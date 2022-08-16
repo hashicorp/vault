@@ -1504,6 +1504,12 @@ func (a *ActivityLog) DefaultStartTime(endTime time.Time) time.Time {
 
 func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.Time, limitNamespaces int) (map[string]interface{}, error) {
 	var computePartial bool
+
+	// Change the start time to the beginning of the month, and the end time to be the end
+	// of the month.
+	startTime = timeutil.StartOfMonth(startTime)
+	endTime = timeutil.EndOfMonth(endTime)
+
 	// If the endTime of the query is the current month, request data from the queryStore
 	// with the endTime equal to the end of the last month, and add in the current month
 	// data.
@@ -1513,16 +1519,26 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 		computePartial = true
 	}
 
-	// From the precomputed queries stored in the queryStore (computed at the end of each month)
-	// get the query associated with the start and end time specified
-	pq, err := a.queryStore.Get(ctx, startTime, precomputedQueryEndTime)
-	if err != nil {
-		return nil, err
+	pq := &activity.PrecomputedQuery{}
+	if startTime.After(precomputedQueryEndTime) && timeutil.IsCurrentMonth(startTime, time.Now().UTC()) {
+		// We're only calculating the partial month client count. Skip the precomputation
+		// get call.
+		pq = &activity.PrecomputedQuery{
+			StartTime:  startTime,
+			EndTime:    endTime,
+			Namespaces: make([]*activity.NamespaceRecord, 0),
+			Months:     make([]*activity.MonthRecord, 0),
+		}
+	} else {
+		storedQuery, err := a.queryStore.Get(ctx, startTime, precomputedQueryEndTime)
+		if err != nil {
+			return nil, err
+		}
+		if storedQuery == nil {
+			return nil, nil
+		}
+		pq = storedQuery
 	}
-	if pq == nil {
-		return nil, nil
-	}
-
 	// Calculate the namespace response breakdowns and totals for entities and tokens from the initial
 	// namespace data.
 	totalEntities, totalTokens, byNamespaceResponse, err := a.calculateByNamespaceResponseForQuery(ctx, pq.Namespaces)
@@ -1619,7 +1635,7 @@ func modifyResponseMonths(months []*ResponseMonth, start time.Time, end time.Tim
 	if err != nil {
 		return months
 	}
-	for start.Before(firstMonth) {
+	for start.Before(firstMonth) && !timeutil.IsCurrentMonth(start, firstMonth) {
 		monthPlaceholder := &ResponseMonth{Timestamp: start.UTC().Format(time.RFC3339)}
 		modifiedResponseMonths = append(modifiedResponseMonths, monthPlaceholder)
 		start = timeutil.StartOfMonth(start.AddDate(0, 1, 0))
@@ -1630,7 +1646,7 @@ func modifyResponseMonths(months []*ResponseMonth, start time.Time, end time.Tim
 		return modifiedResponseMonths
 	}
 	lastMonth := timeutil.EndOfMonth(lastMonthStart)
-	for lastMonth.Before(end) {
+	for lastMonth.Before(end) && !timeutil.IsCurrentMonth(end, lastMonth) {
 		lastMonth = timeutil.StartOfMonth(lastMonth).AddDate(0, 1, 0)
 		monthPlaceholder := &ResponseMonth{Timestamp: lastMonth.UTC().Format(time.RFC3339)}
 		modifiedResponseMonths = append(modifiedResponseMonths, monthPlaceholder)
