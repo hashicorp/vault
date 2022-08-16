@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: select appropriate signature algorithm for ECDSA signature on certificates.
+```

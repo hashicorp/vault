@@ -103,7 +103,7 @@ func (h *ExternalTokenHelper) Path() string {
 }
 
 func (h *ExternalTokenHelper) cmd(op string) (*exec.Cmd, error) {
-	script := strings.Replace(h.BinaryPath, "\\", "\\\\", -1) + " " + op
+	script := strings.ReplaceAll(h.BinaryPath, "\\", "\\\\") + " " + op
 	cmd, err := ExecScript(script)
 	if err != nil {
 		return nil, err

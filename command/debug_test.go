@@ -7,12 +7,14 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/mholt/archiver"
+	"github.com/mholt/archiver/v3"
 	"github.com/mitchellh/cli"
 )
 
@@ -182,7 +184,7 @@ func TestDebugCommand_Archive(t *testing.T) {
 			err = tgz.Walk(bundlePath, func(f archiver.File) error {
 				fh, ok := f.Header.(*tar.Header)
 				if !ok {
-					t.Fatalf("invalid file header: %#v", f.Header)
+					return fmt.Errorf("invalid file header: %#v", f.Header)
 				}
 
 				// Ignore base directory and index file
@@ -191,10 +193,13 @@ func TestDebugCommand_Archive(t *testing.T) {
 				}
 
 				if fh.Name != filepath.Join(basePath, "server_status.json") {
-					t.Fatalf("unxexpected file: %s", fh.Name)
+					return fmt.Errorf("unexpected file: %s", fh.Name)
 				}
 				return nil
 			})
+			if err != nil {
+				t.Fatal(err)
+			}
 		})
 	}
 }
@@ -231,6 +236,11 @@ func TestDebugCommand_CaptureTargets(t *testing.T) {
 			"server-status",
 			[]string{"server-status"},
 			[]string{"server_status.json"},
+		},
+		{
+			"in-flight-req",
+			[]string{"requests"},
+			[]string{"requests.json"},
 		},
 		{
 			"all-minus-pprof",
@@ -590,7 +600,7 @@ func TestDebugCommand_OutputExists(t *testing.T) {
 					t.Fatal(err)
 				}
 			} else {
-				err = os.Mkdir(outputPath, 0o755)
+				err = os.Mkdir(outputPath, 0o700)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -695,4 +705,135 @@ func TestDebugCommand_PartialPermissions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+// set insecure umask to see if the files and directories get created with right permissions
+func TestDebugCommand_InsecureUmask(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("test does not work in windows environment")
+	}
+	t.Parallel()
+
+	cases := []struct {
+		name        string
+		compress    bool
+		outputFile  string
+		expectError bool
+	}{
+		{
+			"with-compress",
+			true,
+			"with-compress.tar.gz",
+			false,
+		},
+		{
+			"no-compress",
+			false,
+			"no-compress",
+			false,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			// set insecure umask
+			defer syscall.Umask(syscall.Umask(0))
+
+			testDir, err := ioutil.TempDir("", "vault-debug")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(testDir)
+
+			client, closer := testVaultServer(t)
+			defer closer()
+
+			ui, cmd := testDebugCommand(t)
+			cmd.client = client
+			cmd.skipTimingChecks = true
+
+			outputPath := filepath.Join(testDir, tc.outputFile)
+
+			args := []string{
+				fmt.Sprintf("-compress=%t", tc.compress),
+				"-duration=1s",
+				"-interval=1s",
+				"-metrics-interval=1s",
+				fmt.Sprintf("-output=%s", outputPath),
+			}
+
+			code := cmd.Run(args)
+			if exp := 0; code != exp {
+				t.Log(ui.ErrorWriter.String())
+				t.Fatalf("expected %d to be %d", code, exp)
+			}
+			// If we expect an error we're done here
+			if tc.expectError {
+				return
+			}
+
+			bundlePath := filepath.Join(testDir, tc.outputFile)
+			fs, err := os.Stat(bundlePath)
+			if os.IsNotExist(err) {
+				t.Log(ui.OutputWriter.String())
+				t.Fatal(err)
+			}
+			// check permissions of the parent debug directory
+			err = isValidFilePermissions(fs)
+			if err != nil {
+				t.Fatalf(err.Error())
+			}
+
+			// check permissions of the files within the parent directory
+			switch tc.compress {
+			case true:
+				tgz := archiver.NewTarGz()
+
+				err = tgz.Walk(bundlePath, func(f archiver.File) error {
+					fh, ok := f.Header.(*tar.Header)
+					if !ok {
+						return fmt.Errorf("invalid file header: %#v", f.Header)
+					}
+					err = isValidFilePermissions(fh.FileInfo())
+					if err != nil {
+						t.Fatalf(err.Error())
+					}
+					return nil
+				})
+
+			case false:
+				err = filepath.Walk(bundlePath, func(path string, info os.FileInfo, err error) error {
+					err = isValidFilePermissions(info)
+					if err != nil {
+						t.Fatalf(err.Error())
+					}
+					return nil
+				})
+			}
+
+			if err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func isValidFilePermissions(info os.FileInfo) (err error) {
+	mode := info.Mode()
+	// check group permissions
+	for i := 4; i < 7; i++ {
+		if string(mode.String()[i]) != "-" {
+			return fmt.Errorf("expected no permissions for group but got %s permissions for file %s", string(mode.String()[i]), info.Name())
+		}
+	}
+
+	// check others permissions
+	for i := 7; i < 10; i++ {
+		if string(mode.String()[i]) != "-" {
+			return fmt.Errorf("expected no permissions for others but got %s permissions for file %s", string(mode.String()[i]), info.Name())
+		}
+	}
+	return err
 }

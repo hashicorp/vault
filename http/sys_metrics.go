@@ -35,12 +35,14 @@ func handleMetricsUnauthenticated(core *vault.Core) http.Handler {
 		resp := core.MetricsHelper().ResponseForFormat(format)
 
 		// Manually extract the logical response and send back the information
-		w.WriteHeader(resp.Data[logical.HTTPStatusCode].(int))
+		status := resp.Data[logical.HTTPStatusCode].(int)
 		w.Header().Set("Content-Type", resp.Data[logical.HTTPContentType].(string))
 		switch v := resp.Data[logical.HTTPRawBody].(type) {
 		case string:
+			w.WriteHeader(status)
 			w.Write([]byte(v))
 		case []byte:
+			w.WriteHeader(status)
 			w.Write(v)
 		default:
 			respondError(w, http.StatusInternalServerError, fmt.Errorf("wrong response returned"))

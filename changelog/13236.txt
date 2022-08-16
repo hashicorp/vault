@@ -1,0 +1,3 @@
+```release-note:bug
+core/token: Fix null token_type panic resulting from 'v1/auth/token/roles/{role_name}' endpoint
+```

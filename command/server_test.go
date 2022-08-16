@@ -1,4 +1,4 @@
-// +build !race,!hsm
+//go:build !race && !hsm && !fips_140_3
 
 // NOTE: we can't use this with HSM. We can't set testing mode on and it's not
 // safe to use env vars since that provides an attack vector in the real world.
@@ -115,14 +115,13 @@ func TestServer_ReloadListener(t *testing.T) {
 	defer os.RemoveAll(td)
 
 	wg := &sync.WaitGroup{}
-
 	// Setup initial certs
 	inBytes, _ := ioutil.ReadFile(wd + "reload_foo.pem")
 	ioutil.WriteFile(td+"/reload_cert.pem", inBytes, 0o777)
 	inBytes, _ = ioutil.ReadFile(wd + "reload_foo.key")
 	ioutil.WriteFile(td+"/reload_key.pem", inBytes, 0o777)
 
-	relhcl := strings.Replace(reloadHCL, "TMPDIR", td, -1)
+	relhcl := strings.ReplaceAll(reloadHCL, "TMPDIR", td)
 	ioutil.WriteFile(td+"/reload.hcl", []byte(relhcl), 0o777)
 
 	inBytes, _ = ioutil.ReadFile(wd + "reload_ca.pem")
@@ -173,7 +172,7 @@ func TestServer_ReloadListener(t *testing.T) {
 		t.Fatalf("certificate name didn't check out: %s", err)
 	}
 
-	relhcl = strings.Replace(reloadHCL, "TMPDIR", td, -1)
+	relhcl = strings.ReplaceAll(reloadHCL, "TMPDIR", td)
 	inBytes, _ = ioutil.ReadFile(wd + "reload_bar.pem")
 	ioutil.WriteFile(td+"/reload_cert.pem", inBytes, 0o777)
 	inBytes, _ = ioutil.ReadFile(wd + "reload_bar.key")
@@ -244,7 +243,7 @@ func TestServer(t *testing.T) {
 		{
 			"bad_listener_read_timeout_config",
 			testBaseHCL(t, badListenerReadTimeout) + inmemHCL,
-			"parsing \"34日\": invalid syntax",
+			"unknown unit \"\\xe6\\x97\\xa5\" in duration",
 			1,
 			"-test-server-config",
 		},

@@ -7,11 +7,15 @@ const SUPPORTED_BACKENDS = supportedSecretBackends();
 export default Controller.extend({
   wizard: service(),
   actions: {
-    onMountSuccess: function(type, path) {
+    onMountSuccess: function (type, path) {
       let transition;
       if (SUPPORTED_BACKENDS.includes(type)) {
         if (type === 'kmip') {
           transition = this.transitionToRoute('vault.cluster.secrets.backend.kmip.scopes', path);
+        } else if (type === 'keymgmt') {
+          transition = this.transitionToRoute('vault.cluster.secrets.backend.index', path, {
+            queryParams: { tab: 'provider' },
+          });
         } else {
           transition = this.transitionToRoute('vault.cluster.secrets.backend.index', path);
         }
@@ -21,9 +25,6 @@ export default Controller.extend({
       return transition.followRedirects().then(() => {
         this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', type);
       });
-    },
-    onConfigError: function(modelId) {
-      return this.transitionToRoute('vault.cluster.settings.configure-secret-backend', modelId);
     },
   },
 });

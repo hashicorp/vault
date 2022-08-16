@@ -1,0 +1,3 @@
+```release-note:bug
+core: fixing excessive unix file permissions on dir, files and archive created by vault debug command  
+```

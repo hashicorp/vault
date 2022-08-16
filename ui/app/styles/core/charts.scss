@@ -1,0 +1,345 @@
+.chart-wrapper {
+  border: $light-border;
+  border-radius: $radius-large;
+  padding: $spacing-s $spacing-l;
+  margin-bottom: $spacing-m;
+}
+
+// GRID LAYOUT //
+.single-month-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2em;
+  width: 100%;
+}
+.single-month-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2em;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+.single-month-section-title {
+  grid-column-start: 1;
+  grid-column-end: span col3-end;
+}
+.single-month-breakdown-entity {
+  grid-column-start: 1;
+}
+.single-month-breakdown-nonentity {
+  grid-column-start: 2;
+}
+.stacked-charts {
+  display: grid;
+  width: 100%;
+}
+
+.single-chart-grid {
+  display: grid;
+  grid-template-columns: 1fr 0.3fr 3.7fr;
+  grid-template-rows: 0.5fr 1fr 1fr 1fr 0.25fr;
+  width: 100%;
+}
+
+.dual-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: 0.7fr 1fr 1fr 1fr 0.3fr;
+  width: 100%;
+}
+
+.chart-header {
+  grid-column-start: 1;
+  grid-column-end: span col4-end;
+  grid-row-start: 1;
+  box-shadow: inset 0 -1px 0 $vault-gray-200;
+}
+
+.has-header-link {
+  display: grid;
+  grid-template-columns: 4fr 1fr;
+
+  .header-right {
+    text-align: right;
+    > button {
+      &:hover,
+      &.is-hovered,
+      &:focus,
+      &.is-focused {
+        background-color: transparent;
+        background-color: darken($ui-gray-050, 5%);
+        border-color: darken($ui-gray-300, 5%);
+      }
+    }
+  }
+}
+
+.chart-container-wide {
+  grid-column-start: 3;
+  grid-column-end: 4;
+  grid-row-start: 2;
+  grid-row-end: span 3;
+  justify-self: center;
+  height: 300px;
+  max-width: 700px;
+
+  svg.chart {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.chart-container-left {
+  grid-column-start: 1;
+  grid-column-end: 4;
+  grid-row-start: 2;
+  grid-row-end: 5;
+  padding-bottom: $spacing-xl;
+  margin-bottom: $spacing-s;
+  box-shadow: inset 0 -1px 0 $vault-gray-200;
+
+  > h2 {
+    padding-left: 18px;
+  }
+  > p {
+    padding-left: 18px;
+  }
+}
+
+.chart-container-right {
+  grid-column-start: 4;
+  grid-column-end: 8;
+  grid-row-start: 2;
+  grid-row-end: 5;
+  padding-bottom: $spacing-xl;
+  margin-bottom: $spacing-s;
+  box-shadow: inset 0 -1px 0 $vault-gray-200;
+
+  > h2 {
+    padding-left: 18px;
+  }
+  > p {
+    padding-left: 18px;
+  }
+}
+
+.chart-empty-state {
+  place-self: center stretch;
+  grid-row-end: span 3;
+  grid-column-end: span 3;
+  max-width: none;
+  padding-right: 20px;
+  padding-left: 20px;
+  display: flex;
+
+  > div {
+    box-shadow: none !important;
+  }
+
+  > div.empty-state {
+    white-space: nowrap;
+    align-self: stretch;
+    width: 100%;
+  }
+}
+
+.chart-subTitle {
+  grid-column-start: 1;
+  grid-column-end: 3;
+  grid-row-start: 2;
+}
+
+.data-details-top {
+  grid-column-start: 1;
+  grid-column-end: 3;
+  grid-row-start: 3;
+}
+
+.data-details-bottom {
+  grid-column-start: 1;
+  grid-column-end: 3;
+  grid-row-start: 4;
+}
+
+.timestamp {
+  grid-column-start: 1;
+  grid-column-end: 2;
+  grid-row-start: 5;
+  color: $ui-gray-500;
+  font-size: $size-9;
+  align-self: end;
+}
+
+.legend-center {
+  grid-row-start: 5;
+  grid-column-start: 3;
+  grid-column-end: 5;
+  align-self: center;
+  justify-self: center;
+  font-size: $size-9;
+}
+
+.legend-right {
+  grid-row-start: 4;
+  grid-column-start: 3;
+  grid-column-end: 3;
+  align-self: end;
+  justify-self: center;
+  font-size: $size-9;
+}
+
+// FONT STYLES //
+
+h2.chart-title {
+  font-weight: $font-weight-bold;
+  font-size: $size-5;
+  line-height: $spacing-l;
+  margin-bottom: $spacing-xxs;
+}
+
+p.chart-description {
+  color: $ui-gray-700;
+  font-size: $body-size;
+  line-height: 18px;
+  margin-bottom: $spacing-xs;
+}
+
+p.chart-subtext {
+  color: $ui-gray-500;
+  font-size: $size-8;
+  line-height: 16px;
+  margin-top: $spacing-xs;
+}
+
+h3.data-details {
+  font-weight: $font-weight-bold;
+  font-size: $size-8;
+  line-height: $body-size;
+  margin-bottom: $spacing-xs;
+}
+
+p.data-details {
+  font-weight: $font-weight-normal;
+  font-size: $size-4;
+}
+
+// MISC STYLES
+
+.light-dot {
+  background-color: #bfd4ff;
+  height: 10px;
+  width: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dark-dot {
+  background-color: #1563ff;
+  height: 10px;
+  width: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.legend-label {
+  padding-left: $spacing-xs;
+  padding-right: $spacing-xl;
+}
+
+.chart-tooltip {
+  background-color: $ui-gray-700;
+  color: white;
+  font-size: $size-9;
+  padding: 6px;
+  border-radius: $radius-large;
+  width: 140px;
+
+  .bold {
+    font-weight: $font-weight-bold;
+  }
+  .line-chart {
+    width: 117px;
+  }
+  .vertical-chart {
+    text-align: center;
+    flex-wrap: nowrap;
+    width: fit-content;
+  }
+  .horizontal-chart {
+    padding: $spacing-s;
+  }
+}
+
+.is-label-fit-content {
+  max-width: fit-content !important;
+}
+
+.chart-tooltip-arrow {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 9px solid $ui-gray-700;
+  position: absolute;
+  opacity: 0.8;
+  bottom: -9px;
+  left: calc(50% - 5px);
+}
+
+.has-grid {
+  g > text {
+    color: $ui-gray-500;
+    font-size: $size-9;
+  }
+
+  g > line {
+    // TODO: mix-blend doesn't work in firefox browser?
+    mix-blend-mode: darken;
+    color: $ui-gray-300;
+  }
+}
+
+.is-horizontal {
+  .tick > text {
+    font-weight: $font-weight-semibold;
+    font-size: $size-9;
+  }
+}
+
+// RESPONSIVE STYLING //
+
+@media only screen and (max-width: 950px) {
+  .dual-chart-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: 0.2fr 0.75fr 0.75fr 0.2fr;
+    width: 100%;
+  }
+
+  .chart-container-left {
+    grid-column-start: 1;
+    grid-column-end: 4;
+    grid-row-start: 2;
+    grid-row-end: 3;
+    margin-left: $spacing-xxl;
+    margin-right: $spacing-xxl;
+  }
+  .chart-container-right {
+    grid-column-start: 1;
+    grid-column-end: 4;
+    grid-row-start: 3;
+    grid-row-end: 4;
+    margin-left: $spacing-xxl;
+    margin-right: $spacing-xxl;
+  }
+
+  .legend-center {
+    grid-column-start: 1;
+    grid-row-start: 4;
+  }
+
+  .timestamp {
+    grid-column-start: 1;
+    grid-row-start: 4;
+  }
+}

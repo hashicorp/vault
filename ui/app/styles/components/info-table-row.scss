@@ -23,6 +23,8 @@
   .column {
     align-self: center;
     padding-left: 0px;
+    padding: $spacing-m;
+
     &.info-table-row-edit {
       padding-bottom: 0.3rem;
       padding-top: 0.3rem;
@@ -34,6 +36,10 @@
 
     .helper-text {
       font-weight: normal;
+    }
+    &.justify-right {
+      display: flex;
+      justify-content: right;
     }
   }
 
@@ -82,5 +88,19 @@
   }
   .info-table-row:not(.is-mobile) .column:last-child {
     padding-left: 0;
+  }
+}
+
+.label-overflow {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  // inline display necessary for nested elements so ellipsis shows
+  > div {
+    display: inline;
+  }
+  > div > span {
+    display: inline;
   }
 }

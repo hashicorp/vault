@@ -6,8 +6,7 @@ description: An overview of how Sentinel interacts with Vault Enterprise.
 
 # Overview
 
--> **Note**: This feature requires [Vault Enterprise](https://www.hashicorp.com/products/vault/)
-with the Governance & Policy Module.
+-> **Note**: This feature requires [Vault Enterprise Plus](https://www.hashicorp.com/products/vault/).
 
 Vault Enterprise integrates HashiCorp Sentinel to provide a rich set of access
 control functionality. Because Vault is a security-focused product trusted with
@@ -90,7 +89,7 @@ able to glean from the original request alone.
 
 Sentinel policies can be configured via the `sys/policies/rgp/` and
 `sys/policies/egp/` endpoints; see [the
-documentation](/api/system/policies) for more information.
+documentation](/api-docs/system/policies) for more information.
 
 Once set, RGPs can be assigned to Identity entities and groups or to tokens
 just like ACL policies. As a result, they cannot share names with ACL policies.
@@ -111,7 +110,7 @@ of Sentinel in action, and the
 [Properties](/docs/enterprise/sentinel/properties) page for detailed
 property documentation.
 
-## Learn
+## Tutorial
 
 Refer to the [Sentinel Policies](https://learn.hashicorp.com/vault/identity-access-management/iam-sentinel)
-guide for a step-by-step tutorial.
+tutorial to learn how to author Sentinel policies in Vault.

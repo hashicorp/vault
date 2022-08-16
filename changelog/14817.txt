@@ -1,0 +1,3 @@
+```release-note:improvement
+core : check uid and permissions of config dir, config file, plugin dir and plugin binaries 
+```

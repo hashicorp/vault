@@ -32,7 +32,7 @@ func pathUser(b *backend) *framework.Path {
 				Description: "Lifetime of the returned credentials in seconds",
 				Default:     3600,
 			},
-			"role_session_name": &framework.FieldSchema{
+			"role_session_name": {
 				Type:        framework.TypeString,
 				Description: "Session name to use when assuming role. Max chars: 64",
 			},
@@ -58,7 +58,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	}
 	if role == nil {
 		return logical.ErrorResponse(fmt.Sprintf(
-			"Role '%s' not found", roleName)), nil
+			"Role %q not found", roleName)), nil
 	}
 
 	var ttl int64

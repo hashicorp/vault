@@ -140,7 +140,7 @@ spec:
       containers:
         - name: app
           image: my-app:1.0.0
-          envs:
+          env:
             - name: DB_USERNAME
               valueFrom:
                 secretKeyRef:

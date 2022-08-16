@@ -1,0 +1,3 @@
+```release-note:improvement
+sdk/framework: The '+' wildcard is now supported for parameterizing unauthenticated paths.
+```

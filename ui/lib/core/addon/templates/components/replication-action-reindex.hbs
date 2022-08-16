@@ -11,7 +11,7 @@
     <button
       type="button"
       class="button is-secondary"
-      onclick={{action (mut isModalActive) true}}
+      onclick={{action (mut this.isModalActive) true}}
       data-test-replication-action-trigger
     >
       Reindex
@@ -20,35 +20,30 @@
 </div>
 <Modal
   @title="Begin reindex?"
-  @onClose={{action (mut isModalActive) false}}
-  @isActive={{isModalActive}}
+  @onClose={{action (mut this.isModalActive) false}}
+  @isActive={{this.isModalActive}}
   @type="warning"
   @showCloseButton={{true}}
 >
   <section class="modal-card-body">
     <p class="has-bottom-margin-m">
       Reindexing can cause a very long delay depending on the number and size of objects in the data store.
-      {{if model.replicationAttrs.isPrimary 'You should always re-index your secondary first.'}}
+      {{if this.model.replicationAttrs.isPrimary "You should always re-index your secondary first."}}
     </p>
     <p>
       Progress will be shown, and you will
-      {{if model.replicationAttrs.isPrimary 'not'}}
+      {{if this.model.replicationAttrs.isPrimary "not"}}
       be able to use Vault during this time.
     </p>
   </section>
   <footer class="modal-card-foot modal-card-foot-outlined">
-    <button
-      type="button"
-      class="button is-primary"
-      onclick={{action 'onSubmit' 'reindex'}}
-      data-test-reindex-confirm-button
-    >
+    <button type="button" class="button is-primary" onclick={{action "onSubmit" "reindex"}} data-test-reindex-confirm-button>
       Reindex
     </button>
     <button
       type="button"
       class="button is-secondary"
-      onclick={{action (mut isModalActive) false}}
+      onclick={{action (mut this.isModalActive) false}}
       data-test-reindex-cancel-button
     >
       Cancel

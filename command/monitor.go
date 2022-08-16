@@ -18,7 +18,8 @@ var (
 type MonitorCommand struct {
 	*BaseCommand
 
-	logLevel string
+	logLevel  string
+	logFormat string
 
 	// ShutdownCh is used to capture interrupt signal and end streaming
 	ShutdownCh chan struct{}
@@ -55,6 +56,13 @@ func (c *MonitorCommand) Flags() *FlagSets {
 			"(in order of detail) are \"trace\", \"debug\", \"info\", \"warn\"" +
 			" and \"error\". These are not case sensitive.",
 	})
+	f.StringVar(&StringVar{
+		Name:       "log-format",
+		Target:     &c.logFormat,
+		Default:    "standard",
+		Completion: complete.PredictSet("standard", "json"),
+		Usage:      "Output format of logs. Supported values are \"standard\" and \"json\".",
+	})
 
 	return set
 }
@@ -88,6 +96,13 @@ func (c *MonitorCommand) Run(args []string) int {
 		return 1
 	}
 
+	c.logFormat = strings.ToLower(c.logFormat)
+	validFormats := []string{"standard", "json"}
+	if !strutil.StrListContains(validFormats, c.logFormat) {
+		c.UI.Error(fmt.Sprintf("%s is an unknown log format. Valid log formats are: %s", c.logFormat, validFormats))
+		return 1
+	}
+
 	client, err := c.Client()
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -100,7 +115,7 @@ func (c *MonitorCommand) Run(args []string) int {
 	var logCh chan string
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	logCh, err = client.Sys().Monitor(ctx, c.logLevel)
+	logCh, err = client.Sys().Monitor(ctx, c.logLevel, c.logFormat)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error starting monitor: %s", err))
 		return 1

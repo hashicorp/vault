@@ -4,7 +4,7 @@ import Base from './_popup-base';
 
 export default Base.extend({
   model: alias('params.firstObject'),
-  policyName: computed('params', function() {
+  policyName: computed('params', function () {
     return this.params.objectAt(1);
   }),
 

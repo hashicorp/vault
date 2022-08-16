@@ -8,12 +8,12 @@
 
 {{#if (or @creation_time @creation_ttl)}}
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-    <InfoTableRow @label="Creation path" @value={{@creation_path}} @data-test-tools="token-lookup-row" />
-    <InfoTableRow @label="Creation time" @value={{@creation_time}} @data-test-tools="token-lookup-row" />
-    <InfoTableRow @label="Creation TTL" @value={{@creation_ttl}} @data-test-tools="token-lookup-row" />
+    <InfoTableRow @label="Creation path" @value={{@creation_path}} data-test-tools="token-lookup-row" />
+    <InfoTableRow @label="Creation time" @value={{@creation_time}} data-test-tools="token-lookup-row" />
+    <InfoTableRow @label="Creation TTL" @value={{@creation_ttl}} data-test-tools="token-lookup-row" />
     {{#if @expirationDate}}
-      <InfoTableRow @label="Expiration date" @value={{@expirationDate}} @data-test-tools="token-lookup-row" />
-      <InfoTableRow @label="Expires in" @value={{date-from-now @expirationDate}} @data-test-tools="token-lookup-row" />
+      <InfoTableRow @label="Expiration date" @value={{@expirationDate}} data-test-tools="token-lookup-row" />
+      <InfoTableRow @label="Expires in" @value={{date-from-now @expirationDate}} data-test-tools="token-lookup-row" />
     {{/if}}
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
@@ -28,9 +28,12 @@
     <NamespaceReminder @mode="perform" @noun={{@selectedAction}} />
     <MessageError @errors={{@errors}} />
     <div class="field">
-      <label for="token" class="is-label">Wrapping token</label>
+      <label for="token" class="is-label">Wrapped token</label>
+      <div class="has-text-grey is-size-8 has-bottom-margin-xs">
+        Enter your wrapped token here to display its information.
+      </div>
       <div class="control">
-        <Input @value={{@token}} class="input" @id="token" @name="token" data-test-tools-input="wrapping-token" />
+        <Input @value={{@token}} class="input" id="token" name="token" data-test-tools-input="wrapping-token" />
       </div>
     </div>
   </div>

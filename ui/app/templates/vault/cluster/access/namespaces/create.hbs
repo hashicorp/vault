@@ -15,7 +15,7 @@
     </p.levelLeft>
   </PageHeader>
   <EditForm
-    @model={{model}}
+    @model={{this.model}}
     @onSave={{action "onSave"}}
     @cancelLinkParams={{array "vault.cluster.access.namespaces.index"}}
   />

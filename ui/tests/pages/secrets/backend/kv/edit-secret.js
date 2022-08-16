@@ -1,9 +1,9 @@
 import { Base } from '../create';
 import { isPresent, clickable, visitable, create, fillable } from 'ember-cli-page-object';
-import { codeFillable } from 'vault/tests/pages/helpers/codemirror';
+
 export default create({
   ...Base,
-  path: fillable('[data-test-secret-path]'),
+  path: fillable('[data-test-secret-path="true"]'),
   secretKey: fillable('[data-test-secret-key]'),
   secretValue: fillable('[data-test-secret-value] textarea'),
   save: clickable('[data-test-secret-save]'),
@@ -15,21 +15,21 @@ export default create({
   toggleMetadata: clickable('[data-test-show-metadata-toggle]'),
   metadataTab: clickable('[data-test-secret-metadata-tab]'),
   hasMetadataFields: isPresent('[data-test-metadata-fields]'),
-  editor: {
-    fillIn: codeFillable('[data-test-component="json-editor"]'),
-  },
+  maxVersion: fillable('[data-test-input="maxVersions"]'),
+  startCreateSecret: clickable('[data-test-secret-create]'),
   deleteSecret() {
     return this.deleteBtn().confirmBtn();
   },
-  createSecret: async function(path, key, value) {
-    return this.path(path)
-      .secretKey(key)
-      .secretValue(value)
-      .save();
+  createSecret: async function (path, key, value) {
+    return this.path(path).secretKey(key).secretValue(value).save();
   },
-  editSecret: async function(key, value) {
-    return this.secretKey(key)
-      .secretValue(value)
-      .save();
+  createSecretDontSave: async function (path, key, value) {
+    return this.path(path).secretKey(key).secretValue(value);
+  },
+  createSecretWithMetadata: async function (path, key, value, maxVersion) {
+    return this.path(path).secretKey(key).secretValue(value).toggleMetadata().maxVersion(maxVersion).save();
+  },
+  editSecret: async function (key, value) {
+    return this.secretKey(key).secretValue(value).save();
   },
 });

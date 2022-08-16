@@ -9,7 +9,7 @@ description: The `/sys/rekey` endpoints are used to rekey the unseal keys for Va
 The `/sys/rekey` endpoints are used to rekey the unseal keys for Vault.
 
 On seals that support stored keys (e.g. HSM PKCS11), the recovery key share(s)
-can be provided to rekey the master key since no unseal keys are available. The
+can be provided to rekey the root key since no unseal keys are available. The
 secret shares, secret threshold, and stored shares parameters must be set to 1.
 Upon successful rekey, no split unseal key shares are returned.
 
@@ -62,15 +62,15 @@ and starting a new rekey, which will also provide a new nonce.
 
 | Method | Path              |
 | :----- | :---------------- |
-| `PUT`  | `/sys/rekey/init` |
+| `POST` | `/sys/rekey/init` |
 
 ### Parameters
 
 - `secret_shares` `(int: <required>)` – Specifies the number of shares to split
-  the master key into.
+  the root key into.
 
 - `secret_threshold` `(int: <required>)` – Specifies the number of shares
-  required to reconstruct the master key. This must be less than or equal to
+  required to reconstruct the root key. This must be less than or equal to
   `secret_shares`.
 
 - `pgp_keys` `(array<string>: nil)` – Specifies an array of PGP public keys used
@@ -87,7 +87,7 @@ and starting a new rekey, which will also provide a new nonce.
   functionality. When verification is turned on, after successful authorization
   with the current unseal keys, the new unseal keys are returned but the master
   key is not actually rotated. The new keys must be provided to authorize the
-  actual rotation of the master key. This ensures that the new keys have been
+  actual rotation of the root key. This ensures that the new keys have been
   successfully saved and protects against a risk of the keys being lost after
   rotation but before they can be persisted. This can be used with or without
   `pgp_keys`, and when used with it, it allows ensuring that the returned keys
@@ -108,7 +108,7 @@ and starting a new rekey, which will also provide a new nonce.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/rekey/init
 ```
@@ -181,8 +181,8 @@ $ curl \
 
 ## Submit Key
 
-This endpoint is used to enter a single master key share to progress the rekey
-of the Vault. If the threshold number of master key shares is reached, Vault
+This endpoint is used to enter a single root key share to progress the rekey
+of the Vault. If the threshold number of root key shares is reached, Vault
 will complete the rekey. Otherwise, this API must be called multiple times until
 that threshold is met. The rekey nonce operation must be provided with each
 call.
@@ -197,7 +197,7 @@ for the verification operation.
 
 | Method | Path                |
 | :----- | :------------------ |
-| `PUT`  | `/sys/rekey/update` |
+| `POST` | `/sys/rekey/update` |
 
 ### Parameters
 
@@ -219,7 +219,7 @@ for the verification operation.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/rekey/update
 ```
@@ -322,7 +322,7 @@ below; otherwise the response will be the same as the `GET` method against
 
 | Method | Path                |
 | :----- | :------------------ |
-| `PUT`  | `/sys/rekey/verify` |
+| `POST` | `/sys/rekey/verify` |
 
 ### Parameters
 
@@ -346,7 +346,7 @@ below; otherwise the response will be the same as the `GET` method against
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/rekey/verify
 ```

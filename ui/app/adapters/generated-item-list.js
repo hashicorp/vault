@@ -6,14 +6,14 @@ export default ApplicationAdapter.extend({
   namespace: 'v1',
   urlForItem() {},
   dynamicApiPath: '',
-  getDynamicApiPath: task(function*(id) {
+  getDynamicApiPath: task(function* (id) {
     // TODO: remove yield at some point.
     let result = yield this.store.peekRecord('auth-method', id);
     this.dynamicApiPath = result.apiPath;
     return;
   }),
 
-  fetchByQuery: task(function*(store, query, isList) {
+  fetchByQuery: task(function* (store, query, isList) {
     const { id } = query;
     let data = {};
     if (isList) {
@@ -21,7 +21,7 @@ export default ApplicationAdapter.extend({
       yield this.getDynamicApiPath.perform(id);
     }
 
-    return this.ajax(this.urlForItem(id, isList, this.dynamicApiPath), 'GET', { data }).then(resp => {
+    return this.ajax(this.urlForItem(id, isList, this.dynamicApiPath), 'GET', { data }).then((resp) => {
       const data = {
         id,
         method: id,

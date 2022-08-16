@@ -15,7 +15,7 @@ import (
 // Query templates a query for us.
 func substQuery(tpl string, data map[string]string) string {
 	for k, v := range data {
-		tpl = strings.Replace(tpl, fmt.Sprintf("{{%s}}", k), v, -1)
+		tpl = strings.ReplaceAll(tpl, fmt.Sprintf("{{%s}}", k), v)
 	}
 
 	return tpl
