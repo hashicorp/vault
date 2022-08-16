@@ -49,12 +49,16 @@ This is the _unseal_ process: the shards are added one at a time (in any
 order) until enough shards are present to reconstruct the key and
 decrypt the root key.
 
+Note: When using the Shamir seal with multiple nodes, each node must be unsealed
+with the required threshold of shards. Partial unsealing of each node is not
+distributed across the cluster.
+
 ## Unsealing
 
 The unseal process is done by running `vault operator unseal` or via the API.
 This process is stateful: each key can be entered via multiple mechanisms
 on multiple computers and it will work. This allows each shard of the root key
-to be on a distinct machine for better security.
+to be on a distinct client machine for better security.
 
 Once a Vault node is unsealed, it remains unsealed until one of these things happens:
 
