@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Add empty state to Database secret engine when DB type is not supported.
+```
