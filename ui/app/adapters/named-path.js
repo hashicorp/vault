@@ -38,11 +38,11 @@ export default class NamedPathAdapter extends ApplicationAdapter {
     const url = this.urlForQuery(query, type.modelName);
     const { paramKey, filterFor } = query;
     // * 'paramKey' is a string of the param name (model attr) we're filtering for, e.g. 'client_id'
-    // * 'filterFor' is an array of values to filter for (value type must match the attr type), e.g. list of ID strings
+    // * 'filterFor' is an array of values to filter for (value type must match the attr type), e.g. array of ID strings
     // example: the OidcProviderClientsRoute where we only want to list clients that are permitted to use the currently viewed provider
     const response = await this.ajax(url, 'GET', { data: { list: true } });
 
-    // filter LIST response only if key_info exists and passed both 'paramKey' & 'filterFor'
+    // filter LIST response only if key_info exists and query includes both 'paramKey' & 'filterFor'
     if (response.data.key_info && filterFor && paramKey && !filterFor.includes('*')) {
       const data = this.filterListResponse(paramKey, filterFor, response.data.key_info);
       return { ...response, data };

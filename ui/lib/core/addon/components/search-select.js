@@ -110,7 +110,7 @@ export default Component.extend({
       return;
     }
     for (let modelType of this.models) {
-      if (modelType.includes('identity') || modelType.includes('oidc/client')) {
+      if (modelType.includes('identity') || this.idKey !== 'id') {
         this.set('shouldRenderName', true);
       }
       try {
