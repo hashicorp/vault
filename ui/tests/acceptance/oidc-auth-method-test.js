@@ -34,7 +34,6 @@ module('Acceptance | oidc auth method', function (hooks) {
       assert.ok(true, 'request made to auth/token/lookup-self after oidc callback');
       req.passthrough();
     });
-    // make sure you're logged out before trying to login.
     authPage.logout();
     // select from dropdown or click auth path tab
     await waitUntil(() => find('[data-test-select="auth-method"]'));
@@ -83,7 +82,6 @@ module('Acceptance | oidc auth method', function (hooks) {
 
   // coverage for bug where token was selected as auth method for oidc and jwt
   test('it should populate oidc auth method on logout', async function (assert) {
-    // make sure you're logged out before trying to login.
     authPage.logout();
     // select from dropdown or click auth path tab
     await waitUntil(() => find('[data-test-select="auth-method"]'));
