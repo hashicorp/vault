@@ -56,7 +56,6 @@ export default class OidcClientModel extends Model {
     label: 'Access Token TTL',
     editType: 'ttl',
     defaultValue: '24h',
-    helperTextDisabled: 'Vault will use the default lease duration',
   })
   accessTokenTtl;
 
@@ -64,7 +63,6 @@ export default class OidcClientModel extends Model {
     label: 'ID Token TTL',
     editType: 'ttl',
     defaultValue: '24h',
-    helperTextDisabled: 'Vault will use the default lease duration',
   })
   idTokenTtl;
 
