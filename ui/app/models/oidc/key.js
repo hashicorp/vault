@@ -16,26 +16,14 @@ const validations = {
 @withModelValidations(validations)
 export default class OidcKeyModel extends Model {
   @attr('string', { editDisabled: true }) name;
-
   @attr('string', {
     defaultValue: 'RS256',
     possibleValues: ['RS256', 'RS384', 'RS512', 'ES256', 'ES384', 'ES512', 'EdDSA'],
   })
   algorithm;
 
-  @attr({
-    editType: 'ttl',
-    defaultValue: '24h',
-  })
-  rotationPeriod;
-
-  @attr({
-    label: 'Verification TTL',
-    editType: 'ttl',
-    defaultValue: '24h',
-  })
-  verificationTtl;
-
+  @attr({ editType: 'ttl', defaultValue: '24h' }) rotationPeriod;
+  @attr({ label: 'Verification TTL', editType: 'ttl', defaultValue: '24h' }) verificationTtl;
   @attr('array', { label: 'Allowed applications' }) allowedClientIds; // no editType because does not use form-field component
 
   // TODO refactor when field-to-attrs is refactored as decorator
