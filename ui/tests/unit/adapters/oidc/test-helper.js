@@ -53,21 +53,21 @@ export default (test) => {
         return { data: { keys, key_info } };
       });
 
-      // test passing 'key' and 'filterFor' to query and filterListResponse in adapters/named-path.js works as expected
+      // test passing 'paramKey' and 'filterFor' to query and filterListResponse in adapters/named-path.js works as expected
       let testQuery = ['*', 'a123'];
       await this.store
-        .query(this.modelName, { key: 'model_id', filterFor: testQuery })
+        .query(this.modelName, { paramKey: 'model_id', filterFor: testQuery })
         .then((resp) =>
           assert.equal(resp.content.length, 3, 'returns all clients when ids include glob (*)')
         );
 
       testQuery = ['*'];
       await this.store
-        .query(this.modelName, { key: 'model_id', filterFor: testQuery })
+        .query(this.modelName, { paramKey: 'model_id', filterFor: testQuery })
         .then((resp) => assert.equal(resp.content.length, 3, 'returns all clients when glob (*) is only id'));
 
       testQuery = ['b123'];
-      await this.store.query(this.modelName, { key: 'model_id', filterFor: testQuery }).then((resp) => {
+      await this.store.query(this.modelName, { paramKey: 'model_id', filterFor: testQuery }).then((resp) => {
         console.log(resp);
         assert.equal(resp.content.length, 1, 'filters response and returns only matching id');
         console.log(resp.firstObject, 'FIRST OBJECT');
@@ -75,7 +75,7 @@ export default (test) => {
       });
 
       testQuery = ['b123', 'c123'];
-      await this.store.query(this.modelName, { key: 'model_id', filterFor: testQuery }).then((resp) => {
+      await this.store.query(this.modelName, { paramKey: 'model_id', filterFor: testQuery }).then((resp) => {
         assert.equal(resp.content.length, 2, 'filters response when passed multiple ids');
         resp.content.forEach((m) =>
           assert.ok(['model-2', 'model-3'].includes(m.id), `it filters correctly and included: ${m.id}`)
@@ -90,7 +90,7 @@ export default (test) => {
       this.store.query(this.modelName, {});
 
       this.store
-        .query(this.modelName, { key: 'model_id', filterFor: this.data.name })
+        .query(this.modelName, { paramKey: 'model_id', filterFor: this.data.name })
         .then((resp) => assert.ok(resp.isLoaded, 'does not attempt to filter when no key_info'));
     }
   });
