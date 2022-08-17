@@ -25,14 +25,14 @@ type VaultUI struct {
 }
 
 const (
-	envFlagOutputCurlString = "output-curl-string"
-	envFlagOutputPolicy     = "output-policy"
-	envFlagFormat           = "format"
-	envFlagDetailed         = "detailed"
+	globalFlagOutputCurlString = "output-curl-string"
+	globalFlagOutputPolicy     = "output-policy"
+	globalFlagFormat           = "format"
+	globalFlagDetailed         = "detailed"
 )
 
 var envFlags = []string{
-	envFlagOutputCurlString, envFlagOutputPolicy, envFlagFormat, envFlagDetailed,
+	globalFlagOutputCurlString, globalFlagOutputPolicy, globalFlagFormat, globalFlagDetailed,
 }
 
 // setupEnv parses args and may replace them and sets some env vars to known
@@ -58,28 +58,28 @@ func setupEnv(args []string) (retArgs []string, format string, detailed bool, ou
 			break
 		}
 
-		if isEnvFlag(arg, envFlagOutputCurlString) {
+		if isEnvFlag(arg, globalFlagOutputCurlString) {
 			outputCurlString = true
 			continue
 		}
 
-		if isEnvFlag(arg, envFlagOutputPolicy) {
+		if isEnvFlag(arg, globalFlagOutputPolicy) {
 			outputPolicy = true
 			continue
 		}
 
 		// Parse a given flag here, which overrides the env var
-		if isEnvFlagWithValue(arg, envFlagFormat) {
+		if isEnvFlagWithValue(arg, globalFlagFormat) {
 			format = getEnvFlagValue(arg)
 		}
 		// For backwards compat, it could be specified without an equal sign
-		if isEnvFlag(arg, envFlagFormat) {
+		if isEnvFlag(arg, globalFlagFormat) {
 			nextArgFormat = true
 		}
 
 		// Parse a given flag here, which overrides the env var
-		if isEnvFlagWithValue(arg, envFlagDetailed) {
-			detailed, err = strconv.ParseBool(getEnvFlagValue(envFlagDetailed))
+		if isEnvFlagWithValue(arg, globalFlagDetailed) {
+			detailed, err = strconv.ParseBool(getEnvFlagValue(globalFlagDetailed))
 			if err != nil {
 				detailed = false
 			}
@@ -87,7 +87,7 @@ func setupEnv(args []string) (retArgs []string, format string, detailed bool, ou
 		}
 		// For backwards compat, it could be specified without an equal sign to enable
 		// detailed output.
-		if isEnvFlag(arg, envFlagDetailed) {
+		if isEnvFlag(arg, globalFlagDetailed) {
 			detailed = true
 			haveDetailed = true
 		}

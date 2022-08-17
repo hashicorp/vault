@@ -243,20 +243,24 @@ func TestArgWarnings(t *testing.T) {
 			"-a",
 		},
 		{
-			[]string{envFlagDetailed},
+			[]string{globalFlagDetailed},
 			"",
 		},
 		{
-			[]string{"-" + envFlagOutputCurlString + "=true"},
+			[]string{"-" + globalFlagOutputCurlString + "=true"},
 			"",
 		},
 		{
-			[]string{"-x" + envFlagDetailed},
-			"-x" + envFlagDetailed,
+			[]string{"--" + globalFlagFormat + "=false"},
+			"",
 		},
 		{
-			[]string{"--x=" + envFlagDetailed},
-			"--x=" + envFlagDetailed,
+			[]string{"-x" + globalFlagDetailed},
+			"-x" + globalFlagDetailed,
+		},
+		{
+			[]string{"--x=" + globalFlagDetailed},
+			"--x=" + globalFlagDetailed,
 		},
 	}
 

@@ -1,3 +1,0 @@
-```release-note:improvement
-cli: CLI commands will not print a warning if environmental flags are passed after positional arguments.
-```

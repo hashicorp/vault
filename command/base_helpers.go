@@ -300,14 +300,14 @@ func generateFlagWarnings(args []string) string {
 			continue
 		}
 
-		isEnvFlag := false
+		isGlobalFlag := false
 		trimmedArg, _, _ := strings.Cut(strings.TrimLeft(arg, "-"), "=")
 		for _, flag := range envFlags {
 			if trimmedArg == flag {
-				isEnvFlag = true
+				isGlobalFlag = true
 			}
 		}
-		if isEnvFlag {
+		if isGlobalFlag {
 			continue
 		}
 
