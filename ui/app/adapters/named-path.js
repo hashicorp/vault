@@ -38,6 +38,7 @@ export default class NamedPathAdapter extends ApplicationAdapter {
     const url = this.urlForQuery(query, type.modelName);
     const { key, filterFor } = query;
     const response = await this.ajax(url, 'GET', { data: { list: true } });
+
     // filter LIST response when key_info and filterFor exist
     if (response.data.key_info && filterFor && !filterFor.includes('*')) {
       const data = this.filterListResponse(key, filterFor, response.data.key_info);
