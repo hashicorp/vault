@@ -8,7 +8,10 @@ project "vault" {
   github {
     organization = "hashicorp"
     repository = "vault"
-    release_branches = ["release/1.11.x"]
+    release_branches = [
+      "main",
+      "release/**",
+    ]
   }
 }
 
@@ -244,6 +247,21 @@ event "promote-production-packaging" {
     organization = "hashicorp"
     repository = "crt-workflows-common"
     workflow = "promote-production-packaging"
+  }
+
+  notification {
+    on = "always"
+  }
+}
+
+# The post-publish-website event should not be merged into the enterprise repo.
+# It is for OSS use only. 
+event "post-publish-website" {
+  depends = ["promote-production-packaging"]
+  action "post-publish-website" {
+    organization = "hashicorp"
+    repository = "crt-workflows-common"
+    workflow = "post-publish-website"
   }
 
   notification {

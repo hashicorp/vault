@@ -2167,6 +2167,7 @@ func NewMockBuiltinRegistry() *mockBuiltinRegistry {
 			"mysql-database-plugin":      consts.PluginTypeDatabase,
 			"postgresql-database-plugin": consts.PluginTypeDatabase,
 			"approle":                    consts.PluginTypeCredential,
+			"aws":                        consts.PluginTypeCredential,
 		},
 	}
 }
@@ -2187,6 +2188,15 @@ func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (fu
 
 	if name == "approle" {
 		return toFunc(approle.Factory), true
+	}
+
+	if name == "aws" {
+		return toFunc(func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+			b := new(framework.Backend)
+			b.Setup(ctx, config)
+			b.BackendType = logical.TypeCredential
+			return b, nil
+		}), true
 	}
 
 	if name == "postgresql-database-plugin" {
