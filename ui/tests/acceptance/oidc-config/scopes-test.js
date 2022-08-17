@@ -90,7 +90,7 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
     await clearRecord(this.store, 'oidc/scope', 'test-scope');
 
     // create a new scope
-    await visit(SCOPES_URL+'/create');
+    await visit(SCOPES_URL + '/create');
     assert.equal(currentRouteName(), 'vault.cluster.access.oidc.scopes.create', 'navigates to create form');
     await fillIn('[data-test-input="name"]', 'test-scope');
     await fillIn('[data-test-input="description"]', 'this is a test');
@@ -222,7 +222,7 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
     );
     this.server.get('/identity/oidc/provider', () => overrideMirageResponse(null, PROVIDER_LIST_RESPONSE));
     this.server.get('/identity/oidc/provider/test-provider', () => {
-      overrideMirageResponse(null, PROVIDER_DATA_RESPONSE)
+      overrideMirageResponse(null, PROVIDER_DATA_RESPONSE);
     });
     // throw error when trying to delete test-scope since it is associated to test-provider
     this.server.delete(

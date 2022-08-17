@@ -69,7 +69,7 @@ module('Acceptance | oidc-config/clients', function (hooks) {
     //* clear out test state
     await clearRecord(this.store, 'oidc/client', 'some-app');
 
-    await visit(OIDC_BASE_URL+'/clients/create');
+    await visit(OIDC_BASE_URL + '/clients/create');
     // create a new application
     assert.equal(currentRouteName(), 'vault.cluster.access.oidc.clients.create', 'navigates to create form');
     await fillIn('[data-test-input="name"]', 'some-app');
