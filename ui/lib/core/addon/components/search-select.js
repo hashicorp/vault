@@ -23,6 +23,7 @@ import layout from '../templates/components/search-select';
  * @param {boolean} [disallowNewItems=false] - Controls whether or not the user can add a new item if none found
  * @param {boolean} [passObject=false] - When true, the onChange callback returns an array of objects with id (string) and isNew (boolean) (instead of an array of id strings)
  * @param {array} [objectKeys=null] - Array of strings that correlate to model attrs. When passObject=true, objectKeys are added to the passed object. NOTE: make 'id' as the first element in objectKeys if you do not want to override the default of 'id'
+ * @param {string} [helpText] - Text to be displayed in the info tooltip for this form field
  * @param {number} [selectLimit] - A number that sets the limit to how many select options they can choose
  * @param {string} [subText] - Text to be displayed below the label
  * @param {string} [subLabel] - a smaller label below the main Label
