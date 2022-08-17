@@ -16,7 +16,7 @@ import {
   SCOPE_DATA_RESPONSE,
   PROVIDER_LIST_RESPONSE,
   PROVIDER_DATA_RESPONSE,
-} from '../../helpers/oidc-config';
+} from 'vault/tests/helpers/oidc-config';
 const SCOPES_URL = OIDC_BASE_URL.concat('/scopes');
 
 // OIDC_BASE_URL = '/vault/access/oidc'

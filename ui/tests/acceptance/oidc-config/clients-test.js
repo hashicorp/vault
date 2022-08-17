@@ -16,7 +16,7 @@ import {
   overrideMirageResponse,
   CLIENT_LIST_RESPONSE,
   CLIENT_DATA_RESPONSE,
-} from '../../helpers/oidc-config';
+} from 'vault/tests/helpers/oidc-config';
 const searchSelect = create(ss);
 const flashMessage = create(fm);
 // in congruency with backend verbiage 'applications' are referred to as 'clients
