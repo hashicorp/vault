@@ -589,7 +589,7 @@ func (f *FlagSets) Parse(args []string) error {
 	err := f.mainSet.Parse(args)
 
 	warnings := generateFlagWarnings(f.Args())
-	if warnings != "" && Format(f.ui) != "json" {
+	if warnings != "" && Format(f.ui) == "table" {
 		f.ui.Warn(warnings)
 	}
 
