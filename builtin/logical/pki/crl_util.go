@@ -230,13 +230,12 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 			return nil, fmt.Errorf("error creating revocation entry")
 		}
 
-		b.certsCountedLock.RLock() // Writing to /revoke during the initial count could result in a miscount
-		defer b.certsCountedLock.RUnlock()
+		certsCounted := b.certsCounted
 		err = req.Storage.Put(ctx, revEntry)
 		if err != nil {
 			return nil, fmt.Errorf("error saving revoked certificate to new location")
 		}
-		b.incrementTotalRevokedCertificatesCount()
+		b.incrementTotalRevokedCertificatesCount(certsCounted, revEntry.Key)
 	}
 
 	crlErr := b.crlBuilder.rebuild(ctx, b, req, false)

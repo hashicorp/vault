@@ -3,12 +3,12 @@ package pki
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/hashicorp/vault/sdk/helper/consts"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -178,8 +178,11 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 	b.crlBuilder = &crlBuilder{}
 
+	b.certsCounted = false
 	b.certCount = new(uint32)
 	b.revokedCertCount = new(uint32)
+	b.possibleDoubleCountedSerials = make([]string, 0, 250)
+	b.possibleDoubleCountedRevokedSerials = make([]string, 0, 250)
 
 	return &b
 }
@@ -196,9 +199,11 @@ type backend struct {
 	tidyStatusLock sync.RWMutex
 	tidyStatus     *tidyStatus
 
-	certCount        *uint32
-	revokedCertCount *uint32
-	certsCountedLock sync.RWMutex
+	certCount                           *uint32
+	revokedCertCount                    *uint32
+	certsCounted                        bool
+	possibleDoubleCountedSerials        []string
+	possibleDoubleCountedRevokedSerials []string
 
 	pkiStorageVersion atomic.Value
 	crlBuilder        *crlBuilder
@@ -402,8 +407,11 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 }
 
 func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
-	b.certsCountedLock.Lock()
-	defer b.certsCountedLock.Unlock()
+	b.tidyStatusLock.Lock()
+	defer b.tidyStatusLock.Unlock()
+	// For performance reasons, we can't lock on issuance/storage of certs until a list operation completes,
+	// but we want to limit possible miscounts / double-counts to over-counting, so we take the tidy lock which
+	// prevents (most) deletions
 
 	entries, err := b.storage.List(ctx, "certs/")
 	if err != nil {
@@ -411,18 +419,101 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 	}
 	atomic.StoreUint32(b.certCount, uint32(len(entries)))
 	metrics.SetGauge([]string{"secrets", "pki", "total_certificates_stored"}, float32(*b.certCount))
-	entries, err = b.storage.List(ctx, "revoked/")
+	revokedEntries, err := b.storage.List(ctx, "revoked/")
 	if err != nil {
 		return err
 	}
-	atomic.StoreUint32(b.revokedCertCount, uint32(len(entries)))
+	atomic.StoreUint32(b.revokedCertCount, uint32(len(revokedEntries)))
 	metrics.SetGauge([]string{"secrets", "pki", "total_revoked_certificates_stored"}, float32(*b.revokedCertCount))
+
+	b.certsCounted = true
+	// Now that the metrics are set, we can switch from appending newly-stored certificates to the possible double-count
+	// list, and instead have them update the counter directly.  We need to do this so that we are looking at a static
+	// slice of possibly double counted serials.  Note that certsCounted is computed before the storage operation, so
+	// there may be some delay here.
+
+	// Sort the listed-entries first, to accommodate that delay.
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i] < entries[j]
+	})
+
+	sort.Slice(revokedEntries, func(i, j int) bool {
+		return revokedEntries[i] < revokedEntries[j]
+	})
+
+	// We assume here that these lists are now complete.
+	sort.Slice(b.possibleDoubleCountedSerials, func(i, j int) bool {
+		return b.possibleDoubleCountedSerials[i] < b.possibleDoubleCountedSerials[j]
+	})
+
+	sort.Slice(b.possibleDoubleCountedRevokedSerials, func(i, j int) bool {
+		return b.possibleDoubleCountedRevokedSerials[i] < b.possibleDoubleCountedRevokedSerials[j]
+	})
+
+	listEntriesIndex := 0
+	possibleDoubleCountIndex := 0
+	for true {
+		if listEntriesIndex >= len(entries) {
+			break
+		}
+		if possibleDoubleCountIndex >= len(b.possibleDoubleCountedSerials) {
+			break
+		}
+		if entries[listEntriesIndex] == b.possibleDoubleCountedSerials[possibleDoubleCountIndex] {
+			// This represents a double-counted entry
+			b.decrementTotalCertificatesCount()
+			listEntriesIndex = listEntriesIndex + 1
+			possibleDoubleCountIndex = possibleDoubleCountIndex + 1
+			continue
+		}
+		if entries[listEntriesIndex] < b.possibleDoubleCountedSerials[possibleDoubleCountIndex] {
+			listEntriesIndex = listEntriesIndex + 1
+			continue
+		}
+		if entries[listEntriesIndex] > b.possibleDoubleCountedSerials[possibleDoubleCountIndex] {
+			possibleDoubleCountIndex = possibleDoubleCountIndex + 1
+			continue
+		}
+	}
+
+	listRevokedEntriesIndex := 0
+	possibleRevokedDoubleCountIndex := 0
+	for true {
+		if listRevokedEntriesIndex >= len(revokedEntries) {
+			break
+		}
+		if possibleRevokedDoubleCountIndex >= len(b.possibleDoubleCountedRevokedSerials) {
+			break
+		}
+		if revokedEntries[listRevokedEntriesIndex] == b.possibleDoubleCountedRevokedSerials[possibleRevokedDoubleCountIndex] {
+			// This represents a double-counted revoked entry
+			b.decrementTotalRevokedCertificatesCount()
+			listRevokedEntriesIndex = listRevokedEntriesIndex + 1
+			possibleRevokedDoubleCountIndex = possibleRevokedDoubleCountIndex + 1
+			continue
+		}
+		if revokedEntries[listRevokedEntriesIndex] < b.possibleDoubleCountedRevokedSerials[possibleRevokedDoubleCountIndex] {
+			listRevokedEntriesIndex = listRevokedEntriesIndex + 1
+			continue
+		}
+		if revokedEntries[listRevokedEntriesIndex] > b.possibleDoubleCountedRevokedSerials[possibleRevokedDoubleCountIndex] {
+			possibleRevokedDoubleCountIndex = possibleRevokedDoubleCountIndex + 1
+			continue
+		}
+	}
+
 	return nil
 }
 
-func (b *backend) incrementTotalCertificatesCount() {
-	atomic.AddUint32(b.certCount, 1)
-	metrics.SetGauge([]string{"secrets", "pki", "total_certificates_stored"}, float32(*b.certCount))
+func (b *backend) incrementTotalCertificatesCount(certsCounted bool, newSerial string) {
+	switch {
+	case certsCounted:
+		atomic.AddUint32(b.certCount, 1)
+		metrics.SetGauge([]string{"secrets", "pki", "total_certificates_stored"}, float32(*b.certCount))
+	default:
+		// This is unsafe, but a good best-attempt
+		b.possibleDoubleCountedSerials = append(b.possibleDoubleCountedSerials, newSerial)
+	}
 }
 
 func (b *backend) decrementTotalCertificatesCount() {
@@ -430,9 +521,15 @@ func (b *backend) decrementTotalCertificatesCount() {
 	metrics.SetGauge([]string{"secrets", "pki", "total_certificates_stored"}, float32(*b.certCount))
 }
 
-func (b *backend) incrementTotalRevokedCertificatesCount() {
-	atomic.AddUint32(b.revokedCertCount, 1)
-	metrics.SetGauge([]string{"secrets", "pki", "total_revoked_certificates_stored"}, float32(*b.revokedCertCount))
+func (b *backend) incrementTotalRevokedCertificatesCount(certsCounted bool, newSerial string) {
+	switch {
+	case certsCounted:
+		atomic.AddUint32(b.revokedCertCount, 1)
+		metrics.SetGauge([]string{"secrets", "pki", "total_revoked_certificates_stored"}, float32(*b.revokedCertCount))
+	default:
+		// This is unsafe, but a good best-attempt
+		b.possibleDoubleCountedRevokedSerials = append(b.possibleDoubleCountedRevokedSerials, newSerial)
+	}
 }
 
 func (b *backend) decrementTotalRevokedCertificatesCount() {

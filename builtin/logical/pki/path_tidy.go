@@ -359,9 +359,6 @@ func (b *backend) tidyStatusIncCertStoreCount() {
 
 	b.tidyStatus.certStoreDeletedCount++
 
-	b.certsCountedLock.RLock()
-	defer b.certsCountedLock.RUnlock()
-
 	b.decrementTotalCertificatesCount()
 }
 
@@ -370,9 +367,6 @@ func (b *backend) tidyStatusIncRevokedCertCount() {
 	defer b.tidyStatusLock.Unlock()
 
 	b.tidyStatus.revokedCertDeletedCount++
-
-	b.certsCountedLock.RLock()
-	defer b.certsCountedLock.RUnlock()
 
 	b.decrementTotalRevokedCertificatesCount()
 }

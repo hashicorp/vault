@@ -213,8 +213,7 @@ func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, pr
 
 	// Update old-style paths to new-style paths
 	certEntry.Key = path
-	b.certsCountedLock.RLock() // Make sure we don't double count a cert for metrics during this path-update
-	defer b.certsCountedLock.RUnlock()
+	certsCounted := b.certsCounted
 	if err = req.Storage.Put(ctx, certEntry); err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error saving certificate with serial %s to new location", serial)}
 	}
@@ -222,9 +221,9 @@ func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, pr
 		// If we fail here, we have an extra (copy) of a cert in storage, add to metrics:
 		switch {
 		case strings.HasPrefix(prefix, "revoked/"):
-			b.incrementTotalRevokedCertificatesCount()
+			b.incrementTotalRevokedCertificatesCount(certsCounted, path)
 		default:
-			b.incrementTotalCertificatesCount()
+			b.incrementTotalCertificatesCount(certsCounted, path)
 		}
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error deleting certificate with serial %s from old location", serial)}
 	}
