@@ -149,7 +149,7 @@ As soon as a node joins a Raft cluster, it attempts to catch up with the reset
 of the nodes via the data that it's replicating from the leader. While in 
 this initial synchronisation state, the node cannot vote but is counted for 
 the purposes of quorum. If a number of new nodes join the cluster 
-simultaneously or at similar times, and thereby exceed the failure
+simultaneously or at similar times, and thereby exceeding the failure
 tolerance of the cluster, quorum may be lost and the cluster can fail.
 
 For example - there may be a scenario where:
