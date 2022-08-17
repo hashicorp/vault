@@ -145,7 +145,7 @@ be removed from the cluster with the `remove peer`
 
 ### Quorum Management
 
-As soon as a node joins a Raft cluster, it attempts to catch up with the reset 
+When a node joins a Raft cluster, it attempts to catch up with the reset 
 of the nodes via the data that it's replicating from the leader. While in 
 this initial synchronisation state, the node cannot vote but is counted for 
 the purposes of quorum. If a number of new nodes join the cluster 
