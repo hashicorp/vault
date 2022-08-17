@@ -302,7 +302,7 @@ func generateFlagWarnings(args []string) string {
 
 		isGlobalFlag := false
 		trimmedArg, _, _ := strings.Cut(strings.TrimLeft(arg, "-"), "=")
-		for _, flag := range envFlags {
+		for _, flag := range globalFlags {
 			if trimmedArg == flag {
 				isGlobalFlag = true
 			}
