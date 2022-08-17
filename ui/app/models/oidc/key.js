@@ -26,7 +26,6 @@ export default class OidcKeyModel extends Model {
   @attr({
     editType: 'ttl',
     defaultValue: '24h',
-    helperTextDisabled: 'Vault will use the default lease duration',
   })
   rotationPeriod;
 
@@ -34,7 +33,6 @@ export default class OidcKeyModel extends Model {
     label: 'Verification TTL',
     editType: 'ttl',
     defaultValue: '24h',
-    helperTextDisabled: 'Vault will use the default lease duration',
   })
   verificationTtl;
 
