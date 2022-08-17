@@ -46,6 +46,20 @@ const storeService = Service.extend({
             { id: 'barfoo1', name: 'different' },
           ]);
           break;
+        case 'oidc/client':
+          resolve([
+            { id: 'client-a', name: 'client-a', client_id: 'a123', client_secret: 'asecret123' },
+            { id: 'client-b', name: 'client-b', client_id: 'b456', client_secret: 'bsecret123' },
+            { id: 'client-c', name: 'client-c', client_id: 'c789', client_secret: 'csecret123' },
+          ]);
+          break;
+        case 'some/model':
+          resolve([
+            { id: 'client-a', name: 'client-a', uuid: 'a123' },
+            { id: 'client-b', name: 'client-b', uuid: 'b456' },
+            { id: 'client-c', name: 'client-c', uuid: 'c789' },
+          ]);
+          break;
         default:
           reject({ httpStatus: 404, message: 'not found' });
           break;
@@ -255,6 +269,7 @@ module('Integration | Component | search select', function (hooks) {
     await typeInSearch('new item');
     assert.equal(component.options.objectAt(0).text, 'Add new foo: new item', 'shows the create suggestion');
   });
+
   test('it shows items not in the returned response', async function (assert) {
     const models = ['test'];
     this.set('models', models);
@@ -326,6 +341,96 @@ module('Integration | Component | search select', function (hooks) {
         { id: '7', isNew: false },
         { id: 'newItem', isNew: true },
       ]),
+      'onClick is called with array of objects with isNew true on new item'
+    );
+  });
+
+  test('it returns object with custom keys if passObject=true and passed objectKeys', async function (assert) {
+    const models = ['some/model'];
+    const spy = sinon.spy();
+    this.set('models', models);
+    this.set('onChange', spy);
+    this.set('objectKeys', ['id', 'uuid']);
+    await render(hbs`
+    <div class="box">
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @passObject={{true}}
+        @objectKeys={{this.objectKeys}}
+      />
+    </div>
+    `);
+
+    await clickTrigger();
+    await settled();
+
+    // First select existing option
+    await component.selectOption();
+    assert.equal(component.selectedOptions.length, 1, 'there is 1 selected option');
+    assert.ok(this.onChange.calledOnce);
+    assert.ok(
+      this.onChange.calledWith([{ id: 'client-a', isNew: false, uuid: 'a123' }]),
+      'onClick is called with array of single object with two keys: id, uuid'
+    );
+    // Then create a new item and select it
+    await clickTrigger();
+    await settled();
+    await typeInSearch('newItem');
+    await component.selectOption();
+    await settled();
+    assert.propEqual(
+      spy.args[1][0],
+      [
+        {
+          id: 'client-a',
+          isNew: false,
+          uuid: 'a123',
+        },
+        {
+          id: 'newItem',
+          isNew: true,
+        },
+      ],
+      'onClick is called with array of objects with isNew true on new item'
+    );
+  });
+
+  test('it lists option name and passed objectKey in dropdown for oidc/client models', async function (assert) {
+    const models = ['oidc/client'];
+    const spy = sinon.spy();
+    this.set('models', models);
+    this.set('onChange', spy);
+    this.set('objectKeys', ['client_secret']);
+    await render(hbs`
+    <div class="box">
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @passObject={{true}}
+        @objectKeys={{this.objectKeys}}
+      />
+    </div>
+    `);
+
+    await clickTrigger();
+    await settled();
+
+    // First select existing option
+    await component.selectOption();
+    assert.equal(component.selectedOptions.length, 1, 'there is 1 selected option');
+    assert
+      .dom('[data-test-selected-option]')
+      .hasText('client-a asecret123', 'oidc/client models renders both name and dynamic id');
+    assert
+      .dom('[data-test-smaller-id]')
+      .hasText('asecret123', 'renders passed in objectKey as the smaller id');
+
+    assert.propEqual(
+      spy.args[0][0],
+      [{ id: 'client-a', isNew: false, client_secret: 'asecret123' }],
       'onClick is called with array of objects with isNew true on new item'
     );
   });

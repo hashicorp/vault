@@ -158,7 +158,7 @@ export default Component.extend({
   //----- adapted from ember-power-select-with-create
   addCreateOption(term, results) {
     if (this.shouldShowCreate(term, results)) {
-      const name = `Add new ${singularize(this.label)}: ${term}`;
+      const name = `Add new ${singularize(this.label || 'item')}: ${term}`;
       const suggestion = {
         __isSuggestion__: true,
         __value__: term,
@@ -174,19 +174,24 @@ export default Component.extend({
   },
   // -----
   customizeObject(option) {
-    // if passObject=true return array of objects, instead of array of strings
+    // if passObject=true return array of objects
     if (this.passObject) {
-      let additionalKeys = this.objectKeys
-        ? // if the LIST endpoint has key_info then we can pass search-select an array of keys
-          // to add to a selected option (object), and then pass the customized selected option back to the parent
-          Object.fromEntries(this.objectKeys.map((key) => [key, option[key]]))
-        : // otherwise return isNew and have the parent handle creating or finding the record
-          // see component/keymgmt/distribute.js for an example
-          { isNew: !!option.new };
-      return { id: option.id, ...additionalKeys };
-    } else {
-      return option.id;
+      let additionalKeys;
+      if (this.objectKeys) {
+        // if the LIST endpoint has key_info and the model has been hydrated in serializer (ex: serializer/oidc/clients)
+        // 'option' is a model record, so pull any attrs we want sent to the parent by adding them to the selected option (object)
+        additionalKeys = Object.fromEntries(this.objectKeys.map((key) => [key, option[key]]));
+        if (Object.values(additionalKeys).includes(undefined)) additionalKeys = false;
+      }
+      // otherwise have the parent handle creating or finding the record
+      // see component/keymgmt/distribute.js for an example
+      return {
+        id: option.id,
+        isNew: !!option.new,
+        ...additionalKeys,
+      };
     }
+    return option.id;
   },
   actions: {
     onChange(val) {
