@@ -397,7 +397,7 @@ module('Integration | Component | search select', function (hooks) {
     );
   });
 
-  test('it lists option name and passed objectKey in dropdown for oidc/client models', async function (assert) {
+  test('it correctly renders when passed objectKeys', async function (assert) {
     const models = ['oidc/client'];
     const spy = sinon.spy();
     this.set('models', models);
@@ -423,15 +423,9 @@ module('Integration | Component | search select', function (hooks) {
     assert.equal(component.selectedOptions.length, 1, 'there is 1 selected option');
     assert
       .dom('[data-test-selected-option]')
-      .hasText('client-a asecret123', 'oidc/client models renders both name and dynamic id');
+      .hasText('client-a asecret123', 'renders both name and dynamic id in dropdown');
     assert
       .dom('[data-test-smaller-id]')
       .hasText('asecret123', 'renders passed in objectKey as the smaller id');
-
-    assert.propEqual(
-      spy.args[0][0],
-      [{ id: 'client-a', isNew: false, client_secret: 'asecret123' }],
-      'onClick is called with array of objects with isNew true on new item'
-    );
   });
 });

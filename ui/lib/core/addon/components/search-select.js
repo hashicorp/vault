@@ -109,8 +109,11 @@ export default Component.extend({
       }
       return;
     }
+    if (this.idKey !== 'id' && this.models.length === 1) {
+      this.set('shouldRenderName', true);
+    }
     for (let modelType of this.models) {
-      if (modelType.includes('identity') || this.idKey !== 'id') {
+      if (modelType.includes('identity')) {
         this.set('shouldRenderName', true);
       }
       try {
