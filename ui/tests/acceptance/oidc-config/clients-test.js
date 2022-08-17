@@ -47,9 +47,7 @@ module('Acceptance | oidc-config/clients', function (hooks) {
 
   test('it renders empty state when no clients are configured', async function (assert) {
     assert.expect(5);
-
-    //* clear out test state
-    await clearRecord(this.store, 'oidc/client', 'some-app');
+    this.server.get('/identity/oidc/client', () => overrideMirageResponse(404));
 
     await visit(OIDC_BASE_URL);
     assert.equal(currentURL(), '/vault/access/oidc');
@@ -71,9 +69,8 @@ module('Acceptance | oidc-config/clients', function (hooks) {
     //* clear out test state
     await clearRecord(this.store, 'oidc/client', 'some-app');
 
-    await visit(OIDC_BASE_URL);
+    await visit(OIDC_BASE_URL + '/clients/create');
     // create a new application
-    await click(SELECTORS.oidcClientCreateButton);
     assert.equal(currentRouteName(), 'vault.cluster.access.oidc.clients.create', 'navigates to create form');
     await fillIn('[data-test-input="name"]', 'some-app');
     await click('[data-test-toggle-group="More options"]');
