@@ -31,7 +31,7 @@ const (
 	globalFlagDetailed         = "detailed"
 )
 
-var envFlags = []string{
+var globalFlags = []string{
 	globalFlagOutputCurlString, globalFlagOutputPolicy, globalFlagFormat, globalFlagDetailed,
 }
 
