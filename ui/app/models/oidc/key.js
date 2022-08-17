@@ -23,6 +23,7 @@ export default class OidcKeyModel extends Model {
   @attr('array', { label: 'Allowed applications' }) allowedClientIds; // no editType because does not use form-field component
 
   @lazyCapabilities(apiPath`identity/oidc/key/${'name'}`, 'name') keyPath;
+  @lazyCapabilities(apiPath`identity/oidc/key/${'name'}/rotate`, 'name') rotatePath;
   @lazyCapabilities(apiPath`identity/oidc/key`) keysPath;
   get canCreate() {
     return this.keyPath.get('canCreate');
@@ -34,18 +35,12 @@ export default class OidcKeyModel extends Model {
     return this.keyPath.get('canUpdate');
   }
   get canRotate() {
-    return this.keyPath.get('canRotate');
+    return this.rotatePath.get('canUpdate');
   }
   get canDelete() {
     return this.keyPath.get('canDelete');
   }
   get canList() {
     return this.keysPath.get('canList');
-  }
-
-  // need to list all for search select in create/edit form
-  @lazyCapabilities(apiPath`identity/oidc/client`) clientsPath;
-  get canListClients() {
-    return this.clientsPath.get('canList');
   }
 }
