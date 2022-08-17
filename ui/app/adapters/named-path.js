@@ -48,8 +48,8 @@ export default class NamedPathAdapter extends ApplicationAdapter {
 
   filterListResponse(filterKey, matchValues, key_info) {
     const keyInfoAsArray = Object.entries(key_info);
-    const filtered = keyInfoAsArray.filter(([key, value]) => {
-      // value is the object of model attributes
+    const filtered = keyInfoAsArray.filter((key) => {
+      const value = key[1]; // value is the object of model attributes
       return matchValues.includes(value[filterKey]);
     });
     const filteredKeyInfo = Object.fromEntries(filtered);
