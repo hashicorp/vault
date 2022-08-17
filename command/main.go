@@ -31,7 +31,7 @@ const (
 	globalFlagDetailed         = "detailed"
 )
 
-var envFlags = []string{
+var globalFlags = []string{
 	globalFlagOutputCurlString, globalFlagOutputPolicy, globalFlagFormat, globalFlagDetailed,
 }
 
@@ -124,7 +124,7 @@ func isEnvFlagWithValue(arg string, flag string) bool {
 	return strings.HasPrefix(arg, "--"+flag+"=") || strings.HasPrefix(arg, "-"+flag+"=")
 }
 
-func getEnvFlagValue(arg string) string {
+func getGlobalFlagValue(arg string) string {
 	_, value, _ := strings.Cut(arg, "=")
 
 	return value
