@@ -124,7 +124,7 @@ func isEnvFlagWithValue(arg string, flag string) bool {
 	return strings.HasPrefix(arg, "--"+flag+"=") || strings.HasPrefix(arg, "-"+flag+"=")
 }
 
-func getEnvFlagValue(arg string) string {
+func getGlobalFlagValue(arg string) string {
 	_, value, _ := strings.Cut(arg, "=")
 
 	return value
