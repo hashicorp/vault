@@ -58,28 +58,28 @@ func setupEnv(args []string) (retArgs []string, format string, detailed bool, ou
 			break
 		}
 
-		if isEnvFlag(arg, globalFlagOutputCurlString) {
+		if isGlobalFlag(arg, globalFlagOutputCurlString) {
 			outputCurlString = true
 			continue
 		}
 
-		if isEnvFlag(arg, globalFlagOutputPolicy) {
+		if isGlobalFlag(arg, globalFlagOutputPolicy) {
 			outputPolicy = true
 			continue
 		}
 
 		// Parse a given flag here, which overrides the env var
-		if isEnvFlagWithValue(arg, globalFlagFormat) {
-			format = getEnvFlagValue(arg)
+		if isGlobalFlagWithValue(arg, globalFlagFormat) {
+			format = getGlobalFlagValue(arg)
 		}
 		// For backwards compat, it could be specified without an equal sign
-		if isEnvFlag(arg, globalFlagFormat) {
+		if isGlobalFlag(arg, globalFlagFormat) {
 			nextArgFormat = true
 		}
 
 		// Parse a given flag here, which overrides the env var
-		if isEnvFlagWithValue(arg, globalFlagDetailed) {
-			detailed, err = strconv.ParseBool(getEnvFlagValue(globalFlagDetailed))
+		if isGlobalFlagWithValue(arg, globalFlagDetailed) {
+			detailed, err = strconv.ParseBool(getGlobalFlagValue(globalFlagDetailed))
 			if err != nil {
 				detailed = false
 			}
@@ -87,7 +87,7 @@ func setupEnv(args []string) (retArgs []string, format string, detailed bool, ou
 		}
 		// For backwards compat, it could be specified without an equal sign to enable
 		// detailed output.
-		if isEnvFlag(arg, globalFlagDetailed) {
+		if isGlobalFlag(arg, globalFlagDetailed) {
 			detailed = true
 			haveDetailed = true
 		}
@@ -116,11 +116,11 @@ func setupEnv(args []string) (retArgs []string, format string, detailed bool, ou
 	return args, format, detailed, outputCurlString, outputPolicy
 }
 
-func isEnvFlag(arg string, flag string) bool {
+func isGlobalFlag(arg string, flag string) bool {
 	return arg == "-"+flag || arg == "--"+flag
 }
 
-func isEnvFlagWithValue(arg string, flag string) bool {
+func isGlobalFlagWithValue(arg string, flag string) bool {
 	return strings.HasPrefix(arg, "--"+flag+"=") || strings.HasPrefix(arg, "-"+flag+"=")
 }
 
