@@ -5,11 +5,8 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
 import { overrideMirageResponse, CLIENT_LIST_RESPONSE } from 'vault/tests/helpers/oidc-config';
-import parseURL from 'core/utils/parse-url';
 
-const ISSUER_URL = 'http://127.0.0.1:8200/v1/identity/oidc/provider/test-provider';
-
-module('Integration | Component | oidc/provider-form', function (hooks) {
+module('Integration | Component | oidc/key-form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
@@ -23,57 +20,37 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
-    this.server.get('/identity/oidc/scope', () => {
-      return {
-        request_id: 'scope-list-id',
-        lease_id: '',
-        renewable: false,
-        lease_duration: 0,
-        data: {
-          keys: ['test-scope'],
-        },
-        wrap_info: null,
-        warnings: null,
-        auth: null,
-      };
-    });
     this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
   });
 
-  test('it should save new provider', async function (assert) {
-    assert.expect(12);
-    this.server.post('/identity/oidc/provider/test-provider', (schema, req) => {
-      assert.ok(true, 'Request made to save provider');
+  test('it should save new key', async function (assert) {
+    assert.expect(11);
+    this.server.post('/identity/oidc/key/test-key', (schema, req) => {
+      assert.ok(true, 'Request made to save key');
       return JSON.parse(req.requestBody);
     });
-    this.model = this.store.createRecord('oidc/provider');
+    this.model = this.store.createRecord('oidc/key');
     this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
     await render(hbs`
-    <Oidc::ProviderForm
+    <Oidc::KeyForm
     @model={{this.model}}
     @onCancel={{this.onCancel}}
     @onSave={{this.onSave}}
     />
     `);
 
-    assert
-      .dom('[data-test-oidc-provider-title]')
-      .hasText('Create provider', 'Form title renders correct text');
-    assert.dom('[data-test-oidc-provider-save]').hasText('Create', 'Save button has correct text');
-    assert
-      .dom('[data-test-input="issuer"]')
-      .hasAttribute('placeholder', 'e.g. https://example.com:8200', 'issuer placeholder text is correct');
-    assert.equal(findAll('[data-test-field]').length, 3, 'renders all input fields');
-    await click('[data-test-component="search-select"]#scopesSupported .ember-basic-dropdown-trigger');
-    assert.dom('li.ember-power-select-option').hasText('test-scope', 'dropdown renders scopes');
+    assert.dom('[data-test-oidc-key-title]').hasText('Create key', 'Form title renders correct text');
+    assert.dom('[data-test-oidc-key-save]').hasText('Create', 'Save button has correct text');
+    assert.dom('[data-test-input="algorithm"]').hasValue('RS256', 'default algorithm is correct');
+    assert.equal(findAll('[data-test-field]').length, 4, 'renders all input fields');
 
     // check validation errors
-    await click('[data-test-oidc-provider-save]');
+    await click('[data-test-oidc-key-save]');
     assert
       .dom('[data-test-inline-error-message]')
       .hasText('Name is required.', 'Validation message is shown for name');
     await fillIn('[data-test-input="name"]', 'test space');
-    await click('[data-test-oidc-provider-save]');
+    await click('[data-test-oidc-key-save]');
     assert
       .dom('[data-test-inline-error-message]')
       .hasText('Name cannot contain whitespace.', 'Validation message is shown whitespace');
@@ -90,80 +67,69 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       .dom('[data-test-component="search-select"]#allowedClientIds')
       .doesNotExist('Allow all radio button hides search select');
 
-    await fillIn('[data-test-input="name"]', 'test-provider');
-    await click('[data-test-oidc-provider-save]');
+    await fillIn('[data-test-input="name"]', 'test-key');
+    await click('[data-test-oidc-key-save]');
   });
 
-  test('it should update provider', async function (assert) {
-    assert.expect(9);
+  test('it should update key', async function (assert) {
+    assert.expect(7);
 
-    this.server.post('/identity/oidc/provider/test-provider', (schema, req) => {
-      assert.ok(true, 'Request made to save provider');
+    this.server.post('/identity/oidc/key/test-key', (schema, req) => {
+      assert.ok(true, 'Request made to save key');
       return JSON.parse(req.requestBody);
     });
 
-    this.store.pushPayload('oidc/provider', {
-      modelName: 'oidc/provider',
-      name: 'test-provider',
+    this.store.pushPayload('oidc/key', {
+      modelName: 'oidc/key',
+      name: 'test-key',
       allowed_client_ids: ['*'],
-      issuer: ISSUER_URL,
-      scopes_supported: ['test-scope'],
     });
 
-    this.model = this.store.peekRecord('oidc/provider', 'test-provider');
+    this.model = this.store.peekRecord('oidc/key', 'test-key');
     this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
 
     await render(hbs`
-      <Oidc::ProviderForm
+      <Oidc::KeyForm
         @model={{this.model}}
         @onCancel={{this.onCancel}}
         @onSave={{this.onSave}}
       />
     `);
 
-    assert.dom('[data-test-oidc-provider-title]').hasText('Edit provider', 'Title renders correct text');
-    assert.dom('[data-test-oidc-provider-save]').hasText('Update', 'Save button has correct text');
+    assert.dom('[data-test-oidc-key-title]').hasText('Edit key', 'Title renders correct text');
+    assert.dom('[data-test-oidc-key-save]').hasText('Update', 'Save button has correct text');
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
-    assert
-      .dom('[data-test-input="name"]')
-      .hasValue('test-provider', 'Name input is populated with model value');
-    assert
-      .dom('[data-test-input="issuer"]')
-      .hasValue(parseURL(ISSUER_URL).origin, 'issuer value is just scheme://host:port portion of full URL');
-
-    assert.dom('[data-test-selected-option="true"]').hasText('test-scope', 'model scope is selected');
+    assert.dom('[data-test-input="name"]').hasValue('test-key', 'Name input is populated with model value');
     assert.dom('input#allow-all').isChecked('Allow all radio button is selected');
-    await click('[data-test-oidc-provider-save]');
+    await click('[data-test-oidc-key-save]');
   });
 
   test('it should rollback attributes or unload record on cancel', async function (assert) {
     assert.expect(4);
-    this.model = this.store.createRecord('oidc/provider');
+    this.model = this.store.createRecord('oidc/key');
     this.onCancel = () => assert.ok(true, 'onCancel callback fires');
 
     await render(hbs`
-      <Oidc::ProviderForm
+      <Oidc::KeyForm
         @model={{this.model}}
         @onCancel={{this.onCancel}}
         @onSave={{this.onSave}}
       />
     `);
 
-    await click('[data-test-oidc-provider-cancel]');
+    await click('[data-test-oidc-key-cancel]');
     assert.true(this.model.isDestroyed, 'New model is unloaded on cancel');
 
-    this.store.pushPayload('oidc/provider', {
-      modelName: 'oidc/provider',
-      name: 'test-provider',
+    this.store.pushPayload('oidc/key', {
+      modelName: 'oidc/key',
+      name: 'test-key',
       allowed_client_ids: ['*'],
-      issuer: ISSUER_URL,
-      scopes_supported: ['test-scope'],
     });
 
-    this.model = this.store.peekRecord('oidc/provider', 'test-provider');
+    this.model = this.store.peekRecord('oidc/key', 'test-key');
 
     await render(hbs`
-      <Oidc::ProviderForm
+      <Oidc::KeyForm
         @model={{this.model}}
         @onCancel={{this.onCancel}}
         @onSave={{this.onSave}}
@@ -171,26 +137,22 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
     `);
 
     await click('label[for=limited]');
-    await click('[data-test-oidc-provider-cancel]');
+    await click('[data-test-oidc-key-cancel]');
     assert.equal(this.model.allowed_client_ids, undefined, 'Model attributes rolled back on cancel');
   });
 
   test('it should render fallback for search select', async function (assert) {
-    assert.expect(2);
-    this.model = this.store.createRecord('oidc/provider');
-    this.server.get('/identity/oidc/scope', () => overrideMirageResponse(403));
+    assert.expect(1);
+    this.model = this.store.createRecord('oidc/key');
     this.server.get('/identity/oidc/client', () => overrideMirageResponse(403));
     await render(hbs`
-      <Oidc::ProviderForm
+      <Oidc::KeyForm
         @model={{this.model}}
         @onCancel={{this.onCancel}}
         @onSave={{this.onSave}}
       />
     `);
 
-    assert
-      .dom('[data-test-component="search-select"]#scopesSupported [data-test-component="string-list"]')
-      .exists('renders fall back for scopes search select');
     await click('label[for=limited]');
     assert
       .dom('[data-test-component="search-select"]#allowedClientIds [data-test-component="string-list"]')

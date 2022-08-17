@@ -38,8 +38,8 @@ export function overrideMirageResponse(httpStatus, data) {
       JSON.stringify({ errors: ['permission denied'] })
     );
   }
-  if (httpStatus === 204) {
-    return new Response(204, { 'Content-Type': 'application/json' });
+  if (httpStatus === 404) {
+    return new Response(404, { 'Content-Type': 'application/json' });
   }
   if (httpStatus === 200) {
     return new Response(200, { 'Content-Type': 'application/json' }, JSON.stringify(data));
@@ -114,4 +114,23 @@ export const CLIENT_DATA_RESPONSE = {
   id_token_ttl: 0,
   key: 'default',
   redirect_uris: [],
+};
+
+export const SCOPE_LIST_RESPONSE = {
+  keys: ['test-scope'],
+};
+
+export const SCOPE_DATA_RESPONSE = {
+  description: 'this is a test',
+  template: '{ test }',
+};
+
+export const PROVIDER_LIST_RESPONSE = {
+  keys: ['test-provider'],
+};
+
+export const PROVIDER_DATA_RESPONSE = {
+  allowed_client_ids: ['*'],
+  issuer: '',
+  scopes_supported: ['test-scope'],
 };
