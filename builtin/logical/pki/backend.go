@@ -3,12 +3,13 @@ package pki
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/consts"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/metricsutil"
