@@ -22,24 +22,10 @@ module('Acceptance | oidc auth method', function (hooks) {
     // ensure clean state
     localStorage.removeItem('selectedAuth');
   });
+
   hooks.afterEach(function () {
     this.openStub.restore();
   });
-
-  // const login = async (select) => {
-  //   authPage.logout();
-  //   // select from dropdown or click auth path tab
-  //   if (select) {
-  //     await fillIn('[data-test-select="auth-method"]', 'oidc');
-  //   } else {
-  //     await click('[data-test-auth-method-link="oidc"]');
-  //   }
-  //   later(() => {
-  //     window.postMessage(buildMessage().data, window.origin);
-  //     cancelTimers();
-  //   }, 50);
-  //   await click('[data-test-auth-submit]');
-  // };
 
   test('it should login with oidc when selected from auth methods dropdown', async function (assert) {
     assert.expect(1);
