@@ -152,7 +152,7 @@ the purposes of quorum. If a number of new nodes join the cluster
 simultaneously or at similar times, and thereby exceeding the failure
 tolerance of the cluster, quorum may be lost and the cluster can fail.
 
-For example - there may be a scenario where:
+For example, consider a scenario where there is a 3-node cluster with a large amount of data and a failure tolerance of 1. An additional 3 new nodes then joins the cluster. The cluster now consists of 6 nodes with a failure tolerance of 2, but since all 3 nodes are still catching up, this will result in a loss of quorum.
 
 * A 3 node cluster with a large amount of data that's at a failure tolerance of 1.
 * Another 3 new nodes then join the cluster together.
