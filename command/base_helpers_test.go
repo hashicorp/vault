@@ -242,6 +242,26 @@ func TestArgWarnings(t *testing.T) {
 			[]string{"-a", "b"},
 			"-a",
 		},
+		{
+			[]string{globalFlagDetailed},
+			"",
+		},
+		{
+			[]string{"-" + globalFlagOutputCurlString + "=true"},
+			"",
+		},
+		{
+			[]string{"--" + globalFlagFormat + "=false"},
+			"",
+		},
+		{
+			[]string{"-x" + globalFlagDetailed},
+			"-x" + globalFlagDetailed,
+		},
+		{
+			[]string{"--x=" + globalFlagDetailed},
+			"--x=" + globalFlagDetailed,
+		},
 	}
 
 	for _, tc := range cases {
