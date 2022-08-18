@@ -78,9 +78,21 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 		if err != nil {
 			return nil, err
 		}
-		if m != 0 {
+		switch m {
+		case 0:
+			// if mode is 0000, then do not modify file mode
+			if path != "stdout" && path != "discard" {
+				fileInfo, err := os.Stat(path)
+				if err != nil {
+					return nil, err
+				}
+				mode = fileInfo.Mode()
+			}
+		default:
 			mode = os.FileMode(m)
+
 		}
+
 	}
 
 	b := &Backend{

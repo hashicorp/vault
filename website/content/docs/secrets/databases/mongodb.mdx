@@ -107,7 +107,7 @@ step-by-step tutorial.
 ## API
 
 The full list of configurable options can be seen in the [MongoDB database
-plugin API](/api/secret/databases/mongodb) page.
+plugin API](/api-docs/secret/databases/mongodb) page.
 
 For more information on the database secrets engine's HTTP API please see the
-[Database secrets engine API](/api/secret/databases) page.
+[Database secrets engine API](/api-docs/secret/databases) page.

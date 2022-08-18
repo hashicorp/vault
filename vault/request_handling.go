@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -28,7 +29,8 @@ import (
 )
 
 const (
-	replTimeout = 1 * time.Second
+	replTimeout                           = 1 * time.Second
+	EnvVaultDisableLocalAuthMountEntities = "VAULT_DISABLE_LOCAL_AUTH_MOUNT_ENTITIES"
 )
 
 var (
@@ -312,6 +314,8 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		case logical.ErrUnsupportedPath:
 			// fail later via bad path to avoid confusing items in the log
 			checkExists = false
+		case logical.ErrRelativePath:
+			return nil, te, errutil.UserError{Err: err.Error()}
 		case nil:
 			if existsResp != nil && existsResp.IsError() {
 				return nil, te, existsResp.Error()
@@ -768,6 +772,9 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 	// Validate the token
 	auth, te, ctErr := c.checkToken(ctx, req, false)
+	if ctErr == logical.ErrRelativePath {
+		return logical.ErrorResponse(ctErr.Error()), nil, ctErr
+	}
 	if ctErr == logical.ErrPerfStandbyPleaseForward {
 		return nil, nil, ctErr
 	}
@@ -1325,6 +1332,11 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		if auth.Alias != nil &&
 			mEntry != nil &&
 			c.identityStore != nil {
+
+			if mEntry.Local && os.Getenv(EnvVaultDisableLocalAuthMountEntities) != "" {
+				goto CREATE_TOKEN
+			}
+
 			// Overwrite the mount type and mount path in the alias
 			// information
 			auth.Alias.MountType = req.MountType

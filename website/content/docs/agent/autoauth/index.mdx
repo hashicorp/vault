@@ -58,8 +58,8 @@ There are two ways that tokens can be response-wrapped by the agent:
 
 ### Encrypting Tokens
 
-~> This is experimental; if input/output formats change we will make every
-effort to provide backwards compatibility.
+~> Support for encrypted tokens is experimental; if input/output formats
+change, we will make every effort to provide backwards compatibility.
 
 Tokens can be encrypted, using a Diffie-Hellman exchange to generate an
 ephemeral key. In this mechanism, the client receiving the token writes a
@@ -69,10 +69,11 @@ key, which is then used to encrypt the token via AES-GCM. The nonce, encrypted
 payload, and the sink's public key are then written to the output file, where
 the client can compute the shared secret and decrypt the token value.
 
-~> NOTE: This is not a protection against MITM attacks! The purpose of this
-feature is for forward-secrecy and coverage against bare token values being
-persisted. A MITM that can write to the sink's output and/or client public-key
-input files could attack this exchange.
+~> NOTE: Token encryption is not a protection against MITM attacks! The purpose
+of this feature is for forward-secrecy and coverage against bare token values
+being persisted. A MITM that can write to the sink's output and/or client
+public-key input files could attack this exchange. Using TLS to protect the
+transit of tokens is highly recommended.
 
 To help mitigate MITM attacks, additional authenticated data (AAD) can be
 provided to the agent. This data is written as part of the AES-GCM tag and must
