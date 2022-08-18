@@ -22,7 +22,7 @@ import layout from '../templates/components/search-select';
  * @param {string} [backend] - name of the backend if the query for options needs additional information (eg. secret backend)
  * @param {boolean} [disallowNewItems=false] - Controls whether or not the user can add a new item if none found
  * @param {boolean} [passObject=false] - When true, the onChange callback returns an array of objects with id (string) and isNew (boolean) (instead of an array of id strings)
- * @param {array} [objectKeys=null] - Array of strings that correlate to model attrs. When passObject=true, objectKeys are added to the passed object. NOTE: make 'id' as the first element in objectKeys if you do not want to override the default of 'id'
+ * @param {array} [objectKeys=null] - Array of values that correlate to model attrs. When passObject=true, objectKeys are added to the passed object. NOTE: make 'id' as the first element in objectKeys if you do not want to override the default of 'id'
  * @param {string} [helpText] - Text to be displayed in the info tooltip for this form field
  * @param {number} [selectLimit] - A number that sets the limit to how many select options they can choose
  * @param {string} [subText] - Text to be displayed below the label
@@ -109,7 +109,8 @@ export default Component.extend({
       }
       return;
     }
-    if (this.idKey !== 'id' && this.models.length === 1) {
+    if (this.idKey !== 'id') {
+      // if passing a dynamic idKey, then display it in the dropdown beside the name
       this.set('shouldRenderName', true);
     }
     for (let modelType of this.models) {
@@ -178,17 +179,20 @@ export default Component.extend({
   },
   // -----
   customizeObject(option) {
-    // if passObject=true return array of objects
+    // if passObject=true return object, otherwise return string of option id
     if (this.passObject) {
       let additionalKeys;
       if (this.objectKeys) {
-        // if the LIST endpoint has key_info and the model has been hydrated in serializer (ex: serializer/oidc/clients)
-        // 'option' is a model record, so pull any attrs, add to the selected option (object) and send to the parent
+        // pull attrs corresponding to objectKeys from model record, add to the selected option (object) and send to the parent
         additionalKeys = Object.fromEntries(this.objectKeys.map((key) => [key, option[key]]));
-        if (Object.values(additionalKeys).includes(undefined)) additionalKeys = false;
+        // filter any undefined attrs, which means the model did not have a value for that attr
+        // no value could mean the model was not hydrated, the record is new or the model doesn't have that attribute
+        Object.keys(additionalKeys).forEach((key) => {
+          if (additionalKeys[key] === undefined) {
+            delete additionalKeys[key];
+          }
+        });
       }
-      // otherwise have the parent handle creating or finding the record
-      // see component/keymgmt/distribute.js for an example
       return {
         id: option.id,
         isNew: !!option.new,
