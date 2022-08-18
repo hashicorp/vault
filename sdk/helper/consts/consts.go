@@ -32,4 +32,9 @@ const (
 	// ReplicationResolverALPN is the negotiated protocol used for
 	// resolving replicaiton addresses
 	ReplicationResolverALPN = "replication_resolver_v1"
+
+	//MaxUint, MaxInt and MinInt are not available in math package before go 1.7
+	MaxUint = ^uint(0)
+	MaxInt  = int(^uint(0) >> 1)
+	MinInt  = -MaxInt - 1
 )

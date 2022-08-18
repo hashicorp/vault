@@ -41,6 +41,23 @@ func TestBuilder_escapedAt(t *testing.T) {
 	}
 }
 
+func TestBuilder_singleBackslash(t *testing.T) {
+	var b Builder
+	err := b.Add("foo=bar", "bar=\\")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := map[string]interface{}{
+		"foo": "bar",
+		"bar": "\\",
+	}
+	actual := b.Map()
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad: %#v", actual)
+	}
+}
+
 func TestBuilder_stdin(t *testing.T) {
 	var b Builder
 	b.Stdin = bytes.NewBufferString("baz")

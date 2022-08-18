@@ -1501,7 +1501,7 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 		return now, err
 	}
 
-	usedKeys := make([]string, 0, 2*len(namedKeys))
+	usedKeys := make([]string, 0)
 
 	for _, k := range namedKeys {
 		entry, err := s.Get(ctx, namedKeyConfigPath+k)

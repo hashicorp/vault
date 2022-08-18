@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/posener/complete"
 )
 
@@ -246,9 +247,11 @@ func (i *intValue) Set(s string) error {
 	if err != nil {
 		return err
 	}
-
-	*i.target = int(v)
-	return nil
+	if v >= int64(consts.MinInt) && v <= int64(consts.MaxInt) {
+		*i.target = int(v)
+		return nil
+	}
+	return fmt.Errorf("Incorrect conversion of a 64-bit integer to a lower bit size. Value %d is not within bounds for int32", v)
 }
 
 func (i *intValue) Get() interface{} { return int(*i.target) }
@@ -374,9 +377,12 @@ func (i *uintValue) Set(s string) error {
 	if err != nil {
 		return err
 	}
+	if v >= 0 && v <= uint64(consts.MaxUint) {
+		*i.target = uint(v)
+		return nil
+	}
 
-	*i.target = uint(v)
-	return nil
+	return fmt.Errorf("Incorrect conversion of a 64-bit integer to a lower bit size. Value %d is not within bounds for uint32", v)
 }
 
 func (i *uintValue) Get() interface{} { return uint(*i.target) }

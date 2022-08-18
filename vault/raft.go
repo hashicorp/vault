@@ -473,38 +473,50 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 		return errors.New("no active raft TLS key found")
 	}
 
+	getNextRotationTime := func(next time.Time) time.Time {
+		now := time.Now()
+
+		// active key's CreatedTime + raftTLSRotationPeriod might be in
+		// the past (meaning it is ready to be rotated) which will cause
+		// NewTicker to panic when used with time.Until, prevent this by
+		// pushing out rotation time into very near future
+		if next.Before(now) {
+			return now.Add(1 * time.Minute)
+		}
+
+		// push out to ensure proposed time does not elapse
+		return next.Add(10 * time.Second)
+	}
+
 	// Start the process in a go routine
 	go func() {
-		nextRotationTime := activeKey.CreatedTime.Add(raftTLSRotationPeriod)
+		nextRotationTime := getNextRotationTime(activeKey.CreatedTime.Add(raftTLSRotationPeriod))
 
 		keyCheckInterval := time.NewTicker(1 * time.Minute)
 		defer keyCheckInterval.Stop()
 
-		var backoff bool
+		// ticker is used to prevent memory leak of using time.After in
+		// for - select pattern.
+		ticker := time.NewTicker(time.Until(nextRotationTime))
+		defer ticker.Stop()
 		for {
-			// If we encountered and error we should try to create the key
-			// again.
-			if backoff {
-				nextRotationTime = time.Now().Add(10 * time.Second)
-				backoff = false
-			}
-
 			select {
 			case <-keyCheckInterval.C:
 				err := checkCommitted()
 				if err != nil {
 					logger.Error("failed to activate TLS key", "error", err)
 				}
-			case <-time.After(time.Until(nextRotationTime)):
+			case <-ticker.C:
 				// It's time to rotate the keys
 				next, err := rotateKeyring()
 				if err != nil {
 					logger.Error("failed to rotate TLS key", "error", err)
-					backoff = true
-					continue
+					nextRotationTime = time.Now().Add(10 * time.Second)
+				} else {
+					nextRotationTime = getNextRotationTime(next)
 				}
 
-				nextRotationTime = next
+				ticker.Reset(time.Until(nextRotationTime))
 
 			case <-stopCh:
 				return

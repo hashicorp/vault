@@ -153,20 +153,22 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 	}
 
 	entry := &roleEntry{
-		AllowLocalhost:       true,
-		AllowAnyName:         true,
-		AllowIPSANs:          true,
-		EnforceHostnames:     false,
-		KeyType:              "any",
-		UseCSRCommonName:     true,
-		UseCSRSANs:           true,
-		AllowedURISANs:       []string{"*"},
-		AllowedSerialNumbers: []string{"*"},
-		GenerateLease:        new(bool),
-		KeyUsage:             data.Get("key_usage").([]string),
-		ExtKeyUsage:          data.Get("ext_key_usage").([]string),
-		ExtKeyUsageOIDs:      data.Get("ext_key_usage_oids").([]string),
+		AllowLocalhost:            true,
+		AllowAnyName:              true,
+		AllowIPSANs:               true,
+		AllowWildcardCertificates: new(bool),
+		EnforceHostnames:          false,
+		KeyType:                   "any",
+		UseCSRCommonName:          true,
+		UseCSRSANs:                true,
+		AllowedURISANs:            []string{"*"},
+		AllowedSerialNumbers:      []string{"*"},
+		GenerateLease:             new(bool),
+		KeyUsage:                  data.Get("key_usage").([]string),
+		ExtKeyUsage:               data.Get("ext_key_usage").([]string),
+		ExtKeyUsageOIDs:           data.Get("ext_key_usage_oids").([]string),
 	}
+	*entry.AllowWildcardCertificates = true
 
 	*entry.GenerateLease = false
 
@@ -188,7 +190,8 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 
 func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry, useCSR, useCSRValues bool) (*logical.Response, error) {
 	// If storing the certificate and on a performance standby, forward this request on to the primary
-	if !role.NoStore && b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby|consts.ReplicationPerformanceSecondary) {
+	// Allow performance secondaries to generate and store certificates locally to them.
+	if !role.NoStore && b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) {
 		return nil, logical.ErrReadOnly
 	}
 

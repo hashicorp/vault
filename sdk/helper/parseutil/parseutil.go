@@ -248,6 +248,11 @@ func ParseString(in interface{}) (string, error) {
 }
 
 func ParseCommaStringSlice(in interface{}) ([]string, error) {
+	jsonIn, ok := in.(json.Number)
+	if ok {
+		in = jsonIn.String()
+	}
+
 	rawString, ok := in.(string)
 	if ok && rawString == "" {
 		return []string{}, nil

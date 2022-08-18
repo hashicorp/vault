@@ -2,6 +2,7 @@ package parseutil
 
 import (
 	"encoding/json"
+	"math/cmplx"
 	"testing"
 	"time"
 )
@@ -280,5 +281,184 @@ func Test_ParseBool(t *testing.T) {
 	}
 	if !outp {
 		t.Fatal("wrong output")
+	}
+}
+
+func equalStringSlice(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
+func Test_ParseCommaStringSlice(t *testing.T) {
+	cases := []struct {
+		name     string
+		inp      interface{}
+		expected []string
+		valid    bool
+	}{
+		{
+			"nil",
+			nil,
+			[]string{},
+			true,
+		},
+		{
+			"empty string",
+			"",
+			[]string{},
+			true,
+		},
+		{
+			"string without commas",
+			"foo",
+			[]string{"foo"},
+			true,
+		},
+		{
+			"comma-separated string",
+			"foo,bar,baz",
+			[]string{"foo", "bar", "baz"},
+			true,
+		},
+		{
+			"comma-separated string with trim",
+			"  foo ,    bar   ,baz  ",
+			[]string{"foo", "bar", "baz"},
+			true,
+		},
+		{
+			"json number",
+			json.Number("123"),
+			[]string{"123"},
+			true,
+		},
+		{
+			"int",
+			1,
+			[]string{"1"},
+			true,
+		},
+		{
+			"float",
+			5.5,
+			[]string{"5.5"},
+			true,
+		},
+		{
+			"rune",
+			'a',
+			[]string{"97"},
+			true,
+		},
+		{
+			"bool",
+			true,
+			[]string{"1"},
+			true,
+		},
+		{
+			"byte",
+			byte(10),
+			[]string{"10"},
+			true,
+		},
+		{
+			"complex",
+			cmplx.Sqrt(-1),
+			nil,
+			false,
+		},
+		{
+			"time",
+			time.Now(),
+			nil,
+			false,
+		},
+		{
+			"string slice",
+			[]string{"foo", "bar", "baz"},
+			[]string{"foo", "bar", "baz"},
+			true,
+		},
+		{
+			"json number slice",
+			[]json.Number{json.Number("1"), json.Number("2")},
+			[]string{"1", "2"},
+			true,
+		},
+		{
+			"int slice",
+			[]int{1, 2, 3},
+			[]string{"1", "2", "3"},
+			true,
+		},
+		{
+			"float slice",
+			[]float64{1.1, 1.2, 1.3},
+			[]string{"1.1", "1.2", "1.3"},
+			true,
+		},
+		{
+			"rune slice",
+			[]rune{'a', 'b', 'c'},
+			[]string{"97", "98", "99"},
+			true,
+		},
+		{
+			"bool slice",
+			[]bool{true, false, true},
+			[]string{"1", "0", "1"},
+			true,
+		},
+		{
+			"complex slice",
+			[]complex128{cmplx.Sqrt(-1)},
+			nil,
+			false,
+		},
+		{
+			"map",
+			map[string]interface{}{"foo": "bar"},
+			nil,
+			false,
+		},
+		{
+			"struct",
+			struct{ name string }{"foo"},
+			nil,
+			false,
+		},
+	}
+
+	for _, tc := range cases {
+
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			outp, err := ParseCommaStringSlice(tc.inp)
+
+			if tc.valid && err != nil {
+				t.Errorf("failed to parse: %v. err: %v", tc.inp, err)
+			}
+
+			if !tc.valid && err == nil {
+				t.Errorf("no error for: %v", tc.inp)
+			}
+
+			if !equalStringSlice(outp, tc.expected) {
+				t.Errorf("input %v parsed as %v, expected %v", tc.inp, outp, tc.expected)
+			}
+		})
 	}
 }

@@ -36,7 +36,7 @@ jobs:
     - run:
         command: |
           case "$CIRCLE_BRANCH" in
-          main|ui/*|release/*|merge*) ;;
+          main|ui/*|backport/ui/*|release/*|merge*) ;;
           *) # If the branch being tested doesn't match one of the above patterns,
              # we don't need to run test-ui and can abort the job.
              circleci-agent step halt
@@ -99,7 +99,8 @@ jobs:
           make test-ui-browserstack
         name: Run Browserstack Tests
   build-go-dev:
-    machine: true
+    machine:
+      image: ubuntu-2004:202201-02
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
@@ -113,6 +114,7 @@ jobs:
           rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
           GOPATH="/home/circleci/go"
           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
+          mkdir $GOPATH/bin 2>/dev/null || { sudo mkdir $GOPATH/bin && sudo chmod 777 $GOPATH/bin; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
           echo "export GOPROXY=off" >> "$BASH_ENV"
@@ -125,7 +127,7 @@ jobs:
     - checkout
     - restore_cache:
         keys:
-        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - attach_workspace:
         at: .
@@ -145,7 +147,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.16.12
+    - GO_VERSION: 1.16.15
     - GOTESTSUM_VERSION: 0.5.2
   algolia-index:
     docker:
@@ -164,7 +166,7 @@ jobs:
         name: Push content to Algolia Index
   test-go-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.16.12
+    - image: docker.mirror.hashicorp.services/cimg/go:1.16.15
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -172,7 +174,7 @@ jobs:
     - run:
         command: |
           # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
-          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* ]] && {
+          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* || "$CIRCLE_BRANCH" = backport/docs/* ]] && {
             # stop the job from this step
             circleci-agent step halt
           }
@@ -199,7 +201,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
@@ -282,7 +284,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.16.12 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.16.15 \
               tail -f /dev/null
 
             # Run tests
@@ -346,7 +348,7 @@ jobs:
     - GO_TAGS: ''
   test-go-race:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.16.12
+    - image: docker.mirror.hashicorp.services/cimg/go:1.16.15
     resource_class: xlarge
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -354,7 +356,7 @@ jobs:
     - run:
         command: |
           # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
-          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* ]] && {
+          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* || "$CIRCLE_BRANCH" = backport/docs/* ]] && {
             # stop the job from this step
             circleci-agent step halt
           }
@@ -378,7 +380,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
@@ -460,7 +462,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.16.12 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.16.15 \
               tail -f /dev/null
 
             # Run tests
@@ -541,7 +543,7 @@ jobs:
         name: Build Docker Image if Necessary
   test-go:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.16.12
+    - image: docker.mirror.hashicorp.services/cimg/go:1.16.15
     resource_class: large
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -549,7 +551,7 @@ jobs:
     - run:
         command: |
           # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
-          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* ]] && {
+          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* || "$CIRCLE_BRANCH" = backport/docs/* ]] && {
             # stop the job from this step
             circleci-agent step halt
           }
@@ -573,7 +575,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
@@ -655,7 +657,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.16.12 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.16.15 \
               tail -f /dev/null
 
             # Run tests
@@ -712,7 +714,8 @@ jobs:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
   pre-flight-checks:
-    machine: true
+    machine:
+      image: ubuntu-2004:202201-02
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
@@ -726,6 +729,7 @@ jobs:
           rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
           GOPATH="/home/circleci/go"
           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
+          mkdir $GOPATH/bin 2>/dev/null || { sudo mkdir $GOPATH/bin && sudo chmod 777 $GOPATH/bin; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
           echo "export GOPROXY=https://proxy.golang.org,direct" >> "$BASH_ENV"
@@ -756,7 +760,11 @@ jobs:
           BASE: https://github.com/CircleCI-Public/circleci-cli/releases/download
         name: Install CircleCI CLI
     - run:
-        command: make ci-verify
+        command: |
+          set -x
+          . $BASH_ENV
+          make ci-verify
+        name: Verify CircleCI
     - add_ssh_keys:
         fingerprints:
         - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
@@ -765,12 +773,14 @@ jobs:
           git config --global url."git@github.com:".insteadOf https://github.com/
     - restore_cache:
         keys:
-        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
-        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
-        - v1.4-{{checksum "go.sum"}}
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
+        - v1.5-{{checksum "go.sum"}}
         name: Restore closest matching go modules cache
     - run:
         command: |
+          # set GOPATH explicitly to download to the right cache
+          export GOPATH=$HOME/go
           # go list ./... forces downloading some additional versions of modules that 'go mod
           # download' misses. We need this because we make use of go list itself during
           # code generation in later builds that rely on this module cache.
@@ -787,18 +797,18 @@ jobs:
           }
         name: Verify downloading modules did not modify any files
     - save_cache:
-        key: v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        key: v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Save go modules cache
         paths:
         - /home/circleci/go/pkg/mod
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.16.12
+    - GO_VERSION: 1.16.15
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.16.12
+    - image: docker.mirror.hashicorp.services/cimg/go:1.16.15
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -806,7 +816,7 @@ jobs:
     - run:
         command: |
           # If the branch being tested starts with ui/ or docs/ we want to exit the job without failing
-          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* ]] && {
+          [[ "$CIRCLE_BRANCH" = ui/* || "$CIRCLE_BRANCH" = docs/* || "$CIRCLE_BRANCH" = backport/docs/* ]] && {
             # stop the job from this step
             circleci-agent step halt
           }
@@ -833,7 +843,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
@@ -916,7 +926,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.16.12 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.16.15 \
               tail -f /dev/null
 
             # Run tests
@@ -1006,19 +1016,9 @@ workflows:
         requires:
         - pre-flight-checks
     - test-go-race:
-        filters:
-          branches:
-            ignore:
-            - /^docs\/.*/
-            - /^ui\/.*/
         requires:
         - pre-flight-checks
     - test-go-race-remote-docker:
-        filters:
-          branches:
-            ignore:
-            - /^docs\/.*/
-            - /^ui\/.*/
         requires:
         - pre-flight-checks
     - website-docker-image:

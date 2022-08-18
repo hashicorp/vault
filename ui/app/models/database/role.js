@@ -25,7 +25,7 @@ export default Model.extend({
     noDefault: true,
     possibleValues: ['static', 'dynamic'],
   }),
-  ttl: attr({
+  default_ttl: attr({
     editType: 'ttl',
     defaultValue: '1h',
     label: 'Generated credentials’s Time-to-Live (TTL)',
@@ -90,7 +90,7 @@ export default Model.extend({
   get showFields() {
     let fields = ['name', 'database', 'type'];
     if (this.type === 'dynamic') {
-      fields = fields.concat(['ttl', 'max_ttl', 'creation_statements', 'revocation_statements']);
+      fields = fields.concat(['default_ttl', 'max_ttl', 'creation_statements', 'revocation_statements']);
     } else {
       fields = fields.concat(['username', 'rotation_period']);
     }
@@ -100,7 +100,7 @@ export default Model.extend({
   roleSettingAttrs: computed(function() {
     // logic for which get displayed is on DatabaseRoleSettingForm
     let allRoleSettingFields = [
-      'ttl',
+      'default_ttl',
       'max_ttl',
       'username',
       'rotation_period',

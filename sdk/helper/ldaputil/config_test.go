@@ -163,6 +163,7 @@ var jsonConfigDefault = []byte(`
   "tls_max_version": "tls12",
   "use_token_groups": false,
   "use_pre111_group_cn_behavior": null,
+  "username_as_alias": false,
   "request_timeout": 90,
   "case_sensitive_names": false
 }

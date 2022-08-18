@@ -174,6 +174,7 @@ func (f *FSM) openDBFile(dbPath string) error {
 		Timeout:        1 * time.Second,
 		FreelistType:   freelistType,
 		NoFreelistSync: noFreelistSync,
+		MmapFlags:      getMmapFlags(dbPath),
 	})
 	if err != nil {
 		return err

@@ -3,6 +3,7 @@ package namespace
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -11,6 +12,10 @@ type contextValues struct{}
 type Namespace struct {
 	ID   string `json:"id"`
 	Path string `json:"path"`
+}
+
+func (n *Namespace) String() string {
+	return fmt.Sprintf("ID: %s. Path: %s", n.ID, n.Path)
 }
 
 const (
