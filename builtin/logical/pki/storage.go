@@ -156,7 +156,6 @@ type issuerEntry struct {
 	RevocationTimeUTC    time.Time                 `json:"revocation_time_utc"`
 	AIAURIs              *certutil.URLEntries      `json:"aia_uris,omitempty"`
 	Version              uint                      `json:"version"`
-	Dirty                bool                      `json:"-"`
 }
 
 type localCRLConfigEntry struct {
@@ -581,6 +580,8 @@ func (sc *storageContext) upgradeIssuerIfRequired(issuer *issuerEntry) *issuerEn
 	// *NOTE*: Don't attempt to write out the issuer here as it may cause ErrReadOnly that will direct the
 	// request all the way up to the primary cluster which would be horrible for local cluster operations such
 	// as generating a leaf cert or a revoke.
+	// Also even though we could tell if we are the primary cluster's active node, we can't tell if we have the
+	// a full rw issuer lock, so it might not be safe to write.
 	if issuer.Version == latestIssuerVersion {
 		return issuer
 	}
@@ -593,7 +594,6 @@ func (sc *storageContext) upgradeIssuerIfRequired(issuer *issuerEntry) *issuerEn
 	}
 
 	issuer.Version = latestIssuerVersion
-	issuer.Dirty = true
 	return issuer
 }
 
