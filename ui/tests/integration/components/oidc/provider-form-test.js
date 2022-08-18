@@ -41,7 +41,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
   });
 
   test('it should save new provider', async function (assert) {
-    assert.expect(12);
+    assert.expect(13);
     this.server.post('/identity/oidc/provider/test-provider', (schema, req) => {
       assert.ok(true, 'Request made to save provider');
       return JSON.parse(req.requestBody);
@@ -83,7 +83,8 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       .dom('[data-test-component="search-select"]#allowedClientIds')
       .exists('Limited radio button shows clients search select');
     await click('[data-test-component="search-select"]#allowedClientIds .ember-basic-dropdown-trigger');
-    assert.dom('li.ember-power-select-option').hasText('some-app', 'dropdown renders clients');
+    assert.dom('li.ember-power-select-option').hasTextContaining('some-app', 'dropdown renders client name');
+    assert.dom('[data-test-smaller-id]').exists('renders smaller client id in dropdown');
 
     await click('label[for=allow-all]');
     assert

@@ -36,20 +36,28 @@ export default class NamedPathAdapter extends ApplicationAdapter {
   // GET request with list=true as query param
   async query(store, type, query) {
     const url = this.urlForQuery(query, type.modelName);
-    const { filterIds } = query;
+    const { paramKey, filterFor } = query;
+    // * 'paramKey' is a string of the param name (model attr) we're filtering for, e.g. 'client_id'
+    // * 'filterFor' is an array of values to filter for (value type must match the attr type), e.g. array of ID strings
+    // example: the OidcProviderClientsRoute where we only want to list clients that are permitted to use the currently viewed provider
     const response = await this.ajax(url, 'GET', { data: { list: true } });
 
-    // filter LIST response when key_info and filterIds exist
-    if (response.data.key_info && filterIds && !filterIds.includes('*')) {
-      const data = this.filterListResponse(filterIds, response.data.keys, response.data.key_info);
+    // filter LIST response only if key_info exists and query includes both 'paramKey' & 'filterFor'
+    if (response.data.key_info && filterFor && paramKey && !filterFor.includes('*')) {
+      const data = this.filterListResponse(paramKey, filterFor, response.data.key_info);
       return { ...response, data };
     }
     return response;
   }
 
-  filterListResponse(matchKeys, keys, key_info) {
-    let filteredKeys = keys.filter((k) => matchKeys.includes(k));
-    let filteredKeyInfo = { key_info: Object.fromEntries(filteredKeys.map((key) => [key, key_info[key]])) };
+  filterListResponse(paramKey, matchValues, key_info) {
+    const keyInfoAsArray = Object.entries(key_info);
+    const filtered = keyInfoAsArray.filter((key) => {
+      const value = key[1]; // value is an object of model attributes
+      return matchValues.includes(value[paramKey]);
+    });
+    const filteredKeyInfo = Object.fromEntries(filtered);
+    const filteredKeys = Object.keys(filteredKeyInfo);
     return { keys: filteredKeys, key_info: filteredKeyInfo };
   }
 }
