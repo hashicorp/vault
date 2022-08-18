@@ -31,17 +31,6 @@ The key value with secrets storage is the ability to dynamically generate creden
 
 In addition to database credential management, Vault can manage your Active Directory accounts, SSH keys, PKI certificates and more. Visit the [Secrets Management](https://learn.hashicorp.com/collections/vault/secrets-management) tutorial series to learn more about secrets management using Vault.
 
-## Key Management
-
-Working with cloud providers requires that you use their security features, which involve encryption keys issued and stored by the provider in its own key management system (KMS). You may also have a requirement to maintain root of trust and control of the encryption key lifecycle, both within and outside of the cloud. The Vault [Key Management Secrets Engine](https://www.vaultproject.io/docs/secrets/key-management) provides a consistent workflow for distribution and lifecycle management features for cloud provider keys, thereby, allowing organizations to maintain a centralized control of their keys in Vault while leveraging the cryptographic capabilities native to the KMS providers.
-
-### Resources
-
-- Try our [Key Management Secrets Engine with Azure Key Vault](https://learn.hashicorp.com/tutorials/vault/key-management-secrets-engine-azure-key-vault?in=vault/adp) to enable management of the Key Vault key with the Key Management secrets engine.
-
-- Try our [Key Management Secrets Engine with GCP Cloud KMS](https://learn.hashicorp.com/tutorials/vault/key-management-secrets-engine-azure-key-vault?in=vault/adp) to enable management of the Key Value key with the Key Management secrets engine.
-
-
 ## Data Encryption
 
 Many organizations seek solutions to encrypt/decrypt application data within a cloud or multi-datacenter environment; deploying cryptography and maintaining a complex key management infrastructure can be expensive and challenging to develop. Vault provides [encryption as a service](/docs/secrets/transit) with centralized key management to simplify encrypting data in transit and stored across clouds and datacenters. Vault can encrypt/decrypt data stored elsewhere, essentially allowing applications to encrypt their data while storing it in the primary data store. Vault's security team manages and maintains the responsibility of the data encryption within the Vault environment, allowing developers to focus solely on encrypting/decrypting data as needed.
@@ -62,3 +51,13 @@ Organizations need a way to manage identity sprawl with the proliferation of dif
 - Try our [Identity: Entities and Groups](https://learn.hashicorp.com/tutorials/vault/identity) tutorial to learn how Vault's unified identity system works.
 
 - Follow the [Policies](https://learn.hashicorp.com/collections/vault/policies) tutorial series to learn how Vault enforces role-based access control (RBAC) across multiple cloud environments.
+
+## Key Management
+
+Working with cloud providers requires that you use their security features, which involve encryption keys issued and stored by the provider in its own key management system (KMS). You may also have a requirement to maintain root of trust and control of the encryption key lifecycle, both within and outside of the cloud. The Vault Key Management Secrets Engine provides a consistent workflow for distribution and lifecycle management of cloud provider keys, allowing organizations to maintain centralized control of their keys in Vault while leveraging the cryptographic capabilities native to the KMS providers.
+
+### Resources
+
+- Try our [Key Management Secrets Engine with Azure Key Vault](https://learn.hashicorp.com/tutorials/vault/key-management-secrets-engine-azure-key-vault?in=vault/adp) to enable management of the Key Vault key with the Key Management secrets engine.
+
+- Try our [Key Management Secrets Engine with GCP Cloud KMS](https://learn.hashicorp.com/tutorials/vault/key-management-secrets-engine-azure-key-vault?in=vault/adp) to enable management of the Key Value key with the Key Management secrets engine.
