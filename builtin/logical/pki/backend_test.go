@@ -4965,9 +4965,9 @@ func TestPerIssuerAIA(t *testing.T) {
 
 	// Set global URLs and ensure they don't appear on this issuer's leaf.
 	_, err = CBWrite(b, s, "config/urls", map[string]interface{}{
-		"issuing_certificates":    []string{"https://example.com/ca"},
-		"crl_distribution_points": []string{"https://example.com/crl"},
-		"ocsp_servers":            []string{"https://example.com/ocsp"},
+		"issuing_certificates":    []string{"https://example.com/ca", "https://backup.example.com/ca"},
+		"crl_distribution_points": []string{"https://example.com/crl", "https://backup.example.com/crl"},
+		"ocsp_servers":            []string{"https://example.com/ocsp", "https://backup.example.com/ocsp"},
 	})
 	require.NoError(t, err)
 	resp, err = CBWrite(b, s, "issuer/default/issue/testing", map[string]interface{}{
@@ -4992,9 +4992,9 @@ func TestPerIssuerAIA(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	leafCert = parseCert(t, resp.Data["certificate"].(string))
-	require.Equal(t, leafCert.IssuingCertificateURL, []string{"https://example.com/ca"})
-	require.Equal(t, leafCert.OCSPServer, []string{"https://example.com/ocsp"})
-	require.Equal(t, leafCert.CRLDistributionPoints, []string{"https://example.com/crl"})
+	require.Equal(t, leafCert.IssuingCertificateURL, []string{"https://example.com/ca", "https://backup.example.com/ca"})
+	require.Equal(t, leafCert.OCSPServer, []string{"https://example.com/ocsp", "https://backup.example.com/ocsp"})
+	require.Equal(t, leafCert.CRLDistributionPoints, []string{"https://example.com/crl", "https://backup.example.com/crl"})
 }
 
 var (
