@@ -27,10 +27,11 @@ import (
 )
 
 var (
-	pluginCatalogPath         = "core/plugin-catalog/"
-	ErrDirectoryNotConfigured = errors.New("could not set plugin, plugin directory is not configured")
-	ErrPluginNotFound         = errors.New("plugin not found in the catalog")
-	ErrPluginBadType          = errors.New("unable to determine plugin type")
+	pluginCatalogPath           = "core/plugin-catalog/"
+	ErrDirectoryNotConfigured   = errors.New("could not set plugin, plugin directory is not configured")
+	ErrPluginNotFound           = errors.New("plugin not found in the catalog")
+	ErrPluginConnectionNotFound = errors.New("plugin connection not found for client")
+	ErrPluginBadType            = errors.New("unable to determine plugin type")
 )
 
 // PluginCatalog keeps a record of plugins known to vault. External plugins need
@@ -164,7 +165,7 @@ func (c *PluginCatalog) reloadExternalPlugin(name, id string) error {
 
 	pc, ok := extPlugin.connections[id]
 	if !ok {
-		return fmt.Errorf("connection not found for client id: %s", id)
+		return fmt.Errorf("%w id: %s", ErrPluginConnectionNotFound, id)
 	}
 
 	delete(c.externalPlugins, name)
@@ -195,8 +196,8 @@ func (c *PluginCatalog) cleanupExternalPlugin(name, id string) error {
 	if !ok {
 		// this can happen if the backend is reloaded due to a plugin process
 		// being killed out of band
-		c.logger.Warn("connection not found for client", "id", id)
-		return fmt.Errorf("connection not found for client id: %s", id)
+		c.logger.Warn(ErrPluginConnectionNotFound.Error(), "id", id)
+		return fmt.Errorf("%w id: %s", ErrPluginConnectionNotFound, id)
 	}
 
 	delete(extPlugin.connections, id)
