@@ -1,14 +1,5 @@
 import { module, test } from 'qunit';
-import {
-  visit,
-  currentURL,
-  click,
-  fillIn,
-  findAll,
-  currentRouteName,
-  find,
-  waitUntil,
-} from '@ember/test-helpers';
+import { visit, currentURL, click, fillIn, findAll, currentRouteName } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
@@ -167,9 +158,7 @@ module('Acceptance | oidc-config/assignments', function (hooks) {
       'edit form navigates back to assignment details on cancel'
     );
     // navigate to details from index page
-    await click('[data-test-link="oidc"]');
-    await waitUntil(() => find('[data-test-tab="assignments"]'));
-    await click('[data-test-tab="assignments"]');
+    await visit('/vault/access/oidc/assignments');
     await click('[data-test-popup-menu-trigger]');
     await click('[data-test-oidc-assignment-menu-link="details"]');
     assert.equal(
