@@ -9,7 +9,17 @@ import logout from 'vault/tests/pages/logout';
 import { create } from 'ember-cli-page-object';
 import fm from 'vault/tests/pages/components/flash-message';
 const flashMessage = create(fm);
+import {
+  clearRecord,
+  overrideMirageResponse,
+  SCOPE_LIST_RESPONSE,
+  SCOPE_DATA_RESPONSE,
+  PROVIDER_LIST_RESPONSE,
+  PROVIDER_DATA_RESPONSE,
+} from 'vault/tests/helpers/oidc-config';
 const SCOPES_URL = OIDC_BASE_URL.concat('/scopes');
+
+// OIDC_BASE_URL = '/vault/access/oidc'
 
 module('Acceptance | oidc-config/scopes', function (hooks) {
   setupApplicationTest(hooks);
@@ -34,9 +44,10 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
 
   test('it renders empty state when no scopes are configured', async function (assert) {
     assert.expect(2);
+    this.server.get('/identity/oidc/scope', () => overrideMirageResponse(404));
+
     await visit(SCOPES_URL);
     assert.equal(currentURL(), '/vault/access/oidc/scopes');
-
     // check empty state
     assert
       .dom(SELECTORS.scopeEmptyState)
@@ -48,6 +59,8 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
 
   test('it creates a scope from empty state create scope button', async function (assert) {
     assert.expect(3);
+
+    this.server.get('/identity/oidc/scope', () => overrideMirageResponse(404));
     await visit(SCOPES_URL);
     // create a new scope
     await click(SELECTORS.scopeCreateButtonEmptyState);
@@ -72,9 +85,12 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
 
   test('it creates, updates and deletes a scope', async function (assert) {
     assert.expect(11);
-    await visit(SCOPES_URL);
+
+    //* clear out test state
+    await clearRecord(this.store, 'oidc/scope', 'test-scope');
+
     // create a new scope
-    await click(SELECTORS.scopeCreateButton);
+    await visit(SCOPES_URL + '/create');
     assert.equal(currentRouteName(), 'vault.cluster.access.oidc.scopes.create', 'navigates to create form');
     await fillIn('[data-test-input="name"]', 'test-scope');
     await fillIn('[data-test-input="description"]', 'this is a test');
@@ -133,33 +149,17 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
       'vault.cluster.access.oidc.scopes.index',
       'navigates back to list view after delete'
     );
+
+    //* clear out test state
+    await clearRecord(this.store, 'oidc/scope', 'test-scope');
   });
 
   test('it renders scope list when scopes exist', async function (assert) {
+    this.server.get('/identity/oidc/scope', () => overrideMirageResponse(null, SCOPE_LIST_RESPONSE));
+    this.server.get('/identity/oidc/scope/test-scope', () =>
+      overrideMirageResponse(null, SCOPE_DATA_RESPONSE)
+    );
     assert.expect(12);
-    this.server.get('/identity/oidc/scope', () => {
-      return {
-        request_id: '8b89adf5-d086-5fe5-5876-59b0aaf5c0c3',
-        lease_id: '',
-        renewable: false,
-        lease_duration: 0,
-        data: {
-          keys: ['test-scope'],
-        },
-        wrap_info: null,
-        warnings: null,
-        auth: null,
-      };
-    });
-    this.server.get('/identity/oidc/scope/test-scope', () => {
-      return {
-        request_id: 'test-id',
-        data: {
-          description: 'this is a test',
-          template: '{ test }',
-        },
-      };
-    });
     await visit(SCOPES_URL);
     assert.equal(
       currentRouteName(),
@@ -216,51 +216,13 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
 
   test('it throws error when trying to delete when scope is currently being associated with any provider', async function (assert) {
     assert.expect(5);
-    this.server.get('/identity/oidc/scope', () => {
-      return {
-        request_id: '8b89adf5-d086-5fe5-5876-59b0aaf5c0c2',
-        lease_id: '',
-        renewable: false,
-        lease_duration: 0,
-        data: {
-          keys: ['test-scope'],
-        },
-        wrap_info: null,
-        warnings: null,
-        auth: null,
-      };
-    });
-    this.server.get('/identity/oidc/scope/test-scope', () => {
-      return {
-        request_id: 'test-scope-id',
-        data: {
-          description: 'this is a test',
-          template: '{ test }',
-        },
-      };
-    });
-    this.server.get('/identity/oidc/provider', () => {
-      return {
-        request_id: 'cb878e41-3708-0a97-84b4-c4b803f4376f',
-        lease_id: '',
-        renewable: false,
-        lease_duration: 0,
-        data: {
-          keys: ['test-provider'],
-        },
-        wrap_info: null,
-        warnings: null,
-        auth: null,
-      };
-    });
+    this.server.get('/identity/oidc/scope', () => overrideMirageResponse(null, SCOPE_LIST_RESPONSE));
+    this.server.get('/identity/oidc/scope/test-scope', () =>
+      overrideMirageResponse(null, SCOPE_DATA_RESPONSE)
+    );
+    this.server.get('/identity/oidc/provider', () => overrideMirageResponse(null, PROVIDER_LIST_RESPONSE));
     this.server.get('/identity/oidc/provider/test-provider', () => {
-      return {
-        request_id: 'test-provider-id',
-        data: {
-          allowed_client_ids: ['*'],
-          scopes_supported: ['test-scope'],
-        },
-      };
+      overrideMirageResponse(null, PROVIDER_DATA_RESPONSE);
     });
     // throw error when trying to delete test-scope since it is associated to test-provider
     this.server.delete(

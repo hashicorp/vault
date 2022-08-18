@@ -3,6 +3,7 @@ package keysutil
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -618,6 +619,67 @@ func Test_BadArchive(t *testing.T) {
 	// Here's the expected change
 	if len(p.Keys) != 6 {
 		t.Fatalf("unexpected key length %d", len(p.Keys))
+	}
+}
+
+func Test_RSAVerificationErrors(t *testing.T) {
+	ctx := context.Background()
+	lm, _ := NewLockManager(true, 0)
+	storage := &logical.InmemStorage{}
+	p, _, err := lm.GetPolicy(ctx, PolicyRequest{
+		Upsert:  true,
+		Storage: storage,
+		KeyType: KeyType_RSA2048,
+		Name:    "test",
+	}, rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p == nil {
+		t.Fatal("nil policy")
+	}
+
+	signContext := []byte("context")
+
+	hf := crypto.SHA1.New()
+	hf.Write([]byte("input"))
+	input := hf.Sum(nil)
+
+	sig, err := p.Sign(0, signContext, input, HashTypeSHA1, "", MarshalingTypeASN1)
+	if err != nil {
+		t.Fatalf("failed signing: %#v", err)
+	}
+
+	// Normal signature success
+	matches, err := p.VerifySignature(signContext, input, HashTypeSHA1, "", MarshalingTypeASN1, sig.Signature)
+	if err != nil {
+		t.Fatalf("failed signature verification: %#v", err)
+	}
+	if !matches {
+		t.Fatalf("signature verification failed ")
+	}
+
+	hf.Reset()
+	hf.Write([]byte("bad-input"))
+	badInput := hf.Sum(nil)
+
+	// Normal signature failure
+	matches2, err := p.VerifySignature(signContext, badInput, HashTypeSHA1, "", MarshalingTypeASN1, sig.Signature)
+	if err != nil {
+		t.Fatalf("failed signature verification: %#v", err)
+	}
+	if matches2 {
+		t.Fatalf("signature verification passed when it should have failed")
+	}
+
+	// bad usage (not hashing input will trigger an error that is not rsa.ErrVerification so we
+	// should get an error back.
+	matches3, err := p.VerifySignature(signContext, []byte("bad-input"), HashTypeSHA1, "pkcs1v15", MarshalingTypeASN1, sig.Signature)
+	if err == nil {
+		t.Fatal("expected error signature without hashing input with pkcs1v15 but got none")
+	}
+	if matches3 {
+		t.Fatalf("signature verification passed when it should have failed with an error returned")
 	}
 }
 

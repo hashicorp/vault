@@ -16,7 +16,7 @@ import {
   overrideMirageResponse,
   CLIENT_LIST_RESPONSE,
   CLIENT_DATA_RESPONSE,
-} from '../../helpers/oidc-config';
+} from 'vault/tests/helpers/oidc-config';
 const searchSelect = create(ss);
 const flashMessage = create(fm);
 // in congruency with backend verbiage 'applications' are referred to as 'clients
@@ -47,9 +47,7 @@ module('Acceptance | oidc-config/clients', function (hooks) {
 
   test('it renders empty state when no clients are configured', async function (assert) {
     assert.expect(5);
-
-    //* clear out test state
-    await clearRecord(this.store, 'oidc/client', 'some-app');
+    this.server.get('/identity/oidc/client', () => overrideMirageResponse(404));
 
     await visit(OIDC_BASE_URL);
     assert.equal(currentURL(), '/vault/access/oidc');
@@ -71,9 +69,8 @@ module('Acceptance | oidc-config/clients', function (hooks) {
     //* clear out test state
     await clearRecord(this.store, 'oidc/client', 'some-app');
 
-    await visit(OIDC_BASE_URL);
+    await visit(OIDC_BASE_URL + '/clients/create');
     // create a new application
-    await click(SELECTORS.oidcClientCreateButton);
     assert.equal(currentRouteName(), 'vault.cluster.access.oidc.clients.create', 'navigates to create form');
     await fillIn('[data-test-input="name"]', 'some-app');
     await click('[data-test-toggle-group="More options"]');
@@ -191,7 +188,7 @@ module('Acceptance | oidc-config/clients', function (hooks) {
     );
     assert
       .dom('[data-test-oidc-client-linked-block]')
-      .hasText('some-app', 'displays linked block for client');
+      .hasText('some-app Client ID: whaT7KB0C3iBH1l3rXhd5HPf0n6vXU0s', 'displays linked block for client');
 
     // navigates to/from create, edit, detail views from list view
     await click('[data-test-oidc-client-create]');
