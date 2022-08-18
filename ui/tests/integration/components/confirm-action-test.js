@@ -37,9 +37,9 @@ module('Integration | Component | confirm-action', function (hooks) {
       `);
     await click('[data-test-confirm-action-trigger="true"]');
     await click('[data-test-confirm-cancel-button="true"]');
-    // assert that after canceling the icon button is pointing down.
+    // assert that after CANCEL the icon button is pointing down.
     assert.dom('[data-test-icon="chevron-down"]').exists('Icon is pointing down after clicking cancel');
-    // open the modal again to test the Cancel action
+    // open the modal again to test the DELETE action
     await click('[data-test-confirm-action-trigger="true"]');
     await click('[data-test-confirm-button="true"]');
     assert
