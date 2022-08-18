@@ -4,11 +4,12 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
 import authPage from 'vault/tests/pages/auth';
-import { OIDC_BASE_URL, SELECTORS } from 'vault/tests/helpers/oidc-config';
 import logout from 'vault/tests/pages/logout';
 import { create } from 'ember-cli-page-object';
 import fm from 'vault/tests/pages/components/flash-message';
 import {
+  OIDC_BASE_URL,
+  SELECTORS,
   clearRecord,
   overrideCapabilities,
   overrideMirageResponse,
@@ -63,7 +64,7 @@ module('Acceptance | oidc-config/assignments', function (hooks) {
     assert.equal(
       currentRouteName(),
       'vault.cluster.access.oidc.assignments.create',
-      'navigates to create form in empty state'
+      'navigates to create form'
     );
     await fillIn('[data-test-input="name"]', 'test-assignment');
     await click('[data-test-component="search-select"]#entities .ember-basic-dropdown-trigger');
@@ -118,7 +119,7 @@ module('Acceptance | oidc-config/assignments', function (hooks) {
     );
   });
 
-  test('it renders assignment list when assignments exist', async function (assert) {
+  test('it navigates to and from an assignment from the list view', async function (assert) {
     assert.expect(6);
     this.server.get('/identity/oidc/assignment', () =>
       overrideMirageResponse(null, ASSIGNMENT_LIST_RESPONSE)

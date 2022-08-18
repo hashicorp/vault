@@ -122,7 +122,7 @@ export const CLIENT_DATA_RESPONSE = {
 };
 
 export const ASSIGNMENT_LIST_RESPONSE = {
-  keys: ['test-assignment'],
+  keys: ['allow-all', 'test-assignment'],
 };
 
 export const ASSIGNMENT_DATA_RESPONSE = {
