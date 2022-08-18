@@ -120,3 +120,31 @@ export const CLIENT_DATA_RESPONSE = {
   key: 'default',
   redirect_uris: [],
 };
+
+export const ASSIGNMENT_LIST_RESPONSE = {
+  keys: ['test-assignment'],
+};
+
+export const ASSIGNMENT_DATA_RESPONSE = {
+  group_ids: ['262ca5b9-7b69-0a84-446a-303dc7d778af'],
+  entity_ids: ['b6094ac6-baf4-6520-b05a-2bd9f07c66da'],
+};
+
+export const SCOPE_LIST_RESPONSE = {
+  keys: ['test-scope'],
+};
+
+export const SCOPE_DATA_RESPONSE = {
+  description: 'this is a test',
+  template: '{ test }',
+};
+
+export const PROVIDER_LIST_RESPONSE = {
+  keys: ['test-provider'],
+};
+
+export const PROVIDER_DATA_RESPONSE = {
+  allowed_client_ids: ['*'],
+  issuer: '',
+  scopes_supported: ['test-scope'],
+};
