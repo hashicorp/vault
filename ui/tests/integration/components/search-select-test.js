@@ -46,18 +46,11 @@ const storeService = Service.extend({
             { id: 'barfoo1', name: 'different' },
           ]);
           break;
-        case 'oidc/client':
-          resolve([
-            { id: 'client-a', name: 'client-a', client_id: 'a123', client_secret: 'asecret123' },
-            { id: 'client-b', name: 'client-b', client_id: 'b456', client_secret: 'bsecret123' },
-            { id: 'client-c', name: 'client-c', client_id: 'c789', client_secret: 'csecret123' },
-          ]);
-          break;
         case 'some/model':
           resolve([
-            { id: 'client-a', name: 'client-a', uuid: 'a123' },
-            { id: 'client-b', name: 'client-b', uuid: 'b456' },
-            { id: 'client-c', name: 'client-c', uuid: 'c789' },
+            { id: 'client-a-id', name: 'client-a', uuid: 'a123' },
+            { id: 'client-b-id', name: 'client-b', uuid: 'b456' },
+            { id: 'client-c-id', name: 'client-c', uuid: 'c789' },
           ]);
           break;
         default:
@@ -345,7 +338,7 @@ module('Integration | Component | search select', function (hooks) {
     );
   });
 
-  test('it returns object with custom keys if passObject=true and passed objectKeys', async function (assert) {
+  test('it returns custom object if passObject=true and multiple objectKeys', async function (assert) {
     const models = ['some/model'];
     const spy = sinon.spy();
     this.set('models', models);
@@ -369,9 +362,12 @@ module('Integration | Component | search select', function (hooks) {
     // First select existing option
     await component.selectOption();
     assert.equal(component.selectedOptions.length, 1, 'there is 1 selected option');
+    assert
+      .dom('[data-test-selected-option]')
+      .hasText('client-a-id', 'does not render name if first objectKey is id');
     assert.ok(this.onChange.calledOnce);
     assert.ok(
-      this.onChange.calledWith([{ id: 'client-a', isNew: false, uuid: 'a123' }]),
+      this.onChange.calledWith([{ id: 'client-a-id', isNew: false, uuid: 'a123' }]),
       'onClick is called with array of single object with two keys: id, uuid'
     );
     // Then create a new item and select it
@@ -384,7 +380,7 @@ module('Integration | Component | search select', function (hooks) {
       spy.args[1][0],
       [
         {
-          id: 'client-a',
+          id: 'client-a-id',
           isNew: false,
           uuid: 'a123',
         },
@@ -397,12 +393,13 @@ module('Integration | Component | search select', function (hooks) {
     );
   });
 
-  test('it correctly renders when passed objectKeys', async function (assert) {
-    const models = ['oidc/client'];
+  test('it returns custom object if passObject=true and renders name', async function (assert) {
+    const models = ['some/model'];
     const spy = sinon.spy();
+    const objectKeys = ['uuid', 'name'];
     this.set('models', models);
     this.set('onChange', spy);
-    this.set('objectKeys', ['client_secret']);
+    this.set('objectKeys', objectKeys);
     await render(hbs`
     <div class="box">
       <SearchSelect
@@ -421,11 +418,19 @@ module('Integration | Component | search select', function (hooks) {
     // First select existing option
     await component.selectOption();
     assert.equal(component.selectedOptions.length, 1, 'there is 1 selected option');
-    assert
-      .dom('[data-test-selected-option]')
-      .hasText('client-a asecret123', 'renders both name and dynamic id in dropdown');
-    assert
-      .dom('[data-test-smaller-id]')
-      .hasText('asecret123', 'renders passed in objectKey as the smaller id');
+    assert.dom('[data-test-selected-option]').hasText('client-a a123', 'renders both name and uuid');
+    assert.dom('[data-test-smaller-id]').hasText('a123', 'renders passed in objectKey as the smaller id');
+    assert.propEqual(
+      spy.args[0][0],
+      [
+        {
+          id: 'client-a-id',
+          isNew: false,
+          name: 'client-a',
+          uuid: 'a123',
+        },
+      ],
+      `onClick is called with array of single object: isNew=false, and has keys: ${objectKeys.join(', ')}`
+    );
   });
 });

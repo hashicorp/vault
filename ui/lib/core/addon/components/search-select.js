@@ -183,7 +183,7 @@ export default Component.extend({
       let additionalKeys;
       if (this.objectKeys) {
         // if the LIST endpoint has key_info and the model has been hydrated in serializer (ex: serializer/oidc/clients)
-        // 'option' is a model record, so pull any attrs we want sent to the parent by adding them to the selected option (object)
+        // 'option' is a model record, so pull any attrs, add to the selected option (object) and send to the parent
         additionalKeys = Object.fromEntries(this.objectKeys.map((key) => [key, option[key]]));
         if (Object.values(additionalKeys).includes(undefined)) additionalKeys = false;
       }
