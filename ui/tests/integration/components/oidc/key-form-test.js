@@ -24,7 +24,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
   });
 
   test('it should save new key', async function (assert) {
-    assert.expect(11);
+    assert.expect(12);
     this.server.post('/identity/oidc/key/test-key', (schema, req) => {
       assert.ok(true, 'Request made to save key');
       return JSON.parse(req.requestBody);
