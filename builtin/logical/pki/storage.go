@@ -485,7 +485,7 @@ func (i issuerEntry) GetAIAURLs(sc *storageContext) (urls *certutil.URLEntries, 
 	// If none are set (either due to a nil entry or because no URLs have
 	// been provided), fall back to the global AIA URL config.
 	if urls == nil || (len(urls.IssuingCertificates) == 0 && len(urls.CRLDistributionPoints) == 0 && len(urls.OCSPServers) == 0) {
-		urls, err = getURLs(sc.Context, sc.Storage)
+		urls, err = getGlobalAIAURLs(sc.Context, sc.Storage)
 	}
 
 	return urls, err

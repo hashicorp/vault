@@ -114,7 +114,7 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		Data: map[string]interface{}{},
 	}
 
-	entries, err := getURLs(ctx, req.Storage)
+	entries, err := getGlobalAIAURLs(ctx, req.Storage)
 	if err == nil && len(entries.OCSPServers) == 0 && len(entries.IssuingCertificates) == 0 && len(entries.CRLDistributionPoints) == 0 {
 		// If the operator hasn't configured any of the URLs prior to
 		// generating this issuer, we should add a warning to the response,

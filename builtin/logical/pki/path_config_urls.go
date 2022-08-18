@@ -57,7 +57,7 @@ func validateURLs(urls []string) string {
 	return ""
 }
 
-func getURLs(ctx context.Context, storage logical.Storage) (*certutil.URLEntries, error) {
+func getGlobalAIAURLs(ctx context.Context, storage logical.Storage) (*certutil.URLEntries, error) {
 	entry, err := storage.Get(ctx, "urls")
 	if err != nil {
 		return nil, err
@@ -98,7 +98,7 @@ func writeURLs(ctx context.Context, storage logical.Storage, entries *certutil.U
 }
 
 func (b *backend) pathReadURL(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	entries, err := getURLs(ctx, req.Storage)
+	entries, err := getGlobalAIAURLs(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func (b *backend) pathReadURL(ctx context.Context, req *logical.Request, _ *fram
 }
 
 func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	entries, err := getURLs(ctx, req.Storage)
+	entries, err := getGlobalAIAURLs(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
