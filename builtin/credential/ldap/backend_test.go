@@ -501,12 +501,11 @@ func TestBackend_basic_authbind(t *testing.T) {
 }
 
 func TestBackend_basic_authbind_userfilter(t *testing.T) {
-
 	b := factory(t)
 	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
-	//Add a liberal user filter, allowing to log in with either cn or email
+	// Add a liberal user filter, allowing to log in with either cn or email
 	cfg.UserFilter = "(|({{.UserAttr}}={{.Username}})(mail={{.Username}}))"
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -524,7 +523,7 @@ func TestBackend_basic_authbind_userfilter(t *testing.T) {
 		},
 	})
 
-	//A filter giving the same DN makes the entity_id the same
+	// A filter giving the same DN makes the entity_id the same
 	entity_id := ""
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -542,7 +541,7 @@ func TestBackend_basic_authbind_userfilter(t *testing.T) {
 		},
 	})
 
-	//Missing entity alias attribute means access denied
+	// Missing entity alias attribute means access denied
 	cfg.UserAttr = "inexistent"
 	cfg.UserFilter = "(|({{.UserAttr}}={{.Username}})(mail={{.Username}}))"
 
@@ -556,7 +555,7 @@ func TestBackend_basic_authbind_userfilter(t *testing.T) {
 	})
 	cfg.UserAttr = "cn"
 
-	//UPNDomain has precedence over userfilter, for backward compatibility
+	// UPNDomain has precedence over userfilter, for backward compatibility
 	cfg.UPNDomain = "planetexpress.com"
 
 	addUPNAttributeToLDAPSchemaAndUser(t, cfg, "cn=Hubert J. Farnsworth,ou=people,dc=planetexpress,dc=com", "professor@planetexpress.com")
@@ -571,7 +570,7 @@ func TestBackend_basic_authbind_userfilter(t *testing.T) {
 
 	cfg.UPNDomain = ""
 
-	//Add a strict user filter, rejecting login of bureaucrats
+	// Add a strict user filter, rejecting login of bureaucrats
 	cfg.UserFilter = "(&({{.UserAttr}}={{.Username}})(!(employeeType=Bureaucrat)))"
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -583,22 +582,44 @@ func TestBackend_basic_authbind_userfilter(t *testing.T) {
 		},
 	})
 
-	//Login fails when multiple user match search filter (using an incorrect filter on purporse)
+	// Login fails when multiple user match search filter (using an incorrect filter on purporse)
 	cfg.UserFilter = "(objectClass=*)"
 	logicaltest.Test(t, logicaltest.TestCase{
 		CredentialBackend: b,
 		Steps: []logicaltest.TestStep{
-			//testAccStepConfigUrl(t, cfg),
+			// testAccStepConfigUrl(t, cfg),
 			testAccStepConfigUrlWithAuthBind(t, cfg),
 			// Authenticate with cn attribute
 			testAccStepLoginFailure(t, "hermes conrad", "hermes"),
 		},
 	})
 
+	// If UserAttr returns multiple attributes that can be used as alias then
+	// we return an error...
+	cfg.UserAttr = "employeeType"
+	cfg.UserFilter = "(cn={{.Username}})"
+	cfg.UsernameAsAlias = false
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrl(t, cfg),
+			testAccStepLoginFailure(t, "hermes conrad", "hermes"),
+		},
+	})
+
+	// ...unless username_as_alias has been set in which case we don't care
+	// about the alias returned by the LDAP server and always use the username
+	cfg.UsernameAsAlias = true
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrl(t, cfg),
+			testAccStepLoginNoAttachedPolicies(t, "hermes conrad", "hermes"),
+		},
+	})
 }
 
 func TestBackend_basic_authbind_metadata_name(t *testing.T) {
-
 	b := factory(t)
 	cleanup, cfg := ldap.PrepareTestContainer(t, "latest")
 	defer cleanup()
@@ -661,7 +682,6 @@ func addUPNAttributeToLDAPSchemaAndUser(t *testing.T, cfg *ldaputil.ConfigEntry,
 	if err := conn.Modify(modifyUserReq); err != nil {
 		t.Fatal(err)
 	}
-
 }
 
 func TestBackend_basic_discover(t *testing.T) {
@@ -784,6 +804,7 @@ func testAccStepConfigUrl(t *testing.T, cfg *ldaputil.ConfigEntry) logicaltest.T
 			"case_sensitive_names": true,
 			"token_policies":       "abc,xyz",
 			"request_timeout":      cfg.RequestTimeout,
+			"username_as_alias":    cfg.UsernameAsAlias,
 		},
 	}
 }
@@ -1154,6 +1175,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			CaseSensitiveNames:       falseBool,
 			UsePre111GroupCNBehavior: new(bool),
 			RequestTimeout:           cfg.RequestTimeout,
+			UsernameAsAlias:          false,
 		},
 	}
 

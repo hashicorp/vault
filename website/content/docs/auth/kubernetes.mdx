@@ -74,45 +74,45 @@ management tool.
 
 1. Enable the Kubernetes auth method:
 
-  ```bash
-  vault auth enable kubernetes
-  ```
+```bash
+vault auth enable kubernetes
+```
 
 1. Use the `/config` endpoint to configure Vault to talk to Kubernetes. Use
-  `kubectl cluster-info` to validate the Kubernetes host address and TCP port.
-  For the list of available configuration options, please see the
-  [API documentation](/api/auth/kubernetes).
+   `kubectl cluster-info` to validate the Kubernetes host address and TCP port.
+   For the list of available configuration options, please see the
+   [API documentation](/api-docs/auth/kubernetes).
 
-  ```bash
-  vault write auth/kubernetes/config \
-      token_reviewer_jwt="<your reviewer service account JWT>" \
-      kubernetes_host=https://192.168.99.100:<your TCP port or blank for 443> \
-      kubernetes_ca_cert=@ca.crt
-  ```
+```bash
+vault write auth/kubernetes/config \
+    token_reviewer_jwt="<your reviewer service account JWT>" \
+    kubernetes_host=https://192.168.99.100:<your TCP port or blank for 443> \
+    kubernetes_ca_cert=@ca.crt
+```
 
-  !> **Note:** The pattern Vault uses to authenticate Pods depends on sharing
-  the JWT token over the network. Given the [security model of
-  Vault](/docs/internals/security), this is allowable because Vault is
-  part of the trusted compute base. In general, Kubernetes applications should
-  **not** share this JWT with other applications, as it allows API calls to be
-  made on behalf of the Pod and can result in unintended access being granted
-  to 3rd parties.
+!> **Note:** The pattern Vault uses to authenticate Pods depends on sharing
+the JWT token over the network. Given the [security model of
+Vault](/docs/internals/security), this is allowable because Vault is
+part of the trusted compute base. In general, Kubernetes applications should
+**not** share this JWT with other applications, as it allows API calls to be
+made on behalf of the Pod and can result in unintended access being granted
+to 3rd parties.
 
 1. Create a named role:
 
-  ```text
-  vault write auth/kubernetes/role/demo \
-      bound_service_account_names=vault-auth \
-      bound_service_account_namespaces=default \
-      policies=default \
-      ttl=1h
-  ```
+```text
+vault write auth/kubernetes/role/demo \
+    bound_service_account_names=vault-auth \
+    bound_service_account_namespaces=default \
+    policies=default \
+    ttl=1h
+```
 
-  This role authorizes the "vault-auth" service account in the default
-  namespace and it gives it the default policy.
+This role authorizes the "vault-auth" service account in the default
+namespace and it gives it the default policy.
 
-  For the complete list of configuration options, please see the [API
-  documentation](/api/auth/kubernetes).
+For the complete list of configuration options, please see the [API
+documentation](/api-docs/auth/kubernetes).
 
 ## Kubernetes 1.21
 
@@ -121,8 +121,8 @@ Starting in version [1.21][k8s-1.21-changelog], the Kubernetes
 JWT token mounted into containers by default in two ways that are important for
 Kubernetes auth:
 
-* It has an expiry time and is bound to the lifetime of the pod and service account.
-* The value of the JWT's `"iss"` claim depends on the cluster's configuration.
+- It has an expiry time and is bound to the lifetime of the pod and service account.
+- The value of the JWT's `"iss"` claim depends on the cluster's configuration.
 
 The changes to token lifetime are important when configuring the
 [`token_reviewer_jwt`](/api-docs/auth/kubernetes#token_reviewer_jwt) option.
@@ -152,12 +152,12 @@ There are a few different ways to configure auth for Kubernetes pods when
 default mounted pod tokens are short-lived, each with their own tradeoffs. This
 table summarizes the options, each of which is explained in more detail below.
 
-| Option                               | All tokens are short-lived | Can revoke tokens early | Other considerations |
-| ------------------------------------ | -------------------------- | ----------------------- | -------------------- |
+| Option                               | All tokens are short-lived | Can revoke tokens early | Other considerations                                             |
+| ------------------------------------ | -------------------------- | ----------------------- | ---------------------------------------------------------------- |
 | Use local token as reviewer JWT      | Yes                        | Yes                     | Requires Vault (1.9.3+) to be deployed on the Kubernetes cluster |
-| Use client JWT as reviewer JWT       | Yes                        | Yes                     | Operational overhead |
-| Use long-lived token as reviewer JWT | No                         | Yes                     |                      |
-| Use JWT auth instead                 | Yes                        | No                      |                      |
+| Use client JWT as reviewer JWT       | Yes                        | Yes                     | Operational overhead                                             |
+| Use long-lived token as reviewer JWT | No                         | Yes                     |                                                                  |
+| Use JWT auth instead                 | Yes                        | No                      |                                                                  |
 
 -> **Note:** By default, Kubernetes currently extends the lifetime of admission
 injected service account tokens to a year to help smooth the transition to
@@ -326,7 +326,7 @@ subjects:
 ## API
 
 The Kubernetes Auth Plugin has a full HTTP API. Please see the
-[API docs](/api/auth/kubernetes) for more details.
+[API docs](/api-docs/auth/kubernetes) for more details.
 
 [k8s-tokenreview]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#tokenreview-v1-authentication-k8s-io
 
@@ -406,6 +406,7 @@ func getSecretWithKubernetesAuth() (string, error) {
 	return value, nil
 }
 ```
+
 </CodeBlockConfig>
 
 <CodeBlockConfig lineNumbers>
@@ -420,7 +421,7 @@ using VaultSharp.V1.Commons;
 
 namespace Examples
 {
-    public class KubernetesAuthExample 
+    public class KubernetesAuthExample
     {
         const string DefaultTokenPath = "path/to/service-account-token";
 
@@ -442,24 +443,25 @@ namespace Examples
 
             // Get the path to service account token or fall back on default path
             string pathToToken = String.IsNullOrEmpty(Environment.GetEnvironmentVariable("SA_TOKEN_PATH")) ? DefaultTokenPath : Environment.GetEnvironmentVariable("SA_TOKEN_PATH");
-            string jwt = File.ReadAllText(pathToToken); 
+            string jwt = File.ReadAllText(pathToToken);
 
             IAuthMethodInfo authMethod = new KubernetesAuthMethodInfo(roleName, jwt);
             var vaultClientSettings = new VaultClientSettings(vaultAddr, authMethod);
 
-            IVaultClient vaultClient = new VaultClient(vaultClientSettings); 
+            IVaultClient vaultClient = new VaultClient(vaultClientSettings);
 
             // We can retrieve the secret after creating our VaultClient object
             Secret<SecretData> kv2Secret = null;
             kv2Secret = vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path: "/creds").Result;
-            
+
             var password = kv2Secret.Data.Data["password"];
-            
+
             return password.ToString();
         }
     }
 }
 ```
+
 </CodeBlockConfig>
 
 </CodeTabs>

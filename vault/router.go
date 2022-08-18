@@ -9,9 +9,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
-	radix "github.com/armon/go-radix"
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/armon/go-metrics"
+	"github.com/armon/go-radix"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -47,6 +47,8 @@ func NewRouter() *Router {
 		storagePrefix:      radix.New(),
 		mountUUIDCache:     radix.New(),
 		mountAccessorCache: radix.New(),
+		// this will get replaced in production with a real logger but it's useful to have a default in place for tests
+		logger: hclog.NewNullLogger(),
 	}
 	return r
 }
@@ -530,7 +532,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	}
 	r.l.RUnlock()
 	if !ok {
-		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
+		return logical.ErrorResponse(fmt.Sprintf("no handler for route %q. route entry not found.", req.Path)), false, false, logical.ErrUnsupportedPath
 	}
 	req.Path = adjustedPath
 	defer metrics.MeasureSince([]string{
@@ -551,7 +553,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 
 	// Filtered mounts will have a nil backend
 	if re.backend == nil {
-		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
+		return logical.ErrorResponse(fmt.Sprintf("no handler for route %q. route entry found, but backend is nil.", req.Path)), false, false, logical.ErrUnsupportedPath
 	}
 
 	// If the path is tainted, we reject any operation except for
@@ -560,7 +562,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		switch req.Operation {
 		case logical.RevokeOperation, logical.RollbackOperation:
 		default:
-			return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
+			return logical.ErrorResponse(fmt.Sprintf("no handler for route %q. route entry is tainted.", req.Path)), false, false, logical.ErrUnsupportedPath
 		}
 	}
 

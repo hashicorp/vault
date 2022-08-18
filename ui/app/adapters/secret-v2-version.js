@@ -26,7 +26,7 @@ export default ApplicationAdapter.extend({
   },
 
   findRecord() {
-    return this._super(...arguments).catch(errorOrModel => {
+    return this._super(...arguments).catch((errorOrModel) => {
       // if the response is a real 404 or if the secret is gated by a control group this will be an error,
       // otherwise the response will be the body of a deleted / destroyed version
       if (errorOrModel instanceof AdapterError) {
@@ -44,7 +44,7 @@ export default ApplicationAdapter.extend({
   },
 
   queryRecord(id, options) {
-    return this.ajax(this.urlForQueryRecord(id), 'GET', options).then(resp => {
+    return this.ajax(this.urlForQueryRecord(id), 'GET', options).then((resp) => {
       if (options.wrapTTL) {
         return resp;
       }
@@ -63,7 +63,7 @@ export default ApplicationAdapter.extend({
   createRecord(store, modelName, snapshot) {
     let backend = snapshot.belongsTo('secret').belongsTo('engine').id;
     let path = snapshot.attr('path');
-    return this._super(...arguments).then(resp => {
+    return this._super(...arguments).then((resp) => {
       resp.id = JSON.stringify([backend, path, resp.version]);
       return resp;
     });
@@ -139,6 +139,7 @@ export default ApplicationAdapter.extend({
     } else if (deleteType === 'soft-delete') {
       return this.softDelete(backend, path, version);
     } else {
+      version = version || currentVersionForNoReadMetadata;
       return this.deleteByDeleteType(backend, path, deleteType, version);
     }
   },

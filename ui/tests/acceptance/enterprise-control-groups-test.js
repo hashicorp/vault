@@ -1,4 +1,4 @@
-import { settled, currentURL, currentRouteName, visit } from '@ember/test-helpers';
+import { settled, currentURL, currentRouteName, visit, waitUntil } from '@ember/test-helpers';
 import { module, test, skip } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -130,9 +130,8 @@ module('Acceptance | Enterprise | control groups', function(hooks) {
     await settled();
     await visit('/vault/secrets/kv-v2-mount/show/foo');
     await settled();
-    assert.equal(
-      currentRouteName(),
-      'vault.cluster.access.control-group-accessor',
+    assert.ok(
+      await waitUntil(() => currentRouteName() === 'vault.cluster.access.control-group-accessor'),
       'redirects to access control group route'
     );
   });
