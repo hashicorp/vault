@@ -1,6 +1,10 @@
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink @type="add" @params={{array "vault.cluster.access.oidc.assignments.create"}}>
+    <ToolbarLink
+      @type="add"
+      @params={{array "vault.cluster.access.oidc.assignments.create"}}
+      data-test-oidc-assignment-create
+    >
       Create assignment
     </ToolbarLink>
   </ToolbarActions>
@@ -11,6 +15,7 @@
     class="list-item-row {{if (eq model.name 'allow_all') 'is-disabled'}}"
     @params={{array "vault.cluster.access.oidc.assignments.assignment.details" model.name}}
     @disabled={{eq model.name "allow_all"}}
+    data-test-oidc-assignment-linked-block
   >
     <div class="level is-mobile">
       <div class="level-left">
@@ -40,6 +45,7 @@
                       @route="vault.cluster.access.oidc.assignments.assignment.details"
                       @model={{model.name}}
                       @disabled={{not model.canRead}}
+                      data-test-oidc-assignment-menu-link="details"
                     >
                       Details
                     </LinkTo>
@@ -49,6 +55,7 @@
                       @route="vault.cluster.access.oidc.assignments.assignment.edit"
                       @model={{model.name}}
                       @disabled={{not model.canEdit}}
+                      data-test-oidc-assignment-menu-link="edit"
                     >
                       Edit
                     </LinkTo>

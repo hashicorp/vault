@@ -48,7 +48,7 @@ module('Integration | Component | oidc/assignment-form', function (hooks) {
       .hasText('Name is required.', 'Validation message is shown for name');
     assert.equal(findAll('[data-test-inline-error-message]').length, 2, `there are two validations errors.`);
     await fillIn('[data-test-input="name"]', 'test');
-    await click('[data-test-component="search-select"] .ember-basic-dropdown-trigger');
+    await click('[data-test-component="search-select"]#entities .ember-basic-dropdown-trigger');
     await click('.ember-power-select-option');
     await click('[data-test-oidc-assignment-save]');
   });

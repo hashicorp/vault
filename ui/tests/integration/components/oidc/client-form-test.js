@@ -199,7 +199,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     await fillIn('.ember-power-select-search input', 'test-new');
     await searchSelect.options.objectAt(0).click();
     assert.dom('[data-test-modal-title]').hasText('Create new assignment', 'Create assignment modal renders');
-    await click('[data-test-oidc-assignment-cancel]');
+    await click(SELECTORS.assignmentCancelButton);
     assert.dom('[data-test-modal-div]').doesNotExist('Modal disappears after clicking cancel');
   });
 

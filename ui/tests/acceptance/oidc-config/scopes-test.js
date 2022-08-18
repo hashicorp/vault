@@ -79,7 +79,7 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
     assert.equal(
       currentRouteName(),
       'vault.cluster.access.oidc.scopes.scope.details',
-      'navigates to detail view after save'
+      'navigates to scopes detail view after save'
     );
   });
 

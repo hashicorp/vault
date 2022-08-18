@@ -34,8 +34,11 @@ export default class OidcAssignmentFormComponent extends Component {
       const { isValid, state } = this.args.model.validate();
       this.modelValidations = isValid ? null : state;
       if (isValid) {
+        const { isNew, name } = this.args.model;
         yield this.args.model.save();
-        this.flashMessages.success('Successfully created an assignment');
+        this.flashMessages.success(
+          `Successfully ${isNew ? 'created' : 'updated'} the OIDC assignment ${name}.`
+        );
         // this form is sometimes used in modal, passing the model notifies
         // the parent if the save was successful
         this.args.onSave(this.args.model);

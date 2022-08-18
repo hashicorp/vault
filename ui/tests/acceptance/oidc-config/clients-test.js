@@ -127,10 +127,10 @@ module('Acceptance | oidc-config/clients', function (hooks) {
     await searchSelect.options.objectAt(0).click();
     await click('[data-test-search-select="groups"] .ember-basic-dropdown-trigger');
     await searchSelect.options.objectAt(0).click();
-    await click(SELECTORS.assignSaveButton);
+    await click(SELECTORS.assignmentSaveButton);
     assert.equal(
       flashMessage.latestMessage,
-      'Successfully created an assignment',
+      'Successfully created the OIDC assignment assignment-1.',
       'renders success flash upon assignment creating'
     );
     await click(SELECTORS.clientSaveButton);
