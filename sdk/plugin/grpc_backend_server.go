@@ -26,8 +26,8 @@ type backendGRPCPluginServer struct {
 
 	broker *plugin.GRPCBroker
 
-	instances map[string]backendInstance
-	sync.RWMutex
+	instances     map[string]backendInstance
+	instancesLock sync.RWMutex
 
 	factory logical.Factory
 
@@ -54,8 +54,8 @@ func (b *backendGRPCPluginServer) getBackendInternal(ctx context.Context) (logic
 
 // getBackend holds a read lock and returns the backend
 func (b *backendGRPCPluginServer) getBackend(ctx context.Context) (logical.Backend, error) {
-	b.RLock()
-	defer b.RUnlock()
+	b.instancesLock.RLock()
+	defer b.instancesLock.RUnlock()
 	return b.getBackendInternal(ctx)
 }
 
@@ -79,8 +79,8 @@ func (b *backendGRPCPluginServer) getBrokeredClientInternal(ctx context.Context)
 
 // getBrokeredClient holds a read lock and returns the backend
 func (b *backendGRPCPluginServer) getBrokeredClient(ctx context.Context) (*grpc.ClientConn, error) {
-	b.RLock()
-	defer b.RUnlock()
+	b.instancesLock.RLock()
+	defer b.instancesLock.RUnlock()
 	return b.getBrokeredClientInternal(ctx)
 }
 
@@ -246,8 +246,8 @@ func (b *backendGRPCPluginServer) HandleExistenceCheck(ctx context.Context, args
 }
 
 func (b *backendGRPCPluginServer) Cleanup(ctx context.Context, _ *pb.Empty) (*pb.Empty, error) {
-	b.Lock()
-	defer b.Unlock()
+	b.instancesLock.Lock()
+	defer b.instancesLock.Unlock()
 
 	backend, err := b.getBackendInternal(ctx)
 	if err != nil {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -19,7 +18,6 @@ import (
 // used to cleanly kill the client on Cleanup()
 type BackendPluginClient struct {
 	client pluginutil.PluginClient
-	sync.Mutex
 
 	logical.Backend
 }

@@ -37,7 +37,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 // backend is a thin wrapper around plugin.BackendPluginClient
 type backend struct {
 	logical.Backend
-	sync.RWMutex
+	mu sync.RWMutex
 
 	config *logical.BackendConfig
 
@@ -73,33 +73,33 @@ func (b *backend) reloadBackend(ctx context.Context) error {
 
 // HandleRequest is a thin wrapper implementation of HandleRequest that includes automatic plugin reload.
 func (b *backend) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
-	b.RLock()
+	b.mu.RLock()
 	canary := b.canary
 	resp, err := b.Backend.HandleRequest(ctx, req)
-	b.RUnlock()
+	b.mu.RUnlock()
 	// Need to compare string value for case were err comes from plugin RPC
 	// and is returned as plugin.BasicError type.
 	if err != nil &&
 		(err.Error() == rpc.ErrShutdown.Error() || err == bplugin.ErrPluginShutdown) {
 		// Reload plugin if it's an rpc.ErrShutdown
-		b.Lock()
+		b.mu.Lock()
 		if b.canary == canary {
 			err := b.reloadBackend(ctx)
 			if err != nil {
-				b.Unlock()
+				b.mu.Unlock()
 				return nil, err
 			}
 			b.canary, err = uuid.GenerateUUID()
 			if err != nil {
-				b.Unlock()
+				b.mu.Unlock()
 				return nil, err
 			}
 		}
-		b.Unlock()
+		b.mu.Unlock()
 
 		// Try request once more
-		b.RLock()
-		defer b.RUnlock()
+		b.mu.RLock()
+		defer b.mu.RUnlock()
 		return b.Backend.HandleRequest(ctx, req)
 	}
 	return resp, err
@@ -107,31 +107,31 @@ func (b *backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 
 // HandleExistenceCheck is a thin wrapper implementation of HandleRequest that includes automatic plugin reload.
 func (b *backend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (bool, bool, error) {
-	b.RLock()
+	b.mu.RLock()
 	canary := b.canary
 	checkFound, exists, err := b.Backend.HandleExistenceCheck(ctx, req)
-	b.RUnlock()
+	b.mu.RUnlock()
 	if err != nil &&
 		(err.Error() == rpc.ErrShutdown.Error() || err == bplugin.ErrPluginShutdown) {
 		// Reload plugin if it's an rpc.ErrShutdown
-		b.Lock()
+		b.mu.Lock()
 		if b.canary == canary {
 			err := b.reloadBackend(ctx)
 			if err != nil {
-				b.Unlock()
+				b.mu.Unlock()
 				return false, false, err
 			}
 			b.canary, err = uuid.GenerateUUID()
 			if err != nil {
-				b.Unlock()
+				b.mu.Unlock()
 				return false, false, err
 			}
 		}
-		b.Unlock()
+		b.mu.Unlock()
 
 		// Try request once more
-		b.RLock()
-		defer b.RUnlock()
+		b.mu.RLock()
+		defer b.mu.RUnlock()
 		return b.Backend.HandleExistenceCheck(ctx, req)
 	}
 	return checkFound, exists, err
@@ -139,7 +139,7 @@ func (b *backend) HandleExistenceCheck(ctx context.Context, req *logical.Request
 
 // InvalidateKey is a thin wrapper used to ensure we grab the lock for race purposes
 func (b *backend) InvalidateKey(ctx context.Context, key string) {
-	b.RLock()
-	defer b.RUnlock()
+	b.mu.RLock()
+	defer b.mu.RUnlock()
 	b.Backend.InvalidateKey(ctx, key)
 }

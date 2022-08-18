@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -19,7 +18,6 @@ import (
 // used to cleanly kill the client on Cleanup()
 type BackendPluginClient struct {
 	client *plugin.Client
-	sync.Mutex
 
 	logical.Backend
 }
