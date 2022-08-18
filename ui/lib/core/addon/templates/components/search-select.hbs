@@ -40,7 +40,7 @@
       {{#if this.shouldRenderName}}
         {{option.name}}
         <small class="search-select-list-key" data-test-smaller-id="true">
-          {{option.id}}
+          {{get option this.idKey}}
         </small>
       {{else}}
         {{option.id}}
@@ -53,7 +53,7 @@
         {{#if this.shouldRenderName}}
           {{selected.name}}
           <small class="search-select-list-key" data-test-smaller-id="true">
-            {{selected.id}}
+            {{get selected this.idKey}}
           </small>
         {{else}}
           <div>

@@ -3,7 +3,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
 import { typeInSearch, clickTrigger } from 'ember-power-select/test-support/helpers';
 import Service from '@ember/service';
-import { render, settled } from '@ember/test-helpers';
+import { click, render, settled } from '@ember/test-helpers';
 import { run } from '@ember/runloop';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
@@ -44,6 +44,13 @@ const storeService = Service.extend({
             { id: 'foo', name: 'bar' },
             { id: 'foobar', name: '' },
             { id: 'barfoo1', name: 'different' },
+          ]);
+          break;
+        case 'some/model':
+          resolve([
+            { id: 'model-a-id', name: 'model-a', uuid: 'a123', type: 'a' },
+            { id: 'model-b-id', name: 'model-b', uuid: 'b456', type: 'b' },
+            { id: 'model-c-id', name: 'model-c', uuid: 'c789', type: 'c' },
           ]);
           break;
         default:
@@ -255,6 +262,7 @@ module('Integration | Component | search select', function (hooks) {
     await typeInSearch('new item');
     assert.equal(component.options.objectAt(0).text, 'Add new foo: new item', 'shows the create suggestion');
   });
+
   test('it shows items not in the returned response', async function (assert) {
     const models = ['test'];
     this.set('models', models);
@@ -328,5 +336,259 @@ module('Integration | Component | search select', function (hooks) {
       ]),
       'onClick is called with array of objects with isNew true on new item'
     );
+  });
+
+  test(`it returns custom object if passObject=true and multiple objectKeys with objectKeys[0]='id'`, async function (assert) {
+    const models = ['some/model'];
+    const spy = sinon.spy();
+    this.set('models', models);
+    this.set('onChange', spy);
+    this.set('objectKeys', ['id', 'uuid']);
+    await render(hbs`
+    <div class="box">
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @passObject={{true}}
+        @objectKeys={{this.objectKeys}}
+      />
+    </div>
+    `);
+
+    await clickTrigger();
+    await settled();
+
+    // First select existing option
+    await component.selectOption();
+    assert.equal(component.selectedOptions.length, 1, 'there is 1 selected option');
+    assert
+      .dom('[data-test-selected-option]')
+      .hasText('model-a-id', 'does not render name if first objectKey is id');
+    assert.ok(this.onChange.calledOnce);
+    assert.ok(
+      this.onChange.calledWith([{ id: 'model-a-id', isNew: false, uuid: 'a123' }]),
+      'onClick is called with array of single object with keys: id, uuid'
+    );
+    // Then create a new item and select it
+    await clickTrigger();
+    await settled();
+    await typeInSearch('newItem');
+    await component.selectOption();
+    await settled();
+    assert.propEqual(
+      spy.args[1][0],
+      [
+        {
+          id: 'model-a-id',
+          isNew: false,
+          uuid: 'a123',
+        },
+        {
+          id: 'newItem',
+          isNew: true,
+        },
+      ],
+      'onClick is called with array of objects with isNew=true (and no additional keys) on new item'
+    );
+  });
+
+  test('it returns custom object and renders name if passObject=true and multiple objectKeys', async function (assert) {
+    const models = ['some/model'];
+    const spy = sinon.spy();
+    const objectKeys = ['uuid', 'name'];
+    this.set('models', models);
+    this.set('onChange', spy);
+    this.set('objectKeys', objectKeys);
+    await render(hbs`
+    <div class="box">
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @passObject={{true}}
+        @objectKeys={{this.objectKeys}}
+      />
+    </div>
+    `);
+
+    await clickTrigger();
+    await settled();
+
+    // First select existing option
+    await component.selectOption();
+    assert.equal(component.selectedOptions.length, 1, 'there is 1 selected option');
+    assert
+      .dom('[data-test-selected-option]')
+      .hasText('model-a a123', `renders name and ${objectKeys[0]} if first objectKey is not id`);
+    assert.dom('[data-test-smaller-id]').exists();
+    assert.propEqual(
+      spy.args[0][0],
+      [
+        {
+          id: 'model-a-id',
+          isNew: false,
+          name: 'model-a',
+          uuid: 'a123',
+        },
+      ],
+      `onClick is called with array of single object: isNew=false, and has keys: ${objectKeys.join(', ')}`
+    );
+  });
+
+  test('it renders ids if model does not have the passed objectKeys as an attribute', async function (assert) {
+    const models = ['policy/acl'];
+    const spy = sinon.spy();
+    const objectKeys = ['uuid'];
+    this.set('models', models);
+    this.set('onChange', spy);
+    this.set('objectKeys', objectKeys);
+    await render(hbs`
+    <div class="box">
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @objectKeys={{this.objectKeys}}
+      />
+    </div>
+    `);
+
+    await clickTrigger();
+    await settled();
+
+    // First select existing option
+    await component.selectOption();
+    assert.equal(component.selectedOptions.length, 1, 'there is 1 selected option');
+    assert
+      .dom('[data-test-selected-option]')
+      .hasText('1', 'renders model id if does not have objectKey as an attribute');
+    assert.propEqual(spy.args[0][0], ['1'], 'onClick is called with array of single id string');
+  });
+
+  test('it renders when passObject=true and model does not have the passed objectKeys as an attr', async function (assert) {
+    const models = ['policy/acl'];
+    const spy = sinon.spy();
+    const objectKeys = ['uuid'];
+    this.set('models', models);
+    this.set('onChange', spy);
+    this.set('objectKeys', objectKeys);
+    await render(hbs`
+    <div class="box">
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @passObject={{true}}
+        @objectKeys={{this.objectKeys}}
+      />
+    </div>
+    `);
+
+    await clickTrigger();
+    await settled();
+
+    // First select existing option
+    await component.selectOption();
+    assert.equal(component.selectedOptions.length, 1, 'there is 1 selected option');
+    assert.dom('[data-test-selected-option]').hasText('1', 'renders model id if does not have objectKey');
+    assert.propEqual(
+      spy.args[0][0],
+      [
+        {
+          id: '1',
+          isNew: false,
+        },
+      ],
+      'onClick is called with array of single object with correct keys'
+    );
+  });
+
+  test('it renders when passed multiple models, passObject=true and one model does not have the attr in objectKeys', async function (assert) {
+    const models = ['policy/acl', 'some/model'];
+    const spy = sinon.spy();
+    const objectKeys = ['uuid'];
+    this.set('models', models);
+    this.set('onChange', spy);
+    this.set('objectKeys', objectKeys);
+    await render(hbs`
+    <div class="box">
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @passObject={{true}}
+        @objectKeys={{this.objectKeys}}
+      />
+    </div>
+    `);
+
+    await clickTrigger();
+    await settled();
+    assert.equal(component.options.objectAt(0).text, '1', 'first option renders just id as name');
+    assert.equal(
+      component.options.objectAt(3).text,
+      'model-a a123',
+      `4 option renders both name and ${objectKeys[0]}`
+    );
+
+    // First select options with and without id
+    await component.selectOption();
+    await clickTrigger();
+    await settled();
+    await click('[data-option-index="2"]');
+    const expectedArray = [
+      {
+        id: '1',
+        isNew: false,
+      },
+      {
+        id: 'model-a-id',
+        isNew: false,
+        uuid: 'a123',
+      },
+    ];
+    assert.propEqual(
+      spy.args[1][0],
+      expectedArray,
+      `onClick is called with array of objects and correct keys.
+      first object: ${Object.keys(expectedArray[0]).join(', ')}, 
+      second object: ${Object.keys(expectedArray[1]).join(', ')}`
+    );
+  });
+
+  test('it renders when passed multiple models, passedObject=false and one model does not have the attr in objectKeys', async function (assert) {
+    const models = ['policy/acl', 'some/model'];
+    const spy = sinon.spy();
+    const objectKeys = ['uuid'];
+    this.set('models', models);
+    this.set('onChange', spy);
+    this.set('objectKeys', objectKeys);
+    await render(hbs`
+    <div class="box">
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @objectKeys={{this.objectKeys}}
+      />
+    </div>
+    `);
+
+    await clickTrigger();
+    await settled();
+    assert.equal(component.options.objectAt(0).text, '1', 'first option is just id as name');
+    assert.equal(
+      component.options.objectAt(3).text,
+      'model-a a123',
+      `4th option has both name and ${objectKeys[0]}`
+    );
+
+    // First select options with and without id
+    await component.selectOption();
+    await clickTrigger();
+    await settled();
+    await click('[data-option-index="2"]');
+    assert.propEqual(spy.args[1][0], ['1', 'model-a-id'], 'onClick is called with array of id strings');
   });
 });
