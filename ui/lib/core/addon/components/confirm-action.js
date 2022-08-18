@@ -78,8 +78,6 @@ export default class ConfirmActionComponent extends Component {
       assert('confirm-action components expects `onConfirmAction` attr to be a function');
     } else {
       confirmAction();
-      // toggle
-      this.showConfirm = !this.showConfirm;
       // close the dropdown content
       actions.close();
     }

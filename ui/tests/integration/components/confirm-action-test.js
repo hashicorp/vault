@@ -12,7 +12,7 @@ module('Integration | Component | confirm-action', function (hooks) {
     this.set('onConfirm', confirmAction);
     await render(hbs`
       <ConfirmAction
-        @onConfirmAction={{confirmAction}}
+        @onConfirmAction={{onConfirm}}
         @buttonClasses="toolbar-link"
       >
         DELETE
@@ -29,14 +29,22 @@ module('Integration | Component | confirm-action', function (hooks) {
     this.set('onConfirm', confirmAction);
     await render(hbs`
       <ConfirmAction
-        @onConfirmAction={{this.onConfirm}}
+        @onConfirmAction={{onConfirm}}
         @buttonClasses="toolbar-link"
       >
         DELETE
         </ConfirmAction>
       `);
     await click('[data-test-confirm-action-trigger="true"]');
+    await click('[data-test-confirm-cancel-button="true"]');
+    // assert that after canceling the icon button is pointing down.
+    assert.dom('[data-test-icon="chevron-down"]').exists('Icon is pointing down after clicking cancel');
+    // open the modal again to test the Cancel action
+    await click('[data-test-confirm-action-trigger="true"]');
     await click('[data-test-confirm-button="true"]');
+    assert
+      .dom('[data-test-icon="chevron-down"]')
+      .exists('Icon is pointing down after executing the Delete action');
     assert.true(confirmAction.called, 'calls the action when Delete is pressed');
     assert
       .dom('[data-test-confirm-action-title]')
