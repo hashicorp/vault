@@ -524,6 +524,11 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 		response.AddWarning("This issuer lacks another parent issuer within the mount. This means it will not appear on any other CRLs and may not be considered revoked by clients. Consider adding this issuer to its issuer's CRL as well if it is not self-signed.")
 	}
 
+	config, err := sc.getIssuersConfig()
+	if err == nil && config != nil && config.DefaultIssuerId == issuer.ID {
+		response.AddWarning("This issuer is currently configured as the default issuer for this mount; operations such as certificate issuance may not work until a new default issuer is selected.")
+	}
+
 	return response, nil
 }
 
