@@ -6,6 +6,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -211,7 +212,7 @@ func respondReadIssuer(issuer *issuerEntry) (*logical.Response, error) {
 
 	if issuer.Revoked {
 		data["revocation_time"] = issuer.RevocationTime
-		data["revocation_time_utc"] = issuer.RevocationTimeUTC
+		data["revocation_time_rfc3339"] = issuer.RevocationTimeUTC.Format(time.RFC3339Nano)
 	}
 
 	return &logical.Response{
