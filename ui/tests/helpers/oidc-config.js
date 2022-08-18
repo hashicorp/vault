@@ -17,8 +17,8 @@ export const SELECTORS = {
   clientProvidersTab: '[data-test-oidc-client-providers]',
 
   // assignment route
-  assignSaveButton: '[data-test-oidc-assignment-save]',
-  assignCreateButton: '[data-test-oidc-assignment-create]',
+  assignmentSaveButton: '[data-test-oidc-assignment-save]',
+  assignmentCreateButton: '[data-test-oidc-assignment-create]',
   assignmentEditButton: '[data-test-oidc-assignment-edit]',
   assignmentDeleteButton: '[data-test-oidc-assignment-delete] button',
   assignmentCancelButton: '[data-test-oidc-assignment-cancel]',

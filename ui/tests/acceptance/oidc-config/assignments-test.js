@@ -14,7 +14,7 @@ import {
   overrideMirageResponse,
   ASSIGNMENT_LIST_RESPONSE,
   ASSIGNMENT_DATA_RESPONSE,
-} from '../../helpers/oidc-config';
+} from 'vault/tests/helpers/oidc-config';
 const flashMessage = create(fm);
 const ASSIGNMENTS_URL = OIDC_BASE_URL.concat('/assignments');
 
@@ -59,7 +59,7 @@ module('Acceptance | oidc-config/assignments', function (hooks) {
     assert.expect(12);
     await visit(ASSIGNMENTS_URL);
     // create a new assignment
-    await click(SELECTORS.assignCreateButton);
+    await click(SELECTORS.assignmentCreateButton);
     assert.equal(
       currentRouteName(),
       'vault.cluster.access.oidc.assignments.create',
@@ -68,7 +68,7 @@ module('Acceptance | oidc-config/assignments', function (hooks) {
     await fillIn('[data-test-input="name"]', 'test-assignment');
     await click('[data-test-component="search-select"]#entities .ember-basic-dropdown-trigger');
     await click('.ember-power-select-option');
-    await click(SELECTORS.assignSaveButton);
+    await click(SELECTORS.assignmentSaveButton);
     assert.equal(
       flashMessage.latestMessage,
       'Successfully created the OIDC assignment test-assignment.',
@@ -93,7 +93,7 @@ module('Acceptance | oidc-config/assignments', function (hooks) {
     await click('[data-test-component="search-select"]#groups .ember-basic-dropdown-trigger');
     await click('.ember-power-select-option');
     assert.dom('[data-test-oidc-assignment-save]').hasText('Update');
-    await click(SELECTORS.assignSaveButton);
+    await click(SELECTORS.assignmentSaveButton);
     assert.equal(
       flashMessage.latestMessage,
       'Successfully updated the OIDC assignment test-assignment.',
@@ -131,7 +131,7 @@ module('Acceptance | oidc-config/assignments', function (hooks) {
       .dom('[data-test-oidc-assignment-linked-block]')
       .hasText('test-assignment', 'displays linked block for assignment');
 
-    await click(SELECTORS.assignCreateButton);
+    await click(SELECTORS.assignmentCreateButton);
     assert.equal(
       currentRouteName(),
       'vault.cluster.access.oidc.assignments.create',
