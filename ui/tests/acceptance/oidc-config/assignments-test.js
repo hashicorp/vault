@@ -128,9 +128,8 @@ module('Acceptance | oidc-config/assignments', function (hooks) {
       overrideMirageResponse(null, ASSIGNMENT_DATA_RESPONSE)
     );
     await visit(ASSIGNMENTS_URL);
-    assert
-      .dom('[data-test-oidc-assignment-linked-block]')
-      .hasText('test-assignment', 'displays linked block for assignment');
+    let linkedBlock = document.querySelectorAll('[data-test-oidc-assignment-linked-block]')[1];
+    assert.dom(linkedBlock).hasText('test-assignment', 'displays linked block for assignment');
 
     await click(SELECTORS.assignmentCreateButton);
     assert.equal(
@@ -182,7 +181,8 @@ module('Acceptance | oidc-config/assignments', function (hooks) {
     );
 
     await visit(ASSIGNMENTS_URL);
-    await click('[data-test-oidc-assignment-linked-block]');
+    let linkedBlock = document.querySelectorAll('[data-test-oidc-assignment-linked-block]')[1];
+    await click(linkedBlock);
     assert
       .dom('[data-test-oidc-assignment-title]')
       .hasText('test-assignment', 'renders assignment name as title');
