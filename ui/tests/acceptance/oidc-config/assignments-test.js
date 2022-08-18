@@ -42,7 +42,7 @@ module('Acceptance | oidc-config/assignments', function (hooks) {
   });
 
   test('it renders only allow_all when no assignments are configured', async function (assert) {
-    assert.expect(4);
+    assert.expect(3);
 
     //* clear out test state
     await clearRecord(this.store, 'oidc/assignment', 'test-assignment');
@@ -53,7 +53,6 @@ module('Acceptance | oidc-config/assignments', function (hooks) {
       .dom('[data-test-oidc-assignment-linked-block]')
       .includesText('allow_all', 'displays default assignment');
     assert.dom('[data-test-oidc-assignment-linked-block]').hasClass('is-disabled', 'Allow all is disabled.');
-    assert.dom('[data-test-oidc-assignment-linked-block]').exists({ count: 1 });
   });
 
   test('it creates, updates, and deletes an assignment', async function (assert) {
