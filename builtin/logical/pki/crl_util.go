@@ -364,6 +364,10 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 		return fmt.Errorf("error building CRLs: unable to get revoked certificate entries: %v", err)
 	}
 
+	if err := augmentWithRevokedIssuers(issuerIDEntryMap, issuerIDCertMap, revokedCertsMap); err != nil {
+		return fmt.Errorf("error building CRLs: unable to parse revoked issuers: %v", err)
+	}
+
 	// Now we can call buildCRL once, on an arbitrary/representative issuer
 	// from each of these (keyID, subject) sets.
 	for _, subjectIssuersMap := range keySubjectIssuersMap {
@@ -568,6 +572,40 @@ func getRevokedCertEntries(ctx context.Context, req *logical.Request, issuerIDCe
 	}
 
 	return unassignedCerts, revokedCertsMap, nil
+}
+
+func augmentWithRevokedIssuers(issuerIDEntryMap map[issuerID]*issuerEntry, issuerIDCertMap map[issuerID]*x509.Certificate, revokedCertsMap map[issuerID][]pkix.RevokedCertificate) error {
+	// When setup our maps with the legacy CA bundle, we only have a
+	// single entry here. This entry is never revoked, so the outer loop
+	// will exit quickly.
+	for ourIssuerID, ourIssuer := range issuerIDEntryMap {
+		if !ourIssuer.Revoked {
+			continue
+		}
+
+		ourCert := issuerIDCertMap[ourIssuerID]
+		ourRevCert := pkix.RevokedCertificate{
+			SerialNumber:   ourCert.SerialNumber,
+			RevocationTime: ourIssuer.RevocationTimeUTC,
+		}
+
+		for otherIssuerID := range issuerIDEntryMap {
+			if otherIssuerID == ourIssuerID {
+				continue
+			}
+
+			// Find all _other_ certificates which verify this issuer,
+			// allowing us to add this revoked issuer to this issuer's
+			// CRL.
+			otherCert := issuerIDCertMap[otherIssuerID]
+			if err := ourCert.CheckSignatureFrom(otherCert); err == nil {
+				// Valid signature; add our result.
+				revokedCertsMap[otherIssuerID] = append(revokedCertsMap[otherIssuerID], ourRevCert)
+			}
+		}
+	}
+
+	return nil
 }
 
 // Builds a CRL by going through the list of revoked certificates and building
