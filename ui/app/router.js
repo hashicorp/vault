@@ -121,6 +121,7 @@ Router.map(function () {
             this.route('create');
             this.route('key', { path: '/:name' }, function () {
               this.route('details');
+              this.route('clients');
               this.route('edit');
             });
           });
