@@ -711,6 +711,12 @@ func TestIssuerRevocation(t *testing.T) {
 	require.NoError(t, err)
 	crl = getParsedCrlFromBackend(t, b, s, "issuer/int1/crl/der")
 	requireSerialNumberInCRL(t, crl.TBSCertList, issuedSerial)
+
+	// Ensure we can't fetch the intermediate's cert by serial any more.
+	resp, err = CBRead(b, s, "cert/"+intCertSerial)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data["revocation_time"])
 }
 
 func requestCrlFromBackend(t *testing.T, s logical.Storage, b *backend) *logical.Response {

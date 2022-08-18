@@ -3,6 +3,7 @@ package pki
 import (
 	"bytes"
 	"context"
+	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"strings"
@@ -394,6 +395,61 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 	err = sc.writeIssuer(issuer)
 	if err != nil {
 		return nil, err
+	}
+
+	// Now, if the parent issuer exists within this mount, we'd have written
+	// a storage entry for this certificate, making it appear as any other
+	// leaf. We need to add a revocationInfo entry for this into storage,
+	// so that it appears as if it was revoked.
+	//
+	// This is a _necessary_ but not necessarily _sufficient_ step to
+	// consider an arbitrary issuer revoked and the former step (setting
+	// issuer.Revoked = true) is more correct: if two intermediates have the
+	// same serial number, and one appears somehow in the storage but from a
+	// different issuer, we'd only include one in the CRLs, but we'd want to
+	// include both in two separate CRLs. Hence, the former is the condition
+	// we check in CRL building, but this step satisfies other guarantees
+	// within Vault.
+	certEntry, err := fetchCertBySerial(ctx, b, req, "certs/", issuer.SerialNumber)
+	if err == nil && certEntry != nil {
+		// We've inverted this error check as it doesn't matter; we already
+		// consider this certificate revoked.
+		storageCert, err := x509.ParseCertificate(certEntry.Value)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing stored certificate value: %v", err)
+		}
+
+		issuerCert, err := issuer.GetCertificate()
+		if err != nil {
+			return nil, fmt.Errorf("error parsing issuer certificate value: %v", err)
+		}
+
+		if bytes.Equal(issuerCert.Raw, storageCert.Raw) {
+			// If the issuer is on disk at its serial number is the same as
+			// our issuer, we know we can write the revocation entry. Since
+			// Vault has historically forbid revocation of non-stored certs
+			// and issuers, we're the only ones to write this entry, so we
+			// don't need the write guard that exists in crl_util.go for the
+			// general case (forbidding a newer revocation time).
+			//
+			// We'll let a cleanup pass or CRL build identify the issuer for
+			// us.
+			revInfo := revocationInfo{
+				CertificateBytes:  issuerCert.Raw,
+				RevocationTime:    issuer.RevocationTime,
+				RevocationTimeUTC: issuer.RevocationTimeUTC,
+			}
+
+			revEntry, err := logical.StorageEntryJSON(revokedPath+normalizeSerial(issuer.SerialNumber), revInfo)
+			if err != nil {
+				return nil, fmt.Errorf("error creating revocation entry for issuer: %v", err)
+			}
+
+			err = req.Storage.Put(ctx, revEntry)
+			if err != nil {
+				return nil, fmt.Errorf("error saving revoked issuer to new location: %v", err)
+			}
+		}
 	}
 
 	// Rebuild the CRL to include the newly revoked issuer.
