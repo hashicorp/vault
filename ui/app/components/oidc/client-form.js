@@ -67,9 +67,9 @@ export default class OidcClientForm extends Component {
         // value returned from API is a number, and string when from form action
         if (Number(idTokenTtl) === 0) this.args.model.idTokenTtl = '24h';
         if (Number(accessTokenTtl) === 0) this.args.model.accessTokenTtl = '24h';
-        const { isNew } = this.args.model;
+        const { isNew, name } = this.args.model;
         yield this.args.model.save();
-        this.flashMessages.success(`Successfully ${isNew ? 'created an' : 'updated'} application`);
+        this.flashMessages.success(`Successfully ${isNew ? 'created' : 'updated'} the application ${name}.`);
         this.args.onSave();
       }
     } catch (error) {

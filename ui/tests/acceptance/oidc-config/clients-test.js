@@ -81,7 +81,7 @@ module('Acceptance | oidc-config/clients', function (hooks) {
 
     assert.equal(
       flashMessage.latestMessage,
-      'Successfully created an application',
+      'Successfully created the application some-app.',
       'renders success flash upon client creation'
     );
     assert.equal(
@@ -130,13 +130,13 @@ module('Acceptance | oidc-config/clients', function (hooks) {
     await click(SELECTORS.assignmentSaveButton);
     assert.equal(
       flashMessage.latestMessage,
-      'Successfully created the OIDC assignment assignment-1.',
+      'Successfully created the assignment assignment-1.',
       'renders success flash upon assignment creating'
     );
     await click(SELECTORS.clientSaveButton);
     assert.equal(
       flashMessage.latestMessage,
-      'Successfully updated application',
+      'Successfully updated the application some-app.',
       'renders success flash upon client updating'
     );
     assert.equal(

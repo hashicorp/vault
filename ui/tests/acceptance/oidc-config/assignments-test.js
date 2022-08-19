@@ -72,7 +72,7 @@ module('Acceptance | oidc-config/assignments', function (hooks) {
     await click(SELECTORS.assignmentSaveButton);
     assert.equal(
       flashMessage.latestMessage,
-      'Successfully created the OIDC assignment test-assignment.',
+      'Successfully created the assignment test-assignment.',
       'renders success flash upon creating the assignment'
     );
     assert.equal(
@@ -97,7 +97,7 @@ module('Acceptance | oidc-config/assignments', function (hooks) {
     await click(SELECTORS.assignmentSaveButton);
     assert.equal(
       flashMessage.latestMessage,
-      'Successfully updated the OIDC assignment test-assignment.',
+      'Successfully updated the assignment test-assignment.',
       'renders success flash upon updating the assignment'
     );
 

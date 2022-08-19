@@ -73,7 +73,7 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
     await click(SELECTORS.scopeSaveButton);
     assert.equal(
       flashMessage.latestMessage,
-      'Successfully created a scope',
+      'Successfully created the scope test-scope.',
       'renders success flash upon scope creation'
     );
     assert.equal(
@@ -98,7 +98,7 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
     await click(SELECTORS.scopeSaveButton);
     assert.equal(
       flashMessage.latestMessage,
-      'Successfully created a scope',
+      'Successfully created the scope test-scope.',
       'renders success flash upon scope creation'
     );
     assert.equal(
@@ -124,7 +124,7 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
     await click(SELECTORS.scopeSaveButton);
     assert.equal(
       flashMessage.latestMessage,
-      'Successfully updated scope',
+      'Successfully updated the scope test-scope.',
       'renders success flash upon scope updating'
     );
     assert.equal(
