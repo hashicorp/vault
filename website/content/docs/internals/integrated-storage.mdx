@@ -82,15 +82,15 @@ are block until they are _committed_ and _applied_.
 #### Compacting Logs
 
 It would be undesirable to allow a replicated log to grow in an unbounded
-fashion. Raft provides a mechanism by which the current state is snapshotted and the
-log is compacted. Because of the FSM abstraction, restoring the state of the FSM must
-result in the same state as a replay of old logs. This allows Raft to capture the FSM
-state at a point in time and then remove all the logs that were used to reach that
-state. This is performed automatically without user intervention and prevents unbounded
-disk usage while also minimizing the time spent replaying logs. One of the advantages of
-using BoltDB is that it allows Vault's snapshots to be very light weight. Since
-Vault's data is already persisted to disk in BoltDB, the snapshot process just
-needs to truncate the raft logs.
+fashion. Raft provides a mechanism by which the current state is saved to 
+snapshots and its related logs are compacted. Because of the FSM abstraction, 
+restoring the state of the FSM must result in the same state as a replay of old 
+logs. This allows Raft to capture the FSM state at a point in time and then remove 
+all the logs that were used to reach that state. This is performed automatically 
+without user intervention and prevents unbounded disk usage while also minimizing 
+the time spent replaying logs. One of the advantages of using BoltDB is that it 
+allows Vault's snapshots to be very light weight. Since Vault's data is already 
+persisted to disk in BoltDB, the snapshot process just needs to truncate the raft logs.
 
 #### Quorum
 
@@ -140,19 +140,46 @@ will be encrypted by Vault's barrier.
 
 Vault does not currently offer automated dead server cleanup. If you wish to
 decommission a node, or a node dies and must be replaced, the node must manually
-be removed from the cluster with the `remove peer`
-[command](/docs/commands/operator/raft#remove-peer).
+be removed from the cluster with the `remove peer` [command](/docs/commands/operator/raft#remove-peer).
 
 ### Quorum Management
 
-When a node joins a Raft cluster, it attempts to catch up with the reset 
-of the nodes through the data that it's replicating from the leader. While in 
-this initial synchronisation state, the node cannot vote but is counted for 
-the purposes of quorum. If a number of new nodes join the cluster 
-simultaneously or at similar times, and thereby exceeding the failure
+I would probably move the warning about joining nodes to the Autopilot docs in a "If you disable server stabilization then keep this in mind ..." section. But we should probably make sure it can in fact be disabled first. The other changes in that PR are 
+
+#### Autopilot
+
+An [Autopilot feature](https://www.vaultproject.io/docs/concepts/integrated-storage/autopilot) 
+is available since 1.7.x & later versions that include configurable parameters 
+for when a node is treated as healthy before it's then an eligible voter in the 
+Quorum list. Other features which may enabled include the ability to remove nodes 
+considered as dead from the Quorum list after a certain period.
+
+Autopilot is typically enabled in most current versions of Vault with default 
+values that should be adapted to best suit the environmental requirements where 
+Vault instances are deployed.
+
+Vault 1.7.x & higher include a stabilization logic that's available as part of 
+Autopilot and activated by default. Nodes that are new and a recent joiner are 
+accepted as non-voter initially until they are in sync with matching Raft index 
+and only after a stability thresholds are they then full voting members.
+
+#### Without Autopilot
+
+Older versions of Vault, 1.6.x & lower, as well as cases where Autopilot may be 
+disabled or misconfigured, behave differently.
+
+In scenarios involving those when a node joins a Raft cluster, it attempts to 
+catch up with the reset of the nodes through the data that it's replicating from 
+the leader. While in this initial synchronisation state, the node cannot 
+vote but is counted for the purposes of quorum. If a number of new nodes join 
+the cluster simultaneously or at similar times, and thereby exceeding the failure
 tolerance of the cluster, quorum may be lost and the cluster can fail.
 
-For example, consider a scenario where there is a 3-node cluster with a large amount of data and a failure tolerance of 1. An additional 3 new nodes then joins the cluster. The cluster now consists of 6 nodes with a failure tolerance of 2, but since all 3 nodes are still catching up, this will result in a loss of quorum.
+For example, consider a scenario where there is a 3-node cluster with a large 
+amount of data and a failure tolerance of 1. An additional 3 new nodes then 
+join the cluster. The cluster now consists of 6 nodes with a failure tolerance 
+of 2, but since all 3 nodes are still catching up, this will result in a loss of 
+quorum.
 
 * A 3 node cluster with a large amount of data that's at a failure tolerance of 1.
 * Another 3 new nodes then join the cluster together.
@@ -215,3 +242,29 @@ failure scenario.
     </tr>
   </tbody>
 </table>
+
+### Minimums & Scaling
+
+The Vault Reference Architecture recommends a 5 node cluster to ensure a minimum 
+failure tolerance of at least 2.
+
+It is good practise, wherever possible, to retain a failure tolerance of 2 or 
+more.
+
+A scaling approach can be pursued in the event of maintenance and other changes 
+where an additional pair of nodes (ie two) are added in an existing 5 node cluster 
+making for a 7 node cluster. Once new joiners are confirmed to be in sync then 
+the 2 older nodes can be stopped and or destroyed with the same processes being 
+repeated until all other nodes have been replaced. This use of additional nodes 
+on a temporary basis of a 7 node cluster arrangement, concluding back to 5 nodes, 
+may be one way to ensure sufficient failure tolerance is maintained and that 
+changes are made progressively in proportion to the cluster failure tolerance and 
+never exceeding the available failure tolerance in any given one-time.
+
+The intent with any change or scaling ought to be with the lose of Quorum and 
+reduction of the Quorum failure tolerances at the forefront and discouraging 
+any practises that compromise that.
+
+Scaling clusters up or down in pairs with 2 nodes each time also has the added 
+advantage of avoiding even numbers and it is always recommended to 
+allow for an odd number of total voters in any cluster.
