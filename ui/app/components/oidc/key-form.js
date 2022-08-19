@@ -34,7 +34,7 @@ export default class OidcKeyForm extends Component {
   handleClientSelection(selection) {
     // if array then coming from search-select component, set selection as model clients
     if (Array.isArray(selection)) {
-      this.args.model.allowedClientIds = selection;
+      this.args.model.allowedClientIds = selection.map((client) => client.clientId);
     } else {
       // otherwise update radio button value and reset clients so
       // UI always reflects a user's selection (including when no clients are selected)

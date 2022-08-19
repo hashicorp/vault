@@ -3,6 +3,7 @@ import ApplicationSerializer from '../application';
 export default class OidcClientSerializer extends ApplicationSerializer {
   primaryKey = 'name';
 
+  // rehydrate each client model so all model attributes are accessible from the LIST response
   normalizeItems(payload) {
     if (payload.data) {
       if (payload.data?.keys && Array.isArray(payload.data.keys)) {
