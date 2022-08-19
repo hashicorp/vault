@@ -63,7 +63,7 @@ Follow the steps below to add policies to your tenancy that allow the OCI comput
 - Configure the home_tenancy_id parameter in the Vault.
 
 ```sh
-    curl --header "X-Vault-Token: $roottoken" --request PUT \
+    curl --header "X-Vault-Token: $roottoken" --request POST \
     --data @hometenancyid.json \
     http://127.0.0.1:8200/v1/auth/oci/config (127.0.0.1:8200/v1/auth/oci/config)
 ```
@@ -88,7 +88,7 @@ Group or Dynamic Group OCIDs in your tenancy that has users or instances that yo
 Create the Vault admin role:
 
 ```sh
-    curl --header "X-Vault-Token: $roottoken" --request PUT \
+    curl --header "X-Vault-Token: $roottoken" --request POST \
     --data @vaultadminrole.json \
     http://127.0.0.1:8200/v1/auth/oci/role/vaultadminrole (127.0.0.1:8200/v1/auth/oci/role/vaultadminrole)
 ```
@@ -129,7 +129,7 @@ You will see a response that includes a token with the previously added policy.
 1.  Add the role.
 
 ```sh
-curl --header "X-Vault-Token: $token" --request PUT \
+curl --header "X-Vault-Token: $token" --request POST \
 --data @devrole.json \
 http://127.0.0.1:8200/v1/auth/oci/role/devrole (127.0.0.1:8200/v1/auth/oci/role/devrole)
 ```
@@ -199,4 +199,4 @@ POST http://127.0.0.1/v1/auth/oci/login/devrole
 
 ## API
 
-The OCI Auth method has a full HTTP API. Please see the [API docs](/api/auth/oci) for more details.
+The OCI Auth method has a full HTTP API. Please see the [API docs](/api-docs/auth/oci) for more details.

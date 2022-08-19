@@ -620,9 +620,11 @@ func (i *IdentityStore) keyIDsByName(ctx context.Context, s logical.Storage, nam
 	if err := entry.DecodeJSON(&key); err != nil {
 		return keyIDs, err
 	}
+
 	for _, k := range key.KeyRing {
 		keyIDs = append(keyIDs, k.KeyID)
 	}
+
 	return keyIDs, nil
 }
 
@@ -1654,16 +1656,14 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 		return nil, err
 	}
 
-	jwks := &jose.JSONWebKeySet{
-		Keys: make([]jose.JSONWebKey, 0),
-	}
-
 	// only return keys that are associated with a role
 	roleNames, err := s.List(ctx, roleConfigPath)
 	if err != nil {
 		return nil, err
 	}
 
+	// collect and deduplicate the key IDs for all roles
+	keyIDs := make(map[string]struct{})
 	for _, roleName := range roleNames {
 		role, err := i.getOIDCRole(ctx, s, roleName)
 		if err != nil {
@@ -1673,18 +1673,27 @@ func (i *IdentityStore) generatePublicJWKS(ctx context.Context, s logical.Storag
 			continue
 		}
 
-		keyIDs, err := i.keyIDsByName(ctx, s, role.Key)
+		roleKeyIDs, err := i.keyIDsByName(ctx, s, role.Key)
 		if err != nil {
 			return nil, err
 		}
 
-		for _, keyID := range keyIDs {
-			key, err := loadOIDCPublicKey(ctx, s, keyID)
-			if err != nil {
-				return nil, err
-			}
-			jwks.Keys = append(jwks.Keys, *key)
+		for _, keyID := range roleKeyIDs {
+			keyIDs[keyID] = struct{}{}
 		}
+	}
+
+	jwks := &jose.JSONWebKeySet{
+		Keys: make([]jose.JSONWebKey, 0, len(keyIDs)),
+	}
+
+	// load the JSON web key for each key ID
+	for keyID := range keyIDs {
+		key, err := loadOIDCPublicKey(ctx, s, keyID)
+		if err != nil {
+			return nil, err
+		}
+		jwks.Keys = append(jwks.Keys, *key)
 	}
 
 	if err := i.oidcCache.SetDefault(ns, "jwks", jwks); err != nil {

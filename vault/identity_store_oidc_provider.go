@@ -2164,12 +2164,12 @@ func (i *IdentityStore) entityHasAssignment(ctx context.Context, s logical.Stora
 	}
 
 	// Get the group IDs that the entity is a member of
-	entityGroups, err := i.MemDBGroupsByMemberEntityID(entity.GetID(), true, false)
+	groups, inheritedGroups, err := i.groupsByEntityID(entity.GetID())
 	if err != nil {
 		return false, err
 	}
 	entityGroupIDs := make(map[string]bool)
-	for _, group := range entityGroups {
+	for _, group := range append(groups, inheritedGroups...) {
 		entityGroupIDs[group.GetID()] = true
 	}
 

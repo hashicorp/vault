@@ -5,7 +5,6 @@ package pkcs7
 import (
 	"crypto/x509"
 	"encoding/pem"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -108,7 +107,7 @@ but that's not what ships are built for.
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Printf("%s\n", pemSignature)
+	t.Logf("%s\n", pemSignature)
 	derBlock, _ := pem.Decode(pemSignature)
 	if derBlock == nil {
 		t.Fatalf("failed to read DER block from signature PEM %s", tmpSignedFile.Name())

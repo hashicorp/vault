@@ -83,7 +83,7 @@ environment variables or files on disk in predefined locations.
 
 - `aws_s3_enable_kms` `(boolean)` - Use KMS to encrypt bucket contents.
 
-- `aws_s3_server_side_encryption` `(boolean)` - Use AES256 to encrypt bucket contents.
+- `aws_s3_server_side_encryption` `(boolean)` - Use AES256 to encrypt bucket contents. Cannot use with `aws_s3_enable_kms` parameter.
 
 - `aws_s3_kms_key` `(string)` - Use named KMS key, when `aws_s3_enable_kms=true`
 

@@ -63,6 +63,14 @@
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
           @value={{stringify (get @model attr.name)}}
         />
+      {{else if (eq attr.options.editType "ttl")}}
+        <InfoTableRow
+          @alwaysRender={{true}}
+          @defaultShown={{defaultDisplay}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{format-duration (get @model attr.name)}}
+          @isLink={{eq attr.name "database"}}
+        />
       {{else}}
         <InfoTableRow
           @alwaysRender={{true}}

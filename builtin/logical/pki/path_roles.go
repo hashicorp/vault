@@ -107,6 +107,14 @@ can include glob patterns, e.g. "ftp*.example.com". See
 the documentation for more information.`,
 			},
 
+			"allow_wildcard_certificates": {
+				Type: framework.TypeBool,
+				Description: `If set, allows certificates with wildcards in
+the common name to be issued, conforming to RFC 6125's Section 6.4.3; e.g.,
+"*.example.net" or "b*z.example.net". See the documentation for more
+information.`,
+			},
+
 			"allow_any_name": {
 				Type: framework.TypeBool,
 				Description: `If set, clients can request certificates for
@@ -458,6 +466,15 @@ func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*ro
 		result.AllowedBaseDomain = ""
 		modified = true
 	}
+	if result.AllowWildcardCertificates == nil {
+		// While not the most secure default, when AllowWildcardCertificates isn't
+		// explicitly specified in the stored Role, we automatically upgrade it to
+		// true to preserve compatibility with previous versions of Vault. Once this
+		// field is set, this logic will not be triggered any more.
+		result.AllowWildcardCertificates = new(bool)
+		*result.AllowWildcardCertificates = true
+		modified = true
+	}
 
 	// Upgrade generate_lease in role
 	if result.GenerateLease == nil {
@@ -557,6 +574,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		AllowBareDomains:              data.Get("allow_bare_domains").(bool),
 		AllowSubdomains:               data.Get("allow_subdomains").(bool),
 		AllowGlobDomains:              data.Get("allow_glob_domains").(bool),
+		AllowWildcardCertificates:     new(bool), // Handled specially below
 		AllowAnyName:                  data.Get("allow_any_name").(bool),
 		EnforceHostnames:              data.Get("enforce_hostnames").(bool),
 		AllowIPSANs:                   data.Get("allow_ip_sans").(bool),
@@ -643,6 +661,15 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 			}
 		}
 	}
+
+	allow_wildcard_certificates, present := data.GetOk("allow_wildcard_certificates")
+	if !present {
+		// While not the most secure default, when AllowWildcardCertificates isn't
+		// explicitly specified in the request, we automatically set it to true to
+		// preserve compatibility with previous versions of Vault.
+		allow_wildcard_certificates = true
+	}
+	*entry.AllowWildcardCertificates = allow_wildcard_certificates.(bool)
 
 	// Store it
 	jsonEntry, err := logical.StorageEntryJSON("role/"+name, entry)
@@ -752,6 +779,7 @@ type roleEntry struct {
 	AllowTokenDisplayName         bool          `json:"allow_token_displayname" mapstructure:"allow_token_displayname"`
 	AllowSubdomains               bool          `json:"allow_subdomains" mapstructure:"allow_subdomains"`
 	AllowGlobDomains              bool          `json:"allow_glob_domains" mapstructure:"allow_glob_domains"`
+	AllowWildcardCertificates     *bool         `json:"allow_wildcard_certificates,omitempty" mapstructure:"allow_wildcard_certificates"`
 	AllowAnyName                  bool          `json:"allow_any_name" mapstructure:"allow_any_name"`
 	EnforceHostnames              bool          `json:"enforce_hostnames" mapstructure:"enforce_hostnames"`
 	AllowIPSANs                   bool          `json:"allow_ip_sans" mapstructure:"allow_ip_sans"`
@@ -803,6 +831,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"allow_token_displayname":            r.AllowTokenDisplayName,
 		"allow_subdomains":                   r.AllowSubdomains,
 		"allow_glob_domains":                 r.AllowGlobDomains,
+		"allow_wildcard_certificates":        r.AllowWildcardCertificates,
 		"allow_any_name":                     r.AllowAnyName,
 		"enforce_hostnames":                  r.EnforceHostnames,
 		"allow_ip_sans":                      r.AllowIPSANs,
