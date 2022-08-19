@@ -28,7 +28,7 @@ func (c ContextKey) String() string {
 	return "plugin" + string(c)
 }
 
-var ContextKeyPluginReload = ContextKey("plugin-reload")
+const ContextKeyPluginReload = ContextKey("plugin-reload")
 
 // Cleanup cleans up the go-plugin client and the plugin catalog
 func (b *BackendPluginClient) Cleanup(ctx context.Context) {
