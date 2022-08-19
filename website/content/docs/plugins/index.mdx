@@ -1,0 +1,41 @@
+---
+layout: docs
+page_title: Plugin System
+description: Learn about Vault's plugin system.
+---
+
+
+# Plugin System
+
+All Vault auth methods and secrets engines are considered plugins. This simple concept
+allows both built-in and external plugins to be treated like Legos. Any plugin
+can exist at multiple different locations. Different versions of a plugin may
+be at each location, with each version differing from Vault's version.
+
+@include 'plugin-file-permissions-check.mdx'
+
+## Built-In Plugins
+
+Built-in plugins are shipped with Vault, often for commonly used implementations,
+and require no additional operator intervention to run. Built-in plugins are
+just like any other backend code inside Vault.
+
+To use a different or edited version of a built-in plugin, the plugin must be
+run as an external plugin. See [Overriding Built-in Plugins](/docs/upgrading/plugins#overriding-built-in-plugins)
+for details on how to override a built-in plugin in-place.
+
+## External Plugins
+
+External plugins are not shipped with Vault and require additional operator
+intervention to run.
+
+To run an external plugin, a binary of the plugin is required. Plugin
+binaries can be obtained from [releases.hashicorp.com](https://releases.hashicorp.com/)
+or they can be [built from source](/docs/plugins/plugin-development#building-a-plugin-from-source).
+
+Vault's external plugins are completely separate, standalone applications that
+Vault executes and communicates with over RPC. Each time a Vault secret engine
+or auth method is mounted, a new process is spawned. However, database plugins
+can be made to implement [plugin multiplexing](/docs/plugins/plugin-architecture#plugin-multiplexing)
+which allows a single plugin process to be used for multiple database
+connections.

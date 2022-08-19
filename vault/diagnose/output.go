@@ -199,7 +199,6 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 						Status:  ErrorStatus,
 						Message: message,
 					})
-
 				}
 			case spotCheckOkEventName:
 				checkName, message := findAttributes(e, nameKey, messageKey)
@@ -255,7 +254,6 @@ func (t *TelemetryCollector) getOrBuildResult(id trace.SpanID) *Result {
 					r.Advice = message
 				}
 			}
-
 		}
 		switch s.StatusCode() {
 		case codes.Unset:

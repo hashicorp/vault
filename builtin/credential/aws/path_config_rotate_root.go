@@ -145,6 +145,10 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		}
 	}()
 
+	oldAccessKey := clientConf.AccessKey
+	clientConf.AccessKey = *createAccessKeyRes.AccessKey.AccessKeyId
+	clientConf.SecretKey = *createAccessKeyRes.AccessKey.SecretAccessKey
+
 	// Now get ready to update storage, doing everything beforehand so we can minimize how long
 	// we need to hold onto the lock.
 	newEntry, err := b.configClientToEntry(clientConf)
@@ -152,10 +156,6 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		errs = multierror.Append(errs, fmt.Errorf("error generating new client config JSON: %w", err))
 		return nil, errs
 	}
-
-	oldAccessKey := clientConf.AccessKey
-	clientConf.AccessKey = *createAccessKeyRes.AccessKey.AccessKeyId
-	clientConf.SecretKey = *createAccessKeyRes.AccessKey.SecretAccessKey
 
 	// Someday we may want to allow the user to send a number of seconds to wait here
 	// before deleting the previous access key to allow work to complete. That would allow

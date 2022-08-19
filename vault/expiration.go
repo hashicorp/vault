@@ -28,7 +28,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/quotas"
 	uberAtomic "go.uber.org/atomic"
 )
@@ -144,8 +143,6 @@ type ExpirationManager struct {
 
 	logLeaseExpirations bool
 	expireFunc          ExpireLeaseStrategy
-
-	revokePermitPool *physical.PermitPool
 
 	// testRegisterAuthFailure, if set to true, triggers an explicit failure on
 	// RegisterAuth to simulate a partial failure during a token creation
@@ -295,62 +292,6 @@ func revokeExponentialBackoff(attempt uint8) time.Duration {
 	return time.Duration(backoffTime)
 }
 
-// revokeIDFunc is invoked when a given ID is expired
-func expireLeaseStrategyRevoke(ctx context.Context, m *ExpirationManager, leaseID string, ns *namespace.Namespace) {
-	for attempt := uint(0); attempt < maxRevokeAttempts; attempt++ {
-		releasePermit := func() {}
-		if m.revokePermitPool != nil {
-			m.logger.Trace("expiring lease; waiting for permit pool")
-			m.revokePermitPool.Acquire()
-			releasePermit = m.revokePermitPool.Release
-			m.logger.Trace("expiring lease; got permit pool")
-		}
-
-		metrics.IncrCounterWithLabels([]string{"expire", "lease_expiration"}, 1, []metrics.Label{{"namespace", ns.ID}})
-
-		revokeCtx, cancel := context.WithTimeout(ctx, DefaultMaxRequestDuration)
-		revokeCtx = namespace.ContextWithNamespace(revokeCtx, ns)
-
-		go func() {
-			select {
-			case <-ctx.Done():
-			case <-m.quitCh:
-				cancel()
-			case <-revokeCtx.Done():
-			}
-		}()
-
-		select {
-		case <-m.quitCh:
-			m.logger.Error("shutting down, not attempting further revocation of lease", "lease_id", leaseID)
-			releasePermit()
-			cancel()
-			return
-		case <-m.quitContext.Done():
-			m.logger.Error("core context canceled, not attempting further revocation of lease", "lease_id", leaseID)
-			releasePermit()
-			cancel()
-			return
-		default:
-		}
-
-		m.coreStateLock.RLock()
-		err := m.Revoke(revokeCtx, leaseID)
-		m.coreStateLock.RUnlock()
-		releasePermit()
-		cancel()
-		if err == nil {
-			return
-		}
-
-		metrics.IncrCounterWithLabels([]string{"expire", "lease_expiration", "error"}, 1, []metrics.Label{{"namespace", ns.ID}})
-
-		m.logger.Error("failed to revoke lease", "lease_id", leaseID, "error", err)
-		time.Sleep((1 << attempt) * revokeRetryBase)
-	}
-	m.logger.Error("maximum revoke attempts reached", "lease_id", leaseID)
-}
-
 func getNumExpirationWorkers(c *Core, l log.Logger) int {
 	numWorkers := c.numExpirationWorkers
 
@@ -372,20 +313,11 @@ func getNumExpirationWorkers(c *Core, l log.Logger) int {
 // NewExpirationManager creates a new ExpirationManager that is backed
 // using a given view, and uses the provided router for revocation.
 func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, logger log.Logger) *ExpirationManager {
-	var permitPool *physical.PermitPool
-	if os.Getenv("VAULT_16_REVOKE_PERMITPOOL") != "" {
-		permitPoolSize := 50
-		permitPoolSizeRaw, err := strconv.Atoi(os.Getenv("VAULT_16_REVOKE_PERMITPOOL"))
-		if err == nil && permitPoolSizeRaw > 0 {
-			permitPoolSize = permitPoolSizeRaw
-		}
-
-		permitPool = physical.NewPermitPool(permitPoolSize)
-
-	}
-
-	jobManager := fairshare.NewJobManager("expire", getNumExpirationWorkers(c, logger), logger.Named("job-manager"), c.metricSink)
+	managerLogger := logger.Named("job-manager")
+	jobManager := fairshare.NewJobManager("expire", getNumExpirationWorkers(c, logger), managerLogger, c.metricSink)
 	jobManager.Start()
+
+	c.AddLogger(managerLogger)
 
 	exp := &ExpirationManager{
 		core:        c,
@@ -416,7 +348,6 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 
 		logLeaseExpirations: os.Getenv("VAULT_SKIP_LOGGING_LEASE_EXPIRATIONS") == "",
 		expireFunc:          e,
-		revokePermitPool:    permitPool,
 
 		jobManager: jobManager,
 	}
@@ -540,9 +471,15 @@ func (m *ExpirationManager) invalidate(key string) {
 				m.pending.Delete(leaseID)
 				m.leaseCount--
 
-				if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
-					m.logger.Error("failed to update quota on lease invalidation", "error", err)
-					return
+				// Avoid nil pointer dereference. Without cachedLeaseInfo we do not have enough information to
+				// accurately update quota lease information.
+				// Note that cachedLeaseInfo should never be nil under normal operation.
+				if pending.cachedLeaseInfo != nil {
+					leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: leaseID, Role: pending.cachedLeaseInfo.LoginRole}
+					if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
+						m.logger.Error("failed to update quota on lease invalidation", "error", err)
+						return
+					}
 				}
 			default:
 				// Update the lease in memory
@@ -555,14 +492,21 @@ func (m *ExpirationManager) invalidate(key string) {
 				// other maps, and update metrics/quotas if appropriate.
 				m.nonexpiring.Delete(leaseID)
 
-				if _, ok := m.irrevocable.Load(leaseID); ok {
+				if info, ok := m.irrevocable.Load(leaseID); ok {
+					irrevocable := info.(pendingInfo)
 					m.irrevocable.Delete(leaseID)
 					m.irrevocableLeaseCount--
 
 					m.leaseCount--
-					if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
-						m.logger.Error("failed to update quota on lease invalidation", "error", err)
-						return
+					// Avoid nil pointer dereference. Without cachedLeaseInfo we do not have enough information to
+					// accurately update quota lease information.
+					// Note that cachedLeaseInfo should never be nil under normal operation.
+					if irrevocable.cachedLeaseInfo != nil {
+						leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: leaseID, Role: irrevocable.cachedLeaseInfo.LoginRole}
+						if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
+							m.logger.Error("failed to update quota on lease invalidation", "error", err)
+							return
+						}
 					}
 				}
 				return
@@ -740,8 +684,8 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 	broker := make(chan *lease)
 	quit := make(chan bool)
 	// Buffer these channels to prevent deadlocks
-	errs := make(chan error, len(existing))
-	result := make(chan struct{}, len(existing))
+	errs := make(chan error, leaseCount)
+	result := make(chan struct{}, leaseCount)
 
 	// Use a wait group
 	wg := &sync.WaitGroup{}
@@ -814,16 +758,17 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 	}()
 
 	// Ensure all keys on the chan are processed
+LOOP:
 	for i := 0; i < leaseCount; i++ {
 		select {
-		case err := <-errs:
+		case err = <-errs:
 			// Close all go routines
 			close(quit)
-			return err
+			break LOOP
 
 		case <-m.quitCh:
 			close(quit)
-			return nil
+			break LOOP
 
 		case <-result:
 		}
@@ -831,6 +776,9 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 
 	// Let all go routines finish
 	wg.Wait()
+	if err != nil {
+		return err
+	}
 
 	m.restoreModeLock.Lock()
 	atomic.StoreInt32(m.restoreMode, 0)
@@ -846,7 +794,8 @@ func (m *ExpirationManager) Restore(errorFunc func()) (retErr error) {
 }
 
 // processRestore takes a lease and restores it in the expiration manager if it has
-// not already been seen
+// not already been seen.
+// Once we load the lease, we also update the quotas that are keeping track of those leases
 func (m *ExpirationManager) processRestore(ctx context.Context, leaseID string) error {
 	m.restoreRequestLock.RLock()
 	defer m.restoreRequestLock.RUnlock()
@@ -865,9 +814,20 @@ func (m *ExpirationManager) processRestore(ctx context.Context, leaseID string) 
 	}
 
 	// Load lease and restore expiration timer
-	_, err := m.loadEntryInternal(ctx, leaseID, true, false)
+	le, err := m.loadEntryInternal(ctx, leaseID, true, false)
 	if err != nil {
 		return err
+	}
+
+	// Update quotas with relevant lease information
+	if le != nil {
+		leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: le.LeaseID, Role: le.LoginRole}
+		if err := m.core.quotasHandleLeases(context.Background(), quotas.LeaseActionLoaded, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
+			// We don't want to fail the start-up due to leases not being able
+			// to be loaded into the quota manager. When the leases get loaded,
+			// quota manager will be updated individually too.
+			m.logger.Error("failed to load lease into the quota sub-system", "LeaseID:", leaseID, "LoginRole", le.LoginRole, "error", err)
+		}
 	}
 
 	return nil
@@ -1163,6 +1123,10 @@ func (m *ExpirationManager) RevokeByToken(ctx context.Context, te *logical.Token
 	return nil
 }
 
+// revoke all leases under `prefix`
+// if sync == true, revoke immediately (using a single worker).
+// otherwise, mark the lease as expiring  `now` and let the expiration manager
+// queue it for revocation.
 func (m *ExpirationManager) revokePrefixCommon(ctx context.Context, prefix string, force, sync bool) error {
 	if m.inRestoreMode() {
 		m.restoreRequestLock.Lock()
@@ -1332,7 +1296,8 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 // RenewToken is used to renew a token which does not need to
 // invoke a logical backend.
 func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request, te *logical.TokenEntry,
-	increment time.Duration) (*logical.Response, error) {
+	increment time.Duration,
+) (*logical.Response, error) {
 	defer metrics.MeasureSince([]string{"expire", "renew-token"}, time.Now())
 
 	tokenNS, err := NamespaceByID(ctx, te.NamespaceID, m.core)
@@ -1448,8 +1413,8 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 
 // Register is used to take a request and response with an associated
 // lease. The secret gets assigned a LeaseID and the management of
-// of lease is assumed by the expiration manager.
-func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, resp *logical.Response) (id string, retErr error) {
+// the lease is assumed by the expiration manager.
+func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, resp *logical.Response, loginRole string) (id string, retErr error) {
 	defer metrics.MeasureSince([]string{"expire", "register"}, time.Now())
 
 	te := req.TokenEntry()
@@ -1491,6 +1456,7 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 		Path:            req.Path,
 		Data:            resp.Data,
 		Secret:          resp.Secret,
+		LoginRole:       loginRole,
 		IssueTime:       time.Now(),
 		ExpireTime:      resp.Secret.ExpirationTime(),
 		namespace:       ns,
@@ -1584,7 +1550,7 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 // RegisterAuth is used to take an Auth response with an associated lease.
 // The token does not get a LeaseID, but the lease management is handled by
 // the expiration manager.
-func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenEntry, auth *logical.Auth) error {
+func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenEntry, auth *logical.Auth, loginRole string) error {
 	defer metrics.MeasureSince([]string{"expire", "register-auth"}, time.Now())
 
 	// Triggers failure of RegisterAuth. This should only be set and triggered
@@ -1636,6 +1602,7 @@ func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenE
 		ClientToken: auth.ClientToken,
 		Auth:        auth,
 		Path:        te.Path,
+		LoginRole:   loginRole,
 		IssueTime:   time.Now(),
 		ExpireTime:  authExpirationTime,
 		namespace:   tokenNS,
@@ -1653,6 +1620,11 @@ func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenE
 
 	// Setup revocation timer
 	m.updatePending(&le)
+	if strings.HasPrefix(auth.ClientToken, consts.ServiceTokenPrefix) {
+		generatedTokenEntry := logical.TokenEntry{Policies: auth.Policies}
+		tok := m.tokenStore.GenerateSSCTokenID(auth.ClientToken, logical.IndexStateFromContext(ctx), &generatedTokenEntry)
+		te.ExternalID = tok
+	}
 
 	return nil
 }
@@ -1776,12 +1748,17 @@ func (m *ExpirationManager) inMemoryLeaseInfo(le *leaseEntry) *leaseEntry {
 	if le.isIrrevocable() {
 		ret.RevokeErr = le.RevokeErr
 	}
+	ret.LoginRole = le.LoginRole
 	return ret
 }
 
 func (m *ExpirationManager) uniquePoliciesGc() {
 	for {
-		<-m.emptyUniquePolicies.C
+		select {
+		case <-m.quitCh:
+			return
+		case <-m.emptyUniquePolicies.C:
+		}
 
 		// If the maximum lease is a month, and we blow away the unique
 		// policy cache every week, the pessimal case is 4x larger space
@@ -1846,9 +1823,15 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 			info.(pendingInfo).timer.Stop()
 			m.pending.Delete(le.LeaseID)
 			m.leaseCount--
-			if err := m.core.quotasHandleLeases(m.quitContext, quotas.LeaseActionDeleted, []string{le.LeaseID}); err != nil {
-				m.logger.Error("failed to update quota on lease deletion", "error", err)
-				return
+			// Avoid nil pointer dereference. Without cachedLeaseInfo we do not have enough information to
+			// accurately update quota lease information.
+			// Note that cachedLeaseInfo should never be nil under normal operation.
+			if pending.cachedLeaseInfo != nil {
+				leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: le.LeaseID, Role: le.LoginRole}
+				if err := m.core.quotasHandleLeases(m.quitContext, quotas.LeaseActionDeleted, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
+					m.logger.Error("failed to update quota on lease deletion", "error", err)
+					return
+				}
 			}
 		}
 		return
@@ -1897,12 +1880,24 @@ func (m *ExpirationManager) updatePendingInternal(le *leaseEntry) {
 		pending.cachedLeaseInfo = m.inMemoryLeaseInfo(le)
 		m.pending.Store(le.LeaseID, pending)
 	}
-
 	if leaseCreated {
 		m.leaseCount++
-		if err := m.core.quotasHandleLeases(m.quitContext, quotas.LeaseActionCreated, []string{le.LeaseID}); err != nil {
-			m.logger.Error("failed to update quota on lease creation", "error", err)
-			return
+
+		// If we're in restore mode, Vault is still starting. While we may get leases created, it is likely
+		// 'catching up' on old creates. There will be a core.quotasHandleLeases call to register these leases in
+		// restore process instead - in other words, !m.inRestoreMode() prevents double counting for quotas.
+		// We keep m.leaseCount++ out of this check as it is not called in processRestore
+		if !m.inRestoreMode() {
+			// Avoid nil pointer dereference. Without cachedLeaseInfo we do not have enough information to
+			// accurately update quota lease information.
+			// Note that cachedLeaseInfo should never be nil under normal operation.
+			if pending.cachedLeaseInfo != nil {
+				leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: le.LeaseID, Role: le.LoginRole}
+				if err := m.core.quotasHandleLeases(m.quitContext, quotas.LeaseActionCreated, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
+					m.logger.Error("failed to update quota on lease creation", "error", err)
+					return
+				}
+			}
 		}
 	}
 }
@@ -2501,9 +2496,15 @@ func (m *ExpirationManager) removeFromPending(ctx context.Context, leaseID strin
 		m.pending.Delete(leaseID)
 		if decrementCounters {
 			m.leaseCount--
-			// Log but do not fail; unit tests (and maybe Tidy on production systems)
-			if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []string{leaseID}); err != nil {
-				m.logger.Error("failed to update quota on revocation", "error", err)
+			// Avoid nil pointer dereference. Without cachedLeaseInfo we do not have enough information to
+			// accurately update quota lease information.
+			// Note that cachedLeaseInfo should never be nil under normal operation.
+			if pending.cachedLeaseInfo != nil {
+				leaseInfo := &quotas.QuotaLeaseInformation{LeaseId: leaseID, Role: pending.cachedLeaseInfo.LoginRole}
+				// Log but do not fail; unit tests (and maybe Tidy on production systems)
+				if err := m.core.quotasHandleLeases(ctx, quotas.LeaseActionDeleted, []*quotas.QuotaLeaseInformation{leaseInfo}); err != nil {
+					m.logger.Error("failed to update quota on revocation", "error", err)
+				}
 			}
 		}
 	}
@@ -2713,6 +2714,11 @@ type leaseEntry struct {
 	IssueTime       time.Time              `json:"issue_time"`
 	ExpireTime      time.Time              `json:"expire_time"`
 	LastRenewalTime time.Time              `json:"last_renewal_time"`
+
+	// LoginRole is used to indicate which login role (if applicable) this lease
+	// was created with. This is required to decrement lease count quotas
+	// based on login roles upon lease expiry.
+	LoginRole string `json:"login_role"`
 
 	// Version is used to track new different versions of leases. V0 (or
 	// zero-value) had non-root namespaced secondary indexes live in the root

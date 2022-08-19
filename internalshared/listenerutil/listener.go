@@ -101,10 +101,9 @@ func TLSConfig(
 
 PASSPHRASECORRECT:
 	tlsConf := &tls.Config{
-		GetCertificate:           cg.GetCertificate,
-		NextProtos:               []string{"h2", "http/1.1"},
-		ClientAuth:               tls.RequestClientCert,
-		PreferServerCipherSuites: l.TLSPreferServerCipherSuites,
+		GetCertificate: cg.GetCertificate,
+		NextProtos:     []string{"h2", "http/1.1"},
+		ClientAuth:     tls.RequestClientCert,
 	}
 
 	if l.TLSMinVersion == "" {

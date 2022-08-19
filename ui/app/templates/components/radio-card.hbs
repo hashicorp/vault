@@ -1,0 +1,35 @@
+<label
+  for={{dasherize @value}}
+  class="radio-card {{if (eq @value @groupValue) 'is-selected'}} {{if @disabled 'is-disabled'}}"
+  ...attributes
+>
+  {{#if (has-block)}}
+    {{yield}}
+  {{else}}
+    <div class="radio-card-row">
+      <div>
+        <Icon @name={{@icon}} @size="24" class="has-text-grey-light" />
+      </div>
+      <div class="has-left-margin-s">
+        <h5 class="radio-card-message-title">
+          {{@title}}
+        </h5>
+        <p class="radio-card-message-body">
+          {{@description}}
+        </p>
+      </div>
+    </div>
+  {{/if}}
+  <div class="radio-card-radio-row">
+    <RadioButton
+      id={{dasherize @value}}
+      name="config-mode"
+      class="radio"
+      disabled={{@disabled}}
+      @value={{@value}}
+      @groupValue={{@groupValue}}
+      @onChange={{@onChange}}
+    />
+    <span class="dot"></span>
+  </div>
+</label>

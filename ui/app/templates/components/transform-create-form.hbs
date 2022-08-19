@@ -1,30 +1,21 @@
 <form onsubmit={{action "createOrUpdate" "create"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
-    <MessageError @model={{model}} />
-    <NamespaceReminder @mode={{mode}} @noun="transformation" />
-    {{#each model.transformFieldAttrs as |attr|}}
-      <FormField
-        data-test-field
-        @attr={{attr}}
-        @model={{model}}
-      />
+    <MessageError @model={{this.model}} />
+    <NamespaceReminder @mode={{this.mode}} @noun="transformation" />
+    {{#each this.model.transformFieldAttrs as |attr|}}
+      <FormField data-test-field @attr={{attr}} @model={{this.model}} />
     {{/each}}
   </div>
   <div class="field is-grouped-split box is-fullwidth is-bottomless">
     <div class="control">
-      <button
-        type="submit"
-        disabled={{buttonDisabled}}
-        class="button is-primary"
-        data-test-transform-create=true
-      >
-        {{#if (eq mode 'create')}}
+      <button type="submit" disabled={{this.buttonDisabled}} class="button is-primary" data-test-transform-create={{true}}>
+        {{#if (eq this.mode "create")}}
           Create transformation
-        {{else if (eq mode 'edit')}}
+        {{else if (eq this.mode "edit")}}
           Save
         {{/if}}
       </button>
-      <SecretLink @mode={{if (eq mode "create") "list" "show"}} @class="button" @secret={{model.id}}>
+      <SecretLink @mode={{if (eq this.mode "create") "list" "show"}} class="button" @secret={{this.model.id}}>
         Cancel
       </SecretLink>
     </div>

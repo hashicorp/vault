@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -166,7 +165,7 @@ DONELISTHANDLING:
 		},
 	)
 
-	resp.WrapInfo.Token = te.ID
+	resp.WrapInfo.Token = te.ExternalID
 	resp.WrapInfo.Accessor = te.Accessor
 	resp.WrapInfo.CreationTime = creationTime
 	// If this is not a rewrap, store the request path as creation_path
@@ -326,7 +325,7 @@ DONELISTHANDLING:
 	}
 
 	// Register the wrapped token with the expiration manager
-	if err := c.expiration.RegisterAuth(ctx, &te, wAuth); err != nil {
+	if err := c.expiration.RegisterAuth(ctx, &te, wAuth, c.DetermineRoleFromLoginRequest(req.MountPoint, req.Data, ctx)); err != nil {
 		// Revoke since it's not yet being tracked for expiration
 		c.tokenStore.revokeOrphan(ctx, te.ID)
 		c.logger.Error("failed to register cubbyhole wrapping token lease", "request_path", req.Path, "error", err)
@@ -403,7 +402,7 @@ func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) 
 	// token to be a JWT -- namespaced tokens have two dots too, but Vault
 	// token types (for now at least) begin with a letter representing a type
 	// and then a dot.
-	if strings.Count(token, ".") == 2 && token[1] != '.' {
+	if IsJWT(token) {
 		// Implement the jose library way
 		parsedJWT, err := squarejwt.ParseSigned(token)
 		if err != nil {

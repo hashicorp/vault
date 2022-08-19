@@ -49,7 +49,7 @@ export default class DatabaseRoleEdit extends Component {
     }
     return this.store
       .queryRecord('database/connection', { id: dbs[0], backend })
-      .then(record => record.plugin_name)
+      .then((record) => record.plugin_name)
       .catch(() => null);
   }
 
@@ -73,7 +73,7 @@ export default class DatabaseRoleEdit extends Component {
           console.debug(e);
         }
       })
-      .catch(e => {
+      .catch((e) => {
         this.flashMessages.danger(e.errors?.join('. '));
       });
   }
@@ -100,12 +100,25 @@ export default class DatabaseRoleEdit extends Component {
           console.debug(e);
         }
       })
-      .catch(e => {
+      .catch((e) => {
         const errorMessage = e.errors?.join('. ') || e.message;
         this.flashMessages.danger(
           errorMessage || 'Could not save the role. Please check Vault logs for more information.'
         );
         this.loading = false;
+      });
+  }
+  @action
+  rotateRoleCred(id) {
+    const backend = this.args.model?.backend;
+    let adapter = this.store.adapterFor('database/credential');
+    adapter
+      .rotateRoleCredentials(backend, id)
+      .then(() => {
+        this.flashMessages.success(`Success: Credentials for ${id} role were rotated`);
+      })
+      .catch((e) => {
+        this.flashMessages.danger(e.errors);
       });
   }
 }

@@ -1,4 +1,4 @@
-// +build !openbsd !arm
+//go:build !openbsd || !arm
 
 package diagnose
 
@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/dustin/go-humanize"
-	"github.com/shirou/gopsutil/disk"
+	"github.com/shirou/gopsutil/v3/disk"
 )
 
 func diskUsage(ctx context.Context) error {

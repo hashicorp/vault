@@ -144,7 +144,6 @@ func TestReadConfig_DefaultTemplate(t *testing.T) {
 	}
 
 	configResult, err := readConfig(context.Background(), config.StorageView)
-
 	if err != nil {
 		t.Fatalf("expected err to be nil; got %s", err)
 	}
@@ -189,7 +188,6 @@ func TestReadConfig_CustomTemplate(t *testing.T) {
 	}
 
 	configResult, err := readConfig(context.Background(), config.StorageView)
-
 	if err != nil {
 		t.Fatalf("expected err to be nil; got %s", err)
 	}

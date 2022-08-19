@@ -27,11 +27,11 @@ Usage: vault operator seal [options]
 
   Seals the Vault server. Sealing tells the Vault server to stop responding
   to any operations until it is unsealed. When sealed, the Vault server
-  discards its in-memory master key to unlock the data, so it is physically
+  discards its in-memory root key to unlock the data, so it is physically
   blocked from responding to operations unsealed.
 
   If an unseal is in progress, sealing the Vault will reset the unsealing
-  process. Users will have to re-enter their portions of the master key again.
+  process. Users will have to re-enter their portions of the root key again.
 
   This command does nothing if the Vault server is already sealed.
 

@@ -14,7 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
@@ -168,13 +168,9 @@ func (f *FSM) openDBFile(dbPath string) error {
 		}
 	}
 
-	freelistType, noFreelistSync := freelistOptions()
+	opts := boltOptions(dbPath)
 	start := time.Now()
-	boltDB, err := bolt.Open(dbPath, 0o600, &bolt.Options{
-		Timeout:        1 * time.Second,
-		FreelistType:   freelistType,
-		NoFreelistSync: noFreelistSync,
-	})
+	boltDB, err := bolt.Open(dbPath, 0o600, opts)
 	if err != nil {
 		return err
 	}
@@ -782,13 +778,21 @@ func (f *FSM) SetNoopRestore(enabled bool) {
 func (f *FSM) Restore(r io.ReadCloser) error {
 	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "restore_snapshot"}, time.Now())
 
-	if f.noopRestore == true {
+	if f.noopRestore {
 		return nil
 	}
 
 	snapshotInstaller, ok := r.(*boltSnapshotInstaller)
 	if !ok {
-		return errors.New("expected snapshot installer object")
+		wrapper, ok := r.(raft.ReadCloserWrapper)
+		if !ok {
+			return fmt.Errorf("expected ReadCloserWrapper object, got: %T", r)
+		}
+		snapshotInstallerRaw := wrapper.WrappedReadCloser()
+		snapshotInstaller, ok = snapshotInstallerRaw.(*boltSnapshotInstaller)
+		if !ok {
+			return fmt.Errorf("expected snapshot installer object, got: %T", snapshotInstallerRaw)
+		}
 	}
 
 	f.l.Lock()

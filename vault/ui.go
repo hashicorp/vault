@@ -32,8 +32,9 @@ type UIConfig struct {
 // NewUIConfig creates a new UI config
 func NewUIConfig(enabled bool, physicalStorage physical.Backend, barrierStorage logical.Storage) *UIConfig {
 	defaultHeaders := http.Header{}
-	defaultHeaders.Set("Content-Security-Policy", "default-src 'none'; connect-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'unsafe-inline' 'self'; form-action 'none'; frame-ancestors 'none'; font-src 'self'")
 	defaultHeaders.Set("Service-Worker-Allowed", "/")
+	defaultHeaders.Set("X-Content-Type-Options", "nosniff")
+	defaultHeaders.Set("Content-Security-Policy", "default-src 'none'; connect-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'unsafe-inline' 'self'; form-action  'none'; frame-ancestors 'none'; font-src 'self'")
 
 	return &UIConfig{
 		physicalStorage: physicalStorage,
@@ -157,37 +158,30 @@ func (c *UIConfig) get(ctx context.Context) (*uiConfigEntry, error) {
 	if err != nil {
 		return nil, err
 	}
+	configRaw, uiConfigGetErr := c.barrierStorage.Get(ctx, uiConfigKey)
 
-	configRaw, err := c.barrierStorage.Get(ctx, uiConfigKey)
-	if err == nil {
-		if configRaw == nil {
-			return nil, nil
-		}
-		config := new(uiConfigEntry)
-		if err := json.Unmarshal(configRaw.Value, config); err != nil {
-			return nil, err
-		}
-		// Check that plaintext value matches barrier value, if not sync values
-		if plaintextConfigRaw == nil || bytes.Compare(plaintextConfigRaw.Value, configRaw.Value) != 0 {
-			if err := c.save(ctx, config); err != nil {
-				return nil, err
-			}
-		}
-		return config, nil
+	// Respond with error only if not sealed, otherwise do not throw the error
+	if uiConfigGetErr != nil && !strings.Contains(uiConfigGetErr.Error(), ErrBarrierSealed.Error()) {
+		return nil, uiConfigGetErr
 	}
-
-	// Respond with error if not sealed
-	if !strings.Contains(err.Error(), ErrBarrierSealed.Error()) {
-		return nil, err
-	}
-
-	// Respond with plaintext value
 	if configRaw == nil {
 		return nil, nil
 	}
+
 	config := new(uiConfigEntry)
-	if err := json.Unmarshal(plaintextConfigRaw.Value, config); err != nil {
+	if config == nil {
+		return nil, nil
+	}
+	if err := json.Unmarshal(configRaw.Value, config); err != nil {
 		return nil, err
+	}
+
+	// Check that plaintext value matches barrier value, if not sync values
+	if uiConfigGetErr == nil && (plaintextConfigRaw == nil ||
+		!bytes.Equal(plaintextConfigRaw.Value, configRaw.Value)) {
+		if err := c.save(ctx, config); err != nil {
+			return nil, err
+		}
 	}
 	return config, nil
 }

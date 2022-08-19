@@ -1,7 +1,7 @@
-{{#if (eq  model.backendType "pki")}}
-  {{#if (eq model.section "cert")}}
-     <ConfigPkiCa @config={{model}} @onRefresh={{onRefresh}} />
-   {{else}}
-     <ConfigPki @config={{model}} @onRefresh={{onRefresh}} @section={{model.section}} />
+{{#if (eq this.model.backendType "pki")}}
+  {{#if (eq this.model.section "cert")}}
+    <Pki::ConfigPkiCa @config={{this.model}} @onRefresh={{this.onRefresh}} />
+  {{else}}
+    <Pki::ConfigPki @config={{this.model}} @onRefresh={{this.onRefresh}} @section={{this.model.section}} />
   {{/if}}
 {{/if}}

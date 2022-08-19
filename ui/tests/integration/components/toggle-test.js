@@ -9,10 +9,10 @@ let handler = (data, e) => {
   return;
 };
 
-module('Integration | Component | toggle', function(hooks) {
+module('Integration | Component | toggle', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders with name as default label', async function(assert) {
+  test('it renders with name as default label', async function (assert) {
     this.set('handler', sinon.spy(handler));
 
     await render(hbs`<Toggle
@@ -34,7 +34,7 @@ module('Integration | Component | toggle', function(hooks) {
     assert.dom('#test-value').hasText('template block text', 'yielded text renders');
   });
 
-  test('it has the correct classes', async function(assert) {
+  test('it has the correct classes', async function (assert) {
     this.set('handler', sinon.spy(handler));
     await render(hbs`
       <Toggle
@@ -48,7 +48,7 @@ module('Integration | Component | toggle', function(hooks) {
     assert.dom('.toggle.is-small').exists('toggle has is-small class');
   });
 
-  test('it sets the id of the input correctly', async function(assert) {
+  test('it sets the id of the input correctly', async function (assert) {
     this.set('handler', sinon.spy(handler));
     await render(hbs`
     <Toggle

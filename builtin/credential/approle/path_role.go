@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/parseip"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -237,7 +239,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 				},
 				"bound_cidr_list": {
 					Type: framework.TypeCommaStringSlice,
-					Description: `Deprecated: Please use "secret_id_bound_cidrs" instead. Comma separated string or list 
+					Description: `Deprecated: Please use "secret_id_bound_cidrs" instead. Comma separated string or list
 of CIDR blocks. If set, specifies the blocks of IP addresses which can perform the login operation.`,
 				},
 			},
@@ -817,6 +819,10 @@ func (b *backend) roleEntry(ctx context.Context, s logical.Storage, roleName str
 		needsUpgrade = true
 	}
 
+	for i, cidr := range role.SecretIDBoundCIDRs {
+		role.SecretIDBoundCIDRs[i] = parseip.TrimLeadingZeroesCIDR(cidr)
+	}
+
 	if role.TokenPeriod == 0 && role.Period > 0 {
 		role.TokenPeriod = role.Period
 	}
@@ -1297,7 +1303,11 @@ func (b *backend) pathRoleSecretIDAccessorLookupUpdate(ctx context.Context, req 
 		return nil, err
 	}
 	if accessorEntry == nil {
-		return nil, fmt.Errorf("failed to find accessor entry for secret_id_accessor: %q", secretIDAccessor)
+		return logical.RespondWithStatusCode(
+			logical.ErrorResponse("failed to find accessor entry for secret_id_accessor: %q", secretIDAccessor),
+			req,
+			http.StatusNotFound,
+		)
 	}
 
 	roleNameHMAC, err := createHMAC(role.HMACKey, role.name)

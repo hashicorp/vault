@@ -26,34 +26,50 @@ func pathRoles(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
-				Description: "Name of the role",
+				Description: "Name of the role.",
 			},
 
+			// The "policy" and "token_type" parameters were deprecated in Consul back in version 1.4.
+			// They have been removed from Consul as of version 1.11. Consider removing them here in the future.
 			"policy": {
 				Type: framework.TypeString,
 				Description: `Policy document, base64 encoded. Required
 for 'client' tokens. Required for Consul pre-1.4.`,
-			},
-
-			"policies": {
-				Type: framework.TypeCommaStringSlice,
-				Description: `List of policies to attach to the token. Required
-for Consul 1.4 or above.`,
-			},
-
-			"local": {
-				Type: framework.TypeBool,
-				Description: `Indicates that the token should not be replicated globally 
-and instead be local to the current datacenter.  Available in Consul 1.4 and above.`,
+				Deprecated: true,
 			},
 
 			"token_type": {
 				Type:    framework.TypeString,
 				Default: "client",
-				Description: `Which type of token to create: 'client'
-or 'management'. If a 'management' token,
-the "policy" parameter is not required.
-Defaults to 'client'.`,
+				Description: `Which type of token to create: 'client' or 'management'. If
+a 'management' token, the "policy", "policies", and "consul_roles" parameters are not
+required. Defaults to 'client'.`,
+				Deprecated: true,
+			},
+
+			"policies": {
+				Type:        framework.TypeCommaStringSlice,
+				Description: `Use "consul_policies" instead.`,
+				Deprecated:  true,
+			},
+
+			"consul_policies": {
+				Type: framework.TypeCommaStringSlice,
+				Description: `List of policies to attach to the token. Either "consul_policies"
+or "consul_roles" are required for Consul 1.5 and above, or just "consul_policies" if
+using Consul 1.4.`,
+			},
+
+			"consul_roles": {
+				Type: framework.TypeCommaStringSlice,
+				Description: `List of Consul roles to attach to the token. Either "policies"
+or "consul_roles" are required for Consul 1.5 and above.`,
+			},
+
+			"local": {
+				Type: framework.TypeBool,
+				Description: `Indicates that the token should not be replicated globally 
+and instead be local to the current datacenter. Available in Consul 1.4 and above.`,
 			},
 
 			"ttl": {
@@ -68,8 +84,32 @@ Defaults to 'client'.`,
 
 			"lease": {
 				Type:        framework.TypeDurationSecond,
-				Description: "Use ttl instead.",
+				Description: `Use "ttl" instead.`,
 				Deprecated:  true,
+			},
+
+			"consul_namespace": {
+				Type: framework.TypeString,
+				Description: `Indicates which namespace that the token will be
+created within. Defaults to 'default'. Available in Consul 1.7 and above.`,
+			},
+
+			"partition": {
+				Type: framework.TypeString,
+				Description: `Indicates which admin partition that the token
+will be created within. Defaults to 'default'. Available in Consul 1.11 and above.`,
+			},
+
+			"service_identities": {
+				Type: framework.TypeStringSlice,
+				Description: `List of Service Identities to attach to the
+token, separated by semicolons. Available in Consul 1.5 or above.`,
+			},
+
+			"node_identities": {
+				Type: framework.TypeStringSlice,
+				Description: `List of Node Identities to attach to the
+token. Available in Consul 1.8.1 or above.`,
 			},
 		},
 
@@ -101,53 +141,69 @@ func (b *backend) pathRolesRead(ctx context.Context, req *logical.Request, d *fr
 		return nil, nil
 	}
 
-	var result roleConfig
-	if err := entry.DecodeJSON(&result); err != nil {
+	var roleConfigData roleConfig
+	if err := entry.DecodeJSON(&roleConfigData); err != nil {
 		return nil, err
 	}
 
-	if result.TokenType == "" {
-		result.TokenType = "client"
+	if roleConfigData.TokenType == "" {
+		roleConfigData.TokenType = "client"
 	}
 
 	// Generate the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"lease":      int64(result.TTL.Seconds()),
-			"ttl":        int64(result.TTL.Seconds()),
-			"max_ttl":    int64(result.MaxTTL.Seconds()),
-			"token_type": result.TokenType,
-			"local":      result.Local,
+			"lease":            int64(roleConfigData.TTL.Seconds()),
+			"ttl":              int64(roleConfigData.TTL.Seconds()),
+			"max_ttl":          int64(roleConfigData.MaxTTL.Seconds()),
+			"token_type":       roleConfigData.TokenType,
+			"local":            roleConfigData.Local,
+			"consul_namespace": roleConfigData.ConsulNamespace,
+			"partition":        roleConfigData.Partition,
 		},
 	}
-	if result.Policy != "" {
-		resp.Data["policy"] = base64.StdEncoding.EncodeToString([]byte(result.Policy))
+	if roleConfigData.Policy != "" {
+		resp.Data["policy"] = base64.StdEncoding.EncodeToString([]byte(roleConfigData.Policy))
 	}
-	if len(result.Policies) > 0 {
-		resp.Data["policies"] = result.Policies
+	if len(roleConfigData.Policies) > 0 {
+		resp.Data["consul_policies"] = roleConfigData.Policies
 	}
+	if len(roleConfigData.ConsulRoles) > 0 {
+		resp.Data["consul_roles"] = roleConfigData.ConsulRoles
+	}
+	if len(roleConfigData.ServiceIdentities) > 0 {
+		resp.Data["service_identities"] = roleConfigData.ServiceIdentities
+	}
+	if len(roleConfigData.NodeIdentities) > 0 {
+		resp.Data["node_identities"] = roleConfigData.NodeIdentities
+	}
+
 	return resp, nil
 }
 
 func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	tokenType := d.Get("token_type").(string)
 	policy := d.Get("policy").(string)
-	name := d.Get("name").(string)
+	consulPolicies := d.Get("consul_policies").([]string)
 	policies := d.Get("policies").([]string)
-	local := d.Get("local").(bool)
+	roles := d.Get("consul_roles").([]string)
+	serviceIdentities := d.Get("service_identities").([]string)
+	nodeIdentities := d.Get("node_identities").([]string)
 
-	if len(policies) == 0 {
-		switch tokenType {
-		case "client":
-			if policy == "" {
-				return logical.ErrorResponse(
-					"Use either a policy document, or a list of policies, depending on your Consul version"), nil
-			}
-		case "management":
-		default:
+	switch tokenType {
+	case "client":
+		if policy == "" && len(policies) == 0 && len(consulPolicies) == 0 &&
+			len(roles) == 0 && len(serviceIdentities) == 0 && len(nodeIdentities) == 0 {
 			return logical.ErrorResponse(
-				"token_type must be \"client\" or \"management\""), nil
+				"Use either a policy document, a list of policies or roles, or a set of service or node identities, depending on your Consul version"), nil
 		}
+	case "management":
+	default:
+		return logical.ErrorResponse("token_type must be \"client\" or \"management\""), nil
+	}
+
+	if len(consulPolicies) == 0 {
+		consulPolicies = policies
 	}
 
 	policyRaw, err := base64.StdEncoding.DecodeString(policy)
@@ -173,13 +229,22 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 		maxTTL = time.Second * time.Duration(maxTTLRaw.(int))
 	}
 
+	name := d.Get("name").(string)
+	local := d.Get("local").(bool)
+	namespace := d.Get("consul_namespace").(string)
+	partition := d.Get("partition").(string)
 	entry, err := logical.StorageEntryJSON("policy/"+name, roleConfig{
-		Policy:    string(policyRaw),
-		Policies:  policies,
-		TokenType: tokenType,
-		TTL:       ttl,
-		MaxTTL:    maxTTL,
-		Local:     local,
+		Policy:            string(policyRaw),
+		Policies:          consulPolicies,
+		ConsulRoles:       roles,
+		ServiceIdentities: serviceIdentities,
+		NodeIdentities:    nodeIdentities,
+		TokenType:         tokenType,
+		TTL:               ttl,
+		MaxTTL:            maxTTL,
+		Local:             local,
+		ConsulNamespace:   namespace,
+		Partition:         partition,
 	})
 	if err != nil {
 		return nil, err
@@ -201,10 +266,15 @@ func (b *backend) pathRolesDelete(ctx context.Context, req *logical.Request, d *
 }
 
 type roleConfig struct {
-	Policy    string        `json:"policy"`
-	Policies  []string      `json:"policies"`
-	TTL       time.Duration `json:"lease"`
-	MaxTTL    time.Duration `json:"max_ttl"`
-	TokenType string        `json:"token_type"`
-	Local     bool          `json:"local"`
+	Policy            string        `json:"policy"`
+	Policies          []string      `json:"policies"`
+	ConsulRoles       []string      `json:"consul_roles"`
+	ServiceIdentities []string      `json:"service_identities"`
+	NodeIdentities    []string      `json:"node_identities"`
+	TTL               time.Duration `json:"lease"`
+	MaxTTL            time.Duration `json:"max_ttl"`
+	TokenType         string        `json:"token_type"`
+	Local             bool          `json:"local"`
+	ConsulNamespace   string        `json:"consul_namespace"`
+	Partition         string        `json:"partition"`
 }

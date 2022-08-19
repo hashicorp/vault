@@ -11,17 +11,20 @@ import (
 	"github.com/hashicorp/vault/physical/raft"
 )
 
-const DatabaseFilename = "vault.db"
-const owner = "owner"
-const group = "group"
-const other = "other"
+const (
+	DatabaseFilename = "vault.db"
+	owner            = "owner"
+	group            = "group"
+	other            = "other"
+)
 
-const ownershipTestName = "Check Raft Folder Ownership"
-const permissionsTestName = "Check Raft Folder Permissions"
-const raftQuorumTestName = "Check For Raft Quorum"
+const (
+	ownershipTestName   = "Check Raft Folder Ownership"
+	permissionsTestName = "Check Raft Folder Permissions"
+	raftQuorumTestName  = "Check For Raft Quorum"
+)
 
 func RaftFileChecks(ctx context.Context, path string) {
-
 	// Note: Stat does not return information about the symlink itself, in the case where we are dealing with one.
 	info, err := os.Stat(path)
 	if err != nil {

@@ -3,12 +3,19 @@ package keysutil
 import (
 	"bytes"
 	"context"
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"reflect"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
+
+	"golang.org/x/crypto/ed25519"
 
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -350,8 +357,8 @@ func checkKeys(t *testing.T,
 	storage logical.Storage,
 	keysArchive []KeyEntry,
 	action string,
-	archiveVer, latestVer, keysSize int) {
-
+	archiveVer, latestVer, keysSize int,
+) {
 	// Sanity check
 	if len(keysArchive) != latestVer+1 {
 		t.Fatalf("latest expected key version is %d, expected test keys archive size is %d, "+
@@ -613,6 +620,174 @@ func Test_BadArchive(t *testing.T) {
 	if len(p.Keys) != 6 {
 		t.Fatalf("unexpected key length %d", len(p.Keys))
 	}
+}
+
+func Test_RSAVerificationErrors(t *testing.T) {
+	ctx := context.Background()
+	lm, _ := NewLockManager(true, 0)
+	storage := &logical.InmemStorage{}
+	p, _, err := lm.GetPolicy(ctx, PolicyRequest{
+		Upsert:  true,
+		Storage: storage,
+		KeyType: KeyType_RSA2048,
+		Name:    "test",
+	}, rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p == nil {
+		t.Fatal("nil policy")
+	}
+
+	signContext := []byte("context")
+
+	hf := crypto.SHA1.New()
+	hf.Write([]byte("input"))
+	input := hf.Sum(nil)
+
+	sig, err := p.Sign(0, signContext, input, HashTypeSHA1, "", MarshalingTypeASN1)
+	if err != nil {
+		t.Fatalf("failed signing: %#v", err)
+	}
+
+	// Normal signature success
+	matches, err := p.VerifySignature(signContext, input, HashTypeSHA1, "", MarshalingTypeASN1, sig.Signature)
+	if err != nil {
+		t.Fatalf("failed signature verification: %#v", err)
+	}
+	if !matches {
+		t.Fatalf("signature verification failed ")
+	}
+
+	hf.Reset()
+	hf.Write([]byte("bad-input"))
+	badInput := hf.Sum(nil)
+
+	// Normal signature failure
+	matches2, err := p.VerifySignature(signContext, badInput, HashTypeSHA1, "", MarshalingTypeASN1, sig.Signature)
+	if err != nil {
+		t.Fatalf("failed signature verification: %#v", err)
+	}
+	if matches2 {
+		t.Fatalf("signature verification passed when it should have failed")
+	}
+
+	// bad usage (not hashing input will trigger an error that is not rsa.ErrVerification so we
+	// should get an error back.
+	matches3, err := p.VerifySignature(signContext, []byte("bad-input"), HashTypeSHA1, "pkcs1v15", MarshalingTypeASN1, sig.Signature)
+	if err == nil {
+		t.Fatal("expected error signature without hashing input with pkcs1v15 but got none")
+	}
+	if matches3 {
+		t.Fatalf("signature verification passed when it should have failed with an error returned")
+	}
+}
+
+func Test_Import(t *testing.T) {
+	ctx := context.Background()
+	storage := &logical.InmemStorage{}
+	testKeys, err := generateTestKeys()
+	if err != nil {
+		t.Fatalf("error generating test keys: %s", err)
+	}
+
+	tests := map[string]struct {
+		policy      Policy
+		key         []byte
+		shouldError bool
+	}{
+		"import AES key": {
+			policy: Policy{
+				Name: "test-aes-key",
+				Type: KeyType_AES256_GCM96,
+			},
+			key:         testKeys[KeyType_AES256_GCM96],
+			shouldError: false,
+		},
+		"import RSA key": {
+			policy: Policy{
+				Name: "test-rsa-key",
+				Type: KeyType_RSA2048,
+			},
+			key:         testKeys[KeyType_RSA2048],
+			shouldError: false,
+		},
+		"import ECDSA key": {
+			policy: Policy{
+				Name: "test-ecdsa-key",
+				Type: KeyType_ECDSA_P256,
+			},
+			key:         testKeys[KeyType_ECDSA_P256],
+			shouldError: false,
+		},
+		"import ED25519 key": {
+			policy: Policy{
+				Name: "test-ed25519-key",
+				Type: KeyType_ED25519,
+			},
+			key:         testKeys[KeyType_ED25519],
+			shouldError: false,
+		},
+		"import incorrect key type": {
+			policy: Policy{
+				Name: "test-ed25519-key",
+				Type: KeyType_ED25519,
+			},
+			key:         testKeys[KeyType_AES256_GCM96],
+			shouldError: true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if err := test.policy.Import(ctx, storage, test.key, rand.Reader); (err != nil) != test.shouldError {
+				t.Fatalf("error importing key: %s", err)
+			}
+		})
+	}
+}
+
+func generateTestKeys() (map[KeyType][]byte, error) {
+	keyMap := make(map[KeyType][]byte)
+
+	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, err
+	}
+	rsaKeyBytes, err := x509.MarshalPKCS8PrivateKey(rsaKey)
+	if err != nil {
+		return nil, err
+	}
+	keyMap[KeyType_RSA2048] = rsaKeyBytes
+
+	ecdsaKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	ecdsaKeyBytes, err := x509.MarshalPKCS8PrivateKey(ecdsaKey)
+	if err != nil {
+		return nil, err
+	}
+	keyMap[KeyType_ECDSA_P256] = ecdsaKeyBytes
+
+	_, ed25519Key, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	ed25519KeyBytes, err := x509.MarshalPKCS8PrivateKey(ed25519Key)
+	if err != nil {
+		return nil, err
+	}
+	keyMap[KeyType_ED25519] = ed25519KeyBytes
+
+	aesKey := make([]byte, 32)
+	_, err = rand.Read(aesKey)
+	if err != nil {
+		return nil, err
+	}
+	keyMap[KeyType_AES256_GCM96] = aesKey
+
+	return keyMap, nil
 }
 
 func BenchmarkSymmetric(b *testing.B) {

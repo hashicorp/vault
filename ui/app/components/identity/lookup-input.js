@@ -20,7 +20,7 @@ export default Component.extend({
 
   init() {
     this._super(...arguments);
-    this.store.findAll('auth-method').then(methods => {
+    this.store.findAll('auth-method').then((methods) => {
       this.set('authMethods', methods);
       this.set('aliasMountAccessor', methods.get('firstObject.accessor'));
     });
@@ -43,7 +43,7 @@ export default Component.extend({
     return data;
   },
 
-  lookup: task(function*() {
+  lookup: task(function* () {
     let flash = this.flashMessages;
     let type = this.type;
     let store = this.store;

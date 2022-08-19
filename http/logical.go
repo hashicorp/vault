@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime"
 	"net"
 	"net/http"
 	"strconv"
@@ -37,6 +38,8 @@ func newBufferedReader(r io.ReadCloser) *bufferedReader {
 func (b *bufferedReader) Close() error {
 	return b.rOrig.Close()
 }
+
+const MergePatchContentTypeHeader = "application/merge-patch+json"
 
 func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
 	ns, err := namespace.FromContext(r.Context())
@@ -84,6 +87,8 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 			passHTTPReq = true
 			responseWriter = w
 		case path == "sys/storage/raft/snapshot":
+			responseWriter = w
+		case path == "sys/internal/counters/activity/export":
 			responseWriter = w
 		case path == "sys/monitor":
 			passHTTPReq = true
@@ -139,11 +144,41 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 			}
 		}
 
+	case "PATCH":
+		op = logical.PatchOperation
+
+		contentTypeHeader := r.Header.Get("Content-Type")
+		contentType, _, err := mime.ParseMediaType(contentTypeHeader)
+		if err != nil {
+			status := http.StatusBadRequest
+			logical.AdjustErrorStatusCode(&status, err)
+			return nil, nil, status, err
+		}
+
+		if contentType != MergePatchContentTypeHeader {
+			return nil, nil, http.StatusUnsupportedMediaType, fmt.Errorf("PATCH requires Content-Type of %s, provided %s", MergePatchContentTypeHeader, contentType)
+		}
+
+		origBody, err = parseJSONRequest(perfStandby, r, w, &data)
+
+		if err == io.EOF {
+			data = nil
+			err = nil
+		}
+
+		if err != nil {
+			status := http.StatusBadRequest
+			logical.AdjustErrorStatusCode(&status, err)
+			return nil, nil, status, fmt.Errorf("error parsing JSON")
+		}
+
 	case "LIST":
 		op = logical.ListOperation
 		if !strings.HasSuffix(path, "/") {
 			path += "/"
 		}
+
+		data = parseQuery(r.URL.Query())
 
 	case "OPTIONS", "HEAD":
 	default:
@@ -152,7 +187,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 
 	requestId, err := uuid.GenerateUUID()
 	if err != nil {
-		return nil, nil, http.StatusBadRequest, fmt.Errorf("failed to generate identifier for the request: %w", err)
+		return nil, nil, http.StatusInternalServerError, fmt.Errorf("failed to generate identifier for the request: %w", err)
 	}
 
 	req := &logical.Request{
@@ -479,8 +514,16 @@ WRITE_RESPONSE:
 		w.Header().Set("Content-Type", contentType)
 	}
 
-	if cacheControl, ok := resp.Data[logical.HTTPRawCacheControl].(string); ok {
+	if cacheControl, ok := resp.Data[logical.HTTPCacheControlHeader].(string); ok {
 		w.Header().Set("Cache-Control", cacheControl)
+	}
+
+	if pragma, ok := resp.Data[logical.HTTPPragmaHeader].(string); ok {
+		w.Header().Set("Pragma", pragma)
+	}
+
+	if wwwAuthn, ok := resp.Data[logical.HTTPWWWAuthenticateHeader].(string); ok {
+		w.Header().Set("WWW-Authenticate", wwwAuthn)
 	}
 
 	w.WriteHeader(status)
@@ -491,14 +534,21 @@ WRITE_RESPONSE:
 // attaching to a logical request
 func getConnection(r *http.Request) (connection *logical.Connection) {
 	var remoteAddr string
+	var remotePort int
 
-	remoteAddr, _, err := net.SplitHostPort(r.RemoteAddr)
+	remoteAddr, port, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		remoteAddr = ""
+	} else {
+		remotePort, err = strconv.Atoi(port)
+		if err != nil {
+			remotePort = 0
+		}
 	}
 
 	connection = &logical.Connection{
 		RemoteAddr: remoteAddr,
+		RemotePort: remotePort,
 		ConnState:  r.TLS,
 	}
 	return

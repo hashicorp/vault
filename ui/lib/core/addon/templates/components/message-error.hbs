@@ -1,9 +1,5 @@
-{{#if displayErrors.length}}
-  {{#each displayErrors as |error|}}
-    <AlertBanner
-      @type="danger"
-      @message={{error}}
-      data-test-error
-    />
+{{#if this.displayErrors}}
+  {{#each this.displayErrors as |error|}}
+    <AlertBanner @type="danger" @message={{error}} data-test-error ...attributes />
   {{/each}}
 {{/if}}

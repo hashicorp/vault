@@ -90,7 +90,7 @@ func (c *KVListCommand) Run(args []string) int {
 	}
 
 	if v2 {
-		path = addPrefixToVKVPath(path, mountPath, "metadata")
+		path = addPrefixToKVPath(path, mountPath, "metadata")
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2
