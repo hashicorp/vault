@@ -22,6 +22,9 @@ import (
 	"golang.org/x/crypto/ocsp"
 )
 
+// If the ocsp_disabled flag is set to true in the crl configuration make sure we always
+// return an Unauthorized error back as we assume an end-user disabling the feature does
+// not want us to act as the OCSP authority and the RFC specifies this is the appropriate response.
 func TestOcsp_Disabled(t *testing.T) {
 	t.Parallel()
 	type testArgs struct {
@@ -53,9 +56,9 @@ func TestOcsp_Disabled(t *testing.T) {
 	}
 }
 
-// If we can't find the issuer within the request return an UnauthorizedErrorResponse according to the
-// RFC, similar to if we are disabled (lack of authority)
-func TestOcsp_UnknownIssuer(t *testing.T) {
+// If we can't find the issuer within the request and have no default issuer to sign an Unknown response
+// with return an UnauthorizedErrorResponse/according to/the RFC, similar to if we are disabled (lack of authority)
+func TestOcsp_UnknownIssuerWithNoDefault(t *testing.T) {
 	t.Parallel()
 
 	_, _, testEnv := setupOcspEnv(t, "ec")
@@ -72,9 +75,9 @@ func TestOcsp_UnknownIssuer(t *testing.T) {
 	require.Equal(t, ocsp.UnauthorizedErrorResponse, respDer)
 }
 
+// If the issuer in the request does exist, but the request coming in associates the serial with the
+// wrong issuer return an Unknown response back to the caller.
 func TestOcsp_WrongIssuerInRequest(t *testing.T) {
-	// If the issuers do exist, but the request coming in associates the serial with the
-	// wrong issuer return an error.
 	t.Parallel()
 
 	b, s, testEnv := setupOcspEnv(t, "ec")
@@ -87,13 +90,17 @@ func TestOcsp_WrongIssuerInRequest(t *testing.T) {
 	resp, err = sendOcspRequest(t, b, s, "get", testEnv.leafCertIssuer1, testEnv.issuer2, crypto.SHA1)
 	require.NoError(t, err)
 	requireFieldsSetInResp(t, resp, "http_content_type", "http_status_code", "http_raw_body")
-	require.Equal(t, 401, resp.Data["http_status_code"])
+	require.Equal(t, 200, resp.Data["http_status_code"])
 	require.Equal(t, "application/ocsp-response", resp.Data["http_content_type"])
 	respDer := resp.Data["http_raw_body"].([]byte)
 
-	require.Equal(t, ocsp.UnauthorizedErrorResponse, respDer)
+	ocspResp, err := ocsp.ParseResponse(respDer, testEnv.issuer1)
+	require.NoError(t, err, "parsing ocsp get response")
+
+	require.Equal(t, ocsp.Unknown, ocspResp.Status)
 }
 
+// Verify that requests we can't properly decode result in the correct response of MalformedRequestError
 func TestOcsp_MalformedRequests(t *testing.T) {
 	t.Parallel()
 	type testArgs struct {
@@ -131,8 +138,11 @@ func TestOcsp_MalformedRequests(t *testing.T) {
 	}
 }
 
+// Validate that we properly handle a revocation entry that contains an issuer ID that no longer exists,
+// the best we can do in this use case is to respond back with the default issuer that we don't know
+// the issuer that they are requesting (we can't guarantee that the client is actually requesting a serial
+// from that issuer)
 func TestOcsp_InvalidIssuerIdInRevocationEntry(t *testing.T) {
-	// Validate that we properly handle a revocation entry that contains an issuer ID that no longer exists
 	t.Parallel()
 
 	b, s, testEnv := setupOcspEnv(t, "ec")
@@ -161,6 +171,135 @@ func TestOcsp_InvalidIssuerIdInRevocationEntry(t *testing.T) {
 	// Send the request
 	resp, err = sendOcspRequest(t, b, s, "get", testEnv.leafCertIssuer1, testEnv.issuer1, crypto.SHA1)
 	require.NoError(t, err)
+	requireFieldsSetInResp(t, resp, "http_content_type", "http_status_code", "http_raw_body")
+	require.Equal(t, 200, resp.Data["http_status_code"])
+	require.Equal(t, "application/ocsp-response", resp.Data["http_content_type"])
+	respDer := resp.Data["http_raw_body"].([]byte)
+
+	ocspResp, err := ocsp.ParseResponse(respDer, testEnv.issuer1)
+	require.NoError(t, err, "parsing ocsp get response")
+
+	require.Equal(t, ocsp.Unknown, ocspResp.Status)
+}
+
+// Validate that we properly handle an unknown issuer use-case but that the default issuer
+// does not have the OCSP usage flag set, we can't do much else other than reply with an
+// Unauthorized response.
+func TestOcsp_UnknownIssuerIdWithDefaultHavingOcspUsageRemoved(t *testing.T) {
+	t.Parallel()
+
+	b, s, testEnv := setupOcspEnv(t, "ec")
+	ctx := context.Background()
+
+	// Revoke the entry
+	serial := serialFromCert(testEnv.leafCertIssuer1)
+	resp, err := CBWrite(b, s, "revoke", map[string]interface{}{
+		"serial_number": serial,
+	})
+	requireSuccessNonNilResponse(t, resp, err, "revoke")
+
+	// Twiddle the entry so that the issuer id is no longer valid.
+	storagePath := revokedPath + normalizeSerial(serial)
+	var revInfo revocationInfo
+	revEntry, err := s.Get(ctx, storagePath)
+	require.NoError(t, err, "failed looking up storage path: %s", storagePath)
+	err = revEntry.DecodeJSON(&revInfo)
+	require.NoError(t, err, "failed decoding storage entry: %v", revEntry)
+	revInfo.CertificateIssuer = "00000000-0000-0000-0000-000000000000"
+	revEntry, err = logical.StorageEntryJSON(storagePath, revInfo)
+	require.NoError(t, err, "failed re-encoding revocation info: %v", revInfo)
+	err = s.Put(ctx, revEntry)
+	require.NoError(t, err, "failed writing out new revocation entry: %v", revEntry)
+
+	// Update our issuers to no longer have the OcspSigning usage
+	resp, err = CBPatch(b, s, "issuer/"+testEnv.issuerId1.String(), map[string]interface{}{
+		"usage": "read-only,issuing-certificates,crl-signing",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed resetting usage flags on issuer1")
+	resp, err = CBPatch(b, s, "issuer/"+testEnv.issuerId2.String(), map[string]interface{}{
+		"usage": "read-only,issuing-certificates,crl-signing",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed resetting usage flags on issuer2")
+
+	// Send the request
+	resp, err = sendOcspRequest(t, b, s, "get", testEnv.leafCertIssuer1, testEnv.issuer1, crypto.SHA1)
+	require.NoError(t, err)
+	requireFieldsSetInResp(t, resp, "http_content_type", "http_status_code", "http_raw_body")
+	require.Equal(t, 401, resp.Data["http_status_code"])
+	require.Equal(t, "application/ocsp-response", resp.Data["http_content_type"])
+	respDer := resp.Data["http_raw_body"].([]byte)
+
+	require.Equal(t, ocsp.UnauthorizedErrorResponse, respDer)
+}
+
+// Verify that if we do have a revoked certificate entry for the request, that matches an
+// issuer but that issuer does not have the OcspUsage flag set that we return an Unauthorized
+// response back to the caller
+func TestOcsp_RevokedCertHasIssuerWithoutOcspUsage(t *testing.T) {
+	b, s, testEnv := setupOcspEnv(t, "ec")
+
+	// Revoke our certificate
+	resp, err := CBWrite(b, s, "revoke", map[string]interface{}{
+		"serial_number": serialFromCert(testEnv.leafCertIssuer1),
+	})
+	requireSuccessNonNilResponse(t, resp, err, "revoke")
+
+	// Update our issuer to no longer have the OcspSigning usage
+	resp, err = CBPatch(b, s, "issuer/"+testEnv.issuerId1.String(), map[string]interface{}{
+		"usage": "read-only,issuing-certificates,crl-signing",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed resetting usage flags on issuer")
+	requireFieldsSetInResp(t, resp, "usage")
+
+	// Do not assume a specific ordering for usage...
+	usages, err := NewIssuerUsageFromNames(strings.Split(resp.Data["usage"].(string), ","))
+	require.NoError(t, err, "failed parsing usage return value")
+	require.True(t, usages.HasUsage(IssuanceUsage))
+	require.True(t, usages.HasUsage(CRLSigningUsage))
+	require.False(t, usages.HasUsage(OCSPSigningUsage))
+
+	// Request an OCSP request from it, we should get an Unauthorized response back
+	resp, err = sendOcspRequest(t, b, s, "get", testEnv.leafCertIssuer1, testEnv.issuer1, crypto.SHA1)
+	requireSuccessNonNilResponse(t, resp, err, "ocsp get request")
+	requireFieldsSetInResp(t, resp, "http_content_type", "http_status_code", "http_raw_body")
+	require.Equal(t, 401, resp.Data["http_status_code"])
+	require.Equal(t, "application/ocsp-response", resp.Data["http_content_type"])
+	respDer := resp.Data["http_raw_body"].([]byte)
+
+	require.Equal(t, ocsp.UnauthorizedErrorResponse, respDer)
+}
+
+// Verify if our matching issuer for a revocation entry has no key associated with it that
+// we bail with an Unauthorized response.
+func TestOcsp_RevokedCertHasIssuerWithoutAKey(t *testing.T) {
+	b, s, testEnv := setupOcspEnv(t, "ec")
+
+	// Revoke our certificate
+	resp, err := CBWrite(b, s, "revoke", map[string]interface{}{
+		"serial_number": serialFromCert(testEnv.leafCertIssuer1),
+	})
+	requireSuccessNonNilResponse(t, resp, err, "revoke")
+
+	// Delete the key associated with our issuer
+	resp, err = CBRead(b, s, "issuer/"+testEnv.issuerId1.String())
+	requireSuccessNonNilResponse(t, resp, err, "failed reading issuer")
+	requireFieldsSetInResp(t, resp, "key_id")
+	keyId := resp.Data["key_id"].(keyID)
+
+	// This is a bit naughty but allow me to delete the key...
+	sc := b.makeStorageContext(context.Background(), s)
+	issuer, err := sc.fetchIssuerById(testEnv.issuerId1)
+	require.NoError(t, err, "failed to get issuer from storage")
+	issuer.KeyID = ""
+	err = sc.writeIssuer(issuer)
+	require.NoError(t, err, "failed to write issuer update")
+
+	resp, err = CBDelete(b, s, "key/"+keyId.String())
+	requireSuccessNonNilResponse(t, resp, err, "failed deleting key")
+
+	// Request an OCSP request from it, we should get an Unauthorized response back
+	resp, err = sendOcspRequest(t, b, s, "get", testEnv.leafCertIssuer1, testEnv.issuer1, crypto.SHA1)
+	requireSuccessNonNilResponse(t, resp, err, "ocsp get request")
 	requireFieldsSetInResp(t, resp, "http_content_type", "http_status_code", "http_raw_body")
 	require.Equal(t, 401, resp.Data["http_status_code"])
 	require.Equal(t, "application/ocsp-response", resp.Data["http_content_type"])
