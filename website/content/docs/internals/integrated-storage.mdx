@@ -156,8 +156,8 @@ Autopilot is enabled by default in Vault 1.7+  with default
 values that should be adapted to best suit the environmental requirements where 
 Vault instances are deployed.
 
-Vault 1.7.x & higher include a stabilization logic that's available as part of 
-Autopilot and activated by default. Nodes that are new and a recent joiner are 
+Autopilot includes stabilization logic for nodes joining the cluster.
+Recently joined nodes are 
 accepted as non-voter initially until they are in sync with matching Raft index 
 and only after a stability thresholds are they then full voting members.
 
