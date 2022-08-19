@@ -53,7 +53,7 @@ You'll note that log entries are prefixed with the metric type as follows:
 - **[G]** is a gauge. Gauges provide measurements of current values.
 - **[S]** is a summary. Summaries provide sample observations of values. Vault commonly uses summaries for measuring timing duration of discrete events in the reporting interval.
 
-The following sections describe available Vault metrics. The metrics interval can be assumed to be 10 seconds when manually triggering metrics output using the above described signals. Some high-cardinality gauges, like `vault.kv.secret.count`, are emitted every 10 minutes, or at an interval configured in the `telemetry` stanza.
+The following sections describe available Vault metrics. The metrics interval can be assumed to be 10 seconds when manually triggering metrics output using the above described signals. Some high-cardinality gauges, like `vault.secret.kv.count`, are emitted every 10 minutes, or at an interval configured in the `telemetry` stanza.
 
 Some Vault metrics come with additional [labels](#metric-labels) describing the measurement in more detail, such as the namespace in which an operation takes place, or the auth method used to create a token. In the in-memory telemetry, or other telemetry engines that do not support labels, this additional information is incorporated into the metric name. The metric name in the table below is followed by a list of labels supported, in the order in which they appear if flattened.
 
