@@ -1389,7 +1389,7 @@ func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte
 
 	if (p.Type == KeyType_AES128_GCM96 && len(key) != 16) ||
 		((p.Type == KeyType_AES256_GCM96 || p.Type == KeyType_ChaCha20_Poly1305) && len(key) != 32) ||
-		(p.Type == KeyType_HMAC && len(key) < HmacMinKeySize || len(key) > HmacMaxKeySize) {
+		(p.Type == KeyType_HMAC && (len(key) < HmacMinKeySize || len(key) > HmacMaxKeySize)) {
 		return fmt.Errorf("invalid key size %d bytes for key type %s", len(key), p.Type)
 	}
 
