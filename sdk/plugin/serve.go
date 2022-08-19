@@ -87,7 +87,7 @@ func ServeMultiplex(opts *ServeOpts) error {
 	logger := opts.Logger
 	if logger == nil {
 		logger = log.New(&log.LoggerOptions{
-			Level:      log.Trace,
+			Level:      log.Info,
 			Output:     os.Stderr,
 			JSONFormat: true,
 		})
