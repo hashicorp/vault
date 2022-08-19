@@ -13,6 +13,7 @@ export default class OidcAssignmentDetailsController extends Controller {
       this.flashMessages.success('Assignment deleted successfully');
       this.router.transitionTo('vault.cluster.access.oidc.assignments');
     } catch (error) {
+      this.model.rollbackAttributes();
       const message = error.errors ? error.errors.join('. ') : error.message;
       this.flashMessages.danger(message);
     }
