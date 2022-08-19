@@ -208,3 +208,17 @@ func extractRef(data *framework.FieldData, paramName string) string {
 	}
 	return value
 }
+
+func isStringArrayDifferent(a, b []string) bool {
+	if len(a) != len(b) {
+		return true
+	}
+
+	for i, v := range a {
+		if v != b[i] {
+			return true
+		}
+	}
+
+	return false
+}
