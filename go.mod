@@ -56,7 +56,7 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/hashicorp/cap v0.1.1
-	github.com/hashicorp/consul-template v0.27.2-0.20211014231529-4ff55381f1c4
+	github.com/hashicorp/consul-template v0.27.3
 	github.com/hashicorp/consul/api v1.11.0
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
