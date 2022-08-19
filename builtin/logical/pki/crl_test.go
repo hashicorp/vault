@@ -420,6 +420,305 @@ func TestBYOC(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestPoP(t *testing.T) {
+	b, s := createBackendWithStorage(t)
+
+	// Create a root CA.
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root example.com",
+		"issuer_name": "root",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data["certificate"])
+	oldRoot := resp.Data["certificate"].(string)
+
+	// Create a role for issuance.
+	_, err = CBWrite(b, s, "roles/local-testing", map[string]interface{}{
+		"allow_any_name":    true,
+		"enforce_hostnames": false,
+		"key_type":          "ec",
+		"ttl":               "75s",
+		"no_store":          "true",
+	})
+	require.NoError(t, err)
+
+	// Issue a leaf cert and ensure we can revoke it with the private key and
+	// an explicit certificate.
+	resp, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
+		"common_name": "testing1",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data["certificate"])
+
+	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+		"certificate": resp.Data["certificate"],
+		"private_key": resp.Data["private_key"],
+	})
+	require.NoError(t, err)
+
+	// Issue a second leaf, but hold onto it for now.
+	resp, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
+		"common_name": "testing2",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data["certificate"])
+	notStoredCert := resp.Data["certificate"].(string)
+	notStoredKey := resp.Data["private_key"].(string)
+
+	// Update the role to make things stored and issue another cert.
+	_, err = CBWrite(b, s, "roles/stored-testing", map[string]interface{}{
+		"allow_any_name":    true,
+		"enforce_hostnames": false,
+		"key_type":          "ec",
+		"ttl":               "75s",
+		"no_store":          "false",
+	})
+	require.NoError(t, err)
+
+	// Issue a leaf and ensure we can revoke it via serial number and private key.
+	resp, err = CBWrite(b, s, "issue/stored-testing", map[string]interface{}{
+		"common_name": "testing3",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data["certificate"])
+	require.NotEmpty(t, resp.Data["serial_number"])
+	require.NotEmpty(t, resp.Data["private_key"])
+
+	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+		"serial_number": resp.Data["serial_number"],
+		"private_key":   resp.Data["private_key"],
+	})
+	require.NoError(t, err)
+
+	// Issue a leaf cert and ensure we can revoke it after removing its root;
+	// hold onto it for now.
+	resp, err = CBWrite(b, s, "issue/stored-testing", map[string]interface{}{
+		"common_name": "testing4",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data["certificate"])
+	storedCert := resp.Data["certificate"].(string)
+	storedKey := resp.Data["private_key"].(string)
+
+	// Delete the root and regenerate a new one.
+	_, err = CBDelete(b, s, "issuer/default")
+	require.NoError(t, err)
+
+	resp, err = CBList(b, s, "issuers")
+	require.NoError(t, err)
+	require.Equal(t, len(resp.Data), 0)
+
+	_, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root2 example.com",
+		"issuer_name": "root2",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+
+	// Issue a new leaf and revoke that one.
+	resp, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
+		"common_name": "testing5",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data["certificate"])
+
+	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+		"certificate": resp.Data["certificate"],
+		"private_key": resp.Data["private_key"],
+	})
+	require.NoError(t, err)
+
+	// Now attempt to revoke the earlier leaves. The first should fail since
+	// we deleted its issuer, but the stored one should succeed.
+	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+		"certificate": notStoredCert,
+		"private_key": notStoredKey,
+	})
+	require.Error(t, err)
+
+	// Incorrect combination (stored with not stored key) should fail.
+	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+		"certificate": storedCert,
+		"private_key": notStoredKey,
+	})
+	require.Error(t, err)
+
+	// Correct combination (stored with stored) should succeed.
+	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+		"certificate": storedCert,
+		"private_key": storedKey,
+	})
+	require.NoError(t, err)
+
+	// Import the old root again and revoke the no stored leaf should work.
+	_, err = CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
+		"pem_bundle": oldRoot,
+	})
+	require.NoError(t, err)
+
+	// Incorrect combination (not stored with stored key) should fail.
+	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+		"certificate": notStoredCert,
+		"private_key": storedKey,
+	})
+	require.Error(t, err)
+
+	// Correct combination (not stored with not stored) should succeed.
+	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+		"certificate": notStoredCert,
+		"private_key": notStoredKey,
+	})
+	require.NoError(t, err)
+}
+
+func TestIssuerRevocation(t *testing.T) {
+	b, s := createBackendWithStorage(t)
+
+	// Create a root CA.
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root example.com",
+		"issuer_name": "root",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data["certificate"])
+	require.NotEmpty(t, resp.Data["serial_number"])
+	// oldRoot := resp.Data["certificate"].(string)
+	oldRootSerial := resp.Data["serial_number"].(string)
+
+	// Create a second root CA. We'll revoke this one and ensure it
+	// doesn't appear on the former's CRL.
+	resp, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root2 example.com",
+		"issuer_name": "root2",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data["certificate"])
+	require.NotEmpty(t, resp.Data["serial_number"])
+	// revokedRoot := resp.Data["certificate"].(string)
+	revokedRootSerial := resp.Data["serial_number"].(string)
+
+	// Shouldn't be able to revoke it by serial number.
+	_, err = CBWrite(b, s, "revoke", map[string]interface{}{
+		"serial_number": revokedRootSerial,
+	})
+	require.Error(t, err)
+
+	// Revoke it.
+	resp, err = CBWrite(b, s, "issuer/root2/revoke", map[string]interface{}{})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotZero(t, resp.Data["revocation_time"])
+
+	// Regenerate the CRLs
+	_, err = CBRead(b, s, "crl/rotate")
+	require.NoError(t, err)
+
+	// Ensure the old cert isn't on the one's CRL.
+	crl := getParsedCrlFromBackend(t, b, s, "issuer/root/crl/der")
+	if requireSerialNumberInCRL(nil, crl.TBSCertList, revokedRootSerial) {
+		t.Fatalf("the serial number %v should not be on %v's CRL as they're separate roots", revokedRootSerial, oldRootSerial)
+	}
+
+	// Create a role and ensure we can't use the revoked root.
+	_, err = CBWrite(b, s, "roles/local-testing", map[string]interface{}{
+		"allow_any_name":    true,
+		"enforce_hostnames": false,
+		"key_type":          "ec",
+		"ttl":               "75s",
+	})
+	require.NoError(t, err)
+
+	// Issue a leaf cert and ensure it fails (because the issuer is revoked).
+	_, err = CBWrite(b, s, "issuer/root2/issue/local-testing", map[string]interface{}{
+		"common_name": "testing",
+	})
+	require.Error(t, err)
+
+	// Issue an intermediate and ensure we can revoke it.
+	resp, err = CBWrite(b, s, "intermediate/generate/internal", map[string]interface{}{
+		"common_name": "intermediate example.com",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data["csr"])
+	intCsr := resp.Data["csr"].(string)
+	resp, err = CBWrite(b, s, "root/sign-intermediate", map[string]interface{}{
+		"ttl": "30h",
+		"csr": intCsr,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data["certificate"])
+	require.NotEmpty(t, resp.Data["serial_number"])
+	intCert := resp.Data["certificate"].(string)
+	intCertSerial := resp.Data["serial_number"].(string)
+	resp, err = CBWrite(b, s, "intermediate/set-signed", map[string]interface{}{
+		"certificate": intCert,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data["imported_issuers"])
+	importedIssuers := resp.Data["imported_issuers"].([]string)
+	require.Equal(t, len(importedIssuers), 1)
+	intId := importedIssuers[0]
+	_, err = CBPatch(b, s, "issuer/"+intId, map[string]interface{}{
+		"issuer_name": "int1",
+	})
+	require.NoError(t, err)
+
+	// Now issue a leaf with the intermediate.
+	resp, err = CBWrite(b, s, "issuer/int1/issue/local-testing", map[string]interface{}{
+		"common_name": "testing",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data["certificate"])
+	require.NotEmpty(t, resp.Data["serial_number"])
+	issuedSerial := resp.Data["serial_number"].(string)
+
+	// Now revoke the intermediate.
+	resp, err = CBWrite(b, s, "issuer/int1/revoke", map[string]interface{}{})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotZero(t, resp.Data["revocation_time"])
+
+	// Update the CRLs and ensure it appears.
+	_, err = CBRead(b, s, "crl/rotate")
+	require.NoError(t, err)
+	crl = getParsedCrlFromBackend(t, b, s, "issuer/root/crl/der")
+	requireSerialNumberInCRL(t, crl.TBSCertList, intCertSerial)
+
+	// Ensure we can still revoke the issued leaf.
+	resp, err = CBWrite(b, s, "revoke", map[string]interface{}{
+		"serial_number": issuedSerial,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	// Ensure it appears on the intermediate's CRL.
+	_, err = CBRead(b, s, "crl/rotate")
+	require.NoError(t, err)
+	crl = getParsedCrlFromBackend(t, b, s, "issuer/int1/crl/der")
+	requireSerialNumberInCRL(t, crl.TBSCertList, issuedSerial)
+
+	// Ensure we can't fetch the intermediate's cert by serial any more.
+	resp, err = CBRead(b, s, "cert/"+intCertSerial)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data["revocation_time"])
+}
+
 func requestCrlFromBackend(t *testing.T, s logical.Storage, b *backend) *logical.Response {
 	crlReq := &logical.Request{
 		Operation: logical.ReadOperation,

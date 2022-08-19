@@ -322,6 +322,31 @@ func TestBackend_AllowedUsers(t *testing.T) {
 	}
 }
 
+func TestBackend_AllowedDomainsTemplate(t *testing.T) {
+	testAllowedDomainsTemplate := "{{ identity.entity.metadata.ssh_username }}.example.com"
+	expectedValidPrincipal := "foo." + testUserName + ".example.com"
+	testAllowedPrincipalsTemplate(
+		t, testAllowedDomainsTemplate,
+		expectedValidPrincipal,
+		map[string]string{
+			"ssh_username": testUserName,
+		},
+		map[string]interface{}{
+			"key_type":                 testCaKeyType,
+			"algorithm_signer":         "rsa-sha2-256",
+			"allow_host_certificates":  true,
+			"allow_subdomains":         true,
+			"allowed_domains":          testAllowedDomainsTemplate,
+			"allowed_domains_template": true,
+		},
+		map[string]interface{}{
+			"cert_type":        "host",
+			"public_key":       testCAPublicKey,
+			"valid_principals": expectedValidPrincipal,
+		},
+	)
+}
+
 func TestBackend_AllowedUsersTemplate(t *testing.T) {
 	testAllowedUsersTemplate(t,
 		"{{ identity.entity.metadata.ssh_username }}",
@@ -2093,9 +2118,9 @@ func testDefaultUserTemplate(t *testing.T, testDefaultUserTemplate string,
 	}
 }
 
-func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
+func testAllowedPrincipalsTemplate(t *testing.T, testAllowedDomainsTemplate string,
 	expectedValidPrincipal string, testEntityMetadata map[string]string,
-) {
+	roleConfigPayload map[string]interface{}, signingPayload map[string]interface{}) {
 	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
 	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
@@ -2115,22 +2140,14 @@ func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().Write("ssh/roles/my-role", map[string]interface{}{
-		"key_type":                testCaKeyType,
-		"allow_user_certificates": true,
-		"allowed_users":           testAllowedUsersTemplate,
-		"allowed_users_template":  true,
-	})
+	_, err = client.Logical().Write("ssh/roles/my-role", roleConfigPayload)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// sign SSH key as userpass user
 	client.SetToken(userpassToken)
-	signResponse, err := client.Logical().Write("ssh/sign/my-role", map[string]interface{}{
-		"public_key":       testCAPublicKey,
-		"valid_principals": expectedValidPrincipal,
-	})
+	signResponse, err := client.Logical().Write("ssh/sign/my-role", signingPayload)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2149,6 +2166,24 @@ func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
 				actualPrincipals, []string{expectedValidPrincipal}),
 		)
 	}
+}
+
+func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
+	expectedValidPrincipal string, testEntityMetadata map[string]string) {
+	testAllowedPrincipalsTemplate(
+		t, testAllowedUsersTemplate,
+		expectedValidPrincipal, testEntityMetadata,
+		map[string]interface{}{
+			"key_type":                testCaKeyType,
+			"allow_user_certificates": true,
+			"allowed_users":           testAllowedUsersTemplate,
+			"allowed_users_template":  true,
+		},
+		map[string]interface{}{
+			"public_key":       testCAPublicKey,
+			"valid_principals": expectedValidPrincipal,
+		},
+	)
 }
 
 func configCaStep(caPublicKey, caPrivateKey string) logicaltest.TestStep {

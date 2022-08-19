@@ -1,6 +1,7 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { assert } from '@ember/debug';
+import { tracked } from '@glimmer/tracking';
 
 /**
  * @module ConfirmAction
@@ -29,6 +30,8 @@ import { assert } from '@ember/debug';
  */
 
 export default class ConfirmActionComponent extends Component {
+  @tracked showConfirm = false;
+
   get horizontalPosition() {
     return this.args.horizontalPosition || 'auto-right';
   }
@@ -62,26 +65,21 @@ export default class ConfirmActionComponent extends Component {
   }
 
   @action
-  closeButton(d) {
-    d.actions.close();
-  }
-
-  @action
   toggleConfirm() {
     // toggle
     this.showConfirm = !this.showConfirm;
   }
 
   @action
-  onConfirm() {
+  onConfirm(actions) {
     const confirmAction = this.args.onConfirmAction;
 
     if (typeof confirmAction !== 'function') {
       assert('confirm-action components expects `onConfirmAction` attr to be a function');
     } else {
       confirmAction();
-      // toggle
-      this.showConfirm = !this.showConfirm;
+      // close the dropdown content
+      actions.close();
     }
   }
 }
