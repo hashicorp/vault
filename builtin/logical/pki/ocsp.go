@@ -244,8 +244,8 @@ func getOcspStatus(sc *storageContext, request *logical.Request, ocspReq *ocsp.R
 	}
 
 	info := ocspRespInfo{
-		serialNumber:      ocspReq.SerialNumber,
-		ocspStatus:        ocsp.Good,
+		serialNumber: ocspReq.SerialNumber,
+		ocspStatus:   ocsp.Good,
 	}
 
 	if revEntryRaw != nil {
