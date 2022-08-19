@@ -2,7 +2,6 @@ package vault
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -59,7 +58,7 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 	}
 	defer file.Close()
 
-	command := fmt.Sprintf("%s", filepath.Base(file.Name()))
+	command := filepath.Base(file.Name())
 	err = core.pluginCatalog.Set(context.Background(), "mysql-database-plugin", consts.PluginTypeDatabase, command, []string{"--test"}, []string{"FOO=BAR"}, []byte{'1'})
 	if err != nil {
 		t.Fatal(err)

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -46,7 +45,7 @@ func NewBackend(ctx context.Context, pluginName string, pluginType consts.Plugin
 		// from the pluginRunner. Then cast it to logical.Factory.
 		rawFactory, err := pluginRunner.BuiltinFactory()
 		if err != nil {
-			return nil, errwrap.Wrapf("error getting plugin type: {{err}}", err)
+			return nil, fmt.Errorf("error getting plugin type: %q", err)
 		}
 
 		if factory, ok := rawFactory.(logical.Factory); !ok {
@@ -115,9 +114,9 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	var transport string
 	// We should have a logical backend type now. This feels like a normal interface
 	// implementation but is in fact over an RPC connection.
-	switch raw.(type) {
+	switch b := raw.(type) {
 	case *BackendGRPCPluginClient:
-		backend = raw.(*BackendGRPCPluginClient)
+		backend = b
 		transport = "gRPC"
 	default:
 		return nil, errors.New("unsupported plugin client type")
@@ -135,23 +134,4 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 		client:  client,
 		Backend: backend,
 	}, nil
-}
-
-// wrapError takes a generic error type and makes it usable with the plugin
-// interface. Only errors which have exported fields and have been registered
-// with gob can be unwrapped and transported. This checks error types and, if
-// none match, wrap the error in a plugin.BasicError.
-func wrapError(err error) error {
-	if err == nil {
-		return nil
-	}
-
-	switch err.(type) {
-	case *plugin.BasicError,
-		logical.HTTPCodedError,
-		*logical.StatusBadRequest:
-		return err
-	}
-
-	return plugin.NewBasicError(err)
 }
