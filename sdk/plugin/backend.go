@@ -18,6 +18,10 @@ var (
 	_ plugin.GRPCPlugin = (*GRPCBackendPlugin)(nil)
 )
 
+// SingleImplemenation is the string used to define the instance ID of a
+// non-multiplexed plugin
+const SingleImplementation string = "single"
+
 // GRPCBackendPlugin is the plugin.Plugin implementation that only supports GRPC
 // transport
 type GRPCBackendPlugin struct {
@@ -48,7 +52,7 @@ func (b GRPCBackendPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server)
 			Supported: true,
 		})
 	} else {
-		server.instances["single"] = backendInstance{}
+		server.instances[SingleImplementation] = backendInstance{}
 	}
 
 	pb.RegisterBackendServer(s, &server)

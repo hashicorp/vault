@@ -36,7 +36,7 @@ type backendGRPCPluginServer struct {
 
 // getBackendInternal returns the backend but does not hold a lock
 func (b *backendGRPCPluginServer) getBackendInternal(ctx context.Context) (logical.Backend, error) {
-	if singleImpl, ok := b.instances["single"]; ok {
+	if singleImpl, ok := b.instances[SingleImplementation]; ok {
 		return singleImpl.backend, nil
 	}
 
@@ -61,7 +61,7 @@ func (b *backendGRPCPluginServer) getBackend(ctx context.Context) (logical.Backe
 
 // getBrokeredClientInternal returns the brokeredClient but does not hold a lock
 func (b *backendGRPCPluginServer) getBrokeredClientInternal(ctx context.Context) (*grpc.ClientConn, error) {
-	if singleImpl, ok := b.instances["single"]; ok {
+	if singleImpl, ok := b.instances[SingleImplementation]; ok {
 		return singleImpl.brokeredClient, nil
 	}
 
@@ -89,7 +89,7 @@ func (b *backendGRPCPluginServer) getBrokeredClient(ctx context.Context) (*grpc.
 // backend through its factory func for the server side of the plugin.
 func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs) (*pb.SetupReply, error) {
 	var err error
-	id := "single"
+	id := SingleImplementation
 
 	if _, ok := b.instances[id]; !ok {
 		id, err = pluginutil.GetMultiplexIDFromContext(ctx)
