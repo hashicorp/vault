@@ -15,14 +15,24 @@ export default class NamedPathAdapter extends ApplicationAdapter {
       data,
     }).then(() => data);
   }
+
   // create does not return response similar to PUT request
   createRecord() {
-    return this._saveRecord(...arguments);
+    let [store, { modelName }, snapshot] = arguments;
+    let name = snapshot.attr('name');
+    // throw error if user attempts to create a record with same name, otherwise POST request silently overrides (updates) the existing model
+    if (store.hasRecordForId(modelName, name))
+      throw new Error(`A record already exists with the name: ${name}`);
+    else {
+      return this._saveRecord(...arguments);
+    }
   }
+
   // update uses same endpoint and method as create
   updateRecord() {
     return this._saveRecord(...arguments);
   }
+
   // if backend does not return name in response Ember Data will throw an error for pushing a record with no id
   // use the id (name) supplied to findRecord to set property on response data
   findRecord(store, type, name) {
@@ -33,6 +43,7 @@ export default class NamedPathAdapter extends ApplicationAdapter {
       return resp;
     });
   }
+
   // GET request with list=true as query param
   async query(store, type, query) {
     const url = this.urlForQuery(query, type.modelName);
