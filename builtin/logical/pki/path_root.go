@@ -258,7 +258,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	// Also store it as just the certificate identified by serial number, so it
 	// can be revoked
 	key := "certs/" + normalizeSerial(cb.SerialNumber)
-	certsCounted := b.certsCounted
+	certsCounted := b.certsCounted.Load()
 	err = req.Storage.Put(ctx, &logical.StorageEntry{
 		Key:   key,
 		Value: parsedBundle.CertificateBytes,
@@ -443,7 +443,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 	}
 
 	key := "certs/" + normalizeSerial(cb.SerialNumber)
-	certsCounted := b.certsCounted
+	certsCounted := b.certsCounted.Load()
 	err = req.Storage.Put(ctx, &logical.StorageEntry{
 		Key:   key,
 		Value: parsedBundle.CertificateBytes,

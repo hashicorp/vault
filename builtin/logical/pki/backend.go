@@ -9,6 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	atomic2 "go.uber.org/atomic"
+
 	"github.com/hashicorp/vault/sdk/helper/consts"
 
 	"github.com/armon/go-metrics"
@@ -179,7 +181,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 	b.crlBuilder = &crlBuilder{}
 
-	b.certsCounted = false
+	b.certsCounted = atomic2.NewBool(false)
 	b.certCount = new(uint32)
 	b.revokedCertCount = new(uint32)
 	b.possibleDoubleCountedSerials = make([]string, 0, 250)
@@ -202,7 +204,7 @@ type backend struct {
 
 	certCount                           *uint32
 	revokedCertCount                    *uint32
-	certsCounted                        bool
+	certsCounted                        *atomic2.Bool
 	possibleDoubleCountedSerials        []string
 	possibleDoubleCountedRevokedSerials []string
 
@@ -427,7 +429,7 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 	atomic.StoreUint32(b.revokedCertCount, uint32(len(revokedEntries)))
 	metrics.SetGauge([]string{"secrets", "pki", "total_revoked_certificates_stored"}, float32(*b.revokedCertCount))
 
-	b.certsCounted = true
+	b.certsCounted.Store(true)
 	// Now that the metrics are set, we can switch from appending newly-stored certificates to the possible double-count
 	// list, and instead have them update the counter directly.  We need to do this so that we are looking at a static
 	// slice of possibly double counted serials.  Note that certsCounted is computed before the storage operation, so
@@ -506,6 +508,8 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 	return nil
 }
 
+// The "certsCounted" boolean here should be loaded from the backend certsCounted before the corresponding storage call:
+// eg. certsCounted := b.certsCounted.Load()
 func (b *backend) incrementTotalCertificatesCount(certsCounted bool, newSerial string) {
 	switch {
 	case certsCounted:
@@ -522,6 +526,8 @@ func (b *backend) decrementTotalCertificatesCount() {
 	metrics.SetGauge([]string{"secrets", "pki", "total_certificates_stored"}, float32(*b.certCount))
 }
 
+// The "certsCounted" boolean here should be loaded from the backend certsCounted before the corresponding storage call:
+// eg. certsCounted := b.certsCounted.Load()
 func (b *backend) incrementTotalRevokedCertificatesCount(certsCounted bool, newSerial string) {
 	switch {
 	case certsCounted:
