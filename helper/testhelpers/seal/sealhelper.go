@@ -66,7 +66,7 @@ func (tss *TransitSealServer) MakeSeal(t testing.T, key string) vault.Seal {
 		"key_name":    key,
 		"tls_ca_cert": tss.CACertPEMFile,
 	}
-	transitSeal, _, err := configutil.GetTransitKMSFunc(nil, &configutil.KMS{Config: wrapperConfig})
+	transitSeal, _, err := configutil.GetTransitKMSFunc(&configutil.KMS{Config: wrapperConfig})
 	if err != nil {
 		t.Fatalf("error setting wrapper config: %v", err)
 	}

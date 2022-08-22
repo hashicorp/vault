@@ -24,8 +24,8 @@ import (
 	systemd "github.com/coreos/go-systemd/daemon"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
-	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
+	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/go-secure-stdlib/mlock"
@@ -556,7 +556,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	var wrapper wrapping.Wrapper
 
 	if len(config.Seals) == 0 {
-		config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.Shamir})
+		config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.WrapperTypeShamir.String()})
 	}
 
 	if len(config.Seals) > 1 {
@@ -565,7 +565,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	configSeal := config.Seals[0]
-	sealType := wrapping.Shamir
+	sealType := wrapping.WrapperTypeShamir.String()
 	if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
 		sealType = os.Getenv("VAULT_SEAL_TYPE")
 		configSeal.Type = sealType
@@ -578,9 +578,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 
 	var seal vault.Seal
 	defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
-		Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
-			Logger: c.logger.Named("shamir"),
-		}),
+		Wrapper: aeadwrapper.NewShamirWrapper(),
 	})
 	sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
 	wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &infoKeys, &info, sealLogger)
@@ -2357,17 +2355,17 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	// Handle the case where no seal is provided
 	switch len(config.Seals) {
 	case 0:
-		config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.Shamir})
+		config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.WrapperTypeShamir.String()})
 	case 1:
 		// If there's only one seal and it's disabled assume they want to
 		// migrate to a shamir seal and simply didn't provide it
 		if config.Seals[0].Disabled {
-			config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.Shamir})
+			config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.WrapperTypeShamir.String()})
 		}
 	}
 	var createdSeals []vault.Seal = make([]vault.Seal, len(config.Seals))
 	for _, configSeal := range config.Seals {
-		sealType := wrapping.Shamir
+		sealType := wrapping.WrapperTypeShamir.String()
 		if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
 			sealType = os.Getenv("VAULT_SEAL_TYPE")
 			configSeal.Type = sealType
@@ -2379,9 +2377,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
 		c.allLoggers = append(c.allLoggers, sealLogger)
 		defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
-			Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
-				Logger: c.logger.Named("shamir"),
-			}),
+			Wrapper: aeadwrapper.NewShamirWrapper(),
 		})
 		var sealInfoKeys []string
 		sealInfoMap := map[string]string{}

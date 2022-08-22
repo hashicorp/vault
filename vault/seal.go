@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 
 	"github.com/golang/protobuf/proto"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/keybase/go-crypto/openpgp"
 	"github.com/keybase/go-crypto/openpgp/packet"
@@ -59,7 +59,7 @@ type Seal interface {
 	SealWrapable() bool
 	SetStoredKeys(context.Context, [][]byte) error
 	GetStoredKeys(context.Context) ([][]byte, error)
-	BarrierType() string
+	BarrierType() wrapping.WrapperType
 	BarrierConfig(context.Context) (*SealConfig, error)
 	SetBarrierConfig(context.Context, *SealConfig) error
 	SetCachedBarrierConfig(*SealConfig)
@@ -119,8 +119,8 @@ func (d *defaultSeal) Finalize(ctx context.Context) error {
 	return nil
 }
 
-func (d *defaultSeal) BarrierType() string {
-	return wrapping.Shamir
+func (d *defaultSeal) BarrierType() wrapping.WrapperType {
+	return wrapping.WrapperTypeShamir
 }
 
 func (d *defaultSeal) StoredKeysSupported() seal.StoredKeysSupport {
@@ -193,8 +193,8 @@ func (d *defaultSeal) BarrierConfig(ctx context.Context) (*SealConfig, error) {
 	switch conf.Type {
 	// This case should not be valid for other types as only this is the default
 	case "":
-		conf.Type = d.BarrierType()
-	case d.BarrierType():
+		conf.Type = d.BarrierType().String()
+	case d.BarrierType().String():
 	default:
 		d.core.logger.Error("barrier seal type does not match expected type", "barrier_seal_type", conf.Type, "loaded_seal_type", d.BarrierType())
 		return nil, fmt.Errorf("barrier seal type of %q does not match expected type of %q", conf.Type, d.BarrierType())
@@ -222,7 +222,7 @@ func (d *defaultSeal) SetBarrierConfig(ctx context.Context, config *SealConfig) 
 		return nil
 	}
 
-	config.Type = d.BarrierType()
+	config.Type = d.BarrierType().String()
 
 	// If we are doing a raft unseal we do not want to persist the barrier config
 	// because storage isn't setup yet.
@@ -477,7 +477,7 @@ func readStoredKeys(ctx context.Context, storage physical.Backend, encryptor *se
 		return nil, nil
 	}
 
-	blobInfo := &wrapping.EncryptedBlobInfo{}
+	blobInfo := &wrapping.BlobInfo{}
 	if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
 		return nil, fmt.Errorf("failed to proto decode stored keys: %w", err)
 	}

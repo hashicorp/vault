@@ -13,7 +13,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
-	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
+	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -869,7 +869,7 @@ func (c *Core) reloadShamirKey(ctx context.Context) error {
 		}
 		shamirKey = keyring.rootKey
 	}
-	return c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAESGCMKeyBytes(shamirKey)
+	return c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(shamirKey)
 }
 
 func (c *Core) performKeyUpgrades(ctx context.Context) error {
