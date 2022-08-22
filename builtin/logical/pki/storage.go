@@ -1184,40 +1184,62 @@ func parseIfNotModifiedSince(req *logical.Request) (time.Time, error) {
 	return headerTimeValue, nil
 }
 
-func (sc *storageContext) isIfModifiedSinceBeforeCRLConfigLastModified(req *logical.Request, responseHeaders map[string][]string) (bool, error) {
-	var before bool
-	ifModifiedSince, err := parseIfNotModifiedSince(req)
-	if err != nil {
-		return before, err
-	}
-
-	crlConfig, err := sc.getLocalCRLConfig()
-	if err != nil {
-		return before, err
-	}
-
-	lastModified := crlConfig.LastModified
-	if !lastModified.IsZero() && lastModified.Before(ifModifiedSince) {
-		before = true
-		responseHeaders[headerLastModified] = []string{lastModified.Format(http.TimeFormat)}
-	}
-
-	return before, nil
+type IfModifiedSinceHelper struct {
+	req       *logical.Request
+	issuerRef issuerID
 }
 
-func (sc *storageContext) isIfModifiedSinceBeforeIssuerLastModified(req *logical.Request, issuerId issuerID, responseHeaders map[string][]string) (bool, error) {
+func sendNotModifiedResponseIfNecessary(helper *IfModifiedSinceHelper, sc *storageContext, resp *logical.Response) (bool, error) {
+	var ret bool
+	responseHeaders := map[string][]string{}
+	if !hasHeader(headerIfModifiedSince, helper.req) {
+		return ret, nil
+	}
+
+	before, err := sc.isIfModifiedSinceBeforeLastModified(helper, responseHeaders)
+	if err != nil {
+		ret = true
+		return ret, err
+	}
+	if !before {
+		return ret, nil
+	} else {
+		ret = true
+	}
+
+	// Fill response
+	resp.Data = map[string]interface{}{
+		logical.HTTPContentType: "",
+		logical.HTTPStatusCode:  304,
+	}
+	resp.Headers = responseHeaders
+
+	return ret, nil
+}
+
+func (sc *storageContext) isIfModifiedSinceBeforeLastModified(helper *IfModifiedSinceHelper, responseHeaders map[string][]string) (bool, error) {
 	var before bool
-	ifModifiedSince, err := parseIfNotModifiedSince(req)
+	var err error
+	var lastModified time.Time
+	ifModifiedSince, err := parseIfNotModifiedSince(helper.req)
 	if err != nil {
 		return before, err
 	}
 
-	issuer, err := sc.fetchIssuerById(issuerId)
-	if err != nil {
-		return before, err
+	if helper.issuerRef == "" {
+		crlConfig, err := sc.getLocalCRLConfig()
+		if err != nil {
+			return before, err
+		}
+		lastModified = crlConfig.LastModified
+	} else {
+		issuer, err := sc.fetchIssuerById(helper.issuerRef)
+		if err != nil {
+			return before, err
+		}
+		lastModified = issuer.LastModified
 	}
 
-	lastModified := issuer.LastModified
 	if !lastModified.IsZero() && lastModified.Before(ifModifiedSince) {
 		before = true
 		responseHeaders[headerLastModified] = []string{lastModified.Format(http.TimeFormat)}

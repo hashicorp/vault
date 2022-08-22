@@ -156,8 +156,6 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 	var certificate []byte
 	var fullChain []byte
 	var revocationTime int64
-	var httpStatusCode int
-	responseHeaders := map[string][]string{}
 	response = &logical.Response{
 		Data: map[string]interface{}{},
 	}
@@ -170,15 +168,10 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 
 	switch {
 	case req.Path == "ca" || req.Path == "ca/pem":
-		if hasHeader(headerIfModifiedSince, req) {
-			before, err := sc.isIfModifiedSinceBeforeIssuerLastModified(req, defaultRef, responseHeaders)
-			if err != nil || before {
-				retErr = err
-				if before {
-					httpStatusCode = 304
-				}
-				goto reply
-			}
+		ret, err := sendNotModifiedResponseIfNecessary(&IfModifiedSinceHelper{req: req, issuerRef: defaultRef}, sc, response)
+		if err != nil || ret {
+			retErr = err
+			goto reply
 		}
 
 		serial = "ca"
@@ -193,15 +186,10 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 			contentType = "application/pkix-cert"
 		}
 	case req.Path == "crl" || req.Path == "crl/pem" || req.Path == "crl/delta" || req.Path == "crl/delta/pem":
-		if hasHeader(headerIfModifiedSince, req) {
-			before, err := sc.isIfModifiedSinceBeforeCRLConfigLastModified(req, responseHeaders)
-			if err != nil || before {
-				retErr = err
-				if before {
-					httpStatusCode = 304
-				}
-				goto reply
-			}
+		ret, err := sendNotModifiedResponseIfNecessary(&IfModifiedSinceHelper{req: req}, sc, response)
+		if err != nil || ret {
+			retErr = err
+			goto reply
 		}
 
 		serial = legacyCRLPath
@@ -354,19 +342,6 @@ reply:
 		return
 	case response.IsError():
 		return response, nil
-	case httpStatusCode != 0:
-		response = &logical.Response{
-			Data: map[string]interface{}{
-				logical.HTTPContentType: contentType,
-				logical.HTTPRawBody:     certificate,
-				logical.HTTPStatusCode:  httpStatusCode,
-			},
-		}
-		retErr = nil
-		switch {
-		case httpStatusCode == 304:
-			response.Headers = responseHeaders
-		}
 	default:
 		response.Data["certificate"] = string(certificate)
 		response.Data["revocation_time"] = revocationTime

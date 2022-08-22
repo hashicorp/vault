@@ -48,14 +48,20 @@ func (sc *storageContext) updateDefaultIssuerId(id issuerID) error {
 		err := sc.setIssuersConfig(&issuerConfigEntry{
 			DefaultIssuerId: id,
 		})
-
 		if err != nil {
 			return err
 		}
 
-		// Can we assume that this fetch won't raise an error?
-		issuer, _ := sc.fetchIssuerById(id)
+		issuer, err := sc.fetchIssuerById(id)
+		if err != nil {
+			return err
+		}
+
 		issuer.LastModified = time.Now().In(time.FixedZone("GMT", 0))
+		// err = sc.writeIssuer(issuer)
+		// if err != nil {
+		// 	return err
+		// }
 	}
 
 	return nil

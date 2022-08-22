@@ -898,7 +898,7 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 				lastCompleteNumber = crlNumber - 1
 			}
 
-            // Update `LastModified`
+			// Update `LastModified`
 			crlConfig.LastModified = time.Now().In(time.FixedZone("GMT", 0))
 
 			// Lastly, build the CRL.
