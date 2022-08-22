@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/gocql/gocql"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -17,7 +17,7 @@ func pathCredsCreate(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "creds/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the role",
 			},
@@ -50,7 +50,7 @@ func (b *backend) pathCredsCreateRead(ctx context.Context, req *logical.Request,
 		return nil, err
 	}
 	username := fmt.Sprintf("vault_%s_%s_%s_%d", name, displayName, userUUID, time.Now().Unix())
-	username = strings.Replace(username, "-", "_", -1)
+	username = strings.ReplaceAll(username, "-", "_")
 	password, err := uuid.GenerateUUID()
 	if err != nil {
 		return nil, err

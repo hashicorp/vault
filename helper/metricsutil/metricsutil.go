@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -16,6 +17,8 @@ import (
 const (
 	OpenMetricsMIMEType = "application/openmetrics-text"
 
+	PrometheusSchemaMIMEType = "prometheus/telemetry"
+
 	// ErrorContentType is the content type returned by an error response.
 	ErrorContentType = "text/plain"
 )
@@ -24,13 +27,34 @@ const (
 	PrometheusMetricFormat = "prometheus"
 )
 
+// PhysicalTableSizeName is a set of gauge metric keys for physical mount table sizes
+var PhysicalTableSizeName []string = []string{"core", "mount_table", "size"}
+
+// LogicalTableSizeName is a set of gauge metric keys for logical mount table sizes
+var LogicalTableSizeName []string = []string{"core", "mount_table", "num_entries"}
+
 type MetricsHelper struct {
 	inMemSink         *metrics.InmemSink
 	PrometheusEnabled bool
+	LoopMetrics       GaugeMetrics
+}
+
+type GaugeMetrics struct {
+	// Metrics is a map from keys concatenated by "." to the metric.
+	// It is a map because although we do not care about distinguishing
+	// these loop metrics during emission, we must distinguish them
+	// when we update a metric.
+	Metrics sync.Map
+}
+
+type GaugeMetric struct {
+	Value  float32
+	Labels []Label
+	Key    []string
 }
 
 func NewMetricsHelper(inMem *metrics.InmemSink, enablePrometheus bool) *MetricsHelper {
-	return &MetricsHelper{inMem, enablePrometheus}
+	return &MetricsHelper{inMem, enablePrometheus, GaugeMetrics{Metrics: sync.Map{}}}
 }
 
 func FormatFromRequest(req *logical.Request) string {
@@ -38,10 +62,37 @@ func FormatFromRequest(req *logical.Request) string {
 	if len(acceptHeaders) > 0 {
 		acceptHeader := acceptHeaders[0]
 		if strings.HasPrefix(acceptHeader, OpenMetricsMIMEType) {
-			return "prometheus"
+			return PrometheusMetricFormat
+		}
+
+		// Look for prometheus accept header
+		for _, header := range acceptHeaders {
+			if strings.Contains(header, PrometheusSchemaMIMEType) {
+				return PrometheusMetricFormat
+			}
 		}
 	}
 	return ""
+}
+
+func (m *MetricsHelper) AddGaugeLoopMetric(key []string, val float32, labels []Label) {
+	mapKey := m.CreateMetricsCacheKeyName(key, val, labels)
+	m.LoopMetrics.Metrics.Store(mapKey,
+		GaugeMetric{
+			Key:    key,
+			Value:  val,
+			Labels: labels,
+		})
+}
+
+func (m *MetricsHelper) CreateMetricsCacheKeyName(key []string, val float32, labels []Label) string {
+	var keyJoin string = strings.Join(key, ".")
+	labelJoinStr := ""
+	for _, label := range labels {
+		labelJoinStr = labelJoinStr + label.Name + "|" + label.Value + "||"
+	}
+	keyJoin = keyJoin + "." + labelJoinStr
+	return keyJoin
 }
 
 func (m *MetricsHelper) ResponseForFormat(format string) *logical.Response {
@@ -54,7 +105,7 @@ func (m *MetricsHelper) ResponseForFormat(format string) *logical.Response {
 		return &logical.Response{
 			Data: map[string]interface{}{
 				logical.HTTPContentType: ErrorContentType,
-				logical.HTTPRawBody:     fmt.Sprintf("metric response format \"%s\" unknown", format),
+				logical.HTTPRawBody:     fmt.Sprintf("metric response format %q unknown", format),
 				logical.HTTPStatusCode:  http.StatusBadRequest,
 			},
 		}

@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/mfa"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+const errUserBindFailed = `ldap operation failed: failed to bind as user`
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
@@ -26,8 +27,6 @@ func Backend() *backend {
 		Help: backendHelp,
 
 		PathsSpecial: &logical.Paths{
-			Root: mfa.MFARootPaths(),
-
 			Unauthenticated: []string{
 				"login/*",
 			},
@@ -37,15 +36,14 @@ func Backend() *backend {
 			},
 		},
 
-		Paths: append([]*framework.Path{
+		Paths: []*framework.Path{
 			pathConfig(&b),
 			pathGroups(&b),
 			pathGroupsList(&b),
 			pathUsers(&b),
 			pathUsersList(&b),
+			pathLogin(&b),
 		},
-			mfa.MFAPaths(b.Backend, pathLogin(&b))...,
-		),
 
 		AuthRenew:   b.pathLoginRenew,
 		BackendType: logical.TypeCredential,
@@ -58,18 +56,17 @@ type backend struct {
 	*framework.Backend
 }
 
-func (b *backend) Login(ctx context.Context, req *logical.Request, username string, password string) ([]string, *logical.Response, []string, error) {
-
+func (b *backend) Login(ctx context.Context, req *logical.Request, username string, password string, usernameAsAlias bool) (string, []string, *logical.Response, []string, error) {
 	cfg, err := b.Config(ctx, req)
 	if err != nil {
-		return nil, nil, nil, err
+		return "", nil, nil, nil, err
 	}
 	if cfg == nil {
-		return nil, logical.ErrorResponse("ldap backend not configured"), nil, nil
+		return "", nil, logical.ErrorResponse("ldap backend not configured"), nil, nil
 	}
 
 	if cfg.DenyNullBind && len(password) == 0 {
-		return nil, logical.ErrorResponse("password cannot be of zero length when passwordless binds are being denied"), nil, nil
+		return "", nil, logical.ErrorResponse("password cannot be of zero length when passwordless binds are being denied"), nil, nil
 	}
 
 	ldapClient := ldaputil.Client{
@@ -79,10 +76,10 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 
 	c, err := ldapClient.DialLDAP(cfg.ConfigEntry)
 	if err != nil {
-		return nil, logical.ErrorResponse(err.Error()), nil, nil
+		return "", nil, logical.ErrorResponse(err.Error()), nil, nil
 	}
 	if c == nil {
-		return nil, logical.ErrorResponse("invalid connection returned from LDAP dial"), nil, nil
+		return "", nil, logical.ErrorResponse("invalid connection returned from LDAP dial"), nil, nil
 	}
 
 	// Clean connection
@@ -93,7 +90,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("error getting user bind DN", "error", err)
 		}
-		return nil, logical.ErrorResponse("ldap operation failed"), nil, nil
+		return "", nil, logical.ErrorResponse(errUserBindFailed), nil, nil
 	}
 
 	if b.Logger().IsDebug() {
@@ -110,7 +107,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("ldap bind failed", "error", err)
 		}
-		return nil, logical.ErrorResponse("ldap operation failed"), nil, nil
+		return "", nil, logical.ErrorResponse(errUserBindFailed), nil, nil
 	}
 
 	// We re-bind to the BindDN if it's defined because we assume
@@ -120,21 +117,29 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 			if b.Logger().IsDebug() {
 				b.Logger().Debug("error while attempting to re-bind with the BindDN User", "error", err)
 			}
-			return nil, logical.ErrorResponse("ldap operation failed"), nil, nil
+			return "", nil, logical.ErrorResponse("ldap operation failed: failed to re-bind with the BindDN user"), nil, nil
 		}
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("re-bound to original binddn")
 		}
 	}
 
-	userDN, err := ldapClient.GetUserDN(cfg.ConfigEntry, c, userBindDN)
+	userDN, err := ldapClient.GetUserDN(cfg.ConfigEntry, c, userBindDN, username)
 	if err != nil {
-		return nil, logical.ErrorResponse(err.Error()), nil, nil
+		return "", nil, logical.ErrorResponse(err.Error()), nil, nil
+	}
+
+	if cfg.AnonymousGroupSearch {
+		c, err = ldapClient.DialLDAP(cfg.ConfigEntry)
+		if err != nil {
+			return "", nil, logical.ErrorResponse("ldap operation failed: failed to connect to LDAP server"), nil, nil
+		}
+		defer c.Close() // Defer closing of this connection as the deferal above closes the other defined connection
 	}
 
 	ldapGroups, err := ldapClient.GetLdapGroups(cfg.ConfigEntry, c, userDN, username)
 	if err != nil {
-		return nil, logical.ErrorResponse(err.Error()), nil, nil
+		return "", nil, logical.ErrorResponse(err.Error()), nil, nil
 	}
 	if b.Logger().IsDebug() {
 		b.Logger().Debug("groups fetched from server", "num_server_groups", len(ldapGroups), "server_groups", ldapGroups)
@@ -145,7 +150,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	}
 	if len(ldapGroups) == 0 {
 		errString := fmt.Sprintf(
-			"no LDAP groups found in groupDN '%s'; only policies from locally-defined groups available",
+			"no LDAP groups found in groupDN %q; only policies from locally-defined groups available",
 			cfg.GroupDN)
 		ldapResponse.AddWarning(errString)
 	}
@@ -190,7 +195,19 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	// Policies from each group may overlap
 	policies = strutil.RemoveDuplicates(policies, true)
 
-	return policies, ldapResponse, allGroups, nil
+	if usernameAsAlias {
+		return username, policies, ldapResponse, allGroups, nil
+	}
+
+	entityAliasAttribute, err := ldapClient.GetUserAliasAttributeValue(cfg.ConfigEntry, c, username)
+	if err != nil {
+		return "", nil, logical.ErrorResponse(err.Error()), nil, nil
+	}
+	if entityAliasAttribute == "" {
+		return "", nil, logical.ErrorResponse("missing entity alias attribute value"), nil, nil
+	}
+
+	return entityAliasAttribute, policies, ldapResponse, allGroups, nil
 }
 
 const backendHelp = `

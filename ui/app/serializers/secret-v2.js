@@ -1,7 +1,7 @@
+import { EmbeddedRecordsMixin } from '@ember-data/serializer/rest';
 import ApplicationSerializer from './application';
-import DS from 'ember-data';
 
-export default ApplicationSerializer.extend(DS.EmbeddedRecordsMixin, {
+export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
   attrs: {
     versions: { embedded: 'always' },
   },
@@ -10,7 +10,7 @@ export default ApplicationSerializer.extend(DS.EmbeddedRecordsMixin, {
     if (payload.data.keys && Array.isArray(payload.data.keys)) {
       // if we have data.keys, it's a list of ids, so we map over that
       // and create objects with id's
-      return payload.data.keys.map(secret => {
+      return payload.data.keys.map((secret) => {
         // secrets don't have an id in the response, so we need to concat the full
         // path of the secret here - the id in the payload is added
         // in the adapter after making the request
@@ -30,7 +30,7 @@ export default ApplicationSerializer.extend(DS.EmbeddedRecordsMixin, {
     }
     // transform versions to an array with composite IDs
     if (payload.data.versions) {
-      payload.data.versions = Object.keys(payload.data.versions).map(version => {
+      payload.data.versions = Object.keys(payload.data.versions).map((version) => {
         let body = payload.data.versions[version];
         body.version = version;
         body.path = payload.id;

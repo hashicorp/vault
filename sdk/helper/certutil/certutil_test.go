@@ -2,7 +2,9 @@ package certutil
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
@@ -36,6 +38,8 @@ func TestCertBundleConversion(t *testing.T) {
 		refreshECCertBundleWithChain(),
 		refreshEC8CertBundle(),
 		refreshEC8CertBundleWithChain(),
+		refreshEd255198CertBundle(),
+		refreshEd255198CertBundleWithChain(),
 	}
 
 	for i, cbut := range cbuts {
@@ -75,6 +79,8 @@ func BenchmarkCertBundleParsing(b *testing.B) {
 			refreshECCertBundleWithChain(),
 			refreshEC8CertBundle(),
 			refreshEC8CertBundleWithChain(),
+			refreshEd255198CertBundle(),
+			refreshEd255198CertBundleWithChain(),
 		}
 
 		for i, cbut := range cbuts {
@@ -103,6 +109,8 @@ func TestCertBundleParsing(t *testing.T) {
 		refreshECCertBundleWithChain(),
 		refreshEC8CertBundle(),
 		refreshEC8CertBundleWithChain(),
+		refreshEd255198CertBundle(),
+		refreshEd255198CertBundleWithChain(),
 	}
 
 	for i, cbut := range cbuts {
@@ -179,6 +187,10 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 		if pcbut.PrivateKeyType != ECPrivateKey {
 			return fmt.Errorf("parsed bundle has wrong pkcs8 private key type: %v, should be 'ec' (%v)", pcbut.PrivateKeyType, ECPrivateKey)
 		}
+	case privEd255198KeyPem:
+		if pcbut.PrivateKeyType != Ed25519PrivateKey {
+			return fmt.Errorf("parsed bundle has wrong pkcs8 private key type: %v, should be 'ed25519' (%v)", pcbut.PrivateKeyType, ECPrivateKey)
+		}
 	default:
 		return fmt.Errorf("parsed bundle has unknown private key type")
 	}
@@ -221,6 +233,10 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 		if cb.PrivateKey != privECKeyPem && cb.PrivateKey != privEC8KeyPem {
 			return fmt.Errorf("bundle private key does not match")
 		}
+	case Ed25519PrivateKey:
+		if cb.PrivateKey != privEd255198KeyPem {
+			return fmt.Errorf("bundle private key does not match")
+		}
 	default:
 		return fmt.Errorf("certBundle has unknown private key type")
 	}
@@ -245,6 +261,7 @@ func TestCSRBundleConversion(t *testing.T) {
 	csrbuts := []*CSRBundle{
 		refreshRSACSRBundle(),
 		refreshECCSRBundle(),
+		refreshEd25519CSRBundle(),
 	}
 
 	for _, csrbut := range csrbuts {
@@ -294,6 +311,10 @@ func compareCSRBundleToParsedCSRBundle(csrbut *CSRBundle, pcsrbut *ParsedCSRBund
 		if pcsrbut.PrivateKeyType != ECPrivateKey {
 			return fmt.Errorf("parsed bundle has wrong private key type")
 		}
+	case privEd255198KeyPem:
+		if pcsrbut.PrivateKeyType != Ed25519PrivateKey {
+			return fmt.Errorf("parsed bundle has wrong private key type")
+		}
 	default:
 		return fmt.Errorf("parsed bundle has unknown private key type")
 	}
@@ -324,6 +345,13 @@ func compareCSRBundleToParsedCSRBundle(csrbut *CSRBundle, pcsrbut *ParsedCSRBund
 		}
 		if csrb.PrivateKey != privECKeyPem {
 			return fmt.Errorf("bundle ec private key does not match")
+		}
+	case "ed25519":
+		if pcsrbut.PrivateKeyType != Ed25519PrivateKey {
+			return fmt.Errorf("bundle has wrong private key type")
+		}
+		if csrb.PrivateKey != privEd255198KeyPem {
+			return fmt.Errorf("bundle ed25519 private key does not match")
 		}
 	default:
 		return fmt.Errorf("bundle has unknown private key type")
@@ -403,6 +431,56 @@ func TestTLSConfig(t *testing.T) {
 	}
 }
 
+func TestNewCertPool(t *testing.T) {
+	caExample := `-----BEGIN CERTIFICATE-----
+MIIC5zCCAc+gAwIBAgIBATANBgkqhkiG9w0BAQsFADAVMRMwEQYDVQQDEwptaW5p
+a3ViZUNBMB4XDTE5MTIxMDIzMDUxOVoXDTI5MTIwODIzMDUxOVowFTETMBEGA1UE
+AxMKbWluaWt1YmVDQTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBANFi
+/RIdMHd865X6JygTb9riX01DA3QnR+RoXDXNnj8D3LziLG2n8ItXMJvWbU3sxxyy
+nX9HxJ0SIeexj1cYzdQBtJDjO1/PeuKc4CZ7zCukCAtHz8mC7BDPOU7F7pggpcQ0
+/t/pa2m22hmCu8aDF9WlUYHtJpYATnI/A5vz/VFLR9daxmkl59Qo3oHITj7vAzSx
+/75r9cibpQyJ+FhiHOZHQWYY2JYw2g4v5hm5hg5SFM9yFcZ75ISI9ebyFFIl9iBY
+zAk9jqv1mXvLr0Q39AVwMTamvGuap1oocjM9NIhQvaFL/DNqF1ouDQjCf5u2imLc
+TraO1/2KO8fqwOZCOrMCAwEAAaNCMEAwDgYDVR0PAQH/BAQDAgKkMB0GA1UdJQQW
+MBQGCCsGAQUFBwMCBggrBgEFBQcDATAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3
+DQEBCwUAA4IBAQBtVZCwCPqUUUpIClAlE9nc2fo2bTs9gsjXRmqdQ5oaSomSLE93
+aJWYFuAhxPXtlApbLYZfW2m1sM3mTVQN60y0uE4e1jdSN1ErYQ9slJdYDAMaEmOh
+iSexj+Nd1scUiMHV9lf3ps5J8sYeCpwZX3sPmw7lqZojTS12pANBDcigsaj5RRyN
+9GyP3WkSQUsTpWlDb9Fd+KNdkCVw7nClIpBPA2KW4BQKw/rNSvOFD61mbzc89lo0
+Q9IFGQFFF8jO18lbyWqnRBGXcS4/G7jQ3S7C121d14YLUeAYOM7pJykI1g4CLx9y
+vitin0L6nprauWkKO38XgM4T75qKZpqtiOcT
+-----END CERTIFICATE-----
+`
+	if _, err := NewCertPool(bytes.NewReader([]byte(caExample))); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestGetPublicKeySize(t *testing.T) {
+	rsa, err := rsa.GenerateKey(rand.Reader, 3072)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if GetPublicKeySize(&rsa.PublicKey) != 3072 {
+		t.Fatal("unexpected rsa key size")
+	}
+	ecdsa, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if GetPublicKeySize(&ecdsa.PublicKey) != 384 {
+		t.Fatal("unexpected ecdsa key size")
+	}
+	ed25519, _, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if GetPublicKeySize(ed25519) != 256 {
+		t.Fatal("unexpected ed25519 key size")
+	}
+	// Skipping DSA as too slow
+}
+
 func refreshRSA8CertBundle() *CertBundle {
 	initTest.Do(setCerts)
 	return &CertBundle{
@@ -449,6 +527,30 @@ func refreshECCertBundleWithChain() *CertBundle {
 	ret := refreshECCertBundle()
 	ret.CAChain = issuingCaChainPem
 	return ret
+}
+
+func refreshEd255198CertBundle() *CertBundle {
+	initTest.Do(setCerts)
+	return &CertBundle{
+		Certificate: certEd25519Pem,
+		PrivateKey:  privEd255198KeyPem,
+		CAChain:     []string{issuingCaChainPem[0]},
+	}
+}
+
+func refreshEd255198CertBundleWithChain() *CertBundle {
+	initTest.Do(setCerts)
+	ret := refreshEd255198CertBundle()
+	ret.CAChain = issuingCaChainPem
+	return ret
+}
+
+func refreshEd25519CSRBundle() *CSRBundle {
+	initTest.Do(setCerts)
+	return &CSRBundle{
+		CSR:        csrEd25519Pem,
+		PrivateKey: privEd255198KeyPem,
+	}
 }
 
 func refreshRSACSRBundle() *CSRBundle {
@@ -689,18 +791,161 @@ func setCerts() {
 		privRSA8KeyPem = strings.TrimSpace(string(pem.EncodeToMemory(keyPEMBlock)))
 	}
 
+	// Ed25519 generation
+	{
+		pubkey, privkey, err := ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			panic(err)
+		}
+		subjKeyID, err := GetSubjKeyID(privkey)
+		if err != nil {
+			panic(err)
+		}
+		certTemplate := &x509.Certificate{
+			Subject: pkix.Name{
+				CommonName: "localhost",
+			},
+			SubjectKeyId: subjKeyID,
+			DNSNames:     []string{"localhost"},
+			ExtKeyUsage: []x509.ExtKeyUsage{
+				x509.ExtKeyUsageServerAuth,
+				x509.ExtKeyUsageClientAuth,
+			},
+			KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement,
+			SerialNumber: big.NewInt(mathrand.Int63()),
+			NotBefore:    time.Now().Add(-30 * time.Second),
+			NotAfter:     time.Now().Add(262980 * time.Hour),
+		}
+		csrTemplate := &x509.CertificateRequest{
+			Subject: pkix.Name{
+				CommonName: "localhost",
+			},
+			DNSNames: []string{"localhost"},
+		}
+		csrBytes, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, privkey)
+		if err != nil {
+			panic(err)
+		}
+		csrPEMBlock := &pem.Block{
+			Type:  "CERTIFICATE REQUEST",
+			Bytes: csrBytes,
+		}
+		csrEd25519Pem = strings.TrimSpace(string(pem.EncodeToMemory(csrPEMBlock)))
+		certBytes, err := x509.CreateCertificate(rand.Reader, certTemplate, intCert, pubkey, intKey)
+		if err != nil {
+			panic(err)
+		}
+		certPEMBlock := &pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: certBytes,
+		}
+		certEd25519Pem = strings.TrimSpace(string(pem.EncodeToMemory(certPEMBlock)))
+		marshaledKey, err := x509.MarshalPKCS8PrivateKey(privkey)
+		if err != nil {
+			panic(err)
+		}
+		keyPEMBlock := &pem.Block{
+			Type:  "PRIVATE KEY",
+			Bytes: marshaledKey,
+		}
+		privEd255198KeyPem = strings.TrimSpace(string(pem.EncodeToMemory(keyPEMBlock)))
+	}
+
 	issuingCaChainPem = []string{intCertPEM, caCertPEM}
 }
 
+func TestComparePublicKeysAndType(t *testing.T) {
+	rsa1 := genRsaKey(t).Public()
+	rsa2 := genRsaKey(t).Public()
+	eddsa1 := genEdDSA(t).Public()
+	eddsa2 := genEdDSA(t).Public()
+	ed25519_1, _ := genEd25519Key(t)
+	ed25519_2, _ := genEd25519Key(t)
+
+	type args struct {
+		key1Iface crypto.PublicKey
+		key2Iface crypto.PublicKey
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    bool
+		wantErr bool
+	}{
+		{name: "RSA_Equal", args: args{key1Iface: rsa1, key2Iface: rsa1}, want: true, wantErr: false},
+		{name: "RSA_NotEqual", args: args{key1Iface: rsa1, key2Iface: rsa2}, want: false, wantErr: false},
+		{name: "EDDSA_Equal", args: args{key1Iface: eddsa1, key2Iface: eddsa1}, want: true, wantErr: false},
+		{name: "EDDSA_NotEqual", args: args{key1Iface: eddsa1, key2Iface: eddsa2}, want: false, wantErr: false},
+		{name: "ED25519_Equal", args: args{key1Iface: ed25519_1, key2Iface: ed25519_1}, want: true, wantErr: false},
+		{name: "ED25519_NotEqual", args: args{key1Iface: ed25519_1, key2Iface: ed25519_2}, want: false, wantErr: false},
+		{name: "Mismatched_RSA", args: args{key1Iface: rsa1, key2Iface: ed25519_2}, want: false, wantErr: false},
+		{name: "Mismatched_EDDSA", args: args{key1Iface: ed25519_1, key2Iface: rsa1}, want: false, wantErr: false},
+		{name: "Mismatched_ED25519", args: args{key1Iface: ed25519_1, key2Iface: rsa1}, want: false, wantErr: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ComparePublicKeysAndType(tt.args.key1Iface, tt.args.key2Iface)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ComparePublicKeysAndType() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("ComparePublicKeysAndType() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNotAfterValues(t *testing.T) {
+	if ErrNotAfterBehavior != 0 {
+		t.Fatalf("Expected ErrNotAfterBehavior=%v to have value 0", ErrNotAfterBehavior)
+	}
+
+	if TruncateNotAfterBehavior != 1 {
+		t.Fatalf("Expected TruncateNotAfterBehavior=%v to have value 1", TruncateNotAfterBehavior)
+	}
+
+	if PermitNotAfterBehavior != 2 {
+		t.Fatalf("Expected PermitNotAfterBehavior=%v to have value 2", PermitNotAfterBehavior)
+	}
+}
+
+func genRsaKey(t *testing.T) *rsa.PrivateKey {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return key
+}
+
+func genEdDSA(t *testing.T) *ecdsa.PrivateKey {
+	key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return key
+}
+
+func genEd25519Key(t *testing.T) (ed25519.PublicKey, ed25519.PrivateKey) {
+	key, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return key, priv
+}
+
 var (
-	initTest          sync.Once
-	privRSA8KeyPem    string
-	privRSAKeyPem     string
-	csrRSAPem         string
-	certRSAPem        string
-	privECKeyPem      string
-	csrECPem          string
-	privEC8KeyPem     string
-	certECPem         string
-	issuingCaChainPem []string
+	initTest           sync.Once
+	privRSA8KeyPem     string
+	privRSAKeyPem      string
+	csrRSAPem          string
+	certRSAPem         string
+	privEd255198KeyPem string
+	csrEd25519Pem      string
+	certEd25519Pem     string
+	privECKeyPem       string
+	csrECPem           string
+	privEC8KeyPem      string
+	certECPem          string
+	issuingCaChainPem  []string
 )

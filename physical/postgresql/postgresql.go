@@ -4,19 +4,18 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/sdk/physical"
-
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
-
-	"github.com/armon/go-metrics"
-	"github.com/lib/pq"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/physical"
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
 const (
@@ -42,8 +41,10 @@ var _ physical.Backend = (*PostgreSQLBackend)(nil)
 // With distinction using central postgres clock, hereby avoiding
 // possible issues with multiple clocks
 //
-var _ physical.HABackend = (*PostgreSQLBackend)(nil)
-var _ physical.Lock = (*PostgreSQLLock)(nil)
+var (
+	_ physical.HABackend = (*PostgreSQLBackend)(nil)
+	_ physical.Lock      = (*PostgreSQLLock)(nil)
+)
 
 // PostgreSQL Backend is a physical backend that stores data
 // within a PostgreSQL database.
@@ -88,8 +89,8 @@ type PostgreSQLLock struct {
 // API client, server address, credentials, and database.
 func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
 	// Get the PostgreSQL credentials to perform read/write operations.
-	connURL, ok := conf["connection_url"]
-	if !ok || connURL == "" {
+	connURL := connectionURL(conf)
+	if connURL == "" {
 		return nil, fmt.Errorf("missing connection_url")
 	}
 
@@ -97,7 +98,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	if !ok {
 		unquoted_table = "vault_kv_store"
 	}
-	quoted_table := pq.QuoteIdentifier(unquoted_table)
+	quoted_table := dbutil.QuoteIdentifier(unquoted_table)
 
 	maxParStr, ok := conf["max_parallel"]
 	var maxParInt int
@@ -105,7 +106,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	if ok {
 		maxParInt, err = strconv.Atoi(maxParStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_parallel set", "max_parallel", maxParInt)
@@ -119,7 +120,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	if maxIdleConnsIsSet {
 		maxIdleConns, err = strconv.Atoi(maxIdleConnsStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_idle_connections parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_idle_connections parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_idle_connections set", "max_idle_connections", maxIdleConnsStr)
@@ -127,9 +128,9 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	}
 
 	// Create PostgreSQL handle for the database.
-	db, err := sql.Open("postgres", connURL)
+	db, err := sql.Open("pgx", connURL)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to connect to postgres: {{err}}", err)
+		return nil, fmt.Errorf("failed to connect to postgres: %w", err)
 	}
 	db.SetMaxOpenConns(maxParInt)
 
@@ -141,7 +142,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	var upsertAvailable bool
 	upsertAvailableQuery := "SELECT current_setting('server_version_num')::int >= 90500"
 	if err := db.QueryRow(upsertAvailableQuery).Scan(&upsertAvailable); err != nil {
-		return nil, errwrap.Wrapf("failed to check for native upsert: {{err}}", err)
+		return nil, fmt.Errorf("failed to check for native upsert: %w", err)
 	}
 
 	if !upsertAvailable && conf["ha_enabled"] == "true" {
@@ -163,7 +164,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	if !ok {
 		unquoted_ha_table = "vault_ha_locks"
 	}
-	quoted_ha_table := pq.QuoteIdentifier(unquoted_ha_table)
+	quoted_ha_table := dbutil.QuoteIdentifier(unquoted_ha_table)
 
 	// Setup the backend.
 	m := &PostgreSQLBackend{
@@ -195,6 +196,19 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	}
 
 	return m, nil
+}
+
+// connectionURL first check the environment variables for a connection URL. If
+// no connection URL exists in the environment variable, the Vault config file is
+// checked. If neither the environment variables or the config file set the connection
+// URL for the Postgres backend, because it is a required field, an error is returned.
+func connectionURL(conf map[string]string) string {
+	connURL := conf["connection_url"]
+	if envURL := os.Getenv("VAULT_PG_CONNECTION_URL"); envURL != "" {
+		connURL = envURL
+	}
+
+	return connURL
 }
 
 // splitKey is a helper to split a full path key into individual
@@ -230,7 +244,7 @@ func (m *PostgreSQLBackend) Put(ctx context.Context, entry *physical.Entry) erro
 
 	parentPath, path, key := m.splitKey(entry.Key)
 
-	_, err := m.client.Exec(m.put_query, parentPath, path, key, entry.Value)
+	_, err := m.client.ExecContext(ctx, m.put_query, parentPath, path, key, entry.Value)
 	if err != nil {
 		return err
 	}
@@ -247,7 +261,7 @@ func (m *PostgreSQLBackend) Get(ctx context.Context, fullPath string) (*physical
 	_, path, key := m.splitKey(fullPath)
 
 	var result []byte
-	err := m.client.QueryRow(m.get_query, path, key).Scan(&result)
+	err := m.client.QueryRowContext(ctx, m.get_query, path, key).Scan(&result)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -271,7 +285,7 @@ func (m *PostgreSQLBackend) Delete(ctx context.Context, fullPath string) error {
 
 	_, path, key := m.splitKey(fullPath)
 
-	_, err := m.client.Exec(m.delete_query, path, key)
+	_, err := m.client.ExecContext(ctx, m.delete_query, path, key)
 	if err != nil {
 		return err
 	}
@@ -286,7 +300,7 @@ func (m *PostgreSQLBackend) List(ctx context.Context, prefix string) ([]string, 
 	m.permitPool.Acquire()
 	defer m.permitPool.Release()
 
-	rows, err := m.client.Query(m.list_query, "/"+prefix)
+	rows, err := m.client.QueryContext(ctx, m.list_query, "/"+prefix)
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +311,7 @@ func (m *PostgreSQLBackend) List(ctx context.Context, prefix string) ([]string, 
 		var key string
 		err = rows.Scan(&key)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to scan rows: {{err}}", err)
+			return nil, fmt.Errorf("failed to scan rows: %w", err)
 		}
 
 		keys = append(keys, key)

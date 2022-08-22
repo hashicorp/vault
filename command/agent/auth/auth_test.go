@@ -2,10 +2,11 @@ package auth
 
 import (
 	"context"
+	"net/http"
 	"testing"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -31,14 +32,14 @@ func newUserpassTestMethod(t *testing.T, client *api.Client) AuthMethod {
 	return &userpassTestMethod{}
 }
 
-func (u *userpassTestMethod) Authenticate(_ context.Context, client *api.Client) (string, map[string]interface{}, error) {
+func (u *userpassTestMethod) Authenticate(_ context.Context, client *api.Client) (string, http.Header, map[string]interface{}, error) {
 	_, err := client.Logical().Write("auth/userpass/users/foo", map[string]interface{}{
 		"password": "bar",
 	})
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
-	return "auth/userpass/login/foo", map[string]interface{}{
+	return "auth/userpass/login/foo", nil, map[string]interface{}{
 		"password": "bar",
 	}, nil
 }
@@ -78,7 +79,10 @@ func TestAuthHandler(t *testing.T) {
 	})
 
 	am := newUserpassTestMethod(t, client)
-	go ah.Run(ctx, am)
+	errCh := make(chan error)
+	go func() {
+		errCh <- ah.Run(ctx, am)
+	}()
 
 	// Consume tokens so we don't block
 	stopTime := time.Now().Add(5 * time.Second)
@@ -86,6 +90,11 @@ func TestAuthHandler(t *testing.T) {
 consumption:
 	for {
 		select {
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
+			break consumption
 		case <-ah.OutputCh:
 		case <-ah.TemplateTokenCh:
 		// Nothing
@@ -94,8 +103,94 @@ consumption:
 				cancelFunc()
 				closed = true
 			}
-		case <-ah.DoneCh:
-			break consumption
+		}
+	}
+}
+
+func TestAgentBackoff(t *testing.T) {
+	max := 1024 * time.Second
+	backoff := newAgentBackoff(defaultMinBackoff, max)
+
+	// Test initial value
+	if backoff.current != defaultMinBackoff {
+		t.Fatalf("expected 1s initial backoff, got: %v", backoff.current)
+	}
+
+	// Test that backoff values are in expected range (75-100% of 2*previous)
+	for i := 0; i < 9; i++ {
+		old := backoff.current
+		backoff.next()
+
+		expMax := 2 * old
+		expMin := 3 * expMax / 4
+
+		if backoff.current < expMin || backoff.current > expMax {
+			t.Fatalf("expected backoff in range %v to %v, got: %v", expMin, expMax, backoff)
+		}
+	}
+
+	// Test that backoff is capped
+	for i := 0; i < 100; i++ {
+		backoff.next()
+		if backoff.current > max {
+			t.Fatalf("backoff exceeded max of 100s: %v", backoff)
+		}
+	}
+
+	// Test reset
+	backoff.reset()
+	if backoff.current != defaultMinBackoff {
+		t.Fatalf("expected 1s backoff after reset, got: %v", backoff.current)
+	}
+}
+
+func TestAgentMinBackoffCustom(t *testing.T) {
+	type test struct {
+		minBackoff time.Duration
+		want       time.Duration
+	}
+
+	tests := []test{
+		{minBackoff: 0 * time.Second, want: 1 * time.Second},
+		{minBackoff: 1 * time.Second, want: 1 * time.Second},
+		{minBackoff: 5 * time.Second, want: 5 * time.Second},
+		{minBackoff: 10 * time.Second, want: 10 * time.Second},
+	}
+
+	for _, test := range tests {
+		max := 1024 * time.Second
+		backoff := newAgentBackoff(test.minBackoff, max)
+
+		// Test initial value
+		if backoff.current != test.want {
+			t.Fatalf("expected %d initial backoff, got: %v", test.want, backoff.current)
+		}
+
+		// Test that backoff values are in expected range (75-100% of 2*previous)
+		for i := 0; i < 5; i++ {
+			old := backoff.current
+			backoff.next()
+
+			expMax := 2 * old
+			expMin := 3 * expMax / 4
+
+			if backoff.current < expMin || backoff.current > expMax {
+				t.Fatalf("expected backoff in range %v to %v, got: %v", expMin, expMax, backoff)
+			}
+		}
+
+		// Test that backoff is capped
+		for i := 0; i < 100; i++ {
+			backoff.next()
+			if backoff.current > max {
+				t.Fatalf("backoff exceeded max of 100s: %v", backoff)
+			}
+		}
+
+		// Test reset
+		backoff.reset()
+		if backoff.current != test.want {
+			t.Fatalf("expected %d backoff after reset, got: %v", test.want, backoff.current)
 		}
 	}
 }

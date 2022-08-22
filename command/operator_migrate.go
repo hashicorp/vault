@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/command/server"
@@ -24,8 +24,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorMigrateCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorMigrateCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorMigrateCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorMigrateCommand)(nil)
+)
 
 var errAbort = errors.New("Migration aborted")
 
@@ -34,6 +36,7 @@ type OperatorMigrateCommand struct {
 
 	PhysicalBackends map[string]physical.Factory
 	flagConfig       string
+	flagLogLevel     string
 	flagStart        string
 	flagReset        bool
 	logger           log.Logger
@@ -95,6 +98,16 @@ func (c *OperatorMigrateCommand) Flags() *FlagSets {
 		Usage:  "Reset the migration lock. No migration will occur.",
 	})
 
+	f.StringVar(&StringVar{
+		Name:       "log-level",
+		Target:     &c.flagLogLevel,
+		Default:    "info",
+		EnvVar:     "VAULT_LOG_LEVEL",
+		Completion: complete.PredictSet("trace", "debug", "info", "warn", "error"),
+		Usage: "Log verbosity level. Supported values (in order of detail) are " +
+			"\"trace\", \"debug\", \"info\", \"warn\", and \"error\". These are not case sensitive.",
+	})
+
 	return set
 }
 
@@ -107,13 +120,20 @@ func (c *OperatorMigrateCommand) AutocompleteFlags() complete.Flags {
 }
 
 func (c *OperatorMigrateCommand) Run(args []string) int {
-	c.logger = logging.NewVaultLogger(log.Info)
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
+
+	c.flagLogLevel = strings.ToLower(c.flagLogLevel)
+	validLevels := []string{"trace", "debug", "info", "warn", "error"}
+	if !strutil.StrListContains(validLevels, c.flagLogLevel) {
+		c.UI.Error(fmt.Sprintf("%s is an unknown log level. Valid log levels are: %s", c.flagLogLevel, validLevels))
+		return 1
+	}
+	c.logger = logging.NewVaultLogger(log.LevelFromString(c.flagLogLevel))
 
 	if c.flagConfig == "" {
 		c.UI.Error("Must specify exactly one config path using -config")
@@ -148,35 +168,42 @@ func (c *OperatorMigrateCommand) Run(args []string) int {
 func (c *OperatorMigrateCommand) migrate(config *migratorConfig) error {
 	from, err := c.newBackend(config.StorageSource.Type, config.StorageSource.Config)
 	if err != nil {
-		return errwrap.Wrapf("error mounting 'storage_source': {{err}}", err)
+		return fmt.Errorf("error mounting 'storage_source': %w", err)
 	}
 
 	if c.flagReset {
 		if err := SetStorageMigration(from, false); err != nil {
-			return errwrap.Wrapf("error reseting migration lock: {{err}}", err)
+			return fmt.Errorf("error resetting migration lock: %w", err)
 		}
 		return nil
 	}
 
 	to, err := c.createDestinationBackend(config.StorageDestination.Type, config.StorageDestination.Config, config)
 	if err != nil {
-		return errwrap.Wrapf("error mounting 'storage_destination': {{err}}", err)
+		return fmt.Errorf("error mounting 'storage_destination': %w", err)
 	}
 
 	migrationStatus, err := CheckStorageMigration(from)
 	if err != nil {
-		return errwrap.Wrapf("error checking migration status: {{err}}", err)
+		return fmt.Errorf("error checking migration status: %w", err)
 	}
 
 	if migrationStatus != nil {
-		return fmt.Errorf("Storage migration in progress (started: %s).", migrationStatus.Start.Format(time.RFC3339))
+		return fmt.Errorf("storage migration in progress (started: %s)", migrationStatus.Start.Format(time.RFC3339))
 	}
 
-	if err := SetStorageMigration(from, true); err != nil {
-		return errwrap.Wrapf("error setting migration lock: {{err}}", err)
-	}
+	switch config.StorageSource.Type {
+	case "raft":
+		// Raft storage cannot be written to when shutdown. Also the boltDB file
+		// already uses file locking to ensure two processes are not accessing
+		// it.
+	default:
+		if err := SetStorageMigration(from, true); err != nil {
+			return fmt.Errorf("error setting migration lock: %w", err)
+		}
 
-	defer SetStorageMigration(from, false)
+		defer SetStorageMigration(from, false)
+	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
@@ -205,9 +232,8 @@ func (c *OperatorMigrateCommand) migrateAll(ctx context.Context, from physical.B
 		}
 
 		entry, err := from.Get(ctx, path)
-
 		if err != nil {
-			return errwrap.Wrapf("error reading entry: {{err}}", err)
+			return fmt.Errorf("error reading entry: %w", err)
 		}
 
 		if entry == nil {
@@ -215,7 +241,7 @@ func (c *OperatorMigrateCommand) migrateAll(ctx context.Context, from physical.B
 		}
 
 		if err := to.Put(ctx, entry); err != nil {
-			return errwrap.Wrapf("error writing entry: {{err}}", err)
+			return fmt.Errorf("error writing entry: %w", err)
 		}
 		c.logger.Info("copied key", "path", path)
 		return nil
@@ -250,21 +276,21 @@ func (c *OperatorMigrateCommand) createDestinationBackend(kind string, conf map[
 
 		parsedClusterAddr, err := url.Parse(config.ClusterAddr)
 		if err != nil {
-			return nil, errwrap.Wrapf("error parsing cluster address: {{err}}", err)
+			return nil, fmt.Errorf("error parsing cluster address: %w", err)
 		}
-		if err := raftStorage.Bootstrap(context.Background(), []raft.Peer{
+		if err := raftStorage.Bootstrap([]raft.Peer{
 			{
 				ID:      raftStorage.NodeID(),
 				Address: parsedClusterAddr.Host,
 			},
 		}); err != nil {
-			return nil, errwrap.Wrapf("could not bootstrap clustered storage: {{err}}", err)
+			return nil, fmt.Errorf("could not bootstrap clustered storage: %w", err)
 		}
 
 		if err := raftStorage.SetupCluster(context.Background(), raft.SetupOpts{
 			StartAsLeader: true,
 		}); err != nil {
-			return nil, errwrap.Wrapf("could not start clustered storage: {{err}}", err)
+			return nil, fmt.Errorf("could not start clustered storage: %w", err)
 		}
 	}
 
@@ -306,11 +332,11 @@ func (c *OperatorMigrateCommand) loadMigratorConfig(path string) (*migratorConfi
 	for _, stanza := range []string{"storage_source", "storage_destination"} {
 		o := list.Filter(stanza)
 		if len(o.Items) != 1 {
-			return nil, fmt.Errorf("exactly one '%s' block is required", stanza)
+			return nil, fmt.Errorf("exactly one %q block is required", stanza)
 		}
 
 		if err := parseStorage(&result, o, stanza); err != nil {
-			return nil, errwrap.Wrapf("error parsing '%s': {{err}}", err)
+			return nil, fmt.Errorf("error parsing %q: %w", stanza, err)
 		}
 	}
 	return &result, nil
@@ -347,7 +373,7 @@ func dfsScan(ctx context.Context, source physical.Backend, cb func(ctx context.C
 		if key == "" || strings.HasSuffix(key, "/") {
 			children, err := source.List(ctx, key)
 			if err != nil {
-				return errwrap.Wrapf("failed to scan for children: {{err}}", err)
+				return fmt.Errorf("failed to scan for children: %w", err)
 			}
 			sort.Strings(children)
 

@@ -1,0 +1,3 @@
+```release-note:bug
+http:Fix /sys/monitor endpoint returning streaming not supported
+```

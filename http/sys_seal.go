@@ -5,13 +5,11 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -86,7 +84,7 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 
 		// Parse the request
 		var req UnsealRequest
-		if _, err := parseRequest(core.PerfStandby(), r, w, &req); err != nil {
+		if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil {
 			respondError(w, http.StatusBadRequest, err)
 			return
 		}
@@ -98,20 +96,6 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 			}
 			core.ResetUnsealProcess()
 			handleSysSealStatusRaw(core, w, r)
-			return
-		}
-
-		isInSealMigration := core.IsInSealMigration()
-		if !req.Migrate && isInSealMigration {
-			respondError(
-				w, http.StatusBadRequest,
-				errors.New("'migrate' parameter must be set true in JSON body when in seal migration mode"))
-			return
-		}
-		if req.Migrate && !isInSealMigration {
-			respondError(
-				w, http.StatusBadRequest,
-				errors.New("'migrate' parameter set true in JSON body when not in seal migration mode"))
 			return
 		}
 
@@ -138,9 +122,10 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 			}
 		}
 
-		// Attempt the unseal
-		if core.SealAccess().RecoveryKeySupported() {
-			_, err = core.UnsealWithRecoveryKeys(key)
+		// Attempt the unseal.  If migrate was specified, the key should correspond
+		// to the old seal.
+		if req.Migrate {
+			_, err = core.UnsealMigrate(key)
 		} else {
 			_, err = core.Unseal(key)
 		}
@@ -177,81 +162,13 @@ func handleSysSealStatus(core *vault.Core) http.Handler {
 
 func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
-
-	sealed := core.Sealed()
-
-	var sealConfig *vault.SealConfig
-	var err error
-	if core.SealAccess().RecoveryKeySupported() {
-		sealConfig, err = core.SealAccess().RecoveryConfig(ctx)
-	} else {
-		sealConfig, err = core.SealAccess().BarrierConfig(ctx)
-	}
+	status, err := core.GetSealStatus(ctx)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	if sealConfig == nil {
-		respondOk(w, &SealStatusResponse{
-			Type:         core.SealAccess().BarrierType(),
-			Initialized:  false,
-			Sealed:       true,
-			RecoverySeal: core.SealAccess().RecoveryKeySupported(),
-			StorageType:  core.StorageType(),
-		})
-		return
-	}
-
-	// Fetch the local cluster name and identifier
-	var clusterName, clusterID string
-	if !sealed {
-		cluster, err := core.Cluster(ctx)
-		if err != nil {
-			respondError(w, http.StatusInternalServerError, err)
-			return
-		}
-		if cluster == nil {
-			respondError(w, http.StatusInternalServerError, fmt.Errorf("failed to fetch cluster details"))
-			return
-		}
-		clusterName = cluster.Name
-		clusterID = cluster.ID
-	}
-
-	progress, nonce := core.SecretProgress()
-
-	respondOk(w, &SealStatusResponse{
-		Type:         sealConfig.Type,
-		Initialized:  true,
-		Sealed:       sealed,
-		T:            sealConfig.SecretThreshold,
-		N:            sealConfig.SecretShares,
-		Progress:     progress,
-		Nonce:        nonce,
-		Version:      version.GetVersion().VersionNumber(),
-		Migration:    core.IsInSealMigration(),
-		ClusterName:  clusterName,
-		ClusterID:    clusterID,
-		RecoverySeal: core.SealAccess().RecoveryKeySupported(),
-		StorageType:  core.StorageType(),
-	})
-}
-
-type SealStatusResponse struct {
-	Type         string `json:"type"`
-	Initialized  bool   `json:"initialized"`
-	Sealed       bool   `json:"sealed"`
-	T            int    `json:"t"`
-	N            int    `json:"n"`
-	Progress     int    `json:"progress"`
-	Nonce        string `json:"nonce"`
-	Version      string `json:"version"`
-	Migration    bool   `json:"migration"`
-	ClusterName  string `json:"cluster_name,omitempty"`
-	ClusterID    string `json:"cluster_id,omitempty"`
-	RecoverySeal bool   `json:"recovery_seal"`
-	StorageType  string `json:"storage_type,omitempty"`
+	respondOk(w, status)
 }
 
 // Note: because we didn't provide explicit tagging in the past we can't do it

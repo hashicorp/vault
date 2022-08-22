@@ -2,8 +2,8 @@ package cert
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -12,7 +12,7 @@ func pathConfig(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config",
 		Fields: map[string]*framework.FieldSchema{
-			"disable_binding": &framework.FieldSchema{
+			"disable_binding": {
 				Type:        framework.TypeBool,
 				Default:     false,
 				Description: `If set, during renewal, skips the matching of presented client identity with the client identity used during login. Defaults to false.`,
@@ -52,7 +52,7 @@ func (b *backend) Config(ctx context.Context, s logical.Storage) (*config, error
 	var result config
 	if entry != nil {
 		if err := entry.DecodeJSON(&result); err != nil {
-			return nil, errwrap.Wrapf("error reading configuration: {{err}}", err)
+			return nil, fmt.Errorf("error reading configuration: %w", err)
 		}
 	}
 	return &result, nil

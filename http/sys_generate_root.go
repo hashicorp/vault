@@ -8,7 +8,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/hashicorp/vault/sdk/helper/base62"
+	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -64,6 +64,12 @@ func handleSysGenerateRootAttemptGet(core *vault.Core, w http.ResponseWriter, r 
 		respondError(w, http.StatusInternalServerError, err)
 		return
 	}
+	var otpLength int
+	if core.DisableSSCTokens() {
+		otpLength = vault.TokenLength + vault.OldTokenPrefixLength
+	} else {
+		otpLength = vault.TokenLength + vault.TokenPrefixLength
+	}
 
 	// Format the status
 	status := &GenerateRootStatusResponse{
@@ -71,7 +77,7 @@ func handleSysGenerateRootAttemptGet(core *vault.Core, w http.ResponseWriter, r 
 		Progress:  progress,
 		Required:  sealConfig.SecretThreshold,
 		Complete:  false,
-		OTPLength: vault.TokenLength + 2,
+		OTPLength: otpLength,
 		OTP:       otp,
 	}
 	if generationConfig != nil {
@@ -86,7 +92,7 @@ func handleSysGenerateRootAttemptGet(core *vault.Core, w http.ResponseWriter, r 
 func handleSysGenerateRootAttemptPut(core *vault.Core, w http.ResponseWriter, r *http.Request, generateStrategy vault.GenerateRootStrategy) {
 	// Parse the request
 	var req GenerateRootInitRequest
-	if _, err := parseRequest(core.PerfStandby(), r, w, &req); err != nil && err != io.EOF {
+	if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil && err != io.EOF {
 		respondError(w, http.StatusBadRequest, err)
 		return
 	}
@@ -98,7 +104,11 @@ func handleSysGenerateRootAttemptPut(core *vault.Core, w http.ResponseWriter, r 
 	case len(req.PGPKey) > 0, len(req.OTP) > 0:
 	default:
 		genned = true
-		req.OTP, err = base62.Random(vault.TokenLength + 2)
+		if core.DisableSSCTokens() {
+			req.OTP, err = base62.Random(vault.TokenLength + vault.OldTokenPrefixLength)
+		} else {
+			req.OTP, err = base62.Random(vault.TokenLength + vault.TokenPrefixLength)
+		}
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, err)
 			return
@@ -132,7 +142,7 @@ func handleSysGenerateRootUpdate(core *vault.Core, generateStrategy vault.Genera
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Parse the request
 		var req GenerateRootUpdateRequest
-		if _, err := parseRequest(core.PerfStandby(), r, w, &req); err != nil {
+		if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil {
 			respondError(w, http.StatusBadRequest, err)
 			return
 		}

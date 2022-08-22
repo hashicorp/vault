@@ -2,15 +2,15 @@ import { run } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 
-module('Unit | Model | transit key', function(hooks) {
+module('Unit | Model | transit key', function (hooks) {
   setupTest(hooks);
 
-  test('it exists', function(assert) {
+  test('it exists', function (assert) {
     let model = run(() => this.owner.lookup('service:store').createRecord('transit-key'));
     assert.ok(!!model);
   });
 
-  test('supported actions', function(assert) {
+  test('supported actions', function (assert) {
     let model = run(() =>
       this.owner.lookup('service:store').createRecord('transit-key', {
         supportsEncryption: true,
@@ -19,11 +19,12 @@ module('Unit | Model | transit key', function(hooks) {
       })
     );
 
-    let supportedActions = model.get('supportedActions');
+    let supportedActions = model.get('supportedActions').map((k) => k.name);
     assert.deepEqual(['encrypt', 'decrypt', 'datakey', 'rewrap', 'hmac', 'verify'], supportedActions);
   });
 
-  test('encryption key versions', function(assert) {
+  test('encryption key versions', function (assert) {
+    assert.expect(2);
     let done = assert.async();
     let model = run(() =>
       this.owner.lookup('service:store').createRecord('transit-key', {
@@ -44,7 +45,8 @@ module('Unit | Model | transit key', function(hooks) {
     });
   });
 
-  test('keys for encryption', function(assert) {
+  test('keys for encryption', function (assert) {
+    assert.expect(2);
     let done = assert.async();
     let model = run(() =>
       this.owner.lookup('service:store').createRecord('transit-key', {

@@ -7,14 +7,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
-	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
-	influx "github.com/influxdata/influxdb/client/v2"
+	influx "github.com/influxdata/influxdb1-client/v2"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -24,7 +22,7 @@ type influxdbConnectionProducer struct {
 	Host              string      `json:"host" structs:"host" mapstructure:"host"`
 	Username          string      `json:"username" structs:"username" mapstructure:"username"`
 	Password          string      `json:"password" structs:"password" mapstructure:"password"`
-	Port              string      `json:"port" structs:"port" mapstructure:"port"` //default to 8086
+	Port              string      `json:"port" structs:"port" mapstructure:"port"` // default to 8086
 	TLS               bool        `json:"tls" structs:"tls" mapstructure:"tls"`
 	InsecureTLS       bool        `json:"insecure_tls" structs:"insecure_tls" mapstructure:"insecure_tls"`
 	ConnectTimeoutRaw interface{} `json:"connect_timeout" structs:"connect_timeout" mapstructure:"connect_timeout"`
@@ -44,40 +42,35 @@ type influxdbConnectionProducer struct {
 	sync.Mutex
 }
 
-func (i *influxdbConnectionProducer) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
-	_, err := i.Init(ctx, conf, verifyConnection)
-	return err
-}
-
-func (i *influxdbConnectionProducer) Init(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (map[string]interface{}, error) {
+func (i *influxdbConnectionProducer) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
 	i.Lock()
 	defer i.Unlock()
 
-	i.rawConfig = conf
+	i.rawConfig = req.Config
 
-	err := mapstructure.WeakDecode(conf, i)
+	err := mapstructure.WeakDecode(req.Config, i)
 	if err != nil {
-		return nil, err
+		return dbplugin.InitializeResponse{}, err
 	}
 
 	if i.ConnectTimeoutRaw == nil {
-		i.ConnectTimeoutRaw = "0s"
+		i.ConnectTimeoutRaw = "5s"
 	}
 	if i.Port == "" {
 		i.Port = "8086"
 	}
 	i.connectTimeout, err = parseutil.ParseDurationSecond(i.ConnectTimeoutRaw)
 	if err != nil {
-		return nil, errwrap.Wrapf("invalid connect_timeout: {{err}}", err)
+		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid connect_timeout: %w", err)
 	}
 
 	switch {
 	case len(i.Host) == 0:
-		return nil, fmt.Errorf("host cannot be empty")
+		return dbplugin.InitializeResponse{}, fmt.Errorf("host cannot be empty")
 	case len(i.Username) == 0:
-		return nil, fmt.Errorf("username cannot be empty")
+		return dbplugin.InitializeResponse{}, fmt.Errorf("username cannot be empty")
 	case len(i.Password) == 0:
-		return nil, fmt.Errorf("password cannot be empty")
+		return dbplugin.InitializeResponse{}, fmt.Errorf("password cannot be empty")
 	}
 
 	var certBundle *certutil.CertBundle
@@ -86,11 +79,11 @@ func (i *influxdbConnectionProducer) Init(ctx context.Context, conf map[string]i
 	case len(i.PemJSON) != 0:
 		parsedCertBundle, err = certutil.ParsePKIJSON([]byte(i.PemJSON))
 		if err != nil {
-			return nil, errwrap.Wrapf("could not parse given JSON; it must be in the format of the output of the PKI backend certificate issuing command: {{err}}", err)
+			return dbplugin.InitializeResponse{}, fmt.Errorf("could not parse given JSON; it must be in the format of the output of the PKI backend certificate issuing command: %w", err)
 		}
 		certBundle, err = parsedCertBundle.ToCertBundle()
 		if err != nil {
-			return nil, errwrap.Wrapf("Error marshaling PEM information: {{err}}", err)
+			return dbplugin.InitializeResponse{}, fmt.Errorf("Error marshaling PEM information: %w", err)
 		}
 		i.certificate = certBundle.Certificate
 		i.privateKey = certBundle.PrivateKey
@@ -100,11 +93,11 @@ func (i *influxdbConnectionProducer) Init(ctx context.Context, conf map[string]i
 	case len(i.PemBundle) != 0:
 		parsedCertBundle, err = certutil.ParsePEMBundle(i.PemBundle)
 		if err != nil {
-			return nil, errwrap.Wrapf("Error parsing the given PEM information: {{err}}", err)
+			return dbplugin.InitializeResponse{}, fmt.Errorf("Error parsing the given PEM information: %w", err)
 		}
 		certBundle, err = parsedCertBundle.ToCertBundle()
 		if err != nil {
-			return nil, errwrap.Wrapf("Error marshaling PEM information: {{err}}", err)
+			return dbplugin.InitializeResponse{}, fmt.Errorf("Error marshaling PEM information: %w", err)
 		}
 		i.certificate = certBundle.Certificate
 		i.privateKey = certBundle.PrivateKey
@@ -116,13 +109,17 @@ func (i *influxdbConnectionProducer) Init(ctx context.Context, conf map[string]i
 	// and the connection can be established at a later time.
 	i.Initialized = true
 
-	if verifyConnection {
+	if req.VerifyConnection {
 		if _, err := i.Connection(ctx); err != nil {
-			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
+			return dbplugin.InitializeResponse{}, fmt.Errorf("error verifying connection: %w", err)
 		}
 	}
 
-	return conf, nil
+	resp := dbplugin.InitializeResponse{
+		Config: req.Config,
+	}
+
+	return resp, nil
 }
 
 func (i *influxdbConnectionProducer) Connection(_ context.Context) (interface{}, error) {
@@ -170,7 +167,7 @@ func (i *influxdbConnectionProducer) createClient() (influx.Client, error) {
 	}
 
 	if i.TLS {
-		var tlsConfig *tls.Config
+		tlsConfig := &tls.Config{}
 		if len(i.certificate) > 0 || len(i.issuingCA) > 0 {
 			if len(i.certificate) > 0 && len(i.privateKey) == 0 {
 				return nil, fmt.Errorf("found certificate for TLS authentication but no private key")
@@ -187,46 +184,48 @@ func (i *influxdbConnectionProducer) createClient() (influx.Client, error) {
 
 			parsedCertBundle, err := certBundle.ToParsedCertBundle()
 			if err != nil {
-				return nil, errwrap.Wrapf("failed to parse certificate bundle: {{err}}", err)
+				return nil, fmt.Errorf("failed to parse certificate bundle: %w", err)
 			}
 
 			tlsConfig, err = parsedCertBundle.GetTLSConfig(certutil.TLSClient)
 			if err != nil || tlsConfig == nil {
-				return nil, errwrap.Wrapf(fmt.Sprintf("failed to get TLS configuration: tlsConfig:%#v err:{{err}}", tlsConfig), err)
-			}
-			tlsConfig.InsecureSkipVerify = i.InsecureTLS
-
-			if i.TLSMinVersion != "" {
-				var ok bool
-				tlsConfig.MinVersion, ok = tlsutil.TLSLookup[i.TLSMinVersion]
-				if !ok {
-					return nil, fmt.Errorf("invalid 'tls_min_version' in config")
-				}
-			} else {
-				// MinVersion was not being set earlier. Reset it to
-				// zero to gracefully handle upgrades.
-				tlsConfig.MinVersion = 0
+				return nil, fmt.Errorf("failed to get TLS configuration: tlsConfig:%#v err:%w", tlsConfig, err)
 			}
 		}
+
+		tlsConfig.InsecureSkipVerify = i.InsecureTLS
+
+		if i.TLSMinVersion != "" {
+			var ok bool
+			tlsConfig.MinVersion, ok = tlsutil.TLSLookup[i.TLSMinVersion]
+			if !ok {
+				return nil, fmt.Errorf("invalid 'tls_min_version' in config")
+			}
+		} else {
+			// MinVersion was not being set earlier. Reset it to
+			// zero to gracefully handle upgrades.
+			tlsConfig.MinVersion = 0
+		}
+
 		clientConfig.TLSConfig = tlsConfig
 		clientConfig.Addr = fmt.Sprintf("https://%s:%s", i.Host, i.Port)
 	}
 
 	cli, err := influx.NewHTTPClient(clientConfig)
 	if err != nil {
-		return nil, errwrap.Wrapf("error creating client: {{err}}", err)
+		return nil, fmt.Errorf("error creating client: %w", err)
 	}
 
 	// Checking server status
 	_, _, err = cli.Ping(i.connectTimeout)
 	if err != nil {
-		return nil, errwrap.Wrapf("error checking cluster status: {{err}}", err)
+		return nil, fmt.Errorf("error checking cluster status: %w", err)
 	}
 
 	// verifying infos about the connection
 	isAdmin, err := isUserAdmin(cli, i.Username)
 	if err != nil {
-		return nil, errwrap.Wrapf("error getting if provided username is admin: {{err}}", err)
+		return nil, fmt.Errorf("error getting if provided username is admin: %w", err)
 	}
 	if !isAdmin {
 		return nil, fmt.Errorf("the provided user is not an admin of the influxDB server")
@@ -235,8 +234,8 @@ func (i *influxdbConnectionProducer) createClient() (influx.Client, error) {
 	return cli, nil
 }
 
-func (i *influxdbConnectionProducer) secretValues() map[string]interface{} {
-	return map[string]interface{}{
+func (i *influxdbConnectionProducer) secretValues() map[string]string {
+	return map[string]string{
 		i.Password:  "[password]",
 		i.PemBundle: "[pem_bundle]",
 		i.PemJSON:   "[pem_json]",
@@ -249,27 +248,20 @@ func isUserAdmin(cli influx.Client, user string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	if response == nil {
+		return false, fmt.Errorf("empty response")
+	}
 	if response.Error() != nil {
 		return false, response.Error()
 	}
 	for _, res := range response.Results {
 		for _, serie := range res.Series {
 			for _, val := range serie.Values {
-				if val[0].(string) == user && val[1].(bool) == true {
+				if val[0].(string) == user && val[1].(bool) {
 					return true, nil
 				}
 			}
 		}
 	}
 	return false, fmt.Errorf("the provided username is not a valid user in the influxdb")
-}
-
-// SetCredentials uses provided information to set/create a user in the
-// database. Unlike CreateUser, this method requires a username be provided and
-// uses the name given, instead of generating a name. This is used for creating
-// and setting the password of static accounts, as well as rolling back
-// passwords in the database in the event an updated database fails to save in
-// Vault's storage.
-func (i *influxdbConnectionProducer) SetCredentials(ctx context.Context, statements dbplugin.Statements, staticUser dbplugin.StaticUserConfig) (username, password string, err error) {
-	return "", "", dbutil.Unimplemented()
 }

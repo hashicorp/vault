@@ -2,8 +2,10 @@ package http
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/vault"
@@ -293,6 +295,7 @@ func TestSysTuneAuth_nonHMACKeys(t *testing.T) {
 		"warnings":       nil,
 		"auth":           nil,
 		"data": map[string]interface{}{
+			"description":                  "token based credentials",
 			"default_lease_ttl":            json.Number("2764800"),
 			"max_lease_ttl":                json.Number("2764800"),
 			"force_no_cache":               false,
@@ -300,6 +303,7 @@ func TestSysTuneAuth_nonHMACKeys(t *testing.T) {
 			"audit_non_hmac_response_keys": []interface{}{"bar"},
 			"token_type":                   "default-service",
 		},
+		"description":                  "token based credentials",
 		"default_lease_ttl":            json.Number("2764800"),
 		"max_lease_ttl":                json.Number("2764800"),
 		"force_no_cache":               false,
@@ -336,11 +340,13 @@ func TestSysTuneAuth_nonHMACKeys(t *testing.T) {
 		"warnings":       nil,
 		"auth":           nil,
 		"data": map[string]interface{}{
+			"description":       "token based credentials",
 			"default_lease_ttl": json.Number("2764800"),
 			"max_lease_ttl":     json.Number("2764800"),
 			"force_no_cache":    false,
 			"token_type":        "default-service",
 		},
+		"description":       "token based credentials",
 		"default_lease_ttl": json.Number("2764800"),
 		"max_lease_ttl":     json.Number("2764800"),
 		"force_no_cache":    false,
@@ -372,11 +378,13 @@ func TestSysTuneAuth_showUIMount(t *testing.T) {
 		"warnings":       nil,
 		"auth":           nil,
 		"data": map[string]interface{}{
+			"description":       "token based credentials",
 			"default_lease_ttl": json.Number("2764800"),
 			"max_lease_ttl":     json.Number("2764800"),
 			"force_no_cache":    false,
 			"token_type":        "default-service",
 		},
+		"description":       "token based credentials",
 		"default_lease_ttl": json.Number("2764800"),
 		"max_lease_ttl":     json.Number("2764800"),
 		"force_no_cache":    false,
@@ -400,6 +408,7 @@ func TestSysTuneAuth_showUIMount(t *testing.T) {
 
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
+		"description":    "token based credentials",
 		"lease_id":       "",
 		"renewable":      false,
 		"lease_duration": json.Number("0"),
@@ -407,6 +416,7 @@ func TestSysTuneAuth_showUIMount(t *testing.T) {
 		"warnings":       nil,
 		"auth":           nil,
 		"data": map[string]interface{}{
+			"description":        "token based credentials",
 			"default_lease_ttl":  json.Number("2764800"),
 			"max_lease_ttl":      json.Number("2764800"),
 			"force_no_cache":     false,
@@ -423,5 +433,132 @@ func TestSysTuneAuth_showUIMount(t *testing.T) {
 	expected["request_id"] = actual["request_id"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
+	}
+}
+
+func TestSysRemountAuth(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	resp := testHttpPost(t, token, addr+"/v1/sys/auth/foo", map[string]interface{}{
+		"type":        "noop",
+		"description": "foo",
+	})
+	testResponseStatus(t, resp, 204)
+
+	resp = testHttpPost(t, token, addr+"/v1/sys/remount", map[string]interface{}{
+		"from": "auth/foo",
+		"to":   "auth/bar",
+	})
+	testResponseStatus(t, resp, 200)
+
+	// Poll until the remount succeeds
+	var remountResp map[string]interface{}
+	testResponseBody(t, resp, &remountResp)
+	vault.RetryUntil(t, 5*time.Second, func() error {
+		resp = testHttpGet(t, token, addr+"/v1/sys/remount/status/"+remountResp["migration_id"].(string))
+		testResponseStatus(t, resp, 200)
+
+		var remountStatusResp map[string]interface{}
+		testResponseBody(t, resp, &remountStatusResp)
+
+		status := remountStatusResp["data"].(map[string]interface{})["migration_info"].(map[string]interface{})["status"]
+		if status != "success" {
+			return fmt.Errorf("Expected migration status to be successful, got %q", status)
+		}
+		return nil
+	})
+
+	resp = testHttpGet(t, token, addr+"/v1/sys/auth")
+
+	var actual map[string]interface{}
+	expected := map[string]interface{}{
+		"lease_id":       "",
+		"renewable":      false,
+		"lease_duration": json.Number("0"),
+		"wrap_info":      nil,
+		"warnings":       nil,
+		"auth":           nil,
+		"data": map[string]interface{}{
+			"bar/": map[string]interface{}{
+				"description":             "foo",
+				"type":                    "noop",
+				"external_entropy_access": false,
+				"config": map[string]interface{}{
+					"default_lease_ttl": json.Number("0"),
+					"max_lease_ttl":     json.Number("0"),
+					"token_type":        "default-service",
+					"force_no_cache":    false,
+				},
+				"local":     false,
+				"seal_wrap": false,
+				"options":   map[string]interface{}{},
+			},
+			"token/": map[string]interface{}{
+				"description":             "token based credentials",
+				"type":                    "token",
+				"external_entropy_access": false,
+				"config": map[string]interface{}{
+					"default_lease_ttl": json.Number("0"),
+					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
+					"token_type":        "default-service",
+				},
+				"local":     false,
+				"seal_wrap": false,
+				"options":   interface{}(nil),
+			},
+		},
+		"bar/": map[string]interface{}{
+			"description":             "foo",
+			"type":                    "noop",
+			"external_entropy_access": false,
+			"config": map[string]interface{}{
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
+				"token_type":        "default-service",
+				"force_no_cache":    false,
+			},
+			"local":     false,
+			"seal_wrap": false,
+			"options":   map[string]interface{}{},
+		},
+		"token/": map[string]interface{}{
+			"description":             "token based credentials",
+			"type":                    "token",
+			"external_entropy_access": false,
+			"config": map[string]interface{}{
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
+				"token_type":        "default-service",
+				"force_no_cache":    false,
+			},
+			"local":     false,
+			"seal_wrap": false,
+			"options":   interface{}(nil),
+		},
+	}
+	testResponseStatus(t, resp, 200)
+	testResponseBody(t, resp, &actual)
+
+	expected["request_id"] = actual["request_id"]
+	for k, v := range actual["data"].(map[string]interface{}) {
+		if v.(map[string]interface{})["accessor"] == "" {
+			t.Fatalf("no accessor from %s", k)
+		}
+		if v.(map[string]interface{})["uuid"] == "" {
+			t.Fatalf("no uuid from %s", k)
+		}
+
+		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected[k].(map[string]interface{})["uuid"] = v.(map[string]interface{})["uuid"]
+		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected["data"].(map[string]interface{})[k].(map[string]interface{})["uuid"] = v.(map[string]interface{})["uuid"]
+	}
+
+	if diff := deep.Equal(actual, expected); diff != nil {
+		t.Fatal(diff)
 	}
 }

@@ -1,0 +1,42 @@
+.transit-card-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 0.2fr));
+  grid-template-rows: 1fr;
+  align-content: start;
+  grid-gap: 2rem;
+  margin-top: $spacing-l;
+}
+
+.transit-card {
+  border-radius: $radius;
+  box-shadow: 0 0 0 1px rgba($grey-light, 0.4);
+  display: grid;
+  grid-template-columns: 0.45fr 2fr;
+  padding: $spacing-m;
+  border: none;
+
+  .transit-icon {
+    justify-self: center;
+  }
+
+  .transit-action-description {
+    font-family: $family-sans;
+    font-size: $size-8;
+    color: $grey;
+  }
+
+  .title {
+    color: $grey;
+    font-size: $size-7;
+    margin-bottom: $spacing-xxs;
+  }
+
+  &:hover {
+    box-shadow: 0 0 0 1px $blue-500, $box-shadow-middle;
+    background: $blue-010;
+
+    .title {
+      color: initial;
+    }
+  }
+}

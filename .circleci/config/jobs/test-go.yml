@@ -1,10 +1,13 @@
-executor: go-machine
-parallelism: 2
+executor: docker-env-go-test
+parallelism: 8
 steps:
-  - setup-go
+  - exit-if-ui-or-docs-branch
   - checkout
-  - go_test
+  - go_test:
+      log_dir: "/tmp/testlogs"
   - store_artifacts:
       path: test-results
   - store_test_results:
       path: test-results
+  - store_artifacts:
+      path: "/tmp/testlogs"

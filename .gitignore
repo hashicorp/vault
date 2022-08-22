@@ -28,6 +28,10 @@ _testmain.go
 /bin/
 /pkg/
 
+# Generated Web UI goes here
+/http/web_ui/*.*
+/http/web_ui/**/*.*
+
 # Vault-specific
 example.hcl
 example.vault.d
@@ -47,8 +51,11 @@ Vagrantfile
 
 # Configs
 *.hcl
+!.release/ci.hcl
+!.release/security-scan.hcl
+!.release/linux/package/etc/vault.d/vault.hcl
 !command/agent/config/test-fixtures/*.hcl
-!command/server/test-fixtures/*.hcl
+!command/server/test-fixtures/**/*.hcl
 
 
 .DS_Store
@@ -57,7 +64,8 @@ Vagrantfile
 
 dist/*
 
-tags
+# ignore ctags
+./tags
 
 # Editor backups
 *~
@@ -72,7 +80,6 @@ tags
 ui/dist
 ui/tmp
 ui/root
-http/bindata_assetfs.go
 
 # dependencies
 ui/node_modules
@@ -105,3 +112,6 @@ website/.cache
 website/assets/node_modules
 website/assets/public
 website/components/node_modules
+
+.buildcache/
+.releaser/

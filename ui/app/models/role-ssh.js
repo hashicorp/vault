@@ -1,14 +1,12 @@
+import Model, { attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
-import DS from 'ember-data';
+import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-
-const { attr } = DS;
 
 // these arrays define the order in which the fields will be displayed
 // see
-// https://github.com/hashicorp/vault/blob/master/builtin/logical/ssh/path_roles.go#L542 for list of fields for each key type
+// https://github.com/hashicorp/vault/blob/main/builtin/logical/ssh/path_roles.go#L542 for list of fields for each key type
 const OTP_FIELDS = [
   'name',
   'keyType',
@@ -26,6 +24,7 @@ const CA_FIELDS = [
   'allowHostCertificates',
   'defaultUser',
   'allowedUsers',
+  'allowedUsersTemplate',
   'allowedDomains',
   'ttl',
   'maxTtl',
@@ -37,11 +36,12 @@ const CA_FIELDS = [
   'allowSubdomains',
   'allowUserKeyIds',
   'keyIdFormat',
+  'notBeforeDuration',
 ];
 
-export default DS.Model.extend({
+export default Model.extend({
   useOpenAPI: true,
-  getHelpUrl: function(backend) {
+  getHelpUrl: function (backend) {
     return `/v1/${backend}/roles/example?help=1`;
   },
   zeroAddress: attr('boolean', {
@@ -66,7 +66,11 @@ export default DS.Model.extend({
   }),
   allowedUsers: attr('string', {
     helpText:
-      'Create a whitelist of users that can use this key (e.g. `admin, dev`, or use `*` to allow all)',
+      'Create a list of users who are allowed to use this key (e.g. `admin, dev`, or use `*` to allow all.)',
+  }),
+  allowedUsersTemplate: attr('boolean', {
+    helpText:
+      'Specifies that Allowed users can be templated e.g. {{identity.entity.aliases.mount_accessor_xyz.name}}',
   }),
   allowedDomains: attr('string', {
     helpText:
@@ -114,10 +118,23 @@ export default DS.Model.extend({
     helpText: 'When supplied, this value specifies a custom format for the key id of a signed certificate',
   }),
 
-  attrsForKeyType: computed('keyType', function() {
-    const keyType = this.get('keyType');
+  showFields: computed('keyType', function () {
+    const keyType = this.keyType;
     let keys = keyType === 'ca' ? CA_FIELDS.slice(0) : OTP_FIELDS.slice(0);
     return expandAttributeMeta(this, keys);
+  }),
+
+  fieldGroups: computed('keyType', function () {
+    let numRequired = this.keyType === 'otp' ? 3 : 4;
+    let fields = this.keyType === 'otp' ? [...OTP_FIELDS] : [...CA_FIELDS];
+    let defaultFields = fields.splice(0, numRequired);
+    const groups = [
+      { default: defaultFields },
+      {
+        Options: [...fields],
+      },
+    ];
+    return fieldToAttrs(this, groups);
   }),
 
   updatePath: lazyCapabilities(apiPath`${'backend'}/roles/${'id'}`, 'backend', 'id'),

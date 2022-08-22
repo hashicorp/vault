@@ -84,7 +84,7 @@
   color: $black;
   transition: background-color $speed;
 
-  &:hover {
+  &:hover:not(.disabled) {
     background-color: $ui-gray-100;
     border: 0;
     color: $blue;
@@ -98,6 +98,27 @@
     height: 2.5rem;
     padding: $size-10 $size-8;
   }
+
+  &.disabled {
+    opacity: 0.5;
+    cursor: default;
+
+    &:focus {
+      box-shadow: none;
+    }
+    &:hover {
+      background: transparent;
+    }
+  }
+}
+a.disabled.toolbar-link {
+  color: $black;
+  background-color: $white;
+  cursor: not-allowed;
+  &:hover {
+    background-color: $ui-gray-100;
+    color: $blue;
+  }
 }
 
 .toolbar-separator {
@@ -105,4 +126,16 @@
   height: 32px;
   margin: 0 $spacing-xs;
   width: 0;
+}
+
+.version-diff-toolbar {
+  display: flex;
+  align-items: baseline;
+  gap: $spacing-s;
+
+  .diff-status {
+    display: flex;
+    direction: rtl;
+    align-items: center;
+  }
 }

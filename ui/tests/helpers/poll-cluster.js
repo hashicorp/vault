@@ -1,8 +1,7 @@
-import { run } from '@ember/runloop';
+import { settled } from '@ember/test-helpers';
 
-export function pollCluster(owner) {
+export async function pollCluster(owner) {
   const store = owner.lookup('service:store');
-  return run(() => {
-    return store.peekAll('cluster').firstObject.reload();
-  });
+  await store.peekAll('cluster').firstObject.reload();
+  await settled();
 }

@@ -1,4 +1,4 @@
-// +build !enterprise
+//go:build !enterprise
 
 package vault
 
@@ -10,6 +10,7 @@ import (
 
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 )
@@ -56,7 +57,7 @@ func performTestSealUnwrapper(t *testing.T, phys physical.Backend, logger log.Lo
 	// Save the original for comparison later
 	origBytes := make([]byte, len(entry.Value))
 	copy(origBytes, entry.Value)
-	se := &physical.EncryptedBlobInfo{
+	se := &wrapping.EncryptedBlobInfo{
 		Ciphertext: entry.Value,
 	}
 	seb, err := proto.Marshal(se)
@@ -80,6 +81,9 @@ func performTestSealUnwrapper(t *testing.T, phys physical.Backend, logger log.Lo
 		entry, err := core.physical.Get(ctx, "core/master")
 		if err != nil {
 			t.Fatal(err)
+		}
+		if entry == nil {
+			t.Fatal("nil entry")
 		}
 		if !bytes.Equal(entry.Value, origBytes) {
 			t.Fatalf("mismatched original bytes and unwrapped entry bytes:\ngot:\n%v\nexpected:\n%v", entry.Value, origBytes)

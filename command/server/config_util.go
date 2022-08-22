@@ -1,13 +1,22 @@
+//go:build !enterprise
+
 package server
 
 import (
 	"github.com/hashicorp/hcl/hcl/ast"
 )
 
-var (
-	parseEntropy = parseEntropyOSS
-)
+type entConfig struct{}
 
-func parseEntropyOSS(result *Config, list *ast.ObjectList, blockName string) error {
+func (ec *entConfig) parseConfig(list *ast.ObjectList) error {
+	return nil
+}
+
+func (ec entConfig) Merge(ec2 entConfig) entConfig {
+	result := entConfig{}
+	return result
+}
+
+func (ec entConfig) Sanitized() map[string]interface{} {
 	return nil
 }

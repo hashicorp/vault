@@ -48,12 +48,7 @@ type backend struct {
 	*framework.Backend
 }
 
-func (b *backend) client(ctx context.Context, s logical.Storage) (*api.Client, error) {
-	conf, err := b.readConfigAccess(ctx, s)
-	if err != nil {
-		return nil, err
-	}
-
+func clientFromConfig(conf *accessConfig) (*api.Client, error) {
 	nomadConf := api.DefaultConfig()
 	if conf != nil {
 		if conf.Address != "" {
@@ -62,12 +57,24 @@ func (b *backend) client(ctx context.Context, s logical.Storage) (*api.Client, e
 		if conf.Token != "" {
 			nomadConf.SecretID = conf.Token
 		}
+		if conf.CACert != "" {
+			nomadConf.TLSConfig.CACertPEM = []byte(conf.CACert)
+		}
+		if conf.ClientCert != "" {
+			nomadConf.TLSConfig.ClientCertPEM = []byte(conf.ClientCert)
+		}
+		if conf.ClientKey != "" {
+			nomadConf.TLSConfig.ClientKeyPEM = []byte(conf.ClientKey)
+		}
 	}
+	return api.NewClient(nomadConf)
+}
 
-	client, err := api.NewClient(nomadConf)
+func (b *backend) client(ctx context.Context, s logical.Storage) (*api.Client, error) {
+	conf, err := b.readConfigAccess(ctx, s)
 	if err != nil {
 		return nil, err
 	}
 
-	return client, nil
+	return clientFromConfig(conf)
 }

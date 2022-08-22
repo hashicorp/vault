@@ -2,26 +2,23 @@ package command
 
 import (
 	"bytes"
-	"crypto/rand"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-secure-stdlib/password"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/pgpkeys"
-	"github.com/hashicorp/vault/helper/xor"
-	"github.com/hashicorp/vault/sdk/helper/base62"
-	"github.com/hashicorp/vault/sdk/helper/password"
+	"github.com/hashicorp/vault/sdk/helper/roottoken"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorGenerateRootCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorGenerateRootCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorGenerateRootCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorGenerateRootCommand)(nil)
+)
 
 type generateRootKind int
 
@@ -129,7 +126,8 @@ func (c *OperatorGenerateRootCommand) Flags() *FlagSets {
 		Default:    "",
 		EnvVar:     "",
 		Completion: complete.PredictAnything,
-		Usage:      "The value to decode; setting this triggers a decode operation.",
+		Usage: "The value to decode; setting this triggers a decode operation. " +
+			" If the value is \"-\" then read the encoded token from stdin.",
 	})
 
 	f.BoolVar(&BoolVar{
@@ -178,7 +176,7 @@ func (c *OperatorGenerateRootCommand) Flags() *FlagSets {
 		EnvVar:     "",
 		Completion: complete.PredictAnything,
 		Usage: "Path to a file on disk containing a binary or base64-encoded " +
-			"public GPG key. This can also be specified as a Keybase username " +
+			"public PGP key. This can also be specified as a Keybase username " +
 			"using the format \"keybase:<username>\". When supplied, the generated " +
 			"root token will be encrypted and base64-encoded with the given public " +
 			"key.",
@@ -242,7 +240,16 @@ func (c *OperatorGenerateRootCommand) Run(args []string) int {
 	case c.flagGenerateOTP:
 		otp, code := c.generateOTP(client, kind)
 		if code == 0 {
-			return PrintRaw(c.UI, otp)
+			switch Format(c.UI) {
+			case "", "table":
+				return PrintRaw(c.UI, otp)
+			default:
+				status := map[string]interface{}{
+					"otp":        otp,
+					"otp_length": len(otp),
+				}
+				return OutputData(c.UI, status)
+			}
 		}
 		return code
 	case c.flagDecode != "":
@@ -279,32 +286,15 @@ func (c *OperatorGenerateRootCommand) generateOTP(client *api.Client, kind gener
 		return "", 2
 	}
 
-	switch status.OTPLength {
-	case 0:
-		// This is the fallback case
-		buf := make([]byte, 16)
-		readLen, err := rand.Read(buf)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error reading random bytes: %s", err))
-			return "", 2
-		}
-
-		if readLen != 16 {
-			c.UI.Error(fmt.Sprintf("Read %d bytes when we should have read 16", readLen))
-			return "", 2
-		}
-
-		return base64.StdEncoding.EncodeToString(buf), 0
-
-	default:
-		otp, err := base62.Random(status.OTPLength)
-		if err != nil {
-			c.UI.Error(errwrap.Wrapf("Error reading random bytes: {{err}}", err).Error())
-			return "", 2
-		}
-
-		return otp, 0
+	otp, err := roottoken.GenerateOTP(status.OTPLength)
+	var retCode int
+	if err != nil {
+		retCode = 2
+		c.UI.Error(err.Error())
+	} else {
+		retCode = 0
 	}
+	return otp, retCode
 }
 
 // decode decodes the given value using the otp.
@@ -316,6 +306,27 @@ func (c *OperatorGenerateRootCommand) decode(client *api.Client, encoded, otp st
 	if otp == "" {
 		c.UI.Error("Missing otp: use -otp to supply it")
 		return 1
+	}
+
+	if encoded == "-" {
+		// Pull our fake stdin if needed
+		stdin := (io.Reader)(os.Stdin)
+		if c.testStdin != nil {
+			stdin = c.testStdin
+		}
+
+		var buf bytes.Buffer
+		if _, err := io.Copy(&buf, stdin); err != nil {
+			c.UI.Error(fmt.Sprintf("Failed to read from stdin: %s", err))
+			return 1
+		}
+
+		encoded = buf.String()
+
+		if encoded == "" {
+			c.UI.Error("Missing encoded value. When using -decode=\"-\" value must be passed via stdin.")
+			return 1
+		}
 	}
 
 	f := client.Sys().GenerateRootStatus
@@ -332,37 +343,20 @@ func (c *OperatorGenerateRootCommand) decode(client *api.Client, encoded, otp st
 		return 2
 	}
 
-	switch status.OTPLength {
-	case 0:
-		// Backwards compat
-		tokenBytes, err := xor.XORBase64(encoded, otp)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error xoring token: %s", err))
-			return 1
-		}
+	token, err := roottoken.DecodeToken(encoded, otp, status.OTPLength)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Error decoding root token: %s", err))
+		return 1
+	}
 
-		token, err := uuid.FormatUUID(tokenBytes)
-		if err != nil {
-			c.UI.Error(fmt.Sprintf("Error formatting base64 token value: %s", err))
-			return 1
-		}
-
-		return PrintRaw(c.UI, strings.TrimSpace(token))
-
+	switch Format(c.UI) {
+	case "", "table":
+		return PrintRaw(c.UI, token)
 	default:
-		tokenBytes, err := base64.RawStdEncoding.DecodeString(encoded)
-		if err != nil {
-			c.UI.Error(errwrap.Wrapf("Error decoding base64'd token: {{err}}", err).Error())
-			return 1
+		tokenJSON := map[string]interface{}{
+			"token": token,
 		}
-
-		tokenBytes, err = xor.XORBytes(tokenBytes, []byte(otp))
-		if err != nil {
-			c.UI.Error(errwrap.Wrapf("Error xoring token: {{err}}", err).Error())
-			return 1
-		}
-
-		return PrintRaw(c.UI, string(tokenBytes))
+		return OutputData(c.UI, tokenJSON)
 	}
 }
 

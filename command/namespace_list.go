@@ -8,8 +8,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*NamespaceListCommand)(nil)
-var _ cli.CommandAutocomplete = (*NamespaceListCommand)(nil)
+var (
+	_ cli.Command             = (*NamespaceListCommand)(nil)
+	_ cli.CommandAutocomplete = (*NamespaceListCommand)(nil)
+)
 
 type NamespaceListCommand struct {
 	*BaseCommand
@@ -39,7 +41,7 @@ func (c *NamespaceListCommand) Flags() *FlagSets {
 }
 
 func (c *NamespaceListCommand) AutocompleteArgs() complete.Predictor {
-	return c.PredictVaultFolders()
+	return complete.PredictNothing
 }
 
 func (c *NamespaceListCommand) AutocompleteFlags() complete.Flags {
@@ -81,7 +83,7 @@ func (c *NamespaceListCommand) Run(args []string) int {
 	}
 
 	if secret == nil {
-		c.UI.Error(fmt.Sprintf("No namespaces found"))
+		c.UI.Error("No namespaces found")
 		return 2
 	}
 
@@ -95,7 +97,7 @@ func (c *NamespaceListCommand) Run(args []string) int {
 	}
 
 	if !ok {
-		c.UI.Error(fmt.Sprintf("No entries found"))
+		c.UI.Error("No entries found")
 		return 2
 	}
 

@@ -18,12 +18,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/awsutil"
+	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
@@ -102,6 +101,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 		AccessKey:    accessKey,
 		SecretKey:    secretKey,
 		SessionToken: sessionToken,
+		Logger:       logger,
 	}
 	creds, err := credsConfig.GenerateCredentialChain()
 	if err != nil {
@@ -111,7 +111,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 	pooledTransport := cleanhttp.DefaultPooledTransport()
 	pooledTransport.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
 
-	s3conn := s3.New(session.New(&aws.Config{
+	sess, err := session.NewSession(&aws.Config{
 		Credentials: creds,
 		HTTPClient: &http.Client{
 			Transport: pooledTransport,
@@ -120,11 +120,15 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 		Region:           aws.String(region),
 		S3ForcePathStyle: aws.Bool(s3ForcePathStyleBool),
 		DisableSSL:       aws.Bool(disableSSLBool),
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
+	s3conn := s3.New(sess)
 
 	_, err = s3conn.ListObjects(&s3.ListObjectsInput{Bucket: &bucket})
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("unable to access bucket %q in region %q: {{err}}", bucket, region), err)
+		return nil, fmt.Errorf("unable to access bucket %q in region %q: %w", bucket, region, err)
 	}
 
 	maxParStr, ok := conf["max_parallel"]
@@ -132,7 +136,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 	if ok {
 		maxParInt, err = strconv.Atoi(maxParStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_parallel set", "max_parallel", maxParInt)
@@ -177,7 +181,6 @@ func (s *S3Backend) Put(ctx context.Context, entry *physical.Entry) error {
 	}
 
 	_, err := s.client.PutObject(putObjectInput)
-
 	if err != nil {
 		return err
 	}
@@ -225,6 +228,11 @@ func (s *S3Backend) Get(ctx context.Context, key string) (*physical.Entry, error
 		return nil, err
 	}
 
+	// Strip path prefix
+	if s.path != "" {
+		key = strings.TrimPrefix(key, s.path+"/")
+	}
+
 	ent := &physical.Entry{
 		Key:   key,
 		Value: data.Bytes(),
@@ -247,7 +255,6 @@ func (s *S3Backend) Delete(ctx context.Context, key string) error {
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 	})
-
 	if err != nil {
 		return err
 	}
@@ -266,8 +273,8 @@ func (s *S3Backend) List(ctx context.Context, prefix string) ([]string, error) {
 	// Setup prefix
 	prefix = path.Join(s.path, prefix)
 
-	// Validate prefix is ending with a "/"
-	if !strings.HasSuffix(prefix, "/") {
+	// Validate prefix (if present) is ending with a "/"
+	if prefix != "" && !strings.HasSuffix(prefix, "/") {
 		prefix += "/"
 	}
 
@@ -305,7 +312,6 @@ func (s *S3Backend) List(ctx context.Context, prefix string) ([]string, error) {
 			}
 			return true
 		})
-
 	if err != nil {
 		return nil, err
 	}

@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
@@ -39,7 +40,7 @@ func (s *StoragePacker) View() logical.Storage {
 }
 
 // GetBucket returns a bucket for a given key
-func (s *StoragePacker) GetBucket(key string) (*Bucket, error) {
+func (s *StoragePacker) GetBucket(ctx context.Context, key string) (*Bucket, error) {
 	if key == "" {
 		return nil, fmt.Errorf("missing bucket key")
 	}
@@ -49,9 +50,9 @@ func (s *StoragePacker) GetBucket(key string) (*Bucket, error) {
 	defer lock.RUnlock()
 
 	// Read from storage
-	storageEntry, err := s.view.Get(context.Background(), key)
+	storageEntry, err := s.view.Get(ctx, key)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to read packed storage entry: {{err}}", err)
+		return nil, fmt.Errorf("failed to read packed storage entry: %w", err)
 	}
 	if storageEntry == nil {
 		return nil, nil
@@ -59,7 +60,7 @@ func (s *StoragePacker) GetBucket(key string) (*Bucket, error) {
 
 	uncompressedData, notCompressed, err := compressutil.Decompress(storageEntry.Value)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to decompress packed storage entry: {{err}}", err)
+		return nil, fmt.Errorf("failed to decompress packed storage entry: %w", err)
 	}
 	if notCompressed {
 		uncompressedData = storageEntry.Value
@@ -68,7 +69,7 @@ func (s *StoragePacker) GetBucket(key string) (*Bucket, error) {
 	var bucket Bucket
 	err = proto.Unmarshal(uncompressedData, &bucket)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to decode packed storage entry: {{err}}", err)
+		return nil, fmt.Errorf("failed to decode packed storage entry: %w", err)
 	}
 
 	return &bucket, nil
@@ -124,113 +125,86 @@ func (s *StoragePacker) BucketKey(itemID string) string {
 }
 
 // DeleteItem removes the item from the respective bucket
-func (s *StoragePacker) DeleteItem(_ context.Context, itemID string) error {
-	return s.DeleteMultipleItems(context.Background(), nil, itemID)
+func (s *StoragePacker) DeleteItem(ctx context.Context, itemID string) error {
+	return s.DeleteMultipleItems(ctx, nil, []string{itemID})
 }
 
-func (s *StoragePacker) DeleteMultipleItems(ctx context.Context, logger hclog.Logger, itemIDs ...string) error {
-	var err error
-	switch len(itemIDs) {
-	case 0:
-		// Nothing
+func (s *StoragePacker) DeleteMultipleItems(ctx context.Context, logger hclog.Logger, itemIDs []string) error {
+	defer metrics.MeasureSince([]string{"storage_packer", "delete_items"}, time.Now())
+	if len(itemIDs) == 0 {
 		return nil
-
-	case 1:
-		logger = hclog.NewNullLogger()
-		fallthrough
-
-	default:
-		lockIndexes := make(map[string]struct{}, len(s.storageLocks))
-		for _, itemID := range itemIDs {
-			bucketKey := s.BucketKey(itemID)
-			if _, ok := lockIndexes[bucketKey]; !ok {
-				lockIndexes[bucketKey] = struct{}{}
-			}
-		}
-
-		lockKeys := make([]string, 0, len(lockIndexes))
-		for k := range lockIndexes {
-			lockKeys = append(lockKeys, k)
-		}
-
-		locks := locksutil.LocksForKeys(s.storageLocks, lockKeys)
-		for _, lock := range locks {
-			lock.Lock()
-			defer lock.Unlock()
-		}
 	}
 
 	if logger == nil {
 		logger = hclog.NewNullLogger()
 	}
 
-	bucketCache := make(map[string]*Bucket, len(s.storageLocks))
+	// Sort the ids by the bucket they will be deleted from
+	lockKeys := make([]string, 0)
+	byBucket := make(map[string]map[string]struct{})
+	for _, id := range itemIDs {
+		bucketKey := s.BucketKey(id)
+		bucket, ok := byBucket[bucketKey]
+		if !ok {
+			bucket = make(map[string]struct{})
+			byBucket[bucketKey] = bucket
+
+			// Add the lock key once
+			lockKeys = append(lockKeys, bucketKey)
+		}
+
+		bucket[id] = struct{}{}
+	}
+
+	locks := locksutil.LocksForKeys(s.storageLocks, lockKeys)
+	for _, lock := range locks {
+		lock.Lock()
+		defer lock.Unlock()
+	}
 
 	logger.Debug("deleting multiple items from storagepacker; caching and deleting from buckets", "total_items", len(itemIDs))
 
-	var pctDone int
-	for idx, itemID := range itemIDs {
-		bucketKey := s.BucketKey(itemID)
-
-		bucket, bucketFound := bucketCache[bucketKey]
-		if !bucketFound {
-			// Read from storage
-			storageEntry, err := s.view.Get(context.Background(), bucketKey)
-			if err != nil {
-				return errwrap.Wrapf("failed to read packed storage value: {{err}}", err)
-			}
-			if storageEntry == nil {
-				return nil
-			}
-
-			uncompressedData, notCompressed, err := compressutil.Decompress(storageEntry.Value)
-			if err != nil {
-				return errwrap.Wrapf("failed to decompress packed storage value: {{err}}", err)
-			}
-			if notCompressed {
-				uncompressedData = storageEntry.Value
-			}
-
-			bucket = new(Bucket)
-			err = proto.Unmarshal(uncompressedData, bucket)
-			if err != nil {
-				return errwrap.Wrapf("failed decoding packed storage entry: {{err}}", err)
-			}
-		}
-
-		// Look for a matching storage entry
-		foundIdx := -1
-		for itemIdx, item := range bucket.Items {
-			if item.ID == itemID {
-				foundIdx = itemIdx
-				break
-			}
-		}
-
-		// If there is a match, remove it from the collection and persist the
-		// resulting collection
-		if foundIdx != -1 {
-			bucket.Items[foundIdx] = bucket.Items[len(bucket.Items)-1]
-			bucket.Items = bucket.Items[:len(bucket.Items)-1]
-			if !bucketFound {
-				bucketCache[bucketKey] = bucket
-			}
-		}
-
-		newPctDone := idx * 100.0 / len(itemIDs)
-		if int(newPctDone) > pctDone {
-			pctDone = int(newPctDone)
-			logger.Trace("bucket item removal progress", "percent", pctDone, "items_removed", idx)
-		}
-	}
-
-	logger.Debug("persisting buckets", "total_buckets", len(bucketCache))
-
-	// Persist all buckets in the cache; these will be the ones that had
-	// deletions
-	pctDone = 0
+	// For each bucket, load from storage, remove the necessary items, and add
+	// write it back out to storage
+	pctDone := 0
 	idx := 0
-	for _, bucket := range bucketCache {
+	for bucketKey, itemsToRemove := range byBucket {
+		// Read bucket from storage
+		storageEntry, err := s.view.Get(ctx, bucketKey)
+		if err != nil {
+			return fmt.Errorf("failed to read packed storage value: %w", err)
+		}
+		if storageEntry == nil {
+			logger.Warn("could not find bucket", "bucket", bucketKey)
+			continue
+		}
+
+		uncompressedData, notCompressed, err := compressutil.Decompress(storageEntry.Value)
+		if err != nil {
+			return fmt.Errorf("failed to decompress packed storage value: %w", err)
+		}
+		if notCompressed {
+			uncompressedData = storageEntry.Value
+		}
+
+		bucket := new(Bucket)
+		err = proto.Unmarshal(uncompressedData, bucket)
+		if err != nil {
+			return fmt.Errorf("failed decoding packed storage entry: %w", err)
+		}
+
+		// Look for a matching storage entries and delete them from the list.
+		for i := 0; i < len(bucket.Items); i++ {
+			if _, ok := itemsToRemove[bucket.Items[i].ID]; ok {
+				bucket.Items[i] = bucket.Items[len(bucket.Items)-1]
+				bucket.Items = bucket.Items[:len(bucket.Items)-1]
+
+				// Since we just moved a value to position i we need to
+				// decrement i so we replay this position
+				i--
+			}
+		}
+
 		// Fail if the context is canceled, the storage calls will fail anyways
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -241,7 +215,7 @@ func (s *StoragePacker) DeleteMultipleItems(ctx context.Context, logger hclog.Lo
 			return err
 		}
 
-		newPctDone := idx * 100.0 / len(bucketCache)
+		newPctDone := idx * 100.0 / len(byBucket)
 		if int(newPctDone) > pctDone {
 			pctDone = int(newPctDone)
 			logger.Trace("bucket persistence progress", "percent", pctDone, "buckets_persisted", idx)
@@ -254,6 +228,7 @@ func (s *StoragePacker) DeleteMultipleItems(ctx context.Context, logger hclog.Lo
 }
 
 func (s *StoragePacker) putBucket(ctx context.Context, bucket *Bucket) error {
+	defer metrics.MeasureSince([]string{"storage_packer", "put_bucket"}, time.Now())
 	if bucket == nil {
 		return fmt.Errorf("nil bucket entry")
 	}
@@ -268,14 +243,14 @@ func (s *StoragePacker) putBucket(ctx context.Context, bucket *Bucket) error {
 
 	marshaledBucket, err := proto.Marshal(bucket)
 	if err != nil {
-		return errwrap.Wrapf("failed to marshal bucket: {{err}}", err)
+		return fmt.Errorf("failed to marshal bucket: %w", err)
 	}
 
 	compressedBucket, err := compressutil.Compress(marshaledBucket, &compressutil.CompressionConfig{
 		Type: compressutil.CompressionTypeSnappy,
 	})
 	if err != nil {
-		return errwrap.Wrapf("failed to compress packed bucket: {{err}}", err)
+		return fmt.Errorf("failed to compress packed bucket: %w", err)
 	}
 
 	// Store the compressed value
@@ -284,7 +259,7 @@ func (s *StoragePacker) putBucket(ctx context.Context, bucket *Bucket) error {
 		Value: compressedBucket,
 	})
 	if err != nil {
-		return errwrap.Wrapf("failed to persist packed storage entry: {{err}}", err)
+		return fmt.Errorf("failed to persist packed storage entry: %w", err)
 	}
 
 	return nil
@@ -293,6 +268,8 @@ func (s *StoragePacker) putBucket(ctx context.Context, bucket *Bucket) error {
 // GetItem fetches the storage entry for a given key from its corresponding
 // bucket.
 func (s *StoragePacker) GetItem(itemID string) (*Item, error) {
+	defer metrics.MeasureSince([]string{"storage_packer", "get_item"}, time.Now())
+
 	if itemID == "" {
 		return nil, fmt.Errorf("empty item ID")
 	}
@@ -300,9 +277,9 @@ func (s *StoragePacker) GetItem(itemID string) (*Item, error) {
 	bucketKey := s.BucketKey(itemID)
 
 	// Fetch the bucket entry
-	bucket, err := s.GetBucket(bucketKey)
+	bucket, err := s.GetBucket(context.Background(), bucketKey)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to read packed storage item: {{err}}", err)
+		return nil, fmt.Errorf("failed to read packed storage item: %w", err)
 	}
 	if bucket == nil {
 		return nil, nil
@@ -319,7 +296,9 @@ func (s *StoragePacker) GetItem(itemID string) (*Item, error) {
 }
 
 // PutItem stores the given item in its respective bucket
-func (s *StoragePacker) PutItem(_ context.Context, item *Item) error {
+func (s *StoragePacker) PutItem(ctx context.Context, item *Item) error {
+	defer metrics.MeasureSince([]string{"storage_packer", "put_item"}, time.Now())
+
 	if item == nil {
 		return fmt.Errorf("nil item")
 	}
@@ -343,9 +322,9 @@ func (s *StoragePacker) PutItem(_ context.Context, item *Item) error {
 	defer lock.Unlock()
 
 	// Check if there is an existing bucket for a given key
-	storageEntry, err := s.view.Get(context.Background(), bucketKey)
+	storageEntry, err := s.view.Get(ctx, bucketKey)
 	if err != nil {
-		return errwrap.Wrapf("failed to read packed storage bucket entry: {{err}}", err)
+		return fmt.Errorf("failed to read packed storage bucket entry: %w", err)
 	}
 
 	if storageEntry == nil {
@@ -357,7 +336,7 @@ func (s *StoragePacker) PutItem(_ context.Context, item *Item) error {
 	} else {
 		uncompressedData, notCompressed, err := compressutil.Decompress(storageEntry.Value)
 		if err != nil {
-			return errwrap.Wrapf("failed to decompress packed storage entry: {{err}}", err)
+			return fmt.Errorf("failed to decompress packed storage entry: %w", err)
 		}
 		if notCompressed {
 			uncompressedData = storageEntry.Value
@@ -365,16 +344,16 @@ func (s *StoragePacker) PutItem(_ context.Context, item *Item) error {
 
 		err = proto.Unmarshal(uncompressedData, bucket)
 		if err != nil {
-			return errwrap.Wrapf("failed to decode packed storage entry: {{err}}", err)
+			return fmt.Errorf("failed to decode packed storage entry: %w", err)
 		}
 
 		err = bucket.upsert(item)
 		if err != nil {
-			return errwrap.Wrapf("failed to update entry in packed storage entry: {{err}}", err)
+			return fmt.Errorf("failed to update entry in packed storage entry: %w", err)
 		}
 	}
 
-	return s.putBucket(context.Background(), bucket)
+	return s.putBucket(ctx, bucket)
 }
 
 // NewStoragePacker creates a new storage packer for a given view

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"reflect"
 	"sync"
 	"time"
@@ -174,16 +175,16 @@ type alicloudMethod struct {
 	stopCh chan struct{}
 }
 
-func (a *alicloudMethod) Authenticate(context.Context, *api.Client) (string, map[string]interface{}, error) {
+func (a *alicloudMethod) Authenticate(context.Context, *api.Client) (string, http.Header, map[string]interface{}, error) {
 	a.credLock.Lock()
 	defer a.credLock.Unlock()
 
 	a.logger.Trace("beginning authentication")
 	data, err := tools.GenerateLoginData(a.role, a.lastCreds, a.region)
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
-	return fmt.Sprintf("%s/login", a.mountPath), data, nil
+	return fmt.Sprintf("%s/login", a.mountPath), nil, data, nil
 }
 
 func (a *alicloudMethod) NewCreds() chan struct{} {

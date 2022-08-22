@@ -3,38 +3,38 @@ package hana
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	_ "github.com/SAP/go-hdb/driver"
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/template"
 )
 
 const (
 	hanaTypeName = "hdb"
+
+	defaultUserNameTemplate = `{{ printf "v_%s_%s_%s_%s" (.DisplayName | truncate 32) (.RoleName | truncate 20) (random 20) (unix_time) | truncate 127 | replace "-" "_" | uppercase }}`
 )
 
 // HANA is an implementation of Database interface
 type HANA struct {
 	*connutil.SQLConnectionProducer
-	credsutil.CredentialsProducer
+
+	usernameProducer template.StringTemplate
 }
 
-var _ dbplugin.Database = &HANA{}
+var _ dbplugin.Database = (*HANA)(nil)
 
 // New implements builtinplugins.BuiltinFactory
 func New() (interface{}, error) {
 	db := new()
 	// Wrap the plugin with middleware to sanitize errors
-	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.SecretValues)
+	dbType := dbplugin.NewDatabaseErrorSanitizerMiddleware(db, db.secretValues)
 
 	return dbType, nil
 }
@@ -43,29 +43,45 @@ func new() *HANA {
 	connProducer := &connutil.SQLConnectionProducer{}
 	connProducer.Type = hanaTypeName
 
-	credsProducer := &credsutil.SQLCredentialsProducer{
-		DisplayNameLen: 32,
-		RoleNameLen:    20,
-		UsernameLen:    128,
-		Separator:      "_",
-	}
-
 	return &HANA{
 		SQLConnectionProducer: connProducer,
-		CredentialsProducer:   credsProducer,
 	}
 }
 
-// Run instantiates a HANA object, and runs the RPC server for the plugin
-func Run(apiTLSConfig *api.TLSConfig) error {
-	dbType, err := New()
+func (h *HANA) secretValues() map[string]string {
+	return map[string]string{
+		h.Password: "[password]",
+	}
+}
+
+func (h *HANA) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
+	conf, err := h.Init(ctx, req.Config, req.VerifyConnection)
 	if err != nil {
-		return err
+		return dbplugin.InitializeResponse{}, fmt.Errorf("error initializing db: %w", err)
 	}
 
-	dbplugin.Serve(dbType.(dbplugin.Database), api.VaultPluginTLSProvider(apiTLSConfig))
+	usernameTemplate, err := strutil.GetString(req.Config, "username_template")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve username_template: %w", err)
+	}
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
+	}
 
-	return nil
+	up, err := template.NewTemplate(template.Template(usernameTemplate))
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("unable to initialize username template: %w", err)
+	}
+	h.usernameProducer = up
+
+	_, err = h.usernameProducer.Generate(dbplugin.UsernameMetadata{})
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template: %w", err)
+	}
+
+	return dbplugin.InitializeResponse{
+		Config: conf,
+	}, nil
 }
 
 // Type returns the TypeName for this backend
@@ -82,61 +98,46 @@ func (h *HANA) getConnection(ctx context.Context) (*sql.DB, error) {
 	return db.(*sql.DB), nil
 }
 
-// CreateUser generates the username/password on the underlying HANA secret backend
+// NewUser generates the username/password on the underlying HANA secret backend
 // as instructed by the CreationStatement provided.
-func (h *HANA) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
+func (h *HANA) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (response dbplugin.NewUserResponse, err error) {
 	// Grab the lock
 	h.Lock()
 	defer h.Unlock()
 
-	statements = dbutil.StatementCompatibilityHelper(statements)
-
 	// Get the connection
 	db, err := h.getConnection(ctx)
 	if err != nil {
-		return "", "", err
+		return dbplugin.NewUserResponse{}, err
 	}
 
-	if len(statements.Creation) == 0 {
-		return "", "", dbutil.ErrEmptyCreationStatement
+	if len(req.Statements.Commands) == 0 {
+		return dbplugin.NewUserResponse{}, dbutil.ErrEmptyCreationStatement
 	}
 
 	// Generate username
-	username, err = h.GenerateUsername(usernameConfig)
+	username, err := h.usernameProducer.Generate(req.UsernameConfig)
 	if err != nil {
-		return "", "", err
+		return dbplugin.NewUserResponse{}, err
 	}
 
 	// HANA does not allow hyphens in usernames, and highly prefers capital letters
-	username = strings.Replace(username, "-", "_", -1)
+	username = strings.ReplaceAll(username, "-", "_")
 	username = strings.ToUpper(username)
-
-	// Generate password
-	password, err = h.GeneratePassword()
-	if err != nil {
-		return "", "", err
-	}
-	// Most HANA configurations have password constraints
-	// Prefix with A1a to satisfy these constraints. User will be forced to change upon login
-	password = strings.Replace(password, "-", "_", -1)
-	password = "A1a" + password
 
 	// If expiration is in the role SQL, HANA will deactivate the user when time is up,
 	// regardless of whether vault is alive to revoke lease
-	expirationStr, err := h.GenerateExpiration(expiration)
-	if err != nil {
-		return "", "", err
-	}
+	expirationStr := req.Expiration.UTC().Format("2006-01-02 15:04:05")
 
 	// Start a transaction
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return "", "", err
+		return dbplugin.NewUserResponse{}, err
 	}
 	defer tx.Rollback()
 
 	// Execute each query
-	for _, stmt := range statements.Creation {
+	for _, stmt := range req.Statements.Commands {
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
 			query = strings.TrimSpace(query)
 			if len(query) == 0 {
@@ -145,89 +146,87 @@ func (h *HANA) CreateUser(ctx context.Context, statements dbplugin.Statements, u
 
 			m := map[string]string{
 				"name":       username,
-				"password":   password,
+				"password":   req.Password,
 				"expiration": expirationStr,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
-				return "", "", err
+
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
+				return dbplugin.NewUserResponse{}, err
 			}
 		}
 	}
 
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
-		return "", "", err
+		return dbplugin.NewUserResponse{}, err
 	}
 
-	return username, password, nil
+	resp := dbplugin.NewUserResponse{
+		Username: username,
+	}
+
+	return resp, nil
 }
 
-// Renewing hana user just means altering user's valid until property
-func (h *HANA) RenewUser(ctx context.Context, statements dbplugin.Statements, username string, expiration time.Time) error {
-	statements = dbutil.StatementCompatibilityHelper(statements)
+// UpdateUser allows for updating the expiration or password of the user mentioned in
+// the UpdateUserRequest
+func (h *HANA) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) (dbplugin.UpdateUserResponse, error) {
+	h.Lock()
+	defer h.Unlock()
+
+	// No change requested
+	if req.Password == nil && req.Expiration == nil {
+		return dbplugin.UpdateUserResponse{}, nil
+	}
 
 	// Get connection
 	db, err := h.getConnection(ctx)
 	if err != nil {
-		return err
+		return dbplugin.UpdateUserResponse{}, err
 	}
 
 	// Start a transaction
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return dbplugin.UpdateUserResponse{}, err
 	}
 	defer tx.Rollback()
 
-	// If expiration is in the role SQL, HANA will deactivate the user when time is up,
-	// regardless of whether vault is alive to revoke lease
-	expirationStr, err := h.GenerateExpiration(expiration)
-	if err != nil {
-		return err
+	if req.Password != nil {
+		err = h.updateUserPassword(ctx, tx, req.Username, req.Password)
+		if err != nil {
+			return dbplugin.UpdateUserResponse{}, err
+		}
 	}
 
-	// Renew user's valid until property field
-	stmt, err := tx.PrepareContext(ctx, "ALTER USER "+username+" VALID UNTIL "+"'"+expirationStr+"'")
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	if _, err := stmt.ExecContext(ctx); err != nil {
-		return err
+	if req.Expiration != nil {
+		err = h.updateUserExpiration(ctx, tx, req.Username, req.Expiration)
+		if err != nil {
+			return dbplugin.UpdateUserResponse{}, err
+		}
 	}
 
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
-		return err
+		return dbplugin.UpdateUserResponse{}, err
 	}
 
-	return nil
+	return dbplugin.UpdateUserResponse{}, nil
 }
 
-// Revoking hana user will deactivate user and try to perform a soft drop
-func (h *HANA) RevokeUser(ctx context.Context, statements dbplugin.Statements, username string) error {
-	statements = dbutil.StatementCompatibilityHelper(statements)
+func (h *HANA) updateUserPassword(ctx context.Context, tx *sql.Tx, username string, req *dbplugin.ChangePassword) error {
+	password := req.NewPassword
 
-	// default revoke will be a soft drop on user
-	if len(statements.Revocation) == 0 {
-		return h.revokeUserDefault(ctx, username)
+	if username == "" || password == "" {
+		return fmt.Errorf("must provide both username and password")
 	}
 
-	// Get connection
-	db, err := h.getConnection(ctx)
-	if err != nil {
-		return err
+	stmts := req.Statements.Commands
+	if len(stmts) == 0 {
+		stmts = []string{"ALTER USER {{username}} PASSWORD \"{{password}}\""}
 	}
 
-	// Start a transaction
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	// Execute each query
-	for _, stmt := range statements.Revocation {
+	for _, stmt := range stmts {
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
 			query = strings.TrimSpace(query)
 			if len(query) == 0 {
@@ -235,61 +234,138 @@ func (h *HANA) RevokeUser(ctx context.Context, statements dbplugin.Statements, u
 			}
 
 			m := map[string]string{
-				"name": username,
+				"name":     username,
+				"username": username,
+				"password": password,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
-				return err
+
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
+				return fmt.Errorf("failed to execute query: %w", err)
 			}
 		}
-	}
-
-	return tx.Commit()
-}
-
-func (h *HANA) revokeUserDefault(ctx context.Context, username string) error {
-	// Get connection
-	db, err := h.getConnection(ctx)
-	if err != nil {
-		return err
-	}
-
-	// Start a transaction
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	// Disable server login for user
-	disableStmt, err := tx.PrepareContext(ctx, fmt.Sprintf("ALTER USER %s DEACTIVATE USER NOW", username))
-	if err != nil {
-		return err
-	}
-	defer disableStmt.Close()
-	if _, err := disableStmt.ExecContext(ctx); err != nil {
-		return err
-	}
-
-	// Invalidates current sessions and performs soft drop (drop if no dependencies)
-	// if hard drop is desired, custom revoke statements should be written for role
-	dropStmt, err := tx.PrepareContext(ctx, fmt.Sprintf("DROP USER %s RESTRICT", username))
-	if err != nil {
-		return err
-	}
-	defer dropStmt.Close()
-	if _, err := dropStmt.ExecContext(ctx); err != nil {
-		return err
-	}
-
-	// Commit transaction
-	if err := tx.Commit(); err != nil {
-		return err
 	}
 
 	return nil
 }
 
-// RotateRootCredentials is not currently supported on HANA
-func (h *HANA) RotateRootCredentials(ctx context.Context, statements []string) (map[string]interface{}, error) {
-	return nil, errors.New("root credentaion rotation is not currently implemented in this database secrets engine")
+func (h *HANA) updateUserExpiration(ctx context.Context, tx *sql.Tx, username string, req *dbplugin.ChangeExpiration) error {
+	// If expiration is in the role SQL, HANA will deactivate the user when time is up,
+	// regardless of whether vault is alive to revoke lease
+	expirationStr := req.NewExpiration.String()
+
+	if username == "" || expirationStr == "" {
+		return fmt.Errorf("must provide both username and expiration")
+	}
+
+	stmts := req.Statements.Commands
+	if len(stmts) == 0 {
+		stmts = []string{"ALTER USER {{username}} VALID UNTIL '{{expiration}}'"}
+	}
+
+	for _, stmt := range stmts {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
+
+			m := map[string]string{
+				"name":       username,
+				"username":   username,
+				"expiration": expirationStr,
+			}
+
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
+				return fmt.Errorf("failed to execute query: %w", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// Revoking hana user will deactivate user and try to perform a soft drop
+func (h *HANA) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) (dbplugin.DeleteUserResponse, error) {
+	h.Lock()
+	defer h.Unlock()
+
+	// default revoke will be a soft drop on user
+	if len(req.Statements.Commands) == 0 {
+		return h.revokeUserDefault(ctx, req)
+	}
+
+	// Get connection
+	db, err := h.getConnection(ctx)
+	if err != nil {
+		return dbplugin.DeleteUserResponse{}, err
+	}
+
+	// Start a transaction
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return dbplugin.DeleteUserResponse{}, err
+	}
+	defer tx.Rollback()
+
+	// Execute each query
+	for _, stmt := range req.Statements.Commands {
+		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
+			query = strings.TrimSpace(query)
+			if len(query) == 0 {
+				continue
+			}
+
+			m := map[string]string{
+				"name": req.Username,
+			}
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
+				return dbplugin.DeleteUserResponse{}, err
+			}
+		}
+	}
+
+	return dbplugin.DeleteUserResponse{}, tx.Commit()
+}
+
+func (h *HANA) revokeUserDefault(ctx context.Context, req dbplugin.DeleteUserRequest) (dbplugin.DeleteUserResponse, error) {
+	// Get connection
+	db, err := h.getConnection(ctx)
+	if err != nil {
+		return dbplugin.DeleteUserResponse{}, err
+	}
+
+	// Start a transaction
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return dbplugin.DeleteUserResponse{}, err
+	}
+	defer tx.Rollback()
+
+	// Disable server login for user
+	disableStmt, err := tx.PrepareContext(ctx, fmt.Sprintf("ALTER USER %s DEACTIVATE USER NOW", req.Username))
+	if err != nil {
+		return dbplugin.DeleteUserResponse{}, err
+	}
+	defer disableStmt.Close()
+	if _, err := disableStmt.ExecContext(ctx); err != nil {
+		return dbplugin.DeleteUserResponse{}, err
+	}
+
+	// Invalidates current sessions and performs soft drop (drop if no dependencies)
+	// if hard drop is desired, custom revoke statements should be written for role
+	dropStmt, err := tx.PrepareContext(ctx, fmt.Sprintf("DROP USER %s RESTRICT", req.Username))
+	if err != nil {
+		return dbplugin.DeleteUserResponse{}, err
+	}
+	defer dropStmt.Close()
+	if _, err := dropStmt.ExecContext(ctx); err != nil {
+		return dbplugin.DeleteUserResponse{}, err
+	}
+
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
+		return dbplugin.DeleteUserResponse{}, err
+	}
+
+	return dbplugin.DeleteUserResponse{}, nil
 }

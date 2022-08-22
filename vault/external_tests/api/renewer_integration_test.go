@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
+	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 )
 
 func TestRenewer_Renew(t *testing.T) {
@@ -28,7 +29,7 @@ func TestRenewer_Renew(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			v, err := client.NewRenewer(&api.RenewerInput{
+			v, err := client.NewLifetimeWatcher(&api.RenewerInput{
 				Secret: secret,
 			})
 			if err != nil {
@@ -39,7 +40,7 @@ func TestRenewer_Renew(t *testing.T) {
 
 			select {
 			case err := <-v.DoneCh():
-				if err != api.ErrRenewerNotRenewable {
+				if err != api.ErrLifetimeWatcherNotRenewable {
 					t.Fatal(err)
 				}
 			case renew := <-v.RenewCh():
@@ -65,7 +66,7 @@ func TestRenewer_Renew(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			v, err := client.NewRenewer(&api.RenewerInput{
+			v, err := client.NewLifetimeWatcher(&api.RenewerInput{
 				Secret: secret,
 			})
 			if err != nil {
@@ -76,7 +77,7 @@ func TestRenewer_Renew(t *testing.T) {
 
 			select {
 			case err := <-v.DoneCh():
-				if err != api.ErrRenewerNotRenewable {
+				if err != api.ErrLifetimeWatcherNotRenewable {
 					t.Fatal(err)
 				}
 			case renew := <-v.RenewCh():
@@ -89,8 +90,8 @@ func TestRenewer_Renew(t *testing.T) {
 		t.Run("database", func(t *testing.T) {
 			t.Parallel()
 
-			pgURL, pgDone := testPostgresDB(t)
-			defer pgDone()
+			cleanup, pgURL := postgreshelper.PrepareTestContainer(t, "")
+			defer cleanup()
 
 			if err := client.Sys().Mount("database", &api.MountInput{
 				Type: "database",
@@ -120,7 +121,7 @@ func TestRenewer_Renew(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			v, err := client.NewRenewer(&api.RenewerInput{
+			v, err := client.NewLifetimeWatcher(&api.RenewerInput{
 				Secret: secret,
 			})
 			if err != nil {
@@ -180,7 +181,7 @@ func TestRenewer_Renew(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			v, err := client.NewRenewer(&api.RenewerInput{
+			v, err := client.NewLifetimeWatcher(&api.RenewerInput{
 				Secret: secret,
 			})
 			if err != nil {

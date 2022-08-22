@@ -1,6 +1,5 @@
 import { Base } from '../show';
 import { create, clickable, collection, isPresent, text } from 'ember-cli-page-object';
-import { code } from 'vault/tests/pages/helpers/codemirror';
 
 export default create({
   ...Base,
@@ -8,6 +7,8 @@ export default create({
     text: text(),
   }),
   deleteBtn: clickable('[data-test-secret-delete] button'),
+  deleteBtnV1: clickable('[data-test-secret-v1-delete="true"] button'),
+  deleteBtnV2: clickable('[data-test-secret-v2-delete="true"] button'),
   confirmBtn: clickable('[data-test-confirm-button]'),
   rows: collection('data-test-row-label'),
   toggleJSON: clickable('[data-test-secret-json-toggle]'),
@@ -16,10 +17,14 @@ export default create({
   editIsPresent: isPresent('[data-test-secret-edit]'),
   noReadIsPresent: isPresent('[data-test-write-without-read-empty-message]'),
   noReadMessage: text('data-test-empty-state-message'),
-  editor: {
-    content: code('[data-test-component="json-editor"]'),
-  },
+
   deleteSecret() {
     return this.deleteBtn().confirmBtn();
+  },
+  deleteSecretV1() {
+    return this.deleteBtnV1().confirmBtn();
+  },
+  deleteSecretV2() {
+    return this.deleteBtnV2().confirmBtn();
   },
 });

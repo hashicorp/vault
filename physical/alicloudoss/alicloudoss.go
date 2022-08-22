@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"sort"
 	"strconv"
@@ -12,10 +13,18 @@ import (
 	"time"
 
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
-	metrics "github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/physical"
+)
+
+const (
+	AlibabaMetricKey = "alibaba"
+
+	AlibabaCloudOSSEndpointEnv = "ALICLOUD_OSS_ENDPOINT"
+	AlibabaCloudOSSBucketEnv   = "ALICLOUD_OSS_BUCKET"
+	AlibabaCloudAccessKeyEnv   = "ALICLOUD_ACCESS_KEY"
+	AlibabaCloudSecretKeyEnv   = "ALICLOUD_SECRET_KEY"
 )
 
 // Verify AliCloudOSSBackend satisfies the correct interfaces
@@ -34,7 +43,7 @@ type AliCloudOSSBackend struct {
 // bucket. Credentials can be provided to the backend, sourced
 // from the environment.
 func NewAliCloudOSSBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
-	endpoint := os.Getenv("ALICLOUD_OSS_ENDPOINT")
+	endpoint := os.Getenv(AlibabaCloudOSSEndpointEnv)
 	if endpoint == "" {
 		endpoint = conf["endpoint"]
 		if endpoint == "" {
@@ -42,7 +51,7 @@ func NewAliCloudOSSBackend(conf map[string]string, logger log.Logger) (physical.
 		}
 	}
 
-	bucket := os.Getenv("ALICLOUD_OSS_BUCKET")
+	bucket := os.Getenv(AlibabaCloudOSSBucketEnv)
 	if bucket == "" {
 		bucket = conf["bucket"]
 		if bucket == "" {
@@ -50,7 +59,7 @@ func NewAliCloudOSSBackend(conf map[string]string, logger log.Logger) (physical.
 		}
 	}
 
-	accessKeyID := os.Getenv("ALICLOUD_ACCESS_KEY")
+	accessKeyID := os.Getenv(AlibabaCloudAccessKeyEnv)
 	if accessKeyID == "" {
 		accessKeyID = conf["access_key"]
 		if accessKeyID == "" {
@@ -58,7 +67,7 @@ func NewAliCloudOSSBackend(conf map[string]string, logger log.Logger) (physical.
 		}
 	}
 
-	accessKeySecret := os.Getenv("ALICLOUD_SECRET_KEY")
+	accessKeySecret := os.Getenv(AlibabaCloudSecretKeyEnv)
 	if accessKeySecret == "" {
 		accessKeySecret = conf["secret_key"]
 		if accessKeySecret == "" {
@@ -82,7 +91,7 @@ func NewAliCloudOSSBackend(conf map[string]string, logger log.Logger) (physical.
 
 	_, err = bucketObj.ListObjects()
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("unable to access bucket %q at endpoint %q: {{err}}", bucket, endpoint), err)
+		return nil, fmt.Errorf("unable to access bucket %q at endpoint %q: %w", bucket, endpoint, err)
 	}
 
 	maxParStr, ok := conf["max_parallel"]
@@ -90,7 +99,7 @@ func NewAliCloudOSSBackend(conf map[string]string, logger log.Logger) (physical.
 	if ok {
 		maxParInt, err = strconv.Atoi(maxParStr)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+			return nil, fmt.Errorf("failed parsing max_parallel parameter: %w", err)
 		}
 		if logger.IsDebug() {
 			logger.Debug("max_parallel set", "max_parallel", maxParInt)
@@ -108,7 +117,7 @@ func NewAliCloudOSSBackend(conf map[string]string, logger log.Logger) (physical.
 
 // Put is used to insert or update an entry
 func (a *AliCloudOSSBackend) Put(ctx context.Context, entry *physical.Entry) error {
-	defer metrics.MeasureSince([]string{"alibaba", "put"}, time.Now())
+	defer metrics.MeasureSince([]string{AlibabaMetricKey, "put"}, time.Now())
 
 	a.permitPool.Acquire()
 	defer a.permitPool.Release()
@@ -119,12 +128,11 @@ func (a *AliCloudOSSBackend) Put(ctx context.Context, entry *physical.Entry) err
 	}
 
 	return bucket.PutObject(entry.Key, bytes.NewReader(entry.Value))
-
 }
 
 // Get is used to fetch an entry
 func (a *AliCloudOSSBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
-	defer metrics.MeasureSince([]string{"alibaba", "get"}, time.Now())
+	defer metrics.MeasureSince([]string{AlibabaMetricKey, "get"}, time.Now())
 
 	a.permitPool.Acquire()
 	defer a.permitPool.Release()
@@ -138,7 +146,7 @@ func (a *AliCloudOSSBackend) Get(ctx context.Context, key string) (*physical.Ent
 	if err != nil {
 		switch err := err.(type) {
 		case oss.ServiceError:
-			if err.StatusCode == 404 && err.Code == "NoSuchKey" {
+			if err.StatusCode == http.StatusNotFound && err.Code == "NoSuchKey" {
 				return nil, nil
 			}
 		}
@@ -161,7 +169,7 @@ func (a *AliCloudOSSBackend) Get(ctx context.Context, key string) (*physical.Ent
 
 // Delete is used to permanently delete an entry
 func (a *AliCloudOSSBackend) Delete(ctx context.Context, key string) error {
-	defer metrics.MeasureSince([]string{"alibaba", "delete"}, time.Now())
+	defer metrics.MeasureSince([]string{AlibabaMetricKey, "delete"}, time.Now())
 
 	a.permitPool.Acquire()
 	defer a.permitPool.Release()
@@ -177,7 +185,7 @@ func (a *AliCloudOSSBackend) Delete(ctx context.Context, key string) error {
 // List is used to list all the keys under a given
 // prefix, up to the next prefix.
 func (a *AliCloudOSSBackend) List(ctx context.Context, prefix string) ([]string, error) {
-	defer metrics.MeasureSince([]string{"alibaba", "list"}, time.Now())
+	defer metrics.MeasureSince([]string{AlibabaMetricKey, "list"}, time.Now())
 
 	a.permitPool.Acquire()
 	defer a.permitPool.Release()
@@ -198,7 +206,6 @@ func (a *AliCloudOSSBackend) List(ctx context.Context, prefix string) ([]string,
 		}
 
 		for _, commonPrefix := range result.CommonPrefixes {
-
 			commonPrefix := strings.TrimPrefix(commonPrefix, prefix)
 			keys = append(keys, commonPrefix)
 		}

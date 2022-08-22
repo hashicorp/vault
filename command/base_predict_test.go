@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/posener/complete"
 )
 
@@ -29,6 +29,12 @@ func TestPredictVaultPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := client.Logical().Write("secret/zip/twoot", data); err != nil {
+		t.Fatal(err)
+	}
+	if err := client.Sys().Mount("level1a/level2a/level3a", &api.MountInput{Type: "kv"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := client.Sys().Mount("level1a/level2a/level3b", &api.MountInput{Type: "kv"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -181,6 +187,18 @@ func TestPredictVaultPaths(t *testing.T) {
 			},
 			false,
 			[]string{"secret/zip/t"},
+		},
+		{
+			"multi_nested",
+			complete.Args{
+				All:  []string{"read", "level1a/level2a"},
+				Last: "level1a/level2a",
+			},
+			false,
+			[]string{
+				"level1a/level2a/level3a/",
+				"level1a/level2a/level3b/",
+			},
 		},
 	}
 
@@ -335,6 +353,7 @@ func TestPredict_Plugins(t *testing.T) {
 				"cert",
 				"cf",
 				"consul",
+				"couchbase-database-plugin",
 				"elasticsearch-database-plugin",
 				"gcp",
 				"gcpkms",
@@ -342,12 +361,16 @@ func TestPredict_Plugins(t *testing.T) {
 				"hana-database-plugin",
 				"influxdb-database-plugin",
 				"jwt",
+				"kerberos",
+				"keymgmt",
 				"kmip",
 				"kubernetes",
 				"kv",
 				"ldap",
 				"mongodb",
 				"mongodb-database-plugin",
+				"mongodbatlas",
+				"mongodbatlas-database-plugin",
 				"mssql",
 				"mssql-database-plugin",
 				"mysql",
@@ -359,14 +382,19 @@ func TestPredict_Plugins(t *testing.T) {
 				"oci",
 				"oidc",
 				"okta",
+				"openldap",
 				"pcf", // Deprecated.
 				"pki",
 				"postgresql",
 				"postgresql-database-plugin",
 				"rabbitmq",
 				"radius",
+				"redshift-database-plugin",
+				"snowflake-database-plugin",
 				"ssh",
+				"terraform",
 				"totp",
+				"transform",
 				"transit",
 				"userpass",
 			},
@@ -384,6 +412,14 @@ func TestPredict_Plugins(t *testing.T) {
 
 				act := p.plugins()
 
+				if !strutil.StrListContains(act, "keymgmt") {
+					for i, v := range tc.exp {
+						if v == "keymgmt" {
+							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
+							break
+						}
+					}
+				}
 				if !strutil.StrListContains(act, "kmip") {
 					for i, v := range tc.exp {
 						if v == "kmip" {
@@ -392,8 +428,16 @@ func TestPredict_Plugins(t *testing.T) {
 						}
 					}
 				}
+				if !strutil.StrListContains(act, "transform") {
+					for i, v := range tc.exp {
+						if v == "transform" {
+							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
+							break
+						}
+					}
+				}
 				if !reflect.DeepEqual(act, tc.exp) {
-					t.Errorf("expected %q to be %q", act, tc.exp)
+					t.Errorf("expected:%q, got: %q", tc.exp, act)
 				}
 			})
 		}

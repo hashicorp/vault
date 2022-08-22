@@ -7,8 +7,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // Secret is the structure returned for every secret within Vault.
@@ -93,12 +94,7 @@ func (s *Secret) TokenRemainingUses() (int, error) {
 		return -1, nil
 	}
 
-	uses, err := parseutil.ParseInt(s.Data["num_uses"])
-	if err != nil {
-		return 0, err
-	}
-
-	return int(uses), nil
+	return parseutil.SafeParseInt(s.Data["num_uses"])
 }
 
 // TokenPolicies returns the standardized list of policies for the given secret.
@@ -297,6 +293,8 @@ type SecretAuth struct {
 
 	LeaseDuration int  `json:"lease_duration"`
 	Renewable     bool `json:"renewable"`
+
+	MFARequirement *logical.MFARequirement `json:"mfa_requirement"`
 }
 
 // ParseSecret is used to parse a secret value from JSON from an io.Reader.

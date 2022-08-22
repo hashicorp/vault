@@ -80,20 +80,20 @@ func testConfig(t *testing.T) (*logical.BackendConfig, func()) {
 
 	core := cores[0]
 
-	sys := vault.TestDynamicSystemView(core.Core)
+	sys := vault.TestDynamicSystemView(core.Core, nil)
 
 	config := &logical.BackendConfig{
 		Logger: logging.NewVaultLogger(log.Debug),
 		System: sys,
 		Config: map[string]string{
 			"plugin_name": "mock-plugin",
-			"plugin_type": "database",
+			"plugin_type": "secret",
 		},
 	}
 
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
-	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain", []string{}, "")
+	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "TestBackend_PluginMain", []string{}, "")
 
 	return config, func() {
 		cluster.Cleanup()

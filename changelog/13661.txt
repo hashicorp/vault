@@ -1,0 +1,4 @@
+```release-note:improvement
+auth/token: The `auth/token/revoke-accessor` endpoint is now idempotent and will
+not error out if the token has already been revoked.
+```

@@ -3,33 +3,28 @@ package vault
 import (
 	"context"
 
-	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/vault/seal"
+	vaultseal "github.com/hashicorp/vault/vault/seal"
 	testing "github.com/mitchellh/go-testing-interface"
 )
 
-type TestSealOpts struct {
-	Logger     log.Logger
-	StoredKeys StoredKeysSupport
-	Secret     []byte
-}
-
 func TestCoreUnsealedWithConfigs(t testing.T, barrierConf, recoveryConf *SealConfig) (*Core, [][]byte, [][]byte, string) {
 	t.Helper()
-	opts := &TestSealOpts{}
+	opts := &seal.TestSealOpts{}
 	if recoveryConf == nil {
-		opts.StoredKeys = StoredKeysSupportedShamirMaster
+		opts.StoredKeys = seal.StoredKeysSupportedShamirRoot
 	}
 	return TestCoreUnsealedWithConfigSealOpts(t, barrierConf, recoveryConf, opts)
 }
 
-func TestCoreUnsealedWithConfigSealOpts(t testing.T, barrierConf, recoveryConf *SealConfig, sealOpts *TestSealOpts) (*Core, [][]byte, [][]byte, string) {
+func TestCoreUnsealedWithConfigSealOpts(t testing.T, barrierConf, recoveryConf *SealConfig, sealOpts *seal.TestSealOpts) (*Core, [][]byte, [][]byte, string) {
 	t.Helper()
 	seal := NewTestSeal(t, sealOpts)
 	core := TestCoreWithSeal(t, seal, false)
 	result, err := core.Initialize(context.Background(), &InitParams{
 		BarrierConfig:    barrierConf,
 		RecoveryConfig:   recoveryConf,
-		LegacyShamirSeal: sealOpts.StoredKeys == StoredKeysNotSupported,
+		LegacyShamirSeal: sealOpts.StoredKeys == vaultseal.StoredKeysNotSupported,
 	})
 	if err != nil {
 		t.Fatalf("err: %s", err)

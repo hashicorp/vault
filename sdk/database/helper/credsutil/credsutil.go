@@ -2,12 +2,11 @@ package credsutil
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"fmt"
-
+	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
-	"github.com/hashicorp/vault/sdk/helper/base62"
 )
 
 // CredentialsProducer can be used as an embedded interface in the Database

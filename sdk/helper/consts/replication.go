@@ -1,11 +1,9 @@
 package consts
 
-import "time"
-
 const (
-	//N.B. This needs to be excluded from replication despite the name; it's
-	//merely saying that this is cluster information for the replicated
-	//cluster.
+	// N.B. This needs to be excluded from replication despite the name; it's
+	// merely saying that this is cluster information for the replicated
+	// cluster.
 	CoreReplicatedClusterPrefix   = "core/cluster/replicated/"
 	CoreReplicatedClusterPrefixDR = "core/cluster/replicated-dr/"
 
@@ -18,11 +16,10 @@ const (
 	// manager.  It should contain a character that is not allowed in secondary
 	// ids to ensure it doesn't collide.
 	CurrentReplicatedSecondaryIdentifier = ".current"
+	CoreFeatureFlagPath                  = "core/cluster/feature-flags"
 )
 
 type ReplicationState uint32
-
-var ReplicationStaleReadTimeout = 2 * time.Second
 
 const (
 	_ ReplicationState = iota
@@ -48,7 +45,6 @@ const (
 
 // We verify no change to the above values are made
 func init() {
-
 	if OldReplicationBootstrapping != 3 {
 		panic("Replication Constants have changed")
 	}
@@ -144,7 +140,20 @@ func (r ReplicationState) GetPerformanceString() string {
 	}
 }
 
+func (r ReplicationState) IsPrimaryState() bool {
+	return r.HasState(ReplicationPerformancePrimary | ReplicationDRPrimary)
+}
+
 func (r ReplicationState) HasState(flag ReplicationState) bool { return r&flag != 0 }
 func (r *ReplicationState) AddState(flag ReplicationState)     { *r |= flag }
 func (r *ReplicationState) ClearState(flag ReplicationState)   { *r &= ^flag }
 func (r *ReplicationState) ToggleState(flag ReplicationState)  { *r ^= flag }
+
+type HAState uint32
+
+const (
+	_ HAState = iota
+	Standby
+	PerfStandby
+	Active
+)

@@ -13,7 +13,6 @@ import (
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/fatih/structs"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -36,29 +35,29 @@ func (b *backend) pathKeys() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the key",
 			},
 
-			"type": &framework.FieldSchema{
+			"type": {
 				Type:    framework.TypeString,
 				Default: "aes256-gcm96",
 				Description: `
 The type of key to create. Currently, "aes128-gcm96" (symmetric), "aes256-gcm96" (symmetric), "ecdsa-p256"
-(asymmetric), "ecdsa-p384" (asymmetric), "ecdsa-p521" (asymmetric), "ed25519" (asymmetric), "rsa-2048" (asymmetric), "rsa-4096"
-(asymmetric) are supported.  Defaults to "aes256-gcm96".
+(asymmetric), "ecdsa-p384" (asymmetric), "ecdsa-p521" (asymmetric), "ed25519" (asymmetric), "rsa-2048" (asymmetric), "rsa-3072"
+(asymmetric), "rsa-4096" (asymmetric) are supported.  Defaults to "aes256-gcm96".
 `,
 			},
 
-			"derived": &framework.FieldSchema{
+			"derived": {
 				Type: framework.TypeBool,
 				Description: `Enables key derivation mode. This
 allows for per-transaction unique
 keys for encryption operations.`,
 			},
 
-			"convergent_encryption": &framework.FieldSchema{
+			"convergent_encryption": {
 				Type: framework.TypeBool,
 				Description: `Whether to support convergent encryption.
 This is only supported when using a key with
@@ -74,26 +73,35 @@ given context. Failing to do so will severely
 impact the ciphertext's security.`,
 			},
 
-			"exportable": &framework.FieldSchema{
+			"exportable": {
 				Type: framework.TypeBool,
 				Description: `Enables keys to be exportable.
 This allows for all the valid keys
 in the key ring to be exported.`,
 			},
 
-			"allow_plaintext_backup": &framework.FieldSchema{
+			"allow_plaintext_backup": {
 				Type: framework.TypeBool,
 				Description: `Enables taking a backup of the named
 key in plaintext format. Once set,
 this cannot be disabled.`,
 			},
 
-			"context": &framework.FieldSchema{
+			"context": {
 				Type: framework.TypeString,
 				Description: `Base64 encoded context for key derivation.
 When reading a key with key derivation enabled,
 if the key type supports public keys, this will
 return the public key for the given context.`,
+			},
+
+			"auto_rotate_period": {
+				Type:    framework.TypeDurationSecond,
+				Default: 0,
+				Description: `Amount of time the key should live before
+being automatically rotated. A value of 0
+(default) disables automatic rotation for the
+key.`,
 			},
 		},
 
@@ -124,6 +132,11 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 	keyType := d.Get("type").(string)
 	exportable := d.Get("exportable").(bool)
 	allowPlaintextBackup := d.Get("allow_plaintext_backup").(bool)
+	autoRotatePeriod := time.Second * time.Duration(d.Get("auto_rotate_period").(int))
+
+	if autoRotatePeriod != 0 && autoRotatePeriod < time.Hour {
+		return logical.ErrorResponse("auto rotate period must be 0 to disable or at least an hour"), nil
+	}
 
 	if !derived && convergent {
 		return logical.ErrorResponse("convergent encryption requires derivation to be enabled"), nil
@@ -137,6 +150,7 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		Convergent:           convergent,
 		Exportable:           exportable,
 		AllowPlaintextBackup: allowPlaintextBackup,
+		AutoRotatePeriod:     autoRotatePeriod,
 	}
 	switch keyType {
 	case "aes128-gcm96":
@@ -155,13 +169,15 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		polReq.KeyType = keysutil.KeyType_ED25519
 	case "rsa-2048":
 		polReq.KeyType = keysutil.KeyType_RSA2048
+	case "rsa-3072":
+		polReq.KeyType = keysutil.KeyType_RSA3072
 	case "rsa-4096":
 		polReq.KeyType = keysutil.KeyType_RSA4096
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 	}
 
-	p, upserted, err := b.lm.GetPolicy(ctx, polReq, b.GetRandomReader())
+	p, upserted, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +206,7 @@ type asymKey struct {
 func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
-	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
 	}, b.GetRandomReader())
@@ -222,7 +238,13 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 			"supports_decryption":    p.Type.DecryptionSupported(),
 			"supports_signing":       p.Type.SigningSupported(),
 			"supports_derivation":    p.Type.DerivationSupported(),
+			"auto_rotate_period":     int64(p.AutoRotatePeriod.Seconds()),
+			"imported_key":           p.Imported,
 		},
+	}
+
+	if p.Imported {
+		resp.Data["imported_key_allow_rotation"] = p.AllowImportedKeyRotation
 	}
 
 	if p.BackupInfo != nil {
@@ -269,7 +291,7 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 		}
 		resp.Data["keys"] = retKeys
 
-	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096:
+	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096:
 		retKeys := map[string]map[string]interface{}{}
 		for k, v := range p.Keys {
 			key := asymKey{
@@ -294,9 +316,9 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 					} else {
 						ver, err := strconv.Atoi(k)
 						if err != nil {
-							return nil, errwrap.Wrapf(fmt.Sprintf("invalid version %q: {{err}}", k), err)
+							return nil, fmt.Errorf("invalid version %q: %w", k, err)
 						}
-						derived, err := p.DeriveKey(context, ver, 32)
+						derived, err := p.GetKey(context, ver, 32)
 						if err != nil {
 							return nil, fmt.Errorf("failed to derive key to return public component")
 						}
@@ -305,8 +327,12 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 					}
 				}
 				key.Name = "ed25519"
-			case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA4096:
+			case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096:
 				key.Name = "rsa-2048"
+				if p.Type == keysutil.KeyType_RSA3072 {
+					key.Name = "rsa-3072"
+				}
+
 				if p.Type == keysutil.KeyType_RSA4096 {
 					key.Name = "rsa-4096"
 				}
@@ -315,7 +341,7 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 				// API
 				derBytes, err := x509.MarshalPKIXPublicKey(v.RSAKey.Public())
 				if err != nil {
-					return nil, errwrap.Wrapf("error marshaling RSA public key: {{err}}", err)
+					return nil, fmt.Errorf("error marshaling RSA public key: %w", err)
 				}
 				pemBlock := &pem.Block{
 					Type:  "PUBLIC KEY",

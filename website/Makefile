@@ -1,32 +1,38 @@
-configure-cache:
-	@mkdir -p tmp/cache .bundle
+.DEFAULT_GOAL := website
 
-build: configure-cache
-	@echo "==> Starting build in Docker..."
-	@docker run \
-		--interactive \
+PWD=$$(pwd)
+DOCKER_IMAGE="hashicorp/dev-portal"
+DOCKER_IMAGE_LOCAL="dev-portal-local"
+DOCKER_RUN_FLAGS=-it \
+		--publish "3000:3000" \
 		--rm \
 		--tty \
-		--volume "$(shell pwd):/opt/buildhome/repo" \
-		--volume "$(shell pwd)/tmp/cache:/opt/buildhome/cache" \
-		--user buildbot:$(shell id -g) \
-		--env "ENV=production" \
-		netlify/build \
-		build "sh bootstrap.sh && middleman build --verbose"
+		--volume "$(PWD)/content:/app/content" \
+		--volume "$(PWD)/public:/app/public" \
+		--volume "$(PWD)/data:/app/data" \
+		--volume "$(PWD)/redirects.js:/app/redirects.js" \
+		--volume "next-dir:/app/website-preview/.next" \
+		--volume "$(PWD)/.env:/app/.env" \
+		-e "REPO=vault"
 
-website: configure-cache
-	@echo "==> Starting website in Docker..."
-	@docker run \
-		--interactive \
-		--rm \
-		--tty \
-		--volume "$(shell pwd):/opt/buildhome/repo" \
-		--volume "$(shell pwd)/tmp/cache:/opt/buildhome/cache" \
-		--user buildbot:$(shell id -g) \
-		--publish "4567:4567" \
-		--publish "35729:35729" \
-		--env "ENV=production" \
-		netlify/build \
-		build "sh bootstrap.sh && middleman"
+# Default: run this if working on the website locally to run in watch mode.
+.PHONY: website
+website:
+	@echo "==> Downloading latest Docker image..."
+	@docker pull $(DOCKER_IMAGE)
+	@echo "==> Starting website..."
+	@docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE)
 
-.PHONY: configure-cache build website
+# Use this if you have run `website/build-local` to use the locally built image.
+.PHONY: website/local
+website/local:
+	@echo "==> Starting website from local image..."
+	@docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE_LOCAL)
+
+# Run this to generate a new local Docker image.
+.PHONY: website/build-local
+website/build-local:
+	@echo "==> Building local Docker image"
+	@docker build https://github.com/hashicorp/dev-portal.git\#main \
+		-t $(DOCKER_IMAGE_LOCAL)
+

@@ -12,8 +12,10 @@ import (
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 )
 
-var _ plugin.Plugin = (*GRPCBackendPlugin)(nil)
-var _ plugin.GRPCPlugin = (*GRPCBackendPlugin)(nil)
+var (
+	_ plugin.Plugin     = (*GRPCBackendPlugin)(nil)
+	_ plugin.GRPCPlugin = (*GRPCBackendPlugin)(nil)
+)
 
 // GRPCBackendPlugin is the plugin.Plugin implementation that only supports GRPC
 // transport

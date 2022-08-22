@@ -2,88 +2,70 @@ package seal
 
 import (
 	"context"
+	"sync"
 
-	"github.com/hashicorp/vault/helper/xor"
-	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/go-hclog"
+	wrapping "github.com/hashicorp/go-kms-wrapping"
 )
 
-type TestSeal struct {
-	Type   string
-	secret []byte
-	keyId  string
+type TestSealOpts struct {
+	Logger     hclog.Logger
+	StoredKeys StoredKeysSupport
+	Secret     []byte
+	Name       string
 }
 
-var _ Access = (*TestSeal)(nil)
+func NewTestSeal(opts *TestSealOpts) *Access {
+	if opts == nil {
+		opts = new(TestSealOpts)
+	}
 
-func NewTestSeal(secret []byte) *TestSeal {
-	return &TestSeal{
-		Type:   Test,
-		secret: secret,
-		keyId:  "static-key",
+	return &Access{
+		Wrapper:        wrapping.NewTestWrapper(opts.Secret),
+		OverriddenType: opts.Name,
 	}
 }
 
-func (s *TestSeal) Init(_ context.Context) error {
-	return nil
-}
-
-func (t *TestSeal) Finalize(_ context.Context) error {
-	return nil
-}
-
-func (t *TestSeal) SealType() string {
-	return t.Type
-}
-
-func (t *TestSeal) KeyID() string {
-	return t.keyId
-}
-
-func (t *TestSeal) SetKeyID(k string) {
-	t.keyId = k
-}
-
-func (t *TestSeal) Encrypt(_ context.Context, plaintext []byte) (*physical.EncryptedBlobInfo, error) {
-	ct, err := t.obscureBytes(plaintext)
-	if err != nil {
-		return nil, err
+func NewToggleableTestSeal(opts *TestSealOpts) (*Access, func(error)) {
+	if opts == nil {
+		opts = new(TestSealOpts)
 	}
 
-	return &physical.EncryptedBlobInfo{
-		Ciphertext: ct,
-		KeyInfo: &physical.SealKeyInfo{
-			KeyID: t.KeyID(),
-		},
-	}, nil
+	w := &ToggleableWrapper{Wrapper: wrapping.NewTestWrapper(opts.Secret)}
+	return &Access{
+		Wrapper:        w,
+		OverriddenType: opts.Name,
+	}, w.SetError
 }
 
-func (t *TestSeal) Decrypt(_ context.Context, dwi *physical.EncryptedBlobInfo) ([]byte, error) {
-	return t.obscureBytes(dwi.Ciphertext)
+type ToggleableWrapper struct {
+	wrapping.Wrapper
+	error error
+	l     sync.RWMutex
 }
 
-// obscureBytes is a helper to simulate "encryption/decryption"
-// on protected values.
-func (t *TestSeal) obscureBytes(in []byte) ([]byte, error) {
-	out := make([]byte, len(in))
-
-	if len(t.secret) != 0 {
-		// make sure they are the same length
-		localSecret := make([]byte, len(in))
-		copy(localSecret, t.secret)
-
-		var err error
-
-		out, err = xor.XORBytes(in, localSecret)
-		if err != nil {
-			return nil, err
-		}
-
-	} else {
-		// if there is no secret, simply reverse the string
-		for i := 0; i < len(in); i++ {
-			out[i] = in[len(in)-1-i]
-		}
+func (t *ToggleableWrapper) Encrypt(ctx context.Context, bytes []byte, bytes2 []byte) (*wrapping.EncryptedBlobInfo, error) {
+	t.l.RLock()
+	defer t.l.RUnlock()
+	if t.error != nil {
+		return nil, t.error
 	}
-
-	return out, nil
+	return t.Wrapper.Encrypt(ctx, bytes, bytes2)
 }
+
+func (t ToggleableWrapper) Decrypt(ctx context.Context, info *wrapping.EncryptedBlobInfo, bytes []byte) ([]byte, error) {
+	t.l.RLock()
+	defer t.l.RUnlock()
+	if t.error != nil {
+		return nil, t.error
+	}
+	return t.Wrapper.Decrypt(ctx, info, bytes)
+}
+
+func (t *ToggleableWrapper) SetError(err error) {
+	t.l.Lock()
+	defer t.l.Unlock()
+	t.error = err
+}
+
+var _ wrapping.Wrapper = &ToggleableWrapper{}

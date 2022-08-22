@@ -8,7 +8,7 @@
     box-shadow: $box-shadow, $box-shadow-middle;
     padding: 0;
     position: relative;
-    width: 200px;
+    width: 210px;
   }
 
   &.is-wide > .box {
@@ -23,10 +23,6 @@
 
   .menu {
     padding: $size-11 0;
-
-    small code {
-      margin-left: $spacing-xs;
-    }
   }
 
   button.link,
@@ -111,6 +107,12 @@
 
 .popup-menu-content .level-left {
   flex-shrink: 1;
+}
+
+// when you need to limit the height and have dropdown scroll in child nav element
+.popup-menu-content > nav.scroll {
+  height: 200px;
+  overflow-y: scroll;
 }
 
 .list-item-row,

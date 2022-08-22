@@ -1,140 +1,216 @@
 package server
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/helper/osutil"
+	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
 const (
-	prometheusDefaultRetentionTime = 24 * time.Hour
+	VaultDevCAFilename   = "vault-ca.pem"
+	VaultDevCertFilename = "vault-cert.pem"
+	VaultDevKeyFilename  = "vault-key.pem"
 )
+
+var entConfigValidate = func(_ *Config, _ string) []configutil.ConfigError {
+	return nil
+}
 
 // Config is the configuration for the vault server.
 type Config struct {
-	Listeners []*Listener `hcl:"-"`
-	Storage   *Storage    `hcl:"-"`
-	HAStorage *Storage    `hcl:"-"`
+	UnusedKeys configutil.UnusedKeyMap `hcl:",unusedKeyPositions"`
+	FoundKeys  []string                `hcl:",decodedFields"`
+	entConfig
 
-	Seals   []*Seal  `hcl:"-"`
-	Entropy *Entropy `hcl:"-"`
+	*configutil.SharedConfig `hcl:"-"`
+
+	Storage   *Storage `hcl:"-"`
+	HAStorage *Storage `hcl:"-"`
+
+	ServiceRegistration *ServiceRegistration `hcl:"-"`
 
 	CacheSize                int         `hcl:"cache_size"`
 	DisableCache             bool        `hcl:"-"`
 	DisableCacheRaw          interface{} `hcl:"disable_cache"`
-	DisableMlock             bool        `hcl:"-"`
-	DisableMlockRaw          interface{} `hcl:"disable_mlock"`
 	DisablePrintableCheck    bool        `hcl:"-"`
 	DisablePrintableCheckRaw interface{} `hcl:"disable_printable_check"`
 
 	EnableUI    bool        `hcl:"-"`
 	EnableUIRaw interface{} `hcl:"ui"`
 
-	Telemetry *Telemetry `hcl:"telemetry"`
-
 	MaxLeaseTTL        time.Duration `hcl:"-"`
-	MaxLeaseTTLRaw     interface{}   `hcl:"max_lease_ttl"`
+	MaxLeaseTTLRaw     interface{}   `hcl:"max_lease_ttl,alias:MaxLeaseTTL"`
 	DefaultLeaseTTL    time.Duration `hcl:"-"`
-	DefaultLeaseTTLRaw interface{}   `hcl:"default_lease_ttl"`
+	DefaultLeaseTTLRaw interface{}   `hcl:"default_lease_ttl,alias:DefaultLeaseTTL"`
 
-	DefaultMaxRequestDuration    time.Duration `hcl:"-"`
-	DefaultMaxRequestDurationRaw interface{}   `hcl:"default_max_request_duration"`
-
-	ClusterName         string `hcl:"cluster_name"`
 	ClusterCipherSuites string `hcl:"cluster_cipher_suites"`
 
 	PluginDirectory string `hcl:"plugin_directory"`
 
-	LogLevel string `hcl:"log_level"`
+	PluginFileUid int `hcl:"plugin_file_uid"`
 
-	// LogFormat specifies the log format.  Valid values are "standard" and "json".  The values are case-insenstive.
-	// If no log format is specified, then standard format will be used.
-	LogFormat string `hcl:"log_format"`
+	PluginFilePermissions    int         `hcl:"-"`
+	PluginFilePermissionsRaw interface{} `hcl:"plugin_file_permissions,alias:PluginFilePermissions"`
 
-	PidFile              string      `hcl:"pid_file"`
 	EnableRawEndpoint    bool        `hcl:"-"`
-	EnableRawEndpointRaw interface{} `hcl:"raw_storage_endpoint"`
+	EnableRawEndpointRaw interface{} `hcl:"raw_storage_endpoint,alias:EnableRawEndpoint"`
 
 	APIAddr              string      `hcl:"api_addr"`
 	ClusterAddr          string      `hcl:"cluster_addr"`
 	DisableClustering    bool        `hcl:"-"`
-	DisableClusteringRaw interface{} `hcl:"disable_clustering"`
+	DisableClusteringRaw interface{} `hcl:"disable_clustering,alias:DisableClustering"`
 
 	DisablePerformanceStandby    bool        `hcl:"-"`
-	DisablePerformanceStandbyRaw interface{} `hcl:"disable_performance_standby"`
+	DisablePerformanceStandbyRaw interface{} `hcl:"disable_performance_standby,alias:DisablePerformanceStandby"`
 
 	DisableSealWrap    bool        `hcl:"-"`
-	DisableSealWrapRaw interface{} `hcl:"disable_sealwrap"`
+	DisableSealWrapRaw interface{} `hcl:"disable_sealwrap,alias:DisableSealWrap"`
 
 	DisableIndexing    bool        `hcl:"-"`
-	DisableIndexingRaw interface{} `hcl:"disable_indexing"`
+	DisableIndexingRaw interface{} `hcl:"disable_indexing,alias:DisableIndexing"`
+
+	DisableSentinelTrace    bool        `hcl:"-"`
+	DisableSentinelTraceRaw interface{} `hcl:"disable_sentinel_trace,alias:DisableSentinelTrace"`
+
+	EnableResponseHeaderHostname    bool        `hcl:"-"`
+	EnableResponseHeaderHostnameRaw interface{} `hcl:"enable_response_header_hostname"`
+
+	LogRequestsLevel    string      `hcl:"-"`
+	LogRequestsLevelRaw interface{} `hcl:"log_requests_level"`
+
+	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
+	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
+
+	License          string `hcl:"-"`
+	LicensePath      string `hcl:"license_path"`
+	DisableSSCTokens bool   `hcl:"-"`
+}
+
+const (
+	sectionSeal = "Seal"
+)
+
+func (c *Config) Validate(sourceFilePath string) []configutil.ConfigError {
+	results := configutil.ValidateUnusedFields(c.UnusedKeys, sourceFilePath)
+	if c.Telemetry != nil {
+		results = append(results, c.Telemetry.Validate(sourceFilePath)...)
+	}
+	if c.ServiceRegistration != nil {
+		results = append(results, c.ServiceRegistration.Validate(sourceFilePath)...)
+	}
+	for _, l := range c.Listeners {
+		results = append(results, l.Validate(sourceFilePath)...)
+	}
+	results = append(results, c.validateEnt(sourceFilePath)...)
+	return results
+}
+
+func (c *Config) validateEnt(sourceFilePath string) []configutil.ConfigError {
+	return entConfigValidate(c, sourceFilePath)
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
-func DevConfig(storageType string) *Config {
-	ret := &Config{
-		DisableMlock:      true,
-		EnableRawEndpoint: true,
+func DevConfig(storageType string) (*Config, error) {
+	hclStr := `
+disable_mlock = true
 
-		Storage: &Storage{
-			Type: storageType,
-		},
+listener "tcp" {
+	address = "127.0.0.1:8200"
+	tls_disable = true
+	proxy_protocol_behavior = "allow_authorized"
+	proxy_protocol_authorized_addrs = "127.0.0.1:8200"
+}
 
-		Listeners: []*Listener{
-			&Listener{
-				Type: "tcp",
-				Config: map[string]interface{}{
-					"address":                         "127.0.0.1:8200",
-					"tls_disable":                     true,
-					"proxy_protocol_behavior":         "allow_authorized",
-					"proxy_protocol_authorized_addrs": "127.0.0.1:8200",
-				},
-			},
-		},
+telemetry {
+	prometheus_retention_time = "24h"
+	disable_hostname = true
+}
+enable_raw_endpoint = true
 
-		EnableUI: true,
+storage "%s" {
+}
 
-		Telemetry: &Telemetry{
-			PrometheusRetentionTime: prometheusDefaultRetentionTime,
-			DisableHostname:         true,
-		},
+ui = true
+`
+
+	hclStr = fmt.Sprintf(hclStr, storageType)
+	parsed, err := ParseConfig(hclStr, "")
+	if err != nil {
+		return nil, fmt.Errorf("error parsing dev config: %w", err)
+	}
+	return parsed, nil
+}
+
+// DevTLSConfig is a Config that is used for dev tls mode of Vault.
+func DevTLSConfig(storageType, certDir string) (*Config, error) {
+	ca, err := GenerateCA()
+	if err != nil {
+		return nil, err
 	}
 
-	return ret
+	cert, key, err := GenerateCert(ca.Template, ca.Signer)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := os.WriteFile(fmt.Sprintf("%s/%s", certDir, VaultDevCAFilename), []byte(ca.PEM), 0o444); err != nil {
+		return nil, err
+	}
+
+	if err := os.WriteFile(fmt.Sprintf("%s/%s", certDir, VaultDevCertFilename), []byte(cert), 0o400); err != nil {
+		return nil, err
+	}
+
+	if err := os.WriteFile(fmt.Sprintf("%s/%s", certDir, VaultDevKeyFilename), []byte(key), 0o400); err != nil {
+		return nil, err
+	}
+
+	hclStr := `
+disable_mlock = true
+
+listener "tcp" {
+	address = "[::]:8200"
+	tls_cert_file = "%s/vault-cert.pem"
+	tls_key_file = "%s/vault-key.pem"
+	proxy_protocol_behavior = "allow_authorized"
+	proxy_protocol_authorized_addrs = "[::]:8200"
 }
 
-// Listener is the listener configuration for the server.
-type Listener struct {
-	Type   string
-	Config map[string]interface{}
+telemetry {
+	prometheus_retention_time = "24h"
+	disable_hostname = true
+}
+enable_raw_endpoint = true
+
+storage "%s" {
 }
 
-func (l *Listener) GoString() string {
-	return fmt.Sprintf("*%#v", *l)
-}
+ui = true
+`
 
-// Entropy contains Entropy configuration for the server
-type EntropyMode int
+	hclStr = fmt.Sprintf(hclStr, certDir, certDir, storageType)
+	parsed, err := ParseConfig(hclStr, "")
+	if err != nil {
+		return nil, err
+	}
 
-const (
-	Unknown EntropyMode = iota
-	Augmentation
-)
-
-type Entropy struct {
-	Mode EntropyMode
+	return parsed, nil
 }
 
 // Storage is the underlying storage configuration for the server.
@@ -150,121 +226,25 @@ func (b *Storage) GoString() string {
 	return fmt.Sprintf("*%#v", *b)
 }
 
-// Seal contains Seal configuration for the server
-type Seal struct {
-	Type     string
-	Disabled bool
-	Config   map[string]string
+// ServiceRegistration is the optional service discovery for the server.
+type ServiceRegistration struct {
+	UnusedKeys configutil.UnusedKeyMap `hcl:",unusedKeyPositions"`
+	Type       string
+	Config     map[string]string
 }
 
-func (h *Seal) GoString() string {
-	return fmt.Sprintf("*%#v", *h)
+func (b *ServiceRegistration) Validate(source string) []configutil.ConfigError {
+	return configutil.ValidateUnusedFields(b.UnusedKeys, source)
 }
 
-// Telemetry is the telemetry configuration for the server
-type Telemetry struct {
-	StatsiteAddr string `hcl:"statsite_address"`
-	StatsdAddr   string `hcl:"statsd_address"`
-
-	DisableHostname bool `hcl:"disable_hostname"`
-
-	// Circonus: see https://github.com/circonus-labs/circonus-gometrics
-	// for more details on the various configuration options.
-	// Valid configuration combinations:
-	//    - CirconusAPIToken
-	//      metric management enabled (search for existing check or create a new one)
-	//    - CirconusSubmissionUrl
-	//      metric management disabled (use check with specified submission_url,
-	//      broker must be using a public SSL certificate)
-	//    - CirconusAPIToken + CirconusCheckSubmissionURL
-	//      metric management enabled (use check with specified submission_url)
-	//    - CirconusAPIToken + CirconusCheckID
-	//      metric management enabled (use check with specified id)
-
-	// CirconusAPIToken is a valid API Token used to create/manage check. If provided,
-	// metric management is enabled.
-	// Default: none
-	CirconusAPIToken string `hcl:"circonus_api_token"`
-	// CirconusAPIApp is an app name associated with API token.
-	// Default: "consul"
-	CirconusAPIApp string `hcl:"circonus_api_app"`
-	// CirconusAPIURL is the base URL to use for contacting the Circonus API.
-	// Default: "https://api.circonus.com/v2"
-	CirconusAPIURL string `hcl:"circonus_api_url"`
-	// CirconusSubmissionInterval is the interval at which metrics are submitted to Circonus.
-	// Default: 10s
-	CirconusSubmissionInterval string `hcl:"circonus_submission_interval"`
-	// CirconusCheckSubmissionURL is the check.config.submission_url field from a
-	// previously created HTTPTRAP check.
-	// Default: none
-	CirconusCheckSubmissionURL string `hcl:"circonus_submission_url"`
-	// CirconusCheckID is the check id (not check bundle id) from a previously created
-	// HTTPTRAP check. The numeric portion of the check._cid field.
-	// Default: none
-	CirconusCheckID string `hcl:"circonus_check_id"`
-	// CirconusCheckForceMetricActivation will force enabling metrics, as they are encountered,
-	// if the metric already exists and is NOT active. If check management is enabled, the default
-	// behavior is to add new metrics as they are encountered. If the metric already exists in the
-	// check, it will *NOT* be activated. This setting overrides that behavior.
-	// Default: "false"
-	CirconusCheckForceMetricActivation string `hcl:"circonus_check_force_metric_activation"`
-	// CirconusCheckInstanceID serves to uniquely identify the metrics coming from this "instance".
-	// It can be used to maintain metric continuity with transient or ephemeral instances as
-	// they move around within an infrastructure.
-	// Default: hostname:app
-	CirconusCheckInstanceID string `hcl:"circonus_check_instance_id"`
-	// CirconusCheckSearchTag is a special tag which, when coupled with the instance id, helps to
-	// narrow down the search results when neither a Submission URL or Check ID is provided.
-	// Default: service:app (e.g. service:consul)
-	CirconusCheckSearchTag string `hcl:"circonus_check_search_tag"`
-	// CirconusCheckTags is a comma separated list of tags to apply to the check. Note that
-	// the value of CirconusCheckSearchTag will always be added to the check.
-	// Default: none
-	CirconusCheckTags string `hcl:"circonus_check_tags"`
-	// CirconusCheckDisplayName is the name for the check which will be displayed in the Circonus UI.
-	// Default: value of CirconusCheckInstanceID
-	CirconusCheckDisplayName string `hcl:"circonus_check_display_name"`
-	// CirconusBrokerID is an explicit broker to use when creating a new check. The numeric portion
-	// of broker._cid. If metric management is enabled and neither a Submission URL nor Check ID
-	// is provided, an attempt will be made to search for an existing check using Instance ID and
-	// Search Tag. If one is not found, a new HTTPTRAP check will be created.
-	// Default: use Select Tag if provided, otherwise, a random Enterprise Broker associated
-	// with the specified API token or the default Circonus Broker.
-	// Default: none
-	CirconusBrokerID string `hcl:"circonus_broker_id"`
-	// CirconusBrokerSelectTag is a special tag which will be used to select a broker when
-	// a Broker ID is not provided. The best use of this is to as a hint for which broker
-	// should be used based on *where* this particular instance is running.
-	// (e.g. a specific geo location or datacenter, dc:sfo)
-	// Default: none
-	CirconusBrokerSelectTag string `hcl:"circonus_broker_select_tag"`
-
-	// Dogstats:
-	// DogStatsdAddr is the address of a dogstatsd instance. If provided,
-	// metrics will be sent to that instance
-	DogStatsDAddr string `hcl:"dogstatsd_addr"`
-
-	// DogStatsdTags are the global tags that should be sent with each packet to dogstatsd
-	// It is a list of strings, where each string looks like "my_tag_name:my_tag_value"
-	DogStatsDTags []string `hcl:"dogstatsd_tags"`
-
-	// Prometheus:
-	// PrometheusRetentionTime is the retention time for prometheus metrics if greater than 0.
-	// Default: 24h
-	PrometheusRetentionTime    time.Duration `hcl:"-"`
-	PrometheusRetentionTimeRaw interface{}   `hcl:"prometheus_retention_time"`
-
-	// Stackdriver:
-	// StackdriverProjectID is the project to publish stackdriver metrics to.
-	StackdriverProjectID string `hcl:"stackdriver_project_id"`
-	// StackdriverLocation is the GCP or AWS region of the monitored resource.
-	StackdriverLocation string `hcl:"stackdriver_location"`
-	// StackdriverNamespace is the namespace identifier, such as a cluster name.
-	StackdriverNamespace string `hcl:"stackdriver_namespace"`
+func (b *ServiceRegistration) GoString() string {
+	return fmt.Sprintf("*%#v", *b)
 }
 
-func (s *Telemetry) GoString() string {
-	return fmt.Sprintf("*%#v", *s)
+func NewConfig() *Config {
+	return &Config{
+		SharedConfig: new(configutil.SharedConfig),
+	}
 }
 
 // Merge merges two configurations.
@@ -273,12 +253,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		return c
 	}
 
-	result := new(Config)
-	for _, l := range c.Listeners {
-		result.Listeners = append(result.Listeners, l)
-	}
-	for _, l := range c2.Listeners {
-		result.Listeners = append(result.Listeners, l)
+	result := NewConfig()
+
+	result.SharedConfig = c.SharedConfig
+	if c2.SharedConfig != nil {
+		result.SharedConfig = c.SharedConfig.Merge(c2.SharedConfig)
 	}
 
 	result.Storage = c.Storage
@@ -291,21 +270,9 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.HAStorage = c2.HAStorage
 	}
 
-	result.Entropy = c.Entropy
-	if c2.Entropy != nil {
-		result.Entropy = c2.Entropy
-	}
-
-	for _, s := range c.Seals {
-		result.Seals = append(result.Seals, s)
-	}
-	for _, s := range c2.Seals {
-		result.Seals = append(result.Seals, s)
-	}
-
-	result.Telemetry = c.Telemetry
-	if c2.Telemetry != nil {
-		result.Telemetry = c2.Telemetry
+	result.ServiceRegistration = c.ServiceRegistration
+	if c2.ServiceRegistration != nil {
+		result.ServiceRegistration = c2.ServiceRegistration
 	}
 
 	result.CacheSize = c.CacheSize
@@ -319,9 +286,9 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DisableCache = c2.DisableCache
 	}
 
-	result.DisableMlock = c.DisableMlock
-	if c2.DisableMlock {
-		result.DisableMlock = c2.DisableMlock
+	result.DisableSentinelTrace = c.DisableSentinelTrace
+	if c2.DisableSentinelTrace {
+		result.DisableSentinelTrace = c2.DisableSentinelTrace
 	}
 
 	result.DisablePrintableCheck = c.DisablePrintableCheck
@@ -338,26 +305,6 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.DefaultLeaseTTL = c.DefaultLeaseTTL
 	if c2.DefaultLeaseTTL > result.DefaultLeaseTTL {
 		result.DefaultLeaseTTL = c2.DefaultLeaseTTL
-	}
-
-	result.DefaultMaxRequestDuration = c.DefaultMaxRequestDuration
-	if c2.DefaultMaxRequestDuration > result.DefaultMaxRequestDuration {
-		result.DefaultMaxRequestDuration = c2.DefaultMaxRequestDuration
-	}
-
-	result.LogLevel = c.LogLevel
-	if c2.LogLevel != "" {
-		result.LogLevel = c2.LogLevel
-	}
-
-	result.LogFormat = c.LogFormat
-	if c2.LogFormat != "" {
-		result.LogFormat = c2.LogFormat
-	}
-
-	result.ClusterName = c.ClusterName
-	if c2.ClusterName != "" {
-		result.ClusterName = c2.ClusterName
 	}
 
 	result.ClusterCipherSuites = c.ClusterCipherSuites
@@ -398,9 +345,15 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.PluginDirectory = c2.PluginDirectory
 	}
 
-	result.PidFile = c.PidFile
-	if c2.PidFile != "" {
-		result.PidFile = c2.PidFile
+	result.PluginFileUid = c.PluginFileUid
+	if c2.PluginFileUid != 0 {
+		result.PluginFileUid = c2.PluginFileUid
+	}
+
+	result.PluginFilePermissions = c.PluginFilePermissions
+	if c2.PluginFilePermissionsRaw != nil {
+		result.PluginFilePermissions = c2.PluginFilePermissions
+		result.PluginFilePermissionsRaw = c2.PluginFilePermissionsRaw
 	}
 
 	result.DisablePerformanceStandby = c.DisablePerformanceStandby
@@ -416,6 +369,26 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.DisableIndexing = c.DisableIndexing
 	if c2.DisableIndexing {
 		result.DisableIndexing = c2.DisableIndexing
+	}
+
+	result.EnableResponseHeaderHostname = c.EnableResponseHeaderHostname
+	if c2.EnableResponseHeaderHostname {
+		result.EnableResponseHeaderHostname = c2.EnableResponseHeaderHostname
+	}
+
+	result.LogRequestsLevel = c.LogRequestsLevel
+	if c2.LogRequestsLevel != "" {
+		result.LogRequestsLevel = c2.LogRequestsLevel
+	}
+
+	result.EnableResponseHeaderRaftNodeID = c.EnableResponseHeaderRaftNodeID
+	if c2.EnableResponseHeaderRaftNodeID {
+		result.EnableResponseHeaderRaftNodeID = c2.EnableResponseHeaderRaftNodeID
+	}
+
+	result.LicensePath = c.LicensePath
+	if c2.LicensePath != "" {
+		result.LicensePath = c2.LicensePath
 	}
 
 	// Use values from top-level configuration for storage if set
@@ -443,6 +416,8 @@ func (c *Config) Merge(c2 *Config) *Config {
 		}
 	}
 
+	result.entConfig = c.entConfig.Merge(c2.entConfig)
+
 	return result
 }
 
@@ -455,9 +430,42 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	if fi.IsDir() {
-		return LoadConfigDir(path)
+		// check permissions on the config directory
+		var enableFilePermissionsCheck bool
+		if enableFilePermissionsCheckEnv := os.Getenv(consts.VaultEnableFilePermissionsCheckEnv); enableFilePermissionsCheckEnv != "" {
+			var err error
+			enableFilePermissionsCheck, err = strconv.ParseBool(enableFilePermissionsCheckEnv)
+			if err != nil {
+				return nil, errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
+			}
+		}
+
+		if enableFilePermissionsCheck {
+			err = osutil.OwnerPermissionsMatch(path, 0, 0)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return CheckConfig(LoadConfigDir(path))
 	}
-	return LoadConfigFile(path)
+	return CheckConfig(LoadConfigFile(path))
+}
+
+func CheckConfig(c *Config, e error) (*Config, error) {
+	if e != nil {
+		return c, e
+	}
+
+	if len(c.Seals) == 2 {
+		switch {
+		case c.Seals[0].Disabled && c.Seals[1].Disabled:
+			return nil, errors.New("seals: two seals provided but both are disabled")
+		case !c.Seals[0].Disabled && !c.Seals[1].Disabled:
+			return nil, errors.New("seals: two seals provided but neither is disabled")
+		}
+	}
+
+	return c, nil
 }
 
 // LoadConfigFile loads the configuration from the given file.
@@ -467,10 +475,40 @@ func LoadConfigFile(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ParseConfig(string(d))
+
+	conf, err := ParseConfig(string(d), path)
+	if err != nil {
+		return nil, err
+	}
+
+	var enableFilePermissionsCheck bool
+	if enableFilePermissionsCheckEnv := os.Getenv(consts.VaultEnableFilePermissionsCheckEnv); enableFilePermissionsCheckEnv != "" {
+		var err error
+		enableFilePermissionsCheck, err = strconv.ParseBool(enableFilePermissionsCheckEnv)
+		if err != nil {
+			return nil, errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
+		}
+	}
+
+	if enableFilePermissionsCheck {
+		// check permissions of the config file
+		err = osutil.OwnerPermissionsMatch(path, 0, 0)
+		if err != nil {
+			return nil, err
+		}
+		// check permissions of the plugin directory
+		if conf.PluginDirectory != "" {
+
+			err = osutil.OwnerPermissionsMatch(conf.PluginDirectory, conf.PluginFileUid, conf.PluginFilePermissions)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return conf, nil
 }
 
-func ParseConfig(d string) (*Config, error) {
+func ParseConfig(d, source string) (*Config, error) {
 	// Parse!
 	obj, err := hcl.Parse(d)
 	if err != nil {
@@ -478,10 +516,27 @@ func ParseConfig(d string) (*Config, error) {
 	}
 
 	// Start building the result
-	var result Config
-	if err := hcl.DecodeObject(&result, obj); err != nil {
+	result := NewConfig()
+	if err := hcl.DecodeObject(result, obj); err != nil {
 		return nil, err
 	}
+
+	if rendered, err := configutil.ParseSingleIPTemplate(result.APIAddr); err != nil {
+		return nil, err
+	} else {
+		result.APIAddr = rendered
+	}
+	if rendered, err := configutil.ParseSingleIPTemplate(result.ClusterAddr); err != nil {
+		return nil, err
+	} else {
+		result.ClusterAddr = rendered
+	}
+
+	sharedConfig, err := configutil.ParseConfig(d)
+	if err != nil {
+		return nil, err
+	}
+	result.SharedConfig = sharedConfig
 
 	if result.MaxLeaseTTLRaw != nil {
 		if result.MaxLeaseTTL, err = parseutil.ParseDurationSecond(result.MaxLeaseTTLRaw); err != nil {
@@ -494,12 +549,6 @@ func ParseConfig(d string) (*Config, error) {
 		}
 	}
 
-	if result.DefaultMaxRequestDurationRaw != nil {
-		if result.DefaultMaxRequestDuration, err = parseutil.ParseDurationSecond(result.DefaultMaxRequestDurationRaw); err != nil {
-			return nil, err
-		}
-	}
-
 	if result.EnableUIRaw != nil {
 		if result.EnableUI, err = parseutil.ParseBool(result.EnableUIRaw); err != nil {
 			return nil, err
@@ -508,12 +557,6 @@ func ParseConfig(d string) (*Config, error) {
 
 	if result.DisableCacheRaw != nil {
 		if result.DisableCache, err = parseutil.ParseBool(result.DisableCacheRaw); err != nil {
-			return nil, err
-		}
-	}
-
-	if result.DisableMlockRaw != nil {
-		if result.DisableMlock, err = parseutil.ParseBool(result.DisableMlockRaw); err != nil {
 			return nil, err
 		}
 	}
@@ -536,6 +579,27 @@ func ParseConfig(d string) (*Config, error) {
 		}
 	}
 
+	if result.PluginFilePermissionsRaw != nil {
+		octalPermissionsString, err := parseutil.ParseString(result.PluginFilePermissionsRaw)
+		if err != nil {
+			return nil, err
+		}
+		pluginFilePermissions, err := strconv.ParseInt(octalPermissionsString, 8, 64)
+		if err != nil {
+			return nil, err
+		}
+		if pluginFilePermissions < math.MinInt || pluginFilePermissions > math.MaxInt {
+			return nil, fmt.Errorf("file permission value %v cannot be safely cast to int: exceeds bounds (%v, %v)", pluginFilePermissions, math.MinInt, math.MaxInt)
+		}
+		result.PluginFilePermissions = int(pluginFilePermissions)
+	}
+
+	if result.DisableSentinelTraceRaw != nil {
+		if result.DisableSentinelTrace, err = parseutil.ParseBool(result.DisableSentinelTraceRaw); err != nil {
+			return nil, err
+		}
+	}
+
 	if result.DisablePerformanceStandbyRaw != nil {
 		if result.DisablePerformanceStandby, err = parseutil.ParseBool(result.DisablePerformanceStandbyRaw); err != nil {
 			return nil, err
@@ -554,6 +618,23 @@ func ParseConfig(d string) (*Config, error) {
 		}
 	}
 
+	if result.EnableResponseHeaderHostnameRaw != nil {
+		if result.EnableResponseHeaderHostname, err = parseutil.ParseBool(result.EnableResponseHeaderHostnameRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.LogRequestsLevelRaw != nil {
+		result.LogRequestsLevel = strings.ToLower(strings.TrimSpace(result.LogRequestsLevelRaw.(string)))
+		result.LogRequestsLevelRaw = ""
+	}
+
+	if result.EnableResponseHeaderRaftNodeIDRaw != nil {
+		if result.EnableResponseHeaderRaftNodeID, err = parseutil.ParseBool(result.EnableResponseHeaderRaftNodeIDRaw); err != nil {
+			return nil, err
+		}
+	}
+
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
 		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
@@ -561,60 +642,56 @@ func ParseConfig(d string) (*Config, error) {
 
 	// Look for storage but still support old backend
 	if o := list.Filter("storage"); len(o.Items) > 0 {
-		if err := ParseStorage(&result, o, "storage"); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'storage': {{err}}", err)
+		delete(result.UnusedKeys, "storage")
+		if err := ParseStorage(result, o, "storage"); err != nil {
+			return nil, fmt.Errorf("error parsing 'storage': %w", err)
 		}
+		result.found(result.Storage.Type, result.Storage.Type)
 	} else {
+		delete(result.UnusedKeys, "backend")
 		if o := list.Filter("backend"); len(o.Items) > 0 {
-			if err := ParseStorage(&result, o, "backend"); err != nil {
-				return nil, errwrap.Wrapf("error parsing 'backend': {{err}}", err)
+			if err := ParseStorage(result, o, "backend"); err != nil {
+				return nil, fmt.Errorf("error parsing 'backend': %w", err)
 			}
 		}
 	}
 
 	if o := list.Filter("ha_storage"); len(o.Items) > 0 {
-		if err := parseHAStorage(&result, o, "ha_storage"); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'ha_storage': {{err}}", err)
+		delete(result.UnusedKeys, "ha_storage")
+		if err := parseHAStorage(result, o, "ha_storage"); err != nil {
+			return nil, fmt.Errorf("error parsing 'ha_storage': %w", err)
 		}
 	} else {
 		if o := list.Filter("ha_backend"); len(o.Items) > 0 {
-			if err := parseHAStorage(&result, o, "ha_backend"); err != nil {
-				return nil, errwrap.Wrapf("error parsing 'ha_backend': {{err}}", err)
+			delete(result.UnusedKeys, "ha_backend")
+			if err := parseHAStorage(result, o, "ha_backend"); err != nil {
+				return nil, fmt.Errorf("error parsing 'ha_backend': %w", err)
 			}
 		}
 	}
 
-	if o := list.Filter("hsm"); len(o.Items) > 0 {
-		if err := parseSeals(&result, o, "hsm"); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'hsm': {{err}}", err)
+	// Parse service discovery
+	if o := list.Filter("service_registration"); len(o.Items) > 0 {
+		delete(result.UnusedKeys, "service_registration")
+		if err := parseServiceRegistration(result, o, "service_registration"); err != nil {
+			return nil, fmt.Errorf("error parsing 'service_registration': %w", err)
 		}
 	}
 
-	if o := list.Filter("seal"); len(o.Items) > 0 {
-		if err := parseSeals(&result, o, "seal"); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'seal': {{err}}", err)
+	if err := result.parseConfig(list); err != nil {
+		return nil, fmt.Errorf("error parsing enterprise config: %w", err)
+	}
+
+	// Remove all unused keys from Config that were satisfied by SharedConfig.
+	result.UnusedKeys = configutil.UnusedFieldDifference(result.UnusedKeys, nil, append(result.FoundKeys, sharedConfig.FoundKeys...))
+	// Assign file info
+	for _, v := range result.UnusedKeys {
+		for i := range v {
+			v[i].Filename = source
 		}
 	}
 
-	if o := list.Filter("entropy"); len(o.Items) > 0 {
-		if err := parseEntropy(&result, o, "entropy"); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'entropy': {{err}}", err)
-		}
-	}
-
-	if o := list.Filter("listener"); len(o.Items) > 0 {
-		if err := parseListeners(&result, o); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'listener': {{err}}", err)
-		}
-	}
-
-	if o := list.Filter("telemetry"); len(o.Items) > 0 {
-		if err := parseTelemetry(&result, o); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'telemetry': {{err}}", err)
-		}
-	}
-
-	return &result, nil
+	return result, nil
 }
 
 // LoadConfigDir loads all the configurations in the given directory
@@ -666,11 +743,11 @@ func LoadConfigDir(dir string) (*Config, error) {
 		}
 	}
 
-	var result *Config
+	result := NewConfig()
 	for _, f := range files {
 		config, err := LoadConfigFile(f)
 		if err != nil {
-			return nil, errwrap.Wrapf(fmt.Sprintf("error loading %q: {{err}}", f), err)
+			return nil, fmt.Errorf("error loading %q: %w", f, err)
 		}
 
 		if result == nil {
@@ -705,9 +782,23 @@ func ParseStorage(result *Config, list *ast.ObjectList, name string) error {
 		key = item.Keys[0].Token.Value().(string)
 	}
 
-	var m map[string]string
-	if err := hcl.DecodeObject(&m, item.Val); err != nil {
+	var config map[string]interface{}
+	if err := hcl.DecodeObject(&config, item.Val); err != nil {
 		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", name, key))
+	}
+
+	m := make(map[string]string)
+	for key, val := range config {
+		valStr, ok := val.(string)
+		if ok {
+			m[key] = valStr
+			continue
+		}
+		valBytes, err := json.Marshal(val)
+		if err != nil {
+			return err
+		}
+		m[key] = string(valBytes)
 	}
 
 	// Pull out the redirect address since it's common to all backends
@@ -773,9 +864,23 @@ func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 		key = item.Keys[0].Token.Value().(string)
 	}
 
-	var m map[string]string
-	if err := hcl.DecodeObject(&m, item.Val); err != nil {
+	var config map[string]interface{}
+	if err := hcl.DecodeObject(&config, item.Val); err != nil {
 		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", name, key))
+	}
+
+	m := make(map[string]string)
+	for key, val := range config {
+		valStr, ok := val.(string)
+		if ok {
+			m[key] = valStr
+			continue
+		}
+		valBytes, err := json.Marshal(val)
+		if err != nil {
+			return err
+		}
+		m[key] = string(valBytes)
 	}
 
 	// Pull out the redirect address since it's common to all backends
@@ -828,103 +933,27 @@ func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 	return nil
 }
 
-func parseSeals(result *Config, list *ast.ObjectList, blockName string) error {
-	if len(list.Items) > 2 {
-		return fmt.Errorf("only two or less %q blocks are permitted", blockName)
-	}
-
-	seals := make([]*Seal, 0, len(list.Items))
-	for _, item := range list.Items {
-		key := "seal"
-		if len(item.Keys) > 0 {
-			key = item.Keys[0].Token.Value().(string)
-		}
-
-		var m map[string]string
-		if err := hcl.DecodeObject(&m, item.Val); err != nil {
-			return multierror.Prefix(err, fmt.Sprintf("seal.%s:", key))
-		}
-		var disabled bool
-		var err error
-		if v, ok := m["disabled"]; ok {
-			disabled, err = strconv.ParseBool(v)
-			if err != nil {
-				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
-			}
-			delete(m, "disabled")
-		}
-		seals = append(seals, &Seal{
-			Type:     strings.ToLower(key),
-			Disabled: disabled,
-			Config:   m,
-		})
-	}
-
-	if len(seals) == 2 &&
-		(seals[0].Disabled && seals[1].Disabled || !seals[0].Disabled && !seals[1].Disabled) {
-		return errors.New("seals: two seals provided but both are disabled or neither are disabled")
-	}
-
-	result.Seals = seals
-
-	return nil
-}
-
-func parseListeners(result *Config, list *ast.ObjectList) error {
-	listeners := make([]*Listener, 0, len(list.Items))
-	for _, item := range list.Items {
-		key := "listener"
-		if len(item.Keys) > 0 {
-			key = item.Keys[0].Token.Value().(string)
-		}
-
-		var m map[string]interface{}
-		if err := hcl.DecodeObject(&m, item.Val); err != nil {
-			return multierror.Prefix(err, fmt.Sprintf("listeners.%s:", key))
-		}
-
-		lnType := strings.ToLower(key)
-
-		listeners = append(listeners, &Listener{
-			Type:   lnType,
-			Config: m,
-		})
-	}
-
-	result.Listeners = listeners
-	return nil
-}
-
-func parseTelemetry(result *Config, list *ast.ObjectList) error {
+func parseServiceRegistration(result *Config, list *ast.ObjectList, name string) error {
 	if len(list.Items) > 1 {
-		return fmt.Errorf("only one 'telemetry' block is permitted")
+		return fmt.Errorf("only one %q block is permitted", name)
 	}
 
-	// Get our one item
+	// Get our item
 	item := list.Items[0]
-
-	var t Telemetry
-	if err := hcl.DecodeObject(&t, item.Val); err != nil {
-		return multierror.Prefix(err, "telemetry:")
+	key := name
+	if len(item.Keys) > 0 {
+		key = item.Keys[0].Token.Value().(string)
 	}
 
-	if result.Telemetry == nil {
-		result.Telemetry = &Telemetry{}
+	var m map[string]string
+	if err := hcl.DecodeObject(&m, item.Val); err != nil {
+		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", name, key))
 	}
 
-	if err := hcl.DecodeObject(&result.Telemetry, item.Val); err != nil {
-		return multierror.Prefix(err, "telemetry:")
+	result.ServiceRegistration = &ServiceRegistration{
+		Type:   strings.ToLower(key),
+		Config: m,
 	}
-
-	if result.Telemetry.PrometheusRetentionTimeRaw != nil {
-		var err error
-		if result.Telemetry.PrometheusRetentionTime, err = parseutil.ParseDurationSecond(result.Telemetry.PrometheusRetentionTimeRaw); err != nil {
-			return err
-		}
-	} else {
-		result.Telemetry.PrometheusRetentionTime = prometheusDefaultRetentionTime
-	}
-
 	return nil
 }
 
@@ -938,28 +967,31 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 // - Seals.Config
 // - Telemetry.CirconusAPIToken
 func (c *Config) Sanitized() map[string]interface{} {
+	// Create shared config if it doesn't exist (e.g. in tests) so that map
+	// keys are actually populated
+	if c.SharedConfig == nil {
+		c.SharedConfig = new(configutil.SharedConfig)
+	}
+	sharedResult := c.SharedConfig.Sanitized()
 	result := map[string]interface{}{
 		"cache_size":              c.CacheSize,
+		"disable_sentinel_trace":  c.DisableSentinelTrace,
 		"disable_cache":           c.DisableCache,
-		"disable_mlock":           c.DisableMlock,
 		"disable_printable_check": c.DisablePrintableCheck,
 
 		"enable_ui": c.EnableUI,
 
-		"max_lease_ttl":     c.MaxLeaseTTL,
-		"default_lease_ttl": c.DefaultLeaseTTL,
+		"max_lease_ttl":     c.MaxLeaseTTL / time.Second,
+		"default_lease_ttl": c.DefaultLeaseTTL / time.Second,
 
-		"default_max_request_duration": c.DefaultMaxRequestDuration,
-
-		"cluster_name":          c.ClusterName,
 		"cluster_cipher_suites": c.ClusterCipherSuites,
 
 		"plugin_directory": c.PluginDirectory,
 
-		"log_level":  c.LogLevel,
-		"log_format": c.LogFormat,
+		"plugin_file_uid": c.PluginFileUid,
 
-		"pid_file":             c.PidFile,
+		"plugin_file_permissions": c.PluginFilePermissions,
+
 		"raw_storage_endpoint": c.EnableRawEndpoint,
 
 		"api_addr":           c.APIAddr,
@@ -971,19 +1003,15 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"disable_sealwrap": c.DisableSealWrap,
 
 		"disable_indexing": c.DisableIndexing,
-	}
 
-	// Sanitize listeners
-	if len(c.Listeners) != 0 {
-		var sanitizedListeners []interface{}
-		for _, ln := range c.Listeners {
-			cleanLn := map[string]interface{}{
-				"type":   ln.Type,
-				"config": ln.Config,
-			}
-			sanitizedListeners = append(sanitizedListeners, cleanLn)
-		}
-		result["listeners"] = sanitizedListeners
+		"enable_response_header_hostname": c.EnableResponseHeaderHostname,
+
+		"enable_response_header_raft_node_id": c.EnableResponseHeaderRaftNodeID,
+
+		"log_requests_level": c.LogRequestsLevel,
+	}
+	for k, v := range sharedResult {
+		result[k] = v
 	}
 
 	// Sanitize storage stanza
@@ -1008,47 +1036,38 @@ func (c *Config) Sanitized() map[string]interface{} {
 		result["ha_storage"] = sanitizedHAStorage
 	}
 
-	// Sanitize seals stanza
-	if len(c.Seals) != 0 {
-		var sanitizedSeals []interface{}
-		for _, s := range c.Seals {
-			cleanSeal := map[string]interface{}{
-				"type":     s.Type,
-				"disabled": s.Disabled,
-			}
-			sanitizedSeals = append(sanitizedSeals, cleanSeal)
+	// Sanitize service_registration stanza
+	if c.ServiceRegistration != nil {
+		sanitizedServiceRegistration := map[string]interface{}{
+			"type": c.ServiceRegistration.Type,
 		}
-		result["seals"] = sanitizedSeals
+		result["service_registration"] = sanitizedServiceRegistration
 	}
 
-	// Sanitize telemetry stanza
-	if c.Telemetry != nil {
-		sanitizedTelemetry := map[string]interface{}{
-			"statsite_address":                       c.Telemetry.StatsiteAddr,
-			"statsd_address":                         c.Telemetry.StatsdAddr,
-			"disable_hostname":                       c.Telemetry.DisableHostname,
-			"circonus_api_token":                     "",
-			"circonus_api_app":                       c.Telemetry.CirconusAPIApp,
-			"circonus_api_url":                       c.Telemetry.CirconusAPIURL,
-			"circonus_submission_interval":           c.Telemetry.CirconusSubmissionInterval,
-			"circonus_submission_url":                c.Telemetry.CirconusCheckSubmissionURL,
-			"circonus_check_id":                      c.Telemetry.CirconusCheckID,
-			"circonus_check_force_metric_activation": c.Telemetry.CirconusCheckForceMetricActivation,
-			"circonus_check_instance_id":             c.Telemetry.CirconusCheckInstanceID,
-			"circonus_check_search_tag":              c.Telemetry.CirconusCheckSearchTag,
-			"circonus_check_tags":                    c.Telemetry.CirconusCheckTags,
-			"circonus_check_display_name":            c.Telemetry.CirconusCheckDisplayName,
-			"circonus_broker_id":                     c.Telemetry.CirconusBrokerID,
-			"circonus_broker_select_tag":             c.Telemetry.CirconusBrokerSelectTag,
-			"dogstatsd_addr":                         c.Telemetry.DogStatsDAddr,
-			"dogstatsd_tags":                         c.Telemetry.DogStatsDTags,
-			"prometheus_retention_time":              c.Telemetry.PrometheusRetentionTime,
-			"stackdriver_project_id":                 c.Telemetry.StackdriverProjectID,
-			"stackdriver_location":                   c.Telemetry.StackdriverLocation,
-			"stackdriver_namespace":                  c.Telemetry.StackdriverNamespace,
-		}
-		result["telemetry"] = sanitizedTelemetry
+	entConfigResult := c.entConfig.Sanitized()
+	for k, v := range entConfigResult {
+		result[k] = v
 	}
 
 	return result
+}
+
+func (c *Config) Prune() {
+	for _, l := range c.Listeners {
+		l.RawConfig = nil
+		l.UnusedKeys = nil
+	}
+	c.FoundKeys = nil
+	c.UnusedKeys = nil
+	c.SharedConfig.FoundKeys = nil
+	c.SharedConfig.UnusedKeys = nil
+	if c.Telemetry != nil {
+		c.Telemetry.FoundKeys = nil
+		c.Telemetry.UnusedKeys = nil
+	}
+}
+
+func (c *Config) found(s, k string) {
+	delete(c.UnusedKeys, s)
+	c.FoundKeys = append(c.FoundKeys, k)
 }

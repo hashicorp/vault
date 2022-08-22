@@ -1,6 +1,7 @@
 package ldaputil
 
 import (
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -8,8 +9,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 
 	"github.com/hashicorp/errwrap"
 )
@@ -18,6 +19,14 @@ import (
 // Not all fields will be used by every integration.
 func ConfigFields() map[string]*framework.FieldSchema {
 	return map[string]*framework.FieldSchema{
+		"anonymous_group_search": {
+			Type:        framework.TypeBool,
+			Default:     false,
+			Description: "Use anonymous binds when performing LDAP group searches (if true the initial credentials will still be used for the initial connection test).",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Anonymous group search",
+			},
+		},
 		"url": {
 			Type:        framework.TypeString,
 			Default:     "ldap://127.0.0.1",
@@ -84,12 +93,29 @@ Default: cn`,
 			},
 		},
 
+		"userfilter": {
+			Type:    framework.TypeString,
+			Default: "({{.UserAttr}}={{.Username}})",
+			Description: `Go template for LDAP user search filer (optional)
+The template can access the following context variables: UserAttr, Username
+Default: ({{.UserAttr}}={{.Username}})`,
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "User Search Filter",
+			},
+		},
+
 		"upndomain": {
 			Type:        framework.TypeString,
 			Description: "Enables userPrincipalDomain login with [username]@UPNDomain (optional)",
 			DisplayAttrs: &framework.DisplayAttributes{
 				Name: "User Principal (UPN) Domain",
 			},
+		},
+
+		"username_as_alias": {
+			Type:        framework.TypeBool,
+			Default:     false,
+			Description: "If true, sets the alias name to the username",
 		},
 
 		"userattr": {
@@ -105,6 +131,28 @@ Default: cn`,
 		"certificate": {
 			Type:        framework.TypeString,
 			Description: "CA certificate to use when verifying LDAP server certificate, must be x509 PEM encoded (optional)",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name:     "CA certificate",
+				EditType: "file",
+			},
+		},
+
+		"client_tls_cert": {
+			Type:        framework.TypeString,
+			Description: "Client certificate to provide to the LDAP server, must be x509 PEM encoded (optional)",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name:     "Client certificate",
+				EditType: "file",
+			},
+		},
+
+		"client_tls_key": {
+			Type:        framework.TypeString,
+			Description: "Client certificate key to provide to the LDAP server, must be x509 PEM encoded (optional)",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name:     "Client key",
+				EditType: "file",
+			},
 		},
 
 		"discoverdn": {
@@ -134,21 +182,21 @@ Default: cn`,
 		"tls_min_version": {
 			Type:        framework.TypeString,
 			Default:     "tls12",
-			Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
+			Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11', 'tls12' or 'tls13'. Defaults to 'tls12'",
 			DisplayAttrs: &framework.DisplayAttributes{
 				Name: "Minimum TLS Version",
 			},
-			AllowedValues: []interface{}{"tls10", "tls11", "tls12"},
+			AllowedValues: []interface{}{"tls10", "tls11", "tls12", "tls13"},
 		},
 
 		"tls_max_version": {
 			Type:        framework.TypeString,
 			Default:     "tls12",
-			Description: "Maximum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
+			Description: "Maximum TLS version to use. Accepted values are 'tls10', 'tls11', 'tls12' or 'tls13'. Defaults to 'tls12'",
 			DisplayAttrs: &framework.DisplayAttributes{
 				Name: "Maximum TLS Version",
 			},
-			AllowedValues: []interface{}{"tls10", "tls11", "tls12"},
+			AllowedValues: []interface{}{"tls10", "tls11", "tls12", "tls13"},
 		},
 
 		"deny_null_bind": {
@@ -196,8 +244,29 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 		cfg = new(ConfigEntry)
 	}
 
+	if _, ok := d.Raw["anonymous_group_search"]; ok || !hadExisting {
+		cfg.AnonymousGroupSearch = d.Get("anonymous_group_search").(bool)
+	}
+
+	if _, ok := d.Raw["username_as_alias"]; ok || !hadExisting {
+		cfg.UsernameAsAlias = d.Get("username_as_alias").(bool)
+	}
+
 	if _, ok := d.Raw["url"]; ok || !hadExisting {
 		cfg.Url = strings.ToLower(d.Get("url").(string))
+	}
+
+	if _, ok := d.Raw["userfilter"]; ok || !hadExisting {
+		userfilter := d.Get("userfilter").(string)
+		if userfilter != "" {
+			// Validate the template before proceeding
+			_, err := template.New("queryTemplate").Parse(userfilter)
+			if err != nil {
+				return nil, errwrap.Wrapf("invalid userfilter: {{err}}", err)
+			}
+		}
+
+		cfg.UserFilter = userfilter
 	}
 
 	if _, ok := d.Raw["userattr"]; ok || !hadExisting {
@@ -236,18 +305,29 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 	if _, ok := d.Raw["certificate"]; ok || !hadExisting {
 		certificate := d.Get("certificate").(string)
 		if certificate != "" {
-			block, _ := pem.Decode([]byte(certificate))
-
-			if block == nil || block.Type != "CERTIFICATE" {
-				return nil, errors.New("failed to decode PEM block in the certificate")
-			}
-			_, err := x509.ParseCertificate(block.Bytes)
-			if err != nil {
-				return nil, errwrap.Wrapf("failed to parse certificate: {{err}}", err)
+			if err := validateCertificate([]byte(certificate)); err != nil {
+				return nil, errwrap.Wrapf("failed to parse server tls cert: {{err}}", err)
 			}
 		}
-
 		cfg.Certificate = certificate
+	}
+
+	if _, ok := d.Raw["client_tls_cert"]; ok || !hadExisting {
+		clientTLSCert := d.Get("client_tls_cert").(string)
+		cfg.ClientTLSCert = clientTLSCert
+	}
+
+	if _, ok := d.Raw["client_tls_key"]; ok || !hadExisting {
+		clientTLSKey := d.Get("client_tls_key").(string)
+		cfg.ClientTLSKey = clientTLSKey
+	}
+
+	if cfg.ClientTLSCert != "" && cfg.ClientTLSKey != "" {
+		if _, err := tls.X509KeyPair([]byte(cfg.ClientTLSCert), []byte(cfg.ClientTLSKey)); err != nil {
+			return nil, errwrap.Wrapf("failed to parse client X509 key pair: {{err}}", err)
+		}
+	} else if cfg.ClientTLSCert != "" || cfg.ClientTLSKey != "" {
+		return nil, fmt.Errorf("both client_tls_cert and client_tls_key must be set")
 	}
 
 	if _, ok := d.Raw["insecure_tls"]; ok || !hadExisting {
@@ -318,10 +398,13 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 type ConfigEntry struct {
 	Url                      string `json:"url"`
 	UserDN                   string `json:"userdn"`
+	AnonymousGroupSearch     bool   `json:"anonymous_group_search"`
 	GroupDN                  string `json:"groupdn"`
 	GroupFilter              string `json:"groupfilter"`
 	GroupAttr                string `json:"groupattr"`
 	UPNDomain                string `json:"upndomain"`
+	UsernameAsAlias          bool   `json:"username_as_alias"`
+	UserFilter               string `json:"userfilter"`
 	UserAttr                 string `json:"userattr"`
 	Certificate              string `json:"certificate"`
 	InsecureTLS              bool   `json:"insecure_tls"`
@@ -336,11 +419,13 @@ type ConfigEntry struct {
 	UsePre111GroupCNBehavior *bool  `json:"use_pre111_group_cn_behavior"`
 	RequestTimeout           int    `json:"request_timeout"`
 
-	// This json tag deviates from snake case because there was a past issue
-	// where the tag was being ignored, causing it to be jsonified as "CaseSensitiveNames".
+	// These json tags deviate from snake case because there was a past issue
+	// where the tag was being ignored, causing it to be jsonified as "CaseSensitiveNames", etc.
 	// To continue reading in users' previously stored values,
 	// we chose to carry that forward.
-	CaseSensitiveNames *bool `json:"CaseSensitiveNames,omitempty"`
+	CaseSensitiveNames *bool  `json:"CaseSensitiveNames,omitempty"`
+	ClientTLSCert      string `json:"ClientTLSCert"`
+	ClientTLSKey       string `json:"ClientTLSKey"`
 }
 
 func (c *ConfigEntry) Map() map[string]interface{} {
@@ -351,22 +436,26 @@ func (c *ConfigEntry) Map() map[string]interface{} {
 
 func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
 	m := map[string]interface{}{
-		"url":              c.Url,
-		"userdn":           c.UserDN,
-		"groupdn":          c.GroupDN,
-		"groupfilter":      c.GroupFilter,
-		"groupattr":        c.GroupAttr,
-		"upndomain":        c.UPNDomain,
-		"userattr":         c.UserAttr,
-		"certificate":      c.Certificate,
-		"insecure_tls":     c.InsecureTLS,
-		"starttls":         c.StartTLS,
-		"binddn":           c.BindDN,
-		"deny_null_bind":   c.DenyNullBind,
-		"discoverdn":       c.DiscoverDN,
-		"tls_min_version":  c.TLSMinVersion,
-		"tls_max_version":  c.TLSMaxVersion,
-		"use_token_groups": c.UseTokenGroups,
+		"url":                    c.Url,
+		"userdn":                 c.UserDN,
+		"groupdn":                c.GroupDN,
+		"groupfilter":            c.GroupFilter,
+		"groupattr":              c.GroupAttr,
+		"userfilter":             c.UserFilter,
+		"upndomain":              c.UPNDomain,
+		"userattr":               c.UserAttr,
+		"certificate":            c.Certificate,
+		"insecure_tls":           c.InsecureTLS,
+		"starttls":               c.StartTLS,
+		"binddn":                 c.BindDN,
+		"deny_null_bind":         c.DenyNullBind,
+		"discoverdn":             c.DiscoverDN,
+		"tls_min_version":        c.TLSMinVersion,
+		"tls_max_version":        c.TLSMaxVersion,
+		"use_token_groups":       c.UseTokenGroups,
+		"anonymous_group_search": c.AnonymousGroupSearch,
+		"request_timeout":        c.RequestTimeout,
+		"username_as_alias":      c.UsernameAsAlias,
 	}
 	if c.CaseSensitiveNames != nil {
 		m["case_sensitive_names"] = *c.CaseSensitiveNames
@@ -375,6 +464,18 @@ func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
 		m["use_pre111_group_cn_behavior"] = *c.UsePre111GroupCNBehavior
 	}
 	return m
+}
+
+func validateCertificate(pemBlock []byte) error {
+	block, _ := pem.Decode([]byte(pemBlock))
+	if block == nil || block.Type != "CERTIFICATE" {
+		return errors.New("failed to decode PEM block in the certificate")
+	}
+	_, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return fmt.Errorf("failed to parse certificate %s", err.Error())
+	}
+	return nil
 }
 
 func (c *ConfigEntry) Validate() error {
@@ -398,13 +499,13 @@ func (c *ConfigEntry) Validate() error {
 		return errors.New("'tls_max_version' must be greater than or equal to 'tls_min_version'")
 	}
 	if c.Certificate != "" {
-		block, _ := pem.Decode([]byte(c.Certificate))
-		if block == nil || block.Type != "CERTIFICATE" {
-			return errors.New("failed to decode PEM block in the certificate")
+		if err := validateCertificate([]byte(c.Certificate)); err != nil {
+			return errwrap.Wrapf("failed to parse server tls cert: {{err}}", err)
 		}
-		_, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return fmt.Errorf("failed to parse certificate %s", err.Error())
+	}
+	if c.ClientTLSCert != "" && c.ClientTLSKey != "" {
+		if _, err := tls.X509KeyPair([]byte(c.ClientTLSCert), []byte(c.ClientTLSKey)); err != nil {
+			return errwrap.Wrapf("failed to parse client X509 key pair: {{err}}", err)
 		}
 	}
 	return nil

@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
+	"github.com/hashicorp/vault/vault/seal"
 )
 
 func TestCore_Rekey_Lifecycle(t *testing.T) {
@@ -328,7 +329,7 @@ func TestCore_Rekey_Legacy(t *testing.T) {
 		SecretThreshold: 1,
 	}
 	c, masterKeys, _, root := TestCoreUnsealedWithConfigSealOpts(t, bc, nil,
-		&TestSealOpts{StoredKeys: StoredKeysNotSupported})
+		&seal.TestSealOpts{StoredKeys: seal.StoredKeysNotSupported})
 	testCore_Rekey_Update_Common(t, c, masterKeys, root, false)
 }
 
@@ -414,6 +415,7 @@ func TestCore_Rekey_Standby(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core.Shutdown()
 	keys, root := TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
@@ -436,6 +438,7 @@ func TestCore_Rekey_Standby(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core2.Shutdown()
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
@@ -518,7 +521,7 @@ func TestSysRekey_Verification_Invalid(t *testing.T) {
 	core, _, _, _ := TestCoreUnsealedWithConfigSealOpts(t,
 		&SealConfig{StoredShares: 1, SecretShares: 1, SecretThreshold: 1},
 		&SealConfig{StoredShares: 1, SecretShares: 1, SecretThreshold: 1},
-		&TestSealOpts{StoredKeys: StoredKeysSupportedGeneric})
+		&seal.TestSealOpts{StoredKeys: seal.StoredKeysSupportedGeneric})
 
 	err := core.BarrierRekeyInit(&SealConfig{
 		VerificationRequired: true,

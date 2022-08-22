@@ -5,7 +5,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/json"
@@ -18,7 +17,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -72,7 +70,7 @@ func (c *Core) Cluster(ctx context.Context) (*Cluster, error) {
 
 	// Decode the cluster information
 	if err = jsonutil.DecodeJSON(entry.Value, &cluster); err != nil {
-		return nil, errwrap.Wrapf("failed to decode cluster details: {{err}}", err)
+		return nil, fmt.Errorf("failed to decode cluster details: %w", err)
 	}
 
 	// Set in config file
@@ -137,7 +135,7 @@ func (c *Core) loadLocalClusterTLS(adv activeAdvertisement) (retErr error) {
 	cert, err := x509.ParseCertificate(adv.ClusterCert)
 	if err != nil {
 		c.logger.Error("failed parsing local cluster certificate", "error", err)
-		return errwrap.Wrapf("error parsing local cluster certificate: {{err}}", err)
+		return fmt.Errorf("error parsing local cluster certificate: %w", err)
 	}
 
 	c.localClusterParsedCert.Store(cert)
@@ -186,6 +184,10 @@ func (c *Core) setupCluster(ctx context.Context) error {
 		modified = true
 	}
 
+	// This is the first point at which the stored (or newly generated)
+	// cluster name is known.
+	c.metricSink.SetDefaultClusterName(cluster.Name)
+
 	if cluster.ID == "" {
 		c.logger.Debug("cluster ID not found, generating new")
 		// Generate a clusterID
@@ -216,13 +218,12 @@ func (c *Core) setupCluster(ctx context.Context) error {
 
 		// Create a certificate
 		if c.localClusterCert.Load().([]byte) == nil {
-			c.logger.Debug("generating local cluster certificate")
-
 			host, err := uuid.GenerateUUID()
 			if err != nil {
 				return err
 			}
 			host = fmt.Sprintf("fw-%s", host)
+			c.logger.Debug("generating local cluster certificate", "host", host)
 			template := &x509.Certificate{
 				Subject: pkix.Name{
 					CommonName: host,
@@ -244,13 +245,13 @@ func (c *Core) setupCluster(ctx context.Context) error {
 			certBytes, err := x509.CreateCertificate(rand.Reader, template, template, c.localClusterPrivateKey.Load().(*ecdsa.PrivateKey).Public(), c.localClusterPrivateKey.Load().(*ecdsa.PrivateKey))
 			if err != nil {
 				c.logger.Error("error generating self-signed cert", "error", err)
-				return errwrap.Wrapf("unable to generate local cluster certificate: {{err}}", err)
+				return fmt.Errorf("unable to generate local cluster certificate: %w", err)
 			}
 
 			parsedCert, err := x509.ParseCertificate(certBytes)
 			if err != nil {
 				c.logger.Error("error parsing self-signed cert", "error", err)
-				return errwrap.Wrapf("error parsing generated certificate: {{err}}", err)
+				return fmt.Errorf("error parsing generated certificate: %w", err)
 			}
 
 			c.localClusterCert.Store(certBytes)
@@ -277,6 +278,18 @@ func (c *Core) setupCluster(ctx context.Context) error {
 		}
 	}
 
+	c.clusterID.Store(cluster.ID)
+	return nil
+}
+
+func (c *Core) loadCluster(ctx context.Context) error {
+	cluster, err := c.Cluster(ctx)
+	if err != nil {
+		c.logger.Error("failed to get cluster details", "error", err)
+		return err
+	}
+
+	c.clusterID.Store(cluster.ID)
 	return nil
 }
 
@@ -302,7 +315,21 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 
 	c.logger.Debug("starting cluster listeners")
 
-	c.clusterListener.Store(cluster.NewListener(c.clusterListenerAddrs, c.clusterCipherSuites, c.logger.Named("cluster-listener")))
+	networkLayer := c.clusterNetworkLayer
+
+	if networkLayer == nil {
+		tcpLogger := c.logger.Named("cluster-listener.tcp")
+		networkLayer = cluster.NewTCPLayer(c.clusterListenerAddrs, tcpLogger)
+		c.AddLogger(tcpLogger)
+	}
+
+	listenerLogger := c.logger.Named("cluster-listener")
+	c.clusterListener.Store(cluster.NewListener(networkLayer,
+		c.clusterCipherSuites,
+		listenerLogger,
+		5*c.clusterHeartbeatInterval))
+
+	c.AddLogger(listenerLogger)
 
 	err := c.getClusterListener().Run(ctx)
 	if err != nil {
@@ -310,8 +337,15 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 	}
 	if strings.HasSuffix(c.ClusterAddr(), ":0") {
 		// If we listened on port 0, record the port the OS gave us.
-		c.clusterAddr.Store(fmt.Sprintf("https://%s", c.getClusterListener().Addrs()[0]))
+		c.clusterAddr.Store(fmt.Sprintf("https://%s", c.getClusterListener().Addr()))
 	}
+
+	if len(c.ClusterAddr()) != 0 {
+		if err := c.getClusterListener().SetAdvertiseAddr(c.ClusterAddr()); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -339,8 +373,7 @@ func (c *Core) stopClusterListener() {
 	c.logger.Info("stopping cluster listeners")
 
 	clusterListener.Stop()
-	var nilCL *cluster.Listener
-	c.clusterListener.Store(nilCL)
+	c.clusterListener.Store((*cluster.Listener)(nil))
 
 	c.logger.Info("cluster listeners successfully shut down")
 }
@@ -354,38 +387,4 @@ func (c *Core) SetClusterListenerAddrs(addrs []*net.TCPAddr) {
 
 func (c *Core) SetClusterHandler(handler http.Handler) {
 	c.clusterHandler = handler
-}
-
-// getGRPCDialer is used to return a dialer that has the correct TLS
-// configuration. Otherwise gRPC tries to be helpful and stomps all over our
-// NextProtos.
-func (c *Core) getGRPCDialer(ctx context.Context, alpnProto, serverName string, caCert *x509.Certificate) func(string, time.Duration) (net.Conn, error) {
-	return func(addr string, timeout time.Duration) (net.Conn, error) {
-		clusterListener := c.getClusterListener()
-		if clusterListener == nil {
-			return nil, errors.New("clustering disabled")
-		}
-
-		tlsConfig, err := clusterListener.TLSConfig(ctx)
-		if err != nil {
-			c.logger.Error("failed to get tls configuration", "error", err)
-			return nil, err
-		}
-		if serverName != "" {
-			tlsConfig.ServerName = serverName
-		}
-		if caCert != nil {
-			pool := x509.NewCertPool()
-			pool.AddCert(caCert)
-			tlsConfig.RootCAs = pool
-			tlsConfig.ClientCAs = pool
-		}
-		c.logger.Debug("creating rpc dialer", "host", tlsConfig.ServerName)
-
-		tlsConfig.NextProtos = []string{alpnProto}
-		dialer := &net.Dialer{
-			Timeout: timeout,
-		}
-		return tls.DialWithDialer(dialer, "tcp", addr, tlsConfig)
-	}
 }

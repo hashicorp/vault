@@ -10,12 +10,14 @@
 
 # misc
 /.sass-cache
+/.eslintcache
 /connect.lock
 /coverage/
 /libpeerconnection.log
 /npm-debug.log*
 /testem.log
 /yarn-error.log
+package-lock.json
 
 # ember-try
 /.node_modules.ember-try/

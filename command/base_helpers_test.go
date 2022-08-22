@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -150,12 +151,126 @@ func TestTruncateToSeconds(t *testing.T) {
 	for _, tc := range cases {
 		tc := tc
 
-		t.Run(fmt.Sprintf("%s", tc.d), func(t *testing.T) {
+		t.Run(tc.d.String(), func(t *testing.T) {
 			t.Parallel()
 
 			act := truncateToSeconds(tc.d)
 			if act != tc.exp {
 				t.Errorf("expected %d to be %d", act, tc.exp)
+			}
+		})
+	}
+}
+
+func TestParseFlagFile(t *testing.T) {
+	t.Parallel()
+
+	content := "some raw content"
+	tmpFile, err := ioutil.TempFile(os.TempDir(), "TestParseFlagFile")
+	if err != nil {
+		t.Fatalf("failed to create temporary file: %v", err)
+	}
+
+	defer os.Remove(tmpFile.Name())
+
+	if _, err := tmpFile.WriteString(content); err != nil {
+		t.Fatalf("failed to write to temporary file: %v", err)
+	}
+
+	cases := []struct {
+		value string
+		exp   string
+	}{
+		{
+			"",
+			"",
+		},
+		{
+			content,
+			content,
+		},
+		{
+			fmt.Sprintf("@%s", tmpFile.Name()),
+			content,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.value, func(t *testing.T) {
+			content, err := parseFlagFile(tc.value)
+			if err != nil {
+				t.Fatalf("unexpected error parsing flag value: %v", err)
+			}
+
+			if content != tc.exp {
+				t.Fatalf("expected %s to be %s", content, tc.exp)
+			}
+		})
+	}
+}
+
+func TestArgWarnings(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		args     []string
+		expected string
+	}{
+		{
+			[]string{"a", "b", "c"},
+			"",
+		},
+		{
+			[]string{"a", "-b"},
+			"-b",
+		},
+		{
+			[]string{"a", "--b"},
+			"--b",
+		},
+		{
+			[]string{"a-b", "-c"},
+			"-c",
+		},
+		{
+			[]string{"a", "-b-c"},
+			"-b-c",
+		},
+		{
+			[]string{"-a", "b"},
+			"-a",
+		},
+		{
+			[]string{globalFlagDetailed},
+			"",
+		},
+		{
+			[]string{"-" + globalFlagOutputCurlString + "=true"},
+			"",
+		},
+		{
+			[]string{"--" + globalFlagFormat + "=false"},
+			"",
+		},
+		{
+			[]string{"-x" + globalFlagDetailed},
+			"-x" + globalFlagDetailed,
+		},
+		{
+			[]string{"--x=" + globalFlagDetailed},
+			"--x=" + globalFlagDetailed,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.expected, func(t *testing.T) {
+			warnings := generateFlagWarnings(tc.args)
+			if !strings.Contains(warnings, tc.expected) {
+				t.Fatalf("expected %s to contain %s", warnings, tc.expected)
 			}
 		})
 	}

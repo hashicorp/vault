@@ -10,8 +10,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*TokenCreateCommand)(nil)
-var _ cli.CommandAutocomplete = (*TokenCreateCommand)(nil)
+var (
+	_ cli.Command             = (*TokenCreateCommand)(nil)
+	_ cli.CommandAutocomplete = (*TokenCreateCommand)(nil)
+)
 
 type TokenCreateCommand struct {
 	*BaseCommand
@@ -123,7 +125,7 @@ func (c *TokenCreateCommand) Flags() *FlagSets {
 		Default: false,
 		Usage: "Create the token with no parent. This prevents the token from " +
 			"being revoked when the token which created it expires. Setting this " +
-			"value requires sudo permissions.",
+			"value requires root or sudo permissions.",
 	})
 
 	f.BoolVar(&BoolVar{

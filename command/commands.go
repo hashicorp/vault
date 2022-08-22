@@ -28,6 +28,7 @@ import (
 	credCF "github.com/hashicorp/vault-plugin-auth-cf"
 	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
 	credOIDC "github.com/hashicorp/vault-plugin-auth-jwt"
+	credKerb "github.com/hashicorp/vault-plugin-auth-kerberos"
 	credOCI "github.com/hashicorp/vault-plugin-auth-oci"
 	credAws "github.com/hashicorp/vault/builtin/credential/aws"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
@@ -40,6 +41,7 @@ import (
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 
+	physAerospike "github.com/hashicorp/vault/physical/aerospike"
 	physAliCloudOSS "github.com/hashicorp/vault/physical/alicloudoss"
 	physAzure "github.com/hashicorp/vault/physical/azure"
 	physCassandra "github.com/hashicorp/vault/physical/cassandra"
@@ -62,6 +64,10 @@ import (
 	physZooKeeper "github.com/hashicorp/vault/physical/zookeeper"
 	physFile "github.com/hashicorp/vault/sdk/physical/file"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
+
+	sr "github.com/hashicorp/vault/serviceregistration"
+	csr "github.com/hashicorp/vault/serviceregistration/consul"
+	ksr "github.com/hashicorp/vault/serviceregistration/kubernetes"
 )
 
 const (
@@ -69,6 +75,17 @@ const (
 	EnvVaultCLINoColor = `VAULT_CLI_NO_COLOR`
 	// EnvVaultFormat is the output format
 	EnvVaultFormat = `VAULT_FORMAT`
+	// EnvVaultLicense is an env var used in Vault Enterprise to provide a license blob
+	EnvVaultLicense = "VAULT_LICENSE"
+	// EnvVaultLicensePath is an env var used in Vault Enterprise to provide a
+	// path to a license file on disk
+	EnvVaultLicensePath = "VAULT_LICENSE_PATH"
+	// EnvVaultDetailed is to output detailed information (e.g., ListResponseWithInfo).
+	EnvVaultDetailed = `VAULT_DETAILED`
+
+	// DisableSSCTokens is an env var used to disable index bearing
+	// token functionality
+	DisableSSCTokens = "VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS"
 
 	// flagNameAddress is the flag used in the base command to read in the
 	// address of the Vault server.
@@ -79,11 +96,11 @@ const (
 	// flagnameCAPath is the flag used in the base command to read in the CA
 	// cert path.
 	flagNameCAPath = "ca-path"
-	//flagNameClientCert is the flag used in the base command to read in the
-	//client key
+	// flagNameClientCert is the flag used in the base command to read in the
+	// client key
 	flagNameClientKey = "client-key"
-	//flagNameClientCert is the flag used in the base command to read in the
-	//client cert
+	// flagNameClientCert is the flag used in the base command to read in the
+	// client cert
 	flagNameClientCert = "client-cert"
 	// flagNameTLSSkipVerify is the flag used in the base command to read in
 	// the option to ignore TLS certificate verification.
@@ -105,6 +122,8 @@ const (
 	flagNameAllowedResponseHeaders = "allowed-response-headers"
 	// flagNameTokenType is the flag name used to force a specific token type
 	flagNameTokenType = "token-type"
+	// flagNameAllowedManagedKeys is the flag name used for auth/secrets enable
+	flagNameAllowedManagedKeys = "allowed-managed-keys"
 )
 
 var (
@@ -127,6 +146,7 @@ var (
 	}
 
 	physicalBackends = map[string]physical.Factory{
+		"aerospike":              physAerospike.NewAerospikeBackend,
 		"alicloudoss":            physAliCloudOSS.NewAliCloudOSSBackend,
 		"azure":                  physAzure.NewAzureBackend,
 		"cassandra":              physCassandra.NewCassandraBackend,
@@ -155,6 +175,13 @@ var (
 		"raft":                   physRaft.NewRaftBackend,
 		"zookeeper":              physZooKeeper.NewZooKeeperBackend,
 	}
+
+	serviceRegistrations = map[string]sr.Factory{
+		"consul":     csr.NewServiceRegistration,
+		"kubernetes": ksr.NewServiceRegistration,
+	}
+
+	initCommandsEnt = func(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {}
 )
 
 // Commands is the mapping of all the available commands.
@@ -169,6 +196,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		"cf":       &credCF.CLIHandler{},
 		"gcp":      &credGcp.CLIHandler{},
 		"github":   &credGitHub.CLIHandler{},
+		"kerberos": &credKerb.CLIHandler{},
 		"ldap":     &credLdap.CLIHandler{},
 		"oci":      &credOCI.CLIHandler{},
 		"oidc":     &credOIDC.CLIHandler{},
@@ -252,6 +280,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"auth move": func() (cli.Command, error) {
+			return &AuthMoveCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"debug": func() (cli.Command, error) {
 			return &DebugCommand{
 				BaseCommand: getBaseCommand(),
@@ -270,6 +303,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"lease renew": func() (cli.Command, error) {
 			return &LeaseRenewCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"lease lookup": func() (cli.Command, error) {
+			return &LeaseLookupCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -309,13 +347,33 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"namespace patch": func() (cli.Command, error) {
+			return &NamespacePatchCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"namespace delete": func() (cli.Command, error) {
 			return &NamespaceDeleteCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"namespace lock": func() (cli.Command, error) {
+			return &NamespaceAPILockCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"namespace unlock": func() (cli.Command, error) {
+			return &NamespaceAPIUnlockCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"operator": func() (cli.Command, error) {
 			return &OperatorCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator diagnose": func() (cli.Command, error) {
+			return &OperatorDiagnoseCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -346,8 +404,23 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"operator raft configuration": func() (cli.Command, error) {
-			return &OperatorRaftConfigurationCommand{
+		"operator raft autopilot get-config": func() (cli.Command, error) {
+			return &OperatorRaftAutopilotGetConfigCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft autopilot set-config": func() (cli.Command, error) {
+			return &OperatorRaftAutopilotSetConfigCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft autopilot state": func() (cli.Command, error) {
+			return &OperatorRaftAutopilotStateCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator raft list-peers": func() (cli.Command, error) {
+			return &OperatorRaftListPeersCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -396,8 +469,18 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"operator usage": func() (cli.Command, error) {
+			return &OperatorUsageCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"operator unseal": func() (cli.Command, error) {
 			return &OperatorUnsealCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"operator members": func() (cli.Command, error) {
+			return &OperatorMembersCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -428,6 +511,16 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"plugin register": func() (cli.Command, error) {
 			return &PluginRegisterCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin reload": func() (cli.Command, error) {
+			return &PluginReloadCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"plugin reload-status": func() (cli.Command, error) {
+			return &PluginReloadStatusCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -517,9 +610,12 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				CredentialBackends: credentialBackends,
 				LogicalBackends:    logicalBackends,
 				PhysicalBackends:   physicalBackends,
-				ShutdownCh:         MakeShutdownCh(),
-				SighupCh:           MakeSighupCh(),
-				SigUSR2Ch:          MakeSigUSR2Ch(),
+
+				ServiceRegistrations: serviceRegistrations,
+
+				ShutdownCh: MakeShutdownCh(),
+				SighupCh:   MakeSighupCh(),
+				SigUSR2Ch:  MakeSigUSR2Ch(),
 			}, nil
 		},
 		"ssh": func() (cli.Command, error) {
@@ -570,6 +666,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		"version": func() (cli.Command, error) {
 			return &VersionCommand{
 				VersionInfo: version.GetVersion(),
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"version-history": func() (cli.Command, error) {
+			return &VersionHistoryCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -638,6 +739,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"kv metadata patch": func() (cli.Command, error) {
+			return &KVMetadataPatchCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"kv metadata get": func() (cli.Command, error) {
 			return &KVMetadataGetCommand{
 				BaseCommand: getBaseCommand(),
@@ -648,7 +754,24 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"monitor": func() (cli.Command, error) {
+			return &MonitorCommand{
+				BaseCommand: getBaseCommand(),
+				ShutdownCh:  MakeShutdownCh(),
+			}, nil
+		},
 	}
+
+	// Disabled by default until functional
+	if os.Getenv(OperatorDiagnoseEnableEnv) != "" {
+		Commands["operator diagnose"] = func() (cli.Command, error) {
+			return &OperatorDiagnoseCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		}
+	}
+
+	initCommandsEnt(ui, serverCmdUi, runOpts)
 }
 
 // MakeShutdownCh returns a channel that can be used for shutdown
