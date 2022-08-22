@@ -27,13 +27,15 @@ export default class OidcAssignmentFormComponent extends Component {
   @service flashMessages;
   @tracked modelValidations;
   @tracked errorBanner;
+  @tracked invalidFormMessage;
 
   @task
   *save(event) {
     event.preventDefault();
     try {
-      const { isValid, state } = this.args.model.validate();
+      const { isValid, state, invalidFormMessage } = this.args.model.validate();
       this.modelValidations = isValid ? null : state;
+      this.invalidFormMessage = invalidFormMessage;
       if (isValid) {
         const { isNew, name } = this.args.model;
         yield this.args.model.save();

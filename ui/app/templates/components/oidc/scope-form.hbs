@@ -66,6 +66,11 @@
       Cancel
     </button>
   </div>
+  {{#if this.invalidFormMessage}}
+    <div class="control">
+      <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormMessage}} @mimicRefresh={{true}} />
+    </div>
+  {{/if}}
 </form>
 
 <Modal
