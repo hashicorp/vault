@@ -683,6 +683,17 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 	return nil
 }
 
+func isRevInfoIssuerValid(revInfo *revocationInfo, issuerIDCertMap map[issuerID]*x509.Certificate) bool {
+	if len(revInfo.CertificateIssuer) > 0 {
+		issuerId := revInfo.CertificateIssuer
+		if _, issuerExists := issuerIDCertMap[issuerId]; issuerExists {
+			return true
+		}
+	}
+
+	return false
+}
+
 func associateRevokedCertWithIsssuer(revInfo *revocationInfo, revokedCert *x509.Certificate, issuerIDCertMap map[issuerID]*x509.Certificate) bool {
 	for issuerId, issuerCert := range issuerIDCertMap {
 		if bytes.Equal(revokedCert.RawIssuer, issuerCert.RawSubject) {
@@ -782,12 +793,9 @@ func getRevokedCertEntries(ctx context.Context, req *logical.Request, issuerIDCe
 		// prefer it to manually checking each issuer signature, assuming it
 		// appears valid. It's highly unlikely for two different issuers
 		// to have the same id (after the first was deleted).
-		if len(revInfo.CertificateIssuer) > 0 {
-			issuerId := revInfo.CertificateIssuer
-			if _, issuerExists := issuerIDCertMap[issuerId]; issuerExists {
-				revokedCertsMap[issuerId] = append(revokedCertsMap[issuerId], newRevCert)
-				continue
-			}
+		if isRevInfoIssuerValid(&revInfo, issuerIDCertMap) {
+			revokedCertsMap[revInfo.CertificateIssuer] = append(revokedCertsMap[revInfo.CertificateIssuer], newRevCert)
+			continue
 
 			// Otherwise, fall through and update the entry.
 		}
