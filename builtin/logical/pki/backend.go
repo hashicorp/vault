@@ -449,10 +449,6 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 		return b.possibleDoubleCountedSerials[i] < b.possibleDoubleCountedSerials[j]
 	})
 
-	sort.Slice(b.possibleDoubleCountedRevokedSerials, func(i, j int) bool {
-		return b.possibleDoubleCountedRevokedSerials[i] < b.possibleDoubleCountedRevokedSerials[j]
-	})
-
 	listEntriesIndex := 0
 	possibleDoubleCountIndex := 0
 	for true {
@@ -478,6 +474,10 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 			continue
 		}
 	}
+
+	sort.Slice(b.possibleDoubleCountedRevokedSerials, func(i, j int) bool {
+		return b.possibleDoubleCountedRevokedSerials[i] < b.possibleDoubleCountedRevokedSerials[j]
+	})
 
 	listRevokedEntriesIndex := 0
 	possibleRevokedDoubleCountIndex := 0
