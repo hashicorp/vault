@@ -58,6 +58,7 @@ func TestOcsp_Disabled(t *testing.T) {
 
 // If we can't find the issuer within the request and have no default issuer to sign an Unknown response
 // with return an UnauthorizedErrorResponse/according to/the RFC, similar to if we are disabled (lack of authority)
+// This behavior differs from CRLs when an issuer is removed from a mount.
 func TestOcsp_UnknownIssuerWithNoDefault(t *testing.T) {
 	t.Parallel()
 

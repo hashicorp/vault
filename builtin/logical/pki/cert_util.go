@@ -152,7 +152,7 @@ func (sc *storageContext) fetchCAInfoByIssuerId(issuerId issuerID, usage issuerU
 }
 
 func fetchCertBySerialBigInt(ctx context.Context, b *backend, req *logical.Request, prefix string, serial *big.Int) (*logical.StorageEntry, error) {
-	return fetchCertBySerial(ctx, b, req, prefix, certutil.GetHexFormatted(serial.Bytes(), ":"))
+	return fetchCertBySerial(ctx, b, req, prefix, serialFromBigInt(serial))
 }
 
 // Allows fetching certificates from the backend; it handles the slightly
@@ -920,9 +920,10 @@ func signCert(b *backend,
 
 // otherNameRaw describes a name related to a certificate which is not in one
 // of the standard name formats. RFC 5280, 4.2.1.6:
-// OtherName ::= SEQUENCE {
-//      type-id    OBJECT IDENTIFIER,
-//      value      [0] EXPLICIT ANY DEFINED BY type-id }
+//
+//	OtherName ::= SEQUENCE {
+//	     type-id    OBJECT IDENTIFIER,
+//	     value      [0] EXPLICIT ANY DEFINED BY type-id }
 type otherNameRaw struct {
 	TypeID asn1.ObjectIdentifier
 	Value  asn1.RawValue
