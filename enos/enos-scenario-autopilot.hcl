@@ -1,12 +1,10 @@
-scenario "upgrade" {
+scenario "autopilot" {
   matrix {
-    arch           = ["amd64", "arm64"]
-    backend        = ["consul", "raft"]
-    builder        = ["local", "crt"]
-    consul_version = ["1.12.3", "1.11.7", "1.10.12"]
-    distro         = ["ubuntu", "rhel"]
-    edition        = ["oss", "ent"]
-    seal           = ["awskms", "shamir"]
+    arch    = ["amd64", "arm64"]
+    builder = ["local", "crt"]
+    distro  = ["ubuntu", "rhel"]
+    edition = ["ent"]
+    seal    = ["awskms", "shamir"]
   }
 
   terraform_cli = terraform_cli.default
@@ -19,7 +17,6 @@ scenario "upgrade" {
 
   locals {
     build_tags = {
-      "oss" = ["ui"]
       "ent" = ["enterprise", "ent"]
     }
     bundle_path             = abspath(var.vault_bundle_path)
@@ -56,8 +53,7 @@ scenario "upgrade" {
 
     variables {
       instance_type = [
-        var.backend_instance_type,
-        local.vault_instance_type,
+        local.vault_instance_type
       ]
     }
   }
@@ -66,42 +62,15 @@ scenario "upgrade" {
     module = module.create_vpc
 
     variables {
-      ami_architectures  = [matrix.arch]
-      availability_zones = step.find_azs.availability_zones
-      common_tags        = local.tags
+      ami_architectures = [matrix.arch]
     }
   }
 
   step "read_license" {
-    skip_step = matrix.edition == "oss"
-    module    = module.read_license
+    module = module.read_license
 
     variables {
       file_name = abspath(joinpath(path.root, "./support/vault.hclic"))
-    }
-  }
-
-  step "create_backend_cluster" {
-    module = "backend_${matrix.backend}"
-    depends_on = [
-      step.create_vpc,
-      step.build_vault,
-    ]
-
-    providers = {
-      enos = provider.enos.ubuntu
-    }
-
-    variables {
-      ami_id      = step.create_vpc.ami_ids["ubuntu"][matrix.arch]
-      common_tags = local.tags
-      consul_release = {
-        edition = var.backend_edition
-        version = matrix.consul_version
-      }
-      instance_type = var.backend_instance_type
-      kms_key_arn   = step.create_vpc.kms_key_arn
-      vpc_id        = step.create_vpc.vpc_id
     }
   }
 
@@ -109,9 +78,8 @@ scenario "upgrade" {
     module = module.vault_cluster
     depends_on = [
       step.create_vpc,
-      step.create_backend_cluster,
+      step.build_vault,
     ]
-
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
@@ -119,22 +87,38 @@ scenario "upgrade" {
     variables {
       ami_id                  = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
       common_tags             = local.tags
-      consul_cluster_tag      = step.create_backend_cluster.consul_cluster_tag
       dependencies_to_install = local.dependencies_to_install
       instance_type           = local.vault_instance_type
       kms_key_arn             = step.create_vpc.kms_key_arn
-      storage_backend         = matrix.backend
-      unseal_method           = matrix.seal
-      vault_release           = var.vault_upgrade_initial_release
-      vault_license           = matrix.edition != "oss" ? step.read_license.license : null
-      vpc_id                  = step.create_vpc.vpc_id
+      storage_backend         = "raft"
+      storage_backend_addl_config = {
+        autopilot_upgrade_version = var.vault_autopilot_initial_release.version
+      }
+      unseal_method = matrix.seal
+      vault_release = var.vault_autopilot_initial_release
+      vault_license = step.read_license.license
+      vpc_id        = step.create_vpc.vpc_id
     }
   }
 
-  step "upgrade_vault" {
-    module = module.vault_upgrade
+  step "get_local_version" {
+    module = module.get_local_version_from_make
+  }
+
+  step "create_autopilot_upgrade_storageconfig" {
+    module     = module.autopilot_upgrade_storageconfig
+    depends_on = [step.get_local_version]
+
+    variables {
+      vault_product_version = step.get_local_version.version
+    }
+  }
+
+  step "upgrade_vault_cluster_with_autopilot" {
+    module = module.vault_cluster
     depends_on = [
       step.create_vault_cluster,
+      step.create_autopilot_upgrade_storageconfig,
     ]
 
     providers = {
@@ -142,27 +126,38 @@ scenario "upgrade" {
     }
 
     variables {
-      vault_api_addr          = "http://localhost:8200"
-      vault_instances         = step.create_vault_cluster.vault_instances
-      vault_local_bundle_path = local.bundle_path
-      vault_unseal_keys       = matrix.seal == "shamir" ? step.create_vault_cluster.vault_unseal_keys_hex : null
-      vault_seal_type         = matrix.seal
+      ami_id                      = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
+      common_tags                 = local.tags
+      dependencies_to_install     = local.dependencies_to_install
+      instance_type               = local.vault_instance_type
+      kms_key_arn                 = step.create_vpc.kms_key_arn
+      storage_backend             = "raft"
+      storage_backend_addl_config = step.create_autopilot_upgrade_storageconfig.storage_addl_config
+      unseal_method               = matrix.seal
+      vault_cluster_tag           = step.create_vault_cluster.vault_cluster_tag
+      vault_init                  = false
+      vault_license               = step.read_license.license
+      vault_local_artifact_path   = local.bundle_path
+      vault_node_prefix           = "upgrade_node"
+      vault_root_token            = step.create_vault_cluster.vault_root_token
+      vault_unseal_when_no_init   = matrix.seal == "shamir"
+      vault_unseal_keys           = matrix.seal == "shamir" ? step.create_vault_cluster.vault_unseal_keys_hex : null
+      vpc_id                      = step.create_vpc.vpc_id
     }
   }
 
-  step "verify_vault_version" {
-    module = module.vault_verify_version
-    depends_on = [
-      step.create_backend_cluster,
-      step.upgrade_vault,
-    ]
+  step "verify_autopilot_upgraded_vault_cluster" {
+    module     = module.vault_verify_autopilot
+    depends_on = [step.upgrade_vault_cluster_with_autopilot]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
     variables {
-      vault_instances = step.create_vault_cluster.vault_instances
+      vault_autopilot_upgrade_version = step.get_local_version.version
+      vault_instances                 = step.create_vault_cluster.vault_instances
+      vault_root_token                = step.create_vault_cluster.vault_root_token
     }
   }
 
@@ -170,7 +165,7 @@ scenario "upgrade" {
     module = module.vault_verify_unsealed
     depends_on = [
       step.create_vault_cluster,
-      step.upgrade_vault,
+      step.upgrade_vault_cluster_with_autopilot,
     ]
 
     providers = {
@@ -184,11 +179,10 @@ scenario "upgrade" {
   }
 
   step "verify_raft_auto_join_voter" {
-    skip_step = matrix.backend != "raft"
-    module    = module.vault_verify_raft_auto_join_voter
+    module = module.vault_verify_raft_auto_join_voter
     depends_on = [
-      step.create_backend_cluster,
-      step.upgrade_vault,
+      step.create_vault_cluster,
+      step.upgrade_vault_cluster_with_autopilot,
     ]
 
     providers = {
@@ -239,5 +233,20 @@ scenario "upgrade" {
   output "vault_cluster_tag" {
     description = "The Vault cluster tag"
     value       = step.create_vault_cluster.vault_cluster_tag
+  }
+
+  output "upgraded_vault_cluster_instance_ids" {
+    description = "The Vault cluster instance IDs"
+    value       = step.upgrade_vault_cluster_with_autopilot.instance_ids
+  }
+
+  output "upgraded_vault_cluster_pub_ips" {
+    description = "The Vault cluster public IPs"
+    value       = step.upgrade_vault_cluster_with_autopilot.instance_public_ips
+  }
+
+  output "upgraded_vault_cluster_priv_ips" {
+    description = "The Vault cluster private IPs"
+    value       = step.upgrade_vault_cluster_with_autopilot.instance_private_ips
   }
 }

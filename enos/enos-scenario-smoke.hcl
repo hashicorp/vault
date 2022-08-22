@@ -6,7 +6,7 @@ scenario "smoke" {
     consul_version = ["1.12.3", "1.11.7", "1.10.12"]
     distro         = ["ubuntu", "rhel"]
     edition        = ["oss", "ent"]
-    seal_type      = ["awskms", "shamir"]
+    seal           = ["awskms", "shamir"]
   }
 
   terraform_cli = terraform_cli.default
@@ -18,6 +18,10 @@ scenario "smoke" {
   ]
 
   locals {
+    build_tags = {
+      "oss" = ["ui"]
+      "ent" = ["enterprise", "ent"]
+    }
     bundle_path             = abspath(var.vault_bundle_path)
     dependencies_to_install = ["jq"]
     enos_provider = {
@@ -29,13 +33,21 @@ scenario "smoke" {
       "Project" : "Enos",
       "Environment" : "ci"
     }, var.tags)
+    vault_instance_types = {
+      amd64 = "t3a.small"
+      arm64 = "t4g.small"
+    }
+    vault_instance_type = coalesce(var.vault_instance_type, local.vault_instance_types[matrix.arch])
   }
 
   step "build_vault" {
     module = matrix.builder == "crt" ? module.build_crt : module.build_local
 
     variables {
+      build_tags  = var.vault_local_build_tags != null ? var.vault_local_build_tags : local.build_tags[matrix.edition]
       bundle_path = local.bundle_path
+      goarch      = matrix.arch
+      goos        = "linux"
     }
   }
 
@@ -45,7 +57,7 @@ scenario "smoke" {
     variables {
       instance_type = [
         var.backend_instance_type,
-        var.vault_instance_type
+        local.vault_instance_type
       ]
     }
   }
@@ -70,8 +82,11 @@ scenario "smoke" {
   }
 
   step "create_backend_cluster" {
-    module     = "backend_${matrix.backend}"
-    depends_on = [step.create_vpc]
+    module = "backend_${matrix.backend}"
+    depends_on = [
+      step.create_vpc,
+      step.build_vault,
+    ]
 
     providers = {
       enos = provider.enos.ubuntu
@@ -106,12 +121,10 @@ scenario "smoke" {
       common_tags               = local.tags
       consul_cluster_tag        = step.create_backend_cluster.consul_cluster_tag
       dependencies_to_install   = local.dependencies_to_install
-      instance_count            = var.vault_instance_count
-      instance_type             = var.vault_instance_type
+      instance_type             = local.vault_instance_type
       kms_key_arn               = step.create_vpc.kms_key_arn
       storage_backend           = matrix.backend
-      unseal_method             = matrix.seal_type
-      vault_install_dir         = var.vault_install_dir
+      unseal_method             = matrix.seal
       vault_local_artifact_path = local.bundle_path
       vault_license             = matrix.edition != "oss" ? step.read_license.license : null
       vpc_id                    = step.create_vpc.vpc_id
@@ -129,10 +142,8 @@ scenario "smoke" {
     }
 
     variables {
-      vault_install_dir    = var.vault_install_dir
-      vault_instance_count = var.vault_instance_count
-      vault_instances      = step.create_vault_cluster.vault_instances
-      vault_root_token     = step.create_vault_cluster.vault_root_token
+      vault_instances  = step.create_vault_cluster.vault_instances
+      vault_root_token = step.create_vault_cluster.vault_root_token
     }
   }
 
@@ -148,10 +159,8 @@ scenario "smoke" {
     }
 
     variables {
-      vault_install_dir    = var.vault_install_dir
-      vault_instance_count = var.vault_instance_count
-      vault_instances      = step.create_vault_cluster.vault_instances
-      vault_root_token     = step.create_vault_cluster.vault_root_token
+      vault_instances  = step.create_vault_cluster.vault_instances
+      vault_root_token = step.create_vault_cluster.vault_root_token
     }
   }
 
