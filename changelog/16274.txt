@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/oidc: Adds support for group membership parsing when using SecureAuth as an OIDC provider.
+```

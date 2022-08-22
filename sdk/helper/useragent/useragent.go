@@ -44,12 +44,29 @@ func String(comments ...string) string {
 // Given comments will be appended to the semicolon-delimited comment section.
 //
 // e.g. Vault/0.10.4 (+https://www.vaultproject.io/; azure-auth; go1.10.1; comment-0; comment-1)
+//
+// Returns an empty string if the given env is nil.
 func PluginString(env *logical.PluginEnvironment, pluginName string, comments ...string) string {
+	if env == nil {
+		return ""
+	}
+
+	// Construct comments
 	c := []string{"+" + projectURL}
 	if pluginName != "" {
 		c = append(c, pluginName)
 	}
 	c = append(c, rt)
 	c = append(c, comments...)
-	return fmt.Sprintf("Vault/%s (%s)", env.VaultVersion, strings.Join(c, "; "))
+
+	// Construct version string
+	v := env.VaultVersion
+	if env.VaultVersionPrerelease != "" {
+		v = fmt.Sprintf("%s-%s", v, env.VaultVersionPrerelease)
+	}
+	if env.VaultVersionMetadata != "" {
+		v = fmt.Sprintf("%s+%s", v, env.VaultVersionMetadata)
+	}
+
+	return fmt.Sprintf("Vault/%s (%s)", v, strings.Join(c, "; "))
 }

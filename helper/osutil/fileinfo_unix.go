@@ -51,3 +51,8 @@ func FileUidMatch(info fs.FileInfo, path string, uid int) (err error) {
 	}
 	return err
 }
+
+// Sets new umask and returns old umask
+func Umask(newmask int) int {
+	return syscall.Umask(newmask)
+}

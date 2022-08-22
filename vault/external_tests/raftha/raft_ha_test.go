@@ -1,7 +1,6 @@
 package raftha
 
 import (
-	"context"
 	"sync/atomic"
 	"testing"
 
@@ -87,7 +86,7 @@ func testRaftHANewCluster(t *testing.T, bundler teststorage.PhysicalBackendBundl
 			req.LeaderClientCert = string(cluster.CACertPEM)
 			req.LeaderClientKey = string(cluster.CAKeyPEM)
 		}
-		resp, err := client.Sys().RaftJoinWithContext(context.Background(), req)
+		resp, err := client.Sys().RaftJoin(req)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -101,21 +100,24 @@ func testRaftHANewCluster(t *testing.T, bundler teststorage.PhysicalBackendBundl
 
 	// Ensure peers are added
 	leaderClient := cluster.Cores[0].Client
-	testhelpers.VerifyRaftPeers(t, leaderClient, map[string]bool{
+	err := testhelpers.VerifyRaftPeers(t, leaderClient, map[string]bool{
 		"core-0": true,
 		"core-1": true,
 		"core-2": true,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Test remove peers
-	_, err := leaderClient.Logical().WriteWithContext(context.Background(), "sys/storage/raft/remove-peer", map[string]interface{}{
+	_, err = leaderClient.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
 		"server_id": "core-1",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = leaderClient.Logical().WriteWithContext(context.Background(), "sys/storage/raft/remove-peer", map[string]interface{}{
+	_, err = leaderClient.Logical().Write("sys/storage/raft/remove-peer", map[string]interface{}{
 		"server_id": "core-2",
 	})
 	if err != nil {
@@ -123,9 +125,12 @@ func testRaftHANewCluster(t *testing.T, bundler teststorage.PhysicalBackendBundl
 	}
 
 	// Ensure peers are removed
-	testhelpers.VerifyRaftPeers(t, leaderClient, map[string]bool{
+	err = testhelpers.VerifyRaftPeers(t, leaderClient, map[string]bool{
 		"core-0": true,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestRaft_HA_ExistingCluster(t *testing.T) {
@@ -203,7 +208,7 @@ func TestRaft_HA_ExistingCluster(t *testing.T) {
 		leaderClient := cluster.Cores[0].Client
 		leaderClient.SetToken(clusterRootToken)
 		{
-			_, err := leaderClient.Logical().WriteWithContext(context.Background(), "sys/storage/raft/bootstrap", nil)
+			_, err := leaderClient.Logical().Write("sys/storage/raft/bootstrap", nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -221,7 +226,7 @@ func TestRaft_HA_ExistingCluster(t *testing.T) {
 			req := &api.RaftJoinRequest{
 				LeaderCACert: string(cluster.CACertPEM),
 			}
-			resp, err := client.Sys().RaftJoinWithContext(context.Background(), req)
+			resp, err := client.Sys().RaftJoin(req)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -234,11 +239,14 @@ func TestRaft_HA_ExistingCluster(t *testing.T) {
 		joinFunc(cluster.Cores[2].Client)
 
 		// Ensure peers are added
-		testhelpers.VerifyRaftPeers(t, leaderClient, map[string]bool{
+		err := testhelpers.VerifyRaftPeers(t, leaderClient, map[string]bool{
 			"core-0": true,
 			"core-1": true,
 			"core-2": true,
 		})
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	updateCluster(t)

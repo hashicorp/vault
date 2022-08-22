@@ -181,7 +181,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <button type="submit" disabled={{@loading}} class="button is-primary {{if @loading "is-loading"}}">
+      <button type="submit" disabled={{@loading}} class="button is-primary {{if @loading 'is-loading'}}">
         Verify
       </button>
     </div>
@@ -192,7 +192,7 @@
     <AlertBanner
       @type={{if @valid "success" "danger"}}
       @title={{if @valid "Valid" "Not Valid"}}
-      @message="The input is {{if @valid "valid" "not valid"}} for the given {{if @signature "signature" "HMAC"}}"
+      @message="The input is {{if @valid 'valid' 'not valid'}} for the given {{if @signature 'signature' 'HMAC'}}"
       data-test-transit-verify="true"
     />
   </section>

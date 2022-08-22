@@ -2,7 +2,6 @@ package command
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"io/ioutil"
 	"os"
@@ -124,7 +123,7 @@ func TestPolicyWriteCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		policies, err := client.Sys().ListPoliciesWithContext(context.Background())
+		policies, err := client.Sys().ListPolicies()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -165,7 +164,7 @@ func TestPolicyWriteCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		policies, err := client.Sys().ListPoliciesWithContext(context.Background())
+		policies, err := client.Sys().ListPolicies()
 		if err != nil {
 			t.Fatal(err)
 		}

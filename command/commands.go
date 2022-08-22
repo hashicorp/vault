@@ -80,6 +80,8 @@ const (
 	// EnvVaultLicensePath is an env var used in Vault Enterprise to provide a
 	// path to a license file on disk
 	EnvVaultLicensePath = "VAULT_LICENSE_PATH"
+	// EnvVaultDetailed is to output detailed information (e.g., ListResponseWithInfo).
+	EnvVaultDetailed = `VAULT_DETAILED`
 
 	// DisableSSCTokens is an env var used to disable index bearing
 	// token functionality
@@ -342,6 +344,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"namespace create": func() (cli.Command, error) {
 			return &NamespaceCreateCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"namespace patch": func() (cli.Command, error) {
+			return &NamespacePatchCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},

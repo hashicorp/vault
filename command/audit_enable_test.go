@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -33,7 +32,7 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 		{
 			"empty",
 			nil,
-			"Missing TYPE!",
+			"Error enabling audit device: audit type missing. Valid types include 'file', 'socket' and 'syslog'.",
 			1,
 		},
 		{
@@ -109,7 +108,7 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		audits, err := client.Sys().ListAuditWithContext(context.Background())
+		audits, err := client.Sys().ListAudit()
 		if err != nil {
 			t.Fatal(err)
 		}

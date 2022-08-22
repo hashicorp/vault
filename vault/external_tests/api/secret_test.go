@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"reflect"
 	"strings"
@@ -170,14 +169,14 @@ func TestSecret_TokenID(t *testing.T) {
 		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/test", map[string]interface{}{
+		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
 			"password": "test",
 			"policies": "default",
 		}); err != nil {
 			t.Fatal(err)
 		}
 
-		secret, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/login/test", map[string]interface{}{
+		secret, err := client.Logical().Write("auth/userpass/login/test", map[string]interface{}{
 			"password": "test",
 		})
 		if err != nil || secret == nil {
@@ -200,7 +199,7 @@ func TestSecret_TokenID(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies: []string{"default"},
 		})
 		if err != nil {
@@ -223,7 +222,7 @@ func TestSecret_TokenID(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies: []string{"default"},
 		})
 		if err != nil {
@@ -231,7 +230,7 @@ func TestSecret_TokenID(t *testing.T) {
 		}
 		token := secret.Auth.ClientToken
 
-		secret, err = client.Auth().Token().LookupWithContext(context.Background(), token)
+		secret, err = client.Auth().Token().Lookup(token)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -251,7 +250,7 @@ func TestSecret_TokenID(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies: []string{"default"},
 		})
 		if err != nil {
@@ -260,7 +259,7 @@ func TestSecret_TokenID(t *testing.T) {
 		token := secret.Auth.ClientToken
 
 		client.SetToken(token)
-		secret, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+		secret, err = client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -280,7 +279,7 @@ func TestSecret_TokenID(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies: []string{"default"},
 		})
 		if err != nil {
@@ -288,7 +287,7 @@ func TestSecret_TokenID(t *testing.T) {
 		}
 		token := secret.Auth.ClientToken
 
-		secret, err = client.Auth().Token().RenewWithContext(context.Background(), token, 0)
+		secret, err = client.Auth().Token().Renew(token, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -308,7 +307,7 @@ func TestSecret_TokenID(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies: []string{"default"},
 		})
 		if err != nil {
@@ -317,7 +316,7 @@ func TestSecret_TokenID(t *testing.T) {
 		token := secret.Auth.ClientToken
 
 		client.SetToken(token)
-		secret, err = client.Auth().Token().RenewSelfWithContext(context.Background(), 0)
+		secret, err = client.Auth().Token().RenewSelf(0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -438,14 +437,14 @@ func TestSecret_TokenAccessor(t *testing.T) {
 		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/test", map[string]interface{}{
+		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
 			"password": "test",
 			"policies": "default",
 		}); err != nil {
 			t.Fatal(err)
 		}
 
-		secret, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/login/test", map[string]interface{}{
+		secret, err := client.Logical().Write("auth/userpass/login/test", map[string]interface{}{
 			"password": "test",
 		})
 		if err != nil || secret == nil {
@@ -468,7 +467,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies: []string{"default"},
 		})
 		if err != nil {
@@ -491,7 +490,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies: []string{"default"},
 		})
 		if err != nil {
@@ -499,7 +498,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 		}
 		token, accessor := secret.Auth.ClientToken, secret.Auth.Accessor
 
-		secret, err = client.Auth().Token().LookupWithContext(context.Background(), token)
+		secret, err = client.Auth().Token().Lookup(token)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -519,7 +518,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies: []string{"default"},
 		})
 		if err != nil {
@@ -528,7 +527,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 		token, accessor := secret.Auth.ClientToken, secret.Auth.Accessor
 
 		client.SetToken(token)
-		secret, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+		secret, err = client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -548,7 +547,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies: []string{"default"},
 		})
 		if err != nil {
@@ -556,7 +555,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 		}
 		token, accessor := secret.Auth.ClientToken, secret.Auth.Accessor
 
-		secret, err = client.Auth().Token().RenewWithContext(context.Background(), token, 0)
+		secret, err = client.Auth().Token().Renew(token, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -576,7 +575,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies: []string{"default"},
 		})
 		if err != nil {
@@ -585,7 +584,7 @@ func TestSecret_TokenAccessor(t *testing.T) {
 		token, accessor := secret.Auth.ClientToken, secret.Auth.Accessor
 
 		client.SetToken(token)
-		secret, err = client.Auth().Token().RenewSelfWithContext(context.Background(), 0)
+		secret, err = client.Auth().Token().RenewSelf(0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -674,7 +673,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/test", map[string]interface{}{
+		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
 			"password": "test",
 			"policies": "default",
 			"num_uses": uses,
@@ -682,7 +681,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		secret, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/login/test", map[string]interface{}{
+		secret, err := client.Logical().Write("auth/userpass/login/test", map[string]interface{}{
 			"password": "test",
 		})
 		if err != nil || secret == nil {
@@ -708,7 +707,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 
 		uses := 5
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies: []string{"default"},
 			NumUses:  uses,
 		})
@@ -735,7 +734,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 
 		uses := 5
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies: []string{"default"},
 			NumUses:  uses,
 		})
@@ -744,7 +743,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 		}
 		token := secret.Auth.ClientToken
 
-		secret, err = client.Auth().Token().LookupWithContext(context.Background(), token)
+		secret, err = client.Auth().Token().Lookup(token)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -766,7 +765,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 
 		uses := 5
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies: []string{"default"},
 			NumUses:  uses,
 		})
@@ -776,7 +775,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 		token := secret.Auth.ClientToken
 
 		client.SetToken(token)
-		secret, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+		secret, err = client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -799,7 +798,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 
 		uses := 5
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies: []string{"default"},
 			NumUses:  uses,
 		})
@@ -808,7 +807,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 		}
 		token := secret.Auth.ClientToken
 
-		secret, err = client.Auth().Token().RenewWithContext(context.Background(), token, 0)
+		secret, err = client.Auth().Token().Renew(token, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -832,7 +831,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 
 		uses := 5
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies: []string{"default"},
 			NumUses:  uses,
 		})
@@ -842,7 +841,7 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 		token := secret.Auth.ClientToken
 
 		client.SetToken(token)
-		secret, err = client.Auth().Token().RenewSelfWithContext(context.Background(), 0)
+		secret, err = client.Auth().Token().RenewSelf(0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -977,14 +976,14 @@ func TestSecret_TokenPolicies(t *testing.T) {
 		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/test", map[string]interface{}{
+		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
 			"password": "test",
 			"policies": strings.Join(policies, ","),
 		}); err != nil {
 			t.Fatal(err)
 		}
 
-		secret, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/login/test", map[string]interface{}{
+		secret, err := client.Logical().Write("auth/userpass/login/test", map[string]interface{}{
 			"password": "test",
 		})
 		if err != nil || secret == nil {
@@ -1008,7 +1007,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 
 		policies := []string{"bar", "default", "foo"}
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies: policies,
 		})
 		if err != nil {
@@ -1032,7 +1031,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 
 		policies := []string{"bar", "default", "foo"}
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies: policies,
 		})
 		if err != nil {
@@ -1040,7 +1039,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 		}
 		token := secret.Auth.ClientToken
 
-		secret, err = client.Auth().Token().LookupWithContext(context.Background(), token)
+		secret, err = client.Auth().Token().Lookup(token)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1062,7 +1061,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 
 		policies := []string{"bar", "default", "foo"}
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies: policies,
 		})
 		if err != nil {
@@ -1071,7 +1070,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 		token := secret.Auth.ClientToken
 
 		client.SetToken(token)
-		secret, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+		secret, err = client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1093,7 +1092,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 
 		policies := []string{"bar", "default", "foo"}
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies: policies,
 		})
 		if err != nil {
@@ -1101,7 +1100,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 		}
 		token := secret.Auth.ClientToken
 
-		secret, err = client.Auth().Token().RenewWithContext(context.Background(), token, 0)
+		secret, err = client.Auth().Token().Renew(token, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1123,7 +1122,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 
 		policies := []string{"bar", "default", "foo"}
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies: policies,
 		})
 		if err != nil {
@@ -1132,7 +1131,7 @@ func TestSecret_TokenPolicies(t *testing.T) {
 		token := secret.Auth.ClientToken
 
 		client.SetToken(token)
-		secret, err = client.Auth().Token().RenewSelfWithContext(context.Background(), 0)
+		secret, err = client.Auth().Token().RenewSelf(0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1275,14 +1274,14 @@ func TestSecret_TokenMetadata(t *testing.T) {
 		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/test", map[string]interface{}{
+		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
 			"password": "test",
 			"policies": "default",
 		}); err != nil {
 			t.Fatal(err)
 		}
 
-		secret, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/login/test", map[string]interface{}{
+		secret, err := client.Logical().Write("auth/userpass/login/test", map[string]interface{}{
 			"password": "test",
 		})
 		if err != nil || secret == nil {
@@ -1306,7 +1305,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 
 		metadata := map[string]string{"username": "test"}
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Metadata: metadata,
 			Policies: []string{"default"},
 		})
@@ -1331,7 +1330,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 
 		metadata := map[string]string{"username": "test"}
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Metadata: metadata,
 			Policies: []string{"default"},
 		})
@@ -1340,7 +1339,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 		}
 		token := secret.Auth.ClientToken
 
-		secret, err = client.Auth().Token().LookupWithContext(context.Background(), token)
+		secret, err = client.Auth().Token().Lookup(token)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1362,7 +1361,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 
 		metadata := map[string]string{"username": "test"}
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Metadata: metadata,
 			Policies: []string{"default"},
 		})
@@ -1372,7 +1371,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 		token := secret.Auth.ClientToken
 
 		client.SetToken(token)
-		secret, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+		secret, err = client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1394,7 +1393,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 
 		metadata := map[string]string{"username": "test"}
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Metadata: metadata,
 			Policies: []string{"default"},
 		})
@@ -1403,7 +1402,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 		}
 		token := secret.Auth.ClientToken
 
-		secret, err = client.Auth().Token().RenewWithContext(context.Background(), token, 0)
+		secret, err = client.Auth().Token().Renew(token, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1425,7 +1424,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 
 		metadata := map[string]string{"username": "test"}
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Metadata: metadata,
 			Policies: []string{"default"},
 		})
@@ -1435,7 +1434,7 @@ func TestSecret_TokenMetadata(t *testing.T) {
 		token := secret.Auth.ClientToken
 
 		client.SetToken(token)
-		secret, err = client.Auth().Token().RenewSelfWithContext(context.Background(), 0)
+		secret, err = client.Auth().Token().RenewSelf(0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1567,14 +1566,14 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/test", map[string]interface{}{
+		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
 			"password": "test",
 			"policies": "default",
 		}); err != nil {
 			t.Fatal(err)
 		}
 
-		secret, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/login/test", map[string]interface{}{
+		secret, err := client.Logical().Write("auth/userpass/login/test", map[string]interface{}{
 			"password": "test",
 		})
 		if err != nil || secret == nil {
@@ -1598,7 +1597,7 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 
 		renewable := true
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies:  []string{"default"},
 			Renewable: &renewable,
 		})
@@ -1623,7 +1622,7 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 
 		renewable := true
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies:  []string{"default"},
 			Renewable: &renewable,
 		})
@@ -1632,7 +1631,7 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 		}
 		token := secret.Auth.ClientToken
 
-		secret, err = client.Auth().Token().LookupWithContext(context.Background(), token)
+		secret, err = client.Auth().Token().Lookup(token)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1654,7 +1653,7 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 
 		renewable := true
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies:  []string{"default"},
 			Renewable: &renewable,
 		})
@@ -1664,7 +1663,7 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 		token := secret.Auth.ClientToken
 
 		client.SetToken(token)
-		secret, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+		secret, err = client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1686,7 +1685,7 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 
 		renewable := true
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies:  []string{"default"},
 			Renewable: &renewable,
 		})
@@ -1695,7 +1694,7 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 		}
 		token := secret.Auth.ClientToken
 
-		secret, err = client.Auth().Token().RenewWithContext(context.Background(), token, 0)
+		secret, err = client.Auth().Token().Renew(token, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1717,7 +1716,7 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 
 		renewable := true
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies:  []string{"default"},
 			Renewable: &renewable,
 		})
@@ -1727,7 +1726,7 @@ func TestSecret_TokenIsRenewable(t *testing.T) {
 		token := secret.Auth.ClientToken
 
 		client.SetToken(token)
-		secret, err = client.Auth().Token().RenewSelfWithContext(context.Background(), 0)
+		secret, err = client.Auth().Token().RenewSelf(0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1841,7 +1840,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 		if err := client.Sys().EnableAuth("userpass", "userpass", ""); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/users/test", map[string]interface{}{
+		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
 			"password":         "test",
 			"policies":         "default",
 			"ttl":              ttl.String(),
@@ -1850,7 +1849,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		secret, err := client.Logical().WriteWithContext(context.Background(), "auth/userpass/login/test", map[string]interface{}{
+		secret, err := client.Logical().Write("auth/userpass/login/test", map[string]interface{}{
 			"password": "test",
 		})
 		if err != nil || secret == nil {
@@ -1874,7 +1873,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 
 		ttl := 30 * time.Minute
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies:       []string{"default"},
 			TTL:            ttl.String(),
 			ExplicitMaxTTL: ttl.String(),
@@ -1900,7 +1899,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 
 		ttl := 30 * time.Minute
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies:       []string{"default"},
 			TTL:            ttl.String(),
 			ExplicitMaxTTL: ttl.String(),
@@ -1910,7 +1909,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 		}
 		token := secret.Auth.ClientToken
 
-		secret, err = client.Auth().Token().LookupWithContext(context.Background(), token)
+		secret, err = client.Auth().Token().Lookup(token)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1932,7 +1931,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 
 		ttl := 30 * time.Minute
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies:       []string{"default"},
 			TTL:            ttl.String(),
 			ExplicitMaxTTL: ttl.String(),
@@ -1943,7 +1942,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 		token := secret.Auth.ClientToken
 
 		client.SetToken(token)
-		secret, err = client.Auth().Token().LookupSelfWithContext(context.Background())
+		secret, err = client.Auth().Token().LookupSelf()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1965,7 +1964,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 
 		ttl := 30 * time.Minute
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies:       []string{"default"},
 			TTL:            ttl.String(),
 			ExplicitMaxTTL: ttl.String(),
@@ -1975,7 +1974,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 		}
 		token := secret.Auth.ClientToken
 
-		secret, err = client.Auth().Token().RenewWithContext(context.Background(), token, 0)
+		secret, err = client.Auth().Token().Renew(token, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1997,7 +1996,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 
 		ttl := 30 * time.Minute
 
-		secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+		secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 			Policies:       []string{"default"},
 			TTL:            ttl.String(),
 			ExplicitMaxTTL: ttl.String(),
@@ -2008,7 +2007,7 @@ func TestSecret_TokenTTL(t *testing.T) {
 		token := secret.Auth.ClientToken
 
 		client.SetToken(token)
-		secret, err = client.Auth().Token().RenewSelfWithContext(context.Background(), 0)
+		secret, err = client.Auth().Token().RenewSelf(0)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -12,10 +13,193 @@ import (
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-var dataKeys = []string{"username", "password", "last_vault_rotation", "rotation_period"}
+func TestBackend_Roles_CredentialTypes(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.System = logical.TestSystemView()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	type args struct {
+		credentialType   v5.CredentialType
+		credentialConfig map[string]string
+	}
+	tests := []struct {
+		name         string
+		args         args
+		wantErr      bool
+		expectedResp map[string]interface{}
+	}{
+		{
+			name: "role with invalid credential type",
+			args: args{
+				credentialType: v5.CredentialType(10),
+			},
+			wantErr: true,
+		},
+		{
+			name: "role with invalid credential type and valid credential config",
+			args: args{
+				credentialType: v5.CredentialType(7),
+				credentialConfig: map[string]string{
+					"password_policy": "test-policy",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "role with password credential type",
+			args: args{
+				credentialType: v5.CredentialTypePassword,
+			},
+			expectedResp: map[string]interface{}{
+				"credential_type":   v5.CredentialTypePassword.String(),
+				"credential_config": nil,
+			},
+		},
+		{
+			name: "role with password credential type and configuration",
+			args: args{
+				credentialType: v5.CredentialTypePassword,
+				credentialConfig: map[string]string{
+					"password_policy": "test-policy",
+				},
+			},
+			expectedResp: map[string]interface{}{
+				"credential_type": v5.CredentialTypePassword.String(),
+				"credential_config": map[string]interface{}{
+					"password_policy": "test-policy",
+				},
+			},
+		},
+		{
+			name: "role with rsa_private_key credential type and default configuration",
+			args: args{
+				credentialType: v5.CredentialTypeRSAPrivateKey,
+			},
+			expectedResp: map[string]interface{}{
+				"credential_type": v5.CredentialTypeRSAPrivateKey.String(),
+				"credential_config": map[string]interface{}{
+					"key_bits": json.Number("2048"),
+					"format":   "pkcs8",
+				},
+			},
+		},
+		{
+			name: "role with rsa_private_key credential type and 2048 bit configuration",
+			args: args{
+				credentialType: v5.CredentialTypeRSAPrivateKey,
+				credentialConfig: map[string]string{
+					"key_bits": "2048",
+				},
+			},
+			expectedResp: map[string]interface{}{
+				"credential_type": v5.CredentialTypeRSAPrivateKey.String(),
+				"credential_config": map[string]interface{}{
+					"key_bits": json.Number("2048"),
+					"format":   "pkcs8",
+				},
+			},
+		},
+		{
+			name: "role with rsa_private_key credential type and 3072 bit configuration",
+			args: args{
+				credentialType: v5.CredentialTypeRSAPrivateKey,
+				credentialConfig: map[string]string{
+					"key_bits": "3072",
+				},
+			},
+			expectedResp: map[string]interface{}{
+				"credential_type": v5.CredentialTypeRSAPrivateKey.String(),
+				"credential_config": map[string]interface{}{
+					"key_bits": json.Number("3072"),
+					"format":   "pkcs8",
+				},
+			},
+		},
+		{
+			name: "role with rsa_private_key credential type and 4096 bit configuration",
+			args: args{
+				credentialType: v5.CredentialTypeRSAPrivateKey,
+				credentialConfig: map[string]string{
+					"key_bits": "4096",
+				},
+			},
+			expectedResp: map[string]interface{}{
+				"credential_type": v5.CredentialTypeRSAPrivateKey.String(),
+				"credential_config": map[string]interface{}{
+					"key_bits": json.Number("4096"),
+					"format":   "pkcs8",
+				},
+			},
+		},
+		{
+			name: "role with rsa_private_key credential type invalid key_bits configuration",
+			args: args{
+				credentialType: v5.CredentialTypeRSAPrivateKey,
+				credentialConfig: map[string]string{
+					"key_bits": "256",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "role with rsa_private_key credential type invalid format configuration",
+			args: args{
+				credentialType: v5.CredentialTypeRSAPrivateKey,
+				credentialConfig: map[string]string{
+					"format": "pkcs1",
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := &logical.Request{
+				Operation: logical.CreateOperation,
+				Path:      "roles/test",
+				Storage:   config.StorageView,
+				Data: map[string]interface{}{
+					"db_name":             "test-database",
+					"creation_statements": "CREATE USER {{name}}",
+					"credential_type":     tt.args.credentialType.String(),
+					"credential_config":   tt.args.credentialConfig,
+				},
+			}
+
+			// Create the role
+			resp, err := b.HandleRequest(context.Background(), req)
+			if tt.wantErr {
+				assert.True(t, resp.IsError(), "expected error")
+				return
+			}
+			assert.False(t, resp.IsError())
+			assert.Nil(t, err)
+
+			// Read the role
+			req.Operation = logical.ReadOperation
+			resp, err = b.HandleRequest(context.Background(), req)
+			assert.False(t, resp.IsError())
+			assert.Nil(t, err)
+			for k, v := range tt.expectedResp {
+				assert.Equal(t, v, resp.Data[k])
+			}
+
+			// Delete the role
+			req.Operation = logical.DeleteOperation
+			resp, err = b.HandleRequest(context.Background(), req)
+			assert.False(t, resp.IsError())
+			assert.Nil(t, err)
+		})
+	}
+}
 
 func TestBackend_StaticRole_Config(t *testing.T) {
 	cluster, sys := getCluster(t)
@@ -154,6 +338,7 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 
 			expected := tc.expected
 			actual := make(map[string]interface{})
+			dataKeys := []string{"username", "password", "last_vault_rotation", "rotation_period"}
 			for _, key := range dataKeys {
 				if v, ok := resp.Data[key]; ok {
 					actual[key] = v
@@ -549,7 +734,6 @@ func TestWALsStillTrackedAfterUpdate(t *testing.T) {
 		Storage:   storage,
 		Data: map[string]interface{}{
 			"username":        "hashicorp",
-			"dn":              "uid=hashicorp,ou=users,dc=hashicorp,dc=com",
 			"rotation_period": "600s",
 		},
 	})

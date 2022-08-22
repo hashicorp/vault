@@ -72,6 +72,7 @@ module('Unit | Service | console', function (hooks) {
   ];
 
   test('it reads, writes, lists, deletes', function (assert) {
+    assert.expect(18);
     let ajax = sinon.stub();
     let uiConsole = this.owner.factoryFor('service:console').create({
       adapter() {

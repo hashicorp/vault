@@ -13,7 +13,7 @@ module('Acceptance | /access/', function (hooks) {
 
   test('it navigates', async function (assert) {
     await page.visit();
-    assert.ok(currentRouteName(), 'vault.cluster.access.methods', 'navigates to the correct route');
+    assert.equal(currentRouteName(), 'vault.cluster.access.methods', 'navigates to the correct route');
     assert.ok(page.navLinks.objectAt(0).isActive, 'the first link is active');
     assert.equal(page.navLinks.objectAt(0).text, 'Auth Methods');
   });

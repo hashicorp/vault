@@ -14,7 +14,7 @@ module.exports = () => {
     '@name',
     '@autocomplete',
     '@spellcheck',
-    '@disabled',
+    '@disabled', // not deprecated for LinkTo
     '@class',
     '@placeholder',
     '@wrap',
@@ -26,11 +26,22 @@ module.exports = () => {
   ];
   return {
     ElementNode(node) {
-      if (['Textarea', 'Input', 'LinkTo'].includes(node.tag)) {
+      if (['Textarea', 'Input', 'LinkTo', 'ToolbarSecretLink', 'SecretLink'].includes(node.tag)) {
         const attrs = node.attributes;
         let i = 0;
         while (i < attrs.length) {
-          const arg = deprecatedArgs.find((name) => name === attrs[i].name);
+          // LinkTo uses disabled as named arg
+          // ensure that it is not present as attribute since link will still work
+          // since ToolbarSecretLink wraps SecretLink and SecretLink wraps LinkTo include them as well
+          const disabledAsArg = ['LinkTo', 'SecretLink', 'ToolbarSecretLink'].includes(node.tag);
+          if (disabledAsArg && attrs[i].name === 'disabled') {
+            attrs[i].name = '@disabled';
+          }
+          const arg = deprecatedArgs.find((name) => {
+            return node.tag.includes('SecretLink') || (node.tag === 'LinkTo' && name === '@disabled')
+              ? false
+              : name === attrs[i].name;
+          });
           if (arg) {
             attrs[i].name = arg.slice(1);
           }

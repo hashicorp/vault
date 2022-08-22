@@ -1,28 +1,26 @@
-import { computed } from '@ember/object';
-import Component from '@ember/component';
+import Component from '@glimmer/component';
+import { action } from '@ember/object';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
-export default Component.extend({
-  onLinkClick() {},
-  tagName: '',
-  // so that ember-test-selectors doesn't log a warning
-  supportsDataTestProperties: true,
-  mode: 'list',
-
-  secret: null,
-  queryParams: null,
-  ariaLabel: null,
-
-  link: computed('mode', 'secret', function () {
-    const route = `vault.cluster.secrets.backend.${this.mode}`;
-    if ((this.mode !== 'versions' && !this.secret) || this.secret === ' ') {
+export default class SecretLink extends Component {
+  get link() {
+    const { mode, secret } = this.args;
+    const route = `vault.cluster.secrets.backend.${mode}`;
+    if ((mode !== 'versions' && !secret) || secret === ' ') {
       return { route: `${route}-root`, models: [] };
     } else {
-      return { route, models: [encodePath(this.secret)] };
+      return { route, models: [encodePath(secret)] };
     }
-  }),
-  query: computed('queryParams', function () {
-    const qp = this.queryParams || {};
+  }
+  get query() {
+    const qp = this.args.queryParams || {};
     return qp.isQueryParams ? qp.values : qp;
-  }),
-});
+  }
+
+  @action
+  onLinkClick() {
+    if (this.args.onLinkClick) {
+      this.args.onLinkClick(...arguments);
+    }
+  }
+}

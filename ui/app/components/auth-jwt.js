@@ -1,5 +1,6 @@
 import Ember from 'ember';
 import { inject as service } from '@ember/service';
+// ARG NOTE: Once you remove outer-html after glimmerizing you can remove the outer-html component
 import Component from './outer-html';
 import { later } from '@ember/runloop';
 import { task, timeout, waitForEvent } from 'ember-concurrency';
@@ -178,8 +179,14 @@ export default Component.extend({
       if (!this.isOIDC || !this.role || !this.role.authUrl) {
         return;
       }
-
-      await this.fetchRole.perform(this.roleName, { debounce: false });
+      try {
+        await this.fetchRole.perform(this.roleName, { debounce: false });
+      } catch (error) {
+        // this task could be cancelled if the instances in didReceiveAttrs resolve after this was started
+        if (error?.name !== 'TaskCancelation') {
+          throw error;
+        }
+      }
       let win = this.getWindow();
 
       const POPUP_WIDTH = 500;

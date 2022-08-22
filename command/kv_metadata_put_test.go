@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -27,7 +26,7 @@ func TestKvMetadataPutCommand_DeleteVersionAfter(t *testing.T) {
 	defer closer()
 
 	basePath := t.Name() + "/"
-	if err := client.Sys().MountWithContext(context.Background(), basePath, &api.MountInput{
+	if err := client.Sys().Mount(basePath, &api.MountInput{
 		Type: "kv-v2",
 	}); err != nil {
 		t.Fatal(err)
@@ -49,7 +48,7 @@ func TestKvMetadataPutCommand_DeleteVersionAfter(t *testing.T) {
 		t.Fatalf("expected %q but received %q", success, combined)
 	}
 
-	secret, err := client.Logical().ReadWithContext(context.Background(), metaFullPath)
+	secret, err := client.Logical().Read(metaFullPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +71,7 @@ func TestKvMetadataPutCommand_DeleteVersionAfter(t *testing.T) {
 		t.Errorf("expected %q but received %q", success, combined)
 	}
 
-	secret, err = client.Logical().ReadWithContext(context.Background(), metaFullPath)
+	secret, err = client.Logical().Read(metaFullPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +87,7 @@ func TestKvMetadataPutCommand_CustomMetadata(t *testing.T) {
 	basePath := t.Name() + "/"
 	secretPath := basePath + "secret/my-secret"
 
-	if err := client.Sys().MountWithContext(context.Background(), basePath, &api.MountInput{
+	if err := client.Sys().Mount(basePath, &api.MountInput{
 		Type: "kv-v2",
 	}); err != nil {
 		t.Fatalf("kv-v2 mount error: %#v", err)
@@ -111,7 +110,7 @@ func TestKvMetadataPutCommand_CustomMetadata(t *testing.T) {
 		t.Fatalf("Expected command output %q but received %q", expectedOutput, commandOutput)
 	}
 
-	metadata, err := client.Logical().ReadWithContext(context.Background(), metaFullPath)
+	metadata, err := client.Logical().Read(metaFullPath)
 	if err != nil {
 		t.Fatalf("Metadata read error: %#v", err)
 	}
@@ -142,7 +141,7 @@ func TestKvMetadataPutCommand_CustomMetadata(t *testing.T) {
 		t.Fatalf("Expected command output %q but received %q", expectedOutput, commandOutput)
 	}
 
-	metadata, err = client.Logical().ReadWithContext(context.Background(), metaFullPath)
+	metadata, err = client.Logical().Read(metaFullPath)
 
 	if err != nil {
 		t.Fatalf("Metadata read error: %#v", err)
@@ -164,7 +163,7 @@ func TestKvMetadataPutCommand_UnprovidedFlags(t *testing.T) {
 	basePath := t.Name() + "/"
 	secretPath := basePath + "my-secret"
 
-	if err := client.Sys().MountWithContext(context.Background(), basePath, &api.MountInput{
+	if err := client.Sys().Mount(basePath, &api.MountInput{
 		Type: "kv-v2",
 	}); err != nil {
 		t.Fatalf("kv-v2 mount error: %#v", err)
@@ -187,7 +186,7 @@ func TestKvMetadataPutCommand_UnprovidedFlags(t *testing.T) {
 		t.Fatalf("expected 0 exit status but received %d", code)
 	}
 
-	secret, err := client.Logical().ReadWithContext(context.Background(), basePath+"metadata/"+"my-secret")
+	secret, err := client.Logical().Read(basePath + "metadata/" + "my-secret")
 	if err != nil {
 		t.Fatal(err)
 	}

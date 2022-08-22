@@ -21,7 +21,7 @@ const disableReplication = async (type, assert) => {
     await click('[data-test-disable-replication] button');
 
     const typeDisplay = type === 'dr' ? 'Disaster Recovery' : 'Performance';
-    await fillIn('[data-test-confirmation-modal-input="disable"]', typeDisplay);
+    await fillIn('[data-test-confirmation-modal-input="Disable Replication?"]', typeDisplay);
     await click('[data-test-confirm-button]');
     await settled(); // eslint-disable-line
 
@@ -61,6 +61,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
   });
 
   test('replication', async function (assert) {
+    assert.expect(17);
     const secondaryName = 'firstSecondary';
     const mode = 'deny';
     let mountPath;
@@ -115,7 +116,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     await click('[data-test-popup-menu-trigger]');
 
-    await click('[data-test-replication-mount-filter-link]');
+    await click('[data-test-replication-path-filter-link]');
 
     assert.equal(currentURL(), `/vault/replication/performance/secondaries/config/show/${secondaryName}`);
     assert.dom('[data-test-mount-config-mode]').includesText(mode, 'show page renders the correct mode');
@@ -366,9 +367,9 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await click('[data-test-demote-replication] [data-test-replication-action-trigger]');
 
     // enter confirmation text
-    await fillIn('[data-test-confirmation-modal-input="demote"]', 'Performance');
+    await fillIn('[data-test-confirmation-modal-input="Demote to secondary?"]', 'Performance');
     // Click confirm button
-    await click('[data-test-confirm-button="demote"]');
+    await click('[data-test-confirm-button="Demote to secondary?"]');
 
     await click('[data-test-replication-link="details"]');
 

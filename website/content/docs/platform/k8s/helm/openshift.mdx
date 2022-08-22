@@ -9,6 +9,8 @@ description: >-
 
 # Run Vault on OpenShift
 
+@include 'helm/version.mdx'
+
 The following documentation describes installing, running, and using
 Vault and **Vault Agent Injector** on OpenShift.
 
@@ -27,8 +29,8 @@ The following are required to install Vault and Vault Agent Injector
 on OpenShift:
 
 - Cluster Admin privileges to bind the `auth-delegator` role to Vault's service account
-- Helm v3
-- OpenShift 4.X
+- Helm v3.6+
+- OpenShift 4.3+
 - Vault Helm v0.6.0+
 - Vault K8s v0.4.0+
 

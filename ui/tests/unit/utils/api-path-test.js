@@ -4,7 +4,7 @@ import { module, test } from 'qunit';
 module('Unit | Util | api path', function () {
   test('it returns a function', function (assert) {
     let ret = apiPath`foo`;
-    assert.ok(typeof ret === 'function');
+    assert.strictEqual(typeof ret, 'function');
   });
 
   test('it iterpolates strings from passed context object', function (assert) {

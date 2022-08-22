@@ -529,7 +529,7 @@ func TestOIDC_Auth_Code_Flow_Confidential_CAP_Client(t *testing.T) {
 			client.SetToken(clientToken)
 
 			// Update allowed client IDs before the authentication flow
-			_, err = client.Logical().WriteWithContext(context.Background(), "identity/oidc/provider/test-provider", map[string]interface{}{
+			_, err = client.Logical().Write("identity/oidc/provider/test-provider", map[string]interface{}{
 				"allowed_client_ids": []string{clientID},
 			})
 			require.NoError(t, err)
@@ -599,7 +599,7 @@ func TestOIDC_Auth_Code_Flow_Confidential_CAP_Client(t *testing.T) {
 
 			// Assert that the access token is no longer able to obtain user info
 			// after removing the client from the provider's allowed client ids
-			_, err = client.Logical().WriteWithContext(context.Background(), "identity/oidc/provider/test-provider", map[string]interface{}{
+			_, err = client.Logical().Write("identity/oidc/provider/test-provider", map[string]interface{}{
 				"allowed_client_ids": []string{},
 			})
 			require.NoError(t, err)
@@ -860,7 +860,7 @@ func TestOIDC_Auth_Code_Flow_Public_CAP_Client(t *testing.T) {
 			client.SetToken(clientToken)
 
 			// Update allowed client IDs before the authentication flow
-			_, err = client.Logical().WriteWithContext(context.Background(), "identity/oidc/provider/test-provider", map[string]interface{}{
+			_, err = client.Logical().Write("identity/oidc/provider/test-provider", map[string]interface{}{
 				"allowed_client_ids": []string{clientID},
 			})
 			require.NoError(t, err)
@@ -935,7 +935,7 @@ func TestOIDC_Auth_Code_Flow_Public_CAP_Client(t *testing.T) {
 
 			// Assert that the access token is no longer able to obtain user info
 			// after removing the client from the provider's allowed client ids
-			_, err = client.Logical().WriteWithContext(context.Background(), "identity/oidc/provider/test-provider", map[string]interface{}{
+			_, err = client.Logical().Write("identity/oidc/provider/test-provider", map[string]interface{}{
 				"allowed_client_ids": []string{},
 			})
 			require.NoError(t, err)

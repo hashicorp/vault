@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/builtin/logical/ssh"
 	"github.com/hashicorp/vault/builtin/logical/transit"
+	"github.com/hashicorp/vault/helper/benchhelpers"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -125,7 +126,7 @@ func testVaultServerPluginDir(tb testing.TB, pluginDir string) (*api.Client, []s
 func testVaultServerCoreConfig(tb testing.TB, coreConfig *vault.CoreConfig) (*api.Client, []string, func()) {
 	tb.Helper()
 
-	cluster := vault.NewTestCluster(tb, coreConfig, &vault.TestClusterOptions{
+	cluster := vault.NewTestCluster(benchhelpers.TBtoT(tb), coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 		NumCores:    1, // Default is 3, but we don't need that many
 	})
@@ -133,7 +134,7 @@ func testVaultServerCoreConfig(tb testing.TB, coreConfig *vault.CoreConfig) (*ap
 
 	// Make it easy to get access to the active
 	core := cluster.Cores[0].Core
-	vault.TestWaitActive(tb, core)
+	vault.TestWaitActive(benchhelpers.TBtoT(tb), core)
 
 	// Get the client already setup for us!
 	client := cluster.Cores[0].Client
@@ -236,7 +237,7 @@ func testVaultServerBad(tb testing.TB) (*api.Client, func()) {
 func testTokenAndAccessor(tb testing.TB, client *api.Client) (string, string) {
 	tb.Helper()
 
-	secret, err := client.Auth().Token().CreateWithContext(context.Background(), &api.TokenCreateRequest{
+	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 		Policies: []string{"default"},
 		TTL:      "30m",
 	})

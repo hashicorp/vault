@@ -8,12 +8,15 @@ description: Vault server configuration reference.
 
 Outside of development mode, Vault servers are configured using a file.
 The format of this file is [HCL](https://github.com/hashicorp/hcl) or JSON.
+
+@include 'plugin-file-permissions-check.mdx'
+
 An example configuration is shown below:
 
 ```javascript
 storage "consul" {
   address = "127.0.0.1:8500"
-  path    = "vault"
+  path    = "vault/"
 }
 
 listener "tcp" {
@@ -116,6 +119,17 @@ to specify where the configuration is.
 - `plugin_directory` `(string: "")` – A directory from which plugins are
   allowed to be loaded. Vault must have permission to read files in this
   directory to successfully load plugins, and the value cannot be a symbolic link.
+
+  @include 'plugin-file-permissions-check.mdx'
+
+- `plugin_file_uid` `(integer: 0)` – Uid of the plugin directories and plugin binaries if they
+   are owned by an user other than the user running Vault. This only needs to be set if the 
+   file permissions check is enabled via the environment variable `VAULT_ENABLE_FILE_PERMISSIONS_CHECK`.
+
+- `plugin_file_permissions` `(string: "")` – Octal permission string of the plugin
+   directories and plugin binaries if they have write or execute permissions for group or others.
+   This only needs to be set if the file permissions check is enabled via the environment variable 
+   `VAULT_ENABLE_FILE_PERMISSIONS_CHECK`.
 
 - `telemetry` `([Telemetry][telemetry]: <none>)` – Specifies the telemetry
   reporting system.

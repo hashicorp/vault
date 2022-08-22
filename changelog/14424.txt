@@ -1,0 +1,3 @@
+```release-note:bug
+agent: Fix log level mismatch between ERR and ERROR
+```

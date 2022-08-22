@@ -71,7 +71,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	defer os.Setenv(api.EnvVaultCACert, os.Getenv(api.EnvVaultCACert))
 	os.Setenv(api.EnvVaultCACert, fmt.Sprintf("%s/ca_cert.pem", cluster.TempDir))
 
-	err = client.Sys().MountWithContext(context.Background(), "kv", &api.MountInput{
+	err = client.Sys().Mount("kv", &api.MountInput{
 		Type: "kv",
 	})
 	if err != nil {
@@ -79,7 +79,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	}
 
 	// Create a secret in the backend
-	_, err = client.Logical().WriteWithContext(context.Background(), "kv/foo", map[string]interface{}{
+	_, err = client.Logical().Write("kv/foo", map[string]interface{}{
 		"value": "bar",
 		"ttl":   "1h",
 	})
@@ -88,7 +88,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	}
 
 	// Add an kv-admin policy
-	if err := client.Sys().PutPolicyWithContext(context.Background(), "test-autoauth", policyAutoAuthAppRole); err != nil {
+	if err := client.Sys().PutPolicy("test-autoauth", policyAutoAuthAppRole); err != nil {
 		t.Fatal(err)
 	}
 
@@ -100,7 +100,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = client.Logical().WriteWithContext(context.Background(), "auth/approle/role/test1", map[string]interface{}{
+	_, err = client.Logical().Write("auth/approle/role/test1", map[string]interface{}{
 		"bind_secret_id": "true",
 		"token_ttl":      "3s",
 		"token_max_ttl":  "10s",
@@ -110,13 +110,13 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err := client.Logical().WriteWithContext(context.Background(), "auth/approle/role/test1/secret-id", nil)
+	resp, err := client.Logical().Write("auth/approle/role/test1/secret-id", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	secretID1 := resp.Data["secret_id"].(string)
 
-	resp, err = client.Logical().ReadWithContext(context.Background(), "auth/approle/role/test1/role-id")
+	resp, err = client.Logical().Read("auth/approle/role/test1/role-id")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -343,7 +343,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 		// Empty the token in the client to ensure that auto-auth token is used
 		testClient.SetToken("")
 
-		resp, err = testClient.Logical().ReadWithContext(context.Background(), "auth/token/lookup-self")
+		resp, err = testClient.Logical().Read("auth/token/lookup-self")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -354,14 +354,14 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 
 	// This block tests lease creation caching using the auto-auth token.
 	{
-		resp, err = testClient.Logical().ReadWithContext(context.Background(), "kv/foo")
+		resp, err = testClient.Logical().Read("kv/foo")
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		origReqID := resp.RequestID
 
-		resp, err = testClient.Logical().ReadWithContext(context.Background(), "kv/foo")
+		resp, err = testClient.Logical().Read("kv/foo")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -379,7 +379,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	// This block tests auth token creation caching (child, non-orphan tokens)
 	// using the auto-auth token.
 	{
-		resp, err = testClient.Logical().WriteWithContext(context.Background(), "auth/token/create", nil)
+		resp, err = testClient.Logical().Write("auth/token/create", nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -388,7 +388,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 		// Sleep for a bit to allow renewer logic to kick in
 		time.Sleep(20 * time.Millisecond)
 
-		resp, err = testClient.Logical().WriteWithContext(context.Background(), "auth/token/create", nil)
+		resp, err = testClient.Logical().Write("auth/token/create", nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -405,7 +405,7 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 		// Empty the token in the client to ensure that auto-auth token is used
 		testClient.SetToken(client.Token())
 
-		resp, err = testClient.Logical().ReadWithContext(context.Background(), "auth/token/lookup-self")
+		resp, err = testClient.Logical().Read("auth/token/lookup-self")
 		if err != nil {
 			t.Fatal(err)
 		}
