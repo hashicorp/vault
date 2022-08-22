@@ -15,7 +15,6 @@ import (
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
 
-	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -150,8 +149,8 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 			return nil, errutil.InternalError{Err: "stored CA information not able to be parsed"}
 		}
 
-		colonSerial := strings.Replace(strings.ToLower(serial), "-", ":", -1)
-		if colonSerial == certutil.GetHexFormatted(parsedBundle.Certificate.SerialNumber.Bytes(), ":") {
+		colonSerial := strings.ReplaceAll(strings.ToLower(serial), "-", ":")
+		if colonSerial == serialFromCert(parsedBundle.Certificate) {
 			return logical.ErrorResponse(fmt.Sprintf("adding issuer (id: %v) to its own CRL is not allowed", issuer)), nil
 		}
 	}
@@ -365,6 +364,10 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 		return fmt.Errorf("error building CRLs: unable to get revoked certificate entries: %v", err)
 	}
 
+	if err := augmentWithRevokedIssuers(issuerIDEntryMap, issuerIDCertMap, revokedCertsMap); err != nil {
+		return fmt.Errorf("error building CRLs: unable to parse revoked issuers: %v", err)
+	}
+
 	// Now we can call buildCRL once, on an arbitrary/representative issuer
 	// from each of these (keyID, subject) sets.
 	for _, subjectIssuersMap := range keySubjectIssuersMap {
@@ -571,6 +574,40 @@ func getRevokedCertEntries(ctx context.Context, req *logical.Request, issuerIDCe
 	return unassignedCerts, revokedCertsMap, nil
 }
 
+func augmentWithRevokedIssuers(issuerIDEntryMap map[issuerID]*issuerEntry, issuerIDCertMap map[issuerID]*x509.Certificate, revokedCertsMap map[issuerID][]pkix.RevokedCertificate) error {
+	// When setup our maps with the legacy CA bundle, we only have a
+	// single entry here. This entry is never revoked, so the outer loop
+	// will exit quickly.
+	for ourIssuerID, ourIssuer := range issuerIDEntryMap {
+		if !ourIssuer.Revoked {
+			continue
+		}
+
+		ourCert := issuerIDCertMap[ourIssuerID]
+		ourRevCert := pkix.RevokedCertificate{
+			SerialNumber:   ourCert.SerialNumber,
+			RevocationTime: ourIssuer.RevocationTimeUTC,
+		}
+
+		for otherIssuerID := range issuerIDEntryMap {
+			if otherIssuerID == ourIssuerID {
+				continue
+			}
+
+			// Find all _other_ certificates which verify this issuer,
+			// allowing us to add this revoked issuer to this issuer's
+			// CRL.
+			otherCert := issuerIDCertMap[otherIssuerID]
+			if err := ourCert.CheckSignatureFrom(otherCert); err == nil {
+				// Valid signature; add our result.
+				revokedCertsMap[otherIssuerID] = append(revokedCertsMap[otherIssuerID], ourRevCert)
+			}
+		}
+	}
+
+	return nil
+}
+
 // Builds a CRL by going through the list of revoked certificates and building
 // a new CRL with the stored revocation times and serial numbers.
 func buildCRL(sc *storageContext, forceNew bool, thisIssuerId issuerID, revoked []pkix.RevokedCertificate, identifier crlID, crlNumber int64) error {
@@ -622,6 +659,7 @@ WRITE:
 		Number:              big.NewInt(crlNumber),
 		ThisUpdate:          time.Now(),
 		NextUpdate:          time.Now().Add(crlLifetime),
+		SignatureAlgorithm:  signingBundle.RevocationSigAlg,
 	}
 
 	crlBytes, err := x509.CreateRevocationList(rand.Reader, revocationListTemplate, signingBundle.Certificate, signingBundle.PrivateKey)

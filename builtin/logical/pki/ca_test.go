@@ -26,6 +26,7 @@ import (
 )
 
 func TestBackend_CA_Steps(t *testing.T) {
+	t.Parallel()
 	var b *backend
 
 	factory := func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {

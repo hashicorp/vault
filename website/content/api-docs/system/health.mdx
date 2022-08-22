@@ -88,3 +88,42 @@ standby of its status.
   "cluster_id": "00af5aa8-c87d-b5fc-e82e-97cd8dfaf731"
 }
 ```
+
+### Sample Request to customize the status code being returned
+
+```shell-session
+$ curl -i https://127.0.0.1:8200/v1/sys/health\?drsecondarycode\=200
+
+HTTP/2 200
+cache-control: no-store
+content-type: application/json
+strict-transport-security: max-age=31536000; includeSubDomains
+content-length: 364
+date: Wed, 26 Jan 2022 09:21:13 GMT
+```
+
+### Sample Response
+
+This response is only returned for a `GET` request.
+
+Note: `replication_performance_mode` and `replication_dr_mode` reflect the state of
+the active node in the cluster; if you are querying it for a standby that has
+just come up, it may take time for the active node to inform the
+standby of its status.
+
+```json
+{
+  "initialized": true,
+  "sealed": false,
+  "standby": false,
+  "performance_standby": false,
+  "replication_performance_mode": "disabled",
+  "replication_dr_mode": "secondary",
+  "server_time_utc": 1643188873,
+  "version": "1.9.0+prem",
+  "cluster_name": "SECONDARY",
+  "cluster_id": "d2fbb13b-0830-70a3-4751-57b6b6d95d01",
+  "last_wal":13,
+  "license":{"state":"none","expiry_time":"","terminated":false}
+}
+```

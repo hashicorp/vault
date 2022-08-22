@@ -114,7 +114,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
       @type={{this.type}}
     />`);
 
-    assert.dom('[data-test-item="array"]').hasText('valueArray', 'Confirm link with item value exist');
+    assert.dom('[data-test-item="valueArray"]').hasText('valueArray', 'Confirm link with item value exist');
   });
 
   test('it renders as expected if a label and/or value do not exist', async function (assert) {

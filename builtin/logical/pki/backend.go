@@ -121,6 +121,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathIssue(&b),
 			pathRotateCRL(&b),
 			pathRevoke(&b),
+			pathRevokeWithKey(&b),
 			pathTidy(&b),
 			pathTidyStatus(&b),
 
@@ -140,6 +141,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathCrossSignIntermediate(&b),
 			pathConfigIssuers(&b),
 			pathReplaceRoot(&b),
+			pathRevokeIssuer(&b),
 
 			// Key APIs
 			pathListKeys(&b),

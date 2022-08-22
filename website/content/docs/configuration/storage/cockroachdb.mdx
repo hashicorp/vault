@@ -3,9 +3,7 @@ layout: docs
 page_title: CockroachDB - Storage Backends - Configuration
 description: >-
   The CockroachDB storage backend is used to persist Vault's data in a
-  CockroachDB
-
-  server or cluster.
+  CockroachDB server or cluster.
 ---
 
 # CockroachDB Storage Backend
@@ -13,8 +11,7 @@ description: >-
 The CockroachDB storage backend is used to persist Vault's data in a
 [CockroachDB][cockroachdb] server or cluster.
 
-- **No High Availability** – the CockroachDB storage backend does not support
-  high availability.
+- **High Availability** – the CockroachDB storage backend supports high availability.
 
 - **Community Supported** – the CockroachDB storage backend is supported by the
   community. While it has undergone development and review by HashiCorp
@@ -42,14 +39,20 @@ uses that driver to interact with the database.
 - `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
   requests to CockroachDB.
 
+- `ha_enabled` `(string: "true|false")` - Default not enabled.
+
+- `ha_table` `(string: "vault_ha_locks")` - Specifies the name of the table to use
+  for storing high availability information.
+
 ## `cockroachdb` Examples
 
-This example shows connecting to a PostgreSQL cluster using full SSL
-verification (recommended).
+This example shows connecting to a CockroachDB cluster using full SSL
+verification (recommended) and high availability enabled.
 
 ```hcl
 storage "cockroachdb" {
-  connection_url = "postgres://user:pass@localhost:5432/database?sslmode=verify-full"
+  connection_url = "postgres://user:pass@localhost:26257/database?sslmode=verify-full"
+  ha_enabled     = "true"
 }
 ```
 
@@ -58,7 +61,8 @@ To disable SSL verification (not recommended), replace `verify-full` with
 
 ```hcl
 storage "cockroachdb" {
-  connection_url = "postgres://user:pass@localhost:5432/database?sslmode=disable"
+  connection_url = "postgres://user:pass@localhost:26257/database?sslmode=disable"
+  ha_enabled     = "true"
 }
 ```
 

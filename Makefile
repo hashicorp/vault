@@ -8,14 +8,13 @@ EXTENDED_TEST_TIMEOUT=60m
 INTEG_TEST_TIMEOUT=120m
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS_CI=\
-	github.com/mitchellh/gox \
 	golang.org/x/tools/cmd/goimports
 EXTERNAL_TOOLS=\
 	github.com/client9/misspell/cmd/misspell
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
 
-GO_VERSION_MIN=1.17.11
+GO_VERSION_MIN=1.18.4
 GO_CMD?=go
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
@@ -202,10 +201,10 @@ fmtcheck:
 fmt:
 	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -w
 
-semgrep: 
+semgrep:
 	semgrep --include '*.go' --exclude 'vendor' -a -f tools/semgrep .
 
-semgrep-ci: 
+semgrep-ci:
 	semgrep --error --include '*.go' --exclude 'vendor' -f tools/semgrep/ci .
 
 assetcheck:

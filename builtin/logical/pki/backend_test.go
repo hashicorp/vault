@@ -12,6 +12,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
@@ -101,6 +102,7 @@ OzQeADTSCn5VidOfjDkIst9UXjMlrFfV9/oJEw5Eiqa6lkNPCGDhfA8=
 )
 
 func TestPKI_RequireCN(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -176,6 +178,7 @@ func TestPKI_RequireCN(t *testing.T) {
 }
 
 func TestPKI_DeviceCert(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -244,6 +247,7 @@ func TestPKI_DeviceCert(t *testing.T) {
 }
 
 func TestBackend_InvalidParameter(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -265,6 +269,7 @@ func TestBackend_InvalidParameter(t *testing.T) {
 }
 
 func TestBackend_CSRValues(t *testing.T) {
+	t.Parallel()
 	initTest.Do(setCerts)
 	b, _ := createBackendWithStorage(t)
 
@@ -281,6 +286,7 @@ func TestBackend_CSRValues(t *testing.T) {
 }
 
 func TestBackend_URLsCRUD(t *testing.T) {
+	t.Parallel()
 	initTest.Do(setCerts)
 	b, _ := createBackendWithStorage(t)
 
@@ -299,6 +305,7 @@ func TestBackend_URLsCRUD(t *testing.T) {
 // Generates and tests steps that walk through the various possibilities
 // of role flags to ensure that they are properly restricted
 func TestBackend_Roles(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name      string
 		key, cert *string
@@ -577,6 +584,8 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				"signature_bits":      512,
 				"format":              "der",
 				"not_before_duration": "2h",
+				// Let's Encrypt -- R3 SKID
+				"skid": "14:2E:B3:17:B7:58:56:CB:AE:50:09:40:E6:1F:AF:9D:8B:14:C2:C6",
 			},
 			Check: func(resp *logical.Response) error {
 				certString := resp.Data["certificate"].(string)
@@ -596,6 +605,8 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 				}
 				cert := certs[0]
 
+				skid, _ := hex.DecodeString("142EB317B75856CBAE500940E61FAF9D8B14C2C6")
+
 				switch {
 				case !reflect.DeepEqual(expected.IssuingCertificates, cert.IssuingCertificateURL):
 					return fmt.Errorf("IssuingCertificateURL:\nexpected\n%#v\ngot\n%#v\n", expected.IssuingCertificates, cert.IssuingCertificateURL)
@@ -607,6 +618,8 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 					return fmt.Errorf("DNSNames\nexpected\n%#v\ngot\n%#v\n", []string{"intermediate.cert.com"}, cert.DNSNames)
 				case !reflect.DeepEqual(x509.SHA512WithRSA, cert.SignatureAlgorithm):
 					return fmt.Errorf("Signature Algorithm:\nexpected\n%#v\ngot\n%#v\n", x509.SHA512WithRSA, cert.SignatureAlgorithm)
+				case !reflect.DeepEqual(skid, cert.SubjectKeyId):
+					return fmt.Errorf("SKID:\nexpected\n%#v\ngot\n%#v\n", skid, cert.SubjectKeyId)
 				}
 
 				if math.Abs(float64(time.Now().Add(-2*time.Hour).Unix()-cert.NotBefore.Unix())) > 10 {
@@ -1715,6 +1728,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 }
 
 func TestRolesAltIssuer(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	// Create two issuers.
@@ -1812,6 +1826,7 @@ func TestRolesAltIssuer(t *testing.T) {
 }
 
 func TestBackend_PathFetchValidRaw(t *testing.T) {
+	t.Parallel()
 	b, storage := createBackendWithStorage(t)
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -1893,7 +1908,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 
 	issueCrtAsPem := resp.Data["certificate"].(string)
 	issuedCrt := parseCert(t, issueCrtAsPem)
-	expectedSerial := certutil.GetHexFormatted(issuedCrt.SerialNumber.Bytes(), ":")
+	expectedSerial := serialFromCert(issuedCrt)
 	expectedCert := []byte(issueCrtAsPem)
 
 	// get der cert
@@ -1942,6 +1957,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 }
 
 func TestBackend_PathFetchCertList(t *testing.T) {
+	t.Parallel()
 	// create the backend
 	b, storage := createBackendWithStorage(t)
 
@@ -2067,6 +2083,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 }
 
 func TestBackend_SignVerbatim(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		testName string
 		keyType  string
@@ -2077,6 +2094,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 		{testName: "Any", keyType: "any"},
 	}
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.testName, func(t *testing.T) {
 			runTestSignVerbatim(t, tc.keyType)
 		})
@@ -2316,6 +2334,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 }
 
 func TestBackend_Root_Idempotency(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	// This is a change within 1.11, we are no longer idempotent across generate/internal calls.
@@ -2420,6 +2439,7 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 }
 
 func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
+	t.Parallel()
 	b_root, s_root := createBackendWithStorage(t)
 	b_int, s_int := createBackendWithStorage(t)
 	var err error
@@ -2486,7 +2506,43 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 	}
 }
 
+func TestBackend_ConsulSignLeafWithLegacyRole(t *testing.T) {
+	t.Parallel()
+	// create the backend
+	b, s := createBackendWithStorage(t)
+
+	// generate root
+	data, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "myvault.com",
+	})
+	require.NoError(t, err, "failed generating internal root cert")
+	rootCaPem := data.Data["certificate"].(string)
+
+	// Create a signing role like Consul did with the default args prior to Vault 1.10
+	_, err = CBWrite(b, s, "roles/test", map[string]interface{}{
+		"allow_any_name":         true,
+		"allowed_serial_numbers": []string{"MySerialNumber"},
+		"key_type":               "any",
+		"key_bits":               "2048",
+		"signature_bits":         "256",
+	})
+	require.NoError(t, err, "failed creating legacy role")
+
+	_, csrPem := generateTestCsr(t, certutil.ECPrivateKey, 256)
+	data, err = CBWrite(b, s, "sign/test", map[string]interface{}{
+		"csr": csrPem,
+	})
+	require.NoError(t, err, "failed signing csr")
+	certAsPem := data.Data["certificate"].(string)
+
+	signedCert := parseCert(t, certAsPem)
+	rootCert := parseCert(t, rootCaPem)
+	requireSignedBy(t, signedCert, rootCert.PublicKey)
+}
+
 func TestBackend_SignSelfIssued(t *testing.T) {
+	t.Parallel()
 	// create the backend
 	b, storage := createBackendWithStorage(t)
 
@@ -2627,6 +2683,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 // TestBackend_SignSelfIssued_DifferentTypes tests the functionality of the
 // require_matching_certificate_algorithms flag.
 func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
+	t.Parallel()
 	// create the backend
 	b, storage := createBackendWithStorage(t)
 
@@ -2752,6 +2809,7 @@ func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 // here into the form at that site as it will do the right thing so it's pretty
 // easy to validate.
 func TestBackend_OID_SANs(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	var err error
@@ -2974,6 +3032,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 }
 
 func TestBackend_AllowedSerialNumbers(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	var err error
@@ -3080,6 +3139,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 }
 
 func TestBackend_URI_SANs(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	var err error
@@ -3173,6 +3233,7 @@ func TestBackend_URI_SANs(t *testing.T) {
 }
 
 func TestBackend_AllowedURISANsTemplate(t *testing.T) {
+	t.Parallel()
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
 			"userpass": userpass.Factory,
@@ -3297,6 +3358,7 @@ func TestBackend_AllowedURISANsTemplate(t *testing.T) {
 }
 
 func TestBackend_AllowedDomainsTemplate(t *testing.T) {
+	t.Parallel()
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
 			"userpass": userpass.Factory,
@@ -3428,6 +3490,7 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 }
 
 func TestReadWriteDeleteRoles(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
@@ -3489,6 +3552,7 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 		"allowed_serial_numbers":             []interface{}{},
 		"generate_lease":                     false,
 		"signature_bits":                     json.Number("256"),
+		"use_pss":                            false,
 		"allowed_domains":                    []interface{}{},
 		"allowed_uri_sans_template":          false,
 		"enforce_hostnames":                  true,
@@ -3655,6 +3719,8 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	// that we have to deal with more than one interval.
 	// InMemSink rounds down to an interval boundary rather than
 	// starting one at the time of initialization.
+	//
+	// This test is not parallelizable.
 	inmemSink := metrics.NewInmemSink(
 		1000000*time.Hour,
 		2000000*time.Hour)
@@ -3894,6 +3960,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 }
 
 func TestBackend_Root_FullCAChain(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		testName string
 		keyType  string
@@ -3903,6 +3970,7 @@ func TestBackend_Root_FullCAChain(t *testing.T) {
 		{testName: "EC", keyType: "ec"},
 	}
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.testName, func(t *testing.T) {
 			runFullCAChainTest(t, tc.keyType)
 		})
@@ -4189,6 +4257,7 @@ func RoleIssuanceRegressionHelper(t *testing.T, b *backend, s logical.Storage, i
 }
 
 func TestBackend_Roles_IssuanceRegression(t *testing.T) {
+	t.Parallel()
 	// Regression testing of role's issuance policy.
 	testCases := []IssuanceRegression{
 		// allowed, bare, glob, subdomains, localhost, wildcards, cn, issued
@@ -4391,6 +4460,7 @@ type KeySizeRegression struct {
 
 	// Signature Bits presently is only specified on the role.
 	RoleSignatureBits []int
+	RoleUsePSS        bool
 
 	// These are tuples; must be of the same length.
 	TestKeyTypes []string
@@ -4434,6 +4504,7 @@ func RoleKeySizeRegressionHelper(t *testing.T, b *backend, s logical.Storage, in
 						"key_type":       test.RoleKeyType,
 						"key_bits":       roleKeyBits,
 						"signature_bits": roleSignatureBits,
+						"use_pss":        test.RoleUsePSS,
 					})
 					if err != nil {
 						t.Fatal(err)
@@ -4459,6 +4530,15 @@ func RoleKeySizeRegressionHelper(t *testing.T, b *backend, s logical.Storage, in
 							t.Fatalf("key size regression test [%d] failed: haveErr: %v, expectErr: %v, err: %v, resp: %v, test case: %v, caKeyType: %v, caKeyBits: %v, role: %v, keyType: %v, keyBits: %v", index, haveErr, test.ExpectError, err, resp, test, caKeyType, caKeyBits, role, keyType, keyBits)
 						}
 
+						if resp != nil && test.RoleUsePSS && caKeyType == "rsa" {
+							leafCert := parseCert(t, resp.Data["certificate"].(string))
+							switch leafCert.SignatureAlgorithm {
+							case x509.SHA256WithRSAPSS, x509.SHA384WithRSAPSS, x509.SHA512WithRSAPSS:
+							default:
+								t.Fatalf("key size regression test [%d] failed on role %v: unexpected signature algorithm; expected RSA-type CA to sign a leaf cert with PSS algorithm; got %v", index, role, leafCert.SignatureAlgorithm.String())
+							}
+						}
+
 						tested += 1
 					}
 				}
@@ -4475,40 +4555,46 @@ func RoleKeySizeRegressionHelper(t *testing.T, b *backend, s logical.Storage, in
 }
 
 func TestBackend_Roles_KeySizeRegression(t *testing.T) {
+	t.Parallel()
 	// Regression testing of role's issuance policy.
 	testCases := []KeySizeRegression{
 		// RSA with default parameters should fail to issue smaller RSA keys
 		// and any size ECDSA/Ed25519 keys.
-		/*  0 */ {"rsa", []int{0, 2048}, []int{0, 256, 384, 512}, []string{"rsa", "ec", "ec", "ec", "ec", "ed25519"}, []int{1024, 224, 256, 384, 521, 0}, true},
+		/*  0 */ {"rsa", []int{0, 2048}, []int{0, 256, 384, 512}, false, []string{"rsa", "ec", "ec", "ec", "ec", "ed25519"}, []int{1024, 224, 256, 384, 521, 0}, true},
 		// But it should work to issue larger RSA keys.
-		/*  1 */ {"rsa", []int{0, 2048}, []int{0, 256, 384, 512}, []string{"rsa", "rsa"}, []int{2048, 3072}, false},
+		/*  1 */ {"rsa", []int{0, 2048}, []int{0, 256, 384, 512}, false, []string{"rsa", "rsa"}, []int{2048, 3072}, false},
 
 		// EC with default parameters should fail to issue smaller EC keys
 		// and any size RSA/Ed25519 keys.
-		/*  2 */ {"ec", []int{0}, []int{0}, []string{"rsa", "ec", "ed25519"}, []int{2048, 224, 0}, true},
+		/*  2 */ {"ec", []int{0}, []int{0}, false, []string{"rsa", "ec", "ed25519"}, []int{2048, 224, 0}, true},
 		// But it should work to issue larger EC keys. Note that we should be
 		// independent of signature bits as that's computed from the issuer
 		// type (for EC based issuers).
-		/*  3 */ {"ec", []int{224}, []int{0, 256, 384, 521}, []string{"ec", "ec", "ec", "ec"}, []int{224, 256, 384, 521}, false},
-		/*  4 */ {"ec", []int{0, 256}, []int{0, 256, 384, 521}, []string{"ec", "ec", "ec"}, []int{256, 384, 521}, false},
-		/*  5 */ {"ec", []int{384}, []int{0, 256, 384, 521}, []string{"ec", "ec"}, []int{384, 521}, false},
-		/*  6 */ {"ec", []int{521}, []int{0, 256, 384, 512}, []string{"ec"}, []int{521}, false},
+		/*  3 */ {"ec", []int{224}, []int{0, 256, 384, 521}, false, []string{"ec", "ec", "ec", "ec"}, []int{224, 256, 384, 521}, false},
+		/*  4 */ {"ec", []int{0, 256}, []int{0, 256, 384, 521}, false, []string{"ec", "ec", "ec"}, []int{256, 384, 521}, false},
+		/*  5 */ {"ec", []int{384}, []int{0, 256, 384, 521}, false, []string{"ec", "ec"}, []int{384, 521}, false},
+		/*  6 */ {"ec", []int{521}, []int{0, 256, 384, 512}, false, []string{"ec"}, []int{521}, false},
 
 		// Ed25519 should reject RSA and EC keys.
-		/*  7 */ {"ed25519", []int{0}, []int{0}, []string{"rsa", "ec", "ec"}, []int{2048, 256, 521}, true},
+		/*  7 */ {"ed25519", []int{0}, []int{0}, false, []string{"rsa", "ec", "ec"}, []int{2048, 256, 521}, true},
 		// But it should work to issue Ed25519 keys.
-		/*  8 */ {"ed25519", []int{0}, []int{0}, []string{"ed25519"}, []int{0}, false},
+		/*  8 */ {"ed25519", []int{0}, []int{0}, false, []string{"ed25519"}, []int{0}, false},
 
 		// Any key type should reject insecure RSA key sizes.
-		/*  9 */ {"any", []int{0}, []int{0, 256, 384, 512}, []string{"rsa", "rsa"}, []int{512, 1024}, true},
+		/*  9 */ {"any", []int{0}, []int{0, 256, 384, 512}, false, []string{"rsa", "rsa"}, []int{512, 1024}, true},
 		// But work for everything else.
-		/* 10 */ {"any", []int{0}, []int{0, 256, 384, 512}, []string{"rsa", "rsa", "ec", "ec", "ec", "ec", "ed25519"}, []int{2048, 3072, 224, 256, 384, 521, 0}, false},
+		/* 10 */ {"any", []int{0}, []int{0, 256, 384, 512}, false, []string{"rsa", "rsa", "ec", "ec", "ec", "ec", "ed25519"}, []int{2048, 3072, 224, 256, 384, 521, 0}, false},
 
 		// RSA with larger than default key size should reject smaller ones.
-		/* 11 */ {"rsa", []int{3072}, []int{0, 256, 384, 512}, []string{"rsa"}, []int{2048}, true},
+		/* 11 */ {"rsa", []int{3072}, []int{0, 256, 384, 512}, false, []string{"rsa"}, []int{2048}, true},
+
+		// We should be able to sign with PSS with any CA key type.
+		/* 12 */ {"rsa", []int{0}, []int{0, 256, 384, 512}, true, []string{"rsa"}, []int{2048}, false},
+		/* 13 */ {"ec", []int{0}, []int{0}, true, []string{"ec"}, []int{256}, false},
+		/* 14 */ {"ed25519", []int{0}, []int{0}, true, []string{"ed25519"}, []int{0}, false},
 	}
 
-	if len(testCases) != 12 {
+	if len(testCases) != 15 {
 		t.Fatalf("misnumbered test case entries will make it hard to find bugs: %v", len(testCases))
 	}
 
@@ -4523,6 +4609,7 @@ func TestBackend_Roles_KeySizeRegression(t *testing.T) {
 }
 
 func TestRootWithExistingKey(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 	var err error
 
@@ -4655,6 +4742,7 @@ func TestRootWithExistingKey(t *testing.T) {
 }
 
 func TestIntermediateWithExistingKey(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	var err error
@@ -4719,6 +4807,7 @@ func TestIntermediateWithExistingKey(t *testing.T) {
 }
 
 func TestIssuanceTTLs(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -4793,6 +4882,7 @@ func TestIssuanceTTLs(t *testing.T) {
 }
 
 func TestSealWrappedStorageConfigured(t *testing.T) {
+	t.Parallel()
 	b, _ := createBackendWithStorage(t)
 	wrappedEntries := b.Backend.PathsSpecial.SealWrapStorage
 
@@ -4801,6 +4891,110 @@ func TestSealWrappedStorageConfigured(t *testing.T) {
 	require.Contains(t, wrappedEntries, "config/ca_bundle", "Legacy bundle missing from seal wrap")
 	// The trailing / is important as it treats the entire folder requiring seal wrapping, not just config/key
 	require.Contains(t, wrappedEntries, "config/key/", "key prefix with trailing / missing from seal wrap.")
+}
+
+func TestBackend_ConfigCA_WithECParams(t *testing.T) {
+	t.Parallel()
+	b, s := createBackendWithStorage(t)
+
+	// Generated key with OpenSSL:
+	// $ openssl ecparam -out p256.key -name prime256v1 -genkey
+	//
+	// Regression test for https://github.com/hashicorp/vault/issues/16667
+	resp, err := CBWrite(b, s, "config/ca", map[string]interface{}{
+		"pem_bundle": `
+-----BEGIN EC PARAMETERS-----
+BggqhkjOPQMBBw==
+-----END EC PARAMETERS-----
+-----BEGIN EC PRIVATE KEY-----
+MHcCAQEEINzXthCZdhyV7+wIEBl/ty+ctNsUS99ykTeax6EbYZtvoAoGCCqGSM49
+AwEHoUQDQgAE57NX8bR/nDoW8yRgLswoXBQcjHrdyfuHS0gPwki6BNnfunUzryVb
+8f22/JWj6fsEF6AOADZlrswKIbR2Es9e/w==
+-----END EC PRIVATE KEY-----
+		`,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp, "expected ca info")
+	importedKeys := resp.Data["imported_keys"].([]string)
+	importedIssuers := resp.Data["imported_issuers"].([]string)
+
+	require.Equal(t, len(importedKeys), 1)
+	require.Equal(t, len(importedIssuers), 0)
+}
+
+func TestPerIssuerAIA(t *testing.T) {
+	t.Parallel()
+	b, s := createBackendWithStorage(t)
+
+	// Generating a root without anything should not have AIAs.
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root example.com",
+		"issuer_name": "root",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	rootCert := parseCert(t, resp.Data["certificate"].(string))
+	require.Empty(t, rootCert.OCSPServer)
+	require.Empty(t, rootCert.IssuingCertificateURL)
+	require.Empty(t, rootCert.CRLDistributionPoints)
+
+	// Set some local URLs on the issuer.
+	_, err = CBWrite(b, s, "issuer/default", map[string]interface{}{
+		"issuing_certificates": []string{"https://google.com"},
+	})
+	require.NoError(t, err)
+
+	_, err = CBWrite(b, s, "roles/testing", map[string]interface{}{
+		"allow_any_name": true,
+		"ttl":            "85s",
+		"key_type":       "ec",
+	})
+	require.NoError(t, err)
+
+	// Issue something with this re-configured issuer.
+	resp, err = CBWrite(b, s, "issuer/default/issue/testing", map[string]interface{}{
+		"common_name": "localhost.com",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	leafCert := parseCert(t, resp.Data["certificate"].(string))
+	require.Empty(t, leafCert.OCSPServer)
+	require.Equal(t, leafCert.IssuingCertificateURL, []string{"https://google.com"})
+	require.Empty(t, leafCert.CRLDistributionPoints)
+
+	// Set global URLs and ensure they don't appear on this issuer's leaf.
+	_, err = CBWrite(b, s, "config/urls", map[string]interface{}{
+		"issuing_certificates":    []string{"https://example.com/ca", "https://backup.example.com/ca"},
+		"crl_distribution_points": []string{"https://example.com/crl", "https://backup.example.com/crl"},
+		"ocsp_servers":            []string{"https://example.com/ocsp", "https://backup.example.com/ocsp"},
+	})
+	require.NoError(t, err)
+	resp, err = CBWrite(b, s, "issuer/default/issue/testing", map[string]interface{}{
+		"common_name": "localhost.com",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	leafCert = parseCert(t, resp.Data["certificate"].(string))
+	require.Empty(t, leafCert.OCSPServer)
+	require.Equal(t, leafCert.IssuingCertificateURL, []string{"https://google.com"})
+	require.Empty(t, leafCert.CRLDistributionPoints)
+
+	// Now come back and remove the local modifications and ensure we get
+	// the defaults again.
+	_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+		"issuing_certificates": []string{},
+	})
+	require.NoError(t, err)
+	resp, err = CBWrite(b, s, "issuer/default/issue/testing", map[string]interface{}{
+		"common_name": "localhost.com",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	leafCert = parseCert(t, resp.Data["certificate"].(string))
+	require.Equal(t, leafCert.IssuingCertificateURL, []string{"https://example.com/ca", "https://backup.example.com/ca"})
+	require.Equal(t, leafCert.OCSPServer, []string{"https://example.com/ocsp", "https://backup.example.com/ocsp"})
+	require.Equal(t, leafCert.CRLDistributionPoints, []string{"https://example.com/crl", "https://backup.example.com/crl"})
 }
 
 var (

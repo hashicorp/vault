@@ -2,26 +2,26 @@
   <BasicDropdown
     @horizontalPosition={{this.horizontalPosition}}
     @verticalPosition={{this.verticalPosition}}
-    @onOpen={{action "toggleConfirm"}}
-    @onClose={{action "toggleConfirm"}}
+    @onOpen={{this.toggleConfirm}}
+    @onClose={{this.toggleConfirm}}
     as |d|
   >
     <d.Trigger
       @htmlTag="button"
-      class={{concat this.buttonClasses " popup-menu-trigger" (if d.isOpen " is-active")}}
+      class={{concat @buttonClasses " popup-menu-trigger" (if d.isOpen " is-active")}}
       type="button"
       disabled={{this.disabled}}
       data-test-confirm-action-trigger="true"
     >
       {{yield}}
-      {{#if (eq this.buttonClasses "toolbar-link")}}
-        <Chevron @direction={{if this.showConfirm "up" "down"}} />
+      {{#if (eq @buttonClasses "toolbar-link")}}
+        <Chevron @direction={{if this.showConfirm "up" "down"}} data-test-confirm-action-chevron />
       {{/if}}
     </d.Trigger>
     <d.Content @defaultClass="popup-menu-content">
       <div class="box confirm-action-message">
         <div class="message is-highlight">
-          <div class="message-title">
+          <div class="message-title" data-test-confirm-action-title>
             <Icon @name="alert-triangle-fill" />
             {{this.confirmTitle}}
           </div>
@@ -35,7 +35,7 @@
             disabled={{or this.disabled this.isRunning}}
             class="link is-destroy"
             data-test-confirm-button="true"
-            {{action "onConfirm"}}
+            {{on "click" (fn this.onConfirm d.actions)}}
           >
             {{#if this.isRunning}}
               <span class="loader is-inline-block"></span>
@@ -43,7 +43,7 @@
               {{this.confirmButtonText}}
             {{/if}}
           </button>
-          <button type="button" class="link" data-test-confirm-cancel-button="true" {{action d.actions.close}}>
+          <button type="button" class="link" data-test-confirm-cancel-button="true" {{on "click" d.actions.close}}>
             {{this.cancelButtonText}}
           </button>
         </div>

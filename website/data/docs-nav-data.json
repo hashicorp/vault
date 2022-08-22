@@ -1174,7 +1174,16 @@
       },
       {
         "title": "Transit",
-        "path": "secrets/transit"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/transit"
+          },
+          {
+            "title": "Import Key Wrapping Guide",
+            "path": "secrets/transit/key-wrapping-guide"
+          }
+        ]
       },
       {
         "title": "Venafi (Certificates)",
@@ -1226,7 +1235,48 @@
           },
           {
             "title": "OIDC Providers",
-            "path": "auth/jwt/oidc_providers"
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "auth/jwt/oidc-providers"
+              },
+              {
+                "title": "Auth0",
+                "path": "auth/jwt/oidc-providers/auth0"
+              },
+              {
+                "title": "Azure AD",
+                "path": "auth/jwt/oidc-providers/azuread"
+              },
+              {
+                "title": "Forgerock",
+                "path": "auth/jwt/oidc-providers/forgerock"
+              },
+              {
+                "title": "Gitlab",
+                "path": "auth/jwt/oidc-providers/gitlab"
+              },
+              {
+                "title": "Google",
+                "path": "auth/jwt/oidc-providers/google"
+              },
+              {
+                "title": "Keycloak",
+                "path": "auth/jwt/oidc-providers/keycloak"
+              },
+              {
+                "title": "Kubernetes",
+                "path": "auth/jwt/oidc-providers/kubernetes"
+              },
+              {
+                "title": "Okta",
+                "path": "auth/jwt/oidc-providers/okta"
+              },
+              {
+                "title": "SecureAuth",
+                "path": "auth/jwt/oidc-providers/secureauth"
+              }
+            ]
           }
         ]
       },
@@ -1414,6 +1464,10 @@
                 "path": "platform/k8s/helm/configuration"
               },
               {
+                "title": "Terraform",
+                "path": "platform/k8s/helm/terraform"
+              },
+              {
                 "title": "Examples",
                 "routes": [
                   {
@@ -1542,6 +1596,10 @@
           {
             "title": "Troubleshooting",
             "path": "platform/mssql/troubleshooting"
+          },
+          {
+            "title": "Release Notes",
+            "path": "platform/mssql/changelog"
           }
         ]
       },

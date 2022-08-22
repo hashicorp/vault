@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -145,6 +146,11 @@ type issuerEntry struct {
 	SerialNumber         string                    `json:"serial_number"`
 	LeafNotAfterBehavior certutil.NotAfterBehavior `json:"not_after_behavior"`
 	Usage                issuerUsage               `json:"usage"`
+	RevocationSigAlg     x509.SignatureAlgorithm   `json:"revocation_signature_algorithm"`
+	Revoked              bool                      `json:"revoked"`
+	RevocationTime       int64                     `json:"revocation_time"`
+	RevocationTimeUTC    time.Time                 `json:"revocation_time_utc"`
+	AIAURIs              *certutil.URLEntries      `json:"aia_uris,omitempty"`
 }
 
 type localCRLConfigEntry struct {
@@ -427,6 +433,64 @@ func (i issuerEntry) EnsureUsage(usage issuerUsage) error {
 	return fmt.Errorf("unknown delta between usages: %v -> %v / for issuer [%v]", usage.Names(), i.Usage.Names(), issuerRef)
 }
 
+func (i issuerEntry) CanMaybeSignWithAlgo(algo x509.SignatureAlgorithm) error {
+	// Hack: Go isn't kind enough expose its lovely signatureAlgorithmDetails
+	// informational struct for our usage. However, we don't want to actually
+	// fetch the private key and attempt a signature with this algo (as we'll
+	// mint new, previously unsigned material in the process that could maybe
+	// be potentially abused if it leaks).
+	//
+	// So...
+	//
+	// ...we maintain our own mapping of cert.PKI<->sigAlgos. Notably, we
+	// exclude DSA support as the PKI engine has never supported DSA keys.
+	if algo == x509.UnknownSignatureAlgorithm {
+		// Special cased to indicate upgrade and letting Go automatically
+		// chose the correct value.
+		return nil
+	}
+
+	cert, err := i.GetCertificate()
+	if err != nil {
+		return fmt.Errorf("unable to parse issuer's potential signature algorithm types: %v", err)
+	}
+
+	switch cert.PublicKeyAlgorithm {
+	case x509.RSA:
+		switch algo {
+		case x509.SHA256WithRSA, x509.SHA384WithRSA, x509.SHA512WithRSA,
+			x509.SHA256WithRSAPSS, x509.SHA384WithRSAPSS,
+			x509.SHA512WithRSAPSS:
+			return nil
+		}
+	case x509.ECDSA:
+		switch algo {
+		case x509.ECDSAWithSHA256, x509.ECDSAWithSHA384, x509.ECDSAWithSHA512:
+			return nil
+		}
+	case x509.Ed25519:
+		switch algo {
+		case x509.PureEd25519:
+			return nil
+		}
+	}
+
+	return fmt.Errorf("unable to use issuer of type %v to sign with %v key type", cert.PublicKeyAlgorithm.String(), algo.String())
+}
+
+func (i issuerEntry) GetAIAURLs(sc *storageContext) (urls *certutil.URLEntries, err error) {
+	// Default to the per-issuer AIA URLs.
+	urls = i.AIAURIs
+
+	// If none are set (either due to a nil entry or because no URLs have
+	// been provided), fall back to the global AIA URL config.
+	if urls == nil || (len(urls.IssuingCertificates) == 0 && len(urls.CRLDistributionPoints) == 0 && len(urls.OCSPServers) == 0) {
+		urls, err = getGlobalAIAURLs(sc.Context, sc.Storage)
+	}
+
+	return urls, err
+}
+
 func (sc *storageContext) listIssuers() ([]issuerID, error) {
 	strList, err := sc.Storage.List(sc.Context, issuerPrefix)
 	if err != nil {
@@ -623,7 +687,7 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 		return nil, false, fmt.Errorf("bad issuer: potentially multiple PEM blobs in one certificate storage entry:\n%v", result.Certificate)
 	}
 
-	result.SerialNumber = strings.TrimSpace(certutil.GetHexFormatted(issuerCert.SerialNumber.Bytes(), ":"))
+	result.SerialNumber = serialFromCert(issuerCert)
 
 	// Before we return below, we need to iterate over _all_ keys and see if
 	// one of them a public key matching this certificate, and if so, update our
