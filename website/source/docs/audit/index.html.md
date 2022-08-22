@@ -67,7 +67,7 @@ The existing logs that it did store are untouched.
 If the audit device request becomes blocked for an indefinite period of time,
 then the associated Vault request will block as well.
 
-!> Note that even with multiple audit devices enabled, if any one audit device
+!> Note that even with multiple audit devices enabled, if an audit device
 becomes blocked (due to network issue, etc.), then Vault will become
 _unresponsive_. Vault **will not** complete any requests until the blocked
 audit device can write.
