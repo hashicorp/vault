@@ -28,6 +28,7 @@ export default class OidcKeyDetailsController extends Controller {
       this.flashMessages.success('Key deleted successfully');
       this.router.transitionTo('vault.cluster.access.oidc.keys');
     } catch (error) {
+      this.model.rollbackAttributes();
       const message = error.errors ? error.errors.join('. ') : error.message;
       this.flashMessages.danger(message);
     }

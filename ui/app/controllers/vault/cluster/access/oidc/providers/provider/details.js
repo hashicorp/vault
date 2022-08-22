@@ -13,6 +13,7 @@ export default class OidcProviderDetailsController extends Controller {
       this.flashMessages.success('Provider deleted successfully');
       this.router.transitionTo('vault.cluster.access.oidc.providers');
     } catch (error) {
+      this.model.rollbackAttributes();
       const message = error.errors ? error.errors.join('. ') : error.message;
       this.flashMessages.danger(message);
     }
