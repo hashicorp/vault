@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"crypto/x509"
 	"fmt"
+	"math/big"
 	"regexp"
 	"strings"
 
@@ -27,7 +28,11 @@ var (
 )
 
 func serialFromCert(cert *x509.Certificate) string {
-	return strings.TrimSpace(certutil.GetHexFormatted(cert.SerialNumber.Bytes(), ":"))
+	return serialFromBigInt(cert.SerialNumber)
+}
+
+func serialFromBigInt(serial *big.Int) string {
+	return strings.TrimSpace(certutil.GetHexFormatted(serial.Bytes(), ":"))
 }
 
 func normalizeSerial(serial string) string {

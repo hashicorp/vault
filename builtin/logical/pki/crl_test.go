@@ -3,6 +3,7 @@ package pki
 import (
 	"context"
 	"encoding/asn1"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -24,6 +25,64 @@ func TestBackend_CRL_EnableDisableRoot(t *testing.T) {
 	caSerial := resp.Data["serial_number"].(string)
 
 	crlEnableDisableTestForBackend(t, b, s, []string{caSerial})
+}
+
+func TestBackend_CRLConfig(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		expiry      string
+		disable     bool
+		ocspDisable bool
+	}{
+		{expiry: "24h", disable: true, ocspDisable: true},
+		{expiry: "16h", disable: false, ocspDisable: true},
+		{expiry: "8h", disable: true, ocspDisable: false},
+	}
+	for _, tc := range tests {
+		name := fmt.Sprintf("%s-%t-%t", tc.expiry, tc.disable, tc.ocspDisable)
+		t.Run(name, func(t *testing.T) {
+			b, s := createBackendWithStorage(t)
+
+			resp, err := CBWrite(b, s, "config/crl", map[string]interface{}{
+				"expiry":       tc.expiry,
+				"disable":      tc.disable,
+				"ocsp_disable": tc.ocspDisable,
+			})
+			requireSuccessNilResponse(t, resp, err)
+
+			resp, err = CBRead(b, s, "config/crl")
+			requireSuccessNonNilResponse(t, resp, err)
+			requireFieldsSetInResp(t, resp, "disable", "expiry", "ocsp_disable")
+
+			require.Equal(t, tc.expiry, resp.Data["expiry"])
+			require.Equal(t, tc.disable, resp.Data["disable"])
+			require.Equal(t, tc.ocspDisable, resp.Data["ocsp_disable"])
+		})
+	}
+
+	badValueTests := []struct {
+		expiry      string
+		disable     string
+		ocspDisable string
+	}{
+		{expiry: "not a duration", disable: "true", ocspDisable: "true"},
+		{expiry: "16h", disable: "not a boolean", ocspDisable: "true"},
+		{expiry: "8h", disable: "true", ocspDisable: "not a boolean"},
+	}
+	for _, tc := range badValueTests {
+		name := fmt.Sprintf("bad-%s-%s-%s", tc.expiry, tc.disable, tc.ocspDisable)
+		t.Run(name, func(t *testing.T) {
+			b, s := createBackendWithStorage(t)
+
+			_, err := CBWrite(b, s, "config/crl", map[string]interface{}{
+				"expiry":       tc.expiry,
+				"disable":      tc.disable,
+				"ocsp_disable": tc.ocspDisable,
+			})
+			require.Error(t, err)
+		})
+	}
 }
 
 func TestBackend_CRL_AllKeyTypeSigAlgos(t *testing.T) {

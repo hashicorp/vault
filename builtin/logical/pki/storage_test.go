@@ -164,6 +164,41 @@ func Test_KeysIssuerImport(t *testing.T) {
 	require.Equal(t, "", key2Ref.Name)
 }
 
+func Test_IssuerUpgrade(t *testing.T) {
+	t.Parallel()
+	b, s := createBackendWithStorage(t)
+	sc := b.makeStorageContext(ctx, s)
+
+	// Make sure that we add OCSP signing to v0 issuers if CRLSigning is enabled
+	issuer, _ := genIssuerAndKey(t, b, s)
+	issuer.Version = 0
+	issuer.Usage.ToggleUsage(OCSPSigningUsage)
+
+	err := sc.writeIssuer(&issuer)
+	require.NoError(t, err, "failed writing out issuer")
+
+	newIssuer, err := sc.fetchIssuerById(issuer.ID)
+	require.NoError(t, err, "failed fetching issuer")
+
+	require.Equal(t, uint(1), newIssuer.Version)
+	require.True(t, newIssuer.Usage.HasUsage(OCSPSigningUsage))
+
+	// If CRLSigning is not present on a v0, we should not have OCSP signing after upgrade.
+	issuer, _ = genIssuerAndKey(t, b, s)
+	issuer.Version = 0
+	issuer.Usage.ToggleUsage(OCSPSigningUsage)
+	issuer.Usage.ToggleUsage(CRLSigningUsage)
+
+	err = sc.writeIssuer(&issuer)
+	require.NoError(t, err, "failed writing out issuer")
+
+	newIssuer, err = sc.fetchIssuerById(issuer.ID)
+	require.NoError(t, err, "failed fetching issuer")
+
+	require.Equal(t, uint(1), newIssuer.Version)
+	require.False(t, newIssuer.Usage.HasUsage(OCSPSigningUsage))
+}
+
 func genIssuerAndKey(t *testing.T, b *backend, s logical.Storage) (issuerEntry, keyEntry) {
 	certBundle := genCertBundle(t, b, s)
 
@@ -183,6 +218,8 @@ func genIssuerAndKey(t *testing.T, b *backend, s logical.Storage) (issuerEntry, 
 		Certificate:  strings.TrimSpace(certBundle.Certificate) + "\n",
 		CAChain:      certBundle.CAChain,
 		SerialNumber: certBundle.SerialNumber,
+		Usage:        AllIssuerUsages,
+		Version:      latestIssuerVersion,
 	}
 
 	return pkiIssuer, pkiKey
