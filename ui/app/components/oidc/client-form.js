@@ -21,7 +21,7 @@ import { task } from 'ember-concurrency';
 export default class OidcClientForm extends Component {
   @service store;
   @service flashMessages;
-
+  @tracked errorBanner;
   @tracked modelValidations;
   @tracked radioCardGroupValue =
     !this.args.model.assignments || this.args.model.assignments.includes('allow_all')
@@ -74,7 +74,7 @@ export default class OidcClientForm extends Component {
       }
     } catch (error) {
       const message = error.errors ? error.errors.join('. ') : error.message;
-      this.flashMessages.danger(message);
+      this.errorBanner = message;
     }
   }
 

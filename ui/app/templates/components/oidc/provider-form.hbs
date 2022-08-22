@@ -27,7 +27,7 @@
 
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-bottomless">
-    <MessageError @errorMessage={{this.error}} class="has-top-margin-s" />
+    <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
     {{! name field }}
     <FormField
       data-test-field={{true}}

@@ -31,6 +31,7 @@
     <p class="has-bottom-margin-l">
       Providers may reference a set of scopes to make specific identity information available as claims
     </p>
+    <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
     {{#each @model.formFields as |field|}}
       <FormField @attr={{field}} @model={{@model}} @modelValidations={{this.modelValidations}} />
     {{/each}}

@@ -26,6 +26,7 @@ export default class OidcAssignmentFormComponent extends Component {
   @service store;
   @service flashMessages;
   @tracked modelValidations;
+  @tracked errorBanner;
 
   @task
   *save(event) {
@@ -43,7 +44,7 @@ export default class OidcAssignmentFormComponent extends Component {
       }
     } catch (error) {
       const message = error.errors ? error.errors.join('. ') : error.message;
-      this.flashMessages.danger(message);
+      this.errorBanner = message;
     }
   }
 

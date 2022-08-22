@@ -22,7 +22,7 @@ import { task } from 'ember-concurrency';
 export default class OidcKeyForm extends Component {
   @service store;
   @service flashMessages;
-
+  @tracked errorBanner;
   @tracked modelValidations;
   @tracked radioCardGroupValue =
     // If "*" is provided, all clients are allowed: https://www.vaultproject.io/api-docs/secret/identity/oidc-provider#parameters
@@ -75,7 +75,7 @@ export default class OidcKeyForm extends Component {
       }
     } catch (error) {
       const message = error.errors ? error.errors.join('. ') : error.message;
-      this.flashMessages.danger(message);
+      this.errorBanner = message;
     }
   }
 }
