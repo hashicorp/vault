@@ -48,7 +48,7 @@ func TestOcsp_Disabled(t *testing.T) {
 			require.NoError(t, err)
 			requireFieldsSetInResp(t, resp, "http_content_type", "http_status_code", "http_raw_body")
 			require.Equal(t, 401, resp.Data["http_status_code"])
-			require.Equal(t, "application/ocsp-response", resp.Data["http_content_type"])
+			require.Equal(t, ocspResponseContentType, resp.Data["http_content_type"])
 			respDer := resp.Data["http_raw_body"].([]byte)
 
 			require.Equal(t, ocsp.UnauthorizedErrorResponse, respDer)
@@ -70,7 +70,7 @@ func TestOcsp_UnknownIssuerWithNoDefault(t *testing.T) {
 	require.NoError(t, err)
 	requireFieldsSetInResp(t, resp, "http_content_type", "http_status_code", "http_raw_body")
 	require.Equal(t, 401, resp.Data["http_status_code"])
-	require.Equal(t, "application/ocsp-response", resp.Data["http_content_type"])
+	require.Equal(t, ocspResponseContentType, resp.Data["http_content_type"])
 	respDer := resp.Data["http_raw_body"].([]byte)
 
 	require.Equal(t, ocsp.UnauthorizedErrorResponse, respDer)
@@ -92,7 +92,7 @@ func TestOcsp_WrongIssuerInRequest(t *testing.T) {
 	require.NoError(t, err)
 	requireFieldsSetInResp(t, resp, "http_content_type", "http_status_code", "http_raw_body")
 	require.Equal(t, 200, resp.Data["http_status_code"])
-	require.Equal(t, "application/ocsp-response", resp.Data["http_content_type"])
+	require.Equal(t, ocspResponseContentType, resp.Data["http_content_type"])
 	respDer := resp.Data["http_raw_body"].([]byte)
 
 	ocspResp, err := ocsp.ParseResponse(respDer, testEnv.issuer1)
@@ -131,7 +131,7 @@ func TestOcsp_MalformedRequests(t *testing.T) {
 			require.NoError(t, err)
 			requireFieldsSetInResp(t, resp, "http_content_type", "http_status_code", "http_raw_body")
 			require.Equal(t, 400, resp.Data["http_status_code"])
-			require.Equal(t, "application/ocsp-response", resp.Data["http_content_type"])
+			require.Equal(t, ocspResponseContentType, resp.Data["http_content_type"])
 			respDer := resp.Data["http_raw_body"].([]byte)
 
 			require.Equal(t, ocsp.MalformedRequestErrorResponse, respDer)
@@ -174,7 +174,7 @@ func TestOcsp_InvalidIssuerIdInRevocationEntry(t *testing.T) {
 	require.NoError(t, err)
 	requireFieldsSetInResp(t, resp, "http_content_type", "http_status_code", "http_raw_body")
 	require.Equal(t, 200, resp.Data["http_status_code"])
-	require.Equal(t, "application/ocsp-response", resp.Data["http_content_type"])
+	require.Equal(t, ocspResponseContentType, resp.Data["http_content_type"])
 	respDer := resp.Data["http_raw_body"].([]byte)
 
 	ocspResp, err := ocsp.ParseResponse(respDer, testEnv.issuer1)
@@ -227,7 +227,7 @@ func TestOcsp_UnknownIssuerIdWithDefaultHavingOcspUsageRemoved(t *testing.T) {
 	require.NoError(t, err)
 	requireFieldsSetInResp(t, resp, "http_content_type", "http_status_code", "http_raw_body")
 	require.Equal(t, 401, resp.Data["http_status_code"])
-	require.Equal(t, "application/ocsp-response", resp.Data["http_content_type"])
+	require.Equal(t, ocspResponseContentType, resp.Data["http_content_type"])
 	respDer := resp.Data["http_raw_body"].([]byte)
 
 	require.Equal(t, ocsp.UnauthorizedErrorResponse, respDer)
@@ -264,7 +264,7 @@ func TestOcsp_RevokedCertHasIssuerWithoutOcspUsage(t *testing.T) {
 	requireSuccessNonNilResponse(t, resp, err, "ocsp get request")
 	requireFieldsSetInResp(t, resp, "http_content_type", "http_status_code", "http_raw_body")
 	require.Equal(t, 401, resp.Data["http_status_code"])
-	require.Equal(t, "application/ocsp-response", resp.Data["http_content_type"])
+	require.Equal(t, ocspResponseContentType, resp.Data["http_content_type"])
 	respDer := resp.Data["http_raw_body"].([]byte)
 
 	require.Equal(t, ocsp.UnauthorizedErrorResponse, respDer)
@@ -303,7 +303,7 @@ func TestOcsp_RevokedCertHasIssuerWithoutAKey(t *testing.T) {
 	requireSuccessNonNilResponse(t, resp, err, "ocsp get request")
 	requireFieldsSetInResp(t, resp, "http_content_type", "http_status_code", "http_raw_body")
 	require.Equal(t, 401, resp.Data["http_status_code"])
-	require.Equal(t, "application/ocsp-response", resp.Data["http_content_type"])
+	require.Equal(t, ocspResponseContentType, resp.Data["http_content_type"])
 	respDer := resp.Data["http_raw_body"].([]byte)
 
 	require.Equal(t, ocsp.UnauthorizedErrorResponse, respDer)
@@ -345,7 +345,7 @@ func runOcspRequestTest(t *testing.T, requestType string, caKeyType string, requ
 	requireSuccessNonNilResponse(t, resp, err, "ocsp get request")
 	requireFieldsSetInResp(t, resp, "http_content_type", "http_status_code", "http_raw_body")
 	require.Equal(t, 200, resp.Data["http_status_code"])
-	require.Equal(t, "application/ocsp-response", resp.Data["http_content_type"])
+	require.Equal(t, ocspResponseContentType, resp.Data["http_content_type"])
 	respDer := resp.Data["http_raw_body"].([]byte)
 
 	ocspResp, err := ocsp.ParseResponse(respDer, testEnv.issuer1)
@@ -370,7 +370,7 @@ func runOcspRequestTest(t *testing.T, requestType string, caKeyType string, requ
 	requireSuccessNonNilResponse(t, resp, err, "ocsp get request with revoked")
 	requireFieldsSetInResp(t, resp, "http_content_type", "http_status_code", "http_raw_body")
 	require.Equal(t, 200, resp.Data["http_status_code"])
-	require.Equal(t, "application/ocsp-response", resp.Data["http_content_type"])
+	require.Equal(t, ocspResponseContentType, resp.Data["http_content_type"])
 	respDer = resp.Data["http_raw_body"].([]byte)
 
 	ocspResp, err = ocsp.ParseResponse(respDer, testEnv.issuer1)
@@ -390,7 +390,7 @@ func runOcspRequestTest(t *testing.T, requestType string, caKeyType string, requ
 	requireSuccessNonNilResponse(t, resp, err, "ocsp get request")
 	requireFieldsSetInResp(t, resp, "http_content_type", "http_status_code", "http_raw_body")
 	require.Equal(t, 200, resp.Data["http_status_code"])
-	require.Equal(t, "application/ocsp-response", resp.Data["http_content_type"])
+	require.Equal(t, ocspResponseContentType, resp.Data["http_content_type"])
 	respDer = resp.Data["http_raw_body"].([]byte)
 
 	ocspResp, err = ocsp.ParseResponse(respDer, testEnv.issuer2)

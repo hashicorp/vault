@@ -40,30 +40,29 @@ type ocspRespInfo struct {
 var (
 	OcspUnauthorizedResponse = &logical.Response{
 		Data: map[string]interface{}{
-			logical.HTTPContentType: "application/ocsp-response",
+			logical.HTTPContentType: ocspResponseContentType,
 			logical.HTTPStatusCode:  http.StatusUnauthorized,
 			logical.HTTPRawBody:     ocsp.UnauthorizedErrorResponse,
 		},
 	}
 	OcspMalformedResponse = &logical.Response{
 		Data: map[string]interface{}{
-			logical.HTTPContentType: "application/ocsp-response",
+			logical.HTTPContentType: ocspResponseContentType,
 			logical.HTTPStatusCode:  http.StatusBadRequest,
 			logical.HTTPRawBody:     ocsp.MalformedRequestErrorResponse,
 		},
 	}
 	OcspInternalErrorResponse = &logical.Response{
 		Data: map[string]interface{}{
-			logical.HTTPContentType: "application/ocsp-response",
+			logical.HTTPContentType: ocspResponseContentType,
 			logical.HTTPStatusCode:  http.StatusInternalServerError,
 			logical.HTTPRawBody:     ocsp.InternalErrorErrorResponse,
 		},
 	}
 
-	ErrUnknownOcspIssuer = errors.New("unknown issuer requested")
-	ErrMissingOcspUsage  = errors.New("issuer entry did not have the OCSPSigning usage")
-	ErrIssuerHasNoKey    = errors.New("issuer has no key")
-	ErrUnknownIssuerId   = errors.New("unknown issuer id")
+	ErrMissingOcspUsage = errors.New("issuer entry did not have the OCSPSigning usage")
+	ErrIssuerHasNoKey   = errors.New("issuer has no key")
+	ErrUnknownIssuer    = errors.New("unknown issuer")
 )
 
 func buildPathOcspGet(b *backend) *framework.Path {
@@ -124,7 +123,7 @@ func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, dat
 
 	caBundle, err := lookupOcspIssuer(sc, ocspReq, ocspStatus.issuerID)
 	if err != nil {
-		if errors.Is(err, ErrUnknownOcspIssuer) {
+		if errors.Is(err, ErrUnknownIssuer) {
 			// Since we were not able to find a matching issuer for the incoming request
 			// generate an Unknown OCSP response. This might turn into an Unauthorized if
 			// we find out that we don't have a default issuer or it's missing the proper Usage flags
@@ -170,7 +169,7 @@ func generateUnknownResponse(sc *storageContext, ocspReq *ocsp.Request) *logical
 
 	caBundle, issuer, err := getOcspIssuerParsedBundle(sc, config.DefaultIssuerId)
 	if err != nil {
-		if errors.Is(err, ErrUnknownIssuerId) || errors.Is(err, ErrIssuerHasNoKey) {
+		if errors.Is(err, ErrUnknownIssuer) || errors.Is(err, ErrIssuerHasNoKey) {
 			// We must have raced on a delete/update of the default issuer, anyways
 			// no way to sign a response so Unauthorized it is.
 			return OcspUnauthorizedResponse
@@ -279,10 +278,10 @@ func lookupOcspIssuer(sc *storageContext, req *ocsp.Request, optRevokedIssuer is
 	for _, issuerId := range issuerIds {
 		parsedBundle, issuer, err := getOcspIssuerParsedBundle(sc, issuerId)
 		if err != nil {
-			// A bit touchy here as if we get an ErrUnknownIssuerId for an issuer id that we picked up
+			// A bit touchy here as if we get an ErrUnknownIssuer for an issuer id that we picked up
 			// from a revocation entry, we still return an ErrUnknownOcspIssuer as we can't validate
 			// the end-user actually meant this specific issuer's cert with serial X.
-			if errors.Is(err, ErrUnknownIssuerId) || errors.Is(err, ErrIssuerHasNoKey) {
+			if errors.Is(err, ErrUnknownIssuer) || errors.Is(err, ErrIssuerHasNoKey) {
 				// This skips either bad issuer ids, or root certs with no keys that we can't use.
 				continue
 			}
@@ -308,7 +307,7 @@ func lookupOcspIssuer(sc *storageContext, req *ocsp.Request, optRevokedIssuer is
 		}
 	}
 
-	return nil, ErrUnknownOcspIssuer
+	return nil, ErrUnknownIssuer
 }
 
 func getOcspIssuerParsedBundle(sc *storageContext, issuerId issuerID) (*certutil.ParsedCertBundle, *issuerEntry, error) {
@@ -317,7 +316,7 @@ func getOcspIssuerParsedBundle(sc *storageContext, issuerId issuerID) (*certutil
 		switch err.(type) {
 		case errutil.UserError:
 			// Most likely the issuer id no longer exists skip it
-			return nil, nil, ErrUnknownIssuerId
+			return nil, nil, ErrUnknownIssuer
 		default:
 			return nil, nil, err
 		}
