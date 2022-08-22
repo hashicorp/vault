@@ -873,6 +873,12 @@ func writeCaBundle(ctx context.Context, b *backend, s logical.Storage, caBundle 
 		return nil, nil, err
 	}
 
+	// We may have existing mounts that only contained a key with no certificate yet as a signed CSR
+	// was never setup within the mount.
+	if caBundle.Certificate == "" {
+		return &issuerEntry{}, myKey, nil
+	}
+
 	myIssuer, _, err := importIssuer(ctx, b, s, caBundle.Certificate, issuerName)
 	if err != nil {
 		return nil, nil, err
