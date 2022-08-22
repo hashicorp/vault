@@ -11,16 +11,17 @@ export default class VaultClusterRedirectRoute extends Route {
     const isAuthed = this.auth.currentToken;
     // eslint-disable-next-line ember/no-controller-access-in-routes
     const controller = this.controllerFor('vault.cluster.auth');
+    const { redirect_to, ...otherParams } = queryParams;
 
-    if (isAuthed && queryParams.redirect_to) {
-      // if authenticated and redirect exists, redirect to that place
-      transition = this.router.replaceWith(queryParams.redirect_to);
+    if (isAuthed && redirect_to) {
+      // if authenticated and redirect exists, redirect to that place and strip other params
+      transition = this.router.replaceWith(redirect_to);
     } else if (isAuthed) {
       // if authed no redirect, go to cluster
-      transition = this.router.replaceWith(CLUSTER);
+      transition = this.router.replaceWith(CLUSTER, { queryParams: otherParams });
     } else {
       // default go to Auth
-      transition = this.router.replaceWith(AUTH);
+      transition = this.router.replaceWith(AUTH, { queryParams: otherParams });
     }
     transition.followRedirects().then(() => {
       controller.set('redirectTo', '');

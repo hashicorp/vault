@@ -7,7 +7,7 @@ module('Unit | Route | vault/cluster/redirect', function (hooks) {
 
   hooks.beforeEach(function () {
     this.router = this.owner.lookup('service:router');
-    this.originalTransition = this.router.transitionTo;
+    this.originalTransition = this.router.replaceWith;
     this.router.replaceWith = sinon.stub().returns({
       followRedirects: function () {
         return {
@@ -20,7 +20,7 @@ module('Unit | Route | vault/cluster/redirect', function (hooks) {
   });
 
   hooks.afterEach(function () {
-    this.router.transitionTo = this.originalTransition;
+    this.router.replaceWith = this.originalTransition;
   });
 
   test('it calls route', function (assert) {
@@ -35,10 +35,12 @@ module('Unit | Route | vault/cluster/redirect', function (hooks) {
 
     auth.currentToken = null;
 
-    route.beforeModel({ to: { queryParams: { redirect_to: 'vault/cluster/tools' } } });
+    route.beforeModel({ to: { queryParams: { redirect_to: 'vault/cluster/tools', namespace: 'admin' } } });
 
     assert.true(
-      this.router.transitionTo.calledWith('vault.cluster.auth'),
+      this.router.replaceWith.calledWithExactly('vault.cluster.auth', {
+        queryParams: { namespace: 'admin' },
+      }),
       'transitions to auth when not authenticated'
     );
     auth.currentToken = originalToken;
@@ -52,10 +54,9 @@ module('Unit | Route | vault/cluster/redirect', function (hooks) {
     auth.currentToken = 's.xxxxxxxxx';
 
     route.beforeModel({ to: { queryParams: { foo: 'bar' } } });
-
     assert.true(
-      this.router.transitionTo.calledWith('vault.cluster'),
-      'transitions to cluster when not authenticated'
+      this.router.replaceWith.calledWithExactly('vault.cluster', { queryParams: { foo: 'bar' } }),
+      'transitions to cluster when authenticated but no redirect param'
     );
     auth.currentToken = originalToken;
   });
@@ -67,11 +68,15 @@ module('Unit | Route | vault/cluster/redirect', function (hooks) {
 
     auth.currentToken = 's.xxxxxxxxx';
 
-    route.beforeModel({ to: { queryParams: { redirect_to: 'vault/cluster/tools' } } });
+    route.beforeModel({
+      to: {
+        queryParams: { redirect_to: 'vault/cluster/tools?namespace=admin', namespace: 'ns1', foo: 'bar' },
+      },
+    });
 
     assert.true(
-      this.router.transitionTo.calledWith('vault/cluster/tools'),
-      'transitions to redirect_to path when authenticated'
+      this.router.replaceWith.calledWithExactly('vault/cluster/tools?namespace=admin'),
+      'transitions to redirect_to path when authenticated and removes other params'
     );
     auth.currentToken = originalToken;
   });
