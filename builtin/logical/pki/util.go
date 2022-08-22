@@ -2,7 +2,9 @@ package pki
 
 import (
 	"crypto"
+	"crypto/x509"
 	"fmt"
+	"math/big"
 	"regexp"
 	"strings"
 
@@ -24,6 +26,14 @@ var (
 	errIssuerNameInUse = errutil.UserError{Err: "issuer name already in use"}
 	errKeyNameInUse    = errutil.UserError{Err: "key name already in use"}
 )
+
+func serialFromCert(cert *x509.Certificate) string {
+	return serialFromBigInt(cert.SerialNumber)
+}
+
+func serialFromBigInt(serial *big.Int) string {
+	return strings.TrimSpace(certutil.GetHexFormatted(serial.Bytes(), ":"))
+}
 
 func normalizeSerial(serial string) string {
 	return strings.ReplaceAll(strings.ToLower(serial), ":", "-")
@@ -202,4 +212,18 @@ func extractRef(data *framework.FieldData, paramName string) string {
 		return defaultRef
 	}
 	return value
+}
+
+func isStringArrayDifferent(a, b []string) bool {
+	if len(a) != len(b) {
+		return true
+	}
+
+	for i, v := range a {
+		if v != b[i] {
+			return true
+		}
+	}
+
+	return false
 }

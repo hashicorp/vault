@@ -12,8 +12,9 @@ import (
 
 // CRLConfig holds basic CRL configuration information
 type crlConfig struct {
-	Expiry  string `json:"expiry"`
-	Disable bool   `json:"disable"`
+	Expiry      string `json:"expiry"`
+	Disable     bool   `json:"disable"`
+	OcspDisable bool   `json:"ocsp_disable"`
 }
 
 func pathConfigCRL(b *backend) *framework.Path {
@@ -29,6 +30,10 @@ valid; defaults to 72 hours`,
 			"disable": {
 				Type:        framework.TypeBool,
 				Description: `If set to true, disables generating the CRL entirely.`,
+			},
+			"ocsp_disable": {
+				Type:        framework.TypeBool,
+				Description: `If set to true, ocsp unauthorized responses will be returned.`,
 			},
 		},
 
@@ -49,43 +54,25 @@ valid; defaults to 72 hours`,
 	}
 }
 
-func (b *backend) CRL(ctx context.Context, s logical.Storage) (*crlConfig, error) {
-	entry, err := s.Get(ctx, "config/crl")
-	if err != nil {
-		return nil, err
-	}
-
-	var result crlConfig
-	result.Expiry = b.crlLifetime.String()
-	result.Disable = false
-
-	if entry == nil {
-		return &result, nil
-	}
-
-	if err := entry.DecodeJSON(&result); err != nil {
-		return nil, err
-	}
-
-	return &result, nil
-}
-
 func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	config, err := b.CRL(ctx, req.Storage)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	config, err := sc.getRevocationConfig()
 	if err != nil {
 		return nil, err
 	}
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"expiry":  config.Expiry,
-			"disable": config.Disable,
+			"expiry":       config.Expiry,
+			"disable":      config.Disable,
+			"ocsp_disable": config.OcspDisable,
 		},
 	}, nil
 }
 
 func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	config, err := b.CRL(ctx, req.Storage)
+	sc := b.makeStorageContext(ctx, req.Storage)
+	config, err := sc.getRevocationConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -103,6 +90,12 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 	if disableRaw, ok := d.GetOk("disable"); ok {
 		oldDisable = config.Disable
 		config.Disable = disableRaw.(bool)
+	}
+
+	var oldOcspDisable bool
+	if ocspDisableRaw, ok := d.GetOk("ocsp_disable"); ok {
+		oldOcspDisable = config.OcspDisable
+		config.OcspDisable = ocspDisableRaw.(bool)
 	}
 
 	entry, err := logical.StorageEntryJSON("config/crl", config)
@@ -125,6 +118,10 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 				return nil, fmt.Errorf("error encountered during CRL building: %w", crlErr)
 			}
 		}
+	}
+
+	if oldOcspDisable != config.OcspDisable {
+		setOcspStatus(b, ctx)
 	}
 
 	return nil, nil

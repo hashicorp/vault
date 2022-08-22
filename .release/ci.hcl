@@ -10,10 +10,7 @@ project "vault" {
     repository = "vault"
     release_branches = [
       "main",
-      "release/1.8.x",
-      "release/1.9.x",
-      "release/1.10.x",
-      "release/1.11.x",
+      "release/**",
     ]
   }
 }
@@ -257,6 +254,8 @@ event "promote-production-packaging" {
   }
 }
 
+# The post-publish-website event should not be merged into the enterprise repo.
+# It is for OSS use only. 
 event "post-publish-website" {
   depends = ["promote-production-packaging"]
   action "post-publish-website" {

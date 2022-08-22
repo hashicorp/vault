@@ -61,7 +61,7 @@ $ vault auth enable \
     kerberos
 ```
 
-- Create a `keytab` for the Kerberos plugin:
+- Create a `keytab` for the Kerberos plugin (this keytab is used by the Vault server itself, another keytab should be generated for login purposes):
 
 ```shell-session
 $ ktutil

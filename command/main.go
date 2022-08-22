@@ -24,6 +24,17 @@ type VaultUI struct {
 	detailed bool
 }
 
+const (
+	globalFlagOutputCurlString = "output-curl-string"
+	globalFlagOutputPolicy     = "output-policy"
+	globalFlagFormat           = "format"
+	globalFlagDetailed         = "detailed"
+)
+
+var globalFlags = []string{
+	globalFlagOutputCurlString, globalFlagOutputPolicy, globalFlagFormat, globalFlagDetailed,
+}
+
 // setupEnv parses args and may replace them and sets some env vars to known
 // values based on format options
 func setupEnv(args []string) (retArgs []string, format string, detailed bool, outputCurlString bool, outputPolicy bool) {
@@ -47,38 +58,28 @@ func setupEnv(args []string) (retArgs []string, format string, detailed bool, ou
 			break
 		}
 
-		if arg == "-output-curl-string" || arg == "--output-curl-string" {
+		if isGlobalFlag(arg, globalFlagOutputCurlString) {
 			outputCurlString = true
 			continue
 		}
 
-		if arg == "-output-policy" || arg == "--output-policy" {
+		if isGlobalFlag(arg, globalFlagOutputPolicy) {
 			outputPolicy = true
 			continue
 		}
 
 		// Parse a given flag here, which overrides the env var
-		if strings.HasPrefix(arg, "--format=") {
-			format = strings.TrimPrefix(arg, "--format=")
-		}
-		if strings.HasPrefix(arg, "-format=") {
-			format = strings.TrimPrefix(arg, "-format=")
+		if isGlobalFlagWithValue(arg, globalFlagFormat) {
+			format = getGlobalFlagValue(arg)
 		}
 		// For backwards compat, it could be specified without an equal sign
-		if arg == "-format" || arg == "--format" {
+		if isGlobalFlag(arg, globalFlagFormat) {
 			nextArgFormat = true
 		}
 
 		// Parse a given flag here, which overrides the env var
-		if strings.HasPrefix(arg, "--detailed=") {
-			detailed, err = strconv.ParseBool(strings.TrimPrefix(arg, "--detailed="))
-			if err != nil {
-				detailed = false
-			}
-			haveDetailed = true
-		}
-		if strings.HasPrefix(arg, "-detailed=") {
-			detailed, err = strconv.ParseBool(strings.TrimPrefix(arg, "-detailed="))
+		if isGlobalFlagWithValue(arg, globalFlagDetailed) {
+			detailed, err = strconv.ParseBool(getGlobalFlagValue(globalFlagDetailed))
 			if err != nil {
 				detailed = false
 			}
@@ -86,7 +87,7 @@ func setupEnv(args []string) (retArgs []string, format string, detailed bool, ou
 		}
 		// For backwards compat, it could be specified without an equal sign to enable
 		// detailed output.
-		if arg == "-detailed" || arg == "--detailed" {
+		if isGlobalFlag(arg, globalFlagDetailed) {
 			detailed = true
 			haveDetailed = true
 		}
@@ -113,6 +114,20 @@ func setupEnv(args []string) (retArgs []string, format string, detailed bool, ou
 	}
 
 	return args, format, detailed, outputCurlString, outputPolicy
+}
+
+func isGlobalFlag(arg string, flag string) bool {
+	return arg == "-"+flag || arg == "--"+flag
+}
+
+func isGlobalFlagWithValue(arg string, flag string) bool {
+	return strings.HasPrefix(arg, "--"+flag+"=") || strings.HasPrefix(arg, "-"+flag+"=")
+}
+
+func getGlobalFlagValue(arg string) string {
+	_, value, _ := strings.Cut(arg, "=")
+
+	return value
 }
 
 type RunOptions struct {

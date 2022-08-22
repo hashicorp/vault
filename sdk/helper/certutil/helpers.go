@@ -176,18 +176,21 @@ func ParsePKIJSON(input []byte) (*ParsedCertBundle, error) {
 }
 
 func ParseDERKey(privateKeyBytes []byte) (signer crypto.Signer, format BlockType, err error) {
-	if signer, err = x509.ParseECPrivateKey(privateKeyBytes); err == nil {
+	var firstError error
+	if signer, firstError = x509.ParseECPrivateKey(privateKeyBytes); firstError == nil {
 		format = ECBlock
 		return
 	}
 
-	if signer, err = x509.ParsePKCS1PrivateKey(privateKeyBytes); err == nil {
+	var secondError error
+	if signer, secondError = x509.ParsePKCS1PrivateKey(privateKeyBytes); secondError == nil {
 		format = PKCS1Block
 		return
 	}
 
+	var thirdError error
 	var rawKey interface{}
-	if rawKey, err = x509.ParsePKCS8PrivateKey(privateKeyBytes); err == nil {
+	if rawKey, thirdError = x509.ParsePKCS8PrivateKey(privateKeyBytes); thirdError == nil {
 		switch rawSigner := rawKey.(type) {
 		case *rsa.PrivateKey:
 			signer = rawSigner
@@ -203,7 +206,7 @@ func ParseDERKey(privateKeyBytes []byte) (signer crypto.Signer, format BlockType
 		return
 	}
 
-	return nil, UnknownBlock, err
+	return nil, UnknownBlock, fmt.Errorf("got errors attempting to parse DER private key:\n1. %v\n2. %v\n3. %v", firstError, secondError, thirdError)
 }
 
 func ParsePEMKey(keyPem string) (crypto.Signer, BlockType, error) {

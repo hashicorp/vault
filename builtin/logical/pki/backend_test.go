@@ -1908,7 +1908,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 
 	issueCrtAsPem := resp.Data["certificate"].(string)
 	issuedCrt := parseCert(t, issueCrtAsPem)
-	expectedSerial := certutil.GetHexFormatted(issuedCrt.SerialNumber.Bytes(), ":")
+	expectedSerial := serialFromCert(issuedCrt)
 	expectedCert := []byte(issueCrtAsPem)
 
 	// get der cert
@@ -4909,6 +4909,110 @@ func TestSealWrappedStorageConfigured(t *testing.T) {
 	require.Contains(t, wrappedEntries, "config/ca_bundle", "Legacy bundle missing from seal wrap")
 	// The trailing / is important as it treats the entire folder requiring seal wrapping, not just config/key
 	require.Contains(t, wrappedEntries, "config/key/", "key prefix with trailing / missing from seal wrap.")
+}
+
+func TestBackend_ConfigCA_WithECParams(t *testing.T) {
+	t.Parallel()
+	b, s := createBackendWithStorage(t)
+
+	// Generated key with OpenSSL:
+	// $ openssl ecparam -out p256.key -name prime256v1 -genkey
+	//
+	// Regression test for https://github.com/hashicorp/vault/issues/16667
+	resp, err := CBWrite(b, s, "config/ca", map[string]interface{}{
+		"pem_bundle": `
+-----BEGIN EC PARAMETERS-----
+BggqhkjOPQMBBw==
+-----END EC PARAMETERS-----
+-----BEGIN EC PRIVATE KEY-----
+MHcCAQEEINzXthCZdhyV7+wIEBl/ty+ctNsUS99ykTeax6EbYZtvoAoGCCqGSM49
+AwEHoUQDQgAE57NX8bR/nDoW8yRgLswoXBQcjHrdyfuHS0gPwki6BNnfunUzryVb
+8f22/JWj6fsEF6AOADZlrswKIbR2Es9e/w==
+-----END EC PRIVATE KEY-----
+		`,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp, "expected ca info")
+	importedKeys := resp.Data["imported_keys"].([]string)
+	importedIssuers := resp.Data["imported_issuers"].([]string)
+
+	require.Equal(t, len(importedKeys), 1)
+	require.Equal(t, len(importedIssuers), 0)
+}
+
+func TestPerIssuerAIA(t *testing.T) {
+	t.Parallel()
+	b, s := createBackendWithStorage(t)
+
+	// Generating a root without anything should not have AIAs.
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root example.com",
+		"issuer_name": "root",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	rootCert := parseCert(t, resp.Data["certificate"].(string))
+	require.Empty(t, rootCert.OCSPServer)
+	require.Empty(t, rootCert.IssuingCertificateURL)
+	require.Empty(t, rootCert.CRLDistributionPoints)
+
+	// Set some local URLs on the issuer.
+	_, err = CBWrite(b, s, "issuer/default", map[string]interface{}{
+		"issuing_certificates": []string{"https://google.com"},
+	})
+	require.NoError(t, err)
+
+	_, err = CBWrite(b, s, "roles/testing", map[string]interface{}{
+		"allow_any_name": true,
+		"ttl":            "85s",
+		"key_type":       "ec",
+	})
+	require.NoError(t, err)
+
+	// Issue something with this re-configured issuer.
+	resp, err = CBWrite(b, s, "issuer/default/issue/testing", map[string]interface{}{
+		"common_name": "localhost.com",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	leafCert := parseCert(t, resp.Data["certificate"].(string))
+	require.Empty(t, leafCert.OCSPServer)
+	require.Equal(t, leafCert.IssuingCertificateURL, []string{"https://google.com"})
+	require.Empty(t, leafCert.CRLDistributionPoints)
+
+	// Set global URLs and ensure they don't appear on this issuer's leaf.
+	_, err = CBWrite(b, s, "config/urls", map[string]interface{}{
+		"issuing_certificates":    []string{"https://example.com/ca", "https://backup.example.com/ca"},
+		"crl_distribution_points": []string{"https://example.com/crl", "https://backup.example.com/crl"},
+		"ocsp_servers":            []string{"https://example.com/ocsp", "https://backup.example.com/ocsp"},
+	})
+	require.NoError(t, err)
+	resp, err = CBWrite(b, s, "issuer/default/issue/testing", map[string]interface{}{
+		"common_name": "localhost.com",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	leafCert = parseCert(t, resp.Data["certificate"].(string))
+	require.Empty(t, leafCert.OCSPServer)
+	require.Equal(t, leafCert.IssuingCertificateURL, []string{"https://google.com"})
+	require.Empty(t, leafCert.CRLDistributionPoints)
+
+	// Now come back and remove the local modifications and ensure we get
+	// the defaults again.
+	_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+		"issuing_certificates": []string{},
+	})
+	require.NoError(t, err)
+	resp, err = CBWrite(b, s, "issuer/default/issue/testing", map[string]interface{}{
+		"common_name": "localhost.com",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	leafCert = parseCert(t, resp.Data["certificate"].(string))
+	require.Equal(t, leafCert.IssuingCertificateURL, []string{"https://example.com/ca", "https://backup.example.com/ca"})
+	require.Equal(t, leafCert.OCSPServer, []string{"https://example.com/ocsp", "https://backup.example.com/ocsp"})
+	require.Equal(t, leafCert.CRLDistributionPoints, []string{"https://example.com/crl", "https://backup.example.com/crl"})
 }
 
 var (
