@@ -1,5 +1,4 @@
 import Mixin from '@ember/object/mixin';
-import { get } from '@ember/object';
 
 export default Mixin.create({
   queryParams: {
@@ -16,7 +15,7 @@ export default Mixin.create({
     this._super(...arguments);
     controller.setProperties({
       filter: pageFilter || '',
-      page: get(resolvedModel || {}, 'meta.currentPage') || 1,
+      page: resolvedModel?.meta?.currentPage || 1,
     });
   },
 

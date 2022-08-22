@@ -19,7 +19,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
@@ -119,7 +118,7 @@ func GenerateTLSKey(reader io.Reader) (*TLSKey, error) {
 
 	certBytes, err := x509.CreateCertificate(rand.Reader, template, template, key.Public(), key)
 	if err != nil {
-		return nil, errwrap.Wrapf("unable to generate local cluster certificate: {{err}}", err)
+		return nil, fmt.Errorf("unable to generate local cluster certificate: %w", err)
 	}
 
 	return &TLSKey{
@@ -226,7 +225,7 @@ func (l *raftLayer) setTLSKeyring(keyring *TLSKeyring) error {
 
 		parsedCert, err := x509.ParseCertificate(key.CertBytes)
 		if err != nil {
-			return errwrap.Wrapf("error parsing raft cluster certificate: {{err}}", err)
+			return fmt.Errorf("error parsing raft cluster certificate: %w", err)
 		}
 
 		key.parsedCert = parsedCert
@@ -316,7 +315,7 @@ func (l *raftLayer) CALookup(context.Context) ([]*x509.Certificate, error) {
 	return ret, nil
 }
 
-// Stop shutsdown the raft layer.
+// Stop shuts down the raft layer.
 func (l *raftLayer) Stop() error {
 	l.Close()
 	return nil

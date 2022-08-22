@@ -22,8 +22,8 @@ export default Controller.extend(DEFAULTS, {
     this.set('loading', false);
     this.set('keyData', resp);
     this.model.reload();
-    this.get('wizard').set('initEvent', 'SAVE');
-    this.get('wizard').transitionTutorialMachine(this.get('wizard.currentState'), 'TOSAVE');
+    this.wizard.set('initEvent', 'SAVE');
+    this.wizard.transitionTutorialMachine(this.wizard.currentState, 'TOSAVE');
   },
 
   initError(e) {
@@ -35,8 +35,8 @@ export default Controller.extend(DEFAULTS, {
     }
   },
 
-  keyFilename: computed('model.name', function() {
-    return `vault-cluster-${this.get('model.name')}`;
+  keyFilename: computed('model.name', function () {
+    return `vault-cluster-${this.model.name}`;
   }),
 
   actions: {
@@ -78,7 +78,10 @@ export default Controller.extend(DEFAULTS, {
       store
         .adapterFor('cluster')
         .initCluster(data)
-        .then(resp => this.initSuccess(resp), (...errArgs) => this.initError(...errArgs));
+        .then(
+          (resp) => this.initSuccess(resp),
+          (...errArgs) => this.initError(...errArgs)
+        );
     },
 
     setKeys(data) {

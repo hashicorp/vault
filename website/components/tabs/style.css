@@ -1,8 +1,0 @@
-/* This is a CSS overwrite on top of the existing component styles to accommodate the Learn layout */
-.g-tabs {
-  & .g-grid-container,
-  & > .g-grid-container {
-    padding-left: 0;
-    padding-right: 0;
-  }
-}

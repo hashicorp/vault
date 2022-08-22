@@ -6,22 +6,36 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/helper/osutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 )
+
+const (
+	VaultDevCAFilename   = "vault-ca.pem"
+	VaultDevCertFilename = "vault-cert.pem"
+	VaultDevKeyFilename  = "vault-key.pem"
+)
+
+var entConfigValidate = func(_ *Config, _ string) []configutil.ConfigError {
+	return nil
+}
 
 // Config is the configuration for the vault server.
 type Config struct {
+	UnusedKeys configutil.UnusedKeyMap `hcl:",unusedKeyPositions"`
+	FoundKeys  []string                `hcl:",decodedFields"`
 	entConfig
 
 	*configutil.SharedConfig `hcl:"-"`
@@ -41,30 +55,74 @@ type Config struct {
 	EnableUIRaw interface{} `hcl:"ui"`
 
 	MaxLeaseTTL        time.Duration `hcl:"-"`
-	MaxLeaseTTLRaw     interface{}   `hcl:"max_lease_ttl"`
+	MaxLeaseTTLRaw     interface{}   `hcl:"max_lease_ttl,alias:MaxLeaseTTL"`
 	DefaultLeaseTTL    time.Duration `hcl:"-"`
-	DefaultLeaseTTLRaw interface{}   `hcl:"default_lease_ttl"`
+	DefaultLeaseTTLRaw interface{}   `hcl:"default_lease_ttl,alias:DefaultLeaseTTL"`
 
 	ClusterCipherSuites string `hcl:"cluster_cipher_suites"`
 
 	PluginDirectory string `hcl:"plugin_directory"`
 
+	PluginFileUid int `hcl:"plugin_file_uid"`
+
+	PluginFilePermissions    int         `hcl:"-"`
+	PluginFilePermissionsRaw interface{} `hcl:"plugin_file_permissions,alias:PluginFilePermissions"`
+
 	EnableRawEndpoint    bool        `hcl:"-"`
-	EnableRawEndpointRaw interface{} `hcl:"raw_storage_endpoint"`
+	EnableRawEndpointRaw interface{} `hcl:"raw_storage_endpoint,alias:EnableRawEndpoint"`
 
 	APIAddr              string      `hcl:"api_addr"`
 	ClusterAddr          string      `hcl:"cluster_addr"`
 	DisableClustering    bool        `hcl:"-"`
-	DisableClusteringRaw interface{} `hcl:"disable_clustering"`
+	DisableClusteringRaw interface{} `hcl:"disable_clustering,alias:DisableClustering"`
 
 	DisablePerformanceStandby    bool        `hcl:"-"`
-	DisablePerformanceStandbyRaw interface{} `hcl:"disable_performance_standby"`
+	DisablePerformanceStandbyRaw interface{} `hcl:"disable_performance_standby,alias:DisablePerformanceStandby"`
 
 	DisableSealWrap    bool        `hcl:"-"`
-	DisableSealWrapRaw interface{} `hcl:"disable_sealwrap"`
+	DisableSealWrapRaw interface{} `hcl:"disable_sealwrap,alias:DisableSealWrap"`
 
 	DisableIndexing    bool        `hcl:"-"`
-	DisableIndexingRaw interface{} `hcl:"disable_indexing"`
+	DisableIndexingRaw interface{} `hcl:"disable_indexing,alias:DisableIndexing"`
+
+	DisableSentinelTrace    bool        `hcl:"-"`
+	DisableSentinelTraceRaw interface{} `hcl:"disable_sentinel_trace,alias:DisableSentinelTrace"`
+
+	EnableResponseHeaderHostname    bool        `hcl:"-"`
+	EnableResponseHeaderHostnameRaw interface{} `hcl:"enable_response_header_hostname"`
+
+	LogRequestsLevel    string      `hcl:"-"`
+	LogRequestsLevelRaw interface{} `hcl:"log_requests_level"`
+
+	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
+	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
+
+	License          string `hcl:"-"`
+	LicensePath      string `hcl:"license_path"`
+	DisableSSCTokens bool   `hcl:"-"`
+}
+
+const (
+	sectionSeal = "Seal"
+)
+
+func (c *Config) Validate(sourceFilePath string) []configutil.ConfigError {
+	results := configutil.ValidateUnusedFields(c.UnusedKeys, sourceFilePath)
+	if c.Telemetry != nil {
+		results = append(results, c.Telemetry.Validate(sourceFilePath)...)
+	}
+	if c.ServiceRegistration != nil {
+		results = append(results, c.ServiceRegistration.Validate(sourceFilePath)...)
+	}
+	for _, l := range c.Listeners {
+		results = append(results, l.Validate(sourceFilePath)...)
+	}
+	results = append(results, c.validateEnt(sourceFilePath)...)
+	return results
+}
+
+func (c *Config) validateEnt(sourceFilePath string) []configutil.ConfigError {
+	return entConfigValidate(c, sourceFilePath)
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -83,20 +141,75 @@ telemetry {
 	prometheus_retention_time = "24h"
 	disable_hostname = true
 }
-
 enable_raw_endpoint = true
 
 storage "%s" {
 }
 
-enable_ui = true
+ui = true
 `
 
 	hclStr = fmt.Sprintf(hclStr, storageType)
-	parsed, err := ParseConfig(hclStr)
+	parsed, err := ParseConfig(hclStr, "")
 	if err != nil {
 		return nil, fmt.Errorf("error parsing dev config: %w", err)
 	}
+	return parsed, nil
+}
+
+// DevTLSConfig is a Config that is used for dev tls mode of Vault.
+func DevTLSConfig(storageType, certDir string) (*Config, error) {
+	ca, err := GenerateCA()
+	if err != nil {
+		return nil, err
+	}
+
+	cert, key, err := GenerateCert(ca.Template, ca.Signer)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := os.WriteFile(fmt.Sprintf("%s/%s", certDir, VaultDevCAFilename), []byte(ca.PEM), 0o444); err != nil {
+		return nil, err
+	}
+
+	if err := os.WriteFile(fmt.Sprintf("%s/%s", certDir, VaultDevCertFilename), []byte(cert), 0o400); err != nil {
+		return nil, err
+	}
+
+	if err := os.WriteFile(fmt.Sprintf("%s/%s", certDir, VaultDevKeyFilename), []byte(key), 0o400); err != nil {
+		return nil, err
+	}
+
+	hclStr := `
+disable_mlock = true
+
+listener "tcp" {
+	address = "[::]:8200"
+	tls_cert_file = "%s/vault-cert.pem"
+	tls_key_file = "%s/vault-key.pem"
+	proxy_protocol_behavior = "allow_authorized"
+	proxy_protocol_authorized_addrs = "[::]:8200"
+}
+
+telemetry {
+	prometheus_retention_time = "24h"
+	disable_hostname = true
+}
+enable_raw_endpoint = true
+
+storage "%s" {
+}
+
+ui = true
+`
+
+	hclStr = fmt.Sprintf(hclStr, certDir, certDir, storageType)
+	parsed, err := ParseConfig(hclStr, "")
+	if err != nil {
+		return nil, err
+	}
+
 	return parsed, nil
 }
 
@@ -115,8 +228,13 @@ func (b *Storage) GoString() string {
 
 // ServiceRegistration is the optional service discovery for the server.
 type ServiceRegistration struct {
-	Type   string
-	Config map[string]string
+	UnusedKeys configutil.UnusedKeyMap `hcl:",unusedKeyPositions"`
+	Type       string
+	Config     map[string]string
+}
+
+func (b *ServiceRegistration) Validate(source string) []configutil.ConfigError {
+	return configutil.ValidateUnusedFields(b.UnusedKeys, source)
 }
 
 func (b *ServiceRegistration) GoString() string {
@@ -166,6 +284,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.DisableCache = c.DisableCache
 	if c2.DisableCache {
 		result.DisableCache = c2.DisableCache
+	}
+
+	result.DisableSentinelTrace = c.DisableSentinelTrace
+	if c2.DisableSentinelTrace {
+		result.DisableSentinelTrace = c2.DisableSentinelTrace
 	}
 
 	result.DisablePrintableCheck = c.DisablePrintableCheck
@@ -222,6 +345,17 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.PluginDirectory = c2.PluginDirectory
 	}
 
+	result.PluginFileUid = c.PluginFileUid
+	if c2.PluginFileUid != 0 {
+		result.PluginFileUid = c2.PluginFileUid
+	}
+
+	result.PluginFilePermissions = c.PluginFilePermissions
+	if c2.PluginFilePermissionsRaw != nil {
+		result.PluginFilePermissions = c2.PluginFilePermissions
+		result.PluginFilePermissionsRaw = c2.PluginFilePermissionsRaw
+	}
+
 	result.DisablePerformanceStandby = c.DisablePerformanceStandby
 	if c2.DisablePerformanceStandby {
 		result.DisablePerformanceStandby = c2.DisablePerformanceStandby
@@ -235,6 +369,26 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.DisableIndexing = c.DisableIndexing
 	if c2.DisableIndexing {
 		result.DisableIndexing = c2.DisableIndexing
+	}
+
+	result.EnableResponseHeaderHostname = c.EnableResponseHeaderHostname
+	if c2.EnableResponseHeaderHostname {
+		result.EnableResponseHeaderHostname = c2.EnableResponseHeaderHostname
+	}
+
+	result.LogRequestsLevel = c.LogRequestsLevel
+	if c2.LogRequestsLevel != "" {
+		result.LogRequestsLevel = c2.LogRequestsLevel
+	}
+
+	result.EnableResponseHeaderRaftNodeID = c.EnableResponseHeaderRaftNodeID
+	if c2.EnableResponseHeaderRaftNodeID {
+		result.EnableResponseHeaderRaftNodeID = c2.EnableResponseHeaderRaftNodeID
+	}
+
+	result.LicensePath = c.LicensePath
+	if c2.LicensePath != "" {
+		result.LicensePath = c2.LicensePath
 	}
 
 	// Use values from top-level configuration for storage if set
@@ -262,6 +416,8 @@ func (c *Config) Merge(c2 *Config) *Config {
 		}
 	}
 
+	result.entConfig = c.entConfig.Merge(c2.entConfig)
+
 	return result
 }
 
@@ -274,6 +430,22 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	if fi.IsDir() {
+		// check permissions on the config directory
+		var enableFilePermissionsCheck bool
+		if enableFilePermissionsCheckEnv := os.Getenv(consts.VaultEnableFilePermissionsCheckEnv); enableFilePermissionsCheckEnv != "" {
+			var err error
+			enableFilePermissionsCheck, err = strconv.ParseBool(enableFilePermissionsCheckEnv)
+			if err != nil {
+				return nil, errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
+			}
+		}
+
+		if enableFilePermissionsCheck {
+			err = osutil.OwnerPermissionsMatch(path, 0, 0)
+			if err != nil {
+				return nil, err
+			}
+		}
 		return CheckConfig(LoadConfigDir(path))
 	}
 	return CheckConfig(LoadConfigFile(path))
@@ -304,15 +476,39 @@ func LoadConfigFile(path string) (*Config, error) {
 		return nil, err
 	}
 
-	conf, err := ParseConfig(string(d))
+	conf, err := ParseConfig(string(d), path)
 	if err != nil {
 		return nil, err
 	}
 
+	var enableFilePermissionsCheck bool
+	if enableFilePermissionsCheckEnv := os.Getenv(consts.VaultEnableFilePermissionsCheckEnv); enableFilePermissionsCheckEnv != "" {
+		var err error
+		enableFilePermissionsCheck, err = strconv.ParseBool(enableFilePermissionsCheckEnv)
+		if err != nil {
+			return nil, errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
+		}
+	}
+
+	if enableFilePermissionsCheck {
+		// check permissions of the config file
+		err = osutil.OwnerPermissionsMatch(path, 0, 0)
+		if err != nil {
+			return nil, err
+		}
+		// check permissions of the plugin directory
+		if conf.PluginDirectory != "" {
+
+			err = osutil.OwnerPermissionsMatch(conf.PluginDirectory, conf.PluginFileUid, conf.PluginFilePermissions)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
 	return conf, nil
 }
 
-func ParseConfig(d string) (*Config, error) {
+func ParseConfig(d, source string) (*Config, error) {
 	// Parse!
 	obj, err := hcl.Parse(d)
 	if err != nil {
@@ -323,6 +519,17 @@ func ParseConfig(d string) (*Config, error) {
 	result := NewConfig()
 	if err := hcl.DecodeObject(result, obj); err != nil {
 		return nil, err
+	}
+
+	if rendered, err := configutil.ParseSingleIPTemplate(result.APIAddr); err != nil {
+		return nil, err
+	} else {
+		result.APIAddr = rendered
+	}
+	if rendered, err := configutil.ParseSingleIPTemplate(result.ClusterAddr); err != nil {
+		return nil, err
+	} else {
+		result.ClusterAddr = rendered
 	}
 
 	sharedConfig, err := configutil.ParseConfig(d)
@@ -372,6 +579,27 @@ func ParseConfig(d string) (*Config, error) {
 		}
 	}
 
+	if result.PluginFilePermissionsRaw != nil {
+		octalPermissionsString, err := parseutil.ParseString(result.PluginFilePermissionsRaw)
+		if err != nil {
+			return nil, err
+		}
+		pluginFilePermissions, err := strconv.ParseInt(octalPermissionsString, 8, 64)
+		if err != nil {
+			return nil, err
+		}
+		if pluginFilePermissions < math.MinInt || pluginFilePermissions > math.MaxInt {
+			return nil, fmt.Errorf("file permission value %v cannot be safely cast to int: exceeds bounds (%v, %v)", pluginFilePermissions, math.MinInt, math.MaxInt)
+		}
+		result.PluginFilePermissions = int(pluginFilePermissions)
+	}
+
+	if result.DisableSentinelTraceRaw != nil {
+		if result.DisableSentinelTrace, err = parseutil.ParseBool(result.DisableSentinelTraceRaw); err != nil {
+			return nil, err
+		}
+	}
+
 	if result.DisablePerformanceStandbyRaw != nil {
 		if result.DisablePerformanceStandby, err = parseutil.ParseBool(result.DisablePerformanceStandbyRaw); err != nil {
 			return nil, err
@@ -390,6 +618,23 @@ func ParseConfig(d string) (*Config, error) {
 		}
 	}
 
+	if result.EnableResponseHeaderHostnameRaw != nil {
+		if result.EnableResponseHeaderHostname, err = parseutil.ParseBool(result.EnableResponseHeaderHostnameRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.LogRequestsLevelRaw != nil {
+		result.LogRequestsLevel = strings.ToLower(strings.TrimSpace(result.LogRequestsLevelRaw.(string)))
+		result.LogRequestsLevelRaw = ""
+	}
+
+	if result.EnableResponseHeaderRaftNodeIDRaw != nil {
+		if result.EnableResponseHeaderRaftNodeID, err = parseutil.ParseBool(result.EnableResponseHeaderRaftNodeIDRaw); err != nil {
+			return nil, err
+		}
+	}
+
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
 		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
@@ -397,39 +642,53 @@ func ParseConfig(d string) (*Config, error) {
 
 	// Look for storage but still support old backend
 	if o := list.Filter("storage"); len(o.Items) > 0 {
+		delete(result.UnusedKeys, "storage")
 		if err := ParseStorage(result, o, "storage"); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'storage': {{err}}", err)
+			return nil, fmt.Errorf("error parsing 'storage': %w", err)
 		}
+		result.found(result.Storage.Type, result.Storage.Type)
 	} else {
+		delete(result.UnusedKeys, "backend")
 		if o := list.Filter("backend"); len(o.Items) > 0 {
 			if err := ParseStorage(result, o, "backend"); err != nil {
-				return nil, errwrap.Wrapf("error parsing 'backend': {{err}}", err)
+				return nil, fmt.Errorf("error parsing 'backend': %w", err)
 			}
 		}
 	}
 
 	if o := list.Filter("ha_storage"); len(o.Items) > 0 {
+		delete(result.UnusedKeys, "ha_storage")
 		if err := parseHAStorage(result, o, "ha_storage"); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'ha_storage': {{err}}", err)
+			return nil, fmt.Errorf("error parsing 'ha_storage': %w", err)
 		}
 	} else {
 		if o := list.Filter("ha_backend"); len(o.Items) > 0 {
+			delete(result.UnusedKeys, "ha_backend")
 			if err := parseHAStorage(result, o, "ha_backend"); err != nil {
-				return nil, errwrap.Wrapf("error parsing 'ha_backend': {{err}}", err)
+				return nil, fmt.Errorf("error parsing 'ha_backend': %w", err)
 			}
 		}
 	}
 
 	// Parse service discovery
 	if o := list.Filter("service_registration"); len(o.Items) > 0 {
+		delete(result.UnusedKeys, "service_registration")
 		if err := parseServiceRegistration(result, o, "service_registration"); err != nil {
-			return nil, errwrap.Wrapf("error parsing 'service_registration': {{err}}", err)
+			return nil, fmt.Errorf("error parsing 'service_registration': %w", err)
 		}
 	}
 
-	entConfig := &(result.entConfig)
-	if err := entConfig.parseConfig(list); err != nil {
-		return nil, errwrap.Wrapf("error parsing enterprise config: {{err}}", err)
+	if err := result.parseConfig(list); err != nil {
+		return nil, fmt.Errorf("error parsing enterprise config: %w", err)
+	}
+
+	// Remove all unused keys from Config that were satisfied by SharedConfig.
+	result.UnusedKeys = configutil.UnusedFieldDifference(result.UnusedKeys, nil, append(result.FoundKeys, sharedConfig.FoundKeys...))
+	// Assign file info
+	for _, v := range result.UnusedKeys {
+		for i := range v {
+			v[i].Filename = source
+		}
 	}
 
 	return result, nil
@@ -488,7 +747,7 @@ func LoadConfigDir(dir string) (*Config, error) {
 	for _, f := range files {
 		config, err := LoadConfigFile(f)
 		if err != nil {
-			return nil, errwrap.Wrapf(fmt.Sprintf("error loading %q: {{err}}", f), err)
+			return nil, fmt.Errorf("error loading %q: %w", f, err)
 		}
 
 		if result == nil {
@@ -605,9 +864,23 @@ func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 		key = item.Keys[0].Token.Value().(string)
 	}
 
-	var m map[string]string
-	if err := hcl.DecodeObject(&m, item.Val); err != nil {
+	var config map[string]interface{}
+	if err := hcl.DecodeObject(&config, item.Val); err != nil {
 		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", name, key))
+	}
+
+	m := make(map[string]string)
+	for key, val := range config {
+		valStr, ok := val.(string)
+		if ok {
+			m[key] = valStr
+			continue
+		}
+		valBytes, err := json.Marshal(val)
+		if err != nil {
+			return err
+		}
+		m[key] = string(valBytes)
 	}
 
 	// Pull out the redirect address since it's common to all backends
@@ -702,17 +975,22 @@ func (c *Config) Sanitized() map[string]interface{} {
 	sharedResult := c.SharedConfig.Sanitized()
 	result := map[string]interface{}{
 		"cache_size":              c.CacheSize,
+		"disable_sentinel_trace":  c.DisableSentinelTrace,
 		"disable_cache":           c.DisableCache,
 		"disable_printable_check": c.DisablePrintableCheck,
 
 		"enable_ui": c.EnableUI,
 
-		"max_lease_ttl":     c.MaxLeaseTTL,
-		"default_lease_ttl": c.DefaultLeaseTTL,
+		"max_lease_ttl":     c.MaxLeaseTTL / time.Second,
+		"default_lease_ttl": c.DefaultLeaseTTL / time.Second,
 
 		"cluster_cipher_suites": c.ClusterCipherSuites,
 
 		"plugin_directory": c.PluginDirectory,
+
+		"plugin_file_uid": c.PluginFileUid,
+
+		"plugin_file_permissions": c.PluginFilePermissions,
 
 		"raw_storage_endpoint": c.EnableRawEndpoint,
 
@@ -725,6 +1003,12 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"disable_sealwrap": c.DisableSealWrap,
 
 		"disable_indexing": c.DisableIndexing,
+
+		"enable_response_header_hostname": c.EnableResponseHeaderHostname,
+
+		"enable_response_header_raft_node_id": c.EnableResponseHeaderRaftNodeID,
+
+		"log_requests_level": c.LogRequestsLevel,
 	}
 	for k, v := range sharedResult {
 		result[k] = v
@@ -760,5 +1044,30 @@ func (c *Config) Sanitized() map[string]interface{} {
 		result["service_registration"] = sanitizedServiceRegistration
 	}
 
+	entConfigResult := c.entConfig.Sanitized()
+	for k, v := range entConfigResult {
+		result[k] = v
+	}
+
 	return result
+}
+
+func (c *Config) Prune() {
+	for _, l := range c.Listeners {
+		l.RawConfig = nil
+		l.UnusedKeys = nil
+	}
+	c.FoundKeys = nil
+	c.UnusedKeys = nil
+	c.SharedConfig.FoundKeys = nil
+	c.SharedConfig.UnusedKeys = nil
+	if c.Telemetry != nil {
+		c.Telemetry.FoundKeys = nil
+		c.Telemetry.UnusedKeys = nil
+	}
+}
+
+func (c *Config) found(s, k string) {
+	delete(c.UnusedKeys, s)
+	c.FoundKeys = append(c.FoundKeys, k)
 }

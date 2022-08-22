@@ -11,8 +11,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*SecretsListCommand)(nil)
-var _ cli.CommandAutocomplete = (*SecretsListCommand)(nil)
+var (
+	_ cli.Command             = (*SecretsListCommand)(nil)
+	_ cli.CommandAutocomplete = (*SecretsListCommand)(nil)
+)
 
 type SecretsListCommand struct {
 	*BaseCommand

@@ -1,0 +1,3 @@
+```release-note:improvement
+api: Add configuration option for ensuring isolated read-after-write semantics for all Client requests.
+```

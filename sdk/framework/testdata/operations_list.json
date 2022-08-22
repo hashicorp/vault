@@ -1,0 +1,67 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "HashiCorp Vault API",
+    "description": "HTTP API that gives you full access to Vault. All API routes are prefixed with `/v1/`.",
+    "version": "<vault_version>",
+    "license": {
+      "name": "Mozilla Public License 2.0",
+      "url": "https://www.mozilla.org/en-US/MPL/2.0"
+    }
+  },
+  "paths": {
+    "/foo/{id}": {
+      "description": "Synopsis",
+      "x-vault-sudo": true,
+      "x-vault-displayAttrs": {
+        "navigation": true
+      },
+      "parameters": [
+        {
+          "name": "format",
+          "description": "a query param",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "id",
+          "description": "id path parameter",
+          "in": "path",
+          "schema": {
+            "type": "string"
+          },
+          "required": true
+        }
+      ],
+      "get": {
+        "operationId": "getFooId",
+        "tags": ["secrets"],
+        "summary": "List Summary",
+        "description": "List Description",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "parameters": [
+          {
+            "name": "list",
+            "description": "Must be set to `true`",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["true"]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+    }
+  }
+}

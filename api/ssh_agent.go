@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 
 	"github.com/hashicorp/errwrap"
@@ -60,6 +61,7 @@ type SSHVerifyResponse struct {
 type SSHHelperConfig struct {
 	VaultAddr       string `hcl:"vault_addr"`
 	SSHMountPoint   string `hcl:"ssh_mount_point"`
+	Namespace       string `hcl:"namespace"`
 	CACert          string `hcl:"ca_cert"`
 	CAPath          string `hcl:"ca_path"`
 	AllowedCidrList string `hcl:"allowed_cidr_list"`
@@ -123,6 +125,11 @@ func (c *SSHHelperConfig) NewClient() (*Client, error) {
 		return nil, err
 	}
 
+	// Configure namespace
+	if c.Namespace != "" {
+		client.SetNamespace(c.Namespace)
+	}
+
 	return client, nil
 }
 
@@ -155,6 +162,7 @@ func ParseSSHHelperConfig(contents string) (*SSHHelperConfig, error) {
 	valid := []string{
 		"vault_addr",
 		"ssh_mount_point",
+		"namespace",
 		"ca_cert",
 		"ca_path",
 		"allowed_cidr_list",
@@ -199,18 +207,24 @@ func (c *Client) SSHHelperWithMountPoint(mountPoint string) *SSHHelper {
 // an echo response message is returned. This feature is used by ssh-helper to verify if
 // its configured correctly.
 func (c *SSHHelper) Verify(otp string) (*SSHVerifyResponse, error) {
+	return c.VerifyWithContext(context.Background(), otp)
+}
+
+// VerifyWithContext the same as Verify but with a custom context.
+func (c *SSHHelper) VerifyWithContext(ctx context.Context, otp string) (*SSHVerifyResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	data := map[string]interface{}{
 		"otp": otp,
 	}
 	verifyPath := fmt.Sprintf("/v1/%s/verify", c.MountPoint)
-	r := c.c.NewRequest("PUT", verifyPath)
+	r := c.c.NewRequest(http.MethodPut, verifyPath)
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}

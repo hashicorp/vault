@@ -9,13 +9,23 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/auth"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
 type certMethod struct {
 	logger    hclog.Logger
 	mountPath string
 	name      string
+
+	caCert     string
+	clientCert string
+	clientKey  string
+
+	// Client is the cached client to use if cert info was provided.
+	client *api.Client
 }
+
+var _ auth.AuthMethodWithClient = &certMethod{}
 
 func NewCertAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	if conf == nil {
@@ -28,7 +38,6 @@ func NewCertAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	c := &certMethod{
 		logger:    conf.Logger,
 		mountPath: conf.MountPath,
-		name:      "",
 	}
 
 	if conf.Config != nil {
@@ -39,6 +48,30 @@ func NewCertAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 		c.name, ok = nameRaw.(string)
 		if !ok {
 			return nil, errors.New("could not convert 'name' config value to string")
+		}
+
+		caCertRaw, ok := conf.Config["ca_cert"]
+		if ok {
+			c.caCert, ok = caCertRaw.(string)
+			if !ok {
+				return nil, errors.New("could not convert 'ca_cert' config value to string")
+			}
+		}
+
+		clientCertRaw, ok := conf.Config["client_cert"]
+		if ok {
+			c.clientCert, ok = clientCertRaw.(string)
+			if !ok {
+				return nil, errors.New("could not convert 'cert_file' config value to string")
+			}
+		}
+
+		clientKeyRaw, ok := conf.Config["client_key"]
+		if ok {
+			c.clientKey, ok = clientKeyRaw.(string)
+			if !ok {
+				return nil, errors.New("could not convert 'cert_key' config value to string")
+			}
 		}
 	}
 
@@ -64,3 +97,50 @@ func (c *certMethod) NewCreds() chan struct{} {
 func (c *certMethod) CredSuccess() {}
 
 func (c *certMethod) Shutdown() {}
+
+// AuthClient uses the existing client's address and returns a new client with
+// the auto-auth method's certificate information if that's provided in its
+// config map.
+func (c *certMethod) AuthClient(client *api.Client) (*api.Client, error) {
+	c.logger.Trace("deriving auth client to use")
+
+	clientToAuth := client
+
+	if c.caCert != "" || (c.clientKey != "" && c.clientCert != "") {
+		// Return cached client if present
+		if c.client != nil {
+			return c.client, nil
+		}
+
+		config := api.DefaultConfig()
+		if config.Error != nil {
+			return nil, config.Error
+		}
+		config.Address = client.Address()
+
+		t := &api.TLSConfig{
+			CACert:     c.caCert,
+			ClientCert: c.clientCert,
+			ClientKey:  c.clientKey,
+		}
+
+		// Setup TLS config
+		if err := config.ConfigureTLS(t); err != nil {
+			return nil, err
+		}
+
+		var err error
+		clientToAuth, err = api.NewClient(config)
+		if err != nil {
+			return nil, err
+		}
+		if ns := client.Headers().Get(consts.NamespaceHeaderName); ns != "" {
+			clientToAuth.SetNamespace(ns)
+		}
+
+		// Cache the client for future use
+		c.client = clientToAuth
+	}
+
+	return clientToAuth, nil
+}

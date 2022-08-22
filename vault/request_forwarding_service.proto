@@ -17,6 +17,12 @@ message EchoRequest {
     
 	uint64 raft_applied_index = 4;
 	string raft_node_id = 5;
+	NodeInformation node_info = 6;
+	uint64 raft_term = 7;
+	string raft_desired_suffrage = 8;
+	string raft_upgrade_version = 9;
+	string raft_redundancy_zone = 10;
+	string sdk_version = 11;
 }
 
 message EchoReply {
@@ -25,6 +31,16 @@ message EchoReply {
 	uint32 replication_state = 3;
 	uint64 raft_applied_index = 4;
 	string raft_node_id = 5;
+	NodeInformation node_info = 6;
+}
+
+message NodeInformation {
+	string cluster_addr = 1;
+	string api_addr = 2;
+	string mode = 3;
+	string node_id = 4;
+	uint32 replication_state = 5;
+	string hostname = 6;
 }
 
 message ClientKey {

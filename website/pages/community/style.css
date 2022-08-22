@@ -1,8 +1,0 @@
-#community {
-  max-width: var(--site-max-width);
-  margin: 72px auto;
-
-  & .g-section-header {
-    margin-bottom: 100px;
-  }
-}

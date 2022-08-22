@@ -55,7 +55,7 @@ func testTransit_SignVerify_ECDSA(t *testing.T, bits int) {
 	}
 
 	// Now, change the key value to something we control
-	p, _, err := b.lm.GetPolicy(context.Background(), keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(context.Background(), keysutil.PolicyRequest{
 		Storage: storage,
 		Name:    "foo",
 	}, b.GetRandomReader())
@@ -178,19 +178,19 @@ func testTransit_SignVerify_ECDSA(t *testing.T, bits int) {
 		req.Path = "verify/foo" + postpath
 		req.Data["signature"] = sig
 		resp, err := b.HandleRequest(context.Background(), req)
-		if err != nil && !errExpected {
-			t.Fatalf("got error: %v, sig was %v", err, sig)
-		}
-		if errExpected {
-			if resp != nil && !resp.IsError() {
-				t.Fatalf("bad: should have gotten error response: %#v", *resp)
+		if err != nil {
+			if errExpected {
+				return
 			}
-			return
+			t.Fatalf("got error: %v, sig was %v", err, sig)
 		}
 		if resp == nil {
 			t.Fatal("expected non-nil response")
 		}
 		if resp.IsError() {
+			if errExpected {
+				return
+			}
 			t.Fatalf("bad: got error response: %#v", *resp)
 		}
 		value, ok := resp.Data["valid"]
@@ -199,6 +199,8 @@ func testTransit_SignVerify_ECDSA(t *testing.T, bits int) {
 		}
 		if !value.(bool) && !errExpected {
 			t.Fatalf("verification failed; req was %#v, resp is %#v", *req, *resp)
+		} else if value.(bool) && errExpected {
+			t.Fatalf("expected error and didn't get one; req was %#v, resp is %#v", *req, *resp)
 		}
 	}
 
@@ -232,6 +234,26 @@ func testTransit_SignVerify_ECDSA(t *testing.T, bits int) {
 	verifyRequest(req, false, "", sig)
 
 	req.Data["hash_algorithm"] = "sha2-384"
+	sig = signRequest(req, false, "")
+	verifyRequest(req, false, "", sig)
+
+	req.Data["hash_algorithm"] = "sha2-512"
+	sig = signRequest(req, false, "")
+	verifyRequest(req, false, "", sig)
+
+	req.Data["hash_algorithm"] = "sha3-224"
+	sig = signRequest(req, false, "")
+	verifyRequest(req, false, "", sig)
+
+	req.Data["hash_algorithm"] = "sha3-256"
+	sig = signRequest(req, false, "")
+	verifyRequest(req, false, "", sig)
+
+	req.Data["hash_algorithm"] = "sha3-384"
+	sig = signRequest(req, false, "")
+	verifyRequest(req, false, "", sig)
+
+	req.Data["hash_algorithm"] = "sha3-512"
 	sig = signRequest(req, false, "")
 	verifyRequest(req, false, "", sig)
 
@@ -375,7 +397,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 	}
 
 	// Get the keys for later
-	fooP, _, err := b.lm.GetPolicy(context.Background(), keysutil.PolicyRequest{
+	fooP, _, err := b.GetPolicy(context.Background(), keysutil.PolicyRequest{
 		Storage: storage,
 		Name:    "foo",
 	}, b.GetRandomReader())
@@ -383,7 +405,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	barP, _, err := b.lm.GetPolicy(context.Background(), keysutil.PolicyRequest{
+	barP, _, err := b.GetPolicy(context.Background(), keysutil.PolicyRequest{
 		Storage: storage,
 		Name:    "bar",
 	}, b.GetRandomReader())

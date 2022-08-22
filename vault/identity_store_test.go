@@ -2,18 +2,78 @@ package vault
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
+	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/ptypes"
 	uuid "github.com/hashicorp/go-uuid"
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+func TestIdentityStore_DeleteEntityAlias(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	txn := c.identityStore.db.Txn(true)
+	defer txn.Abort()
+
+	alias := &identity.Alias{
+		ID:             "testAliasID1",
+		CanonicalID:    "testEntityID",
+		MountType:      "testMountType",
+		MountAccessor:  "testMountAccessor",
+		Name:           "testAliasName",
+		LocalBucketKey: c.identityStore.localAliasPacker.BucketKey("testEntityID"),
+	}
+	alias2 := &identity.Alias{
+		ID:             "testAliasID2",
+		CanonicalID:    "testEntityID",
+		MountType:      "testMountType",
+		MountAccessor:  "testMountAccessor2",
+		Name:           "testAliasName2",
+		LocalBucketKey: c.identityStore.localAliasPacker.BucketKey("testEntityID"),
+	}
+	entity := &identity.Entity{
+		ID:       "testEntityID",
+		Name:     "testEntityName",
+		Policies: []string{"foo", "bar"},
+		Aliases: []*identity.Alias{
+			alias,
+			alias2,
+		},
+		NamespaceID: namespace.RootNamespaceID,
+		BucketKey:   c.identityStore.entityPacker.BucketKey("testEntityID"),
+	}
+
+	err := c.identityStore.upsertEntityInTxn(context.Background(), txn, entity, nil, false)
+	require.NoError(t, err)
+
+	err = c.identityStore.deleteAliasesInEntityInTxn(txn, entity, []*identity.Alias{alias, alias2})
+	require.NoError(t, err)
+
+	txn.Commit()
+
+	alias, err = c.identityStore.MemDBAliasByID("testAliasID1", false, false)
+	require.NoError(t, err)
+	require.Nil(t, alias)
+
+	alias, err = c.identityStore.MemDBAliasByID("testAliasID2", false, false)
+	require.NoError(t, err)
+	require.Nil(t, alias)
+
+	entity, err = c.identityStore.MemDBEntityByID("testEntityID", false)
+	require.NoError(t, err)
+
+	require.Len(t, entity.Aliases, 0)
+}
 
 func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 	err := AddTestCredentialBackend("github", credGithub.Factory)
@@ -36,11 +96,12 @@ func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 	}
 
 	alias := &identity.Alias{
-		ID:            "alias1",
-		CanonicalID:   "entity1",
-		MountType:     "github",
-		MountAccessor: meGH.Accessor,
-		Name:          "githubuser",
+		ID:             "alias1",
+		CanonicalID:    "entity1",
+		MountType:      "github",
+		MountAccessor:  meGH.Accessor,
+		Name:           "githubuser",
+		LocalBucketKey: c.identityStore.localAliasPacker.BucketKey("entity1"),
 	}
 	entity := &identity.Entity{
 		ID:       "entity1",
@@ -50,8 +111,8 @@ func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 			alias,
 		},
 		NamespaceID: namespace.RootNamespaceID,
+		BucketKey:   c.identityStore.entityPacker.BucketKey("entity1"),
 	}
-	entity.BucketKey = c.identityStore.entityPacker.BucketKey(entity.ID)
 
 	err = c.identityStore.upsertEntity(namespace.RootContext(nil), entity, nil, true)
 	if err != nil {
@@ -59,11 +120,12 @@ func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 	}
 
 	alias2 := &identity.Alias{
-		ID:            "alias2",
-		CanonicalID:   "entity2",
-		MountType:     "github",
-		MountAccessor: meGH.Accessor,
-		Name:          "GITHUBUSER",
+		ID:             "alias2",
+		CanonicalID:    "entity2",
+		MountType:      "github",
+		MountAccessor:  meGH.Accessor,
+		Name:           "GITHUBUSER",
+		LocalBucketKey: c.identityStore.localAliasPacker.BucketKey("entity2"),
 	}
 	entity2 := &identity.Entity{
 		ID:       "entity2",
@@ -73,8 +135,8 @@ func TestIdentityStore_UnsealingWhenConflictingAliasNames(t *testing.T) {
 			alias2,
 		},
 		NamespaceID: namespace.RootNamespaceID,
+		BucketKey:   c.identityStore.entityPacker.BucketKey("entity2"),
 	}
-	entity2.BucketKey = c.identityStore.entityPacker.BucketKey(entity2.ID)
 
 	// Persist the second entity directly without the regular flow. This will skip
 	// merging of these enties.
@@ -120,7 +182,7 @@ func TestIdentityStore_EntityIDPassthrough(t *testing.T) {
 	}
 
 	// Create an entity with GitHub alias
-	entity, err := is.CreateOrFetchEntity(ctx, alias)
+	entity, _, err := is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,7 +247,8 @@ func TestIdentityStore_EntityIDPassthrough(t *testing.T) {
 
 func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 	ctx := namespace.RootContext(nil)
-	is, ghAccessor, _ := testIdentityStoreWithGithubAuth(ctx, t)
+	is, ghAccessor, upAccessor, _ := testIdentityStoreWithGithubUserpassAuth(ctx, t)
+
 	alias := &logical.Alias{
 		MountType:     "github",
 		MountAccessor: ghAccessor,
@@ -195,7 +258,7 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 		},
 	}
 
-	entity, err := is.CreateOrFetchEntity(ctx, alias)
+	entity, _, err := is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,7 +274,7 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 		t.Fatalf("bad: alias name; expected: %q, actual: %q", alias.Name, entity.Aliases[0].Name)
 	}
 
-	entity, err = is.CreateOrFetchEntity(ctx, alias)
+	entity, _, err = is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -237,7 +300,7 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 		Data: map[string]interface{}{
 			"name":           "githubuser2",
 			"canonical_id":   entity.ID,
-			"mount_accessor": ghAccessor,
+			"mount_accessor": upAccessor,
 		},
 	}
 
@@ -246,7 +309,7 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	entity, err = is.CreateOrFetchEntity(ctx, alias)
+	entity, _, err = is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -272,7 +335,7 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 		"foo": "zzzz",
 	}
 
-	entity, err = is.CreateOrFetchEntity(ctx, alias)
+	entity, _, err = is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -474,7 +537,6 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-
 	c, _, _ := TestCoreUnsealed(t)
 
 	meGH := &MountEntry{
@@ -490,11 +552,12 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 	}
 
 	alias := &identity.Alias{
-		ID:            "alias1",
-		CanonicalID:   "entity1",
-		MountType:     "github",
-		MountAccessor: meGH.Accessor,
-		Name:          "githubuser",
+		ID:             "alias1",
+		CanonicalID:    "entity1",
+		MountType:      "github",
+		MountAccessor:  meGH.Accessor,
+		Name:           "githubuser",
+		LocalBucketKey: c.identityStore.localAliasPacker.BucketKey("entity1"),
 	}
 	entity := &identity.Entity{
 		ID:       "entity1",
@@ -504,19 +567,20 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 			alias,
 		},
 		NamespaceID: namespace.RootNamespaceID,
+		BucketKey:   c.identityStore.entityPacker.BucketKey("entity1"),
 	}
-	entity.BucketKey = c.identityStore.entityPacker.BucketKey(entity.ID)
 	err = c.identityStore.upsertEntity(namespace.RootContext(nil), entity, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	alias2 := &identity.Alias{
-		ID:            "alias2",
-		CanonicalID:   "entity2",
-		MountType:     "github",
-		MountAccessor: meGH.Accessor,
-		Name:          "githubuser",
+		ID:             "alias2",
+		CanonicalID:    "entity2",
+		MountType:      "github",
+		MountAccessor:  meGH.Accessor,
+		Name:           "githubuser",
+		LocalBucketKey: c.identityStore.localAliasPacker.BucketKey("entity2"),
 	}
 	entity2 := &identity.Entity{
 		ID:       "entity2",
@@ -526,16 +590,15 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 			alias2,
 		},
 		NamespaceID: namespace.RootNamespaceID,
+		BucketKey:   c.identityStore.entityPacker.BucketKey("entity2"),
 	}
-
-	entity2.BucketKey = c.identityStore.entityPacker.BucketKey(entity2.ID)
 
 	err = c.identityStore.upsertEntity(namespace.RootContext(nil), entity2, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	newEntity, err := c.identityStore.CreateOrFetchEntity(namespace.RootContext(nil), &logical.Alias{
+	newEntity, _, err := c.identityStore.CreateOrFetchEntity(namespace.RootContext(nil), &logical.Alias{
 		MountAccessor: meGH.Accessor,
 		MountType:     "github",
 		Name:          "githubuser",
@@ -610,6 +673,47 @@ func testIdentityStoreWithGithubAuthRoot(ctx context.Context, t *testing.T) (*Id
 	return c.identityStore, meGH.Accessor, c, root
 }
 
+func testIdentityStoreWithGithubUserpassAuth(ctx context.Context, t *testing.T) (*IdentityStore, string, string, *Core) {
+	// Setup 2 auth backends, github and userpass
+	err := AddTestCredentialBackend("github", credGithub.Factory)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	err = AddTestCredentialBackend("userpass", credUserpass.Factory)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	c, _, _ := TestCoreUnsealed(t)
+
+	githubMe := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "github/",
+		Type:        "github",
+		Description: "github auth",
+	}
+
+	err = c.enableCredential(ctx, githubMe)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	userpassMe := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "userpass/",
+		Type:        "userpass",
+		Description: "userpass",
+	}
+
+	err = c.enableCredential(ctx, userpassMe)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return c.identityStore, githubMe.Accessor, userpassMe.Accessor, c
+}
+
 func TestIdentityStore_MetadataKeyRegex(t *testing.T) {
 	key := "validVALID012_-=+/"
 
@@ -621,4 +725,83 @@ func TestIdentityStore_MetadataKeyRegex(t *testing.T) {
 	if metaKeyFormatRegEx(key) {
 		t.Fatal("accepted invalid metadata key")
 	}
+}
+
+func expectSingleCount(t *testing.T, sink *metrics.InmemSink, keyPrefix string) {
+	t.Helper()
+
+	intervals := sink.Data()
+	// Test crossed an interval boundary, don't try to deal with it.
+	if len(intervals) > 1 {
+		t.Skip("Detected interval crossing.")
+	}
+
+	var counter *metrics.SampledValue = nil
+
+	for _, c := range intervals[0].Counters {
+		if strings.HasPrefix(c.Name, keyPrefix) {
+			counter = &c
+			break
+		}
+	}
+	if counter == nil {
+		t.Fatalf("No %q counter found.", keyPrefix)
+	}
+
+	if counter.Count != 1 {
+		t.Errorf("Counter number of samples %v is not 1.", counter.Count)
+	}
+
+	if counter.Sum != 1.0 {
+		t.Errorf("Counter sum %v is not 1.", counter.Sum)
+	}
+}
+
+func TestIdentityStore_NewEntityCounter(t *testing.T) {
+	// Add github credential factory to core config
+	err := AddTestCredentialBackend("github", credGithub.Factory)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	c, _, _, sink := TestCoreUnsealedWithMetrics(t)
+
+	meGH := &MountEntry{
+		Table:       credentialTableType,
+		Path:        "github/",
+		Type:        "github",
+		Description: "github auth",
+	}
+
+	ctx := namespace.RootContext(nil)
+	err = c.enableCredential(ctx, meGH)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	is := c.identityStore
+	ghAccessor := meGH.Accessor
+
+	alias := &logical.Alias{
+		MountType:     "github",
+		MountAccessor: ghAccessor,
+		Name:          "githubuser",
+		Metadata: map[string]string{
+			"foo": "a",
+		},
+	}
+
+	_, _, err = is.CreateOrFetchEntity(ctx, alias)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectSingleCount(t, sink, "identity.entity.creation")
+
+	_, _, err = is.CreateOrFetchEntity(ctx, alias)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectSingleCount(t, sink, "identity.entity.creation")
 }

@@ -1,6 +1,9 @@
 package pb
 
 import (
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"reflect"
 	"testing"
@@ -39,9 +42,9 @@ func TestTranslation_Errors(t *testing.T) {
 func TestTranslation_StorageEntry(t *testing.T) {
 	tCases := []*logical.StorageEntry{
 		nil,
-		&logical.StorageEntry{Key: "key", Value: []byte("value")},
-		&logical.StorageEntry{Key: "key1", Value: []byte("value1"), SealWrap: true},
-		&logical.StorageEntry{Key: "key1", SealWrap: true},
+		{Key: "key", Value: []byte("value")},
+		{Key: "key1", Value: []byte("value1"), SealWrap: true},
+		{Key: "key1", SealWrap: true},
 	}
 
 	for _, c := range tCases {
@@ -55,9 +58,14 @@ func TestTranslation_StorageEntry(t *testing.T) {
 }
 
 func TestTranslation_Request(t *testing.T) {
+	certs, err := peerCertificates()
+	if err != nil {
+		t.Logf("No test certificates were generated: %v", err)
+	}
+
 	tCases := []*logical.Request{
 		nil,
-		&logical.Request{
+		{
 			ID:                       "ID",
 			ReplicationCluster:       "RID",
 			Operation:                logical.CreateOperation,
@@ -74,9 +82,14 @@ func TestTranslation_Request(t *testing.T) {
 			Unauthenticated:          true,
 			Connection: &logical.Connection{
 				RemoteAddr: "localhost",
+				ConnState: &tls.ConnectionState{
+					Version:           tls.VersionTLS12,
+					HandshakeComplete: true,
+					PeerCertificates:  certs,
+				},
 			},
 		},
-		&logical.Request{
+		{
 			ID:                 "ID",
 			ReplicationCluster: "RID",
 			Operation:          logical.CreateOperation,
@@ -129,7 +142,7 @@ func TestTranslation_Request(t *testing.T) {
 					Name:          "name",
 				},
 				GroupAliases: []*logical.Alias{
-					&logical.Alias{
+					{
 						MountType:     "type",
 						MountAccessor: "accessor",
 						Name:          "name",
@@ -137,7 +150,7 @@ func TestTranslation_Request(t *testing.T) {
 				},
 			},
 			Headers: map[string][]string{
-				"X-Vault-Test": []string{"test"},
+				"X-Vault-Test": {"test"},
 			},
 			ClientToken:         "token",
 			ClientTokenAccessor: "accessor",
@@ -176,13 +189,13 @@ func TestTranslation_Request(t *testing.T) {
 func TestTranslation_Response(t *testing.T) {
 	tCases := []*logical.Response{
 		nil,
-		&logical.Response{
+		{
 			Data: map[string]interface{}{
 				"data": "blah",
 			},
 			Warnings: []string{"warning"},
 		},
-		&logical.Response{
+		{
 			Data: map[string]interface{}{
 				"string": "string",
 				"bool":   true,
@@ -231,7 +244,7 @@ func TestTranslation_Response(t *testing.T) {
 					Name:          "name",
 				},
 				GroupAliases: []*logical.Alias{
-					&logical.Alias{
+					{
 						MountType:     "type",
 						MountAccessor: "accessor",
 						Name:          "name",
@@ -266,4 +279,34 @@ func TestTranslation_Response(t *testing.T) {
 			t.Fatalf("Requests did not match: \n%#v, \n%#v", c, r)
 		}
 	}
+}
+
+// This is the contents of $GOROOT/src/crypto/tls/testdata/example-cert.pem
+// If it's good enough for testing the crypto/tls package it's good enough
+// for Vault.
+const exampleCert = `
+-----BEGIN CERTIFICATE-----
+MIIBhTCCASugAwIBAgIQIRi6zePL6mKjOipn+dNuaTAKBggqhkjOPQQDAjASMRAw
+DgYDVQQKEwdBY21lIENvMB4XDTE3MTAyMDE5NDMwNloXDTE4MTAyMDE5NDMwNlow
+EjEQMA4GA1UEChMHQWNtZSBDbzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABD0d
+7VNhbWvZLWPuj/RtHFjvtJBEwOkhbN/BnnE8rnZR8+sbwnc/KhCk3FhnpHZnQz7B
+5aETbbIgmuvewdjvSBSjYzBhMA4GA1UdDwEB/wQEAwICpDATBgNVHSUEDDAKBggr
+BgEFBQcDATAPBgNVHRMBAf8EBTADAQH/MCkGA1UdEQQiMCCCDmxvY2FsaG9zdDo1
+NDUzgg4xMjcuMC4wLjE6NTQ1MzAKBggqhkjOPQQDAgNIADBFAiEA2zpJEPQyz6/l
+Wf86aX6PepsntZv2GYlA5UpabfT2EZICICpJ5h/iI+i341gBmLiAFQOyTDT+/wQc
+6MF9+Yw1Yy0t
+-----END CERTIFICATE-----`
+
+func peerCertificates() ([]*x509.Certificate, error) {
+	blk, _ := pem.Decode([]byte(exampleCert))
+	if blk == nil {
+		return nil, errors.New("cannot decode example certificate")
+	}
+
+	cert, err := x509.ParseCertificate(blk.Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return []*x509.Certificate{cert}, nil
 }

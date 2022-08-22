@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 )
@@ -166,6 +167,10 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 				"-max-lease-ttl", "1h",
 				"-audit-non-hmac-request-keys", "foo,bar",
 				"-audit-non-hmac-response-keys", "foo,bar",
+				"-passthrough-request-headers", "authorization",
+				"-passthrough-request-headers", "www-authentication",
+				"-allowed-response-headers", "authorization,www-authentication",
+				"-allowed-managed-keys", "key1,key2",
 				"-listing-visibility", "unauth",
 				"mount_tune_integration/",
 			})
@@ -199,6 +204,21 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 			}
 			if exp := 3600; mountInfo.Config.MaxLeaseTTL != exp {
 				t.Errorf("expected %d to be %d", mountInfo.Config.MaxLeaseTTL, exp)
+			}
+			if diff := deep.Equal([]string{"authorization", "www-authentication"}, mountInfo.Config.PassthroughRequestHeaders); len(diff) > 0 {
+				t.Errorf("Failed to find expected values for PassthroughRequestHeaders. Difference is: %v", diff)
+			}
+			if diff := deep.Equal([]string{"authorization,www-authentication"}, mountInfo.Config.AllowedResponseHeaders); len(diff) > 0 {
+				t.Errorf("Failed to find expected values in AllowedResponseHeaders. Difference is: %v", diff)
+			}
+			if diff := deep.Equal([]string{"foo,bar"}, mountInfo.Config.AuditNonHMACRequestKeys); len(diff) > 0 {
+				t.Errorf("Failed to find expected values in AuditNonHMACRequestKeys. Difference is: %v", diff)
+			}
+			if diff := deep.Equal([]string{"foo,bar"}, mountInfo.Config.AuditNonHMACResponseKeys); len(diff) > 0 {
+				t.Errorf("Failed to find expected values in AuditNonHMACResponseKeys. Difference is: %v", diff)
+			}
+			if diff := deep.Equal([]string{"key1,key2"}, mountInfo.Config.AllowedManagedKeys); len(diff) > 0 {
+				t.Errorf("Failed to find expected values in AllowedManagedKeys. Difference is: %v", diff)
 			}
 		})
 

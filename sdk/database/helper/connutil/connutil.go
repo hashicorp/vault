@@ -6,9 +6,7 @@ import (
 	"sync"
 )
 
-var (
-	ErrNotInitialized = errors.New("connection has not been initialized")
-)
+var ErrNotInitialized = errors.New("connection has not been initialized")
 
 // ConnectionProducer can be used as an embedded interface in the Database
 // definition. It implements the methods dealing with individual database

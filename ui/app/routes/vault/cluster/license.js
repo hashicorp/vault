@@ -13,10 +13,4 @@ export default Route.extend(ClusterRoute, {
   model() {
     return this.store.queryRecord('license', {});
   },
-
-  actions: {
-    doRefresh() {
-      this.refresh();
-    },
-  },
 });

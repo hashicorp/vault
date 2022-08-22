@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Add Validation to KV secret engine
+```

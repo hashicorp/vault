@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 
 	"golang.org/x/crypto/ssh"
@@ -278,7 +277,7 @@ func checkSCPStatus(r *bufio.Reader) error {
 		// Treat any non-zero (really 1 and 2) as fatal errors
 		message, _, err := r.ReadLine()
 		if err != nil {
-			return errwrap.Wrapf("error reading error message: {{err}}", err)
+			return fmt.Errorf("error reading error message: %w", err)
 		}
 
 		return errors.New(string(message))
@@ -299,12 +298,12 @@ func scpUploadFile(dst string, src io.Reader, w io.Writer, r *bufio.Reader, fi *
 		// so that we can determine the length, since SCP is length-prefixed.
 		tf, err := ioutil.TempFile("", "vault-ssh-upload")
 		if err != nil {
-			return errwrap.Wrapf("error creating temporary file for upload: {{err}}", err)
+			return fmt.Errorf("error creating temporary file for upload: %w", err)
 		}
 		defer os.Remove(tf.Name())
 		defer tf.Close()
 
-		mode = 0644
+		mode = 0o644
 
 		if _, err := io.Copy(tf, src); err != nil {
 			return err
@@ -313,17 +312,17 @@ func scpUploadFile(dst string, src io.Reader, w io.Writer, r *bufio.Reader, fi *
 		// Sync the file so that the contents are definitely on disk, then
 		// read the length of it.
 		if err := tf.Sync(); err != nil {
-			return errwrap.Wrapf("error creating temporary file for upload: {{err}}", err)
+			return fmt.Errorf("error creating temporary file for upload: %w", err)
 		}
 
 		// Seek the file to the beginning so we can re-read all of it
 		if _, err := tf.Seek(0, 0); err != nil {
-			return errwrap.Wrapf("error creating temporary file for upload: {{err}}", err)
+			return fmt.Errorf("error creating temporary file for upload: %w", err)
 		}
 
 		tfi, err := tf.Stat()
 		if err != nil {
-			return errwrap.Wrapf("error creating temporary file for upload: {{err}}", err)
+			return fmt.Errorf("error creating temporary file for upload: %w", err)
 		}
 
 		size = tfi.Size()

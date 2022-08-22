@@ -7,6 +7,9 @@
   color: $grey;
   margin: $size-7 0 0 0;
 }
+.box-radio-spacing {
+  margin: $size-6 $size-3 $size-6 0;
+}
 .box-radio {
   box-sizing: border-box;
   flex-basis: 7rem;
@@ -32,10 +35,8 @@
     box-shadow: 0 0 0 1px $grey-light, $box-shadow-middle;
   }
 
-  input[type='radio'].radio {
-    position: absolute;
-    z-index: 1;
-    opacity: 0;
+  &.is-disabled {
+    opacity: 0.5;
   }
 
   input[type='radio'].radio + label {

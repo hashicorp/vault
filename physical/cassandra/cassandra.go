@@ -10,11 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
-	log "github.com/hashicorp/go-hclog"
-
 	metrics "github.com/armon/go-metrics"
 	"github.com/gocql/gocql"
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )
@@ -166,34 +164,32 @@ func setupCassandraTLS(conf map[string]string, cluster *gocql.ClusterConfig) err
 		return nil
 	}
 
-	var tlsConfig = &tls.Config{}
+	tlsConfig := &tls.Config{}
 	if pemBundlePath, ok := conf["pem_bundle_file"]; ok {
 		pemBundleData, err := ioutil.ReadFile(pemBundlePath)
 		if err != nil {
-			return errwrap.Wrapf(fmt.Sprintf("error reading pem bundle from %q: {{err}}", pemBundlePath), err)
+			return fmt.Errorf("error reading pem bundle from %q: %w", pemBundlePath, err)
 		}
 		pemBundle, err := certutil.ParsePEMBundle(string(pemBundleData))
 		if err != nil {
-			return errwrap.Wrapf("error parsing 'pem_bundle': {{err}}", err)
+			return fmt.Errorf("error parsing 'pem_bundle': %w", err)
 		}
 		tlsConfig, err = pemBundle.GetTLSConfig(certutil.TLSClient)
 		if err != nil {
 			return err
 		}
-	} else {
-		if pemJSONPath, ok := conf["pem_json_file"]; ok {
-			pemJSONData, err := ioutil.ReadFile(pemJSONPath)
-			if err != nil {
-				return errwrap.Wrapf(fmt.Sprintf("error reading json bundle from %q: {{err}}", pemJSONPath), err)
-			}
-			pemJSON, err := certutil.ParsePKIJSON([]byte(pemJSONData))
-			if err != nil {
-				return err
-			}
-			tlsConfig, err = pemJSON.GetTLSConfig(certutil.TLSClient)
-			if err != nil {
-				return err
-			}
+	} else if pemJSONPath, ok := conf["pem_json_file"]; ok {
+		pemJSONData, err := ioutil.ReadFile(pemJSONPath)
+		if err != nil {
+			return fmt.Errorf("error reading json bundle from %q: %w", pemJSONPath, err)
+		}
+		pemJSON, err := certutil.ParsePKIJSON([]byte(pemJSONData))
+		if err != nil {
+			return err
+		}
+		tlsConfig, err = pemJSON.GetTLSConfig(certutil.TLSClient)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -225,7 +221,9 @@ func setupCassandraTLS(conf map[string]string, cluster *gocql.ClusterConfig) err
 	}
 
 	cluster.SslOpts = &gocql.SslOptions{
-		Config: tlsConfig.Clone()}
+		Config:                 tlsConfig,
+		EnableHostVerification: !tlsConfig.InsecureSkipVerify,
+	}
 	return nil
 }
 

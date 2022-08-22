@@ -87,6 +87,6 @@ func EncryptDecrypt(rawStr string, decrypt, strip bool, wrapper wrapping.Wrapper
 		prevMaxLoc = match[1]
 	}
 	// At the end, append the rest
-	out = append(out, raw[prevMaxLoc:len(raw)]...)
+	out = append(out, raw[prevMaxLoc:]...)
 	return string(out), nil
 }

@@ -1,31 +1,35 @@
-import DS from 'ember-data';
+import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
-import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-import fieldToAttrs from 'vault/utils/field-to-attrs';
+import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import apiPath from 'vault/utils/api-path';
 import attachCapabilities from 'vault/lib/attach-capabilities';
 
-const { attr } = DS;
 export const COMPUTEDS = {
-  operationFields: computed('newFields', function() {
-    return this.newFields.filter(key => key.startsWith('operation'));
+  operationFields: computed('newFields', function () {
+    return this.newFields.filter((key) => key.startsWith('operation'));
   }),
 
-  operationFieldsWithoutSpecial: computed('operationFields', function() {
+  operationFieldsWithoutSpecial: computed('operationFields', function () {
     return this.operationFields.slice().removeObjects(['operationAll', 'operationNone']);
   }),
 
-  tlsFields: computed(function() {
+  tlsFields: computed(function () {
     return ['tlsClientKeyBits', 'tlsClientKeyType', 'tlsClientTtl'];
   }),
 
-  nonOperationFields: computed('tlsFields', 'operationFields', function() {
+  // For rendering on the create/edit pages
+  defaultFields: computed('newFields', 'operationFields', 'tlsFields', function () {
     let excludeFields = ['role'].concat(this.operationFields, this.tlsFields);
     return this.newFields.slice().removeObjects(excludeFields);
   }),
+
+  // For adapter/serializer
+  nonOperationFields: computed('newFields', 'operationFields', function () {
+    return this.newFields.slice().removeObjects(this.operationFields);
+  }),
 };
 
-const Model = DS.Model.extend(COMPUTEDS, {
+const ModelExport = Model.extend(COMPUTEDS, {
   useOpenAPI: true,
   backend: attr({ readOnly: true }),
   scope: attr({ readOnly: true }),
@@ -33,16 +37,16 @@ const Model = DS.Model.extend(COMPUTEDS, {
   getHelpUrl(path) {
     return `/v1/${path}/scope/example/role/example?help=1`;
   },
-  fieldGroups: computed('fields', 'tlsFields', 'nonOperationFields', function() {
+  fieldGroups: computed('fields', 'defaultFields.length', 'tlsFields', function () {
     const groups = [{ TLS: this.tlsFields }];
-    if (this.nonOperationFields.length) {
-      groups.unshift({ default: this.nonOperationFields });
+    if (this.defaultFields.length) {
+      groups.unshift({ default: this.defaultFields });
     }
     let ret = fieldToAttrs(this, groups);
     return ret;
   }),
 
-  operationFormFields: computed('operationFieldsWithoutSpecial', function() {
+  operationFormFields: computed('operationFieldsWithoutSpecial', function () {
     let objects = [
       'operationCreate',
       'operationActivate',
@@ -63,19 +67,19 @@ const Model = DS.Model.extend(COMPUTEDS, {
     ];
     if (others.length) {
       groups.push({
-        '': others,
+        Other: others,
       });
     }
     return fieldToAttrs(this, groups);
   }),
-  tlsFormFields: computed('tlsFields', function() {
+  tlsFormFields: computed('tlsFields', function () {
     return expandAttributeMeta(this, this.tlsFields);
   }),
-  fields: computed('nonOperationFields', function() {
-    return expandAttributeMeta(this, this.nonOperationFields);
+  fields: computed('defaultFields', function () {
+    return expandAttributeMeta(this, this.defaultFields);
   }),
 });
 
-export default attachCapabilities(Model, {
+export default attachCapabilities(ModelExport, {
   updatePath: apiPath`${'backend'}/scope/${'scope'}/role/${'id'}`,
 });

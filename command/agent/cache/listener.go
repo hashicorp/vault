@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
-
 	"strings"
 
 	"github.com/hashicorp/vault/command/server"

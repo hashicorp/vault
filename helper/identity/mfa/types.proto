@@ -9,17 +9,25 @@ package mfa;
 // Configuration information differs by type. Handler of each type should know
 // what to expect from the Config field.
 message Config {
+	// @inject_tag: sentinel:"-"
 	string type = 1;
+	// @inject_tag: sentinel:"-"
 	string name = 2;
+	// @inject_tag: sentinel:"-"
 	string id = 3;
+	// @inject_tag: sentinel:"-"
 	string mount_accessor = 4;
+	// @inject_tag: sentinel:"-"
 	string username_format = 5;
+	// @inject_tag: sentinel:"-"
 	oneof config {
 		TOTPConfig totp_config = 6;
 		OktaConfig okta_config = 7;
 		DuoConfig duo_config = 8;
 		PingIDConfig pingid_config = 9;
 	}
+	// @inject_tag: sentinel:"-"
+	string namespace_id = 10;
 }
 
 // TOTPConfig represents the configuration information required to generate
@@ -28,50 +36,79 @@ message Config {
 // by the information stored in the entity and not from the values in the
 // configuration.
 message TOTPConfig {
+	// @inject_tag: sentinel:"-"
 	string issuer = 1;
+	// @inject_tag: sentinel:"-"
 	uint32 period = 2;
+	// @inject_tag: sentinel:"-"
 	int32 algorithm = 3;
+	// @inject_tag: sentinel:"-"
 	int32 digits = 4;
+	// @inject_tag: sentinel:"-"
 	uint32 skew = 5;
+	// @inject_tag: sentinel:"-"
 	uint32 key_size = 6;
+	// @inject_tag: sentinel:"-"
 	int32 qr_size = 7;
+	// @inject_tag: sentinel:"-"
+	uint32 max_validation_attempts = 8;
 }
 
 // DuoConfig represents the configuration information required to perform
 // Duo authentication.
 message DuoConfig {
+	// @inject_tag: sentinel:"-"
 	string integration_key = 1;
+	// @inject_tag: sentinel:"-"
 	string secret_key = 2;
+	// @inject_tag: sentinel:"-"
 	string api_hostname = 3;
+	// @inject_tag: sentinel:"-"
 	string push_info = 4;
+	// @inject_tag: sentinel:"-"
+	bool use_passcode = 5;
 }
 
 // OktaConfig contains Okta configuration parameters required to perform Okta
 // authentication.
 message OktaConfig {
+	// @inject_tag: sentinel:"-"
 	string org_name = 1;
+	// @inject_tag: sentinel:"-"
 	string api_token = 2;
+	// @inject_tag: sentinel:"-"
 	bool production = 3;
+	// @inject_tag: sentinel:"-"
 	string base_url = 4;
+	// @inject_tag: sentinel:"-"
 	bool primary_email = 5;
 }
 
 // PingIDConfig contains PingID configuration information
 message PingIDConfig {
+	// @inject_tag: sentinel:"-"
 	string use_base64_key = 1;
+	// @inject_tag: sentinel:"-"
 	bool use_signature = 2;
+	// @inject_tag: sentinel:"-"
 	string token = 3;
+	// @inject_tag: sentinel:"-"
 	string idp_url = 4;
+	// @inject_tag: sentinel:"-"
 	string org_alias = 5;
+	// @inject_tag: sentinel:"-"
 	string admin_url = 6;
+	// @inject_tag: sentinel:"-"
 	string authenticator_url = 7;
 }
 
 // Secret represents all the types of secrets which the entity can hold.
 // Each MFA type should add a secret type to the oneof block in this message.
 message Secret {
+	// @inject_tag: sentinel:"-"
 	string method_name = 1;
 	oneof value {
+	// @inject_tag: sentinel:"-"
 		TOTPSecret totp_secret = 2;
 	}
 }
@@ -80,13 +117,34 @@ message Secret {
 // particular MFA method. This information is used to validate the MFA
 // credential supplied over the API during request time.
 message TOTPSecret {
+	// @inject_tag: sentinel:"-"
 	string issuer = 1;
+	// @inject_tag: sentinel:"-"
 	uint32 period = 2;
+	// @inject_tag: sentinel:"-"
 	int32 algorithm = 3;
+	// @inject_tag: sentinel:"-"
 	int32 digits = 4;
+	// @inject_tag: sentinel:"-"
 	uint32 skew = 5;
+	// @inject_tag: sentinel:"-"
 	uint32 key_size = 6;
 	// reserving 7 here just to keep parity with the config message above
+	// @inject_tag: sentinel:"-"
 	string account_name = 8;
+	// @inject_tag: sentinel:"-"
 	string key = 9;
+}
+
+// MFAEnforcementConfig is what the user provides to the
+// mfa/login_enforcement endpoint.
+message MFAEnforcementConfig {
+	string name = 1;
+	string namespace_id = 2;
+	repeated string mfa_method_ids = 3;
+	repeated string auth_method_accessors = 4;
+	repeated string auth_method_types = 5;
+	repeated string identity_group_ids = 6;
+	repeated string identity_entity_ids = 7;
+	string id = 8;
 }

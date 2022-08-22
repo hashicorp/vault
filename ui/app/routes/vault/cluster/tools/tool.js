@@ -29,6 +29,7 @@ export default Route.extend({
       if (this.wizard.currentMachine === 'tools') {
         this.wizard.transitionFeatureMachine(this.wizard.featureState, params.selected_action.toUpperCase());
       }
+      /* eslint-disable-next-line ember/no-controller-access-in-routes */
       this.controller.setProperties(params);
       return true;
     },

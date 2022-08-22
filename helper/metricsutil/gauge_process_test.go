@@ -147,10 +147,13 @@ func TestGauge_StartDelay(t *testing.T) {
 	sink := BlackholeSink()
 	sink.GaugeInterval = 2 * time.Hour
 
-	p, err := sink.newGaugeCollectionProcessWithClock(
+	p, err := newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		c.EmptyCollectionFunction,
+		sink,
+		sink.GaugeInterval,
+		sink.MaxGaugeCardinality,
 		log.Default(),
 		s,
 	)
@@ -209,10 +212,13 @@ func TestGauge_StoppedDuringInitialDelay(t *testing.T) {
 	sink := BlackholeSink()
 	sink.GaugeInterval = 2 * time.Hour
 
-	p, err := sink.newGaugeCollectionProcessWithClock(
+	p, err := newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		c.EmptyCollectionFunction,
+		sink,
+		sink.GaugeInterval,
+		sink.MaxGaugeCardinality,
 		log.Default(),
 		s,
 	)
@@ -235,10 +241,13 @@ func TestGauge_StoppedAfterInitialDelay(t *testing.T) {
 	sink := BlackholeSink()
 	sink.GaugeInterval = 2 * time.Hour
 
-	p, err := sink.newGaugeCollectionProcessWithClock(
+	p, err := newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		c.EmptyCollectionFunction,
+		sink,
+		sink.GaugeInterval,
+		sink.MaxGaugeCardinality,
 		log.Default(),
 		s,
 	)
@@ -265,7 +274,7 @@ func TestGauge_Backoff(t *testing.T) {
 	sink := BlackholeSink()
 	sink.GaugeInterval = 2 * time.Hour
 
-	threshold := time.Duration(int(sink.GaugeInterval) / 100)
+	threshold := sink.GaugeInterval / 100
 	f := func(ctx context.Context) ([]GaugeLabelValues, error) {
 		atomic.AddUint32(&c.numCalls, 1)
 		// Move time forward by more than 1% of the gauge interval
@@ -274,10 +283,13 @@ func TestGauge_Backoff(t *testing.T) {
 		return []GaugeLabelValues{}, nil
 	}
 
-	p, err := sink.newGaugeCollectionProcessWithClock(
+	p, err := newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		f,
+		sink,
+		sink.GaugeInterval,
+		sink.MaxGaugeCardinality,
 		log.Default(),
 		s,
 	)
@@ -300,10 +312,13 @@ func TestGauge_RestartTimer(t *testing.T) {
 	sink := BlackholeSink()
 	sink.GaugeInterval = 2 * time.Hour
 
-	p, err := sink.newGaugeCollectionProcessWithClock(
+	p, err := newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		c.EmptyCollectionFunction,
+		sink,
+		sink.GaugeInterval,
+		sink.MaxGaugeCardinality,
 		log.Default(),
 		s,
 	)
@@ -332,7 +347,7 @@ func waitForDone(t *testing.T,
 	done <-chan struct{},
 ) int {
 	t.Helper()
-	timeout := time.After(100 * time.Millisecond)
+	timeout := time.After(500 * time.Millisecond)
 
 	numTicks := 0
 	for {
@@ -366,16 +381,17 @@ func TestGauge_InterruptedStreaming(t *testing.T) {
 		1000000*time.Hour,
 		2000000*time.Hour)
 
-	sink := &ClusterMetricSink{
-		ClusterName:         "test",
-		MaxGaugeCardinality: 500,
-		GaugeInterval:       2 * time.Hour,
-		Sink:                inmemSink,
-	}
-	p, err := sink.newGaugeCollectionProcessWithClock(
+	sink := NewClusterMetricSink("test", inmemSink)
+	sink.MaxGaugeCardinality = 500
+	sink.GaugeInterval = 2 * time.Hour
+
+	p, err := newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		nil, // shouldn't be called
+		sink,
+		sink.GaugeInterval,
+		sink.MaxGaugeCardinality,
 		log.Default(),
 		s,
 	)
@@ -407,7 +423,6 @@ func TestGauge_InterruptedStreaming(t *testing.T) {
 		t.Errorf("Found %v gauges, expected fewer.",
 			len(intervals[0].Gauges))
 	}
-
 }
 
 // helper function to create a closure that's a GaugeCollector.
@@ -435,15 +450,12 @@ func TestGauge_MaximumMeasurements(t *testing.T) {
 		1000000*time.Hour,
 		2000000*time.Hour)
 
-	sink := &ClusterMetricSink{
-		ClusterName:         "test",
-		MaxGaugeCardinality: 500,
-		GaugeInterval:       2 * time.Hour,
-		Sink:                inmemSink,
-	}
+	sink := NewClusterMetricSink("test", inmemSink)
+	sink.MaxGaugeCardinality = 100
+	sink.GaugeInterval = 2 * time.Hour
 
 	// Create a report larger than the default limit
-	excessGauges := 100
+	excessGauges := 20
 	values := makeLabels(sink.MaxGaugeCardinality + excessGauges)
 	rand.Shuffle(len(values), func(i, j int) {
 		values[i], values[j] = values[j], values[i]
@@ -451,10 +463,13 @@ func TestGauge_MaximumMeasurements(t *testing.T) {
 
 	// Advance time by 0.5% of duration
 	advance := time.Duration(int(0.005 * float32(sink.GaugeInterval)))
-	p, err := sink.newGaugeCollectionProcessWithClock(
+	p, err := newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		c.makeFunctionForValues(values, s, advance),
+		sink,
+		sink.GaugeInterval,
+		sink.MaxGaugeCardinality,
 		log.Default(),
 		s,
 	)
@@ -474,9 +489,9 @@ func TestGauge_MaximumMeasurements(t *testing.T) {
 	sendTicker := s.waitForTicker(t)
 	numTicksSent := waitForDone(t, sendTicker.sender, done)
 
-	// 500 items, one delay after after each 25, means that
-	// 19 ticks are consumed, so 19 or 20 must be sent.
-	expectedTicks := sink.MaxGaugeCardinality/25 - 1
+	// 100 items, one delay after each batchSize (25), means that
+	// 3 ticks are consumed, so 3 or 4 must be sent.
+	expectedTicks := sink.MaxGaugeCardinality/batchSize - 1
 	if numTicksSent < expectedTicks || numTicksSent > expectedTicks+1 {
 		t.Errorf("Number of ticks = %v, expected %v.", numTicksSent, expectedTicks)
 	}
@@ -509,12 +524,10 @@ func TestGauge_MeasurementError(t *testing.T) {
 	inmemSink := metrics.NewInmemSink(
 		1000000*time.Hour,
 		2000000*time.Hour)
-	sink := &ClusterMetricSink{
-		ClusterName:         "test",
-		MaxGaugeCardinality: 500,
-		GaugeInterval:       2 * time.Hour,
-		Sink:                inmemSink,
-	}
+	sink := NewClusterMetricSink("test", inmemSink)
+	sink.MaxGaugeCardinality = 500
+	sink.GaugeInterval = 2 * time.Hour
+
 	// Create a small report so we don't have to deal with batching.
 	numGauges := 10
 	values := make([]GaugeLabelValues, numGauges)
@@ -532,10 +545,13 @@ func TestGauge_MeasurementError(t *testing.T) {
 		return values, errors.New("test error")
 	}
 
-	p, err := sink.newGaugeCollectionProcessWithClock(
+	p, err := newGaugeCollectionProcessWithClock(
 		[]string{"example", "count"},
 		[]Label{{"gauge", "test"}},
 		f,
+		sink,
+		sink.GaugeInterval,
+		sink.MaxGaugeCardinality,
 		log.Default(),
 		s,
 	)

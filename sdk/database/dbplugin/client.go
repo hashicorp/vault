@@ -32,18 +32,17 @@ func (dc *DatabasePluginClient) Close() error {
 // plugin. The client is wrapped in a DatabasePluginClient object to ensure the
 // plugin is killed on call of Close().
 func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (Database, error) {
-
 	// pluginSets is the map of plugins we can dispense.
 	pluginSets := map[int]plugin.PluginSet{
 		// Version 3 used to supports both protocols. We want to keep it around
 		// since it's possible old plugins built against this version will still
 		// work with gRPC. There is currently no difference between version 3
 		// and version 4.
-		3: plugin.PluginSet{
+		3: {
 			"database": new(GRPCDatabasePlugin),
 		},
 		// Version 4 only supports gRPC
-		4: plugin.PluginSet{
+		4: {
 			"database": new(GRPCDatabasePlugin),
 		},
 	}

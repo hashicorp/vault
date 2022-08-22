@@ -7,7 +7,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
@@ -45,7 +44,6 @@ func (b *backend) tidySecretID(ctx context.Context, req *logical.Request) (*logi
 	resp := &logical.Response{}
 	resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
 	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
-
 }
 
 type tidyHelperSecretIDAccessor struct {
@@ -115,7 +113,7 @@ func (b *backend) tidySecretIDinternal(s logical.Storage) {
 			entryIndex := fmt.Sprintf("%s%s%s", secretIDPrefixToUse, roleNameHMAC, secretIDHMAC)
 			secretIDEntry, err := s.Get(ctx, entryIndex)
 			if err != nil {
-				return errwrap.Wrapf(fmt.Sprintf("error fetching SecretID %q: {{err}}", secretIDHMAC), err)
+				return fmt.Errorf("error fetching SecretID %q: %w", secretIDHMAC, err)
 			}
 
 			if secretIDEntry == nil {
@@ -136,12 +134,12 @@ func (b *backend) tidySecretIDinternal(s logical.Storage) {
 			// entry, revoke the secret ID immediately
 			accessorEntry, err := b.secretIDAccessorEntry(ctx, s, result.SecretIDAccessor, secretIDPrefixToUse)
 			if err != nil {
-				return errwrap.Wrapf("failed to read secret ID accessor entry: {{err}}", err)
+				return fmt.Errorf("failed to read secret ID accessor entry: %w", err)
 			}
 			if accessorEntry == nil {
 				logger.Trace("found nil accessor")
 				if err := s.Delete(ctx, entryIndex); err != nil {
-					return errwrap.Wrapf(fmt.Sprintf("error deleting secret ID %q from storage: {{err}}", secretIDHMAC), err)
+					return fmt.Errorf("error deleting secret ID %q from storage: %w", secretIDHMAC, err)
 				}
 				return nil
 			}
@@ -152,11 +150,11 @@ func (b *backend) tidySecretIDinternal(s logical.Storage) {
 				// Clean up the accessor of the secret ID first
 				err = b.deleteSecretIDAccessorEntry(ctx, s, result.SecretIDAccessor, secretIDPrefixToUse)
 				if err != nil {
-					return errwrap.Wrapf("failed to delete secret ID accessor entry: {{err}}", err)
+					return fmt.Errorf("failed to delete secret ID accessor entry: %w", err)
 				}
 
 				if err := s.Delete(ctx, entryIndex); err != nil {
-					return errwrap.Wrapf(fmt.Sprintf("error deleting SecretID %q from storage: {{err}}", secretIDHMAC), err)
+					return fmt.Errorf("error deleting SecretID %q from storage: %w", secretIDHMAC, err)
 				}
 
 				return nil
@@ -197,7 +195,7 @@ func (b *backend) tidySecretIDinternal(s logical.Storage) {
 			// roles without having a lock while doing so.  Because
 			// accHashesByLockID was populated previously, at worst this may
 			// mean that we fail to clean up something we ought to.
-			var allSecretIDHMACs = make(map[string]struct{})
+			allSecretIDHMACs := make(map[string]struct{})
 			for _, roleNameHMAC := range roleNameHMACs {
 				secretIDHMACs, err := s.List(ctx, secretIDPrefixToUse+roleNameHMAC)
 				if err != nil {
@@ -265,7 +263,9 @@ func (b *backend) pathTidySecretIDUpdate(ctx context.Context, req *logical.Reque
 	return b.tidySecretID(ctx, req)
 }
 
-const pathTidySecretIDSyn = "Trigger the clean-up of expired SecretID entries."
-const pathTidySecretIDDesc = `SecretIDs will have expiration time attached to them. The periodic function
+const (
+	pathTidySecretIDSyn  = "Trigger the clean-up of expired SecretID entries."
+	pathTidySecretIDDesc = `SecretIDs will have expiration time attached to them. The periodic function
 of the backend will look for expired entries and delete them. This happens once in a minute. Invoking
 this endpoint will trigger the clean-up action, without waiting for the backend's periodic function.`
+)

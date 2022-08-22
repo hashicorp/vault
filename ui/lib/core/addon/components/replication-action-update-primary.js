@@ -3,4 +3,5 @@ import layout from '../templates/components/replication-action-update-primary';
 
 export default Actions.extend({
   layout,
+  tagName: '',
 });
