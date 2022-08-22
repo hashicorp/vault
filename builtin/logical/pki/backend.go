@@ -452,7 +452,7 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 
 	listEntriesIndex := 0
 	possibleDoubleCountIndex := 0
-	for true {
+	for {
 		if listEntriesIndex >= len(entries) {
 			break
 		}
@@ -482,7 +482,7 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 
 	listRevokedEntriesIndex := 0
 	possibleRevokedDoubleCountIndex := 0
-	for true {
+	for {
 		if listRevokedEntriesIndex >= len(revokedEntries) {
 			break
 		}
