@@ -9,7 +9,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -48,11 +48,12 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*PluginBackend, 
 	if err != nil {
 		return nil, err
 	}
+	version := conf.Config["plugin_version"]
 
 	sys := conf.System
 
 	// NewBackend with isMetadataMode set to true
-	raw, err := bplugin.NewBackend(ctx, name, pluginType, sys, conf, true)
+	raw, err := bplugin.NewBackend(ctx, name, pluginType, sys, conf, true, version)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +106,7 @@ func (b *PluginBackend) startBackend(ctx context.Context, storage logical.Storag
 	// Ensure proper cleanup of the backend (i.e. call client.Kill())
 	b.Backend.Cleanup(ctx)
 
-	nb, err := bplugin.NewBackend(ctx, pluginName, pluginType, b.config.System, b.config, false)
+	nb, err := bplugin.NewBackend(ctx, pluginName, pluginType, b.config.System, b.config, false, b.config.Config["plugin_version"])
 	if err != nil {
 		return err
 	}

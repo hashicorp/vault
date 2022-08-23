@@ -119,3 +119,6 @@ website/components/node_modules
 
 .buildcache/
 .releaser/
+
+# test files
+test-plugins

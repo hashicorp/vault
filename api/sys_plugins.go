@@ -194,6 +194,9 @@ type RegisterPluginInput struct {
 
 	// SHA256 is the shasum of the plugin.
 	SHA256 string `json:"sha256,omitempty"`
+
+	// Version is the optional version of the plugin being registered
+	Version string `json:"version,omitempty"`
 }
 
 // RegisterPlugin wraps RegisterPluginWithContext using context.Background.

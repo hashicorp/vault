@@ -13,8 +13,8 @@ import (
 	"sync"
 
 	log "github.com/hashicorp/go-hclog"
-	multierror "github.com/hashicorp/go-multierror"
-	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	semver "github.com/hashicorp/go-version"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
@@ -653,7 +653,10 @@ func (c *PluginCatalog) Delete(ctx context.Context, name string, pluginType cons
 // List returns a list of all the known plugin names. If an external and builtin
 // plugin share the same name, only one instance of the name will be returned.
 func (c *PluginCatalog) List(ctx context.Context, pluginType consts.PluginType) ([]string, error) {
-	plugins, err := c.listInternal(ctx, pluginType, false)
+	plugins, err := c.listInternal(ctx, pluginType, true)
+	c.logger.Info("List", "list", plugins, "err", err)
+
+	plugins, err = c.listInternal(ctx, pluginType, false)
 	if err != nil {
 		return nil, err
 	}

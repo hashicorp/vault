@@ -131,6 +131,55 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		}
 	})
 
+	t.Run("integration with version", func(t *testing.T) {
+		t.Parallel()
+
+		pluginDir, cleanup := testPluginDir(t)
+		defer cleanup(t)
+
+		client, _, closer := testVaultServerPluginDir(t, pluginDir)
+		defer closer()
+
+		pluginName := "my-plugin"
+		testPluginCreateAndRegisterVersioned(t, client, pluginDir, pluginName, consts.PluginTypeCredential)
+
+		ui, cmd := testPluginDeregisterCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			consts.PluginTypeCredential.String(),
+			pluginName,
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "Success! Deregistered plugin (if it was registered): "
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+
+		resp, err := client.Sys().ListPlugins(&api.ListPluginsInput{
+			Type: consts.PluginTypeCredential,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		found := false
+		for _, plugins := range resp.PluginsByType {
+			for _, p := range plugins {
+				if p == pluginName {
+					found = true
+				}
+			}
+		}
+		if found {
+			t.Errorf("expected %q to not be in %q", pluginName, resp.PluginsByType)
+		}
+	})
+
 	t.Run("communication_failure", func(t *testing.T) {
 		t.Parallel()
 
