@@ -1,3 +1,0 @@
-```release-note:improvement
-website/docs: Integrated Storage notes on quroum managment & scaling.
-```
