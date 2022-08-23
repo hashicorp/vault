@@ -275,6 +275,7 @@ func lookupOcspIssuer(sc *storageContext, req *ocsp.Request, optRevokedIssuer is
 		return nil, err
 	}
 
+	matchedButNoUsage := false
 	for _, issuerId := range issuerIds {
 		parsedBundle, issuer, err := getOcspIssuerParsedBundle(sc, issuerId)
 		if err != nil {
@@ -298,13 +299,20 @@ func lookupOcspIssuer(sc *storageContext, req *ocsp.Request, optRevokedIssuer is
 
 		if matches {
 			if !issuer.Usage.HasUsage(OCSPSigningUsage) {
-				// We found the correct issuer, but it's not allowed to sign the
-				// response so give up.
-				return nil, ErrMissingOcspUsage
+				matchedButNoUsage = true
+				// We found a matching issuer, but it's not allowed to sign the
+				// response, there might be another issuer that we rotated
+				// that will match though, so keep iterating.
+				continue
 			}
 
 			return parsedBundle, nil
 		}
+	}
+
+	if matchedButNoUsage {
+		// We matched an issuer but it did not have an OCSP signing usage set so bail.
+		return nil, ErrMissingOcspUsage
 	}
 
 	return nil, ErrUnknownIssuer
