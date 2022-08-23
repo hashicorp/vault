@@ -14,7 +14,7 @@ import (
 
 // Backend returns an instance of the backend, either as a plugin if external
 // or as a concrete implementation if builtin, casted as logical.Backend.
-func Backend(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error) {
 	var b backend
 	name := conf.Config["plugin_name"]
 	pluginType, err := consts.ParsePluginType(conf.Config["plugin_type"])
@@ -52,9 +52,11 @@ func (b *backend) reloadBackend(ctx context.Context) error {
 		return err
 	}
 
-	b.Logger().Trace("plugin: reloading plugin backend", "plugin", pluginName)
+	b.Logger().Debug("plugin: reloading plugin backend", "plugin", pluginName)
 
 	// Ensure proper cleanup of the backend
+	// Pass a context value so that the plugin client will call the appropriate
+	// cleanup method for reloading
 	reloadCtx := context.WithValue(ctx, v5.ContextKeyPluginReload, "reload")
 	b.Backend.Cleanup(reloadCtx)
 
