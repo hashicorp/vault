@@ -19,7 +19,7 @@ import (
 const (
 	// PluginAutoMTLSEnv is used to ensure AutoMTLS is used. This will override
 	// setting a TLSProviderFunc for a plugin.
-	PluginAutoMTLSEnv = "VAULT_PLUGIN_AUTOMTLS"
+	PluginAutoMTLSEnv = "VAULT_PLUGIN_AUTOMTLS_ENABLED"
 
 	// PluginMetadataModeEnv is an ENV name used to disable TLS communication
 	// to bootstrap mounting plugins.

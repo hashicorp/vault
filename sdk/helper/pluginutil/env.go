@@ -10,7 +10,7 @@ import (
 const (
 	// PluginAutoMTLSEnv is used to ensure AutoMTLS is used. This will override
 	// setting a TLSProviderFunc for a plugin.
-	PluginAutoMTLSEnv = "VAULT_PLUGIN_AUTOMTLS"
+	PluginAutoMTLSEnv = "VAULT_PLUGIN_AUTOMTLS_ENABLED"
 
 	// PluginMlockEnabled is the ENV name used to pass the configuration for
 	// enabling mlock
