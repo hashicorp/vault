@@ -592,9 +592,12 @@ func (c *ServerCommand) runRecoveryMode() int {
 	if wrapper == nil {
 		seal = defaultSeal
 	} else {
-		seal = vault.NewAutoSeal(&vaultseal.Access{
+		seal, err = vault.NewAutoSeal(&vaultseal.Access{
 			Wrapper: wrapper,
 		})
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("error creating auto seal: %v", err))
+		}
 	}
 	barrierSeal = seal
 
@@ -2348,7 +2351,11 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	var wrapper wrapping.Wrapper
 	var barrierWrapper wrapping.Wrapper
 	if c.flagDevAutoSeal {
-		barrierSeal = vault.NewAutoSeal(vaultseal.NewTestSeal(nil))
+		var err error
+		barrierSeal, err = vault.NewAutoSeal(vaultseal.NewTestSeal(nil))
+		if err != nil {
+			return nil, nil, nil, nil, nil, err
+		}
 		return barrierSeal, nil, nil, nil, nil, nil
 	}
 
@@ -2391,9 +2398,13 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		if wrapper == nil {
 			seal = defaultSeal
 		} else {
-			seal = vault.NewAutoSeal(&vaultseal.Access{
+			var err error
+			seal, err = vault.NewAutoSeal(&vaultseal.Access{
 				Wrapper: wrapper,
 			})
+			if err != nil {
+				return nil, nil, nil, nil, nil, err
+			}
 		}
 		infoPrefix := ""
 		if configSeal.Disabled {

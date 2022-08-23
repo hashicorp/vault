@@ -42,18 +42,25 @@ type autoSeal struct {
 
 	hcLock          sync.Mutex
 	healthCheckStop chan struct{}
+	barrierType     wrapping.WrapperType
 }
 
 // Ensure we are implementing the Seal interface
 var _ Seal = (*autoSeal)(nil)
 
-func NewAutoSeal(lowLevel *seal.Access) *autoSeal {
+func NewAutoSeal(lowLevel *seal.Access) (*autoSeal, error) {
 	ret := &autoSeal{
 		Access: lowLevel,
 	}
 	ret.barrierConfig.Store((*SealConfig)(nil))
 	ret.recoveryConfig.Store((*SealConfig)(nil))
-	return ret
+
+	var err error
+	ret.barrierType, err = ret.Type(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return ret, nil
 }
 
 func (d *autoSeal) SealWrapable() bool {
@@ -88,8 +95,7 @@ func (d *autoSeal) Finalize(ctx context.Context) error {
 }
 
 func (d *autoSeal) BarrierType() wrapping.WrapperType {
-	typ, _ := d.Type(context.Background())
-	return typ
+	return d.barrierType
 }
 
 func (d *autoSeal) StoredKeysSupported() seal.StoredKeysSupport {
