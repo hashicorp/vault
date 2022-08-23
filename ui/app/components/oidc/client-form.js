@@ -23,7 +23,7 @@ export default class OidcClientForm extends Component {
   @service flashMessages;
   @tracked modelValidations;
   @tracked errorBanner;
-  @tracked invalidFormMessage;
+  @tracked invalidFormAlert;
   @tracked radioCardGroupValue =
     !this.args.model.assignments || this.args.model.assignments.includes('allow_all')
       ? 'allow_all'
@@ -64,7 +64,7 @@ export default class OidcClientForm extends Component {
     try {
       const { isValid, state, invalidFormMessage } = this.args.model.validate();
       this.modelValidations = isValid ? null : state;
-      this.invalidFormMessage = invalidFormMessage;
+      this.invalidFormAlert = invalidFormMessage;
       if (isValid) {
         if (this.radioCardGroupValue === 'allow_all') {
           // the backend permits 'allow_all' AND other assignments, though 'allow_all' will take precedence
@@ -84,7 +84,9 @@ export default class OidcClientForm extends Component {
       }
     } catch (error) {
       const message = error.errors ? error.errors.join('. ') : error.message;
+      console.log(error.errors);
       this.errorBanner = message;
+      this.invalidFormAlert = 'There was a problem submitting';
     }
   }
 }

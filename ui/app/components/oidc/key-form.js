@@ -57,7 +57,7 @@ export default class OidcKeyForm extends Component {
     try {
       const { isValid, state, invalidFormMessage } = this.args.model.validate();
       this.modelValidations = isValid ? null : state;
-      this.invalidFormMessage = invalidFormMessage;
+      this.invalidFormAlert = invalidFormMessage;
       if (isValid) {
         const { isNew, name } = this.args.model;
         if (this.radioCardGroupValue === 'allow_all') {
