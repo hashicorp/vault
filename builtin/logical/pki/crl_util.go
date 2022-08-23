@@ -68,6 +68,12 @@ func (cb *crlBuilder) reloadConfigIfRequired(sc *storageContext) error {
 		cb.c.Lock()
 		defer cb.c.Unlock()
 
+		if !cb.dirty.Load() {
+			// Someone else might've been reloading the config; no need
+			// to do it twice.
+			return nil
+		}
+
 		config, err := sc.getRevocationConfig()
 		if err != nil {
 			return err
