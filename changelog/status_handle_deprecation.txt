@@ -1,0 +1,15 @@
+```release-note:change
+auth: `enable` command now returns an error for deprecated auth methods.
+```
+```release-note:change
+auth: `POST /sys/auth/:type` endpoint now reports an error for deprecated auth methods.
+```
+```release-note:change
+secrets: `enable` command now returns an error for deprecated secrets engines.
+```
+```release-note:change
+secrets: `POST /sys/mount/:type` endpoint now reports an error for deprecated auth secrets engines.
+```
+```release-note:improvement
+core: Handle and log deprecated builtin mounts
+```
