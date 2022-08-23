@@ -93,7 +93,7 @@ module('Unit | Mixin | cluster route', function () {
   test('#targetRouteName happy path when not authed forwards to AUTH', function (assert) {
     let subject = createClusterRoute(
       { needsInit: false, sealed: false, dr: { isSecondary: false } },
-      { authToken: () => null }
+      { hasKeyData: () => false, authToken: () => null }
     );
     subject.routeName = INIT;
     assert.equal(subject.targetRouteName(), AUTH, 'forwards when inited and navigating to INIT');
@@ -120,20 +120,6 @@ module('Unit | Mixin | cluster route', function () {
     subject.transitionToTargetRoute();
     assert.ok(
       spy.calledWithExactly(AUTH, { queryParams: { redirect_to: redirectRouteURL } }),
-      'calls transitionTo with the expected args'
-    );
-
-    spy.restore();
-  });
-
-  test('#transitionToTargetRoute to AUTH when authd', function (assert) {
-    let redirectRouteURL = '/vault/secrets/secret/create';
-    let subject = createClusterRoute({ needsInit: false, sealed: false }, { authToken: () => 'has-token' });
-    subject.router.queryParams.redirect_to = redirectRouteURL;
-    let spy = sinon.spy(subject, 'transitionTo');
-    subject.transitionToTargetRoute();
-    assert.ok(
-      spy.calledWithExactly(REDIRECT, { queryParams: { redirect_to: redirectRouteURL } }),
       'calls transitionTo with the expected args'
     );
 
