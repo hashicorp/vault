@@ -343,7 +343,7 @@ func TestOcsp_MultipleMatchingIssuersOneWithoutSigningUsage(t *testing.T) {
 	require.True(t, usages.HasUsage(CRLSigningUsage))
 	require.False(t, usages.HasUsage(OCSPSigningUsage))
 
-	// Request an OCSP request from it, we should get an Unauthorized response back
+	// Request an OCSP request from it, we should get a Good response back, from the rotated cert
 	resp, err = sendOcspRequest(t, b, s, "get", testEnv.leafCertIssuer1, testEnv.issuer1, crypto.SHA1)
 	requireSuccessNonNilResponse(t, resp, err, "ocsp get request")
 	requireFieldsSetInResp(t, resp, "http_content_type", "http_status_code", "http_raw_body")
@@ -358,9 +358,7 @@ func TestOcsp_MultipleMatchingIssuersOneWithoutSigningUsage(t *testing.T) {
 	require.Equal(t, crypto.SHA1, ocspResp.IssuerHash)
 	require.Equal(t, 0, ocspResp.RevocationReason)
 	require.Equal(t, testEnv.leafCertIssuer1.SerialNumber, ocspResp.SerialNumber)
-	require.Equal(t, crypto.SHA1, ocspResp.IssuerHash)
 	require.Equal(t, rotatedCert, ocspResp.Certificate)
-	require.Equal(t, 0, ocspResp.RevocationReason)
 
 	requireOcspSignatureAlgoForKey(t, rotatedCert.PublicKey, ocspResp.SignatureAlgorithm)
 	requireOcspResponseSignedBy(t, ocspResp, rotatedCert.PublicKey)
