@@ -66,13 +66,18 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 	// Nasty hack part two. :-) For generation of CSRs, certutil presently doesn't
 	// support configuration of this. However, because we need generation parameters,
 	// which create a role and attempt to read this parameter, we need to provide
-	// a value (which will be ignored). Hence, we stub in the missing parameter here,
+	// a value (which will be ignored). Hence, we stub in the missing parameters here,
 	// including its schema, just enough for it to work..
 	data.Schema["signature_bits"] = &framework.FieldSchema{
 		Type:    framework.TypeInt,
 		Default: 0,
 	}
 	data.Raw["signature_bits"] = 0
+	data.Schema["use_pss"] = &framework.FieldSchema{
+		Type:    framework.TypeBool,
+		Default: false,
+	}
+	data.Raw["use_pss"] = false
 
 	sc := b.makeStorageContext(ctx, req.Storage)
 	exported, format, role, errorResp := getGenerationParams(sc, data)
@@ -109,12 +114,12 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		Data: map[string]interface{}{},
 	}
 
-	entries, err := getURLs(ctx, req.Storage)
+	entries, err := getGlobalAIAURLs(ctx, req.Storage)
 	if err == nil && len(entries.OCSPServers) == 0 && len(entries.IssuingCertificates) == 0 && len(entries.CRLDistributionPoints) == 0 {
 		// If the operator hasn't configured any of the URLs prior to
 		// generating this issuer, we should add a warning to the response,
 		// informing them they might want to do so and re-generate the issuer.
-		resp.AddWarning("This mount hasn't configured any authority access information fields; this may make it harder for systems to find missing certificates in the chain or to validate revocation status of certificates. Consider updating /config/urls with this information.")
+		resp.AddWarning("This mount hasn't configured any authority information access (AIA) fields; this may make it harder for systems to find missing certificates in the chain or to validate revocation status of certificates. Consider updating /config/urls or the newly generated issuer with this information. Since this certificate is an intermediate, it might be useful to regenerate this certificate after fixing this problem for the root mount.")
 	}
 
 	switch format {

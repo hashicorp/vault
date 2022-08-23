@@ -1795,6 +1795,8 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["wrap"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["wrap"][1]),
+
+			TakesArbitraryInput: true,
 		},
 
 		{

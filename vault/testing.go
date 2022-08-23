@@ -39,7 +39,6 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
-	dbPostgres "github.com/hashicorp/vault/plugins/database/postgresql"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -2213,6 +2212,7 @@ func NewMockBuiltinRegistry() *mockBuiltinRegistry {
 			"mysql-database-plugin":      consts.PluginTypeDatabase,
 			"postgresql-database-plugin": consts.PluginTypeDatabase,
 			"approle":                    consts.PluginTypeCredential,
+			"aws":                        consts.PluginTypeCredential,
 		},
 	}
 }
@@ -2235,8 +2235,22 @@ func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (fu
 		return toFunc(approle.Factory), true
 	}
 
+	if name == "aws" {
+		return toFunc(func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+			b := new(framework.Backend)
+			b.Setup(ctx, config)
+			b.BackendType = logical.TypeCredential
+			return b, nil
+		}), true
+	}
+
 	if name == "postgresql-database-plugin" {
-		return dbPostgres.New, true
+		return toFunc(func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+			b := new(framework.Backend)
+			b.Setup(ctx, config)
+			b.BackendType = logical.TypeLogical
+			return b, nil
+		}), true
 	}
 	return dbMysql.New(dbMysql.DefaultUserNameTemplate), true
 }
@@ -2277,6 +2291,10 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 
 func (m *mockBuiltinRegistry) Contains(name string, pluginType consts.PluginType) bool {
 	return false
+}
+
+func (m *mockBuiltinRegistry) DeprecationStatus(name string, pluginType consts.PluginType) (consts.DeprecationStatus, bool) {
+	return consts.Supported, true
 }
 
 type NoopAudit struct {
@@ -2378,4 +2396,15 @@ func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
 		time.Sleep(100 * time.Millisecond)
 	}
 	t.Fatalf("did not complete before deadline, err: %v", err)
+}
+
+// SetRollbackPeriodForTesting lets us modify the periodic func invocation
+// time period to some other value. Best practice is to set this, spin up
+// a test cluster and immediately reset the value back to the default, to
+// avoid impacting other tests too much. To that end, we return the original
+// value of that period.
+func SetRollbackPeriodForTesting(newPeriod time.Duration) time.Duration {
+	oldPeriod := rollbackPeriod
+	rollbackPeriod = newPeriod
+	return oldPeriod
 }

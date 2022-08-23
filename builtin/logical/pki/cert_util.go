@@ -10,10 +10,12 @@ import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"net"
 	"net/url"
 	"regexp"
@@ -137,15 +139,20 @@ func (sc *storageContext) fetchCAInfoByIssuerId(issuerId issuerID, usage issuerU
 		ParsedCertBundle:     *parsedBundle,
 		URLs:                 nil,
 		LeafNotAfterBehavior: entry.LeafNotAfterBehavior,
+		RevocationSigAlg:     entry.RevocationSigAlg,
 	}
 
-	entries, err := getURLs(sc.Context, sc.Storage)
+	entries, err := entry.GetAIAURLs(sc)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
 	}
 	caInfo.URLs = entries
 
 	return caInfo, nil
+}
+
+func fetchCertBySerialBigInt(ctx context.Context, b *backend, req *logical.Request, prefix string, serial *big.Int) (*logical.StorageEntry, error) {
+	return fetchCertBySerial(ctx, b, req, prefix, serialFromBigInt(serial))
 }
 
 // Allows fetching certificates from the backend; it handles the slightly
@@ -159,7 +166,7 @@ func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, pr
 	var certEntry *logical.StorageEntry
 
 	hyphenSerial := normalizeSerial(serial)
-	colonSerial := strings.Replace(strings.ToLower(serial), "-", ":", -1)
+	colonSerial := strings.ReplaceAll(strings.ToLower(serial), "-", ":")
 
 	switch {
 	// Revoked goes first as otherwise crl get hardcoded paths which fail if
@@ -672,8 +679,9 @@ func generateCert(sc *storageContext,
 		data.Params.PermittedDNSDomains = input.apiData.Get("permitted_dns_domains").([]string)
 
 		if data.SigningBundle == nil {
-			// Generating a self-signed root certificate
-			entries, err := getURLs(ctx, sc.Storage)
+			// Generating a self-signed root certificate. Since we have no
+			// issuer entry yet, we default to the global URLs.
+			entries, err := getGlobalAIAURLs(ctx, sc.Storage)
 			if err != nil {
 				return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
 			}
@@ -912,9 +920,10 @@ func signCert(b *backend,
 
 // otherNameRaw describes a name related to a certificate which is not in one
 // of the standard name formats. RFC 5280, 4.2.1.6:
-// OtherName ::= SEQUENCE {
-//      type-id    OBJECT IDENTIFIER,
-//      value      [0] EXPLICIT ANY DEFINED BY type-id }
+//
+//	OtherName ::= SEQUENCE {
+//	     type-id    OBJECT IDENTIFIER,
+//	     value      [0] EXPLICIT ANY DEFINED BY type-id }
 type otherNameRaw struct {
 	TypeID asn1.ObjectIdentifier
 	Value  asn1.RawValue
@@ -1194,7 +1203,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 					parsedIP := net.ParseIP(v)
 					if parsedIP == nil {
 						return nil, errutil.UserError{Err: fmt.Sprintf(
-							"the value '%s' is not a valid IP address", v)}
+							"the value %q is not a valid IP address", v)}
 					}
 					ipAddresses = append(ipAddresses, parsedIP)
 				}
@@ -1249,7 +1258,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 					if parsedURI == nil || err != nil {
 						return nil, errutil.UserError{
 							Err: fmt.Sprintf(
-								"the provided URI Subject Alternative Name '%s' is not a valid URI", uri),
+								"the provided URI Subject Alternative Name %q is not a valid URI", uri),
 						}
 					}
 
@@ -1340,6 +1349,27 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		}
 	}
 
+	// Parse SKID from the request for cross-signing.
+	var skid []byte
+	{
+		if rawSKIDValue, ok := data.apiData.GetOk("skid"); ok {
+			// Handle removing common separators to make copy/paste from tool
+			// output easier. Chromium uses space, OpenSSL uses colons, and at
+			// one point, Vault had preferred dash as a separator for hex
+			// strings.
+			var err error
+			skidValue := rawSKIDValue.(string)
+			for _, separator := range []string{":", "-", " "} {
+				skidValue = strings.ReplaceAll(skidValue, separator, "")
+			}
+
+			skid, err = hex.DecodeString(skidValue)
+			if err != nil {
+				return nil, errutil.UserError{Err: fmt.Sprintf("cannot parse requested SKID value as hex: %v", err)}
+			}
+		}
+	}
+
 	creation := &certutil.CreationBundle{
 		Params: &certutil.CreationParameters{
 			Subject:                       subject,
@@ -1351,6 +1381,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			KeyType:                       data.role.KeyType,
 			KeyBits:                       data.role.KeyBits,
 			SignatureBits:                 data.role.SignatureBits,
+			UsePSS:                        data.role.UsePSS,
 			NotAfter:                      notAfter,
 			KeyUsage:                      x509.KeyUsage(parseKeyUsages(data.role.KeyUsage)),
 			ExtKeyUsage:                   parseExtKeyUsages(data.role),
@@ -1359,6 +1390,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			BasicConstraintsValidForNonCA: data.role.BasicConstraintsValidForNonCA,
 			NotBeforeDuration:             data.role.NotBeforeDuration,
 			ForceAppendCaChain:            caSign != nil,
+			SKID:                          skid,
 		},
 		SigningBundle: caSign,
 		CSR:           csr,
@@ -1370,7 +1402,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		return creation, nil
 	}
 
-	// This will have been read in from the getURLs function
+	// This will have been read in from the getGlobalAIAURLs function
 	creation.Params.URLs = caSign.URLs
 
 	// If the max path length in the role is not nil, it was specified at

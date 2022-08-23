@@ -1716,7 +1716,7 @@ func (p *Policy) getVersionPrefix(ver int) string {
 		template = DefaultVersionTemplate
 	}
 
-	prefix := strings.Replace(template, "{{version}}", strconv.Itoa(ver), -1)
+	prefix := strings.ReplaceAll(template, "{{version}}", strconv.Itoa(ver))
 	p.versionPrefixCache.Store(ver, prefix)
 
 	return prefix

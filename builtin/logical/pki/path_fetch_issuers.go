@@ -2,9 +2,11 @@ package pki
 
 import (
 	"context"
+	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -106,6 +108,32 @@ this issuer; valid values are "read-only", "issuing-certificates", and
 and always set.`,
 		Default: []string{"read-only", "issuing-certificates", "crl-signing"},
 	}
+	fields["revocation_signature_algorithm"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Which x509.SignatureAlgorithm name to use for
+signing CRLs. This parameter allows differentiation between PKCS#1v1.5
+and PSS keys and choice of signature hash algorithm. The default (empty
+string) value is for Go to select the signature algorithm. This can fail
+if the underlying key does not support the requested signature algorithm,
+which may not be known at modification time (such as with PKCS#11 managed
+RSA keys).`,
+		Default: "",
+	}
+	fields["issuing_certificates"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `Comma-separated list of URLs to be used
+for the issuing certificate attribute. See also RFC 5280 Section 4.2.2.1.`,
+	}
+	fields["crl_distribution_points"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `Comma-separated list of URLs to be used
+for the CRL distribution points attribute. See also RFC 5280 Section 4.2.1.13.`,
+	}
+	fields["ocsp_servers"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `Comma-separated list of URLs to be used
+for the OCSP servers attribute. See also RFC 5280 Section 4.2.2.1.`,
+	}
 
 	return &framework.Path{
 		// Returns a JSON entry.
@@ -179,17 +207,40 @@ func respondReadIssuer(issuer *issuerEntry) (*logical.Response, error) {
 		respManualChain = append(respManualChain, string(entity))
 	}
 
+	revSigAlgStr := issuer.RevocationSigAlg.String()
+	if issuer.RevocationSigAlg == x509.UnknownSignatureAlgorithm {
+		revSigAlgStr = ""
+	}
+
+	data := map[string]interface{}{
+		"issuer_id":                      issuer.ID,
+		"issuer_name":                    issuer.Name,
+		"key_id":                         issuer.KeyID,
+		"certificate":                    issuer.Certificate,
+		"manual_chain":                   respManualChain,
+		"ca_chain":                       issuer.CAChain,
+		"leaf_not_after_behavior":        issuer.LeafNotAfterBehavior.String(),
+		"usage":                          issuer.Usage.Names(),
+		"revocation_signature_algorithm": revSigAlgStr,
+		"revoked":                        issuer.Revoked,
+		"issuing_certificates":           []string{},
+		"crl_distribution_points":        []string{},
+		"ocsp_servers":                   []string{},
+	}
+
+	if issuer.Revoked {
+		data["revocation_time"] = issuer.RevocationTime
+		data["revocation_time_rfc3339"] = issuer.RevocationTimeUTC.Format(time.RFC3339Nano)
+	}
+
+	if issuer.AIAURIs != nil {
+		data["issuing_certificates"] = issuer.AIAURIs.IssuingCertificates
+		data["crl_distribution_points"] = issuer.AIAURIs.CRLDistributionPoints
+		data["ocsp_servers"] = issuer.AIAURIs.OCSPServers
+	}
+
 	return &logical.Response{
-		Data: map[string]interface{}{
-			"issuer_id":               issuer.ID,
-			"issuer_name":             issuer.Name,
-			"key_id":                  issuer.KeyID,
-			"certificate":             issuer.Certificate,
-			"manual_chain":            respManualChain,
-			"ca_chain":                issuer.CAChain,
-			"leaf_not_after_behavior": issuer.LeafNotAfterBehavior.String(),
-			"usage":                   issuer.Usage.Names(),
-		},
+		Data: data,
 	}, nil
 }
 
@@ -258,6 +309,37 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse(fmt.Sprintf("Unable to parse specified usages: %v - valid values are %v", rawUsage, AllIssuerUsages.Names())), nil
 	}
 
+	// Revocation signature algorithm changes
+	revSigAlgStr := data.Get("revocation_signature_algorithm").(string)
+	revSigAlg, present := certutil.SignatureAlgorithmNames[strings.ToLower(revSigAlgStr)]
+	if !present && revSigAlgStr != "" {
+		var knownAlgos []string
+		for algoName := range certutil.SignatureAlgorithmNames {
+			knownAlgos = append(knownAlgos, algoName)
+		}
+
+		return logical.ErrorResponse(fmt.Sprintf("Unknown signature algorithm value: %v - valid values are %v", revSigAlg, strings.Join(knownAlgos, ", "))), nil
+	} else if revSigAlgStr == "" {
+		revSigAlg = x509.UnknownSignatureAlgorithm
+	}
+	if err := issuer.CanMaybeSignWithAlgo(revSigAlg); err != nil {
+		return nil, err
+	}
+
+	// AIA access changes
+	issuerCertificates := data.Get("issuing_certificates").([]string)
+	if badURL := validateURLs(issuerCertificates); badURL != "" {
+		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter issuing_certificates: %s", badURL)), nil
+	}
+	crlDistributionPoints := data.Get("crl_distribution_points").([]string)
+	if badURL := validateURLs(crlDistributionPoints); badURL != "" {
+		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter crl_distribution_points: %s", badURL)), nil
+	}
+	ocspServers := data.Get("ocsp_servers").([]string)
+	if badURL := validateURLs(ocspServers); badURL != "" {
+		return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter ocsp_servers: %s", badURL)), nil
+	}
+
 	modified := false
 
 	var oldName string
@@ -273,10 +355,63 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	if newUsage != issuer.Usage {
+		if issuer.Revoked && newUsage.HasUsage(IssuanceUsage) {
+			// Forbid allowing cert signing on its usage.
+			return logical.ErrorResponse(fmt.Sprintf("This issuer was revoked; unable to modify its usage to include certificate signing again. Reissue this certificate (preferably with a new key) and modify that entry instead.")), nil
+		}
+
 		issuer.Usage = newUsage
 		modified = true
 	}
 
+	if revSigAlg != issuer.RevocationSigAlg {
+		issuer.RevocationSigAlg = revSigAlg
+		modified = true
+	}
+
+	if issuer.AIAURIs == nil && (len(issuerCertificates) > 0 || len(crlDistributionPoints) > 0 || len(ocspServers) > 0) {
+		issuer.AIAURIs = &certutil.URLEntries{}
+	}
+	if issuer.AIAURIs != nil {
+		// Associative mapping from data source to destination on the
+		// backing issuer object.
+		type aiaPair struct {
+			Source *[]string
+			Dest   *[]string
+		}
+		pairs := []aiaPair{
+			{
+				Source: &issuerCertificates,
+				Dest:   &issuer.AIAURIs.IssuingCertificates,
+			},
+			{
+				Source: &crlDistributionPoints,
+				Dest:   &issuer.AIAURIs.CRLDistributionPoints,
+			},
+			{
+				Source: &ocspServers,
+				Dest:   &issuer.AIAURIs.OCSPServers,
+			},
+		}
+
+		// For each pair, if it is different on the object, update it.
+		for _, pair := range pairs {
+			if isStringArrayDifferent(*pair.Source, *pair.Dest) {
+				*pair.Dest = *pair.Source
+				modified = true
+			}
+		}
+
+		// If no AIA URLs exist on the issuer, set the AIA URLs entry to nil
+		// to ease usage later.
+		if len(issuer.AIAURIs.IssuingCertificates) == 0 && len(issuer.AIAURIs.CRLDistributionPoints) == 0 && len(issuer.AIAURIs.OCSPServers) == 0 {
+			issuer.AIAURIs = nil
+		}
+	}
+
+	// Updating the chain should be the last modification as there's a chance
+	// it'll write it out to disk for us. We'd hate to then modify the issuer
+	// again and write it a second time.
 	var updateChain bool
 	var constructedChain []issuerID
 	for index, newPathRef := range newPath {
@@ -421,9 +556,90 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 			return logical.ErrorResponse(fmt.Sprintf("Unable to parse specified usages: %v - valid values are %v", rawUsage, AllIssuerUsages.Names())), nil
 		}
 		if newUsage != issuer.Usage {
+			if issuer.Revoked && newUsage.HasUsage(IssuanceUsage) {
+				// Forbid allowing cert signing on its usage.
+				return logical.ErrorResponse(fmt.Sprintf("This issuer was revoked; unable to modify its usage to include certificate signing again. Reissue this certificate (preferably with a new key) and modify that entry instead.")), nil
+			}
+
 			issuer.Usage = newUsage
 			modified = true
 		}
+	}
+
+	// Revocation signature algorithm changes
+	rawRevSigAlg, ok := data.GetOk("revocation_signature_algorithm")
+	if ok {
+		revSigAlgStr := rawRevSigAlg.(string)
+		revSigAlg, present := certutil.SignatureAlgorithmNames[strings.ToLower(revSigAlgStr)]
+		if !present && revSigAlgStr != "" {
+			var knownAlgos []string
+			for algoName := range certutil.SignatureAlgorithmNames {
+				knownAlgos = append(knownAlgos, algoName)
+			}
+
+			return logical.ErrorResponse(fmt.Sprintf("Unknown signature algorithm value: %v - valid values are %v", revSigAlg, strings.Join(knownAlgos, ", "))), nil
+		} else if revSigAlgStr == "" {
+			revSigAlg = x509.UnknownSignatureAlgorithm
+		}
+
+		if err := issuer.CanMaybeSignWithAlgo(revSigAlg); err != nil {
+			return nil, err
+		}
+
+		if revSigAlg != issuer.RevocationSigAlg {
+			issuer.RevocationSigAlg = revSigAlg
+			modified = true
+		}
+	}
+
+	// AIA access changes.
+	if issuer.AIAURIs == nil {
+		issuer.AIAURIs = &certutil.URLEntries{}
+	}
+
+	// Associative mapping from data source to destination on the
+	// backing issuer object. For PATCH requests, we use the source
+	// data parameter as we still need to validate them and process
+	// it into a string list.
+	type aiaPair struct {
+		Source string
+		Dest   *[]string
+	}
+	pairs := []aiaPair{
+		{
+			Source: "issuing_certificates",
+			Dest:   &issuer.AIAURIs.IssuingCertificates,
+		},
+		{
+			Source: "crl_distribution_points",
+			Dest:   &issuer.AIAURIs.CRLDistributionPoints,
+		},
+		{
+			Source: "ocsp_servers",
+			Dest:   &issuer.AIAURIs.OCSPServers,
+		},
+	}
+
+	// For each pair, if it is different on the object, update it.
+	for _, pair := range pairs {
+		rawURLsValue, ok := data.GetOk(pair.Source)
+		if ok {
+			urlsValue := rawURLsValue.([]string)
+			if badURL := validateURLs(urlsValue); badURL != "" {
+				return logical.ErrorResponse(fmt.Sprintf("invalid URL found in Authority Information Access (AIA) parameter %v: %s", pair.Source, badURL)), nil
+			}
+
+			if isStringArrayDifferent(urlsValue, *pair.Dest) {
+				modified = true
+				*pair.Dest = urlsValue
+			}
+		}
+	}
+
+	// If no AIA URLs exist on the issuer, set the AIA URLs entry to nil to
+	// ease usage later.
+	if len(issuer.AIAURIs.IssuingCertificates) == 0 && len(issuer.AIAURIs.CRLDistributionPoints) == 0 && len(issuer.AIAURIs.OCSPServers) == 0 {
+		issuer.AIAURIs = nil
 	}
 
 	// Manual Chain Changes

@@ -5,7 +5,6 @@ description: |-
 
   The `/sys/storage/raft/autopilot` endpoints are used to manage raft clusters using autopilot with Vault's Integrated Storage backend.
 
-  These endpoints are inactive on DR secondaries currently.
 ---
 
 # `/sys/storage/raft/autopilot`
@@ -204,14 +203,14 @@ This endpoint is used to modify the configuration of the autopilot subsystem of 
 
 - `cleanup_dead_servers` `(bool: false)` - Controls whether to remove dead servers from
   the Raft peer list periodically or when a new server joins. This requires that
-  `min-quorum` is also set.
+  `min_quorum` is also set.
 
 - `last_contact_threshold` `(string: "10s")` - Limit on the amount of time a server can
   go without leader contact before being considered unhealthy.
 
 - `dead_server_last_contact_threshold` `(string: "24h")` - Limit on the amount of time
   a server can go without leader contact before being considered failed. This
-  takes effect only when `cleanup_dead_servers` is set.
+  takes effect only when `cleanup_dead_servers` is `true`.
 
 - `max_trailing_logs` `(int: 1000)` - Amount of entries in the Raft Log that a server
   can be behind before being considered unhealthy.

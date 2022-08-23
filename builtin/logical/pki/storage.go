@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -30,6 +31,8 @@ const (
 
 	maxRolesToScanOnIssuerChange = 100
 	maxRolesToFindOnIssuerChange = 10
+
+	latestIssuerVersion = 1
 )
 
 type keyID string
@@ -76,20 +79,22 @@ func (e keyEntry) isManagedPrivateKey() bool {
 type issuerUsage uint
 
 const (
-	ReadOnlyUsage   issuerUsage = iota
-	IssuanceUsage   issuerUsage = 1 << iota
-	CRLSigningUsage issuerUsage = 1 << iota
+	ReadOnlyUsage    issuerUsage = iota
+	IssuanceUsage    issuerUsage = 1 << iota
+	CRLSigningUsage  issuerUsage = 1 << iota
+	OCSPSigningUsage issuerUsage = 1 << iota
 
 	// When adding a new usage in the future, we'll need to create a usage
 	// mask field on the IssuerEntry and handle migrations to a newer mask,
 	// inferring a value for the new bits.
-	AllIssuerUsages issuerUsage = ReadOnlyUsage | IssuanceUsage | CRLSigningUsage
+	AllIssuerUsages = ReadOnlyUsage | IssuanceUsage | CRLSigningUsage | OCSPSigningUsage
 )
 
 var namedIssuerUsages = map[string]issuerUsage{
 	"read-only":            ReadOnlyUsage,
 	"issuing-certificates": IssuanceUsage,
 	"crl-signing":          CRLSigningUsage,
+	"ocsp-signing":         OCSPSigningUsage,
 }
 
 func (i *issuerUsage) ToggleUsage(usages ...issuerUsage) {
@@ -145,11 +150,18 @@ type issuerEntry struct {
 	SerialNumber         string                    `json:"serial_number"`
 	LeafNotAfterBehavior certutil.NotAfterBehavior `json:"not_after_behavior"`
 	Usage                issuerUsage               `json:"usage"`
+	RevocationSigAlg     x509.SignatureAlgorithm   `json:"revocation_signature_algorithm"`
+	Revoked              bool                      `json:"revoked"`
+	RevocationTime       int64                     `json:"revocation_time"`
+	RevocationTimeUTC    time.Time                 `json:"revocation_time_utc"`
+	AIAURIs              *certutil.URLEntries      `json:"aia_uris,omitempty"`
+	Version              uint                      `json:"version"`
 }
 
 type localCRLConfigEntry struct {
-	IssuerIDCRLMap map[issuerID]crlID `json:"issuer_id_crl_map"`
-	CRLNumberMap   map[crlID]int64    `json:"crl_number_map"`
+	IssuerIDCRLMap   map[issuerID]crlID  `json:"issuer_id_crl_map"`
+	CRLNumberMap     map[crlID]int64     `json:"crl_number_map"`
+	CRLExpirationMap map[crlID]time.Time `json:"crl_expiration_map"`
 }
 
 type keyConfigEntry struct {
@@ -198,7 +210,6 @@ func (sc *storageContext) fetchKeyById(keyId keyID) (*keyEntry, error) {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki key: %v", err)}
 	}
 	if entry == nil {
-		// FIXME: Dedicated/specific error for this?
 		return nil, errutil.UserError{Err: fmt.Sprintf("pki key id %s does not exist", keyId.String())}
 	}
 
@@ -427,6 +438,64 @@ func (i issuerEntry) EnsureUsage(usage issuerUsage) error {
 	return fmt.Errorf("unknown delta between usages: %v -> %v / for issuer [%v]", usage.Names(), i.Usage.Names(), issuerRef)
 }
 
+func (i issuerEntry) CanMaybeSignWithAlgo(algo x509.SignatureAlgorithm) error {
+	// Hack: Go isn't kind enough expose its lovely signatureAlgorithmDetails
+	// informational struct for our usage. However, we don't want to actually
+	// fetch the private key and attempt a signature with this algo (as we'll
+	// mint new, previously unsigned material in the process that could maybe
+	// be potentially abused if it leaks).
+	//
+	// So...
+	//
+	// ...we maintain our own mapping of cert.PKI<->sigAlgos. Notably, we
+	// exclude DSA support as the PKI engine has never supported DSA keys.
+	if algo == x509.UnknownSignatureAlgorithm {
+		// Special cased to indicate upgrade and letting Go automatically
+		// chose the correct value.
+		return nil
+	}
+
+	cert, err := i.GetCertificate()
+	if err != nil {
+		return fmt.Errorf("unable to parse issuer's potential signature algorithm types: %v", err)
+	}
+
+	switch cert.PublicKeyAlgorithm {
+	case x509.RSA:
+		switch algo {
+		case x509.SHA256WithRSA, x509.SHA384WithRSA, x509.SHA512WithRSA,
+			x509.SHA256WithRSAPSS, x509.SHA384WithRSAPSS,
+			x509.SHA512WithRSAPSS:
+			return nil
+		}
+	case x509.ECDSA:
+		switch algo {
+		case x509.ECDSAWithSHA256, x509.ECDSAWithSHA384, x509.ECDSAWithSHA512:
+			return nil
+		}
+	case x509.Ed25519:
+		switch algo {
+		case x509.PureEd25519:
+			return nil
+		}
+	}
+
+	return fmt.Errorf("unable to use issuer of type %v to sign with %v key type", cert.PublicKeyAlgorithm.String(), algo.String())
+}
+
+func (i issuerEntry) GetAIAURLs(sc *storageContext) (urls *certutil.URLEntries, err error) {
+	// Default to the per-issuer AIA URLs.
+	urls = i.AIAURIs
+
+	// If none are set (either due to a nil entry or because no URLs have
+	// been provided), fall back to the global AIA URL config.
+	if urls == nil || (len(urls.IssuingCertificates) == 0 && len(urls.CRLDistributionPoints) == 0 && len(urls.OCSPServers) == 0) {
+		urls, err = getGlobalAIAURLs(sc.Context, sc.Storage)
+	}
+
+	return urls, err
+}
+
 func (sc *storageContext) listIssuers() ([]issuerID, error) {
 	strList, err := sc.Storage.List(sc.Context, issuerPrefix)
 	if err != nil {
@@ -497,7 +566,6 @@ func (sc *storageContext) fetchIssuerById(issuerId issuerID) (*issuerEntry, erro
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki issuer: %v", err)}
 	}
 	if entry == nil {
-		// FIXME: Dedicated/specific error for this?
 		return nil, errutil.UserError{Err: fmt.Sprintf("pki issuer id %s does not exist", issuerId.String())}
 	}
 
@@ -506,7 +574,28 @@ func (sc *storageContext) fetchIssuerById(issuerId issuerID) (*issuerEntry, erro
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode pki issuer with id %s: %v", issuerId.String(), err)}
 	}
 
-	return &issuer, nil
+	return sc.upgradeIssuerIfRequired(&issuer), nil
+}
+
+func (sc *storageContext) upgradeIssuerIfRequired(issuer *issuerEntry) *issuerEntry {
+	// *NOTE*: Don't attempt to write out the issuer here as it may cause ErrReadOnly that will direct the
+	// request all the way up to the primary cluster which would be horrible for local cluster operations such
+	// as generating a leaf cert or a revoke.
+	// Also even though we could tell if we are the primary cluster's active node, we can't tell if we have the
+	// a full rw issuer lock, so it might not be safe to write.
+	if issuer.Version == latestIssuerVersion {
+		return issuer
+	}
+
+	if issuer.Version == 0 {
+		// handle our new OCSPSigning usage flag for earlier versions
+		if issuer.Usage.HasUsage(CRLSigningUsage) && !issuer.Usage.HasUsage(OCSPSigningUsage) {
+			issuer.Usage.ToggleUsage(OCSPSigningUsage)
+		}
+	}
+
+	issuer.Version = latestIssuerVersion
+	return issuer
 }
 
 func (sc *storageContext) writeIssuer(issuer *issuerEntry) error {
@@ -615,7 +704,8 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 	result.Name = issuerName
 	result.Certificate = certValue
 	result.LeafNotAfterBehavior = certutil.ErrNotAfterBehavior
-	result.Usage.ToggleUsage(IssuanceUsage, CRLSigningUsage)
+	result.Usage.ToggleUsage(AllIssuerUsages)
+	result.Version = latestIssuerVersion
 
 	// We shouldn't add CSRs or multiple certificates in this
 	countCertificates := strings.Count(result.Certificate, "-BEGIN ")
@@ -623,7 +713,7 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 		return nil, false, fmt.Errorf("bad issuer: potentially multiple PEM blobs in one certificate storage entry:\n%v", result.Certificate)
 	}
 
-	result.SerialNumber = strings.TrimSpace(certutil.GetHexFormatted(issuerCert.SerialNumber.Bytes(), ":"))
+	result.SerialNumber = serialFromCert(issuerCert)
 
 	// Before we return below, we need to iterate over _all_ keys and see if
 	// one of them a public key matching this certificate, and if so, update our
@@ -712,6 +802,10 @@ func (sc *storageContext) getLocalCRLConfig() (*localCRLConfigEntry, error) {
 
 	if len(mapping.CRLNumberMap) == 0 {
 		mapping.CRLNumberMap = make(map[crlID]int64)
+	}
+
+	if len(mapping.CRLExpirationMap) == 0 {
+		mapping.CRLExpirationMap = make(map[crlID]time.Time)
 	}
 
 	return mapping, nil
@@ -887,6 +981,12 @@ func (sc *storageContext) writeCaBundle(caBundle *certutil.CertBundle, issuerNam
 		return nil, nil, err
 	}
 
+	// We may have existing mounts that only contained a key with no certificate yet as a signed CSR
+	// was never setup within the mount.
+	if caBundle.Certificate == "" {
+		return &issuerEntry{}, myKey, nil
+	}
+
 	myIssuer, _, err := sc.importIssuer(caBundle.Certificate, issuerName)
 	if err != nil {
 		return nil, nil, err
@@ -977,4 +1077,23 @@ func (sc *storageContext) checkForRolesReferencing(issuerId string) (timeout boo
 	}
 
 	return false, inUseBy, nil
+}
+
+func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
+	entry, err := sc.Storage.Get(sc.Context, "config/crl")
+	if err != nil {
+		return nil, err
+	}
+
+	var result crlConfig
+	if entry == nil {
+		result = defaultCrlConfig
+		return &result, nil
+	}
+
+	if err = entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }

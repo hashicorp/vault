@@ -49,6 +49,7 @@ func getGenerationParams(sc *storageContext, data *framework.FieldData) (exporte
 		KeyType:                   keyType,
 		KeyBits:                   keyBits,
 		SignatureBits:             data.Get("signature_bits").(int),
+		UsePSS:                    data.Get("use_pss").(bool),
 		AllowLocalhost:            true,
 		AllowAnyName:              true,
 		AllowIPSANs:               true,
