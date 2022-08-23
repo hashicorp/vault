@@ -8,7 +8,8 @@ import {
   CLUSTER,
   CLUSTER_INDEX,
   DR_REPLICATION_SECONDARY,
-} from 'vault/mixins/cluster-route';
+  REDIRECT,
+} from 'vault/lib/route-paths';
 import { module, test } from 'qunit';
 import sinon from 'sinon';
 
@@ -79,12 +80,34 @@ module('Unit | Mixin | cluster route', function () {
     assert.equal(subject.targetRouteName(), CLUSTER, 'forwards when unsealed and navigating to UNSEAL');
 
     subject.routeName = AUTH;
-    assert.equal(subject.targetRouteName(), CLUSTER, 'forwards when authenticated and navigating to AUTH');
+    assert.equal(subject.targetRouteName(), REDIRECT, 'forwards when authenticated and navigating to AUTH');
 
     subject.routeName = DR_REPLICATION_SECONDARY;
     assert.equal(
       subject.targetRouteName(),
       CLUSTER,
+      'forwards when not a DR secondary and navigating to DR_REPLICATION_SECONDARY'
+    );
+  });
+
+  test('#targetRouteName happy path when not authed forwards to AUTH', function (assert) {
+    let subject = createClusterRoute(
+      { needsInit: false, sealed: false, dr: { isSecondary: false } },
+      { hasKeyData: () => false, authToken: () => null }
+    );
+    subject.routeName = INIT;
+    assert.equal(subject.targetRouteName(), AUTH, 'forwards when inited and navigating to INIT');
+
+    subject.routeName = UNSEAL;
+    assert.equal(subject.targetRouteName(), AUTH, 'forwards when unsealed and navigating to UNSEAL');
+
+    subject.routeName = AUTH;
+    assert.equal(subject.targetRouteName(), AUTH, 'forwards when non-authenticated and navigating to AUTH');
+
+    subject.routeName = DR_REPLICATION_SECONDARY;
+    assert.equal(
+      subject.targetRouteName(),
+      AUTH,
       'forwards when not a DR secondary and navigating to DR_REPLICATION_SECONDARY'
     );
   });

@@ -86,9 +86,9 @@ func Backend(conf *logical.BackendConfig) *backend {
 				"issuer/+/pem",
 				"issuer/+/der",
 				"issuer/+/json",
-				"issuers",
-				"ocsp",   // OCSP POST
-				"ocsp/*", // OCSP GET
+				"issuers/", // LIST operations append a '/' to the requested path
+				"ocsp",     // OCSP POST
+				"ocsp/*",   // OCSP GET
 			},
 
 			LocalStorage: []string{

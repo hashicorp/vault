@@ -3920,13 +3920,15 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	{
 		// Map of gauges to expected value
 		expectedGauges := map[string]float32{
-			"secrets.pki.tidy.cert_store_current_entry":     0,
-			"secrets.pki.tidy.cert_store_total_entries":     1,
-			"secrets.pki.tidy.revoked_cert_current_entry":   0,
-			"secrets.pki.tidy.revoked_cert_total_entries":   1,
-			"secrets.pki.tidy.start_time_epoch":             0,
-			"secrets.pki.total_certificates_stored":         0,
-			"secrets.pki.total_revoked_certificates_stored": 0,
+			"secrets.pki.tidy.cert_store_current_entry":             0,
+			"secrets.pki.tidy.cert_store_total_entries":             1,
+			"secrets.pki.tidy.revoked_cert_current_entry":           0,
+			"secrets.pki.tidy.revoked_cert_total_entries":           1,
+			"secrets.pki.tidy.start_time_epoch":                     0,
+			"secrets.pki.total_certificates_stored":                 0,
+			"secrets.pki.total_revoked_certificates_stored":         0,
+			"secrets.pki.tidy.cert_store_total_entries_remaining":   0,
+			"secrets.pki.tidy.revoked_cert_total_entries_remaining": 0,
 		}
 		// Map of counters to the sum of the metrics for that counter
 		expectedCounters := map[string]float64{
