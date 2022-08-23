@@ -1,6 +1,6 @@
 export default (test) => {
   test('it should make request to correct endpoint on save', async function (assert) {
-    assert.expect(2);
+    assert.expect(1);
 
     this.server.post(this.path, () => {
       assert.ok(true, 'request made to correct endpoint on save');
@@ -8,7 +8,14 @@ export default (test) => {
 
     const model = this.store.createRecord(this.modelName, this.data);
     await model.save();
-    await model.save();
+  });
+
+  test('it should throw error if attempting to createRecord with an existing name', async function (assert) {
+    const { modelName, data } = this;
+    this.store.pushPayload(modelName, { modelName, name: data.name });
+
+    const model = this.store.createRecord(modelName, data);
+    assert.rejects(model.save(), `Error: A record already exists with the name: ${data.name}`);
   });
 
   test('it should make request to correct endpoint on find', async function (assert) {
@@ -23,54 +30,70 @@ export default (test) => {
   });
 
   test('it should make request to correct endpoint on query', async function (assert) {
-    // these models have key_info on the LIST response
-    const keyInfoModels = ['client', 'provider'];
-    if (keyInfoModels.some((model) => this.modelName.includes(model))) {
-      const keys = ['model-1', 'model-2', 'model-3'];
-      const key_info = {
-        'model-1': {
-          model_id: 'a123',
-          key: 'test-key',
-          access_token_ttl: '30m',
-          id_token_ttl: '1h',
-        },
-        'model-2': {
-          model_id: 'b123',
-          key: 'test-key',
-          access_token_ttl: '30m',
-          id_token_ttl: '1h',
-        },
-        'model-3': {
-          model_id: 'c123',
-          key: 'test-key',
-          access_token_ttl: '30m',
-          id_token_ttl: '1h',
-        },
-      };
+    const keyInfoModels = ['client', 'provider']; // these models have key_info on the LIST response
+    const { name, ...otherAttrs } = this.data; // excludes name from key_info data
+    const key_info = { [name]: { ...otherAttrs } };
 
-      this.server.get(`/identity/${this.modelName}`, (schema, req) => {
-        assert.equal(req.queryParams.list, 'true', 'request is made to correct endpoint on query');
+    this.server.get(`/identity/${this.modelName}`, (schema, req) => {
+      assert.equal(req.queryParams.list, 'true', 'request is made to correct endpoint on query');
+      if (keyInfoModels.some((model) => this.modelName.includes(model))) {
+        return { data: { keys: [name], key_info } };
+      } else {
+        return { data: { keys: [name] } };
+      }
+    });
+
+    this.store.query(this.modelName, {});
+  });
+
+  test('it should filter query when passed filterFor and paramKey', async function (assert) {
+    const keyInfoModels = ['client', 'provider']; // these models have key_info on the LIST response
+    const keys = ['model-1', 'model-2', 'model-3'];
+    const key_info = {
+      'model-1': {
+        model_id: 'a123',
+        key: 'test-key',
+        access_token_ttl: '30m',
+        id_token_ttl: '1h',
+      },
+      'model-2': {
+        model_id: 'b123',
+        key: 'test-key',
+        access_token_ttl: '30m',
+        id_token_ttl: '1h',
+      },
+      'model-3': {
+        model_id: 'c123',
+        key: 'test-key',
+        access_token_ttl: '30m',
+        id_token_ttl: '1h',
+      },
+    };
+
+    this.server.get(`/identity/${this.modelName}`, (schema, req) => {
+      if (keyInfoModels.some((model) => this.modelName.includes(model))) {
         return { data: { keys, key_info } };
-      });
+      } else {
+        return { data: { keys: [this.data.name] } };
+      }
+    });
 
-      // test passing 'paramKey' and 'filterFor' to query and filterListResponse in adapters/named-path.js works as expected
+    // test passing 'paramKey' and 'filterFor' to query and filterListResponse in adapters/named-path.js works as expected
+    if (keyInfoModels.some((model) => this.modelName.includes(model))) {
       let testQuery = ['*', 'a123'];
       await this.store
         .query(this.modelName, { paramKey: 'model_id', filterFor: testQuery })
-        .then((resp) =>
-          assert.equal(resp.content.length, 3, 'returns all clients when ids include glob (*)')
-        );
+        .then((resp) => assert.equal(resp.content.length, 3, 'returns all models when ids include glob (*)'));
 
       testQuery = ['*'];
       await this.store
         .query(this.modelName, { paramKey: 'model_id', filterFor: testQuery })
-        .then((resp) => assert.equal(resp.content.length, 3, 'returns all clients when glob (*) is only id'));
+        .then((resp) => assert.equal(resp.content.length, 3, 'returns all models when glob (*) is only id'));
 
       testQuery = ['b123'];
       await this.store.query(this.modelName, { paramKey: 'model_id', filterFor: testQuery }).then((resp) => {
-        console.log(resp);
         assert.equal(resp.content.length, 1, 'filters response and returns only matching id');
-        console.log(resp.firstObject, 'FIRST OBJECT');
+
         assert.equal(resp.firstObject.name, 'model-2', 'response contains correct model');
       });
 
@@ -81,17 +104,20 @@ export default (test) => {
           assert.ok(['model-2', 'model-3'].includes(m.id), `it filters correctly and included: ${m.id}`)
         );
       });
+
+      await this.store
+        .query(this.modelName, { paramKey: 'nonexistent_key', filterFor: testQuery })
+        .then((resp) => assert.ok(resp.isLoaded, 'does not error when paramKey does not exist'));
+
+      assert.rejects(
+        this.store.query(this.modelName, { paramKey: 'model_id', filterFor: 'some-string' }),
+        'throws assertion when filterFor is not an array'
+      );
     } else {
-      this.server.get(`/identity/${this.modelName}`, (schema, req) => {
-        assert.equal(req.queryParams.list, 'true', 'request is made to correct endpoint on query');
-        return { data: { keys: [this.data.name] } };
-      });
-
-      this.store.query(this.modelName, {});
-
-      this.store
-        .query(this.modelName, { paramKey: 'model_id', filterFor: this.data.name })
-        .then((resp) => assert.ok(resp.isLoaded, 'does not attempt to filter when no key_info'));
+      let testQuery = ['b123', 'c123'];
+      await this.store
+        .query(this.modelName, { paramKey: 'model_id', filterFor: testQuery })
+        .then((resp) => assert.ok(resp.isLoaded, 'does not error when key_info does not exist'));
     }
   });
 
