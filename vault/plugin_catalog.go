@@ -161,6 +161,7 @@ func (c *PluginCatalog) reloadExternalPlugin(name, id string) error {
 		if err != nil {
 			return err
 		}
+		return nil
 	}
 
 	pc, ok := extPlugin.connections[id]
