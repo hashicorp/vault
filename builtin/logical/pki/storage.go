@@ -1087,7 +1087,7 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 
 	var result crlConfig
 	if entry == nil {
-		result.Expiry = sc.Backend.crlLifetime.String()
+		result = defaultCrlConfig
 		return &result, nil
 	}
 

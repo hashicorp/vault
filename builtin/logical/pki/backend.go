@@ -193,7 +193,6 @@ type backend struct {
 
 	backendUUID       string
 	storage           logical.Storage
-	crlLifetime       time.Duration
 	revokeStorageLock sync.RWMutex
 	tidyCASGuard      *uint32
 
