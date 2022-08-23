@@ -842,6 +842,18 @@ func TestAutoRebuild(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	// Regression test: ensure we respond with the default values for CRL
+	// config when we haven't set any values yet.
+	resp, err := client.Logical().Read("pki/config/crl")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.Equal(t, resp.Data["expiry"], defaultCrlConfig.Expiry)
+	require.Equal(t, resp.Data["disable"], defaultCrlConfig.Disable)
+	require.Equal(t, resp.Data["ocsp_disable"], defaultCrlConfig.OcspDisable)
+	require.Equal(t, resp.Data["auto_rebuild"], defaultCrlConfig.AutoRebuild)
+	require.Equal(t, resp.Data["auto_rebuild_grace_period"], defaultCrlConfig.AutoRebuildGracePeriod)
+
 	// Safety guard: we play with rebuild timing below. We don't expect
 	// this entire test to take longer than 80s.
 	_, err = client.Logical().Write("pki/config/crl", map[string]interface{}{
@@ -850,7 +862,7 @@ func TestAutoRebuild(t *testing.T) {
 	require.NoError(t, err)
 
 	// Issue a cert and revoke it. It should appear on the CRL right away.
-	resp, err := client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
+	resp, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
 		"common_name": "example.com",
 	})
 	require.NoError(t, err)
