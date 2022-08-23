@@ -1,0 +1,3 @@
+```release-note:enhancement
+cli: Add Deprecation Status information to list commands.
+```
