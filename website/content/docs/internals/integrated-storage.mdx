@@ -159,7 +159,7 @@ Vault instances are deployed.
 Autopilot includes stabilization logic for nodes joining the cluster.
 Recently joined nodes are 
 accepted as non-voter initially until they are in sync with matching Raft index 
-and only after a stability thresholds are they then full voting members.
+and only after a stability threshold is reached are they then full voting members.
 Setting the stability threshold too low can result in cluster instability as nodes will be
 counted as voters before they are capable of voting.
 
