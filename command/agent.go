@@ -593,7 +593,7 @@ func (c *AgentCommand) Run(args []string) int {
 					c.UI.Warn(fmt.Sprintf("Failed to close persistent cache file after getting retrieval token: %s", err))
 				}
 
-				km, err := keymanager.NewPassthroughKeyManager(token)
+				km, err := keymanager.NewPassthroughKeyManager(ctx, token)
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("failed to configure persistence encryption for cache: %s", err))
 					return 1
@@ -657,7 +657,7 @@ func (c *AgentCommand) Run(args []string) int {
 					}
 				}
 			} else {
-				km, err := keymanager.NewPassthroughKeyManager(nil)
+				km, err := keymanager.NewPassthroughKeyManager(ctx, nil)
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("failed to configure persistence encryption for cache: %s", err))
 					return 1
@@ -675,7 +675,7 @@ func (c *AgentCommand) Run(args []string) int {
 				cacheLogger.Info("configured persistent storage", "path", config.Cache.Persist.Path)
 
 				// Stash the key material in bolt
-				token, err := km.RetrievalToken()
+				token, err := km.RetrievalToken(ctx)
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("Error getting persistent key: %s", err))
 					return 1
