@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/builtinplugins"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -145,7 +147,7 @@ func (c *AuthListCommand) detailedMounts(auths map[string]*api.AuthMount) []stri
 		}
 	}
 
-	out := []string{"Path | Plugin | Accessor | Default TTL | Max TTL | Token Type | Replication | Seal Wrap | External Entropy Access | Options | Description | UUID | Version"}
+	out := []string{"Path | Plugin | Accessor | Default TTL | Max TTL | Token Type | Replication | Seal Wrap | External Entropy Access | Options | Description | UUID | Version | Deprecation Status"}
 	for _, path := range paths {
 		mount := auths[path]
 
@@ -162,7 +164,9 @@ func (c *AuthListCommand) detailedMounts(auths map[string]*api.AuthMount) []stri
 			pluginName = mount.Config.PluginName
 		}
 
-		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %s | %s | %t | %v | %s | %s | %s | %s",
+		status, _ := builtinplugins.Registry.DeprecationStatus(mount.Type, consts.PluginTypeCredential)
+
+		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %s | %s | %t | %v | %s | %s | %s | %s | %s",
 			path,
 			pluginName,
 			mount.Accessor,
@@ -176,6 +180,7 @@ func (c *AuthListCommand) detailedMounts(auths map[string]*api.AuthMount) []stri
 			mount.Description,
 			mount.UUID,
 			mount.Version,
+			status.String(),
 		))
 	}
 
