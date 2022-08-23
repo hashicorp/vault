@@ -2247,6 +2247,10 @@ func (m *mockBuiltinRegistry) Contains(name string, pluginType consts.PluginType
 	return false
 }
 
+func (m *mockBuiltinRegistry) DeprecationStatus(name string, pluginType consts.PluginType) (consts.DeprecationStatus, bool) {
+	return consts.Supported, true
+}
+
 type NoopAudit struct {
 	Config         *audit.BackendConfig
 	ReqErr         error
