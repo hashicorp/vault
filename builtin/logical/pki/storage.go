@@ -159,8 +159,9 @@ type issuerEntry struct {
 }
 
 type localCRLConfigEntry struct {
-	IssuerIDCRLMap map[issuerID]crlID `json:"issuer_id_crl_map"`
-	CRLNumberMap   map[crlID]int64    `json:"crl_number_map"`
+	IssuerIDCRLMap   map[issuerID]crlID  `json:"issuer_id_crl_map"`
+	CRLNumberMap     map[crlID]int64     `json:"crl_number_map"`
+	CRLExpirationMap map[crlID]time.Time `json:"crl_expiration_map"`
 }
 
 type keyConfigEntry struct {
@@ -801,6 +802,10 @@ func (sc *storageContext) getLocalCRLConfig() (*localCRLConfigEntry, error) {
 
 	if len(mapping.CRLNumberMap) == 0 {
 		mapping.CRLNumberMap = make(map[crlID]int64)
+	}
+
+	if len(mapping.CRLExpirationMap) == 0 {
+		mapping.CRLExpirationMap = make(map[crlID]time.Time)
 	}
 
 	return mapping, nil
