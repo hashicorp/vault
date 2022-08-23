@@ -14,7 +14,7 @@ import (
 
 // Backend returns an instance of the backend, either as a plugin if external
 // or as a concrete implementation if builtin, casted as logical.Backend.
-func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error) {
+func Backend(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	var b backend
 	name := conf.Config["plugin_name"]
 	pluginType, err := consts.ParsePluginType(conf.Config["plugin_type"])
