@@ -13,7 +13,8 @@ DOCKER_RUN_FLAGS=-it \
 		--volume "$(PWD)/redirects.js:/app/redirects.js" \
 		--volume "next-dir:/app/website-preview/.next" \
 		--volume "$(PWD)/.env:/app/.env" \
-		-e "REPO=vault"
+		-e "REPO=vault" \
+		-e "PREVIEW_MODE=developer"
 
 # Default: run this if working on the website locally to run in watch mode.
 .PHONY: website
@@ -33,6 +34,6 @@ website/local:
 .PHONY: website/build-local
 website/build-local:
 	@echo "==> Building local Docker image"
-	@docker build https://github.com/hashicorp/dev-portal.git\#main \
+	@docker build https://github.com/hashicorp/dev-portal.git\#brk.feat/developer-preview \
 		-t $(DOCKER_IMAGE_LOCAL)
 
