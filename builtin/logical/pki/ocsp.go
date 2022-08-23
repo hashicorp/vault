@@ -100,7 +100,9 @@ func buildPathOcspPost(b *backend) *framework.Path {
 }
 
 func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if b.crlBuilder.getConfig().OcspDisable {
+	sc := b.makeStorageContext(ctx, request.Storage)
+	cfg, err := b.crlBuilder.getConfigWithUpdate(sc)
+	if err != nil || cfg.OcspDisable {
 		return OcspUnauthorizedResponse, nil
 	}
 
@@ -113,8 +115,6 @@ func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, dat
 	if err != nil {
 		return OcspMalformedResponse, nil
 	}
-
-	sc := b.makeStorageContext(ctx, request.Storage)
 
 	ocspStatus, err := getOcspStatus(sc, request, ocspReq)
 	if err != nil {

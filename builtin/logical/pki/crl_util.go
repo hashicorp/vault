@@ -87,15 +87,6 @@ func (cb *crlBuilder) reloadConfigIfRequired(sc *storageContext) error {
 	return nil
 }
 
-func (cb *crlBuilder) getConfig() *crlConfig {
-	// Config may mutate immediately after accessing!
-	cb.c.RLock()
-	defer cb.c.RUnlock()
-
-	configCopy := cb.config
-	return &configCopy
-}
-
 func (cb *crlBuilder) getConfigWithUpdate(sc *storageContext) (*crlConfig, error) {
 	// Config may mutate immediately after accessing, but will be freshly
 	// fetched if necessary.
@@ -103,11 +94,19 @@ func (cb *crlBuilder) getConfigWithUpdate(sc *storageContext) (*crlConfig, error
 		return nil, err
 	}
 
-	return cb.getConfig(), nil
+	cb.c.RLock()
+	defer cb.c.RUnlock()
+
+	configCopy := cb.config
+	return &configCopy, nil
 }
 
 func (cb *crlBuilder) checkForAutoRebuild(sc *storageContext) error {
-	cfg := cb.getConfig()
+	cfg, err := cb.getConfigWithUpdate(sc)
+	if err != nil {
+		return err
+	}
+
 	if cfg.Disable || !cfg.AutoRebuild || atomic.LoadUint32(&cb.forceRebuild) == 1 {
 		// Not enabled, not on auto-rebuilder, or we're already scheduled to
 		// rebuild so there's no point to interrogate CRL values...
