@@ -35,53 +35,28 @@ type backendGRPCPluginServer struct {
 }
 
 // getBackendInternal returns the backend but does not hold a lock
-func (b *backendGRPCPluginServer) getBackendInternal(ctx context.Context) (logical.Backend, error) {
+func (b *backendGRPCPluginServer) getBackendAndBrokeredClientInternal(ctx context.Context) (logical.Backend, *grpc.ClientConn, error) {
 	if singleImpl, ok := b.instances[SingleImplementation]; ok {
-		return singleImpl.backend, nil
+		return singleImpl.backend, singleImpl.brokeredClient, nil
 	}
 
 	id, err := pluginutil.GetMultiplexIDFromContext(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if inst, ok := b.instances[id]; ok {
-		return inst.backend, nil
+		return inst.backend, inst.brokeredClient, nil
 	}
 
-	return nil, fmt.Errorf("no backend instance found")
+	return nil, nil, fmt.Errorf("no backend instance found")
 }
 
 // getBackend holds a read lock and returns the backend
-func (b *backendGRPCPluginServer) getBackend(ctx context.Context) (logical.Backend, error) {
+func (b *backendGRPCPluginServer) getBackendAndBrokeredClient(ctx context.Context) (logical.Backend, *grpc.ClientConn, error) {
 	b.instancesLock.RLock()
 	defer b.instancesLock.RUnlock()
-	return b.getBackendInternal(ctx)
-}
-
-// getBrokeredClientInternal returns the brokeredClient but does not hold a lock
-func (b *backendGRPCPluginServer) getBrokeredClientInternal(ctx context.Context) (*grpc.ClientConn, error) {
-	if singleImpl, ok := b.instances[SingleImplementation]; ok {
-		return singleImpl.brokeredClient, nil
-	}
-
-	id, err := pluginutil.GetMultiplexIDFromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if inst, ok := b.instances[id]; ok {
-		return inst.brokeredClient, nil
-	}
-
-	return nil, fmt.Errorf("no backend instance found")
-}
-
-// getBrokeredClient holds a read lock and returns the backend
-func (b *backendGRPCPluginServer) getBrokeredClient(ctx context.Context) (*grpc.ClientConn, error) {
-	b.instancesLock.RLock()
-	defer b.instancesLock.RUnlock()
-	return b.getBrokeredClientInternal(ctx)
+	return b.getBackendAndBrokeredClientInternal(ctx)
 }
 
 // Setup dials into the plugin's broker to get a shimmed storage, logger, and
@@ -132,7 +107,7 @@ func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs)
 }
 
 func (b *backendGRPCPluginServer) HandleRequest(ctx context.Context, args *pb.HandleRequestArgs) (*pb.HandleRequestReply, error) {
-	backend, err := b.getBackend(ctx)
+	backend, brokeredClient, err := b.getBackendAndBrokeredClient(ctx)
 	if err != nil {
 		return &pb.HandleRequestReply{}, err
 	}
@@ -142,11 +117,6 @@ func (b *backendGRPCPluginServer) HandleRequest(ctx context.Context, args *pb.Ha
 	}
 
 	logicalReq, err := pb.ProtoRequestToLogicalRequest(args.Request)
-	if err != nil {
-		return &pb.HandleRequestReply{}, err
-	}
-
-	brokeredClient, err := b.getBrokeredClient(ctx)
 	if err != nil {
 		return &pb.HandleRequestReply{}, err
 	}
@@ -167,18 +137,13 @@ func (b *backendGRPCPluginServer) HandleRequest(ctx context.Context, args *pb.Ha
 }
 
 func (b *backendGRPCPluginServer) Initialize(ctx context.Context, _ *pb.InitializeArgs) (*pb.InitializeReply, error) {
-	backend, err := b.getBackend(ctx)
+	backend, brokeredClient, err := b.getBackendAndBrokeredClient(ctx)
 	if err != nil {
 		return &pb.InitializeReply{}, err
 	}
 
 	if pluginutil.InMetadataMode() {
 		return &pb.InitializeReply{}, ErrServerInMetadataMode
-	}
-
-	brokeredClient, err := b.getBrokeredClient(ctx)
-	if err != nil {
-		return &pb.InitializeReply{}, err
 	}
 
 	req := &logical.InitializationRequest{
@@ -193,7 +158,7 @@ func (b *backendGRPCPluginServer) Initialize(ctx context.Context, _ *pb.Initiali
 }
 
 func (b *backendGRPCPluginServer) SpecialPaths(ctx context.Context, args *pb.Empty) (*pb.SpecialPathsReply, error) {
-	backend, err := b.getBackend(ctx)
+	backend, _, err := b.getBackendAndBrokeredClient(ctx)
 	if err != nil {
 		return &pb.SpecialPathsReply{}, err
 	}
@@ -216,7 +181,7 @@ func (b *backendGRPCPluginServer) SpecialPaths(ctx context.Context, args *pb.Emp
 }
 
 func (b *backendGRPCPluginServer) HandleExistenceCheck(ctx context.Context, args *pb.HandleExistenceCheckArgs) (*pb.HandleExistenceCheckReply, error) {
-	backend, err := b.getBackend(ctx)
+	backend, brokeredClient, err := b.getBackendAndBrokeredClient(ctx)
 	if err != nil {
 		return &pb.HandleExistenceCheckReply{}, err
 	}
@@ -226,11 +191,6 @@ func (b *backendGRPCPluginServer) HandleExistenceCheck(ctx context.Context, args
 	}
 
 	logicalReq, err := pb.ProtoRequestToLogicalRequest(args.Request)
-	if err != nil {
-		return &pb.HandleExistenceCheckReply{}, err
-	}
-
-	brokeredClient, err := b.getBrokeredClient(ctx)
 	if err != nil {
 		return &pb.HandleExistenceCheckReply{}, err
 	}
@@ -249,17 +209,12 @@ func (b *backendGRPCPluginServer) Cleanup(ctx context.Context, _ *pb.Empty) (*pb
 	b.instancesLock.Lock()
 	defer b.instancesLock.Unlock()
 
-	backend, err := b.getBackendInternal(ctx)
+	backend, brokeredClient, err := b.getBackendAndBrokeredClientInternal(ctx)
 	if err != nil {
 		return &pb.Empty{}, err
 	}
 
 	backend.Cleanup(ctx)
-
-	brokeredClient, err := b.getBrokeredClientInternal(ctx)
-	if err != nil {
-		return &pb.Empty{}, err
-	}
 
 	// Close rpc clients
 	brokeredClient.Close()
@@ -278,7 +233,7 @@ func (b *backendGRPCPluginServer) Cleanup(ctx context.Context, _ *pb.Empty) (*pb
 }
 
 func (b *backendGRPCPluginServer) InvalidateKey(ctx context.Context, args *pb.InvalidateKeyArgs) (*pb.Empty, error) {
-	backend, err := b.getBackend(ctx)
+	backend, _, err := b.getBackendAndBrokeredClient(ctx)
 	if err != nil {
 		return &pb.Empty{}, err
 	}
@@ -292,7 +247,7 @@ func (b *backendGRPCPluginServer) InvalidateKey(ctx context.Context, args *pb.In
 }
 
 func (b *backendGRPCPluginServer) Type(ctx context.Context, _ *pb.Empty) (*pb.TypeReply, error) {
-	backend, err := b.getBackend(ctx)
+	backend, _, err := b.getBackendAndBrokeredClient(ctx)
 	if err != nil {
 		return &pb.TypeReply{}, err
 	}
