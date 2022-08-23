@@ -1,3 +1,0 @@
-```release-note:improvement
-website/docs: SSH CA Certificate notes clarifying how to preserve comment attributes in keys.
-```
