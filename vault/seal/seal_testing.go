@@ -21,8 +21,8 @@ func NewTestSeal(opts *TestSealOpts) *Access {
 	}
 
 	return &Access{
-		Wrapper:        wrapping.NewTestWrapper(opts.Secret),
-		OverriddenType: opts.Name,
+		Wrapper:     wrapping.NewTestWrapper(opts.Secret),
+		WrapperType: opts.Name,
 	}
 }
 
@@ -33,8 +33,8 @@ func NewToggleableTestSeal(opts *TestSealOpts) (*Access, func(error)) {
 
 	w := &ToggleableWrapper{Wrapper: wrapping.NewTestWrapper(opts.Secret)}
 	return &Access{
-		Wrapper:        w,
-		OverriddenType: opts.Name,
+		Wrapper:     w,
+		WrapperType: opts.Name,
 	}, w.SetError
 }
 
