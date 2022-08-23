@@ -226,9 +226,10 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 		for _, b := range backends {
 			var expectedResult int = 0
 			status, _ := builtinplugins.Registry.DeprecationStatus(b, consts.PluginTypeCredential)
+			allowDeprecated := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv)
 
 			// Need to handle deprecated builtins specially
-			if status == consts.PendingRemoval || status == consts.Removed {
+			if (status == consts.PendingRemoval && allowDeprecated == "") || status == consts.Removed {
 				expectedResult = 2
 			}
 
