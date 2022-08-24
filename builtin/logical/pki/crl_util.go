@@ -253,6 +253,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		issuers = []issuerID{legacyBundleShimID}
 	}
 
+	issuerIDCertMap := make(map[issuerID]*x509.Certificate, len(issuers))
 	for _, issuer := range issuers {
 		_, bundle, caErr := sc.fetchCertBundleByIssuerId(issuer, false)
 		if caErr != nil {
@@ -281,6 +282,8 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		if colonSerial == serialFromCert(parsedBundle.Certificate) {
 			return logical.ErrorResponse(fmt.Sprintf("adding issuer (id: %v) to its own CRL is not allowed", issuer)), nil
 		}
+
+		issuerIDCertMap[issuer] = parsedBundle.Certificate
 	}
 
 	alreadyRevoked := false
@@ -351,6 +354,10 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		revInfo.CertificateBytes = certEntry.Value
 		revInfo.RevocationTime = currTime.Unix()
 		revInfo.RevocationTimeUTC = currTime.UTC()
+
+		// We may not find an issuer with this certificate; that's fine so
+		// ignore the return value.
+		associateRevokedCertWithIsssuer(&revInfo, cert, issuerIDCertMap)
 
 		revEntry, err = logical.StorageEntryJSON(revokedPath+normalizeSerial(serial), revInfo)
 		if err != nil {
@@ -626,6 +633,20 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 	return nil
 }
 
+func associateRevokedCertWithIsssuer(revInfo *revocationInfo, revokedCert *x509.Certificate, issuerIDCertMap map[issuerID]*x509.Certificate) bool {
+	for issuerId, issuerCert := range issuerIDCertMap {
+		if bytes.Equal(revokedCert.RawIssuer, issuerCert.RawSubject) {
+			if err := revokedCert.CheckSignatureFrom(issuerCert); err == nil {
+				// Valid mapping. Add it to the specified entry.
+				revInfo.CertificateIssuer = issuerId
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 func getRevokedCertEntries(ctx context.Context, req *logical.Request, issuerIDCertMap map[issuerID]*x509.Certificate) ([]pkix.RevokedCertificate, map[issuerID][]pkix.RevokedCertificate, error) {
 	var unassignedCerts []pkix.RevokedCertificate
 	revokedCertsMap := make(map[issuerID][]pkix.RevokedCertificate)
@@ -687,23 +708,13 @@ func getRevokedCertEntries(ctx context.Context, req *logical.Request, issuerIDCe
 		}
 
 		// Now we need to assign the revoked certificate to an issuer.
-		foundParent := false
-		for issuerId, issuerCert := range issuerIDCertMap {
-			if bytes.Equal(revokedCert.RawIssuer, issuerCert.RawSubject) {
-				if err := revokedCert.CheckSignatureFrom(issuerCert); err == nil {
-					// Valid mapping. Add it to the specified entry.
-					revokedCertsMap[issuerId] = append(revokedCertsMap[issuerId], newRevCert)
-					revInfo.CertificateIssuer = issuerId
-					foundParent = true
-					break
-				}
-			}
-		}
-
+		foundParent := associateRevokedCertWithIsssuer(&revInfo, revokedCert, issuerIDCertMap)
 		if !foundParent {
 			// If the parent isn't found, add it to the unassigned bucket.
 			unassignedCerts = append(unassignedCerts, newRevCert)
 		} else {
+			revokedCertsMap[revInfo.CertificateIssuer] = append(revokedCertsMap[revInfo.CertificateIssuer], newRevCert)
+
 			// When the CertificateIssuer field wasn't found on the existing
 			// entry (or was invalid), and we've found a new value for it,
 			// we should update the entry to make future CRL builds faster.
