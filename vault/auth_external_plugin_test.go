@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/hashicorp/vault/helper/namespace"
@@ -17,26 +18,27 @@ import (
 )
 
 var (
-	pluginName   string
-	pluginSha256 string
-	pluginDir    string
+	compileOnce sync.Once
+	pluginBytes []byte
 )
 
-func init() {
-	pluginName, pluginSha256, pluginDir = compilePlugin()
-}
-
-func testCoreWithPlugins(t *testing.T) (*Core, [][]byte, string) {
+func testCoreWithPlugin(t *testing.T) (*Core, string, string) {
 	t.Helper()
+	pluginName, pluginSha256, pluginDir := compilePlugin(t)
 	conf := &CoreConfig{
 		BuiltinRegistry: NewMockBuiltinRegistry(),
 		PluginDirectory: pluginDir,
 	}
 	core := TestCoreWithSealAndUI(t, conf)
-	return testCoreUnsealed(t, core)
+	core, _, _ = testCoreUnsealed(t, core)
+	return core, pluginName, pluginSha256
 }
 
-func compilePlugin() (string, string, string) {
+// to mount a plugin, we need a working binary plugin, so we compile one here.
+func compilePlugin(t *testing.T) (string, string, string) {
+	pluginType := "approle"
+	pluginName := "vault-plugin-auth-" + pluginType
+
 	dir := ""
 	// detect if we are in the "vault/" or the root directory and compensate
 	if _, err := os.Stat("builtin"); os.IsNotExist(err) {
@@ -46,35 +48,45 @@ func compilePlugin() (string, string, string) {
 		}
 		dir = filepath.Dir(wd)
 	}
-	pluginDir = path.Join(dir, "test-plugins")
-	err := os.Mkdir(pluginDir, os.FileMode(0o775))
-	if err != nil && !os.IsExist(err) {
-		panic(err)
+
+	pluginDir, cleanup := MakeTestPluginDir(t)
+	t.Cleanup(func() { cleanup(t) })
+
+	pluginPath := path.Join(pluginDir, pluginName)
+
+	// cache the compilation to only run once
+	compileOnce.Do(func() {
+		cmd := exec.Command("go", "build", "-o", pluginPath, fmt.Sprintf("builtin/credential/%s/cmd/%s/main.go", pluginType, pluginType))
+		cmd.Dir = dir
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			panic(fmt.Errorf("error running go build %v output: %s", err, output))
+		}
+		pluginBytes, err = os.ReadFile(pluginPath)
+		if err != nil {
+			panic(err)
+		}
+	})
+
+	// write the cached plugin if necessary
+	var err error
+	if _, err := os.Stat(pluginPath); os.IsNotExist(err) {
+		err = os.WriteFile(pluginPath, pluginBytes, 0o777)
+	}
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	pluginType := "approle"
-	pluginName := "vault-plugin-auth-" + pluginType
-	pluginPath := path.Join(pluginDir, pluginName)
-	cmd := exec.Command("go", "build", "-o", pluginPath, fmt.Sprintf("builtin/credential/%s/cmd/%s/main.go", pluginType, pluginType))
-	cmd.Dir = dir
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		panic(fmt.Errorf("error running go build %v output: %s", err, output))
-	}
-	pluginBytes, err := os.ReadFile(pluginPath)
-	if err != nil {
-		panic(err)
-	}
 	sha := sha256.New()
 	_, err = sha.Write(pluginBytes)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	return pluginName, fmt.Sprintf("%x", sha.Sum(nil)), pluginDir
 }
 
 func TestCore_EnableExternalCredentialPlugin(t *testing.T) {
-	c, _, _ := testCoreWithPlugins(t)
+	c, pluginName, pluginSha256 := testCoreWithPlugin(t)
 	d := &framework.FieldData{
 		Raw: map[string]interface{}{
 			"name":    pluginName,
@@ -109,7 +121,7 @@ func TestCore_EnableExternalCredentialPlugin(t *testing.T) {
 }
 
 func TestCore_EnableExternalCredentialPlugin_MultipleVersions(t *testing.T) {
-	c, _, _ := testCoreWithPlugins(t)
+	c, pluginName, pluginSha256 := testCoreWithPlugin(t)
 	d := &framework.FieldData{
 		Raw: map[string]interface{}{
 			"name":    pluginName,
@@ -167,7 +179,7 @@ func TestCore_EnableExternalCredentialPlugin_MultipleVersions(t *testing.T) {
 }
 
 func TestCore_EnableExternalCredentialPlugin_MismatchedVersions(t *testing.T) {
-	c, _, _ := testCoreWithPlugins(t)
+	c, pluginName, pluginSha256 := testCoreWithPlugin(t)
 	d := &framework.FieldData{
 		Raw: map[string]interface{}{
 			"name":    pluginName,
@@ -225,7 +237,7 @@ func TestCore_EnableExternalCredentialPlugin_MismatchedVersions(t *testing.T) {
 }
 
 func TestCore_EnableExternalCredentialPlugin_NoVersionsOkay(t *testing.T) {
-	c, _, _ := testCoreWithPlugins(t)
+	c, pluginName, pluginSha256 := testCoreWithPlugin(t)
 	d := &framework.FieldData{
 		Raw: map[string]interface{}{
 			"name":    pluginName,
@@ -259,7 +271,7 @@ func TestCore_EnableExternalCredentialPlugin_NoVersionsOkay(t *testing.T) {
 }
 
 func TestCore_EnableExternalCredentialPlugin_NoVersionOnRegister(t *testing.T) {
-	c, _, _ := testCoreWithPlugins(t)
+	c, pluginName, pluginSha256 := testCoreWithPlugin(t)
 	d := &framework.FieldData{
 		Raw: map[string]interface{}{
 			"name":    pluginName,
@@ -289,7 +301,7 @@ func TestCore_EnableExternalCredentialPlugin_NoVersionOnRegister(t *testing.T) {
 }
 
 func TestCore_EnableExternalCredentialPlugin_InvalidName(t *testing.T) {
-	c, _, _ := testCoreWithPlugins(t)
+	c, pluginName, pluginSha256 := testCoreWithPlugin(t)
 	d := &framework.FieldData{
 		Raw: map[string]interface{}{
 			"name":    pluginName,

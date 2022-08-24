@@ -6,35 +6,11 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 )
-
-// testPluginDir creates a temporary directory suitable for holding plugins.
-// This helper also resolves symlinks to make tests happy on OS X.
-func testPluginDir(tb testing.TB) (string, func(tb testing.TB)) {
-	tb.Helper()
-
-	dir, err := ioutil.TempDir("", "")
-	if err != nil {
-		tb.Fatal(err)
-	}
-
-	// OSX tempdir are /var, but actually symlinked to /private/var
-	dir, err = filepath.EvalSymlinks(dir)
-	if err != nil {
-		tb.Fatal(err)
-	}
-
-	return dir, func(tb testing.TB) {
-		if err := os.RemoveAll(dir); err != nil {
-			tb.Fatal(err)
-		}
-	}
-}
 
 // testPluginCreate creates a sample plugin in a tempdir and returns the shasum
 // and filepath to the plugin.
