@@ -7,8 +7,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/builtinplugins"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -164,8 +162,6 @@ func (c *SecretsListCommand) detailedMounts(mounts map[string]*api.MountOutput) 
 			pluginName = mount.Config.PluginName
 		}
 
-		status, _ := builtinplugins.Registry.DeprecationStatus(mount.Type, consts.PluginTypeSecrets)
-
 		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %t | %s | %t | %v | %s | %s | %s | %s",
 			path,
 			pluginName,
@@ -179,7 +175,7 @@ func (c *SecretsListCommand) detailedMounts(mounts map[string]*api.MountOutput) 
 			mount.Options,
 			mount.Description,
 			mount.UUID,
-			status.String(),
+			mount.DeprecationStatus,
 		))
 	}
 

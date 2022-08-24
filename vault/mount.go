@@ -665,6 +665,40 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	return nil
 }
 
+// pluginTypeFromMountEntry attempts to find a pluginType associated with the
+// specified MountEntry. Returns consts.PluginTypeUnknown in the following cases:
+//
+// * Multiple types match (also returns an error)
+// * No types match (no error)
+func (c *Core) pluginTypeFromMountEntry(ctx context.Context, entry *MountEntry) (consts.PluginType, error) {
+	var pluginTypes []consts.PluginType
+	if c.builtinRegistry == nil || entry == nil {
+		return consts.PluginTypeUnknown, nil
+	}
+
+	pluginType, _ := consts.ParsePluginType(entry.Table)
+	if pluginType != consts.PluginTypeUnknown {
+		pluginTypes = append(pluginTypes, pluginType)
+	}
+
+	if c.builtinRegistry.Contains(entry.Type, consts.PluginTypeSecrets) {
+		pluginTypes = append(pluginTypes, consts.PluginTypeSecrets)
+	}
+
+	if c.builtinRegistry.Contains(entry.Type, consts.PluginTypeDatabase) {
+		pluginTypes = append(pluginTypes, consts.PluginTypeDatabase)
+	}
+
+	switch len(pluginTypes) {
+	case 0:
+		return consts.PluginTypeUnknown, nil
+	case 1:
+		return pluginTypes[0], nil
+	default:
+		return consts.PluginTypeUnknown, fmt.Errorf("too many plugin types for mount entry")
+	}
+}
+
 // Unmount is used to unmount a path. The boolean indicates whether the mount
 // was found.
 func (c *Core) unmount(ctx context.Context, path string) error {

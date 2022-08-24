@@ -286,6 +286,7 @@ type MountOutput struct {
 	RunningVersion        string            `json:"running_version"`
 	Sha                   string            `json:"sha"`
 	RunningSha            string            `json:"running_sha"`
+	DeprecationStatus     string            `json:"deprecation_status" mapstructure:"deprecation_status"`
 }
 
 type MountConfigOutput struct {
