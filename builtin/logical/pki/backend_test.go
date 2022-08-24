@@ -5063,6 +5063,14 @@ TgM7RZnmEjNdeaa4M52o7VY=
 	require.NotEmpty(t, resp.Data["imported_keys"])
 	require.NotEmpty(t, resp.Data["mapping"])
 
+	// Shouldn't have crl-signing on the newly imported issuer's usage.
+	resp, err = CBRead(b, s, "issuer/default")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data)
+	require.NotEmpty(t, resp.Data["usage"])
+	require.NotContains(t, resp.Data["usage"], "crl-signing")
+
 	// Modifying to set CRL should fail.
 	resp, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
 		"usage": "issuing-certificates,crl-signing",
