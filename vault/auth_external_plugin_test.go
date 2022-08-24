@@ -38,6 +38,7 @@ func testCoreWithPlugins(t *testing.T) (*Core, [][]byte, string) {
 
 func compilePlugin() (string, string, string) {
 	dir := ""
+	// detect if we are in the "vault/" or the root directory and compensate
 	if _, err := os.Stat("builtin"); os.IsNotExist(err) {
 		wd, err := os.Getwd()
 		if err != nil {
@@ -159,7 +160,10 @@ func TestCore_EnableExternalCredentialPlugin_MultipleVersions(t *testing.T) {
 		t.Fatalf("missing mount, match: %q", match)
 	}
 
-	// TODO: check that the version is correct
+	raw, _ := c.router.root.Get(match)
+	if raw.(*routeEntry).mountEntry.Version != "v1.0.0" {
+		t.Errorf("Expected mount to be version v1.0.0 but got %s", raw.(*routeEntry).mountEntry.Version)
+	}
 }
 
 func TestCore_EnableExternalCredentialPlugin_MismatchedVersions(t *testing.T) {
@@ -202,7 +206,7 @@ func TestCore_EnableExternalCredentialPlugin_MismatchedVersions(t *testing.T) {
 		Table:   credentialTableType,
 		Path:    "foo",
 		Type:    pluginName,
-		Version: "v1.0.0",
+		Version: "v1.0.1",
 	}
 	err = c.enableCredential(namespace.RootContext(nil), me)
 	if err != nil {
@@ -212,6 +216,11 @@ func TestCore_EnableExternalCredentialPlugin_MismatchedVersions(t *testing.T) {
 	match := c.router.MatchingMount(namespace.RootContext(nil), "auth/foo/bar")
 	if match != "auth/foo/" {
 		t.Fatalf("missing mount, match: %q", match)
+	}
+
+	raw, _ := c.router.root.Get(match)
+	if raw.(*routeEntry).mountEntry.Version != "v1.0.1" {
+		t.Errorf("Expected mount to be version v1.0.1 but got %s", raw.(*routeEntry).mountEntry.Version)
 	}
 }
 
