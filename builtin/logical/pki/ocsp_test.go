@@ -309,6 +309,61 @@ func TestOcsp_RevokedCertHasIssuerWithoutAKey(t *testing.T) {
 	require.Equal(t, ocsp.UnauthorizedErrorResponse, respDer)
 }
 
+// Verify if for some reason an end-user has rotated an existing certificate using the same
+// key so our algo matches multiple issuers and one has OCSP usage disabled. We expect that
+// even if a prior issuer issued the certificate, the new matching issuer can respond and sign
+// the response to the caller on its behalf.
+//
+// NOTE: This test is a bit at the mercy of iteration order of the issuer ids.
+//       If it becomes flaky, most likely something is wrong in the code
+//       and not the test.
+func TestOcsp_MultipleMatchingIssuersOneWithoutSigningUsage(t *testing.T) {
+	b, s, testEnv := setupOcspEnv(t, "ec")
+
+	// Create a matching issuer as issuer1 with the same backing key
+	resp, err := CBWrite(b, s, "root/rotate/existing", map[string]interface{}{
+		"key_ref":     testEnv.keyId1,
+		"ttl":         "40h",
+		"common_name": "example-ocsp.com",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "rotate issuer failed")
+	requireFieldsSetInResp(t, resp, "issuer_id")
+	rotatedCert := parseCert(t, resp.Data["certificate"].(string))
+
+	// Remove ocsp signing from our issuer
+	resp, err = CBPatch(b, s, "issuer/"+testEnv.issuerId1.String(), map[string]interface{}{
+		"usage": "read-only,issuing-certificates,crl-signing",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed resetting usage flags on issuer")
+	requireFieldsSetInResp(t, resp, "usage")
+	// Do not assume a specific ordering for usage...
+	usages, err := NewIssuerUsageFromNames(strings.Split(resp.Data["usage"].(string), ","))
+	require.NoError(t, err, "failed parsing usage return value")
+	require.True(t, usages.HasUsage(IssuanceUsage))
+	require.True(t, usages.HasUsage(CRLSigningUsage))
+	require.False(t, usages.HasUsage(OCSPSigningUsage))
+
+	// Request an OCSP request from it, we should get a Good response back, from the rotated cert
+	resp, err = sendOcspRequest(t, b, s, "get", testEnv.leafCertIssuer1, testEnv.issuer1, crypto.SHA1)
+	requireSuccessNonNilResponse(t, resp, err, "ocsp get request")
+	requireFieldsSetInResp(t, resp, "http_content_type", "http_status_code", "http_raw_body")
+	require.Equal(t, 200, resp.Data["http_status_code"])
+	require.Equal(t, ocspResponseContentType, resp.Data["http_content_type"])
+	respDer := resp.Data["http_raw_body"].([]byte)
+
+	ocspResp, err := ocsp.ParseResponse(respDer, testEnv.issuer1)
+	require.NoError(t, err, "parsing ocsp get response")
+
+	require.Equal(t, ocsp.Good, ocspResp.Status)
+	require.Equal(t, crypto.SHA1, ocspResp.IssuerHash)
+	require.Equal(t, 0, ocspResp.RevocationReason)
+	require.Equal(t, testEnv.leafCertIssuer1.SerialNumber, ocspResp.SerialNumber)
+	require.Equal(t, rotatedCert, ocspResp.Certificate)
+
+	requireOcspSignatureAlgoForKey(t, rotatedCert.PublicKey, ocspResp.SignatureAlgorithm)
+	requireOcspResponseSignedBy(t, ocspResp, rotatedCert.PublicKey)
+}
+
 func TestOcsp_ValidRequests(t *testing.T) {
 	t.Parallel()
 	type testArgs struct {
@@ -428,6 +483,9 @@ type ocspTestEnv struct {
 
 	leafCertIssuer1 *x509.Certificate
 	leafCertIssuer2 *x509.Certificate
+
+	keyId1 keyID
+	keyId2 keyID
 }
 
 func setupOcspEnv(t *testing.T, keyType string) (*backend, logical.Storage, *ocspTestEnv) {
@@ -435,6 +493,7 @@ func setupOcspEnv(t *testing.T, keyType string) (*backend, logical.Storage, *ocs
 	var issuerCerts []*x509.Certificate
 	var leafCerts []*x509.Certificate
 	var issuerIds []issuerID
+	var keyIds []keyID
 
 	for i := 0; i < 2; i++ {
 		resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -443,8 +502,9 @@ func setupOcspEnv(t *testing.T, keyType string) (*backend, logical.Storage, *ocs
 			"common_name": "example-ocsp.com",
 		})
 		requireSuccessNonNilResponse(t, resp, err, "root/generate/internal")
-		requireFieldsSetInResp(t, resp, "issuer_id")
+		requireFieldsSetInResp(t, resp, "issuer_id", "key_id")
 		issuerId := resp.Data["issuer_id"].(issuerID)
+		keyId := resp.Data["key_id"].(keyID)
 
 		resp, err = CBWrite(b, s, "roles/test"+strconv.FormatInt(int64(i), 10), map[string]interface{}{
 			"allow_bare_domains": true,
@@ -468,16 +528,19 @@ func setupOcspEnv(t *testing.T, keyType string) (*backend, logical.Storage, *ocs
 		issuerCerts = append(issuerCerts, issuingCa)
 		leafCerts = append(leafCerts, leafCert)
 		issuerIds = append(issuerIds, issuerId)
+		keyIds = append(keyIds, keyId)
 	}
 
 	testEnv := &ocspTestEnv{
 		issuerId1:       issuerIds[0],
 		issuer1:         issuerCerts[0],
 		leafCertIssuer1: leafCerts[0],
+		keyId1:          keyIds[0],
 
 		issuerId2:       issuerIds[1],
 		issuer2:         issuerCerts[1],
 		leafCertIssuer2: leafCerts[1],
+		keyId2:          keyIds[1],
 	}
 
 	return b, s, testEnv
