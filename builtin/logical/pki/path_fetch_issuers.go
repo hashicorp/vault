@@ -531,7 +531,6 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 			return logical.ErrorResponse("new key name outside of valid character limits"), nil
 		}
 		if newName != issuer.Name {
-			// Diff between update and patch?
 			oldName = issuer.Name
 			issuer.Name = newName
 			issuer.LastModified = time.Now().In(time.FixedZone("GMT", 0))

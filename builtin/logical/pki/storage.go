@@ -1233,6 +1233,15 @@ func (sc *storageContext) isIfModifiedSinceBeforeLastModified(helper *IfModified
 		}
 		lastModified = crlConfig.LastModified
 	} else {
+		issuerRef := helper.issuerRef
+		if issuerRef == defaultRef {
+			config, err := sc.getIssuersConfig()
+			if err != nil {
+				return before, err
+			}
+			issuerRef = config.DefaultIssuerId
+		}
+
 		issuer, err := sc.fetchIssuerById(helper.issuerRef)
 		if err != nil {
 			return before, err

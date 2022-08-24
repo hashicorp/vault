@@ -58,10 +58,10 @@ func (sc *storageContext) updateDefaultIssuerId(id issuerID) error {
 		}
 
 		issuer.LastModified = time.Now().In(time.FixedZone("GMT", 0))
-		// err = sc.writeIssuer(issuer)
-		// if err != nil {
-		// 	return err
-		// }
+		err = sc.writeIssuer(issuer)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
