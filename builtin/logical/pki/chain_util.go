@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"crypto/x509"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"sort"
+
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 )
 
 func prettyIssuer(issuerIdEntryMap map[issuerID]*issuerEntry, issuer issuerID) string {
