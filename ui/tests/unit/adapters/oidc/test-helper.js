@@ -70,7 +70,7 @@ export default (test) => {
       },
     };
 
-    this.server.get(`/identity/${this.modelName}`, (schema, req) => {
+    this.server.get(`/identity/${this.modelName}`, () => {
       if (keyInfoModels.some((model) => this.modelName.includes(model))) {
         return { data: { keys, key_info } };
       } else {
