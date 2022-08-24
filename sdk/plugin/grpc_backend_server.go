@@ -16,6 +16,10 @@ import (
 
 var ErrServerInMetadataMode = errors.New("plugin server can not perform action while in metadata mode")
 
+// singleImplemenationID is the string used to define the instance ID of a
+// non-multiplexed plugin
+const singleImplementationID string = "single"
+
 type backendInstance struct {
 	brokeredClient *grpc.ClientConn
 	backend        logical.Backend
@@ -26,8 +30,9 @@ type backendGRPCPluginServer struct {
 
 	broker *plugin.GRPCBroker
 
-	instances     map[string]backendInstance
-	instancesLock sync.RWMutex
+	instances           map[string]backendInstance
+	instancesLock       sync.RWMutex
+	multiplexingSupport bool
 
 	factory logical.Factory
 
@@ -36,17 +41,20 @@ type backendGRPCPluginServer struct {
 
 // getBackendInternal returns the backend but does not hold a lock
 func (b *backendGRPCPluginServer) getBackendAndBrokeredClientInternal(ctx context.Context) (logical.Backend, *grpc.ClientConn, error) {
-	if singleImpl, ok := b.instances[SingleImplementation]; ok {
+	if b.multiplexingSupport {
+		id, err := pluginutil.GetMultiplexIDFromContext(ctx)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if inst, ok := b.instances[id]; ok {
+			return inst.backend, inst.brokeredClient, nil
+		}
+
+	}
+
+	if singleImpl, ok := b.instances[singleImplementationID]; ok {
 		return singleImpl.backend, singleImpl.brokeredClient, nil
-	}
-
-	id, err := pluginutil.GetMultiplexIDFromContext(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if inst, ok := b.instances[id]; ok {
-		return inst.backend, inst.brokeredClient, nil
 	}
 
 	return nil, nil, fmt.Errorf("no backend instance found")
@@ -64,9 +72,9 @@ func (b *backendGRPCPluginServer) getBackendAndBrokeredClient(ctx context.Contex
 // backend through its factory func for the server side of the plugin.
 func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs) (*pb.SetupReply, error) {
 	var err error
-	id := SingleImplementation
+	id := singleImplementationID
 
-	if _, ok := b.instances[id]; !ok {
+	if b.multiplexingSupport {
 		id, err = pluginutil.GetMultiplexIDFromContext(ctx)
 		if err != nil {
 			return &pb.SetupReply{}, err
