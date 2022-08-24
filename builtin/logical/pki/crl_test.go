@@ -3,6 +3,7 @@ package pki
 import (
 	"context"
 	"encoding/asn1"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -806,6 +807,7 @@ func TestAutoRebuild(t *testing.T) {
 		LogicalBackends: map[string]logical.Factory{
 			"pki": Factory,
 		},
+		EnableRaw: true,
 	}
 	oldPeriod := vault.SetRollbackPeriodForTesting(newPeriod)
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
@@ -827,12 +829,16 @@ func TestAutoRebuild(t *testing.T) {
 	require.NoError(t, err)
 
 	// Generate root.
-	_, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
 		"common_name": "Root X1",
 		"key_type":    "ec",
 	})
 	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data)
+	require.NotEmpty(t, resp.Data["issuer_id"])
+	rootIssuer := resp.Data["issuer_id"].(string)
 
 	// Setup a testing role.
 	_, err = client.Logical().Write("pki/roles/local-testing", map[string]interface{}{
@@ -844,7 +850,7 @@ func TestAutoRebuild(t *testing.T) {
 
 	// Regression test: ensure we respond with the default values for CRL
 	// config when we haven't set any values yet.
-	resp, err := client.Logical().Read("pki/config/crl")
+	resp, err = client.Logical().Read("pki/config/crl")
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotNil(t, resp.Data)
@@ -903,6 +909,57 @@ func TestAutoRebuild(t *testing.T) {
 		"serial_number": newLeafSerial,
 	})
 	require.NoError(t, err)
+
+	// Now, we want to test the issuer identification on revocation. This
+	// only happens as a distinct "step" when CRL building isn't done on
+	// each reovcation. Pull the storage from the cluster and verify the
+	// revInfo contains a matching cert. Some of this code is cribbed from
+	// kvv2_upgrade_test.go.
+	var pkiMount string
+	storage := cluster.Cores[0].UnderlyingStorage
+	mounts, err := storage.List(ctx, "logical/")
+	require.NoError(t, err)
+	require.NotEmpty(t, mounts)
+	for _, mount := range mounts {
+		// For whatever reason, OIDC gets provisioned as the first mount,
+		// but I'm not convinced that's a stable list. Let's look inside
+		// each mount until we find a revoked certs folder that we'd expect
+		// if its a real PKI mount. This is because mounts are just UUID
+		// strings...
+		mountFolders, err := storage.List(ctx, "logical/"+mount)
+		require.NoError(t, err)
+
+		isPkiMount := false
+		for _, folder := range mountFolders {
+			if folder == "revoked/" {
+				isPkiMount = true
+				break
+			}
+		}
+
+		if isPkiMount {
+			pkiMount = mount
+			break
+		}
+	}
+	require.NotEmpty(t, pkiMount)
+	revEntryPath := "logical/" + pkiMount + revokedPath + strings.ReplaceAll(newLeafSerial, ":", "-")
+	// storage above is a physical storage copy, not a logical storage. This
+	// difference means, if we were to do a storage.Get(...) on the above
+	// path, we'd read the barrier-encrypted value. This is less than useful
+	// for decoding, and fetching the proper storage view is a touch much
+	// work. So, assert EnableRaw above and (ab)use it here.
+	resp, err = client.Logical().Read("sys/raw/" + revEntryPath)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotEmpty(t, resp.Data["value"])
+	revEntryValue := resp.Data["value"].(string)
+	fmt.Println(resp)
+	var revInfo revocationInfo
+	err = json.Unmarshal([]byte(revEntryValue), &revInfo)
+	require.NoError(t, err)
+	require.Equal(t, revInfo.CertificateIssuer, issuerID(rootIssuer))
 
 	// Serial should not appear on CRL.
 	crl = getCrlCertificateList(t, client, "pki")
