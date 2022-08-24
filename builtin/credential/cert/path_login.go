@@ -77,6 +77,11 @@ func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Requ
 }
 
 func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	config, err := b.Config(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
 	var matched *ParsedCert
 	if verifyResp, resp, err := b.verifyCredentials(ctx, req, data); err != nil {
 		return nil, err
@@ -132,6 +137,11 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 			Name: clientCerts[0].Subject.CommonName,
 		},
 	}
+
+	if config.EnableIdentityAliasMetadata {
+		auth.Alias.Metadata = metadata
+	}
+
 	matched.Entry.PopulateTokenAuth(auth)
 
 	return &logical.Response{

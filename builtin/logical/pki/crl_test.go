@@ -8,7 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/api"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -363,6 +367,8 @@ func TestCrlRebuilder(t *testing.T) {
 }
 
 func TestBYOC(t *testing.T) {
+	t.Parallel()
+
 	b, s := createBackendWithStorage(t)
 
 	// Create a root CA.
@@ -480,6 +486,8 @@ func TestBYOC(t *testing.T) {
 }
 
 func TestPoP(t *testing.T) {
+	t.Parallel()
+
 	b, s := createBackendWithStorage(t)
 
 	// Create a root CA.
@@ -638,6 +646,8 @@ func TestPoP(t *testing.T) {
 }
 
 func TestIssuerRevocation(t *testing.T) {
+	t.Parallel()
+
 	b, s := createBackendWithStorage(t)
 
 	// Create a root CA.
@@ -776,6 +786,179 @@ func TestIssuerRevocation(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data["revocation_time"])
+}
+
+func TestAutoRebuild(t *testing.T) {
+	t.Parallel()
+
+	// While we'd like to reduce this duration, we need to wait until
+	// the rollback manager timer ticks. With the new helper, we can
+	// modify the rollback manager timer period directly, allowing us
+	// to shorten the total test time significantly.
+	newPeriod := 6 * time.Second
+	gracePeriod := (newPeriod + 1*time.Second).String()
+	crlTime := (newPeriod + 2*time.Second).String()
+	delta := 2 * newPeriod
+
+	// This test requires the periodicFunc to trigger, which requires we stand
+	// up a full test cluster.
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	oldPeriod := vault.SetRollbackPeriodForTesting(newPeriod)
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+	vault.SetRollbackPeriodForTesting(oldPeriod)
+
+	// Mount PKI
+	err := client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	require.NoError(t, err)
+
+	// Generate root.
+	_, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "Root X1",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+
+	// Setup a testing role.
+	_, err = client.Logical().Write("pki/roles/local-testing", map[string]interface{}{
+		"allow_any_name":    true,
+		"enforce_hostnames": false,
+		"key_type":          "ec",
+	})
+	require.NoError(t, err)
+
+	// Regression test: ensure we respond with the default values for CRL
+	// config when we haven't set any values yet.
+	resp, err := client.Logical().Read("pki/config/crl")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.Equal(t, resp.Data["expiry"], defaultCrlConfig.Expiry)
+	require.Equal(t, resp.Data["disable"], defaultCrlConfig.Disable)
+	require.Equal(t, resp.Data["ocsp_disable"], defaultCrlConfig.OcspDisable)
+	require.Equal(t, resp.Data["auto_rebuild"], defaultCrlConfig.AutoRebuild)
+	require.Equal(t, resp.Data["auto_rebuild_grace_period"], defaultCrlConfig.AutoRebuildGracePeriod)
+
+	// Safety guard: we play with rebuild timing below. We don't expect
+	// this entire test to take longer than 80s.
+	_, err = client.Logical().Write("pki/config/crl", map[string]interface{}{
+		"expiry": crlTime,
+	})
+	require.NoError(t, err)
+
+	// Issue a cert and revoke it. It should appear on the CRL right away.
+	resp, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
+		"common_name": "example.com",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotEmpty(t, resp.Data["serial_number"])
+	leafSerial := resp.Data["serial_number"].(string)
+
+	_, err = client.Logical().Write("pki/revoke", map[string]interface{}{
+		"serial_number": leafSerial,
+	})
+	require.NoError(t, err)
+
+	crl := getCrlCertificateList(t, client, "pki")
+	lastCRLNumber := crl.Version
+	lastCRLExpiry := crl.NextUpdate
+	requireSerialNumberInCRL(t, crl, leafSerial)
+
+	// Enable periodic rebuild of the CRL.
+	_, err = client.Logical().Write("pki/config/crl", map[string]interface{}{
+		"expiry":                    crlTime,
+		"auto_rebuild":              true,
+		"auto_rebuild_grace_period": gracePeriod,
+	})
+	require.NoError(t, err)
+
+	// Issue a cert and revoke it.
+	resp, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
+		"common_name": "example.com",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotEmpty(t, resp.Data["serial_number"])
+	newLeafSerial := resp.Data["serial_number"].(string)
+
+	_, err = client.Logical().Write("pki/revoke", map[string]interface{}{
+		"serial_number": newLeafSerial,
+	})
+	require.NoError(t, err)
+
+	// Serial should not appear on CRL.
+	crl = getCrlCertificateList(t, client, "pki")
+	thisCRLNumber := crl.Version
+	requireSerialNumberInCRL(t, crl, leafSerial)
+
+	now := time.Now()
+	graceInterval, _ := time.ParseDuration(gracePeriod)
+	expectedUpdate := lastCRLExpiry.Add(-1 * graceInterval)
+	if requireSerialNumberInCRL(nil, crl, newLeafSerial) {
+		// If we somehow lagged and we ended up needing to rebuild
+		// the CRL, we should avoid throwing an error.
+
+		if thisCRLNumber == lastCRLNumber {
+			t.Fatalf("unexpected failure: last (%v) and current (%v) leaf certificate might have the same serial number?", leafSerial, newLeafSerial)
+		}
+
+		if !now.After(expectedUpdate) {
+			t.Fatalf("expected newly generated certificate with serial %v not to appear on this CRL but it did, prematurely: %v", newLeafSerial, crl)
+		}
+
+		t.Fatalf("shouldn't be here")
+	}
+
+	// Now, wait until we're within the grace period... Then start prompting
+	// for regeneration.
+	if expectedUpdate.After(now) {
+		time.Sleep(expectedUpdate.Sub(now))
+	}
+
+	// Otherwise, the absolute latest we're willing to wait is some delta
+	// after CRL expiry (to let stuff regenerate &c).
+	interruptChan := time.After(lastCRLExpiry.Sub(now) + delta)
+	for {
+		select {
+		case <-interruptChan:
+			t.Fatalf("expected CRL to regenerate prior to CRL expiry (plus %v grace period)", delta)
+		default:
+			crl = getCrlCertificateList(t, client, "pki")
+			if crl.NextUpdate.Equal(lastCRLExpiry) {
+				// Hack to ensure we got a net-new CRL. If we didn't, we can
+				// exit this default conditional and wait for the next
+				// go-round. When the timer fires, it'll populate the channel
+				// and we'll exit correctly.
+				time.Sleep(1 * time.Second)
+				break
+			}
+
+			now := time.Now()
+			require.True(t, crl.ThisUpdate.Before(now))
+			require.True(t, crl.NextUpdate.After(now))
+			requireSerialNumberInCRL(t, crl, leafSerial)
+			requireSerialNumberInCRL(t, crl, newLeafSerial)
+			return
+		}
+	}
 }
 
 func requestCrlFromBackend(t *testing.T, s logical.Storage, b *backend) *logical.Response {

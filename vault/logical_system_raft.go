@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -572,7 +572,7 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 		case err == nil:
 		case strings.Contains(err.Error(), "failed to open the sealed hashes"):
 			switch b.Core.seal.BarrierType() {
-			case wrapping.Shamir:
+			case wrapping.WrapperTypeShamir:
 				return logical.ErrorResponse("could not verify hash file, possibly the snapshot is using a different set of unseal keys; use the snapshot-force API to bypass this check"), logical.ErrInvalidRequest
 			default:
 				return logical.ErrorResponse("could not verify hash file, possibly the snapshot is using a different autoseal key; use the snapshot-force API to bypass this check"), logical.ErrInvalidRequest

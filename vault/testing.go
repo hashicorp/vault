@@ -2247,6 +2247,10 @@ func (m *mockBuiltinRegistry) Contains(name string, pluginType consts.PluginType
 	return false
 }
 
+func (m *mockBuiltinRegistry) DeprecationStatus(name string, pluginType consts.PluginType) (consts.DeprecationStatus, bool) {
+	return consts.Supported, true
+}
+
 type NoopAudit struct {
 	Config         *audit.BackendConfig
 	ReqErr         error
@@ -2346,4 +2350,15 @@ func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
 		time.Sleep(100 * time.Millisecond)
 	}
 	t.Fatalf("did not complete before deadline, err: %v", err)
+}
+
+// SetRollbackPeriodForTesting lets us modify the periodic func invocation
+// time period to some other value. Best practice is to set this, spin up
+// a test cluster and immediately reset the value back to the default, to
+// avoid impacting other tests too much. To that end, we return the original
+// value of that period.
+func SetRollbackPeriodForTesting(newPeriod time.Duration) time.Duration {
+	oldPeriod := rollbackPeriod
+	rollbackPeriod = newPeriod
+	return oldPeriod
 }

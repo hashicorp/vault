@@ -9,8 +9,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	atomic2 "go.uber.org/atomic"
-
 	"github.com/hashicorp/vault/sdk/helper/consts"
 
 	"github.com/armon/go-metrics"
@@ -179,7 +177,6 @@ func Backend(conf *logical.BackendConfig) *backend {
 		PeriodicFunc:   b.periodicFunc,
 	}
 
-	b.crlLifetime = time.Hour * 72
 	b.tidyCASGuard = new(uint32)
 	b.tidyStatus = &tidyStatus{state: tidyStatusInactive}
 	b.storage = conf.StorageView
@@ -187,8 +184,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 	b.pkiStorageVersion.Store(0)
 
-	b.crlBuilder = &crlBuilder{}
-	b.isOcspDisabled = atomic2.NewBool(false)
+	b.crlBuilder = newCRLBuilder()
 
 	b.certsCounted = atomic2.NewBool(false)
 	b.certCount = new(uint32)
@@ -204,7 +200,6 @@ type backend struct {
 
 	backendUUID       string
 	storage           logical.Storage
-	crlLifetime       time.Duration
 	revokeStorageLock sync.RWMutex
 	tidyCASGuard      *uint32
 
@@ -222,9 +217,6 @@ type backend struct {
 
 	// Write lock around issuers and keys.
 	issuersLock sync.RWMutex
-
-	// Optimization to not read the CRL config on every OCSP request.
-	isOcspDisabled *atomic2.Bool
 }
 
 type (
@@ -321,8 +313,10 @@ func (b *backend) metricsWrap(callType string, roleMode int, ofunc roleOperation
 
 // initialize is used to perform a possible PKI storage migration if needed
 func (b *backend) initialize(ctx context.Context, _ *logical.InitializationRequest) error {
-	// load ocsp enabled status
-	setOcspStatus(b, ctx)
+	sc := b.makeStorageContext(ctx, b.storage)
+	if err := b.crlBuilder.reloadConfigIfRequired(sc); err != nil {
+		return err
+	}
 
 	err := b.initializePKIIssuersStorage(ctx)
 	if err != nil {
@@ -363,14 +357,6 @@ func (b *backend) initializePKIIssuersStorage(ctx context.Context) error {
 	b.updatePkiStorageVersion(ctx, false)
 
 	return nil
-}
-
-func setOcspStatus(b *backend, ctx context.Context) {
-	sc := b.makeStorageContext(ctx, b.storage)
-	config, err := sc.getRevocationConfig()
-	if config != nil && err == nil {
-		b.isOcspDisabled.Store(config.OcspDisable)
-	}
 }
 
 func (b *backend) useLegacyBundleCaStorage() bool {
@@ -428,12 +414,29 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 		}
 	case key == "config/crl":
 		// We may need to reload our OCSP status flag
-		setOcspStatus(b, ctx)
+		b.crlBuilder.markConfigDirty()
 	}
 }
 
 func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) error {
-	return b.crlBuilder.rebuildIfForced(ctx, b, request)
+	// First attempt to reload the CRL configuration.
+	sc := b.makeStorageContext(ctx, request.Storage)
+	if err := b.crlBuilder.reloadConfigIfRequired(sc); err != nil {
+		return err
+	}
+
+	// Check if we're set to auto rebuild and a CRL is set to expire.
+	if err := b.crlBuilder.checkForAutoRebuild(sc); err != nil {
+		return err
+	}
+
+	// Then attempt to rebuild the CRLs if required.
+	if err := b.crlBuilder.rebuildIfForced(ctx, b, request); err != nil {
+		return err
+	}
+
+	// All good!
+	return nil
 }
 
 func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
