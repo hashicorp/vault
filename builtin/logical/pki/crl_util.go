@@ -222,6 +222,50 @@ func (cb *crlBuilder) _doRebuild(ctx context.Context, b *backend, request *logic
 	return nil
 }
 
+// Helper function to fetch a map of issuerID->parsed cert for revocation
+// usage. Unlike other paths, this needs to handle the legacy bundle
+// more gracefully than rejecting it outright.
+func fetchIssuerMapForRevocationChecking(sc *storageContext) (map[issuerID]*x509.Certificate, error) {
+	var err error
+	var issuers []issuerID
+
+	if !sc.Backend.useLegacyBundleCaStorage() {
+		issuers, err = sc.listIssuers()
+		if err != nil {
+			return nil, fmt.Errorf("could not fetch issuers list: %v", err)
+		}
+	} else {
+		// Hack: this isn't a real issuerID, but it works for fetchCAInfo
+		// since it resolves the reference.
+		issuers = []issuerID{legacyBundleShimID}
+	}
+
+	issuerIDCertMap := make(map[issuerID]*x509.Certificate, len(issuers))
+	for _, issuer := range issuers {
+		_, bundle, caErr := sc.fetchCertBundleByIssuerId(issuer, false)
+		if caErr != nil {
+			return nil, fmt.Errorf("error fetching CA certificate for issuer id %v: %s", issuer, caErr)
+		}
+
+		if bundle == nil {
+			return nil, fmt.Errorf("faulty reference: %v - CA info not found", issuer)
+		}
+
+		parsedBundle, err := parseCABundle(sc.Context, sc.Backend, bundle)
+		if err != nil {
+			return nil, errutil.InternalError{Err: err.Error()}
+		}
+
+		if parsedBundle.Certificate == nil {
+			return nil, errutil.InternalError{Err: "stored CA information not able to be parsed"}
+		}
+
+		issuerIDCertMap[issuer] = parsedBundle.Certificate
+	}
+
+	return issuerIDCertMap, nil
+}
+
 // Revokes a cert, and tries to be smart about error recovery
 func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial string, fromLease bool) (*logical.Response, error) {
 	// As this backend is self-contained and this function does not hook into
@@ -237,53 +281,20 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 	// to gracefully degrade to the legacy cert bundle when it is required, as
 	// secondary PR clusters might not have been upgraded, but still need to
 	// handle revoking certs.
-	var err error
-	var issuers []issuerID
-
 	sc := b.makeStorageContext(ctx, req.Storage)
 
-	if !b.useLegacyBundleCaStorage() {
-		issuers, err = sc.listIssuers()
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("could not fetch issuers list: %v", err)), nil
-		}
-	} else {
-		// Hack: this isn't a real issuerID, but it works for fetchCAInfo
-		// since it resolves the reference.
-		issuers = []issuerID{legacyBundleShimID}
+	issuerIDCertMap, err := fetchIssuerMapForRevocationChecking(sc)
+	if err != nil {
+		return nil, err
 	}
 
-	issuerIDCertMap := make(map[issuerID]*x509.Certificate, len(issuers))
-	for _, issuer := range issuers {
-		_, bundle, caErr := sc.fetchCertBundleByIssuerId(issuer, false)
-		if caErr != nil {
-			switch caErr.(type) {
-			case errutil.UserError:
-				return logical.ErrorResponse(fmt.Sprintf("could not fetch the CA certificate for issuer id %v: %s", issuer, caErr)), nil
-			default:
-				return nil, fmt.Errorf("error fetching CA certificate for issuer id %v: %s", issuer, caErr)
-			}
-		}
-
-		if bundle == nil {
-			return nil, fmt.Errorf("faulty reference: %v - CA info not found", issuer)
-		}
-
-		parsedBundle, err := parseCABundle(ctx, b, bundle)
-		if err != nil {
-			return nil, errutil.InternalError{Err: err.Error()}
-		}
-
-		if parsedBundle.Certificate == nil {
-			return nil, errutil.InternalError{Err: "stored CA information not able to be parsed"}
-		}
-
+	// Ensure we don't revoke an issuer via this API; use /issuer/:issuer_ref/revoke
+	// instead.
+	for issuer, certificate := range issuerIDCertMap {
 		colonSerial := strings.ReplaceAll(strings.ToLower(serial), "-", ":")
-		if colonSerial == serialFromCert(parsedBundle.Certificate) {
+		if colonSerial == serialFromCert(certificate) {
 			return logical.ErrorResponse(fmt.Sprintf("adding issuer (id: %v) to its own CRL is not allowed", issuer)), nil
 		}
-
-		issuerIDCertMap[issuer] = parsedBundle.Certificate
 	}
 
 	alreadyRevoked := false
