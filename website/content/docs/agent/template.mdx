@@ -184,7 +184,7 @@ can be used here:
 - `error_on_missing_key` `(bool: false)` - Exit with an error when accessing
   a struct or map field/key that does notexist. The default behavior will print `<no value>`
   when accessing a field that does not exist. It is highly recommended you set this
-  to "true". Also see [`exit_on_retry_failure` in global Vault Agent Template Config](/docs/agent/template-config#interaction-between-exit_on_retry_failure-and-error_on_missing_key).
+  to "true". Also see [`exit_on_retry_failure` in global Vault Agent Template Config](/docs/agent/template#interaction-between-exit_on_retry_failure-and-error_on_missing_key).
 - `exec` `(object: optional)` - The exec block executes a command when the
   template is rendered and the output has changed. The block parameters are
   `command` `(string slice: required)` and `timeout` `(string: optional, defaults
