@@ -143,6 +143,10 @@ func ServeMultiplex(opts *ServeOpts) error {
 			opts = append(opts, grpc.MaxSendMsgSize(math.MaxInt32))
 			return plugin.DefaultGRPCServer(opts)
 		},
+
+		// TLSProvider is required to support v3 and v4 plugins.
+		// It will be ignored for v5 which uses AutoMTLS
+		TLSProvider: opts.TLSProviderFunc,
 	}
 
 	plugin.Serve(serveOpts)
