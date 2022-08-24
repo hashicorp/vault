@@ -15,7 +15,7 @@ import (
 
 func TestGRPCBackendPlugin_impl(t *testing.T) {
 	var _ gplugin.Plugin = new(GRPCBackendPlugin)
-	var _ logical.Backend = new(BackendGRPCPluginClient)
+	var _ logical.Backend = new(backendGRPCPluginClient)
 }
 
 func TestGRPCBackendPlugin_HandleRequest(t *testing.T) {

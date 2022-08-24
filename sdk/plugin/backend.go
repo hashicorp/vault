@@ -60,8 +60,8 @@ func (b GRPCBackendPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server)
 }
 
 func (b *GRPCBackendPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
-	ret := &BackendGRPCPluginClient{
-		Client:       pb.NewBackendClient(c),
+	ret := &backendGRPCPluginClient{
+		client:       pb.NewBackendClient(c),
 		clientConn:   c,
 		broker:       broker,
 		cleanupCh:    make(chan struct{}),

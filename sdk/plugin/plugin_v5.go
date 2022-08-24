@@ -41,10 +41,10 @@ func (b *BackendPluginClientV5) Cleanup(ctx context.Context) {
 	b.client.Reload()
 }
 
-// NewBackend will return an instance of an RPC-based client implementation of the backend for
-// external plugins, or a concrete implementation of the backend if it is a builtin backend.
-// The backend is returned as a logical.Backend interface. The isMetadataMode param determines whether
-// the plugin should run in metadata mode.
+// NewBackendV5 will return an instance of an RPC-based client implementation of
+// the backend for external plugins, or a concrete implementation of the
+// backend if it is a builtin backend. The backend is returned as a
+// logical.Backend interface.
 func NewBackendV5(ctx context.Context, pluginName string, pluginType consts.PluginType, sys pluginutil.LookRunnerUtil, conf *logical.BackendConfig) (logical.Backend, error) {
 	// Look for plugin in the plugin catalog
 	pluginRunner, err := sys.LookupPlugin(ctx, pluginName, pluginType)
@@ -106,10 +106,10 @@ func Dispense(rpcClient plugin.ClientProtocol, pluginClient pluginutil.PluginCli
 	// We should have a logical backend type now. This feels like a normal interface
 	// implementation but is in fact over an RPC connection.
 	switch c := raw.(type) {
-	case *BackendGRPCPluginClient:
+	case *backendGRPCPluginClient:
 		// This is an abstraction leak from go-plugin but it is necessary in
 		// order to enable multiplexing on multiplexed plugins
-		c.Client = pb.NewBackendClient(pluginClient.Conn())
+		c.client = pb.NewBackendClient(pluginClient.Conn())
 
 		backend = c
 	default:
@@ -139,10 +139,10 @@ func NewPluginClientV5(ctx context.Context, sys pluginutil.RunnerUtil, config pl
 	// We should have a logical backend type now. This feels like a normal interface
 	// implementation but is in fact over an RPC connection.
 	switch c := raw.(type) {
-	case *BackendGRPCPluginClient:
+	case *backendGRPCPluginClient:
 		// This is an abstraction leak from go-plugin but it is necessary in
 		// order to enable multiplexing on multiplexed plugins
-		c.Client = pb.NewBackendClient(pluginClient.Conn())
+		c.client = pb.NewBackendClient(pluginClient.Conn())
 
 		backend = c
 		transport = "gRPC"
@@ -153,8 +153,8 @@ func NewPluginClientV5(ctx context.Context, sys pluginutil.RunnerUtil, config pl
 	// Wrap the backend in a tracing middleware
 	if config.Logger.IsTrace() {
 		backend = &BackendTracingMiddleware{
-			BLogger: config.Logger.With("transport", transport),
-			Next:    backend,
+			logger: config.Logger.With("transport", transport),
+			next:   backend,
 		}
 	}
 
