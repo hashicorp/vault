@@ -440,6 +440,18 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 		return fmt.Errorf("error building CRL: while updating config: %v", err)
 	}
 
+	if globalCRLConfig.Disable && !forceNew {
+		// We build a single long-lived empty CRL in the event that we disable
+		// the CRL, but we don't keep updating it with newer, more-valid empty
+		// CRLs in the event that we later re-enable it. This is a historical
+		// behavior.
+		//
+		// So, since tidy can now associate issuers on revocation entries, we
+		// can skip the rest of this function and exit early without updating
+		// anything.
+		return nil
+	}
+
 	if !b.useLegacyBundleCaStorage() {
 		issuers, err = sc.listIssuers()
 		if err != nil {
