@@ -23,7 +23,7 @@ export default class OidcKeyForm extends Component {
   @service store;
   @service flashMessages;
   @tracked errorBanner;
-  @tracked invalidFormMessage;
+  @tracked invalidFormAlert;
   @tracked modelValidations;
   @tracked radioCardGroupValue =
     // If "*" is provided, all clients are allowed: https://www.vaultproject.io/api-docs/secret/identity/oidc-provider#parameters
@@ -78,6 +78,7 @@ export default class OidcKeyForm extends Component {
     } catch (error) {
       const message = error.errors ? error.errors.join('. ') : error.message;
       this.errorBanner = message;
+      this.invalidFormAlert = 'There was an error submitting this form.';
     }
   }
 }

@@ -84,9 +84,8 @@ export default class OidcClientForm extends Component {
       }
     } catch (error) {
       const message = error.errors ? error.errors.join('. ') : error.message;
-      console.log(error.errors);
       this.errorBanner = message;
-      this.invalidFormAlert = 'There was a problem submitting';
+      this.invalidFormAlert = 'There was an error submitting this form.';
     }
   }
 }

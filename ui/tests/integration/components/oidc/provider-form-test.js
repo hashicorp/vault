@@ -4,7 +4,13 @@ import { render, fillIn, click, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
-import { overrideMirageResponse, CLIENT_LIST_RESPONSE } from 'vault/tests/helpers/oidc-config';
+import {
+  SELECTORS,
+  OIDC_BASE_URL,
+  CLIENT_LIST_RESPONSE,
+  overrideMirageResponse,
+  overrideCapabilities,
+} from 'vault/tests/helpers/oidc-config';
 import parseURL from 'core/utils/parse-url';
 
 const ISSUER_URL = 'http://127.0.0.1:8200/v1/identity/oidc/provider/test-provider';
@@ -68,15 +74,14 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
     assert.dom('li.ember-power-select-option').hasText('test-scope', 'dropdown renders scopes');
 
     // check validation errors
+    await fillIn('[data-test-input="name"]', ' ');
     await click('[data-test-oidc-provider-save]');
+
+    let validationErrors = findAll(SELECTORS.inlineAlert);
     assert
-      .dom('[data-test-inline-error-message]')
-      .hasText('Name is required.', 'Validation message is shown for name');
-    await fillIn('[data-test-input="name"]', 'test space');
-    await click('[data-test-oidc-provider-save]');
-    assert
-      .dom('[data-test-inline-error-message]')
-      .hasText('Name cannot contain whitespace.', 'Validation message is shown whitespace');
+      .dom(validationErrors[0])
+      .hasText('Name is required. Name cannot contain whitespace.', 'Validation messages are shown for name');
+    assert.dom(validationErrors[1]).hasText('There are 2 errors with this form.', 'Renders form error count');
 
     await click('label[for=limited]');
     assert
@@ -196,5 +201,24 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
     assert
       .dom('[data-test-component="search-select"]#allowedClientIds [data-test-component="string-list"]')
       .exists('Radio toggle shows assignments string-list input');
+  });
+
+  test('it should render error alerts when API returns an error', async function (assert) {
+    assert.expect(2);
+    this.model = this.store.createRecord('oidc/provider');
+    this.server.post('/sys/capabilities-self', () => overrideCapabilities(OIDC_BASE_URL + '/providers'));
+    await render(hbs`
+      <Oidc::ProviderForm
+        @model={{this.model}}
+        @onCancel={{this.onCancel}}
+        @onSave={{this.onSave}}
+      />
+    `);
+    await fillIn('[data-test-input="name"]', 'some-provider');
+    await click('[data-test-oidc-provider-save]');
+    assert
+      .dom(SELECTORS.inlineAlert)
+      .hasText('There was an error submitting this form.', 'form error alert renders ');
+    assert.dom('[data-test-alert-banner="alert"]').exists('alert banner renders');
   });
 });

@@ -4,13 +4,14 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
 import authPage from 'vault/tests/pages/auth';
-import { OIDC_BASE_URL, SELECTORS } from 'vault/tests/helpers/oidc-config';
 import logout from 'vault/tests/pages/logout';
 import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
 import fm from 'vault/tests/pages/components/flash-message';
 import {
+  OIDC_BASE_URL,
+  SELECTORS,
   clearRecord,
   overrideCapabilities,
   overrideMirageResponse,

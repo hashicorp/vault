@@ -22,7 +22,7 @@ import { inject as service } from '@ember/service';
 export default class OidcScopeFormComponent extends Component {
   @service flashMessages;
   @tracked errorBanner;
-  @tracked invalidFormMessage;
+  @tracked invalidFormAlert;
   @tracked modelValidations;
   // formatting here is purposeful so that whitespace renders correctly in JsonEditor
   exampleTemplate = `{
@@ -50,6 +50,7 @@ export default class OidcScopeFormComponent extends Component {
     } catch (error) {
       const message = error.errors ? error.errors.join('. ') : error.message;
       this.errorBanner = message;
+      this.invalidFormAlert = 'There was an error submitting this form.';
     }
   }
   @action

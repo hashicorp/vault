@@ -1,9 +1,9 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, fillIn, click } from '@ember/test-helpers';
+import { render, fillIn, click, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { SELECTORS } from 'vault/tests/helpers/oidc-config';
+import { SELECTORS, OIDC_BASE_URL, overrideCapabilities } from 'vault/tests/helpers/oidc-config';
 
 module('Integration | Component | oidc/scope-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -14,7 +14,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
   });
 
   test('it should save new scope', async function (assert) {
-    assert.expect(7);
+    assert.expect(9);
 
     this.server.post('/identity/oidc/scope/test', (schema, req) => {
       assert.ok(true, 'Request made to save scope');
@@ -36,6 +36,14 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
     assert.dom('[data-test-oidc-scope-title]').hasText('Create scope', 'Form title renders');
     assert.dom(SELECTORS.scopeSaveButton).hasText('Create', 'Save button has correct label');
     await click(SELECTORS.scopeSaveButton);
+
+    // check validation errors
+    await click(SELECTORS.scopeSaveButton);
+
+    let validationErrors = findAll(SELECTORS.inlineAlert);
+    assert.dom(validationErrors[0]).hasText('Name is required.', 'Validation messages are shown for name');
+    assert.dom(validationErrors[1]).hasText('There is an error with this form.', 'Renders form error count');
+
     assert
       .dom('[data-test-inline-error-message]')
       .hasText('Name is required.', 'Validation message is shown for name');
@@ -160,5 +168,25 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
     assert.dom('.cm-string').hasText('"username"', 'Example template json renders');
     await click('[data-test-close-modal]');
     assert.dom('[data-test-modal-div]').doesNotHaveClass('is-active', 'Modal is hidden');
+  });
+
+  test('it should render error alerts when API returns an error', async function (assert) {
+    assert.expect(2);
+    this.model = this.store.createRecord('oidc/scope');
+    this.server.post('/sys/capabilities-self', () => overrideCapabilities(OIDC_BASE_URL + '/scopes'));
+    await render(hbs`
+      <Oidc::ScopeForm
+        @model={{this.model}}
+        @onCancel={{this.onCancel}}
+        @onSave={{this.onSave}}
+      />
+      <div id="modal-wormhole"></div>
+    `);
+    await fillIn('[data-test-input="name"]', 'test-scope');
+    await click(SELECTORS.scopeSaveButton);
+    assert
+      .dom(SELECTORS.inlineAlert)
+      .hasText('There was an error submitting this form.', 'form error alert renders ');
+    assert.dom('[data-test-alert-banner="alert"]').exists('alert banner renders');
   });
 });

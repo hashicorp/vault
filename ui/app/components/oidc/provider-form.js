@@ -24,7 +24,7 @@ export default class OidcProviderForm extends Component {
   @service flashMessages;
   @tracked modelValidations;
   @tracked errorBanner;
-  @tracked invalidFormMessage;
+  @tracked invalidFormAlert;
   @tracked radioCardGroupValue =
     // If "*" is provided, all clients are allowed: https://www.vaultproject.io/api-docs/secret/identity/oidc-provider#parameters
     !this.args.model.allowedClientIds || this.args.model.allowedClientIds.includes('*')
@@ -79,6 +79,7 @@ export default class OidcProviderForm extends Component {
     } catch (error) {
       const message = error.errors ? error.errors.join('. ') : error.message;
       this.errorBanner = message;
+      this.invalidFormAlert = 'There was an error submitting this form.';
     }
   }
 }

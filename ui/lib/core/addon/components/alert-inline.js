@@ -19,7 +19,6 @@ import { messageTypes } from 'core/helpers/message-types';
  * @param {boolean} [isMarginless=false] - Whether or not to remove margin bottom below component.
  * @param {boolean} [sizeSmall=false] - Whether or not to display a small font with padding below of alert message.
  * @param {boolean} [mimicRefresh=false] - If true will display a loading icon when attributes change (e.g. when a form submits and the alert message changes).
- * @param {number} [formErrorCount=null] - Number of errors (i.e. error.errors.length) to display an inline alert (typically be the submit button).
  */
 
 export default class AlertInlineComponent extends Component {
@@ -50,18 +49,6 @@ export default class AlertInlineComponent extends Component {
 
   get alertType() {
     return messageTypes([this.args.type]);
-  }
-
-  get displayMessage() {
-    const { formErrorCount, message } = this.args;
-    return formErrorCount ? this.generateErrorCountMessage(formErrorCount) : message;
-  }
-
-  generateErrorCountMessage(errorCount) {
-    if (errorCount < 1) return null;
-    // returns count specific message: 'There is an error/are N errors with this form.'
-    let isPlural = errorCount > 1 ? `are ${errorCount} errors` : false;
-    return `There ${isPlural ? isPlural : 'is an error'} with this form.`;
   }
 
   @action
