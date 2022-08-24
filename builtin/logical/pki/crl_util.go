@@ -668,6 +668,13 @@ func getRevokedCertEntries(ctx context.Context, req *logical.Request, issuerIDCe
 		return nil, nil, errutil.InternalError{Err: fmt.Sprintf("error fetching list of revoked certs: %s", err)}
 	}
 
+	// Build a mapping of issuer serial -> certificate.
+	issuerSerialCertMap := make(map[string][]*x509.Certificate, len(issuerIDCertMap))
+	for _, cert := range issuerIDCertMap {
+		serialStr := serialFromCert(cert)
+		issuerSerialCertMap[serialStr] = append(issuerSerialCertMap[serialStr], cert)
+	}
+
 	for _, serial := range revokedSerials {
 		var revInfo revocationInfo
 		revokedEntry, err := req.Storage.Get(ctx, revokedPath+serial)
@@ -692,6 +699,34 @@ func getRevokedCertEntries(ctx context.Context, req *logical.Request, issuerIDCe
 		revokedCert, err := x509.ParseCertificate(revInfo.CertificateBytes)
 		if err != nil {
 			return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse stored revoked certificate with serial %s: %s", serial, err)}
+		}
+
+		// We want to skip issuer certificate's revocationEntries for two
+		// reasons:
+		//
+		// 1. We canonically use augmentWithRevokedIssuers to handle this
+		//    case and this entry is just a backup. This prevents the issue
+		//    of duplicate serial numbers on the CRL from both paths.
+		// 2. We want to avoid a root's serial from appearing on its own
+		//    CRL. If it is a cross-signed or re-issued variant, this is OK,
+		//    but in the case we mark the root itself as "revoked", we want
+		//    to avoid it appearing on the CRL as that is definitely
+		//    undefined/little-supported behavior.
+		//
+		// This hash map lookup should be faster than byte comparison against
+		// each issuer proactively.
+		if candidates, present := issuerSerialCertMap[serialFromCert(revokedCert)]; present {
+			revokedCertIsIssuer := false
+			for _, candidate := range candidates {
+				if bytes.Equal(candidate.Raw, revokedCert.Raw) {
+					revokedCertIsIssuer = true
+					break
+				}
+			}
+
+			if revokedCertIsIssuer {
+				continue
+			}
 		}
 
 		// NOTE: We have to change this to UTC time because the CRL standard

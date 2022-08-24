@@ -694,8 +694,14 @@ func TestIssuerRevocation(t *testing.T) {
 	_, err = CBRead(b, s, "crl/rotate")
 	require.NoError(t, err)
 
+	// Ensure the old cert isn't on its own CRL.
+	crl := getParsedCrlFromBackend(t, b, s, "issuer/root2/crl/der")
+	if requireSerialNumberInCRL(nil, crl.TBSCertList, revokedRootSerial) {
+		t.Fatalf("the serial number %v should not be on its own CRL as self-CRL appearance should not occur", revokedRootSerial)
+	}
+
 	// Ensure the old cert isn't on the one's CRL.
-	crl := getParsedCrlFromBackend(t, b, s, "issuer/root/crl/der")
+	crl = getParsedCrlFromBackend(t, b, s, "issuer/root/crl/der")
 	if requireSerialNumberInCRL(nil, crl.TBSCertList, revokedRootSerial) {
 		t.Fatalf("the serial number %v should not be on %v's CRL as they're separate roots", revokedRootSerial, oldRootSerial)
 	}
