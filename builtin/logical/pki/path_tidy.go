@@ -38,6 +38,13 @@ and expired certificates, removing them both from the CRL and from storage. The
 CRL will be rotated if this causes any values to be removed.`,
 			},
 
+			"tidy_revoked_cert_issuer_associations": {
+				Type: framework.TypeBool,
+				Description: `Set to true to validate issuer associations
+on revocation entries. This helps increase the performance of CRL building
+and OCSP responses.`,
+			},
+
 			"safety_buffer": {
 				Type: framework.TypeDurationSecond,
 				Description: `The amount of extra time that must have passed
@@ -78,6 +85,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	safetyBuffer := d.Get("safety_buffer").(int)
 	tidyCertStore := d.Get("tidy_cert_store").(bool)
 	tidyRevokedCerts := d.Get("tidy_revoked_certs").(bool) || d.Get("tidy_revocation_list").(bool)
+	tidyRevokedAssocs := d.Get("tidy_revoked_cert_issuer_associations").(bool)
 
 	if safetyBuffer < 1 {
 		return logical.ErrorResponse("safety_buffer must be greater than zero"), nil
@@ -114,8 +122,8 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 				}
 			}
 
-			if tidyRevokedCerts {
-				if err := b.doTidyRevocationStore(ctx, req, logger, bufferDuration); err != nil {
+			if tidyRevokedCerts || tidyRevokedAssocs {
+				if err := b.doTidyRevocationStore(ctx, req, logger, tidyRevokedCerts, tidyRevokedAssocs, bufferDuration); err != nil {
 					return nil
 				}
 			}
@@ -132,8 +140,8 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	}()
 
 	resp := &logical.Response{}
-	if !tidyCertStore && !tidyRevokedCerts {
-		resp.AddWarning("No targets to tidy; specify tidy_cert_store=true or tidy_revoked_certs=true to start a tidy operation.")
+	if !tidyCertStore && !tidyRevokedCerts && !tidyRevokedAssocs {
+		resp.AddWarning("No targets to tidy; specify tidy_cert_store=true or tidy_revoked_certs=true or tidy_revoked_cert_issuer_associations=true to start a tidy operation.")
 	} else {
 		resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
 	}
@@ -194,9 +202,16 @@ func (b *backend) doTidyCertStore(ctx context.Context, req *logical.Request, log
 	return nil
 }
 
-func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Request, logger hclog.Logger, bufferDuration time.Duration) error {
+func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Request, logger hclog.Logger, tidyRevokedCerts bool, tidyRevokedAssocs bool, bufferDuration time.Duration) error {
 	b.revokeStorageLock.Lock()
 	defer b.revokeStorageLock.Unlock()
+
+	// Fetch and parse our issuers so we can associate them if necessary.
+	sc := b.makeStorageContext(ctx, req.Storage)
+	issuerIDCertMap, err := fetchIssuerMapForRevocationChecking(sc)
+	if err != nil {
+		return err
+	}
 
 	rebuildCRL := false
 
@@ -207,6 +222,9 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 
 	revokedSerialsCount := len(revokedSerials)
 	metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_total_entries"}, float32(revokedSerialsCount))
+
+	missingIssuers := 0
+	fixedIssuers := 0
 
 	var revInfo revocationInfo
 	for i, serial := range revokedSerials {
@@ -246,30 +264,63 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 			return fmt.Errorf("unable to parse stored revoked certificate with serial %q: %w", serial, err)
 		}
 
-		// Only remove the entries from revoked/ and certs/ if we're
-		// past its NotAfter value. This is because we use the
-		// information on revoked/ to build the CRL and the
-		// information on certs/ for lookup.
-		if time.Now().After(revokedCert.NotAfter.Add(bufferDuration)) {
-			if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
-				return fmt.Errorf("error deleting serial %q from revoked list: %w", serial, err)
+		// Tidy operations over revoked certs should execute prior to
+		// tidyRevokedCerts as that may remove the entry. If that happens,
+		// we won't persist the revInfo changes (as it was deleted instead).
+		var storeCert bool
+		if tidyRevokedAssocs {
+			if !isRevInfoIssuerValid(&revInfo, issuerIDCertMap) {
+				missingIssuers += 1
+				revInfo.CertificateIssuer = issuerID("")
+				storeCert = true
+				if associateRevokedCertWithIsssuer(&revInfo, revokedCert, issuerIDCertMap) {
+					fixedIssuers += 1
+				}
 			}
-			if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
-				return fmt.Errorf("error deleting serial %q from store when tidying revoked: %w", serial, err)
+		}
+
+		if tidyRevokedCerts {
+			// Only remove the entries from revoked/ and certs/ if we're
+			// past its NotAfter value. This is because we use the
+			// information on revoked/ to build the CRL and the
+			// information on certs/ for lookup.
+			if time.Now().After(revokedCert.NotAfter.Add(bufferDuration)) {
+				if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
+					return fmt.Errorf("error deleting serial %q from revoked list: %w", serial, err)
+				}
+				if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
+					return fmt.Errorf("error deleting serial %q from store when tidying revoked: %w", serial, err)
+				}
+				rebuildCRL = true
+				storeCert = false
+				b.tidyStatusIncRevokedCertCount()
 			}
-			rebuildCRL = true
-			b.tidyStatusIncRevokedCertCount()
+		}
+
+		// If the entry wasn't removed but was otherwise modified,
+		// go ahead and write it back out.
+		if storeCert {
+			revokedEntry, err = logical.StorageEntryJSON("revoked/"+serial, revInfo)
+			if err != nil {
+				return fmt.Errorf("error building entry to persist changes to serial %v from revoked list: %v", serial, err)
+			}
+
+			err = req.Storage.Put(ctx, revokedEntry)
+			if err != nil {
+				return fmt.Errorf("error persisting changes to serial %v from revoked list: %v", serial, err)
+			}
 		}
 	}
 
 	metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_total_entries_remaining"}, float32(uint(revokedSerialsCount)-b.tidyStatus.revokedCertDeletedCount))
+	metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_entries_incorrect_issuers"}, float32(missingIssuers))
+	metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_entries_fixed_issuers"}, float32(fixedIssuers))
 
 	if rebuildCRL {
 		// Expired certificates isn't generally an important
 		// reason to trigger a CRL rebuild for. Check if
 		// automatic CRL rebuilds have been enabled and defer
 		// the rebuild if so.
-		sc := b.makeStorageContext(ctx, req.Storage)
 		config, err := sc.getRevocationConfig()
 		if err != nil {
 			return err
