@@ -27,18 +27,21 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 	}
 	core.pluginCatalog.directory = tempDir
 
+	const pluginName = "mysql-database-plugin"
+
 	// Get builtin plugin
-	p, err := core.pluginCatalog.Get(context.Background(), "mysql-database-plugin", consts.PluginTypeDatabase, "")
+	p, err := core.pluginCatalog.Get(context.Background(), pluginName, consts.PluginTypeDatabase, "")
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
 
 	expectedBuiltin := &pluginutil.PluginRunner{
-		Name:    "mysql-database-plugin",
+		Name:    pluginName,
 		Type:    consts.PluginTypeDatabase,
 		Builtin: true,
+		Version: core.pluginCatalog.getBuiltinVersion(consts.PluginTypeDatabase, pluginName),
 	}
-	expectedBuiltin.BuiltinFactory, _ = builtinplugins.Registry.Get("mysql-database-plugin", consts.PluginTypeDatabase)
+	expectedBuiltin.BuiltinFactory, _ = builtinplugins.Registry.Get(pluginName, consts.PluginTypeDatabase)
 
 	if &(p.BuiltinFactory) == &(expectedBuiltin.BuiltinFactory) {
 		t.Fatal("expected BuiltinFactory did not match actual")
@@ -57,25 +60,26 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 	defer file.Close()
 
 	command := fmt.Sprintf("%s", filepath.Base(file.Name()))
-	err = core.pluginCatalog.Set(context.Background(), "mysql-database-plugin", consts.PluginTypeDatabase, "", command, []string{"--test"}, []string{"FOO=BAR"}, []byte{'1'})
+	err = core.pluginCatalog.Set(context.Background(), pluginName, consts.PluginTypeDatabase, "", command, []string{"--test"}, []string{"FOO=BAR"}, []byte{'1'})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Get the plugin
-	p, err = core.pluginCatalog.Get(context.Background(), "mysql-database-plugin", consts.PluginTypeDatabase, "")
+	p, err = core.pluginCatalog.Get(context.Background(), pluginName, consts.PluginTypeDatabase, "")
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
 
 	expected := &pluginutil.PluginRunner{
-		Name:    "mysql-database-plugin",
+		Name:    pluginName,
 		Type:    consts.PluginTypeDatabase,
 		Command: filepath.Join(tempDir, filepath.Base(file.Name())),
 		Args:    []string{"--test"},
 		Env:     []string{"FOO=BAR"},
 		Sha256:  []byte{'1'},
 		Builtin: false,
+		Version: "",
 	}
 
 	if !reflect.DeepEqual(p, expected) {
@@ -83,23 +87,24 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 	}
 
 	// Delete the plugin
-	err = core.pluginCatalog.Delete(context.Background(), "mysql-database-plugin", consts.PluginTypeDatabase, "")
+	err = core.pluginCatalog.Delete(context.Background(), pluginName, consts.PluginTypeDatabase, "")
 	if err != nil {
 		t.Fatalf("unexpected err: %v", err)
 	}
 
 	// Get builtin plugin
-	p, err = core.pluginCatalog.Get(context.Background(), "mysql-database-plugin", consts.PluginTypeDatabase, "")
+	p, err = core.pluginCatalog.Get(context.Background(), pluginName, consts.PluginTypeDatabase, "")
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
 
 	expectedBuiltin = &pluginutil.PluginRunner{
-		Name:    "mysql-database-plugin",
+		Name:    pluginName,
 		Type:    consts.PluginTypeDatabase,
 		Builtin: true,
+		Version: core.pluginCatalog.getBuiltinVersion(consts.PluginTypeDatabase, pluginName),
 	}
-	expectedBuiltin.BuiltinFactory, _ = builtinplugins.Registry.Get("mysql-database-plugin", consts.PluginTypeDatabase)
+	expectedBuiltin.BuiltinFactory, _ = builtinplugins.Registry.Get(pluginName, consts.PluginTypeDatabase)
 
 	if &(p.BuiltinFactory) == &(expectedBuiltin.BuiltinFactory) {
 		t.Fatal("expected BuiltinFactory did not match actual")

@@ -2944,6 +2944,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 		"args":    []string(nil),
 		"sha256":  "",
 		"builtin": true,
+		"version": c.pluginCatalog.getBuiltinVersion(consts.PluginTypeDatabase, "mysql-database-plugin"),
 	}
 	if !reflect.DeepEqual(actualRespData, expectedRespData) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actualRespData, expectedRespData)
@@ -2989,6 +2990,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 		"args":    []string{"--test"},
 		"sha256":  "31",
 		"builtin": false,
+		"version": "",
 	}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actual, expected)
@@ -3002,6 +3004,51 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	}
 
 	req = logical.TestRequest(t, logical.ReadOperation, "plugins/catalog/database/test-plugin")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if resp != nil || err != nil {
+		t.Fatalf("expected nil response, plugin not deleted correctly got resp: %v, err: %v", resp, err)
+	}
+
+	// Add a versioned plugin, and check we get the version back in the right form when we read.
+	req = logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
+	req.Data["version"] = "v0.1.0"
+	req.Data["sha_256"] = hex.EncodeToString([]byte{'1'})
+	req.Data["command"] = command
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || resp.Error() != nil {
+		t.Fatalf("err: %v %v", err, resp.Error())
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/catalog/database/test-plugin")
+	req.Data["version"] = "v0.1.0"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	actual = resp.Data
+	expected = map[string]interface{}{
+		"name":    "test-plugin",
+		"command": filepath.Base(file.Name()),
+		"args":    []string{"--test"},
+		"sha256":  "31",
+		"builtin": false,
+		"version": "0.1.0",
+	}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actual, expected)
+	}
+
+	// Delete versioned plugin
+	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/catalog/database/test-plugin")
+	req.Data["version"] = "0.1.0"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/catalog/database/test-plugin")
+	req.Data["version"] = "0.1.0"
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if resp != nil || err != nil {
 		t.Fatalf("expected nil response, plugin not deleted correctly got resp: %v, err: %v", resp, err)
