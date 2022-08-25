@@ -11,7 +11,6 @@ export default Route.extend({
   afterModel() {
     let { auth_path: path, code, state } = this.paramsFor(this.routeName);
     let { namespaceQueryParam: namespace } = this.paramsFor('vault.cluster');
-    console.log(namespace, 'ANAMESPCE');
     if (namespace === '' && state?.includes(',ns=')) {
       let arrayParams = state.split(',ns=');
       state = arrayParams[0];
