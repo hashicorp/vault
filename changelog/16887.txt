@@ -1,0 +1,3 @@
+```release-note:bug
+api: honor "Age" header when returning renewed secrets.
+```
