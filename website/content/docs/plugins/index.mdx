@@ -12,8 +12,6 @@ allows both built-in and external plugins to be treated like Legos. Any plugin
 can exist at multiple different locations. Different versions of a plugin may
 be at each location, with each version differing from Vault's version.
 
-@include 'plugin-file-permissions-check.mdx'
-
 ## Built-In Plugins
 
 Built-in plugins are shipped with Vault, often for commonly used implementations,
@@ -35,7 +33,7 @@ or they can be [built from source](/docs/plugins/plugin-development#building-a-p
 
 Vault's external plugins are completely separate, standalone applications that
 Vault executes and communicates with over RPC. Each time a Vault secret engine
-or auth method is mounted, a new process is spawned. However, database plugins
-can be made to implement [plugin multiplexing](/docs/plugins/plugin-architecture#plugin-multiplexing)
-which allows a single plugin process to be used for multiple database
-connections.
+or auth method is mounted, a new process is spawned. However, plugins can be
+made to implement [plugin multiplexing](/docs/plugins/plugin-architecture#plugin-multiplexing)
+to improve performance. Plugin multiplexing allows plugin processes to be
+reused across all mounts of a given type.
