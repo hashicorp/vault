@@ -448,11 +448,6 @@ func sortVersionedPlugins(versionedPlugins []pluginutil.VersionedPlugin) {
 			return left.Name < right.Name
 		}
 		if left.Version != right.Version {
-			if left.Version == "" {
-				return true
-			} else if right.Version == "" {
-				return false
-			}
 			return right.SemanticVersion.GreaterThan(left.SemanticVersion)
 		}
 
