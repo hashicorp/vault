@@ -1,0 +1,3 @@
+```release-note:bug
+physical/mysql: Fix multi master issue after lost connection.
+```
