@@ -30,6 +30,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/armon/go-metrics"
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
@@ -735,6 +737,34 @@ func generateCSR(t *testing.T, csrTemplate *x509.CertificateRequest, keyType str
 	})))
 
 	return priv, csr, csrPem
+}
+
+func generateTestCsr(t *testing.T, keyType certutil.PrivateKeyType, keyBits int) (x509.CertificateRequest, string) {
+	csrTemplate := x509.CertificateRequest{
+		Subject: pkix.Name{
+			Country:      []string{"MyCountry"},
+			PostalCode:   []string{"MyPostalCode"},
+			SerialNumber: "MySerialNumber",
+			CommonName:   "my@example.com",
+		},
+		DNSNames: []string{
+			"name1.example.com",
+			"name2.example.com",
+			"name3.example.com",
+		},
+		EmailAddresses: []string{
+			"name1@example.com",
+			"name2@example.com",
+			"name3@example.com",
+		},
+		IPAddresses: []net.IP{
+			net.ParseIP("::ff:1:2:3:4"),
+			net.ParseIP("::ff:5:6:7:8"),
+		},
+	}
+
+	_, _, csrPem := generateCSR(t, &csrTemplate, string(keyType), keyBits)
+	return csrTemplate, csrPem
 }
 
 func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[string]interface{}) []logicaltest.TestStep {
@@ -2393,6 +2423,40 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 	}
 }
 
+func TestBackend_ConsulSignLeafWithLegacyRole(t *testing.T) {
+	// create the backend
+	b, s := createBackendWithStorage(t)
+
+	// generate root
+	data, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "myvault.com",
+	})
+	require.NoError(t, err, "failed generating internal root cert")
+	rootCaPem := data.Data["certificate"].(string)
+
+	// Create a signing role like Consul did with the default args prior to Vault 1.10
+	_, err = CBWrite(b, s, "roles/test", map[string]interface{}{
+		"allow_any_name":         true,
+		"allowed_serial_numbers": []string{"MySerialNumber"},
+		"key_type":               "any",
+		"key_bits":               "2048",
+		"signature_bits":         "256",
+	})
+	require.NoError(t, err, "failed creating legacy role")
+
+	_, csrPem := generateTestCsr(t, certutil.ECPrivateKey, 256)
+	data, err = CBWrite(b, s, "sign/test", map[string]interface{}{
+		"csr": csrPem,
+	})
+	require.NoError(t, err, "failed signing csr")
+	certAsPem := data.Data["certificate"].(string)
+
+	signedCert := parseCert(t, certAsPem)
+	rootCert := parseCert(t, rootCaPem)
+	requireSignedBy(t, signedCert, rootCert.PublicKey)
+}
+
 func TestBackend_SignSelfIssued(t *testing.T) {
 	// create the backend
 	config := logical.TestBackendConfig()
@@ -2643,23 +2707,6 @@ func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error due to mismatched algorithms")
 	}
-}
-
-func getSelfSigned(t *testing.T, subject, issuer *x509.Certificate, key *rsa.PrivateKey) (string, *x509.Certificate) {
-	t.Helper()
-	selfSigned, err := x509.CreateCertificate(rand.Reader, subject, issuer, key.Public(), key)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cert, err := x509.ParseCertificate(selfSigned)
-	if err != nil {
-		t.Fatal(err)
-	}
-	pemSS := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: selfSigned,
-	})))
-	return pemSS, cert
 }
 
 // This is a really tricky test because the Go stdlib asn1 package is incapable
