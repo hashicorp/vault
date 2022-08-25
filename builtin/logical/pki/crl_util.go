@@ -13,6 +13,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	atomic2 "go.uber.org/atomic"
+
 	"github.com/hashicorp/vault/sdk/helper/consts"
 
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -33,15 +35,141 @@ type revocationInfo struct {
 // without the actual API calls. During the storage invalidation process, we do not have the required state
 // to actually rebuild the CRLs, so we need to schedule it in a deferred fashion. This allows either
 // read or write calls to perform the operation if required, or have the flag reset upon a write operation
+//
+// The CRL builder also tracks the revocation configuration.
 type crlBuilder struct {
 	m            sync.Mutex
 	forceRebuild uint32
+
+	c      sync.RWMutex
+	dirty  *atomic2.Bool
+	config crlConfig
 }
 
 const (
 	_ignoreForceFlag  = true
 	_enforceForceFlag = false
 )
+
+func newCRLBuilder() *crlBuilder {
+	return &crlBuilder{
+		dirty:  atomic2.NewBool(true),
+		config: defaultCrlConfig,
+	}
+}
+
+func (cb *crlBuilder) markConfigDirty() {
+	cb.dirty.Store(true)
+}
+
+func (cb *crlBuilder) reloadConfigIfRequired(sc *storageContext) error {
+	if cb.dirty.Load() {
+		// Acquire a write lock.
+		cb.c.Lock()
+		defer cb.c.Unlock()
+
+		if !cb.dirty.Load() {
+			// Someone else might've been reloading the config; no need
+			// to do it twice.
+			return nil
+		}
+
+		config, err := sc.getRevocationConfig()
+		if err != nil {
+			return err
+		}
+
+		// Set the default config if none was returned to us.
+		if config != nil {
+			cb.config = *config
+		} else {
+			cb.config = defaultCrlConfig
+		}
+
+		// Updated the config; unset dirty.
+		cb.dirty.Store(false)
+	}
+
+	return nil
+}
+
+func (cb *crlBuilder) getConfigWithUpdate(sc *storageContext) (*crlConfig, error) {
+	// Config may mutate immediately after accessing, but will be freshly
+	// fetched if necessary.
+	if err := cb.reloadConfigIfRequired(sc); err != nil {
+		return nil, err
+	}
+
+	cb.c.RLock()
+	defer cb.c.RUnlock()
+
+	configCopy := cb.config
+	return &configCopy, nil
+}
+
+func (cb *crlBuilder) checkForAutoRebuild(sc *storageContext) error {
+	cfg, err := cb.getConfigWithUpdate(sc)
+	if err != nil {
+		return err
+	}
+
+	if cfg.Disable || !cfg.AutoRebuild || atomic.LoadUint32(&cb.forceRebuild) == 1 {
+		// Not enabled, not on auto-rebuilder, or we're already scheduled to
+		// rebuild so there's no point to interrogate CRL values...
+		return nil
+	}
+
+	// Auto-Rebuild is enabled. We need to check each issuer's CRL and see
+	// if its about to expire. If it is, we've gotta rebuild it (and well,
+	// every other CRL since we don't have a fine-toothed rebuilder).
+	//
+	// We store a list of all (unique) CRLs in the cluster-local CRL
+	// configuration along with their expiration dates.
+	crlConfig, err := sc.getLocalCRLConfig()
+	if err != nil {
+		return fmt.Errorf("error checking for auto-rebuild status: unable to fetch cluster-local CRL configuration: %v", err)
+	}
+
+	// If there's no config, assume we've gotta rebuild it to get this
+	// information.
+	if crlConfig == nil {
+		atomic.CompareAndSwapUint32(&cb.forceRebuild, 0, 1)
+		return nil
+	}
+
+	// If the map is empty, assume we need to upgrade and schedule a
+	// rebuild.
+	if len(crlConfig.CRLExpirationMap) == 0 {
+		atomic.CompareAndSwapUint32(&cb.forceRebuild, 0, 1)
+		return nil
+	}
+
+	// Otherwise, check CRL's expirations and see if its zero or within
+	// the grace period and act accordingly.
+	now := time.Now()
+
+	period, err := time.ParseDuration(cfg.AutoRebuildGracePeriod)
+	if err != nil {
+		// This may occur if the duration is empty; in that case
+		// assume the default. The default should be valid and shouldn't
+		// error.
+		defaultPeriod, defaultErr := time.ParseDuration(defaultCrlConfig.AutoRebuildGracePeriod)
+		if defaultErr != nil {
+			return fmt.Errorf("error checking for auto-rebuild status: unable to parse duration from both config's grace period (%v) and default grace period (%v):\n- config: %v\n- default: %v\n", cfg.AutoRebuildGracePeriod, defaultCrlConfig.AutoRebuildGracePeriod, err, defaultErr)
+		}
+
+		period = defaultPeriod
+	}
+
+	for _, value := range crlConfig.CRLExpirationMap {
+		if value.IsZero() || now.After(value.Add(-1*period)) {
+			atomic.CompareAndSwapUint32(&cb.forceRebuild, 0, 1)
+			return nil
+		}
+	}
+
+	return nil
+}
 
 // rebuildIfForced is to be called by readers or periodic functions that might need to trigger
 // a refresh of the CRL before the read occurs.
@@ -125,6 +253,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		issuers = []issuerID{legacyBundleShimID}
 	}
 
+	issuerIDCertMap := make(map[issuerID]*x509.Certificate, len(issuers))
 	for _, issuer := range issuers {
 		_, bundle, caErr := sc.fetchCertBundleByIssuerId(issuer, false)
 		if caErr != nil {
@@ -153,6 +282,8 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		if colonSerial == serialFromCert(parsedBundle.Certificate) {
 			return logical.ErrorResponse(fmt.Sprintf("adding issuer (id: %v) to its own CRL is not allowed", issuer)), nil
 		}
+
+		issuerIDCertMap[issuer] = parsedBundle.Certificate
 	}
 
 	alreadyRevoked := false
@@ -224,6 +355,10 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		revInfo.RevocationTime = currTime.Unix()
 		revInfo.RevocationTimeUTC = currTime.UTC()
 
+		// We may not find an issuer with this certificate; that's fine so
+		// ignore the return value.
+		associateRevokedCertWithIsssuer(&revInfo, cert, issuerIDCertMap)
+
 		revEntry, err = logical.StorageEntryJSON(revokedPath+normalizeSerial(serial), revInfo)
 		if err != nil {
 			return nil, fmt.Errorf("error creating revocation entry")
@@ -235,13 +370,23 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		}
 	}
 
-	crlErr := b.crlBuilder.rebuild(ctx, b, req, false)
-	if crlErr != nil {
-		switch crlErr.(type) {
-		case errutil.UserError:
-			return logical.ErrorResponse(fmt.Sprintf("Error during CRL building: %s", crlErr)), nil
-		default:
-			return nil, fmt.Errorf("error encountered during CRL building: %w", crlErr)
+	// Fetch the config and see if we need to rebuild the CRL. If we have
+	// auto building enabled, we will wait for the next rebuild period to
+	// actually rebuild it.
+	config, err := b.crlBuilder.getConfigWithUpdate(sc)
+	if err != nil {
+		return nil, fmt.Errorf("error building CRL: while updating config: %v", err)
+	}
+
+	if !config.AutoRebuild {
+		crlErr := b.crlBuilder.rebuild(ctx, b, req, false)
+		if crlErr != nil {
+			switch crlErr.(type) {
+			case errutil.UserError:
+				return logical.ErrorResponse(fmt.Sprintf("Error during CRL building: %s", crlErr)), nil
+			default:
+				return nil, fmt.Errorf("error encountered during CRL building: %w", crlErr)
+			}
 		}
 	}
 
@@ -288,6 +433,25 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 	var wasLegacy bool
 	sc := b.makeStorageContext(ctx, req.Storage)
 
+	// First, fetch an updated copy of the CRL config. We'll pass this into
+	// buildCRL.
+	globalCRLConfig, err := b.crlBuilder.getConfigWithUpdate(sc)
+	if err != nil {
+		return fmt.Errorf("error building CRL: while updating config: %v", err)
+	}
+
+	if globalCRLConfig.Disable && !forceNew {
+		// We build a single long-lived empty CRL in the event that we disable
+		// the CRL, but we don't keep updating it with newer, more-valid empty
+		// CRLs in the event that we later re-enable it. This is a historical
+		// behavior.
+		//
+		// So, since tidy can now associate issuers on revocation entries, we
+		// can skip the rest of this function and exit early without updating
+		// anything.
+		return nil
+	}
+
 	if !b.useLegacyBundleCaStorage() {
 		issuers, err = sc.listIssuers()
 		if err != nil {
@@ -327,11 +491,20 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 			continue
 		}
 
-		// Skip entries which aren't enabled for CRL signing.
-		if err := thisEntry.EnsureUsage(CRLSigningUsage); err != nil {
-			continue
-		}
-
+		// n.b.: issuer usage check has been delayed. This occurred because
+		// we want to ensure any issuer (representative of a larger set) can
+		// be used to associate revocation entries and we won't bother
+		// rewriting that entry (causing churn) if the particular selected
+		// issuer lacks CRL signing capabilities.
+		//
+		// The result is that this map (and the other maps) contain all the
+		// issuers we know about, and only later do we check crlSigning before
+		// choosing our representative.
+		//
+		// The other side effect (making this not compatible with Vault 1.11
+		// behavior) is that _identified_ certificates whose issuer set is
+		// not allowed for crlSigning will no longer appear on the default
+		// issuer's CRL.
 		issuerIDEntryMap[issuer] = thisEntry
 
 		thisCert, err := thisEntry.GetCertificate()
@@ -377,10 +550,24 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 			}
 
 			var revokedCerts []pkix.RevokedCertificate
-			representative := issuersSet[0]
+			representative := issuerID("")
 			var crlIdentifier crlID
 			var crlIdIssuer issuerID
 			for _, issuerId := range issuersSet {
+				// Skip entries which aren't enabled for CRL signing. We don't
+				// particularly care which issuer is ultimately chosen as the
+				// set representative for signing at this point, other than
+				// that it has crl-signing usage.
+				if err := issuerIDEntryMap[issuerId].EnsureUsage(CRLSigningUsage); err != nil {
+					continue
+				}
+
+				// Prefer to use the default as the representative of this
+				// set, if it is a member.
+				//
+				// If it is, we'll also pull in the unassigned certs to remain
+				// compatible with Vault's earlier, potentially questionable
+				// behavior.
 				if issuerId == config.DefaultIssuerId {
 					if len(unassignedCerts) > 0 {
 						revokedCerts = append(revokedCerts, unassignedCerts...)
@@ -389,10 +576,18 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 					representative = issuerId
 				}
 
+				// Otherwise, use any other random issuer if we've not yet
+				// chosen one.
+				if representative == issuerID("") {
+					representative = issuerId
+				}
+
+				// Pull in the revoked certs associated with this member.
 				if thisRevoked, ok := revokedCertsMap[issuerId]; ok && len(thisRevoked) > 0 {
 					revokedCerts = append(revokedCerts, thisRevoked...)
 				}
 
+				// Finally, check our crlIdentifier.
 				if thisCRLId, ok := crlConfig.IssuerIDCRLMap[issuerId]; ok && len(thisCRLId) > 0 {
 					if len(crlIdentifier) > 0 && crlIdentifier != thisCRLId {
 						return fmt.Errorf("error building CRLs: two issuers with same keys/subjects (%v vs %v) have different internal CRL IDs: %v vs %v", issuerId, crlIdIssuer, thisCRLId, crlIdentifier)
@@ -401,6 +596,13 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 					crlIdentifier = thisCRLId
 					crlIdIssuer = issuerId
 				}
+			}
+
+			if representative == "" {
+				// Skip this set for the time being; while we have valid
+				// issuers and associated keys, this occurred because we lack
+				// crl-signing usage on all issuers in this set.
+				continue
 			}
 
 			if len(crlIdentifier) == 0 {
@@ -420,9 +622,12 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 			crlConfig.CRLNumberMap[crlIdentifier] += 1
 
 			// Lastly, build the CRL.
-			if err := buildCRL(sc, forceNew, representative, revokedCerts, crlIdentifier, crlNumber); err != nil {
+			nextUpdate, err := buildCRL(sc, globalCRLConfig, forceNew, representative, revokedCerts, crlIdentifier, crlNumber)
+			if err != nil {
 				return fmt.Errorf("error building CRLs: unable to build CRL for issuer (%v): %v", representative, err)
 			}
+
+			crlConfig.CRLExpirationMap[crlIdentifier] = *nextUpdate
 		}
 	}
 
@@ -478,6 +683,20 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 	return nil
 }
 
+func associateRevokedCertWithIsssuer(revInfo *revocationInfo, revokedCert *x509.Certificate, issuerIDCertMap map[issuerID]*x509.Certificate) bool {
+	for issuerId, issuerCert := range issuerIDCertMap {
+		if bytes.Equal(revokedCert.RawIssuer, issuerCert.RawSubject) {
+			if err := revokedCert.CheckSignatureFrom(issuerCert); err == nil {
+				// Valid mapping. Add it to the specified entry.
+				revInfo.CertificateIssuer = issuerId
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 func getRevokedCertEntries(ctx context.Context, req *logical.Request, issuerIDCertMap map[issuerID]*x509.Certificate) ([]pkix.RevokedCertificate, map[issuerID][]pkix.RevokedCertificate, error) {
 	var unassignedCerts []pkix.RevokedCertificate
 	revokedCertsMap := make(map[issuerID][]pkix.RevokedCertificate)
@@ -485,6 +704,13 @@ func getRevokedCertEntries(ctx context.Context, req *logical.Request, issuerIDCe
 	revokedSerials, err := req.Storage.List(ctx, revokedPath)
 	if err != nil {
 		return nil, nil, errutil.InternalError{Err: fmt.Sprintf("error fetching list of revoked certs: %s", err)}
+	}
+
+	// Build a mapping of issuer serial -> certificate.
+	issuerSerialCertMap := make(map[string][]*x509.Certificate, len(issuerIDCertMap))
+	for _, cert := range issuerIDCertMap {
+		serialStr := serialFromCert(cert)
+		issuerSerialCertMap[serialStr] = append(issuerSerialCertMap[serialStr], cert)
 	}
 
 	for _, serial := range revokedSerials {
@@ -513,6 +739,34 @@ func getRevokedCertEntries(ctx context.Context, req *logical.Request, issuerIDCe
 			return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse stored revoked certificate with serial %s: %s", serial, err)}
 		}
 
+		// We want to skip issuer certificate's revocationEntries for two
+		// reasons:
+		//
+		// 1. We canonically use augmentWithRevokedIssuers to handle this
+		//    case and this entry is just a backup. This prevents the issue
+		//    of duplicate serial numbers on the CRL from both paths.
+		// 2. We want to avoid a root's serial from appearing on its own
+		//    CRL. If it is a cross-signed or re-issued variant, this is OK,
+		//    but in the case we mark the root itself as "revoked", we want
+		//    to avoid it appearing on the CRL as that is definitely
+		//    undefined/little-supported behavior.
+		//
+		// This hash map lookup should be faster than byte comparison against
+		// each issuer proactively.
+		if candidates, present := issuerSerialCertMap[serialFromCert(revokedCert)]; present {
+			revokedCertIsIssuer := false
+			for _, candidate := range candidates {
+				if bytes.Equal(candidate.Raw, revokedCert.Raw) {
+					revokedCertIsIssuer = true
+					break
+				}
+			}
+
+			if revokedCertIsIssuer {
+				continue
+			}
+		}
+
 		// NOTE: We have to change this to UTC time because the CRL standard
 		// mandates it but Go will happily encode the CRL without this.
 		newRevCert := pkix.RevokedCertificate{
@@ -539,23 +793,13 @@ func getRevokedCertEntries(ctx context.Context, req *logical.Request, issuerIDCe
 		}
 
 		// Now we need to assign the revoked certificate to an issuer.
-		foundParent := false
-		for issuerId, issuerCert := range issuerIDCertMap {
-			if bytes.Equal(revokedCert.RawIssuer, issuerCert.RawSubject) {
-				if err := revokedCert.CheckSignatureFrom(issuerCert); err == nil {
-					// Valid mapping. Add it to the specified entry.
-					revokedCertsMap[issuerId] = append(revokedCertsMap[issuerId], newRevCert)
-					revInfo.CertificateIssuer = issuerId
-					foundParent = true
-					break
-				}
-			}
-		}
-
+		foundParent := associateRevokedCertWithIsssuer(&revInfo, revokedCert, issuerIDCertMap)
 		if !foundParent {
 			// If the parent isn't found, add it to the unassigned bucket.
 			unassignedCerts = append(unassignedCerts, newRevCert)
 		} else {
+			revokedCertsMap[revInfo.CertificateIssuer] = append(revokedCertsMap[revInfo.CertificateIssuer], newRevCert)
+
 			// When the CertificateIssuer field wasn't found on the existing
 			// entry (or was invalid), and we've found a new value for it,
 			// we should update the entry to make future CRL builds faster.
@@ -610,26 +854,19 @@ func augmentWithRevokedIssuers(issuerIDEntryMap map[issuerID]*issuerEntry, issue
 
 // Builds a CRL by going through the list of revoked certificates and building
 // a new CRL with the stored revocation times and serial numbers.
-func buildCRL(sc *storageContext, forceNew bool, thisIssuerId issuerID, revoked []pkix.RevokedCertificate, identifier crlID, crlNumber int64) error {
-	crlInfo, err := sc.Backend.CRL(sc.Context, sc.Storage)
-	if err != nil {
-		return errutil.InternalError{Err: fmt.Sprintf("error fetching CRL config information: %s", err)}
-	}
-
-	crlLifetime := sc.Backend.crlLifetime
+func buildCRL(sc *storageContext, crlInfo *crlConfig, forceNew bool, thisIssuerId issuerID, revoked []pkix.RevokedCertificate, identifier crlID, crlNumber int64) (*time.Time, error) {
 	var revokedCerts []pkix.RevokedCertificate
 
-	if crlInfo.Expiry != "" {
-		crlDur, err := time.ParseDuration(crlInfo.Expiry)
-		if err != nil {
-			return errutil.InternalError{Err: fmt.Sprintf("error parsing CRL duration of %s", crlInfo.Expiry)}
-		}
-		crlLifetime = crlDur
+	crlLifetime, err := time.ParseDuration(crlInfo.Expiry)
+	if err != nil {
+		return nil, errutil.InternalError{Err: fmt.Sprintf("error parsing CRL duration of %s", crlInfo.Expiry)}
 	}
 
 	if crlInfo.Disable {
 		if !forceNew {
-			return nil
+			// In the event of a disabled CRL, we'll have the next time set
+			// to the zero time as a sentinel in case we get re-enabled.
+			return &time.Time{}, nil
 		}
 
 		// NOTE: in this case, the passed argument (revoked) is not added
@@ -648,23 +885,26 @@ WRITE:
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
-			return errutil.UserError{Err: fmt.Sprintf("could not fetch the CA certificate: %s", caErr)}
+			return nil, errutil.UserError{Err: fmt.Sprintf("could not fetch the CA certificate: %s", caErr)}
 		default:
-			return errutil.InternalError{Err: fmt.Sprintf("error fetching CA certificate: %s", caErr)}
+			return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching CA certificate: %s", caErr)}
 		}
 	}
+
+	now := time.Now()
+	nextUpdate := now.Add(crlLifetime)
 
 	revocationListTemplate := &x509.RevocationList{
 		RevokedCertificates: revokedCerts,
 		Number:              big.NewInt(crlNumber),
-		ThisUpdate:          time.Now(),
-		NextUpdate:          time.Now().Add(crlLifetime),
+		ThisUpdate:          now,
+		NextUpdate:          nextUpdate,
 		SignatureAlgorithm:  signingBundle.RevocationSigAlg,
 	}
 
 	crlBytes, err := x509.CreateRevocationList(rand.Reader, revocationListTemplate, signingBundle.Certificate, signingBundle.PrivateKey)
 	if err != nil {
-		return errutil.InternalError{Err: fmt.Sprintf("error creating new CRL: %s", err)}
+		return nil, errutil.InternalError{Err: fmt.Sprintf("error creating new CRL: %s", err)}
 	}
 
 	writePath := "crls/" + identifier.String()
@@ -679,8 +919,8 @@ WRITE:
 		Value: crlBytes,
 	})
 	if err != nil {
-		return errutil.InternalError{Err: fmt.Sprintf("error storing CRL: %s", err)}
+		return nil, errutil.InternalError{Err: fmt.Sprintf("error storing CRL: %s", err)}
 	}
 
-	return nil
+	return &nextUpdate, nil
 }

@@ -55,7 +55,7 @@ Using the identity system allows for Vault to make sure that entities aren’t c
 
 ## Non-entity Tokens
 
-If you choose to use the [Token Auth Method](/docs/auth/token) without an identity, this will create a non-entity token. To avoid driving up client count, assign each token to a role and entity alias. HashiCorp recommends creating a [Token Role](/api-docs/auth/token#create-update-token-role) first, with allowable entity aliases and issuing your token with the appropriate [role and entity alias name](/api-docs/auth/token#create-token). This is the name that will uniquely identify the client, no matter how many tokens are issued. Without this, each token will be counted as a client instead. See more on entity alias below.
+If you choose to use the [Token Auth Method](/docs/auth/token) without an identity, this will create a non-entity token. Starting with Vault 1.9, any number of non-entity tokens having the same namespace and set of policies assigned, count as one client. In earlier versions, every non-entity token counted as a separate client, which could rapidly drive up client count to unrealistic values. If you are using Vault 1.8 or earlier, and need to address this without upgrading, one option is to create a [Token Role](/api-docs/auth/token#create-update-token-role) first, with allowable entity aliases and create your token with the appropriate [role and entity alias name](/api-docs/auth/token#create-token). All tokens issued with the same entity alias name count as one client.
 
 ### Differences between a direct entity and a non-entity token
 
