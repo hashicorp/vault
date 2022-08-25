@@ -32,14 +32,12 @@ func (c *Sys) RenewWithContext(ctx context.Context, id string, increment int) (*
 	defer resp.Body.Close()
 
 	secret, err := ParseSecret(resp.Body)
-
 	if err != nil {
 		return nil, err
 	}
 
 	if ageHeader := resp.Header.Get("Age"); ageHeader != "" {
 		age, err := strconv.Atoi(ageHeader)
-
 		if err != nil {
 			return nil, err
 		}

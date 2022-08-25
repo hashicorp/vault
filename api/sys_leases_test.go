@@ -8,9 +8,9 @@ import (
 	"time"
 )
 
-//TestRenewLeaseThroughCache validates that cached lease renew responses
-//that include an "Age" header will correctly adjust the TTL age so that
-//API consumers work with the true TTL and not the original cached TTL.
+// TestRenewLeaseThroughCache validates that cached lease renew responses
+// that include an "Age" header will correctly adjust the TTL age so that
+// API consumers work with the true TTL and not the original cached TTL.
 func TestRenewLeaseThroughCache(t *testing.T) {
 	age := time.Hour * 10
 	expectedDuration := int(((time.Hour * 24) - age).Seconds())
@@ -21,13 +21,11 @@ func TestRenewLeaseThroughCache(t *testing.T) {
 	cfg.AgentAddress = mockVaultAgentCache.URL
 
 	client, err := NewClient(cfg)
-
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	resp, err := client.Sys().Renew("112321-bd6b-818g-edbb-e462338bb0aa", 1)
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +38,6 @@ func TestRenewLeaseThroughCache(t *testing.T) {
 func agedVaultCacheResponseHandler(age time.Duration) func(http.ResponseWriter, *http.Request) {
 	ageStr := fmt.Sprintf("%.0f", (time.Hour * 10).Seconds())
 	return func(w http.ResponseWriter, _ *http.Request) {
-
 		w.Header().Set("Age", ageStr)
 
 		renewResponseTemplate := `{
