@@ -5,13 +5,11 @@ export default Route.extend({
   model() {
     // left blank so we render the template immediately
   },
-  // const queryString = decodeURIComponent(window.location.search);
-  // Since state param can also contain namespace, fetch the values using native url api.
-  // For instance, state params value can be state=st_123456,ns=d4fq
   afterModel() {
     let { auth_path: path, code, state } = this.paramsFor(this.routeName);
     let { namespaceQueryParam: namespace } = this.paramsFor('vault.cluster');
-    if (namespace === '' && state?.includes(',ns=')) {
+    // only replace namespace param from cluster if state has a namespace
+    if (state?.includes(',ns=')) {
       let arrayParams = state.split(',ns=');
       state = arrayParams[0];
       namespace = arrayParams[1];
