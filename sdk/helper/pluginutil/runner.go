@@ -15,8 +15,8 @@ import (
 // Looker defines the plugin Lookup function that looks into the plugin catalog
 // for available plugins and returns a PluginRunner
 type Looker interface {
-	LookupPlugin(context.Context, string, consts.PluginType) (*PluginRunner, error)
-	LookupPluginVersion(context.Context, string, consts.PluginType, string) (*PluginRunner, error)
+	LookupPlugin(ctx context.Context, pluginName string, pluginType consts.PluginType) (*PluginRunner, error)
+	LookupPluginVersion(ctx context.Context, pluginName string, pluginType consts.PluginType, version string) (*PluginRunner, error)
 }
 
 // RunnerUtil interface defines the functions needed by the runner to wrap the
