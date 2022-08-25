@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
@@ -456,6 +457,19 @@ func runOcspRequestTest(t *testing.T, requestType string, caKeyType string, requ
 	require.Equal(t, testEnv.issuer2, ocspResp.Certificate)
 	require.Equal(t, 0, ocspResp.RevocationReason)
 	require.Equal(t, testEnv.leafCertIssuer2.SerialNumber, ocspResp.SerialNumber)
+	require.Equal(t, testEnv.leafCertIssuer2.SerialNumber, ocspResp.SerialNumber)
+
+	// Verify that our thisUpdate and nextUpdate fields are updated as expected
+	thisUpdate := ocspResp.ThisUpdate
+	nextUpdate := ocspResp.NextUpdate
+	require.True(t, thisUpdate.Before(nextUpdate),
+		fmt.Sprintf("thisUpdate %s, should have been before nextUpdate: %s", thisUpdate, nextUpdate))
+	nextUpdateDiff := nextUpdate.Sub(thisUpdate)
+	expectedDiff, err := time.ParseDuration(defaultCrlConfig.OcspExpiry)
+	require.NoError(t, err, "failed to parse default ocsp expiry value")
+	require.Equal(t, expectedDiff, nextUpdateDiff,
+		fmt.Sprintf("the delta between thisUpdate %s and nextUpdate: %s should have been around: %s but was %s",
+			thisUpdate, nextUpdate, defaultCrlConfig.OcspExpiry, nextUpdateDiff))
 
 	requireOcspSignatureAlgoForKey(t, testEnv.issuer2.PublicKey, ocspResp.SignatureAlgorithm)
 	requireOcspResponseSignedBy(t, ocspResp, testEnv.issuer2.PublicKey)

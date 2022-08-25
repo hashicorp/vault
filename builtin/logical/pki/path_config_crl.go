@@ -17,6 +17,7 @@ type crlConfig struct {
 	OcspDisable            bool   `json:"ocsp_disable"`
 	AutoRebuild            bool   `json:"auto_rebuild"`
 	AutoRebuildGracePeriod string `json:"auto_rebuild_grace_period"`
+	OcspExpiry             string `json:"ocsp_expiry"`
 }
 
 // Implicit default values for the config if it does not exist.
@@ -24,6 +25,7 @@ var defaultCrlConfig = crlConfig{
 	Expiry:                 "72h",
 	Disable:                false,
 	OcspDisable:            false,
+	OcspExpiry:             "12h",
 	AutoRebuild:            false,
 	AutoRebuildGracePeriod: "12h",
 }
@@ -45,6 +47,12 @@ valid; defaults to 72 hours`,
 			"ocsp_disable": {
 				Type:        framework.TypeBool,
 				Description: `If set to true, ocsp unauthorized responses will be returned.`,
+			},
+			"ocsp_expiry": {
+				Type: framework.TypeString,
+				Description: `The amount of time an OCSP response will be valid (controls 
+the NextUpdate field); defaults to 12 hours`,
+				Default: "1h",
 			},
 			"auto_rebuild": {
 				Type:        framework.TypeBool,
@@ -86,6 +94,7 @@ func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, _ *fram
 			"expiry":                    config.Expiry,
 			"disable":                   config.Disable,
 			"ocsp_disable":              config.OcspDisable,
+			"ocsp_expiry":               config.OcspExpiry,
 			"auto_rebuild":              config.AutoRebuild,
 			"auto_rebuild_grace_period": config.AutoRebuildGracePeriod,
 		},
@@ -115,6 +124,18 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 
 	if ocspDisableRaw, ok := d.GetOk("ocsp_disable"); ok {
 		config.OcspDisable = ocspDisableRaw.(bool)
+	}
+
+	if expiryRaw, ok := d.GetOk("ocsp_expiry"); ok {
+		expiry := expiryRaw.(string)
+		duration, err := time.ParseDuration(expiry)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("given ocsp_expiry could not be decoded: %s", err)), nil
+		}
+		if duration < 0 {
+			return logical.ErrorResponse(fmt.Sprintf("ocsp_expiry must be greater than or equal to 0 got: %s", duration)), nil
+		}
+		config.OcspExpiry = expiry
 	}
 
 	oldAutoRebuild := config.AutoRebuild
