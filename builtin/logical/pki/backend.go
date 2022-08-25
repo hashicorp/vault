@@ -75,11 +75,16 @@ func Backend(conf *logical.BackendConfig) *backend {
 				"ca/pem",
 				"ca_chain",
 				"ca",
+				"crl/delta",
+				"crl/delta/pem",
 				"crl/pem",
 				"crl",
 				"issuer/+/crl/der",
 				"issuer/+/crl/pem",
 				"issuer/+/crl",
+				"issuer/+/crl/delta/der",
+				"issuer/+/crl/delta/pem",
+				"issuer/+/crl/delta",
 				"issuer/+/pem",
 				"issuer/+/der",
 				"issuer/+/json",
@@ -89,7 +94,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 			},
 
 			LocalStorage: []string{
-				"revoked/",
+				revokedPath,
+				deltaWALPath,
 				legacyCRLPath,
 				"crls/",
 				"certs/",
@@ -405,6 +411,13 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 
 	// Then attempt to rebuild the CRLs if required.
 	if err := b.crlBuilder.rebuildIfForced(ctx, b, request); err != nil {
+		return err
+	}
+
+	// If a delta CRL was rebuilt above as part of the complete CRL rebuild,
+	// this will be a no-op. However, if we do need to rebuild delta CRLs,
+	// this would cause us to do so.
+	if err := b.crlBuilder.rebuildDeltaCRLsIfForced(sc); err != nil {
 		return err
 	}
 

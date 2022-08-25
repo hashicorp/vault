@@ -25,6 +25,8 @@ const (
 	legacyMigrationBundleLogKey = "config/legacyMigrationBundleLog"
 	legacyCertBundlePath        = "config/ca_bundle"
 	legacyCRLPath               = "crl"
+	deltaCRLPath                = "delta-crl"
+	deltaCRLPathSuffix          = "-delta"
 
 	// Used as a quick sanity check for a reference id lookups...
 	uuidLength = 36
@@ -159,9 +161,10 @@ type issuerEntry struct {
 }
 
 type localCRLConfigEntry struct {
-	IssuerIDCRLMap   map[issuerID]crlID  `json:"issuer_id_crl_map"`
-	CRLNumberMap     map[crlID]int64     `json:"crl_number_map"`
-	CRLExpirationMap map[crlID]time.Time `json:"crl_expiration_map"`
+	IssuerIDCRLMap        map[issuerID]crlID  `json:"issuer_id_crl_map"`
+	CRLNumberMap          map[crlID]int64     `json:"crl_number_map"`
+	LastCompleteNumberMap map[crlID]int64     `json:"last_complete_number_map"`
+	CRLExpirationMap      map[crlID]time.Time `json:"crl_expiration_map"`
 }
 
 type keyConfigEntry struct {
@@ -827,6 +830,24 @@ func (sc *storageContext) getLocalCRLConfig() (*localCRLConfigEntry, error) {
 
 	if len(mapping.CRLNumberMap) == 0 {
 		mapping.CRLNumberMap = make(map[crlID]int64)
+	}
+
+	if len(mapping.LastCompleteNumberMap) == 0 {
+		mapping.LastCompleteNumberMap = make(map[crlID]int64)
+
+		// Since this might not exist on migration, we want to guess as
+		// to the last full CRL number was. This was likely the last
+		// value from CRLNumberMap if it existed, since we're just adding
+		// the mapping here in this block.
+		//
+		// After the next full CRL build, we will have set this value
+		// correctly, so it doesn't really matter in the long term if
+		// we're off here.
+		for id, number := range mapping.CRLNumberMap {
+			// Decrement by one, since CRLNumberMap is the future number,
+			// not the last built number.
+			mapping.LastCompleteNumberMap[id] = number - 1
+		}
 	}
 
 	if len(mapping.CRLExpirationMap) == 0 {
