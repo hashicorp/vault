@@ -4882,31 +4882,42 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 }
 
 func TestSortVersionedPlugins(t *testing.T) {
-	versionedPlugin := func(typ consts.PluginType, name string, version string) pluginutil.VersionedPlugin {
+	versionedPlugin := func(typ consts.PluginType, name string, version string, builtin bool) pluginutil.VersionedPlugin {
 		return pluginutil.VersionedPlugin{
-			Type:            typ.String(),
-			Name:            name,
-			Version:         version,
-			SHA256:          "",
-			Builtin:         false,
-			SemanticVersion: semver.Must(semver.NewVersion(version)),
+			Type:    typ.String(),
+			Name:    name,
+			Version: version,
+			SHA256:  "",
+			Builtin: builtin,
+			SemanticVersion: func() *semver.Version {
+				if version != "" {
+					return semver.Must(semver.NewVersion(version))
+				}
+
+				return semver.Must(semver.NewVersion("0.0.0"))
+			}(),
 		}
 	}
 
 	differingTypes := []pluginutil.VersionedPlugin{
-		versionedPlugin(consts.PluginTypeSecrets, "c", "1.0.0"),
-		versionedPlugin(consts.PluginTypeDatabase, "c", "1.0.0"),
-		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0"),
+		versionedPlugin(consts.PluginTypeSecrets, "c", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeDatabase, "c", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", false),
 	}
 	differingNames := []pluginutil.VersionedPlugin{
-		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0"),
-		versionedPlugin(consts.PluginTypeCredential, "b", "1.0.0"),
-		versionedPlugin(consts.PluginTypeCredential, "a", "1.0.0"),
+		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "b", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "a", "1.0.0", false),
 	}
 	differingVersions := []pluginutil.VersionedPlugin{
-		versionedPlugin(consts.PluginTypeCredential, "c", "10.0.0"),
-		versionedPlugin(consts.PluginTypeCredential, "c", "2.0.1"),
-		versionedPlugin(consts.PluginTypeCredential, "c", "2.1.0"),
+		versionedPlugin(consts.PluginTypeCredential, "c", "10.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "2.0.1", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "2.1.0", false),
+	}
+	versionedUnversionedAndBuiltin := []pluginutil.VersionedPlugin{
+		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", true),
 	}
 
 	for name, tc := range map[string][]pluginutil.VersionedPlugin{
@@ -4914,9 +4925,10 @@ func TestSortVersionedPlugins(t *testing.T) {
 		"ascending names":    differingNames,
 		"ascending versions": differingVersions,
 		// Include differing versions twice so we can test out equality too.
-		"all types": append(differingTypes,
+		"differing types, names and versions": append(differingTypes,
 			append(differingNames,
 				append(differingVersions, differingVersions...)...)...),
+		"mix of unversioned, versioned, and builtin": versionedUnversionedAndBuiltin,
 	} {
 		t.Run(name, func(t *testing.T) {
 			sortVersionedPlugins(tc)

@@ -699,9 +699,19 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 		switch len(parts) {
 		case 1: // Unversioned, no type (legacy)
 			normalizedName = parts[0]
+			// Use 0.0.0 to ensure unversioned is sorted as the oldest version.
+			semanticVersion, err = semver.NewVersion("0.0.0")
+			if err != nil {
+				return nil, err
+			}
 		case 2: // Unversioned
 			if isPluginType(parts[0]) {
 				normalizedName = parts[1]
+				// Use 0.0.0 to ensure unversioned is sorted as the oldest version.
+				semanticVersion, err = semver.NewVersion("0.0.0")
+				if err != nil {
+					return nil, err
+				}
 			} else {
 				return nil, fmt.Errorf("unknown plugin type in plugin catalog: %s", plugin)
 			}

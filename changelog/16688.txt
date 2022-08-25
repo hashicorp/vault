@@ -1,6 +1,6 @@
-```change
+```release-note:change
 plugins: `GET /sys/plugins/catalog` endpoint now returns an additional `detailed` field in the response with additional plugin metadata.
 ```
-```improvement
+```release-note:improvement
 plugins: Plugin catalog supports registering plugins with a semantic version
 ```

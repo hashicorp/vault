@@ -256,9 +256,7 @@ func TestPluginCatalog_ListVersionedPlugins(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
-	sort.SliceStable(plugins, func(i, j int) bool {
-		return plugins[i].Name < plugins[j].Name
-	})
+	sortVersionedPlugins(plugins)
 
 	if len(plugins) != len(builtinKeys) {
 		t.Fatalf("unexpected length of plugin list, expected %d, got %d", len(builtinKeys), len(plugins))
@@ -278,13 +276,31 @@ func TestPluginCatalog_ListVersionedPlugins(t *testing.T) {
 	defer file.Close()
 
 	command := filepath.Base(file.Name())
-	err = core.pluginCatalog.Set(context.Background(), "mysql-database-plugin", consts.PluginTypeDatabase, "", command, []string{"--test"}, []string{}, []byte{'1'})
+	err = core.pluginCatalog.Set(
+		context.Background(),
+		"mysql-database-plugin",
+		consts.PluginTypeDatabase,
+		"",
+		command,
+		[]string{"--test"},
+		[]string{},
+		[]byte{'1'},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Set another plugin
-	err = core.pluginCatalog.Set(context.Background(), "aaaaaaa", consts.PluginTypeDatabase, "", command, []string{"--test"}, []string{}, []byte{'1'})
+	// Set another plugin, with version information
+	err = core.pluginCatalog.Set(
+		context.Background(),
+		"aaaaaaa",
+		consts.PluginTypeDatabase,
+		"1.1.0",
+		command,
+		[]string{"--test"},
+		[]string{},
+		[]byte{'1'},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -294,9 +310,7 @@ func TestPluginCatalog_ListVersionedPlugins(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
-	sort.SliceStable(plugins, func(i, j int) bool {
-		return plugins[i].Name < plugins[j].Name
-	})
+	sortVersionedPlugins(plugins)
 
 	// plugins has a test-added plugin called "aaaaaaa" that is not built in
 	if len(plugins) != len(builtinKeys)+1 {
@@ -306,6 +320,9 @@ func TestPluginCatalog_ListVersionedPlugins(t *testing.T) {
 	// verify the first plugin is the one we just created.
 	if !reflect.DeepEqual(plugins[0].Name, "aaaaaaa") {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", plugins[0], "aaaaaaa")
+	}
+	if plugins[0].SemanticVersion == nil {
+		t.Fatalf("expected non-nil semantic version for %v", plugins[0].Name)
 	}
 
 	// verify the builtin plugins are correct
@@ -328,6 +345,10 @@ func TestPluginCatalog_ListVersionedPlugins(t *testing.T) {
 			if plugin.SemanticVersion.Metadata() != "builtin" && plugin.SemanticVersion.Metadata() != "builtin.vault" {
 				t.Fatalf("expected +builtin metadata but got %s", plugin.Version)
 			}
+		}
+
+		if plugin.SemanticVersion == nil {
+			t.Fatalf("expected non-nil semantic version for %v", plugin)
 		}
 	}
 }
