@@ -569,6 +569,7 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 		"command": command,
 		"sha256":  hex.EncodeToString(plugin.Sha256),
 		"builtin": plugin.Builtin,
+		"version": plugin.Version,
 	}
 
 	return &logical.Response{

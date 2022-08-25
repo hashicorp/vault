@@ -533,6 +533,7 @@ func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.
 				Type:           pluginType,
 				Builtin:        true,
 				BuiltinFactory: factory,
+				Version:        c.getBuiltinVersion(pluginType, name),
 			}, nil
 		}
 	}
