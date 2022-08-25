@@ -1120,13 +1120,13 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 		return nil, err
 	}
 
-	// Automatically update existing configurations.
-	if result.AutoRebuildGracePeriod == "" {
-		result.AutoRebuildGracePeriod = defaultCrlConfig.AutoRebuildGracePeriod
-	}
-
-	if result.OcspExpiry == "" {
+	if result.Version == 0 {
+		// Automatically update existing configurations.
+		result.OcspDisable = defaultCrlConfig.OcspDisable
 		result.OcspExpiry = defaultCrlConfig.OcspExpiry
+		result.AutoRebuild = defaultCrlConfig.AutoRebuild
+		result.AutoRebuildGracePeriod = defaultCrlConfig.AutoRebuildGracePeriod
+		result.Version = 1
 	}
 
 	return &result, nil

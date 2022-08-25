@@ -10,8 +10,11 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const latestCrlConfigVersion = 1
+
 // CRLConfig holds basic CRL configuration information
 type crlConfig struct {
+	Version                int    `json:"version"`
 	Expiry                 string `json:"expiry"`
 	Disable                bool   `json:"disable"`
 	OcspDisable            bool   `json:"ocsp_disable"`
@@ -22,6 +25,7 @@ type crlConfig struct {
 
 // Implicit default values for the config if it does not exist.
 var defaultCrlConfig = crlConfig{
+	Version:                latestCrlConfigVersion,
 	Expiry:                 "72h",
 	Disable:                false,
 	OcspDisable:            false,

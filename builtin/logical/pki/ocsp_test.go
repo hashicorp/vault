@@ -457,7 +457,6 @@ func runOcspRequestTest(t *testing.T, requestType string, caKeyType string, requ
 	require.Equal(t, testEnv.issuer2, ocspResp.Certificate)
 	require.Equal(t, 0, ocspResp.RevocationReason)
 	require.Equal(t, testEnv.leafCertIssuer2.SerialNumber, ocspResp.SerialNumber)
-	require.Equal(t, testEnv.leafCertIssuer2.SerialNumber, ocspResp.SerialNumber)
 
 	// Verify that our thisUpdate and nextUpdate fields are updated as expected
 	thisUpdate := ocspResp.ThisUpdate
