@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
 	"net/http"
 	"time"
@@ -26,6 +27,7 @@ import (
 const (
 	ocspReqParam            = "req"
 	ocspResponseContentType = "application/ocsp-response"
+	maximumRequestSize      = 87 * 5 // A normal simple request is 87 bytes, so give us some buffer
 )
 
 type ocspRespInfo struct {
@@ -210,18 +212,25 @@ func fetchDerEncodedRequest(request *logical.Request, data *framework.FieldData)
 			return nil, errors.New("no base64 encoded ocsp request was found")
 		}
 
+		if len(base64Req) >= maximumRequestSize {
+			return nil, errors.New("request is too large")
+		}
+
 		return base64.StdEncoding.DecodeString(base64Req)
 	case logical.UpdateOperation:
 		// POST bodies should contain the binary form of the DER request.
 		rawBody := request.HTTPRequest.Body
 		defer rawBody.Close()
 
-		buf := bytes.Buffer{}
-		_, err := buf.ReadFrom(rawBody)
+		requestBytes, err := io.ReadAll(io.LimitReader(rawBody, maximumRequestSize))
 		if err != nil {
 			return nil, err
 		}
-		return buf.Bytes(), nil
+
+		if len(requestBytes) >= maximumRequestSize {
+			return nil, errors.New("request is too large")
+		}
+		return requestBytes, nil
 	default:
 		return nil, fmt.Errorf("unsupported request method: %s", request.HTTPRequest.Method)
 	}
