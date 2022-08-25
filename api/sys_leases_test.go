@@ -8,6 +8,9 @@ import (
 	"time"
 )
 
+//TestRenewLeaseThroughCache validates that cached lease renew responses
+//that include an "Age" header will correctly adjust the TTL age so that
+//API consumers work with the true TTL and not the original cached TTL.
 func TestRenewLeaseThroughCache(t *testing.T) {
 	age := time.Hour * 10
 	expectedDuration := int(((time.Hour * 24) - age).Seconds())
