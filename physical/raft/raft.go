@@ -17,7 +17,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-uuid"
@@ -1801,7 +1801,7 @@ func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
 		return nil, errors.New("no seal access available")
 	}
 
-	var eblob wrapping.EncryptedBlobInfo
+	var eblob wrapping.BlobInfo
 	err := proto.Unmarshal(ct, &eblob)
 	if err != nil {
 		return nil, err

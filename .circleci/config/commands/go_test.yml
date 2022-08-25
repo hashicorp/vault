@@ -14,7 +14,7 @@ parameters:
     default: false
   go_image:
     type: string
-    default: "docker.mirror.hashicorp.services/cimg/go:1.18.4"
+    default: "docker.mirror.hashicorp.services/cimg/go:1.18.5"
   use_docker:
     type: boolean
     default: false

@@ -295,3 +295,27 @@ func CBList(b *backend, s logical.Storage, path string) (*logical.Response, erro
 func CBDelete(b *backend, s logical.Storage, path string) (*logical.Response, error) {
 	return CBReq(b, s, logical.DeleteOperation, path, make(map[string]interface{}))
 }
+
+func requireFieldsSetInResp(t *testing.T, resp *logical.Response, fields ...string) {
+	var missingFields []string
+	for _, field := range fields {
+		value, ok := resp.Data[field]
+		if !ok || value == nil {
+			missingFields = append(missingFields, field)
+		}
+	}
+
+	require.Empty(t, missingFields, "The following fields were required but missing from response:\n%v", resp.Data)
+}
+
+func requireSuccessNonNilResponse(t *testing.T, resp *logical.Response, err error, msgAndArgs ...interface{}) {
+	require.NoError(t, err, msgAndArgs...)
+	require.False(t, resp.IsError(), msgAndArgs...)
+	require.NotNil(t, resp, msgAndArgs...)
+}
+
+func requireSuccessNilResponse(t *testing.T, resp *logical.Response, err error, msgAndArgs ...interface{}) {
+	require.NoError(t, err, msgAndArgs...)
+	require.False(t, resp.IsError(), msgAndArgs...)
+	require.Nil(t, resp, msgAndArgs...)
+}
