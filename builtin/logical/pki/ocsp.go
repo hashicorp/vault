@@ -27,7 +27,7 @@ import (
 const (
 	ocspReqParam            = "req"
 	ocspResponseContentType = "application/ocsp-response"
-	maximumRequestSize      = 87 * 5 // A normal simple request is 87 bytes, so give us some buffer
+	maximumRequestSize      = 2048 // A normal simple request is 87 bytes, so give us some buffer
 )
 
 type ocspRespInfo struct {
