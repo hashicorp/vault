@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strconv"
 )
 
 func (c *Sys) Renew(id string, increment int) (*Secret, error) {
@@ -30,7 +31,23 @@ func (c *Sys) RenewWithContext(ctx context.Context, id string, increment int) (*
 	}
 	defer resp.Body.Close()
 
-	return ParseSecret(resp.Body)
+	secret, err := ParseSecret(resp.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if ageHeader := resp.Header.Get("Age"); ageHeader != "" {
+		age, err := strconv.Atoi(ageHeader)
+
+		if err != nil {
+			return nil, err
+		}
+
+		secret.LeaseDuration = secret.LeaseDuration - int(age)
+	}
+
+	return secret, nil
 }
 
 func (c *Sys) Lookup(id string) (*Secret, error) {
