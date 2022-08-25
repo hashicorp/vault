@@ -13,8 +13,9 @@ import (
 // API consumers work with the true TTL and not the original cached TTL.
 func TestRenewLeaseThroughCache(t *testing.T) {
 	age := time.Hour * 10
-	expectedDuration := int(((time.Hour * 24) - age).Seconds())
-	mockVaultAgentCache := httptest.NewServer(http.HandlerFunc(agedVaultCacheResponseHandler(time.Hour * 10)))
+	ttl := time.Hour * 24
+	expectedDuration := int((ttl - age).Seconds())
+	mockVaultAgentCache := httptest.NewServer(http.HandlerFunc(agedVaultCacheResponseHandler(age, ttl)))
 	defer mockVaultAgentCache.Close()
 
 	cfg := DefaultConfig()
@@ -35,8 +36,8 @@ func TestRenewLeaseThroughCache(t *testing.T) {
 	}
 }
 
-func agedVaultCacheResponseHandler(age time.Duration) func(http.ResponseWriter, *http.Request) {
-	ageStr := fmt.Sprintf("%.0f", (time.Hour * 10).Seconds())
+func agedVaultCacheResponseHandler(age, ttl time.Duration) func(http.ResponseWriter, *http.Request) {
+	ageStr := fmt.Sprintf("%.0f", (age).Seconds())
 	return func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Age", ageStr)
 
@@ -52,7 +53,7 @@ func agedVaultCacheResponseHandler(age time.Duration) func(http.ResponseWriter, 
 			"auth": null
 		}`
 
-		renewResponse := fmt.Sprintf(renewResponseTemplate, (time.Hour * 24).Seconds())
+		renewResponse := fmt.Sprintf(renewResponseTemplate, (ttl).Seconds())
 		_, _ = w.Write([]byte(renewResponse))
 	}
 }
