@@ -1,7 +1,6 @@
 ---
 layout: api
 page_title: /sys/plugins/catalog - HTTP API
-sidebar_title: <code>/sys/plugins/catalog</code>
 description: The `/sys/plugins/catalog` endpoint is used to manage plugins.
 ---
 
@@ -101,7 +100,7 @@ supplied name.
 
 | Method | Path                               |
 | :----- | :--------------------------------- |
-| `PUT`  | `/sys/plugins/catalog/:type/:name` |
+| `POST` | `/sys/plugins/catalog/:type/:name` |
 
 ### Parameters
 
@@ -141,7 +140,7 @@ supplied name.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/plugins/catalog/secret/example-plugin
 ```

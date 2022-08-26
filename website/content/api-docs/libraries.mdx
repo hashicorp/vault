@@ -1,7 +1,6 @@
 ---
 layout: api
 page_title: 'HTTP API: Libraries'
-sidebar_title: Client Libraries
 description: >-
   List of official and community contributed libraries for interacting with the
   Vault HTTP API.
@@ -12,17 +11,22 @@ description: >-
 The programming libraries listed on this page can be used to consume the API more conveniently.
 Some are officially maintained while others are provided by the community.
 
+For a step-by-step walkthrough on using these client libraries, see the [developer quickstart](https://www.vaultproject.io/docs/get-started/developer-qs).
+For copy-pastable code examples, see the [vault-examples](https://github.com/hashicorp/vault-examples) repo.
+
 ## Official
 
 These libraries are officially maintained by HashiCorp.
 
 ### Go
 
-- [Vault Go Client](https://github.com/hashicorp/vault/tree/master/api)
+- [Vault Go Client](https://github.com/hashicorp/vault/tree/main/api)
 
 ```shell-session
 $ go get github.com/hashicorp/vault/api
 ```
+
+[Example application](https://github.com/hashicorp/hello-vault-go)
 
 ### Ruby
 
@@ -59,6 +63,8 @@ $ Install-Package VaultSharp
 $ Install-Package Vault
 ```
 
+[Example application](https://github.com/hashicorp/hello-vault-dotnet)
+
 ### C++
 
 - [libvault](https://github.com/abedra/libvault)
@@ -82,6 +88,12 @@ $ Install-Package Vault
 
 ```shell-session
 $ go get github.com/adfinis-sygroup/vault-client
+```
+
+- [vaultgo](https://github.com/mittwald/vaultgo)
+
+```shell-session
+$ go get github.com/mittwald/vaultgo
 ```
 
 ### Haskell
@@ -115,6 +127,18 @@ $ stack install gothic
 $ npm install node-vault
 ```
 
+- [vaulTS](https://github.com/mittwald/vaulTS) (Github NPM Registry)
+
+```shell-session
+$ npm install @mittwald/vaults
+```
+
+- [vault-api](https://github.com/SaiHemanthBR/vault-api) (Typescript. Axios-like API)
+
+```shell-session
+$ npm install vault-api
+```
+
 ### PHP
 
 - [vault-php-sdk](https://github.com/jippi/vault-php-sdk)
@@ -133,6 +157,12 @@ $ composer require violuke/vault-php-sdk
 
 ```shell-session
 $ composer require csharpru/vault-php
+```
+
+- [vault-php](https://github.com/mittwald/vaultPHP)
+
+```shell-session
+$ composer require mittwald/vault-php
 ```
 
 ### PowerShell
@@ -164,6 +194,7 @@ $ pip install async-hvac
 ### Rust
 
 - [HashicorpVault](https://crates.io/crates/hashicorp_vault)
+- [vaultrs](https://crates.io/crates/vaultrs)
 
 ### Scala
 

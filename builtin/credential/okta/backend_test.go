@@ -171,7 +171,6 @@ func testLoginWrite(t *testing.T, username, password, reason string, expectedTTL
 				}
 			} else if reason != "" {
 				return fmt.Errorf("expected error containing %q, got no error", reason)
-
 			}
 
 			if resp.Auth != nil {

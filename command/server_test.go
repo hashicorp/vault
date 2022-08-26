@@ -1,4 +1,4 @@
-// +build !race,!hsm
+//go:build !race && !hsm && !fips_140_3
 
 // NOTE: we can't use this with HSM. We can't set testing mode on and it's not
 // safe to use env vars since that provides an attack vector in the real world.
@@ -22,6 +22,12 @@ import (
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/mitchellh/cli"
 )
+
+func init() {
+	if signed := os.Getenv("VAULT_LICENSE_CI"); signed != "" {
+		os.Setenv(EnvVaultLicense, signed)
+	}
+}
 
 func testBaseHCL(tb testing.TB, listenerExtras string) string {
 	tb.Helper()
@@ -90,8 +96,9 @@ func testServerCommand(tb testing.TB) (*cli.MockUi, *ServerCommand) {
 		},
 
 		// These prevent us from random sleep guessing...
-		startedCh:  make(chan struct{}, 5),
-		reloadedCh: make(chan struct{}, 5),
+		startedCh:         make(chan struct{}, 5),
+		reloadedCh:        make(chan struct{}, 5),
+		licenseReloadedCh: make(chan error),
 	}
 }
 
@@ -108,15 +115,14 @@ func TestServer_ReloadListener(t *testing.T) {
 	defer os.RemoveAll(td)
 
 	wg := &sync.WaitGroup{}
-
 	// Setup initial certs
 	inBytes, _ := ioutil.ReadFile(wd + "reload_foo.pem")
-	ioutil.WriteFile(td+"/reload_cert.pem", inBytes, 0777)
+	ioutil.WriteFile(td+"/reload_cert.pem", inBytes, 0o777)
 	inBytes, _ = ioutil.ReadFile(wd + "reload_foo.key")
-	ioutil.WriteFile(td+"/reload_key.pem", inBytes, 0777)
+	ioutil.WriteFile(td+"/reload_key.pem", inBytes, 0o777)
 
-	relhcl := strings.Replace(reloadHCL, "TMPDIR", td, -1)
-	ioutil.WriteFile(td+"/reload.hcl", []byte(relhcl), 0777)
+	relhcl := strings.ReplaceAll(reloadHCL, "TMPDIR", td)
+	ioutil.WriteFile(td+"/reload.hcl", []byte(relhcl), 0o777)
 
 	inBytes, _ = ioutil.ReadFile(wd + "reload_ca.pem")
 	certPool := x509.NewCertPool()
@@ -166,12 +172,12 @@ func TestServer_ReloadListener(t *testing.T) {
 		t.Fatalf("certificate name didn't check out: %s", err)
 	}
 
-	relhcl = strings.Replace(reloadHCL, "TMPDIR", td, -1)
+	relhcl = strings.ReplaceAll(reloadHCL, "TMPDIR", td)
 	inBytes, _ = ioutil.ReadFile(wd + "reload_bar.pem")
-	ioutil.WriteFile(td+"/reload_cert.pem", inBytes, 0777)
+	ioutil.WriteFile(td+"/reload_cert.pem", inBytes, 0o777)
 	inBytes, _ = ioutil.ReadFile(wd + "reload_bar.key")
-	ioutil.WriteFile(td+"/reload_key.pem", inBytes, 0777)
-	ioutil.WriteFile(td+"/reload.hcl", []byte(relhcl), 0777)
+	ioutil.WriteFile(td+"/reload_key.pem", inBytes, 0o777)
+	ioutil.WriteFile(td+"/reload.hcl", []byte(relhcl), 0o777)
 
 	cmd.SighupCh <- struct{}{}
 	select {
@@ -237,7 +243,7 @@ func TestServer(t *testing.T) {
 		{
 			"bad_listener_read_timeout_config",
 			testBaseHCL(t, badListenerReadTimeout) + inmemHCL,
-			"parsing \"34日\": invalid syntax",
+			"unknown unit \"\\xe6\\x97\\xa5\" in duration",
 			1,
 			"-test-server-config",
 		},

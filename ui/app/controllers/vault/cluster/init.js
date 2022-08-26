@@ -35,7 +35,7 @@ export default Controller.extend(DEFAULTS, {
     }
   },
 
-  keyFilename: computed('model.name', function() {
+  keyFilename: computed('model.name', function () {
     return `vault-cluster-${this.model.name}`;
   }),
 
@@ -78,7 +78,10 @@ export default Controller.extend(DEFAULTS, {
       store
         .adapterFor('cluster')
         .initCluster(data)
-        .then(resp => this.initSuccess(resp), (...errArgs) => this.initError(...errArgs));
+        .then(
+          (resp) => this.initSuccess(resp),
+          (...errArgs) => this.initError(...errArgs)
+        );
     },
 
     setKeys(data) {

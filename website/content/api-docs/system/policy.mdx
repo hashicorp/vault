@@ -1,7 +1,6 @@
 ---
 layout: api
 page_title: /sys/policy - HTTP API
-sidebar_title: <code>/sys/policy</code>
 description: The `/sys/policy` endpoint is used to manage ACL policies in Vault.
 ---
 
@@ -70,7 +69,7 @@ updated, it takes effect immediately to all associated users.
 
 | Method | Path                |
 | :----- | :------------------ |
-| `PUT`  | `/sys/policy/:name` |
+| `POST` | `/sys/policy/:name` |
 
 ### Parameters
 
@@ -92,7 +91,7 @@ updated, it takes effect immediately to all associated users.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/policy/my-policy
 ```

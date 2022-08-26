@@ -48,7 +48,7 @@ func TestDynamoDBBackend(t *testing.T) {
 
 	conn := dynamodb.New(awsSession)
 
-	var randInt = rand.New(rand.NewSource(time.Now().UnixNano())).Int()
+	randInt := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
 	table := fmt.Sprintf("vault-dynamodb-testacc-%d", randInt)
 
 	defer func() {
@@ -138,7 +138,7 @@ func TestDynamoDBHABackend(t *testing.T) {
 
 	conn := dynamodb.New(awsSession)
 
-	var randInt = rand.New(rand.NewSource(time.Now().UnixNano())).Int()
+	randInt := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
 	table := fmt.Sprintf("vault-dynamodb-testacc-%d", randInt)
 
 	defer func() {

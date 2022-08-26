@@ -1,7 +1,6 @@
 ---
 layout: docs
 page_title: lease revoke - Command
-sidebar_title: <code>revoke</code>
 description: |-
   The "lease revoke" command revokes the lease on a secret, invalidating the
   underlying secret.
@@ -41,3 +40,6 @@ flags](/docs/commands) included on all commands.
 
 - `-prefix` `(bool: false)` - Treat the ID as a prefix instead of an exact lease
   ID. This can revoke multiple leases simultaneously. The default is false.
+
+- `-sync` `(bool: false)` - Make the operation synchronous instead of queuing the
+revocations to be done in the background.

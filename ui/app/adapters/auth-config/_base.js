@@ -6,6 +6,7 @@ export default ApplicationAdapter.extend({
   pathForType(modelType) {
     // we want the last part of the path
     const type = modelType.split('/').pop();
+    // TODO: Update endpoints from PR#10997
     if (type === 'identity-whitelist' || type === 'roletag-blacklist') {
       return `tidy/${type}`;
     }

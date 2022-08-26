@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fixes issue with the number of PGP Key inputs not matching the key shares number in the initialization form on change
+```

@@ -1,45 +1,42 @@
 <PageHeader as |p|>
   <p.top>
-    {{key-value-header
-      baseKey=(hash display=model.id id=model.idForNav)
-      path="vault.cluster.secrets.backend.list"
-      mode=mode
-      root=root
-      showCurrent=true
-    }}
+    <KeyValueHeader
+      @baseKey={{hash display=this.model.id id=this.model.idForNav}}
+      @path="vault.cluster.secrets.backend.list"
+      @mode={{this.mode}}
+      @root={{this.root}}
+      @showCurrent={{true}}
+    />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
-      {{#if (eq mode "create") }}
+      {{#if (eq this.mode "create")}}
         Create Template
-      {{else if (eq mode "edit")}}
+      {{else if (eq this.mode "edit")}}
         Edit Template
       {{else}}
-        Template <code>{{model.id}}</code>
+        Template
+        <code>{{this.model.id}}</code>
       {{/if}}
     </h1>
   </p.levelLeft>
 </PageHeader>
 
-{{#if (eq mode "show")}}
+{{#if (eq this.mode "show")}}
   <Toolbar>
     <ToolbarActions>
-      {{#if capabilities.canDelete}}
-        <button
-          type="button"
-          class="toolbar-link"
-          onclick={{action "delete"}}
-          data-test-transformation-template-delete
-        >
+      {{#if this.capabilities.canDelete}}
+        <button type="button" class="toolbar-link" onclick={{action "delete"}} data-test-transformation-template-delete>
           Delete template
         </button>
+        <div class="toolbar-separator"></div>
       {{/if}}
-      {{#if capabilities.canUpdate }}
+      {{#if this.capabilities.canUpdate}}
         <ToolbarSecretLink
-          @secret={{concat model.idPrefix model.id}}
+          @secret={{concat this.model.idPrefix this.model.id}}
           @mode="edit"
-          @data-test-edit-link=true
-          @replace=true
+          data-test-edit-link={{true}}
+          @replace={{true}}
         >
           Edit template
         </ToolbarSecretLink>
@@ -48,82 +45,91 @@
   </Toolbar>
 {{/if}}
 
-{{#if (or (eq mode 'edit') (eq mode 'create'))}}
-<form onsubmit={{action "createOrUpdate" mode}}>
-  <div class="box is-sideless is-fullwidth is-marginless">
-    {{message-error model=model}}
-    <NamespaceReminder @mode={{mode}} @noun="transform template" />
-    {{#each model.attrs as |attr|}}
-      {{#if (and (eq attr.name 'name') (eq mode 'edit')) }}
-        <label for="{{attr.name}}" class="is-label">
-          {{attr.options.label}}
-        </label>
-        {{#if attr.options.subText}}
-          <p class="sub-text">{{attr.options.subText}}</p>
+{{#if (or (eq this.mode "edit") (eq this.mode "create"))}}
+  <form onsubmit={{action "createOrUpdate" this.mode}}>
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <MessageError @model={{this.model}} />
+      <NamespaceReminder @mode={{this.mode}} @noun="transform template" />
+      {{#each this.model.writeAttrs as |attr|}}
+        {{#if (and (eq attr.name "name") (eq this.mode "edit"))}}
+          <label for={{attr.name}} class="is-label">
+            {{attr.options.label}}
+          </label>
+          {{#if attr.options.subText}}
+            <p class="sub-text">{{attr.options.subText}}</p>
+          {{/if}}
+          <input
+            data-test-input={{attr.name}}
+            id={{attr.name}}
+            autocomplete="off"
+            spellcheck="false"
+            value={{or (get this.model attr.name) attr.options.defaultValue}}
+            readonly={{true}}
+            class="field input is-readOnly"
+            type={{attr.type}}
+          />
+        {{else}}
+          {{#if (eq attr.name "alphabet")}}
+            <TransformAdvancedTemplating @model={{this.model}} />
+          {{/if}}
+          <FormField data-test-field @attr={{attr}} @model={{this.model}} />
         {{/if}}
-        <input
-          data-test-input={{attr.name}}
-          id={{attr.name}}
-          autocomplete="off"
-          spellcheck="false"
-          value={{or (get model attr.name) attr.options.defaultValue}}
-          readonly={{true}}
-          class="field input is-readOnly"
-          type={{attr.type}}
-        />
-      {{else}}
-        <FormField
-          data-test-field
-          @attr={{attr}}
-          @model={{model}}
-        />
-      {{/if}}
-    {{/each}}
-  </div>
-  <div class="field is-grouped-split box is-fullwidth is-bottomless">
-    <div class="control">
-      <button
-        type="submit"
-        disabled={{buttonDisabled}}
-        class="button is-primary"
-        data-test-template-transform-create=true
-      >
-        {{#if (eq mode 'create')}}
-          Create template
-        {{else if (eq mode 'edit')}}
-          Save
-        {{/if}}
-      </button>
-      {{#secret-link
-        mode=(if (eq mode "create") "list" "show")
-        class="button"
-        secret=(concat model.idPrefix model.id)
-      }}
-        Cancel
-      {{/secret-link}}
+      {{/each}}
     </div>
-  </div>
-</form>
+    <div class="field is-grouped-split box is-fullwidth is-bottomless">
+      <div class="control">
+        <button
+          type="submit"
+          disabled={{this.buttonDisabled}}
+          class="button is-primary"
+          data-test-template-transform-create={{true}}
+        >
+          {{#if (eq this.mode "create")}}
+            Create template
+          {{else if (eq this.mode "edit")}}
+            Save
+          {{/if}}
+        </button>
+        <SecretLink
+          @mode={{if (eq this.mode "create") "list" "show"}}
+          class="button"
+          @secret={{concat this.model.idPrefix this.model.id}}
+        >
+          Cancel
+        </SecretLink>
+      </div>
+    </div>
+  </form>
 {{else}}
-  {{#if model.displayErrors}}
+  {{#if this.model.displayErrors}}
     <div class="has-top-margin-s">
-      {{message-error model=model}}
+      <MessageError @model={{this.model}} />
     </div>
   {{/if}}
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-    {{#each model.attrs as |attr|}}
-      {{#if (eq attr.type "object")}}
-        {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(stringify (get model attr.name))}}
-      {{else if (eq attr.type "array")}}
-        {{info-table-row
-          label=(capitalize (or attr.options.label (humanize (dasherize attr.name))))
-          value=(get model attr.name)
-          type=attr.type
-          viewAll=attr.name
-        }}
-      {{else}}
-        {{info-table-row label=(capitalize (or attr.options.label (humanize (dasherize attr.name)))) value=(get model attr.name)}}
-      {{/if}}
+    {{#each this.model.readAttrs as |attr|}}
+      {{#let (capitalize (or attr.options.label (humanize (dasherize attr.name)))) as |label|}}
+        {{#if (eq attr.name "decodeFormats")}}
+          {{#if (not (is-empty-value this.model.decodeFormats))}}
+            <InfoTableRow @label={{label}}>
+              <div>
+                {{#each-in this.model.decodeFormats as |key value|}}
+                  <div class="transform-decode-formats">
+                    <p class="is-label has-text-grey-400">{{key}}</p>
+                    <p>{{value}}</p>
+                  </div>
+                {{/each-in}}
+              </div>
+            </InfoTableRow>
+          {{/if}}
+        {{else}}
+          <InfoTableRow
+            @label={{label}}
+            @value={{get this.model attr.name}}
+            class={{if (eq attr.name "pattern") "transform-pattern-text"}}
+          />
+        {{/if}}
+      {{/let}}
     {{/each}}
   </div>
 {{/if}}

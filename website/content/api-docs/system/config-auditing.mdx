@@ -1,7 +1,6 @@
 ---
 layout: api
 page_title: /sys/config/auditing - HTTP API
-sidebar_title: <code>/sys/config/auditing</code>
 description: The `/sys/config/auditing` endpoint is used to configure auditing settings.
 ---
 
@@ -83,7 +82,7 @@ This endpoint enables auditing of a header.
 
 | Method | Path                                         |
 | :----- | :------------------------------------------- |
-| `PUT`  | `/sys/config/auditing/request-headers/:name` |
+| `POST` | `/sys/config/auditing/request-headers/:name` |
 
 ### Parameters
 
@@ -103,7 +102,7 @@ This endpoint enables auditing of a header.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/config/auditing/request-headers/my-header
 ```

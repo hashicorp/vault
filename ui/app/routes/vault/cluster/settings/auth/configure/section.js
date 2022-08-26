@@ -10,6 +10,7 @@ export default Route.extend(UnloadModelRoute, {
   pathHelp: service('path-help'),
 
   modelType(backendType, section) {
+    // TODO: Update endpoints from PR#10997
     const MODELS = {
       'aws-client': 'auth-config/aws/client',
       'aws-identity-whitelist': 'auth-config/aws/identity-whitelist',
@@ -62,14 +63,14 @@ export default Route.extend(UnloadModelRoute, {
     }
     return this.store
       .findRecord(modelType, backend.id)
-      .then(config => {
+      .then((config) => {
         config.set('backend', backend);
         return RSVP.hash({
           model: config,
           section,
         });
       })
-      .catch(e => {
+      .catch((e) => {
         let config;
         // if you haven't saved a config, the API 404s, so create one here to edit and return it
         if (e.httpStatus === 404) {

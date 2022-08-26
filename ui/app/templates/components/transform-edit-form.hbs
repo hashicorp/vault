@@ -1,10 +1,10 @@
 <form onsubmit={{action "createOrUpdate" "create"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
-    <MessageError @model={{model}} />
-    <NamespaceReminder @mode={{mode}} @noun="transformation" />
-    {{#each model.transformFieldAttrs as |attr|}}
-      {{#if (or (eq attr.name 'name') (eq attr.name 'type')) }}
-        <label for="{{attr.name}}" class="is-label">
+    <MessageError @model={{this.model}} />
+    <NamespaceReminder @mode={{this.mode}} @noun="transformation" />
+    {{#each this.model.transformFieldAttrs as |attr|}}
+      {{#if (or (eq attr.name "name") (eq attr.name "type"))}}
+        <label for={{attr.name}} class="is-label">
           {{attr.options.label}}
         </label>
         {{#if attr.options.subText}}
@@ -13,23 +13,27 @@
         {{#if attr.options.possibleValues}}
           <div class="control is-expanded field is-readOnly">
             <div class="select is-fullwidth">
-              <select name="{{attr.name}}" id="{{attr.name}}" disabled data-test-input={{attr.name}}>
-                <option selected={{get model attr.name}} value={{get model attr.name}}>
-                  {{get model attr.name}}
+              <select name={{attr.name}} id={{attr.name}} disabled data-test-input={{attr.name}}>
+                <option selected={{get this.model attr.name}} value={{get this.model attr.name}}>
+                  {{get this.model attr.name}}
                 </option>
               </select>
             </div>
           </div>
         {{else}}
-          <input data-test-input={{attr.name}} id={{attr.name}} autocomplete="off" spellcheck="false"
-            value={{or (get model attr.name) attr.options.defaultValue}} readonly class="field input is-readOnly" type={{attr.type}} />
+          <input
+            data-test-input={{attr.name}}
+            id={{attr.name}}
+            autocomplete="off"
+            spellcheck="false"
+            value={{or (get this.model attr.name) attr.options.defaultValue}}
+            readonly
+            class="field input is-readOnly"
+            type={{attr.type}}
+          />
         {{/if}}
       {{else}}
-      <FormField
-        data-test-field
-        @attr={{attr}}
-        @model={{model}}
-      />
+        <FormField data-test-field @attr={{attr}} @model={{this.model}} />
       {{/if}}
     {{/each}}
   </div>
@@ -37,17 +41,17 @@
     <div class="control">
       <button
         type="submit"
-        disabled={{buttonDisabled}}
+        disabled={{this.buttonDisabled}}
         class="button is-primary"
-        data-test-transformation-save-button=true
+        data-test-transformation-save-button={{true}}
       >
-        {{#if (eq mode 'create')}}
+        {{#if (eq this.mode "create")}}
           Create transformation
-        {{else if (eq mode 'edit')}}
+        {{else if (eq this.mode "edit")}}
           Save
         {{/if}}
       </button>
-      <SecretLink @mode={{if (eq mode "create") "list" "show"}} @class="button" @secret={{model.id}}>
+      <SecretLink @mode={{if (eq this.mode "create") "list" "show"}} class="button" @secret={{this.model.id}}>
         Cancel
       </SecretLink>
     </div>

@@ -9,10 +9,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/awsutil"
+	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -29,7 +28,7 @@ func getRootConfig(ctx context.Context, s logical.Storage, clientType string, lo
 	if entry != nil {
 		var config rootConfig
 		if err := entry.DecodeJSON(&config); err != nil {
-			return nil, errwrap.Wrapf("error reading root configuration: {{err}}", err)
+			return nil, fmt.Errorf("error reading root configuration: %w", err)
 		}
 
 		credsConfig.AccessKey = config.AccessKey

@@ -9,7 +9,7 @@ export default Controller.extend(BackendCrumbMixin, {
   itemType: '',
 
   actions: {
-    refresh: function() {
+    refresh: function () {
       this.send('refreshModel');
     },
     toggleAdvancedEdit(bool) {

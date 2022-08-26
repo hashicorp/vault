@@ -61,7 +61,7 @@ func TestAuditFile_fileModeExisting(t *testing.T) {
 	}
 	defer os.Remove(f.Name())
 
-	err = os.Chmod(f.Name(), 0777)
+	err = os.Chmod(f.Name(), 0o777)
 	if err != nil {
 		t.Fatalf("Failure to chmod temp file for testing.")
 	}
@@ -88,7 +88,47 @@ func TestAuditFile_fileModeExisting(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot retrieve file mode from `Stat`")
 	}
-	if info.Mode() != os.FileMode(0600) {
+	if info.Mode() != os.FileMode(0o600) {
+		t.Fatalf("File mode does not match.")
+	}
+}
+
+func TestAuditFile_fileMode0000(t *testing.T) {
+	f, err := ioutil.TempFile("", "test")
+	if err != nil {
+		t.Fatalf("Failure to create test file. The error is %v", err)
+	}
+	defer os.Remove(f.Name())
+
+	err = os.Chmod(f.Name(), 0o777)
+	if err != nil {
+		t.Fatalf("Failure to chmod temp file for testing. The error is %v", err)
+	}
+
+	err = f.Close()
+	if err != nil {
+		t.Fatalf("Failure to close temp file for test. The error is %v", err)
+	}
+
+	config := map[string]string{
+		"path": f.Name(),
+		"mode": "0000",
+	}
+
+	_, err = Factory(context.Background(), &audit.BackendConfig{
+		Config:     config,
+		SaltConfig: &salt.Config{},
+		SaltView:   &logical.InmemStorage{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	info, err := os.Stat(f.Name())
+	if err != nil {
+		t.Fatalf("cannot retrieve file mode from `Stat`. The error is %v", err)
+	}
+	if info.Mode() != os.FileMode(0o777) {
 		t.Fatalf("File mode does not match.")
 	}
 }
@@ -126,7 +166,7 @@ func BenchmarkAuditFile_request(b *testing.B) {
 				TTL: 60 * time.Second,
 			},
 			Headers: map[string][]string{
-				"foo": []string{"bar"},
+				"foo": {"bar"},
 			},
 		},
 	}

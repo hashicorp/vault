@@ -8,8 +8,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*PolicyReadCommand)(nil)
-var _ cli.CommandAutocomplete = (*PolicyReadCommand)(nil)
+var (
+	_ cli.Command             = (*PolicyReadCommand)(nil)
+	_ cli.CommandAutocomplete = (*PolicyReadCommand)(nil)
+)
 
 type PolicyReadCommand struct {
 	*BaseCommand

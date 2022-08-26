@@ -1,60 +1,52 @@
 <PageHeader as |p|>
   <p.top>
-    <KeyValueHeader @baseKey={{model}} @path="vault.cluster.secrets.backend.list" @mode={{mode}} @root={{root}} @showCurrent={{true}} />
+    <KeyValueHeader
+      @baseKey={{this.model}}
+      @path="vault.cluster.secrets.backend.list"
+      @mode={{this.mode}}
+      @root={{this.root}}
+      @showCurrent={{true}}
+    />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
-      {{#if (eq mode "create") }}
+      {{#if (eq this.mode "create")}}
         Create an SSH role
-      {{else if (eq mode 'edit')}}
+      {{else if (eq this.mode "edit")}}
         Edit SSH role
       {{else}}
-        SSH role <code>{{model.id}}</code>
+        SSH role
+        <code>{{this.model.id}}</code>
       {{/if}}
     </h1>
   </p.levelLeft>
 </PageHeader>
 
-{{#if (eq mode "show")}}
+{{#if (eq this.mode "show")}}
   <Toolbar>
     <ToolbarActions>
-      {{#if (eq model.keyType "otp")}}
+      {{#if this.model.canDelete}}
+        <ConfirmAction @buttonClasses="toolbar-link" @onConfirmAction={{action "delete"}}>
+          Delete role
+        </ConfirmAction>
+        <div class="toolbar-separator"></div>
+      {{/if}}
+      {{#if (eq this.model.keyType "otp")}}
         <ToolbarSecretLink
-          @secret={{model.id}}
+          @secret={{this.model.id}}
           @mode="credentials"
-          @data-test-backend-credentials=true
-          @replace=true
+          data-test-backend-credentials={{true}}
+          @replace={{true}}
         >
-         Generate Credential
-       </ToolbarSecretLink>
+          Generate Credential
+        </ToolbarSecretLink>
       {{else}}
-        <ToolbarSecretLink
-          @secret={{model.id}}
-          @mode="sign"
-          @data-test-backend-credentials=true
-          @replace=true
-        >
+        <ToolbarSecretLink @secret={{this.model.id}} @mode="sign" data-test-backend-credentials={{true}} @replace={{true}}>
           Sign Keys
         </ToolbarSecretLink>
       {{/if}}
-      {{#if (or model.canUpdate model.canDelete)}}
-        <div class="toolbar-separator" />
-      {{/if}}
-      {{#if model.canDelete}}
-        <ConfirmAction
-          @buttonClasses="toolbar-link"
-          @onConfirmAction={{action "delete"}}
-        >
-          Delete role
-        </ConfirmAction>
-      {{/if}}
-      {{#if (or model.canUpdate model.canDelete)}}
-        <ToolbarSecretLink
-          @secret={{model.id}}
-          @mode="edit"
-          @data-test-edit-link=true
-          @replace=true
-        >
+      {{#if (or this.model.canUpdate this.model.canDelete)}}
+        <ToolbarSecretLink @secret={{this.model.id}} @mode="edit" data-test-edit-link={{true}} @replace={{true}}>
           Edit role
         </ToolbarSecretLink>
       {{/if}}
@@ -62,8 +54,42 @@
   </Toolbar>
 {{/if}}
 
-{{#if (or (eq mode 'edit') (eq mode 'create'))}}
-  {{partial 'partials/role-ssh/form'}}
+{{#if (or (eq this.mode "edit") (eq this.mode "create"))}}
+  <form onsubmit={{action "createOrUpdate" "create"}}>
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <MessageError @model={{this.model}} />
+      <NamespaceReminder @mode={{this.mode}} @noun="SSH role" />
+      <FormFieldGroupsLoop @model={{this.model}} @mode={{this.mode}} />
+    </div>
+    <div class="field is-grouped-split box is-fullwidth is-bottomless">
+      <div class="control">
+        <button type="submit" disabled={{this.buttonDisabled}} class="button is-primary" data-test-role-ssh-create={{true}}>
+          {{#if (eq this.mode "create")}}
+            Create role
+          {{else if (eq this.mode "edit")}}
+            Save
+          {{/if}}
+        </button>
+        <SecretLink @mode={{if (eq this.mode "create") "list" "show"}} class="button" @secret={{this.model.id}}>
+          Cancel
+        </SecretLink>
+      </div>
+    </div>
+  </form>
 {{else}}
-  {{partial 'partials/role-ssh/show'}}
+  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    {{#each this.model.showFields as |attr|}}
+      {{#if (eq attr.type "object")}}
+        <InfoTableRow
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{stringify (get this.model attr.name)}}
+        />
+      {{else}}
+        <InfoTableRow
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{get this.model attr.name}}
+        />
+      {{/if}}
+    {{/each}}
+  </div>
 {{/if}}

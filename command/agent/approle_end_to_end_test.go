@@ -31,7 +31,7 @@ func TestAppRoleEndToEnd(t *testing.T) {
 		secretIDLess       bool
 		expectToken        bool
 	}{
-		//default behaviour => token expected
+		// default behaviour => token expected
 		{false, true, false, true},
 		{true, true, false, true},
 
@@ -40,11 +40,11 @@ func TestAppRoleEndToEnd(t *testing.T) {
 		{false, false, false, true},
 		{true, false, false, true},
 
-		//bindSecretID=false, secret not provided => token expected
+		// bindSecretID=false, secret not provided => token expected
 		{false, false, true, true},
 		{true, false, true, true},
 
-		//bindSecretID=true, secret not provided => token not expected
+		// bindSecretID=true, secret not provided => token not expected
 		{false, true, true, false},
 		{true, true, true, false},
 	}
@@ -192,8 +192,8 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 		secretFromAgent = secretf.Name()
 		secretf.Close()
 		defer os.Remove(secretFromAgent)
-		//if the token is empty, auth.approle would fail reporting the error
-		if err := ioutil.WriteFile(secretFromAgent, []byte("wrong-secret"), 0600); err != nil {
+		// if the token is empty, auth.approle would fail reporting the error
+		if err := ioutil.WriteFile(secretFromAgent, []byte("wrong-secret"), 0o600); err != nil {
 			t.Fatal(err)
 		} else {
 			logger.Trace("wrote secret_id_file_path with wrong-secret", "path", secretFromAgent)
@@ -280,14 +280,14 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 		t.Fatal("expected notexist err")
 	}
 
-	if err := ioutil.WriteFile(role, []byte(roleID1), 0600); err != nil {
+	if err := ioutil.WriteFile(role, []byte(roleID1), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test role 1", "path", role)
 	}
 
 	if bindSecretID {
-		if err := ioutil.WriteFile(secret, []byte(secretID1), 0600); err != nil {
+		if err := ioutil.WriteFile(secret, []byte(secretID1), 0o600); err != nil {
 			t.Fatal(err)
 		} else {
 			logger.Trace("wrote test secret 1", "path", secret)
@@ -359,14 +359,14 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 	}
 
 	// Write new values
-	if err := ioutil.WriteFile(role, []byte(roleID2), 0600); err != nil {
+	if err := ioutil.WriteFile(role, []byte(roleID2), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test role 2", "path", role)
 	}
 
 	if bindSecretID {
-		if err := ioutil.WriteFile(secret, []byte(secretID2), 0600); err != nil {
+		if err := ioutil.WriteFile(secret, []byte(secretID2), 0o600); err != nil {
 			t.Fatal(err)
 		} else {
 			logger.Trace("wrote test secret 2", "path", secret)
@@ -405,14 +405,14 @@ func TestAppRoleWithWrapping(t *testing.T) {
 		secretIDLess bool
 		expectToken  bool
 	}{
-		//default behaviour => token expected
+		// default behaviour => token expected
 		{true, false, true},
 
 		//bindSecretID=false, wrong secret provided, wrapping_path provided => token not expected
 		//(wrapping token is not valid or does not exist)
 		{false, false, false},
 
-		//bindSecretID=false, no secret provided, wrapping_path provided but ignored => token expected
+		// bindSecretID=false, no secret provided, wrapping_path provided but ignored => token expected
 		{false, true, true},
 	}
 	for _, tc := range testCases {
@@ -536,8 +536,8 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 		secretFromAgent = secretf.Name()
 		secretf.Close()
 		defer os.Remove(secretFromAgent)
-		//if the token is empty, auth.approle would fail reporting the error
-		if err := ioutil.WriteFile(secretFromAgent, []byte("wrong-secret"), 0600); err != nil {
+		// if the token is empty, auth.approle would fail reporting the error
+		if err := ioutil.WriteFile(secretFromAgent, []byte("wrong-secret"), 0o600); err != nil {
 			t.Fatal(err)
 		} else {
 			logger.Trace("wrote secret_id_file_path with wrong-secret", "path", secretFromAgent)
@@ -624,7 +624,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 		t.Fatal("expected notexist err")
 	}
 
-	if err := ioutil.WriteFile(role, []byte(roleID1), 0600); err != nil {
+	if err := ioutil.WriteFile(role, []byte(roleID1), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test role 1", "path", role)
@@ -633,7 +633,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 	if bindSecretID {
 		logger.Trace("WRITING TO auth.secret-id.test.", "secret", secret, "secretID1", secretID1)
 
-		if err := ioutil.WriteFile(secret, []byte(secretID1), 0600); err != nil {
+		if err := ioutil.WriteFile(secret, []byte(secretID1), 0o600); err != nil {
 			t.Fatal(err)
 		} else {
 			logger.Trace("wrote test secret 1", "path", secret)
@@ -713,7 +713,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 			t.Fatal(err)
 		}
 		secretID2 := resp.WrapInfo.Token
-		if err := ioutil.WriteFile(secret, []byte(secretID2), 0600); err != nil {
+		if err := ioutil.WriteFile(secret, []byte(secretID2), 0o600); err != nil {
 			t.Fatal(err)
 		} else {
 			logger.Trace("wrote test secret 2", "path", secret)
@@ -748,7 +748,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 
 func addConstraints(add bool, cfg map[string]interface{}) map[string]interface{} {
 	if add {
-		//extraConstraints to add when bind_secret_id=false (otherwise Vault would fail with: "at least one constraint should be enabled on the role")
+		// extraConstraints to add when bind_secret_id=false (otherwise Vault would fail with: "at least one constraint should be enabled on the role")
 		extraConstraints := map[string]interface{}{
 			"secret_id_bound_cidrs": "127.0.0.1/32",
 			"token_bound_cidrs":     "127.0.0.1/32",

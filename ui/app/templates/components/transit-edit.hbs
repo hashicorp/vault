@@ -1,17 +1,58 @@
 <PageHeader as |p|>
   <p.top>
-    <KeyValueHeader @baseKey={{key}} @path="vault.cluster.secrets.backend.list" @mode={{mode}} @root={{root}} @showCurrent={{true}} />
+    <KeyValueHeader
+      @baseKey={{this.key}}
+      @path="vault.cluster.secrets.backend.list"
+      @mode={{this.mode}}
+      @root={{this.root}}
+      @showCurrent={{true}}
+    />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      {{#if (eq mode "create") }}
+      {{#if (eq this.mode "create")}}
         Create encryption key
-      {{else if (eq mode "edit") }}
+      {{else if (eq this.mode "edit")}}
         Edit encryption key
       {{else}}
-        Encryption key <code>{{key.id}}</code>
+        Encryption key
+        <code>{{this.key.id}}</code>
       {{/if}}
     </h1>
   </p.levelLeft>
 </PageHeader>
-{{partial (concat 'partials/transit-form-' mode)}}
+{{#if (eq this.mode "create")}}
+  <TransitFormCreate
+    @createOrUpdateKey={{action "createOrUpdateKey" this.mode}}
+    @setValueOnKey={{action "setValueOnKey" "exportable"}}
+    @autoRotateInvalid={{this.autoRotateInvalid}}
+    @handleAutoRotateChange={{action "handleAutoRotateChange"}}
+    @derivedChange={{action "derivedChange" value="target.checked"}}
+    @convergentEncryptionChange={{action "convergentEncryptionChange" value="target.checked"}}
+    @key={{this.key}}
+    @requestInFlight={{this.requestInFlight}}
+  />
+{{else if (eq this.mode "edit")}}
+  <TransitFormEdit
+    @createOrUpdateKey={{action "createOrUpdateKey" this.mode}}
+    @setValueOnKey={{action "setValueOnKey" "deletionAllowed"}}
+    @autoRotateInvalid={{this.autoRotateInvalid}}
+    @handleAutoRotateChange={{action "handleAutoRotateChange"}}
+    @deleteKey={{action "deleteKey"}}
+    @key={{this.key}}
+    @requestInFlight={{this.requestInFlight}}
+    @capabilities={{this.capabilities}}
+  />
+{{else if (eq this.mode "show")}}
+  <TransitFormShow
+    @refresh={{action "refresh"}}
+    @tab={{this.tab}}
+    @key={{this.key}}
+    @capabilities={{this.capabilities}}
+    @mode={{this.mode}}
+    @model={{this.model}}
+    @backend={{this.backend}}
+  />
+{{else}}
+  <EmptyState @title="No Transit mode selected" />
+{{/if}}

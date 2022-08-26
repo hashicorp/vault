@@ -5,7 +5,7 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 )
 
 type StoredKeysSupport int
@@ -15,7 +15,7 @@ const (
 	StoredKeysInvalid StoredKeysSupport = iota
 	StoredKeysNotSupported
 	StoredKeysSupportedGeneric
-	StoredKeysSupportedShamirMaster
+	StoredKeysSupportedShamirRoot
 )
 
 func (s StoredKeysSupport) String() string {
@@ -24,7 +24,7 @@ func (s StoredKeysSupport) String() string {
 		return "Old-style Shamir"
 	case StoredKeysSupportedGeneric:
 		return "AutoUnseal"
-	case StoredKeysSupportedShamirMaster:
+	case StoredKeysSupportedShamirRoot:
 		return "New-style Shamir"
 	default:
 		return "Invalid StoredKeys type"
@@ -35,54 +35,74 @@ func (s StoredKeysSupport) String() string {
 // specific to encrypting and decrypting data, or in this case keys.
 type Access struct {
 	wrapping.Wrapper
-	OverriddenType string
+	WrapperType wrapping.WrapperType
 }
 
-func (a *Access) SetType(t string) {
-	a.OverriddenType = t
-}
-
-func (a *Access) Type() string {
-	if a.OverriddenType != "" {
-		return a.OverriddenType
+func (a *Access) Init(ctx context.Context) error {
+	if initWrapper, ok := a.Wrapper.(wrapping.InitFinalizer); ok {
+		return initWrapper.Init(ctx)
 	}
-	return a.Wrapper.Type()
+	return nil
+}
+
+func (a *Access) SetType(t wrapping.WrapperType) {
+	a.WrapperType = t
+}
+
+func (a *Access) Type(ctx context.Context) (wrapping.WrapperType, error) {
+	if a != nil && a.WrapperType != "" {
+		return a.WrapperType, nil
+	}
+	return a.Wrapper.Type(ctx)
 }
 
 // Encrypt uses the underlying seal to encrypt the plaintext and returns it.
-func (a *Access) Encrypt(ctx context.Context, plaintext, aad []byte) (blob *wrapping.EncryptedBlobInfo, err error) {
+func (a *Access) Encrypt(ctx context.Context, plaintext, aad []byte) (blob *wrapping.BlobInfo, err error) {
+	wTyp, err := a.Wrapper.Type(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	defer func(now time.Time) {
 		metrics.MeasureSince([]string{"seal", "encrypt", "time"}, now)
-		metrics.MeasureSince([]string{"seal", a.Wrapper.Type(), "encrypt", "time"}, now)
+		metrics.MeasureSince([]string{"seal", wTyp.String(), "encrypt", "time"}, now)
 
 		if err != nil {
 			metrics.IncrCounter([]string{"seal", "encrypt", "error"}, 1)
-			metrics.IncrCounter([]string{"seal", a.Wrapper.Type(), "encrypt", "error"}, 1)
+			metrics.IncrCounter([]string{"seal", wTyp.String(), "encrypt", "error"}, 1)
 		}
 	}(time.Now())
 
 	metrics.IncrCounter([]string{"seal", "encrypt"}, 1)
-	metrics.IncrCounter([]string{"seal", a.Wrapper.Type(), "encrypt"}, 1)
+	metrics.IncrCounter([]string{"seal", wTyp.String(), "encrypt"}, 1)
 
-	return a.Wrapper.Encrypt(ctx, plaintext, aad)
+	return a.Wrapper.Encrypt(ctx, plaintext, wrapping.WithAad(aad))
 }
 
 // Decrypt uses the underlying seal to decrypt the cryptotext and returns it.
 // Note that it is possible depending on the wrapper used that both pt and err
 // are populated.
-func (a *Access) Decrypt(ctx context.Context, data *wrapping.EncryptedBlobInfo, aad []byte) (pt []byte, err error) {
+func (a *Access) Decrypt(ctx context.Context, data *wrapping.BlobInfo, aad []byte) (pt []byte, err error) {
+	wTyp, err := a.Wrapper.Type(ctx)
 	defer func(now time.Time) {
 		metrics.MeasureSince([]string{"seal", "decrypt", "time"}, now)
-		metrics.MeasureSince([]string{"seal", a.Wrapper.Type(), "decrypt", "time"}, now)
+		metrics.MeasureSince([]string{"seal", wTyp.String(), "decrypt", "time"}, now)
 
 		if err != nil {
 			metrics.IncrCounter([]string{"seal", "decrypt", "error"}, 1)
-			metrics.IncrCounter([]string{"seal", a.Wrapper.Type(), "decrypt", "error"}, 1)
+			metrics.IncrCounter([]string{"seal", wTyp.String(), "decrypt", "error"}, 1)
 		}
 	}(time.Now())
 
 	metrics.IncrCounter([]string{"seal", "decrypt"}, 1)
-	metrics.IncrCounter([]string{"seal", a.Wrapper.Type(), "decrypt"}, 1)
+	metrics.IncrCounter([]string{"seal", wTyp.String(), "decrypt"}, 1)
 
-	return a.Wrapper.Decrypt(ctx, data, aad)
+	return a.Wrapper.Decrypt(ctx, data, wrapping.WithAad(aad))
+}
+
+func (a *Access) Finalize(ctx context.Context) error {
+	if finalizeWrapper, ok := a.Wrapper.(wrapping.InitFinalizer); ok {
+		return finalizeWrapper.Finalize(ctx)
+	}
+	return nil
 }

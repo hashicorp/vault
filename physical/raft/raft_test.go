@@ -17,8 +17,9 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
-	hclog "github.com/hashicorp/go-hclog"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/base62"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -86,6 +87,8 @@ func getRaftWithDir(t testing.TB, bootstrap bool, noStoreState bool, raftDir str
 		}
 
 	}
+
+	backend.DisableAutopilot()
 
 	return backend, raftDir
 }
@@ -182,7 +185,6 @@ func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB, dataOnly bool) error {
 
 		return nil
 	})
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,6 +225,57 @@ func TestRaft_Backend(t *testing.T) {
 	physical.ExerciseBackend(t, b)
 }
 
+func TestRaft_ParseAutopilotUpgradeVersion(t *testing.T) {
+	raftDir, err := ioutil.TempDir("", "vault-raft-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(raftDir)
+
+	conf := map[string]string{
+		"path":                      raftDir,
+		"node_id":                   "abc123",
+		"autopilot_upgrade_version": "hahano",
+	}
+
+	_, err = NewRaftBackend(conf, hclog.NewNullLogger())
+	if err == nil {
+		t.Fatal("expected an error but got none")
+	}
+
+	if !strings.Contains(err.Error(), "does not parse") {
+		t.Fatal("expected an error about unparseable versions but got none")
+	}
+}
+
+func TestRaft_Backend_LargeKey(t *testing.T) {
+	b, dir := getRaft(t, true, true)
+	defer os.RemoveAll(dir)
+
+	key, err := base62.Random(bolt.MaxKeySize + 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry := &physical.Entry{Key: key, Value: []byte(key)}
+
+	err = b.Put(context.Background(), entry)
+	if err == nil {
+		t.Fatal("expected error for put entry")
+	}
+
+	if !strings.Contains(err.Error(), physical.ErrKeyTooLarge) {
+		t.Fatalf("expected %q, got %v", physical.ErrKeyTooLarge, err)
+	}
+
+	out, err := b.Get(context.Background(), entry.Key)
+	if err != nil {
+		t.Fatalf("unexpected error after failed put: %v", err)
+	}
+	if out != nil {
+		t.Fatal("expected response entry to be nil after a failed put")
+	}
+}
+
 func TestRaft_Backend_LargeValue(t *testing.T) {
 	b, dir := getRaft(t, true, true)
 	defer os.RemoveAll(dir)
@@ -249,6 +302,45 @@ func TestRaft_Backend_LargeValue(t *testing.T) {
 	}
 }
 
+func TestRaft_TransactionalBackend_LargeKey(t *testing.T) {
+	b, dir := getRaft(t, true, true)
+	defer os.RemoveAll(dir)
+
+	value := make([]byte, defaultMaxEntrySize+1)
+	rand.Read(value)
+
+	key, err := base62.Random(bolt.MaxKeySize + 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	txns := []*physical.TxnEntry{
+		{
+			Operation: physical.PutOperation,
+			Entry: &physical.Entry{
+				Key:   key,
+				Value: []byte(key),
+			},
+		},
+	}
+
+	err = b.Transaction(context.Background(), txns)
+	if err == nil {
+		t.Fatal("expected error for transactions")
+	}
+
+	if !strings.Contains(err.Error(), physical.ErrKeyTooLarge) {
+		t.Fatalf("expected %q, got %v", physical.ErrValueTooLarge, err)
+	}
+
+	out, err := b.Get(context.Background(), txns[0].Entry.Key)
+	if err != nil {
+		t.Fatalf("unexpected error after failed put: %v", err)
+	}
+	if out != nil {
+		t.Fatal("expected response entry to be nil after a failed put")
+	}
+}
+
 func TestRaft_TransactionalBackend_LargeValue(t *testing.T) {
 	b, dir := getRaft(t, true, true)
 	defer os.RemoveAll(dir)
@@ -257,7 +349,7 @@ func TestRaft_TransactionalBackend_LargeValue(t *testing.T) {
 	rand.Read(value)
 
 	txns := []*physical.TxnEntry{
-		&physical.TxnEntry{
+		{
 			Operation: physical.PutOperation,
 			Entry: &physical.Entry{
 				Key:   "foo",
@@ -333,6 +425,44 @@ func TestRaft_Backend_ThreeNode(t *testing.T) {
 	compareFSMs(t, raft1.fsm, raft3.fsm)
 }
 
+func TestRaft_GetOfflineConfig(t *testing.T) {
+	// Create 3 raft nodes
+	raft1, dir1 := getRaft(t, true, true)
+	raft2, dir2 := getRaft(t, false, true)
+	raft3, dir3 := getRaft(t, false, true)
+	defer os.RemoveAll(dir1)
+	defer os.RemoveAll(dir2)
+	defer os.RemoveAll(dir3)
+
+	// Add them all to the cluster
+	addPeer(t, raft1, raft2)
+	addPeer(t, raft1, raft3)
+
+	// Add some data into the FSM
+	physical.ExerciseBackend(t, raft1)
+
+	time.Sleep(10 * time.Second)
+
+	// Spin down the raft cluster and check that GetConfigurationOffline
+	// returns 3 voters
+	raft3.TeardownCluster(nil)
+	raft2.TeardownCluster(nil)
+	raft1.TeardownCluster(nil)
+
+	conf, err := raft1.GetConfigurationOffline()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(conf.Servers) != 3 {
+		t.Fatalf("three raft nodes existed but we only see %d", len(conf.Servers))
+	}
+	for _, s := range conf.Servers {
+		if s.Voter != true {
+			t.Fatalf("one of the nodes is not a voter")
+		}
+	}
+}
+
 func TestRaft_Recovery(t *testing.T) {
 	// Create 4 raft nodes
 	raft1, dir1 := getRaft(t, true, true)
@@ -389,15 +519,15 @@ func TestRaft_Recovery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir1, raftState), "peers.json"), peersJSONBytes, 0644)
+	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir1, raftState), "peers.json"), peersJSONBytes, 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir2, raftState), "peers.json"), peersJSONBytes, 0644)
+	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir2, raftState), "peers.json"), peersJSONBytes, 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir4, raftState), "peers.json"), peersJSONBytes, 0644)
+	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir4, raftState), "peers.json"), peersJSONBytes, 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -497,7 +627,6 @@ func TestRaft_Backend_Performance(t *testing.T) {
 	if localConfig.LeaderLeaseTimeout != defaultConfig.LeaderLeaseTimeout {
 		t.Fatalf("bad config: %v", localConfig)
 	}
-
 }
 
 func BenchmarkDB_Puts(b *testing.B) {

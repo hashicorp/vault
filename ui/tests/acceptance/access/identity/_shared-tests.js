@@ -1,4 +1,5 @@
-import { settled, currentRouteName } from '@ember/test-helpers';
+import { settled, currentRouteName, click, waitUntil, find } from '@ember/test-helpers';
+import { selectChoose, clickTrigger } from 'ember-power-select/test-support/helpers';
 import page from 'vault/tests/pages/access/identity/create';
 import showPage from 'vault/tests/pages/access/identity/show';
 import indexPage from 'vault/tests/pages/access/identity/index';
@@ -27,7 +28,7 @@ export const testCRUD = async (name, itemType, assert) => {
     `${itemType}: lists the entity in the entity list`
   );
   await indexPage.items.filterBy('name', name)[0].menu();
-  await settled();
+  await waitUntil(() => find('[data-test-item-delete]'));
   await indexPage.delete();
   await settled();
   await indexPage.confirmDelete();
@@ -42,8 +43,17 @@ export const testCRUD = async (name, itemType, assert) => {
 export const testDeleteFromForm = async (name, itemType, assert) => {
   await page.visit({ item_type: itemType });
   await settled();
-  await page.editForm.name(name).submit();
-  await settled();
+  await page.editForm.name(name);
+  await page.editForm.metadataKey('hello');
+  await page.editForm.metadataValue('goodbye');
+  await clickTrigger('#policies');
+  // first option should be "default"
+  await selectChoose('#policies', '.ember-power-select-option', 0);
+  await page.editForm.submit();
+  await click('[data-test-tab-subnav="policies"]');
+  assert.dom('.list-item-row').exists({ count: 1 }, 'One item is under policies');
+  await click('[data-test-tab-subnav="metadata"]');
+  assert.dom('.info-table-row').hasText('hello goodbye', 'Metadata shows on tab');
   await showPage.edit();
   assert.equal(
     currentRouteName(),

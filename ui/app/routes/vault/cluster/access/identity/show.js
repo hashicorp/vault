@@ -41,6 +41,7 @@ export default Route.extend({
     // reload to make sure we have the newest info
     if (this.currentModel) {
       next(() => {
+        /* eslint-disable-next-line ember/no-controller-access-in-routes */
         this.controller.get('model').reload();
       });
     }

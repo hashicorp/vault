@@ -6,8 +6,10 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
+	"google.golang.org/grpc"
 )
 
 // Looker defines the plugin Lookup function that looks into the plugin catalog
@@ -21,6 +23,7 @@ type Looker interface {
 // configuration and wrapping data in a response wrapped token.
 // logical.SystemView implementations satisfy this interface.
 type RunnerUtil interface {
+	NewPluginClient(ctx context.Context, config PluginClientConfig) (PluginClient, error)
 	ResponseWrapData(ctx context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
 	MlockEnabled() bool
 }
@@ -31,11 +34,19 @@ type LookRunnerUtil interface {
 	RunnerUtil
 }
 
+type PluginClient interface {
+	Conn() grpc.ClientConnInterface
+	plugin.ClientProtocol
+}
+
+const MultiplexingCtxKey string = "multiplex_id"
+
 // PluginRunner defines the metadata needed to run a plugin securely with
 // go-plugin.
 type PluginRunner struct {
 	Name           string                      `json:"name" structs:"name"`
 	Type           consts.PluginType           `json:"type" structs:"type"`
+	Version        string                      `json:"version" structs:"version"`
 	Command        string                      `json:"command" structs:"command"`
 	Args           []string                    `json:"args" structs:"args"`
 	Env            []string                    `json:"env" structs:"env"`
@@ -70,6 +81,19 @@ func (r *PluginRunner) RunMetadataMode(ctx context.Context, wrapper RunnerUtil, 
 		Logger(logger),
 		MetadataMode(true),
 	)
+}
+
+// VersionedPlugin holds any versioning information stored about a plugin in the
+// plugin catalog.
+type VersionedPlugin struct {
+	Type    string `json:"type"` // string instead of consts.PluginType so that we get the string form in API responses.
+	Name    string `json:"name"`
+	Version string `json:"version"`
+	SHA256  string `json:"sha256,omitempty"`
+	Builtin bool   `json:"builtin"`
+
+	// Pre-parsed semver struct of the Version field
+	SemanticVersion *version.Version `json:"-"`
 }
 
 // CtxCancelIfCanceled takes a context cancel func and a context. If the context is

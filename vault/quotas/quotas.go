@@ -11,6 +11,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/pathmanager"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -80,10 +81,12 @@ func (q Type) String() string {
 }
 
 const (
-	indexID             = "id"
-	indexName           = "name"
-	indexNamespace      = "ns"
-	indexNamespaceMount = "ns_mount"
+	indexID                 = "id"
+	indexName               = "name"
+	indexNamespace          = "ns"
+	indexNamespaceMount     = "ns_mount"
+	indexNamespaceMountPath = "ns_mount_path"
+	indexNamespaceMountRole = "ns_mount_role"
 )
 
 const (
@@ -165,10 +168,21 @@ type Manager struct {
 	lock       *sync.RWMutex
 }
 
+// QuotaLeaseInformation contains all of the information lease-count quotas require
+// from a lease to uniquely identify the lease-count quota to increment/decrement
+type QuotaLeaseInformation struct {
+	// We can determine path and namespace from leaseId
+	LeaseId string
+
+	// We need the role as it's not part of the leaseId, and is required
+	// to uniquely identify a lease count quota
+	Role string
+}
+
 // Quota represents the common properties of every quota type
 type Quota interface {
 	// allow checks the if the request is allowed by the quota type implementation.
-	allow(*Request) (Response, error)
+	allow(context.Context, *Request) (Response, error)
 
 	// quotaID is the identifier of the quota rule
 	quotaID() string
@@ -181,10 +195,13 @@ type Quota interface {
 
 	// close defines any cleanup behavior that needs to be executed when a quota
 	// rule is deleted.
-	close() error
+	close(context.Context) error
 
-	// handleRemount takes in the new mount path in the quota
-	handleRemount(string)
+	// Clone creates a clone of the calling quota
+	Clone() Quota
+
+	// handleRemount updates the mount and namesapce paths of the quota
+	handleRemount(string, string)
 }
 
 // Response holds information about the result of the Allow() call. The response
@@ -228,6 +245,9 @@ type Request struct {
 	// Path is the request path to which quota rules are being queried for
 	Path string
 
+	// Role is the role given as part of the request to a login endpoint
+	Role string
+
 	// NamespacePath is the namespace path to which the request belongs
 	NamespacePath string
 
@@ -261,42 +281,21 @@ func NewManager(logger log.Logger, walkFunc leaseWalkFunc, ms *metricsutil.Clust
 	return manager, nil
 }
 
-// SetQuota adds a new quota rule to the db.
+// SetQuota adds or updates a quota rule.
 func (m *Manager) SetQuota(ctx context.Context, qType string, quota Quota, loading bool) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	return m.setQuotaLocked(ctx, qType, quota, loading)
 }
 
-// setQuotaLocked should be called with the manager's lock held
+// setQuotaLocked creates a transaction, passes it into setQuotaLockedWithTxn and manages its lifecycle
+// along with updating lease quota counts
 func (m *Manager) setQuotaLocked(ctx context.Context, qType string, quota Quota, loading bool) error {
-	if qType == TypeLeaseCount.String() {
-		m.setIsPerfStandby(quota)
-	}
-
 	txn := m.db.Txn(true)
 	defer txn.Abort()
 
-	raw, err := txn.First(qType, "id", quota.quotaID())
+	err := m.setQuotaLockedWithTxn(ctx, qType, quota, loading, txn)
 	if err != nil {
-		return err
-	}
-
-	// If there already exists an entry in the db, remove that first.
-	if raw != nil {
-		err = txn.Delete(qType, raw)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Initialize the quota type implementation
-	if err := quota.initialize(m.logger, m.metricSink); err != nil {
-		return err
-	}
-
-	// Add the initialized quota type implementation to the db
-	if err := txn.Insert(qType, quota); err != nil {
 		return err
 	}
 
@@ -313,6 +312,44 @@ func (m *Manager) setQuotaLocked(ctx context.Context, qType string, quota Quota,
 	}
 
 	txn.Commit()
+	return nil
+}
+
+// setQuotaLockedWithTxn adds or updates a quota rule, modifying the db as well as
+// any runtime elements such as goroutines, using the transaction passed in
+// It should be called with the write lock held.
+func (m *Manager) setQuotaLockedWithTxn(ctx context.Context, qType string, quota Quota, loading bool, txn *memdb.Txn) error {
+	if qType == TypeLeaseCount.String() {
+		m.setIsPerfStandby(quota)
+	}
+
+	raw, err := txn.First(qType, indexID, quota.quotaID())
+	if err != nil {
+		return err
+	}
+
+	// If there already exists an entry in the db, remove that first.
+	if raw != nil {
+		quota := raw.(Quota)
+		if err := quota.close(ctx); err != nil {
+			return err
+		}
+		err = txn.Delete(qType, raw)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Initialize the quota type implementation
+	if err := quota.initialize(m.logger, m.metricSink); err != nil {
+		return err
+	}
+
+	// Add the initialized quota type implementation to the db
+	if err := txn.Insert(qType, quota); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -370,7 +407,7 @@ func (m *Manager) QuotaByName(qType string, name string) (Quota, error) {
 }
 
 // QuotaByFactors returns the quota rule that matches the provided factors
-func (m *Manager) QuotaByFactors(ctx context.Context, qType, nsPath, mountPath string) (Quota, error) {
+func (m *Manager) QuotaByFactors(ctx context.Context, qType, nsPath, mountPath, pathSuffix, role string) (Quota, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
@@ -381,10 +418,18 @@ func (m *Manager) QuotaByFactors(ctx context.Context, qType, nsPath, mountPath s
 	}
 
 	idx := indexNamespace
-	args := []interface{}{nsPath, false}
+	args := []interface{}{nsPath, false, false, false}
 	if mountPath != "" {
-		idx = indexNamespaceMount
-		args = []interface{}{nsPath, mountPath}
+		if pathSuffix != "" {
+			idx = indexNamespaceMountPath
+			args = []interface{}{nsPath, mountPath, pathSuffix, false}
+		} else if role != "" {
+			idx = indexNamespaceMountRole
+			args = []interface{}{nsPath, mountPath, false, role}
+		} else {
+			idx = indexNamespaceMount
+			args = []interface{}{nsPath, mountPath, false, false}
+		}
 	}
 
 	txn := m.db.Txn(false)
@@ -397,6 +442,7 @@ func (m *Manager) QuotaByFactors(ctx context.Context, qType, nsPath, mountPath s
 		quotas = append(quotas, raw.(Quota))
 	}
 	if len(quotas) > 1 {
+		m.logger.Debug("conflicting quotas in QuotaByFactors", "matching_quotas", quotas)
 		return nil, fmt.Errorf("conflicting quota definitions detected")
 	}
 	if len(quotas) == 0 {
@@ -421,6 +467,8 @@ func (m *Manager) QueryQuota(req *Request) (Quota, error) {
 // Priority rules are as follows:
 // - namespace specific quota takes precedence over global quota
 // - mount specific quota takes precedence over namespace specific quota
+// - path suffix specific quota takes precedence over mount specific quota
+// - role based quota takes precedence over path suffix/mount specific quota
 func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 	if txn == nil {
 		txn = m.db.Txn(false)
@@ -446,6 +494,7 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 			quotas = append(quotas, quota)
 		}
 		if len(quotas) > 1 {
+			m.logger.Debug("conflicting quotas in queryQuota", "matching_quotas", quotas, "args", args)
 			return nil, fmt.Errorf("conflicting quota definitions detected")
 		}
 		if len(quotas) == 0 {
@@ -455,8 +504,41 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 		return quotas[0], nil
 	}
 
+	// Fetch role suffix quota
+	quota, err := quotaFetchFunc(indexNamespaceMountRole, req.NamespacePath, req.MountPath, false, req.Role)
+	if err != nil {
+		return nil, err
+	}
+	if quota != nil {
+		return quota, nil
+	}
+
+	// Fetch path suffix quota
+	pathSuffix := strings.TrimSuffix(strings.TrimPrefix(strings.TrimPrefix(req.Path, req.NamespacePath), req.MountPath), "/")
+	quota, err = quotaFetchFunc(indexNamespaceMountPath, req.NamespacePath, req.MountPath, pathSuffix, false)
+	if err != nil {
+		return nil, err
+	}
+	if quota != nil {
+		return quota, nil
+	}
+
+	// Fetch path suffix quotas with globbing
+	// Request paths which match the resulting glob (i.e. share the same prefix prior to the glob) are in scope for the quota
+	for i := 0; i <= len(pathSuffix); i++ {
+		trimmedSuffixWithGlob := pathSuffix[:len(pathSuffix)-i] + "*"
+		// Check to see if a quota exists with this particular pattern
+		quota, err = quotaFetchFunc(indexNamespaceMountPath, req.NamespacePath, req.MountPath, trimmedSuffixWithGlob, false)
+		if err != nil {
+			return nil, err
+		}
+		if quota != nil {
+			return quota, nil
+		}
+	}
+
 	// Fetch mount quota
-	quota, err := quotaFetchFunc(indexNamespaceMount, req.NamespacePath, req.MountPath)
+	quota, err = quotaFetchFunc(indexNamespaceMount, req.NamespacePath, req.MountPath, false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -465,7 +547,7 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 	}
 
 	// Fetch ns quota. If NamespacePath is root, this will return the global quota.
-	quota, err = quotaFetchFunc(indexNamespace, req.NamespacePath, false)
+	quota, err = quotaFetchFunc(indexNamespace, req.NamespacePath, false, false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -482,7 +564,7 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 	}
 
 	// Fetch global quota
-	quota, err = quotaFetchFunc(indexNamespace, "root", false)
+	quota, err = quotaFetchFunc(indexNamespace, "root", false, false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -510,7 +592,7 @@ func (m *Manager) DeleteQuota(ctx context.Context, qType string, name string) er
 	}
 
 	quota := raw.(Quota)
-	if err := quota.close(); err != nil {
+	if err := quota.close(ctx); err != nil {
 		return err
 	}
 
@@ -533,7 +615,7 @@ func (m *Manager) DeleteQuota(ctx context.Context, qType string, name string) er
 // ApplyQuota runs the request against any quota rule that is applicable to it. If
 // there are multiple quota rule that matches the request parameters, rule that
 // takes precedence will be used to allow/reject the request.
-func (m *Manager) ApplyQuota(req *Request) (Response, error) {
+func (m *Manager) ApplyQuota(ctx context.Context, req *Request) (Response, error) {
 	var resp Response
 
 	quota, err := m.QueryQuota(req)
@@ -554,7 +636,7 @@ func (m *Manager) ApplyQuota(req *Request) (Response, error) {
 		return resp, nil
 	}
 
-	return quota.allow(req)
+	return quota.allow(ctx, req)
 }
 
 // SetEnableRateLimitAuditLogging updates the operator preference regarding the
@@ -708,6 +790,16 @@ func dbSchema() *memdb.DBSchema {
 							&memdb.FieldSetIndex{
 								Field: "MountPath",
 							},
+							// By sending false as the query parameter, we can
+							// query just the namespace specific quota.
+							&memdb.FieldSetIndex{
+								Field: "PathSuffix",
+							},
+							// By sending false as the query parameter, we can
+							// query just the namespace specific quota.
+							&memdb.FieldSetIndex{
+								Field: "Role",
+							},
 						},
 					},
 				},
@@ -721,6 +813,60 @@ func dbSchema() *memdb.DBSchema {
 							},
 							&memdb.StringFieldIndex{
 								Field: "MountPath",
+							},
+							// By sending false as the query parameter, we can
+							// query just the namespace specific quota.
+							&memdb.FieldSetIndex{
+								Field: "PathSuffix",
+							},
+							// By sending false as the query parameter, we can
+							// query just the namespace specific quota.
+							&memdb.FieldSetIndex{
+								Field: "Role",
+							},
+						},
+					},
+				},
+				indexNamespaceMountRole: {
+					Name:         indexNamespaceMountRole,
+					AllowMissing: true,
+					Indexer: &memdb.CompoundMultiIndex{
+						Indexes: []memdb.Indexer{
+							&memdb.StringFieldIndex{
+								Field: "NamespacePath",
+							},
+							&memdb.StringFieldIndex{
+								Field: "MountPath",
+							},
+							// By sending false as the query parameter, we can
+							// query just the role specific quota.
+							&memdb.FieldSetIndex{
+								Field: "PathSuffix",
+							},
+							&memdb.StringFieldIndex{
+								Field: "Role",
+							},
+						},
+					},
+				},
+				indexNamespaceMountPath: {
+					Name:         indexNamespaceMountPath,
+					AllowMissing: true,
+					Indexer: &memdb.CompoundMultiIndex{
+						Indexes: []memdb.Indexer{
+							&memdb.StringFieldIndex{
+								Field: "NamespacePath",
+							},
+							&memdb.StringFieldIndex{
+								Field: "MountPath",
+							},
+							&memdb.StringFieldIndex{
+								Field: "PathSuffix",
+							},
+							// By sending false as the query parameter, we can
+							// query just the namespace specific quota.
+							&memdb.FieldSetIndex{
+								Field: "Role",
 							},
 						},
 					},
@@ -757,11 +903,16 @@ func (m *Manager) Invalidate(key string) {
 	default:
 		splitKeys := strings.Split(key, "/")
 		if len(splitKeys) != 2 {
-			m.logger.Error("incorrect key while invalidating quota rule")
+			m.logger.Error("incorrect key while invalidating quota rule", "key", key)
 			return
 		}
 		qType := splitKeys[0]
 		name := splitKeys[1]
+
+		if qType == TypeLeaseCount.String() && m.isDRSecondary {
+			// lease count invalidation not supported on DR Secondary
+			return
+		}
 
 		// Read quota rule from storage
 		quota, err := Load(m.ctx, m.storage, qType, name)
@@ -836,13 +987,14 @@ func Load(ctx context.Context, storage logical.Storage, qType, name string) (Quo
 
 // Setup loads the quota configuration and all the quota rules into the
 // quota manager.
-func (m *Manager) Setup(ctx context.Context, storage logical.Storage, isPerfStandby bool) error {
+func (m *Manager) Setup(ctx context.Context, storage logical.Storage, isPerfStandby, isDRSecondary bool) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	m.storage = storage
 	m.ctx = ctx
 	m.isPerfStandby = isPerfStandby
+	m.isDRSecondary = isDRSecondary
 
 	// Load the quota configuration from storage and load it into the quota
 	// manager.
@@ -879,27 +1031,36 @@ func (m *Manager) Setup(ctx context.Context, storage logical.Storage, isPerfStan
 		return err
 	}
 
-	// Load the quota rules for all supported types from storage and load it in
-	// the quota manager.
 	for _, qType := range quotaTypes() {
-		names, err := logical.CollectKeys(ctx, logical.NewStorageView(storage, StoragePrefix+qType+"/"))
+		m.setupQuotaType(ctx, storage, qType)
+	}
+
+	return nil
+}
+
+func (m *Manager) setupQuotaType(ctx context.Context, storage logical.Storage, quotaType string) error {
+	if quotaType == TypeLeaseCount.String() && m.isDRSecondary {
+		m.logger.Trace("lease count quotas are not processed on DR Secondaries")
+		return nil
+	}
+
+	names, err := logical.CollectKeys(ctx, logical.NewStorageView(storage, StoragePrefix+quotaType+"/"))
+	if err != nil {
+		return err
+	}
+	for _, name := range names {
+		quota, err := Load(ctx, m.storage, quotaType, name)
 		if err != nil {
-			return nil
+			return err
 		}
-		for _, name := range names {
-			quota, err := Load(ctx, m.storage, qType, name)
-			if err != nil {
-				return err
-			}
 
-			if quota == nil {
-				continue
-			}
+		if quota == nil {
+			continue
+		}
 
-			err = m.setQuotaLocked(ctx, qType, quota, true)
-			if err != nil {
-				return err
-			}
+		err = m.setQuotaLocked(ctx, quotaType, quota, true)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -914,42 +1075,76 @@ func QuotaStoragePath(quotaType, name string) string {
 
 // HandleRemount updates the quota subsystem about the remount operation that
 // took place. Quota manager will trigger the quota specific updates including
-// the mount path update..
-func (m *Manager) HandleRemount(ctx context.Context, nsPath, fromPath, toPath string) error {
+// the mount path update and the namespace update
+func (m *Manager) HandleRemount(ctx context.Context, from, to namespace.MountPathDetails) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
+	// Grab a write transaction, as we want to save the updated quota in memdb
 	txn := m.db.Txn(true)
 	defer txn.Abort()
 
-	// nsPath would have been made non-empty during insertion. Use non-empty value
+	// quota namespace would have been made non-empty during insertion. Use non-empty value
 	// during query as well.
-	if nsPath == "" {
-		nsPath = "root"
+	fromNs := from.Namespace.Path
+	if fromNs == "" {
+		fromNs = namespace.RootNamespaceID
 	}
 
-	idx := indexNamespaceMount
+	toNs := to.Namespace.Path
+	if toNs == "" {
+		toNs = namespace.RootNamespaceID
+	}
+
 	leaseQuotaUpdated := false
-	args := []interface{}{nsPath, fromPath}
-	for _, quotaType := range quotaTypes() {
-		iter, err := txn.Get(quotaType, idx, args...)
-		if err != nil {
-			return err
-		}
-		for raw := iter.Next(); raw != nil; raw = iter.Next() {
-			quota := raw.(Quota)
-			quota.handleRemount(toPath)
-			entry, err := logical.StorageEntryJSON(QuotaStoragePath(quotaType, quota.QuotaName()), quota)
+
+	updateMounts := func(idx string, args ...interface{}) error {
+		for _, quotaType := range quotaTypes() {
+			iter, err := txn.Get(quotaType, idx, args...)
 			if err != nil {
 				return err
 			}
-			if err := m.storage.Put(ctx, entry); err != nil {
-				return err
-			}
-			if quotaType == TypeLeaseCount.String() {
-				leaseQuotaUpdated = true
+			for raw := iter.Next(); raw != nil; raw = iter.Next() {
+				quota := raw.(Quota)
+
+				// Clone the object and update it
+				clonedQuota := quota.Clone()
+				clonedQuota.handleRemount(to.MountPath, toNs)
+				// Update both underlying storage and memdb with the quota change
+				entry, err := logical.StorageEntryJSON(QuotaStoragePath(quotaType, quota.QuotaName()), quota)
+				if err != nil {
+					return err
+				}
+				if err := m.storage.Put(ctx, entry); err != nil {
+					return err
+				}
+				if err := m.setQuotaLockedWithTxn(ctx, quotaType, clonedQuota, false, txn); err != nil {
+					return err
+				}
+				if quotaType == TypeLeaseCount.String() {
+					leaseQuotaUpdated = true
+				}
 			}
 		}
+		return nil
+	}
+
+	// Update mounts for everything without a path prefix or role
+	err := updateMounts(indexNamespaceMount, fromNs, from.MountPath, false, false)
+	if err != nil {
+		return err
+	}
+
+	// Update mounts for everything with a path prefix
+	err = updateMounts(indexNamespaceMount, fromNs, from.MountPath, true, false)
+	if err != nil {
+		return err
+	}
+
+	// Update mounts for everything with a role
+	err = updateMounts(indexNamespaceMount, fromNs, from.MountPath, false, true)
+	if err != nil {
+		return err
 	}
 
 	if leaseQuotaUpdated {
@@ -964,7 +1159,8 @@ func (m *Manager) HandleRemount(ctx context.Context, nsPath, fromPath, toPath st
 }
 
 // HandleBackendDisabling updates the quota subsystem with the disabling of auth
-// or secret engine disabling.
+// or secret engine disabling. This should only be called on the primary cluster
+// node.
 func (m *Manager) HandleBackendDisabling(ctx context.Context, nsPath, mountPath string) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -978,26 +1174,46 @@ func (m *Manager) HandleBackendDisabling(ctx context.Context, nsPath, mountPath 
 		nsPath = "root"
 	}
 
-	idx := indexNamespaceMount
 	leaseQuotaDeleted := false
-	args := []interface{}{nsPath, mountPath}
-	for _, quotaType := range quotaTypes() {
-		iter, err := txn.Get(quotaType, idx, args...)
-		if err != nil {
-			return err
+
+	updateMounts := func(idx string, args ...interface{}) error {
+		for _, quotaType := range quotaTypes() {
+			iter, err := txn.Get(quotaType, idx, args...)
+			if err != nil {
+				return err
+			}
+			for raw := iter.Next(); raw != nil; raw = iter.Next() {
+				if err := txn.Delete(quotaType, raw); err != nil {
+					return fmt.Errorf("failed to delete quota from db after mount disabling; namespace %q, err %v", nsPath, err)
+				}
+				quota := raw.(Quota)
+				if err := m.storage.Delete(ctx, QuotaStoragePath(quotaType, quota.QuotaName())); err != nil {
+					return fmt.Errorf("failed to delete quota from storage after mount disabling; namespace %q, err %v", nsPath, err)
+				}
+				if quotaType == TypeLeaseCount.String() {
+					leaseQuotaDeleted = true
+				}
+			}
 		}
-		for raw := iter.Next(); raw != nil; raw = iter.Next() {
-			if err := txn.Delete(quotaType, raw); err != nil {
-				return fmt.Errorf("failed to delete quota from db after mount disabling; namespace %q, err %v", nsPath, err)
-			}
-			quota := raw.(Quota)
-			if err := m.storage.Delete(ctx, QuotaStoragePath(quotaType, quota.QuotaName())); err != nil {
-				return fmt.Errorf("failed to delete quota from storage after mount disabling; namespace %q, err %v", nsPath, err)
-			}
-			if quotaType == TypeLeaseCount.String() {
-				leaseQuotaDeleted = true
-			}
-		}
+		return nil
+	}
+
+	// Update mounts for everything without a path prefix or role
+	err := updateMounts(indexNamespaceMount, nsPath, mountPath, false, false)
+	if err != nil {
+		return err
+	}
+
+	// Update mounts for everything with a path prefix
+	err = updateMounts(indexNamespaceMount, nsPath, mountPath, true, false)
+	if err != nil {
+		return err
+	}
+
+	// Update mounts for everything with a role
+	err = updateMounts(indexNamespaceMount, nsPath, mountPath, false, true)
+	if err != nil {
+		return err
 	}
 
 	if leaseQuotaDeleted {

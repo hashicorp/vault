@@ -14,9 +14,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-var (
-	testImagePull sync.Once
-)
+var testImagePull sync.Once
 
 func TestBackend_config_connection(t *testing.T) {
 	var resp *logical.Response
@@ -59,7 +57,7 @@ func TestBackend_basic(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURI := mongodb.PrepareTestContainer(t, "latest")
+	cleanup, connURI := mongodb.PrepareTestContainer(t, "5.0.10")
 	defer cleanup()
 	connData := map[string]interface{}{
 		"uri": connURI,
@@ -83,7 +81,7 @@ func TestBackend_roleCrud(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURI := mongodb.PrepareTestContainer(t, "latest")
+	cleanup, connURI := mongodb.PrepareTestContainer(t, "5.0.10")
 	defer cleanup()
 	connData := map[string]interface{}{
 		"uri": connURI,
@@ -109,7 +107,7 @@ func TestBackend_leaseWriteRead(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURI := mongodb.PrepareTestContainer(t, "latest")
+	cleanup, connURI := mongodb.PrepareTestContainer(t, "5.0.10")
 	defer cleanup()
 	connData := map[string]interface{}{
 		"uri": connURI,
@@ -123,7 +121,6 @@ func TestBackend_leaseWriteRead(t *testing.T) {
 			testAccStepReadLease(),
 		},
 	})
-
 }
 
 func testAccStepConfig(d map[string]interface{}, expectError bool) logicaltest.TestStep {
@@ -265,5 +262,7 @@ func testAccStepReadLease() logicaltest.TestStep {
 	}
 }
 
-const testDb = "foo"
-const testMongoDBRoles = `["readWrite",{"role":"read","db":"bar"}]`
+const (
+	testDb           = "foo"
+	testMongoDBRoles = `["readWrite",{"role":"read","db":"bar"}]`
+)

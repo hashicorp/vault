@@ -1,7 +1,6 @@
 ---
 layout: api
 page_title: /sys/config/ui - HTTP API
-sidebar_title: <code>/sys/config/ui</code>
 description: The '/sys/config/ui' endpoint configures the UI.
 ---
 
@@ -64,7 +63,7 @@ This endpoint allows configuring the values to be returned for the UI header.
 
 | Method | Path                           |
 | :----- | :----------------------------- |
-| `PUT`  | `/sys/config/ui/headers/:name` |
+| `POST` | `/sys/config/ui/headers/:name` |
 
 ### Parameters
 
@@ -85,7 +84,7 @@ This endpoint allows configuring the values to be returned for the UI header.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/config/ui/headers/X-Custom-Header
 ```

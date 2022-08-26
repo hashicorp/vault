@@ -154,7 +154,7 @@ func TestSystem_GRPC_entityInfo(t *testing.T) {
 			"foo": "bar",
 		},
 		Aliases: []*logical.Alias{
-			&logical.Alias{
+			{
 				MountType:     "logical",
 				MountAccessor: "accessor",
 				Name:          "name",
@@ -213,7 +213,9 @@ func TestSystem_GRPC_groupsForEntity(t *testing.T) {
 func TestSystem_GRPC_pluginEnv(t *testing.T) {
 	sys := logical.TestSystemView()
 	sys.PluginEnvironment = &logical.PluginEnvironment{
-		VaultVersion: "0.10.42",
+		VaultVersion:           "0.10.42",
+		VaultVersionPrerelease: "dev",
+		VaultVersionMetadata:   "ent",
 	}
 	client, _ := plugin.TestGRPCConn(t, func(s *grpc.Server) {
 		pb.RegisterSystemViewServer(s, &gRPCSystemViewServer{

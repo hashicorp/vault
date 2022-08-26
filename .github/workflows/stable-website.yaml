@@ -14,7 +14,7 @@ jobs:
       with:
         ref: stable-website
     - run: |
-        git fetch --no-tags --prune origin master
+        git fetch --no-tags --prune origin main
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git cherry-pick ${{ github.sha }}

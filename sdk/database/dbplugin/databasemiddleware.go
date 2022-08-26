@@ -323,11 +323,11 @@ func (mw *DatabaseErrorSanitizerMiddleware) sanitize(err error) error {
 			// error without changing the actual error message
 			s, ok := status.FromError(err)
 			if ok {
-				err = status.Error(s.Code(), strings.Replace(s.Message(), k, v.(string), -1))
+				err = status.Error(s.Code(), strings.ReplaceAll(s.Message(), k, v.(string)))
 				continue
 			}
 
-			err = errors.New(strings.Replace(err.Error(), k, v.(string), -1))
+			err = errors.New(strings.ReplaceAll(err.Error(), k, v.(string)))
 		}
 	}
 	return err

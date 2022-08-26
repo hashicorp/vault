@@ -1,38 +1,53 @@
-<form {{action 'doSubmit' (hash input=input hash_algorithm=hash_algorithm signature_algorithm=signature_algorithm key_version=key_version context=context prehashed=prehashed encodedBase64=encodedBase64) on="submit"}}>
+<form
+  onsubmit={{action
+    @doSubmit
+    (hash
+      input=@input
+      hash_algorithm=@hash_algorithm
+      signature_algorithm=@signature_algorithm
+      key_version=@key_version
+      context=@context
+      prehashed=@prehashed
+      encodedBase64=@encodedBase64
+    )
+  }}
+>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="signing" />
     <div class="content">
-      <p>Return the cryptographic signature of the given data using <code>{{key.name}}</code> as the encryption key and the specified hash algorithm.</p>
+      <p>
+        Return the cryptographic signature of the given data using
+        <code>{{@key.name}}</code>
+        as the encryption key and the specified hash algorithm.
+      </p>
     </div>
-    <KeyVersionSelect @key={{key}} @onVersionChange={{action (mut key_version)}} @key_version={{key_version}} />
+    <KeyVersionSelect @key={{@key}} @onVersionChange={{action (mut @key_version)}} @key_version={{@key_version}} />
     <div class="field">
-      <label for="input" class="is-label">
-        Input
-      </label>
       <div class="control is-relative">
-        <IvyCodemirror @value={{input}} @valueUpdated={{action (mut input)}} @options={{hash
-              lineNumbers=true
-              tabSize=2
-              mode='ruby'
-              theme='hashi'
-            }} @data-test-transit-input="input" />
+        <JsonEditor
+          @title="Input"
+          @value={{@input}}
+          @valueUpdated={{action (mut @input)}}
+          @mode="ruby"
+          @data-test-transit-input="input"
+        />
       </div>
     </div>
     <div class="field">
-      <Input @type="checkbox" @id="encodedBase64" @checked={{encodedBase64}} data-test-transit-input="encodedBase64" />
+      <Input @type="checkbox" id="encodedBase64" @checked={{@encodedBase64}} data-test-transit-input="encodedBase64" />
       <label for="encodedBase64">This data is already encoded in base64</label>
     </div>
-    {{#if key.derived}}
+    {{#if @key.derived}}
       <div class="field">
         <label for="context" class="is-label">
           Context
         </label>
         <div class="field has-addons">
           <div class="control">
-            <Input @type="text" @id="context" @value={{context}} class="input" data-test-transit-input="context" />
+            <Input @type="text" id="context" @value={{@context}} class="input" data-test-transit-input="context" />
           </div>
           <div class="control">
-            <B64Toggle @value={{context}} @data-test-transit-b64-toggle="context" />
+            <B64Toggle @value={{@context}} @data-test-transit-b64-toggle="context" />
           </div>
         </div>
       </div>
@@ -44,20 +59,22 @@
         </div>
         <div class="level-right">
           <div class="control is-flex">
-            <Input @id="prehashed" @type="checkbox" @name="prehashed" class="switch is-rounded is-success is-small" @checked={{prehashed}} />
+            <Input
+              id="prehashed"
+              @type="checkbox"
+              name="prehashed"
+              class="switch is-rounded is-success is-small"
+              @checked={{@prehashed}}
+            />
             <label for="prehashed">Prehashed</label>
           </div>
         </div>
       </div>
       <div class="control is-expanded">
         <div class="select is-fullwidth">
-          <select
-            name="hash_algorithm"
-            id="hash_algorithm"
-            onchange={{action (mut hash_algorithm) value="target.value"}}
-            >
+          <select name="hash_algorithm" id="hash_algorithm" onchange={{action (mut @hash_algorithm) value="target.value"}}>
             {{#each (sha2-digest-sizes) as |algo|}}
-              <option selected={{if hash_algorithm (eq hash_algorithm algo) (eq algo 'sha2-256')}} value={{algo}}>
+              <option selected={{if @hash_algorithm (eq @hash_algorithm algo) (eq algo "sha2-256")}} value={{algo}}>
                 {{algo}}
               </option>
             {{/each}}
@@ -65,7 +82,7 @@
         </div>
       </div>
     </div>
-    {{#if (or (eq key.type 'rsa-2048') (eq key.type 'rsa-3072') (eq key.type 'rsa-4096'))}}
+    {{#if (or (eq @key.type "rsa-2048") (eq @key.type "rsa-3072") (eq @key.type "rsa-4096"))}}
       <div class="field">
         <label for="signature_algorithm" class="is-label">Signature Algorithm</label>
         <div class="control is-expanded">
@@ -74,10 +91,13 @@
               name="signature_algorithm"
               id="signature_algorithm"
               data-test-signature-algorithm="true"
-              onchange={{action (mut signature_algorithm) value="target.value"}}
-              >
-              {{#each (array 'pss' 'pkcs1v15') as |sigAlgo|}}
-                <option selected={{if signature_algorithm (eq signature_algorithm sigAlgo) (eq sigAlgo 'pss')}} value={{sigAlgo}}>
+              onchange={{action (mut @signature_algorithm) value="target.value"}}
+            >
+              {{#each (array "pss" "pkcs1v15") as |sigAlgo|}}
+                <option
+                  selected={{if @signature_algorithm (eq @signature_algorithm sigAlgo) (eq sigAlgo "pss")}}
+                  value={{sigAlgo}}
+                >
                   {{sigAlgo}}
                 </option>
               {{/each}}
@@ -89,7 +109,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <button type="submit" disabled={{loading}} class="button is-primary {{if loading 'is-loading'}}">
+      <button type="submit" disabled={{@loading}} class="button is-primary {{if @loading 'is-loading'}}">
         Sign
       </button>
     </div>
@@ -97,21 +117,23 @@
 </form>
 <Modal
   @title="Copy your signature"
-  @onClose={{action (mut isModalActive) false}}
-  @isActive={{isModalActive}}
-  data-test-sign-modal>
+  @onClose={{action (mut @isModalActive) false}}
+  @isActive={{@isModalActive}}
+  data-test-sign-modal
+>
   <section class="modal-card-body">
     <div class="box is-shadowless is-fullwidth is-sideless">
       <h2 class="title is-6">Signature</h2>
       <div class="copy-text level">
-        <code class="level-left" data-test-encrypted-value="signature">{{signature}}</code>
+        <code class="level-left" data-test-encrypted-value="signature">{{@signature}}</code>
         <CopyButton
           class="button is-compact is-transparent level-right"
           data-test-button="modal-copy"
-          @clipboardText={{signature}}
+          @clipboardText={{@signature}}
           @buttonType="button"
-          @success={{action (set-flash-message 'Signature copied!')}}>
-          <Icon @glyph="copy-action" aria-label="Copy" />
+          @success={{action (set-flash-message "Signature copied!")}}
+        >
+          <Icon @name="clipboard-copy" aria-label="Copy" />
         </CopyButton>
       </div>
     </div>
@@ -120,9 +142,10 @@
     <CopyButton
       class="button is-primary copy-close"
       data-test-button="modal-copy-close"
-      @clipboardText={{signature}}
+      @clipboardText={{@signature}}
       @buttonType="button"
-      @success={{action "toggleModal" "Signature copied!"}}>
+      @success={{action @toggleModal "Signature copied!"}}
+    >
       Copy &amp; Close
     </CopyButton>
   </footer>

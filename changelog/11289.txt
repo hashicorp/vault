@@ -1,0 +1,3 @@
+```release-note:enhancement
+http: Add optional HTTP response headers for hostname and raft node ID
+```

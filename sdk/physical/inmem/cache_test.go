@@ -327,5 +327,4 @@ func TestCache_Refresh(t *testing.T) {
 	if string(r.Value) != "baz" {
 		t.Fatalf("expected value baz, got %s", string(r.Value))
 	}
-
 }

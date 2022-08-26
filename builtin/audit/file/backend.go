@@ -12,7 +12,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -73,15 +72,27 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 	}
 
 	// Check if mode is provided
-	mode := os.FileMode(0600)
+	mode := os.FileMode(0o600)
 	if modeRaw, ok := conf.Config["mode"]; ok {
 		m, err := strconv.ParseUint(modeRaw, 8, 32)
 		if err != nil {
 			return nil, err
 		}
-		if m != 0 {
+		switch m {
+		case 0:
+			// if mode is 0000, then do not modify file mode
+			if path != "stdout" && path != "discard" {
+				fileInfo, err := os.Stat(path)
+				if err != nil {
+					return nil, err
+				}
+				mode = fileInfo.Mode()
+			}
+		default:
 			mode = os.FileMode(m)
+
 		}
+
 	}
 
 	b := &Backend{
@@ -121,7 +132,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 		// otherwise it will be too late to catch later without problems
 		// (ref: https://github.com/hashicorp/vault/issues/550)
 		if err := b.open(); err != nil {
-			return nil, errwrap.Wrapf(fmt.Sprintf("sanity check failed; unable to open %q for writing: {{err}}", path), err)
+			return nil, fmt.Errorf("sanity check failed; unable to open %q for writing: %w", path, err)
 		}
 	}
 

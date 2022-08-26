@@ -3,6 +3,7 @@ import Controller from '@ember/controller';
 
 export default Controller.extend({
   wizard: service(),
+  showLicenseError: false,
 
   actions: {
     transitionToCluster(resp) {
@@ -18,6 +19,10 @@ export default Controller.extend({
 
     isUnsealed(data) {
       return data.sealed === false;
+    },
+
+    handleLicenseError() {
+      this.set('showLicenseError', true);
     },
   },
 });

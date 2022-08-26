@@ -18,7 +18,7 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 		ImageTag:      version,
 		ContainerName: "ldap",
 		Ports:         []string{"389/tcp"},
-		//Env:        []string{"LDAP_DEBUG_LEVEL=384"},
+		// Env:        []string{"LDAP_DEBUG_LEVEL=384"},
 	})
 	if err != nil {
 		t.Fatalf("could not start local LDAP docker container: %s", err)
@@ -27,6 +27,7 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 	cfg = new(ldaputil.ConfigEntry)
 	cfg.UserDN = "ou=people,dc=planetexpress,dc=com"
 	cfg.UserAttr = "cn"
+	cfg.UserFilter = "({{.UserAttr}}={{.Username}})"
 	cfg.BindDN = "cn=admin,dc=planetexpress,dc=com"
 	cfg.BindPassword = "GoodNewsEveryone"
 	cfg.GroupDN = "ou=people,dc=planetexpress,dc=com"
@@ -54,7 +55,6 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 
 		return docker.NewServiceURLParse(connURL)
 	})
-
 	if err != nil {
 		t.Fatalf("could not start local LDAP docker container: %s", err)
 	}

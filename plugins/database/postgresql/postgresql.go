@@ -7,19 +7,18 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
-	"github.com/lib/pq"
+	"github.com/hashicorp/vault/sdk/helper/template"
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
 const (
-	postgreSQLTypeName         = "postgres"
+	postgreSQLTypeName         = "pgx"
 	defaultExpirationStatement = `
 ALTER ROLE "{{name}}" VALID UNTIL '{{expiration}}';
 `
@@ -28,6 +27,8 @@ ALTER ROLE "{{username}}" WITH PASSWORD '{{password}}';
 `
 
 	expirationFormat = "2006-01-02 15:04:05-0700"
+
+	defaultUserNameTemplate = `{{ printf "v-%s-%s-%s-%s" (.DisplayName | truncate 8) (.RoleName | truncate 8) (random 20) (unix_time) | truncate 63 }}`
 )
 
 var (
@@ -47,7 +48,6 @@ var (
 	singleQuotedPhrases = regexp.MustCompile(`('.*?')`)
 )
 
-// New implements builtinplugins.BuiltinFactory
 func New() (interface{}, error) {
 	db := new()
 	// Wrap the plugin with middleware to sanitize errors
@@ -68,6 +68,8 @@ func new() *PostgreSQL {
 
 type PostgreSQL struct {
 	*connutil.SQLConnectionProducer
+
+	usernameProducer template.StringTemplate
 }
 
 func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
@@ -75,6 +77,26 @@ func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequ
 	if err != nil {
 		return dbplugin.InitializeResponse{}, err
 	}
+
+	usernameTemplate, err := strutil.GetString(req.Config, "username_template")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve username_template: %w", err)
+	}
+	if usernameTemplate == "" {
+		usernameTemplate = defaultUserNameTemplate
+	}
+
+	up, err := template.NewTemplate(template.Template(usernameTemplate))
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("unable to initialize username template: %w", err)
+	}
+	p.usernameProducer = up
+
+	_, err = p.usernameProducer.Generate(dbplugin.UsernameMetadata{})
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("invalid username template: %w", err)
+	}
+
 	resp := dbplugin.InitializeResponse{
 		Config: newConf,
 	}
@@ -158,7 +180,7 @@ func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, ch
 				"username": username,
 				"password": password,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return fmt.Errorf("failed to execute query: %w", err)
 			}
 		}
@@ -207,7 +229,7 @@ func (p *PostgreSQL) changeUserExpiration(ctx context.Context, username string, 
 				"username":   username,
 				"expiration": expirationStr,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return err
 			}
 		}
@@ -224,12 +246,7 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 	p.Lock()
 	defer p.Unlock()
 
-	username, err := credsutil.GenerateUsername(
-		credsutil.DisplayName(req.UsernameConfig.DisplayName, 8),
-		credsutil.RoleName(req.UsernameConfig.RoleName, 8),
-		credsutil.Separator("-"),
-		credsutil.MaxLength(63),
-	)
+	username, err := p.usernameProducer.Generate(req.UsernameConfig)
 	if err != nil {
 		return dbplugin.NewUserResponse{}, err
 	}
@@ -244,7 +261,6 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return dbplugin.NewUserResponse{}, fmt.Errorf("unable to start transaction: %w", err)
-
 	}
 	defer tx.Rollback()
 
@@ -257,7 +273,7 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 				"password":   req.Password,
 				"expiration": expirationStr,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, stmt); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, stmt); err != nil {
 				return dbplugin.NewUserResponse{}, fmt.Errorf("failed to execute query: %w", err)
 			}
 			continue
@@ -275,7 +291,7 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 				"password":   req.Password,
 				"expiration": expirationStr,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return dbplugin.NewUserResponse{}, fmt.Errorf("failed to execute query: %w", err)
 			}
 		}
@@ -327,7 +343,7 @@ func (p *PostgreSQL) customDeleteUser(ctx context.Context, username string, revo
 				"name":     username,
 				"username": username,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return err
 			}
 		}
@@ -380,27 +396,27 @@ func (p *PostgreSQL) defaultDeleteUser(ctx context.Context, username string) err
 		}
 		revocationStmts = append(revocationStmts, fmt.Sprintf(
 			`REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA %s FROM %s;`,
-			pq.QuoteIdentifier(schema),
-			pq.QuoteIdentifier(username)))
+			(schema),
+			dbutil.QuoteIdentifier(username)))
 
 		revocationStmts = append(revocationStmts, fmt.Sprintf(
 			`REVOKE USAGE ON SCHEMA %s FROM %s;`,
-			pq.QuoteIdentifier(schema),
-			pq.QuoteIdentifier(username)))
+			dbutil.QuoteIdentifier(schema),
+			dbutil.QuoteIdentifier(username)))
 	}
 
 	// for good measure, revoke all privileges and usage on schema public
 	revocationStmts = append(revocationStmts, fmt.Sprintf(
 		`REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM %s;`,
-		pq.QuoteIdentifier(username)))
+		dbutil.QuoteIdentifier(username)))
 
 	revocationStmts = append(revocationStmts, fmt.Sprintf(
 		"REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM %s;",
-		pq.QuoteIdentifier(username)))
+		dbutil.QuoteIdentifier(username)))
 
 	revocationStmts = append(revocationStmts, fmt.Sprintf(
 		"REVOKE USAGE ON SCHEMA public FROM %s;",
-		pq.QuoteIdentifier(username)))
+		dbutil.QuoteIdentifier(username)))
 
 	// get the current database name so we can issue a REVOKE CONNECT for
 	// this username
@@ -412,30 +428,30 @@ func (p *PostgreSQL) defaultDeleteUser(ctx context.Context, username string) err
 	if dbname.Valid {
 		revocationStmts = append(revocationStmts, fmt.Sprintf(
 			`REVOKE CONNECT ON DATABASE %s FROM %s;`,
-			pq.QuoteIdentifier(dbname.String),
-			pq.QuoteIdentifier(username)))
+			dbutil.QuoteIdentifier(dbname.String),
+			dbutil.QuoteIdentifier(username)))
 	}
 
 	// again, here, we do not stop on error, as we want to remove as
 	// many permissions as possible right now
 	var lastStmtError error
 	for _, query := range revocationStmts {
-		if err := dbtxn.ExecuteDBQuery(ctx, db, nil, query); err != nil {
+		if err := dbtxn.ExecuteDBQueryDirect(ctx, db, nil, query); err != nil {
 			lastStmtError = err
 		}
 	}
 
 	// can't drop if not all privileges are revoked
 	if rows.Err() != nil {
-		return errwrap.Wrapf("could not generate revocation statements for all rows: {{err}}", rows.Err())
+		return fmt.Errorf("could not generate revocation statements for all rows: %w", rows.Err())
 	}
 	if lastStmtError != nil {
-		return errwrap.Wrapf("could not perform all revocation statements: {{err}}", lastStmtError)
+		return fmt.Errorf("could not perform all revocation statements: %w", lastStmtError)
 	}
 
 	// Drop this user
 	stmt, err = db.PrepareContext(ctx, fmt.Sprintf(
-		`DROP ROLE IF EXISTS %s;`, pq.QuoteIdentifier(username)))
+		`DROP ROLE IF EXISTS %s;`, dbutil.QuoteIdentifier(username)))
 	if err != nil {
 		return err
 	}
@@ -466,7 +482,7 @@ func containsMultilineStatement(stmt string) bool {
 	}
 	stmtWithoutLiterals := stmt
 	for _, literal := range literals {
-		stmtWithoutLiterals = strings.Replace(stmt, literal, "", -1)
+		stmtWithoutLiterals = strings.ReplaceAll(stmt, literal, "")
 	}
 	// Now look for the word "END" specifically. This will miss any
 	// representations of END that aren't surrounded by spaces, but

@@ -12,22 +12,20 @@ export default Component.extend({
   targetNamespace: null,
   showLastSegment: false,
 
-  normalizedNamespace: computed('targetNamespace', function() {
+  normalizedNamespace: computed('targetNamespace', function () {
     let ns = this.targetNamespace;
     return (ns || '').replace(/\.+/g, '/').replace(/☃/g, '.');
   }),
 
-  namespaceDisplay: computed('normalizedNamespace', 'showLastSegment', function() {
+  namespaceDisplay: computed('normalizedNamespace', 'showLastSegment', function () {
     let ns = this.normalizedNamespace;
+    if (!ns) return 'root';
     let showLastSegment = this.showLastSegment;
-    let parts = ns.split('/');
-    if (ns === '') {
-      return 'root';
-    }
+    let parts = ns?.split('/');
     return showLastSegment ? parts[parts.length - 1] : ns;
   }),
 
-  isCurrentNamespace: computed('targetNamespace', 'currentNamespace', function() {
+  isCurrentNamespace: computed('targetNamespace', 'currentNamespace', function () {
     return this.currentNamespace === this.targetNamespace;
   }),
 

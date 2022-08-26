@@ -24,6 +24,7 @@ func (m mockUi) Ask(_ string) (string, error) {
 	m.t.FailNow()
 	return "", nil
 }
+
 func (m mockUi) AskSecret(_ string) (string, error) {
 	m.t.FailNow()
 	return "", nil
@@ -99,8 +100,7 @@ func TestStatusFormat(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedOutputString :=
-		`Key                           Value
+	expectedOutputString := `Key                           Value
 ---                           -----
 Recovery Seal Type            type
 Initialized                   true
@@ -111,6 +111,7 @@ Unseal Progress               3/1
 Unseal Nonce                  nonce
 Seal Migration in Progress    true
 Version                       version
+Build Date                    build date
 Storage Type                  storage type
 Cluster Name                  cluster name
 Cluster ID                    cluster id
@@ -130,8 +131,7 @@ Last WAL                      2`
 		t.Fatal(err)
 	}
 
-	expectedOutputString =
-		`Key                           Value
+	expectedOutputString = `Key                           Value
 ---                           -----
 Recovery Seal Type            type
 Initialized                   true
@@ -142,6 +142,7 @@ Unseal Progress               3/1
 Unseal Nonce                  nonce
 Seal Migration in Progress    true
 Version                       version
+Build Date                    build date
 Storage Type                  n/a
 HA Enabled                    false`
 
@@ -167,6 +168,7 @@ func getMockStatusData(emptyFields bool) SealStatusOutput {
 			Progress:     3,
 			Nonce:        "nonce",
 			Version:      "version",
+			BuildDate:    "build date",
 			Migration:    true,
 			ClusterName:  "cluster name",
 			ClusterID:    "cluster id",
@@ -198,6 +200,7 @@ func getMockStatusData(emptyFields bool) SealStatusOutput {
 			Progress:     3,
 			Nonce:        "nonce",
 			Version:      "version",
+			BuildDate:    "build date",
 			Migration:    true,
 			ClusterName:  "",
 			ClusterID:    "",

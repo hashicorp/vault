@@ -67,7 +67,7 @@ export default Component.extend(TRANSIT_PARAMS, {
     this._super(...arguments);
     // TODO figure out why get is needed here Ember Upgrade
     // eslint-disable-next-line ember/no-get
-    if (get(this, 'selectedAction')) {
+    if (this.selectedAction) {
       return;
     }
     // eslint-disable-next-line ember/no-get
@@ -92,7 +92,7 @@ export default Component.extend(TRANSIT_PARAMS, {
     });
   },
 
-  keyIsRSA: computed('key.type', function() {
+  keyIsRSA: computed('key.type', function () {
     let type = this.key.type;
     return type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
   }),
@@ -102,8 +102,8 @@ export default Component.extend(TRANSIT_PARAMS, {
     if (!model) {
       return null;
     }
-    const backend = get(model, 'backend') || get(model, 'id');
-    const id = get(model, 'id');
+    const backend = model.backend || model.id;
+    const id = model.id;
 
     return {
       backend,
@@ -134,7 +134,7 @@ export default Component.extend(TRANSIT_PARAMS, {
     }
 
     if (paramsToKeep) {
-      paramsToKeep.forEach(param => delete params[param]);
+      paramsToKeep.forEach((param) => delete params[param]);
     }
     //resets params still left in the object to defaults
     this.clearErrors();
@@ -170,8 +170,10 @@ export default Component.extend(TRANSIT_PARAMS, {
     if (options.wrapTTL) {
       props = assign({}, props, { wrappedToken: resp.wrap_info.token });
     }
-    this.toggleProperty('isModalActive');
-    this.setProperties(props);
+    if (!this.isDestroyed && !this.isDestroying) {
+      this.toggleProperty('isModalActive');
+      this.setProperties(props);
+    }
     if (action === 'rotate') {
       this.onRefresh();
     }
@@ -204,7 +206,7 @@ export default Component.extend(TRANSIT_PARAMS, {
 
     clearParams(params) {
       const arr = Array.isArray(params) ? params : [params];
-      arr.forEach(param => this.set(param, null));
+      arr.forEach((param) => this.set(param, null));
     },
 
     toggleModal(successMessage) {
@@ -235,7 +237,7 @@ export default Component.extend(TRANSIT_PARAMS, {
         .adapterFor('transit-key')
         .keyAction(action, { backend, id, payload }, options)
         .then(
-          resp => this.handleSuccess(resp, options, action),
+          (resp) => this.handleSuccess(resp, options, action),
           (...errArgs) => this.handleError(...errArgs)
         );
     },

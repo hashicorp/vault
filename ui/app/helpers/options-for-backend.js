@@ -8,7 +8,7 @@ const DEFAULT_DISPLAY = {
   create: 'Create secret',
   navigateTree: true,
   editComponent: 'secret-edit',
-  listItemPartial: 'partials/secret-list/item',
+  listItemPartial: 'secret-list/item',
 };
 const SECRET_BACKENDS = {
   aws: {
@@ -18,12 +18,12 @@ const SECRET_BACKENDS = {
     create: 'Create role',
     navigateTree: false,
     editComponent: 'role-aws-edit',
-    listItemPartial: 'partials/secret-list/aws-role-item',
+    listItemPartial: 'secret-list/aws-role-item',
   },
   pki: {
     displayName: 'PKI',
     navigateTree: false,
-    listItemPartial: 'partials/secret-list/pki-role-item',
+    listItemPartial: 'secret-list/pki-role-item',
     tabs: [
       {
         name: 'roles',
@@ -31,18 +31,18 @@ const SECRET_BACKENDS = {
         searchPlaceholder: 'Filter roles',
         item: 'role',
         create: 'Create role',
-        editComponent: 'role-pki-edit',
+        editComponent: 'pki/role-pki-edit',
       },
       {
-        name: 'certs',
+        name: 'cert',
         modelPrefix: 'cert/',
         label: 'Certificates',
         searchPlaceholder: 'Filter certificates',
         item: 'certificates',
         create: 'Create role',
-        tab: 'certs',
-        listItemPartial: 'partials/secret-list/pki-cert-item',
-        editComponent: 'pki-cert-show',
+        tab: 'cert',
+        listItemPartial: 'secret-list/pki-cert-item',
+        editComponent: 'pki/pki-cert-show',
       },
     ],
   },
@@ -53,12 +53,66 @@ const SECRET_BACKENDS = {
     create: 'Create role',
     navigateTree: false,
     editComponent: 'role-ssh-edit',
-    listItemPartial: 'partials/secret-list/ssh-role-item',
+    listItemPartial: 'secret-list/ssh-role-item',
+  },
+  database: {
+    displayName: 'Database',
+    navigateTree: false,
+    listItemPartial: 'secret-list/database-list-item',
+    hasOverview: true,
+    tabs: [
+      {
+        name: 'connection',
+        label: 'Connections',
+        searchPlaceholder: 'Filter connections',
+        item: 'connection',
+        create: 'Create connection',
+        editComponent: 'database-connection',
+        checkCapabilitiesPath: 'config',
+      },
+      {
+        name: 'role',
+        modelPrefix: 'role/',
+        label: 'Roles',
+        searchPlaceholder: 'Filter roles',
+        item: 'role',
+        create: 'Create role',
+        tab: 'role',
+        editComponent: 'database-role-edit',
+        checkCapabilitiesPath: 'roles',
+      },
+    ],
+  },
+  keymgmt: {
+    displayName: 'Key Management',
+    navigateTree: false,
+    listItemPartial: 'secret-list/item',
+    tabs: [
+      {
+        name: 'key',
+        label: 'Keys',
+        searchPlaceholder: 'Filter keys',
+        item: 'key',
+        create: 'Create key',
+        editComponent: 'keymgmt/key-edit',
+      },
+      {
+        name: 'provider',
+        modelPrefix: 'provider/',
+        label: 'Providers',
+        searchPlaceholder: 'Filter providers',
+        item: 'provider',
+        create: 'Create provider',
+        tab: 'provider',
+        editComponent: 'keymgmt/provider-edit',
+      },
+    ],
   },
   transform: {
     displayName: 'Transformation',
     navigateTree: false,
-    listItemPartial: 'partials/secret-list/transform-list-item',
+    listItemPartial: 'secret-list/transform-list-item',
+    firstStep: 'create a transformation and a role',
     tabs: [
       {
         name: 'transformations',
@@ -67,7 +121,7 @@ const SECRET_BACKENDS = {
         item: 'transformation',
         create: 'Create transformation',
         editComponent: 'transformation-edit',
-        listItemPartial: 'partials/secret-list/transform-transformation-item',
+        listItemPartial: 'secret-list/transform-transformation-item',
       },
       {
         name: 'role',
@@ -107,7 +161,8 @@ const SECRET_BACKENDS = {
     create: 'Create encryption key',
     navigateTree: false,
     editComponent: 'transit-edit',
-    listItemPartial: 'partials/secret-list/item',
+    listItemPartial: 'secret-list/item',
+    firstStep: 'create an encryption key',
   },
 };
 

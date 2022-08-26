@@ -6,7 +6,6 @@ import (
 
 	"github.com/hashicorp/vault/plugins/database/mysql"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
-	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 )
 
 func main() {
@@ -20,7 +19,7 @@ func main() {
 // Run instantiates a MySQL object, and runs the RPC server for the plugin
 func Run() error {
 	var f func() (interface{}, error)
-	f = mysql.New(credsutil.NoneLength, mysql.LegacyMetadataLen, mysql.LegacyUsernameLen)
+	f = mysql.New(mysql.DefaultLegacyUserNameTemplate)
 	dbType, err := f()
 	if err != nil {
 		return err

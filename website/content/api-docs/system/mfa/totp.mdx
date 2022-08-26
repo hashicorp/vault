@@ -1,7 +1,6 @@
 ---
 layout: api
 page_title: /sys/mfa/method/totp - HTTP API
-sidebar_title: <code>/sys/mfa/method/totp</code>
 description: >-
   The '/sys/mfa/method/totp' endpoint focuses on managing TOTP MFA behaviors in
   Vault Enterprise.
@@ -32,6 +31,8 @@ This endpoint defines a MFA method of type TOTP.
 - `digits` `(int: 6)` - The number of digits in the generated TOTP token. This value can either be 6 or 8.
 
 - `skew` `(int: 1)` - The number of delay periods that are allowed when validating a TOTP token. This value can either be 0 or 1.
+
+- `max_validation_attempts` `(int: 5)` - The maximum number of consecutive TOTP code failed validation.
 
 ### Sample Payload
 
@@ -89,6 +90,7 @@ $ curl \
     "qr_size": 200,
     "skew": 1,
     "type": "totp"
+    "max_validation_attempts": 5
   }
 }
 ```

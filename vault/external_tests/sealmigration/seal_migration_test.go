@@ -1,20 +1,20 @@
 package sealmigration
 
 import (
+	"sync/atomic"
+	"testing"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/vault"
-	"sync/atomic"
-	"testing"
 )
 
 type testFunc func(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int)
 
 func testVariousBackends(t *testing.T, tf testFunc, basePort int, includeRaft bool) {
-
-	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
+	logger := logging.NewVaultLogger(hclog.Trace).Named(t.Name())
 
 	t.Run("inmem", func(t *testing.T) {
 		t.Parallel()

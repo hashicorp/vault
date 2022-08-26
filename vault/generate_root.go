@@ -7,11 +7,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/pgpkeys"
-	"github.com/hashicorp/vault/helper/xor"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/roottoken"
 	"github.com/hashicorp/vault/shamir"
 )
 
@@ -39,12 +38,12 @@ type GenerateRootStrategy interface {
 type generateStandardRootToken struct{}
 
 func (g generateStandardRootToken) authenticate(ctx context.Context, c *Core, combinedKey []byte) error {
-	masterKey, err := c.unsealKeyToMasterKeyPostUnseal(ctx, combinedKey)
+	rootKey, err := c.unsealKeyToRootKeyPostUnseal(ctx, combinedKey)
 	if err != nil {
-		return errwrap.Wrapf("unable to authenticate: {{err}}", err)
+		return fmt.Errorf("unable to authenticate: %w", err)
 	}
-	if err := c.barrier.VerifyMaster(masterKey); err != nil {
-		return errwrap.Wrapf("master key verification failed: {{err}}", err)
+	if err := c.barrier.VerifyRoot(rootKey); err != nil {
+		return fmt.Errorf("root key verification failed: %w", err)
 	}
 
 	return nil
@@ -65,7 +64,7 @@ func (g generateStandardRootToken) generate(ctx context.Context, c *Core) (strin
 		c.tokenStore.revokeOrphan(ctx, te.ID)
 	}
 
-	return te.ID, cleanupFunc, nil
+	return te.ExternalID, cleanupFunc, nil
 }
 
 // GenerateRootConfig holds the configuration for a root generation
@@ -135,14 +134,15 @@ func (c *Core) GenerateRootInit(otp, pgpKey string, strategy GenerateRootStrateg
 	var fingerprint string
 	switch {
 	case len(otp) > 0:
-		if len(otp) != TokenLength+2 {
+		if (len(otp) != TokenLength+TokenPrefixLength && !c.DisableSSCTokens()) ||
+			(len(otp) != TokenLength+OldTokenPrefixLength && c.DisableSSCTokens()) {
 			return fmt.Errorf("OTP string is wrong length")
 		}
 
 	case len(pgpKey) > 0:
 		fingerprints, err := pgpkeys.GetFingerprints([]string{pgpKey}, nil)
 		if err != nil {
-			return errwrap.Wrapf("error parsing PGP key: {{err}}", err)
+			return fmt.Errorf("error parsing PGP key: %w", err)
 		}
 		if len(fingerprints) != 1 || fingerprints[0] == "" {
 			return fmt.Errorf("could not acquire PGP key entity")
@@ -304,13 +304,13 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 		combinedKey, err = shamir.Combine(c.generateRootProgress)
 		c.generateRootProgress = nil
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to compute master key: {{err}}", err)
+			return nil, fmt.Errorf("failed to compute root key: %w", err)
 		}
 	}
 
 	if err := strategy.authenticate(ctx, c, combinedKey); err != nil {
 		c.logger.Error("root generation aborted", "error", err.Error())
-		return nil, errwrap.Wrapf("root generation aborted: {{err}}", err)
+		return nil, fmt.Errorf("root generation aborted: %w", err)
 	}
 
 	// Run the generate strategy
@@ -319,40 +319,28 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 		return nil, err
 	}
 
-	var tokenBytes []byte
+	var encodedToken string
 
-	// Get the encoded value first so that if there is an error we don't create
-	// the root token.
 	switch {
 	case len(c.generateRootConfig.OTP) > 0:
-		// This function performs decoding checks so rather than decode the OTP,
-		// just encode the value we're passing in.
-		tokenBytes, err = xor.XORBytes([]byte(c.generateRootConfig.OTP), []byte(token))
-		if err != nil {
-			cleanupFunc()
-			c.logger.Error("xor of root token failed", "error", err)
-			return nil, err
-		}
-		token = base64.RawStdEncoding.EncodeToString(tokenBytes)
-
+		encodedToken, err = roottoken.EncodeToken(token, c.generateRootConfig.OTP)
 	case len(c.generateRootConfig.PGPKey) > 0:
-		_, tokenBytesArr, err := pgpkeys.EncryptShares([][]byte{[]byte(token)}, []string{c.generateRootConfig.PGPKey})
-		if err != nil {
-			cleanupFunc()
-			c.logger.Error("error encrypting new root token", "error", err)
-			return nil, err
-		}
-		token = base64.StdEncoding.EncodeToString(tokenBytesArr[0])
-
+		var tokenBytesArr [][]byte
+		_, tokenBytesArr, err = pgpkeys.EncryptShares([][]byte{[]byte(token)}, []string{c.generateRootConfig.PGPKey})
+		encodedToken = base64.StdEncoding.EncodeToString(tokenBytesArr[0])
 	default:
+		err = fmt.Errorf("unreachable condition")
+	}
+
+	if err != nil {
 		cleanupFunc()
-		return nil, fmt.Errorf("unreachable condition")
+		return nil, err
 	}
 
 	results := &GenerateRootResult{
 		Progress:       progress,
 		Required:       config.SecretThreshold,
-		EncodedToken:   token,
+		EncodedToken:   encodedToken,
 		PGPFingerprint: c.generateRootConfig.PGPFingerprint,
 	}
 
