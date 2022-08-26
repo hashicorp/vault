@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -197,12 +198,27 @@ func (c *LeaseCache) checkCacheForRequest(id string) (*SendResponse, error) {
 	}
 	sendResp.CacheMeta.Hit = true
 
+	//this is the time the response was received, but what if the response
+	//had an age on it as well?
 	respTime, err := http.ParseTime(resp.Header.Get("Date"))
 	if err != nil {
 		c.logger.Error("failed to parse cached response date", "error", err)
 		return nil, err
 	}
 	sendResp.CacheMeta.Age = time.Now().Sub(respTime)
+
+	//if the cached response had an age header attached to it
+	//we need to propagate that age.
+	if respAgeTxt := resp.Header.Get("Age"); respAgeTxt != "" {
+		respAge, err := strconv.Atoi(respAgeTxt)
+
+		if err != nil {
+			c.logger.Error("failed to parse ")
+			return nil, err
+		}
+
+		sendResp.CacheMeta.Age += time.Duration(respAge) * time.Second
+	}
 
 	return sendResp, nil
 }
