@@ -41,12 +41,14 @@ module('Unit | Route | vault/cluster/oidc-callback', function (hooks) {
     this.route.afterModel();
 
     assert.ok(this.windowStub.calledOnce, 'it is called');
-    assert.propContains(
+    assert.propEqual(
       this.windowStub.lastCall.args[0],
       {
         code: 'lTazRXEwKfyGKBUCo5TyLJzdIt39YniBJOXPABiRMkL0T',
         namespace: 'admin/child-ns',
         path: 'oidc',
+        source: 'oidc-callback',
+        state: 'st_91ji6vR2sQ2zBiZSQkqJ',
       },
       'namespace param is from state, ns=admin/child-ns'
     );
@@ -63,12 +65,14 @@ module('Unit | Route | vault/cluster/oidc-callback', function (hooks) {
       };
     };
     this.route.afterModel();
-    assert.propContains(
+    assert.propEqual(
       this.windowStub.lastCall.args[0],
       {
-        path: 'oidc-dev',
+        code: 'lTazRXEwKfyGKBUCo5TyLJzdIt39YniBJOXPABiRMkL0T',
         namespace: 'admin/child-ns',
-        state: this.state(),
+        path: 'oidc-dev',
+        source: 'oidc-callback',
+        state: 'st_91ji6vR2sQ2zBiZSQkqJ',
       },
       'state ns takes precedence, state no longer has ns query'
     );
@@ -85,12 +89,14 @@ module('Unit | Route | vault/cluster/oidc-callback', function (hooks) {
       };
     };
     this.route.afterModel();
-    assert.propContains(
+    assert.propEqual(
       this.windowStub.lastCall.args[0],
       {
-        path: this.path,
+        code: 'lTazRXEwKfyGKBUCo5TyLJzdIt39YniBJOXPABiRMkL0T',
         namespace: 'admin',
-        state: this.state(),
+        path: 'oidc',
+        source: 'oidc-callback',
+        state: 'st_91ji6vR2sQ2zBiZSQkqJ',
       },
       'namespace is from cluster namespaceQueryParam'
     );
@@ -107,12 +113,14 @@ module('Unit | Route | vault/cluster/oidc-callback', function (hooks) {
       };
     };
     this.route.afterModel();
-    assert.propContains(
+    assert.propEqual(
       this.windowStub.lastCall.args[0],
       {
-        path: this.path,
+        code: 'lTazRXEwKfyGKBUCo5TyLJzdIt39YniBJOXPABiRMkL0T',
         namespace: 'ns1',
-        state: this.state(),
+        path: 'oidc',
+        source: 'oidc-callback',
+        state: 'st_91ji6vR2sQ2zBiZSQkqJ',
       },
       'it strips ns from state and uses as namespace param'
     );
@@ -129,12 +137,13 @@ module('Unit | Route | vault/cluster/oidc-callback', function (hooks) {
       };
     };
     this.route.afterModel();
-    assert.propContains(
+    assert.propEqual(
       this.windowStub.lastCall.args[0],
       {
-        path: '',
-        state: '',
         code: '',
+        path: '',
+        source: 'oidc-callback',
+        state: '',
       },
       'model hook returns with empty params'
     );
@@ -149,11 +158,12 @@ module('Unit | Route | vault/cluster/oidc-callback', function (hooks) {
       };
     };
     this.route.afterModel();
-    assert.propContains(
+    assert.propEqual(
       this.windowStub.lastCall.args[0],
       {
         code: undefined,
         path: 'oidc',
+        source: 'oidc-callback',
         state: undefined,
       },
       'model hook returns non-existent state param'
@@ -171,12 +181,14 @@ module('Unit | Route | vault/cluster/oidc-callback', function (hooks) {
       };
     };
     this.route.afterModel();
-    assert.propContains(
+    assert.propEqual(
       this.windowStub.lastCall.args[0],
       {
-        path: '',
-        state: '',
         code: '',
+        namespace: 'ns1',
+        path: '',
+        source: 'oidc-callback',
+        state: '',
       },
       'model hook returns with empty parameters'
     );
