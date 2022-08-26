@@ -178,7 +178,7 @@ func TestCore_EnableExternalCredentialPlugin_MultipleVersions(t *testing.T) {
 	}
 }
 
-func TestCore_EnableExternalCredentialPlugin_MismatchedVersions(t *testing.T) {
+func TestCore_EnableExternalCredentialPlugin_MultipleVersions(t *testing.T) {
 	c, pluginName, pluginSha256 := testCoreWithPlugin(t)
 	d := &framework.FieldData{
 		Raw: map[string]interface{}{
