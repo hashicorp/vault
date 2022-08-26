@@ -479,7 +479,7 @@ These metrics relate to raft based [integrated storage][integrated-storage].
 | :---------------------------------- | :---------------------------------------------------------------------------------------------------- | :---- | :---- |
 | `vault.autopilot.node.healthy`      | Set to 1 if the node_id is deemed healthy by Autopilot, 0 if not                                      | bool  | gauge |
 | `vault.autopilot.healthy`           | Set to 1 if Autopilot considers all nodes healthy                                                     | bool  | gauge |
-| `vault.autopilot.failure_tolerance` | How many nodes can be lost while maintaining quorum, i.e., number of healthy nodes more than quorum | nodes | gauge |
+| `vault.autopilot.failure_tolerance` | How many nodes can be lost while maintaining quorum, i.e., number of healthy nodes in excess of quorum | nodes | gauge |
 
 Since Autopilot runs only on the active node, these metrics are emitted by the active node only.
 
