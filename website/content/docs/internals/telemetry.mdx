@@ -55,7 +55,7 @@ You'll note that log entries are prefixed with the metric type as follows:
 
 The following sections describe the available Vault metrics. The metrics interval are approximately 10 seconds when manually triggering metrics output using the above-described signals. Some high-cardinality gauges, like `vault.kv.secret.count`, are emitted every 10 minutes, or at an interval configured in the `telemetry` stanza.
 
-Some Vault metrics come with additional [labels](#metric-labels) describing the measurement in more detail, such as the namespace in which an operation takes place or the auth method used to create a token. This additional information is incorporated into the metrics name in the in-memory telemetry or other telemetry engines that do not support labels. The metric name in the table bleow is followed by a list of labels supported, in the order in which they appear, if flattened.
+Some Vault metrics come with additional [labels](#metric-labels) describing the measurement in more detail, such as the namespace in which an operation takes place or the auth method used to create a token. This additional information is incorporated into the metrics name in the in-memory telemetry or other telemetry engines that do not support labels. The metric name in the table below is followed by a list of labels supported, in the order in which they appear, if flattened.
 
 ## Audit Metrics
 
