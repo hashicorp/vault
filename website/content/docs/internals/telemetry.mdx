@@ -491,7 +491,7 @@ Since Autopilot runs only on the active node, these metrics are emitted by the a
 | `vault.raft.state.candidate`    | Increments whenever raft server starts an election                                                            | Elections | counter |
 | `vault.raft.state.leader`       | Increments whenever raft server becomes a leader                                                              | Leaders   | counter |
 
-**Why are they vital?**: Raft cluster a stable leader during normal operations. If frequent elections or leadership changes occur, network issues between the raft nodes may be present or that the raft servers
+**Why are they vital?**: Raft cluster should have a stable leader during normal operations. If frequent elections or leadership changes occur, network issues between the raft nodes may be present or the raft servers
 cannot keep up with the load.
 
 **What to look for**: For a healthy cluster, you're looking for a lastContact
