@@ -628,7 +628,7 @@ func (sc *storageContext) upgradeIssuerIfRequired(issuer *issuerEntry) *issuerEn
 func (sc *storageContext) writeIssuer(issuer *issuerEntry) error {
 	issuerId := issuer.ID
 	if issuer.LastModified.IsZero() {
-		issuer.LastModified = time.Now().In(time.FixedZone("GMT", 0))
+		issuer.LastModified = time.Now().UTC()
 	}
 
 	json, err := logical.StorageEntryJSON(issuerPrefix+issuerId.String(), issuer)

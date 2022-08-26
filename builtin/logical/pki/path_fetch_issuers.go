@@ -346,7 +346,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	if newName != issuer.Name {
 		oldName = issuer.Name
 		issuer.Name = newName
-		issuer.LastModified = time.Now().In(time.FixedZone("GMT", 0))
+		issuer.LastModified = time.Now().UTC()
 		modified = true
 	}
 
@@ -533,7 +533,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 		if newName != issuer.Name {
 			oldName = issuer.Name
 			issuer.Name = newName
-			issuer.LastModified = time.Now().In(time.FixedZone("GMT", 0))
+			issuer.LastModified = time.Now().UTC()
 			modified = true
 		}
 	}
