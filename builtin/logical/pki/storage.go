@@ -28,6 +28,8 @@ const (
 	deltaCRLPath                = "delta-crl"
 	deltaCRLPathSuffix          = "-delta"
 
+	autoTidyConfigPath = "config/auto-tidy"
+
 	// Used as a quick sanity check for a reference id lookups...
 	uuidLength = 36
 
@@ -1159,4 +1161,32 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 	}
 
 	return &result, nil
+}
+
+func (sc *storageContext) getAutoTidyConfig() (*tidyConfig, error) {
+	entry, err := sc.Storage.Get(sc.Context, autoTidyConfigPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var result tidyConfig
+	if entry == nil {
+		result = defaultTidyConfig
+		return &result, nil
+	}
+
+	if err = entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (sc *storageContext) writeAutoTidyConfig(config *tidyConfig) error {
+	entry, err := logical.StorageEntryJSON(autoTidyConfigPath, config)
+	if err != nil {
+		return err
+	}
+
+	return sc.Storage.Put(sc.Context, entry)
 }
