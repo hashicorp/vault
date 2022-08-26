@@ -5,14 +5,16 @@ import (
 	"crypto/x509"
 	"fmt"
 	"math/big"
+	"net/http"
 	"regexp"
 	"strings"
-
-	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -226,4 +228,99 @@ func isStringArrayDifferent(a, b []string) bool {
 	}
 
 	return false
+}
+
+func hasHeader(header string, req *logical.Request) bool {
+	var hasHeader bool
+	headerValue := req.Headers[header]
+	if len(headerValue) > 0 {
+		hasHeader = true
+	}
+
+	return hasHeader
+}
+
+func parseIfNotModifiedSince(req *logical.Request) (time.Time, error) {
+	var headerTimeValue time.Time
+	headerValue := req.Headers[headerIfModifiedSince]
+
+	headerTimeValue, err := time.Parse(time.RFC1123, headerValue[0])
+	if err != nil {
+		return headerTimeValue, fmt.Errorf("failed to parse given value for '%s' header: %v", headerIfModifiedSince, err)
+	}
+
+	return headerTimeValue, nil
+}
+
+type IfModifiedSinceHelper struct {
+	req       *logical.Request
+	issuerRef issuerID
+}
+
+func sendNotModifiedResponseIfNecessary(helper *IfModifiedSinceHelper, sc *storageContext, resp *logical.Response) (bool, error) {
+	var ret bool
+	responseHeaders := map[string][]string{}
+	if !hasHeader(headerIfModifiedSince, helper.req) {
+		return ret, nil
+	}
+
+	before, err := sc.isIfModifiedSinceBeforeLastModified(helper, responseHeaders)
+	if err != nil {
+		ret = true
+		return ret, err
+	}
+	if !before {
+		return ret, nil
+	} else {
+		ret = true
+	}
+
+	// Fill response
+	resp.Data = map[string]interface{}{
+		logical.HTTPContentType: "",
+		logical.HTTPStatusCode:  304,
+	}
+	resp.Headers = responseHeaders
+
+	return ret, nil
+}
+
+func (sc *storageContext) isIfModifiedSinceBeforeLastModified(helper *IfModifiedSinceHelper, responseHeaders map[string][]string) (bool, error) {
+	var before bool
+	var err error
+	var lastModified time.Time
+	ifModifiedSince, err := parseIfNotModifiedSince(helper.req)
+	if err != nil {
+		return before, err
+	}
+
+	if helper.issuerRef == "" {
+		crlConfig, err := sc.getLocalCRLConfig()
+		if err != nil {
+			return before, err
+		}
+		lastModified = crlConfig.LastModified
+	} else {
+		issuerRef := helper.issuerRef
+		if issuerRef == defaultRef {
+			config, err := sc.getIssuersConfig()
+			if err != nil {
+				return before, err
+			}
+			issuerRef = config.DefaultIssuerId
+		}
+
+		issuer, err := sc.fetchIssuerById(helper.issuerRef)
+		if err != nil {
+			return before, err
+		}
+		lastModified = issuer.LastModified
+	}
+
+	if !lastModified.IsZero() && lastModified.Before(ifModifiedSince) {
+		before = true
+		responseHeaders[headerLastModified] = []string{lastModified.Format(http.TimeFormat)}
+	}
+
+	return before, nil
 }
