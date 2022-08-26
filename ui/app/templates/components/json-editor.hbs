@@ -1,0 +1,48 @@
+<div ...attributes>
+  {{#if this.getShowToolbar}}
+    <div data-test-component="json-editor-toolbar">
+      <Toolbar>
+        <label class="is-label" data-test-component="json-editor-title">
+          {{@title}}
+          {{#if @subTitle}}
+            <span class="is-size-9 is-lowercase has-text-grey">({{@subTitle}})</span>
+          {{/if}}
+        </label>
+        <ToolbarActions>
+          {{yield}}
+          <div class="toolbar-separator"></div>
+          <CopyButton
+            class="button is-transparent"
+            @clipboardText={{@value}}
+            @buttonType="button"
+            @success={{action (set-flash-message "Data copied!")}}
+          >
+            <Icon @name="clipboard-copy" aria-label="Copy" />
+          </CopyButton>
+        </ToolbarActions>
+      </Toolbar>
+    </div>
+  {{/if}}
+  <div
+    {{code-mirror
+      content=@value
+      extraKeys=@extraKeys
+      gutters=@gutters
+      lineNumbers=(if @readOnly false true)
+      mode=@mode
+      readOnly=@readOnly
+      theme=@theme
+      viewportMarg=@viewportMargin
+      onUpdate=this.onUpdate
+      onFocus=this.onFocus
+    }}
+    class={{if @readOnly "readonly-codemirror"}}
+    data-test-component="code-mirror-modifier"
+  ></div>
+
+  {{#if @helpText}}
+    <div class="box is-shadowless is-fullwidth has-short-padding">
+      <p class="sub-text">{{@helpText}}</p>
+    </div>
+  {{/if}}
+</div>

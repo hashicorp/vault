@@ -174,7 +174,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 		},
 	}
 
-	//core.Logger().Printf("[TRACE] mounting transit")
+	// core.Logger().Printf("[TRACE] mounting transit")
 	req, err := http.NewRequest("POST", fmt.Sprintf("https://127.0.0.1:%d/v1/sys/mounts/transit", cores[0].Listeners[0].Address.Port),
 		bytes.NewBuffer([]byte("{\"type\": \"transit\"}")))
 	if err != nil {
@@ -185,7 +185,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	//core.Logger().Printf("[TRACE] done mounting transit")
+	// core.Logger().Printf("[TRACE] done mounting transit")
 
 	var totalOps *uint32 = new(uint32)
 	var successfulOps *uint32 = new(uint32)
@@ -316,7 +316,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 			switch chosenFunc {
 			// Encrypt our plaintext and store the result
 			case "encrypt":
-				//core.Logger().Printf("[TRACE] %s, %s, %d", chosenFunc, chosenKey, id)
+				// core.Logger().Printf("[TRACE] %s, %s, %d", chosenFunc, chosenKey, id)
 				resp, err := doReq("POST", chosenHost+"encrypt/"+chosenKey, bytes.NewBuffer([]byte(fmt.Sprintf("{\"plaintext\": \"%s\"}", testPlaintextB64))))
 				if err != nil {
 					panic(err)
@@ -343,7 +343,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 					continue
 				}
 
-				//core.Logger().Printf("[TRACE] %s, %s, %d", chosenFunc, chosenKey, id)
+				// core.Logger().Printf("[TRACE] %s, %s, %d", chosenFunc, chosenKey, id)
 				resp, err := doReq("POST", chosenHost+"decrypt/"+chosenKey, bytes.NewBuffer([]byte(fmt.Sprintf("{\"ciphertext\": \"%s\"}", ct))))
 				if err != nil {
 					panic(err)
@@ -372,7 +372,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 
 			// Rotate to a new key version
 			case "rotate":
-				//core.Logger().Printf("[TRACE] %s, %s, %d", chosenFunc, chosenKey, id)
+				// core.Logger().Printf("[TRACE] %s, %s, %d", chosenFunc, chosenKey, id)
 				_, err := doReq("POST", chosenHost+"keys/"+chosenKey+"/rotate", bytes.NewBuffer([]byte("{}")))
 				if err != nil {
 					panic(err)
@@ -408,7 +408,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 
 				setVersion := (myRand.Int31() % latestVersion) + 1
 
-				//core.Logger().Printf("[TRACE] %s, %s, %d, new min version %d", chosenFunc, chosenKey, id, setVersion)
+				// core.Logger().Printf("[TRACE] %s, %s, %d, new min version %d", chosenFunc, chosenKey, id, setVersion)
 
 				_, err := doReq("POST", chosenHost+"keys/"+chosenKey+"/config", bytes.NewBuffer([]byte(fmt.Sprintf("{\"min_decryption_version\": %d}", setVersion))))
 				if err != nil {
@@ -425,7 +425,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 	// Spawn some of these workers for 10 seconds
 	for i := 0; i < int(atomic.LoadUint32(numWorkers)); i++ {
 		wg.Add(1)
-		//core.Logger().Printf("[TRACE] spawning %d", i)
+		// core.Logger().Printf("[TRACE] spawning %d", i)
 		go doFuzzy(i+1, parallel)
 	}
 

@@ -13,15 +13,15 @@ func pathConfigConnection(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/connection",
 		Fields: map[string]*framework.FieldSchema{
-			"connection_string": &framework.FieldSchema{
+			"connection_string": {
 				Type:        framework.TypeString,
 				Description: "DB connection parameters",
 			},
-			"max_open_connections": &framework.FieldSchema{
+			"max_open_connections": {
 				Type:        framework.TypeInt,
 				Description: "Maximum number of open connections to database",
 			},
-			"verify_connection": &framework.FieldSchema{
+			"verify_connection": {
 				Type:        framework.TypeBool,
 				Default:     true,
 				Description: "If set, connection_string is verified by actually connecting to the database",
@@ -74,7 +74,6 @@ func (b *backend) pathConnectionWrite(ctx context.Context, req *logical.Request,
 	if verifyConnection {
 		// Verify the string
 		db, err := sql.Open("mssql", connString)
-
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"Error validating connection info: %s", err)), nil

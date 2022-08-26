@@ -1,0 +1,4 @@
+```release-note: bug
+storage/raft (enterprise): Automated snapshots with Azure required specifying
+`azure_blob_environment`, which should have had as a default `AZUREPUBLICCLOUD`.
+```

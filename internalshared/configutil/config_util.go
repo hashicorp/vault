@@ -1,4 +1,4 @@
-// +build !enterprise
+//go:build !enterprise
 
 package configutil
 
@@ -6,8 +6,7 @@ import (
 	"github.com/hashicorp/hcl/hcl/ast"
 )
 
-type EntSharedConfig struct {
-}
+type EntSharedConfig struct{}
 
 func (ec *EntSharedConfig) ParseConfig(list *ast.ObjectList) error {
 	return nil

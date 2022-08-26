@@ -1,3 +1,4 @@
+/* eslint qunit/no-conditional-assertions: "warn" */
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -11,23 +12,24 @@ const SECONDARIES = [
   { node_id: '_three_', api_address: 'http://127.0.0.1:8202', connection_status: 'connected' },
 ];
 
-module('Integration | Component | replication known-secondaries-table', function(hooks) {
+module('Integration | Component | replication known-secondaries-table', function (hooks) {
   setupRenderingTest(hooks, { resolver });
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.set('secondaries', SECONDARIES);
   });
 
-  test('it renders a table of known secondaries', async function(assert) {
+  test('it renders a table of known secondaries', async function (assert) {
     await render(hbs`<KnownSecondariesTable @secondaries={{secondaries}} />`);
 
     assert.dom('[data-test-known-secondaries-table]').exists();
   });
 
-  test('it shows the secondary URL and connection_status', async function(assert) {
+  test('it shows the secondary URL and connection_status', async function (assert) {
+    assert.expect(9);
     await render(hbs`<KnownSecondariesTable @secondaries={{secondaries}} />`);
 
-    SECONDARIES.forEach(secondary => {
+    SECONDARIES.forEach((secondary) => {
       assert.equal(
         this.element.querySelector(`[data-test-secondaries=row-for-${secondary.node_id}]`).innerHTML.trim(),
         secondary.node_id,

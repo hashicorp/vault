@@ -10,15 +10,13 @@ export default Route.extend(ClusterRoute, {
   auth: service(),
 
   beforeModel() {
-    return this.get('version')
-      .fetchFeatures()
-      .then(() => {
-        return this._super(...arguments);
-      });
+    return this.version.fetchFeatures().then(() => {
+      return this._super(...arguments);
+    });
   },
 
   model() {
-    const activeClusterId = this.get('auth.activeCluster');
+    const activeClusterId = this.auth.activeCluster;
     return this.store.peekRecord('cluster', activeClusterId);
   },
 
@@ -26,10 +24,10 @@ export default Route.extend(ClusterRoute, {
     return hash({
       canEnablePrimary: this.store
         .findRecord('capabilities', 'sys/replication/primary/enable')
-        .then(c => c.get('canUpdate')),
+        .then((c) => c.get('canUpdate')),
       canEnableSecondary: this.store
         .findRecord('capabilities', 'sys/replication/secondary/enable')
-        .then(c => c.get('canUpdate')),
+        .then((c) => c.get('canUpdate')),
     }).then(({ canEnablePrimary, canEnableSecondary }) => {
       setProperties(model, {
         canEnablePrimary,

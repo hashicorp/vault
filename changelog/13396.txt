@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix client count current month data not showing unless monthly history data exists
+```

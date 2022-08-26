@@ -1,0 +1,17 @@
+rules:
+  - id: bad-nil-guard
+    patterns:
+      - pattern-either:
+          - pattern: $X == nil && <... $X.$F ...>
+          - pattern: $X != nil || <... $X.$F ...>
+          - pattern: <... $X.$F ...> && $X != nil
+          - pattern: <... $X.$F ...> || $X == nil
+          - pattern: <... $X.$F ...> && $X == nil
+          - pattern: <... $X.$F ...> || $X != nil
+    message: Bad nil guard
+    languages:
+      - go
+    severity: ERROR
+    metadata:
+      license: MIT
+

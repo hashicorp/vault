@@ -1,9 +1,11 @@
 package framework
 
 import (
+	"encoding/json"
 	"net/http"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestFieldDataGet(t *testing.T) {
@@ -16,7 +18,7 @@ func TestFieldDataGet(t *testing.T) {
 	}{
 		"string type, string value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeString},
+				"foo": {Type: TypeString},
 			},
 			map[string]interface{}{
 				"foo": "bar",
@@ -28,7 +30,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"string type, int value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeString},
+				"foo": {Type: TypeString},
 			},
 			map[string]interface{}{
 				"foo": 42,
@@ -40,7 +42,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"string type, unset value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeString},
+				"foo": {Type: TypeString},
 			},
 			map[string]interface{}{},
 			"foo",
@@ -50,7 +52,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"string type, unset value with default": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{
+				"foo": {
 					Type:    TypeString,
 					Default: "bar",
 				},
@@ -63,7 +65,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"lowercase string type, lowercase string value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeLowerCaseString},
+				"foo": {Type: TypeLowerCaseString},
 			},
 			map[string]interface{}{
 				"foo": "bar",
@@ -75,7 +77,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"lowercase string type, mixed-case string value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeLowerCaseString},
+				"foo": {Type: TypeLowerCaseString},
 			},
 			map[string]interface{}{
 				"foo": "BaR",
@@ -87,7 +89,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"lowercase string type, int value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeLowerCaseString},
+				"foo": {Type: TypeLowerCaseString},
 			},
 			map[string]interface{}{
 				"foo": 42,
@@ -99,7 +101,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"lowercase string type, unset value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeLowerCaseString},
+				"foo": {Type: TypeLowerCaseString},
 			},
 			map[string]interface{}{},
 			"foo",
@@ -109,7 +111,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"lowercase string type, unset value with lowercase default": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{
+				"foo": {
 					Type:    TypeLowerCaseString,
 					Default: "bar",
 				},
@@ -122,7 +124,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"int type, int value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeInt},
+				"foo": {Type: TypeInt},
 			},
 			map[string]interface{}{
 				"foo": 42,
@@ -134,7 +136,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"bool type, bool value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeBool},
+				"foo": {Type: TypeBool},
 			},
 			map[string]interface{}{
 				"foo": false,
@@ -146,7 +148,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"map type, map value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeMap},
+				"foo": {Type: TypeMap},
 			},
 			map[string]interface{}{
 				"foo": map[string]interface{}{
@@ -162,7 +164,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"duration type, string value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeDurationSecond},
+				"foo": {Type: TypeDurationSecond},
 			},
 			map[string]interface{}{
 				"foo": "42",
@@ -174,7 +176,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"duration type, string duration value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeDurationSecond},
+				"foo": {Type: TypeDurationSecond},
 			},
 			map[string]interface{}{
 				"foo": "42m",
@@ -186,7 +188,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"duration type, int value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeDurationSecond},
+				"foo": {Type: TypeDurationSecond},
 			},
 			map[string]interface{}{
 				"foo": 42,
@@ -198,7 +200,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"duration type, float value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeDurationSecond},
+				"foo": {Type: TypeDurationSecond},
 			},
 			map[string]interface{}{
 				"foo": 42.0,
@@ -210,7 +212,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"duration type, nil value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeDurationSecond},
+				"foo": {Type: TypeDurationSecond},
 			},
 			map[string]interface{}{
 				"foo": nil,
@@ -222,7 +224,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"duration type, 0 value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeDurationSecond},
+				"foo": {Type: TypeDurationSecond},
 			},
 			map[string]interface{}{
 				"foo": 0,
@@ -234,7 +236,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"signed duration type, positive string value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeSignedDurationSecond},
+				"foo": {Type: TypeSignedDurationSecond},
 			},
 			map[string]interface{}{
 				"foo": "42",
@@ -246,7 +248,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"signed duration type, positive string duration value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeSignedDurationSecond},
+				"foo": {Type: TypeSignedDurationSecond},
 			},
 			map[string]interface{}{
 				"foo": "42m",
@@ -258,7 +260,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"signed duration type, positive int value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeSignedDurationSecond},
+				"foo": {Type: TypeSignedDurationSecond},
 			},
 			map[string]interface{}{
 				"foo": 42,
@@ -270,7 +272,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"signed duration type, positive float value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeSignedDurationSecond},
+				"foo": {Type: TypeSignedDurationSecond},
 			},
 			map[string]interface{}{
 				"foo": 42.0,
@@ -282,7 +284,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"signed duration type, negative string value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeSignedDurationSecond},
+				"foo": {Type: TypeSignedDurationSecond},
 			},
 			map[string]interface{}{
 				"foo": "-42",
@@ -294,7 +296,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"signed duration type, negative string duration value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeSignedDurationSecond},
+				"foo": {Type: TypeSignedDurationSecond},
 			},
 			map[string]interface{}{
 				"foo": "-42m",
@@ -306,7 +308,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"signed duration type, negative int value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeSignedDurationSecond},
+				"foo": {Type: TypeSignedDurationSecond},
 			},
 			map[string]interface{}{
 				"foo": -42,
@@ -318,7 +320,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"signed duration type, negative float value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeSignedDurationSecond},
+				"foo": {Type: TypeSignedDurationSecond},
 			},
 			map[string]interface{}{
 				"foo": -42.0,
@@ -330,7 +332,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"signed duration type, nil value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeSignedDurationSecond},
+				"foo": {Type: TypeSignedDurationSecond},
 			},
 			map[string]interface{}{
 				"foo": nil,
@@ -342,7 +344,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"signed duration type, 0 value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeSignedDurationSecond},
+				"foo": {Type: TypeSignedDurationSecond},
 			},
 			map[string]interface{}{
 				"foo": 0,
@@ -354,7 +356,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"slice type, empty slice": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeSlice},
+				"foo": {Type: TypeSlice},
 			},
 			map[string]interface{}{
 				"foo": []interface{}{},
@@ -366,7 +368,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"slice type, filled, mixed slice": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeSlice},
+				"foo": {Type: TypeSlice},
 			},
 			map[string]interface{}{
 				"foo": []interface{}{123, "abc"},
@@ -378,7 +380,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"string slice type, filled slice": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeStringSlice},
+				"foo": {Type: TypeStringSlice},
 			},
 			map[string]interface{}{
 				"foo": []interface{}{123, "abc"},
@@ -390,7 +392,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"string slice type, single value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeStringSlice},
+				"foo": {Type: TypeStringSlice},
 			},
 			map[string]interface{}{
 				"foo": "abc",
@@ -402,7 +404,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"string slice type, empty string": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeStringSlice},
+				"foo": {Type: TypeStringSlice},
 			},
 			map[string]interface{}{
 				"foo": "",
@@ -414,7 +416,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"comma string slice type, empty string": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeCommaStringSlice},
+				"foo": {Type: TypeCommaStringSlice},
 			},
 			map[string]interface{}{
 				"foo": "",
@@ -426,7 +428,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"comma string slice type, comma string with one value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeCommaStringSlice},
+				"foo": {Type: TypeCommaStringSlice},
 			},
 			map[string]interface{}{
 				"foo": "value1",
@@ -438,7 +440,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"comma string slice type, comma string with multi value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeCommaStringSlice},
+				"foo": {Type: TypeCommaStringSlice},
 			},
 			map[string]interface{}{
 				"foo": "value1,value2,value3",
@@ -450,7 +452,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"comma string slice type, nil string slice value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeCommaStringSlice},
+				"foo": {Type: TypeCommaStringSlice},
 			},
 			map[string]interface{}{
 				"foo": "",
@@ -462,7 +464,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"comma string slice type, string slice with one value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeCommaStringSlice},
+				"foo": {Type: TypeCommaStringSlice},
 			},
 			map[string]interface{}{
 				"foo": []interface{}{"value1"},
@@ -474,7 +476,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"comma string slice type, string slice with multi value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeCommaStringSlice},
+				"foo": {Type: TypeCommaStringSlice},
 			},
 			map[string]interface{}{
 				"foo": []interface{}{"value1", "value2", "value3"},
@@ -486,7 +488,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"comma string slice type, empty string slice value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeCommaStringSlice},
+				"foo": {Type: TypeCommaStringSlice},
 			},
 			map[string]interface{}{
 				"foo": []interface{}{},
@@ -498,7 +500,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"comma int slice type, comma int with one value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeCommaIntSlice},
+				"foo": {Type: TypeCommaIntSlice},
 			},
 			map[string]interface{}{
 				"foo": 1,
@@ -510,7 +512,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"comma int slice type, comma int with multi value slice": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeCommaIntSlice},
+				"foo": {Type: TypeCommaIntSlice},
 			},
 			map[string]interface{}{
 				"foo": []int{1, 2, 3},
@@ -522,7 +524,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"comma int slice type, comma int with multi value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeCommaIntSlice},
+				"foo": {Type: TypeCommaIntSlice},
 			},
 			map[string]interface{}{
 				"foo": "1,2,3",
@@ -534,7 +536,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"comma int slice type, nil int slice value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeCommaIntSlice},
+				"foo": {Type: TypeCommaIntSlice},
 			},
 			map[string]interface{}{
 				"foo": "",
@@ -546,7 +548,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"comma int slice type, int slice with one value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeCommaIntSlice},
+				"foo": {Type: TypeCommaIntSlice},
 			},
 			map[string]interface{}{
 				"foo": []interface{}{"1"},
@@ -558,7 +560,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"comma int slice type, int slice with multi value strings": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeCommaIntSlice},
+				"foo": {Type: TypeCommaIntSlice},
 			},
 			map[string]interface{}{
 				"foo": []interface{}{"1", "2", "3"},
@@ -570,7 +572,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"comma int slice type, int slice with multi value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeCommaIntSlice},
+				"foo": {Type: TypeCommaIntSlice},
 			},
 			map[string]interface{}{
 				"foo": []interface{}{1, 2, 3},
@@ -582,7 +584,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"comma int slice type, empty int slice value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeCommaIntSlice},
+				"foo": {Type: TypeCommaIntSlice},
 			},
 			map[string]interface{}{
 				"foo": []interface{}{},
@@ -591,9 +593,22 @@ func TestFieldDataGet(t *testing.T) {
 			[]int{},
 			false,
 		},
+
+		"comma int slice type, json number": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeCommaIntSlice},
+			},
+			map[string]interface{}{
+				"foo": json.Number("1"),
+			},
+			"foo",
+			[]int{1},
+			false,
+		},
+
 		"name string type, valid string": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeNameString},
+				"foo": {Type: TypeNameString},
 			},
 			map[string]interface{}{
 				"foo": "bar",
@@ -605,7 +620,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"name string type, valid value with special characters": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeNameString},
+				"foo": {Type: TypeNameString},
 			},
 			map[string]interface{}{
 				"foo": "bar.baz-bay123",
@@ -617,7 +632,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"keypair type, valid value map type": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeKVPairs},
+				"foo": {Type: TypeKVPairs},
 			},
 			map[string]interface{}{
 				"foo": map[string]interface{}{
@@ -637,7 +652,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"keypair type, list of equal sign delim key pairs type": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeKVPairs},
+				"foo": {Type: TypeKVPairs},
 			},
 			map[string]interface{}{
 				"foo": []interface{}{"key1=value1", "key2=value2", "key3=1"},
@@ -653,7 +668,7 @@ func TestFieldDataGet(t *testing.T) {
 
 		"keypair type, single equal sign delim value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeKVPairs},
+				"foo": {Type: TypeKVPairs},
 			},
 			map[string]interface{}{
 				"foo": "key1=value1",
@@ -854,6 +869,18 @@ func TestFieldDataGet(t *testing.T) {
 			false,
 		},
 
+		"comma string slice type, single JSON number value": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeCommaStringSlice},
+			},
+			map[string]interface{}{
+				"foo": json.Number("123"),
+			},
+			"foo",
+			[]string{"123"},
+			false,
+		},
+
 		"type kv pair, not supplied": {
 			map[string]*FieldSchema{
 				"foo": {Type: TypeKVPairs},
@@ -931,6 +958,40 @@ func TestFieldDataGet(t *testing.T) {
 			0.0,
 			true,
 		},
+
+		"type time, not supplied": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeTime},
+			},
+			map[string]interface{}{},
+			"foo",
+			time.Time{},
+			false,
+		},
+		"type time, string value": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeTime},
+			},
+			map[string]interface{}{
+				"foo": "2021-12-11T09:08:07Z",
+			},
+			"foo",
+			// Comparison uses DeepEqual() so better match exactly,
+			// can't have a different location.
+			time.Date(2021, 12, 11, 9, 8, 7, 0, time.UTC),
+			false,
+		},
+		"type time, invalid value": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeTime},
+			},
+			map[string]interface{}{
+				"foo": "2021-13-11T09:08:07+02:00",
+			},
+			"foo",
+			time.Time{},
+			true,
+		},
 	}
 
 	for name, tc := range cases {
@@ -970,7 +1031,7 @@ func TestFieldDataGet_Error(t *testing.T) {
 	}{
 		"name string type, invalid value with invalid characters": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeNameString},
+				"foo": {Type: TypeNameString},
 			},
 			map[string]interface{}{
 				"foo": "bar baz",
@@ -979,7 +1040,7 @@ func TestFieldDataGet_Error(t *testing.T) {
 		},
 		"name string type, invalid value with special characters at beginning": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeNameString},
+				"foo": {Type: TypeNameString},
 			},
 			map[string]interface{}{
 				"foo": ".barbaz",
@@ -988,7 +1049,7 @@ func TestFieldDataGet_Error(t *testing.T) {
 		},
 		"name string type, invalid value with special characters at end": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeNameString},
+				"foo": {Type: TypeNameString},
 			},
 			map[string]interface{}{
 				"foo": "barbaz-",
@@ -997,7 +1058,7 @@ func TestFieldDataGet_Error(t *testing.T) {
 		},
 		"name string type, empty string": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeNameString},
+				"foo": {Type: TypeNameString},
 			},
 			map[string]interface{}{
 				"foo": "",
@@ -1006,7 +1067,7 @@ func TestFieldDataGet_Error(t *testing.T) {
 		},
 		"keypair type, csv version empty key name": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeKVPairs},
+				"foo": {Type: TypeKVPairs},
 			},
 			map[string]interface{}{
 				"foo": []interface{}{"=value1", "key2=value2", "key3=1"},
@@ -1015,7 +1076,7 @@ func TestFieldDataGet_Error(t *testing.T) {
 		},
 		"duration type, negative string value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeDurationSecond},
+				"foo": {Type: TypeDurationSecond},
 			},
 			map[string]interface{}{
 				"foo": "-42",
@@ -1024,7 +1085,7 @@ func TestFieldDataGet_Error(t *testing.T) {
 		},
 		"duration type, negative string duration value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeDurationSecond},
+				"foo": {Type: TypeDurationSecond},
 			},
 			map[string]interface{}{
 				"foo": "-42m",
@@ -1033,7 +1094,7 @@ func TestFieldDataGet_Error(t *testing.T) {
 		},
 		"duration type, negative int value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeDurationSecond},
+				"foo": {Type: TypeDurationSecond},
 			},
 			map[string]interface{}{
 				"foo": -42,
@@ -1042,7 +1103,7 @@ func TestFieldDataGet_Error(t *testing.T) {
 		},
 		"duration type, negative float value": {
 			map[string]*FieldSchema{
-				"foo": &FieldSchema{Type: TypeDurationSecond},
+				"foo": {Type: TypeDurationSecond},
 			},
 			map[string]interface{}{
 				"foo": -42.0,

@@ -2,11 +2,19 @@ package transit
 
 import (
 	"context"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
+	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/api"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault"
 )
 
 func TestTransit_ConfigSettings(t *testing.T) {
@@ -282,4 +290,116 @@ func TestTransit_ConfigSettings(t *testing.T) {
 	testHMAC(4, true)
 	testHMAC(3, true)
 	testHMAC(2, false)
+}
+
+func TestTransit_UpdateKeyConfigWithAutorotation(t *testing.T) {
+	tests := map[string]struct {
+		initialAutoRotatePeriod interface{}
+		newAutoRotatePeriod     interface{}
+		shouldError             bool
+		expectedValue           time.Duration
+	}{
+		"default (no value)": {
+			initialAutoRotatePeriod: "5h",
+			shouldError:             false,
+			expectedValue:           5 * time.Hour,
+		},
+		"0 (int)": {
+			initialAutoRotatePeriod: "5h",
+			newAutoRotatePeriod:     0,
+			shouldError:             false,
+			expectedValue:           0,
+		},
+		"0 (string)": {
+			initialAutoRotatePeriod: "5h",
+			newAutoRotatePeriod:     0,
+			shouldError:             false,
+			expectedValue:           0,
+		},
+		"5 seconds": {
+			newAutoRotatePeriod: "5s",
+			shouldError:         true,
+		},
+		"5 hours": {
+			newAutoRotatePeriod: "5h",
+			shouldError:         false,
+			expectedValue:       5 * time.Hour,
+		},
+		"negative value": {
+			newAutoRotatePeriod: "-1800s",
+			shouldError:         true,
+		},
+		"invalid string": {
+			newAutoRotatePeriod: "this shouldn't work",
+			shouldError:         true,
+		},
+	}
+
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"transit": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	cores := cluster.Cores
+	vault.TestWaitActive(t, cores[0].Core)
+	client := cores[0].Client
+	err := client.Sys().Mount("transit", &api.MountInput{
+		Type: "transit",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			keyNameBytes, err := uuid.GenerateRandomBytes(16)
+			if err != nil {
+				t.Fatal(err)
+			}
+			keyName := hex.EncodeToString(keyNameBytes)
+
+			_, err = client.Logical().Write(fmt.Sprintf("transit/keys/%s", keyName), map[string]interface{}{
+				"auto_rotate_period": test.initialAutoRotatePeriod,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			resp, err := client.Logical().Write(fmt.Sprintf("transit/keys/%s/config", keyName), map[string]interface{}{
+				"auto_rotate_period": test.newAutoRotatePeriod,
+			})
+			switch {
+			case test.shouldError && err == nil:
+				t.Fatal("expected non-nil error")
+			case !test.shouldError && err != nil:
+				t.Fatal(err)
+			}
+
+			if !test.shouldError {
+				resp, err = client.Logical().Read(fmt.Sprintf("transit/keys/%s", keyName))
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp == nil {
+					t.Fatal("expected non-nil response")
+				}
+				gotRaw, ok := resp.Data["auto_rotate_period"].(json.Number)
+				if !ok {
+					t.Fatal("returned value is of unexpected type")
+				}
+				got, err := gotRaw.Int64()
+				if err != nil {
+					t.Fatal(err)
+				}
+				want := int64(test.expectedValue.Seconds())
+				if got != want {
+					t.Fatalf("incorrect auto_rotate_period returned, got: %d, want: %d", got, want)
+				}
+			}
+		})
+	}
 }

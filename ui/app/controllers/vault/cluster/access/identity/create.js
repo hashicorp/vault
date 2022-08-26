@@ -4,7 +4,7 @@ import { task } from 'ember-concurrency';
 export default Controller.extend({
   showRoute: 'vault.cluster.access.identity.show',
   showTab: 'details',
-  navAfterSave: task(function*({ saveType, model }) {
+  navAfterSave: task(function* ({ saveType, model }) {
     let isDelete = saveType === 'delete';
     let type = model.get('identityType');
     let listRoutes = {
@@ -15,7 +15,7 @@ export default Controller.extend({
     };
     let routeName = listRoutes[type];
     if (!isDelete) {
-      yield this.transitionToRoute(this.get('showRoute'), model.id, this.get('showTab'));
+      yield this.transitionToRoute(this.showRoute, model.id, this.showTab);
       return;
     }
     yield this.transitionToRoute(routeName);

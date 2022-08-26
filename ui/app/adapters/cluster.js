@@ -1,3 +1,4 @@
+import AdapterError from '@ember-data/adapter/error';
 import { inject as service } from '@ember/service';
 import { assign } from '@ember/polyfills';
 import { hash, resolve } from 'rsvp';
@@ -5,9 +6,6 @@ import { assert } from '@ember/debug';
 import { pluralize } from 'ember-inflector';
 
 import ApplicationAdapter from './application';
-import DS from 'ember-data';
-
-const { AdapterError } = DS;
 
 const ENDPOINTS = [
   'health',
@@ -42,10 +40,10 @@ export default ApplicationAdapter.extend({
   findRecord(store, type, id, snapshot) {
     let fetches = {
       health: this.health(),
-      sealStatus: this.sealStatus().catch(e => e),
+      sealStatus: this.sealStatus().catch((e) => e),
     };
-    if (this.get('version.isEnterprise') && this.get('namespaceService.inRootNamespace')) {
-      fetches.replicationStatus = this.replicationStatus().catch(e => e);
+    if (this.version.isEnterprise && this.namespaceService.inRootNamespace) {
+      fetches.replicationStatus = this.replicationStatus().catch((e) => e);
     }
     return hash(fetches).then(({ health, sealStatus, replicationStatus }) => {
       let ret = {
@@ -109,7 +107,7 @@ export default ApplicationAdapter.extend({
   },
 
   authenticate({ backend, data }) {
-    const { role, jwt, token, password, username, path } = data;
+    const { role, jwt, token, password, username, path, nonce } = data;
     const url = this.urlForAuth(backend, username, path);
     const verb = backend === 'token' ? 'GET' : 'POST';
     let options = {
@@ -121,11 +119,26 @@ export default ApplicationAdapter.extend({
       };
     } else if (backend === 'jwt' || backend === 'oidc') {
       options.data = { role, jwt };
+    } else if (backend === 'okta') {
+      options.data = { password, nonce };
     } else {
       options.data = token ? { token, password } : { password };
     }
 
     return this.ajax(url, verb, options);
+  },
+
+  mfaValidate({ mfa_request_id, mfa_constraints }) {
+    const options = {
+      data: {
+        mfa_request_id,
+        mfa_payload: mfa_constraints.reduce((obj, { selectedMethod, passcode }) => {
+          obj[selectedMethod.id] = passcode ? [passcode] : [];
+          return obj;
+        }, {}),
+      },
+    };
+    return this.ajax('/v1/sys/mfa/validate', 'POST', options);
   },
 
   urlFor(endpoint) {

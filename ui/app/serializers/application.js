@@ -1,20 +1,20 @@
+import JSONSerializer from '@ember-data/serializer/json';
 import { isNone, isBlank } from '@ember/utils';
 import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
-import DS from 'ember-data';
 
-export default DS.JSONSerializer.extend({
-  keyForAttribute: function(attr) {
+export default JSONSerializer.extend({
+  keyForAttribute: function (attr) {
     return decamelize(attr);
   },
 
   normalizeItems(payload) {
     if (payload.data && payload.data.keys && Array.isArray(payload.data.keys)) {
-      let models = payload.data.keys.map(key => {
+      let models = payload.data.keys.map((key) => {
         if (typeof key !== 'string') {
           return key;
         }
-        let pk = this.get('primaryKey') || 'id';
+        let pk = this.primaryKey || 'id';
         let model = { [pk]: key };
         // if we've added _requestQuery in the adapter, we want
         // attach it to the individual models

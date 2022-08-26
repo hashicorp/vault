@@ -8,8 +8,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*UnwrapCommand)(nil)
-var _ cli.CommandAutocomplete = (*UnwrapCommand)(nil)
+var (
+	_ cli.Command             = (*UnwrapCommand)(nil)
+	_ cli.CommandAutocomplete = (*UnwrapCommand)(nil)
+)
 
 // UnwrapCommand is a Command that behaves like ReadCommand but specifically for
 // unwrapping cubbyhole-wrapped secrets
