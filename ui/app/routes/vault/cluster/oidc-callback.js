@@ -14,7 +14,10 @@ export default Route.extend({
     }
     path = window.decodeURIComponent(path);
     const source = 'oidc-callback'; // required by event listener in auth-jwt component
-    let queryParams = { source, namespace, path, code, state };
+    let queryParams = { source, path: path || '', code: code || '', state: state || '' };
+    if (namespace) {
+      queryParams.namespace = namespace;
+    }
     window.opener.postMessage(queryParams, window.origin);
   },
   setupController(controller) {
