@@ -1,0 +1,4 @@
+```release-note:feature
+secrets/pki: Add an OCSP responder that implements a subset of RFC6960, answering single serial number OCSP requests for
+a specific cluster's revoked certificates in a mount.
+```

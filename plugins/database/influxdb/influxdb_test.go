@@ -5,18 +5,20 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
-	"github.com/hashicorp/vault/sdk/database/dbplugin"
-	influx "github.com/influxdata/influxdb/client/v2"
+	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
+	influx "github.com/influxdata/influxdb1-client/v2"
+	"github.com/stretchr/testify/require"
 )
 
-const testInfluxRole = `CREATE USER "{{username}}" WITH PASSWORD '{{password}}';GRANT ALL ON "vault" TO "{{username}}";`
+const createUserStatements = `CREATE USER "{{username}}" WITH PASSWORD '{{password}}';GRANT ALL ON "vault" TO "{{username}}";`
 
 type Config struct {
 	docker.ServiceURL
@@ -57,12 +59,13 @@ func prepareInfluxdbTestContainer(t *testing.T) (func(), *Config) {
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		ImageRepo: "influxdb",
-		ImageTag:  "alpine",
+		ImageTag:  "1.8-alpine",
 		Env: []string{
 			"INFLUXDB_DB=vault",
 			"INFLUXDB_ADMIN_USER=" + c.Username,
 			"INFLUXDB_ADMIN_PASSWORD=" + c.Password,
-			"INFLUXDB_HTTP_AUTH_ENABLED=true"},
+			"INFLUXDB_HTTP_AUTH_ENABLED=true",
+		},
 		Ports: []string{"8086/tcp"},
 	})
 	if err != nil {
@@ -75,12 +78,12 @@ func prepareInfluxdbTestContainer(t *testing.T) (func(), *Config) {
 		})
 		cli, err := influx.NewHTTPClient(c.apiConfig())
 		if err != nil {
-			return nil, errwrap.Wrapf("error creating InfluxDB client: {{err}}", err)
+			return nil, fmt.Errorf("error creating InfluxDB client: %w", err)
 		}
 		defer cli.Close()
 		_, _, err = cli.Ping(1)
 		if err != nil {
-			return nil, errwrap.Wrapf("error checking cluster status: {{err}}", err)
+			return nil, fmt.Errorf("error checking cluster status: %w", err)
 		}
 
 		return c, nil
@@ -96,131 +99,305 @@ func TestInfluxdb_Initialize(t *testing.T) {
 	cleanup, config := prepareInfluxdbTestContainer(t)
 	defer cleanup()
 
-	db := new()
-	_, err := db.Init(context.Background(), config.connectionParams(), true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
+	type testCase struct {
+		req               dbplugin.InitializeRequest
+		expectedResponse  dbplugin.InitializeResponse
+		expectErr         bool
+		expectInitialized bool
 	}
 
-	if !db.Initialized {
-		t.Fatal("Database should be initialized")
+	tests := map[string]testCase{
+		"port is an int": {
+			req: dbplugin.InitializeRequest{
+				Config:           makeConfig(config.connectionParams()),
+				VerifyConnection: true,
+			},
+			expectedResponse: dbplugin.InitializeResponse{
+				Config: config.connectionParams(),
+			},
+			expectErr:         false,
+			expectInitialized: true,
+		},
+		"port is a string": {
+			req: dbplugin.InitializeRequest{
+				Config:           makeConfig(config.connectionParams(), "port", strconv.Itoa(config.connectionParams()["port"].(int))),
+				VerifyConnection: true,
+			},
+			expectedResponse: dbplugin.InitializeResponse{
+				Config: makeConfig(config.connectionParams(), "port", strconv.Itoa(config.connectionParams()["port"].(int))),
+			},
+			expectErr:         false,
+			expectInitialized: true,
+		},
+		"missing config": {
+			req: dbplugin.InitializeRequest{
+				Config:           nil,
+				VerifyConnection: true,
+			},
+			expectedResponse:  dbplugin.InitializeResponse{},
+			expectErr:         true,
+			expectInitialized: false,
+		},
+		"missing host": {
+			req: dbplugin.InitializeRequest{
+				Config:           makeConfig(config.connectionParams(), "host", ""),
+				VerifyConnection: true,
+			},
+			expectedResponse:  dbplugin.InitializeResponse{},
+			expectErr:         true,
+			expectInitialized: false,
+		},
+		"missing username": {
+			req: dbplugin.InitializeRequest{
+				Config:           makeConfig(config.connectionParams(), "username", ""),
+				VerifyConnection: true,
+			},
+			expectedResponse:  dbplugin.InitializeResponse{},
+			expectErr:         true,
+			expectInitialized: false,
+		},
+		"missing password": {
+			req: dbplugin.InitializeRequest{
+				Config:           makeConfig(config.connectionParams(), "password", ""),
+				VerifyConnection: true,
+			},
+			expectedResponse:  dbplugin.InitializeResponse{},
+			expectErr:         true,
+			expectInitialized: false,
+		},
+		"failed to validate connection": {
+			req: dbplugin.InitializeRequest{
+				// Host exists, but isn't a running instance
+				Config:           makeConfig(config.connectionParams(), "host", "foobar://bad_connection"),
+				VerifyConnection: true,
+			},
+			expectedResponse:  dbplugin.InitializeResponse{},
+			expectErr:         true,
+			expectInitialized: true,
+		},
 	}
 
-	err = db.Close()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			db := new()
+			defer dbtesting.AssertClose(t, db)
 
-	connectionParams := config.connectionParams()
-	connectionParams["port"] = strconv.Itoa(connectionParams["port"].(int))
-	_, err = db.Init(context.Background(), connectionParams, true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
+			resp, err := db.Initialize(context.Background(), test.req)
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+
+			if !reflect.DeepEqual(resp, test.expectedResponse) {
+				t.Fatalf("Actual response: %#v\nExpected response: %#v", resp, test.expectedResponse)
+			}
+
+			if test.expectInitialized && !db.Initialized {
+				t.Fatalf("Database should be initialized but wasn't")
+			} else if !test.expectInitialized && db.Initialized {
+				t.Fatalf("Database was initiailized when it shouldn't")
+			}
+		})
 	}
 }
 
-func TestInfluxdb_CreateUser(t *testing.T) {
+func makeConfig(rootConfig map[string]interface{}, keyValues ...interface{}) map[string]interface{} {
+	if len(keyValues)%2 != 0 {
+		panic("makeConfig must be provided with key and value pairs")
+	}
+
+	// Make a copy of the map so there isn't a chance of test bleedover between maps
+	config := make(map[string]interface{}, len(rootConfig)+(len(keyValues)/2))
+	for k, v := range rootConfig {
+		config[k] = v
+	}
+	for i := 0; i < len(keyValues); i += 2 {
+		k := keyValues[i].(string) // Will panic if the key field isn't a string and that's fine in a test
+		v := keyValues[i+1]
+		config[k] = v
+	}
+	return config
+}
+
+func TestInfluxdb_CreateUser_DefaultUsernameTemplate(t *testing.T) {
 	cleanup, config := prepareInfluxdbTestContainer(t)
 	defer cleanup()
 
 	db := new()
-	_, err := db.Init(context.Background(), config.connectionParams(), true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
+	req := dbplugin.InitializeRequest{
+		Config:           config.connectionParams(),
+		VerifyConnection: true,
+	}
+	dbtesting.AssertInitialize(t, db, req)
+
+	password := "nuozxby98523u89bdfnkjl"
+	newUserReq := dbplugin.NewUserRequest{
+		UsernameConfig: dbplugin.UsernameMetadata{
+			DisplayName: "token",
+			RoleName:    "mylongrolenamewithmanycharacters",
+		},
+		Statements: dbplugin.Statements{
+			Commands: []string{createUserStatements},
+		},
+		Password:   password,
+		Expiration: time.Now().Add(1 * time.Minute),
+	}
+	resp := dbtesting.AssertNewUser(t, db, newUserReq)
+
+	if resp.Username == "" {
+		t.Fatalf("Missing username")
 	}
 
-	statements := dbplugin.Statements{
-		Creation: []string{testInfluxRole},
-	}
+	assertCredsExist(t, config.URL().String(), resp.Username, password)
 
-	usernameConfig := dbplugin.UsernameConfig{
-		DisplayName: "test",
-		RoleName:    "test",
-	}
-
-	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	config.Username, config.Password = username, password
-	if err := testCredsExist(t, config); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
+	require.Regexp(t, `^v_token_mylongrolenamew_[a-z0-9]{20}_[0-9]{10}$`, resp.Username)
 }
 
-func TestMyInfluxdb_RenewUser(t *testing.T) {
+func TestInfluxdb_CreateUser_CustomUsernameTemplate(t *testing.T) {
 	cleanup, config := prepareInfluxdbTestContainer(t)
 	defer cleanup()
 
 	db := new()
-	_, err := db.Init(context.Background(), config.connectionParams(), true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
+
+	conf := config.connectionParams()
+	conf["username_template"] = "{{.DisplayName}}_{{random 10}}"
+
+	req := dbplugin.InitializeRequest{
+		Config:           conf,
+		VerifyConnection: true,
+	}
+	dbtesting.AssertInitialize(t, db, req)
+
+	password := "nuozxby98523u89bdfnkjl"
+	newUserReq := dbplugin.NewUserRequest{
+		UsernameConfig: dbplugin.UsernameMetadata{
+			DisplayName: "token",
+			RoleName:    "mylongrolenamewithmanycharacters",
+		},
+		Statements: dbplugin.Statements{
+			Commands: []string{createUserStatements},
+		},
+		Password:   password,
+		Expiration: time.Now().Add(1 * time.Minute),
+	}
+	resp := dbtesting.AssertNewUser(t, db, newUserReq)
+
+	if resp.Username == "" {
+		t.Fatalf("Missing username")
 	}
 
-	statements := dbplugin.Statements{
-		Creation: []string{testInfluxRole},
-	}
+	assertCredsExist(t, config.URL().String(), resp.Username, password)
 
-	usernameConfig := dbplugin.UsernameConfig{
-		DisplayName: "test",
-		RoleName:    "test",
-	}
+	require.Regexp(t, `^token_[a-zA-Z0-9]{10}$`, resp.Username)
+}
 
-	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+func TestUpdateUser_expiration(t *testing.T) {
+	// This test should end up with a no-op since the expiration doesn't do anything in Influx
 
-	config.Username, config.Password = username, password
-	if err = testCredsExist(t, config); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
+	cleanup, config := prepareInfluxdbTestContainer(t)
+	defer cleanup()
 
-	err = db.RenewUser(context.Background(), statements, username, time.Now().Add(time.Minute))
-	if err != nil {
-		t.Fatalf("err: %s", err)
+	db := new()
+	req := dbplugin.InitializeRequest{
+		Config:           config.connectionParams(),
+		VerifyConnection: true,
 	}
+	dbtesting.AssertInitialize(t, db, req)
+
+	password := "nuozxby98523u89bdfnkjl"
+	newUserReq := dbplugin.NewUserRequest{
+		UsernameConfig: dbplugin.UsernameMetadata{
+			DisplayName: "test",
+			RoleName:    "test",
+		},
+		Statements: dbplugin.Statements{
+			Commands: []string{createUserStatements},
+		},
+		Password:   password,
+		Expiration: time.Now().Add(1 * time.Minute),
+	}
+	newUserResp := dbtesting.AssertNewUser(t, db, newUserReq)
+
+	assertCredsExist(t, config.URL().String(), newUserResp.Username, password)
+
+	renewReq := dbplugin.UpdateUserRequest{
+		Username: newUserResp.Username,
+		Expiration: &dbplugin.ChangeExpiration{
+			NewExpiration: time.Now().Add(5 * time.Minute),
+		},
+	}
+	dbtesting.AssertUpdateUser(t, db, renewReq)
+
+	// Make sure the user hasn't changed
+	assertCredsExist(t, config.URL().String(), newUserResp.Username, password)
+}
+
+func TestUpdateUser_password(t *testing.T) {
+	cleanup, config := prepareInfluxdbTestContainer(t)
+	defer cleanup()
+
+	db := new()
+	req := dbplugin.InitializeRequest{
+		Config:           config.connectionParams(),
+		VerifyConnection: true,
+	}
+	dbtesting.AssertInitialize(t, db, req)
+
+	initialPassword := "nuozxby98523u89bdfnkjl"
+	newUserReq := dbplugin.NewUserRequest{
+		UsernameConfig: dbplugin.UsernameMetadata{
+			DisplayName: "test",
+			RoleName:    "test",
+		},
+		Statements: dbplugin.Statements{
+			Commands: []string{createUserStatements},
+		},
+		Password:   initialPassword,
+		Expiration: time.Now().Add(1 * time.Minute),
+	}
+	newUserResp := dbtesting.AssertNewUser(t, db, newUserReq)
+
+	assertCredsExist(t, config.URL().String(), newUserResp.Username, initialPassword)
+
+	newPassword := "y89qgmbzadiygry8uazodijnb"
+	newPasswordReq := dbplugin.UpdateUserRequest{
+		Username: newUserResp.Username,
+		Password: &dbplugin.ChangePassword{
+			NewPassword: newPassword,
+		},
+	}
+	dbtesting.AssertUpdateUser(t, db, newPasswordReq)
+
+	assertCredsDoNotExist(t, config.URL().String(), newUserResp.Username, initialPassword)
+	assertCredsExist(t, config.URL().String(), newUserResp.Username, newPassword)
 }
 
 // TestInfluxdb_RevokeDeletedUser tests attempting to revoke a user that was
 // deleted externally. Guards against a panic, see
 // https://github.com/hashicorp/vault/issues/6734
+// Updated to attempt to delete a user that never existed to replicate a similar scenario since
+// the cleanup function from `prepareInfluxdbTestContainer` does not do anything if using an
+// external InfluxDB instance rather than spinning one up for the test.
 func TestInfluxdb_RevokeDeletedUser(t *testing.T) {
 	cleanup, config := prepareInfluxdbTestContainer(t)
 	defer cleanup()
 
 	db := new()
-	_, err := db.Init(context.Background(), config.connectionParams(), true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
+	req := dbplugin.InitializeRequest{
+		Config:           config.connectionParams(),
+		VerifyConnection: true,
 	}
+	dbtesting.AssertInitialize(t, db, req)
 
-	statements := dbplugin.Statements{
-		Creation: []string{testInfluxRole},
+	// attempt to revoke a user that does not exist
+	delReq := dbplugin.DeleteUserRequest{
+		Username: "someuser",
 	}
-
-	usernameConfig := dbplugin.UsernameConfig{
-		DisplayName: "test",
-		RoleName:    "test",
-	}
-
-	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	config.Username, config.Password = username, password
-	if err = testCredsExist(t, config); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
-
-	// call cleanup to remove database
-	cleanup()
-
-	// attempt to revoke the user after database is gone
-	err = db.RevokeUser(context.Background(), statements, username)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, err := db.DeleteUser(ctx, delReq)
 	if err == nil {
 		t.Fatalf("Expected err, got nil")
 	}
@@ -231,88 +408,73 @@ func TestInfluxdb_RevokeUser(t *testing.T) {
 	defer cleanup()
 
 	db := new()
-	_, err := db.Init(context.Background(), config.connectionParams(), true)
-	if err != nil {
-		t.Fatalf("err: %s", err)
+	req := dbplugin.InitializeRequest{
+		Config:           config.connectionParams(),
+		VerifyConnection: true,
 	}
+	dbtesting.AssertInitialize(t, db, req)
 
-	statements := dbplugin.Statements{
-		Creation: []string{testInfluxRole},
+	initialPassword := "nuozxby98523u89bdfnkjl"
+	newUserReq := dbplugin.NewUserRequest{
+		UsernameConfig: dbplugin.UsernameMetadata{
+			DisplayName: "test",
+			RoleName:    "test",
+		},
+		Statements: dbplugin.Statements{
+			Commands: []string{createUserStatements},
+		},
+		Password:   initialPassword,
+		Expiration: time.Now().Add(1 * time.Minute),
 	}
+	newUserResp := dbtesting.AssertNewUser(t, db, newUserReq)
 
-	usernameConfig := dbplugin.UsernameConfig{
-		DisplayName: "test",
-		RoleName:    "test",
-	}
+	assertCredsExist(t, config.URL().String(), newUserResp.Username, initialPassword)
 
-	username, password, err := db.CreateUser(context.Background(), statements, usernameConfig, time.Now().Add(time.Minute))
-	if err != nil {
-		t.Fatalf("err: %s", err)
+	delReq := dbplugin.DeleteUserRequest{
+		Username: newUserResp.Username,
 	}
-
-	config.Username, config.Password = username, password
-	if err = testCredsExist(t, config); err != nil {
-		t.Fatalf("Could not connect with new credentials: %s", err)
-	}
-
-	// Test default revoke statements
-	err = db.RevokeUser(context.Background(), dbplugin.Statements{}, username)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if err = testCredsExist(t, config); err == nil {
-		t.Fatal("Credentials were not revoked")
-	}
+	dbtesting.AssertDeleteUser(t, db, delReq)
+	assertCredsDoNotExist(t, config.URL().String(), newUserResp.Username, initialPassword)
 }
-func TestInfluxdb_RotateRootCredentials(t *testing.T) {
-	cleanup, config := prepareInfluxdbTestContainer(t)
-	defer cleanup()
 
-	db := new()
-
-	connProducer := db.influxdbConnectionProducer
-
-	_, err := db.Init(context.Background(), config.connectionParams(), true)
+func assertCredsExist(t testing.TB, address, username, password string) {
+	t.Helper()
+	err := testCredsExist(address, username, password)
 	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if !connProducer.Initialized {
-		t.Fatal("Database should be initialized")
-	}
-
-	newConf, err := db.RotateRootCredentials(context.Background(), nil)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if newConf["password"] == "influx-root" {
-		t.Fatal("password was not updated")
-	}
-
-	err = db.Close()
-	if err != nil {
-		t.Fatalf("err: %s", err)
+		t.Fatalf("Could not log in as %q", username)
 	}
 }
 
-func testCredsExist(t testing.TB, c *Config) error {
-	cli, err := influx.NewHTTPClient(c.apiConfig())
+func assertCredsDoNotExist(t testing.TB, address, username, password string) {
+	t.Helper()
+	err := testCredsExist(address, username, password)
+	if err == nil {
+		t.Fatalf("Able to log in as %q when it shouldn't", username)
+	}
+}
+
+func testCredsExist(address, username, password string) error {
+	conf := influx.HTTPConfig{
+		Addr:     address,
+		Username: username,
+		Password: password,
+	}
+	cli, err := influx.NewHTTPClient(conf)
 	if err != nil {
-		return errwrap.Wrapf("Error creating InfluxDB Client: ", err)
+		return fmt.Errorf("Error creating InfluxDB Client: %w", err)
 	}
 	defer cli.Close()
 	_, _, err = cli.Ping(1)
 	if err != nil {
-		return errwrap.Wrapf("error checking server ping: {{err}}", err)
+		return fmt.Errorf("error checking server ping: %w", err)
 	}
 	q := influx.NewQuery("SHOW SERIES ON vault", "", "")
 	response, err := cli.Query(q)
 	if err != nil {
-		return errwrap.Wrapf("error querying influxdb server: {{err}}", err)
+		return fmt.Errorf("error querying influxdb server: %w", err)
 	}
 	if response != nil && response.Error() != nil {
-		return errwrap.Wrapf("error using the correct influx database: {{err}}", response.Error())
+		return fmt.Errorf("error using the correct influx database: %w", response.Error())
 	}
 	return nil
 }

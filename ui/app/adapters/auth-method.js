@@ -1,7 +1,7 @@
+import AdapterError from '@ember-data/adapter/error';
 import { assign } from '@ember/polyfills';
-import { get, set } from '@ember/object';
+import { set } from '@ember/object';
 import ApplicationAdapter from './application';
-import DS from 'ember-data';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 export default ApplicationAdapter.extend({
@@ -16,13 +16,13 @@ export default ApplicationAdapter.extend({
   },
 
   findAll(store, type, sinceToken, snapshotRecordArray) {
-    let isUnauthenticated = get(snapshotRecordArray || {}, 'adapterOptions.unauthenticated');
+    let isUnauthenticated = snapshotRecordArray?.adapterOptions?.unauthenticated;
     if (isUnauthenticated) {
       let url = `/${this.urlPrefix()}/internal/ui/mounts`;
       return this.ajax(url, 'GET', {
         unauthenticated: true,
       })
-        .then(result => {
+        .then((result) => {
           return {
             data: result.data.auth,
           };
@@ -33,8 +33,8 @@ export default ApplicationAdapter.extend({
           };
         });
     }
-    return this.ajax(this.url(), 'GET').catch(e => {
-      if (e instanceof DS.AdapterError) {
+    return this.ajax(this.url(), 'GET').catch((e) => {
+      if (e instanceof AdapterError) {
         set(e, 'policyPath', 'sys/auth');
       }
       throw e;

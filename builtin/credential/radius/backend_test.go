@@ -296,7 +296,7 @@ func testAccUserLoginPolicy(t *testing.T, user string, data map[string]interface
 		Data:            data,
 		ErrorOk:         expectError,
 		Unauthenticated: true,
-		//Check:           logicaltest.TestCheckAuth(policies),
+		// Check:           logicaltest.TestCheckAuth(policies),
 		Check: func(resp *logical.Response) error {
 			res := logicaltest.TestCheckAuth(policies)(resp)
 			if res != nil && expectError {

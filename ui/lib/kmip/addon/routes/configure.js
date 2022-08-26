@@ -9,7 +9,7 @@ export default Route.extend({
     return this.pathHelp.getNewModel('kmip/config', this.secretMountPath.currentPath);
   },
   model() {
-    return this.store.findRecord('kmip/config', this.secretMountPath.currentPath).catch(err => {
+    return this.store.findRecord('kmip/config', this.secretMountPath.currentPath).catch((err) => {
       if (err.httpStatus === 404) {
         let model = this.store.createRecord('kmip/config');
         model.set('id', this.secretMountPath.currentPath);

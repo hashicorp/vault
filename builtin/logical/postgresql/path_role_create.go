@@ -6,19 +6,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
 func pathRoleCreate(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "creds/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the role.",
 			},
@@ -113,7 +113,7 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 			"expiration": expiration,
 		}
 
-		if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+		if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 			return nil, err
 		}
 	}

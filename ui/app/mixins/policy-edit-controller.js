@@ -8,14 +8,14 @@ export default Mixin.create({
     deletePolicy(model) {
       let policyType = model.get('policyType');
       let name = model.get('name');
-      let flash = this.get('flashMessages');
+      let flash = this.flashMessages;
       model
         .destroyRecord()
         .then(() => {
           flash.success(`${policyType.toUpperCase()} policy "${name}" was successfully deleted.`);
           return this.transitionToRoute('vault.cluster.policies', policyType);
         })
-        .catch(e => {
+        .catch((e) => {
           let errors = e.errors ? e.errors.join('') : e.message;
           flash.danger(
             `There was an error deleting the ${policyType.toUpperCase()} policy "${name}": ${errors}.`
@@ -24,21 +24,21 @@ export default Mixin.create({
     },
 
     savePolicy(model) {
-      let flash = this.get('flashMessages');
+      let flash = this.flashMessages;
       let policyType = model.get('policyType');
       let name = model.get('name');
       model
         .save()
-        .then(m => {
+        .then((m) => {
           flash.success(`${policyType.toUpperCase()} policy "${name}" was successfully saved.`);
-          if (this.get('wizard.featureState') === 'create') {
-            this.get('wizard').transitionFeatureMachine('create', 'CONTINUE', policyType);
+          if (this.wizard.featureState === 'create') {
+            this.wizard.transitionFeatureMachine('create', 'CONTINUE', policyType);
           }
           return this.transitionToRoute('vault.cluster.policy.show', m.get('policyType'), m.get('name'));
         })
         .catch(() => {
-          // do nothing here...
-          // message-error component will show errors
+          // swallow error -- model.errors set by Adapter
+          return;
         });
     },
 

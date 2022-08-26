@@ -36,9 +36,21 @@ Usage: vault namespace <subcommand> [options] [args]
 
       $ vault namespace create
 
+  Patch an existing namespace:
+
+      $ vault namespace patch
+
   Delete an existing namespace:
 
       $ vault namespace delete
+
+  Lock the API for an existing namespace:
+
+      $ vault namespace lock
+
+  Unlock the API for an existing namespace:
+
+      $ vault namespace unlock
 
   Please see the individual subcommand help for detailed usage information.
 `

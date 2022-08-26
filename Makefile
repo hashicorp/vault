@@ -8,16 +8,13 @@ EXTENDED_TEST_TIMEOUT=60m
 INTEG_TEST_TIMEOUT=120m
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS_CI=\
-	github.com/elazarl/go-bindata-assetfs/... \
-	github.com/hashicorp/go-bindata/... \
-	github.com/mitchellh/gox \
 	golang.org/x/tools/cmd/goimports
 EXTERNAL_TOOLS=\
 	github.com/client9/misspell/cmd/misspell
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
 
-GO_VERSION_MIN=1.14.7
+GO_VERSION_MIN=1.18.5
 GO_CMD?=go
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
@@ -51,12 +48,12 @@ dev-dynamic-mem: BUILD_TAGS+=memprofiler
 dev-dynamic-mem: dev-dynamic
 
 # Creates a Docker image by adding the compiled linux/amd64 binary found in ./bin.
-# The resulting image is tagged "vault:dev". 
+# The resulting image is tagged "vault:dev".
 docker-dev: prep
-	docker build -f scripts/docker/Dockerfile -t vault:dev .
+	docker build --build-arg VERSION=$(GO_VERSION_MIN) --build-arg BUILD_TAGS="$(BUILD_TAGS)" -f scripts/docker/Dockerfile -t vault:dev .
 
 docker-dev-ui: prep
-	docker build -f scripts/docker/Dockerfile.ui -t vault:dev-ui .
+	docker build --build-arg VERSION=$(GO_VERSION_MIN) --build-arg BUILD_TAGS="$(BUILD_TAGS)" -f scripts/docker/Dockerfile.ui -t vault:dev-ui .
 
 # test runs the unit tests and vets the code
 test: prep
@@ -120,12 +117,7 @@ ci-lint:
 prep: fmtcheck
 	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
 	@$(GO_CMD) generate $($(GO_CMD) list ./... | grep -v /vendor/)
-	@# Remove old (now broken) husky git hooks.
-	@[ ! -d .git/hooks ] || grep -l '^# husky$$' .git/hooks/* | xargs rm -f
 	@if [ -d .git/hooks ]; then cp .hooks/* .git/hooks/; fi
-
-PACKAGES_LOCK_DIR := $(shell find . -mindepth 1 -maxdepth 1 \
-	-type d -name 'packages*.lock')
 
 # bootstrap the build by downloading additional tools needed to build
 ci-bootstrap:
@@ -141,81 +133,79 @@ bootstrap: ci-bootstrap
 # Note: if you have plugins in GOPATH you can update all of them via something like:
 # for i in $(ls | grep vault-plugin-); do cd $i; git remote update; git reset --hard origin/master; dep ensure -update; git add .; git commit; git push; cd ..; done
 update-plugins:
-	grep vault-plugin- vendor/vendor.json | cut -d '"' -f 4 | xargs govendor fetch
+	grep vault-plugin- go.mod | cut -d ' ' -f 1 | while read -r P; do echo "Updating $P..."; go get -v "$P"; done
 
 static-assets-dir:
-	@mkdir -p ./pkg/web_ui
+	@mkdir -p ./http/web_ui
 
-static-assets: static-assets-dir
-	@echo "--> Generating static assets"
-	@go-bindata-assetfs -o bindata_assetfs.go -pkg http -prefix pkg -modtime 1480000000 -tags ui ./pkg/web_ui/...
-	@mv bindata_assetfs.go http
-	@$(MAKE) -f $(THIS_FILE) fmt
-
-test-ember:
+install-ui-dependencies:
 	@echo "--> Installing JavaScript assets"
 	@cd ui && yarn --ignore-optional
+
+test-ember: install-ui-dependencies
 	@echo "--> Running ember tests"
 	@cd ui && yarn run test:oss
 
-ember-ci-test: # Deprecated, to be removed soon.
-	@echo "ember-ci-test is deprecated in favour of test-ui-browserstack"
-	@exit 1
+test-ember-enos: install-ui-dependencies
+	@echo "--> Running ember tests with a real backend"
+	@cd ui && yarn run test:enos
 
 check-vault-in-path:
 	@VAULT_BIN=$$(command -v vault) || { echo "vault command not found"; exit 1; }; \
 		[ -x "$$VAULT_BIN" ] || { echo "$$VAULT_BIN not executable"; exit 1; }; \
 		printf "Using Vault at %s:\n\$$ vault version\n%s\n" "$$VAULT_BIN" "$$(vault version)"
 
-check-browserstack-creds:
-	@[ -n "$$BROWSERSTACK_ACCESS_KEY" ] || { echo "BROWSERSTACK_ACCESS_KEY not set"; exit 1; }
-	@[ -n "$$BROWSERSTACK_USERNAME" ] || { echo "BROWSERSTACK_USERNAME not set"; exit 1; }
-
-test-ui-browserstack: check-vault-in-path check-browserstack-creds
-	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn --ignore-optional
-	@echo "--> Running ember tests in Browserstack"
-	@cd ui && yarn run test:browserstack
-
-ember-dist:
-	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn --ignore-optional
+ember-dist: install-ui-dependencies
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
 	@cd ui && yarn run build
 	@rm -rf ui/if-you-need-to-delete-this-open-an-issue-async-disk-cache
 
-ember-dist-dev:
-	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn --ignore-optional
+ember-dist-dev: install-ui-dependencies
 	@cd ui && npm rebuild node-sass
 	@echo "--> Building Ember application"
-	@cd ui && yarn run build-dev
+	@cd ui && yarn run build:dev
 
-static-dist: ember-dist static-assets
-static-dist-dev: ember-dist-dev static-assets
+static-dist: ember-dist
+static-dist-dev: ember-dist-dev
 
-proto:
-	protoc vault/*.proto --go_out=plugins=grpc,paths=source_relative:.
-	protoc vault/activity/activity_log.proto --go_out=plugins=grpc,paths=source_relative:.
-	protoc helper/storagepacker/types.proto --go_out=plugins=grpc,paths=source_relative:.
-	protoc helper/forwarding/types.proto --go_out=plugins=grpc,paths=source_relative:.
-	protoc sdk/logical/*.proto --go_out=plugins=grpc,paths=source_relative:.
-	protoc physical/raft/types.proto --go_out=plugins=grpc,paths=source_relative:.
-	protoc helper/identity/mfa/types.proto --go_out=plugins=grpc,paths=source_relative:.
-	protoc helper/identity/types.proto --go_out=plugins=grpc,paths=source_relative:.
-	protoc sdk/database/dbplugin/*.proto --go_out=plugins=grpc,paths=source_relative:.
-	protoc sdk/database/newdbplugin/proto/*.proto --go_out=plugins=grpc,paths=source_relative:.
-	protoc sdk/plugin/pb/*.proto --go_out=plugins=grpc,paths=source_relative:.
+proto: bootstrap
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative vault/*.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative vault/activity/activity_log.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative helper/storagepacker/types.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative helper/forwarding/types.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/logical/*.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative physical/raft/types.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative helper/identity/mfa/types.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative helper/identity/types.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/database/dbplugin/*.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/database/dbplugin/v5/proto/*.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/plugin/pb/*.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative vault/tokens/token.proto
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/helper/pluginutil/*.proto
+
+	# No additional sed expressions should be added to this list. Going forward
+	# we should just use the variable names choosen by protobuf. These are left
+	# here for backwards compatability, namely for SDK compilation.
 	sed -i -e 's/Id/ID/' vault/request_forwarding_service.pb.go
-	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/protobuf:"/sentinel:"" protobuf:"/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go sdk/plugin/pb/backend.pb.go sdk/logical/identity.pb.go vault/activity/activity_log.pb.go
+	sed -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go sdk/plugin/pb/backend.pb.go sdk/logical/identity.pb.go vault/activity/activity_log.pb.go
+
+	# This will inject the sentinel struct tags as decorated in the proto files.
+	protoc-go-inject-tag -input=./helper/identity/types.pb.go
+	protoc-go-inject-tag -input=./helper/identity/mfa/types.pb.go
 
 fmtcheck:
 	@true
 #@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
 
 fmt:
-	goimports -w $(GOFMT_FILES)
+	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -w
+
+semgrep:
+	semgrep --include '*.go' --exclude 'vendor' -a -f tools/semgrep .
+
+semgrep-ci:
+	semgrep --error --include '*.go' --exclude 'vendor' -f tools/semgrep/ci .
 
 assetcheck:
 	@echo "==> Checking compiled UI assets..."
@@ -249,81 +239,29 @@ hana-database-plugin:
 mongodb-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
 
-# WRITE_GENERATED_FILE_HEADER overwrites the file specified, replacing its contents with
-# the header warning people not to attempt to edit or merge the file. You should call this
-# before writing the generated contents to the file.
-# Args: 1: File to write; 2: Command to generate it; 3: Source files to edit/merge instead.
-define WRITE_GENERATED_FILE_HEADER
-	echo "### ***" > $(1); \
-	echo "### WARNING: DO NOT manually EDIT or MERGE this file, it is generated by '$(2)'." >> $(1); \
-	echo "### INSTEAD: Edit or merge the source in $(3) then run '$(2)'." >> $(1); \
-	echo "### ***" >> $(1)
-endef
-
-## begin packagespec integration ##
-
-# The plan is to generate this packagespec integration section automatically.
-# By keeping it in a contiguous block for now, it will be easier to
-# auto-generate when we get to it.
-
-SPEC_FILE_PATTERN := packages*.yml
-# SPEC is the human-managed description of which packages we are able to build.
-SPEC := $(shell find . -mindepth 1 -maxdepth 1 -name '$(SPEC_FILE_PATTERN)')
-ifneq ($(words $(SPEC)),1)
-$(error Found $(words $(SPEC)) $(SPEC_FILE_PATTERN) files, need exactly 1: $(SPEC))
-endif
-SPEC_FILENAME := $(notdir $(SPEC))
-SPEC_MODIFIER := $(SPEC_FILENAME:packages%.yml=%)
-# LOCKDIR contains the lockfile and layer files.
-LOCKDIR  := packages$(SPEC_MODIFIER).lock
-LOCKFILE := $(LOCKDIR)/pkgs.yml
-
-export PACKAGE_SPEC_ID LAYER_SPEC_ID PRODUCT_REVISION PRODUCT_VERSION
-
-# PACKAGESPEC_TARGETS are convenience aliases for targets defined in $(LOCKDIR)/Makefile
-PACKAGESPEC_TARGETS := \
-	build build-all build-ci \
-	aliases meta package \
-	package-meta stage-config stage \
-	watch-ci publish-config publish list-staged-builds
-
-$(PACKAGESPEC_TARGETS):
-	@PRODUCT_REPO_ROOT="$(shell git rev-parse --show-toplevel)" $(MAKE) -C $(LOCKDIR) $@
-
-# packages regenerates $(LOCKDIR) from $(SPEC) using packagespec. This is only for
-# internal HashiCorp use, as it has dependencies not available to OSS contributors.
-packages:
-	@command -v packagespec > /dev/null 2>&1 || { \
-		echo "Please install packagespec."; \
-		echo "Note: packagespec is only available to HashiCorp employees at present."; \
-		exit 1; \
-	}
-	@packagespec lock -specfile $(SPEC) -lockdir $(LOCKDIR)
-	@$(MAKE) ci-config
-
-.PHONY: $(PACKAGESPEC_TARGETS) packages
-## end packagespec integration ##
-
-CI_WORKFLOW_TPL     := .circleci/config/@build-release.yml.tpl
-CI_WORKFLOW         := .circleci/config/@build-release.yml
-
-.PHONY: ci-update-release-packages $(CI_WORKFLOW)
-ci-update-release-packages: $(CI_WORKFLOW)
-	@echo $^
-
-$(CI_WORKFLOW): $(LOCKFILE) $(CI_WORKFLOW_TPL)
-	@\
-		echo "==> Updating $@ to match $<"; \
-		$(call WRITE_GENERATED_FILE_HEADER,$@,make $@,$^); \
-		cat $< | gomplate -f $(CI_WORKFLOW_TPL) -d 'package-list=stdin://?type=application/yaml' >> $@
-
 .PHONY: ci-config
-ci-config: ci-update-release-packages
+ci-config:
 	@$(MAKE) -C .circleci ci-config
 .PHONY: ci-verify
 ci-verify:
 	@$(MAKE) -C .circleci ci-verify
 
-.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin static-assets ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path check-browserstack-creds test-ui-browserstack packages build build-ci
+.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci
 
-.NOTPARALLEL: ember-dist ember-dist-dev static-assets
+.NOTPARALLEL: ember-dist ember-dist-dev
+
+.PHONY: build
+# This is used for release builds by .github/workflows/build.yml
+build:
+	@echo "--> Building Vault $(VAULT_VERSION)"
+	@go build -v -tags "$(GO_TAGS)" -ldflags " -X github.com/hashicorp/vault/sdk/version.Version=$(VAULT_VERSION) -X github.com/hashicorp/vault/sdk/version.GitCommit=$(VAULT_REVISION) -X github.com/hashicorp/vault/sdk/version.BuildDate=$(VAULT_BUILD_DATE)" -o dist/
+
+.PHONY: version
+# This is used for release builds by .github/workflows/build.yml
+version:
+	@$(CURDIR)/scripts/version.sh sdk/version/version_base.go
+
+.PHONY: build-date
+# This is used for release builds by .github/workflows/build.yml
+build-date:
+	@$(CURDIR)/scripts/build_date.sh

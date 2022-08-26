@@ -9,8 +9,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 
 	"github.com/hashicorp/errwrap"
 )
@@ -93,12 +93,29 @@ Default: cn`,
 			},
 		},
 
+		"userfilter": {
+			Type:    framework.TypeString,
+			Default: "({{.UserAttr}}={{.Username}})",
+			Description: `Go template for LDAP user search filer (optional)
+The template can access the following context variables: UserAttr, Username
+Default: ({{.UserAttr}}={{.Username}})`,
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "User Search Filter",
+			},
+		},
+
 		"upndomain": {
 			Type:        framework.TypeString,
 			Description: "Enables userPrincipalDomain login with [username]@UPNDomain (optional)",
 			DisplayAttrs: &framework.DisplayAttributes{
 				Name: "User Principal (UPN) Domain",
 			},
+		},
+
+		"username_as_alias": {
+			Type:        framework.TypeBool,
+			Default:     false,
+			Description: "If true, sets the alias name to the username",
 		},
 
 		"userattr": {
@@ -231,8 +248,25 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 		cfg.AnonymousGroupSearch = d.Get("anonymous_group_search").(bool)
 	}
 
+	if _, ok := d.Raw["username_as_alias"]; ok || !hadExisting {
+		cfg.UsernameAsAlias = d.Get("username_as_alias").(bool)
+	}
+
 	if _, ok := d.Raw["url"]; ok || !hadExisting {
 		cfg.Url = strings.ToLower(d.Get("url").(string))
+	}
+
+	if _, ok := d.Raw["userfilter"]; ok || !hadExisting {
+		userfilter := d.Get("userfilter").(string)
+		if userfilter != "" {
+			// Validate the template before proceeding
+			_, err := template.New("queryTemplate").Parse(userfilter)
+			if err != nil {
+				return nil, errwrap.Wrapf("invalid userfilter: {{err}}", err)
+			}
+		}
+
+		cfg.UserFilter = userfilter
 	}
 
 	if _, ok := d.Raw["userattr"]; ok || !hadExisting {
@@ -369,10 +403,10 @@ type ConfigEntry struct {
 	GroupFilter              string `json:"groupfilter"`
 	GroupAttr                string `json:"groupattr"`
 	UPNDomain                string `json:"upndomain"`
+	UsernameAsAlias          bool   `json:"username_as_alias"`
+	UserFilter               string `json:"userfilter"`
 	UserAttr                 string `json:"userattr"`
 	Certificate              string `json:"certificate"`
-	ClientTLSCert            string `json:"client_tls_cert`
-	ClientTLSKey             string `json:"client_tls_key`
 	InsecureTLS              bool   `json:"insecure_tls"`
 	StartTLS                 bool   `json:"starttls"`
 	BindDN                   string `json:"binddn"`
@@ -385,11 +419,13 @@ type ConfigEntry struct {
 	UsePre111GroupCNBehavior *bool  `json:"use_pre111_group_cn_behavior"`
 	RequestTimeout           int    `json:"request_timeout"`
 
-	// This json tag deviates from snake case because there was a past issue
-	// where the tag was being ignored, causing it to be jsonified as "CaseSensitiveNames".
+	// These json tags deviate from snake case because there was a past issue
+	// where the tag was being ignored, causing it to be jsonified as "CaseSensitiveNames", etc.
 	// To continue reading in users' previously stored values,
 	// we chose to carry that forward.
-	CaseSensitiveNames *bool `json:"CaseSensitiveNames,omitempty"`
+	CaseSensitiveNames *bool  `json:"CaseSensitiveNames,omitempty"`
+	ClientTLSCert      string `json:"ClientTLSCert"`
+	ClientTLSKey       string `json:"ClientTLSKey"`
 }
 
 func (c *ConfigEntry) Map() map[string]interface{} {
@@ -405,6 +441,7 @@ func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
 		"groupdn":                c.GroupDN,
 		"groupfilter":            c.GroupFilter,
 		"groupattr":              c.GroupAttr,
+		"userfilter":             c.UserFilter,
 		"upndomain":              c.UPNDomain,
 		"userattr":               c.UserAttr,
 		"certificate":            c.Certificate,
@@ -417,6 +454,8 @@ func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
 		"tls_max_version":        c.TLSMaxVersion,
 		"use_token_groups":       c.UseTokenGroups,
 		"anonymous_group_search": c.AnonymousGroupSearch,
+		"request_timeout":        c.RequestTimeout,
+		"username_as_alias":      c.UsernameAsAlias,
 	}
 	if c.CaseSensitiveNames != nil {
 		m["case_sensitive_names"] = *c.CaseSensitiveNames

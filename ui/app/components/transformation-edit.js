@@ -5,7 +5,8 @@ export default TransformBase.extend({
 
   init() {
     this._super(...arguments);
-    this.set('initialRoles', this.get('model.allowed_roles'));
+    if (!this.model) return;
+    this.set('initialRoles', this.model.allowed_roles);
   },
 
   updateOrCreateRole(role, transformationId, backend) {
@@ -14,7 +15,7 @@ export default TransformBase.extend({
         backend,
         id: role.id,
       })
-      .then(roleStore => {
+      .then((roleStore) => {
         let transformations = roleStore.transformations;
         if (role.action === 'ADD') {
           transformations = addToList(transformations, transformationId);
@@ -25,14 +26,14 @@ export default TransformBase.extend({
           backend,
           transformations,
         });
-        return roleStore.save().catch(e => {
+        return roleStore.save().catch((e) => {
           return {
             errorStatus: e.httpStatus,
             ...role,
           };
         });
       })
-      .catch(e => {
+      .catch((e) => {
         if (e.httpStatus !== 403 && role.action === 'ADD') {
           // If role doesn't yet exist, create it with this transformation attached
           var newRole = this.store.createRecord('transform/role', {
@@ -41,7 +42,7 @@ export default TransformBase.extend({
             transformations: [transformationId],
             backend,
           });
-          return newRole.save().catch(e => {
+          return newRole.save().catch((e) => {
             return {
               errorStatus: e.httpStatus,
               ...role,
@@ -59,23 +60,33 @@ export default TransformBase.extend({
 
   handleUpdateRoles(updateRoles, transformationId) {
     if (!updateRoles) return;
-    const backend = this.get('model.backend');
-    const promises = updateRoles.map(r => this.updateOrCreateRole(r, transformationId, backend));
+    const backend = this.model.backend;
+    const promises = updateRoles.map((r) => this.updateOrCreateRole(r, transformationId, backend));
 
-    Promise.all(promises).then(results => {
-      let hasError = results.find(role => !!role.errorStatus);
+    Promise.all(promises).then((results) => {
+      let hasError = results.find((role) => !!role.errorStatus);
 
       if (hasError) {
         let message =
           'The edits to this transformation were successful, but transformations for its roles was not edited due to a lack of permissions.';
-        if (results.find(e => !!e.errorStatus && e.errorStatus !== 403)) {
+        if (results.find((e) => !!e.errorStatus && e.errorStatus !== 403)) {
           // if the errors weren't all due to permissions show generic message
           // eg. trying to update a role with empty array as transformations
           message = `You've edited the allowed_roles for this transformation. However, the corresponding edits to some roles' transformations were not made`;
         }
-        this.get('flashMessages').stickyInfo(message);
+        this.flashMessages.stickyInfo(message);
       }
     });
+  },
+
+  isWildcard(role) {
+    if (typeof role === 'string') {
+      return role.indexOf('*') >= 0;
+    }
+    if (role && role.id) {
+      return role.id.indexOf('*') >= 0;
+    }
+    return false;
   },
 
   actions: {
@@ -83,13 +94,13 @@ export default TransformBase.extend({
       event.preventDefault();
 
       this.applyChanges('save', () => {
-        const transformationId = this.get('model.id');
-        const newModelRoles = this.get('model.allowed_roles') || [];
-        const initialRoles = this.get('initialRoles') || [];
+        const transformationId = this.model.id;
+        const newModelRoles = this.model.allowed_roles || [];
+        const initialRoles = this.initialRoles || [];
 
         const updateRoles = [...newModelRoles, ...initialRoles]
-          .filter(r => r.indexOf('*') < 0) // TODO: expand wildcards into included roles instead
-          .map(role => {
+          .filter((r) => !this.isWildcard(r)) // CBS TODO: expand wildcards into included roles instead
+          .map((role) => {
             if (initialRoles.indexOf(role) < 0) {
               return {
                 id: role,
@@ -104,7 +115,7 @@ export default TransformBase.extend({
             }
             return null;
           })
-          .filter(r => !!r);
+          .filter((r) => !!r);
         this.handleUpdateRoles(updateRoles, transformationId);
       });
     },

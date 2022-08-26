@@ -4,16 +4,22 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/mitchellh/mapstructure"
 )
 
 func (c *Sys) ListAuth() (map[string]*AuthMount, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/auth")
+	return c.ListAuthWithContext(context.Background())
+}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
+func (c *Sys) ListAuthWithContext(ctx context.Context) (map[string]*AuthMount, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/auth")
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -45,14 +51,19 @@ func (c *Sys) EnableAuth(path, authType, desc string) error {
 }
 
 func (c *Sys) EnableAuthWithOptions(path string, options *EnableAuthOptions) error {
-	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/auth/%s", path))
+	return c.EnableAuthWithOptionsWithContext(context.Background(), path, options)
+}
+
+func (c *Sys) EnableAuthWithOptionsWithContext(ctx context.Context, path string, options *EnableAuthOptions) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	r := c.c.NewRequest(http.MethodPost, fmt.Sprintf("/v1/sys/auth/%s", path))
 	if err := r.SetJSONBody(options); err != nil {
 		return err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return err
 	}
@@ -62,11 +73,16 @@ func (c *Sys) EnableAuthWithOptions(path string, options *EnableAuthOptions) err
 }
 
 func (c *Sys) DisableAuth(path string) error {
-	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/auth/%s", path))
+	return c.DisableAuthWithContext(context.Background(), path)
+}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
+func (c *Sys) DisableAuthWithContext(ctx context.Context, path string) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+
+	r := c.c.NewRequest(http.MethodDelete, fmt.Sprintf("/v1/sys/auth/%s", path))
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -74,7 +90,9 @@ func (c *Sys) DisableAuth(path string) error {
 }
 
 // Rather than duplicate, we can use modern Go's type aliasing
-type EnableAuthOptions = MountInput
-type AuthConfigInput = MountConfigInput
-type AuthMount = MountOutput
-type AuthConfigOutput = MountConfigOutput
+type (
+	EnableAuthOptions = MountInput
+	AuthConfigInput   = MountConfigInput
+	AuthMount         = MountOutput
+	AuthConfigOutput  = MountConfigOutput
+)

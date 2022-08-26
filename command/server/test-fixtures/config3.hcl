@@ -1,5 +1,6 @@
 disable_cache = true
 disable_mlock = true
+log_requests_level = "Basic"
 
 ui = true
 
@@ -34,14 +35,18 @@ telemetry {
   maximum_gauge_cardinality = 100
 }
 
+sentinel {
+  additional_enabled_modules = ["http"]
+}
+
 seal "awskms" {
   region     = "us-east-1"
   access_key = "AKIAIOSFODNN7EXAMPLE"
   secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
 }
 
-max_lease_ttl = "10h"
-default_lease_ttl = "10h"
+max_lease_ttl = "30d"
+default_lease_ttl = "365d"
 cluster_name = "testcluster"
 pid_file = "./pidfile"
 raw_storage_endpoint = true

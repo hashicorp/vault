@@ -14,7 +14,7 @@ func secretOTP(b *backend) *framework.Secret {
 	return &framework.Secret{
 		Type: SecretOTPType,
 		Fields: map[string]*framework.FieldSchema{
-			"otp": &framework.FieldSchema{
+			"otp": {
 				Type:        framework.TypeString,
 				Description: "One time password",
 			},

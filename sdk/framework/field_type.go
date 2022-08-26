@@ -7,6 +7,7 @@ const (
 	TypeInvalid FieldType = 0
 	TypeString  FieldType = iota
 	TypeInt
+	TypeInt64
 	TypeBool
 	TypeMap
 

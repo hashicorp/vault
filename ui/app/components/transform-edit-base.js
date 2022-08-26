@@ -2,7 +2,7 @@ import { inject as service } from '@ember/service';
 import { or } from '@ember/object/computed';
 import { isBlank } from '@ember/utils';
 import Component from '@ember/component';
-import { set, get } from '@ember/object';
+import { set } from '@ember/object';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
@@ -46,7 +46,7 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   transitionToRoute() {
-    this.get('router').transitionTo(...arguments);
+    this.router.transitionTo(...arguments);
   },
 
   modelPrefixFromType(modelType) {
@@ -56,16 +56,39 @@ export default Component.extend(FocusOnInsertMixin, {
     }
     return modelPrefix;
   },
+
+  listTabFromType(modelType) {
+    let tab;
+    if (modelType && modelType.startsWith('transform/')) {
+      tab = `${modelType.replace('transform/', '')}`;
+    }
+    return tab;
+  },
+
   persist(method, successCallback) {
-    const model = get(this, 'model');
-    return model[method]().then(() => {
-      successCallback(model);
+    const model = this.model;
+    return model[method]()
+      .then(() => {
+        successCallback(model);
+      })
+      .catch((e) => {
+        model.set('displayErrors', e.errors);
+        throw e;
+      });
+  },
+
+  applyDelete(callback = () => {}) {
+    const tab = this.listTabFromType(this.model.constructor.modelName);
+    this.persist('destroyRecord', () => {
+      this.hasDataChanges();
+      callback();
+      this.transitionToRoute(LIST_ROOT_ROUTE, { queryParams: { tab } });
     });
   },
 
   applyChanges(type, callback = () => {}) {
-    const modelId = this.get('model.id') || this.get('model.name'); // transform comes in as model.name
-    const modelPrefix = this.modelPrefixFromType(this.get('model.constructor.modelName'));
+    const modelId = this.model.id || this.model.name; // transform comes in as model.name
+    const modelPrefix = this.modelPrefixFromType(this.model.constructor.modelName);
     // prevent from submitting if there's no key
     // maybe do something fancier later
     if (type === 'create' && isBlank(modelId)) {
@@ -73,9 +96,14 @@ export default Component.extend(FocusOnInsertMixin, {
     }
 
     this.persist('save', () => {
+      this.hasDataChanges();
       callback();
       this.transitionToRoute(SHOW_ROUTE, `${modelPrefix}${modelId}`);
     });
+  },
+
+  hasDataChanges() {
+    this.onDataChange(this.model?.hasDirtyAttributes);
   },
 
   actions: {
@@ -86,18 +114,15 @@ export default Component.extend(FocusOnInsertMixin, {
     },
 
     setValue(key, event) {
-      set(get(this, 'model'), key, event.target.checked);
+      set(this.model, key, event.target.checked);
     },
 
     refresh() {
-      this.get('onRefresh')();
+      this.onRefresh();
     },
 
     delete() {
-      this.persist('destroyRecord', () => {
-        this.onDataChange();
-        this.transitionToRoute(LIST_ROOT_ROUTE);
-      });
+      this.applyDelete();
     },
   },
 });

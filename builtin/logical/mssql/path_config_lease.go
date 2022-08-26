@@ -13,18 +13,18 @@ func pathConfigLease(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/lease",
 		Fields: map[string]*framework.FieldSchema{
-			"ttl": &framework.FieldSchema{
+			"ttl": {
 				Type:        framework.TypeString,
 				Description: "Default ttl for roles.",
 			},
 
-			"ttl_max": &framework.FieldSchema{
+			"ttl_max": {
 				Type: framework.TypeString,
 				Description: `Deprecated: use "max_ttl" instead.  Maximum
 time a credential is valid for.`,
 			},
 
-			"max_ttl": &framework.FieldSchema{
+			"max_ttl": {
 				Type:        framework.TypeString,
 				Description: "Maximum time a credential is valid for.",
 			},
@@ -75,7 +75,6 @@ func (b *backend) pathConfigLeaseWrite(ctx context.Context, req *logical.Request
 
 func (b *backend) pathConfigLeaseRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	leaseConfig, err := b.LeaseConfig(ctx, req.Storage)
-
 	if err != nil {
 		return nil, err
 	}

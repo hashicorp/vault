@@ -4,7 +4,7 @@ import { alias } from '@ember/object/computed';
 
 export default Base.extend({
   model: alias('params.firstObject'),
-  key: computed('params', function() {
+  key: computed('params', function () {
     return this.params.objectAt(1);
   }),
 

@@ -1,9 +1,9 @@
+/* eslint-disable no-undef */
 module.exports = {
   env: {
     embertest: true,
   },
   globals: {
-    faker: true,
     server: true,
     $: true,
     authLogout: false,

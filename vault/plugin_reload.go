@@ -7,13 +7,12 @@ import (
 
 	"github.com/hashicorp/vault/helper/namespace"
 
-	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// reloadPluginMounts reloads provided mounts, regardless of
+// reloadMatchingPluginMounts reloads provided mounts, regardless of
 // plugin name, as long as the backend type is plugin.
 func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) error {
 	c.mountsLock.RLock()
@@ -28,16 +27,26 @@ func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) 
 
 	var errors error
 	for _, mount := range mounts {
+		var isAuth bool
+		// allow any of
+		//   - sys/auth/foo/
+		//   - sys/auth/foo
+		//   - auth/foo/
+		//   - auth/foo
+		if strings.HasPrefix(mount, credentialRoutePrefix) {
+			isAuth = true
+		} else if strings.HasPrefix(mount, systemMountPath+credentialRoutePrefix) {
+			isAuth = true
+			mount = strings.TrimPrefix(mount, systemMountPath)
+		}
+		if !strings.HasSuffix(mount, "/") {
+			mount += "/"
+		}
+
 		entry := c.router.MatchingMountEntry(ctx, mount)
 		if entry == nil {
 			errors = multierror.Append(errors, fmt.Errorf("cannot fetch mount entry on %q", mount))
 			continue
-		}
-
-		var isAuth bool
-		fullPath := c.router.MatchingMount(ctx, mount)
-		if strings.HasPrefix(fullPath, credentialRoutePrefix) {
-			isAuth = true
 		}
 
 		// We dont reload mounts that are not in the same namespace
@@ -47,7 +56,7 @@ func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) 
 
 		err := c.reloadBackendCommon(ctx, entry, isAuth)
 		if err != nil {
-			errors = multierror.Append(errors, errwrap.Wrapf(fmt.Sprintf("cannot reload plugin on %q: {{err}}", mount), err))
+			errors = multierror.Append(errors, fmt.Errorf("cannot reload plugin on %q: %w", mount, err))
 			continue
 		}
 		c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path)
@@ -189,7 +198,11 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 		paths := backend.SpecialPaths()
 		if paths != nil {
 			re.rootPaths.Store(pathsToRadix(paths.Root))
-			re.loginPaths.Store(pathsToRadix(paths.Unauthenticated))
+			loginPathsEntry, err := parseUnauthenticatedPaths(paths.Unauthenticated)
+			if err != nil {
+				return err
+			}
+			re.loginPaths.Store(loginPathsEntry)
 		}
 	}
 

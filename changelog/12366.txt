@@ -1,0 +1,3 @@
+```release-note:bug
+storage/raft: Support `addr_type=public_v6` in auto-join
+```

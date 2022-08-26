@@ -22,7 +22,7 @@ export default ApplicationAdapter.extend({
     let role = snapshot.attr('role');
     let url = `/v1/${role.backend}/creds/${role.name}`;
 
-    return this.ajax(url, method, options).then(response => {
+    return this.ajax(url, method, options).then((response) => {
       response.id = snapshot.id;
       response.modelName = type.modelName;
       store.pushPayload(type.modelName, response);

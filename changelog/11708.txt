@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: JSON fields on database can be cleared on edit
+```

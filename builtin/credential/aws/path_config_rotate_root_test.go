@@ -3,14 +3,12 @@ package awsauth
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
-	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/awsutil"
+	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -23,7 +21,6 @@ func TestPathConfigRotateRoot(t *testing.T) {
 					SecretAccessKey: aws.String("buzz2"),
 				},
 			},
-			DeleteAccessKeyOutput: &iam.DeleteAccessKeyOutput{},
 			GetUserOutput: &iam.GetUserOutput{
 				User: &iam.User{
 					UserName: aws.String("ellen"),
@@ -33,15 +30,12 @@ func TestPathConfigRotateRoot(t *testing.T) {
 	}
 
 	ctx := context.Background()
+	config := logical.TestBackendConfig()
+	logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
-	b, err := Factory(ctx, &logical.BackendConfig{
-		StorageView: storage,
-		Logger:      hclog.Default(),
-		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: time.Hour,
-			MaxLeaseTTLVal:     time.Hour,
-		},
-	})
+	config.StorageView = storage
+
+	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,5 +69,12 @@ func TestPathConfigRotateRoot(t *testing.T) {
 	}
 	if resp.Data["access_key"].(string) != "fizz2" {
 		t.Fatalf("expected new access key buzz2 but received %s", resp.Data["access_key"])
+	}
+	newClientConf, err := b.nonLockedClientConfigEntry(ctx, req.Storage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Data["access_key"].(string) != newClientConf.AccessKey {
+		t.Fatalf("expected new access key buzz2 to be saved to storage but receieved %s", clientConf.AccessKey)
 	}
 }

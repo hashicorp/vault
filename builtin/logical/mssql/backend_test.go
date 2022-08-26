@@ -105,7 +105,6 @@ func TestBackend_leaseWriteRead(t *testing.T) {
 			testAccStepReadLease(t),
 		},
 	})
-
 }
 
 func testAccPreCheckFunc(t *testing.T, connectionURL string) func() {

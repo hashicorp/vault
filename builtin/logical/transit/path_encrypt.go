@@ -3,9 +3,13 @@ package transit
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"reflect"
 
-	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/constants"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -37,18 +41,14 @@ type BatchRequestItem struct {
 	DecodedNonce []byte
 }
 
-// BatchResponseItem represents a response item for batch processing
-type BatchResponseItem struct {
+// EncryptBatchResponseItem represents a response item for batch processing
+type EncryptBatchResponseItem struct {
 	// Ciphertext for the plaintext present in the corresponding batch
 	// request item
 	Ciphertext string `json:"ciphertext,omitempty" structs:"ciphertext" mapstructure:"ciphertext"`
 
 	// KeyVersion defines the key version used to encrypt plaintext.
 	KeyVersion int `json:"key_version,omitempty" structs:"key_version" mapstructure:"key_version"`
-
-	// Plaintext for the ciphertext present in the corresponding batch
-	// request item
-	Plaintext string `json:"plaintext,omitempty" structs:"plaintext" mapstructure:"plaintext"`
 
 	// Error, if set represents a failure encountered while encrypting a
 	// corresponding batch request item
@@ -127,10 +127,19 @@ to the min_encryption_version configured on the key.`,
 	}
 }
 
+func decodeEncryptBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
+	return decodeBatchRequestItems(src, true, false, dst)
+}
+
+func decodeDecryptBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
+	return decodeBatchRequestItems(src, false, true, dst)
+}
+
 // decodeBatchRequestItems is a fast path alternative to mapstructure.Decode to decode []BatchRequestItem.
 // It aims to behave as closely possible to the original mapstructure.Decode and will return the same errors.
+// Note, however, that an error will also be returned if one of the required fields is missing.
 // https://github.com/hashicorp/vault/pull/8775/files#r437709722
-func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
+func decodeBatchRequestItems(src interface{}, requirePlaintext bool, requireCiphertext bool, dst *[]BatchRequestItem) error {
 	if src == nil || dst == nil {
 		return nil
 	}
@@ -158,7 +167,8 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 		}
 
 		if v, has := item["context"]; has {
-			if casted, ok := v.(string); ok {
+			if !reflect.ValueOf(v).IsValid() {
+			} else if casted, ok := v.(string); ok {
 				(*dst)[i].Context = casted
 			} else {
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].context' expected type 'string', got unconvertible type '%T'", i, item["context"]))
@@ -166,11 +176,14 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 		}
 
 		if v, has := item["ciphertext"]; has {
-			if casted, ok := v.(string); ok {
+			if !reflect.ValueOf(v).IsValid() {
+			} else if casted, ok := v.(string); ok {
 				(*dst)[i].Ciphertext = casted
 			} else {
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].ciphertext' expected type 'string', got unconvertible type '%T'", i, item["ciphertext"]))
 			}
+		} else if requireCiphertext {
+			errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].ciphertext' missing ciphertext to decrypt", i))
 		}
 
 		if v, has := item["plaintext"]; has {
@@ -179,10 +192,13 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 			} else {
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].plaintext' expected type 'string', got unconvertible type '%T'", i, item["plaintext"]))
 			}
+		} else if requirePlaintext {
+			errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].plaintext' missing plaintext to encrypt", i))
 		}
 
 		if v, has := item["nonce"]; has {
-			if casted, ok := v.(string); ok {
+			if !reflect.ValueOf(v).IsValid() {
+			} else if casted, ok := v.(string); ok {
 				(*dst)[i].Nonce = casted
 			} else {
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].nonce' expected type 'string', got unconvertible type '%T'", i, item["nonce"]))
@@ -190,8 +206,17 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 		}
 
 		if v, has := item["key_version"]; has {
-			if casted, ok := v.(int); ok {
+			if !reflect.ValueOf(v).IsValid() {
+			} else if casted, ok := v.(int); ok {
 				(*dst)[i].KeyVersion = casted
+			} else if js, ok := v.(json.Number); ok {
+				// https://github.com/hashicorp/vault/issues/10232
+				// Because API server parses json request with UseNumber=true, logical.Request.Data can include json.Number for a number field.
+				if casted, err := js.Int64(); err == nil {
+					(*dst)[i].KeyVersion = int(casted)
+				} else {
+					errs.Errors = append(errs.Errors, fmt.Sprintf(`error decoding %T into [%d].key_version: strconv.ParseInt: parsing "%s": invalid syntax`, v, i, v))
+				}
 			} else {
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].key_version' expected type 'int', got unconvertible type '%T'", i, item["key_version"]))
 			}
@@ -207,7 +232,7 @@ func decodeBatchRequestItems(src interface{}, dst *[]BatchRequestItem) error {
 
 func (b *backend) pathEncryptExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
 	name := d.Get("name").(string)
-	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
 	}, b.GetRandomReader())
@@ -227,16 +252,19 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	batchInputRaw := d.Raw["batch_input"]
 	var batchInputItems []BatchRequestItem
 	if batchInputRaw != nil {
-		err = decodeBatchRequestItems(batchInputRaw, &batchInputItems)
+		err = decodeEncryptBatchRequestItems(batchInputRaw, &batchInputItems)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to parse batch input: {{err}}", err)
+			return nil, fmt.Errorf("failed to parse batch input: %w", err)
 		}
 
 		if len(batchInputItems) == 0 {
 			return logical.ErrorResponse("missing batch input to process"), logical.ErrInvalidRequest
 		}
 	} else {
-		valueRaw, ok := d.GetOk("plaintext")
+		valueRaw, ok, err := d.GetOkErr("plaintext")
+		if err != nil {
+			return nil, err
+		}
 		if !ok {
 			return logical.ErrorResponse("missing plaintext to encrypt"), logical.ErrInvalidRequest
 		}
@@ -250,8 +278,11 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 	}
 
-	batchResponseItems := make([]BatchResponseItem, len(batchInputItems))
+	batchResponseItems := make([]EncryptBatchResponseItem, len(batchInputItems))
 	contextSet := len(batchInputItems[0].Context) != 0
+
+	userErrorInBatch := false
+	internalErrorInBatch := false
 
 	// Before processing the batch request items, get the policy. If the
 	// policy is supposed to be upserted, then determine if 'derived' is to
@@ -264,6 +295,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 
 		_, err := base64.StdEncoding.DecodeString(item.Plaintext)
 		if err != nil {
+			userErrorInBatch = true
 			batchResponseItems[i].Error = err.Error()
 			continue
 		}
@@ -272,6 +304,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		if len(item.Context) != 0 {
 			batchInputItems[i].DecodedContext, err = base64.StdEncoding.DecodeString(item.Context)
 			if err != nil {
+				userErrorInBatch = true
 				batchResponseItems[i].Error = err.Error()
 				continue
 			}
@@ -281,6 +314,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		if len(item.Nonce) != 0 {
 			batchInputItems[i].DecodedNonce, err = base64.StdEncoding.DecodeString(item.Nonce)
 			if err != nil {
+				userErrorInBatch = true
 				batchResponseItems[i].Error = err.Error()
 				continue
 			}
@@ -326,7 +360,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 	}
 
-	p, upserted, err = b.lm.GetPolicy(ctx, polReq, b.GetRandomReader())
+	p, upserted, err = b.GetPolicy(ctx, polReq, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
@@ -340,26 +374,32 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	// Process batch request items. If encryption of any request
 	// item fails, respectively mark the error in the response
 	// collection and continue to process other items.
+	warnAboutNonceUsage := false
 	for i, item := range batchInputItems {
 		if batchResponseItems[i].Error != "" {
 			continue
 		}
 
+		if !warnAboutNonceUsage && shouldWarnAboutNonceUsage(p, item.DecodedNonce) {
+			warnAboutNonceUsage = true
+		}
+
 		ciphertext, err := p.Encrypt(item.KeyVersion, item.DecodedContext, item.DecodedNonce, item.Plaintext)
 		if err != nil {
 			switch err.(type) {
-			case errutil.UserError:
-				batchResponseItems[i].Error = err.Error()
-				continue
+			case errutil.InternalError:
+				internalErrorInBatch = true
 			default:
-				p.Unlock()
-				return nil, err
+				userErrorInBatch = true
 			}
+			batchResponseItems[i].Error = err.Error()
+			continue
 		}
 
 		if ciphertext == "" {
-			p.Unlock()
-			return nil, fmt.Errorf("empty ciphertext returned for input item %d", i)
+			userErrorInBatch = true
+			batchResponseItems[i].Error = fmt.Sprintf("empty ciphertext returned for input item %d", i)
+			continue
 		}
 
 		keyVersion := item.KeyVersion
@@ -379,6 +419,11 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	} else {
 		if batchResponseItems[0].Error != "" {
 			p.Unlock()
+
+			if internalErrorInBatch {
+				return nil, errutil.InternalError{Err: batchResponseItems[0].Error}
+			}
+
 			return logical.ErrorResponse(batchResponseItems[0].Error), logical.ErrInvalidRequest
 		}
 
@@ -388,12 +433,56 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 	}
 
+	if constants.IsFIPS() && warnAboutNonceUsage {
+		resp.AddWarning("A provided nonce value was used within FIPS mode, this violates FIPS 140 compliance.")
+	}
+
 	if req.Operation == logical.CreateOperation && !upserted {
 		resp.AddWarning("Attempted creation of the key during the encrypt operation, but it was created beforehand")
 	}
 
 	p.Unlock()
+
+	// Depending on the errors in the batch, different status codes should be returned. User errors
+	// will return a 400 and precede internal errors which return a 500. The reasoning behind this is
+	// that user errors are non-retryable without making changes to the request, and should be surfaced
+	// to the user first.
+	switch {
+	case userErrorInBatch:
+		return logical.RespondWithStatusCode(resp, req, http.StatusBadRequest)
+	case internalErrorInBatch:
+		return logical.RespondWithStatusCode(resp, req, http.StatusInternalServerError)
+	}
+
 	return resp, nil
+}
+
+// shouldWarnAboutNonceUsage attempts to determine if we will use a provided nonce or not. Ideally this
+// would be information returned through p.Encrypt but that would require an SDK api change and this is
+// transit specific
+func shouldWarnAboutNonceUsage(p *keysutil.Policy, userSuppliedNonce []byte) bool {
+	if len(userSuppliedNonce) == 0 {
+		return false
+	}
+
+	var supportedKeyType bool
+	switch p.Type {
+	case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305:
+		supportedKeyType = true
+	default:
+		supportedKeyType = false
+	}
+
+	if supportedKeyType && p.ConvergentEncryption && p.ConvergentVersion == 1 {
+		// We only use the user supplied nonce for v1 convergent encryption keys
+		return true
+	}
+
+	if supportedKeyType && !p.ConvergentEncryption {
+		return true
+	}
+
+	return false
 }
 
 const pathEncryptHelpSyn = `Encrypt a plaintext value or a batch of plaintext

@@ -1,6 +1,7 @@
 import Route from '@ember/routing/route';
 import utils from 'vault/lib/key-utils';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
+import { normalizePath } from 'vault/utils/path-encoding-helpers';
 
 export default Route.extend(UnloadModelRoute, {
   templateName: 'vault/cluster/secrets/backend/versions',
@@ -22,6 +23,7 @@ export default Route.extend(UnloadModelRoute, {
   model(params) {
     let { secret } = params;
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    return this.store.queryRecord('secret-v2', { id: secret, backend });
+    let id = normalizePath(secret);
+    return this.store.queryRecord('secret-v2', { id, backend });
   },
 });

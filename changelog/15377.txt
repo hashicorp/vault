@@ -1,0 +1,3 @@
+```release-note:improvement
+api: Support VAULT_PROXY_ADDR environment variable to allow overriding the Vault client's HTTP proxy. 
+```

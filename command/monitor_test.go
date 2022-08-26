@@ -78,11 +78,9 @@ func TestMonitorCommand_Run(t *testing.T) {
 				atomic.StoreInt64(&code, int64(cmd.Run(tc.args)))
 			}()
 
-			select {
-			case <-time.After(3 * time.Second):
-				stopCh <- struct{}{}
-				close(shutdownCh)
-			}
+			<-time.After(3 * time.Second)
+			stopCh <- struct{}{}
+			close(shutdownCh)
 
 			if atomic.LoadInt64(&code) != tc.code {
 				t.Errorf("expected %d to be %d", code, tc.code)
