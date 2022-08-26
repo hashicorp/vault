@@ -5,6 +5,8 @@ import (
 	"crypto/x509"
 	"fmt"
 	"sort"
+
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 )
 
 func prettyIssuer(issuerIdEntryMap map[issuerID]*issuerEntry, issuer issuerID) string {
@@ -372,6 +374,10 @@ func (sc *storageContext) rebuildIssuersChains(referenceCert *issuerEntry /* opt
 				}
 			}
 
+			if len(parentCerts) > 1024*1024*1024 {
+				return errutil.InternalError{Err: fmt.Sprintf("error building certificate chain, %d is too many parent certs",
+					len(parentCerts))}
+			}
 			includedParentCerts := make(map[string]bool, len(parentCerts)+1)
 			includedParentCerts[entry.Certificate] = true
 			for _, parentCert := range append(roots, intermediates...) {
@@ -1159,6 +1165,9 @@ func findAllCyclesWithNode(
 					}
 				}
 
+				if len(path) > 1024*1024*1024 {
+					return nil, errutil.InternalError{Err: fmt.Sprintf("Error updating certificate path: path of length %d is too long", len(path))}
+				}
 				// Make sure to deep copy the path.
 				newPath := make([]issuerID, 0, len(path)+1)
 				newPath = append(newPath, path...)
