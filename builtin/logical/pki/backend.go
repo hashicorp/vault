@@ -220,9 +220,10 @@ const (
 
 type tidyStatus struct {
 	// Parameters used to initiate the operation
-	safetyBuffer     int
-	tidyCertStore    bool
-	tidyRevokedCerts bool
+	safetyBuffer      int
+	tidyCertStore     bool
+	tidyRevokedCerts  bool
+	tidyRevokedAssocs bool
 
 	// Status
 	state                   tidyStatusState
@@ -232,6 +233,7 @@ type tidyStatus struct {
 	message                 string
 	certStoreDeletedCount   uint
 	revokedCertDeletedCount uint
+	missingIssuerCertCount  uint
 }
 
 const backendHelp = `

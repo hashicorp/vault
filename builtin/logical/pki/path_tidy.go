@@ -16,6 +16,13 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+type tidyConfig struct {
+	CertStore    bool          `json:"tidy_cert_store"`
+	RevokedCerts bool          `json:"tidy_revoked_certs"`
+	IssuerAssocs bool          `json:"tidy_revoked_cert_issuer_associations"`
+	SafetyBuffer time.Duration `json:"safety_buffer"`
+}
+
 func pathTidy(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "tidy$",
@@ -93,6 +100,13 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 
 	bufferDuration := time.Duration(safetyBuffer) * time.Second
 
+	config := &tidyConfig{
+		CertStore:    tidyCertStore,
+		RevokedCerts: tidyRevokedCerts,
+		IssuerAssocs: tidyRevokedAssocs,
+		SafetyBuffer: bufferDuration,
+	}
+
 	if !atomic.CompareAndSwapUint32(b.tidyCASGuard, 0, 1) {
 		resp := &logical.Response{}
 		resp.AddWarning("Tidy operation already in progress.")
@@ -105,25 +119,38 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 		Storage: req.Storage,
 	}
 
+	b.startTidyOperation(req, config)
+
+	resp := &logical.Response{}
+	if !tidyCertStore && !tidyRevokedCerts && !tidyRevokedAssocs {
+		resp.AddWarning("No targets to tidy; specify tidy_cert_store=true or tidy_revoked_certs=true or tidy_revoked_cert_issuer_associations=true to start a tidy operation.")
+	} else {
+		resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
+	}
+
+	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
+}
+
+func (b *backend) startTidyOperation(req *logical.Request, config *tidyConfig) {
 	go func() {
 		defer atomic.StoreUint32(b.tidyCASGuard, 0)
 
-		b.tidyStatusStart(safetyBuffer, tidyCertStore, tidyRevokedCerts)
+		b.tidyStatusStart(config)
 
-		// Don't cancel when the original client request goes away
-		ctx = context.Background()
+		// Don't cancel when the original client request goes away.
+		ctx := context.Background()
 
 		logger := b.Logger().Named("tidy")
 
 		doTidy := func() error {
-			if tidyCertStore {
-				if err := b.doTidyCertStore(ctx, req, logger, bufferDuration); err != nil {
+			if config.CertStore {
+				if err := b.doTidyCertStore(ctx, req, logger, config); err != nil {
 					return err
 				}
 			}
 
-			if tidyRevokedCerts || tidyRevokedAssocs {
-				if err := b.doTidyRevocationStore(ctx, req, logger, tidyRevokedCerts, tidyRevokedAssocs, bufferDuration); err != nil {
+			if config.RevokedCerts || config.IssuerAssocs {
+				if err := b.doTidyRevocationStore(ctx, req, logger, config); err != nil {
 					return nil
 				}
 			}
@@ -138,18 +165,9 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 			b.tidyStatusStop(nil)
 		}
 	}()
-
-	resp := &logical.Response{}
-	if !tidyCertStore && !tidyRevokedCerts && !tidyRevokedAssocs {
-		resp.AddWarning("No targets to tidy; specify tidy_cert_store=true or tidy_revoked_certs=true or tidy_revoked_cert_issuer_associations=true to start a tidy operation.")
-	} else {
-		resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
-	}
-
-	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
 }
 
-func (b *backend) doTidyCertStore(ctx context.Context, req *logical.Request, logger hclog.Logger, bufferDuration time.Duration) error {
+func (b *backend) doTidyCertStore(ctx context.Context, req *logical.Request, logger hclog.Logger, config *tidyConfig) error {
 	serials, err := req.Storage.List(ctx, "certs/")
 	if err != nil {
 		return fmt.Errorf("error fetching list of certs: %w", err)
@@ -189,7 +207,7 @@ func (b *backend) doTidyCertStore(ctx context.Context, req *logical.Request, log
 			return fmt.Errorf("unable to parse stored certificate with serial %q: %w", serial, err)
 		}
 
-		if time.Now().After(cert.NotAfter.Add(bufferDuration)) {
+		if time.Now().After(cert.NotAfter.Add(config.SafetyBuffer)) {
 			if err := req.Storage.Delete(ctx, "certs/"+serial); err != nil {
 				return fmt.Errorf("error deleting serial %q from storage: %w", serial, err)
 			}
@@ -202,7 +220,7 @@ func (b *backend) doTidyCertStore(ctx context.Context, req *logical.Request, log
 	return nil
 }
 
-func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Request, logger hclog.Logger, tidyRevokedCerts bool, tidyRevokedAssocs bool, bufferDuration time.Duration) error {
+func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Request, logger hclog.Logger, config *tidyConfig) error {
 	b.revokeStorageLock.Lock()
 	defer b.revokeStorageLock.Unlock()
 
@@ -223,7 +241,6 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 	revokedSerialsCount := len(revokedSerials)
 	metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_total_entries"}, float32(revokedSerialsCount))
 
-	missingIssuers := 0
 	fixedIssuers := 0
 
 	var revInfo revocationInfo
@@ -268,9 +285,9 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 		// tidyRevokedCerts as that may remove the entry. If that happens,
 		// we won't persist the revInfo changes (as it was deleted instead).
 		var storeCert bool
-		if tidyRevokedAssocs {
+		if config.IssuerAssocs {
 			if !isRevInfoIssuerValid(&revInfo, issuerIDCertMap) {
-				missingIssuers += 1
+				b.tidyStatusIncMissingIssuerCertCount()
 				revInfo.CertificateIssuer = issuerID("")
 				storeCert = true
 				if associateRevokedCertWithIsssuer(&revInfo, revokedCert, issuerIDCertMap) {
@@ -279,12 +296,12 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 			}
 		}
 
-		if tidyRevokedCerts {
+		if config.RevokedCerts {
 			// Only remove the entries from revoked/ and certs/ if we're
 			// past its NotAfter value. This is because we use the
 			// information on revoked/ to build the CRL and the
 			// information on certs/ for lookup.
-			if time.Now().After(revokedCert.NotAfter.Add(bufferDuration)) {
+			if time.Now().After(revokedCert.NotAfter.Add(config.SafetyBuffer)) {
 				if err := req.Storage.Delete(ctx, "revoked/"+serial); err != nil {
 					return fmt.Errorf("error deleting serial %q from revoked list: %w", serial, err)
 				}
@@ -313,7 +330,7 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 	}
 
 	metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_total_entries_remaining"}, float32(uint(revokedSerialsCount)-b.tidyStatus.revokedCertDeletedCount))
-	metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_entries_incorrect_issuers"}, float32(missingIssuers))
+	metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_entries_incorrect_issuers"}, float32(b.tidyStatus.missingIssuerCertCount))
 	metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_entries_fixed_issuers"}, float32(fixedIssuers))
 
 	if rebuildCRL {
@@ -358,6 +375,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 			"message":                    nil,
 			"cert_store_deleted_count":   nil,
 			"revoked_cert_deleted_count": nil,
+			"missing_issuer_cert_count":  nil,
 		},
 	}
 
@@ -368,10 +386,12 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	resp.Data["safety_buffer"] = b.tidyStatus.safetyBuffer
 	resp.Data["tidy_cert_store"] = b.tidyStatus.tidyCertStore
 	resp.Data["tidy_revoked_certs"] = b.tidyStatus.tidyRevokedCerts
+	resp.Data["tidy_revoked_cert_issuer_associations"] = b.tidyStatus.tidyRevokedAssocs
 	resp.Data["time_started"] = b.tidyStatus.timeStarted
 	resp.Data["message"] = b.tidyStatus.message
 	resp.Data["cert_store_deleted_count"] = b.tidyStatus.certStoreDeletedCount
 	resp.Data["revoked_cert_deleted_count"] = b.tidyStatus.revokedCertDeletedCount
+	resp.Data["missing_issuer_cert_count"] = b.tidyStatus.missingIssuerCertCount
 
 	switch b.tidyStatus.state {
 	case tidyStatusStarted:
@@ -391,16 +411,17 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	return resp, nil
 }
 
-func (b *backend) tidyStatusStart(safetyBuffer int, tidyCertStore, tidyRevokedCerts bool) {
+func (b *backend) tidyStatusStart(config *tidyConfig) {
 	b.tidyStatusLock.Lock()
 	defer b.tidyStatusLock.Unlock()
 
 	b.tidyStatus = &tidyStatus{
-		safetyBuffer:     safetyBuffer,
-		tidyCertStore:    tidyCertStore,
-		tidyRevokedCerts: tidyRevokedCerts,
-		state:            tidyStatusStarted,
-		timeStarted:      time.Now(),
+		safetyBuffer:      int(config.SafetyBuffer / time.Second),
+		tidyCertStore:     config.CertStore,
+		tidyRevokedCerts:  config.RevokedCerts,
+		tidyRevokedAssocs: config.IssuerAssocs,
+		state:             tidyStatusStarted,
+		timeStarted:       time.Now(),
 	}
 
 	metrics.SetGauge([]string{"secrets", "pki", "tidy", "start_time_epoch"}, float32(b.tidyStatus.timeStarted.Unix()))
@@ -451,6 +472,13 @@ func (b *backend) tidyStatusIncRevokedCertCount() {
 	b.tidyStatus.revokedCertDeletedCount++
 }
 
+func (b *backend) tidyStatusIncMissingIssuerCertCount() {
+	b.tidyStatusLock.Lock()
+	defer b.tidyStatusLock.Unlock()
+
+	b.tidyStatus.missingIssuerCertCount++
+}
+
 const pathTidyHelpSyn = `
 Tidy up the backend by removing expired certificates, revocation information,
 or both.
@@ -490,6 +518,7 @@ The result includes the following fields:
 * 'safety_buffer': the value of this parameter when initiating the tidy operation
 * 'tidy_cert_store': the value of this parameter when initiating the tidy operation
 * 'tidy_revoked_certs': the value of this parameter when initiating the tidy operation
+* 'tidy_revoked_cert_issuer_associations': the value of this parameter when initiating the tidy operation
 * 'state': one of "Inactive", "Running", "Finished", "Error"
 * 'error': the error message, if the operation ran into an error
 * 'time_started': the time the operation started
@@ -498,4 +527,5 @@ The result includes the following fields:
   "Tidying revoked certificates: checking certificate N of TOTAL"
 * 'cert_store_deleted_count': The number of certificate storage entries deleted
 * 'revoked_cert_deleted_count': The number of revoked certificate entries deleted
+* 'missing_issuer_cert_count': The number of revoked certificates which were missing a valid issuer reference
 `
