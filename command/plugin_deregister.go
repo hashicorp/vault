@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/mitchellh/cli"
@@ -33,7 +34,7 @@ Usage: vault plugin deregister [options] TYPE NAME
 
   Deregister the plugin named my-custom-plugin:
 
-      $ vault plugin deregister auth my-custom-plugin
+      $ vault plugin deregister auth my-custom-plugin [version]
 
 ` + c.Flags().Help()
 
@@ -60,14 +61,14 @@ func (c *PluginDeregisterCommand) Run(args []string) int {
 		return 1
 	}
 
-	var pluginNameRaw, pluginTypeRaw string
+	var pluginNameRaw, pluginTypeRaw, pluginVersionRaw string
 	args = f.Args()
 	switch {
 	case len(args) < 1:
-		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1 or 2, got %d)", len(args)))
+		c.UI.Error(fmt.Sprintf("Not enough arguments (expected 1, 2, or 3, got %d)", len(args)))
 		return 1
-	case len(args) > 2:
-		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1 or 2, got %d)", len(args)))
+	case len(args) > 3:
+		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1, 2, or 3, got %d)", len(args)))
 		return 1
 
 	// These cases should come after invalid cases have been checked
@@ -77,6 +78,10 @@ func (c *PluginDeregisterCommand) Run(args []string) int {
 	case len(args) == 2:
 		pluginTypeRaw = args[0]
 		pluginNameRaw = args[1]
+	case len(args) == 3:
+		pluginTypeRaw = args[0]
+		pluginNameRaw = args[1]
+		pluginVersionRaw = args[2]
 	}
 
 	client, err := c.Client()
@@ -91,10 +96,23 @@ func (c *PluginDeregisterCommand) Run(args []string) int {
 		return 2
 	}
 	pluginName := strings.TrimSpace(pluginNameRaw)
+	pluginVersion := strings.TrimSpace(pluginVersionRaw)
+	if pluginVersion != "" {
+		semanticVersion, err := semver.NewSemver(pluginVersion)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("version %q is not a valid semantic version: %v", pluginVersionRaw, err))
+			return 2
+		}
+
+		// Canonicalize the version string.
+		// Add the 'v' back in, since semantic version strips it out, and we want to be consistent with internal plugins.
+		pluginVersion = "v" + semanticVersion.String()
+	}
 
 	if err := client.Sys().DeregisterPlugin(&api.DeregisterPluginInput{
-		Name: pluginName,
-		Type: pluginType,
+		Name:    pluginName,
+		Type:    pluginType,
+		Version: pluginVersion,
 	}); err != nil {
 		c.UI.Error(fmt.Sprintf("Error deregistering plugin named %s: %s", pluginName, err))
 		return 2

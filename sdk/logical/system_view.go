@@ -54,11 +54,11 @@ type SystemView interface {
 
 	// LookupPlugin looks into the plugin catalog for a plugin with the given
 	// name. Returns a PluginRunner or an error if a plugin can not be found.
-	LookupPlugin(context.Context, string, consts.PluginType) (*pluginutil.PluginRunner, error)
+	LookupPlugin(ctx context.Context, pluginName string, pluginType consts.PluginType) (*pluginutil.PluginRunner, error)
 
 	// LookupPluginVersion looks into the plugin catalog for a plugin with the given
 	// name and version. Returns a PluginRunner or an error if a plugin can not be found.
-	LookupPluginVersion(context.Context, string, consts.PluginType, string) (*pluginutil.PluginRunner, error)
+	LookupPluginVersion(ctx context.Context, pluginName string, pluginType consts.PluginType, version string) (*pluginutil.PluginRunner, error)
 
 	// NewPluginClient returns a client for managing the lifecycle of plugin
 	// processes

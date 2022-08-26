@@ -38,7 +38,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		},
 		{
 			"too_many_args",
-			[]string{"foo", "bar", "fizz"},
+			[]string{"foo", "bar", "fizz", "fuzz"},
 			"Too many arguments",
 			1,
 		},
@@ -142,6 +142,54 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		defer closer()
 
 		pluginName := "my-plugin"
+		_, _, version := testPluginCreateAndRegisterVersioned(t, client, pluginDir, pluginName, consts.PluginTypeCredential)
+
+		ui, cmd := testPluginDeregisterCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			consts.PluginTypeCredential.String(),
+			pluginName,
+			version,
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "Success! Deregistered plugin (if it was registered): "
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+
+		resp, err := client.Sys().ListPlugins(&api.ListPluginsInput{
+			Type: consts.PluginTypeUnknown,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		found := false
+		for _, p := range resp.Details {
+			if p.Name == pluginName {
+				found = true
+			}
+		}
+		if found {
+			t.Errorf("expected %q to not be in %#v", pluginName, resp.Details)
+		}
+	})
+
+	t.Run("integration with missing version", func(t *testing.T) {
+		t.Parallel()
+
+		pluginDir, cleanup := vault.MakeTestPluginDir(t)
+		defer cleanup(t)
+
+		client, _, closer := testVaultServerPluginDir(t, pluginDir)
+		defer closer()
+
+		pluginName := "my-plugin"
 		testPluginCreateAndRegisterVersioned(t, client, pluginDir, pluginName, consts.PluginTypeCredential)
 
 		ui, cmd := testPluginDeregisterCommand(t)
@@ -162,22 +210,20 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		}
 
 		resp, err := client.Sys().ListPlugins(&api.ListPluginsInput{
-			Type: consts.PluginTypeCredential,
+			Type: consts.PluginTypeUnknown,
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		found := false
-		for _, plugins := range resp.PluginsByType {
-			for _, p := range plugins {
-				if p == pluginName {
-					found = true
-				}
+		for _, p := range resp.Details {
+			if p.Name == pluginName {
+				found = true
 			}
 		}
-		if found {
-			t.Errorf("expected %q to not be in %q", pluginName, resp.PluginsByType)
+		if !found {
+			t.Errorf("expected %q to be in %#v", pluginName, resp.Details)
 		}
 	})
 
