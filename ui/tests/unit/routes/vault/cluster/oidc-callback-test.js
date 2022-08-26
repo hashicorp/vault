@@ -118,7 +118,7 @@ module('Unit | Route | vault/cluster/oidc-callback', function (hooks) {
     );
   });
 
-  test('the afterModel hook returns when both cluster and route params are empty', function (assert) {
+  test('the afterModel hook returns when both cluster and route params are empty strings', function (assert) {
     this.routeName = 'vault.cluster.oidc-callback';
     this.route.paramsFor = (path) => {
       if (path === 'vault.cluster') return { namespaceQueryParam: '' };
@@ -140,7 +140,27 @@ module('Unit | Route | vault/cluster/oidc-callback', function (hooks) {
     );
   });
 
-  test('the afterModel hook returns when cluster namespaceQueryParam exists and all route params are empty', function (assert) {
+  test('the afterModel hook returns when state param does not exist', function (assert) {
+    this.routeName = 'vault.cluster.oidc-callback';
+    this.route.paramsFor = (path) => {
+      if (path === 'vault.cluster') return { namespaceQueryParam: '' };
+      return {
+        auth_path: this.path,
+      };
+    };
+    this.route.afterModel();
+    assert.propContains(
+      this.windowStub.lastCall.args[0],
+      {
+        code: undefined,
+        path: 'oidc',
+        state: undefined,
+      },
+      'model hook returns non-existent state param'
+    );
+  });
+
+  test('the afterModel hook returns when cluster namespaceQueryParam exists and all route params are empty strings', function (assert) {
     this.routeName = 'vault.cluster.oidc-callback';
     this.route.paramsFor = (path) => {
       if (path === 'vault.cluster') return { namespaceQueryParam: 'ns1' };
