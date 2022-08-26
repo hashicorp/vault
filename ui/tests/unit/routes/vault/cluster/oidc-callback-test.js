@@ -152,11 +152,11 @@ module('Unit | Route | vault/cluster/oidc-callback', function (hooks) {
     assert.propContains(
       this.windowStub.lastCall.args[0],
       {
-        code: undefined,
+        code: '',
         path: 'oidc',
-        state: undefined,
+        state: '',
       },
-      'model hook returns non-existent state param'
+      'model hook returns empty string when state param nonexistent'
     );
   });
 
