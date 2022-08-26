@@ -588,8 +588,27 @@ func (sc *storageContext) upgradeIssuerIfRequired(issuer *issuerEntry) *issuerEn
 	}
 
 	if issuer.Version == 0 {
-		// handle our new OCSPSigning usage flag for earlier versions
-		if issuer.Usage.HasUsage(CRLSigningUsage) && !issuer.Usage.HasUsage(OCSPSigningUsage) {
+		// Upgrade at this step requires interrogating the certificate itself;
+		// if this decode fails, it indicates internal problems and the
+		// request will subsequently fail elsewhere. However, decoding this
+		// certificate is mildly expensive, so we only do it in the event of
+		// a Version 0 certificate.
+		cert, err := issuer.GetCertificate()
+		if err != nil {
+			return issuer
+		}
+
+		hadCRL := issuer.Usage.HasUsage(CRLSigningUsage)
+		// Remove CRL signing usage if it exists on the issuer but doesn't
+		// exist in the KU of the x509 certificate.
+		if hadCRL && (cert.KeyUsage&x509.KeyUsageCRLSign) == 0 {
+			issuer.Usage.ToggleUsage(OCSPSigningUsage)
+		}
+
+		// Handle our new OCSPSigning usage flag for earlier versions. If we
+		// had it (prior to removing it in this upgrade), we'll add the OCSP
+		// flag since EKUs don't matter.
+		if hadCRL && !issuer.Usage.HasUsage(OCSPSigningUsage) {
 			issuer.Usage.ToggleUsage(OCSPSigningUsage)
 		}
 	}
@@ -706,6 +725,12 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 	result.LeafNotAfterBehavior = certutil.ErrNotAfterBehavior
 	result.Usage.ToggleUsage(AllIssuerUsages)
 	result.Version = latestIssuerVersion
+
+	// If we lack relevant bits for CRL, prohibit it from being set
+	// on the usage side.
+	if (issuerCert.KeyUsage&x509.KeyUsageCRLSign) == 0 && result.Usage.HasUsage(CRLSigningUsage) {
+		result.Usage.ToggleUsage(CRLSigningUsage)
+	}
 
 	// We shouldn't add CSRs or multiple certificates in this
 	countCertificates := strings.Count(result.Certificate, "-BEGIN ")
@@ -1093,6 +1118,15 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 
 	if err = entry.DecodeJSON(&result); err != nil {
 		return nil, err
+	}
+
+	if result.Version == 0 {
+		// Automatically update existing configurations.
+		result.OcspDisable = defaultCrlConfig.OcspDisable
+		result.OcspExpiry = defaultCrlConfig.OcspExpiry
+		result.AutoRebuild = defaultCrlConfig.AutoRebuild
+		result.AutoRebuildGracePeriod = defaultCrlConfig.AutoRebuildGracePeriod
+		result.Version = 1
 	}
 
 	return &result, nil

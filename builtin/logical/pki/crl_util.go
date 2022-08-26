@@ -253,6 +253,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		issuers = []issuerID{legacyBundleShimID}
 	}
 
+	issuerIDCertMap := make(map[issuerID]*x509.Certificate, len(issuers))
 	for _, issuer := range issuers {
 		_, bundle, caErr := sc.fetchCertBundleByIssuerId(issuer, false)
 		if caErr != nil {
@@ -281,6 +282,8 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		if colonSerial == serialFromCert(parsedBundle.Certificate) {
 			return logical.ErrorResponse(fmt.Sprintf("adding issuer (id: %v) to its own CRL is not allowed", issuer)), nil
 		}
+
+		issuerIDCertMap[issuer] = parsedBundle.Certificate
 	}
 
 	alreadyRevoked := false
@@ -351,6 +354,10 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		revInfo.CertificateBytes = certEntry.Value
 		revInfo.RevocationTime = currTime.Unix()
 		revInfo.RevocationTimeUTC = currTime.UTC()
+
+		// We may not find an issuer with this certificate; that's fine so
+		// ignore the return value.
+		associateRevokedCertWithIsssuer(&revInfo, cert, issuerIDCertMap)
 
 		revEntry, err = logical.StorageEntryJSON(revokedPath+normalizeSerial(serial), revInfo)
 		if err != nil {
@@ -433,6 +440,18 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 		return fmt.Errorf("error building CRL: while updating config: %v", err)
 	}
 
+	if globalCRLConfig.Disable && !forceNew {
+		// We build a single long-lived empty CRL in the event that we disable
+		// the CRL, but we don't keep updating it with newer, more-valid empty
+		// CRLs in the event that we later re-enable it. This is a historical
+		// behavior.
+		//
+		// So, since tidy can now associate issuers on revocation entries, we
+		// can skip the rest of this function and exit early without updating
+		// anything.
+		return nil
+	}
+
 	if !b.useLegacyBundleCaStorage() {
 		issuers, err = sc.listIssuers()
 		if err != nil {
@@ -472,11 +491,20 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 			continue
 		}
 
-		// Skip entries which aren't enabled for CRL signing.
-		if err := thisEntry.EnsureUsage(CRLSigningUsage); err != nil {
-			continue
-		}
-
+		// n.b.: issuer usage check has been delayed. This occurred because
+		// we want to ensure any issuer (representative of a larger set) can
+		// be used to associate revocation entries and we won't bother
+		// rewriting that entry (causing churn) if the particular selected
+		// issuer lacks CRL signing capabilities.
+		//
+		// The result is that this map (and the other maps) contain all the
+		// issuers we know about, and only later do we check crlSigning before
+		// choosing our representative.
+		//
+		// The other side effect (making this not compatible with Vault 1.11
+		// behavior) is that _identified_ certificates whose issuer set is
+		// not allowed for crlSigning will no longer appear on the default
+		// issuer's CRL.
 		issuerIDEntryMap[issuer] = thisEntry
 
 		thisCert, err := thisEntry.GetCertificate()
@@ -522,10 +550,24 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 			}
 
 			var revokedCerts []pkix.RevokedCertificate
-			representative := issuersSet[0]
+			representative := issuerID("")
 			var crlIdentifier crlID
 			var crlIdIssuer issuerID
 			for _, issuerId := range issuersSet {
+				// Skip entries which aren't enabled for CRL signing. We don't
+				// particularly care which issuer is ultimately chosen as the
+				// set representative for signing at this point, other than
+				// that it has crl-signing usage.
+				if err := issuerIDEntryMap[issuerId].EnsureUsage(CRLSigningUsage); err != nil {
+					continue
+				}
+
+				// Prefer to use the default as the representative of this
+				// set, if it is a member.
+				//
+				// If it is, we'll also pull in the unassigned certs to remain
+				// compatible with Vault's earlier, potentially questionable
+				// behavior.
 				if issuerId == config.DefaultIssuerId {
 					if len(unassignedCerts) > 0 {
 						revokedCerts = append(revokedCerts, unassignedCerts...)
@@ -534,10 +576,18 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 					representative = issuerId
 				}
 
+				// Otherwise, use any other random issuer if we've not yet
+				// chosen one.
+				if representative == issuerID("") {
+					representative = issuerId
+				}
+
+				// Pull in the revoked certs associated with this member.
 				if thisRevoked, ok := revokedCertsMap[issuerId]; ok && len(thisRevoked) > 0 {
 					revokedCerts = append(revokedCerts, thisRevoked...)
 				}
 
+				// Finally, check our crlIdentifier.
 				if thisCRLId, ok := crlConfig.IssuerIDCRLMap[issuerId]; ok && len(thisCRLId) > 0 {
 					if len(crlIdentifier) > 0 && crlIdentifier != thisCRLId {
 						return fmt.Errorf("error building CRLs: two issuers with same keys/subjects (%v vs %v) have different internal CRL IDs: %v vs %v", issuerId, crlIdIssuer, thisCRLId, crlIdentifier)
@@ -546,6 +596,13 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 					crlIdentifier = thisCRLId
 					crlIdIssuer = issuerId
 				}
+			}
+
+			if representative == "" {
+				// Skip this set for the time being; while we have valid
+				// issuers and associated keys, this occurred because we lack
+				// crl-signing usage on all issuers in this set.
+				continue
 			}
 
 			if len(crlIdentifier) == 0 {
@@ -626,6 +683,20 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 	return nil
 }
 
+func associateRevokedCertWithIsssuer(revInfo *revocationInfo, revokedCert *x509.Certificate, issuerIDCertMap map[issuerID]*x509.Certificate) bool {
+	for issuerId, issuerCert := range issuerIDCertMap {
+		if bytes.Equal(revokedCert.RawIssuer, issuerCert.RawSubject) {
+			if err := revokedCert.CheckSignatureFrom(issuerCert); err == nil {
+				// Valid mapping. Add it to the specified entry.
+				revInfo.CertificateIssuer = issuerId
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 func getRevokedCertEntries(ctx context.Context, req *logical.Request, issuerIDCertMap map[issuerID]*x509.Certificate) ([]pkix.RevokedCertificate, map[issuerID][]pkix.RevokedCertificate, error) {
 	var unassignedCerts []pkix.RevokedCertificate
 	revokedCertsMap := make(map[issuerID][]pkix.RevokedCertificate)
@@ -633,6 +704,13 @@ func getRevokedCertEntries(ctx context.Context, req *logical.Request, issuerIDCe
 	revokedSerials, err := req.Storage.List(ctx, revokedPath)
 	if err != nil {
 		return nil, nil, errutil.InternalError{Err: fmt.Sprintf("error fetching list of revoked certs: %s", err)}
+	}
+
+	// Build a mapping of issuer serial -> certificate.
+	issuerSerialCertMap := make(map[string][]*x509.Certificate, len(issuerIDCertMap))
+	for _, cert := range issuerIDCertMap {
+		serialStr := serialFromCert(cert)
+		issuerSerialCertMap[serialStr] = append(issuerSerialCertMap[serialStr], cert)
 	}
 
 	for _, serial := range revokedSerials {
@@ -661,6 +739,34 @@ func getRevokedCertEntries(ctx context.Context, req *logical.Request, issuerIDCe
 			return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse stored revoked certificate with serial %s: %s", serial, err)}
 		}
 
+		// We want to skip issuer certificate's revocationEntries for two
+		// reasons:
+		//
+		// 1. We canonically use augmentWithRevokedIssuers to handle this
+		//    case and this entry is just a backup. This prevents the issue
+		//    of duplicate serial numbers on the CRL from both paths.
+		// 2. We want to avoid a root's serial from appearing on its own
+		//    CRL. If it is a cross-signed or re-issued variant, this is OK,
+		//    but in the case we mark the root itself as "revoked", we want
+		//    to avoid it appearing on the CRL as that is definitely
+		//    undefined/little-supported behavior.
+		//
+		// This hash map lookup should be faster than byte comparison against
+		// each issuer proactively.
+		if candidates, present := issuerSerialCertMap[serialFromCert(revokedCert)]; present {
+			revokedCertIsIssuer := false
+			for _, candidate := range candidates {
+				if bytes.Equal(candidate.Raw, revokedCert.Raw) {
+					revokedCertIsIssuer = true
+					break
+				}
+			}
+
+			if revokedCertIsIssuer {
+				continue
+			}
+		}
+
 		// NOTE: We have to change this to UTC time because the CRL standard
 		// mandates it but Go will happily encode the CRL without this.
 		newRevCert := pkix.RevokedCertificate{
@@ -687,23 +793,13 @@ func getRevokedCertEntries(ctx context.Context, req *logical.Request, issuerIDCe
 		}
 
 		// Now we need to assign the revoked certificate to an issuer.
-		foundParent := false
-		for issuerId, issuerCert := range issuerIDCertMap {
-			if bytes.Equal(revokedCert.RawIssuer, issuerCert.RawSubject) {
-				if err := revokedCert.CheckSignatureFrom(issuerCert); err == nil {
-					// Valid mapping. Add it to the specified entry.
-					revokedCertsMap[issuerId] = append(revokedCertsMap[issuerId], newRevCert)
-					revInfo.CertificateIssuer = issuerId
-					foundParent = true
-					break
-				}
-			}
-		}
-
+		foundParent := associateRevokedCertWithIsssuer(&revInfo, revokedCert, issuerIDCertMap)
 		if !foundParent {
 			// If the parent isn't found, add it to the unassigned bucket.
 			unassignedCerts = append(unassignedCerts, newRevCert)
 		} else {
+			revokedCertsMap[revInfo.CertificateIssuer] = append(revokedCertsMap[revInfo.CertificateIssuer], newRevCert)
+
 			// When the CertificateIssuer field wasn't found on the existing
 			// entry (or was invalid), and we've found a new value for it,
 			// we should update the entry to make future CRL builds faster.

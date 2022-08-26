@@ -3,6 +3,7 @@ package pki
 import (
 	"context"
 	"encoding/asn1"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -31,17 +32,47 @@ func TestBackend_CRL_EnableDisableRoot(t *testing.T) {
 	crlEnableDisableTestForBackend(t, b, s, []string{caSerial})
 }
 
+func TestBackend_CRLConfigUpdate(t *testing.T) {
+	b, s := createBackendWithStorage(t)
+
+	// Write a legacy config to storage.
+	type legacyConfig struct {
+		Expiry  string `json:"expiry"`
+		Disable bool   `json:"disable"`
+	}
+	oldConfig := legacyConfig{Expiry: "24h", Disable: false}
+	entry, err := logical.StorageEntryJSON("config/crl", oldConfig)
+	require.NoError(t, err, "generate storage entry objection with legacy config")
+	err = s.Put(ctx, entry)
+	require.NoError(t, err, "failed writing legacy config")
+
+	// Now lets read it.
+	resp, err := CBRead(b, s, "config/crl")
+	requireSuccessNonNilResponse(t, resp, err)
+	requireFieldsSetInResp(t, resp, "disable", "expiry", "ocsp_disable", "auto_rebuild", "auto_rebuild_grace_period")
+
+	require.Equal(t, "24h", resp.Data["expiry"])
+	require.Equal(t, false, resp.Data["disable"])
+	require.Equal(t, defaultCrlConfig.OcspDisable, resp.Data["ocsp_disable"])
+	require.Equal(t, defaultCrlConfig.OcspExpiry, resp.Data["ocsp_expiry"])
+	require.Equal(t, defaultCrlConfig.AutoRebuild, resp.Data["auto_rebuild"])
+	require.Equal(t, defaultCrlConfig.AutoRebuildGracePeriod, resp.Data["auto_rebuild_grace_period"])
+}
+
 func TestBackend_CRLConfig(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		expiry      string
-		disable     bool
-		ocspDisable bool
+		expiry                 string
+		disable                bool
+		ocspDisable            bool
+		ocspExpiry             string
+		autoRebuild            bool
+		autoRebuildGracePeriod string
 	}{
-		{expiry: "24h", disable: true, ocspDisable: true},
-		{expiry: "16h", disable: false, ocspDisable: true},
-		{expiry: "8h", disable: true, ocspDisable: false},
+		{expiry: "24h", disable: true, ocspDisable: true, ocspExpiry: "72h", autoRebuild: false, autoRebuildGracePeriod: "36h"},
+		{expiry: "16h", disable: false, ocspDisable: true, ocspExpiry: "0h", autoRebuild: true, autoRebuildGracePeriod: "1h"},
+		{expiry: "8h", disable: true, ocspDisable: false, ocspExpiry: "24h", autoRebuild: false, autoRebuildGracePeriod: "24h"},
 	}
 	for _, tc := range tests {
 		name := fmt.Sprintf("%s-%t-%t", tc.expiry, tc.disable, tc.ocspDisable)
@@ -49,30 +80,43 @@ func TestBackend_CRLConfig(t *testing.T) {
 			b, s := createBackendWithStorage(t)
 
 			resp, err := CBWrite(b, s, "config/crl", map[string]interface{}{
-				"expiry":       tc.expiry,
-				"disable":      tc.disable,
-				"ocsp_disable": tc.ocspDisable,
+				"expiry":                    tc.expiry,
+				"disable":                   tc.disable,
+				"ocsp_disable":              tc.ocspDisable,
+				"ocsp_expiry":               tc.ocspExpiry,
+				"auto_rebuild":              tc.autoRebuild,
+				"auto_rebuild_grace_period": tc.autoRebuildGracePeriod,
 			})
 			requireSuccessNilResponse(t, resp, err)
 
 			resp, err = CBRead(b, s, "config/crl")
 			requireSuccessNonNilResponse(t, resp, err)
-			requireFieldsSetInResp(t, resp, "disable", "expiry", "ocsp_disable")
+			requireFieldsSetInResp(t, resp, "disable", "expiry", "ocsp_disable", "auto_rebuild", "auto_rebuild_grace_period")
 
 			require.Equal(t, tc.expiry, resp.Data["expiry"])
 			require.Equal(t, tc.disable, resp.Data["disable"])
 			require.Equal(t, tc.ocspDisable, resp.Data["ocsp_disable"])
+			require.Equal(t, tc.ocspExpiry, resp.Data["ocsp_expiry"])
+			require.Equal(t, tc.autoRebuild, resp.Data["auto_rebuild"])
+			require.Equal(t, tc.autoRebuildGracePeriod, resp.Data["auto_rebuild_grace_period"])
 		})
 	}
 
 	badValueTests := []struct {
-		expiry      string
-		disable     string
-		ocspDisable string
+		expiry                 string
+		disable                string
+		ocspDisable            string
+		ocspExpiry             string
+		autoRebuild            string
+		autoRebuildGracePeriod string
 	}{
-		{expiry: "not a duration", disable: "true", ocspDisable: "true"},
-		{expiry: "16h", disable: "not a boolean", ocspDisable: "true"},
-		{expiry: "8h", disable: "true", ocspDisable: "not a boolean"},
+		{expiry: "not a duration", disable: "true", ocspDisable: "true", ocspExpiry: "72h", autoRebuild: "true", autoRebuildGracePeriod: "1d"},
+		{expiry: "16h", disable: "not a boolean", ocspDisable: "true", ocspExpiry: "72h", autoRebuild: "true", autoRebuildGracePeriod: "1d"},
+		{expiry: "8h", disable: "true", ocspDisable: "not a boolean", ocspExpiry: "72h", autoRebuild: "true", autoRebuildGracePeriod: "1d"},
+		{expiry: "8h", disable: "true", ocspDisable: "true", ocspExpiry: "not a duration", autoRebuild: "true", autoRebuildGracePeriod: "1d"},
+		{expiry: "8h", disable: "true", ocspDisable: "true", ocspExpiry: "-1", autoRebuild: "true", autoRebuildGracePeriod: "1d"},
+		{expiry: "8h", disable: "true", ocspDisable: "true", ocspExpiry: "72h", autoRebuild: "not a boolean", autoRebuildGracePeriod: "1d"},
+		{expiry: "8h", disable: "true", ocspDisable: "true", ocspExpiry: "-1", autoRebuild: "true", autoRebuildGracePeriod: "not a duration"},
 	}
 	for _, tc := range badValueTests {
 		name := fmt.Sprintf("bad-%s-%s-%s", tc.expiry, tc.disable, tc.ocspDisable)
@@ -80,9 +124,12 @@ func TestBackend_CRLConfig(t *testing.T) {
 			b, s := createBackendWithStorage(t)
 
 			_, err := CBWrite(b, s, "config/crl", map[string]interface{}{
-				"expiry":       tc.expiry,
-				"disable":      tc.disable,
-				"ocsp_disable": tc.ocspDisable,
+				"expiry":                    tc.expiry,
+				"disable":                   tc.disable,
+				"ocsp_disable":              tc.ocspDisable,
+				"ocsp_expiry":               tc.ocspExpiry,
+				"auto_rebuild":              tc.autoRebuild,
+				"auto_rebuild_grace_period": tc.autoRebuildGracePeriod,
 			})
 			require.Error(t, err)
 		})
@@ -693,8 +740,14 @@ func TestIssuerRevocation(t *testing.T) {
 	_, err = CBRead(b, s, "crl/rotate")
 	require.NoError(t, err)
 
+	// Ensure the old cert isn't on its own CRL.
+	crl := getParsedCrlFromBackend(t, b, s, "issuer/root2/crl/der")
+	if requireSerialNumberInCRL(nil, crl.TBSCertList, revokedRootSerial) {
+		t.Fatalf("the serial number %v should not be on its own CRL as self-CRL appearance should not occur", revokedRootSerial)
+	}
+
 	// Ensure the old cert isn't on the one's CRL.
-	crl := getParsedCrlFromBackend(t, b, s, "issuer/root/crl/der")
+	crl = getParsedCrlFromBackend(t, b, s, "issuer/root/crl/der")
 	if requireSerialNumberInCRL(nil, crl.TBSCertList, revokedRootSerial) {
 		t.Fatalf("the serial number %v should not be on %v's CRL as they're separate roots", revokedRootSerial, oldRootSerial)
 	}
@@ -806,6 +859,9 @@ func TestAutoRebuild(t *testing.T) {
 		LogicalBackends: map[string]logical.Factory{
 			"pki": Factory,
 		},
+		// See notes below about usage of /sys/raw for reading cluster
+		// storage without barrier encryption.
+		EnableRaw: true,
 	}
 	oldPeriod := vault.SetRollbackPeriodForTesting(newPeriod)
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
@@ -827,12 +883,16 @@ func TestAutoRebuild(t *testing.T) {
 	require.NoError(t, err)
 
 	// Generate root.
-	_, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
 		"common_name": "Root X1",
 		"key_type":    "ec",
 	})
 	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data)
+	require.NotEmpty(t, resp.Data["issuer_id"])
+	rootIssuer := resp.Data["issuer_id"].(string)
 
 	// Setup a testing role.
 	_, err = client.Logical().Write("pki/roles/local-testing", map[string]interface{}{
@@ -844,7 +904,7 @@ func TestAutoRebuild(t *testing.T) {
 
 	// Regression test: ensure we respond with the default values for CRL
 	// config when we haven't set any values yet.
-	resp, err := client.Logical().Read("pki/config/crl")
+	resp, err = client.Logical().Read("pki/config/crl")
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotNil(t, resp.Data)
@@ -903,6 +963,37 @@ func TestAutoRebuild(t *testing.T) {
 		"serial_number": newLeafSerial,
 	})
 	require.NoError(t, err)
+
+	// Now, we want to test the issuer identification on revocation. This
+	// only happens as a distinct "step" when CRL building isn't done on
+	// each revocation. Pull the storage from the cluster (via the sys/raw
+	// endpoint which requires the mount UUID) and verify the revInfo contains
+	// a matching issuer.
+	resp, err = client.Logical().Read("sys/mounts/pki")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotEmpty(t, resp.Data["uuid"])
+	pkiMount := resp.Data["uuid"].(string)
+	require.NotEmpty(t, pkiMount)
+	revEntryPath := "logical/" + pkiMount + "/" + revokedPath + strings.ReplaceAll(newLeafSerial, ":", "-")
+
+	// storage from cluster.Core[0] is a physical storage copy, not a logical
+	// storage. This difference means, if we were to do a storage.Get(...)
+	// on the above path, we'd read the barrier-encrypted value. This is less
+	// than useful for decoding, and fetching the proper storage view is a
+	// touch much work. So, assert EnableRaw above and (ab)use it here.
+	resp, err = client.Logical().Read("sys/raw/" + revEntryPath)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotEmpty(t, resp.Data["value"])
+	revEntryValue := resp.Data["value"].(string)
+	fmt.Println(resp)
+	var revInfo revocationInfo
+	err = json.Unmarshal([]byte(revEntryValue), &revInfo)
+	require.NoError(t, err)
+	require.Equal(t, revInfo.CertificateIssuer, issuerID(rootIssuer))
 
 	// Serial should not appear on CRL.
 	crl = getCrlCertificateList(t, client, "pki")

@@ -16,6 +16,7 @@ import (
 type PluginClientConfig struct {
 	Name            string
 	PluginType      consts.PluginType
+	Version         string
 	PluginSets      map[int]plugin.PluginSet
 	HandshakeConfig plugin.HandshakeConfig
 	Logger          log.Logger
