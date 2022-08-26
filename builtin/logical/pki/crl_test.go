@@ -1052,6 +1052,145 @@ func TestAutoRebuild(t *testing.T) {
 	}
 }
 
+func TestTidyIssuerAssociation(t *testing.T) {
+	t.Parallel()
+
+	b, s := createBackendWithStorage(t)
+
+	// Create a root CA.
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root example.com",
+		"issuer_name": "root",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data["certificate"])
+	require.NotEmpty(t, resp.Data["issuer_id"])
+	rootCert := resp.Data["certificate"].(string)
+	rootID := resp.Data["issuer_id"].(issuerID)
+
+	// Create a role for issuance.
+	_, err = CBWrite(b, s, "roles/local-testing", map[string]interface{}{
+		"allow_any_name":    true,
+		"enforce_hostnames": false,
+		"key_type":          "ec",
+		"ttl":               "75m",
+	})
+	require.NoError(t, err)
+
+	// Issue a leaf cert and ensure we can revoke it.
+	resp, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
+		"common_name": "testing",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data["serial_number"])
+	leafSerial := resp.Data["serial_number"].(string)
+
+	_, err = CBWrite(b, s, "revoke", map[string]interface{}{
+		"serial_number": leafSerial,
+	})
+	require.NoError(t, err)
+
+	// This leaf's revInfo entry should have an issuer associated
+	// with it.
+	entry, err := s.Get(ctx, revokedPath+normalizeSerial(leafSerial))
+	require.NoError(t, err)
+	require.NotNil(t, entry)
+	require.NotNil(t, entry.Value)
+
+	var leafInfo revocationInfo
+	err = entry.DecodeJSON(&leafInfo)
+	require.NoError(t, err)
+	require.Equal(t, rootID, leafInfo.CertificateIssuer)
+
+	// Now remove the root and run tidy.
+	_, err = CBDelete(b, s, "issuer/default")
+	require.NoError(t, err)
+	_, err = CBWrite(b, s, "tidy", map[string]interface{}{
+		"tidy_revoked_cert_issuer_associations": true,
+	})
+	require.NoError(t, err)
+
+	// Wait for tidy to finish.
+	for {
+		time.Sleep(125 * time.Millisecond)
+
+		resp, err = CBRead(b, s, "tidy-status")
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.NotEmpty(t, resp.Data["state"])
+		state := resp.Data["state"].(string)
+
+		if state == "Finished" {
+			break
+		}
+		if state == "Error" {
+			t.Fatalf("unexpected state for tidy operation: Error:\nStatus: %v", resp.Data)
+		}
+	}
+
+	// Ensure we don't have an association on this leaf any more.
+	entry, err = s.Get(ctx, revokedPath+normalizeSerial(leafSerial))
+	require.NoError(t, err)
+	require.NotNil(t, entry)
+	require.NotNil(t, entry.Value)
+
+	err = entry.DecodeJSON(&leafInfo)
+	require.NoError(t, err)
+	require.Empty(t, leafInfo.CertificateIssuer)
+
+	// Now, re-import the root and try again.
+	resp, err = CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
+		"pem_bundle": rootCert,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotNil(t, resp.Data["imported_issuers"])
+	importedIssuers := resp.Data["imported_issuers"].([]string)
+	require.Equal(t, 1, len(importedIssuers))
+	newRootID := importedIssuers[0]
+	require.NotEmpty(t, newRootID)
+
+	// Re-run tidy...
+	_, err = CBWrite(b, s, "tidy", map[string]interface{}{
+		"tidy_revoked_cert_issuer_associations": true,
+	})
+	require.NoError(t, err)
+
+	// Wait for tidy to finish.
+	for {
+		time.Sleep(125 * time.Millisecond)
+
+		resp, err = CBRead(b, s, "tidy-status")
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.NotEmpty(t, resp.Data["state"])
+		state := resp.Data["state"].(string)
+
+		if state == "Finished" {
+			break
+		}
+		if state == "Error" {
+			t.Fatalf("unexpected state for tidy operation: Error:\nStatus: %v", resp.Data)
+		}
+	}
+
+	// Finally, double-check we associated things correctly.
+	entry, err = s.Get(ctx, revokedPath+normalizeSerial(leafSerial))
+	require.NoError(t, err)
+	require.NotNil(t, entry)
+	require.NotNil(t, entry.Value)
+
+	err = entry.DecodeJSON(&leafInfo)
+	require.NoError(t, err)
+	require.Equal(t, newRootID, string(leafInfo.CertificateIssuer))
+}
+
 func requestCrlFromBackend(t *testing.T, s logical.Storage, b *backend) *logical.Response {
 	crlReq := &logical.Request{
 		Operation: logical.ReadOperation,
