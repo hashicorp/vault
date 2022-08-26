@@ -3873,16 +3873,18 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			t.Fatal(err)
 		}
 		expectedData := map[string]interface{}{
-			"safety_buffer":              json.Number("1"),
-			"tidy_cert_store":            true,
-			"tidy_revoked_certs":         true,
-			"state":                      "Finished",
-			"error":                      nil,
-			"time_started":               nil,
-			"time_finished":              nil,
-			"message":                    nil,
-			"cert_store_deleted_count":   json.Number("1"),
-			"revoked_cert_deleted_count": json.Number("1"),
+			"safety_buffer":                         json.Number("1"),
+			"tidy_cert_store":                       true,
+			"tidy_revoked_certs":                    true,
+			"tidy_revoked_cert_issuer_associations": false,
+			"state":                                 "Finished",
+			"error":                                 nil,
+			"time_started":                          nil,
+			"time_finished":                         nil,
+			"message":                               nil,
+			"cert_store_deleted_count":              json.Number("1"),
+			"revoked_cert_deleted_count":            json.Number("1"),
+			"missing_issuer_cert_count":             json.Number("0"),
 		}
 		// Let's copy the times from the response so that we can use deep.Equal()
 		timeStarted, ok := tidyStatus.Data["time_started"]
