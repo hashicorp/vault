@@ -10,9 +10,7 @@ export default Route.extend({
     let { namespaceQueryParam: namespace } = this.paramsFor('vault.cluster');
     // only replace namespace param from cluster if state has a namespace
     if (state?.includes(',ns=')) {
-      let arrayParams = state.split(',ns=');
-      state = arrayParams[0];
-      namespace = arrayParams[1];
+      [state, namespace] = state.split(',ns=');
     }
     path = window.decodeURIComponent(path);
     const source = 'oidc-callback'; // required by event listener in auth-jwt component
