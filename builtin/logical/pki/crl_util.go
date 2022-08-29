@@ -95,7 +95,7 @@ func newCRLBuilder() *crlBuilder {
 		lastDeltaRebuildCheck: time.Now(),
 		dirty:                 atomic2.NewBool(true),
 		config:                defaultCrlConfig,
-		invalidate: atomic2.NewBool(false),
+		invalidate:            atomic2.NewBool(false),
 	}
 }
 

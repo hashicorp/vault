@@ -169,7 +169,7 @@ type localCRLConfigEntry struct {
 	CRLNumberMap          map[crlID]int64     `json:"crl_number_map"`
 	LastCompleteNumberMap map[crlID]int64     `json:"last_complete_number_map"`
 	CRLExpirationMap      map[crlID]time.Time `json:"crl_expiration_map"`
-	LastModified   time.Time          `json:"last_modified"`
+	LastModified          time.Time           `json:"last_modified"`
 }
 
 type keyConfigEntry struct {
