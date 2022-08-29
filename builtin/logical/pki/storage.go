@@ -35,6 +35,9 @@ const (
 	maxRolesToFindOnIssuerChange = 10
 
 	latestIssuerVersion = 1
+
+	headerIfModifiedSince = "If-Modified-Since"
+	headerLastModified    = "Last-Modified"
 )
 
 type keyID string
@@ -157,6 +160,7 @@ type issuerEntry struct {
 	RevocationTime       int64                     `json:"revocation_time"`
 	RevocationTimeUTC    time.Time                 `json:"revocation_time_utc"`
 	AIAURIs              *certutil.URLEntries      `json:"aia_uris,omitempty"`
+	LastModified         time.Time                 `json:"last_modified"`
 	Version              uint                      `json:"version"`
 }
 
@@ -165,6 +169,7 @@ type localCRLConfigEntry struct {
 	CRLNumberMap          map[crlID]int64     `json:"crl_number_map"`
 	LastCompleteNumberMap map[crlID]int64     `json:"last_complete_number_map"`
 	CRLExpirationMap      map[crlID]time.Time `json:"crl_expiration_map"`
+	LastModified          time.Time           `json:"last_modified"`
 }
 
 type keyConfigEntry struct {
@@ -622,6 +627,9 @@ func (sc *storageContext) upgradeIssuerIfRequired(issuer *issuerEntry) *issuerEn
 
 func (sc *storageContext) writeIssuer(issuer *issuerEntry) error {
 	issuerId := issuer.ID
+	if issuer.LastModified.IsZero() {
+		issuer.LastModified = time.Now().UTC()
+	}
 
 	json, err := logical.StorageEntryJSON(issuerPrefix+issuerId.String(), issuer)
 	if err != nil {

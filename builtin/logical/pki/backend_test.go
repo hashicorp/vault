@@ -5091,6 +5091,258 @@ TgM7RZnmEjNdeaa4M52o7VY=
 	require.NotContains(t, resp.Data["usage"], "crl-signing")
 }
 
+func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
+	t.Parallel()
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// Mount PKI.
+	err := client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+			// Required to allow the header to be passed through.
+			PassthroughRequestHeaders: []string{"if-modified-since"},
+		},
+	})
+	require.NoError(t, err)
+
+	// Get a time before CA generation. Subtract two seconds to ensure
+	// the value in the seconds field is different than the time the CA
+	// is actually generated at.
+	beforeOldCAGeneration := time.Now().Add(-2 * time.Second)
+
+	// Generate an internal CA. This one is the default.
+	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "Root X1",
+		"key_type":    "ec",
+		"issuer_name": "old-root",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotEmpty(t, resp.Data["certificate"])
+
+	// CA is generated, but give a grace window.
+	afterOldCAGeneration := time.Now().Add(2 * time.Second)
+
+	// When you _save_ headers, client returns a copy. But when you go to
+	// reset them, it doesn't create a new copy (and instead directly
+	// assigns). This means we have to continually refresh our view of the
+	// last headers, otherwise the headers added after the last set operation
+	// leak into this copy... Yuck!
+	lastHeaders := client.Headers()
+	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/old-root/crl"} {
+		t.Logf("path: %v", path)
+		field := "certificate"
+		if strings.HasPrefix(path, "pki/issuer") && strings.HasSuffix(path, "/crl") {
+			field = "crl"
+		}
+
+		// Reading the CA should work, without a header.
+		resp, err := client.Logical().Read(path)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.NotEmpty(t, resp.Data[field])
+
+		// Ensure that the CA is returned correctly if we give it the old time.
+		client.AddHeader("If-Modified-Since", beforeOldCAGeneration.Format(time.RFC1123))
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.NotEmpty(t, resp.Data[field])
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+
+		// Ensure that the CA is elided if we give it the present time (plus a
+		// grace window).
+		client.AddHeader("If-Modified-Since", afterOldCAGeneration.Format(time.RFC1123))
+		t.Logf("headers: %v", client.Headers())
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.Nil(t, resp)
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+	}
+
+	// Wait three seconds. This ensures we have adequate grace period
+	// to distinguish the two cases, even with grace periods.
+	time.Sleep(3 * time.Second)
+
+	// Generating a second root. This one isn't the default.
+	beforeNewCAGeneration := time.Now().Add(-2 * time.Second)
+
+	// Generate an internal CA. This one is the default.
+	_, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "Root X1",
+		"key_type":    "ec",
+		"issuer_name": "new-root",
+	})
+	require.NoError(t, err)
+
+	// As above.
+	afterNewCAGeneration := time.Now().Add(2 * time.Second)
+
+	// New root isn't the default, so it has fewer paths.
+	for _, path := range []string{"pki/issuer/new-root/json", "pki/issuer/new-root/crl"} {
+		t.Logf("path: %v", path)
+		field := "certificate"
+		if strings.HasPrefix(path, "pki/issuer") && strings.HasSuffix(path, "/crl") {
+			field = "crl"
+		}
+
+		// Reading the CA should work, without a header.
+		resp, err := client.Logical().Read(path)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.NotEmpty(t, resp.Data[field])
+
+		// Ensure that the CA is returned correctly if we give it the old time.
+		client.AddHeader("If-Modified-Since", beforeNewCAGeneration.Format(time.RFC1123))
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.NotEmpty(t, resp.Data[field])
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+
+		// Ensure that the CA is elided if we give it the present time (plus a
+		// grace window).
+		client.AddHeader("If-Modified-Since", afterNewCAGeneration.Format(time.RFC1123))
+		t.Logf("headers: %v", client.Headers())
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.Nil(t, resp)
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+	}
+
+	// Wait three seconds. This ensures we have adequate grace period
+	// to distinguish the two cases, even with grace periods.
+	time.Sleep(3 * time.Second)
+
+	// Now swap the default issuers around.
+	_, err = client.Logical().Write("pki/config/issuers", map[string]interface{}{
+		"default": "new-root",
+	})
+	require.NoError(t, err)
+
+	// Reading both with the last modified date should return new values.
+	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/new-root/json", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl"} {
+		t.Logf("path: %v", path)
+		field := "certificate"
+		if strings.HasPrefix(path, "pki/issuer") && strings.HasSuffix(path, "/crl") {
+			field = "crl"
+		}
+
+		// Ensure that the CA is returned correctly if we give it the old time.
+		client.AddHeader("If-Modified-Since", afterOldCAGeneration.Format(time.RFC1123))
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.NotEmpty(t, resp.Data[field])
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+
+		// Ensure that the CA is returned correctly if we give it the old time.
+		client.AddHeader("If-Modified-Since", afterNewCAGeneration.Format(time.RFC1123))
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.NotEmpty(t, resp.Data[field])
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+	}
+
+	// Wait for things to settle, record the present time, and wait for the
+	// clock to definitely tick over again.
+	time.Sleep(2 * time.Second)
+	preRevocationTimestamp := time.Now()
+	time.Sleep(2 * time.Second)
+
+	// The above tests should say everything is cached.
+	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/new-root/json", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl"} {
+		t.Logf("path: %v", path)
+
+		// Ensure that the CA is returned correctly if we give it the new time.
+		client.AddHeader("If-Modified-Since", preRevocationTimestamp.Format(time.RFC1123))
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.Nil(t, resp)
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+	}
+
+	// We could generate some leaves and verify the revocation updates the
+	// CRL. But, revoking the issuer behaves the same, so let's do that
+	// instead.
+	_, err = client.Logical().Write("pki/issuer/old-root/revoke", map[string]interface{}{})
+	require.NoError(t, err)
+
+	// CA should still be valid.
+	for _, path := range []string{"pki/cert/ca", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/new-root/json"} {
+		t.Logf("path: %v", path)
+
+		// Ensure that the CA is returned correctly if we give it the old time.
+		client.AddHeader("If-Modified-Since", preRevocationTimestamp.Format(time.RFC1123))
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.Nil(t, resp)
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+	}
+
+	// CRL should be invalidated
+	for _, path := range []string{"pki/cert/crl", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl"} {
+		t.Logf("path: %v", path)
+		field := "certificate"
+		if strings.HasPrefix(path, "pki/issuer") && strings.HasSuffix(path, "/crl") {
+			field = "crl"
+		}
+
+		client.AddHeader("If-Modified-Since", preRevocationTimestamp.Format(time.RFC1123))
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.NotEmpty(t, resp.Data[field])
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+	}
+
+	// Finally, if we send some time in the future, everything should be cached again!
+	futureTime := time.Now().Add(30 * time.Second)
+	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/new-root/json", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl"} {
+		t.Logf("path: %v", path)
+
+		// Ensure that the CA is returned correctly if we give it the new time.
+		client.AddHeader("If-Modified-Since", futureTime.Format(time.RFC1123))
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.Nil(t, resp)
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+	}
+}
+
 var (
 	initTest  sync.Once
 	rsaCAKey  string

@@ -346,6 +346,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	if newName != issuer.Name {
 		oldName = issuer.Name
 		issuer.Name = newName
+		issuer.LastModified = time.Now().UTC()
 		modified = true
 	}
 
@@ -532,6 +533,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 		if newName != issuer.Name {
 			oldName = issuer.Name
 			issuer.Name = newName
+			issuer.LastModified = time.Now().UTC()
 			modified = true
 		}
 	}
@@ -743,9 +745,20 @@ func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, da
 		return nil, err
 	}
 
-	certificate := []byte(issuer.Certificate)
-
 	var contentType string
+	var certificate []byte
+
+	response := &logical.Response{}
+	ret, err := sendNotModifiedResponseIfNecessary(&IfModifiedSinceHelper{req: req, issuerRef: ref}, sc, response)
+	if err != nil {
+		return nil, err
+	}
+	if ret {
+		return response, nil
+	}
+
+	certificate = []byte(issuer.Certificate)
+
 	if strings.HasSuffix(req.Path, "/pem") {
 		contentType = "application/pem-certificate-chain"
 	} else if strings.HasSuffix(req.Path, "/der") {
@@ -913,7 +926,18 @@ func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, da
 		return nil, err
 	}
 
+	var certificate []byte
+	var contentType string
+
 	sc := b.makeStorageContext(ctx, req.Storage)
+	response := &logical.Response{}
+	ret, err := sendNotModifiedResponseIfNecessary(&IfModifiedSinceHelper{req: req}, sc, response)
+	if err != nil {
+		return nil, err
+	}
+	if ret {
+		return response, nil
+	}
 	crlPath, err := sc.resolveIssuerCRLPath(issuerName)
 	if err != nil {
 		return nil, err
@@ -928,12 +952,10 @@ func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, da
 		return nil, err
 	}
 
-	var certificate []byte
 	if crlEntry != nil && len(crlEntry.Value) > 0 {
 		certificate = []byte(crlEntry.Value)
 	}
 
-	var contentType string
 	if strings.HasSuffix(req.Path, "/der") {
 		contentType = "application/pkix-crl"
 	} else if strings.HasSuffix(req.Path, "/pem") {

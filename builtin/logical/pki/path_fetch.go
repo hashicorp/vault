@@ -159,6 +159,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 	response = &logical.Response{
 		Data: map[string]interface{}{},
 	}
+	sc := b.makeStorageContext(ctx, req.Storage)
 
 	// Some of these need to return raw and some non-raw;
 	// this is basically handled by setting contentType or not.
@@ -166,19 +167,34 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 	// paths still need to return raw output.
 
 	switch {
-	case req.Path == "ca" || req.Path == "ca/pem":
+	case req.Path == "ca" || req.Path == "ca/pem" || req.Path == "cert/ca" || req.Path == "cert/ca/raw" || req.Path == "cert/ca/raw/pem":
+		ret, err := sendNotModifiedResponseIfNecessary(&IfModifiedSinceHelper{req: req, issuerRef: defaultRef}, sc, response)
+		if err != nil || ret {
+			retErr = err
+			goto reply
+		}
+
 		serial = "ca"
 		contentType = "application/pkix-cert"
-		if req.Path == "ca/pem" {
+		if req.Path == "ca/pem" || req.Path == "cert/ca/raw/pem" {
 			pemType = "CERTIFICATE"
 			contentType = "application/pem-certificate-chain"
+		} else if req.Path == "cert/ca" {
+			pemType = "CERTIFICATE"
+			contentType = ""
 		}
 	case req.Path == "ca_chain" || req.Path == "cert/ca_chain":
 		serial = "ca_chain"
 		if req.Path == "ca_chain" {
 			contentType = "application/pkix-cert"
 		}
-	case req.Path == "crl" || req.Path == "crl/pem" || req.Path == "crl/delta" || req.Path == "crl/delta/pem":
+	case req.Path == "crl" || req.Path == "crl/pem" || req.Path == "crl/delta" || req.Path == "crl/delta/pem" || req.Path == "cert/crl" || req.Path == "cert/crl/raw" || req.Path == "cert/crl/raw/pem":
+		ret, err := sendNotModifiedResponseIfNecessary(&IfModifiedSinceHelper{req: req}, sc, response)
+		if err != nil || ret {
+			retErr = err
+			goto reply
+		}
+
 		serial = legacyCRLPath
 		if req.Path == "crl/delta" || req.Path == "crl/delta/pem" {
 			serial = deltaCRLPath
@@ -187,13 +203,10 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		if req.Path == "crl/pem" || req.Path == "crl/delta/pem" {
 			pemType = "X509 CRL"
 			contentType = "application/x-pem-file"
+		} else if req.Path == "cert/crl" {
+			pemType = "X509 CRL"
+			contentType = ""
 		}
-	case req.Path == "cert/crl" || req.Path == "cert/delta-crl":
-		serial = legacyCRLPath
-		if req.Path == "cert/delta-crl" {
-			serial = deltaCRLPath
-		}
-		pemType = "X509 CRL"
 	case strings.HasSuffix(req.Path, "/pem") || strings.HasSuffix(req.Path, "/raw"):
 		serial = data.Get("serial").(string)
 		contentType = "application/pkix-cert"
@@ -212,7 +225,6 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 
 	// Prefer fetchCAInfo to fetchCertBySerial for CA certificates.
 	if serial == "ca_chain" || serial == "ca" {
-		sc := b.makeStorageContext(ctx, req.Storage)
 		caInfo, err := sc.fetchCAInfo(defaultRef, ReadOnlyUsage)
 		if err != nil {
 			switch err.(type) {

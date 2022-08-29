@@ -394,6 +394,8 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 	case key == "config/crl":
 		// We may need to reload our OCSP status flag
 		b.crlBuilder.markConfigDirty()
+	case key == storageIssuerConfig:
+		b.crlBuilder.invalidateCRLBuildTime()
 	}
 }
 
@@ -425,6 +427,12 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 	// this will be a no-op. However, if we do need to rebuild delta CRLs,
 	// this would cause us to do so.
 	if err := b.crlBuilder.rebuildDeltaCRLsIfForced(sc); err != nil {
+		return err
+	}
+
+	// Check if the CRL was invalidated due to issuer swap and update
+	// accordingly.
+	if err := b.crlBuilder.flushCRLBuildTimeInvalidation(sc); err != nil {
 		return err
 	}
 
