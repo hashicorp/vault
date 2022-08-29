@@ -3,6 +3,9 @@ package api
 import (
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -74,6 +77,16 @@ func TestRenewer_NewRenewer(t *testing.T) {
 	}
 }
 
+// renewedResponse returns an empty http.Response
+// for testing TestLifetimeWatcher
+func renewedResponse() *Response {
+	return &Response{
+		Response: &http.Response{
+			Body: io.NopCloser(strings.NewReader("{}")),
+		},
+	}
+}
+
 func TestLifetimeWatcher(t *testing.T) {
 	t.Parallel()
 
@@ -102,8 +115,8 @@ func TestLifetimeWatcher(t *testing.T) {
 			name:                 "no_error",
 			leaseDurationSeconds: 60,
 			incrementSeconds:     60,
-			renew: func(_ string, _ int) (*Secret, error) {
-				return renewedSecret, nil
+			renew: func(_ string, _ int) (*Response, error) {
+				return renewedResponse(), nil
 			},
 			expectError:   nil,
 			expectRenewal: true,
@@ -113,8 +126,8 @@ func TestLifetimeWatcher(t *testing.T) {
 			name:                 "short_increment_duration",
 			leaseDurationSeconds: 60,
 			incrementSeconds:     10,
-			renew: func(_ string, _ int) (*Secret, error) {
-				return renewedSecret, nil
+			renew: func(_ string, _ int) (*Response, error) {
+				return renewedResponse(), nil
 			},
 			expectError:   nil,
 			expectRenewal: true,
@@ -124,12 +137,12 @@ func TestLifetimeWatcher(t *testing.T) {
 			name:                 "one_error",
 			leaseDurationSeconds: 15,
 			incrementSeconds:     15,
-			renew: func(_ string, _ int) (*Secret, error) {
+			renew: func(_ string, _ int) (*Response, error) {
 				if caseOneErrorCount == 0 {
 					caseOneErrorCount++
 					return nil, fmt.Errorf("renew failure")
 				}
-				return renewedSecret, nil
+				return renewedResponse(), nil
 			},
 			expectError:   nil,
 			expectRenewal: true,
@@ -139,9 +152,9 @@ func TestLifetimeWatcher(t *testing.T) {
 			name:                 "many_errors",
 			leaseDurationSeconds: 15,
 			incrementSeconds:     15,
-			renew: func(_ string, _ int) (*Secret, error) {
+			renew: func(_ string, _ int) (*Response, error) {
 				if caseManyErrorsCount == 3 {
-					return renewedSecret, nil
+					return renewedResponse(), nil
 				}
 				caseManyErrorsCount++
 				return nil, fmt.Errorf("renew failure")
@@ -154,7 +167,7 @@ func TestLifetimeWatcher(t *testing.T) {
 			name:                 "only_errors",
 			leaseDurationSeconds: 15,
 			incrementSeconds:     15,
-			renew: func(_ string, _ int) (*Secret, error) {
+			renew: func(_ string, _ int) (*Response, error) {
 				return nil, fmt.Errorf("renew failure")
 			},
 			expectError:   nil,
@@ -165,8 +178,8 @@ func TestLifetimeWatcher(t *testing.T) {
 			name:                 "negative_lease_duration",
 			leaseDurationSeconds: -15,
 			incrementSeconds:     15,
-			renew: func(_ string, _ int) (*Secret, error) {
-				return renewedSecret, nil
+			renew: func(_ string, _ int) (*Response, error) {
+				return renewedResponse(), nil
 			},
 			expectError:   nil,
 			expectRenewal: true,
