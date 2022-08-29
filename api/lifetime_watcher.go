@@ -233,7 +233,7 @@ func (r *LifetimeWatcher) Renew() {
 	r.Start()
 }
 
-type renewFunc func(string, int) (*Secret, error)
+type renewFunc func(string, int) (*Response, error)
 
 // doRenew is a helper for renewing authentication.
 func (r *LifetimeWatcher) doRenew() error {
@@ -242,11 +242,11 @@ func (r *LifetimeWatcher) doRenew() error {
 	case r.secret.Auth != nil:
 		return r.doRenewWithOptions(true, !r.secret.Auth.Renewable,
 			r.secret.Auth.LeaseDuration, r.secret.Auth.ClientToken,
-			r.client.Auth().Token().RenewTokenAsSelf, defaultInitialRetryInterval)
+			r.client.Auth().Token().RenewTokenAsSelfResponse, defaultInitialRetryInterval)
 	default:
 		return r.doRenewWithOptions(false, !r.secret.Renewable,
 			r.secret.LeaseDuration, r.secret.LeaseID,
-			r.client.Sys().Renew, defaultInitialRetryInterval)
+			r.client.Sys().RenewResponse, defaultInitialRetryInterval)
 	}
 }
 
@@ -272,7 +272,9 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 
 		var remainingLeaseDuration time.Duration
 		fallbackLeaseDuration := initialTime.Add(priorDuration).Sub(time.Now())
-		var renewal *Secret
+		var renewal *Response
+		var renewalSecret *Secret
+		var age time.Duration
 		var err error
 
 		switch {
@@ -284,12 +286,34 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 		default:
 			// Renew the token
 			renewal, err = renew(credString, r.increment)
-			if err != nil || renewal == nil || (tokenMode && renewal.Auth == nil) {
+
+			if err == nil {
+				// if there were no http errors, there should be a body to close.
+				// otherwise no body to close.
+				defer renewal.Body.Close()
+				renewalSecret, err = ParseSecret(renewal.Body)
+
+				if ageHeader := renewal.Header.Get("Age"); err == nil && ageHeader != "" {
+					// Age header is a string that represents the number of seconds
+					// since entering the cache.
+					// https://www.rfc-editor.org/rfc/rfc7234#section-5.1
+					age, err = time.ParseDuration(ageHeader + "s")
+
+					if err == nil {
+						//  initialTime is when the lifetime_watcher begins.
+						//  if a response includes an Age header the initial time
+						//  is _before_ when the lifetime_watcher started.
+						initialTime = initialTime.Add(-age)
+					}
+				}
+			}
+
+			if err != nil || renewal == nil || (tokenMode && renewalSecret.Auth == nil) {
 				if r.renewBehavior == RenewBehaviorErrorOnErrors {
 					if err != nil {
 						return err
 					}
-					if renewal == nil || (tokenMode && renewal.Auth == nil) {
+					if renewal == nil || (tokenMode && renewalSecret.Auth == nil) {
 						return r.errLifetimeWatcherNoSecretData
 					}
 				}
@@ -313,12 +337,12 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 
 			// Push a message that a renewal took place.
 			select {
-			case r.renewCh <- &RenewOutput{time.Now().UTC(), renewal}:
+			case r.renewCh <- &RenewOutput{time.Now().UTC().Add(-age), renewalSecret}:
 			default:
 			}
 
 			// Possibly error if we are not renewable
-			if ((tokenMode && !renewal.Auth.Renewable) || (!tokenMode && !renewal.Renewable)) &&
+			if ((tokenMode && !renewalSecret.Auth.Renewable) || (!tokenMode && !renewalSecret.Renewable)) &&
 				r.renewBehavior == RenewBehaviorErrorOnErrors {
 				return r.errLifetimeWatcherNotRenewable
 			}
@@ -327,9 +351,9 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 			initialTime = time.Now()
 
 			// Grab the lease duration
-			initLeaseDuration = renewal.LeaseDuration
+			initLeaseDuration = renewalSecret.LeaseDuration
 			if tokenMode {
-				initLeaseDuration = renewal.Auth.LeaseDuration
+				initLeaseDuration = renewalSecret.Auth.LeaseDuration
 			}
 
 			remainingLeaseDuration = time.Duration(initLeaseDuration) * time.Second
@@ -353,7 +377,7 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 
 			// The sleep duration is set to 2/3 of the current lease duration plus
 			// 1/3 of the current grace period, which adds jitter.
-			sleepDuration = time.Duration(float64(remainingLeaseDuration.Nanoseconds())*2/3 + float64(r.grace.Nanoseconds())/3)
+			sleepDuration = time.Duration(float64(remainingLeaseDuration.Nanoseconds())*2/3 + float64(r.grace.Nanoseconds())/3 - float64(age.Nanoseconds()))
 		}
 
 		// If we are within grace, return now; or, if the amount of time we
