@@ -30,7 +30,8 @@ export default class OidcKeyForm extends Component {
       ? 'allow_all'
       : 'limited';
 
-  get filterSearchSelect() {
+  get filterDropdownOptions() {
+    // query object sent to search-select so only clients that reference this key appear in dropdown
     return { paramKey: 'key', filterFor: [this.args.model.name] };
   }
 
