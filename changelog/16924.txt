@@ -1,0 +1,3 @@
+```release-note:bug
+api/lifetime_watcher: utilize Age header when calculating sleep duration.
+```
