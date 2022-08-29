@@ -8,6 +8,7 @@ export const SELECTORS = {
   oidcRouteTabs: '[data-test-oidc-tabs]',
   oidcLandingImg: '[data-test-oidc-img]',
   confirmDeleteButton: '[data-test-confirm-button="true"]',
+  inlineAlert: '[data-test-inline-alert]',
   // client route
   clientSaveButton: '[data-test-oidc-client-save]',
   clientCancelButton: '[data-test-oidc-client-cancel]',

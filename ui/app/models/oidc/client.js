@@ -12,6 +12,7 @@ const validations = {
       message: 'Name cannot contain whitespace.',
     },
   ],
+  key: [{ type: 'presence', message: 'Key is required.' }],
 };
 
 @withModelValidations(validations)

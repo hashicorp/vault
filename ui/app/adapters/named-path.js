@@ -3,7 +3,7 @@
  * save requests are made to the same endpoint and the resource is either created if not found or updated
  * */
 import ApplicationAdapter from './application';
-
+import { assert } from '@ember/debug';
 export default class NamedPathAdapter extends ApplicationAdapter {
   namespace = 'v1';
   saveMethod = 'POST'; // override when extending if PUT is used rather than POST
@@ -15,14 +15,24 @@ export default class NamedPathAdapter extends ApplicationAdapter {
       data,
     }).then(() => data);
   }
+
   // create does not return response similar to PUT request
   createRecord() {
-    return this._saveRecord(...arguments);
+    let [store, { modelName }, snapshot] = arguments;
+    let name = snapshot.attr('name');
+    // throw error if user attempts to create a record with same name, otherwise POST request silently overrides (updates) the existing model
+    if (store.hasRecordForId(modelName, name)) {
+      throw new Error(`A record already exists with the name: ${name}`);
+    } else {
+      return this._saveRecord(...arguments);
+    }
   }
+
   // update uses same endpoint and method as create
   updateRecord() {
     return this._saveRecord(...arguments);
   }
+
   // if backend does not return name in response Ember Data will throw an error for pushing a record with no id
   // use the id (name) supplied to findRecord to set property on response data
   findRecord(store, type, name) {
@@ -33,6 +43,7 @@ export default class NamedPathAdapter extends ApplicationAdapter {
       return resp;
     });
   }
+
   // GET request with list=true as query param
   async query(store, type, query) {
     const url = this.urlForQuery(query, type.modelName);
@@ -43,6 +54,7 @@ export default class NamedPathAdapter extends ApplicationAdapter {
     const response = await this.ajax(url, 'GET', { data: { list: true } });
 
     // filter LIST response only if key_info exists and query includes both 'paramKey' & 'filterFor'
+    if (filterFor) assert('filterFor must be an array', Array.isArray(filterFor));
     if (response.data.key_info && filterFor && paramKey && !filterFor.includes('*')) {
       const data = this.filterListResponse(paramKey, filterFor, response.data.key_info);
       return { ...response, data };

@@ -29,6 +29,7 @@
 {{/unless}}
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
+    <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
     <FormFieldLabel for="name" @label="Name" />
     <input
       autocomplete="off"
@@ -70,9 +71,6 @@
     />
   </div>
   <div class="has-top-padding-s">
-    {{#if this.modelValidations.targets.errors}}
-      <AlertInline @type="danger" @message={{join ", " this.modelValidations.targets.errors}} class="has-top-margin-m" />
-    {{/if}}
     <button
       type="submit"
       class="button is-primary {{if this.save.isRunning 'is-loading'}}"
@@ -90,5 +88,8 @@
     >
       Cancel
     </button>
+    {{#if this.modelValidations.targets.errors}}
+      <AlertInline @type="danger" @message={{join ", " this.modelValidations.targets.errors}} @paddingTop={{true}} />
+    {{/if}}
   </div>
 </form>

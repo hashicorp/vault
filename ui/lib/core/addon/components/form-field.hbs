@@ -93,8 +93,12 @@
         @backend={{@model.backend}}
         @disallowNewItems={{@attr.options.onlyAllowExisting}}
         @labelClass={{@labelClass}}
+        class={{if this.validationError "dropdown-has-error-border"}}
       />
     </div>
+    {{#if this.validationError}}
+      <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
+    {{/if}}
   {{else if (eq @attr.options.editType "mountAccessor")}}
     <MountAccessorSelect
       @name={{@attr.name}}

@@ -4,7 +4,6 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import parseURL from 'core/utils/parse-url';
-
 /**
  * @module OidcProviderForm
  * OidcProviderForm components are used to create and update OIDC providers
@@ -23,8 +22,9 @@ import parseURL from 'core/utils/parse-url';
 export default class OidcProviderForm extends Component {
   @service store;
   @service flashMessages;
-
   @tracked modelValidations;
+  @tracked errorBanner;
+  @tracked invalidFormAlert;
   @tracked radioCardGroupValue =
     // If "*" is provided, all clients are allowed: https://www.vaultproject.io/api-docs/secret/identity/oidc-provider#parameters
     !this.args.model.allowedClientIds || this.args.model.allowedClientIds.includes('*')
@@ -61,8 +61,9 @@ export default class OidcProviderForm extends Component {
   *save(event) {
     event.preventDefault();
     try {
-      const { isValid, state } = this.args.model.validate();
+      const { isValid, state, invalidFormMessage } = this.args.model.validate();
       this.modelValidations = isValid ? null : state;
+      this.invalidFormAlert = invalidFormMessage;
       if (isValid) {
         const { isNew, name } = this.args.model;
         if (this.radioCardGroupValue === 'allow_all') {
@@ -77,7 +78,8 @@ export default class OidcProviderForm extends Component {
       }
     } catch (error) {
       const message = error.errors ? error.errors.join('. ') : error.message;
-      this.flashMessages.danger(message);
+      this.errorBanner = message;
+      this.invalidFormAlert = 'There was an error submitting this form.';
     }
   }
 }

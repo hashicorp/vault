@@ -7,7 +7,12 @@ import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
-import { SELECTORS, overrideMirageResponse } from 'vault/tests/helpers/oidc-config';
+import {
+  OIDC_BASE_URL,
+  SELECTORS,
+  overrideMirageResponse,
+  overrideCapabilities,
+} from 'vault/tests/helpers/oidc-config';
 
 const searchSelect = create(ss);
 
@@ -54,7 +59,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
   });
 
   test('it should save new client', async function (assert) {
-    assert.expect(13);
+    assert.expect(14);
 
     this.server.post('/identity/oidc/client/some-app', (schema, req) => {
       assert.ok(true, 'Request made to save client');
@@ -79,22 +84,28 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     assert.dom('input#allow-all').isChecked('Allow all radio button selected by default');
     assert.dom('[data-test-ttl-value="ID Token TTL"]').hasValue('1', 'ttl defaults to 24h');
     assert.dom('[data-test-ttl-value="Access Token TTL"]').hasValue('1', 'ttl defaults to 24h');
-
-    // check validation errors
-    await click(SELECTORS.clientSaveButton);
-    assert
-      .dom('[data-test-inline-error-message]')
-      .hasText('Name is required.', 'Validation message is shown for name');
-    await fillIn('[data-test-input="name"]', 'test space');
-    await click(SELECTORS.clientSaveButton);
-    assert
-      .dom('[data-test-inline-error-message]')
-      .hasText('Name cannot contain whitespace.', 'Validation message is shown whitespace');
-
-    await click('label[for=limited]');
     assert
       .dom('[data-test-selected-option="true"]')
       .hasText('default', 'Search select has default key selected');
+
+    // check validation errors
+    await fillIn('[data-test-input="name"]', ' ');
+    await click('[data-test-selected-list-button="delete"]');
+    await click(SELECTORS.clientSaveButton);
+
+    let validationErrors = findAll(SELECTORS.inlineAlert);
+    assert
+      .dom(validationErrors[0])
+      .hasText('Name is required. Name cannot contain whitespace.', 'Validation messages are shown for name');
+    assert.dom(validationErrors[1]).hasText('Key is required.', 'Validation message is shown for key');
+    assert.dom(validationErrors[2]).hasText('There are 3 errors with this form.', 'Renders form error count');
+
+    // fill out form with valid inputs
+    await clickTrigger();
+    await fillIn('.ember-power-select-search input', 'default');
+    await searchSelect.options.objectAt(0).click();
+
+    await click('label[for=limited]');
     assert
       .dom('[data-test-search-select-with-modal]')
       .exists('Limited radio button shows assignments search select');
@@ -219,5 +230,24 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     assert
       .dom('[data-test-component="string-list"]')
       .exists('Radio toggle shows assignments string-list input');
+  });
+
+  test('it should render error alerts when API returns an error', async function (assert) {
+    assert.expect(2);
+    this.model = this.store.createRecord('oidc/client');
+    this.server.post('/sys/capabilities-self', () => overrideCapabilities(OIDC_BASE_URL + '/clients'));
+    await render(hbs`
+      <Oidc::ClientForm
+        @model={{this.model}}
+        @onCancel={{this.onCancel}}
+        @onSave={{this.onSave}}
+      />
+    `);
+    await fillIn('[data-test-input="name"]', 'some-app');
+    await click(SELECTORS.clientSaveButton);
+    assert
+      .dom(SELECTORS.inlineAlert)
+      .hasText('There was an error submitting this form.', 'form error alert renders ');
+    assert.dom('[data-test-alert-banner="alert"]').exists('alert banner renders');
   });
 });

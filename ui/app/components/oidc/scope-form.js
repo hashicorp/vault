@@ -21,7 +21,8 @@ import { inject as service } from '@ember/service';
 
 export default class OidcScopeFormComponent extends Component {
   @service flashMessages;
-
+  @tracked errorBanner;
+  @tracked invalidFormAlert;
   @tracked modelValidations;
   // formatting here is purposeful so that whitespace renders correctly in JsonEditor
   exampleTemplate = `{
@@ -37,8 +38,9 @@ export default class OidcScopeFormComponent extends Component {
   *save(event) {
     event.preventDefault();
     try {
-      const { isValid, state } = this.args.model.validate();
+      const { isValid, state, invalidFormMessage } = this.args.model.validate();
       this.modelValidations = isValid ? null : state;
+      this.invalidFormAlert = invalidFormMessage;
       if (isValid) {
         const { isNew, name } = this.args.model;
         yield this.args.model.save();
@@ -47,7 +49,8 @@ export default class OidcScopeFormComponent extends Component {
       }
     } catch (error) {
       const message = error.errors ? error.errors.join('. ') : error.message;
-      this.flashMessages.danger(message);
+      this.errorBanner = message;
+      this.invalidFormAlert = 'There was an error submitting this form.';
     }
   }
   @action

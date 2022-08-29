@@ -21,12 +21,22 @@ import { task } from 'ember-concurrency';
 export default class OidcClientForm extends Component {
   @service store;
   @service flashMessages;
-
   @tracked modelValidations;
+  @tracked errorBanner;
+  @tracked invalidFormAlert;
   @tracked radioCardGroupValue =
     !this.args.model.assignments || this.args.model.assignments.includes('allow_all')
       ? 'allow_all'
       : 'limited';
+
+  get modelAssignments() {
+    const { assignments } = this.args.model;
+    if (assignments.includes('allow_all') && assignments.length === 1) {
+      return [];
+    } else {
+      return assignments;
+    }
+  }
 
   @action
   handleAssignmentSelection(selection) {
@@ -41,20 +51,20 @@ export default class OidcClientForm extends Component {
     }
   }
 
-  get modelAssignments() {
-    const { assignments } = this.args.model;
-    if (assignments.includes('allow_all') && assignments.length === 1) {
-      return [];
-    } else {
-      return assignments;
-    }
+  @action
+  cancel() {
+    const method = this.args.model.isNew ? 'unloadRecord' : 'rollbackAttributes';
+    this.args.model[method]();
+    this.args.onCancel();
   }
+
   @task
   *save(event) {
     event.preventDefault();
     try {
-      const { isValid, state } = this.args.model.validate();
+      const { isValid, state, invalidFormMessage } = this.args.model.validate();
       this.modelValidations = isValid ? null : state;
+      this.invalidFormAlert = invalidFormMessage;
       if (isValid) {
         if (this.radioCardGroupValue === 'allow_all') {
           // the backend permits 'allow_all' AND other assignments, though 'allow_all' will take precedence
@@ -74,14 +84,8 @@ export default class OidcClientForm extends Component {
       }
     } catch (error) {
       const message = error.errors ? error.errors.join('. ') : error.message;
-      this.flashMessages.danger(message);
+      this.errorBanner = message;
+      this.invalidFormAlert = 'There was an error submitting this form.';
     }
-  }
-
-  @action
-  cancel() {
-    const method = this.args.model.isNew ? 'unloadRecord' : 'rollbackAttributes';
-    this.args.model[method]();
-    this.args.onCancel();
   }
 }

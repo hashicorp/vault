@@ -22,7 +22,8 @@ import { task } from 'ember-concurrency';
 export default class OidcKeyForm extends Component {
   @service store;
   @service flashMessages;
-
+  @tracked errorBanner;
+  @tracked invalidFormAlert;
   @tracked modelValidations;
   @tracked radioCardGroupValue =
     // If "*" is provided, all clients are allowed: https://www.vaultproject.io/api-docs/secret/identity/oidc-provider#parameters
@@ -54,8 +55,9 @@ export default class OidcKeyForm extends Component {
   *save(event) {
     event.preventDefault();
     try {
-      const { isValid, state } = this.args.model.validate();
+      const { isValid, state, invalidFormMessage } = this.args.model.validate();
       this.modelValidations = isValid ? null : state;
+      this.invalidFormAlert = invalidFormMessage;
       if (isValid) {
         const { isNew, name } = this.args.model;
         if (this.radioCardGroupValue === 'allow_all') {
@@ -75,7 +77,8 @@ export default class OidcKeyForm extends Component {
       }
     } catch (error) {
       const message = error.errors ? error.errors.join('. ') : error.message;
-      this.flashMessages.danger(message);
+      this.errorBanner = message;
+      this.invalidFormAlert = 'There was an error submitting this form.';
     }
   }
 }

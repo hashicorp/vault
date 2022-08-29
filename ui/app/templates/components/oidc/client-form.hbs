@@ -26,7 +26,7 @@
 </PageHeader>
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-bottomless">
-    <MessageError @errorMessage={{this.error}} class="has-top-margin-s" />
+    <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
     {{#each @model.formFields as |attr|}}
       <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
     {{/each}}
@@ -90,5 +90,10 @@
         Cancel
       </button>
     </div>
+    {{#if this.invalidFormAlert}}
+      <div class="control">
+        <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />
+      </div>
+    {{/if}}
   </div>
 </form>
