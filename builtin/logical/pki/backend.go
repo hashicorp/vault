@@ -404,6 +404,13 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		return err
 	}
 
+	// As we're (below) modifying the backing storage, we need to ensure
+	// we're not on a standby/secondary node.
+	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) ||
+		b.System().ReplicationState().HasState(consts.ReplicationDRSecondary) {
+		return nil
+	}
+
 	// Check if we're set to auto rebuild and a CRL is set to expire.
 	if err := b.crlBuilder.checkForAutoRebuild(sc); err != nil {
 		return err

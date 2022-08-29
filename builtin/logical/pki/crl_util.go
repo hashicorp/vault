@@ -288,13 +288,6 @@ func (cb *crlBuilder) clearDeltaWAL(sc *storageContext, walSerials []string) err
 }
 
 func (cb *crlBuilder) rebuildDeltaCRLsIfForced(sc *storageContext) error {
-	// Exit early if we aren't an active node. This still needs to occur on
-	// PR secondary clusters (as they retain their own separate CRL and
-	// delta CRLs).
-	if sc.Backend.System().ReplicationState().HasState(consts.ReplicationDRSecondary | consts.ReplicationPerformanceStandby) {
-		return nil
-	}
-
 	// Delta CRLs use the same expiry duration as the complete CRL. Because
 	// we always rebuild the complete CRL and then the delta CRL, we can
 	// be assured that the delta CRL always expires after a complete CRL,
