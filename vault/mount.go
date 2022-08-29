@@ -665,38 +665,44 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	return nil
 }
 
-// pluginTypeFromMountEntry attempts to find a pluginType associated with the
+// builtinTypeFromMountEntry attempts to find a pluginType associated with the
 // specified MountEntry. Returns consts.PluginTypeUnknown in the following cases:
 //
 // * Multiple types match (also returns an error)
 // * No types match (no error)
-func (c *Core) pluginTypeFromMountEntry(ctx context.Context, entry *MountEntry) (consts.PluginType, error) {
-	var pluginTypes []consts.PluginType
+func (c *Core) builtinTypeFromMountEntry(ctx context.Context, entry *MountEntry) consts.PluginType {
 	if c.builtinRegistry == nil || entry == nil {
-		return consts.PluginTypeUnknown, nil
+		return consts.PluginTypeUnknown
 	}
 
-	pluginType, _ := consts.ParsePluginType(entry.Table)
-	if pluginType != consts.PluginTypeUnknown {
-		pluginTypes = append(pluginTypes, pluginType)
+	builtinPluginType := func(name string, pluginType consts.PluginType) (consts.PluginType, bool) {
+		plugin, err := c.pluginCatalog.Get(ctx, name, pluginType, "")
+		if err == nil && plugin != nil && plugin.Builtin {
+			return plugin.Type, true
+		}
+		return consts.PluginTypeUnknown, false
 	}
 
-	if c.builtinRegistry.Contains(entry.Type, consts.PluginTypeSecrets) {
-		pluginTypes = append(pluginTypes, consts.PluginTypeSecrets)
+	// auth plugins have their own dedicated mount table
+	if pluginType, err := consts.ParsePluginType(entry.Table); err == nil {
+		if builtinType, ok := builtinPluginType(entry.Type, pluginType); ok {
+			return builtinType
+		}
 	}
 
-	if c.builtinRegistry.Contains(entry.Type, consts.PluginTypeDatabase) {
-		pluginTypes = append(pluginTypes, consts.PluginTypeDatabase)
+	// Check for possible matches
+	var builtinTypes []consts.PluginType
+	for _, pluginType := range [...]consts.PluginType{consts.PluginTypeSecrets, consts.PluginTypeDatabase} {
+		if builtinType, ok := builtinPluginType(entry.Type, pluginType); ok {
+			builtinTypes = append(builtinTypes, builtinType)
+		}
 	}
 
-	switch len(pluginTypes) {
-	case 0:
-		return consts.PluginTypeUnknown, nil
-	case 1:
-		return pluginTypes[0], nil
-	default:
-		return consts.PluginTypeUnknown, fmt.Errorf("too many plugin types for mount entry")
+	if len(builtinTypes) == 1 {
+		return builtinTypes[0]
 	}
+
+	return consts.PluginTypeUnknown
 }
 
 // Unmount is used to unmount a path. The boolean indicates whether the mount

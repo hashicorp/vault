@@ -924,11 +924,10 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[st
 	}
 
 	// Add deprecation status only if it exists
-	pluginType, _ := b.Core.pluginTypeFromMountEntry(ctx, entry)
-	if status, ok := b.Core.builtinRegistry.DeprecationStatus(entry.Type, pluginType); ok {
+	builtinType := b.Core.builtinTypeFromMountEntry(ctx, entry)
+	if status, ok := b.Core.builtinRegistry.DeprecationStatus(entry.Type, builtinType); ok {
 		info["deprecation_status"] = status.String()
 	}
-
 	info["config"] = entryConfig
 
 	return info
