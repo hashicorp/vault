@@ -258,21 +258,18 @@ type IfModifiedSinceHelper struct {
 }
 
 func sendNotModifiedResponseIfNecessary(helper *IfModifiedSinceHelper, sc *storageContext, resp *logical.Response) (bool, error) {
-	var ret bool
 	responseHeaders := map[string][]string{}
 	if !hasHeader(headerIfModifiedSince, helper.req) {
-		return ret, nil
+		return false, nil
 	}
 
 	before, err := sc.isIfModifiedSinceBeforeLastModified(helper, responseHeaders)
 	if err != nil {
-		ret = true
-		return ret, err
+		return false, err
 	}
+
 	if !before {
-		return ret, nil
-	} else {
-		ret = true
+		return false, nil
 	}
 
 	// Fill response
@@ -282,7 +279,7 @@ func sendNotModifiedResponseIfNecessary(helper *IfModifiedSinceHelper, sc *stora
 	}
 	resp.Headers = responseHeaders
 
-	return ret, nil
+	return true, nil
 }
 
 func (sc *storageContext) isIfModifiedSinceBeforeLastModified(helper *IfModifiedSinceHelper, responseHeaders map[string][]string) (bool, error) {
