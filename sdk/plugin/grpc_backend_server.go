@@ -39,7 +39,8 @@ type backendGRPCPluginServer struct {
 	logger log.Logger
 }
 
-// getBackendAndBrokeredClientInternal returns the backend but does not hold a lock
+// getBackendAndBrokeredClientInternal returns the backend and client
+// connection but does not hold a lock
 func (b *backendGRPCPluginServer) getBackendAndBrokeredClientInternal(ctx context.Context) (logical.Backend, *grpc.ClientConn, error) {
 	if b.multiplexingSupport {
 		id, err := pluginutil.GetMultiplexIDFromContext(ctx)
@@ -60,7 +61,8 @@ func (b *backendGRPCPluginServer) getBackendAndBrokeredClientInternal(ctx contex
 	return nil, nil, fmt.Errorf("no backend instance found")
 }
 
-// getBackendAndBrokeredClient holds a read lock and returns the backend
+// getBackendAndBrokeredClient holds a read lock and returns the backend and
+// client connection
 func (b *backendGRPCPluginServer) getBackendAndBrokeredClient(ctx context.Context) (logical.Backend, *grpc.ClientConn, error) {
 	b.instancesLock.RLock()
 	defer b.instancesLock.RUnlock()
