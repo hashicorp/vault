@@ -198,8 +198,6 @@ func (c *LeaseCache) checkCacheForRequest(id string) (*SendResponse, error) {
 	}
 	sendResp.CacheMeta.Hit = true
 
-	//this is the time the response was received, but what if the response
-	//had an age on it as well?
 	respTime, err := http.ParseTime(resp.Header.Get("Date"))
 	if err != nil {
 		c.logger.Error("failed to parse cached response date", "error", err)
@@ -207,11 +205,10 @@ func (c *LeaseCache) checkCacheForRequest(id string) (*SendResponse, error) {
 	}
 	sendResp.CacheMeta.Age = time.Now().Sub(respTime)
 
-	//if the cached response had an age header attached to it
-	//we need to propagate that age.
+	//  if the cached response had an age header attached to it
+	//  we need to propagate that age.
 	if respAgeTxt := resp.Header.Get("Age"); respAgeTxt != "" {
 		respAge, err := strconv.Atoi(respAgeTxt)
-
 		if err != nil {
 			c.logger.Error("failed to parse ")
 			return nil, err
@@ -320,14 +317,13 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	// The "Age" header is an HTTP Cache-Control header.
 	if ageHeader := resp.Response.Header.Get("Age"); ageHeader != "" {
 		age, err := strconv.Atoi(ageHeader)
-
 		if err != nil {
 			return resp, err
 		}
 
 		// this is a negative add because the Age indicates how many
 		// seconds before now the response was originally created.
-		//lastRenewed(now) ----------> trueLastRenewed(now - age)
+		// lastRenewed(now) ----------> trueLastRenewed(now - age)
 		lastRenewed = lastRenewed.Add(time.Duration(age) * -time.Second)
 	}
 

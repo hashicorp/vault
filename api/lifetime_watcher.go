@@ -251,7 +251,8 @@ func (r *LifetimeWatcher) doRenew() error {
 }
 
 func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, initLeaseDuration int, credString string,
-	renew renewFunc, initialRetryInterval time.Duration) error {
+	renew renewFunc, initialRetryInterval time.Duration,
+) error {
 	if credString == "" ||
 		(nonRenewable && r.renewBehavior == RenewBehaviorErrorOnErrors) {
 		return r.errLifetimeWatcherNotRenewable
