@@ -7,7 +7,7 @@ export default class ToolTipComponent extends Component {
     return this.args.delay || 200;
   }
   get horizontalPosition() {
-    return this.args.delay || 'auto-right';
+    return this.args.horizontalPosition || 'auto-right';
   }
 
   toggleState({ dropdown, action }) {

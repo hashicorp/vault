@@ -15,6 +15,7 @@ import layout from '../templates/components/search-select';
  *
  * @param {string} id - The name of the form field
  * @param {Array} models - An array of model types to fetch from the API.
+ * @param {object} [queryObject] - object passed as query options to this.store.query(). NOTE: will override this.backend
  * @param {function} onChange - The onchange action for this form field. ** SEE UTIL ** search-select-has-many.js if selecting models from a hasMany relationship
  * @param {string | Array} inputValue -  A comma-separated string or an array of strings -- array of ids for models.
  * @param {string} label - Label for this form field
@@ -45,7 +46,6 @@ export default Component.extend({
   classNameBindings: ['displayInherit:display-inherit'],
   classNames: ['field', 'search-select'],
   store: service(),
-
   onChange: () => {},
   inputValue: computed(function () {
     return [];
@@ -121,6 +121,9 @@ export default Component.extend({
         let queryOptions = {};
         if (this.backend) {
           queryOptions = { backend: this.backend };
+        }
+        if (this.queryObject) {
+          queryOptions = this.queryObject;
         }
         let options = yield this.store.query(modelType, queryOptions);
         this.formatOptions(options);

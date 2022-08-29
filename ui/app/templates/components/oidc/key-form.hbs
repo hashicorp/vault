@@ -51,12 +51,15 @@
         @value="limited"
         @groupValue={{this.radioCardGroupValue}}
         @onChange={{this.handleClientSelection}}
+        @disabled={{@model.isNew}}
+        @disabledTooltipMessage="This option has been disabled for now. To limit access, you must first create an application that references this key."
       />
     </div>
     {{#if (eq this.radioCardGroupValue "limited")}}
       <SearchSelect
         @id="allowedClientIds"
         @subLabel="Application name"
+        @subText="Select which applications are allowed to use this key. Only applications that currently reference this key will appear in the dropdown."
         @models={{array "oidc/client"}}
         @inputValue={{@model.allowedClientIds}}
         @onChange={{this.handleClientSelection}}
@@ -64,6 +67,7 @@
         @fallbackComponent="string-list"
         @passObject={{true}}
         @objectKeys={{array "clientId"}}
+        @queryObject={{this.filterDropdownOptions}}
       />
     {{/if}}
   </div>
