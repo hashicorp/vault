@@ -407,21 +407,28 @@ func (c *PluginCatalog) getBackendPluginType(ctx context.Context, pluginRunner *
 	}
 
 	var client logical.Backend
-	// Attempt to run as backend V5 plugin
+	var attemptV4 bool
+	// First, attempt to run as backend V5 plugin
 	c.logger.Debug("attempting to load backend plugin", "name", pluginRunner.Name)
 	pc, err := c.newPluginClient(ctx, pluginRunner, config)
 	if err == nil {
+		// we spawned a subprocess, so make sure to clean it up
+		defer c.cleanupExternalPlugin(pluginRunner.Name, pc.id)
+
 		// dispense the plugin so we can get its type
 		client, err = backendplugin.Dispense(pc.ClientProtocol, pc)
 		if err != nil {
-			merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as backend v5: %w", err))
-			c.logger.Debug("JMF failed to dispense", "name", pluginRunner.Name, "error", err)
-			// return consts.PluginTypeUnknown, merr.ErrorOrNil()
+			merr = multierror.Append(merr, fmt.Errorf("failed to dispense plugin as backend v5: %w", err))
+			c.logger.Debug("failed to dispense v5 backend plugin", "name", pluginRunner.Name)
+			attemptV4 = true
 		} else {
 			c.logger.Debug("successfully dispensed v5 backend plugin", "name", pluginRunner.Name)
-			defer c.cleanupExternalPlugin(pluginRunner.Name, pc.id)
 		}
 	} else {
+		attemptV4 = true
+	}
+
+	if attemptV4 {
 		c.logger.Debug("failed to dispense v5 backend plugin", "name", pluginRunner.Name, "error", err)
 		config.AutoMTLS = false
 		config.IsMetadataMode = true
@@ -429,7 +436,7 @@ func (c *PluginCatalog) getBackendPluginType(ctx context.Context, pluginRunner *
 		client, err = backendplugin.NewPluginClient(ctx, nil, pluginRunner, log.NewNullLogger(), true)
 		if err != nil {
 			c.logger.Debug("failed to dispense v4 backend plugin", "name", pluginRunner.Name, "error", err)
-			merr = multierror.Append(merr, fmt.Errorf("failed to dispense v4 backend plugin", "name", pluginRunner.Name, "error", err))
+			merr = multierror.Append(merr, fmt.Errorf("failed to dispense v4 backend plugin: %w", err))
 			return consts.PluginTypeUnknown, merr.ErrorOrNil()
 		}
 		c.logger.Debug("successfully dispensed v4 backend plugin", "name", pluginRunner.Name)
