@@ -49,7 +49,6 @@ export default class OidcClientForm extends Component {
       return assignments;
     }
   }
-
   @task
   *save(event) {
     event.preventDefault();
