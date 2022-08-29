@@ -301,19 +301,16 @@ func (sc *storageContext) isIfModifiedSinceBeforeLastModified(helper *IfModified
 		}
 		lastModified = crlConfig.LastModified
 	} else {
-		issuerRef := helper.issuerRef
-		if issuerRef == defaultRef {
-			config, err := sc.getIssuersConfig()
-			if err != nil {
-				return before, err
-			}
-			issuerRef = config.DefaultIssuerId
-		}
-
-		issuer, err := sc.fetchIssuerById(helper.issuerRef)
+		issuerId, err := sc.resolveIssuerReference(string(helper.issuerRef))
 		if err != nil {
 			return before, err
 		}
+
+		issuer, err := sc.fetchIssuerById(issuerId)
+		if err != nil {
+			return before, err
+		}
+
 		lastModified = issuer.LastModified
 	}
 
