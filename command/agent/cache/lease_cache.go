@@ -312,12 +312,31 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		namespace = "root/"
 	}
 
+	lastRenewed := time.Now().UTC()
+
+	// the lease cache received a response from another lease cache
+	// including an "Age" header indicating the time the cached response
+	// has existed since entering a cache.
+	// The "Age" header is an HTTP Cache-Control header.
+	if ageHeader := resp.Response.Header.Get("Age"); ageHeader != "" {
+		age, err := strconv.Atoi(ageHeader)
+
+		if err != nil {
+			return resp, err
+		}
+
+		// this is a negative add because the Age indicates how many
+		// seconds before now the response was originally created.
+		//lastRenewed(now) ----------> trueLastRenewed(now - age)
+		lastRenewed = lastRenewed.Add(time.Duration(age) * -time.Second)
+	}
+
 	// Build the index to cache based on the response received
 	index := &cachememdb.Index{
 		ID:          id,
 		Namespace:   namespace,
 		RequestPath: req.Request.URL.Path,
-		LastRenewed: time.Now().UTC(),
+		LastRenewed: lastRenewed,
 	}
 
 	secret, err := api.ParseSecret(bytes.NewReader(resp.ResponseBody))
@@ -520,10 +539,10 @@ func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index,
 			}
 			c.logger.Debug("renewal halted; evicting from cache", "path", req.Request.URL.Path)
 			return
-		case <-watcher.RenewCh():
+		case output := <-watcher.RenewCh():
 			c.logger.Debug("secret renewed", "path", req.Request.URL.Path)
 			if c.ps != nil {
-				if err := c.updateLastRenewed(ctx, index, time.Now().UTC()); err != nil {
+				if err := c.updateLastRenewed(ctx, index, output.RenewedAt); err != nil {
 					c.logger.Warn("not able to update lastRenewed time for cached index", "id", index.ID)
 				}
 			}
