@@ -6,7 +6,7 @@ import (
 	"encoding/base64"
 	"testing"
 
-	wrapping "github.com/hashicorp/go-kms-wrapping"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -51,7 +51,7 @@ telemetry {
 		if err != nil {
 			t.Fatal(err)
 		}
-		inBlob := new(wrapping.EncryptedBlobInfo)
+		inBlob := new(wrapping.BlobInfo)
 		if err := proto.Unmarshal(inMsg, inBlob); err != nil {
 			t.Fatal(err)
 		}
@@ -89,18 +89,24 @@ telemetry {
 
 type reversingWrapper struct{}
 
-func (r *reversingWrapper) Type() string                     { return "reversing" }
-func (r *reversingWrapper) KeyID() string                    { return "reverser" }
-func (r *reversingWrapper) HMACKeyID() string                { return "" }
-func (r *reversingWrapper) Init(_ context.Context) error     { return nil }
-func (r *reversingWrapper) Finalize(_ context.Context) error { return nil }
-func (r *reversingWrapper) Encrypt(_ context.Context, input []byte, _ []byte) (*wrapping.EncryptedBlobInfo, error) {
-	return &wrapping.EncryptedBlobInfo{
+func (r *reversingWrapper) Type(_ context.Context) (wrapping.WrapperType, error) {
+	return "reverser", nil
+}
+func (r *reversingWrapper) KeyId(_ context.Context) (string, error) { return "reverser", nil }
+func (r *reversingWrapper) HMACKeyID() string                       { return "" }
+func (r *reversingWrapper) Init(_ context.Context) error            { return nil }
+func (r *reversingWrapper) Finalize(_ context.Context) error        { return nil }
+func (r *reversingWrapper) SetConfig(_ context.Context, opts ...wrapping.Option) (*wrapping.WrapperConfig, error) {
+	return &wrapping.WrapperConfig{}, nil
+}
+
+func (r *reversingWrapper) Encrypt(_ context.Context, input []byte, _ ...wrapping.Option) (*wrapping.BlobInfo, error) {
+	return &wrapping.BlobInfo{
 		Ciphertext: r.reverse(input),
 	}, nil
 }
 
-func (r *reversingWrapper) Decrypt(_ context.Context, input *wrapping.EncryptedBlobInfo, _ []byte) ([]byte, error) {
+func (r *reversingWrapper) Decrypt(_ context.Context, input *wrapping.BlobInfo, _ ...wrapping.Option) ([]byte, error) {
 	return r.reverse(input.Ciphertext), nil
 }
 

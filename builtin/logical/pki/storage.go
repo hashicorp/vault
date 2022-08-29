@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -24,12 +25,19 @@ const (
 	legacyMigrationBundleLogKey = "config/legacyMigrationBundleLog"
 	legacyCertBundlePath        = "config/ca_bundle"
 	legacyCRLPath               = "crl"
+	deltaCRLPath                = "delta-crl"
+	deltaCRLPathSuffix          = "-delta"
 
 	// Used as a quick sanity check for a reference id lookups...
 	uuidLength = 36
 
 	maxRolesToScanOnIssuerChange = 100
 	maxRolesToFindOnIssuerChange = 10
+
+	latestIssuerVersion = 1
+
+	headerIfModifiedSince = "If-Modified-Since"
+	headerLastModified    = "Last-Modified"
 )
 
 type keyID string
@@ -76,20 +84,22 @@ func (e keyEntry) isManagedPrivateKey() bool {
 type issuerUsage uint
 
 const (
-	ReadOnlyUsage   issuerUsage = iota
-	IssuanceUsage   issuerUsage = 1 << iota
-	CRLSigningUsage issuerUsage = 1 << iota
+	ReadOnlyUsage    issuerUsage = iota
+	IssuanceUsage    issuerUsage = 1 << iota
+	CRLSigningUsage  issuerUsage = 1 << iota
+	OCSPSigningUsage issuerUsage = 1 << iota
 
 	// When adding a new usage in the future, we'll need to create a usage
 	// mask field on the IssuerEntry and handle migrations to a newer mask,
 	// inferring a value for the new bits.
-	AllIssuerUsages issuerUsage = ReadOnlyUsage | IssuanceUsage | CRLSigningUsage
+	AllIssuerUsages = ReadOnlyUsage | IssuanceUsage | CRLSigningUsage | OCSPSigningUsage
 )
 
 var namedIssuerUsages = map[string]issuerUsage{
 	"read-only":            ReadOnlyUsage,
 	"issuing-certificates": IssuanceUsage,
 	"crl-signing":          CRLSigningUsage,
+	"ocsp-signing":         OCSPSigningUsage,
 }
 
 func (i *issuerUsage) ToggleUsage(usages ...issuerUsage) {
@@ -146,11 +156,20 @@ type issuerEntry struct {
 	LeafNotAfterBehavior certutil.NotAfterBehavior `json:"not_after_behavior"`
 	Usage                issuerUsage               `json:"usage"`
 	RevocationSigAlg     x509.SignatureAlgorithm   `json:"revocation_signature_algorithm"`
+	Revoked              bool                      `json:"revoked"`
+	RevocationTime       int64                     `json:"revocation_time"`
+	RevocationTimeUTC    time.Time                 `json:"revocation_time_utc"`
+	AIAURIs              *certutil.URLEntries      `json:"aia_uris,omitempty"`
+	LastModified         time.Time                 `json:"last_modified"`
+	Version              uint                      `json:"version"`
 }
 
 type localCRLConfigEntry struct {
-	IssuerIDCRLMap map[issuerID]crlID `json:"issuer_id_crl_map"`
-	CRLNumberMap   map[crlID]int64    `json:"crl_number_map"`
+	IssuerIDCRLMap        map[issuerID]crlID  `json:"issuer_id_crl_map"`
+	CRLNumberMap          map[crlID]int64     `json:"crl_number_map"`
+	LastCompleteNumberMap map[crlID]int64     `json:"last_complete_number_map"`
+	CRLExpirationMap      map[crlID]time.Time `json:"crl_expiration_map"`
+	LastModified          time.Time           `json:"last_modified"`
 }
 
 type keyConfigEntry struct {
@@ -199,7 +218,6 @@ func (sc *storageContext) fetchKeyById(keyId keyID) (*keyEntry, error) {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki key: %v", err)}
 	}
 	if entry == nil {
-		// FIXME: Dedicated/specific error for this?
 		return nil, errutil.UserError{Err: fmt.Sprintf("pki key id %s does not exist", keyId.String())}
 	}
 
@@ -473,6 +491,19 @@ func (i issuerEntry) CanMaybeSignWithAlgo(algo x509.SignatureAlgorithm) error {
 	return fmt.Errorf("unable to use issuer of type %v to sign with %v key type", cert.PublicKeyAlgorithm.String(), algo.String())
 }
 
+func (i issuerEntry) GetAIAURLs(sc *storageContext) (urls *certutil.URLEntries, err error) {
+	// Default to the per-issuer AIA URLs.
+	urls = i.AIAURIs
+
+	// If none are set (either due to a nil entry or because no URLs have
+	// been provided), fall back to the global AIA URL config.
+	if urls == nil || (len(urls.IssuingCertificates) == 0 && len(urls.CRLDistributionPoints) == 0 && len(urls.OCSPServers) == 0) {
+		urls, err = getGlobalAIAURLs(sc.Context, sc.Storage)
+	}
+
+	return urls, err
+}
+
 func (sc *storageContext) listIssuers() ([]issuerID, error) {
 	strList, err := sc.Storage.List(sc.Context, issuerPrefix)
 	if err != nil {
@@ -543,7 +574,6 @@ func (sc *storageContext) fetchIssuerById(issuerId issuerID) (*issuerEntry, erro
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki issuer: %v", err)}
 	}
 	if entry == nil {
-		// FIXME: Dedicated/specific error for this?
 		return nil, errutil.UserError{Err: fmt.Sprintf("pki issuer id %s does not exist", issuerId.String())}
 	}
 
@@ -552,11 +582,54 @@ func (sc *storageContext) fetchIssuerById(issuerId issuerID) (*issuerEntry, erro
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode pki issuer with id %s: %v", issuerId.String(), err)}
 	}
 
-	return &issuer, nil
+	return sc.upgradeIssuerIfRequired(&issuer), nil
+}
+
+func (sc *storageContext) upgradeIssuerIfRequired(issuer *issuerEntry) *issuerEntry {
+	// *NOTE*: Don't attempt to write out the issuer here as it may cause ErrReadOnly that will direct the
+	// request all the way up to the primary cluster which would be horrible for local cluster operations such
+	// as generating a leaf cert or a revoke.
+	// Also even though we could tell if we are the primary cluster's active node, we can't tell if we have the
+	// a full rw issuer lock, so it might not be safe to write.
+	if issuer.Version == latestIssuerVersion {
+		return issuer
+	}
+
+	if issuer.Version == 0 {
+		// Upgrade at this step requires interrogating the certificate itself;
+		// if this decode fails, it indicates internal problems and the
+		// request will subsequently fail elsewhere. However, decoding this
+		// certificate is mildly expensive, so we only do it in the event of
+		// a Version 0 certificate.
+		cert, err := issuer.GetCertificate()
+		if err != nil {
+			return issuer
+		}
+
+		hadCRL := issuer.Usage.HasUsage(CRLSigningUsage)
+		// Remove CRL signing usage if it exists on the issuer but doesn't
+		// exist in the KU of the x509 certificate.
+		if hadCRL && (cert.KeyUsage&x509.KeyUsageCRLSign) == 0 {
+			issuer.Usage.ToggleUsage(OCSPSigningUsage)
+		}
+
+		// Handle our new OCSPSigning usage flag for earlier versions. If we
+		// had it (prior to removing it in this upgrade), we'll add the OCSP
+		// flag since EKUs don't matter.
+		if hadCRL && !issuer.Usage.HasUsage(OCSPSigningUsage) {
+			issuer.Usage.ToggleUsage(OCSPSigningUsage)
+		}
+	}
+
+	issuer.Version = latestIssuerVersion
+	return issuer
 }
 
 func (sc *storageContext) writeIssuer(issuer *issuerEntry) error {
 	issuerId := issuer.ID
+	if issuer.LastModified.IsZero() {
+		issuer.LastModified = time.Now().UTC()
+	}
 
 	json, err := logical.StorageEntryJSON(issuerPrefix+issuerId.String(), issuer)
 	if err != nil {
@@ -661,7 +734,14 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 	result.Name = issuerName
 	result.Certificate = certValue
 	result.LeafNotAfterBehavior = certutil.ErrNotAfterBehavior
-	result.Usage.ToggleUsage(IssuanceUsage, CRLSigningUsage)
+	result.Usage.ToggleUsage(AllIssuerUsages)
+	result.Version = latestIssuerVersion
+
+	// If we lack relevant bits for CRL, prohibit it from being set
+	// on the usage side.
+	if (issuerCert.KeyUsage&x509.KeyUsageCRLSign) == 0 && result.Usage.HasUsage(CRLSigningUsage) {
+		result.Usage.ToggleUsage(CRLSigningUsage)
+	}
 
 	// We shouldn't add CSRs or multiple certificates in this
 	countCertificates := strings.Count(result.Certificate, "-BEGIN ")
@@ -669,7 +749,7 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 		return nil, false, fmt.Errorf("bad issuer: potentially multiple PEM blobs in one certificate storage entry:\n%v", result.Certificate)
 	}
 
-	result.SerialNumber = strings.TrimSpace(certutil.GetHexFormatted(issuerCert.SerialNumber.Bytes(), ":"))
+	result.SerialNumber = serialFromCert(issuerCert)
 
 	// Before we return below, we need to iterate over _all_ keys and see if
 	// one of them a public key matching this certificate, and if so, update our
@@ -758,6 +838,28 @@ func (sc *storageContext) getLocalCRLConfig() (*localCRLConfigEntry, error) {
 
 	if len(mapping.CRLNumberMap) == 0 {
 		mapping.CRLNumberMap = make(map[crlID]int64)
+	}
+
+	if len(mapping.LastCompleteNumberMap) == 0 {
+		mapping.LastCompleteNumberMap = make(map[crlID]int64)
+
+		// Since this might not exist on migration, we want to guess as
+		// to the last full CRL number was. This was likely the last
+		// value from CRLNumberMap if it existed, since we're just adding
+		// the mapping here in this block.
+		//
+		// After the next full CRL build, we will have set this value
+		// correctly, so it doesn't really matter in the long term if
+		// we're off here.
+		for id, number := range mapping.CRLNumberMap {
+			// Decrement by one, since CRLNumberMap is the future number,
+			// not the last built number.
+			mapping.LastCompleteNumberMap[id] = number - 1
+		}
+	}
+
+	if len(mapping.CRLExpirationMap) == 0 {
+		mapping.CRLExpirationMap = make(map[crlID]time.Time)
 	}
 
 	return mapping, nil
@@ -933,6 +1035,12 @@ func (sc *storageContext) writeCaBundle(caBundle *certutil.CertBundle, issuerNam
 		return nil, nil, err
 	}
 
+	// We may have existing mounts that only contained a key with no certificate yet as a signed CSR
+	// was never setup within the mount.
+	if caBundle.Certificate == "" {
+		return &issuerEntry{}, myKey, nil
+	}
+
 	myIssuer, _, err := sc.importIssuer(caBundle.Certificate, issuerName)
 	if err != nil {
 		return nil, nil, err
@@ -1023,4 +1131,32 @@ func (sc *storageContext) checkForRolesReferencing(issuerId string) (timeout boo
 	}
 
 	return false, inUseBy, nil
+}
+
+func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
+	entry, err := sc.Storage.Get(sc.Context, "config/crl")
+	if err != nil {
+		return nil, err
+	}
+
+	var result crlConfig
+	if entry == nil {
+		result = defaultCrlConfig
+		return &result, nil
+	}
+
+	if err = entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+
+	if result.Version == 0 {
+		// Automatically update existing configurations.
+		result.OcspDisable = defaultCrlConfig.OcspDisable
+		result.OcspExpiry = defaultCrlConfig.OcspExpiry
+		result.AutoRebuild = defaultCrlConfig.AutoRebuild
+		result.AutoRebuildGracePeriod = defaultCrlConfig.AutoRebuildGracePeriod
+		result.Version = 1
+	}
+
+	return &result, nil
 }

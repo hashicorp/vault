@@ -2,15 +2,19 @@ package pki
 
 import (
 	"crypto"
+	"crypto/x509"
 	"fmt"
+	"math/big"
+	"net/http"
 	"regexp"
 	"strings"
-
-	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -24,6 +28,14 @@ var (
 	errIssuerNameInUse = errutil.UserError{Err: "issuer name already in use"}
 	errKeyNameInUse    = errutil.UserError{Err: "key name already in use"}
 )
+
+func serialFromCert(cert *x509.Certificate) string {
+	return serialFromBigInt(cert.SerialNumber)
+}
+
+func serialFromBigInt(serial *big.Int) string {
+	return strings.TrimSpace(certutil.GetHexFormatted(serial.Bytes(), ":"))
+}
 
 func normalizeSerial(serial string) string {
 	return strings.ReplaceAll(strings.ToLower(serial), ":", "-")
@@ -202,4 +214,107 @@ func extractRef(data *framework.FieldData, paramName string) string {
 		return defaultRef
 	}
 	return value
+}
+
+func isStringArrayDifferent(a, b []string) bool {
+	if len(a) != len(b) {
+		return true
+	}
+
+	for i, v := range a {
+		if v != b[i] {
+			return true
+		}
+	}
+
+	return false
+}
+
+func hasHeader(header string, req *logical.Request) bool {
+	var hasHeader bool
+	headerValue := req.Headers[header]
+	if len(headerValue) > 0 {
+		hasHeader = true
+	}
+
+	return hasHeader
+}
+
+func parseIfNotModifiedSince(req *logical.Request) (time.Time, error) {
+	var headerTimeValue time.Time
+	headerValue := req.Headers[headerIfModifiedSince]
+
+	headerTimeValue, err := time.Parse(time.RFC1123, headerValue[0])
+	if err != nil {
+		return headerTimeValue, fmt.Errorf("failed to parse given value for '%s' header: %v", headerIfModifiedSince, err)
+	}
+
+	return headerTimeValue, nil
+}
+
+type IfModifiedSinceHelper struct {
+	req       *logical.Request
+	issuerRef issuerID
+}
+
+func sendNotModifiedResponseIfNecessary(helper *IfModifiedSinceHelper, sc *storageContext, resp *logical.Response) (bool, error) {
+	responseHeaders := map[string][]string{}
+	if !hasHeader(headerIfModifiedSince, helper.req) {
+		return false, nil
+	}
+
+	before, err := sc.isIfModifiedSinceBeforeLastModified(helper, responseHeaders)
+	if err != nil {
+		return false, err
+	}
+
+	if !before {
+		return false, nil
+	}
+
+	// Fill response
+	resp.Data = map[string]interface{}{
+		logical.HTTPContentType: "",
+		logical.HTTPStatusCode:  304,
+	}
+	resp.Headers = responseHeaders
+
+	return true, nil
+}
+
+func (sc *storageContext) isIfModifiedSinceBeforeLastModified(helper *IfModifiedSinceHelper, responseHeaders map[string][]string) (bool, error) {
+	var before bool
+	var err error
+	var lastModified time.Time
+	ifModifiedSince, err := parseIfNotModifiedSince(helper.req)
+	if err != nil {
+		return before, err
+	}
+
+	if helper.issuerRef == "" {
+		crlConfig, err := sc.getLocalCRLConfig()
+		if err != nil {
+			return before, err
+		}
+		lastModified = crlConfig.LastModified
+	} else {
+		issuerId, err := sc.resolveIssuerReference(string(helper.issuerRef))
+		if err != nil {
+			return before, err
+		}
+
+		issuer, err := sc.fetchIssuerById(issuerId)
+		if err != nil {
+			return before, err
+		}
+
+		lastModified = issuer.LastModified
+	}
+
+	if !lastModified.IsZero() && lastModified.Before(ifModifiedSince) {
+		before = true
+		responseHeaders[headerLastModified] = []string{lastModified.Format(http.TimeFormat)}
+	}
+
+	return before, nil
 }

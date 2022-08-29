@@ -1834,8 +1834,14 @@ func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) err
 	req.InboundSSCToken = token
 	if IsSSCToken(token) {
 		token, err = c.CheckSSCToken(ctx, token, c.isLoginRequest(ctx, req), c.perfStandby)
+		// If we receive an error from CheckSSCToken, we can assume the token is bad somehow, and the client
+		// should receive a 403 bad token error like they do for all other invalid tokens, unless the error
+		// specifies that we should forward the request or retry the request.
 		if err != nil {
-			return err
+			if errors.Is(err, logical.ErrPerfStandbyPleaseForward) || errors.Is(err, logical.ErrMissingRequiredState) {
+				return err
+			}
+			return logical.ErrPermissionDenied
 		}
 	}
 	req.ClientToken = token

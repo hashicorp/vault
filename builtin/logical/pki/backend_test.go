@@ -1908,7 +1908,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 
 	issueCrtAsPem := resp.Data["certificate"].(string)
 	issuedCrt := parseCert(t, issueCrtAsPem)
-	expectedSerial := certutil.GetHexFormatted(issuedCrt.SerialNumber.Bytes(), ":")
+	expectedSerial := serialFromCert(issuedCrt)
 	expectedCert := []byte(issueCrtAsPem)
 
 	// get der cert
@@ -3873,16 +3873,18 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			t.Fatal(err)
 		}
 		expectedData := map[string]interface{}{
-			"safety_buffer":              json.Number("1"),
-			"tidy_cert_store":            true,
-			"tidy_revoked_certs":         true,
-			"state":                      "Finished",
-			"error":                      nil,
-			"time_started":               nil,
-			"time_finished":              nil,
-			"message":                    nil,
-			"cert_store_deleted_count":   json.Number("1"),
-			"revoked_cert_deleted_count": json.Number("1"),
+			"safety_buffer":                         json.Number("1"),
+			"tidy_cert_store":                       true,
+			"tidy_revoked_certs":                    true,
+			"tidy_revoked_cert_issuer_associations": false,
+			"state":                                 "Finished",
+			"error":                                 nil,
+			"time_started":                          nil,
+			"time_finished":                         nil,
+			"message":                               nil,
+			"cert_store_deleted_count":              json.Number("1"),
+			"revoked_cert_deleted_count":            json.Number("1"),
+			"missing_issuer_cert_count":             json.Number("0"),
 		}
 		// Let's copy the times from the response so that we can use deep.Equal()
 		timeStarted, ok := tidyStatus.Data["time_started"]
@@ -3902,13 +3904,15 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	}
 	// Check the tidy metrics
 	{
-		// Map of gagues to expected value
+		// Map of gauges to expected value
 		expectedGauges := map[string]float32{
-			"secrets.pki.tidy.cert_store_current_entry":   0,
-			"secrets.pki.tidy.cert_store_total_entries":   1,
-			"secrets.pki.tidy.revoked_cert_current_entry": 0,
-			"secrets.pki.tidy.revoked_cert_total_entries": 1,
-			"secrets.pki.tidy.start_time_epoch":           0,
+			"secrets.pki.tidy.cert_store_current_entry":             0,
+			"secrets.pki.tidy.cert_store_total_entries":             1,
+			"secrets.pki.tidy.revoked_cert_current_entry":           0,
+			"secrets.pki.tidy.revoked_cert_total_entries":           1,
+			"secrets.pki.tidy.start_time_epoch":                     0,
+			"secrets.pki.tidy.cert_store_total_entries_remaining":   0,
+			"secrets.pki.tidy.revoked_cert_total_entries_remaining": 0,
 		}
 		// Map of counters to the sum of the metrics for that counter
 		expectedCounters := map[string]float64{
@@ -4891,6 +4895,452 @@ func TestSealWrappedStorageConfigured(t *testing.T) {
 	require.Contains(t, wrappedEntries, "config/ca_bundle", "Legacy bundle missing from seal wrap")
 	// The trailing / is important as it treats the entire folder requiring seal wrapping, not just config/key
 	require.Contains(t, wrappedEntries, "config/key/", "key prefix with trailing / missing from seal wrap.")
+}
+
+func TestBackend_ConfigCA_WithECParams(t *testing.T) {
+	t.Parallel()
+	b, s := createBackendWithStorage(t)
+
+	// Generated key with OpenSSL:
+	// $ openssl ecparam -out p256.key -name prime256v1 -genkey
+	//
+	// Regression test for https://github.com/hashicorp/vault/issues/16667
+	resp, err := CBWrite(b, s, "config/ca", map[string]interface{}{
+		"pem_bundle": `
+-----BEGIN EC PARAMETERS-----
+BggqhkjOPQMBBw==
+-----END EC PARAMETERS-----
+-----BEGIN EC PRIVATE KEY-----
+MHcCAQEEINzXthCZdhyV7+wIEBl/ty+ctNsUS99ykTeax6EbYZtvoAoGCCqGSM49
+AwEHoUQDQgAE57NX8bR/nDoW8yRgLswoXBQcjHrdyfuHS0gPwki6BNnfunUzryVb
+8f22/JWj6fsEF6AOADZlrswKIbR2Es9e/w==
+-----END EC PRIVATE KEY-----
+		`,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp, "expected ca info")
+	importedKeys := resp.Data["imported_keys"].([]string)
+	importedIssuers := resp.Data["imported_issuers"].([]string)
+
+	require.Equal(t, len(importedKeys), 1)
+	require.Equal(t, len(importedIssuers), 0)
+}
+
+func TestPerIssuerAIA(t *testing.T) {
+	t.Parallel()
+	b, s := createBackendWithStorage(t)
+
+	// Generating a root without anything should not have AIAs.
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root example.com",
+		"issuer_name": "root",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	rootCert := parseCert(t, resp.Data["certificate"].(string))
+	require.Empty(t, rootCert.OCSPServer)
+	require.Empty(t, rootCert.IssuingCertificateURL)
+	require.Empty(t, rootCert.CRLDistributionPoints)
+
+	// Set some local URLs on the issuer.
+	_, err = CBWrite(b, s, "issuer/default", map[string]interface{}{
+		"issuing_certificates": []string{"https://google.com"},
+	})
+	require.NoError(t, err)
+
+	_, err = CBWrite(b, s, "roles/testing", map[string]interface{}{
+		"allow_any_name": true,
+		"ttl":            "85s",
+		"key_type":       "ec",
+	})
+	require.NoError(t, err)
+
+	// Issue something with this re-configured issuer.
+	resp, err = CBWrite(b, s, "issuer/default/issue/testing", map[string]interface{}{
+		"common_name": "localhost.com",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	leafCert := parseCert(t, resp.Data["certificate"].(string))
+	require.Empty(t, leafCert.OCSPServer)
+	require.Equal(t, leafCert.IssuingCertificateURL, []string{"https://google.com"})
+	require.Empty(t, leafCert.CRLDistributionPoints)
+
+	// Set global URLs and ensure they don't appear on this issuer's leaf.
+	_, err = CBWrite(b, s, "config/urls", map[string]interface{}{
+		"issuing_certificates":    []string{"https://example.com/ca", "https://backup.example.com/ca"},
+		"crl_distribution_points": []string{"https://example.com/crl", "https://backup.example.com/crl"},
+		"ocsp_servers":            []string{"https://example.com/ocsp", "https://backup.example.com/ocsp"},
+	})
+	require.NoError(t, err)
+	resp, err = CBWrite(b, s, "issuer/default/issue/testing", map[string]interface{}{
+		"common_name": "localhost.com",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	leafCert = parseCert(t, resp.Data["certificate"].(string))
+	require.Empty(t, leafCert.OCSPServer)
+	require.Equal(t, leafCert.IssuingCertificateURL, []string{"https://google.com"})
+	require.Empty(t, leafCert.CRLDistributionPoints)
+
+	// Now come back and remove the local modifications and ensure we get
+	// the defaults again.
+	_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+		"issuing_certificates": []string{},
+	})
+	require.NoError(t, err)
+	resp, err = CBWrite(b, s, "issuer/default/issue/testing", map[string]interface{}{
+		"common_name": "localhost.com",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	leafCert = parseCert(t, resp.Data["certificate"].(string))
+	require.Equal(t, leafCert.IssuingCertificateURL, []string{"https://example.com/ca", "https://backup.example.com/ca"})
+	require.Equal(t, leafCert.OCSPServer, []string{"https://example.com/ocsp", "https://backup.example.com/ocsp"})
+	require.Equal(t, leafCert.CRLDistributionPoints, []string{"https://example.com/crl", "https://backup.example.com/crl"})
+}
+
+func TestIssuersWithoutCRLBits(t *testing.T) {
+	t.Parallel()
+	b, s := createBackendWithStorage(t)
+
+	// Importing a root without CRL signing bits should work fine.
+	customBundleWithoutCRLBits := `
+-----BEGIN CERTIFICATE-----
+MIIDGTCCAgGgAwIBAgIBATANBgkqhkiG9w0BAQsFADATMREwDwYDVQQDDAhyb290
+LW5ldzAeFw0yMjA4MjQxMjEzNTVaFw0yMzA5MDMxMjEzNTVaMBMxETAPBgNVBAMM
+CHJvb3QtbmV3MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAojTA/Mx7
+LVW/Zgn/N4BqZbaF82MrTIBFug3ob7mqycNRlWp4/PH8v37+jYn8e691HUsKjden
+rDTrO06kiQKiJinAzmlLJvgcazE3aXoh7wSzVG9lFHYvljEmVj+yDbkeaqaCktup
+skuNjxCoN9BLmKzZIwVCHn92ZHlhN6LI7CNaU3SDJdu7VftWF9Ugzt9FIvI+6Gcn
+/WNE9FWvZ9o7035rZ+1vvTn7/tgxrj2k3XvD51Kq4tsSbqjnSf3QieXT6E6uvtUE
+TbPp3xjBElgBCKmeogR1l28rs1aujqqwzZ0B/zOeF8ptaH0aZOIBsVDJR8yTwHzq
+s34hNdNfKLHzOwIDAQABo3gwdjAdBgNVHQ4EFgQUF4djNmx+1+uJINhZ82pN+7jz
+H8EwHwYDVR0jBBgwFoAUF4djNmx+1+uJINhZ82pN+7jzH8EwDwYDVR0TAQH/BAUw
+AwEB/zAOBgNVHQ8BAf8EBAMCAoQwEwYDVR0lBAwwCgYIKwYBBQUHAwEwDQYJKoZI
+hvcNAQELBQADggEBAICQovBz4KLWlLmXeZ2Vf6WfQYyGNgGyJa10XNXtWQ5dM2NU
+OLAit4x1c2dz+aFocc8ZsX/ikYi/bruT2rsGWqMAGC4at3U4GuaYGO5a6XzMKIDC
+nxIlbiO+Pn6Xum7fAqUri7+ZNf/Cygmc5sByi3MAAIkszeObUDZFTJL7gEOuXIMT
+rKIXCINq/U+qc7m9AQ8vKhF1Ddj+dLGLzNQ5j3cKfilPs/wRaYqbMQvnmarX+5Cs
+k1UL6kWSQsiP3+UWaBlcWkmD6oZ3fIG7c0aMxf7RISq1eTAM9XjH3vMxWQJlS5q3
+2weJ2LYoPe/DwX5CijR0IezapBCrin1BscJMLFQ=
+-----END CERTIFICATE-----
+-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCiNMD8zHstVb9m
+Cf83gGpltoXzYytMgEW6DehvuarJw1GVanj88fy/fv6Nifx7r3UdSwqN16esNOs7
+TqSJAqImKcDOaUsm+BxrMTdpeiHvBLNUb2UUdi+WMSZWP7INuR5qpoKS26myS42P
+EKg30EuYrNkjBUIef3ZkeWE3osjsI1pTdIMl27tV+1YX1SDO30Ui8j7oZyf9Y0T0
+Va9n2jvTfmtn7W+9Ofv+2DGuPaTde8PnUqri2xJuqOdJ/dCJ5dPoTq6+1QRNs+nf
+GMESWAEIqZ6iBHWXbyuzVq6OqrDNnQH/M54Xym1ofRpk4gGxUMlHzJPAfOqzfiE1
+018osfM7AgMBAAECggEAAVd6kZZaN69IZITIc1vHRYa2rlZpKS2JP7c8Vd3Z/4Fz
+ZZvnJ7LgVAmUYg5WPZ2sOqBNLfKVN/oke5Q0dALgdxYl7dWQIhPjHeRFbZFtjqEV
+OXZGBniamMO/HSKGWGrqFf7BM/H7AhClUwQgjnzVSz+B+LJJidM+SVys3n1xuDmC
+EP+iOda+bAHqHv/7oCELQKhLmCvPc9v2fDy+180ttdo8EHuxwVnKiyR/ryKFhSyx
+K1wgAPQ9jO+V+GESL90rqpX/r501REsIOOpm4orueelHTD4+dnHxvUPqJ++9aYGX
+79qBNPPUhxrQI1yoHxwW0cTxW5EqkZ9bT2lSd5rjcQKBgQDNyPBpidkHPrYemQDT
+RldtS6FiW/jc1It/CRbjU4A6Gi7s3Cda43pEUObKNLeXMyLQaMf4GbDPDX+eh7B8
+RkUq0Q/N0H4bn1hbxYSUdgv0j/6czpMo6rLcJHGwOTSpHGsNsxSLL7xlpgzuzqrG
+FzEgjMA1aD3w8B9+/77AoSLoMQKBgQDJyYMw82+euLYRbR5Wc/SbrWfh2n1Mr2BG
+pp1ZNYorXE5CL4ScdLcgH1q/b8r5XGwmhMcpeA+geAAaKmk1CGG+gPLoq20c9Q1Y
+Ykq9tUVJasIkelvbb/SPxyjkJdBwylzcPP14IJBsqQM0be+yVqLJJVHSaoKhXZcl
+IW2xgCpjKwKBgFpeX5U5P+F6nKebMU2WmlYY3GpBUWxIummzKCX0SV86mFjT5UR4
+mPzfOjqaI/V2M1eqbAZ74bVLjDumAs7QXReMb5BGetrOgxLqDmrT3DQt9/YMkXtq
+ddlO984XkRSisjB18BOfhvBsl0lX4I7VKHHO3amWeX0RNgOjc7VMDfRBAoGAWAQH
+r1BfvZHACLXZ58fISCdJCqCsysgsbGS8eW77B5LJp+DmLQBT6DUE9j+i/0Wq/ton
+rRTrbAkrsj4RicpQKDJCwe4UN+9DlOu6wijRQgbJC/Q7IOoieJxcX7eGxcve2UnZ
+HY7GsD7AYRwa02UquCYJHIjM1enmxZFhMW1AD+UCgYEAm4jdNz5e4QjA4AkNF+cB
+ZenrAZ0q3NbTyiSsJEAtRe/c5fNFpmXo3mqgCannarREQYYDF0+jpSoTUY8XAc4q
+wL7EZNzwxITLqBnnHQbdLdAvYxB43kvWTy+JRK8qY9LAMCCFeDoYwXkWV4Wkx/b0
+TgM7RZnmEjNdeaa4M52o7VY=
+-----END PRIVATE KEY-----
+	`
+	resp, err := CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
+		"pem_bundle": customBundleWithoutCRLBits,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data)
+	require.NotEmpty(t, resp.Data["imported_issuers"])
+	require.NotEmpty(t, resp.Data["imported_keys"])
+	require.NotEmpty(t, resp.Data["mapping"])
+
+	// Shouldn't have crl-signing on the newly imported issuer's usage.
+	resp, err = CBRead(b, s, "issuer/default")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data)
+	require.NotEmpty(t, resp.Data["usage"])
+	require.NotContains(t, resp.Data["usage"], "crl-signing")
+
+	// Modifying to set CRL should fail.
+	resp, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+		"usage": "issuing-certificates,crl-signing",
+	})
+	require.Error(t, err)
+	require.True(t, resp.IsError())
+
+	// Modifying to set issuing-certificates and ocsp-signing should succeed.
+	resp, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+		"usage": "issuing-certificates,ocsp-signing",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data)
+	require.NotEmpty(t, resp.Data["usage"])
+	require.NotContains(t, resp.Data["usage"], "crl-signing")
+}
+
+func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
+	t.Parallel()
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// Mount PKI.
+	err := client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+			// Required to allow the header to be passed through.
+			PassthroughRequestHeaders: []string{"if-modified-since"},
+		},
+	})
+	require.NoError(t, err)
+
+	// Get a time before CA generation. Subtract two seconds to ensure
+	// the value in the seconds field is different than the time the CA
+	// is actually generated at.
+	beforeOldCAGeneration := time.Now().Add(-2 * time.Second)
+
+	// Generate an internal CA. This one is the default.
+	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "Root X1",
+		"key_type":    "ec",
+		"issuer_name": "old-root",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotEmpty(t, resp.Data["certificate"])
+
+	// CA is generated, but give a grace window.
+	afterOldCAGeneration := time.Now().Add(2 * time.Second)
+
+	// When you _save_ headers, client returns a copy. But when you go to
+	// reset them, it doesn't create a new copy (and instead directly
+	// assigns). This means we have to continually refresh our view of the
+	// last headers, otherwise the headers added after the last set operation
+	// leak into this copy... Yuck!
+	lastHeaders := client.Headers()
+	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/old-root/crl"} {
+		t.Logf("path: %v", path)
+		field := "certificate"
+		if strings.HasPrefix(path, "pki/issuer") && strings.HasSuffix(path, "/crl") {
+			field = "crl"
+		}
+
+		// Reading the CA should work, without a header.
+		resp, err := client.Logical().Read(path)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.NotEmpty(t, resp.Data[field])
+
+		// Ensure that the CA is returned correctly if we give it the old time.
+		client.AddHeader("If-Modified-Since", beforeOldCAGeneration.Format(time.RFC1123))
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.NotEmpty(t, resp.Data[field])
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+
+		// Ensure that the CA is elided if we give it the present time (plus a
+		// grace window).
+		client.AddHeader("If-Modified-Since", afterOldCAGeneration.Format(time.RFC1123))
+		t.Logf("headers: %v", client.Headers())
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.Nil(t, resp)
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+	}
+
+	// Wait three seconds. This ensures we have adequate grace period
+	// to distinguish the two cases, even with grace periods.
+	time.Sleep(3 * time.Second)
+
+	// Generating a second root. This one isn't the default.
+	beforeNewCAGeneration := time.Now().Add(-2 * time.Second)
+
+	// Generate an internal CA. This one is the default.
+	_, err = client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "Root X1",
+		"key_type":    "ec",
+		"issuer_name": "new-root",
+	})
+	require.NoError(t, err)
+
+	// As above.
+	afterNewCAGeneration := time.Now().Add(2 * time.Second)
+
+	// New root isn't the default, so it has fewer paths.
+	for _, path := range []string{"pki/issuer/new-root/json", "pki/issuer/new-root/crl"} {
+		t.Logf("path: %v", path)
+		field := "certificate"
+		if strings.HasPrefix(path, "pki/issuer") && strings.HasSuffix(path, "/crl") {
+			field = "crl"
+		}
+
+		// Reading the CA should work, without a header.
+		resp, err := client.Logical().Read(path)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.NotEmpty(t, resp.Data[field])
+
+		// Ensure that the CA is returned correctly if we give it the old time.
+		client.AddHeader("If-Modified-Since", beforeNewCAGeneration.Format(time.RFC1123))
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.NotEmpty(t, resp.Data[field])
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+
+		// Ensure that the CA is elided if we give it the present time (plus a
+		// grace window).
+		client.AddHeader("If-Modified-Since", afterNewCAGeneration.Format(time.RFC1123))
+		t.Logf("headers: %v", client.Headers())
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.Nil(t, resp)
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+	}
+
+	// Wait three seconds. This ensures we have adequate grace period
+	// to distinguish the two cases, even with grace periods.
+	time.Sleep(3 * time.Second)
+
+	// Now swap the default issuers around.
+	_, err = client.Logical().Write("pki/config/issuers", map[string]interface{}{
+		"default": "new-root",
+	})
+	require.NoError(t, err)
+
+	// Reading both with the last modified date should return new values.
+	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/new-root/json", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl"} {
+		t.Logf("path: %v", path)
+		field := "certificate"
+		if strings.HasPrefix(path, "pki/issuer") && strings.HasSuffix(path, "/crl") {
+			field = "crl"
+		}
+
+		// Ensure that the CA is returned correctly if we give it the old time.
+		client.AddHeader("If-Modified-Since", afterOldCAGeneration.Format(time.RFC1123))
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.NotEmpty(t, resp.Data[field])
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+
+		// Ensure that the CA is returned correctly if we give it the old time.
+		client.AddHeader("If-Modified-Since", afterNewCAGeneration.Format(time.RFC1123))
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.NotEmpty(t, resp.Data[field])
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+	}
+
+	// Wait for things to settle, record the present time, and wait for the
+	// clock to definitely tick over again.
+	time.Sleep(2 * time.Second)
+	preRevocationTimestamp := time.Now()
+	time.Sleep(2 * time.Second)
+
+	// The above tests should say everything is cached.
+	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/new-root/json", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl"} {
+		t.Logf("path: %v", path)
+
+		// Ensure that the CA is returned correctly if we give it the new time.
+		client.AddHeader("If-Modified-Since", preRevocationTimestamp.Format(time.RFC1123))
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.Nil(t, resp)
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+	}
+
+	// We could generate some leaves and verify the revocation updates the
+	// CRL. But, revoking the issuer behaves the same, so let's do that
+	// instead.
+	_, err = client.Logical().Write("pki/issuer/old-root/revoke", map[string]interface{}{})
+	require.NoError(t, err)
+
+	// CA should still be valid.
+	for _, path := range []string{"pki/cert/ca", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/new-root/json"} {
+		t.Logf("path: %v", path)
+
+		// Ensure that the CA is returned correctly if we give it the old time.
+		client.AddHeader("If-Modified-Since", preRevocationTimestamp.Format(time.RFC1123))
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.Nil(t, resp)
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+	}
+
+	// CRL should be invalidated
+	for _, path := range []string{"pki/cert/crl", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl"} {
+		t.Logf("path: %v", path)
+		field := "certificate"
+		if strings.HasPrefix(path, "pki/issuer") && strings.HasSuffix(path, "/crl") {
+			field = "crl"
+		}
+
+		client.AddHeader("If-Modified-Since", preRevocationTimestamp.Format(time.RFC1123))
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.NotEmpty(t, resp.Data[field])
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+	}
+
+	// Finally, if we send some time in the future, everything should be cached again!
+	futureTime := time.Now().Add(30 * time.Second)
+	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/new-root/json", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl"} {
+		t.Logf("path: %v", path)
+
+		// Ensure that the CA is returned correctly if we give it the new time.
+		client.AddHeader("If-Modified-Since", futureTime.Format(time.RFC1123))
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.Nil(t, resp)
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+	}
 }
 
 var (

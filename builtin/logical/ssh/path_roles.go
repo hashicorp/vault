@@ -48,6 +48,7 @@ type sshRole struct {
 	AllowedUsers               string            `mapstructure:"allowed_users" json:"allowed_users"`
 	AllowedUsersTemplate       bool              `mapstructure:"allowed_users_template" json:"allowed_users_template"`
 	AllowedDomains             string            `mapstructure:"allowed_domains" json:"allowed_domains"`
+	AllowedDomainsTemplate     bool              `mapstructure:"allowed_domains_template" json:"allowed_domains_template"`
 	KeyOptionSpecs             string            `mapstructure:"key_option_specs" json:"key_option_specs"`
 	MaxTTL                     string            `mapstructure:"max_ttl" json:"max_ttl"`
 	TTL                        string            `mapstructure:"ttl" json:"ttl"`
@@ -222,6 +223,15 @@ func pathRoles(b *backend) *framework.Path {
 				If this option is not specified, client can request for a signed certificate for any
 				valid host. If only certain domains are allowed, then this list enforces it.
 				`,
+			},
+			"allowed_domains_template": {
+				Type: framework.TypeBool,
+				Description: `
+				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
+				If set, Allowed domains can be specified using identity template policies.
+				Non-templated domains are also permitted.
+				`,
+				Default: false,
 			},
 			"key_option_specs": {
 				Type: framework.TypeString,
@@ -567,6 +577,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser, signer string, data *f
 		AllowedUsers:              allowedUsers,
 		AllowedUsersTemplate:      data.Get("allowed_users_template").(bool),
 		AllowedDomains:            data.Get("allowed_domains").(string),
+		AllowedDomainsTemplate:    data.Get("allowed_domains_template").(bool),
 		DefaultUser:               defaultUser,
 		DefaultUserTemplate:       data.Get("default_user_template").(bool),
 		AllowBareDomains:          data.Get("allow_bare_domains").(bool),
@@ -750,6 +761,7 @@ func (b *backend) parseRole(role *sshRole) (map[string]interface{}, error) {
 			"allowed_users":               role.AllowedUsers,
 			"allowed_users_template":      role.AllowedUsersTemplate,
 			"allowed_domains":             role.AllowedDomains,
+			"allowed_domains_template":    role.AllowedDomainsTemplate,
 			"default_user":                role.DefaultUser,
 			"default_user_template":       role.DefaultUserTemplate,
 			"ttl":                         int64(ttl.Seconds()),

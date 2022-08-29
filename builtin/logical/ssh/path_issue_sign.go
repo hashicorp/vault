@@ -65,7 +65,7 @@ func (b *backend) pathSignIssueCertificateHelper(ctx context.Context, req *logic
 
 	var parsedPrincipals []string
 	if certificateType == ssh.HostCert {
-		parsedPrincipals, err = b.calculateValidPrincipals(data, req, role, "", role.AllowedDomains, validateValidPrincipalForHosts(role))
+		parsedPrincipals, err = b.calculateValidPrincipals(data, req, role, "", role.AllowedDomains, role.AllowedDomainsTemplate, validateValidPrincipalForHosts(role))
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
@@ -77,7 +77,7 @@ func (b *backend) pathSignIssueCertificateHelper(ctx context.Context, req *logic
 				return nil, err
 			}
 		}
-		parsedPrincipals, err = b.calculateValidPrincipals(data, req, role, defaultPrincipal, role.AllowedUsers, strutil.StrListContains)
+		parsedPrincipals, err = b.calculateValidPrincipals(data, req, role, defaultPrincipal, role.AllowedUsers, role.AllowedUsersTemplate, strutil.StrListContains)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
@@ -160,7 +160,7 @@ func (b *backend) renderPrincipal(principal string, req *logical.Request) (strin
 	return principal, nil
 }
 
-func (b *backend) calculateValidPrincipals(data *framework.FieldData, req *logical.Request, role *sshRole, defaultPrincipal, principalsAllowedByRole string, validatePrincipal func([]string, string) bool) ([]string, error) {
+func (b *backend) calculateValidPrincipals(data *framework.FieldData, req *logical.Request, role *sshRole, defaultPrincipal, principalsAllowedByRole string, enableTemplating bool, validatePrincipal func([]string, string) bool) ([]string, error) {
 	validPrincipals := ""
 	validPrincipalsRaw, ok := data.GetOk("valid_principals")
 	if ok {
@@ -173,7 +173,7 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, req *logic
 	// Build list of allowed Principals from template and static principalsAllowedByRole
 	var allowedPrincipals []string
 	for _, principal := range strutil.RemoveDuplicates(strutil.ParseStringSlice(principalsAllowedByRole, ","), false) {
-		if role.AllowedUsersTemplate {
+		if enableTemplating {
 			rendered, err := b.renderPrincipal(principal, req)
 			if err != nil {
 				return nil, err

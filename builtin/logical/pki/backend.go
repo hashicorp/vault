@@ -75,19 +75,27 @@ func Backend(conf *logical.BackendConfig) *backend {
 				"ca/pem",
 				"ca_chain",
 				"ca",
+				"crl/delta",
+				"crl/delta/pem",
 				"crl/pem",
 				"crl",
 				"issuer/+/crl/der",
 				"issuer/+/crl/pem",
 				"issuer/+/crl",
+				"issuer/+/crl/delta/der",
+				"issuer/+/crl/delta/pem",
+				"issuer/+/crl/delta",
 				"issuer/+/pem",
 				"issuer/+/der",
 				"issuer/+/json",
-				"issuers",
+				"issuers/", // LIST operations append a '/' to the requested path
+				"ocsp",     // OCSP POST
+				"ocsp/*",   // OCSP GET
 			},
 
 			LocalStorage: []string{
-				"revoked/",
+				revokedPath,
+				deltaWALPath,
 				legacyCRLPath,
 				"crls/",
 				"certs/",
@@ -121,6 +129,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathIssue(&b),
 			pathRotateCRL(&b),
 			pathRevoke(&b),
+			pathRevokeWithKey(&b),
 			pathTidy(&b),
 			pathTidyStatus(&b),
 
@@ -140,6 +149,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathCrossSignIntermediate(&b),
 			pathConfigIssuers(&b),
 			pathReplaceRoot(&b),
+			pathRevokeIssuer(&b),
 
 			// Key APIs
 			pathListKeys(&b),
@@ -156,6 +166,10 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathFetchValidRaw(&b),
 			pathFetchValid(&b),
 			pathFetchListCerts(&b),
+
+			// OCSP APIs
+			buildPathOcspGet(&b),
+			buildPathOcspPost(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -168,7 +182,6 @@ func Backend(conf *logical.BackendConfig) *backend {
 		PeriodicFunc:   b.periodicFunc,
 	}
 
-	b.crlLifetime = time.Hour * 72
 	b.tidyCASGuard = new(uint32)
 	b.tidyStatus = &tidyStatus{state: tidyStatusInactive}
 	b.storage = conf.StorageView
@@ -176,7 +189,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 	b.pkiStorageVersion.Store(0)
 
-	b.crlBuilder = &crlBuilder{}
+	b.crlBuilder = newCRLBuilder()
+
 	return &b
 }
 
@@ -185,7 +199,6 @@ type backend struct {
 
 	backendUUID       string
 	storage           logical.Storage
-	crlLifetime       time.Duration
 	revokeStorageLock sync.RWMutex
 	tidyCASGuard      *uint32
 
@@ -213,9 +226,10 @@ const (
 
 type tidyStatus struct {
 	// Parameters used to initiate the operation
-	safetyBuffer     int
-	tidyCertStore    bool
-	tidyRevokedCerts bool
+	safetyBuffer      int
+	tidyCertStore     bool
+	tidyRevokedCerts  bool
+	tidyRevokedAssocs bool
 
 	// Status
 	state                   tidyStatusState
@@ -225,6 +239,7 @@ type tidyStatus struct {
 	message                 string
 	certStoreDeletedCount   uint
 	revokedCertDeletedCount uint
+	missingIssuerCertCount  uint
 }
 
 const backendHelp = `
@@ -293,6 +308,11 @@ func (b *backend) metricsWrap(callType string, roleMode int, ofunc roleOperation
 
 // initialize is used to perform a possible PKI storage migration if needed
 func (b *backend) initialize(ctx context.Context, _ *logical.InitializationRequest) error {
+	sc := b.makeStorageContext(ctx, b.storage)
+	if err := b.crlBuilder.reloadConfigIfRequired(sc); err != nil {
+		return err
+	}
+
 	// Grab the lock prior to the updating of the storage lock preventing us flipping
 	// the storage flag midway through the request stream of other requests.
 	b.issuersLock.Lock()
@@ -371,9 +391,51 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 		} else {
 			b.Logger().Debug("Ignoring invalidation updates for issuer as the PKI migration has yet to complete.")
 		}
+	case key == "config/crl":
+		// We may need to reload our OCSP status flag
+		b.crlBuilder.markConfigDirty()
+	case key == storageIssuerConfig:
+		b.crlBuilder.invalidateCRLBuildTime()
 	}
 }
 
 func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) error {
-	return b.crlBuilder.rebuildIfForced(ctx, b, request)
+	// First attempt to reload the CRL configuration.
+	sc := b.makeStorageContext(ctx, request.Storage)
+	if err := b.crlBuilder.reloadConfigIfRequired(sc); err != nil {
+		return err
+	}
+
+	// As we're (below) modifying the backing storage, we need to ensure
+	// we're not on a standby/secondary node.
+	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) ||
+		b.System().ReplicationState().HasState(consts.ReplicationDRSecondary) {
+		return nil
+	}
+
+	// Check if we're set to auto rebuild and a CRL is set to expire.
+	if err := b.crlBuilder.checkForAutoRebuild(sc); err != nil {
+		return err
+	}
+
+	// Then attempt to rebuild the CRLs if required.
+	if err := b.crlBuilder.rebuildIfForced(ctx, b, request); err != nil {
+		return err
+	}
+
+	// If a delta CRL was rebuilt above as part of the complete CRL rebuild,
+	// this will be a no-op. However, if we do need to rebuild delta CRLs,
+	// this would cause us to do so.
+	if err := b.crlBuilder.rebuildDeltaCRLsIfForced(sc); err != nil {
+		return err
+	}
+
+	// Check if the CRL was invalidated due to issuer swap and update
+	// accordingly.
+	if err := b.crlBuilder.flushCRLBuildTimeInvalidation(sc); err != nil {
+		return err
+	}
+
+	// All good!
+	return nil
 }

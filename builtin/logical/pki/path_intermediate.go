@@ -114,12 +114,12 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		Data: map[string]interface{}{},
 	}
 
-	entries, err := getURLs(ctx, req.Storage)
+	entries, err := getGlobalAIAURLs(ctx, req.Storage)
 	if err == nil && len(entries.OCSPServers) == 0 && len(entries.IssuingCertificates) == 0 && len(entries.CRLDistributionPoints) == 0 {
 		// If the operator hasn't configured any of the URLs prior to
 		// generating this issuer, we should add a warning to the response,
 		// informing them they might want to do so and re-generate the issuer.
-		resp.AddWarning("This mount hasn't configured any authority access information fields; this may make it harder for systems to find missing certificates in the chain or to validate revocation status of certificates. Consider updating /config/urls with this information.")
+		resp.AddWarning("This mount hasn't configured any authority information access (AIA) fields; this may make it harder for systems to find missing certificates in the chain or to validate revocation status of certificates. Consider updating /config/urls or the newly generated issuer with this information. Since this certificate is an intermediate, it might be useful to regenerate this certificate after fixing this problem for the root mount.")
 	}
 
 	switch format {

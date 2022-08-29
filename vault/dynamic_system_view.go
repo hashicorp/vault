@@ -240,7 +240,7 @@ func (d dynamicSystemView) LookupPlugin(ctx context.Context, name string, plugin
 	if d.core.pluginCatalog == nil {
 		return nil, fmt.Errorf("system view core plugin catalog is nil")
 	}
-	r, err := d.core.pluginCatalog.Get(ctx, name, pluginType)
+	r, err := d.core.pluginCatalog.Get(ctx, name, pluginType, "")
 	if err != nil {
 		return nil, err
 	}
