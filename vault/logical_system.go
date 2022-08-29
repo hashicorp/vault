@@ -2157,10 +2157,6 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 		}
 
 		info := b.mountInfo(ctx, entry)
-		status, ok := b.Core.builtinRegistry.DeprecationStatus(entry.Type, consts.PluginTypeCredential)
-		if ok {
-			info["deprecation_status"] = status.String()
-		}
 		resp.Data[entry.Path] = info
 	}
 
