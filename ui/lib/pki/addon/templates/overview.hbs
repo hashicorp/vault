@@ -1,1 +1,10 @@
-Overview landing page WIP
+<SecretListHeader
+  @model={{this.model}}
+  @backendCrumb={{hash
+    label=this.model.id
+    text=this.model.id
+    path="vault.cluster.secrets.backend.list-root"
+    model=this.model.id
+  }}
+  @isEngine={{true}}
+/>
