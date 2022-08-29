@@ -46,7 +46,7 @@ func pathFetchCAChain(b *backend) *framework.Path {
 // Returns the CRL in raw format
 func pathFetchCRL(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `crl(/pem)?`,
+		Pattern: `crl(/pem|/delta(/pem)?)?`,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
@@ -109,7 +109,7 @@ hyphen-separated octal`,
 // This returns the CRL in a non-raw format
 func pathFetchCRLViaCertPath(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `cert/crl`,
+		Pattern: `cert/(crl|delta-crl)`,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
@@ -178,15 +178,21 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		if req.Path == "ca_chain" {
 			contentType = "application/pkix-cert"
 		}
-	case req.Path == "crl" || req.Path == "crl/pem":
+	case req.Path == "crl" || req.Path == "crl/pem" || req.Path == "crl/delta" || req.Path == "crl/delta/pem":
 		serial = legacyCRLPath
+		if req.Path == "crl/delta" || req.Path == "crl/delta/pem" {
+			serial = deltaCRLPath
+		}
 		contentType = "application/pkix-crl"
-		if req.Path == "crl/pem" {
+		if req.Path == "crl/pem" || req.Path == "crl/delta/pem" {
 			pemType = "X509 CRL"
 			contentType = "application/x-pem-file"
 		}
-	case req.Path == "cert/crl":
+	case req.Path == "cert/crl" || req.Path == "cert/delta-crl":
 		serial = legacyCRLPath
+		if req.Path == "cert/delta-crl" {
+			serial = deltaCRLPath
+		}
 		pemType = "X509 CRL"
 	case strings.HasSuffix(req.Path, "/pem") || strings.HasSuffix(req.Path, "/raw"):
 		serial = data.Get("serial").(string)

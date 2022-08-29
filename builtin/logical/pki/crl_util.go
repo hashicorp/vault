@@ -10,18 +10,25 @@ import (
 	"math/big"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	atomic2 "go.uber.org/atomic"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
 
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-const revokedPath = "revoked/"
+const (
+	revokedPath                   = "revoked/"
+	deltaWALPath                  = "delta-wal/"
+	deltaWALLastBuildSerialName   = "last-build-serial"
+	deltaWALLastBuildSerial       = deltaWALPath + deltaWALLastBuildSerialName
+	deltaWALLastRevokedSerialName = "last-revoked-serial"
+	deltaWALLastRevokedSerial     = deltaWALPath + deltaWALLastRevokedSerialName
+)
 
 type revocationInfo struct {
 	CertificateBytes  []byte    `json:"certificate_bytes"`
@@ -29,6 +36,29 @@ type revocationInfo struct {
 	RevocationTimeUTC time.Time `json:"revocation_time_utc"`
 	CertificateIssuer issuerID  `json:"issuer_id"`
 }
+
+type (
+	// Placeholder in case of migrations needing more data. Currently
+	// we use the path name to store the serial number that was revoked.
+	deltaWALInfo struct{}
+	lastWALInfo  struct {
+		// Info to write about the last WAL entry. This is the serial number
+		// of the last revoked certificate.
+		//
+		// We write this below in revokedCert(...) and read it in
+		// rebuildDeltaCRLsIfForced(...).
+		Serial string `json:"serial"`
+	}
+	lastDeltaInfo struct {
+		// Info to write about the last built delta CRL. This is the serial
+		// number of the last revoked certificate that we saw prior to delta
+		// CRL building.
+		//
+		// We write this below in buildAnyCRLs(...) and read it in
+		// rebuildDeltaCRLsIfForced(...).
+		Serial string `json:"serial"`
+	}
+)
 
 // crlBuilder is gatekeeper for controlling various read/write operations to the storage of the CRL.
 // The extra complexity arises from secondary performance clusters seeing various writes to its storage
@@ -38,12 +68,13 @@ type revocationInfo struct {
 //
 // The CRL builder also tracks the revocation configuration.
 type crlBuilder struct {
-	m            sync.Mutex
-	forceRebuild uint32
+	_builder              sync.Mutex
+	forceRebuild          *atomic2.Bool
+	lastDeltaRebuildCheck time.Time
 
-	c      sync.RWMutex
-	dirty  *atomic2.Bool
-	config crlConfig
+	_config sync.RWMutex
+	dirty   *atomic2.Bool
+	config  crlConfig
 }
 
 const (
@@ -53,8 +84,13 @@ const (
 
 func newCRLBuilder() *crlBuilder {
 	return &crlBuilder{
-		dirty:  atomic2.NewBool(true),
-		config: defaultCrlConfig,
+		forceRebuild: atomic2.NewBool(false),
+		// Set the last delta rebuild window to now, delaying the first delta
+		// rebuild by the first rebuild period to give us some time on startup
+		// to stabilize.
+		lastDeltaRebuildCheck: time.Now(),
+		dirty:                 atomic2.NewBool(true),
+		config:                defaultCrlConfig,
 	}
 }
 
@@ -65,8 +101,8 @@ func (cb *crlBuilder) markConfigDirty() {
 func (cb *crlBuilder) reloadConfigIfRequired(sc *storageContext) error {
 	if cb.dirty.Load() {
 		// Acquire a write lock.
-		cb.c.Lock()
-		defer cb.c.Unlock()
+		cb._config.Lock()
+		defer cb._config.Unlock()
 
 		if !cb.dirty.Load() {
 			// Someone else might've been reloading the config; no need
@@ -100,8 +136,8 @@ func (cb *crlBuilder) getConfigWithUpdate(sc *storageContext) (*crlConfig, error
 		return nil, err
 	}
 
-	cb.c.RLock()
-	defer cb.c.RUnlock()
+	cb._config.RLock()
+	defer cb._config.RUnlock()
 
 	configCopy := cb.config
 	return &configCopy, nil
@@ -113,7 +149,7 @@ func (cb *crlBuilder) checkForAutoRebuild(sc *storageContext) error {
 		return err
 	}
 
-	if cfg.Disable || !cfg.AutoRebuild || atomic.LoadUint32(&cb.forceRebuild) == 1 {
+	if cfg.Disable || !cfg.AutoRebuild || cb.forceRebuild.Load() {
 		// Not enabled, not on auto-rebuilder, or we're already scheduled to
 		// rebuild so there's no point to interrogate CRL values...
 		return nil
@@ -133,14 +169,14 @@ func (cb *crlBuilder) checkForAutoRebuild(sc *storageContext) error {
 	// If there's no config, assume we've gotta rebuild it to get this
 	// information.
 	if crlConfig == nil {
-		atomic.CompareAndSwapUint32(&cb.forceRebuild, 0, 1)
+		cb.forceRebuild.Store(true)
 		return nil
 	}
 
 	// If the map is empty, assume we need to upgrade and schedule a
 	// rebuild.
 	if len(crlConfig.CRLExpirationMap) == 0 {
-		atomic.CompareAndSwapUint32(&cb.forceRebuild, 0, 1)
+		cb.forceRebuild.Store(true)
 		return nil
 	}
 
@@ -163,7 +199,7 @@ func (cb *crlBuilder) checkForAutoRebuild(sc *storageContext) error {
 
 	for _, value := range crlConfig.CRLExpirationMap {
 		if value.IsZero() || now.After(value.Add(-1*period)) {
-			atomic.CompareAndSwapUint32(&cb.forceRebuild, 0, 1)
+			cb.forceRebuild.Store(true)
 			return nil
 		}
 	}
@@ -174,7 +210,7 @@ func (cb *crlBuilder) checkForAutoRebuild(sc *storageContext) error {
 // rebuildIfForced is to be called by readers or periodic functions that might need to trigger
 // a refresh of the CRL before the read occurs.
 func (cb *crlBuilder) rebuildIfForced(ctx context.Context, b *backend, request *logical.Request) error {
-	if atomic.LoadUint32(&cb.forceRebuild) == 1 {
+	if cb.forceRebuild.Load() {
 		return cb._doRebuild(ctx, b, request, true, _enforceForceFlag)
 	}
 
@@ -199,27 +235,161 @@ func (cb *crlBuilder) requestRebuildIfActiveNode(b *backend) {
 
 	b.Logger().Info("Scheduling PKI CRL rebuild.")
 	// Set the flag to 1, we don't care if we aren't the ones that actually swap it to 1.
-	atomic.CompareAndSwapUint32(&cb.forceRebuild, 0, 1)
+	cb.forceRebuild.Store(true)
 }
 
 func (cb *crlBuilder) _doRebuild(ctx context.Context, b *backend, request *logical.Request, forceNew bool, ignoreForceFlag bool) error {
-	cb.m.Lock()
-	defer cb.m.Unlock()
+	cb._builder.Lock()
+	defer cb._builder.Unlock()
 	// Re-read the lock in case someone beat us to the punch between the previous load op.
-	forceBuildFlag := atomic.LoadUint32(&cb.forceRebuild)
-	if forceBuildFlag == 1 || ignoreForceFlag {
+	forceBuildFlag := cb.forceRebuild.Load()
+	if forceBuildFlag || ignoreForceFlag {
 		// Reset our original flag back to 0 before we start the rebuilding. This may lead to another round of
 		// CRL building, but we want to avoid the race condition caused by clearing the flag after we completed (An
 		// update/revocation occurred attempting to set the flag, after we listed the certs but before we wrote
 		// the CRL, so we missed the update and cleared the flag.)
-		atomic.CompareAndSwapUint32(&cb.forceRebuild, 1, 0)
+		cb.forceRebuild.Store(false)
 
 		// if forceRebuild was requested, that should force a complete rebuild even if requested not too by forceNew
-		myForceNew := forceBuildFlag == 1 || forceNew
+		myForceNew := forceBuildFlag || forceNew
 		return buildCRLs(ctx, b, request, myForceNew)
 	}
 
 	return nil
+}
+
+func (cb *crlBuilder) getPresentDeltaWALForClearing(sc *storageContext) ([]string, error) {
+	// Clearing of the delta WAL occurs after a new complete CRL has been built.
+	walSerials, err := sc.Storage.List(sc.Context, deltaWALPath)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching list of delta WAL certificates to clear: %s", err)
+	}
+
+	// We _should_ remove the special WAL entries here, but we don't really
+	// want to traverse the list again (and also below in clearDeltaWAL). So
+	// trust the latter does the right thing.
+	return walSerials, nil
+}
+
+func (cb *crlBuilder) clearDeltaWAL(sc *storageContext, walSerials []string) error {
+	// Clearing of the delta WAL occurs after a new complete CRL has been built.
+	for _, serial := range walSerials {
+		// Don't remove our special entries!
+		if serial == deltaWALLastBuildSerialName || serial == deltaWALLastRevokedSerialName {
+			continue
+		}
+
+		if err := sc.Storage.Delete(sc.Context, deltaWALPath+serial); err != nil {
+			return fmt.Errorf("error clearing delta WAL certificate: %s", err)
+		}
+	}
+
+	return nil
+}
+
+func (cb *crlBuilder) rebuildDeltaCRLsIfForced(sc *storageContext) error {
+	// Delta CRLs use the same expiry duration as the complete CRL. Because
+	// we always rebuild the complete CRL and then the delta CRL, we can
+	// be assured that the delta CRL always expires after a complete CRL,
+	// and that rebuilding the complete CRL will trigger a fresh delta CRL
+	// build of its own.
+	//
+	// This guarantee means we can avoid checking delta CRL expiry. Thus,
+	// we only need to rebuild the delta CRL when we have new revocations,
+	// within our time window for updating it.
+	cfg, err := cb.getConfigWithUpdate(sc)
+	if err != nil {
+		return err
+	}
+
+	if !cfg.EnableDelta {
+		// We explicitly do not update the last check time here, as we
+		// want to persist the last rebuild window if it hasn't been set.
+		return nil
+	}
+
+	deltaRebuildDuration, err := time.ParseDuration(cfg.DeltaRebuildInterval)
+	if err != nil {
+		return err
+	}
+
+	// Acquire CRL building locks before we get too much further.
+	cb._builder.Lock()
+	defer cb._builder.Unlock()
+
+	// Last is setup during newCRLBuilder(...), so we don't need to deal with
+	// a zero condition.
+	now := time.Now()
+	last := cb.lastDeltaRebuildCheck
+	nextRebuildCheck := last.Add(deltaRebuildDuration)
+	if now.Before(nextRebuildCheck) {
+		// If we're still before the time of our next rebuild check, we can
+		// safely return here even if we have certs. We'll wait for a bit,
+		// retrigger this check, and then do the rebuild.
+		return nil
+	}
+
+	// Update our check time. If we bail out below (due to storage errors
+	// or whatever), we'll delay the next CRL check (hopefully allowing
+	// things to stabilize). Otherwise, we might not build a new Delta CRL
+	// until our next complete CRL build.
+	cb.lastDeltaRebuildCheck = now
+
+	// Fetch two storage entries to see if we actually need to do this
+	// rebuild, given we're within the window.
+	lastWALEntry, err := sc.Storage.Get(sc.Context, deltaWALLastRevokedSerial)
+	if err != nil || lastWALEntry == nil || lastWALEntry.Value == nil {
+		// If this entry does not exist, we don't need to rebuild the
+		// delta WAL due to the expiration assumption above. There must
+		// not have been any new revocations. Since err should be nil
+		// in this case, we can safely return it.
+		return err
+	}
+
+	lastBuildEntry, err := sc.Storage.Get(sc.Context, deltaWALLastBuildSerial)
+	if err != nil {
+		return err
+	}
+
+	if lastBuildEntry != nil && lastBuildEntry.Value != nil {
+		// If the last build entry doesn't exist, we still want to build a
+		// new delta WAL, since this could be our very first time doing so.
+		//
+		// Otherwise, here, now that we know it exists, we want to check this
+		// value against the other value. Since we previously guarded the WAL
+		// entry being non-empty, we're good to decode everything within this
+		// guard.
+		var walInfo lastWALInfo
+		if err := lastWALEntry.DecodeJSON(&walInfo); err != nil {
+			return err
+		}
+
+		var deltaInfo lastDeltaInfo
+		if err := lastBuildEntry.DecodeJSON(&deltaInfo); err != nil {
+			return err
+		}
+
+		// Here, everything decoded properly and we know that no new certs
+		// have been revoked since we built this last delta CRL. We can exit
+		// without rebuilding then.
+		if walInfo.Serial == deltaInfo.Serial {
+			return nil
+		}
+	}
+
+	// Finally, we must've needed to do the rebuild. Execute!
+	return cb.rebuildDeltaCRLsHoldingLock(sc, false)
+}
+
+func (cb *crlBuilder) rebuildDeltaCRLs(sc *storageContext, forceNew bool) error {
+	cb._builder.Lock()
+	defer cb._builder.Unlock()
+
+	return cb.rebuildDeltaCRLsHoldingLock(sc, forceNew)
+}
+
+func (cb *crlBuilder) rebuildDeltaCRLsHoldingLock(sc *storageContext, forceNew bool) error {
+	return buildAnyCRLs(sc, forceNew, true /* building delta */)
 }
 
 // Helper function to fetch a map of issuerID->parsed cert for revocation
@@ -390,6 +560,10 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 	}
 
 	if !config.AutoRebuild {
+		// Note that writing the Delta WAL here isn't necessary; we've
+		// already rebuilt the full CRL so the Delta WAL will be cleared
+		// afterwards. Writing an entry only to immediately remove it
+		// isn't necessary.
 		crlErr := b.crlBuilder.rebuild(ctx, b, req, false)
 		if crlErr != nil {
 			switch crlErr.(type) {
@@ -398,6 +572,42 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 			default:
 				return nil, fmt.Errorf("error encountered during CRL building: %w", crlErr)
 			}
+		}
+	} else if !alreadyRevoked {
+		// Regardless of whether or not we've presently enabled Delta CRLs,
+		// we should always write the Delta WAL in case it is enabled in the
+		// future. We could trigger another full CRL rebuild instead (to avoid
+		// inconsistent state between the CRL and missing Delta WAL entries),
+		// but writing extra (unused?) WAL entries versus an expensive full
+		// CRL rebuild is probably a net wash.
+		///
+		// We should only do this when the cert hasn't already been revoked.
+		// Otherwise, the re-revocation may appear on both an existing CRL and
+		// on a delta CRL, or a serial may be skipped from the delta CRL if
+		// there's an A->B->A revocation pattern and the delta was rebuilt
+		// after the first cert.
+		//
+		// Currently we don't store any data in the WAL entry.
+		var walInfo deltaWALInfo
+		walEntry, err := logical.StorageEntryJSON(deltaWALPath+normalizeSerial(serial), walInfo)
+		if err != nil {
+			return nil, fmt.Errorf("unable to create delta CRL WAL entry")
+		}
+
+		if err = req.Storage.Put(ctx, walEntry); err != nil {
+			return nil, fmt.Errorf("error saving delta CRL WAL entry")
+		}
+
+		// In order for periodic delta rebuild to be mildly efficient, we
+		// should write the last revoked delta WAL entry so we know if we
+		// have new revocations that we should rebuild the delta WAL for.
+		lastRevSerial := lastWALInfo{Serial: serial}
+		lastWALEntry, err := logical.StorageEntryJSON(deltaWALLastRevokedSerial, lastRevSerial)
+		if err != nil {
+			return nil, fmt.Errorf("unable to create last delta CRL WAL entry")
+		}
+		if err = req.Storage.Put(ctx, lastWALEntry); err != nil {
+			return nil, fmt.Errorf("error saving last delta CRL WAL entry")
 		}
 	}
 
@@ -413,6 +623,11 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 }
 
 func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew bool) error {
+	sc := b.makeStorageContext(ctx, req.Storage)
+	return buildAnyCRLs(sc, forceNew, false)
+}
+
+func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 	// In order to build all CRLs, we need knowledge of all issuers. Any two
 	// issuers with the same keys _and_ subject should have the same CRL since
 	// they're functionally equivalent.
@@ -442,11 +657,10 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 	var err error
 	var issuers []issuerID
 	var wasLegacy bool
-	sc := b.makeStorageContext(ctx, req.Storage)
 
 	// First, fetch an updated copy of the CRL config. We'll pass this into
 	// buildCRL.
-	globalCRLConfig, err := b.crlBuilder.getConfigWithUpdate(sc)
+	globalCRLConfig, err := sc.Backend.crlBuilder.getConfigWithUpdate(sc)
 	if err != nil {
 		return fmt.Errorf("error building CRL: while updating config: %v", err)
 	}
@@ -463,7 +677,7 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 		return nil
 	}
 
-	if !b.useLegacyBundleCaStorage() {
+	if !sc.Backend.useLegacyBundleCaStorage() {
 		issuers, err = sc.listIssuers()
 		if err != nil {
 			return fmt.Errorf("error building CRL: while listing issuers: %v", err)
@@ -474,6 +688,14 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 		// below for revocation to handle the legacy bundle.
 		issuers = []issuerID{legacyBundleShimID}
 		wasLegacy = true
+
+		// Here, we avoid building a delta CRL with the legacy CRL bundle.
+		//
+		// Users should upgrade symmetrically, rather than attempting
+		// backward compatibility for new features across disparate versions.
+		if isDelta {
+			return nil
+		}
 	}
 
 	config, err := sc.getIssuersConfig()
@@ -539,11 +761,44 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 		return fmt.Errorf("error building CRLs: unable to fetch cluster-local CRL configuration: %v", err)
 	}
 
+	// Before we load cert entries, we want to store the last seen delta WAL
+	// serial number. The subsequent List will have at LEAST that certificate
+	// (and potentially more) in it; when we're done writing the delta CRL,
+	// we'll write this serial as a sentinel to see if we need to rebuild it
+	// in the future.
+	var lastDeltaSerial string
+	if isDelta {
+		lastWALEntry, err := sc.Storage.Get(sc.Context, deltaWALLastRevokedSerial)
+		if err != nil {
+			return err
+		}
+
+		if lastWALEntry != nil && lastWALEntry.Value != nil {
+			var walInfo lastWALInfo
+			if err := lastWALEntry.DecodeJSON(&walInfo); err != nil {
+				return err
+			}
+
+			lastDeltaSerial = walInfo.Serial
+		}
+	}
+
+	// We fetch a list of delta WAL entries prior to generating the complete
+	// CRL. This allows us to avoid a lock (to clear such storage): anything
+	// visible now, should also be visible on the complete CRL we're writing.
+	var currDeltaCerts []string
+	if !isDelta {
+		currDeltaCerts, err = sc.Backend.crlBuilder.getPresentDeltaWALForClearing(sc)
+		if err != nil {
+			return fmt.Errorf("error building CRLs: unable to get present delta WAL entries for removal: %v", err)
+		}
+	}
+
 	// Next, we load and parse all revoked certificates. We need to assign
 	// these certificates to an issuer. Some certificates will not be
 	// assignable (if they were issued by a since-deleted issuer), so we need
 	// a separate pool for those.
-	unassignedCerts, revokedCertsMap, err := getRevokedCertEntries(ctx, req, issuerIDCertMap)
+	unassignedCerts, revokedCertsMap, err := getRevokedCertEntries(sc, issuerIDCertMap, isDelta)
 	if err != nil {
 		return fmt.Errorf("error building CRLs: unable to get revoked certificate entries: %v", err)
 	}
@@ -632,13 +887,31 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 			crlNumber := crlConfig.CRLNumberMap[crlIdentifier]
 			crlConfig.CRLNumberMap[crlIdentifier] += 1
 
+			// CRLs (regardless of complete vs delta) are incrementally
+			// numbered. But delta CRLs need to know the number of the
+			// last complete CRL. We assume that's the previous identifier
+			// if no value presently exists.
+			lastCompleteNumber, haveLast := crlConfig.LastCompleteNumberMap[crlIdentifier]
+			if !haveLast {
+				// We use the value of crlNumber for the current CRL, so
+				// decrement it by one to find the last one.
+				lastCompleteNumber = crlNumber - 1
+			}
+
 			// Lastly, build the CRL.
-			nextUpdate, err := buildCRL(sc, globalCRLConfig, forceNew, representative, revokedCerts, crlIdentifier, crlNumber)
+			nextUpdate, err := buildCRL(sc, globalCRLConfig, forceNew, representative, revokedCerts, crlIdentifier, crlNumber, isDelta, lastCompleteNumber)
 			if err != nil {
 				return fmt.Errorf("error building CRLs: unable to build CRL for issuer (%v): %v", representative, err)
 			}
 
 			crlConfig.CRLExpirationMap[crlIdentifier] = *nextUpdate
+			if !isDelta {
+				crlConfig.LastCompleteNumberMap[crlIdentifier] = crlNumber
+			} else if !haveLast {
+				// Since we're writing this config anyways, save our guess
+				// as to the last CRL number.
+				crlConfig.LastCompleteNumberMap[crlIdentifier] = lastCompleteNumber
+			}
 		}
 	}
 
@@ -676,7 +949,7 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 		}
 
 		if !stillHaveIssuerForID {
-			if err := req.Storage.Delete(ctx, "crls/"+crlId.String()); err != nil {
+			if err := sc.Storage.Delete(sc.Context, "crls/"+crlId.String()); err != nil {
 				return fmt.Errorf("error building CRLs: unable to clean up deleted issuers' CRL: %v", err)
 			}
 		}
@@ -687,6 +960,37 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 	if !wasLegacy {
 		if err := sc.setLocalCRLConfig(crlConfig); err != nil {
 			return fmt.Errorf("error building CRLs: unable to persist updated cluster-local CRL config: %v", err)
+		}
+	}
+
+	if !isDelta {
+		// After we've confirmed the primary CRLs have built OK, go ahead and
+		// clear the delta CRL WAL and rebuild it.
+		if err := sc.Backend.crlBuilder.clearDeltaWAL(sc, currDeltaCerts); err != nil {
+			return fmt.Errorf("error building CRLs: unable to clear Delta WAL: %v", err)
+		}
+		if err := sc.Backend.crlBuilder.rebuildDeltaCRLsHoldingLock(sc, forceNew); err != nil {
+			return fmt.Errorf("error building CRLs: unable to rebuild empty Delta WAL: %v", err)
+		}
+	} else {
+		// Update our last build time here so we avoid checking for new certs
+		// for a while.
+		sc.Backend.crlBuilder.lastDeltaRebuildCheck = time.Now()
+
+		if len(lastDeltaSerial) > 0 {
+			// When we have a last delta serial, write out the relevant info
+			// so we can skip extra CRL rebuilds.
+			deltaInfo := lastDeltaInfo{Serial: lastDeltaSerial}
+
+			lastDeltaBuildEntry, err := logical.StorageEntryJSON(deltaWALLastBuildSerial, deltaInfo)
+			if err != nil {
+				return fmt.Errorf("error creating last delta CRL rebuild serial entry: %v", err)
+			}
+
+			err = sc.Storage.Put(sc.Context, lastDeltaBuildEntry)
+			if err != nil {
+				return fmt.Errorf("error persisting last delta CRL rebuild info: %v", err)
+			}
 		}
 	}
 
@@ -719,11 +1023,16 @@ func associateRevokedCertWithIsssuer(revInfo *revocationInfo, revokedCert *x509.
 	return false
 }
 
-func getRevokedCertEntries(ctx context.Context, req *logical.Request, issuerIDCertMap map[issuerID]*x509.Certificate) ([]pkix.RevokedCertificate, map[issuerID][]pkix.RevokedCertificate, error) {
+func getRevokedCertEntries(sc *storageContext, issuerIDCertMap map[issuerID]*x509.Certificate, isDelta bool) ([]pkix.RevokedCertificate, map[issuerID][]pkix.RevokedCertificate, error) {
 	var unassignedCerts []pkix.RevokedCertificate
 	revokedCertsMap := make(map[issuerID][]pkix.RevokedCertificate)
 
-	revokedSerials, err := req.Storage.List(ctx, revokedPath)
+	listingPath := revokedPath
+	if isDelta {
+		listingPath = deltaWALPath
+	}
+
+	revokedSerials, err := sc.Storage.List(sc.Context, listingPath)
 	if err != nil {
 		return nil, nil, errutil.InternalError{Err: fmt.Sprintf("error fetching list of revoked certs: %s", err)}
 	}
@@ -736,11 +1045,17 @@ func getRevokedCertEntries(ctx context.Context, req *logical.Request, issuerIDCe
 	}
 
 	for _, serial := range revokedSerials {
+		if isDelta && (serial == deltaWALLastBuildSerialName || serial == deltaWALLastRevokedSerialName) {
+			// Skip our placeholder entries...
+			continue
+		}
+
 		var revInfo revocationInfo
-		revokedEntry, err := req.Storage.Get(ctx, revokedPath+serial)
+		revokedEntry, err := sc.Storage.Get(sc.Context, revokedPath+serial)
 		if err != nil {
 			return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch revoked cert with serial %s: %s", serial, err)}
 		}
+
 		if revokedEntry == nil {
 			return nil, nil, errutil.InternalError{Err: fmt.Sprintf("revoked certificate entry for serial %s is nil", serial)}
 		}
@@ -827,7 +1142,7 @@ func getRevokedCertEntries(ctx context.Context, req *logical.Request, issuerIDCe
 				return nil, nil, fmt.Errorf("error creating revocation entry for existing cert: %v", serial)
 			}
 
-			err = req.Storage.Put(ctx, revokedEntry)
+			err = sc.Storage.Put(sc.Context, revokedEntry)
 			if err != nil {
 				return nil, nil, fmt.Errorf("error updating revoked certificate at existing location: %v", serial)
 			}
@@ -873,7 +1188,7 @@ func augmentWithRevokedIssuers(issuerIDEntryMap map[issuerID]*issuerEntry, issue
 
 // Builds a CRL by going through the list of revoked certificates and building
 // a new CRL with the stored revocation times and serial numbers.
-func buildCRL(sc *storageContext, crlInfo *crlConfig, forceNew bool, thisIssuerId issuerID, revoked []pkix.RevokedCertificate, identifier crlID, crlNumber int64) (*time.Time, error) {
+func buildCRL(sc *storageContext, crlInfo *crlConfig, forceNew bool, thisIssuerId issuerID, revoked []pkix.RevokedCertificate, identifier crlID, crlNumber int64, isDelta bool, lastCompleteNumber int64) (*time.Time, error) {
 	var revokedCerts []pkix.RevokedCertificate
 
 	crlLifetime, err := time.ParseDuration(crlInfo.Expiry)
@@ -913,12 +1228,18 @@ WRITE:
 	now := time.Now()
 	nextUpdate := now.Add(crlLifetime)
 
+	ext, err := certutil.CreateDeltaCRLIndicatorExt(lastCompleteNumber)
+	if err != nil {
+		return nil, fmt.Errorf("could not create crl delta indicator extension: %v", err)
+	}
+
 	revocationListTemplate := &x509.RevocationList{
 		RevokedCertificates: revokedCerts,
 		Number:              big.NewInt(crlNumber),
 		ThisUpdate:          now,
 		NextUpdate:          nextUpdate,
 		SignatureAlgorithm:  signingBundle.RevocationSigAlg,
+		ExtraExtensions:     []pkix.Extension{ext},
 	}
 
 	crlBytes, err := x509.CreateRevocationList(rand.Reader, revocationListTemplate, signingBundle.Certificate, signingBundle.PrivateKey)
@@ -931,6 +1252,9 @@ WRITE:
 		// Ignore the CRL ID as it won't be persisted anyways; hard-code the
 		// old legacy path and allow it to be updated.
 		writePath = legacyCRLPath
+	} else if isDelta {
+		// Write the delta CRL to a unique storage location.
+		writePath += deltaCRLPathSuffix
 	}
 
 	err = sc.Storage.Put(sc.Context, &logical.StorageEntry{
