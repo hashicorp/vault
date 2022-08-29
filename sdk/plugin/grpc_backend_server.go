@@ -16,7 +16,7 @@ import (
 
 var ErrServerInMetadataMode = errors.New("plugin server can not perform action while in metadata mode")
 
-// singleImplemenationID is the string used to define the instance ID of a
+// singleImplementationID is the string used to define the instance ID of a
 // non-multiplexed plugin
 const singleImplementationID string = "single"
 
@@ -39,7 +39,7 @@ type backendGRPCPluginServer struct {
 	logger log.Logger
 }
 
-// getBackendInternal returns the backend but does not hold a lock
+// getBackendAndBrokeredClientInternal returns the backend but does not hold a lock
 func (b *backendGRPCPluginServer) getBackendAndBrokeredClientInternal(ctx context.Context) (logical.Backend, *grpc.ClientConn, error) {
 	if b.multiplexingSupport {
 		id, err := pluginutil.GetMultiplexIDFromContext(ctx)
@@ -60,7 +60,7 @@ func (b *backendGRPCPluginServer) getBackendAndBrokeredClientInternal(ctx contex
 	return nil, nil, fmt.Errorf("no backend instance found")
 }
 
-// getBackend holds a read lock and returns the backend
+// getBackendAndBrokeredClient holds a read lock and returns the backend
 func (b *backendGRPCPluginServer) getBackendAndBrokeredClient(ctx context.Context) (logical.Backend, *grpc.ClientConn, error) {
 	b.instancesLock.RLock()
 	defer b.instancesLock.RUnlock()
@@ -227,14 +227,14 @@ func (b *backendGRPCPluginServer) Cleanup(ctx context.Context, _ *pb.Empty) (*pb
 	// Close rpc clients
 	brokeredClient.Close()
 
-	if _, ok := b.instances["single"]; ok {
-		delete(b.instances, "single")
-	} else {
+	if b.multiplexingSupport {
 		id, err := pluginutil.GetMultiplexIDFromContext(ctx)
 		if err != nil {
 			return nil, err
 		}
 		delete(b.instances, id)
+	} else if _, ok := b.instances[singleImplementationID]; ok {
+		delete(b.instances, singleImplementationID)
 	}
 
 	return &pb.Empty{}, nil

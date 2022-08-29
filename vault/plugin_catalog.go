@@ -408,13 +408,15 @@ func (c *PluginCatalog) getBackendPluginType(ctx context.Context, pluginRunner *
 
 	var client logical.Backend
 	// Attempt to run as backend V5 plugin
-	c.logger.Debug("attempting to load credential backend plugin", "name", pluginRunner.Name)
+	c.logger.Debug("attempting to load backend plugin", "name", pluginRunner.Name)
 	pc, err := c.newPluginClient(ctx, pluginRunner, config)
 	if err == nil {
 		// dispense the plugin so we can get its type
 		client, err = backendplugin.Dispense(pc.ClientProtocol, pc)
 		if err != nil {
 			merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as backend v5: %w", err))
+			c.logger.Debug("JMF failed to dispense", "name", pluginRunner.Name, "error", err)
+			// return consts.PluginTypeUnknown, merr.ErrorOrNil()
 		} else {
 			c.logger.Debug("successfully dispensed v5 backend plugin", "name", pluginRunner.Name)
 			defer c.cleanupExternalPlugin(pluginRunner.Name, pc.id)
@@ -427,6 +429,7 @@ func (c *PluginCatalog) getBackendPluginType(ctx context.Context, pluginRunner *
 		client, err = backendplugin.NewPluginClient(ctx, nil, pluginRunner, log.NewNullLogger(), true)
 		if err != nil {
 			c.logger.Debug("failed to dispense v4 backend plugin", "name", pluginRunner.Name, "error", err)
+			merr = multierror.Append(merr, fmt.Errorf("failed to dispense v4 backend plugin", "name", pluginRunner.Name, "error", err))
 			return consts.PluginTypeUnknown, merr.ErrorOrNil()
 		}
 		c.logger.Debug("successfully dispensed v4 backend plugin", "name", pluginRunner.Name)
