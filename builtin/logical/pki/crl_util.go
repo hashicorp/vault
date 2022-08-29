@@ -258,13 +258,21 @@ func (cb *crlBuilder) _doRebuild(ctx context.Context, b *backend, request *logic
 	return nil
 }
 
-func (cb *crlBuilder) clearDeltaWAL(sc *storageContext) error {
+func (cb *crlBuilder) getPresentDeltaWALForClearing(sc *storageContext) ([]string, error) {
 	// Clearing of the delta WAL occurs after a new complete CRL has been built.
 	walSerials, err := sc.Storage.List(sc.Context, deltaWALPath)
 	if err != nil {
-		return fmt.Errorf("error fetching list of delta WAL certificates to clear: %s", err)
+		return nil, fmt.Errorf("error fetching list of delta WAL certificates to clear: %s", err)
 	}
 
+	// We _should_ remove the special WAL entries here, but we don't really
+	// want to traverse the list again (and also below in clearDeltaWAL). So
+	// trust the latter does the right thing.
+	return walSerials, nil
+}
+
+func (cb *crlBuilder) clearDeltaWAL(sc *storageContext, walSerials []string) error {
+	// Clearing of the delta WAL occurs after a new complete CRL has been built.
 	for _, serial := range walSerials {
 		// Don't remove our special entries!
 		if serial == deltaWALLastBuildSerialName || serial == deltaWALLastRevokedSerialName {
@@ -280,9 +288,12 @@ func (cb *crlBuilder) clearDeltaWAL(sc *storageContext) error {
 }
 
 func (cb *crlBuilder) rebuildDeltaCRLsIfForced(sc *storageContext) error {
-	// Acquire CRL building locks before we get too much further.
-	cb._builder.Lock()
-	defer cb._builder.Unlock()
+	// Exit early if we aren't an active node. This still needs to occur on
+	// PR secondary clusters (as they retain their own separate CRL and
+	// delta CRLs).
+	if sc.Backend.System().ReplicationState().HasState(consts.ReplicationDRSecondary | consts.ReplicationPerformanceStandby) {
+		return nil
+	}
 
 	// Delta CRLs use the same expiry duration as the complete CRL. Because
 	// we always rebuild the complete CRL and then the delta CRL, we can
@@ -308,6 +319,10 @@ func (cb *crlBuilder) rebuildDeltaCRLsIfForced(sc *storageContext) error {
 	if err != nil {
 		return err
 	}
+
+	// Acquire CRL building locks before we get too much further.
+	cb._builder.Lock()
+	defer cb._builder.Unlock()
 
 	// Last is setup during newCRLBuilder(...), so we don't need to deal with
 	// a zero condition.
@@ -341,7 +356,9 @@ func (cb *crlBuilder) rebuildDeltaCRLsIfForced(sc *storageContext) error {
 	lastBuildEntry, err := sc.Storage.Get(sc.Context, deltaWALLastBuildSerial)
 	if err != nil {
 		return err
-	} else if lastBuildEntry != nil && lastBuildEntry.Value != nil {
+	}
+
+	if lastBuildEntry != nil && lastBuildEntry.Value != nil {
 		// If the last build entry doesn't exist, we still want to build a
 		// new delta WAL, since this could be our very first time doing so.
 		//
@@ -563,13 +580,19 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 				return nil, fmt.Errorf("error encountered during CRL building: %w", crlErr)
 			}
 		}
-	} else {
+	} else if !alreadyRevoked {
 		// Regardless of whether or not we've presently enabled Delta CRLs,
 		// we should always write the Delta WAL in case it is enabled in the
 		// future. We could trigger another full CRL rebuild instead (to avoid
 		// inconsistent state between the CRL and missing Delta WAL entries),
 		// but writing extra (unused?) WAL entries versus an expensive full
 		// CRL rebuild is probably a net wash.
+		///
+		// We should only do this when the cert hasn't already been revoked.
+		// Otherwise, the re-revocation may appear on both an existing CRL and
+		// on a delta CRL, or a serial may be skipped from the delta CRL if
+		// there's an A->B->A revocation pattern and the delta was rebuilt
+		// after the first cert.
 		//
 		// Currently we don't store any data in the WAL entry.
 		var walInfo deltaWALInfo
@@ -755,13 +778,26 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 		lastWALEntry, err := sc.Storage.Get(sc.Context, deltaWALLastRevokedSerial)
 		if err != nil {
 			return err
-		} else if lastWALEntry != nil && lastWALEntry.Value != nil {
+		}
+
+		if lastWALEntry != nil && lastWALEntry.Value != nil {
 			var walInfo lastWALInfo
 			if err := lastWALEntry.DecodeJSON(&walInfo); err != nil {
 				return err
 			}
 
 			lastDeltaSerial = walInfo.Serial
+		}
+	}
+
+	// We fetch a list of delta WAL entries prior to generating the complete
+	// CRL. This allows us to avoid a lock (to clear such storage): anything
+	// visible now, should also be visible on the complete CRL we're writing.
+	var currDeltaCerts []string
+	if !isDelta {
+		currDeltaCerts, err = sc.Backend.crlBuilder.getPresentDeltaWALForClearing(sc)
+		if err != nil {
+			return fmt.Errorf("error building CRLs: unable to get present delta WAL entries for removal: %v", err)
 		}
 	}
 
@@ -937,7 +973,7 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 	if !isDelta {
 		// After we've confirmed the primary CRLs have built OK, go ahead and
 		// clear the delta CRL WAL and rebuild it.
-		if err := sc.Backend.crlBuilder.clearDeltaWAL(sc); err != nil {
+		if err := sc.Backend.crlBuilder.clearDeltaWAL(sc, currDeltaCerts); err != nil {
 			return fmt.Errorf("error building CRLs: unable to clear Delta WAL: %v", err)
 		}
 		if err := sc.Backend.crlBuilder.rebuildDeltaCRLsHoldingLock(sc, forceNew); err != nil {
