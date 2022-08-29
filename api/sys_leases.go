@@ -10,7 +10,27 @@ func (c *Sys) Renew(id string, increment int) (*Secret, error) {
 	return c.RenewWithContext(context.Background(), id, increment)
 }
 
+// RenewResponse returns the full renew response instead of just the secret.
+// Returning the full response allows access to the Age header which is
+// vital for cached requests to calculate correct expiration times.
+func (c *Sys) RenewResponse(id string, increment int) (*Response, error) {
+	return c.RenewResponseWithContext(context.Background(), id, increment)
+}
+
 func (c *Sys) RenewWithContext(ctx context.Context, id string, increment int) (*Secret, error) {
+	resp, err := c.RenewResponseWithContext(ctx, id, increment)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return ParseSecret(resp.Body)
+}
+
+// RenewResponseWithContext returns the full renew response instead of just the secret.
+// Returning the full response allows access to the Age header which is
+// vital for cached requests to calculate correct expiration times.
+func (c *Sys) RenewResponseWithContext(ctx context.Context, id string, increment int) (*Response, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
@@ -28,9 +48,7 @@ func (c *Sys) RenewWithContext(ctx context.Context, id string, increment int) (*
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
-
-	return ParseSecret(resp.Body)
+	return resp, err
 }
 
 func (c *Sys) Lookup(id string) (*Secret, error) {

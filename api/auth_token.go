@@ -227,9 +227,27 @@ func (c *TokenAuth) RenewTokenAsSelf(token string, increment int) (*Secret, erro
 	return c.RenewTokenAsSelfWithContext(context.Background(), token, increment)
 }
 
+func (c *TokenAuth) RenewTokenAsSelfResponse(token string, increment int) (*Response, error) {
+	return c.RenewTokenAsSelfResponseWithContext(context.Background(), token, increment)
+}
+
 // RenewTokenAsSelfWithContext behaves like renew-self, but authenticates using a provided
 // token instead of the token attached to the client.
 func (c *TokenAuth) RenewTokenAsSelfWithContext(ctx context.Context, token string, increment int) (*Secret, error) {
+	resp, err := c.RenewTokenAsSelfResponseWithContext(ctx, token, increment)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return ParseSecret(resp.Body)
+}
+
+// RenewTokenAsSelfResponseWithContext behaves like renew-self, but authenticates using a provided
+// token instead of the token attached to the client.
+// Returning the full response allows access to the Age header which is
+// vital for cached requests to calculate correct expiration times.
+func (c *TokenAuth) RenewTokenAsSelfResponseWithContext(ctx context.Context, token string, increment int) (*Response, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
@@ -241,13 +259,7 @@ func (c *TokenAuth) RenewTokenAsSelfWithContext(ctx context.Context, token strin
 		return nil, err
 	}
 
-	resp, err := c.c.rawRequestWithContext(ctx, r)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	return ParseSecret(resp.Body)
+	return c.c.rawRequestWithContext(ctx, r)
 }
 
 // RevokeAccessor wraps RevokeAccessorWithContext using context.Background.
