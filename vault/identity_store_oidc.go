@@ -1774,7 +1774,7 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 				nextExpiration = k.ExpireAt
 			}
 
-			// Mark the KeyID as in use so it doesn't get deleted in the next step
+			// Mark the KeyId as in use so it doesn't get deleted in the next step
 			usedKeys = append(usedKeys, k.KeyID)
 		}
 

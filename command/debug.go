@@ -1071,7 +1071,18 @@ func (c *DebugCommand) writeLogs(ctx context.Context) {
 	}
 	defer out.Close()
 
-	logCh, err := c.cachedClient.Sys().Monitor(ctx, "trace", c.logFormat)
+	// Create Monitor specific client based on the cached client
+	mClient, err := c.cachedClient.Clone()
+	if err != nil {
+		c.captureError("log", err)
+		return
+	}
+	mClient.SetToken(c.cachedClient.Token())
+
+	// Set timeout to match the context explicitly
+	mClient.SetClientTimeout(c.flagDuration + debugDurationGrace)
+
+	logCh, err := mClient.Sys().Monitor(ctx, "trace", c.logFormat)
 	if err != nil {
 		c.captureError("log", err)
 		return

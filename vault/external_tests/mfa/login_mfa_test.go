@@ -138,6 +138,14 @@ func TestLoginMFA_Method_CRUD(t *testing.T) {
 				t.Fatal("expected response id to match existing method id but it didn't")
 			}
 
+			if resp.Data["namespace_id"] != "root" {
+				t.Fatalf("namespace id was not root, it was %s", resp.Data["namespace_id"])
+			}
+
+			if resp.Data["namespace_path"] != "" {
+				t.Fatalf("namespace path was not empty, it was %s", resp.Data["namespace_path"])
+			}
+
 			// listing should show it
 			resp, err = client.Logical().List(myPath)
 			if err != nil {

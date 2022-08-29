@@ -131,7 +131,7 @@ management tool.
         Write a policy and proceed to link it to the role:
 
         ```shell-session
-        $ vault write consul/roles/my-role policy="$(base64 <<< 'key "" { policy = "read" }')"
+        $ vault write consul/roles/my-role policy="$(echo 'key "" { policy = "read" }' | base64)"
         Success! Data written to: consul/roles/my-role
         ```
 
