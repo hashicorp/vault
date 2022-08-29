@@ -28,15 +28,6 @@ export default class OidcClientForm extends Component {
       ? 'allow_all'
       : 'limited';
 
-  get modelAssignments() {
-    const { assignments } = this.args.model;
-    if (assignments.includes('allow_all') && assignments.length === 1) {
-      return [];
-    } else {
-      return assignments;
-    }
-  }
-
   @action
   handleAssignmentSelection(selection) {
     // if array then coming from search-select component, set selection as model assignments
@@ -47,6 +38,15 @@ export default class OidcClientForm extends Component {
       // UI always reflects a user's selection (including when no assignments are selected)
       this.radioCardGroupValue = selection;
       this.args.model.assignments = [];
+    }
+  }
+
+  get modelAssignments() {
+    const { assignments } = this.args.model;
+    if (assignments.includes('allow_all') && assignments.length === 1) {
+      return [];
+    } else {
+      return assignments;
     }
   }
 
