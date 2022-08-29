@@ -51,6 +51,8 @@
         @value="limited"
         @groupValue={{this.radioCardGroupValue}}
         @onChange={{this.handleClientSelection}}
+        @disabled={{@model.isNew}}
+        @disabledTooltipMessage="This option has been disabled for now. To limit access, you must first create an application that uses this key."
       />
     </div>
     {{#if (eq this.radioCardGroupValue "limited")}}

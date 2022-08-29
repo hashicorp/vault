@@ -28,6 +28,15 @@ export default class OidcClientForm extends Component {
       ? 'allow_all'
       : 'limited';
 
+  get modelAssignments() {
+    const { assignments } = this.args.model;
+    if (assignments.includes('allow_all') && assignments.length === 1) {
+      return [];
+    } else {
+      return assignments;
+    }
+  }
+
   @action
   handleAssignmentSelection(selection) {
     // if array then coming from search-select component, set selection as model assignments
@@ -41,14 +50,6 @@ export default class OidcClientForm extends Component {
     }
   }
 
-  get modelAssignments() {
-    const { assignments } = this.args.model;
-    if (assignments.includes('allow_all') && assignments.length === 1) {
-      return [];
-    } else {
-      return assignments;
-    }
-  }
   @task
   *save(event) {
     event.preventDefault();
