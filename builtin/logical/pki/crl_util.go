@@ -75,6 +75,10 @@ type crlBuilder struct {
 	_config sync.RWMutex
 	dirty   *atomic2.Bool
 	config  crlConfig
+
+	// Whether to invalidate our LastModifiedTime due to write on the
+	// global issuance config.
+	invalidate *atomic2.Bool
 }
 
 const (
@@ -91,6 +95,7 @@ func newCRLBuilder() *crlBuilder {
 		lastDeltaRebuildCheck: time.Now(),
 		dirty:                 atomic2.NewBool(true),
 		config:                defaultCrlConfig,
+		invalidate: atomic2.NewBool(false),
 	}
 }
 
@@ -201,6 +206,33 @@ func (cb *crlBuilder) checkForAutoRebuild(sc *storageContext) error {
 		if value.IsZero() || now.After(value.Add(-1*period)) {
 			cb.forceRebuild.Store(true)
 			return nil
+		}
+	}
+
+	return nil
+}
+
+// Mark the internal LastModifiedTime tracker invalid.
+func (cb *crlBuilder) invalidateCRLBuildTime() {
+	cb.invalidate.Store(true)
+}
+
+// Update the config to mark the modified CRL. See note in
+// updateDefaultIssuerId about why this is necessary.
+func (cb *crlBuilder) flushCRLBuildTimeInvalidation(sc *storageContext) error {
+	if cb.invalidate.CAS(true, false) {
+		// Flush out our invalidation.
+		cfg, err := sc.getLocalCRLConfig()
+		if err != nil {
+			cb.invalidate.Store(true)
+			return fmt.Errorf("unable to update local CRL config's modification time: error fetching: %v", err)
+		}
+
+		cfg.LastModified = time.Now().UTC()
+		err = sc.setLocalCRLConfig(cfg)
+		if err != nil {
+			cb.invalidate.Store(true)
+			return fmt.Errorf("unable to update local CRL config's modification time: error persisting: %v", err)
 		}
 	}
 
