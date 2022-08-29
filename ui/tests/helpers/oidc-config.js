@@ -96,7 +96,7 @@ const deleteModelRecord = async (model) => {
 // MOCK RESPONSES:
 
 export const CLIENT_LIST_RESPONSE = {
-  keys: ['some-app'],
+  keys: ['some-app', 'app-1'],
   key_info: {
     'some-app': {
       assignments: ['allow_all'],
@@ -105,6 +105,15 @@ export const CLIENT_LIST_RESPONSE = {
       client_type: 'confidential',
       id_token_ttl: 0,
       key: 'default',
+      redirect_uris: [],
+    },
+    'app-1': {
+      assignments: ['allow_all'],
+      client_id: 'HkmsTA4GG17j0Djy4EUAB2VAyzuLVewg',
+      client_secret: 'hvo_secret_g3f30MxAJWLXhhrCejbG4zY3O4LEHhEIO24aMy181AYKnfQtWTVV924ZmnlpUFUw',
+      client_type: 'confidential',
+      id_token_ttl: 0,
+      key: 'test-key',
       redirect_uris: [],
     },
   },

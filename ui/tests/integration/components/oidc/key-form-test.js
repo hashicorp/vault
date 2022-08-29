@@ -24,7 +24,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
   });
 
   test('it should save new key', async function (assert) {
-    assert.expect(12);
+    assert.expect(9);
     this.server.post('/identity/oidc/key/test-key', (schema, req) => {
       assert.ok(true, 'Request made to save key');
       return JSON.parse(req.requestBody);
@@ -55,28 +55,16 @@ module('Integration | Component | oidc/key-form', function (hooks) {
       .dom('[data-test-inline-error-message]')
       .hasText('Name cannot contain whitespace.', 'Validation message is shown whitespace');
 
-    await click('label[for=limited]');
-    assert
-      .dom('[data-test-component="search-select"]#allowedClientIds')
-      .exists('Limited radio button shows clients search select');
-    await click('[data-test-component="search-select"]#allowedClientIds .ember-basic-dropdown-trigger');
-    assert.dom('li.ember-power-select-option').hasTextContaining('some-app', 'dropdown renders clients');
-    assert.dom('[data-test-smaller-id]').exists('renders smaller client id in dropdown');
-
-    await click('label[for=allow-all]');
-    assert
-      .dom('[data-test-component="search-select"]#allowedClientIds')
-      .doesNotExist('Allow all radio button hides search select');
-
+    assert.dom('label[for=limited] input').isDisabled('limit radio button disabled on create');
     await fillIn('[data-test-input="name"]', 'test-key');
     await click('[data-test-oidc-key-save]');
   });
 
-  test('it should update key', async function (assert) {
-    assert.expect(7);
+  test('it should update key and limit access to selected applications', async function (assert) {
+    assert.expect(12);
 
     this.server.post('/identity/oidc/key/test-key', (schema, req) => {
-      assert.ok(true, 'Request made to save key');
+      assert.ok(true, 'Request made to update key');
       return JSON.parse(req.requestBody);
     });
 
@@ -87,7 +75,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
     });
 
     this.model = this.store.peekRecord('oidc/key', 'test-key');
-    this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
+    this.onSave = () => assert.ok(true, 'onSave callback fires on update success');
 
     await render(hbs`
       <Oidc::KeyForm
@@ -102,6 +90,23 @@ module('Integration | Component | oidc/key-form', function (hooks) {
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
     assert.dom('[data-test-input="name"]').hasValue('test-key', 'Name input is populated with model value');
     assert.dom('input#allow-all').isChecked('Allow all radio button is selected');
+
+    await click('label[for=limited]');
+    assert
+      .dom('[data-test-component="search-select"]#allowedClientIds')
+      .exists('Limited radio button shows clients search select');
+    await click('[data-test-component="search-select"]#allowedClientIds .ember-basic-dropdown-trigger');
+    assert.equal(findAll('li.ember-power-select-option').length, 1, 'dropdown only renders one option');
+    assert
+      .dom('li.ember-power-select-option')
+      .hasTextContaining('app-1', 'dropdown contains client that references key');
+    assert.dom('[data-test-smaller-id]').exists('renders smaller client id in dropdown');
+
+    await click('label[for=allow-all]');
+    assert
+      .dom('[data-test-component="search-select"]#allowedClientIds')
+      .doesNotExist('Allow all radio button hides search select');
+
     await click('[data-test-oidc-key-save]');
   });
 
@@ -144,7 +149,20 @@ module('Integration | Component | oidc/key-form', function (hooks) {
 
   test('it should render fallback for search select', async function (assert) {
     assert.expect(1);
-    this.model = this.store.createRecord('oidc/key');
+
+    this.server.post('/identity/oidc/key/test-key', (schema, req) => {
+      assert.ok(true, 'Request made to update key');
+      return JSON.parse(req.requestBody);
+    });
+
+    this.store.pushPayload('oidc/key', {
+      modelName: 'oidc/key',
+      name: 'test-key',
+      allowed_client_ids: ['*'],
+    });
+
+    this.model = this.store.peekRecord('oidc/key', 'test-key');
+
     this.server.get('/identity/oidc/client', () => overrideMirageResponse(403));
     await render(hbs`
       <Oidc::KeyForm
@@ -157,6 +175,6 @@ module('Integration | Component | oidc/key-form', function (hooks) {
     await click('label[for=limited]');
     assert
       .dom('[data-test-component="search-select"]#allowedClientIds [data-test-component="string-list"]')
-      .exists('Radio toggle shows assignments string-list input');
+      .exists('Radio toggle shows client string-list input');
   });
 });
