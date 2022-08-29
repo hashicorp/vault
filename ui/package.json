@@ -214,6 +214,7 @@
       "lib/css",
       "lib/kmip",
       "lib/open-api-explorer",
+      "lib/pki",
       "lib/replication",
       "lib/service-worker-authenticated-download"
     ]

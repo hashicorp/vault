@@ -48,6 +48,25 @@ export default class App extends Application {
         },
       },
     },
+    // ARG TODO make sure these are all being used by EOP
+    pki: {
+      dependencies: {
+        services: [
+          'auth',
+          'flash-messages',
+          'namespace',
+          'path-help',
+          'router',
+          'store',
+          'version',
+          'wizard',
+          'secret-mount-path',
+        ],
+        externalRoutes: {
+          secrets: 'vault.cluster.secrets.backends',
+        },
+      },
+    },
   };
 }
 

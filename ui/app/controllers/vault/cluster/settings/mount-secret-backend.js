@@ -9,6 +9,7 @@ export default Controller.extend({
   actions: {
     onMountSuccess: function (type, path) {
       let transition;
+      // ARG TODO for testing will do one line where this is pki to point to overview?
       if (SUPPORTED_BACKENDS.includes(type)) {
         if (type === 'kmip') {
           transition = this.transitionToRoute('vault.cluster.secrets.backend.kmip.scopes', path);
