@@ -15,7 +15,7 @@ import layout from '../templates/components/search-select';
  *
  * @param {string} id - The name of the form field
  * @param {Array} models - An array of model types to fetch from the API.
- * @param {object} queryObject - query object to pass as query options to as second argument to this.store.query(modelType, {})
+ * @param {object} [queryObject] - object passed as query options to this.store.query(). NOTE: will override this.backend
  * @param {function} onChange - The onchange action for this form field. ** SEE UTIL ** search-select-has-many.js if selecting models from a hasMany relationship
  * @param {string | Array} inputValue -  A comma-separated string or an array of strings -- array of ids for models.
  * @param {string} label - Label for this form field
@@ -53,7 +53,6 @@ export default Component.extend({
   allOptions: null, // list of options including matched
   selectedOptions: null, // list of selected options
   options: null, // all possible options
-  queryObject: null,
   shouldUseFallback: false,
   shouldRenderName: false,
   disallowNewItems: false,
@@ -127,7 +126,6 @@ export default Component.extend({
           queryOptions = this.queryObject;
         }
         let options = yield this.store.query(modelType, queryOptions);
-        console.log(options, 'OPTIIONS');
         this.formatOptions(options);
       } catch (err) {
         if (err.httpStatus === 404) {
