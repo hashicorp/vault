@@ -30,6 +30,10 @@ export default class OidcKeyForm extends Component {
       ? 'allow_all'
       : 'limited';
 
+  get filterSearchSelect() {
+    return { paramKey: 'key', filterFor: [this.args.model.name] };
+  }
+
   @action
   handleClientSelection(selection) {
     // if array then coming from search-select component, set selection as model clients

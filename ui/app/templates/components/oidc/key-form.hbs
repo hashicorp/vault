@@ -59,6 +59,7 @@
       <SearchSelect
         @id="allowedClientIds"
         @subLabel="Application name"
+        @subText="Select which applications are allowed to use this key. Only applications that that currently reference this key will appear in dropdown."
         @models={{array "oidc/client"}}
         @inputValue={{@model.allowedClientIds}}
         @onChange={{this.handleClientSelection}}
@@ -66,6 +67,7 @@
         @fallbackComponent="string-list"
         @passObject={{true}}
         @objectKeys={{array "clientId"}}
+        @queryObject={{this.filterSearchSelect}}
       />
     {{/if}}
   </div>
