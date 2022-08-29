@@ -46,7 +46,8 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	}
 
 	if err := b.Setup(ctx, conf); err != nil {
-		return nil, err
+		merr = multierror.Append(merr, err)
+		return nil, merr.ErrorOrNil()
 	}
 	return b, nil
 }

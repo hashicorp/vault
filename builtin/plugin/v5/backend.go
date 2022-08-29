@@ -34,7 +34,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	return &b, nil
 }
 
-// backend is a thin wrapper around plugin.BackendPluginClient
+// backend is a thin wrapper around plugin.BackendPluginClientV5
 type backend struct {
 	logical.Backend
 	mu sync.RWMutex
