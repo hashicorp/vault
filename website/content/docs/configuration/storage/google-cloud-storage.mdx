@@ -96,14 +96,19 @@ https://www.googleapis.com/auth/devstorage.read_write
 ## `gcs` Parameters
 
 - `bucket` `(string: <required>)` – Specifies the name of the bucket to use for
-  storage.
+  storage. Alternatively, this parameter can be omitted and the `GOOGLE_STORAGE_BUCKET` 
+  environment variable can be used to set the name of the bucket. If both the environment
+  variable and the parameter in the stanza are set, the value of the environment variable
+  will take precedence.
 
 - `chunk_size` `(string: "8192")` – Specifies the maximum size (in kilobytes) to
   send in a single request. If set to 0, it will attempt to send the whole
   object at once, but will not retry any failures. If you are not storing large
   objects in Vault, it is recommended to set this to a low value (minimum is
-
-  256. since it will reduce the amount of memory Vault uses.
+  256), since it will reduce the amount of memory Vault uses. Alternatively, this parameter
+  can be omitted and the `GOOGLE_STORAGE_CHUNK_SIZE` environment variable can be used to set 
+  the chunk size. If both the environment variable and the parameter in the stanza are set, 
+  the value of the environment variable will take precedence.
 
 - `max_parallel` `(int: 128)` - Specifies the maximum number of parallel
   operations to take place.
@@ -112,8 +117,12 @@ https://www.googleapis.com/auth/devstorage.read_write
 
 - `ha_enabled` `(string: "false")` - Specifies if high availability mode is
   enabled. This is a boolean value, but it is specified as a string like "true"
-  or "false".
-
+  or "false". Alternatively, this parameter can be omitted and the 
+  `GOOGLE_STORAGE_HA_ENABLED` environment variable can be used to 
+  enable or disable high availability. If both the environment variable and 
+  the parameter in the stanza are set, the value of the environment variable will 
+  take precedence.
+  
 ## `gcs` Examples
 
 ### High Availability

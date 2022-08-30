@@ -100,7 +100,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-cf v0.12.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.13.2
 	github.com/hashicorp/vault-plugin-auth-jwt v0.13.0
-	github.com/hashicorp/vault-plugin-auth-kerberos v0.7.2
+	github.com/hashicorp/vault-plugin-auth-kerberos v0.7.3
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.13.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.11.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.7.0
@@ -122,7 +122,7 @@ require (
 	github.com/hashicorp/vault/api v1.7.2
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
-	github.com/hashicorp/vault/sdk v0.5.3-0.20220803145622-430daff0f040
+	github.com/hashicorp/vault/sdk v0.5.3-0.20220826205147-7caf353e8124
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/jackc/pgx/v4 v4.15.0
 	github.com/jcmturner/gokrb5/v8 v8.4.2
