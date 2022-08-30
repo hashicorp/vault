@@ -182,7 +182,7 @@ export default Component.extend({
   },
   // -----
   customizeObject(option) {
-    // an undefined option means it was not returned by the query and therefore doesn't exist
+    // an undefined option means it was not returned from the query and therefore doesn't exist
     if (!option) return { addTooltip: true }; // add tooltip to let user know the selection can be discarded
     // if passObject=true return object, otherwise return string of option id
     if (this.passObject) {
