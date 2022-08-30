@@ -35,14 +35,11 @@ func TestAutoTidy(t *testing.T) {
 		// storage without barrier encryption.
 		EnableRaw: true,
 	}
-	oldPeriod := vault.SetRollbackPeriodForTesting(newPeriod)
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+	cluster := vault.CreateTestClusterWithRollbackPeriod(t, newPeriod, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
 	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
-	vault.SetRollbackPeriodForTesting(oldPeriod)
 
 	// Mount PKI
 	err := client.Sys().Mount("pki", &api.MountInput{
