@@ -161,7 +161,6 @@ module('Acceptance | oidc-config/clients', function (hooks) {
     // create another client
     await visit(OIDC_BASE_URL + '/clients/create');
     await fillIn('[data-test-input="name"]', 'test-app');
-
     await click(SELECTORS.clientSaveButton);
     // immediately delete client, test transition
     await click(SELECTORS.clientDeleteButton);
