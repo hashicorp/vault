@@ -128,7 +128,7 @@ func TestPKI_RequireCN(t *testing.T) {
 
 	// Issue a cert with require_cn set to true and with common name supplied.
 	// It should succeed.
-	resp, err = CBWrite(b, s, "issue/example", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/example", map[string]interface{}{
 		"common_name": "foobar.com",
 	})
 	if err != nil {
@@ -137,7 +137,7 @@ func TestPKI_RequireCN(t *testing.T) {
 
 	// Issue a cert with require_cn set to true and with out supplying the
 	// common name. It should error out.
-	resp, err = CBWrite(b, s, "issue/example", map[string]interface{}{})
+	_, err = CBWrite(b, s, "issue/example", map[string]interface{}{})
 	if err == nil {
 		t.Fatalf("expected an error due to missing common_name")
 	}
@@ -1079,7 +1079,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 			cert := parsedCertBundle.Certificate
 
-			actualDiff := time.Now().Sub(cert.NotBefore)
+			actualDiff := time.Since(cert.NotBefore)
 			certRoleDiff := (role.NotBeforeDuration - actualDiff).Truncate(time.Second)
 			// These times get truncated, so give a 1 second buffer on each side
 			if certRoleDiff >= -1*time.Second && certRoleDiff <= 1*time.Second {
@@ -1512,8 +1512,8 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 					return fmt.Errorf("error parsing cert bundle: %s", err)
 				}
 				cert := parsedCertBundle.Certificate
-				var emptyIPs []net.IP
-				var expected []net.IP = append(emptyIPs, expectedIp...)
+				var expected []net.IP
+				expected = append(expected, expectedIp...)
 				if diff := deep.Equal(cert.IPAddresses, expected); len(diff) > 0 {
 					return fmt.Errorf("wrong SAN IPs, diff: %v", diff)
 				}
@@ -1589,8 +1589,8 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 				if err != nil {
 					return err
 				}
-				var emptyOthers []otherNameUtf8
-				var expected []otherNameUtf8 = append(emptyOthers, expectedOthers...)
+				var expected []otherNameUtf8
+				expected = append(expected, expectedOthers...)
 				if diff := deep.Equal(foundOthers, expected); len(diff) > 0 {
 					return fmt.Errorf("wrong SAN IPs, diff: %v", diff)
 				}
@@ -1874,11 +1874,11 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 		t.Fatalf("failed read ca/pem, %#v", resp)
 	}
 	// check the raw cert matches the response body
-	if bytes.Compare(resp.Data[logical.HTTPRawBody].([]byte), []byte(rootCaAsPem)) != 0 {
+	if !bytes.Equal(resp.Data[logical.HTTPRawBody].([]byte), []byte(rootCaAsPem)) {
 		t.Fatalf("failed to get raw cert")
 	}
 
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	_, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/example",
 		Storage:   storage,
@@ -1927,7 +1927,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 	// check the raw cert matches the response body
 	rawBody := resp.Data[logical.HTTPRawBody].([]byte)
 	bodyAsPem := []byte(strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: rawBody}))))
-	if bytes.Compare(bodyAsPem, expectedCert) != 0 {
+	if !bytes.Equal(bodyAsPem, expectedCert) {
 		t.Fatalf("failed to get raw cert for serial number: %s", expectedSerial)
 	}
 	if resp.Data[logical.HTTPContentType] != "application/pkix-cert" {
@@ -1948,7 +1948,7 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 	}
 
 	// check the pem cert matches the response body
-	if bytes.Compare(resp.Data[logical.HTTPRawBody].([]byte), expectedCert) != 0 {
+	if !bytes.Equal(resp.Data[logical.HTTPRawBody].([]byte), expectedCert) {
 		t.Fatalf("failed to get pem cert")
 	}
 	if resp.Data[logical.HTTPContentType] != "application/pem-certificate-chain" {
@@ -2631,7 +2631,7 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 		t.Fatalf("expected error due to different issuer; cert info is\nIssuer\n%#v\nSubject\n%#v\n", ssCert.Issuer, ssCert.Subject)
 	}
 
-	ss, ssCert = getSelfSigned(t, template, template, key)
+	ss, _ = getSelfSigned(t, template, template, key)
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/sign-self-issued",
@@ -2765,7 +2765,7 @@ func TestBackend_SignSelfIssued_DifferentTypes(t *testing.T) {
 
 	// Test with flag present and true
 	ss, _ = getSelfSigned(t, template, template, key)
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	_, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "root/sign-self-issued",
 		Storage:   storage,
@@ -2866,7 +2866,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 	}
 
 	// First test some bad stuff that shouldn't work
-	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2878,7 +2878,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2890,7 +2890,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2902,7 +2902,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -2914,7 +2914,7 @@ func TestBackend_OID_SANs(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name": "foobar.com",
 		"ip_sans":     "1.2.3.4",
 		"alt_names":   "foo.foobar.com,bar.foobar.com",
@@ -3058,7 +3058,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name": "foobar",
 		"ttl":         "1h",
 	})
@@ -3066,7 +3066,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name":   "foobar",
 		"ttl":           "1h",
 		"serial_number": "foobar",
@@ -3085,7 +3085,7 @@ func TestBackend_AllowedSerialNumbers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+	_, err = CBWrite(b, s, "issue/test", map[string]interface{}{
 		"common_name": "foobar",
 		"ttl":         "1h",
 		// Not a valid serial number
@@ -3669,7 +3669,7 @@ func setCerts() {
 	if err != nil {
 		panic(err)
 	}
-	subjKeyID, err = certutil.GetSubjKeyID(rak)
+	_, err = certutil.GetSubjKeyID(rak)
 	if err != nil {
 		panic(err)
 	}
@@ -3699,7 +3699,7 @@ func setCerts() {
 	if err != nil {
 		panic(err)
 	}
-	subjKeyID, err = certutil.GetSubjKeyID(edk)
+	_, err = certutil.GetSubjKeyID(edk)
 	if err != nil {
 		panic(err)
 	}
@@ -4014,7 +4014,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	requireCertInCaChainString(t, fullChain, rootCert, "expected root cert within root cert/ca_chain")
 
 	// Make sure when we issue a leaf certificate we get the full chain back.
-	resp, err = CBWrite(b_root, s_root, "roles/example", map[string]interface{}{
+	_, err = CBWrite(b_root, s_root, "roles/example", map[string]interface{}{
 		"allowed_domains":  "example.com",
 		"allow_subdomains": "true",
 		"max_ttl":          "1h",
@@ -4066,7 +4066,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	require.Equal(t, parseCert(t, intermediateCaChain[0]), intermediaryCaCert, "intermediate signed cert should have been part of ca_chain")
 	require.Equal(t, parseCert(t, intermediateCaChain[1]), rootCaCert, "root cert should have been part of ca_chain")
 
-	resp, err = CBWrite(b_int, s_int, "intermediate/set-signed", map[string]interface{}{
+	_, err = CBWrite(b_int, s_int, "intermediate/set-signed", map[string]interface{}{
 		"certificate": intermediateCert + "\n" + rootCert + "\n",
 	})
 	if err != nil {
@@ -4092,7 +4092,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	requireCertInCaChainString(t, fullChain, rootCert, "expected full chain to contain root certificate from pki-intermediate/cert/ca_chain")
 
 	// Make sure when we issue a leaf certificate we get the full chain back.
-	resp, err = CBWrite(b_int, s_int, "roles/example", map[string]interface{}{
+	_, err = CBWrite(b_int, s_int, "roles/example", map[string]interface{}{
 		"allowed_domains":  "example.com",
 		"allow_subdomains": "true",
 		"max_ttl":          "1h",
@@ -4112,7 +4112,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	// "external" CAs behave as expected.
 	b_ext, s_ext := createBackendWithStorage(t)
 
-	resp, err = CBWrite(b_ext, s_ext, "config/ca", map[string]interface{}{
+	_, err = CBWrite(b_ext, s_ext, "config/ca", map[string]interface{}{
 		"pem_bundle": intermediateKey + "\n" + intermediateCert + "\n" + rootCert + "\n",
 	})
 	if err != nil {
@@ -4137,7 +4137,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	}
 
 	// Now issue a short-lived certificate from our pki-external.
-	resp, err = CBWrite(b_ext, s_ext, "roles/example", map[string]interface{}{
+	_, err = CBWrite(b_ext, s_ext, "roles/example", map[string]interface{}{
 		"allowed_domains":  "example.com",
 		"allow_subdomains": "true",
 		"max_ttl":          "1h",
@@ -4233,7 +4233,7 @@ func RoleIssuanceRegressionHelper(t *testing.T, b *backend, s logical.Storage, i
 				for _, AllowLocalhost := range test.AllowLocalhost.ToValues() {
 					for _, AllowWildcardCertificates := range test.AllowWildcardCertificates.ToValues() {
 						role := fmt.Sprintf("issuance-regression-%d-bare-%v-glob-%v-subdomains-%v-localhost-%v-wildcard-%v", index, AllowBareDomains, AllowGlobDomains, AllowSubdomains, AllowLocalhost, AllowWildcardCertificates)
-						resp, err := CBWrite(b, s, "roles/"+role, map[string]interface{}{
+						_, err := CBWrite(b, s, "roles/"+role, map[string]interface{}{
 							"allowed_domains":             test.AllowedDomains,
 							"allow_bare_domains":          AllowBareDomains,
 							"allow_glob_domains":          AllowGlobDomains,
@@ -4254,7 +4254,7 @@ func RoleIssuanceRegressionHelper(t *testing.T, b *backend, s logical.Storage, i
 							t.Fatal(err)
 						}
 
-						resp, err = CBWrite(b, s, "issue/"+role, map[string]interface{}{
+						resp, err := CBWrite(b, s, "issue/"+role, map[string]interface{}{
 							"common_name":          test.CommonName,
 							"exclude_cn_from_sans": true,
 						})
@@ -4470,7 +4470,7 @@ func TestBackend_Roles_IssuanceRegression(t *testing.T) {
 		tested += RoleIssuanceRegressionHelper(t, b, s, index, test)
 	}
 
-	t.Log(fmt.Sprintf("Issuance regression expanded matrix test scenarios: %d", tested))
+	t.Logf("Issuance regression expanded matrix test scenarios: %d", tested)
 }
 
 type KeySizeRegression struct {
@@ -4520,7 +4520,7 @@ func RoleKeySizeRegressionHelper(t *testing.T, b *backend, s logical.Storage, in
 			for _, roleKeyBits := range test.RoleKeyBits {
 				for _, roleSignatureBits := range test.RoleSignatureBits {
 					role := fmt.Sprintf("key-size-regression-%d-keytype-%v-keybits-%d-signature-bits-%d", index, test.RoleKeyType, roleKeyBits, roleSignatureBits)
-					resp, err := CBWrite(b, s, "roles/"+role, map[string]interface{}{
+					_, err := CBWrite(b, s, "roles/"+role, map[string]interface{}{
 						"key_type":       test.RoleKeyType,
 						"key_bits":       roleKeyBits,
 						"signature_bits": roleSignatureBits,
@@ -4625,7 +4625,7 @@ func TestBackend_Roles_KeySizeRegression(t *testing.T) {
 		tested += RoleKeySizeRegressionHelper(t, b, s, index, test)
 	}
 
-	t.Log(fmt.Sprintf("Key size regression expanded matrix test scenarios: %d", tested))
+	t.Logf("Key size regression expanded matrix test scenarios: %d", tested)
 }
 
 func TestRootWithExistingKey(t *testing.T) {
@@ -4884,7 +4884,7 @@ func TestIssuanceTTLs(t *testing.T) {
 
 	// Sleep until the parent cert expires and the clock rolls over
 	// to the next second.
-	time.Sleep(rootCert.NotAfter.Sub(time.Now()) + (1500 * time.Millisecond))
+	time.Sleep(time.Until(rootCert.NotAfter) + (1500 * time.Millisecond))
 
 	resp, err = CBWrite(b, s, "issuer/root", map[string]interface{}{
 		"issuer_name":             "root",

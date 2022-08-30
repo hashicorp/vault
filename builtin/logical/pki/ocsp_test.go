@@ -608,12 +608,12 @@ func requireOcspResponseSignedBy(t *testing.T, ocspResp *ocsp.Response, key cryp
 	hasher.Write(ocspResp.TBSResponseData)
 	hashData := hasher.Sum(nil)
 
-	switch key.(type) {
+	switch typedKey := key.(type) {
 	case *rsa.PublicKey:
-		err := rsa.VerifyPKCS1v15(key.(*rsa.PublicKey), hashAlgo, hashData, ocspResp.Signature)
+		err := rsa.VerifyPKCS1v15(typedKey, hashAlgo, hashData, ocspResp.Signature)
 		require.NoError(t, err, "the ocsp response was not signed by the expected public rsa key.")
 	case *ecdsa.PublicKey:
-		verify := ecdsa.VerifyASN1(key.(*ecdsa.PublicKey), hashData, ocspResp.Signature)
+		verify := ecdsa.VerifyASN1(typedKey, hashData, ocspResp.Signature)
 		require.True(t, verify, "the certificate was not signed by the expected public ecdsa key.")
 	}
 }

@@ -31,10 +31,10 @@ const (
 )
 
 type ocspRespInfo struct {
-	serialNumber          *big.Int
-	ocspStatus            int
-	revocationTimeUTC     *time.Time
-	issuerID              issuerID
+	serialNumber      *big.Int
+	ocspStatus        int
+	revocationTimeUTC *time.Time
+	issuerID          issuerID
 }
 
 // These response variables should not be mutated, instead treat them as constants
