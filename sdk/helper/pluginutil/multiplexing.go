@@ -6,6 +6,7 @@ import (
 
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	status "google.golang.org/grpc/status"
 )
 
@@ -44,4 +45,23 @@ func MultiplexingSupported(ctx context.Context, cc grpc.ClientConnInterface) (bo
 	}
 
 	return resp.Supported, nil
+}
+
+func GetMultiplexIDFromContext(ctx context.Context) (string, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return "", fmt.Errorf("missing plugin multiplexing metadata")
+	}
+
+	multiplexIDs := md[MultiplexingCtxKey]
+	if len(multiplexIDs) != 1 {
+		return "", fmt.Errorf("unexpected number of IDs in metadata: (%d)", len(multiplexIDs))
+	}
+
+	multiplexID := multiplexIDs[0]
+	if multiplexID == "" {
+		return "", fmt.Errorf("empty multiplex ID in metadata")
+	}
+
+	return multiplexID, nil
 }
