@@ -237,7 +237,9 @@ func (b *backend) doTidyCertStore(ctx context.Context, req *logical.Request, log
 		}
 	}
 
+	b.tidyStatusLock.RLock()
 	metrics.SetGauge([]string{"secrets", "pki", "tidy", "cert_store_total_entries_remaining"}, float32(uint(serialCount)-b.tidyStatus.certStoreDeletedCount))
+	b.tidyStatusLock.RUnlock()
 
 	return nil
 }
@@ -351,9 +353,11 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 		}
 	}
 
+	b.tidyStatusLock.RLock()
 	metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_total_entries_remaining"}, float32(uint(revokedSerialsCount)-b.tidyStatus.revokedCertDeletedCount))
 	metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_entries_incorrect_issuers"}, float32(b.tidyStatus.missingIssuerCertCount))
 	metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_entries_fixed_issuers"}, float32(fixedIssuers))
+	b.tidyStatusLock.RUnlock()
 
 	if rebuildCRL {
 		// Expired certificates isn't generally an important
