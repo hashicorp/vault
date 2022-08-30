@@ -31,7 +31,6 @@ const (
 )
 
 type ocspRespInfo struct {
-	formattedSerialNumber string
 	serialNumber          *big.Int
 	ocspStatus            int
 	revocationTimeUTC     *time.Time

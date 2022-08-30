@@ -117,7 +117,7 @@ func getKeyRefWithErr(data *framework.FieldData) (string, error) {
 	keyRef := getKeyRef(data)
 
 	if len(keyRef) == 0 {
-		return "", errutil.UserError{Err: fmt.Sprintf("missing argument key_ref for existing type")}
+		return "", errutil.UserError{Err: "missing argument key_ref for existing type"}
 	}
 
 	return keyRef, nil

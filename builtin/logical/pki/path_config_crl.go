@@ -198,7 +198,7 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 	}
 
 	if config.EnableDelta && !config.AutoRebuild {
-		return logical.ErrorResponse(fmt.Sprintf("Delta CRLs cannot be enabled when auto rebuilding is disabled as the complete CRL is always regenerated!")), nil
+		return logical.ErrorResponse("Delta CRLs cannot be enabled when auto rebuilding is disabled as the complete CRL is always regenerated!"), nil
 	}
 
 	entry, err := logical.StorageEntryJSON("config/crl", config)
