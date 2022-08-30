@@ -347,6 +347,9 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		oldName = issuer.Name
 		issuer.Name = newName
 		issuer.LastModified = time.Now().UTC()
+		// See note in updateDefaultIssuerId about why this is necessary.
+		b.crlBuilder.invalidateCRLBuildTime()
+		b.crlBuilder.flushCRLBuildTimeInvalidation(sc)
 		modified = true
 	}
 
@@ -534,6 +537,9 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 			oldName = issuer.Name
 			issuer.Name = newName
 			issuer.LastModified = time.Now().UTC()
+			// See note in updateDefaultIssuerId about why this is necessary.
+			b.crlBuilder.invalidateCRLBuildTime()
+			b.crlBuilder.flushCRLBuildTimeInvalidation(sc)
 			modified = true
 		}
 	}

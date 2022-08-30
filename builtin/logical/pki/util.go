@@ -283,38 +283,50 @@ func sendNotModifiedResponseIfNecessary(helper *IfModifiedSinceHelper, sc *stora
 }
 
 func (sc *storageContext) isIfModifiedSinceBeforeLastModified(helper *IfModifiedSinceHelper, responseHeaders map[string][]string) (bool, error) {
-	var before bool
+	// False return --> we were last modified _before_ the requester's
+	// time --> keep using the cached copy and return 304.
 	var err error
 	var lastModified time.Time
 	ifModifiedSince, err := parseIfNotModifiedSince(helper.req)
 	if err != nil {
-		return before, err
+		return false, err
 	}
 
 	if helper.issuerRef == "" {
+		if sc.Backend.crlBuilder.invalidate.Load() {
+			// When we see the CRL is invalidated, respond with false
+			// regardless of what the local CRL state says. We've likely
+			// renamed some issuers or are about to rebuild a new CRL....
+			//
+			// We do this earlier, ahead of config load, as it saves us a
+			// potential error condition.
+			return false, nil
+		}
+
 		crlConfig, err := sc.getLocalCRLConfig()
 		if err != nil {
-			return before, err
+			return false, err
 		}
+
 		lastModified = crlConfig.LastModified
 	} else {
 		issuerId, err := sc.resolveIssuerReference(string(helper.issuerRef))
 		if err != nil {
-			return before, err
+			return false, err
 		}
 
 		issuer, err := sc.fetchIssuerById(issuerId)
 		if err != nil {
-			return before, err
+			return false, err
 		}
 
 		lastModified = issuer.LastModified
 	}
 
 	if !lastModified.IsZero() && lastModified.Before(ifModifiedSince) {
-		before = true
 		responseHeaders[headerLastModified] = []string{lastModified.Format(http.TimeFormat)}
+		return true, nil
 	}
 
-	return before, nil
+	return false, nil
 }
