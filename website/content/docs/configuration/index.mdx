@@ -123,12 +123,12 @@ to specify where the configuration is.
   @include 'plugin-file-permissions-check.mdx'
 
 - `plugin_file_uid` `(integer: 0)` – Uid of the plugin directories and plugin binaries if they
-   are owned by an user other than the user running Vault. This only needs to be set if the 
+   are owned by an user other than the user running Vault. This only needs to be set if the
    file permissions check is enabled via the environment variable `VAULT_ENABLE_FILE_PERMISSIONS_CHECK`.
 
 - `plugin_file_permissions` `(string: "")` – Octal permission string of the plugin
    directories and plugin binaries if they have write or execute permissions for group or others.
-   This only needs to be set if the file permissions check is enabled via the environment variable 
+   This only needs to be set if the file permissions check is enabled via the environment variable
    `VAULT_ENABLE_FILE_PERMISSIONS_CHECK`.
 
 - `telemetry` `([Telemetry][telemetry]: <none>)` – Specifies the telemetry
@@ -186,6 +186,10 @@ to specify where the configuration is.
   Raft node ID of the Vault node that serviced the HTTP request. If Vault is not
   participating in a Raft cluster, this header will be omitted, whether this configuration
   option is enabled or not.
+
+- `detect_deadlocks` `(string: "")` - Specifies the internal mutex locks that should be monitored for
+  potential deadlocks. Currently supported value is `statelock`, which will cause "POTENTIAL DEADLOCK:"
+  to be logged when an attempt at a core state lock appears to be deadlocked.
 
 ### High Availability Parameters
 

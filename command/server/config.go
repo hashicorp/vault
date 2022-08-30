@@ -94,6 +94,8 @@ type Config struct {
 	LogRequestsLevel    string      `hcl:"-"`
 	LogRequestsLevelRaw interface{} `hcl:"log_requests_level"`
 
+	DetectDeadlocks string `hcl:"detect_deadlocks"`
+
 	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
 	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
 
@@ -381,6 +383,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.LogRequestsLevel = c2.LogRequestsLevel
 	}
 
+	result.DetectDeadlocks = c.DetectDeadlocks
+	if c2.DetectDeadlocks != "" {
+		result.DetectDeadlocks = c2.DetectDeadlocks
+	}
+
 	result.EnableResponseHeaderRaftNodeID = c.EnableResponseHeaderRaftNodeID
 	if c2.EnableResponseHeaderRaftNodeID {
 		result.EnableResponseHeaderRaftNodeID = c2.EnableResponseHeaderRaftNodeID
@@ -628,6 +635,11 @@ func ParseConfig(d, source string) (*Config, error) {
 		result.LogRequestsLevel = strings.ToLower(strings.TrimSpace(result.LogRequestsLevelRaw.(string)))
 		result.LogRequestsLevelRaw = ""
 	}
+
+	// if result.DetectDeadlocksRaw != nil {
+	// 	result.DetectDeadlocks = strings.ToLower(strings.TrimSpace(result.DetectDeadlocksRaw.(string)))
+	// 	result.DetectDeadlocksRaw = ""
+	// }
 
 	if result.EnableResponseHeaderRaftNodeIDRaw != nil {
 		if result.EnableResponseHeaderRaftNodeID, err = parseutil.ParseBool(result.EnableResponseHeaderRaftNodeIDRaw); err != nil {
@@ -1009,6 +1021,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"enable_response_header_raft_node_id": c.EnableResponseHeaderRaftNodeID,
 
 		"log_requests_level": c.LogRequestsLevel,
+
+		"detect_deadlocks": c.DetectDeadlocks,
 	}
 	for k, v := range sharedResult {
 		result[k] = v

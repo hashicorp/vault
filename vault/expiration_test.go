@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"reflect"
 	"sort"
 	"strings"
@@ -3495,5 +3496,25 @@ func TestExpiration_listIrrevocableLeases_includeAll(t *testing.T) {
 	numLeases := numLeasesRaw.(int)
 	if numLeases != expectedNumLeases {
 		t.Errorf("bad lease count. expected %d, got %d", expectedNumLeases, numLeases)
+	}
+}
+
+// The deadlock detection library will print out its detection and os.exit(3).
+// Here we invoke it in a separate process to capture the output and allow it
+// to exit
+func TestDeadlockExit(t *testing.T) {
+	if os.Getenv("TEST_DEADLOCK_WITH_EXIT") == "1" {
+		testCore, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{DetectDeadlocks: "statelock"})
+		coreStateLock := *testCore.expiration.coreStateLock
+		go coreStateLock.Lock()
+		go coreStateLock.Lock()
+		return
+	}
+	cmd, serr := exec.Command(os.Args[0], "test", "-run=TestDeadlockExit"), new(strings.Builder)
+	cmd.Env = append(os.Environ(), "TEST_DEADLOCK_WITH_EXIT=1")
+	cmd.Stderr = serr
+	cmd.Run()
+	if !strings.Contains(serr.String(), "POTENTIAL DEADLOCK:") {
+		t.Fatalf("Intentionally induced deadlock was not caught")
 	}
 }
