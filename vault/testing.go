@@ -2398,13 +2398,29 @@ func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
 	t.Fatalf("did not complete before deadline, err: %v", err)
 }
 
-// SetRollbackPeriodForTesting lets us modify the periodic func invocation
-// time period to some other value. Best practice is to set this, spin up
-// a test cluster and immediately reset the value back to the default, to
-// avoid impacting other tests too much. To that end, we return the original
-// value of that period.
-func SetRollbackPeriodForTesting(newPeriod time.Duration) time.Duration {
+// CreateTestClusterWithRollbackPeriod lets us modify the periodic func
+// invocation time period to some other value.
+//
+// Because multiple tests in the PKI mount use this helper, we've added
+// a lock around it and created the cluster immediately in this helper.
+// This ensures the tests don't race against each other.
+var rollbackPeriodLock sync.Mutex
+
+func CreateTestClusterWithRollbackPeriod(t testing.T, newPeriod time.Duration, base *CoreConfig, opts *TestClusterOptions) *TestCluster {
+	rollbackPeriodLock.Lock()
+	defer rollbackPeriodLock.Unlock()
+
+	// Set the period
 	oldPeriod := rollbackPeriod
+
+	// Create and start a new cluster.
 	rollbackPeriod = newPeriod
-	return oldPeriod
+	cluster := NewTestCluster(t, base, opts)
+	cluster.Start()
+
+	// Reset the period
+	rollbackPeriod = oldPeriod
+
+	// Return the cluster.
+	return cluster
 }

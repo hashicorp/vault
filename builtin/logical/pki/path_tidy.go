@@ -17,58 +17,33 @@ import (
 )
 
 type tidyConfig struct {
+	Enabled      bool          `json:"enabled"`
+	Interval     time.Duration `json:"interval_duration"`
 	CertStore    bool          `json:"tidy_cert_store"`
 	RevokedCerts bool          `json:"tidy_revoked_certs"`
 	IssuerAssocs bool          `json:"tidy_revoked_cert_issuer_associations"`
 	SafetyBuffer time.Duration `json:"safety_buffer"`
 }
 
+var defaultTidyConfig = tidyConfig{
+	Enabled:      false,
+	Interval:     12 * time.Hour,
+	CertStore:    false,
+	RevokedCerts: false,
+	IssuerAssocs: false,
+	SafetyBuffer: 259200 * time.Second,
+}
+
 func pathTidy(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "tidy$",
-		Fields: map[string]*framework.FieldSchema{
-			"tidy_cert_store": {
-				Type: framework.TypeBool,
-				Description: `Set to true to enable tidying up
-the certificate store`,
-			},
-
-			"tidy_revocation_list": {
-				Type:        framework.TypeBool,
-				Description: `Deprecated; synonym for 'tidy_revoked_certs`,
-			},
-
-			"tidy_revoked_certs": {
-				Type: framework.TypeBool,
-				Description: `Set to true to expire all revoked
-and expired certificates, removing them both from the CRL and from storage. The
-CRL will be rotated if this causes any values to be removed.`,
-			},
-
-			"tidy_revoked_cert_issuer_associations": {
-				Type: framework.TypeBool,
-				Description: `Set to true to validate issuer associations
-on revocation entries. This helps increase the performance of CRL building
-and OCSP responses.`,
-			},
-
-			"safety_buffer": {
-				Type: framework.TypeDurationSecond,
-				Description: `The amount of extra time that must have passed
-beyond certificate expiration before it is removed
-from the backend storage and/or revocation list.
-Defaults to 72 hours.`,
-				Default: 259200, // 72h, but TypeDurationSecond currently requires defaults to be int
-			},
-		},
-
+		Fields:  addTidyFields(map[string]*framework.FieldSchema{}),
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback:                  b.pathTidyWrite,
 				ForwardPerformanceStandby: true,
 			},
 		},
-
 		HelpSynopsis:    pathTidyHelpSyn,
 		HelpDescription: pathTidyHelpDesc,
 	}
@@ -88,6 +63,36 @@ func pathTidyStatus(b *backend) *framework.Path {
 	}
 }
 
+func pathConfigAutoTidy(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "config/auto-tidy",
+		Fields: addTidyFields(map[string]*framework.FieldSchema{
+			"enabled": {
+				Type:        framework.TypeBool,
+				Description: `Set to true to enable automatic tidy operations.`,
+			},
+			"interval_duration": {
+				Type:        framework.TypeDurationSecond,
+				Description: `Interval at which to run an auto-tidy operation. This is the time between tidy invocations (after one finishes to the start of the next). Running a manual tidy will reset this duration.`,
+				Default:     43200, // 32h, but TypeDurationSecond currently requires the default to be an int.
+			},
+		}),
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigAutoTidyRead,
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigAutoTidyWrite,
+				// Read more about why these flags are set in backend.go.
+				ForwardPerformanceStandby:   true,
+				ForwardPerformanceSecondary: true,
+			},
+		},
+		HelpSynopsis:    pathConfigAutoTidySyn,
+		HelpDescription: pathConfigAutoTidyDesc,
+	}
+}
+
 func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	safetyBuffer := d.Get("safety_buffer").(int)
 	tidyCertStore := d.Get("tidy_cert_store").(bool)
@@ -100,7 +105,10 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 
 	bufferDuration := time.Duration(safetyBuffer) * time.Second
 
+	// Manual run with constructed configuration.
 	config := &tidyConfig{
+		Enabled:      true,
+		Interval:     0 * time.Second,
 		CertStore:    tidyCertStore,
 		RevokedCerts: tidyRevokedCerts,
 		IssuerAssocs: tidyRevokedAssocs,
@@ -119,6 +127,13 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 		Storage: req.Storage,
 	}
 
+	// Mark the last tidy operation as relatively recent, to ensure we don't
+	// try to trigger the periodic function.
+	b.tidyStatusLock.Lock()
+	b.lastTidy = time.Now()
+	b.tidyStatusLock.Unlock()
+
+	// Kick off the actual tidy.
 	b.startTidyOperation(req, config)
 
 	resp := &logical.Response{}
@@ -163,6 +178,13 @@ func (b *backend) startTidyOperation(req *logical.Request, config *tidyConfig) {
 			b.tidyStatusStop(err)
 		} else {
 			b.tidyStatusStop(nil)
+
+			// Since the tidy operation finished without an error, we don't
+			// really want to start another tidy right away (if the interval
+			// is too short). So mark the last tidy as now.
+			b.tidyStatusLock.Lock()
+			b.lastTidy = time.Now()
+			b.tidyStatusLock.Unlock()
 		}
 	}()
 }
@@ -215,7 +237,9 @@ func (b *backend) doTidyCertStore(ctx context.Context, req *logical.Request, log
 		}
 	}
 
+	b.tidyStatusLock.RLock()
 	metrics.SetGauge([]string{"secrets", "pki", "tidy", "cert_store_total_entries_remaining"}, float32(uint(serialCount)-b.tidyStatus.certStoreDeletedCount))
+	b.tidyStatusLock.RUnlock()
 
 	return nil
 }
@@ -329,9 +353,11 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 		}
 	}
 
+	b.tidyStatusLock.RLock()
 	metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_total_entries_remaining"}, float32(uint(revokedSerialsCount)-b.tidyStatus.revokedCertDeletedCount))
 	metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_entries_incorrect_issuers"}, float32(b.tidyStatus.missingIssuerCertCount))
 	metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_entries_fixed_issuers"}, float32(fixedIssuers))
+	b.tidyStatusLock.RUnlock()
 
 	if rebuildCRL {
 		// Expired certificates isn't generally an important
@@ -409,6 +435,69 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	}
 
 	return resp, nil
+}
+
+func (b *backend) pathConfigAutoTidyRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	sc := b.makeStorageContext(ctx, req.Storage)
+	config, err := sc.getAutoTidyConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"enabled":                               config.Enabled,
+			"interval_duration":                     int(config.Interval / time.Second),
+			"tidy_cert_store":                       config.CertStore,
+			"tidy_revoked_certs":                    config.RevokedCerts,
+			"tidy_revoked_cert_issuer_associations": config.IssuerAssocs,
+			"safety_buffer":                         int(config.SafetyBuffer / time.Second),
+		},
+	}, nil
+}
+
+func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	sc := b.makeStorageContext(ctx, req.Storage)
+	config, err := sc.getAutoTidyConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	if enabledRaw, ok := d.GetOk("enabled"); ok {
+		config.Enabled = enabledRaw.(bool)
+	}
+
+	if intervalRaw, ok := d.GetOk("interval_duration"); ok {
+		config.Interval = time.Duration(intervalRaw.(int)) * time.Second
+		if config.Interval < 0 {
+			return logical.ErrorResponse(fmt.Sprintf("given interval_duration must be greater than or equal to zero seconds; got: %v", intervalRaw)), nil
+		}
+	}
+
+	if certStoreRaw, ok := d.GetOk("tidy_cert_store"); ok {
+		config.CertStore = certStoreRaw.(bool)
+	}
+
+	if revokedCertsRaw, ok := d.GetOk("tidy_revoked_certs"); ok {
+		config.RevokedCerts = revokedCertsRaw.(bool)
+	}
+
+	if issuerAssocRaw, ok := d.GetOk("tidy_revoked_cert_issuer_associations"); ok {
+		config.IssuerAssocs = issuerAssocRaw.(bool)
+	}
+
+	if safetyBufferRaw, ok := d.GetOk("safety_buffer"); ok {
+		config.SafetyBuffer = time.Duration(safetyBufferRaw.(int)) * time.Second
+		if config.SafetyBuffer < 1*time.Second {
+			return logical.ErrorResponse(fmt.Sprintf("given safety_buffer must be greater than zero seconds; got: %v", safetyBufferRaw)), nil
+		}
+	}
+
+	if config.Enabled && !(config.CertStore || config.RevokedCerts || config.IssuerAssocs) {
+		return logical.ErrorResponse(fmt.Sprintf("Auto-tidy enabled but no tidy operations were requested. Enable at least one tidy operation to be run (tidy_cert_store / tidy_revoked_certs / tidy_revoked_cert_issuer_associations).")), nil
+	}
+
+	return nil, sc.writeAutoTidyConfig(config)
 }
 
 func (b *backend) tidyStatusStart(config *tidyConfig) {
@@ -529,3 +618,7 @@ The result includes the following fields:
 * 'revoked_cert_deleted_count': The number of revoked certificate entries deleted
 * 'missing_issuer_cert_count': The number of revoked certificates which were missing a valid issuer reference
 `
+
+const pathConfigAutoTidySyn = ``
+
+const pathConfigAutoTidyDesc = ``
