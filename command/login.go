@@ -234,7 +234,11 @@ func (c *LoginCommand) Run(args []string) int {
 			// request is validated interactively
 			methodInfo := c.getMFAMethodInfo(secret.Auth.MFARequirement.MFAConstraints)
 			if methodInfo.methodID != "" {
-				return c.validateMFA(secret.Auth.MFARequirement.MFARequestID, methodInfo)
+				secret, err = c.validateMFA(secret.Auth.MFARequirement.MFARequestID, methodInfo)
+				if err != nil {
+					c.UI.Error(err.Error())
+					return 2
+				}
 			}
 		}
 		c.UI.Warn(wrapAtLength("A login request was issued that is subject to "+
@@ -243,7 +247,6 @@ func (c *LoginCommand) Run(args []string) int {
 
 		// We return early to prevent success message from being printed
 		c.checkForAndWarnAboutLoginToken()
-		return OutputSecret(c.UI, secret)
 	}
 
 	// Unset any previous token wrapping functionality. If the original request

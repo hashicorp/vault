@@ -159,7 +159,10 @@ func (c *WriteCommand) Run(args []string) int {
 			// request is validated interactively
 			methodInfo := c.getMFAMethodInfo(secret.Auth.MFARequirement.MFAConstraints)
 			if methodInfo.methodID != "" {
-				return c.validateMFA(secret.Auth.MFARequirement.MFARequestID, methodInfo)
+				secret, err = c.validateMFA(secret.Auth.MFARequirement.MFARequestID, methodInfo)
+				if err != nil {
+					c.UI.Error(err.Error())
+				}
 			}
 		}
 		c.UI.Warn(wrapAtLength("A login request was issued that is subject to "+
