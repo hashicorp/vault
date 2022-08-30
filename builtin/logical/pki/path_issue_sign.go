@@ -438,8 +438,9 @@ func newCaChainOutput(parsedBundle *certutil.ParsedCertBundle, data *framework.F
 		var myChain []*certutil.CertBlock
 		for _, certBlock := range parsedBundle.CAChain {
 			cert := certBlock.Certificate
+
 			if (len(cert.AuthorityKeyId) > 0 && !bytes.Equal(cert.AuthorityKeyId, cert.SubjectKeyId)) ||
-				(len(cert.AuthorityKeyId) == 0 && !bytes.Equal(cert.RawIssuer, cert.RawSubject)) {
+				(len(cert.AuthorityKeyId) == 0 && (!bytes.Equal(cert.RawIssuer, cert.RawSubject) || cert.CheckSignatureFrom(cert) != nil)) {
 				// We aren't self-signed so add it to the list.
 				myChain = append(myChain, certBlock)
 			}
