@@ -29,6 +29,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/quotas"
+	"github.com/sasha-s/go-deadlock"
 	uberAtomic "go.uber.org/atomic"
 )
 
@@ -137,7 +138,7 @@ type ExpirationManager struct {
 	quitCh             chan struct{}
 
 	// do not hold coreStateLock in any API handler code - it is already held
-	coreStateLock     *DeadlockRWMutex
+	coreStateLock     *deadlock.RWMutex
 	quitContext       context.Context
 	leaseCheckCounter *uint32
 
