@@ -38,7 +38,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		},
 		{
 			"too_many_args",
-			[]string{"foo", "bar", "fizz", "fuzz"},
+			[]string{"foo", "bar", "fizz"},
 			"Too many arguments",
 			1,
 		},
@@ -148,9 +148,9 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		cmd.client = client
 
 		code := cmd.Run([]string{
+			"-version=" + version,
 			consts.PluginTypeCredential.String(),
 			pluginName,
-			version,
 		})
 		if exp := 0; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
