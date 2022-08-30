@@ -3,6 +3,7 @@ package pki
 import (
 	"context"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync/atomic"
@@ -15,6 +16,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+var tidyCancelledError = errors.New("tidy operation cancelled")
 
 type tidyConfig struct {
 	Enabled      bool          `json:"enabled"`
@@ -46,6 +49,20 @@ func pathTidy(b *backend) *framework.Path {
 		},
 		HelpSynopsis:    pathTidyHelpSyn,
 		HelpDescription: pathTidyHelpDesc,
+	}
+}
+
+func pathTidyCancel(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "tidy-cancel$",
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback:                  b.pathTidyCancelWrite,
+				ForwardPerformanceStandby: true,
+			},
+		},
+		HelpSynopsis:    pathTidyCancelHelpSyn,
+		HelpDescription: pathTidyCancelHelpDesc,
 	}
 }
 
@@ -164,6 +181,11 @@ func (b *backend) startTidyOperation(req *logical.Request, config *tidyConfig) {
 				}
 			}
 
+			// Check for cancel before continuing.
+			if atomic.CompareAndSwapUint32(b.tidyCancelCAS, 1, 0) {
+				return tidyCancelledError
+			}
+
 			if config.RevokedCerts || config.IssuerAssocs {
 				if err := b.doTidyRevocationStore(ctx, req, logger, config); err != nil {
 					return nil
@@ -200,6 +222,11 @@ func (b *backend) doTidyCertStore(ctx context.Context, req *logical.Request, log
 	for i, serial := range serials {
 		b.tidyStatusMessage(fmt.Sprintf("Tidying certificate store: checking entry %d of %d", i, serialCount))
 		metrics.SetGauge([]string{"secrets", "pki", "tidy", "cert_store_current_entry"}, float32(i))
+
+		// Check for cancel before continuing.
+		if atomic.CompareAndSwapUint32(b.tidyCancelCAS, 1, 0) {
+			return tidyCancelledError
+		}
 
 		certEntry, err := req.Storage.Get(ctx, "certs/"+serial)
 		if err != nil {
@@ -271,6 +298,11 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 	for i, serial := range revokedSerials {
 		b.tidyStatusMessage(fmt.Sprintf("Tidying revoked certificates: checking certificate %d of %d", i, len(revokedSerials)))
 		metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_current_entry"}, float32(i))
+
+		// Check for cancel before continuing.
+		if atomic.CompareAndSwapUint32(b.tidyCancelCAS, 1, 0) {
+			return tidyCancelledError
+		}
 
 		revokedEntry, err := req.Storage.Get(ctx, "revoked/"+serial)
 		if err != nil {
@@ -379,6 +411,32 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 	return nil
 }
 
+func (b *backend) pathTidyCancelWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && !b.System().LocalMount() {
+		return nil, logical.ErrReadOnly
+	}
+
+	if atomic.LoadUint32(b.tidyCASGuard) == 0 {
+		resp := &logical.Response{}
+		resp.AddWarning("Tidy operation cannot be cancelled as none is currently running.")
+		return resp, nil
+	}
+
+	// Grab the status lock before writing the cancel atomic. This lets us
+	// update the status correctly as well, avoiding writing it if we're not
+	// presently running.
+	//
+	// Unlock needs to occur prior to calling read.
+	b.tidyStatusLock.Lock()
+	if b.tidyStatus.state == tidyStatusStarted {
+		atomic.CompareAndSwapUint32(b.tidyCancelCAS, 0, 1)
+		b.tidyStatus.state = tidyStatusCancelling
+	}
+	b.tidyStatusLock.Unlock()
+
+	return b.pathTidyStatusRead(ctx, req, d)
+}
+
 func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	// If this node is a performance secondary return an ErrReadOnly so that the request gets forwarded,
 	// but only if the PKI backend is not a local mount.
@@ -432,6 +490,11 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 		resp.Data["error"] = b.tidyStatus.err.Error()
 		// Don't clear the message so that it serves as a hint about when
 		// the error occurred.
+	case tidyStatusCancelling:
+		resp.Data["state"] = "Cancelling"
+	case tidyStatusCancelled:
+		resp.Data["state"] = "Cancelled"
+		resp.Data["time_finished"] = b.tidyStatus.timeFinished
 	}
 
 	return resp, nil
@@ -524,6 +587,8 @@ func (b *backend) tidyStatusStop(err error) {
 	b.tidyStatus.err = err
 	if err == nil {
 		b.tidyStatus.state = tidyStatusFinished
+	} else if err == tidyCancelledError {
+		b.tidyStatus.state = tidyStatusCancelled
 	} else {
 		b.tidyStatus.state = tidyStatusError
 	}
@@ -593,6 +658,18 @@ certificate/revocation information of each certificate being held in
 certificate storage or in revocation information will then be checked. If the
 current time, minus the value of 'safety_buffer', is greater than the
 expiration, it will be removed.
+`
+
+const pathTidyCancelHelpSyn = `
+Cancels a currently running tidy operation.
+`
+
+const pathTidyCancelHelpDesc = `
+This endpoint allows cancelling a currently running tidy operation.
+
+Periodically throughout the invocation of tidy, we'll check if the operation
+has been requested to be cancelled. If so, we'll stop the currently running
+tidy operation.
 `
 
 const pathTidyStatusHelpSyn = `
