@@ -9,7 +9,7 @@
         @confirmMessage="This application will be permanently deleted. You will need to re-create it to use it again."
         @confirmButtonText="Delete"
       >
-        Delete client
+        Delete application
       </ConfirmAction>
       <div class="toolbar-separator"></div>
     {{/if}}
@@ -18,7 +18,7 @@
         data-test-oidc-client-edit
         @params={{array "vault.cluster.access.oidc.clients.client.edit" this.model.name}}
       >
-        Edit client
+        Edit application
       </ToolbarLink>
     {{/if}}
   </ToolbarActions>
