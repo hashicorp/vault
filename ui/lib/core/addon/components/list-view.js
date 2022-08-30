@@ -31,20 +31,12 @@ import { pluralize } from 'ember-inflector';
  *
  */
 export default class ListView extends Component {
-  get paginationRouteName() {
-    return this.args.paginationRouteName || '';
-  }
-
-  get items() {
-    return this.args.items || null;
-  }
-
   get itemNoun() {
     return this.args.itemNoun || 'item';
   }
 
   get showPagination() {
-    let meta = this.items.meta;
+    let meta = this.args.items.meta;
     return this.paginationRouteName && meta && meta.lastPage > 1 && meta.total > 0;
   }
 
