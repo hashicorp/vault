@@ -1,14 +1,14 @@
-{{#if (or (and this.items.meta this.items.meta.total) this.items.length)}}
+{{#if (or (and @items.meta @items.meta.total) @items.length)}}
   <div class="box is-fullwidth is-bottomless is-sideless is-paddingless" data-test-list-view-list>
-    {{#each this.items as |item|}}
+    {{#each @items as |item|}}
       {{yield (hash item=item)}}
     {{else}}
       {{yield}}
     {{/each}}
     {{#if this.showPagination}}
       <ListPagination
-        @page={{this.items.meta.currentPage}}
-        @lastPage={{this.items.meta.lastPage}}
+        @page={{@items.meta.currentPage}}
+        @lastPage={{@items.meta.lastPage}}
         @link={{@paginationRouteName}}
         data-test-list-view-pagination
       />
