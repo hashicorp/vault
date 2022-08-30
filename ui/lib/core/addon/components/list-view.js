@@ -37,7 +37,7 @@ export default class ListView extends Component {
 
   get showPagination() {
     let meta = this.args.items.meta;
-    return this.paginationRouteName && meta && meta.lastPage > 1 && meta.total > 0;
+    return this.args.paginationRouteName && meta && meta.lastPage > 1 && meta.total > 0;
   }
 
   get emptyTitle() {
