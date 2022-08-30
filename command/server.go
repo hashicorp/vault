@@ -49,6 +49,7 @@ import (
 	"github.com/hashicorp/vault/sdk/version"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/vault/hcp_link"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/cli"
 	"github.com/mitchellh/go-testing-interface"
@@ -1577,6 +1578,14 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	hcpLogger := c.logger.Named("hcpLink")
+	hcpLink, err := hcp_link.NewHCPLink(config.HCPLinkConf, core, hcpLogger)
+	if err != nil {
+		c.logger.Error("failed to start HCP Link", "error", err)
+	} else if hcpLink != nil {
+		c.logger.Trace("started HCP link")
+	}
+
 	if c.flagTestServerConfig {
 		return 0
 	}
@@ -1688,6 +1697,12 @@ func (c *ServerCommand) Run(args []string) int {
 			// Setting log request with the new value in the config after reload
 			core.ReloadLogRequestsLevel()
 
+			// reloading HCP link
+			hcpLink, err = c.reloadHCPLink(hcpLink, config, core, hcpLogger)
+			if err != nil {
+				c.logger.Error(err.Error())
+			}
+
 			if config.LogLevel != "" {
 				configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
 				switch configLogLevel {
@@ -1741,6 +1756,12 @@ func (c *ServerCommand) Run(args []string) int {
 	// Stop the listeners so that we don't process further client requests.
 	c.cleanupGuard.Do(listenerCloseFunc)
 
+	if hcpLink != nil {
+		if err := hcpLink.Shutdown(); err != nil {
+			c.UI.Error(fmt.Sprintf("Error with HCP Link shutdown: %v", err.Error()))
+		}
+	}
+
 	// Finalize will wait until after Vault is sealed, which means the
 	// request forwarding listeners will also be closed (and also
 	// waited for).
@@ -1751,6 +1772,31 @@ func (c *ServerCommand) Run(args []string) int {
 	// Wait for dependent goroutines to complete
 	c.WaitGroup.Wait()
 	return retCode
+}
+
+func (c *ServerCommand) reloadHCPLink(hcpLinkVault *hcp_link.HCPLinkVault, conf *server.Config, core *vault.Core, hcpLogger hclog.Logger) (*hcp_link.HCPLinkVault, error) {
+	// trigger a shutdown
+	if hcpLinkVault != nil {
+		err := hcpLinkVault.Shutdown()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if conf.HCPLinkConf == nil {
+		// if cloud stanza is not configured, we should not show anything
+		// in the seal-status related to HCP link
+		core.SetHCPLinkStatus("", "")
+		return nil, nil
+	}
+
+	// starting HCP link
+	hcpLink, err := hcp_link.NewHCPLink(conf.HCPLinkConf, core, hcpLogger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to restart HCP Link and it is no longer running, %w", err)
+	}
+
+	return hcpLink, nil
 }
 
 func (c *ServerCommand) notifySystemd(status string) {

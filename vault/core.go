@@ -247,6 +247,9 @@ type Core struct {
 	// serviceRegistration is the ServiceRegistration network
 	serviceRegistration sr.ServiceRegistration
 
+	// hcpLinkStatus is a string describing the status of HCP link connection
+	hcpLinkStatus HCPLinkStatus
+
 	// underlyingPhysical will always point to the underlying backend
 	// implementation. This is an un-trusted backend with durable data
 	underlyingPhysical physical.Backend
@@ -3371,4 +3374,65 @@ func (c *Core) DetermineRoleFromLoginRequest(mountPoint string, data map[string]
 		return ""
 	}
 	return resp.Data["role"].(string)
+}
+
+// ListMounts will provide a slice containing a deep copy each mount entry
+func (c *Core) ListMounts() ([]*MountEntry, error) {
+	c.mountsLock.RLock()
+	defer c.mountsLock.RUnlock()
+
+	var entries []*MountEntry
+
+	for _, entry := range c.mounts.Entries {
+		clone, err := entry.Clone()
+		if err != nil {
+			return nil, err
+		}
+
+		entries = append(entries, clone)
+	}
+
+	return entries, nil
+}
+
+// ListAuths will provide a slice containing a deep copy each auth entry
+func (c *Core) ListAuths() ([]*MountEntry, error) {
+	c.mountsLock.RLock()
+	defer c.mountsLock.RUnlock()
+
+	var entries []*MountEntry
+
+	for _, entry := range c.auth.Entries {
+		clone, err := entry.Clone()
+		if err != nil {
+			return nil, err
+		}
+
+		entries = append(entries, clone)
+	}
+
+	return entries, nil
+}
+
+type HCPLinkStatus struct {
+	l                sync.RWMutex
+	ConnectionStatus string `json:"hcp_link_status,omitempty"`
+	ResourceIDOnHCP  string `json:"resource_ID_on_hcp,omitempty"`
+}
+
+func (c *Core) SetHCPLinkStatus(status, resourceID string) {
+	c.hcpLinkStatus.l.Lock()
+	defer c.hcpLinkStatus.l.Unlock()
+	c.hcpLinkStatus.ConnectionStatus = status
+	c.hcpLinkStatus.ResourceIDOnHCP = resourceID
+}
+
+func (c *Core) GetHCPLinkStatus() (string, string) {
+	c.hcpLinkStatus.l.RLock()
+	defer c.hcpLinkStatus.l.RUnlock()
+
+	status := c.hcpLinkStatus.ConnectionStatus
+	resourceID := c.hcpLinkStatus.ResourceIDOnHCP
+
+	return status, resourceID
 }
