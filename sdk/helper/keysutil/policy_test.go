@@ -896,7 +896,7 @@ func Test_RSA_PSS(t *testing.T) {
 		}
 
 		// 3. For three possible valid salt lengths...
-		t.Log(tabs[3], "Test all valid salt lengths")
+		t.Log(tabs[3], "Test three possible valid salt lengths")
 		midSaltLength := mathrand.Intn(maxSaltLength-1) + 1 // [1, maxSaltLength)
 		validSaltLengths := []int{minSaltLength, midSaltLength, maxSaltLength}
 		for _, saltLength := range validSaltLengths {
