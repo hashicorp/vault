@@ -1366,7 +1366,7 @@ func (b *LoginMFABackend) mfaLoginEnforcementConfigToMap(eConfig *mfa.MFAEnforce
 		return nil, err
 	}
 	if ns != nil {
-		respData["namespace_path"] = ns.Path
+		resp["namespace_path"] = ns.Path
 	}
 	resp["namespace_id"] = eConfig.NamespaceID
 	resp["mfa_method_ids"] = append([]string{}, eConfig.MFAMethodIDs...)
