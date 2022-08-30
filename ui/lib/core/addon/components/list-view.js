@@ -1,5 +1,4 @@
 import Component from '@glimmer/component';
-import { tracked } from '@glimmer/tracking';
 import { pluralize } from 'ember-inflector';
 
 /**
@@ -32,7 +31,9 @@ import { pluralize } from 'ember-inflector';
  *
  */
 export default class ListView extends Component {
-  @tracked paginationRouteName = '';
+  get paginationRouteName() {
+    return this.args.paginationRouteName || '';
+  }
 
   get items() {
     return this.args.items || null;
@@ -40,10 +41,6 @@ export default class ListView extends Component {
 
   get itemNoun() {
     return this.args.itemNoun || 'item';
-  }
-
-  get paginationRouteName() {
-    return this.args.paginationRouteName || '';
   }
 
   get showPagination() {
