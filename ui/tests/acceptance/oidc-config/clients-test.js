@@ -65,10 +65,12 @@ module('Acceptance | oidc-config/clients', function (hooks) {
   });
 
   test('it creates, updates and deletes a client', async function (assert) {
-    assert.expect(20);
+    assert.expect(21);
 
     //* clear out test state
     await clearRecord(this.store, 'oidc/client', 'some-app');
+    await clearRecord(this.store, 'oidc/client', 'test-app');
+    await clearRecord(this.store, 'oidc/assignment', 'assignment-1');
 
     await visit(OIDC_BASE_URL + '/clients/create');
     // create a new application
@@ -117,7 +119,6 @@ module('Acceptance | oidc-config/clients', function (hooks) {
       'vault.cluster.access.oidc.clients.client.edit',
       'navigates to edit page from details'
     );
-
     await fillIn('[data-test-input="redirectUris"] [data-test-string-list-input="0"]', 'some-url.com');
     // limit & create new assignment
     await click('label[for=limited]');
@@ -157,7 +158,12 @@ module('Acceptance | oidc-config/clients', function (hooks) {
       .dom('[data-test-value-div="Assignment"]')
       .hasText('allow_all', 'client updated to allow all assignments');
 
-    // delete client
+    // create another client
+    await visit(OIDC_BASE_URL + '/clients/create');
+    await fillIn('[data-test-input="name"]', 'test-app');
+
+    await click(SELECTORS.clientSaveButton);
+    // immediately delete client, test transition
     await click(SELECTORS.clientDeleteButton);
     await click(SELECTORS.confirmDeleteButton);
     assert.equal(
@@ -171,8 +177,15 @@ module('Acceptance | oidc-config/clients', function (hooks) {
       'navigates back to list view after delete'
     );
 
-    //* clear out test state
-    await clearRecord(this.store, 'oidc/assignment', 'assignment-1');
+    // delete some-app client (last client)
+    await click('[data-test-oidc-client-linked-block]');
+    await click(SELECTORS.clientDeleteButton);
+    await click(SELECTORS.confirmDeleteButton);
+    assert.equal(
+      currentRouteName(),
+      'vault.cluster.access.oidc.index',
+      'redirects to call to action if only existing client is deleted'
+    );
   });
 
   test('it renders client list when clients exist', async function (assert) {
