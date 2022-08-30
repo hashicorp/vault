@@ -1735,7 +1735,7 @@ func (a *ActivityLog) HandleTokenUsage(ctx context.Context, entry *logical.Token
 	}
 
 	// Tokens created for the purpose of Link should bypass counting for billing purposes
-	if entry.InternalMeta[IgnoreForBilling] == "true" {
+	if entry.InternalMeta != nil && entry.InternalMeta[IgnoreForBilling] == "true" {
 		return
 	}
 
