@@ -665,11 +665,8 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	return nil
 }
 
-// builtinTypeFromMountEntry attempts to find a pluginType associated with the
-// specified MountEntry. Returns consts.PluginTypeUnknown in the following cases:
-//
-// * Multiple types match (also returns an error)
-// * No types match (no error)
+// builtinTypeFromMountEntry attempts to find a builtin PluginType associated
+// with the specified MountEntry. Returns consts.PluginTypeUnknown if not found.
 func (c *Core) builtinTypeFromMountEntry(ctx context.Context, entry *MountEntry) consts.PluginType {
 	if c.builtinRegistry == nil || entry == nil {
 		return consts.PluginTypeUnknown
