@@ -1077,6 +1077,8 @@ github.com/hashicorp/hcp-link v0.0.0-20220811154050-3e9d0bfa71d3 h1:OZ7uF3X1GeTp
 github.com/hashicorp/hcp-link v0.0.0-20220811154050-3e9d0bfa71d3/go.mod h1:++UBqzQgyLODrW76NI1yl29J5TqfDUu2M/dPzVHlsXY=
 github.com/hashicorp/hcp-link v0.0.0-20220829215000-c59b855e78cd h1:HKSQSIiKkV/Xf+OPd6xLFOHDUR9q4qJ1EQEsVIqyiqw=
 github.com/hashicorp/hcp-link v0.0.0-20220829215000-c59b855e78cd/go.mod h1:++UBqzQgyLODrW76NI1yl29J5TqfDUu2M/dPzVHlsXY=
+github.com/hashicorp/hcp-link v0.0.0-20220830141246-ed8b3e4450ec h1:yuS7JTJ9i8rwHh0ZUtlFabuHE3WfZraP476krjZeazo=
+github.com/hashicorp/hcp-link v0.0.0-20220830141246-ed8b3e4450ec/go.mod h1:++UBqzQgyLODrW76NI1yl29J5TqfDUu2M/dPzVHlsXY=
 github.com/hashicorp/hcp-scada-provider v0.0.0-20220825200755-3695c6588e1b h1:vKUrDX0MNEnAIE8BhumLgcOM0sihuN/XqhqW5EsD5Hs=
 github.com/hashicorp/hcp-scada-provider v0.0.0-20220825200755-3695c6588e1b/go.mod h1:lA7ef3uHoR27iZC8emvW4lcqjc5oWbwQx3rX9Zni2+s=
 github.com/hashicorp/hcp-sdk-go v0.21.0 h1:oejrQk/wZM0KZeYaz23a5Uzc5I5w/PQ293m8IGgqRMY=

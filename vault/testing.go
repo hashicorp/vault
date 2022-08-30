@@ -348,6 +348,10 @@ func TestCoreUnseal(core *Core, key []byte) (bool, error) {
 	return core.Unseal(key)
 }
 
+func TestCoreSeal(core *Core) error {
+	return core.sealInternal()
+}
+
 // TestCoreUnsealed returns a pure in-memory core that is already
 // initialized and unsealed.
 func TestCoreUnsealed(t testing.T) (*Core, [][]byte, string) {
@@ -386,19 +390,24 @@ func TestCoreUnsealedWithConfig(t testing.T, conf *CoreConfig) (*Core, [][]byte,
 
 func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
 	t.Helper()
+	token, keys := TestInitUnsealCore(t, core)
+
+	testCoreAddSecretMount(t, core, token)
+	return core, keys, token
+}
+
+func TestInitUnsealCore(t testing.T, core *Core) (string, [][]byte) {
 	keys, token := TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
 		}
 	}
-
 	if core.Sealed() {
 		t.Fatal("should not be sealed")
 	}
 
-	testCoreAddSecretMount(t, core, token)
-	return core, keys, token
+	return token, keys
 }
 
 func testCoreAddSecretMount(t testing.T, core *Core, token string) {

@@ -7,14 +7,13 @@ import (
 	"testing"
 	"time"
 
-	sdkResource "github.com/hashicorp/hcp-sdk-go/resource"
-
 	"github.com/stretchr/testify/require"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/hcl/hcl/token"
+	sdkResource "github.com/hashicorp/hcp-sdk-go/resource"
 	"github.com/hashicorp/vault/internalshared/configutil"
 )
 

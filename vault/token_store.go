@@ -88,6 +88,10 @@ const (
 	// MaxRetrySSCTokensGenerationCounter is the maximum number of retries the TokenStore
 	// will make when attempting to get the SSCTokensGenerationCounter
 	MaxRetrySSCTokensGenerationCounter = 3
+
+	// IgnoreForBilling used for HCP Link batch tokens and inserted into the InternalMeta
+	// Tokens created for the purpose of HCP Link should bypass counting for billing purposes
+	IgnoreForBilling = "ignore_for_billing"
 )
 
 var (

@@ -1734,6 +1734,11 @@ func (a *ActivityLog) HandleTokenUsage(ctx context.Context, entry *logical.Token
 		return
 	}
 
+	// Tokens created for the purpose of Link should bypass counting for billing purposes
+	if entry.InternalMeta[IgnoreForBilling] == "true" {
+		return
+	}
+
 	mountAccessor := ""
 	mountEntry := a.core.router.MatchingMountEntry(ctx, entry.Path)
 	if mountEntry != nil {

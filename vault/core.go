@@ -934,6 +934,11 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 	c.activeContextCancelFunc.Store((context.CancelFunc)(nil))
 	atomic.StoreInt64(c.keyRotateGracePeriod, int64(2*time.Minute))
 
+	c.hcpLinkStatus = HCPLinkStatus{
+		lock:             sync.RWMutex{},
+		ConnectionStatus: "disconnected",
+	}
+
 	c.raftInfo.Store((*raftInformation)(nil))
 
 	switch conf.ClusterCipherSuites {
@@ -3339,6 +3344,18 @@ func (c *Core) CheckPluginPerms(pluginName string) (err error) {
 	return err
 }
 
+func (c *Core) LoadNodeID() (string, error) {
+	raftNodeID := c.GetRaftNodeID()
+	if raftNodeID != "" {
+		return raftNodeID, nil
+	}
+	hostname, err := os.Hostname()
+	if err != nil {
+		return "", err
+	}
+	return hostname, nil
+}
+
 // DetermineRoleFromLoginRequestFromBytes will determine the role that should be applied to a quota for a given
 // login request, accepting a byte payload
 func (c *Core) DetermineRoleFromLoginRequestFromBytes(mountPoint string, payload []byte, ctx context.Context) string {
@@ -3415,21 +3432,21 @@ func (c *Core) ListAuths() ([]*MountEntry, error) {
 }
 
 type HCPLinkStatus struct {
-	l                sync.RWMutex
+	lock             sync.RWMutex
 	ConnectionStatus string `json:"hcp_link_status,omitempty"`
 	ResourceIDOnHCP  string `json:"resource_ID_on_hcp,omitempty"`
 }
 
 func (c *Core) SetHCPLinkStatus(status, resourceID string) {
-	c.hcpLinkStatus.l.Lock()
-	defer c.hcpLinkStatus.l.Unlock()
+	c.hcpLinkStatus.lock.Lock()
+	defer c.hcpLinkStatus.lock.Unlock()
 	c.hcpLinkStatus.ConnectionStatus = status
 	c.hcpLinkStatus.ResourceIDOnHCP = resourceID
 }
 
 func (c *Core) GetHCPLinkStatus() (string, string) {
-	c.hcpLinkStatus.l.RLock()
-	defer c.hcpLinkStatus.l.RUnlock()
+	c.hcpLinkStatus.lock.RLock()
+	defer c.hcpLinkStatus.lock.RUnlock()
 
 	status := c.hcpLinkStatus.ConnectionStatus
 	resourceID := c.hcpLinkStatus.ResourceIDOnHCP

@@ -98,7 +98,7 @@ require (
 	github.com/hashicorp/go-version v1.6.0
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/hashicorp/hcl v1.0.1-vault-3
-	github.com/hashicorp/hcp-link v0.0.0-20220829215000-c59b855e78cd
+	github.com/hashicorp/hcp-link v0.0.0-20220830141246-ed8b3e4450ec
 	github.com/hashicorp/hcp-scada-provider v0.0.0-20220825200755-3695c6588e1b
 	github.com/hashicorp/hcp-sdk-go v0.21.0
 	github.com/hashicorp/nomad/api v0.0.0-20220707195938-75f4c2237b28
