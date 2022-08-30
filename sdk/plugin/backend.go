@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"fmt"
 	"sync/atomic"
 
 	"google.golang.org/grpc"
@@ -21,11 +22,11 @@ var (
 // GRPCBackendPlugin is the plugin.Plugin implementation that only supports GRPC
 // transport
 type GRPCBackendPlugin struct {
-	Factory      logical.Factory
-	MetadataMode bool
-	Logger       log.Logger
-
+	Factory             logical.Factory
+	MetadataMode        bool
 	MultiplexingSupport bool
+	Logger              log.Logger
+	TLSProviderSet      bool
 
 	// Embeding this will disable the netRPC protocol
 	plugin.NetRPCUnsupportedPlugin
@@ -55,6 +56,14 @@ func (b GRPCBackendPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server)
 }
 
 func (b *GRPCBackendPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
+	// Plugins that use metadataMode require a TLSProvider because they do not
+	// support AutoMTLS
+	if b.MetadataMode {
+		if !b.TLSProviderSet {
+			return nil, fmt.Errorf("TLSProviderFunc is required")
+		}
+	}
+
 	ret := &backendGRPCPluginClient{
 		client:       pb.NewBackendClient(c),
 		clientConn:   c,

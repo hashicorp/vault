@@ -45,14 +45,16 @@ func Serve(opts *ServeOpts) error {
 		// and version 4.
 		3: {
 			"backend": &GRPCBackendPlugin{
-				Factory: opts.BackendFactoryFunc,
-				Logger:  logger,
+				Factory:        opts.BackendFactoryFunc,
+				Logger:         logger,
+				TLSProviderSet: opts.TLSProviderFunc != nil,
 			},
 		},
 		4: {
 			"backend": &GRPCBackendPlugin{
-				Factory: opts.BackendFactoryFunc,
-				Logger:  logger,
+				Factory:        opts.BackendFactoryFunc,
+				Logger:         logger,
+				TLSProviderSet: opts.TLSProviderFunc != nil,
 			},
 		},
 		5: {
@@ -108,14 +110,16 @@ func ServeMultiplex(opts *ServeOpts) error {
 		// and version 4.
 		3: {
 			"backend": &GRPCBackendPlugin{
-				Factory: opts.BackendFactoryFunc,
-				Logger:  logger,
+				Factory:        opts.BackendFactoryFunc,
+				Logger:         logger,
+				TLSProviderSet: opts.TLSProviderFunc != nil,
 			},
 		},
 		4: {
 			"backend": &GRPCBackendPlugin{
-				Factory: opts.BackendFactoryFunc,
-				Logger:  logger,
+				Factory:        opts.BackendFactoryFunc,
+				Logger:         logger,
+				TLSProviderSet: opts.TLSProviderFunc != nil,
 			},
 		},
 		5: {
