@@ -16,8 +16,7 @@ export default Controller.extend(ListController, BackendCrumbMixin, WithNavToNea
   filterIsFolder: computed('filter', function () {
     return !!utils.keyIsFolder(this.filter);
   }),
-  // TODO when refactor to glimmer, note that isCertTab and isConfigure have been removed from the SecretListHeader (they weren't being used).
-  // However, this param returns true in the template for a conditional e.g: (not this.isConfigurableTab) and so I can easily remove it.
+
   isConfigurableTab: or('isCertTab', 'isConfigure'),
 
   actions: {

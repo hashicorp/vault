@@ -20,23 +20,12 @@ const SECRET_BACKENDS = {
         label: 'Overview',
         link: 'overview',
       },
-      // {
-      //   name: 'cert',
-      //   modelPrefix: 'cert/',
-      //   label: 'Certificates',
-      //   searchPlaceholder: 'Filter certificates',
-      //   item: 'certificates',
-      //   create: 'Create role',
-      //   tab: 'cert',
-      //   listItemPartial: 'secret-list/pki-cert-item',
-      //   editComponent: 'pki/pki-cert-show',
-      // },
     ],
   },
 };
 
 export function optionsForBackend([backend, tab]) {
-  // ARG TODO sort through this and see what functionality you can clean up specific for PKI only
+  // ARG TODO in future PR, sort through this and see what functionality you can clean up specific for PKI only
   const selected = SECRET_BACKENDS[backend];
   let backendOptions;
 

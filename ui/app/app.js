@@ -48,7 +48,6 @@ export default class App extends Application {
         },
       },
     },
-    // ARG TODO make sure these are all being used by EOP
     pki: {
       dependencies: {
         services: [
