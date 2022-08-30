@@ -1,7 +1,7 @@
 import { create, visitable, collection } from 'ember-cli-page-object';
 
 import { getter } from 'ember-cli-page-object/macros';
-import ConfigPKI from 'vault/tests/pages/components/config-pki';
+import ConfigPKI from 'vault/tests/pages/components/pki/config-pki';
 
 export default create({
   visit: visitable('/vault/settings/secrets/configure/:backend/:section'),

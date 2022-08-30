@@ -1,7 +1,4 @@
-import { run } from '@ember/runloop';
-import EmberObject, { computed } from '@ember/object';
-import Evented from '@ember/object/evented';
-import Service from '@ember/service';
+import { _cancelTimers as cancelTimers } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, settled, waitUntil } from '@ember/test-helpers';
@@ -12,38 +9,19 @@ import { resolve } from 'rsvp';
 import { create } from 'ember-cli-page-object';
 import form from '../../pages/components/auth-jwt';
 import { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS, ERROR_JWT_LOGIN } from 'vault/components/auth-jwt';
+import { fakeWindow, buildMessage } from '../../helpers/oidc-window-stub';
 
 const component = create(form);
 const windows = [];
-const buildMessage = (opts) => ({
-  isTrusted: true,
-  origin: 'https://my-vault.com',
-  data: {},
-  ...opts,
-});
-const fakeWindow = EmberObject.extend(Evented, {
-  init() {
-    this._super(...arguments);
-    this.on('close', () => {
-      this.set('closed', true);
-    });
-    windows.push(this);
-  },
-  screen: computed(function () {
-    return {
-      height: 600,
-      width: 500,
-    };
-  }),
-  origin: 'https://my-vault.com',
-  closed: false,
-});
 
 fakeWindow.reopen({
+  init() {
+    this._super(...arguments);
+    windows.push(this);
+  },
   open() {
     return fakeWindow.create();
   },
-
   close() {
     windows.forEach((w) => w.trigger('close'));
   },
@@ -54,12 +32,6 @@ const OIDC_AUTH_RESPONSE = {
     client_token: 'token',
   },
 };
-
-const routerStub = Service.extend({
-  urlFor() {
-    return 'http://example.com';
-  },
-});
 
 const renderIt = async (context, path = 'jwt') => {
   let handler = (data, e) => {
@@ -91,7 +63,11 @@ module('Integration | Component | auth jwt', function (hooks) {
 
   hooks.beforeEach(function () {
     this.openSpy = sinon.spy(fakeWindow.proto(), 'open');
-    this.owner.register('service:router', routerStub);
+    this.owner.lookup('service:router').reopen({
+      urlFor() {
+        return 'http://example.com';
+      },
+    });
     this.server = new Pretender(function () {
       this.get('/v1/auth/:path/oidc/callback', function () {
         return [200, { 'Content-Type': 'application/json' }, JSON.stringify(OIDC_AUTH_RESPONSE)];
@@ -181,7 +157,7 @@ module('Integration | Component | auth jwt', function (hooks) {
     await waitUntil(() => {
       return this.openSpy.calledOnce;
     });
-    run.cancelTimers();
+    cancelTimers();
     let call = this.openSpy.getCall(0);
     assert.deepEqual(
       call.args,
@@ -215,7 +191,7 @@ module('Integration | Component | auth jwt', function (hooks) {
       'message',
       buildMessage({ data: { source: 'oidc-callback', state: 'state', foo: 'bar' } })
     );
-    run.cancelTimers();
+    cancelTimers();
     assert.equal(this.error, ERROR_MISSING_PARAMS, 'calls onError with params missing error');
   });
 
@@ -227,19 +203,8 @@ module('Integration | Component | auth jwt', function (hooks) {
     await waitUntil(() => {
       return this.openSpy.calledOnce;
     });
-    this.window.trigger(
-      'message',
-      buildMessage({
-        data: {
-          source: 'oidc-callback',
-          path: 'foo',
-          state: 'state',
-          code: 'code',
-        },
-      })
-    );
+    this.window.trigger('message', buildMessage());
     await settled();
-    assert.equal(this.selectedAuth, 'token', 'calls onSelectedAuth with token');
     assert.equal(this.token, 'token', 'calls onToken with token');
     assert.ok(this.handler.calledOnce, 'calls the onSubmit handler');
   });
@@ -252,19 +217,8 @@ module('Integration | Component | auth jwt', function (hooks) {
     await waitUntil(() => {
       return this.openSpy.calledOnce;
     });
-    this.window.trigger(
-      'message',
-      buildMessage({
-        origin: 'http://hackerz.com',
-        data: {
-          source: 'oidc-callback',
-          path: 'foo',
-          state: 'state',
-          code: 'code',
-        },
-      })
-    );
-    run.cancelTimers();
+    this.window.trigger('message', buildMessage({ origin: 'http://hackerz.com' }));
+    cancelTimers();
     await settled();
     assert.notOk(this.handler.called, 'should not call the submit handler');
   });
@@ -277,19 +231,8 @@ module('Integration | Component | auth jwt', function (hooks) {
     await waitUntil(() => {
       return this.openSpy.calledOnce;
     });
-    this.window.trigger(
-      'message',
-      buildMessage({
-        isTrusted: false,
-        data: {
-          source: 'oidc-callback',
-          path: 'foo',
-          state: 'state',
-          code: 'code',
-        },
-      })
-    );
-    run.cancelTimers();
+    this.window.trigger('message', buildMessage({ isTrusted: false }));
+    cancelTimers();
     await settled();
     assert.notOk(this.handler.called, 'should not call the submit handler');
   });

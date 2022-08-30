@@ -116,7 +116,7 @@ module('Unit | Service | store', function (hooks) {
       });
     });
 
-    assert.ok(result.get('length'), pageSize, 'returns the correct number of items');
+    assert.equal(result.get('length'), pageSize, 'returns the correct number of items');
     assert.deepEqual(result.mapBy('id'), keys.slice(0, pageSize), 'returns the first page of items');
     assert.deepEqual(
       result.get('meta'),

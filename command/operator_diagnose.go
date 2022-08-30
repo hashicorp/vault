@@ -13,8 +13,7 @@ import (
 
 	"golang.org/x/term"
 
-	wrapping "github.com/hashicorp/go-kms-wrapping"
-	"github.com/hashicorp/vault/helper/constants"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/hashicorp/consul/api"
@@ -22,6 +21,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	uuid "github.com/hashicorp/go-uuid"
 	cserver "github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
@@ -455,7 +455,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			}
 			// Ensure that the seal finalizer is called, even if using verify-only
 			defer func(seal *vault.Seal) {
-				sealType := diagnose.CapitalizeFirstLetter((*seal).BarrierType())
+				sealType := diagnose.CapitalizeFirstLetter((*seal).BarrierType().String())
 				finalizeSealContext, finalizeSealSpan := diagnose.StartSpan(ctx, "Finalize "+sealType+" Seal")
 				err = (*seal).Finalize(finalizeSealContext)
 				if err != nil {
@@ -675,7 +675,7 @@ SEALFAIL:
 		if barrierSeal == nil {
 			return fmt.Errorf("Diagnose could not create a barrier seal object.")
 		}
-		if barrierSeal.BarrierType() == wrapping.Shamir {
+		if barrierSeal.BarrierType() == wrapping.WrapperTypeShamir {
 			diagnose.Skipped(ctx, "Skipping barrier encryption test. Only supported for auto-unseal.")
 			return nil
 		}

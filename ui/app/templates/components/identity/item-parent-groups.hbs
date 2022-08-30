@@ -1,6 +1,6 @@
 {{#if @model.parentGroupIds.length}}
   {{#each @model.parentGroupIds as |gid|}}
-    {{#linked-block "vault.cluster.access.identity.show" "groups" gid this.details class="list-item-row"}}
+    <LinkedBlock @params={{array "vault.cluster.access.identity.show" "groups" gid this.details}} class="list-item-row">
       <div class="columns is-mobile">
         <div class="column is-10">
           <LinkTo
@@ -14,7 +14,7 @@
         <div class="column has-text-right">
         </div>
       </div>
-    {{/linked-block}}
+    </LinkedBlock>
   {{/each}}
 {{else}}
   <EmptyState @title="This group has no parent groups yet" />

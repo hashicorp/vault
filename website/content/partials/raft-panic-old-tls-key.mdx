@@ -1,0 +1,17 @@
+### Integrated Storage panic related to old TLS key
+
+Raft in Vault uses its own set of TLS certificates, independent of those that the user
+controls to protect the API port and those used for replication and clustering. These
+certs get rotated daily, but to ensure that nodes which were down or behind on Raft log
+replication don't lose the ability to speak with other nodes, the newly generated daily
+TLS cert only starts being used once we see that all nodes have received it.
+
+A recent security audit related change results in this rotation code [getting a
+panic](https://github.com/hashicorp/vault/issues/15147) when the current cert is
+more than 24h old.  This can happen if the cluster as a whole is down for a day
+or more. It can also happen if a single node is unreachable 24h, or sufficiently
+backlogged in applying raft logs that it's more than a day behind.
+
+Impacted versions: 1.10.1, 1.9.5, 1.8.10.  Versions prior to these are unaffected.
+
+New releases addressing this panic are coming soon.

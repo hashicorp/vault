@@ -1,9 +1,16 @@
 import EditForm from 'core/components/edit-form';
+import { computed } from '@ember/object';
 import layout from '../templates/components/edit-form-kmip-role';
 
 export default EditForm.extend({
   layout,
   model: null,
+
+  cancelLink: computed('cancelLinkParams.[]', function () {
+    if (!Array.isArray(this.cancelLinkParams) || !this.cancelLinkParams.length) return;
+    const [route, ...models] = this.cancelLinkParams;
+    return { route, models };
+  }),
 
   init() {
     this._super(...arguments);

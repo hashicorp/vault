@@ -326,7 +326,8 @@ fieldset.form-fieldset {
   border: none;
 }
 
-.has-error-border {
+.has-error-border,
+select.has-error-border {
   border: 1px solid $red-500;
 }
 

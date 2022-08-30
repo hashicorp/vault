@@ -23,14 +23,22 @@
       </Toolbar>
     </div>
   {{/if}}
-
-  <IvyCodemirror
-    @data-test-component="json-editor"
-    @value={{@value}}
-    @options={{this.options}}
-    @valueUpdated={{action "updateValue"}}
-    @onFocusOut={{action "onFocus"}}
-  />
+  <div
+    {{code-mirror
+      content=@value
+      extraKeys=@extraKeys
+      gutters=@gutters
+      lineNumbers=(if @readOnly false true)
+      mode=@mode
+      readOnly=@readOnly
+      theme=@theme
+      viewportMarg=@viewportMargin
+      onUpdate=this.onUpdate
+      onFocus=this.onFocus
+    }}
+    class={{if @readOnly "readonly-codemirror"}}
+    data-test-component="code-mirror-modifier"
+  ></div>
 
   {{#if @helpText}}
     <div class="box is-shadowless is-fullwidth has-short-padding">

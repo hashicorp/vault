@@ -120,7 +120,7 @@ func Test(tt TestT, c TestCase) {
 	// slow and generally require some outside configuration.
 	if c.AcceptanceTest && os.Getenv(TestEnvVar) == "" {
 		tt.Skip(fmt.Sprintf(
-			"Acceptance tests skipped unless env '%s' set",
+			"Acceptance tests skipped unless env %q set",
 			TestEnvVar))
 		return
 	}

@@ -55,14 +55,14 @@ func (b *backend) pathTrimUpdate() framework.OperationFunc {
 		}
 		defer p.Unlock()
 
-		minAvailableVersionRaw, ok := d.Raw["min_available_version"]
+		minAvailableVersionRaw, ok, err := d.GetOkErr("min_available_version")
+		if err != nil {
+			return nil, err
+		}
 		if !ok {
 			return logical.ErrorResponse("missing min_available_version"), nil
 		}
-		minAvailableVersion, ok := minAvailableVersionRaw.(int)
-		if !ok {
-			return logical.ErrorResponse("expected min_available_version of type 'int', got unconvertible type '%T'", minAvailableVersionRaw), logical.ErrInvalidRequest
-		}
+		minAvailableVersion := minAvailableVersionRaw.(int)
 
 		originalMinAvailableVersion := p.MinAvailableVersion
 

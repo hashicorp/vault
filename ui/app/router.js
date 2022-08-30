@@ -13,10 +13,12 @@ Router.map(function () {
       this.route('oidc-provider', { path: '/identity/oidc/provider/:provider_name/authorize' });
       this.route('oidc-callback', { path: '/auth/*auth_path/oidc/callback' });
       this.route('auth');
+      this.route('redirect');
       this.route('init');
       this.route('logout');
       this.mount('open-api-explorer', { path: '/api-explorer' });
       this.route('license');
+      this.route('mfa-setup');
       this.route('clients', function () {
         this.route('current');
         this.route('history');
@@ -57,6 +59,24 @@ Router.map(function () {
             this.route('show', { path: '/show/:item_id' });
           });
           this.route('section', { path: '/:section_name' });
+        });
+        this.route('mfa', function () {
+          this.route('index', { path: '/' });
+          this.route('methods', function () {
+            this.route('index', { path: '/' });
+            this.route('create');
+            this.route('method', { path: '/:id' }, function () {
+              this.route('edit');
+              this.route('enforcements');
+            });
+          });
+          this.route('enforcements', function () {
+            this.route('index', { path: '/' });
+            this.route('create');
+            this.route('enforcement', { path: '/:name' }, function () {
+              this.route('edit');
+            });
+          });
         });
         this.route('leases', function () {
           // lookup

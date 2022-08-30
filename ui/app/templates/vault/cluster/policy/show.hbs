@@ -30,7 +30,7 @@
       @data={{this.model.policy}}
     />
     {{#if (and (not-eq this.model.id "root") (or this.capabilities.canUpdate this.capabilities.canDelete))}}
-      <ToolbarLink @params={{array "vault.cluster.policy.edit" this.model.id}} @data-test-policy-edit-toggle={{true}}>
+      <ToolbarLink @params={{array "vault.cluster.policy.edit" this.model.id}} data-test-policy-edit-toggle={{true}}>
         Edit policy
       </ToolbarLink>
     {{/if}}
@@ -42,7 +42,8 @@
       @title="Policy"
       @subTitle={{if (eq this.policyType "acl") (concat this.uppercase this.model.format " format")}}
       @value={{this.model.policy}}
-      @options={{hash readOnly=true mode="ruby"}}
+      @readOnly={{true}}
+      @mode="ruby"
     />
   </div>
   {{#if this.model.paths}}

@@ -13,13 +13,13 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-discover"
 	discoverk8s "github.com/hashicorp/go-discover/provider/k8s"
 	"github.com/hashicorp/go-hclog"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -181,6 +181,7 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 		c.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
 	}
 	disableAutopilot := c.disableAutopilot
+
 	raftBackend.SetupAutopilot(c.activeContext, autopilotConfig, c.raftFollowerStates, disableAutopilot)
 
 	c.pendingRaftPeers = &sync.Map{}
@@ -219,6 +220,7 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 
 	c.raftTLSRotationStopCh = make(chan struct{})
 	logger := c.logger.Named("raft")
+	c.AddLogger(logger)
 
 	if c.isRaftHAOnly() {
 		return c.raftTLSRotateDirect(ctx, logger, c.raftTLSRotationStopCh)
@@ -346,7 +348,12 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 	}
 	for _, server := range raftConfig.Servers {
 		if server.NodeID != raftBackend.NodeID() {
-			followerStates.Update(server.NodeID, 0, 0, "voter")
+			followerStates.Update(&raft.EchoRequestUpdate{
+				NodeID:          server.NodeID,
+				AppliedIndex:    0,
+				Term:            0,
+				DesiredSuffrage: "voter",
+			})
 		}
 	}
 
@@ -473,38 +480,50 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 		return errors.New("no active raft TLS key found")
 	}
 
+	getNextRotationTime := func(next time.Time) time.Time {
+		now := time.Now()
+
+		// active key's CreatedTime + raftTLSRotationPeriod might be in
+		// the past (meaning it is ready to be rotated) which will cause
+		// NewTicker to panic when used with time.Until, prevent this by
+		// pushing out rotation time into very near future
+		if next.Before(now) {
+			return now.Add(1 * time.Minute)
+		}
+
+		// push out to ensure proposed time does not elapse
+		return next.Add(10 * time.Second)
+	}
+
 	// Start the process in a go routine
 	go func() {
-		nextRotationTime := activeKey.CreatedTime.Add(raftTLSRotationPeriod)
+		nextRotationTime := getNextRotationTime(activeKey.CreatedTime.Add(raftTLSRotationPeriod))
 
 		keyCheckInterval := time.NewTicker(1 * time.Minute)
 		defer keyCheckInterval.Stop()
 
-		var backoff bool
+		// ticker is used to prevent memory leak of using time.After in
+		// for - select pattern.
+		ticker := time.NewTicker(time.Until(nextRotationTime))
+		defer ticker.Stop()
 		for {
-			// If we encountered and error we should try to create the key
-			// again.
-			if backoff {
-				nextRotationTime = time.Now().Add(10 * time.Second)
-				backoff = false
-			}
-
 			select {
 			case <-keyCheckInterval.C:
 				err := checkCommitted()
 				if err != nil {
 					logger.Error("failed to activate TLS key", "error", err)
 				}
-			case <-time.After(time.Until(nextRotationTime)):
+			case <-ticker.C:
 				// It's time to rotate the keys
 				next, err := rotateKeyring()
 				if err != nil {
 					logger.Error("failed to rotate TLS key", "error", err)
-					backoff = true
-					continue
+					nextRotationTime = time.Now().Add(10 * time.Second)
+				} else {
+					nextRotationTime = getNextRotationTime(next)
 				}
 
-				nextRotationTime = next
+				ticker.Reset(time.Until(nextRotationTime))
 
 			case <-stopCh:
 				return
@@ -641,7 +660,7 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool, sealNode bool) func(co
 			// The snapshot contained a root key or keyring we couldn't
 			// recover
 			switch c.seal.BarrierType() {
-			case wrapping.Shamir:
+			case wrapping.WrapperTypeShamir:
 				// If we are a shamir seal we can't do anything. Just
 				// seal all nodes.
 
@@ -765,6 +784,8 @@ func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo) (*raftInformati
 	if err != nil {
 		return nil, fmt.Errorf("failed to create api client: %w", err)
 	}
+	// Clearing namespace, as this client should only ever be using the root namespace
+	apiClient.ClearNamespace()
 
 	// Attempt to join the leader by requesting for the bootstrap challenge
 	secret, err := apiClient.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
@@ -783,7 +804,7 @@ func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo) (*raftInformati
 		return nil, err
 	}
 
-	if sealConfig.Type != c.seal.BarrierType() {
+	if sealConfig.Type != c.seal.BarrierType().String() {
 		return nil, fmt.Errorf("mismatching seal types between raft leader (%s) and follower (%s)", sealConfig.Type, c.seal.BarrierType())
 	}
 
@@ -796,7 +817,7 @@ func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo) (*raftInformati
 		return nil, fmt.Errorf("error decoding raft bootstrap challenge: %w", err)
 	}
 
-	eBlob := &wrapping.EncryptedBlobInfo{}
+	eBlob := &wrapping.BlobInfo{}
 	if err := proto.Unmarshal(challengeRaw, eBlob); err != nil {
 		return nil, fmt.Errorf("error decoding raft bootstrap challenge: %w", err)
 	}
@@ -812,11 +833,6 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 	raftBackend := c.getRaftBackend()
 	if raftBackend == nil {
 		return false, errors.New("raft backend not in use")
-	}
-
-	if err := raftBackend.SetDesiredSuffrage(nonVoter); err != nil {
-		c.logger.Error("failed to set desired suffrage for this node", "error", err)
-		return false, nil
 	}
 
 	init, err := c.InitializedLocally(ctx)
@@ -897,8 +913,8 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		// If we're using Shamir and using raft for both physical and HA, we
 		// need to block until the node is unsealed, unless retry is set to
 		// false.
-		if c.seal.BarrierType() == wrapping.Shamir && !c.isRaftHAOnly() {
-			c.raftInfo = raftInfo
+		if c.seal.BarrierType() == wrapping.WrapperTypeShamir && !c.isRaftHAOnly() {
+			c.raftInfo.Store(raftInfo)
 			if err := c.seal.SetBarrierConfig(ctx, raftInfo.leaderBarrierConfig); err != nil {
 				return err
 			}
@@ -908,7 +924,8 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			}
 
 			// Wait until unseal keys are supplied
-			c.raftInfo.joinInProgress = true
+			raftInfo.joinInProgress = true
+			c.raftInfo.Store(raftInfo)
 			if atomic.LoadUint32(c.postUnsealStarted) != 1 {
 				return errors.New("waiting for unseal keys to be supplied")
 			}
@@ -919,9 +936,9 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			return fmt.Errorf("failed to send answer to raft leader node: %w", err)
 		}
 
-		if c.seal.BarrierType() == wrapping.Shamir && !isRaftHAOnly {
+		if c.seal.BarrierType() == wrapping.WrapperTypeShamir && !isRaftHAOnly {
 			// Reset the state
-			c.raftInfo = nil
+			c.raftInfo.Store((*raftInformation)(nil))
 
 			// In case of Shamir unsealing, inform the unseal process that raft join is completed
 			close(c.raftJoinDoneCh)
@@ -942,10 +959,21 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		if err != nil {
 			return fmt.Errorf("failed to check if core is initialized: %w", err)
 		}
-		if init && !isRaftHAOnly {
+
+		// InitializedLocally will return non-nil before HA backends are
+		// initialized. c.Initialized(ctx) checks InitializedLocally first, so
+		// we can't use that generically for both cases. Instead check
+		// raftBackend.Initialized() directly for the HA-Only case.
+		if (!isRaftHAOnly && init) || (isRaftHAOnly && raftBackend.Initialized()) {
 			c.logger.Info("returning from raft join as the node is initialized")
 			return nil
 		}
+
+		if err := raftBackend.SetDesiredSuffrage(nonVoter); err != nil {
+			c.logger.Error("failed to set desired suffrage for this node", "error", err)
+			return nil
+		}
+
 		challengeCh := make(chan *raftInformation)
 		var expandedJoinInfos []*raft.LeaderJoinInfo
 		for _, leaderInfo := range leaderInfos {
@@ -980,15 +1008,19 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 
 		select {
 		case <-ctx.Done():
+			err = ctx.Err()
 		case raftInfo := <-challengeCh:
 			if raftInfo != nil {
 				err = answerChallenge(ctx, raftInfo)
 				if err == nil {
 					return nil
 				}
+			} else {
+				// Return an error so we can retry_join
+				err = fmt.Errorf("failed to get raft challenge")
 			}
 		}
-		return fmt.Errorf("timed out on raft join: %w", ctx.Err())
+		return err
 	}
 
 	switch retryFailures {
@@ -1004,7 +1036,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				if err == nil {
 					return
 				}
-				c.logger.Error("failed to retry join raft cluster", "retry", "2s")
+				c.logger.Error("failed to retry join raft cluster", "retry", "2s", "err", err)
 				time.Sleep(2 * time.Second)
 			}
 		}()
@@ -1240,7 +1272,7 @@ func (c *Core) RaftBootstrap(ctx context.Context, onInit bool) error {
 }
 
 func (c *Core) isRaftUnseal() bool {
-	return c.raftInfo != nil
+	return c.raftInfo.Load().(*raftInformation) != nil
 }
 
 type answerRespData struct {

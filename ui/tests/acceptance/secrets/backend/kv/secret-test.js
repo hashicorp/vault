@@ -29,6 +29,18 @@ let writeSecret = async function (backend, path, key, val) {
   return editPage.createSecret(path, key, val);
 };
 
+let deleteEngine = async function (enginePath, assert) {
+  await logout.visit();
+  await authPage.login();
+  await consoleComponent.runCommands([`delete sys/mounts/${enginePath}`]);
+  const response = consoleComponent.lastLogOutput;
+  assert.equal(
+    response,
+    `Success! Data deleted (if it existed) at: sys/mounts/${enginePath}`,
+    'Engine successfully deleted'
+  );
+};
+
 module('Acceptance | secrets/secret/create', function (hooks) {
   setupApplicationTest(hooks);
 
@@ -214,7 +226,6 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     await editPage.toggleMetadata();
     await settled();
     await typeIn('[data-test-input="maxVersions"]', 'abc');
-
     assert
       .dom('[data-test-input="maxVersions"]')
       .hasClass('has-error-border', 'shows border error on input with error');
@@ -252,7 +263,7 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     assert.dom('[data-test-list-item-content]').exists({ count: 1 }, 'renders a single version');
 
     await click('.linked-block');
-
+    await click('button.button.masked-input-toggle');
     assert.dom('[data-test-masked-input]').hasText('bar', 'renders secret on the secret version show page');
     assert.equal(
       currentURL(),
@@ -374,13 +385,15 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     await listPage.visitRoot({ backend: 'secret' });
     await listPage.create();
     await editPage.path(secretPath).toggleJSON();
-    await editPage.editor.fillIn(this, content);
+    let instance = document.querySelector('.CodeMirror').CodeMirror;
+    instance.setValue(content);
     await editPage.save();
 
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
+    let savedInstance = document.querySelector('.CodeMirror').CodeMirror;
     assert.equal(
-      showPage.editor.content(this),
+      savedInstance.options.value,
       JSON.stringify({ bar: 'boo', foo: 'fa' }, null, 2),
       'saves the content'
     );
@@ -459,6 +472,7 @@ module('Acceptance | secrets/secret/create', function (hooks) {
 
   // the web cli does not handle a quote as part of a path, so we test it here via the UI
   test('creating a secret with a single or double quote works properly', async function (assert) {
+    assert.expect(4);
     await consoleComponent.runCommands('write sys/mounts/kv type=kv');
     let paths = ["'some", '"some'];
     for (let path of paths) {
@@ -526,18 +540,17 @@ module('Acceptance | secrets/secret/create', function (hooks) {
   });
 
   test('version 2 with no access to data but access to metadata shows metadata tab', async function (assert) {
+    assert.expect(5);
     let enginePath = 'kv-metadata-access-only';
-    let secretPath = 'kv-metadata-access-only-secret-name';
+    let secretPath = 'nested/kv-metadata-access-only-secret-name';
     const V2_POLICY = `
-      path "${enginePath}/metadata/*" {
-        capabilities = ["read", "update", "list"]
+      path "${enginePath}/metadata/nested/*" {
+        capabilities = ["read", "update"]
       }
     `;
     await consoleComponent.runCommands([
       `write sys/mounts/${enginePath} type=kv options=version=2`,
       `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
-      // delete any kv previously written here so that tests can be re-run
-      `delete ${enginePath}/metadata/${secretPath}`,
       'write -field=client_token auth/token/create policies=kv-v2-degrade',
     ]);
 
@@ -546,15 +559,15 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     await logout.visit();
     await authPage.login(userToken);
     await settled();
-    await click(`[data-test-auth-backend-link=${enginePath}]`);
-
-    await click(`[data-test-secret-link=${secretPath}]`);
-
+    await visit(`/vault/secrets/${enginePath}/show/${secretPath}`);
     assert.dom('[data-test-empty-state-title]').hasText('You do not have permission to read this secret.');
+    assert.dom('[data-test-secret-metadata-tab]').exists('Metadata tab exists');
     await editPage.metadataTab();
     await settled();
     assert.dom('[data-test-empty-state-title]').hasText('No custom metadata');
     assert.dom('[data-test-add-custom-metadata]').exists('it shows link to edit metadata');
+
+    await deleteEngine(enginePath, assert);
   });
 
   test('version 2: with metadata no read or list but with delete access and full access to the data endpoint', async function (assert) {
@@ -601,17 +614,27 @@ module('Acceptance | secrets/secret/create', function (hooks) {
         'They do not have list access so when logged in under the restricted policy they see the get-credentials-card'
       );
 
-    // this fails in IE11 on browserstack so going directly to URL
     await visit(`/vault/secrets/${enginePath}/show/${secretPath}`);
 
     await assert
       .dom('[data-test-value-div="secret-key"]')
       .exists('secret view page and info table row with secret-key value');
-    // create new version should be disabled with no metadata read access
-    assert.dom('[data-test-secret-edit]').hasClass('disabled', 'Create new version action is disabled');
-    assert
-      .dom('[data-test-popup-menu-trigger="version"]')
-      .doesNotExist('the version drop down menu does not show');
+
+    // Create new version
+    assert.dom('[data-test-secret-edit]').doesNotHaveClass('disabled', 'Create new version is not disabled');
+    await click('[data-test-secret-edit]');
+
+    // create new version should not include version in the URL
+    assert.equal(
+      currentURL(),
+      `/vault/secrets/${enginePath}/edit/${secretPath}`,
+      'edit route does not include version query param'
+    );
+    // Update key
+    await editPage.secretKey('newKey');
+    await editPage.secretValue('some-value');
+    await editPage.save();
+    assert.dom('[data-test-value-div="newKey"]').exists('Info row table exists at newKey');
 
     // check metadata tab
     await click('[data-test-secret-metadata-tab]');
@@ -683,8 +706,9 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     await settled(); // eslint-disable-line
     await click('[data-test-secret-tab]');
     await settled(); // eslint-disable-line
-    let text = document.querySelector('[data-test-empty-state-title]').innerText.trim();
-    assert.equal(text, 'Version 1 of this secret has been permanently destroyed');
+    assert
+      .dom('[data-test-empty-state-title]')
+      .includesText('Version 1 of this secret has been permanently destroyed');
   });
 
   test('version 2 with policy with only delete option does not show modal and undelete is an option', async function (assert) {
@@ -723,7 +747,7 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     let url = `/vault/secrets/${enginePath}/list`;
     await visit(url);
 
-    await click(`[data-test-secret-link=${secretPath}]`);
+    await click(`[data-test-secret-link="${secretPath}"]`);
     await settled(); // eslint-disable-line
     assert.dom('[data-test-component="empty-state"]').exists('secret has been deleted');
     assert.dom('[data-test-secret-undelete]').exists('undelete button shows');

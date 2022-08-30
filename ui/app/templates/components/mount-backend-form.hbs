@@ -2,14 +2,14 @@
   <p.levelLeft>
     <h1 class="title is-3 title-with-icon" data-test-mount-form-header="true">
       {{#if this.showEnable}}
-        {{#with (find-by "type" this.mountModel.type this.mountTypes) as |typeInfo|}}
+        {{#let (find-by "type" this.mountModel.type this.mountTypes) as |typeInfo|}}
           <Icon @name={{or typeInfo.glyph typeInfo.type}} @size="24" class="has-text-grey-light" />
           {{#if (eq this.mountType "auth")}}
             {{concat "Enable " typeInfo.displayName " Authentication Method"}}
           {{else}}
             {{concat "Enable " typeInfo.displayName " Secrets Engine"}}
           {{/if}}
-        {{/with}}
+        {{/let}}
       {{else if (eq this.mountType "auth")}}
         Enable an Authentication Method
       {{else}}
@@ -18,19 +18,19 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
-<form {{action (perform this.mountBackend) on="submit"}}>
+<form {{on "submit" (perform this.mountBackend)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="enable" @noun={{if (eq this.mountType "auth") "Auth Method" "Secret Engine"}} />
-    <MessageError @model={{this.model}} @errorMessage={{this.errorMessage}} />
+    <MessageError @model={{this.model}} @errorMessage={{this.errorMessage}} @errors={{this.errors}} />
     {{#if this.showEnable}}
       <FormFieldGroups
         @model={{this.mountModel}}
-        @onChange={{action "onTypeChange"}}
+        @onChange={{this.onTypeChange}}
         @renderGroup="default"
-        @validationMessages={{this.validationMessages}}
-        @onKeyUp={{action "onKeyUp"}}
+        @modelValidations={{this.modelValidations}}
+        @onKeyUp={{this.onKeyUp}}
       />
-      <FormFieldGroups @model={{this.mountModel}} @onChange={{action "onTypeChange"}} @renderGroup="Method Options" />
+      <FormFieldGroups @model={{this.mountModel}} @onChange={{this.onTypeChange}} @renderGroup="Method Options" />
     {{else}}
       {{#each (array "generic" "cloud" "infra") as |category|}}
         <h3 class="title box-radio-header">
@@ -44,10 +44,10 @@
               @glyph={{or type.glyph type.type}}
               @groupValue={{this.mountModel.type}}
               @groupName="mount-type"
-              @onRadioChange={{queue (action (mut this.mountModel.type)) (action "onTypeChange" "type")}}
+              @onRadioChange={{queue (fn (mut this.mountModel.type)) (fn this.onTypeChange "type")}}
               @disabled={{if type.requiredFeature (not (has-feature type.requiredFeature)) false}}
               @tooltipMessage={{if
-                (or (eq type.type "transform") (eq type.type "kmip"))
+                (or (eq type.type "transform") (eq type.type "kmip") (eq type.type "keymgmt"))
                 (concat
                   type.displayName
                   " is part of the Advanced Data Protection module, which is not included in your enterprise license."
@@ -66,8 +66,8 @@
         <button
           type="submit"
           data-test-mount-submit="true"
-          class="button is-primary {{if this.mountBackend.isRunning "loading"}}"
-          disabled={{or this.mountBackend.isRunning this.isFormInvalid}}
+          class="button is-primary {{if this.mountBackend.isRunning 'loading'}}"
+          disabled={{this.mountBackend.isRunning}}
         >
           {{#if (eq this.mountType "auth")}}
             Enable Method
@@ -77,16 +77,21 @@
         </button>
       </div>
       <div class="control">
-        <button data-test-mount-back type="button" class="button" onclick={{action "toggleShowEnable" false}}>
+        <button data-test-mount-back type="button" class="button" {{on "click" (fn this.toggleShowEnable false)}}>
           Back
         </button>
       </div>
+      {{#if this.invalidFormAlert}}
+        <div class="control">
+          <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />
+        </div>
+      {{/if}}
     {{else}}
       <button
         data-test-mount-next
         type="button"
         class="button is-primary"
-        onclick={{action "toggleShowEnable" true}}
+        {{on "click" (fn this.toggleShowEnable true)}}
         disabled={{not this.mountModel.type}}
       >
         Next

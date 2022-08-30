@@ -1,8 +1,6 @@
 import { attr } from '@ember-data/model';
-import { and } from '@ember/object/computed';
 import { computed } from '@ember/object';
-import Certificate from './pki-certificate';
-import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
+import Certificate from './pki/cert';
 
 export default Certificate.extend({
   DISPLAY_FIELDS: computed(function () {
@@ -65,7 +63,7 @@ export default Certificate.extend({
     label: 'PEM bundle',
     editType: 'file',
   }),
-  permittedDnsNames: attr('string', {
+  permittedDnsDomains: attr('string', {
     label: 'Permitted DNS domains',
   }),
   privateKeyFormat: attr('string', {
@@ -119,7 +117,7 @@ export default Certificate.extend({
             'keyType',
             'keyBits',
             'maxPathLength',
-            'permittedDnsNames',
+            'permittedDnsDomains',
             'excludeCnFromSans',
             'ou',
             'organization',
@@ -151,7 +149,4 @@ export default Certificate.extend({
 
     return groups;
   }),
-
-  deletePath: lazyCapabilities(apiPath`${'backend'}/root`, 'backend'),
-  canDeleteRoot: and('deletePath.canDelete', 'deletePath.canSudo'),
 });

@@ -13,7 +13,7 @@ import (
 
 	proto "github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
 )
@@ -21,7 +21,7 @@ import (
 // barrierTypeUpgradeCheck checks for backwards compat on barrier type, not
 // applicable in the OSS side
 var (
-	barrierTypeUpgradeCheck     = func(_ string, _ *SealConfig) {}
+	barrierTypeUpgradeCheck     = func(_ wrapping.WrapperType, _ *SealConfig) {}
 	autoSealUnavailableDuration = []string{"seal", "unreachable", "time"}
 	// vars for unit testings
 	sealHealthTestIntervalNominal   = 10 * time.Minute
@@ -47,13 +47,19 @@ type autoSeal struct {
 // Ensure we are implementing the Seal interface
 var _ Seal = (*autoSeal)(nil)
 
-func NewAutoSeal(lowLevel *seal.Access) *autoSeal {
+func NewAutoSeal(lowLevel *seal.Access) (*autoSeal, error) {
 	ret := &autoSeal{
 		Access: lowLevel,
 	}
 	ret.barrierConfig.Store((*SealConfig)(nil))
 	ret.recoveryConfig.Store((*SealConfig)(nil))
-	return ret
+
+	var err error
+	ret.WrapperType, err = ret.Type(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return ret, nil
 }
 
 func (d *autoSeal) SealWrapable() bool {
@@ -87,8 +93,8 @@ func (d *autoSeal) Finalize(ctx context.Context) error {
 	return d.Access.Finalize(ctx)
 }
 
-func (d *autoSeal) BarrierType() string {
-	return d.Type()
+func (d *autoSeal) BarrierType() wrapping.WrapperType {
+	return d.WrapperType
 }
 
 func (d *autoSeal) StoredKeysSupported() seal.StoredKeysSupport {
@@ -120,12 +126,16 @@ func (d *autoSeal) upgradeStoredKeys(ctx context.Context) error {
 		return fmt.Errorf("no stored keys found")
 	}
 
-	blobInfo := &wrapping.EncryptedBlobInfo{}
+	blobInfo := &wrapping.BlobInfo{}
 	if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
 		return fmt.Errorf("failed to proto decode stored keys: %w", err)
 	}
 
-	if blobInfo.KeyInfo != nil && blobInfo.KeyInfo.KeyID != d.Access.KeyID() {
+	keyId, err := d.Access.KeyId(ctx)
+	if err != nil {
+		return err
+	}
+	if blobInfo.KeyInfo != nil && blobInfo.KeyInfo.KeyId != keyId {
 		d.logger.Info("upgrading stored keys")
 
 		pt, err := d.Decrypt(ctx, blobInfo, nil)
@@ -147,11 +157,11 @@ func (d *autoSeal) upgradeStoredKeys(ctx context.Context) error {
 }
 
 // UpgradeKeys re-encrypts and saves the stored keys and the recovery key
-// with the current key if the current KeyID is different from the KeyID
+// with the current key if the current KeyId is different from the KeyId
 // the stored keys and the recovery key are encrypted with. The provided
 // Context must be non-nil.
 func (d *autoSeal) UpgradeKeys(ctx context.Context) error {
-	// Many of the seals update their keys to the latest KeyID when Encrypt
+	// Many of the seals update their keys to the latest KeyId when Encrypt
 	// is called.
 	if _, err := d.Encrypt(ctx, []byte("a"), nil); err != nil {
 		return err
@@ -206,7 +216,7 @@ func (d *autoSeal) BarrierConfig(ctx context.Context) (*SealConfig, error) {
 
 	barrierTypeUpgradeCheck(d.BarrierType(), conf)
 
-	if conf.Type != d.BarrierType() {
+	if conf.Type != d.BarrierType().String() {
 		d.logger.Error("barrier seal type does not match loaded type", "seal_type", conf.Type, "loaded_type", d.BarrierType())
 		return nil, fmt.Errorf("barrier seal type of %q does not match loaded type of %q", conf.Type, d.BarrierType())
 	}
@@ -225,7 +235,7 @@ func (d *autoSeal) SetBarrierConfig(ctx context.Context, conf *SealConfig) error
 		return nil
 	}
 
-	conf.Type = d.BarrierType()
+	conf.Type = d.BarrierType().String()
 
 	// Encode the seal configuration
 	buf, err := json.Marshal(conf)
@@ -436,7 +446,7 @@ func (d *autoSeal) getRecoveryKeyInternal(ctx context.Context) ([]byte, error) {
 		return nil, fmt.Errorf("no recovery key found")
 	}
 
-	blobInfo := &wrapping.EncryptedBlobInfo{}
+	blobInfo := &wrapping.BlobInfo{}
 	if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
 		return nil, fmt.Errorf("failed to proto decode stored keys: %w", err)
 	}
@@ -458,12 +468,17 @@ func (d *autoSeal) upgradeRecoveryKey(ctx context.Context) error {
 		return fmt.Errorf("no recovery key found")
 	}
 
-	blobInfo := &wrapping.EncryptedBlobInfo{}
+	blobInfo := &wrapping.BlobInfo{}
 	if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
 		return fmt.Errorf("failed to proto decode recovery key: %w", err)
 	}
 
-	if blobInfo.KeyInfo != nil && blobInfo.KeyInfo.KeyID != d.Access.KeyID() {
+	keyId, err := d.Access.KeyId(ctx)
+	if err != nil {
+		return err
+	}
+
+	if blobInfo.KeyInfo != nil && blobInfo.KeyInfo.KeyId != keyId {
 		d.logger.Info("upgrading recovery key")
 
 		pt, err := d.Decrypt(ctx, blobInfo, nil)

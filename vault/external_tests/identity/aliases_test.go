@@ -1,9 +1,13 @@
 package identity
 
 import (
+	"context"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
+	auth "github.com/hashicorp/vault/api/auth/userpass"
 	"github.com/hashicorp/vault/builtin/credential/github"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -248,5 +252,530 @@ func TestIdentityStore_RenameAlias_CannotMergeEntity(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected rename over existing entity to fail")
+	}
+}
+
+func TestIdentityStore_MergeEntities_FailsDueToClash(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+
+	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("auth/userpass/users/bob", map[string]interface{}{
+		"password": "training",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mounts, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var mountAccessor string
+	for k, v := range mounts {
+		if k == "userpass/" {
+			mountAccessor = v.Accessor
+			break
+		}
+	}
+	if mountAccessor == "" {
+		t.Fatal("did not find userpass accessor")
+	}
+
+	_, entityIdBob, aliasIdBob := createEntityAndAlias(client, mountAccessor, "bob-smith", "bob", t)
+
+	// Create userpass login for alice
+	_, err = client.Logical().Write("auth/userpass/users/alice", map[string]interface{}{
+		"password": "training",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, entityIdAlice, aliasIdAlice := createEntityAndAlias(client, mountAccessor, "alice-smith", "alice", t)
+
+	// Perform entity merge
+	mergeResp, err := client.Logical().Write("identity/entity/merge", map[string]interface{}{
+		"to_entity_id":    entityIdBob,
+		"from_entity_ids": entityIdAlice,
+	})
+	if err == nil {
+		t.Fatalf("Expected error upon merge. Resp:%#v", mergeResp)
+	}
+	if !strings.Contains(err.Error(), "toEntity and at least one fromEntity have aliases with the same mount accessor") {
+		t.Fatalf("Error was not due to conflicting alias mount accessors. Error: %v", err)
+	}
+	if !strings.Contains(err.Error(), entityIdAlice) {
+		t.Fatalf("Did not identify alice's entity (%s) as conflicting. Error: %v", entityIdAlice, err)
+	}
+	if !strings.Contains(err.Error(), entityIdBob) {
+		t.Fatalf("Did not identify bob's entity (%s) as conflicting. Error: %v", entityIdBob, err)
+	}
+	if !strings.Contains(err.Error(), aliasIdAlice) {
+		t.Fatalf("Did not identify alice's alias (%s) as conflicting. Error: %v", aliasIdAlice, err)
+	}
+	if !strings.Contains(err.Error(), aliasIdBob) {
+		t.Fatalf("Did not identify bob's alias (%s) as conflicting. Error: %v", aliasIdBob, err)
+	}
+	if !strings.Contains(err.Error(), mountAccessor) {
+		t.Fatalf("Did not identify mount accessor %s as being reason for conflict. Error: %v", mountAccessor, err)
+	}
+}
+
+func TestIdentityStore_MergeEntities_FailsDueToClashInFromEntities(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+			"github":   github.Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+
+	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = client.Sys().EnableAuthWithOptions("github", &api.EnableAuthOptions{
+		Type: "github",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("auth/userpass/users/bob", map[string]interface{}{
+		"password": "training",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mounts, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var mountAccessor string
+	for k, v := range mounts {
+		if k == "userpass/" {
+			mountAccessor = v.Accessor
+			break
+		}
+	}
+	if mountAccessor == "" {
+		t.Fatal("did not find userpass accessor")
+	}
+
+	var mountAccessorGitHub string
+	for k, v := range mounts {
+		if k == "github/" {
+			mountAccessorGitHub = v.Accessor
+			break
+		}
+	}
+	if mountAccessorGitHub == "" {
+		t.Fatal("did not find github accessor")
+	}
+
+	_, entityIdBob, _ := createEntityAndAlias(client, mountAccessor, "bob-smith", "bob", t)
+	_, entityIdAlice, _ := createEntityAndAlias(client, mountAccessorGitHub, "alice-smith", "alice", t)
+	_, entityIdClara, _ := createEntityAndAlias(client, mountAccessorGitHub, "clara-smith", "clara", t)
+
+	// Perform entity merge
+	mergeResp, err := client.Logical().Write("identity/entity/merge", map[string]interface{}{
+		"to_entity_id":    entityIdBob,
+		"from_entity_ids": []string{entityIdAlice, entityIdClara},
+	})
+	if err == nil {
+		t.Fatalf("Expected error upon merge. Resp:%#v", mergeResp)
+	}
+	if !strings.Contains(err.Error(), fmt.Sprintf("mount accessor %s found in multiple fromEntities, merge should be done with one fromEntity at a time", mountAccessorGitHub)) {
+		t.Fatalf("Error was not due to conflicting alias mount accessors in fromEntities. Error: %v", err)
+	}
+}
+
+func TestIdentityStore_MergeEntities_FailsDueToDoubleClash(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+			"github":   github.Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+
+	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = client.Sys().EnableAuthWithOptions("github", &api.EnableAuthOptions{
+		Type: "github",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("auth/userpass/users/bob", map[string]interface{}{
+		"password": "training",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("auth/userpass/users/bob-github", map[string]interface{}{
+		"password": "training",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mounts, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var mountAccessor string
+	for k, v := range mounts {
+		if k == "userpass/" {
+			mountAccessor = v.Accessor
+			break
+		}
+	}
+	if mountAccessor == "" {
+		t.Fatal("did not find userpass accessor")
+	}
+
+	var mountAccessorGitHub string
+	for k, v := range mounts {
+		if k == "github/" {
+			mountAccessorGitHub = v.Accessor
+			break
+		}
+	}
+	if mountAccessorGitHub == "" {
+		t.Fatal("did not find github accessor")
+	}
+
+	_, entityIdBob, aliasIdBob := createEntityAndAlias(client, mountAccessor, "bob-smith", "bob", t)
+
+	aliasResp, err := client.Logical().Write("identity/entity-alias", map[string]interface{}{
+		"name":           "bob-github",
+		"canonical_id":   entityIdBob,
+		"mount_accessor": mountAccessorGitHub,
+	})
+	if err != nil {
+		t.Fatalf("err:%v resp:%#v", err, aliasResp)
+	}
+
+	aliasIdBobGitHub := aliasResp.Data["id"].(string)
+	if aliasIdBobGitHub == "" {
+		t.Fatal("Alias ID not present in response")
+	}
+
+	// Create userpass login for alice
+	_, err = client.Logical().Write("auth/userpass/users/alice", map[string]interface{}{
+		"password": "training",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, entityIdAlice, aliasIdAlice := createEntityAndAlias(client, mountAccessor, "alice-smith", "alice", t)
+	_, entityIdClara, aliasIdClara := createEntityAndAlias(client, mountAccessorGitHub, "clara-smith", "clara", t)
+
+	// Perform entity merge
+	mergeResp, err := client.Logical().Write("identity/entity/merge", map[string]interface{}{
+		"to_entity_id":    entityIdBob,
+		"from_entity_ids": []string{entityIdAlice, entityIdClara},
+	})
+	if err == nil {
+		t.Fatalf("Expected error upon merge. Resp:%#v", mergeResp)
+	}
+	if !strings.Contains(err.Error(), "toEntity and at least one fromEntity have aliases with the same mount accessor") {
+		t.Fatalf("Error was not due to conflicting alias mount accessors. Error: %v", err)
+	}
+	if !strings.Contains(err.Error(), entityIdAlice) {
+		t.Fatalf("Did not identify alice's entity (%s) as conflicting. Error: %v", entityIdAlice, err)
+	}
+	if !strings.Contains(err.Error(), entityIdBob) {
+		t.Fatalf("Did not identify bob's entity (%s) as conflicting. Error: %v", entityIdBob, err)
+	}
+	if !strings.Contains(err.Error(), entityIdClara) {
+		t.Fatalf("Did not identify clara's alias (%s) as conflicting. Error: %v", entityIdClara, err)
+	}
+	if !strings.Contains(err.Error(), aliasIdAlice) {
+		t.Fatalf("Did not identify alice's alias (%s) as conflicting. Error: %v", aliasIdAlice, err)
+	}
+	if !strings.Contains(err.Error(), aliasIdBob) {
+		t.Fatalf("Did not identify bob's alias (%s) as conflicting. Error: %v", aliasIdBob, err)
+	}
+	if !strings.Contains(err.Error(), aliasIdClara) {
+		t.Fatalf("Did not identify bob's alias (%s) as conflicting. Error: %v", aliasIdClara, err)
+	}
+	if !strings.Contains(err.Error(), mountAccessor) {
+		t.Fatalf("Did not identify mount accessor %s as being reason for conflict. Error: %v", mountAccessor, err)
+	}
+	if !strings.Contains(err.Error(), mountAccessorGitHub) {
+		t.Fatalf("Did not identify mount accessor %s as being reason for conflict. Error: %v", mountAccessorGitHub, err)
+	}
+}
+
+func TestIdentityStore_MergeEntities_SameMountAccessor_ThenUseAlias(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+
+	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("auth/userpass/users/bob", map[string]interface{}{
+		"password": "testpassword",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = client.Logical().Write("auth/userpass/login/bob", map[string]interface{}{
+		"password": "testpassword",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mounts, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var mountAccessor string
+	for k, v := range mounts {
+		if k == "userpass/" {
+			mountAccessor = v.Accessor
+			break
+		}
+	}
+	if mountAccessor == "" {
+		t.Fatal("did not find userpass accessor")
+	}
+
+	_, entityIdBob, aliasIdBob := createEntityAndAlias(client, mountAccessor, "bob-smith", "bob", t)
+
+	// Create userpass login for alice
+	_, err = client.Logical().Write("auth/userpass/users/alice", map[string]interface{}{
+		"password": "testpassword",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = client.Logical().Write("auth/userpass/login/alice", map[string]interface{}{
+		"password": "testpassword",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, entityIdAlice, _ := createEntityAndAlias(client, mountAccessor, "alice-smith", "alice", t)
+
+	// Try and login with alias 2 (alice) pre-merge
+	userpassAuth, err := auth.NewUserpassAuth("alice", &auth.Password{FromString: "testpassword"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	loginResp, err := client.Logical().Write("auth/userpass/login/alice", map[string]interface{}{
+		"password": "testpassword",
+	})
+	if err != nil {
+		t.Fatalf("err:%v resp:%#v", err, loginResp)
+	}
+	if loginResp.Auth == nil {
+		t.Fatalf("Request auth is nil, something has gone wrong - resp:%#v", loginResp)
+	}
+	loginEntityId := loginResp.Auth.EntityID
+	if loginEntityId != entityIdAlice {
+		t.Fatalf("Login entity ID is not Alice. loginEntityId:%s aliceEntityId:%s", loginEntityId, entityIdAlice)
+	}
+
+	// Perform entity merge
+	mergeResp, err := client.Logical().Write("identity/entity/merge", map[string]interface{}{
+		"to_entity_id":                  entityIdBob,
+		"from_entity_ids":               entityIdAlice,
+		"conflicting_alias_ids_to_keep": aliasIdBob,
+	})
+	if err != nil {
+		t.Fatalf("err:%v resp:%#v", err, mergeResp)
+	}
+
+	// Delete entity id 1 (bob)
+	deleteResp, err := client.Logical().Delete(fmt.Sprintf("identity/entity/id/%s", entityIdBob))
+	if err != nil {
+		t.Fatalf("err:%v resp:%#v", err, deleteResp)
+	}
+
+	// Try and login with alias 2 (alice) post-merge
+	// Notably, this login method sets the client token, which is why we didn't use it above
+	loginResp, err = client.Auth().Login(context.Background(), userpassAuth)
+	if err != nil {
+		t.Fatalf("err:%v resp:%#v", err, loginResp)
+	}
+	if loginResp.Auth == nil {
+		t.Fatalf("Request auth is nil, something has gone wrong - resp:%#v", loginResp)
+	}
+	if loginEntityId != entityIdAlice {
+		t.Fatalf("Login entity ID is not Alice. loginEntityId:%s aliceEntityId:%s", loginEntityId, entityIdAlice)
+	}
+}
+
+func TestIdentityStore_MergeEntities_FailsDueToMultipleClashMergesAttempted(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+			"github":   github.Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+
+	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = client.Sys().EnableAuthWithOptions("github", &api.EnableAuthOptions{
+		Type: "github",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("auth/userpass/users/bob", map[string]interface{}{
+		"password": "testpassword",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("auth/userpass/users/bob-github", map[string]interface{}{
+		"password": "testpassword",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mounts, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var mountAccessor string
+	for k, v := range mounts {
+		if k == "userpass/" {
+			mountAccessor = v.Accessor
+			break
+		}
+	}
+	if mountAccessor == "" {
+		t.Fatal("did not find userpass accessor")
+	}
+
+	var mountAccessorGitHub string
+	for k, v := range mounts {
+		if k == "github/" {
+			mountAccessorGitHub = v.Accessor
+			break
+		}
+	}
+	if mountAccessorGitHub == "" {
+		t.Fatal("did not find github accessor")
+	}
+
+	_, entityIdBob, _ := createEntityAndAlias(client, mountAccessor, "bob-smith", "bob", t)
+	aliasResp, err := client.Logical().Write("identity/entity-alias", map[string]interface{}{
+		"name":           "bob-github",
+		"canonical_id":   entityIdBob,
+		"mount_accessor": mountAccessorGitHub,
+	})
+	if err != nil {
+		t.Fatalf("err:%v resp:%#v", err, aliasResp)
+	}
+
+	aliasIdBobGitHub := aliasResp.Data["id"].(string)
+	if aliasIdBobGitHub == "" {
+		t.Fatal("Alias ID not present in response")
+	}
+
+	// Create userpass login for alice
+	_, err = client.Logical().Write("auth/userpass/users/alice", map[string]interface{}{
+		"password": "testpassword",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, entityIdAlice, aliasIdAlice := createEntityAndAlias(client, mountAccessor, "alice-smith", "alice", t)
+	_, entityIdClara, aliasIdClara := createEntityAndAlias(client, mountAccessorGitHub, "clara-smith", "alice", t)
+
+	// Perform entity merge
+	mergeResp, err := client.Logical().Write("identity/entity/merge", map[string]interface{}{
+		"to_entity_id":                  entityIdBob,
+		"from_entity_ids":               []string{entityIdAlice, entityIdClara},
+		"conflicting_alias_ids_to_keep": []string{aliasIdAlice, aliasIdClara},
+	})
+	if err == nil {
+		t.Fatalf("Expected error upon merge. Resp:%#v", mergeResp)
+	}
+	if !strings.Contains(err.Error(), "merge one entity at a time") {
+		t.Fatalf("did not error for the right reason. Error: %v", err)
 	}
 }

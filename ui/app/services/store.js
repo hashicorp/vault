@@ -29,8 +29,14 @@ export function keyForCache(query) {
 
 export default Store.extend({
   // this is a map of map that stores the caches
-  lazyCaches: computed(function () {
-    return new Map();
+  // eslint-disable-next-line
+  lazyCaches: computed({
+    get() {
+      return this._lazyCaches || new Map();
+    },
+    set(key, value) {
+      return (this._lazyCaches = value);
+    },
   }),
 
   setLazyCacheForModel(modelName, key, value) {

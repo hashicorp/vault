@@ -36,8 +36,8 @@ export default Route.extend({
       case 'alphabet':
         modelType = 'transform/alphabet';
         break;
-      default:
-        modelType = 'transform'; // CBS TODO: transform/transformation
+      default: // CBS TODO: transform/transformation
+        modelType = 'transform';
         break;
     }
     return modelType;
@@ -80,10 +80,11 @@ export default Route.extend({
       ssh: 'role-ssh',
       transform: this.modelTypeForTransform(tab),
       aws: 'role-aws',
-      pki: tab === 'certs' ? 'pki-certificate' : 'role-pki',
+      pki: `pki/${tab || 'pki-role'}`,
       // secret or secret-v2
       cubbyhole: 'secret',
       kv: secretEngine.get('modelTypeForKV'),
+      keymgmt: `keymgmt/${tab || 'key'}`,
       generic: secretEngine.get('modelTypeForKV'),
     };
     return types[type];
@@ -129,7 +130,7 @@ export default Route.extend({
   afterModel(model) {
     const { tab } = this.paramsFor(this.routeName);
     const backend = this.enginePathParam();
-    if (!tab || tab !== 'certs') {
+    if (!tab || tab !== 'cert') {
       return;
     }
     return all(
@@ -137,7 +138,7 @@ export default Route.extend({
       // possible that there is no certificate for them in order to know,
       // we fetch them specifically on the list page, and then unload the
       // records if there is no `certificate` attribute on the resultant model
-      ['ca', 'crl', 'ca_chain'].map((id) => this.store.queryRecord('pki-certificate', { id, backend }))
+      ['ca', 'crl', 'ca_chain'].map((id) => this.store.queryRecord('pki/cert', { id, backend }))
     ).then(
       (results) => {
         results.rejectBy('certificate').forEach((record) => record.unloadRecord());

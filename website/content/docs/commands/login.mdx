@@ -17,7 +17,7 @@ local machine for future requests.
 The `-method` flag allows using other auth methods, such as userpass,
 github, or cert. For these, additional "K=V" pairs may be required. For more
 information about the list of configuration parameters available for a given
-auth method, use the "vault auth help TYPE". You can also use "vault
+auth method, use the "vault auth help TYPE" command. You can also use "vault
 auth list" to see the list of enabled auth methods.
 
 If an auth method is enabled at a non-standard path, the `-method`
@@ -141,7 +141,7 @@ flags](/docs/commands) included on all commands.
   "userpass" or "ldap". Note this corresponds to the TYPE, not the enabled path.
   Use -path to specify the path where the authentication is enabled.
 
-- `-no-print` `(bool: false)` - Do not display the token. The token will be
+- `-no-print` `(bool: false)` - Do not display the token. The token will
   still be stored to the configured token helper. The default is false.
 
 - `-no-store` `(bool: false)` - Do not persist the token to the token helper

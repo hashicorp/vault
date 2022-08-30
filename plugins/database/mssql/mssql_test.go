@@ -552,7 +552,7 @@ func createTestMSSQLUser(connURL string, username, password, query string) error
 		"name":     username,
 		"password": password,
 	}
-	if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+	if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 		return err
 	}
 	// Commit the transaction

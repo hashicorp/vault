@@ -7,6 +7,8 @@ description: >-
 
 # OpenLDAP Secrets Engine
 
+@include 'x509-sha1-deprecation.mdx'
+
 The OpenLDAP secret engine allows management of LDAP entry passwords as well as dynamic creation of credentials.
 This engine supports interacting with Active Directory which is compatible with LDAP v3.
 

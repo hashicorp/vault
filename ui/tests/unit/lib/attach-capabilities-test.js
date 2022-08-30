@@ -37,10 +37,8 @@ module('Unit | lib | attach capabilities', function (hooks) {
       updatePath: apiPath`update/{'id'}`,
       deletePath: apiPath`delete/{'id'}`,
     });
-    assert.ok(
-      !!mc.relatedCapabilities && typeof mc.relatedCapabilities === 'function',
-      'model class now has a relatedCapabilities static function'
-    );
+    const relatedCapabilities = !!mc.relatedCapabilities && typeof mc.relatedCapabilities === 'function';
+    assert.true(relatedCapabilities, 'model class now has a relatedCapabilities static function');
   });
 
   test('calling static method with single response JSON-API document adds expected relationships', function (assert) {

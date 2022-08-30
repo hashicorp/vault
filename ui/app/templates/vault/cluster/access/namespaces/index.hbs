@@ -32,7 +32,7 @@
           {{list.item.id}}
         </Item.content>
         <Item.menu as |m|>
-          {{#with (concat this.currentNamespace (if this.currentNamespace "/") list.item.id) as |targetNamespace|}}
+          {{#let (concat this.currentNamespace (if this.currentNamespace "/") list.item.id) as |targetNamespace|}}
             {{#if (contains targetNamespace this.accessibleNamespaces)}}
               <li class="action">
                 <NamespaceLink @targetNamespace={{targetNamespace}} @class="is-block">
@@ -40,7 +40,7 @@
                 </NamespaceLink>
               </li>
             {{/if}}
-          {{/with}}
+          {{/let}}
           <li class="action">
             <m.Message
               @id={{list.item.id}}

@@ -3,7 +3,9 @@ package database
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"reflect"
 	"strings"
@@ -25,7 +27,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-	"github.com/lib/pq"
+	_ "github.com/jackc/pgx/v4"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -686,7 +688,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
-	if len(resp.Warnings) != 1 {
+	if len(resp.Warnings) == 0 {
 		t.Fatalf("expected warning about password in url %s, resp:%#v\n", connURL, resp)
 	}
 
@@ -709,7 +711,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 
 	// Replace connection url with templated version
 	req.Operation = logical.UpdateOperation
-	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)
+	connURL = strings.ReplaceAll(connURL, "postgres:secret", "{{username}}:{{password}}")
 	data["connection_url"] = connURL
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -1265,7 +1267,7 @@ func TestBackend_RotateRootCredentials(t *testing.T) {
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "13.4-buster")
 	defer cleanup()
 
-	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", -1)
+	connURL = strings.ReplaceAll(connURL, "postgres:secret", "{{username}}:{{password}}")
 
 	// Configure a connection
 	data := map[string]interface{}{
@@ -1349,6 +1351,201 @@ func TestBackend_RotateRootCredentials(t *testing.T) {
 	}
 }
 
+func TestBackend_ConnectionURL_redacted(t *testing.T) {
+	cluster, sys := getCluster(t)
+	t.Cleanup(cluster.Cleanup)
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = sys
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Cleanup(context.Background())
+
+	tests := []struct {
+		name     string
+		password string
+	}{
+		{
+			name:     "basic",
+			password: "secret",
+		},
+		{
+			name:     "encoded",
+			password: "yourStrong(!)Password",
+		},
+	}
+
+	respCheck := func(req *logical.Request) *logical.Response {
+		t.Helper()
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if resp == nil {
+			t.Fatalf("expected a response, resp: %#v", resp)
+		}
+
+		if resp.Error() != nil {
+			t.Fatalf("unexpected error in response, err: %#v", resp.Error())
+		}
+
+		return resp
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cleanup, u := postgreshelper.PrepareTestContainerWithPassword(t, "13.4-buster", tt.password)
+			t.Cleanup(cleanup)
+
+			p, err := url.Parse(u)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			actualPassword, _ := p.User.Password()
+			if tt.password != actualPassword {
+				t.Fatalf("expected computed URL password %#v, actual %#v", tt.password, actualPassword)
+			}
+
+			// Configure a connection
+			data := map[string]interface{}{
+				"connection_url": u,
+				"plugin_name":    "postgresql-database-plugin",
+				"allowed_roles":  []string{"plugin-role-test"},
+			}
+			req := &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("config/%s", tt.name),
+				Storage:   config.StorageView,
+				Data:      data,
+			}
+			respCheck(req)
+
+			// read config
+			readReq := &logical.Request{
+				Operation: logical.ReadOperation,
+				Path:      req.Path,
+				Storage:   config.StorageView,
+			}
+			resp := respCheck(readReq)
+
+			var connDetails map[string]interface{}
+			if v, ok := resp.Data["connection_details"]; ok {
+				connDetails = v.(map[string]interface{})
+			}
+
+			if connDetails == nil {
+				t.Fatalf("response data missing connection_details, resp: %#v", resp)
+			}
+
+			actual := connDetails["connection_url"].(string)
+			expected := p.Redacted()
+			if expected != actual {
+				t.Fatalf("expected redacted URL %q, actual %q", expected, actual)
+			}
+
+			if tt.password != "" {
+				// extra test to ensure that URL.Redacted() is working as expected.
+				p, err = url.Parse(actual)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if pp, _ := p.User.Password(); pp == tt.password {
+					t.Fatalf("password was not redacted by URL.Redacted()")
+				}
+			}
+		})
+	}
+}
+
+type hangingPlugin struct{}
+
+func (h hangingPlugin) Initialize(_ context.Context, req v5.InitializeRequest) (v5.InitializeResponse, error) {
+	return v5.InitializeResponse{
+		Config: req.Config,
+	}, nil
+}
+
+func (h hangingPlugin) NewUser(_ context.Context, _ v5.NewUserRequest) (v5.NewUserResponse, error) {
+	return v5.NewUserResponse{}, nil
+}
+
+func (h hangingPlugin) UpdateUser(_ context.Context, _ v5.UpdateUserRequest) (v5.UpdateUserResponse, error) {
+	return v5.UpdateUserResponse{}, nil
+}
+
+func (h hangingPlugin) DeleteUser(_ context.Context, _ v5.DeleteUserRequest) (v5.DeleteUserResponse, error) {
+	return v5.DeleteUserResponse{}, nil
+}
+
+func (h hangingPlugin) Type() (string, error) {
+	return "hanging", nil
+}
+
+func (h hangingPlugin) Close() error {
+	time.Sleep(1000 * time.Second)
+	return nil
+}
+
+var _ v5.Database = (*hangingPlugin)(nil)
+
+func TestBackend_PluginMain_Hanging(t *testing.T) {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
+		return
+	}
+	v5.Serve(&hangingPlugin{})
+}
+
+func TestBackend_AsyncClose(t *testing.T) {
+	// Test that having a plugin that takes a LONG time to close will not cause the cleanup function to take
+	// longer than 750ms.
+	cluster, sys := getCluster(t)
+	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "hanging-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Hanging", []string{}, "")
+	t.Cleanup(cluster.Cleanup)
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = sys
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Configure a connection
+	data := map[string]interface{}{
+		"connection_url": "doesn't matter",
+		"plugin_name":    "hanging-plugin",
+		"allowed_roles":  []string{"plugin-role-test"},
+	}
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/hang",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	_, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	timeout := time.NewTimer(750 * time.Millisecond)
+	done := make(chan bool)
+	go func() {
+		b.Cleanup(context.Background())
+		// check that clean can be called twice safely
+		b.Cleanup(context.Background())
+		done <- true
+	}()
+	select {
+	case <-timeout.C:
+		t.Error("Hanging plugin caused Close() to take longer than 750ms")
+	case <-done:
+	}
+}
+
 func testCredsExist(t *testing.T, resp *logical.Response, connURL string) bool {
 	t.Helper()
 	var d struct {
@@ -1359,14 +1556,8 @@ func testCredsExist(t *testing.T, resp *logical.Response, connURL string) bool {
 		t.Fatal(err)
 	}
 	log.Printf("[TRACE] Generated credentials: %v", d)
-	conn, err := pq.ParseURL(connURL)
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	conn += " timezone=utc"
-
-	db, err := sql.Open("postgres", conn)
+	db, err := sql.Open("pgx", connURL+"&timezone=utc")
 	if err != nil {
 		t.Fatal(err)
 	}

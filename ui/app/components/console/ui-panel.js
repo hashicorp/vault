@@ -2,7 +2,7 @@ import { inject as service } from '@ember/service';
 import { alias, or } from '@ember/object/computed';
 import Component from '@ember/component';
 import { getOwner } from '@ember/application';
-import { run } from '@ember/runloop';
+import { schedule } from '@ember/runloop';
 import { task } from 'ember-concurrency';
 import ControlGroupError from 'vault/lib/control-group-error';
 import {
@@ -20,6 +20,7 @@ export default Component.extend({
   controlGroup: service(),
   store: service(),
   'data-test-component': 'console/ui-panel',
+  attributeBindings: ['data-test-component'],
 
   classNames: 'console-ui-panel',
   classNameBindings: ['isFullscreen:fullscreen'],
@@ -34,7 +35,7 @@ export default Component.extend({
 
   logAndOutput(command, logContent) {
     this.console.logAndOutput(command, logContent);
-    run.schedule('afterRender', () => this.scrollToBottom());
+    schedule('afterRender', () => this.scrollToBottom());
   },
 
   isRunning: or('executeCommand.isRunning', 'refreshRoute.isRunning'),

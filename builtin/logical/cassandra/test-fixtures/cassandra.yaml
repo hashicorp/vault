@@ -529,7 +529,7 @@ memtable_allocation_type: heap_buffers
 # new space for cdc-tracked tables has been made available. Default to 250ms
 # cdc_free_space_check_interval_ms: 250
 
-# A fixed memory pool size in MB for for SSTable index summaries. If left
+# A fixed memory pool size in MB for SSTable index summaries. If left
 # empty, this will default to 5% of the heap size. If the memory usage of
 # all index summaries exceeds this limit, SSTables with low read rates will
 # shrink their index summaries in order to meet this limit.  However, this

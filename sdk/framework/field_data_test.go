@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"encoding/json"
 	"net/http"
 	"reflect"
 	"testing"
@@ -592,6 +593,19 @@ func TestFieldDataGet(t *testing.T) {
 			[]int{},
 			false,
 		},
+
+		"comma int slice type, json number": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeCommaIntSlice},
+			},
+			map[string]interface{}{
+				"foo": json.Number("1"),
+			},
+			"foo",
+			[]int{1},
+			false,
+		},
+
 		"name string type, valid string": {
 			map[string]*FieldSchema{
 				"foo": {Type: TypeNameString},
@@ -852,6 +866,18 @@ func TestFieldDataGet(t *testing.T) {
 			map[string]interface{}{},
 			"foo",
 			[]string{},
+			false,
+		},
+
+		"comma string slice type, single JSON number value": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeCommaStringSlice},
+			},
+			map[string]interface{}{
+				"foo": json.Number("123"),
+			},
+			"foo",
+			[]string{"123"},
 			false,
 		},
 

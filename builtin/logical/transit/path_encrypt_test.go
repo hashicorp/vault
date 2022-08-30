@@ -30,15 +30,11 @@ func TestTransit_MissingPlaintext(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	encData := map[string]interface{}{
-		"plaintext": nil,
-	}
-
 	encReq := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "encrypt/existing_key",
 		Storage:   s,
-		Data:      encData,
+		Data:      map[string]interface{}{},
 	}
 	resp, err = b.HandleRequest(context.Background(), encReq)
 	if resp == nil || !resp.IsError() {

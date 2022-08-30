@@ -12,7 +12,6 @@
       <ul>
         {{! template-lint-configure no-nested-interactive "warn" }}
         <li
-          role="tab"
           aria-selected={{if (eq @unwrapActiveTab "data") "true" "false"}}
           class={{if (eq @unwrapActiveTab "data") "is-active"}}
         >
@@ -26,7 +25,6 @@
           </button>
         </li>
         <li
-          role="tab"
           aria-selected={{if (eq @unwrapActiveTab "data") "true" "false"}}
           class={{if (eq @unwrapActiveTab "details") "is-active"}}
         >
@@ -45,7 +43,7 @@
     {{#if (eq @unwrapActiveTab "data")}}
       <div class="field">
         <div class="control">
-          <JsonEditor @title="Unwrapped Data" @value={{stringify @unwrap_data}} @options={{hash readOnly=true}} />
+          <JsonEditor @title="Unwrapped Data" @value={{stringify @unwrap_data}} @readOnly={{true}} />
         </div>
       </div>
     {{else}}
@@ -88,7 +86,10 @@
     <NamespaceReminder @mode="perform" @noun={{@selectedAction}} />
     <MessageError @errors={{@errors}} />
     <div class="field">
-      <label for="token" class="is-label">Wrapping token</label>
+      <label for="token" class="is-label">Wrapped token</label>
+      <div class="has-text-grey is-size-8 has-bottom-margin-xs">
+        Enter your wrapped token here to unwrap it and return its original value.
+      </div>
       <div class="control">
         <Input
           @value={{@token}}

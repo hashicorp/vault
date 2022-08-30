@@ -6,6 +6,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"google.golang.org/grpc"
@@ -35,6 +36,7 @@ type LookRunnerUtil interface {
 
 type PluginClient interface {
 	Conn() grpc.ClientConnInterface
+	Reload() error
 	plugin.ClientProtocol
 }
 
@@ -45,6 +47,7 @@ const MultiplexingCtxKey string = "multiplex_id"
 type PluginRunner struct {
 	Name           string                      `json:"name" structs:"name"`
 	Type           consts.PluginType           `json:"type" structs:"type"`
+	Version        string                      `json:"version" structs:"version"`
 	Command        string                      `json:"command" structs:"command"`
 	Args           []string                    `json:"args" structs:"args"`
 	Env            []string                    `json:"env" structs:"env"`
@@ -79,6 +82,19 @@ func (r *PluginRunner) RunMetadataMode(ctx context.Context, wrapper RunnerUtil, 
 		Logger(logger),
 		MetadataMode(true),
 	)
+}
+
+// VersionedPlugin holds any versioning information stored about a plugin in the
+// plugin catalog.
+type VersionedPlugin struct {
+	Type    string `json:"type"` // string instead of consts.PluginType so that we get the string form in API responses.
+	Name    string `json:"name"`
+	Version string `json:"version"`
+	SHA256  string `json:"sha256,omitempty"`
+	Builtin bool   `json:"builtin"`
+
+	// Pre-parsed semver struct of the Version field
+	SemanticVersion *version.Version `json:"-"`
 }
 
 // CtxCancelIfCanceled takes a context cancel func and a context. If the context is

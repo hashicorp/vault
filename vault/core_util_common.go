@@ -4,8 +4,19 @@ import (
 	"context"
 
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+// GetCoreConfigInternal returns the server configuration
+// in struct format.
+func (c *Core) GetCoreConfigInternal() *server.Config {
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return nil
+	}
+	return conf.(*server.Config)
+}
 
 func (c *Core) loadHeaderHMACKey(ctx context.Context) error {
 	ent, err := c.barrier.Get(ctx, indexHeaderHMACKeyPath)

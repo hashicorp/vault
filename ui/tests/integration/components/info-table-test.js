@@ -17,6 +17,7 @@ module('Integration | Component | InfoTable', function (hooks) {
   });
 
   test('it renders', async function (assert) {
+    assert.expect(6);
     await render(hbs`<InfoTable
         @title={{title}}
         @header={{header}}

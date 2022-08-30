@@ -17,7 +17,10 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/asn1"
+	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
@@ -78,9 +81,10 @@ type BlockType string
 
 // Well-known formats
 const (
-	PKCS1Block BlockType = "RSA PRIVATE KEY"
-	PKCS8Block BlockType = "PRIVATE KEY"
-	ECBlock    BlockType = "EC PRIVATE KEY"
+	UnknownBlock BlockType = ""
+	PKCS1Block   BlockType = "RSA PRIVATE KEY"
+	PKCS8Block   BlockType = "PRIVATE KEY"
+	ECBlock      BlockType = "EC PRIVATE KEY"
 )
 
 // ParsedPrivateKeyContainer allows common key setting for certs and CSRs
@@ -135,6 +139,25 @@ type ParsedCSRBundle struct {
 	PrivateKey      crypto.Signer
 	CSRBytes        []byte
 	CSR             *x509.CertificateRequest
+}
+
+type KeyBundle struct {
+	PrivateKeyType  PrivateKeyType
+	PrivateKeyBytes []byte
+	PrivateKey      crypto.Signer
+}
+
+func GetPrivateKeyTypeFromSigner(signer crypto.Signer) PrivateKeyType {
+	switch signer.(type) {
+	case *rsa.PrivateKey:
+		return RSAPrivateKey
+	case *ecdsa.PrivateKey:
+		return ECPrivateKey
+	case ed25519.PrivateKey:
+		return Ed25519PrivateKey
+	default:
+		return UnknownPrivateKey
+	}
 }
 
 // ToPEMBundle converts a string-based certificate bundle
@@ -661,9 +684,33 @@ type URLEntries struct {
 	OCSPServers           []string `json:"ocsp_servers" structs:"ocsp_servers" mapstructure:"ocsp_servers"`
 }
 
+type NotAfterBehavior int
+
+const (
+	ErrNotAfterBehavior NotAfterBehavior = iota
+	TruncateNotAfterBehavior
+	PermitNotAfterBehavior
+)
+
+var notAfterBehaviorNames = map[NotAfterBehavior]string{
+	ErrNotAfterBehavior:      "err",
+	TruncateNotAfterBehavior: "truncate",
+	PermitNotAfterBehavior:   "permit",
+}
+
+func (n NotAfterBehavior) String() string {
+	if name, ok := notAfterBehaviorNames[n]; ok && len(name) > 0 {
+		return name
+	}
+
+	return "unknown"
+}
+
 type CAInfoBundle struct {
 	ParsedCertBundle
-	URLs *URLEntries
+	URLs                 *URLEntries
+	LeafNotAfterBehavior NotAfterBehavior
+	RevocationSigAlg     x509.SignatureAlgorithm
 }
 
 func (b *CAInfoBundle) GetCAChain() []*CertBlock {
@@ -675,13 +722,7 @@ func (b *CAInfoBundle) GetCAChain() []*CertBlock {
 		(len(b.Certificate.AuthorityKeyId) == 0 &&
 			!bytes.Equal(b.Certificate.RawIssuer, b.Certificate.RawSubject)) {
 
-		chain = append(chain, &CertBlock{
-			Certificate: b.Certificate,
-			Bytes:       b.CertificateBytes,
-		})
-		if b.CAChain != nil && len(b.CAChain) > 0 {
-			chain = append(chain, b.CAChain...)
-		}
+		chain = b.GetFullChain()
 	}
 
 	return chain
@@ -690,10 +731,14 @@ func (b *CAInfoBundle) GetCAChain() []*CertBlock {
 func (b *CAInfoBundle) GetFullChain() []*CertBlock {
 	var chain []*CertBlock
 
-	chain = append(chain, &CertBlock{
-		Certificate: b.Certificate,
-		Bytes:       b.CertificateBytes,
-	})
+	// Some bundles already include the root included in the chain,
+	// so don't include it twice.
+	if len(b.CAChain) == 0 || !bytes.Equal(b.CAChain[0].Bytes, b.CertificateBytes) {
+		chain = append(chain, &CertBlock{
+			Certificate: b.Certificate,
+			Bytes:       b.CertificateBytes,
+		})
+	}
 
 	if len(b.CAChain) > 0 {
 		chain = append(chain, b.CAChain...)
@@ -738,6 +783,8 @@ type CreationParameters struct {
 	PolicyIdentifiers             []string
 	BasicConstraintsValidForNonCA bool
 	SignatureBits                 int
+	UsePSS                        bool
+	ForceAppendCaChain            bool
 
 	// Only used when signing a CA cert
 	UseCSRValues        bool
@@ -751,6 +798,9 @@ type CreationParameters struct {
 
 	// The duration the certificate will use NotBefore
 	NotBeforeDuration time.Duration
+
+	// The explicit SKID to use; especially useful for cross-signing.
+	SKID []byte
 }
 
 type CreationBundle struct {
@@ -824,4 +874,142 @@ func AddKeyUsages(data *CreationBundle, certTemplate *x509.Certificate) {
 	if data.Params.ExtKeyUsage&MicrosoftKernelCodeSigningExtKeyUsage != 0 {
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageMicrosoftKernelCodeSigning)
 	}
+}
+
+// SetParsedPrivateKey sets the private key parameters on the bundle
+func (p *KeyBundle) SetParsedPrivateKey(privateKey crypto.Signer, privateKeyType PrivateKeyType, privateKeyBytes []byte) {
+	p.PrivateKey = privateKey
+	p.PrivateKeyType = privateKeyType
+	p.PrivateKeyBytes = privateKeyBytes
+}
+
+func (p *KeyBundle) ToPrivateKeyPemString() (string, error) {
+	block := pem.Block{}
+
+	if p.PrivateKeyBytes != nil && len(p.PrivateKeyBytes) > 0 {
+		block.Bytes = p.PrivateKeyBytes
+		switch p.PrivateKeyType {
+		case RSAPrivateKey:
+			block.Type = "RSA PRIVATE KEY"
+		case ECPrivateKey:
+			block.Type = "EC PRIVATE KEY"
+		default:
+			block.Type = "PRIVATE KEY"
+		}
+		privateKeyPemString := strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+		return privateKeyPemString, nil
+	}
+
+	return "", errutil.InternalError{Err: "No Private Key Bytes to Wrap"}
+}
+
+// PolicyIdentifierWithQualifierEntry Structure for Internal Storage
+type PolicyIdentifierWithQualifierEntry struct {
+	PolicyIdentifierOid string `json:"oid",mapstructure:"oid"`
+	CPS                 string `json:"cps,omitempty",mapstructure:"cps"`
+	Notice              string `json:"notice,omitempty",mapstructure:"notice"`
+}
+
+// GetPolicyIdentifierFromString parses out the internal structure of a Policy Identifier
+func GetPolicyIdentifierFromString(policyIdentifier string) (*PolicyIdentifierWithQualifierEntry, error) {
+	if policyIdentifier == "" {
+		return nil, nil
+	}
+	entry := &PolicyIdentifierWithQualifierEntry{}
+	// Either a OID, or a JSON Entry: First check OID:
+	_, err := StringToOid(policyIdentifier)
+	if err == nil {
+		entry.PolicyIdentifierOid = policyIdentifier
+		return entry, nil
+	}
+	// Now Check If JSON Entry
+	jsonErr := json.Unmarshal([]byte(policyIdentifier), &entry)
+	if jsonErr != nil { // Neither, if we got here
+		return entry, errors.New(fmt.Sprintf("Policy Identifier %q is neither a valid OID: %s, Nor JSON Policy Identifier: %s", policyIdentifier, err.Error(), jsonErr.Error()))
+	}
+	return entry, nil
+}
+
+// Policy Identifier with Qualifier Structure for ASN Marshalling:
+
+var policyInformationOid = asn1.ObjectIdentifier{2, 5, 29, 32}
+
+type policyInformation struct {
+	PolicyIdentifier asn1.ObjectIdentifier
+	Qualifiers       []interface{} `asn1:"tag:optional,omitempty"`
+}
+
+var cpsPolicyQualifierID = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 2, 1}
+
+type cpsUrlPolicyQualifier struct {
+	PolicyQualifierID asn1.ObjectIdentifier
+	Qualifier         string `asn1:"tag:optional,ia5"`
+}
+
+var userNoticePolicyQualifierID = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 2, 2}
+
+type userNoticePolicyQualifier struct {
+	PolicyQualifierID asn1.ObjectIdentifier
+	Qualifier         userNotice
+}
+
+type userNotice struct {
+	ExplicitText string `asn1:"tag:optional,utf8"`
+}
+
+func createPolicyIdentifierWithQualifier(entry PolicyIdentifierWithQualifierEntry) (*policyInformation, error) {
+	// Each Policy is Identified by a Unique ID, as designated here:
+	policyOid, err := StringToOid(entry.PolicyIdentifierOid)
+	if err != nil {
+		return nil, err
+	}
+	pi := policyInformation{
+		PolicyIdentifier: policyOid,
+	}
+	if entry.CPS != "" {
+		qualifier := cpsUrlPolicyQualifier{
+			PolicyQualifierID: cpsPolicyQualifierID,
+			Qualifier:         entry.CPS,
+		}
+		pi.Qualifiers = append(pi.Qualifiers, qualifier)
+	}
+	if entry.Notice != "" {
+		qualifier := userNoticePolicyQualifier{
+			PolicyQualifierID: userNoticePolicyQualifierID,
+			Qualifier: userNotice{
+				ExplicitText: entry.Notice,
+			},
+		}
+		pi.Qualifiers = append(pi.Qualifiers, qualifier)
+	}
+	return &pi, nil
+}
+
+// CreatePolicyInformationExtensionFromStorageStrings parses the stored policyIdentifiers, which might be JSON Policy
+// Identifier with Qualifier Entries or String OIDs, and returns an extension if everything parsed correctly, and an
+// error if constructing
+func CreatePolicyInformationExtensionFromStorageStrings(policyIdentifiers []string) (*pkix.Extension, error) {
+	var policyInformationList []policyInformation
+	for _, policyIdentifierStr := range policyIdentifiers {
+		policyIdentifierEntry, err := GetPolicyIdentifierFromString(policyIdentifierStr)
+		if err != nil {
+			return nil, err
+		}
+		if policyIdentifierEntry != nil { // Okay to skip empty entries if there is no error
+			policyInformationStruct, err := createPolicyIdentifierWithQualifier(*policyIdentifierEntry)
+			if err != nil {
+				return nil, err
+			}
+			policyInformationList = append(policyInformationList, *policyInformationStruct)
+		}
+	}
+	asn1Bytes, err := asn1.Marshal(policyInformationList)
+	if err != nil {
+		return nil, err
+	}
+	return &pkix.Extension{
+		Id:       policyInformationOid,
+		Critical: false,
+		Value:    asn1Bytes,
+	}, nil
 }

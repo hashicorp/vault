@@ -13,7 +13,6 @@ import (
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/lib/pq"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -272,14 +271,8 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 				return err
 			}
 			log.Printf("[TRACE] Generated credentials: %v", d)
-			conn, err := pq.ParseURL(connURL)
-			if err != nil {
-				t.Fatal(err)
-			}
 
-			conn += " timezone=utc"
-
-			db, err := sql.Open("postgres", conn)
+			db, err := sql.Open("pgx", connURL+"&timezone=utc")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -356,14 +349,8 @@ func testAccStepCreateTable(t *testing.T, b logical.Backend, s logical.Storage, 
 				return err
 			}
 			log.Printf("[TRACE] Generated credentials: %v", d)
-			conn, err := pq.ParseURL(connURL)
-			if err != nil {
-				t.Fatal(err)
-			}
 
-			conn += " timezone=utc"
-
-			db, err := sql.Open("postgres", conn)
+			db, err := sql.Open("pgx", connURL+"&timezone=utc")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -410,14 +397,8 @@ func testAccStepDropTable(t *testing.T, b logical.Backend, s logical.Storage, na
 				return err
 			}
 			log.Printf("[TRACE] Generated credentials: %v", d)
-			conn, err := pq.ParseURL(connURL)
-			if err != nil {
-				t.Fatal(err)
-			}
 
-			conn += " timezone=utc"
-
-			db, err := sql.Open("postgres", conn)
+			db, err := sql.Open("pgx", connURL+"&timezone=utc")
 			if err != nil {
 				t.Fatal(err)
 			}

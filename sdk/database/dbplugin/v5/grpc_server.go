@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -30,25 +29,6 @@ type gRPCServer struct {
 	sync.RWMutex
 }
 
-func getMultiplexIDFromContext(ctx context.Context) (string, error) {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return "", fmt.Errorf("missing plugin multiplexing metadata")
-	}
-
-	multiplexIDs := md[pluginutil.MultiplexingCtxKey]
-	if len(multiplexIDs) != 1 {
-		return "", fmt.Errorf("unexpected number of IDs in metadata: (%d)", len(multiplexIDs))
-	}
-
-	multiplexID := multiplexIDs[0]
-	if multiplexID == "" {
-		return "", fmt.Errorf("empty multiplex ID in metadata")
-	}
-
-	return multiplexID, nil
-}
-
 func (g *gRPCServer) getOrCreateDatabase(ctx context.Context) (Database, error) {
 	g.Lock()
 	defer g.Unlock()
@@ -57,7 +37,7 @@ func (g *gRPCServer) getOrCreateDatabase(ctx context.Context) (Database, error) 
 		return g.singleImpl, nil
 	}
 
-	id, err := getMultiplexIDFromContext(ctx)
+	id, err := pluginutil.GetMultiplexIDFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +63,7 @@ func (g *gRPCServer) getDatabaseInternal(ctx context.Context) (Database, error) 
 		return g.singleImpl, nil
 	}
 
-	id, err := getMultiplexIDFromContext(ctx)
+	id, err := pluginutil.GetMultiplexIDFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +139,9 @@ func (g *gRPCServer) NewUser(ctx context.Context, req *proto.NewUserRequest) (*p
 			DisplayName: req.GetUsernameConfig().GetDisplayName(),
 			RoleName:    req.GetUsernameConfig().GetRoleName(),
 		},
+		CredentialType:     CredentialType(req.GetCredentialType()),
 		Password:           req.GetPassword(),
+		PublicKey:          req.GetPublicKey(),
 		Expiration:         expiration,
 		Statements:         getStatementsFromProto(req.GetStatements()),
 		RollbackStatements: getStatementsFromProto(req.GetRollbackStatements()),
@@ -207,6 +189,14 @@ func getUpdateUserRequest(req *proto.UpdateUserRequest) (UpdateUserRequest, erro
 		}
 	}
 
+	var publicKey *ChangePublicKey
+	if req.GetPublicKey() != nil && len(req.GetPublicKey().GetNewPublicKey()) > 0 {
+		publicKey = &ChangePublicKey{
+			NewPublicKey: req.GetPublicKey().GetNewPublicKey(),
+			Statements:   getStatementsFromProto(req.GetPublicKey().GetStatements()),
+		}
+	}
+
 	var expiration *ChangeExpiration
 	if req.GetExpiration() != nil && req.GetExpiration().GetNewExpiration() != nil {
 		newExpiration, err := ptypes.Timestamp(req.GetExpiration().GetNewExpiration())
@@ -221,9 +211,11 @@ func getUpdateUserRequest(req *proto.UpdateUserRequest) (UpdateUserRequest, erro
 	}
 
 	dbReq := UpdateUserRequest{
-		Username:   req.GetUsername(),
-		Password:   password,
-		Expiration: expiration,
+		Username:       req.GetUsername(),
+		CredentialType: CredentialType(req.GetCredentialType()),
+		Password:       password,
+		PublicKey:      publicKey,
+		Expiration:     expiration,
 	}
 
 	if !hasChange(dbReq) {
@@ -235,6 +227,9 @@ func getUpdateUserRequest(req *proto.UpdateUserRequest) (UpdateUserRequest, erro
 
 func hasChange(dbReq UpdateUserRequest) bool {
 	if dbReq.Password != nil && dbReq.Password.NewPassword != "" {
+		return true
+	}
+	if dbReq.PublicKey != nil && len(dbReq.PublicKey.NewPublicKey) > 0 {
 		return true
 	}
 	if dbReq.Expiration != nil && !dbReq.Expiration.NewExpiration.IsZero() {
@@ -297,7 +292,7 @@ func (g *gRPCServer) Close(ctx context.Context, _ *proto.Empty) (*proto.Empty, e
 
 	if g.singleImpl == nil {
 		// only cleanup instances map when multiplexing is supported
-		id, err := getMultiplexIDFromContext(ctx)
+		id, err := pluginutil.GetMultiplexIDFromContext(ctx)
 		if err != nil {
 			return nil, err
 		}

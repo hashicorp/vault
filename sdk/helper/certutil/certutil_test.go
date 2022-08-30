@@ -2,6 +2,7 @@ package certutil
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
@@ -851,6 +852,86 @@ func setCerts() {
 	}
 
 	issuingCaChainPem = []string{intCertPEM, caCertPEM}
+}
+
+func TestComparePublicKeysAndType(t *testing.T) {
+	rsa1 := genRsaKey(t).Public()
+	rsa2 := genRsaKey(t).Public()
+	eddsa1 := genEdDSA(t).Public()
+	eddsa2 := genEdDSA(t).Public()
+	ed25519_1, _ := genEd25519Key(t)
+	ed25519_2, _ := genEd25519Key(t)
+
+	type args struct {
+		key1Iface crypto.PublicKey
+		key2Iface crypto.PublicKey
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    bool
+		wantErr bool
+	}{
+		{name: "RSA_Equal", args: args{key1Iface: rsa1, key2Iface: rsa1}, want: true, wantErr: false},
+		{name: "RSA_NotEqual", args: args{key1Iface: rsa1, key2Iface: rsa2}, want: false, wantErr: false},
+		{name: "EDDSA_Equal", args: args{key1Iface: eddsa1, key2Iface: eddsa1}, want: true, wantErr: false},
+		{name: "EDDSA_NotEqual", args: args{key1Iface: eddsa1, key2Iface: eddsa2}, want: false, wantErr: false},
+		{name: "ED25519_Equal", args: args{key1Iface: ed25519_1, key2Iface: ed25519_1}, want: true, wantErr: false},
+		{name: "ED25519_NotEqual", args: args{key1Iface: ed25519_1, key2Iface: ed25519_2}, want: false, wantErr: false},
+		{name: "Mismatched_RSA", args: args{key1Iface: rsa1, key2Iface: ed25519_2}, want: false, wantErr: false},
+		{name: "Mismatched_EDDSA", args: args{key1Iface: ed25519_1, key2Iface: rsa1}, want: false, wantErr: false},
+		{name: "Mismatched_ED25519", args: args{key1Iface: ed25519_1, key2Iface: rsa1}, want: false, wantErr: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ComparePublicKeysAndType(tt.args.key1Iface, tt.args.key2Iface)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ComparePublicKeysAndType() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("ComparePublicKeysAndType() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNotAfterValues(t *testing.T) {
+	if ErrNotAfterBehavior != 0 {
+		t.Fatalf("Expected ErrNotAfterBehavior=%v to have value 0", ErrNotAfterBehavior)
+	}
+
+	if TruncateNotAfterBehavior != 1 {
+		t.Fatalf("Expected TruncateNotAfterBehavior=%v to have value 1", TruncateNotAfterBehavior)
+	}
+
+	if PermitNotAfterBehavior != 2 {
+		t.Fatalf("Expected PermitNotAfterBehavior=%v to have value 2", PermitNotAfterBehavior)
+	}
+}
+
+func genRsaKey(t *testing.T) *rsa.PrivateKey {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return key
+}
+
+func genEdDSA(t *testing.T) *ecdsa.PrivateKey {
+	key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return key
+}
+
+func genEd25519Key(t *testing.T) (ed25519.PublicKey, ed25519.PrivateKey) {
+	key, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return key, priv
 }
 
 var (

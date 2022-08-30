@@ -6,21 +6,13 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/custommetadata"
 	"github.com/hashicorp/vault/sdk/logical"
-)
-
-const (
-	maxCustomMetadataKeys               = 64
-	maxCustomMetadataKeyLength          = 128
-	maxCustomMetadataValueLength        = 512
-	customMetadataValidationErrorPrefix = "custom_metadata validation failed"
 )
 
 // aliasPaths returns the API endpoints to operate on aliases.
@@ -152,7 +144,7 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 
 		// validate customMetadata if provided
 		if len(customMetadata) != 0 {
-			if err := validateCustomMetadata(customMetadata); err != nil {
+			if err := custommetadata.Validate(customMetadata); err != nil {
 				return nil, err
 			}
 		}
@@ -466,55 +458,6 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, canonicalID, name
 			"canonical_id": newEntity.ID,
 		},
 	}, nil
-}
-
-func validateCustomMetadata(customMetadata map[string]string) error {
-	var errs *multierror.Error
-
-	if keyCount := len(customMetadata); keyCount > maxCustomMetadataKeys {
-		errs = multierror.Append(errs, fmt.Errorf("%s: payload must contain at most %d keys, provided %d",
-			customMetadataValidationErrorPrefix,
-			maxCustomMetadataKeys,
-			keyCount))
-
-		return errs.ErrorOrNil()
-	}
-
-	// Perform validation on each key and value and return ALL errors
-	for key, value := range customMetadata {
-		if keyLen := len(key); 0 == keyLen || keyLen > maxCustomMetadataKeyLength {
-			errs = multierror.Append(errs, fmt.Errorf("%s: length of key %q is %d but must be 0 < len(key) <= %d",
-				customMetadataValidationErrorPrefix,
-				key,
-				keyLen,
-				maxCustomMetadataKeyLength))
-		}
-
-		if valueLen := len(value); 0 == valueLen || valueLen > maxCustomMetadataValueLength {
-			errs = multierror.Append(errs, fmt.Errorf("%s: length of value for key %q is %d but must be 0 < len(value) <= %d",
-				customMetadataValidationErrorPrefix,
-				key,
-				valueLen,
-				maxCustomMetadataValueLength))
-		}
-
-		if !strutil.Printable(key) {
-			// Include unquoted format (%s) to also include the string without the unprintable
-			//  characters visible to allow for easier debug and key identification
-			errs = multierror.Append(errs, fmt.Errorf("%s: key %q (%s) contains unprintable characters",
-				customMetadataValidationErrorPrefix,
-				key,
-				key))
-		}
-
-		if !strutil.Printable(value) {
-			errs = multierror.Append(errs, fmt.Errorf("%s: value for key %q contains unprintable characters",
-				customMetadataValidationErrorPrefix,
-				key))
-		}
-	}
-
-	return errs.ErrorOrNil()
 }
 
 // pathAliasIDRead returns the properties of an alias for a given

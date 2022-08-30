@@ -19,7 +19,7 @@
     {{#each this.allFeatures as |feature|}}
       {{#if feature.show}}
         <div
-          class="feature-box {{if feature.selected "is-active"}} {{if feature.disabled "is-disabled"}}"
+          class="feature-box {{if feature.selected 'is-active'}} {{if feature.disabled 'is-disabled'}}"
           data-test-select-input={{true}}
         >
           <div class="b-checkbox">
