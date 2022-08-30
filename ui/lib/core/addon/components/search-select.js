@@ -182,6 +182,7 @@ export default Component.extend({
   },
   // -----
   customizeObject(option) {
+    if (!option) return;
     // if passObject=true return object, otherwise return string of option id
     if (this.passObject) {
       let additionalKeys;
