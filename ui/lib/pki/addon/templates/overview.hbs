@@ -8,3 +8,16 @@
   }}
   @isEngine={{true}}
 />
+
+{{! ARG TODO in another PR the conditional to show the EmptyState. }}
+<EmptyState @title="PKI not configured" @message="This PKI mount hasn’t yet been configured with a certificate issuer.">
+  {{! ARG TODO will create when route exists. }}
+  {{!-- <SecretLink
+      @mode="create"
+      @secret=""
+      @queryParams={{query-params initialKey=(or this.filter this.baseKey.id) itemType=this.tab}}
+      class="link"
+    >
+      Configure PKI
+    </SecretLink> --}}
+</EmptyState>
