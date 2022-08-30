@@ -141,6 +141,13 @@ be larger than the role max TTL.`,
 The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
 	}
 
+	fields["remove_roots_from_chain"] = &framework.FieldSchema{
+		Type:    framework.TypeBool,
+		Default: false,
+		Description: `Whether or not to remove self-signed CA certificates in the output
+of the ca_chain field.`,
+	}
+
 	fields = addIssuerRefField(fields)
 
 	return fields
