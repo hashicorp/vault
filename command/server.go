@@ -1774,7 +1774,7 @@ func (c *ServerCommand) Run(args []string) int {
 	return retCode
 }
 
-func (c *ServerCommand) reloadHCPLink(hcpLinkVault *hcp_link.HCPLinkVault, conf *server.Config, core *vault.Core, hcpLogger hclog.Logger) (*hcp_link.HCPLinkVault, error) {
+func (c *ServerCommand) reloadHCPLink(hcpLinkVault *hcp_link.WrappedHCPLinkVault, conf *server.Config, core *vault.Core, hcpLogger hclog.Logger) (*hcp_link.WrappedHCPLinkVault, error) {
 	// trigger a shutdown
 	if hcpLinkVault != nil {
 		err := hcpLinkVault.Shutdown()

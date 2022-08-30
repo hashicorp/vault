@@ -8,12 +8,12 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func NewHCPLink(linkConf *configutil.HCPLinkConfig, core *vault.Core, logger hclog.Logger) (*HCPLinkVault, error) {
+func NewHCPLink(linkConf *configutil.HCPLinkConfig, core *vault.Core, logger hclog.Logger) (*WrappedHCPLinkVault, error) {
 	return nil, nil
 }
 
-func (h *HCPLinkVault) Shutdown() error {
+func (h *WrappedHCPLinkVault) Shutdown() error {
 	return nil
 }
 
-func (h *HCPLinkVault) GetScadaSessionStatus() string { return Disconnected }
+func (h *WrappedHCPLinkVault) GetScadaSessionStatus() string { return Disconnected }
