@@ -10,6 +10,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	mathrand "math/rand"
 	"reflect"
 	"strconv"
 	"strings"
@@ -818,6 +819,7 @@ func autoVerify(depth int, t *testing.T, p *Policy, input []byte, sig *SigningRe
 
 func Test_RSA_PSS(t *testing.T) {
 	t.Log("Testing RSA PSS")
+	mathrand.Seed(time.Now().UnixNano())
 
 	var userError errutil.UserError
 	ctx := context.Background()
@@ -893,9 +895,11 @@ func Test_RSA_PSS(t *testing.T) {
 			}
 		}
 
-		// 3. For each valid salt length...
+		// 3. For three possible valid salt lengths...
 		t.Log(tabs[3], "Test all valid salt lengths")
-		for saltLength := minSaltLength; saltLength <= maxSaltLength; saltLength++ {
+		midSaltLength := mathrand.Intn(maxSaltLength-1) + 1 // [1, maxSaltLength)
+		validSaltLengths := []int{minSaltLength, midSaltLength, maxSaltLength}
+		for _, saltLength := range validSaltLengths {
 			t.Log(tabs[4], "Salt length:", saltLength)
 			saltedOptions := saltOptions(unsaltedOptions, saltLength)
 
