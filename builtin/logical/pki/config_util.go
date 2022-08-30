@@ -91,6 +91,7 @@ func (sc *storageContext) updateDefaultIssuerId(id issuerID) error {
 		}
 
 		cfg.LastModified = now
+		cfg.DeltaLastModified = now
 		err = sc.setLocalCRLConfig(cfg)
 		if err != nil {
 			return fmt.Errorf("unable to update local CRL config's modification time: error persisting local CRL config: %v", err)

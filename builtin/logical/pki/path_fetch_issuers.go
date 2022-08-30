@@ -755,7 +755,7 @@ func (b *backend) pathGetRawIssuer(ctx context.Context, req *logical.Request, da
 	var certificate []byte
 
 	response := &logical.Response{}
-	ret, err := sendNotModifiedResponseIfNecessary(&IfModifiedSinceHelper{req: req, issuerRef: ref}, sc, response)
+	ret, err := sendNotModifiedResponseIfNecessary(&IfModifiedSinceHelper{req: req, reqType: ifModifiedCA, issuerRef: ref}, sc, response)
 	if err != nil {
 		return nil, err
 	}
@@ -937,7 +937,11 @@ func (b *backend) pathGetIssuerCRL(ctx context.Context, req *logical.Request, da
 
 	sc := b.makeStorageContext(ctx, req.Storage)
 	response := &logical.Response{}
-	ret, err := sendNotModifiedResponseIfNecessary(&IfModifiedSinceHelper{req: req}, sc, response)
+	var crlType ifModifiedReqType = ifModifiedCRL
+	if strings.Contains(req.Path, "delta") {
+		crlType = ifModifiedDeltaCRL
+	}
+	ret, err := sendNotModifiedResponseIfNecessary(&IfModifiedSinceHelper{req: req, reqType: crlType}, sc, response)
 	if err != nil {
 		return nil, err
 	}

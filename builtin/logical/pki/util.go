@@ -21,6 +21,10 @@ const (
 	managedKeyNameArg = "managed_key_name"
 	managedKeyIdArg   = "managed_key_id"
 	defaultRef        = "default"
+
+	// Constants for If-Modified-Since operation
+	headerIfModifiedSince = "If-Modified-Since"
+	headerLastModified    = "Last-Modified"
 )
 
 var (
@@ -252,8 +256,18 @@ func parseIfNotModifiedSince(req *logical.Request) (time.Time, error) {
 	return headerTimeValue, nil
 }
 
+type ifModifiedReqType int
+
+const (
+	ifModifiedUnknown  ifModifiedReqType = iota
+	ifModifiedCA                         = iota
+	ifModifiedCRL                        = iota
+	ifModifiedDeltaCRL                   = iota
+)
+
 type IfModifiedSinceHelper struct {
 	req       *logical.Request
+	reqType   ifModifiedReqType
 	issuerRef issuerID
 }
 
@@ -292,7 +306,8 @@ func (sc *storageContext) isIfModifiedSinceBeforeLastModified(helper *IfModified
 		return false, err
 	}
 
-	if helper.issuerRef == "" {
+	switch helper.reqType {
+	case ifModifiedCRL, ifModifiedDeltaCRL:
 		if sc.Backend.crlBuilder.invalidate.Load() {
 			// When we see the CRL is invalidated, respond with false
 			// regardless of what the local CRL state says. We've likely
@@ -309,7 +324,10 @@ func (sc *storageContext) isIfModifiedSinceBeforeLastModified(helper *IfModified
 		}
 
 		lastModified = crlConfig.LastModified
-	} else {
+		if helper.reqType == ifModifiedDeltaCRL {
+			lastModified = crlConfig.DeltaLastModified
+		}
+	case ifModifiedCA:
 		issuerId, err := sc.resolveIssuerReference(string(helper.issuerRef))
 		if err != nil {
 			return false, err
@@ -321,6 +339,8 @@ func (sc *storageContext) isIfModifiedSinceBeforeLastModified(helper *IfModified
 		}
 
 		lastModified = issuer.LastModified
+	default:
+		return false, fmt.Errorf("unknown if-modified-since request type: %v", helper.reqType)
 	}
 
 	if !lastModified.IsZero() && lastModified.Before(ifModifiedSince) {

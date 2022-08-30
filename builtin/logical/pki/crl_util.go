@@ -229,6 +229,7 @@ func (cb *crlBuilder) flushCRLBuildTimeInvalidation(sc *storageContext) error {
 		}
 
 		cfg.LastModified = time.Now().UTC()
+		cfg.DeltaLastModified = time.Now().UTC()
 		err = sc.setLocalCRLConfig(cfg)
 		if err != nil {
 			cb.invalidate.Store(true)
@@ -931,7 +932,11 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 			}
 
 			// Update `LastModified`
-			crlConfig.LastModified = time.Now().UTC()
+			if isDelta {
+				crlConfig.DeltaLastModified = time.Now().UTC()
+			} else {
+				crlConfig.LastModified = time.Now().UTC()
+			}
 
 			// Lastly, build the CRL.
 			nextUpdate, err := buildCRL(sc, globalCRLConfig, forceNew, representative, revokedCerts, crlIdentifier, crlNumber, isDelta, lastCompleteNumber)

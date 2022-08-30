@@ -166,9 +166,14 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 	// Errors don't cause an immediate exit, because the raw
 	// paths still need to return raw output.
 
+	modifiedCtx := &IfModifiedSinceHelper{
+		req:       req,
+		issuerRef: defaultRef,
+	}
 	switch {
 	case req.Path == "ca" || req.Path == "ca/pem" || req.Path == "cert/ca" || req.Path == "cert/ca/raw" || req.Path == "cert/ca/raw/pem":
-		ret, err := sendNotModifiedResponseIfNecessary(&IfModifiedSinceHelper{req: req, issuerRef: defaultRef}, sc, response)
+		modifiedCtx.reqType = ifModifiedCA
+		ret, err := sendNotModifiedResponseIfNecessary(modifiedCtx, sc, response)
 		if err != nil || ret {
 			retErr = err
 			goto reply
@@ -188,22 +193,26 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		if req.Path == "ca_chain" {
 			contentType = "application/pkix-cert"
 		}
-	case req.Path == "crl" || req.Path == "crl/pem" || req.Path == "crl/delta" || req.Path == "crl/delta/pem" || req.Path == "cert/crl" || req.Path == "cert/crl/raw" || req.Path == "cert/crl/raw/pem":
-		ret, err := sendNotModifiedResponseIfNecessary(&IfModifiedSinceHelper{req: req}, sc, response)
+	case req.Path == "crl" || req.Path == "crl/pem" || req.Path == "crl/delta" || req.Path == "crl/delta/pem" || req.Path == "cert/crl" || req.Path == "cert/crl/raw" || req.Path == "cert/crl/raw/pem" || req.Path == "cert/delta-crl":
+		modifiedCtx.reqType = ifModifiedCRL
+		if strings.Contains(req.Path, "delta") {
+			modifiedCtx.reqType = ifModifiedDeltaCRL
+		}
+		ret, err := sendNotModifiedResponseIfNecessary(modifiedCtx, sc, response)
 		if err != nil || ret {
 			retErr = err
 			goto reply
 		}
 
 		serial = legacyCRLPath
-		if req.Path == "crl/delta" || req.Path == "crl/delta/pem" {
+		if req.Path == "crl/delta" || req.Path == "crl/delta/pem" || req.Path == "cert/delta-crl" {
 			serial = deltaCRLPath
 		}
 		contentType = "application/pkix-crl"
 		if req.Path == "crl/pem" || req.Path == "crl/delta/pem" {
 			pemType = "X509 CRL"
 			contentType = "application/x-pem-file"
-		} else if req.Path == "cert/crl" {
+		} else if req.Path == "cert/crl" || req.Path == "cert/delta-crl" {
 			pemType = "X509 CRL"
 			contentType = ""
 		}
