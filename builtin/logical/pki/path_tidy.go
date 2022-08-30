@@ -129,7 +129,9 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 
 	// Mark the last tidy operation as relatively recent, to ensure we don't
 	// try to trigger the periodic function.
+	b.tidyStatusLock.Lock()
 	b.lastTidy = time.Now()
+	b.tidyStatusLock.Unlock()
 
 	// Kick off the actual tidy.
 	b.startTidyOperation(req, config)
@@ -180,7 +182,9 @@ func (b *backend) startTidyOperation(req *logical.Request, config *tidyConfig) {
 			// Since the tidy operation finished without an error, we don't
 			// really want to start another tidy right away (if the interval
 			// is too short). So mark the last tidy as now.
+			b.tidyStatusLock.Lock()
 			b.lastTidy = time.Now()
+			b.tidyStatusLock.Unlock()
 		}
 	}()
 }

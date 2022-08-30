@@ -459,7 +459,9 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 
 		// Check if we should run another tidy...
 		now := time.Now()
+		b.tidyStatusLock.RLock()
 		nextOp := b.lastTidy.Add(config.Interval)
+		b.tidyStatusLock.RUnlock()
 		if now.Before(nextOp) {
 			return nil
 		}
@@ -473,7 +475,9 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		// Prevent ourselves from starting another tidy operation while
 		// this one is still running. This operation runs in the background
 		// and has a separate error reporting mechanism.
+		b.tidyStatusLock.Lock()
 		b.lastTidy = now
+		b.tidyStatusLock.Unlock()
 
 		// Because the request from the parent storage will be cleared at
 		// some point (and potentially reused) -- due to tidy executing in
