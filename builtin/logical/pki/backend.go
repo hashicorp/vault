@@ -383,10 +383,15 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 			b.crlBuilder.requestRebuildIfActiveNode(b)
 		}()
 	case strings.HasPrefix(key, issuerPrefix):
-		// If an issuer has changed on the primary, we need to schedule an update of our CRL,
-		// the primary cluster would have done it already, but the CRL is cluster specific so
-		// force a rebuild of ours.
 		if !b.useLegacyBundleCaStorage() {
+			// See note in updateDefaultIssuerId about why this is necessary.
+			// We do this ahead of CRL rebuilding just so we know that things
+			// are stale.
+			b.crlBuilder.invalidateCRLBuildTime()
+
+			// If an issuer has changed on the primary, we need to schedule an update of our CRL,
+			// the primary cluster would have done it already, but the CRL is cluster specific so
+			// force a rebuild of ours.
 			b.crlBuilder.requestRebuildIfActiveNode(b)
 		} else {
 			b.Logger().Debug("Ignoring invalidation updates for issuer as the PKI migration has yet to complete.")

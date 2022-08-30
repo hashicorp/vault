@@ -35,9 +35,6 @@ const (
 	maxRolesToFindOnIssuerChange = 10
 
 	latestIssuerVersion = 1
-
-	headerIfModifiedSince = "If-Modified-Since"
-	headerLastModified    = "Last-Modified"
 )
 
 type keyID string
@@ -170,6 +167,7 @@ type localCRLConfigEntry struct {
 	LastCompleteNumberMap map[crlID]int64     `json:"last_complete_number_map"`
 	CRLExpirationMap      map[crlID]time.Time `json:"crl_expiration_map"`
 	LastModified          time.Time           `json:"last_modified"`
+	DeltaLastModified     time.Time           `json:"delta_last_modified"`
 }
 
 type keyConfigEntry struct {

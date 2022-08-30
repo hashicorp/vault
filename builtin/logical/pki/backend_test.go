@@ -5143,10 +5143,10 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 	// last headers, otherwise the headers added after the last set operation
 	// leak into this copy... Yuck!
 	lastHeaders := client.Headers()
-	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/old-root/crl"} {
+	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/old-root/crl", "pki/cert/delta-crl", "pki/issuer/old-root/crl/delta"} {
 		t.Logf("path: %v", path)
 		field := "certificate"
-		if strings.HasPrefix(path, "pki/issuer") && strings.HasSuffix(path, "/crl") {
+		if strings.HasPrefix(path, "pki/issuer") && strings.Contains(path, "/crl") {
 			field = "crl"
 		}
 
@@ -5198,10 +5198,10 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 	afterNewCAGeneration := time.Now().Add(2 * time.Second)
 
 	// New root isn't the default, so it has fewer paths.
-	for _, path := range []string{"pki/issuer/new-root/json", "pki/issuer/new-root/crl"} {
+	for _, path := range []string{"pki/issuer/new-root/json", "pki/issuer/new-root/crl", "pki/issuer/new-root/crl/delta"} {
 		t.Logf("path: %v", path)
 		field := "certificate"
-		if strings.HasPrefix(path, "pki/issuer") && strings.HasSuffix(path, "/crl") {
+		if strings.HasPrefix(path, "pki/issuer") && strings.Contains(path, "/crl") {
 			field = "crl"
 		}
 
@@ -5244,10 +5244,10 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 	require.NoError(t, err)
 
 	// Reading both with the last modified date should return new values.
-	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/new-root/json", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl"} {
+	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/new-root/json", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl", "pki/cert/delta-crl", "pki/issuer/old-root/crl/delta", "pki/issuer/new-root/crl/delta"} {
 		t.Logf("path: %v", path)
 		field := "certificate"
-		if strings.HasPrefix(path, "pki/issuer") && strings.HasSuffix(path, "/crl") {
+		if strings.HasPrefix(path, "pki/issuer") && strings.Contains(path, "/crl") {
 			field = "crl"
 		}
 
@@ -5279,7 +5279,7 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// The above tests should say everything is cached.
-	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/new-root/json", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl"} {
+	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/new-root/json", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl", "pki/cert/delta-crl", "pki/issuer/old-root/crl/delta", "pki/issuer/new-root/crl/delta"} {
 		t.Logf("path: %v", path)
 
 		// Ensure that the CA is returned correctly if we give it the new time.
@@ -5311,10 +5311,10 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 	}
 
 	// CRL should be invalidated
-	for _, path := range []string{"pki/cert/crl", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl"} {
+	for _, path := range []string{"pki/cert/crl", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl", "pki/cert/delta-crl", "pki/issuer/old-root/crl/delta", "pki/issuer/new-root/crl/delta"} {
 		t.Logf("path: %v", path)
 		field := "certificate"
-		if strings.HasPrefix(path, "pki/issuer") && strings.HasSuffix(path, "/crl") {
+		if strings.HasPrefix(path, "pki/issuer") && strings.Contains(path, "/crl") {
 			field = "crl"
 		}
 
@@ -5328,13 +5328,58 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 		lastHeaders = client.Headers()
 	}
 
-	// Finally, if we send some time in the future, everything should be cached again!
+	// If we send some time in the future, everything should be cached again!
 	futureTime := time.Now().Add(30 * time.Second)
-	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/new-root/json", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl"} {
+	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/new-root/json", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl", "pki/cert/delta-crl", "pki/issuer/old-root/crl/delta", "pki/issuer/new-root/crl/delta"} {
 		t.Logf("path: %v", path)
 
 		// Ensure that the CA is returned correctly if we give it the new time.
 		client.AddHeader("If-Modified-Since", futureTime.Format(time.RFC1123))
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.Nil(t, resp)
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+	}
+
+	beforeThreeWaySwap := time.Now().Add(-2 * time.Second)
+
+	// Now, do a three-way swap of names (old->tmp; new->old; tmp->new). This
+	// should result in all names/CRLs being invalidated.
+	_, err = client.Logical().JSONMergePatch(ctx, "pki/issuer/old-root", map[string]interface{}{
+		"issuer_name": "tmp-root",
+	})
+	require.NoError(t, err)
+	_, err = client.Logical().JSONMergePatch(ctx, "pki/issuer/new-root", map[string]interface{}{
+		"issuer_name": "old-root",
+	})
+	require.NoError(t, err)
+	_, err = client.Logical().JSONMergePatch(ctx, "pki/issuer/tmp-root", map[string]interface{}{
+		"issuer_name": "new-root",
+	})
+	require.NoError(t, err)
+
+	afterThreeWaySwap := time.Now().Add(2 * time.Second)
+
+	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/new-root/json", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl", "pki/cert/delta-crl", "pki/issuer/old-root/crl/delta", "pki/issuer/new-root/crl/delta"} {
+		t.Logf("path: %v", path)
+		field := "certificate"
+		if strings.HasPrefix(path, "pki/issuer") && strings.Contains(path, "/crl") {
+			field = "crl"
+		}
+
+		// Ensure that the CA is elided if we give it the pre-update time.
+		client.AddHeader("If-Modified-Since", beforeThreeWaySwap.Format(time.RFC1123))
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.NotEmpty(t, resp.Data[field])
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+
+		// Ensure that the CA is returned correctly if we give it the after time.
+		client.AddHeader("If-Modified-Since", afterThreeWaySwap.Format(time.RFC1123))
 		resp, err = client.Logical().Read(path)
 		require.NoError(t, err)
 		require.Nil(t, resp)
