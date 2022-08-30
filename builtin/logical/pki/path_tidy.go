@@ -696,6 +696,16 @@ The result includes the following fields:
 * 'missing_issuer_cert_count': The number of revoked certificates which were missing a valid issuer reference
 `
 
-const pathConfigAutoTidySyn = ``
+const pathConfigAutoTidySyn = `
+Modifies the current configuration for automatic tidy execution.
+`
 
-const pathConfigAutoTidyDesc = ``
+const pathConfigAutoTidyDesc = `
+This endpoint accepts parameters to a tidy operation (see /tidy) that
+will be used for automatic tidy execution. This takes two extra parameters,
+enabled (to enable or disable auto-tidy) and interval_duration (which
+controls the frequency of auto-tidy execution).
+
+Once enabled, a tidy operation will be kicked off automatically, as if it
+were executed with the posted configuration.
+`
