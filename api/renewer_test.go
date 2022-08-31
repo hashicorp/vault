@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -257,17 +258,21 @@ func TestLifetimeWatcher(t *testing.T) {
 	}
 }
 
-func agingRenew() func(string, int) (*Response, error) {
-	origin := time.Now()
+func agingRenew(age int, maxTTL time.Duration) func(string, int) (*Response, error) {
 	headers := http.Header{}
+	expiration := time.Now().Add(maxTTL)
 
 	return func(leaseID string, increment int) (*Response, error) {
-		headers.Set("Age", strconv.Itoa(int(time.Since(origin).Seconds())))
+		headers.Set("Age", strconv.Itoa(age))
 		secret := Secret{
-			LeaseID:       "lease_id",
-			Renewable:     true,
-			LeaseDuration: increment,
+			LeaseID: "lease_id",
 		}
+
+		if time.Now().Before(expiration) {
+			secret.Renewable = true
+			secret.LeaseDuration = int(math.Min(float64(increment), time.Until(expiration).Seconds()))
+		}
+
 		b, err := json.Marshal(&secret)
 
 		if err != nil {
@@ -307,23 +312,38 @@ func TestLifeTimeWatcherCached(t *testing.T) {
 		// also determines how many renewals we should expect during the maxTestTime.
 		incrementSeconds time.Duration
 		// the initial age in seconds for a renewal response.
-		age         int
+		age         time.Duration
 		expectError error
 	}{
+		//expects 5 renewals
 		{
 			name:                 "origin",
-			maxTestTime:          20 * time.Second,
-			leaseDurationSeconds: 2 * time.Second,
-			incrementSeconds:     1 * time.Second,
+			maxTestTime:          15 * time.Second,
+			leaseDurationSeconds: 5 * time.Second,
+			incrementSeconds:     5 * time.Second,
 			age:                  0,
+		},
+		{
+			name:                 "aged",
+			maxTestTime:          20 * time.Second,
+			leaseDurationSeconds: 5 * time.Second,
+			incrementSeconds:     5 * time.Second,
+			// puts every lease/increment into the grace period
+			// immediately
+			// theoretically we should expect approximately 21 renewals.
+			age: 3 * time.Second,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			// from the initial lease how many renewals will we execute
 			// +1 is because the renewal loop always runs the first time a lifetimewatcher starts
-			expectedRenewals := int(((tc.maxTestTime - tc.leaseDurationSeconds) / tc.incrementSeconds) + 1)
+			graceConstant := 0.66
+			realDuration := int(math.Floor(float64(tc.leaseDurationSeconds-tc.age) * graceConstant))
+			realIncrement := int(math.Floor(float64(tc.incrementSeconds-tc.age) * graceConstant))
+			expectedRenewals := (int(tc.maxTestTime)-realDuration)/(realIncrement) + 2
 
 			lw, err := client.NewLifetimeWatcher(&LifetimeWatcherInput{
 				Secret: &Secret{
@@ -339,7 +359,8 @@ func TestLifeTimeWatcherCached(t *testing.T) {
 			doneCh := make(chan error, 1)
 
 			go func() {
-				doneCh <- lw.doRenewWithOptions(false, false, int(tc.leaseDurationSeconds.Seconds()), tc.name, agingRenew(), tc.incrementSeconds)
+				renew := agingRenew(int(tc.age.Seconds()), tc.maxTestTime)
+				doneCh <- lw.doRenewWithOptions(false, false, int(tc.leaseDurationSeconds.Seconds()), tc.name, renew, tc.incrementSeconds)
 			}()
 			defer lw.Stop()
 
@@ -348,7 +369,8 @@ func TestLifeTimeWatcherCached(t *testing.T) {
 		ChannelLoop:
 			for {
 				select {
-				case <-time.After(tc.maxTestTime):
+				case <-time.After(tc.maxTestTime + (5 * time.Second)):
+					t.Fatal("max test time exceeded")
 					break ChannelLoop
 				case <-lw.RenewCh():
 					actualRenewals += 1
@@ -358,13 +380,13 @@ func TestLifeTimeWatcherCached(t *testing.T) {
 						t.Fatal(loopErr)
 						return
 					}
+					break ChannelLoop
 				}
 			}
 
 			if expectedRenewals != actualRenewals {
 				t.Fatalf("expected %d renewals, %d occurred", expectedRenewals, actualRenewals)
 			}
-
 		})
 	}
 }
