@@ -54,7 +54,7 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 
 		resp, err := proxier.Send(ctx, req)
 		if err != nil {
-			// If this is a api.Response error, don't wrap the response.
+			// If this is an api.Response error, don't wrap the response.
 			if resp != nil && resp.Response.Error() != nil {
 				copyHeader(w.Header(), resp.Response.Header)
 				w.WriteHeader(resp.Response.StatusCode)
