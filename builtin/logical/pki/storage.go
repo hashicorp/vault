@@ -210,7 +210,7 @@ func (sc *storageContext) listKeys() ([]keyID, error) {
 
 func (sc *storageContext) fetchKeyById(keyId keyID) (*keyEntry, error) {
 	if len(keyId) == 0 {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki key: empty key identifier")}
+		return nil, errutil.InternalError{Err: "unable to fetch pki key: empty key identifier"}
 	}
 
 	entry, err := sc.Storage.Get(sc.Context, keyPrefix+keyId.String())
@@ -566,7 +566,7 @@ func (sc *storageContext) resolveKeyReference(reference string) (keyID, error) {
 // fetchIssuerById returns an issuerEntry based on issuerId, if none found an error is returned.
 func (sc *storageContext) fetchIssuerById(issuerId issuerID) (*issuerEntry, error) {
 	if len(issuerId) == 0 {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki issuer: empty issuer identifier")}
+		return nil, errutil.InternalError{Err: "unable to fetch pki issuer: empty issuer identifier"}
 	}
 
 	entry, err := sc.Storage.Get(sc.Context, issuerPrefix+issuerId.String())
@@ -807,7 +807,7 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 }
 
 func areCertificatesEqual(cert1 *x509.Certificate, cert2 *x509.Certificate) bool {
-	return bytes.Compare(cert1.Raw, cert2.Raw) == 0
+	return bytes.Equal(cert1.Raw, cert2.Raw)
 }
 
 func (sc *storageContext) setLocalCRLConfig(mapping *localCRLConfigEntry) error {

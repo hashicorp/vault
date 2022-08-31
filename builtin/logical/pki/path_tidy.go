@@ -603,7 +603,7 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 	}
 
 	if config.Enabled && !(config.CertStore || config.RevokedCerts || config.IssuerAssocs) {
-		return logical.ErrorResponse(fmt.Sprintf("Auto-tidy enabled but no tidy operations were requested. Enable at least one tidy operation to be run (tidy_cert_store / tidy_revoked_certs / tidy_revoked_cert_issuer_associations).")), nil
+		return logical.ErrorResponse("Auto-tidy enabled but no tidy operations were requested. Enable at least one tidy operation to be run (tidy_cert_store / tidy_revoked_certs / tidy_revoked_cert_issuer_associations)."), nil
 	}
 
 	return nil, sc.writeAutoTidyConfig(config)

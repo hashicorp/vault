@@ -112,7 +112,7 @@ func TestAutoTidy(t *testing.T) {
 	require.NotEmpty(t, resp.Data["certificate"])
 
 	// Wait for cert to expire and the safety buffer to elapse.
-	time.Sleep(leafCert.NotAfter.Sub(time.Now()) + 3*time.Second)
+	time.Sleep(time.Until(leafCert.NotAfter) + 3*time.Second)
 
 	// Wait for auto-tidy to run afterwards.
 	var foundTidyRunning string

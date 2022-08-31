@@ -156,7 +156,7 @@ func (b *backend) pathRevokeWriteHandleCertificate(ctx context.Context, req *log
 	// Ensure we have a well-formed serial number before continuing.
 	serial := serialFromCert(certReference)
 	if len(serial) == 0 {
-		return "", false, nil, errutil.UserError{Err: fmt.Sprintf("invalid serial number on presented certificate")}
+		return "", false, nil, errutil.UserError{Err: "invalid serial number on presented certificate"}
 	}
 
 	// We have two approaches here: we could start verifying against issuers
@@ -230,7 +230,7 @@ func (b *backend) pathRevokeWriteHandleCertificate(ctx context.Context, req *log
 		return serial, true, certReference.Raw, nil
 	}
 
-	return serial, false, nil, errutil.UserError{Err: fmt.Sprintf("unable to verify signature on presented cert from any present issuer in this mount; certificates from previous CAs will need to have their issuing CA and key re-imported if revocation is necessary")}
+	return serial, false, nil, errutil.UserError{Err: "unable to verify signature on presented cert from any present issuer in this mount; certificates from previous CAs will need to have their issuing CA and key re-imported if revocation is necessary"}
 }
 
 func (b *backend) pathRevokeWriteHandleKey(ctx context.Context, req *logical.Request, cert []byte, keyPem string) error {

@@ -1103,7 +1103,7 @@ func getRevokedCertEntries(sc *storageContext, issuerIDCertMap map[issuerID]*x50
 			// TODO: In this case, remove it and continue? How likely is this to
 			// happen? Alternately, could skip it entirely, or could implement a
 			// delete function so that there is a way to remove these
-			return nil, nil, errutil.InternalError{Err: fmt.Sprintf("found revoked serial but actual certificate is empty")}
+			return nil, nil, errutil.InternalError{Err: "found revoked serial but actual certificate is empty"}
 		}
 
 		err = revokedEntry.DecodeJSON(&revInfo)
