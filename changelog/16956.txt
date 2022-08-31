@@ -1,0 +1,3 @@
+```release-note:bug
+core: Load SSCT Token Generation counter from storage when upgrading a DR to a primary
+```
