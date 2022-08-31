@@ -71,8 +71,8 @@ const (
 	// any namespace information
 	TokenLength = 24
 
-	// MaxNsIdLength is the maximum namespace ID length (4 characters prepended by a ".")
-	MaxNsIdLength = 5
+	// MaxNsIdLength is the maximum namespace ID length (5 characters prepended by a ".")
+	MaxNsIdLength = 6
 
 	// TokenPrefixLength is the length of the new token prefixes ("hvs.", "hvb.",
 	// and "hvr.")
