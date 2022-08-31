@@ -87,11 +87,14 @@ export default Component.extend({
     this.set('allOptions', allOptions); // used by filter-wildcard helper
     let formattedOptions = this.selectedOptions.map((option) => {
       let matchingOption = options.findBy(this.idKey, option);
+      // an undefined matchingOption means a selectedOption, on edit, didn't match a model returned from the query and therefore doesn't exist
+      let addTooltip = matchingOption ? false : true; // add tooltip to let user know the selection can be discarded
       options.removeObject(matchingOption);
       return {
         id: option,
         name: matchingOption ? matchingOption.name : option,
         searchText: matchingOption ? matchingOption.searchText : option,
+        addTooltip,
         // conditionally spread configured object if we're using the dynamic idKey
         ...(this.idKey !== 'id' && this.customizeObject(matchingOption)),
       };
@@ -182,6 +185,9 @@ export default Component.extend({
   },
   // -----
   customizeObject(option) {
+    if (!option) return;
+    // // an undefined option means a selectedOption, on edit, didn't match a model returned from the query and therefore doesn't exist
+    // if (!option) return { addTooltip: true }; // add tooltip to let user know the selection can be discarded
     // if passObject=true return object, otherwise return string of option id
     if (this.passObject) {
       let additionalKeys;
