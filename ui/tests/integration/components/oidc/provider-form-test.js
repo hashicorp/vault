@@ -137,7 +137,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       .dom('[data-test-input="issuer"]')
       .hasValue(parseURL(ISSUER_URL).origin, 'issuer value is just scheme://host:port portion of full URL');
 
-    assert.dom('[data-test-selected-option="true"]').hasText('test-scope', 'model scope is selected');
+    assert.dom('[data-test-selected-option]').hasText('test-scope', 'model scope is selected');
     assert.dom('input#allow-all').isChecked('Allow all radio button is selected');
     await click('[data-test-oidc-provider-save]');
   });

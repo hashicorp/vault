@@ -591,4 +591,125 @@ module('Integration | Component | search select', function (hooks) {
     await click('[data-option-index="2"]');
     assert.propEqual(spy.args[1][0], ['1', 'model-a-id'], 'onClick is called with array of id strings');
   });
+
+  test('it renders an info tooltip beside selection if does not match a record returned from query when passObject=false, passed objectKeys', async function (assert) {
+    const models = ['some/model'];
+    const spy = sinon.spy();
+    const objectKeys = ['uuid'];
+    const inputValue = ['a123', 'non-existent-model'];
+    this.set('models', models);
+    this.set('onChange', spy);
+    this.set('objectKeys', objectKeys);
+    this.set('inputValue', inputValue);
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @objectKeys={{this.objectKeys}}
+        @inputValue={{this.inputValue}}
+      />
+      `);
+
+    assert.equal(component.selectedOptions.length, 2, 'there are two selected options');
+    assert.dom('[data-test-selected-option="0"]').hasText('model-a');
+    assert.dom('[data-test-selected-option="1"]').hasText('non-existent-model');
+    assert
+      .dom('[data-test-selected-option="0"] [data-test-component="info-tooltip"]')
+      .doesNotExist('does not render info tooltip for model that exists');
+
+    assert
+      .dom('[data-test-selected-option="1"] [data-test-component="info-tooltip"]')
+      .exists('renders info tooltip for model not returned from query');
+  });
+
+  test('it renders an info tooltip beside selection if does not match a record returned from query when passObject=true, passed objectKeys', async function (assert) {
+    const models = ['some/model'];
+    const spy = sinon.spy();
+    const objectKeys = ['uuid'];
+    const inputValue = ['a123', 'non-existent-model'];
+    this.set('models', models);
+    this.set('onChange', spy);
+    this.set('objectKeys', objectKeys);
+    this.set('inputValue', inputValue);
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @objectKeys={{this.objectKeys}}
+        @inputValue={{this.inputValue}}
+        @passObject={{true}}
+      />
+    `);
+
+    assert.equal(component.selectedOptions.length, 2, 'there are two selected options');
+    assert.dom('[data-test-selected-option="0"]').hasText('model-a a123');
+    assert.dom('[data-test-selected-option="1"]').hasText('non-existent-model');
+    assert
+      .dom('[data-test-selected-option="0"] [data-test-component="info-tooltip"]')
+      .doesNotExist('does not render info tooltip for model that exists');
+
+    assert
+      .dom('[data-test-selected-option="1"] [data-test-component="info-tooltip"]')
+      .exists('renders info tooltip for model not returned from query');
+  });
+
+  test('it renders an info tooltip beside selection if does not match a record returned from query when passObject=true and idKey=id', async function (assert) {
+    const models = ['some/model'];
+    const spy = sinon.spy();
+    const inputValue = ['model-a-id', 'non-existent-model'];
+    this.set('models', models);
+    this.set('onChange', spy);
+    this.set('inputValue', inputValue);
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
+        @passObject={{true}}
+      />
+    `);
+
+    assert.equal(component.selectedOptions.length, 2, 'there are two selected options');
+    assert.dom('[data-test-selected-option="0"]').hasText('model-a-id');
+    assert.dom('[data-test-selected-option="1"]').hasText('non-existent-model');
+    assert
+      .dom('[data-test-selected-option="0"] [data-test-component="info-tooltip"]')
+      .doesNotExist('does not render info tooltip for model that exists');
+
+    assert
+      .dom('[data-test-selected-option="1"] [data-test-component="info-tooltip"]')
+      .exists('renders info tooltip for model not returned from query');
+  });
+
+  test('it renders an info tooltip beside selection if does not match a record returned from query when passObject=false and idKey=id', async function (assert) {
+    const models = ['some/model'];
+    const spy = sinon.spy();
+    const inputValue = ['model-a-id', 'non-existent-model'];
+    this.set('models', models);
+    this.set('onChange', spy);
+    this.set('inputValue', inputValue);
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
+        @passObject={{false}}
+      />
+    `);
+
+    assert.equal(component.selectedOptions.length, 2, 'there are two selected options');
+    assert.dom('[data-test-selected-option="0"]').hasText('model-a-id');
+    assert.dom('[data-test-selected-option="1"]').hasText('non-existent-model');
+    assert
+      .dom('[data-test-selected-option="0"] [data-test-component="info-tooltip"]')
+      .doesNotExist('does not render info tooltip for model that exists');
+
+    assert
+      .dom('[data-test-selected-option="1"] [data-test-component="info-tooltip"]')
+      .exists('renders info tooltip for model not returned from query');
+  });
 });
