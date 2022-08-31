@@ -383,7 +383,12 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 
 			// The sleep duration is set to 2/3 of the current lease duration plus
 			// 1/3 of the current grace period, which adds jitter.
-			sleepDuration = time.Duration(float64(remainingLeaseDuration.Nanoseconds())*2/3 + float64(r.grace.Nanoseconds())/3 - float64(age.Nanoseconds()))
+			sleepDuration = time.Duration(float64(remainingLeaseDuration.Nanoseconds())*2/3 + float64(r.grace.Nanoseconds())/3)
+
+			//sleepDuration can't be negative.
+			if sleepDuration >= age {
+				sleepDuration = sleepDuration - age
+			}
 		}
 
 		// If we are within grace, return now; or, if the amount of time we
