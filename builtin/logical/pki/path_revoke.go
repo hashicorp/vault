@@ -104,6 +104,25 @@ func pathRotateCRL(b *backend) *framework.Path {
 	}
 }
 
+func pathRotateDeltaCRL(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: `crl/rotate-delta`,
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathRotateDeltaCRLRead,
+				// See backend.go; we will read a lot of data prior to calling write,
+				// so this request should be forwarded when it is first seen, not
+				// when it is ready to write.
+				ForwardPerformanceStandby: true,
+			},
+		},
+
+		HelpSynopsis:    pathRotateDeltaCRLHelpSyn,
+		HelpDescription: pathRotateDeltaCRLHelpDesc,
+	}
+}
+
 func (b *backend) pathRevokeWriteHandleCertificate(ctx context.Context, req *logical.Request, certPem string) (string, bool, []byte, error) {
 	// This function handles just the verification of the certificate against
 	// the global issuer set, checking whether or not it is importable.
@@ -414,6 +433,39 @@ func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, _
 	}, nil
 }
 
+func (b *backend) pathRotateDeltaCRLRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	sc := b.makeStorageContext(ctx, req.Storage)
+
+	cfg, err := b.crlBuilder.getConfigWithUpdate(sc)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching CRL configuration: %v", err)
+	}
+
+	isEnabled := cfg.EnableDelta
+
+	crlErr := b.crlBuilder.rebuildDeltaCRLsIfForced(sc, true)
+	if crlErr != nil {
+		switch crlErr.(type) {
+		case errutil.UserError:
+			return logical.ErrorResponse(fmt.Sprintf("Error during delta CRL building: %s", crlErr)), nil
+		default:
+			return nil, fmt.Errorf("error encountered during delta CRL building: %w", crlErr)
+		}
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"success": true,
+		},
+	}
+
+	if !isEnabled {
+		resp.AddWarning("requested rebuild of delta CRL when delta CRL is not enabled; this is a no-op")
+	}
+
+	return resp, nil
+}
+
 const pathRevokeHelpSyn = `
 Revoke a certificate by serial number or with explicit certificate.
 
@@ -432,4 +484,12 @@ Force a rebuild of the CRL.
 
 const pathRotateCRLHelpDesc = `
 Force a rebuild of the CRL. This can be used to remove expired certificates from it if no certificates have been revoked. A root token is required.
+`
+
+const pathRotateDeltaCRLHelpSyn = `
+Force a rebuild of the delta CRL.
+`
+
+const pathRotateDeltaCRLHelpDesc = `
+Force a rebuild of the delta CRL. This can be used to force an update of the otherwise periodically-rebuilt delta CRLs.
 `

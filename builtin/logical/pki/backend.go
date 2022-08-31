@@ -128,6 +128,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathSign(&b),
 			pathIssue(&b),
 			pathRotateCRL(&b),
+			pathRotateDeltaCRL(&b),
 			pathRevoke(&b),
 			pathRevokeWithKey(&b),
 			pathTidy(&b),
@@ -438,7 +439,7 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		// If a delta CRL was rebuilt above as part of the complete CRL rebuild,
 		// this will be a no-op. However, if we do need to rebuild delta CRLs,
 		// this would cause us to do so.
-		if err := b.crlBuilder.rebuildDeltaCRLsIfForced(sc); err != nil {
+		if err := b.crlBuilder.rebuildDeltaCRLsIfForced(sc, false); err != nil {
 			return err
 		}
 
