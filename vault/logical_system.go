@@ -620,7 +620,8 @@ func getVersion(d *framework.FieldData) (string, error) {
 		}
 
 		// Canonicalize the version string.
-		version = semanticVersion.String()
+		// Add the 'v' back in, since semantic version strips it out, and we want to be consistent with internal plugins.
+		version = "v" + semanticVersion.String()
 	}
 
 	return version, nil
@@ -888,6 +889,10 @@ func mountInfo(entry *MountEntry) map[string]interface{} {
 		"external_entropy_access": entry.ExternalEntropyAccess,
 		"options":                 entry.Options,
 		"uuid":                    entry.UUID,
+		"version":                 entry.Version,
+		"sha":                     entry.Sha,
+		"running_version":         entry.RunningVersion,
+		"running_sha":             entry.RunningSha,
 	}
 	entryConfig := map[string]interface{}{
 		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
@@ -981,6 +986,14 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	sealWrap := data.Get("seal_wrap").(bool)
 	externalEntropyAccess := data.Get("external_entropy_access").(bool)
 	options := data.Get("options").(map[string]string)
+	version := data.Get("version").(string)
+	if version != "" {
+		v, err := semver.NewSemver(version)
+		if err != nil {
+			return nil, err
+		}
+		version = "v" + v.String()
+	}
 
 	var config MountConfig
 	var apiConfig APIMountConfig
@@ -1123,6 +1136,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		SealWrap:              sealWrap,
 		ExternalEntropyAccess: externalEntropyAccess,
 		Options:               options,
+		Version:               version,
 	}
 
 	// Attempt mount
@@ -2223,6 +2237,14 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	sealWrap := data.Get("seal_wrap").(bool)
 	externalEntropyAccess := data.Get("external_entropy_access").(bool)
 	options := data.Get("options").(map[string]string)
+	version := data.Get("version").(string)
+	if version != "" {
+		v, err := semver.NewSemver(version)
+		if err != nil {
+			return nil, err
+		}
+		version = "v" + v.String()
+	}
 
 	var config MountConfig
 	var apiConfig APIMountConfig
@@ -2354,6 +2376,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		SealWrap:              sealWrap,
 		ExternalEntropyAccess: externalEntropyAccess,
 		Options:               options,
+		Version:               version,
 	}
 
 	// Attempt enabling

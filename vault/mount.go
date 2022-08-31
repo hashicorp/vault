@@ -12,7 +12,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -328,6 +328,12 @@ type MountEntry struct {
 	// without separately managing their locks individually. See SyncCache() for
 	// the specific values that are being cached.
 	synthesizedConfigCache sync.Map
+
+	// version info
+	Version        string `json:"version,omitempty"`
+	Sha            string `json:"sha,omitempty"`
+	RunningVersion string `json:"running_version,omitempty"`
+	RunningSha     string `json:"running_sha,omitempty"`
 }
 
 // MountConfig is used to hold settable options
@@ -1419,7 +1425,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 
 	f, ok := c.logicalBackends[t]
 	if !ok {
-		plug, err := c.pluginCatalog.Get(ctx, t, consts.PluginTypeSecrets, "")
+		plug, err := c.pluginCatalog.Get(ctx, t, consts.PluginTypeSecrets, entry.Version)
 		if err != nil {
 			return nil, err
 		}

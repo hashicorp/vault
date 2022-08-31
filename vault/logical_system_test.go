@@ -17,7 +17,7 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/audit"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
@@ -172,6 +172,10 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"options": map[string]string{
 				"version": "1",
 			},
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 		"sys/": map[string]interface{}{
 			"type":                    "system",
@@ -185,9 +189,13 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"force_no_cache":              false,
 				"passthrough_request_headers": []string{"Accept"},
 			},
-			"local":     false,
-			"seal_wrap": true,
-			"options":   map[string]string(nil),
+			"local":           false,
+			"seal_wrap":       true,
+			"options":         map[string]string(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description":             "per-token private secret storage",
@@ -200,9 +208,13 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"max_lease_ttl":     resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 				"force_no_cache":    false,
 			},
-			"local":     true,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":           true,
+			"seal_wrap":       false,
+			"options":         map[string]string(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 		"identity/": map[string]interface{}{
 			"description":             "identity store",
@@ -216,9 +228,13 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"force_no_cache":              false,
 				"passthrough_request_headers": []string{"Authorization"},
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":           false,
+			"seal_wrap":       false,
+			"options":         map[string]string(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); len(diff) > 0 {
@@ -285,6 +301,10 @@ func TestSystemBackend_mount(t *testing.T) {
 			"options": map[string]string{
 				"version": "1",
 			},
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 		"sys/": map[string]interface{}{
 			"type":                    "system",
@@ -298,9 +318,13 @@ func TestSystemBackend_mount(t *testing.T) {
 				"force_no_cache":              false,
 				"passthrough_request_headers": []string{"Accept"},
 			},
-			"local":     false,
-			"seal_wrap": true,
-			"options":   map[string]string(nil),
+			"local":           false,
+			"seal_wrap":       true,
+			"options":         map[string]string(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description":             "per-token private secret storage",
@@ -313,9 +337,13 @@ func TestSystemBackend_mount(t *testing.T) {
 				"max_lease_ttl":     resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 				"force_no_cache":    false,
 			},
-			"local":     true,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":           true,
+			"seal_wrap":       false,
+			"options":         map[string]string(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 		"identity/": map[string]interface{}{
 			"description":             "identity store",
@@ -329,9 +357,13 @@ func TestSystemBackend_mount(t *testing.T) {
 				"force_no_cache":              false,
 				"passthrough_request_headers": []string{"Authorization"},
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":           false,
+			"seal_wrap":       false,
+			"options":         map[string]string(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 		"prod/secret/": map[string]interface{}{
 			"description":             "",
@@ -349,6 +381,10 @@ func TestSystemBackend_mount(t *testing.T) {
 			"options": map[string]string{
 				"version": "1",
 			},
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); len(diff) > 0 {
@@ -1818,9 +1854,13 @@ func TestSystemBackend_authTable(t *testing.T) {
 				"force_no_cache":    false,
 				"token_type":        "default-service",
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":           false,
+			"seal_wrap":       false,
+			"options":         map[string]string(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); diff != nil {
@@ -1882,9 +1922,13 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 				"force_no_cache":    false,
 				"token_type":        "default-service",
 			},
-			"local":     true,
-			"seal_wrap": true,
-			"options":   map[string]string{},
+			"local":           true,
+			"seal_wrap":       true,
+			"options":         map[string]string{},
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 		"token/": map[string]interface{}{
 			"type":                    "token",
@@ -1898,9 +1942,13 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 				"force_no_cache":    false,
 				"token_type":        "default-service",
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":           false,
+			"seal_wrap":       false,
+			"options":         map[string]string(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); diff != nil {
@@ -2893,21 +2941,25 @@ func TestSystemBackend_rotate(t *testing.T) {
 }
 
 func testSystemBackend(t *testing.T) logical.Backend {
+	t.Helper()
 	c, _, _ := TestCoreUnsealed(t)
 	return c.systemBackend
 }
 
 func testSystemBackendRaw(t *testing.T) logical.Backend {
+	t.Helper()
 	c, _, _ := TestCoreUnsealedRaw(t)
 	return c.systemBackend
 }
 
 func testCoreSystemBackend(t *testing.T) (*Core, logical.Backend, string) {
+	t.Helper()
 	c, _, root := TestCoreUnsealed(t)
 	return c, c.systemBackend, root
 }
 
 func testCoreSystemBackendRaw(t *testing.T) (*Core, logical.Backend, string) {
+	t.Helper()
 	c, _, root := TestCoreUnsealedRaw(t)
 	return c, c.systemBackend, root
 }
@@ -3033,7 +3085,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 		"args":    []string{"--test"},
 		"sha256":  "31",
 		"builtin": false,
-		"version": "0.1.0",
+		"version": "v0.1.0",
 	}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actual, expected)
@@ -3270,6 +3322,10 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"options": map[string]string{
 					"version": "1",
 				},
+				"sha":             "",
+				"running_sha":     "",
+				"version":         "",
+				"running_version": "",
 			},
 			"sys/": map[string]interface{}{
 				"type":                    "system",
@@ -3283,9 +3339,13 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 					"force_no_cache":              false,
 					"passthrough_request_headers": []string{"Accept"},
 				},
-				"local":     false,
-				"seal_wrap": true,
-				"options":   map[string]string(nil),
+				"local":           false,
+				"seal_wrap":       true,
+				"options":         map[string]string(nil),
+				"sha":             "",
+				"running_sha":     "",
+				"version":         "",
+				"running_version": "",
 			},
 			"cubbyhole/": map[string]interface{}{
 				"description":             "per-token private secret storage",
@@ -3298,9 +3358,13 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 					"max_lease_ttl":     resp.Data["secret"].(map[string]interface{})["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 					"force_no_cache":    false,
 				},
-				"local":     true,
-				"seal_wrap": false,
-				"options":   map[string]string(nil),
+				"local":           true,
+				"seal_wrap":       false,
+				"options":         map[string]string(nil),
+				"sha":             "",
+				"running_sha":     "",
+				"version":         "",
+				"running_version": "",
 			},
 			"identity/": map[string]interface{}{
 				"description":             "identity store",
@@ -3314,9 +3378,13 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 					"force_no_cache":              false,
 					"passthrough_request_headers": []string{"Authorization"},
 				},
-				"local":     false,
-				"seal_wrap": false,
-				"options":   map[string]string(nil),
+				"local":           false,
+				"seal_wrap":       false,
+				"options":         map[string]string(nil),
+				"sha":             "",
+				"running_sha":     "",
+				"version":         "",
+				"running_version": "",
 			},
 		},
 		"auth": map[string]interface{}{
@@ -3335,6 +3403,10 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"uuid":                    resp.Data["auth"].(map[string]interface{})["token/"].(map[string]interface{})["uuid"],
 				"local":                   false,
 				"seal_wrap":               false,
+				"sha":                     "",
+				"running_sha":             "",
+				"version":                 "",
+				"running_version":         "",
 			},
 		},
 	}

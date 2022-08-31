@@ -2424,3 +2424,37 @@ func CreateTestClusterWithRollbackPeriod(t testing.T, newPeriod time.Duration, b
 	// Return the cluster.
 	return cluster
 }
+
+// MakeTestPluginDir creates a temporary directory suitable for holding plugins.
+// This helper also resolves symlinks to make tests happy on OS X.
+func MakeTestPluginDir(t testing.T) (string, func(t testing.T)) {
+	if t != nil {
+		t.Helper()
+	}
+
+	dir, err := os.MkdirTemp("", "")
+	if err != nil {
+		if t == nil {
+			panic(err)
+		}
+		t.Fatal(err)
+	}
+
+	// OSX tempdir are /var, but actually symlinked to /private/var
+	dir, err = filepath.EvalSymlinks(dir)
+	if err != nil {
+		if t == nil {
+			panic(err)
+		}
+		t.Fatal(err)
+	}
+
+	return dir, func(t testing.T) {
+		if err := os.RemoveAll(dir); err != nil {
+			if t == nil {
+				panic(err)
+			}
+			t.Fatal(err)
+		}
+	}
+}
