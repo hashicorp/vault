@@ -2669,10 +2669,10 @@ func TestBackend_SignSelfIssued(t *testing.T) {
 	if !reflect.DeepEqual(newCert.Issuer, signingBundle.Certificate.Subject) {
 		t.Fatalf("expected matching issuer/CA subject\n\nIssuer:\n%#v\nSubject:\n%#v\n", newCert.Issuer, signingBundle.Certificate.Subject)
 	}
-	if bytes.Equal(newCert.AuthorityKeyId, newCert.SubjectKeyId) {
+	if certutil.AreKeyIdentifiersEqual(newCert.AuthorityKeyId, newCert.SubjectKeyId) {
 		t.Fatal("expected different authority/subject")
 	}
-	if !bytes.Equal(newCert.AuthorityKeyId, signingBundle.Certificate.SubjectKeyId) {
+	if !certutil.AreKeyIdentifiersEqual(newCert.AuthorityKeyId, signingBundle.Certificate.SubjectKeyId) {
 		t.Fatal("expected authority on new cert to be same as signing subject")
 	}
 	if newCert.Subject.CommonName != "foo.bar.com" {
