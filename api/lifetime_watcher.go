@@ -294,18 +294,23 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 				defer renewal.Body.Close()
 				renewalSecret, err = ParseSecret(renewal.Body)
 
+				if err != nil {
+					return err
+				}
+
 				if ageHeader := renewal.Header.Get("Age"); err == nil && ageHeader != "" {
 					// Age header is a string that represents the number of seconds
 					// since entering the cache.
 					// https://www.rfc-editor.org/rfc/rfc7234#section-5.1
 					age, err = time.ParseDuration(ageHeader + "s")
 
-					if err == nil {
-						//  initialTime is when the lifetime_watcher begins.
-						//  if a response includes an Age header the initial time
-						//  is _before_ when the lifetime_watcher started.
-						initialTime = initialTime.Add(-age)
+					if err != nil {
+						return err
 					}
+					//  initialTime is when the lifetime_watcher begins.
+					//  if a response includes an Age header the initial time
+					//  is _before_ when the lifetime_watcher started.
+					initialTime = initialTime.Add(-age)
 				}
 			}
 
