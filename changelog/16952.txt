@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Fix verification failure with RFC-correct AKID encodings on imported intermediates (e.g., from Microsoft ADCA).
+```
