@@ -272,7 +272,7 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 		}
 
 		var remainingLeaseDuration time.Duration
-		fallbackLeaseDuration := initialTime.Add(priorDuration).Sub(time.Now())
+		fallbackLeaseDuration := time.Until(initialTime.Add(priorDuration))
 		var renewal *Response
 		var renewalSecret *Secret
 		var age time.Duration
@@ -325,7 +325,7 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 				}
 
 				// Calculate remaining duration until initial token lease expires
-				remainingLeaseDuration = initialTime.Add(time.Duration(initLeaseDuration) * time.Second).Sub(time.Now())
+				remainingLeaseDuration = time.Until(initialTime.Add(time.Duration(initLeaseDuration) * time.Second))
 				if errorBackoff == nil {
 					errorBackoff = &backoff.ExponentialBackOff{
 						MaxElapsedTime:      remainingLeaseDuration,
