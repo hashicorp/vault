@@ -59,7 +59,3 @@ func TestUnknownFieldValidation(t *testing.T) {
 func TestUnknownFieldValidationListenerAndStorage(t *testing.T) {
 	testUnknownFieldValidationStorageAndListener(t)
 }
-
-func TestHCPLinkConfig(t *testing.T) {
-	testHCPLinkConfig(t)
-}
