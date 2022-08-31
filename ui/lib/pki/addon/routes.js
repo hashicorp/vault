@@ -2,37 +2,10 @@ import buildRoutes from 'ember-engines/routes';
 
 export default buildRoutes(function () {
   this.route('overview');
-  this.route('configuration');
+  this.route('configuration'); // ARG TODO return to "Edit Configuration" depending on convo with Ivana
   this.route('configure', function () {
     // configure the engines tidy, crl, or url
-    this.route('create');
-    this.route('tidy', function () {
-      this.route('details');
-      this.route('edit');
-    });
-    this.route('crl', function () {
-      this.route('details');
-      this.route('edit');
-    });
-    this.route('url', function () {
-      this.route('details');
-      this.route('edit');
-    });
-    // generate root, ca or intermediate
-    this.route('generate');
-    this.route('root', function () {
-      this.route('index', { path: '/' });
-      this.route('details');
-      this.route('edit');
-    });
-    this.route('import', function () {
-      this.route('index', { path: '/' });
-      this.route('details');
-    });
-    this.route('intermediate', function () {
-      this.route('index', { path: '/' });
-      this.route('details');
-    });
+    this.route('tidy'); // ARG TODO appear only to "tidy" the action. There is automatic-tidy, but that doesn't appear to be accounted for in the designs.
   });
   this.route('roles', function () {
     this.route('index', { path: '/' });
