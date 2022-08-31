@@ -5129,6 +5129,7 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 			MaxLeaseTTL:     "60h",
 			// Required to allow the header to be passed through.
 			PassthroughRequestHeaders: []string{"if-modified-since"},
+			AllowedResponseHeaders:    []string{"Last-Modified"},
 		},
 	})
 	require.NoError(t, err)
@@ -5384,7 +5385,7 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 			field = "crl"
 		}
 
-		// Ensure that the CA is elided if we give it the pre-update time.
+		// Ensure that the CA is returned if we give it the pre-update time.
 		client.AddHeader("If-Modified-Since", beforeThreeWaySwap.Format(time.RFC1123))
 		resp, err = client.Logical().Read(path)
 		require.NoError(t, err)
@@ -5394,8 +5395,65 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 		client.SetHeaders(lastHeaders)
 		lastHeaders = client.Headers()
 
-		// Ensure that the CA is returned correctly if we give it the after time.
+		// Ensure that the CA is elided correctly if we give it the after time.
 		client.AddHeader("If-Modified-Since", afterThreeWaySwap.Format(time.RFC1123))
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.Nil(t, resp)
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+	}
+
+	time.Sleep(4 * time.Second)
+
+	beforeDeltaRotation := time.Now().Add(-2 * time.Second)
+
+	// Finally, rebuild the delta CRL and ensure that only that is
+	// invalidated. We first need to enable it though.
+	_, err = client.Logical().Write("pki/config/crl", map[string]interface{}{
+		"auto_rebuild": true,
+		"enable_delta": true,
+	})
+	require.NoError(t, err)
+	resp, err = client.Logical().Read("pki/crl/rotate-delta")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.Equal(t, resp.Data["success"], true)
+
+	afterDeltaRotation := time.Now().Add(2 * time.Second)
+
+	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/new-root/json", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl"} {
+		t.Logf("path: %v", path)
+
+		for _, when := range []time.Time{beforeDeltaRotation, afterDeltaRotation} {
+			client.AddHeader("If-Modified-Since", when.Format(time.RFC1123))
+			resp, err = client.Logical().Read(path)
+			require.NoError(t, err)
+			require.Nil(t, resp)
+			client.SetHeaders(lastHeaders)
+			lastHeaders = client.Headers()
+		}
+	}
+
+	for _, path := range []string{"pki/cert/delta-crl", "pki/issuer/old-root/crl/delta", "pki/issuer/new-root/crl/delta"} {
+		t.Logf("path: %v", path)
+		field := "certificate"
+		if strings.HasPrefix(path, "pki/issuer") && strings.Contains(path, "/crl") {
+			field = "crl"
+		}
+
+		// Ensure that the CRL is present if we give it the pre-update time.
+		client.AddHeader("If-Modified-Since", beforeDeltaRotation.Format(time.RFC1123))
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.NotEmpty(t, resp.Data[field])
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+
+		client.AddHeader("If-Modified-Since", afterDeltaRotation.Format(time.RFC1123))
 		resp, err = client.Logical().Read(path)
 		require.NoError(t, err)
 		require.Nil(t, resp)
