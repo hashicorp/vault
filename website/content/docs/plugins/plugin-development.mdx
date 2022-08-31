@@ -31,6 +31,9 @@ backend running the plugin.
 ~> Note: Plugins should be prepared to handle multiple concurrent requests
 from Vault.
 
+The following code exhibits an example main package for a Vault plugin using
+the Vault SDK for a secrets engine or auth method:
+
 ```go
 package main
 
@@ -47,8 +50,12 @@ func main() {
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(os.Args[1:])
 
+    tlsConfig := apiClientMeta.GetTLSConfig()
+    tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
+
 	err := plugin.ServeMultiplex(&plugin.ServeOpts{
 		BackendFactoryFunc: myPlugin.Factory,
+        TLSProviderFunc:    tlsProviderFunc,
 	})
 	if err != nil {
 		logger := hclog.New(&hclog.LoggerOptions{})
@@ -61,6 +68,29 @@ func main() {
 
 And that's basically it! You would just need to change `myPlugin` to your actual
 plugin.
+
+## Plugin Backwards Compatibility with Vault
+
+Let's take a closer look at a snippet from the above main package.
+
+```go
+	err := plugin.ServeMultiplex(&plugin.ServeOpts{
+		BackendFactoryFunc: myPlugin.Factory,
+        TLSProviderFunc:    tlsProviderFunc,
+	})
+```
+
+The call to `plugin.ServeMultiplex` ensures that the plugin will make use of
+Vault's plugin [plugin
+multiplexing](/docs/plugins/plugin-architecture#plugin-multiplexing) feature.
+However, this plugin will not be multiplexed if it is run by a Version of Vault
+that does not support multiplexing. Vault will simply fall back to a plugin
+version that it can run. Additionally, we set the `TLSProviderFunc` to ensure
+that our plugin is backwards compatible with versions of Vault that do not
+support automatic mutual TLS for secure [plugin
+communication](/docs/plugins/plugin-architecture#plugin-communication). If you
+are certain your plugin does not need backwards compatibility, this field can
+be omitted.
 
 [api_addr]: /docs/configuration#api_addr
 
