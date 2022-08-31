@@ -130,6 +130,10 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("Error parsing pause_duration: %v", err)), nil
 		}
+
+		if pauseDuration < (0 * time.Second) {
+			return logical.ErrorResponse("received invalid, negative pause_duration"), nil
+		}
 	}
 
 	bufferDuration := time.Duration(safetyBuffer) * time.Second
@@ -178,6 +182,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 
 func (b *backend) startTidyOperation(req *logical.Request, config *tidyConfig) {
 	go func() {
+		atomic.StoreUint32(b.tidyCancelCAS, 0)
 		defer atomic.StoreUint32(b.tidyCASGuard, 0)
 
 		b.tidyStatusStart(config)
@@ -201,7 +206,7 @@ func (b *backend) startTidyOperation(req *logical.Request, config *tidyConfig) {
 
 			if config.RevokedCerts || config.IssuerAssocs {
 				if err := b.doTidyRevocationStore(ctx, req, logger, config); err != nil {
-					return nil
+					return err
 				}
 			}
 
@@ -590,6 +595,10 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 		config.PauseDuration, err = time.ParseDuration(pauseDurationRaw.(string))
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("unable to parse given pause_duration: %v", err)), nil
+		}
+
+		if config.PauseDuration < (0 * time.Second) {
+			return logical.ErrorResponse("received invalid, negative pause_duration"), nil
 		}
 	}
 
