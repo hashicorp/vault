@@ -79,11 +79,7 @@ func TestAWSEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	timer := time.AfterFunc(30*time.Second, func() {
-		cancelFunc()
-	})
-	defer timer.Stop()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 
 	// We're going to feed aws auth creds via env variables.
 	if err := setAwsEnvCreds(); err != nil {
@@ -114,9 +110,18 @@ func TestAWSEndToEnd(t *testing.T) {
 	}
 
 	ah := auth.NewAuthHandler(ahConfig)
-	go ah.Run(ctx, am)
+	errCh := make(chan error)
+	go func() {
+		errCh <- ah.Run(ctx, am)
+	}()
 	defer func() {
-		<-ah.DoneCh
+		select {
+		case <-ctx.Done():
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
 	}()
 
 	tmpFile, err := ioutil.TempFile("", "auth.tokensink.test.")
@@ -146,10 +151,25 @@ func TestAWSEndToEnd(t *testing.T) {
 		Logger: logger.Named("sink.server"),
 		Client: client,
 	})
-	go ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
-	defer func() {
-		<-ss.DoneCh
+	go func() {
+		errCh <- ss.Run(ctx, ah.OutputCh, []*sink.SinkConfig{config})
 	}()
+	defer func() {
+		select {
+		case <-ctx.Done():
+		case err := <-errCh:
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	}()
+
+	// This has to be after the other defers so it happens first. It allows
+	// successful test runs to immediately cancel all of the runner goroutines
+	// and unblock any of the blocking defer calls by the runner's DoneCh that
+	// comes before this and avoid successful tests from taking the entire
+	// timeout duration.
+	defer cancel()
 
 	if stat, err := os.Lstat(tokenSinkFileName); err == nil {
 		t.Fatalf("expected err but got %s", stat)
@@ -171,7 +191,6 @@ func TestAWSEndToEnd(t *testing.T) {
 }
 
 func setAwsEnvCreds() error {
-
 	cfg := &aws.Config{
 		Credentials: credentials.NewStaticCredentials(os.Getenv(envVarAwsTestAccessKey), os.Getenv(envVarAwsTestSecretKey), ""),
 	}

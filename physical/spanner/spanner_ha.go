@@ -8,7 +8,6 @@ import (
 
 	"cloud.google.com/go/spanner"
 	metrics "github.com/armon/go-metrics"
-	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/pkg/errors"
@@ -16,8 +15,10 @@ import (
 )
 
 // Verify Backend satisfies the correct interfaces
-var _ physical.HABackend = (*Backend)(nil)
-var _ physical.Lock = (*Lock)(nil)
+var (
+	_ physical.HABackend = (*Backend)(nil)
+	_ physical.Lock      = (*Lock)(nil)
+)
 
 const (
 	// LockRenewInterval is the time to wait between lock renewals.
@@ -102,7 +103,7 @@ func (b *Backend) HAEnabled() bool {
 func (b *Backend) LockWith(key, value string) (physical.Lock, error) {
 	identity, err := uuid.GenerateUUID()
 	if err != nil {
-		return nil, errwrap.Wrapf("lock with: {{err}}", err)
+		return nil, fmt.Errorf("lock with: %w", err)
 	}
 	return &Lock{
 		backend:  b,
@@ -135,7 +136,7 @@ func (l *Lock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	// occurs.
 	acquired, err := l.attemptLock(stopCh)
 	if err != nil {
-		return nil, errwrap.Wrapf("lock: {{err}}", err)
+		return nil, fmt.Errorf("lock: %w", err)
 	}
 	if !acquired {
 		return nil, nil
@@ -175,13 +176,9 @@ func (l *Lock) Unlock() error {
 	}
 	l.stopLock.Unlock()
 
-	// Pooling
-	l.backend.permitPool.Acquire()
-	defer l.backend.permitPool.Release()
-
 	// Delete
 	ctx := context.Background()
-	if _, err := l.backend.client.ReadWriteTransaction(ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+	if _, err := l.backend.haClient.ReadWriteTransaction(ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
 		row, err := txn.ReadRow(ctx, l.backend.haTable, spanner.Key{l.key}, []string{"Identity"})
 		if err != nil {
 			if spanner.ErrCode(err) != codes.NotFound {
@@ -192,7 +189,7 @@ func (l *Lock) Unlock() error {
 
 		var r LockRecord
 		if derr := row.ToStruct(&r); derr != nil {
-			return errwrap.Wrapf("failed to decode to struct: {{err}}", derr)
+			return fmt.Errorf("failed to decode to struct: %w", derr)
 		}
 
 		// If the identity is different, that means that between the time that after
@@ -206,7 +203,7 @@ func (l *Lock) Unlock() error {
 			spanner.Delete(l.backend.haTable, spanner.Key{l.key}),
 		})
 	}); err != nil {
-		return errwrap.Wrapf("unlock: {{err}}", err)
+		return fmt.Errorf("unlock: %w", err)
 	}
 
 	// We are no longer holding the lock
@@ -241,7 +238,7 @@ func (l *Lock) attemptLock(stopCh <-chan struct{}) (bool, error) {
 		case <-ticker.C:
 			acquired, err := l.writeLock()
 			if err != nil {
-				return false, errwrap.Wrapf("attempt lock: {{err}}", err)
+				return false, fmt.Errorf("attempt lock: %w", err)
 			}
 			if !acquired {
 				continue
@@ -327,10 +324,6 @@ OUTER:
 //   - if key is empty or identity is the same or timestamp exceeds TTL
 //     - update the lock to self
 func (l *Lock) writeLock() (bool, error) {
-	// Pooling
-	l.backend.permitPool.Acquire()
-	defer l.backend.permitPool.Release()
-
 	// Keep track of whether the lock was written
 	lockWritten := false
 
@@ -349,7 +342,7 @@ func (l *Lock) writeLock() (bool, error) {
 		}
 	}()
 
-	_, err := l.backend.client.ReadWriteTransaction(ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
+	_, err := l.backend.haClient.ReadWriteTransaction(ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
 		row, err := txn.ReadRow(ctx, l.backend.haTable, spanner.Key{l.key}, []string{"Key", "Identity", "Timestamp"})
 		if err != nil && spanner.ErrCode(err) != codes.NotFound {
 			return err
@@ -359,7 +352,7 @@ func (l *Lock) writeLock() (bool, error) {
 		if row != nil {
 			var r LockRecord
 			if derr := row.ToStruct(&r); derr != nil {
-				return errwrap.Wrapf("failed to decode to struct: {{err}}", derr)
+				return fmt.Errorf("failed to decode to struct: %w", derr)
 			}
 
 			// If the key is empty or the identity is ours or the ttl expired, we can
@@ -376,10 +369,10 @@ func (l *Lock) writeLock() (bool, error) {
 			Timestamp: time.Now().UTC(),
 		})
 		if err != nil {
-			return errwrap.Wrapf("failed to generate struct: {{err}}", err)
+			return fmt.Errorf("failed to generate struct: %w", err)
 		}
 		if err := txn.BufferWrite([]*spanner.Mutation{m}); err != nil {
-			return errwrap.Wrapf("failed to write: {{err}}", err)
+			return fmt.Errorf("failed to write: %w", err)
 		}
 
 		// Mark that the lock was acquired
@@ -388,7 +381,7 @@ func (l *Lock) writeLock() (bool, error) {
 		return nil
 	})
 	if err != nil {
-		return false, errwrap.Wrapf("write lock: {{err}}", err)
+		return false, fmt.Errorf("write lock: %w", err)
 	}
 
 	return lockWritten, nil
@@ -396,22 +389,18 @@ func (l *Lock) writeLock() (bool, error) {
 
 // get retrieves the value for the lock.
 func (l *Lock) get(ctx context.Context) (*LockRecord, error) {
-	// Pooling
-	l.backend.permitPool.Acquire()
-	defer l.backend.permitPool.Release()
-
 	// Read
-	row, err := l.backend.client.Single().ReadRow(ctx, l.backend.haTable, spanner.Key{l.key}, []string{"Key", "Value", "Timestamp", "Identity"})
+	row, err := l.backend.haClient.Single().ReadRow(ctx, l.backend.haTable, spanner.Key{l.key}, []string{"Key", "Value", "Timestamp", "Identity"})
 	if spanner.ErrCode(err) == codes.NotFound {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, errwrap.Wrapf(fmt.Sprintf("failed to read value for %q: {{err}}", l.key), err)
+		return nil, fmt.Errorf("failed to read value for %q: %w", l.key, err)
 	}
 
 	var r LockRecord
 	if err := row.ToStruct(&r); err != nil {
-		return nil, errwrap.Wrapf("failed to decode lock: {{err}}", err)
+		return nil, fmt.Errorf("failed to decode lock: %w", err)
 	}
 	return &r, nil
 }

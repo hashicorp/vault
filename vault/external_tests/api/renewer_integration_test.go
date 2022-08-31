@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
+	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 )
 
 func TestRenewer_Renew(t *testing.T) {
@@ -89,8 +90,8 @@ func TestRenewer_Renew(t *testing.T) {
 		t.Run("database", func(t *testing.T) {
 			t.Parallel()
 
-			pgURL, pgDone := testPostgresDB(t)
-			defer pgDone()
+			cleanup, pgURL := postgreshelper.PrepareTestContainer(t, "")
+			defer cleanup()
 
 			if err := client.Sys().Mount("database", &api.MountInput{
 				Type: "database",

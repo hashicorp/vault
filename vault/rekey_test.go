@@ -154,7 +154,7 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 	if recovery {
 		expType = c.seal.RecoveryType()
 	} else {
-		expType = c.seal.BarrierType()
+		expType = c.seal.BarrierType().String()
 	}
 
 	newConf := &SealConfig{
@@ -415,6 +415,7 @@ func TestCore_Rekey_Standby(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core.Shutdown()
 	keys, root := TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
@@ -437,6 +438,7 @@ func TestCore_Rekey_Standby(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core2.Shutdown()
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)

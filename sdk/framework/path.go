@@ -116,6 +116,12 @@ type Path struct {
 	// DisplayAttrs provides hints for UI and documentation generators. They
 	// will be included in OpenAPI output if set.
 	DisplayAttrs *DisplayAttributes
+
+	// TakesArbitraryInput is used for endpoints that take arbitrary input, instead
+	// of or as well as their Fields. This is taken into account when printing
+	// warnings about ignored fields. If this is set, we will not warn when data is
+	// provided that is not part of the Fields declaration.
+	TakesArbitraryInput bool
 }
 
 // OperationHandler defines and describes a specific operation handler.
@@ -153,6 +159,22 @@ type OperationProperties struct {
 	// Deprecated indicates that this operation should be avoided.
 	Deprecated bool
 
+	// The ForwardPerformance* parameters tell the router to unconditionally forward requests
+	// to this path if the processing node is a performance secondary/standby. This is generally
+	// *not* needed as there is already handling in place to automatically forward requests
+	// that try to write to storage. But there are a few cases where explicit forwarding is needed,
+	// for example:
+	//
+	// * The handler makes requests to other systems (e.g. an external API, database, ...) that
+	//   change external state somehow, and subsequently writes to storage. In this case the
+	//   default forwarding logic could result in multiple mutative calls to the external system.
+	//
+	// * The operation spans multiple requests (e.g. an OIDC callback), in-memory caching used,
+	//   and the same node (and therefore cache) should process both steps.
+	//
+	// If explicit forwarding is needed, it is usually true that forwarding from both performance
+	// standbys and performance secondaries should be enabled.
+	//
 	// ForwardPerformanceStandby indicates that this path should not be processed
 	// on a performance standby node, and should be forwarded to the active node instead.
 	ForwardPerformanceStandby bool
@@ -258,7 +280,7 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 
 		// Alphabetize the fields
 		fieldKeys := make([]string, 0, len(p.Fields))
-		for k, _ := range p.Fields {
+		for k := range p.Fields {
 			fieldKeys = append(fieldKeys, k)
 		}
 		sort.Strings(fieldKeys)
@@ -285,9 +307,17 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 			return nil, errwrap.Wrapf("error executing template: {{err}}", err)
 		}
 
+		// The plugin type (e.g. "kv", "cubbyhole") is only assigned at the time
+		// the plugin is enabled (mounted). If specified in the request, the type
+		// will be used as part of the request/response names in the OAS document
+		var requestResponsePrefix string
+		if v, ok := req.Data["requestResponsePrefix"]; ok {
+			requestResponsePrefix = v.(string)
+		}
+
 		// Build OpenAPI response for this path
 		doc := NewOASDocument()
-		if err := documentPath(p, b.SpecialPaths(), b.BackendType, doc); err != nil {
+		if err := documentPath(p, b.SpecialPaths(), requestResponsePrefix, false, b.BackendType, doc); err != nil {
 			b.Logger().Warn("error generating OpenAPI", "error", err)
 		}
 

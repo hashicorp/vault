@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Adds warning about white space in KV secret engine.
+```

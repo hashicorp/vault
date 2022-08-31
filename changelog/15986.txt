@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: Added `disable_idle_connections` configuration to disable leaving idle connections open in auto-auth, caching and templating.
+```

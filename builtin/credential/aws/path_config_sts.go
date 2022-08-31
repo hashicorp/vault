@@ -250,6 +250,7 @@ by assumption of these STS roles.
 The environment in which the Vault server resides must have access to assume the
 given STS roles.
 `
+
 const pathListStsHelpSyn = `
 List all the AWS account/STS role relationships registered with Vault.
 `

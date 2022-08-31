@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
@@ -27,8 +28,8 @@ func (r *Response) DecodeJSON(out interface{}) error {
 // body must still be closed manually.
 func (r *Response) Error() error {
 	// 200 to 399 are okay status codes. 429 is the code for health status of
-	// standby nodes.
-	if (r.StatusCode >= 200 && r.StatusCode < 400) || r.StatusCode == 429 {
+	// standby nodes, otherwise, 429 is treated as quota limit reached.
+	if (r.StatusCode >= 200 && r.StatusCode < 400) || (r.StatusCode == 429 && r.Request.URL.Path == "/v1/sys/health") {
 		return nil
 	}
 
@@ -41,12 +42,14 @@ func (r *Response) Error() error {
 
 	r.Body.Close()
 	r.Body = ioutil.NopCloser(bodyBuf)
+	ns := r.Header.Get(consts.NamespaceHeaderName)
 
 	// Build up the error object
 	respErr := &ResponseError{
-		HTTPMethod: r.Request.Method,
-		URL:        r.Request.URL.String(),
-		StatusCode: r.StatusCode,
+		HTTPMethod:    r.Request.Method,
+		URL:           r.Request.URL.String(),
+		StatusCode:    r.StatusCode,
+		NamespacePath: ns,
 	}
 
 	// Decode the error response if we can. Note that we wrap the bodyBuf
@@ -92,6 +95,10 @@ type ResponseError struct {
 
 	// Errors are the underlying errors returned by Vault.
 	Errors []string
+
+	// Namespace path to be reported to the client if it is set to anything other
+	// than root
+	NamespacePath string
 }
 
 // Error returns a human-readable error string for the response error.
@@ -101,9 +108,15 @@ func (r *ResponseError) Error() string {
 		errString = "Raw Message"
 	}
 
+	var ns string
+	if r.NamespacePath != "" && r.NamespacePath != "root/" {
+		ns = "Namespace: " + r.NamespacePath + "\n"
+	}
+
 	var errBody bytes.Buffer
 	errBody.WriteString(fmt.Sprintf(
 		"Error making API request.\n\n"+
+			ns+
 			"URL: %s %s\n"+
 			"Code: %d. %s:\n\n",
 		r.HTTPMethod, r.URL, r.StatusCode, errString))

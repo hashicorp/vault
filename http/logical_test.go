@@ -14,16 +14,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
-	log "github.com/hashicorp/go-hclog"
-
-	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/namespace"
+	kv "github.com/hashicorp/vault-plugin-secrets-kv"
+	"github.com/hashicorp/vault/api"
+	auditFile "github.com/hashicorp/vault/builtin/audit/file"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
+
+	"github.com/go-test/deep"
+	log "github.com/hashicorp/go-hclog"
+
+	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -106,6 +112,7 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core1.Shutdown()
 	keys, root := vault.TestCoreInit(t, core1)
 	for _, key := range keys {
 		if _, err := core1.Unseal(vault.TestKeyCopy(key)); err != nil {
@@ -128,6 +135,7 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer core2.Shutdown()
 	for _, key := range keys {
 		if _, err := core2.Unseal(vault.TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
@@ -204,7 +212,6 @@ func TestLogical_CreateToken(t *testing.T) {
 	})
 
 	var actual map[string]interface{}
-	var nilWarnings interface{}
 	expected := map[string]interface{}{
 		"lease_id":       "",
 		"renewable":      false,
@@ -212,21 +219,23 @@ func TestLogical_CreateToken(t *testing.T) {
 		"data":           nil,
 		"wrap_info":      nil,
 		"auth": map[string]interface{}{
-			"policies":       []interface{}{"root"},
-			"token_policies": []interface{}{"root"},
-			"metadata":       nil,
-			"lease_duration": json.Number("0"),
-			"renewable":      false,
-			"entity_id":      "",
-			"token_type":     "service",
-			"orphan":         false,
+			"policies":        []interface{}{"root"},
+			"token_policies":  []interface{}{"root"},
+			"metadata":        nil,
+			"lease_duration":  json.Number("0"),
+			"renewable":       false,
+			"entity_id":       "",
+			"token_type":      "service",
+			"orphan":          false,
+			"mfa_requirement": nil,
+			"num_uses":        json.Number("0"),
 		},
-		"warnings": nilWarnings,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	delete(actual["auth"].(map[string]interface{}), "client_token")
 	delete(actual["auth"].(map[string]interface{}), "accessor")
+	delete(actual, "warnings")
 	expected["request_id"] = actual["request_id"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad:\nexpected:\n%#v\nactual:\n%#v", expected, actual)
@@ -267,11 +276,37 @@ func TestLogical_RequestSizeLimit(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	// Write a very large object, should fail
+	// Write a very large object, should fail. This test works because Go will
+	// convert the byte slice to base64, which makes it significantly larger
+	// than the default max request size.
 	resp := testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
 		"data": make([]byte, DefaultMaxRequestSize),
 	})
-	testResponseStatus(t, resp, 413)
+	testResponseStatus(t, resp, http.StatusRequestEntityTooLarge)
+}
+
+func TestLogical_RequestSizeDisableLimit(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestListener(t)
+	props := &vault.HandlerProperties{
+		Core: core,
+		ListenerConfig: &configutil.Listener{
+			MaxRequestSize: -1,
+			Address:        "127.0.0.1",
+			TLSDisable:     true,
+		},
+	}
+	TestServerWithListenerAndProperties(t, ln, addr, core, props)
+
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	// Write a very large object, should pass as MaxRequestSize set to -1/Negative value
+
+	resp := testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
+		"data": make([]byte, DefaultMaxRequestSize),
+	})
+	testResponseStatus(t, resp, http.StatusNoContent)
 }
 
 func TestLogical_ListSuffix(t *testing.T) {
@@ -279,6 +314,7 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req, _ := http.NewRequest("GET", "http://127.0.0.1:8200/v1/secret/foo", nil)
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
+
 	lreq, _, status, err := buildLogicalRequest(core, nil, req)
 	if err != nil {
 		t.Fatal(err)
@@ -293,6 +329,7 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req, _ = http.NewRequest("GET", "http://127.0.0.1:8200/v1/secret/foo?list=true", nil)
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
+
 	lreq, _, status, err = buildLogicalRequest(core, nil, req)
 	if err != nil {
 		t.Fatal(err)
@@ -307,6 +344,12 @@ func TestLogical_ListSuffix(t *testing.T) {
 	req, _ = http.NewRequest("LIST", "http://127.0.0.1:8200/v1/secret/foo", nil)
 	req = req.WithContext(namespace.RootContext(nil))
 	req.Header.Add(consts.AuthHeaderName, rootToken)
+
+	_, _, status, err = buildLogicalRequestNoAuth(core.PerfStandby(), nil, req)
+	if err != nil || status != 0 {
+		t.Fatal(err)
+	}
+
 	lreq, _, status, err = buildLogicalRequest(core, nil, req)
 	if err != nil {
 		t.Fatal(err)
@@ -332,7 +375,7 @@ func TestLogical_RespondWithStatusCode(t *testing.T) {
 	}
 
 	w := httptest.NewRecorder()
-	respondLogical(w, nil, nil, resp404, false)
+	respondLogical(nil, w, nil, nil, resp404, false)
 
 	if w.Code != 404 {
 		t.Fatalf("Bad Status code: %d", w.Code)
@@ -460,5 +503,180 @@ func TestLogical_ShouldParseForm(t *testing.T) {
 			t.Fatalf("%s fail: expected isForm %t, got %t", name, test.isForm, isForm)
 		}
 	}
+}
 
+func TestLogical_AuditPort(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": kv.VersionedKVFactory,
+		},
+		AuditBackends: map[string]audit.Factory{
+			"file": auditFile.Factory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	core := cores[0].Core
+	c := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	if err := c.Sys().Mount("kv/", &api.MountInput{
+		Type: "kv-v2",
+	}); err != nil {
+		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
+	}
+
+	auditLogFile, err := ioutil.TempFile("", "auditport")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = c.Sys().EnableAuditWithOptions("file", &api.EnableAuditOptions{
+		Type: "file",
+		Options: map[string]string{
+			"file_path": auditLogFile.Name(),
+		},
+	})
+	if err != nil {
+		t.Fatalf("failed to enable audit file, err: %#v\n", err)
+	}
+
+	writeData := map[string]interface{}{
+		"data": map[string]interface{}{
+			"bar": "a",
+		},
+	}
+
+	// workaround kv-v2 initialization upgrade errors
+	numFailures := 0
+	vault.RetryUntil(t, 10*time.Second, func() error {
+		resp, err := c.Logical().Write("kv/data/foo", writeData)
+		if err != nil {
+			if strings.Contains(err.Error(), "Upgrading from non-versioned to versioned data") {
+				t.Logf("Retrying fetch KV data due to upgrade error")
+				time.Sleep(100 * time.Millisecond)
+				numFailures += 1
+				return err
+			}
+
+			t.Fatalf("write request failed, err: %#v, resp: %#v\n", err, resp)
+		}
+
+		return nil
+	})
+
+	decoder := json.NewDecoder(auditLogFile)
+
+	var auditRecord map[string]interface{}
+	count := 0
+	for decoder.Decode(&auditRecord) == nil {
+		count += 1
+
+		// Skip the first line
+		if count == 1 {
+			continue
+		}
+
+		auditRequest := map[string]interface{}{}
+
+		if req, ok := auditRecord["request"]; ok {
+			auditRequest = req.(map[string]interface{})
+		}
+
+		if _, ok := auditRequest["remote_address"].(string); !ok {
+			t.Fatalf("remote_address should be a string, not %T", auditRequest["remote_address"])
+		}
+
+		if _, ok := auditRequest["remote_port"].(float64); !ok {
+			t.Fatalf("remote_port should be a number, not %T", auditRequest["remote_port"])
+		}
+	}
+
+	// We expect the following items in the audit log:
+	// audit log header + an entry for updating sys/audit/file
+	// + request/response per failure (if any) + request/response for creating kv
+	numExpectedEntries := (numFailures * 2) + 4
+	if count != numExpectedEntries {
+		t.Fatalf("wrong number of audit entries expected: %d got: %d", numExpectedEntries, count)
+	}
+}
+
+func TestLogical_ErrRelativePath(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": credUserpass.Factory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	core := cores[0].Core
+	c := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	err := c.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	if err != nil {
+		t.Fatalf("failed to enable userpass, err: %v", err)
+	}
+
+	resp, err := c.Logical().Read("auth/userpass/users/user..aaa")
+
+	if err == nil || resp != nil {
+		t.Fatalf("expected read request to fail, resp: %#v, err: %v", resp, err)
+	}
+
+	respErr, ok := err.(*api.ResponseError)
+
+	if !ok {
+		t.Fatalf("unexpected error type, err: %#v", err)
+	}
+
+	if respErr.StatusCode != 400 {
+		t.Errorf("expected 400 response for read, actual: %d", respErr.StatusCode)
+	}
+
+	if !strings.Contains(respErr.Error(), logical.ErrRelativePath.Error()) {
+		t.Errorf("expected response for read to include %q", logical.ErrRelativePath.Error())
+	}
+
+	data := map[string]interface{}{
+		"password": "abc123",
+	}
+
+	resp, err = c.Logical().Write("auth/userpass/users/user..aaa", data)
+
+	if err == nil || resp != nil {
+		t.Fatalf("expected write request to fail, resp: %#v, err: %v", resp, err)
+	}
+
+	respErr, ok = err.(*api.ResponseError)
+
+	if !ok {
+		t.Fatalf("unexpected error type, err: %#v", err)
+	}
+
+	if respErr.StatusCode != 400 {
+		t.Errorf("expected 400 response for write, actual: %d", respErr.StatusCode)
+	}
+
+	if !strings.Contains(respErr.Error(), logical.ErrRelativePath.Error()) {
+		t.Errorf("expected response for write to include %q", logical.ErrRelativePath.Error())
+	}
 }

@@ -6,7 +6,7 @@ export default Helper.extend({
 
   compute([message, type]) {
     return () => {
-      this.get('flashMessages')[type || 'success'](message);
+      this.flashMessages[type || 'success'](message);
     };
   },
 });

@@ -1,0 +1,22 @@
+rules:
+  - id: logger-used-with-format-string
+    patterns:
+      - pattern-either:
+        - pattern: |
+            $LOGGER.Trace("=~/.*%[v#T%tbcdoOqxXUbeEfFgGps].*/",...)
+        - pattern: |
+            $LOGGER.Debug("=~/.*%[v#T%tbcdoOqxXUbeEfFgGps].*/",...)
+        - pattern: |
+            $LOGGER.Info("=~/.*%[v#T%tbcdoOqxXUbeEfFgGps].*/",...)
+        - pattern: |
+            $LOGGER.Warn("=~/.*%[v#T%tbcdoOqxXUbeEfFgGps].*/",...)
+        - pattern: |
+            $LOGGER.Error("=~/.*%[v#T%tbcdoOqxXUbeEfFgGps].*/",...)
+      - pattern-inside: |
+          import $LOG "github.com/hashicorp/go-hclog"
+          ...
+    message: "Logger message looks like format string"
+    languages: [go]
+    severity: ERROR
+  
+    

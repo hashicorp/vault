@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Reading `sys/mounts/:path` now returns the configuration for the secret engine at the given path
+```

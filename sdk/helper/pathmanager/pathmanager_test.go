@@ -20,7 +20,7 @@ func TestPathManager(t *testing.T) {
 
 	for _, path := range paths {
 		if m.HasPath(path) {
-			t.Fatalf("path should not exist in filtered paths '%s'", path)
+			t.Fatalf("path should not exist in filtered paths %q", path)
 		}
 	}
 
@@ -34,7 +34,7 @@ func TestPathManager(t *testing.T) {
 	}
 	for _, path := range paths {
 		if !m.HasPath(path) {
-			t.Fatalf("path should exist in filtered paths '%s'", path)
+			t.Fatalf("path should exist in filtered paths %q", path)
 		}
 	}
 
@@ -43,7 +43,7 @@ func TestPathManager(t *testing.T) {
 
 	for _, path := range paths {
 		if m.HasPath(path) {
-			t.Fatalf("path should not exist in filtered paths '%s'", path)
+			t.Fatalf("path should not exist in filtered paths %q", path)
 		}
 	}
 }
@@ -63,7 +63,7 @@ func TestPathManager_RemovePrefix(t *testing.T) {
 
 	for _, path := range paths {
 		if m.HasPath(path) {
-			t.Fatalf("path should not exist in filtered paths '%s'", path)
+			t.Fatalf("path should not exist in filtered paths %q", path)
 		}
 	}
 
@@ -77,7 +77,7 @@ func TestPathManager_RemovePrefix(t *testing.T) {
 	}
 	for _, path := range paths {
 		if !m.HasPath(path) {
-			t.Fatalf("path should exist in filtered paths '%s'", path)
+			t.Fatalf("path should exist in filtered paths %q", path)
 		}
 	}
 
@@ -90,7 +90,7 @@ func TestPathManager_RemovePrefix(t *testing.T) {
 
 	for _, path := range paths {
 		if m.HasPath(path) {
-			t.Fatalf("path should not exist in filtered paths '%s'", path)
+			t.Fatalf("path should not exist in filtered paths %q", path)
 		}
 	}
 }
@@ -118,16 +118,16 @@ func TestPathManager_HasExactPath(t *testing.T) {
 	}
 
 	tcases := []tCase{
-		tCase{"path1/key1", true},
-		tCase{"path2/key1", true},
-		tCase{"path3/key1", true},
-		tCase{"path1/key1/subkey1", true},
-		tCase{"path1/key1/subkey99", false},
-		tCase{"path2/key1/subkey1", true},
-		tCase{"path1/key1/subkey1/subkey1", false},
-		tCase{"nonexistentpath/key1", false},
-		tCase{"path4/key1", false},
-		tCase{"path5/key1/subkey1", false},
+		{"path1/key1", true},
+		{"path2/key1", true},
+		{"path3/key1", true},
+		{"path1/key1/subkey1", true},
+		{"path1/key1/subkey99", false},
+		{"path2/key1/subkey1", true},
+		{"path1/key1/subkey1/subkey1", false},
+		{"nonexistentpath/key1", false},
+		{"path4/key1", false},
+		{"path5/key1/subkey1", false},
 	}
 
 	for _, tc := range tcases {
@@ -139,5 +139,42 @@ func TestPathManager_HasExactPath(t *testing.T) {
 	m.RemovePaths(paths)
 	if len(m.Paths()) != 0 {
 		t.Fatalf("removing all paths did not clear manager: paths %v", m.Paths())
+	}
+}
+
+func TestPathManager_HasPath(t *testing.T) {
+	m := New()
+
+	m.AddPaths([]string{"a/b/c/"})
+	if m.HasPath("a/") {
+		t.Fatal("should not have path 'a/'")
+	}
+	if m.HasPath("a/b/") {
+		t.Fatal("should not have path 'a/b/'")
+	}
+	if !m.HasPath("a/b/c/") {
+		t.Fatal("should have path 'a/b/c'")
+	}
+
+	m.AddPaths([]string{"a/"})
+	if !m.HasPath("a/") {
+		t.Fatal("should have path 'a/'")
+	}
+	if !m.HasPath("a/b/") {
+		t.Fatal("should have path 'a/b/'")
+	}
+	if !m.HasPath("a/b/c/") {
+		t.Fatal("should have path 'a/b/c'")
+	}
+
+	m.RemovePaths([]string{"a/"})
+	if m.HasPath("a/") {
+		t.Fatal("should not have path 'a/'")
+	}
+	if m.HasPath("a/b/") {
+		t.Fatal("should not have path 'a/b/'")
+	}
+	if !m.HasPath("a/b/c/") {
+		t.Fatal("should have path 'a/b/c'")
 	}
 }

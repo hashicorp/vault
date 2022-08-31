@@ -1,14 +1,17 @@
 package command
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/posener/complete"
 )
 
@@ -27,6 +30,107 @@ type FlagVisibility interface {
 // FlagBool is an interface which boolean flags implement.
 type FlagBool interface {
 	IsBoolFlag() bool
+}
+
+// BoolPtr is a bool which is aware if it has been set.
+type BoolPtr struct {
+	v *bool
+}
+
+func (b *BoolPtr) Set(v string) error {
+	val, err := strconv.ParseBool(v)
+	if err != nil {
+		return err
+	}
+
+	if b.v == nil {
+		b.v = new(bool)
+	}
+	*b.v = val
+
+	return nil
+}
+
+func (b *BoolPtr) IsSet() bool {
+	return b.v != nil
+}
+
+func (b *BoolPtr) Get() bool {
+	if b.v == nil {
+		return false
+	}
+	return *b.v
+}
+
+func (b *BoolPtr) String() string {
+	var current bool
+	if b.v != nil {
+		current = *(b.v)
+	}
+	return fmt.Sprintf("%v", current)
+}
+
+type boolPtrValue struct {
+	hidden bool
+	target *BoolPtr
+}
+
+func newBoolPtrValue(def *bool, target *BoolPtr, hidden bool) *boolPtrValue {
+	val := &boolPtrValue{
+		hidden: hidden,
+		target: target,
+	}
+	if def != nil {
+		_ = val.target.Set(strconv.FormatBool(*def))
+	}
+	return val
+}
+
+func (b *boolPtrValue) IsBoolFlag() bool {
+	return true
+}
+
+func (b *boolPtrValue) Set(s string) error {
+	if b.target == nil {
+		b.target = new(BoolPtr)
+	}
+	return b.target.Set(s)
+}
+
+func (b *boolPtrValue) Get() interface{} { return *b.target }
+func (b *boolPtrValue) String() string   { return b.target.String() }
+func (b *boolPtrValue) Example() string  { return "*bool" }
+func (b *boolPtrValue) Hidden() bool     { return b.hidden }
+
+type BoolPtrVar struct {
+	Name       string
+	Aliases    []string
+	Usage      string
+	Hidden     bool
+	EnvVar     string
+	Default    *bool
+	Target     *BoolPtr
+	Completion complete.Predictor
+}
+
+func (f *FlagSet) BoolPtrVar(i *BoolPtrVar) {
+	def := i.Default
+	if v, exist := os.LookupEnv(i.EnvVar); exist {
+		if b, err := strconv.ParseBool(v); err == nil {
+			if def == nil {
+				def = new(bool)
+			}
+			*def = b
+		}
+	}
+
+	f.VarFlag(&VarFlag{
+		Name:       i.Name,
+		Aliases:    i.Aliases,
+		Usage:      i.Usage,
+		Value:      newBoolPtrValue(i.Default, i.Target, i.Hidden),
+		Completion: i.Completion,
+	})
 }
 
 // -- BoolVar  and boolValue
@@ -105,8 +209,8 @@ type IntVar struct {
 func (f *FlagSet) IntVar(i *IntVar) {
 	initial := i.Default
 	if v, exist := os.LookupEnv(i.EnvVar); exist {
-		if i, err := strconv.ParseInt(v, 0, 64); err == nil {
-			initial = int(i)
+		if i, err := parseutil.SafeParseInt(v); err == nil {
+			initial = i
 		}
 	}
 
@@ -140,13 +244,15 @@ func newIntValue(def int, target *int, hidden bool) *intValue {
 }
 
 func (i *intValue) Set(s string) error {
-	v, err := strconv.ParseInt(s, 0, 64)
+	v, err := parseutil.SafeParseInt(s)
 	if err != nil {
 		return err
 	}
-
-	*i.target = int(v)
-	return nil
+	if v >= math.MinInt && v <= math.MaxInt {
+		*i.target = int(v)
+		return nil
+	}
+	return fmt.Errorf("Incorrect conversion of a 64-bit integer to a lower bit size. Value %d is not within bounds for int32", v)
 }
 
 func (i *intValue) Get() interface{} { return int(*i.target) }
@@ -272,9 +378,12 @@ func (i *uintValue) Set(s string) error {
 	if err != nil {
 		return err
 	}
+	if v >= 0 && v <= math.MaxUint {
+		*i.target = uint(v)
+		return nil
+	}
 
-	*i.target = uint(v)
-	return nil
+	return fmt.Errorf("Incorrect conversion of a 64-bit integer to a lower bit size. Value %d is not within bounds for uint32", v)
 }
 
 func (i *uintValue) Get() interface{} { return uint(*i.target) }
@@ -667,7 +776,7 @@ func (s *stringMapValue) Hidden() bool     { return s.hidden }
 
 func mapToKV(m map[string]string) string {
 	list := make([]string, 0, len(m))
-	for k, _ := range m {
+	for k := range m {
 		list = append(list, k)
 	}
 	sort.Strings(list)
@@ -748,6 +857,135 @@ func (f *FlagSet) Var(value flag.Value, name, usage string) {
 	f.mainSet.Var(value, name, usage)
 	f.flagSet.Var(value, name, usage)
 }
+
+// -- TimeVar and timeValue
+type TimeVar struct {
+	Name       string
+	Aliases    []string
+	Usage      string
+	Default    time.Time
+	Hidden     bool
+	EnvVar     string
+	Target     *time.Time
+	Completion complete.Predictor
+	Formats    TimeFormat
+}
+
+// Identify the allowable formats, identified by the minimum
+// precision accepted.
+// TODO: move this somewhere where it can be re-used for the API.
+type TimeFormat int
+
+const (
+	TimeVar_EpochSecond TimeFormat = 1 << iota
+	TimeVar_RFC3339Nano
+	TimeVar_RFC3339Second
+	TimeVar_Day
+	TimeVar_Month
+)
+
+// Default value to use
+const TimeVar_TimeOrDay TimeFormat = TimeVar_EpochSecond | TimeVar_RFC3339Nano | TimeVar_RFC3339Second | TimeVar_Day
+
+// parseTimeAlternatives attempts several different allowable variants
+// of the time field.
+func parseTimeAlternatives(input string, allowedFormats TimeFormat) (time.Time, error) {
+	// The RFC3339 formats require the inclusion of a time zone.
+	if allowedFormats&TimeVar_RFC3339Nano != 0 {
+		t, err := time.Parse(time.RFC3339Nano, input)
+		if err == nil {
+			return t, nil
+		}
+	}
+
+	if allowedFormats&TimeVar_RFC3339Second != 0 {
+		t, err := time.Parse(time.RFC3339, input)
+		if err == nil {
+			return t, nil
+		}
+	}
+
+	if allowedFormats&TimeVar_Day != 0 {
+		t, err := time.Parse("2006-01-02", input)
+		if err == nil {
+			return t, nil
+		}
+	}
+
+	if allowedFormats&TimeVar_Month != 0 {
+		t, err := time.Parse("2006-01", input)
+		if err == nil {
+			return t, nil
+		}
+	}
+
+	if allowedFormats&TimeVar_EpochSecond != 0 {
+		i, err := strconv.ParseInt(input, 10, 64)
+		if err == nil {
+			// If a customer enters 20200101 we don't want
+			// to parse that as an epoch time.
+			// This arbitrarily-chosen cutoff is around year 2000.
+			if i > 946000000 {
+				return time.Unix(i, 0), nil
+			}
+		}
+	}
+
+	return time.Time{}, errors.New("Could not parse as absolute time.")
+}
+
+func (f *FlagSet) TimeVar(i *TimeVar) {
+	initial := i.Default
+	if v, exist := os.LookupEnv(i.EnvVar); exist {
+		if d, err := parseTimeAlternatives(v, i.Formats); err == nil {
+			initial = d
+		}
+	}
+
+	def := ""
+	if !i.Default.IsZero() {
+		def = i.Default.String()
+	}
+
+	f.VarFlag(&VarFlag{
+		Name:       i.Name,
+		Aliases:    i.Aliases,
+		Usage:      i.Usage,
+		Default:    def,
+		EnvVar:     i.EnvVar,
+		Value:      newTimeValue(initial, i.Target, i.Hidden, i.Formats),
+		Completion: i.Completion,
+	})
+}
+
+type timeValue struct {
+	hidden  bool
+	target  *time.Time
+	formats TimeFormat
+}
+
+func newTimeValue(def time.Time, target *time.Time, hidden bool, f TimeFormat) *timeValue {
+	*target = def
+	return &timeValue{
+		hidden:  hidden,
+		target:  target,
+		formats: f,
+	}
+}
+
+func (d *timeValue) Set(s string) error {
+	v, err := parseTimeAlternatives(s, d.formats)
+	if err != nil {
+		return err
+	}
+	*d.target = v
+	return nil
+}
+
+func (d *timeValue) Get() interface{} { return *d.target }
+func (d *timeValue) String() string   { return (*d.target).String() }
+func (d *timeValue) Example() string  { return "time" }
+func (d *timeValue) Hidden() bool     { return d.hidden }
 
 // -- helpers
 func envDefault(key, def string) string {

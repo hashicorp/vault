@@ -15,10 +15,10 @@ import (
 	"math/big"
 	mathrand "math/rand"
 	"net"
+	"net/url"
 	"sync"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
@@ -118,7 +118,7 @@ func GenerateTLSKey(reader io.Reader) (*TLSKey, error) {
 
 	certBytes, err := x509.CreateCertificate(rand.Reader, template, template, key.Public(), key)
 	if err != nil {
-		return nil, errwrap.Wrapf("unable to generate local cluster certificate: {{err}}", err)
+		return nil, fmt.Errorf("unable to generate local cluster certificate: %w", err)
 	}
 
 	return &TLSKey{
@@ -135,13 +135,15 @@ func GenerateTLSKey(reader io.Reader) (*TLSKey, error) {
 	}, nil
 }
 
-// Make sure raftLayer satisfies the raft.StreamLayer interface
-var _ raft.StreamLayer = (*raftLayer)(nil)
+var (
+	// Make sure raftLayer satisfies the raft.StreamLayer interface
+	_ raft.StreamLayer = (*raftLayer)(nil)
 
-// Make sure raftLayer satisfies the cluster.Handler and cluster.Client
-// interfaces
-var _ cluster.Handler = (*raftLayer)(nil)
-var _ cluster.Client = (*raftLayer)(nil)
+	// Make sure raftLayer satisfies the cluster.Handler and cluster.Client
+	// interfaces
+	_ cluster.Handler = (*raftLayer)(nil)
+	_ cluster.Client  = (*raftLayer)(nil)
+)
 
 // RaftLayer implements the raft.StreamLayer interface,
 // so that we can use a single RPC layer for Raft and Vault
@@ -170,10 +172,19 @@ type raftLayer struct {
 // from the network config.
 func NewRaftLayer(logger log.Logger, raftTLSKeyring *TLSKeyring, clusterListener cluster.ClusterHook) (*raftLayer, error) {
 	clusterAddr := clusterListener.Addr()
-	switch {
-	case clusterAddr == nil:
-		// Clustering disabled on the server, don't try to look for params
+	if clusterAddr == nil {
 		return nil, errors.New("no raft addr found")
+	}
+
+	{
+		// Test the advertised address to make sure it's not an unspecified IP
+		u := url.URL{
+			Host: clusterAddr.String(),
+		}
+		ip := net.ParseIP(u.Hostname())
+		if ip != nil && ip.IsUnspecified() {
+			return nil, fmt.Errorf("cannot use unspecified IP with raft storage: %s", clusterAddr.String())
+		}
 	}
 
 	layer := &raftLayer{
@@ -214,7 +225,7 @@ func (l *raftLayer) setTLSKeyring(keyring *TLSKeyring) error {
 
 		parsedCert, err := x509.ParseCertificate(key.CertBytes)
 		if err != nil {
-			return errwrap.Wrapf("error parsing raft cluster certificate: {{err}}", err)
+			return fmt.Errorf("error parsing raft cluster certificate: %w", err)
 		}
 
 		key.parsedCert = parsedCert
@@ -304,7 +315,7 @@ func (l *raftLayer) CALookup(context.Context) ([]*x509.Certificate, error) {
 	return ret, nil
 }
 
-// Stop shutsdown the raft layer.
+// Stop shuts down the raft layer.
 func (l *raftLayer) Stop() error {
 	l.Close()
 	return nil

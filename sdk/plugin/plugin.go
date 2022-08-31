@@ -4,9 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -19,7 +17,6 @@ import (
 // used to cleanly kill the client on Cleanup()
 type BackendPluginClient struct {
 	client *plugin.Client
-	sync.Mutex
 
 	logical.Backend
 }
@@ -48,7 +45,7 @@ func NewBackend(ctx context.Context, pluginName string, pluginType consts.Plugin
 		// from the pluginRunner. Then cast it to logical.Factory.
 		rawFactory, err := pluginRunner.BuiltinFactory()
 		if err != nil {
-			return nil, errwrap.Wrapf("error getting plugin type: {{err}}", err)
+			return nil, fmt.Errorf("error getting plugin type: %q", err)
 		}
 
 		if factory, ok := rawFactory.(logical.Factory); !ok {
@@ -76,12 +73,12 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 		// since it's possible old plugins built against this version will still
 		// work with gRPC. There is currently no difference between version 3
 		// and version 4.
-		3: plugin.PluginSet{
+		3: {
 			"backend": &GRPCBackendPlugin{
 				MetadataMode: isMetadataMode,
 			},
 		},
-		4: plugin.PluginSet{
+		4: {
 			"backend": &GRPCBackendPlugin{
 				MetadataMode: isMetadataMode,
 			},
@@ -93,9 +90,9 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	var client *plugin.Client
 	var err error
 	if isMetadataMode {
-		client, err = pluginRunner.RunMetadataMode(ctx, sys, pluginSet, handshakeConfig, []string{}, namedLogger)
+		client, err = pluginRunner.RunMetadataMode(ctx, sys, pluginSet, HandshakeConfig, []string{}, namedLogger)
 	} else {
-		client, err = pluginRunner.Run(ctx, sys, pluginSet, handshakeConfig, []string{}, namedLogger)
+		client, err = pluginRunner.Run(ctx, sys, pluginSet, HandshakeConfig, []string{}, namedLogger)
 	}
 	if err != nil {
 		return nil, err
@@ -117,9 +114,9 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	var transport string
 	// We should have a logical backend type now. This feels like a normal interface
 	// implementation but is in fact over an RPC connection.
-	switch raw.(type) {
+	switch b := raw.(type) {
 	case *backendGRPCPluginClient:
-		backend = raw.(*backendGRPCPluginClient)
+		backend = b
 		transport = "gRPC"
 	default:
 		return nil, errors.New("unsupported plugin client type")
@@ -127,7 +124,7 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 
 	// Wrap the backend in a tracing middleware
 	if namedLogger.IsTrace() {
-		backend = &backendTracingMiddleware{
+		backend = &BackendTracingMiddleware{
 			logger: namedLogger.With("transport", transport),
 			next:   backend,
 		}
@@ -137,23 +134,4 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 		client:  client,
 		Backend: backend,
 	}, nil
-}
-
-// wrapError takes a generic error type and makes it usable with the plugin
-// interface. Only errors which have exported fields and have been registered
-// with gob can be unwrapped and transported. This checks error types and, if
-// none match, wrap the error in a plugin.BasicError.
-func wrapError(err error) error {
-	if err == nil {
-		return nil
-	}
-
-	switch err.(type) {
-	case *plugin.BasicError,
-		logical.HTTPCodedError,
-		*logical.StatusBadRequest:
-		return err
-	}
-
-	return plugin.NewBasicError(err)
 }

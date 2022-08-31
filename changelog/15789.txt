@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix inconsistent behavior in client count calendar widget
+```

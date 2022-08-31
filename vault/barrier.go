@@ -24,6 +24,10 @@ var (
 
 	// ErrBarrierInvalidKey is returned if the Unseal key is invalid
 	ErrBarrierInvalidKey = errors.New("Unseal failed, invalid key")
+
+	// ErrPlaintextTooLarge is returned if a plaintext is offered for encryption
+	// that is too large to encrypt in memory
+	ErrPlaintextTooLarge = errors.New("plaintext value too large")
 )
 
 const (
@@ -31,15 +35,15 @@ const (
 	barrierInitPath = "barrier/init"
 
 	// keyringPath is the location of the keyring data. This is encrypted
-	// by the master key.
+	// by the root key.
 	keyringPath   = "core/keyring"
 	keyringPrefix = "core/"
 
 	// keyringUpgradePrefix is the path used to store keyring update entries.
 	// When running in HA mode, the active instance will install the new key
 	// and re-write the keyring. For standby instances, they need an upgrade
-	// path from key N to N+1. They cannot just use the master key because
-	// in the event of a rekey, that master key can no longer decrypt the keyring.
+	// path from key N to N+1. They cannot just use the root key because
+	// in the event of a rekey, that root key can no longer decrypt the keyring.
 	// When key N+1 is installed, we create an entry at "prefix/N" which uses
 	// encryption key N to provide the N+1 key. The standby instances scan
 	// for this periodically and refresh their keyring. The upgrade keys
@@ -47,17 +51,17 @@ const (
 	// standby instances to upgrade without causing any disruption.
 	keyringUpgradePrefix = "core/upgrade/"
 
-	// masterKeyPath is the location of the master key. This is encrypted
+	// rootKeyPath is the location of the root key. This is encrypted
 	// by the latest key in the keyring. This is only used by standby instances
 	// to handle the case of a rekey. If the active instance does a rekey,
 	// the standby instances can no longer reload the keyring since they
-	// have the old master key. This key can be decrypted if you have the
-	// keyring to discover the new master key. The new master key is then
+	// have the old root key. This key can be decrypted if you have the
+	// keyring to discover the new root key. The new root key is then
 	// used to reload the keyring itself.
-	masterKeyPath = "core/master"
+	rootKeyPath = "core/master"
 
 	// shamirKekPath is used with Shamir in v1.3+ to store a copy of the
-	// unseal key behind the barrier.  As with masterKeyPath this is primarily
+	// unseal key behind the barrier.  As with rootKeyPath this is primarily
 	// used by standbys to handle rekeys.  It also comes into play when restoring
 	// raft snapshots.
 	shamirKekPath = "core/shamir-kek"
@@ -71,14 +75,14 @@ const (
 // a Vault. The barrier should only be Unlockable given its key.
 type SecurityBarrier interface {
 	// Initialized checks if the barrier has been initialized
-	// and has a master key set.
+	// and has a root key set.
 	Initialized(ctx context.Context) (bool, error)
 
 	// Initialize works only if the barrier has not been initialized
-	// and makes use of the given master key.  When sealKey is provided
-	// it's because we're using a new-style Shamir seal, and masterKey
+	// and makes use of the given root key.  When sealKey is provided
+	// it's because we're using a new-style Shamir seal, and rootKey
 	// is to be stored using sealKey to encrypt it.
-	Initialize(ctx context.Context, masterKey []byte, sealKey []byte, random io.Reader) error
+	Initialize(ctx context.Context, rootKey []byte, sealKey []byte, random io.Reader) error
 
 	// GenerateKey is used to generate a new key
 	GenerateKey(io.Reader) ([]byte, error)
@@ -90,27 +94,27 @@ type SecurityBarrier interface {
 	// is not expected to be able to perform any CRUD until it is unsealed.
 	Sealed() (bool, error)
 
-	// Unseal is used to provide the master key which permits the barrier
+	// Unseal is used to provide the unseal key which permits the barrier
 	// to be unsealed. If the key is not correct, the barrier remains sealed.
 	Unseal(ctx context.Context, key []byte) error
 
-	// VerifyMaster is used to check if the given key matches the master key
-	VerifyMaster(key []byte) error
+	// VerifyRoot is used to check if the given key matches the root key
+	VerifyRoot(key []byte) error
 
-	// SetMasterKey is used to directly set a new master key. This is used in
+	// SetRootKey is used to directly set a new root key. This is used in
 	// replicated scenarios due to the chicken and egg problem of reloading the
-	// keyring from disk before we have the master key to decrypt it.
-	SetMasterKey(key []byte) error
+	// keyring from disk before we have the root key to decrypt it.
+	SetRootKey(key []byte) error
 
 	// ReloadKeyring is used to re-read the underlying keyring.
 	// This is used for HA deployments to ensure the latest keyring
 	// is present in the leader.
 	ReloadKeyring(ctx context.Context) error
 
-	// ReloadMasterKey is used to re-read the underlying masterkey.
-	// This is used for HA deployments to ensure the latest master key
+	// ReloadRootKey is used to re-read the underlying root key.
+	// This is used for HA deployments to ensure the latest root key
 	// is available for keyring reloading.
-	ReloadMasterKey(ctx context.Context) error
+	ReloadRootKey(ctx context.Context) error
 
 	// Seal is used to re-seal the barrier. This requires the barrier to
 	// be unsealed again to perform any further operations.
@@ -132,11 +136,27 @@ type SecurityBarrier interface {
 	// ActiveKeyInfo is used to inform details about the active key
 	ActiveKeyInfo() (*KeyInfo, error)
 
+	// RotationConfig returns the auto-rotation config for the barrier key
+	RotationConfig() (KeyRotationConfig, error)
+
+	// SetRotationConfig updates the auto-rotation config for the barrier key
+	SetRotationConfig(ctx context.Context, config KeyRotationConfig) error
+
 	// Rekey is used to change the master key used to protect the keyring
 	Rekey(context.Context, []byte) error
 
 	// For replication we must send over the keyring, so this must be available
 	Keyring() (*Keyring, error)
+
+	// For encryption count shipping, a function which handles updating local encryption counts if the consumer succeeds.
+	// This isolates the barrier code from the replication system
+	ConsumeEncryptionCount(consumer func(int64) error) error
+
+	// Add encryption counts from a remote source (downstream cluster node)
+	AddRemoteEncryptions(encryptions int64)
+
+	// Check whether an automatic rotation is due
+	CheckBarrierAutoRotate(ctx context.Context) (string, error)
 
 	// SecurityBarrier must provide the storage APIs
 	logical.Storage
@@ -173,4 +193,5 @@ type BarrierEncryptor interface {
 type KeyInfo struct {
 	Term        int
 	InstallTime time.Time
+	Encryptions int64
 }

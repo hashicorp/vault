@@ -1,0 +1,94 @@
+---
+layout: docs
+page_title: Audit Devices
+description: Audit devices are mountable devices that log requests and responses in Vault.
+---
+
+# Audit Devices
+
+Audit devices are the components in Vault that collectively keep a detailed log of all
+requests and response to Vault. Because every operation with Vault is an API
+request/response, when using a single audit device, the audit log contains _every authenticated_ interaction with
+Vault, including errors.
+
+Multiple audit devices can be enabled and Vault will attempt to send the audit logs to
+all of them. This allows you to not only have redundant copies, but also a way to check for data tampering in the logs themselves.
+
+~> Note: When using multiple audit devices, Vault considers a request to be successful if it can log to *at least* one configured audit device (see: [Blocked Audit Devices](/docs/audit#blocked-audit-devices) section below). Therefore in order to build a complete picture of all audited actions, use the aggregate/union of the logs from each audit device.
+
+## Format
+
+Each line in the audit log is a JSON object. The `type` field specifies what
+type of object it is. Currently, only two types exist: `request` and `response`.
+The line contains all of the information for any given request and response. By
+default, all the sensitive information is first hashed before logging in the
+audit logs.
+
+## Sensitive Information
+
+The audit logs contain the full request and response objects for every
+interaction with Vault. The request and response can be matched utilizing a
+unique identifier assigned to each request.
+
+Most strings contained within requests and responses are hashed with a salt using HMAC-SHA256. The purpose of the hash is so that secrets aren't in plaintext within your audit logs. However, you're still able to check the value of secrets by generating HMACs yourself; this can be done with the audit device's hash function and salt by using the `/sys/audit-hash` API endpoint (see the documentation for more details).
+
+Note that currently only strings coming from JSON or being returned in JSON are
+HMAC'd. Other data types, like integers, booleans, and so on, are passed
+through in plaintext.
+
+While most strings are hashed, Vault does make some exceptions, such as auth and secrets, and users can enable additional exceptions using the [secrets enable](/docs/commands/secrets/enable) command, and then tune it afterward.
+
+**see also**:
+
+[secrets tune](/docs/commands/secrets/tune)
+
+[auth enable](/docs/commands/auth/enable)
+
+[auth tune](/docs/commands/auth/tune)
+
+## Enabling/Disabling Audit Devices
+
+When a Vault server is first initialized, no auditing is enabled. Audit
+devices must be enabled by a root user using `vault audit enable`.
+
+When enabling an audit device, options can be passed to it to configure it.
+For example, the command below enables the file audit device:
+
+```shell-session
+$ vault audit enable file file_path=/var/log/vault_audit.log
+```
+
+In the command above, we passed the "file_path" parameter to specify the path
+where the audit log will be written to. Each audit device has its own
+set of parameters. See the documentation to the left for more details.
+
+~> Note: Audit device configuration is replicated to all nodes within a
+cluster by default, and to performance/DR secondaries for Vault Enterprise clusters.
+Before enabling an audit device, ensure that all nodes within the cluster(s)
+will be able to successfully log to the audit device to avoid Vault being
+blocked from serving requests.
+An audit device can be limited to only within the node's cluster with the [`local`](/api/system/audit#local) parameter.
+
+When an audit device is disabled, it will stop receiving logs immediately.
+The existing logs that it did store are untouched.
+
+## Blocked Audit Devices
+
+Audit device logs are critically important and ignoring auditing failures opens an avenue for attack. Vault will not respond to requests when no enabled audit devices can record them.
+
+Vault can distinguish between two types of audit device failures.
+
+- A blocking failure is one where an attempt to write to the audit device never completes. This is unlikely with a local disk device, but could occure with a network-based audit device.
+
+- When multiple audit devices are enabled, if any of them fail in a non-blocking fashion, Vault requests can still complete successfully provided at least one audit device successfully writes the audit record. If any of the audit devices fail in a blocking fashion however, Vault requests will hang until the blocking is resolved.
+
+In other words, Vault will not complete any requests until the blocked audit device can write.
+
+## Tutorial
+
+Refer to [Blocked Audit Devices](https://learn.hashicorp.com/tutorials/vault/blocked-audit-devices) for a step-by-step tutorial.
+
+## API
+
+Audit devices also have a full HTTP API. Please see the [Audit device API
+docs](/api-docs/system/audit) for more details.

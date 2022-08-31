@@ -1,13 +1,22 @@
 package api
 
-import "context"
+import (
+	"context"
+	"net/http"
+	"time"
+)
 
 func (c *Sys) Leader() (*LeaderResponse, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/leader")
+	return c.LeaderWithContext(context.Background())
+}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
+func (c *Sys) LeaderWithContext(ctx context.Context) (*LeaderResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/leader")
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -19,11 +28,14 @@ func (c *Sys) Leader() (*LeaderResponse, error) {
 }
 
 type LeaderResponse struct {
-	HAEnabled                bool   `json:"ha_enabled"`
-	IsSelf                   bool   `json:"is_self"`
-	LeaderAddress            string `json:"leader_address"`
-	LeaderClusterAddress     string `json:"leader_cluster_address"`
-	PerfStandby              bool   `json:"performance_standby"`
-	PerfStandbyLastRemoteWAL uint64 `json:"performance_standby_last_remote_wal"`
-	LastWAL                  uint64 `json:"last_wal"`
+	HAEnabled                bool      `json:"ha_enabled"`
+	IsSelf                   bool      `json:"is_self"`
+	ActiveTime               time.Time `json:"active_time"`
+	LeaderAddress            string    `json:"leader_address"`
+	LeaderClusterAddress     string    `json:"leader_cluster_address"`
+	PerfStandby              bool      `json:"performance_standby"`
+	PerfStandbyLastRemoteWAL uint64    `json:"performance_standby_last_remote_wal"`
+	LastWAL                  uint64    `json:"last_wal"`
+	RaftCommittedIndex       uint64    `json:"raft_committed_index,omitempty"`
+	RaftAppliedIndex         uint64    `json:"raft_applied_index,omitempty"`
 }

@@ -3,11 +3,15 @@ package pluginutil
 import (
 	"os"
 
+	"github.com/hashicorp/go-secure-stdlib/mlock"
 	version "github.com/hashicorp/go-version"
-	"github.com/hashicorp/vault/sdk/helper/mlock"
 )
 
-var (
+const (
+	// PluginAutoMTLSEnv is used to ensure AutoMTLS is used. This will override
+	// setting a TLSProviderFunc for a plugin.
+	PluginAutoMTLSEnv = "VAULT_PLUGIN_AUTOMTLS_ENABLED"
+
 	// PluginMlockEnabled is the ENV name used to pass the configuration for
 	// enabling mlock
 	PluginMlockEnabled = "VAULT_PLUGIN_MLOCK_ENABLED"
