@@ -26,10 +26,19 @@ a plugin is basic command-line skills and basic knowledge of the
 
 Your plugin implementation needs to satisfy the interface for the plugin
 type you want to build. You can find these definitions in the docs for the
-backend running the plugin. 
+backend running the plugin.
 
-~> Note: Plugins should be prepared to handle multiple concurrent requests 
+~> Note: Plugins should be prepared to handle multiple concurrent requests
 from Vault.
+
+## Serving A Plugin
+
+### Serving A Plugin with Multiplexing
+
+~> Plugin multiplexing requires `github.com/hashicorp/vault/sdk v0.5.4` or above.
+
+The following code exhibits an example main package for a Vault plugin using
+the Vault SDK for a secrets engine or auth method:
 
 ```go
 package main
@@ -50,7 +59,7 @@ func main() {
 	tlsConfig := apiClientMeta.GetTLSConfig()
 	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
 
-	err := plugin.Serve(&plugin.ServeOpts{
+	err := plugin.ServeMultiplex(&plugin.ServeOpts{
 		BackendFactoryFunc: myPlugin.Factory,
 		TLSProviderFunc:    tlsProviderFunc,
 	})
@@ -65,6 +74,29 @@ func main() {
 
 And that's basically it! You would just need to change `myPlugin` to your actual
 plugin.
+
+## Plugin Backwards Compatibility with Vault
+
+Let's take a closer look at a snippet from the above main package.
+
+```go
+	err := plugin.ServeMultiplex(&plugin.ServeOpts{
+		BackendFactoryFunc: myPlugin.Factory,
+		TLSProviderFunc:    tlsProviderFunc,
+	})
+```
+
+The call to `plugin.ServeMultiplex` ensures that the plugin will use
+Vault's [plugin
+multiplexing](/docs/plugins/plugin-architecture#plugin-multiplexing) feature.
+However, this plugin will not be multiplexed if it is run by a version of Vault
+that does not support multiplexing. Vault will simply fall back to a plugin
+version that it can run. Additionally, we set the `TLSProviderFunc` to ensure
+that our plugin is backwards compatible with versions of Vault that do not
+support automatic mutual TLS for secure [plugin
+communication](/docs/plugins/plugin-architecture#plugin-communication). If you
+are certain your plugin does not need backwards compatibility, this field can
+be omitted.
 
 [api_addr]: /docs/configuration#api_addr
 
