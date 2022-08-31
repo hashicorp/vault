@@ -20,6 +20,26 @@ const SECRET_BACKENDS = {
         label: 'Overview',
         link: 'overview',
       },
+      {
+        label: 'Roles',
+        link: 'roles',
+      },
+      {
+        label: 'Issuers',
+        link: 'issuers',
+      },
+      {
+        label: 'Certificates',
+        link: 'certificates',
+      },
+      {
+        label: 'Keys',
+        link: 'keys',
+      },
+      {
+        label: 'Configuration',
+        link: 'configuration',
+      },
     ],
   },
 };
