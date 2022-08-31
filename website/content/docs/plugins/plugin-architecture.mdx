@@ -154,9 +154,11 @@ To enable multiplexing, the plugin must be compiled with the `ServeMultiplex`
 function call from Vault's respective `plugin` or `dbplugin` SDK packages. At
 this time, there is no opt-out capability for plugins that implement
 multiplexing. To use a non-multiplexed plugin, run an older version of the
-plugin, i.e., the plugin calls the `Serve` function. More details on
-implementing plugin multiplexing can be found in [Serving a Multiplexed
-Plugin](/docs/secrets/databases/custom#serving-a-plugin-with-multiplexing).
+plugin, i.e., the plugin calls the `Serve` function.
+
+More resources on implementing plugin multiplexing:
+* [Database secrets engines](/docs/secrets/databases/custom#serving-a-plugin-with-multiplexing)
+* [Secrets engines and auth methods](/docs/plugins/plugin-development)
 
 ## Troubleshooting
 
