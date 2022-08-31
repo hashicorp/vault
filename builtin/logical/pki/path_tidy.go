@@ -324,7 +324,9 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 
 		// Check for pause duration to reduce resource consumption.
 		if config.PauseDuration > (0 * time.Second) {
+			b.revokeStorageLock.Unlock()
 			time.Sleep(config.PauseDuration)
+			b.revokeStorageLock.Lock()
 		}
 
 		revokedEntry, err := req.Storage.Get(ctx, "revoked/"+serial)
