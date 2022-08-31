@@ -31,6 +31,12 @@ backend running the plugin.
 ~> Note: Plugins should be prepared to handle multiple concurrent requests
 from Vault.
 
+## Serving A Plugin
+
+### Serving A Plugin with Multiplexing
+
+~> Plugin multiplexing requires `github.com/hashicorp/vault/sdk v0.5.4` or above.
+
 The following code exhibits an example main package for a Vault plugin using
 the Vault SDK for a secrets engine or auth method:
 
