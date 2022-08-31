@@ -84,9 +84,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     assert.dom('input#allow-all').isChecked('Allow all radio button selected by default');
     assert.dom('[data-test-ttl-value="ID Token TTL"]').hasValue('1', 'ttl defaults to 24h');
     assert.dom('[data-test-ttl-value="Access Token TTL"]').hasValue('1', 'ttl defaults to 24h');
-    assert
-      .dom('[data-test-selected-option="true"]')
-      .hasText('default', 'Search select has default key selected');
+    assert.dom('[data-test-selected-option]').hasText('default', 'Search select has default key selected');
 
     // check validation errors
     await fillIn('[data-test-input="name"]', ' ');
