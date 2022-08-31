@@ -1438,7 +1438,6 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 			f = wrapFactoryCheckPerms(c, plugin.Factory)
 		}
 	}
-
 	// Set up conf to pass in plugin_name
 	conf := make(map[string]string)
 	for k, v := range entry.Options {

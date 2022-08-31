@@ -416,3 +416,41 @@ to the key.`,
 	}
 	return fields
 }
+
+func addTidyFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields["tidy_cert_store"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to enable tidying up
+the certificate store`,
+	}
+
+	fields["tidy_revocation_list"] = &framework.FieldSchema{
+		Type:        framework.TypeBool,
+		Description: `Deprecated; synonym for 'tidy_revoked_certs`,
+	}
+
+	fields["tidy_revoked_certs"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to expire all revoked
+and expired certificates, removing them both from the CRL and from storage. The
+CRL will be rotated if this causes any values to be removed.`,
+	}
+
+	fields["tidy_revoked_cert_issuer_associations"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to validate issuer associations
+on revocation entries. This helps increase the performance of CRL building
+and OCSP responses.`,
+	}
+
+	fields["safety_buffer"] = &framework.FieldSchema{
+		Type: framework.TypeDurationSecond,
+		Description: `The amount of extra time that must have passed
+beyond certificate expiration before it is removed
+from the backend storage and/or revocation list.
+Defaults to 72 hours.`,
+		Default: 259200, // 72h, but TypeDurationSecond currently requires defaults to be int
+	}
+
+	return fields
+}

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -924,7 +924,6 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 			f = wrapFactoryCheckPerms(c, plugin.Factory)
 		}
 	}
-
 	// Set up conf to pass in plugin_name
 	conf := make(map[string]string)
 	for k, v := range entry.Options {

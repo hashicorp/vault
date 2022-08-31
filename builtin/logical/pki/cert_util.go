@@ -174,7 +174,7 @@ func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, pr
 	case strings.HasPrefix(prefix, "revoked/"):
 		legacyPath = "revoked/" + colonSerial
 		path = "revoked/" + hyphenSerial
-	case serial == legacyCRLPath:
+	case serial == legacyCRLPath || serial == deltaCRLPath:
 		if err = b.crlBuilder.rebuildIfForced(ctx, b, req); err != nil {
 			return nil, err
 		}
@@ -182,6 +182,14 @@ func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, pr
 		path, err = sc.resolveIssuerCRLPath(defaultRef)
 		if err != nil {
 			return nil, err
+		}
+
+		if serial == deltaCRLPath {
+			if sc.Backend.useLegacyBundleCaStorage() {
+				return nil, fmt.Errorf("refusing to serve delta CRL with legacy CA bundle")
+			}
+
+			path += deltaCRLPathSuffix
 		}
 	default:
 		legacyPath = "certs/" + colonSerial

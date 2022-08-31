@@ -285,6 +285,14 @@ func crlEnableDisableTestForBackend(t *testing.T, b *backend, s logical.Storage,
 		for _, serialNum := range expectedSerials {
 			requireSerialNumberInCRL(t, certList, serialNum)
 		}
+
+		// Since this test assumes a complete CRL was rebuilt, we can grab
+		// the delta CRL and ensure it is empty.
+		deltaList := getParsedCrlFromBackend(t, b, s, "crl/delta").TBSCertList
+		lenDeltaList := len(deltaList.RevokedCertificates)
+		if lenDeltaList != 0 {
+			t.Fatalf("expected zero revoked certificates on the delta CRL due to complete CRL rebuild, found %d", lenDeltaList)
+		}
 	}
 
 	revoke := func(serialIndex int) {
@@ -378,7 +386,7 @@ func TestCrlRebuilder(t *testing.T) {
 	require.NoError(t, err)
 
 	req := &logical.Request{Storage: s}
-	cb := crlBuilder{}
+	cb := newCRLBuilder()
 
 	// Force an initial build
 	err = cb.rebuild(ctx, b, req, true)
@@ -848,9 +856,14 @@ func TestAutoRebuild(t *testing.T) {
 	// the rollback manager timer ticks. With the new helper, we can
 	// modify the rollback manager timer period directly, allowing us
 	// to shorten the total test time significantly.
-	newPeriod := 6 * time.Second
-	gracePeriod := (newPeriod + 1*time.Second).String()
-	crlTime := (newPeriod + 2*time.Second).String()
+	//
+	// We set the delta CRL time to ensure it executes prior to the
+	// main CRL rebuild, and the new CRL doesn't rebuild until after
+	// we're done.
+	newPeriod := 1 * time.Second
+	deltaPeriod := (newPeriod + 1*time.Second).String()
+	crlTime := (6*newPeriod + 2*time.Second).String()
+	gracePeriod := (3 * newPeriod).String()
 	delta := 2 * newPeriod
 
 	// This test requires the periodicFunc to trigger, which requires we stand
@@ -863,14 +876,11 @@ func TestAutoRebuild(t *testing.T) {
 		// storage without barrier encryption.
 		EnableRaw: true,
 	}
-	oldPeriod := vault.SetRollbackPeriodForTesting(newPeriod)
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+	cluster := vault.CreateTestClusterWithRollbackPeriod(t, newPeriod, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
 	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
-	vault.SetRollbackPeriodForTesting(oldPeriod)
 
 	// Mount PKI
 	err := client.Sys().Mount("pki", &api.MountInput{
@@ -913,9 +923,10 @@ func TestAutoRebuild(t *testing.T) {
 	require.Equal(t, resp.Data["ocsp_disable"], defaultCrlConfig.OcspDisable)
 	require.Equal(t, resp.Data["auto_rebuild"], defaultCrlConfig.AutoRebuild)
 	require.Equal(t, resp.Data["auto_rebuild_grace_period"], defaultCrlConfig.AutoRebuildGracePeriod)
+	require.Equal(t, resp.Data["enable_delta"], defaultCrlConfig.EnableDelta)
+	require.Equal(t, resp.Data["delta_rebuild_interval"], defaultCrlConfig.DeltaRebuildInterval)
 
-	// Safety guard: we play with rebuild timing below. We don't expect
-	// this entire test to take longer than 80s.
+	// Safety guard: we play with rebuild timing below.
 	_, err = client.Logical().Write("pki/config/crl", map[string]interface{}{
 		"expiry": crlTime,
 	})
@@ -946,6 +957,8 @@ func TestAutoRebuild(t *testing.T) {
 		"expiry":                    crlTime,
 		"auto_rebuild":              true,
 		"auto_rebuild_grace_period": gracePeriod,
+		"enable_delta":              true,
+		"delta_rebuild_interval":    deltaPeriod,
 	})
 	require.NoError(t, err)
 
@@ -976,7 +989,7 @@ func TestAutoRebuild(t *testing.T) {
 	require.NotEmpty(t, resp.Data["uuid"])
 	pkiMount := resp.Data["uuid"].(string)
 	require.NotEmpty(t, pkiMount)
-	revEntryPath := "logical/" + pkiMount + "/" + revokedPath + strings.ReplaceAll(newLeafSerial, ":", "-")
+	revEntryPath := "logical/" + pkiMount + "/" + revokedPath + normalizeSerial(newLeafSerial)
 
 	// storage from cluster.Core[0] is a physical storage copy, not a logical
 	// storage. This difference means, if we were to do a storage.Get(...)
@@ -989,17 +1002,15 @@ func TestAutoRebuild(t *testing.T) {
 	require.NotNil(t, resp.Data)
 	require.NotEmpty(t, resp.Data["value"])
 	revEntryValue := resp.Data["value"].(string)
-	fmt.Println(resp)
 	var revInfo revocationInfo
 	err = json.Unmarshal([]byte(revEntryValue), &revInfo)
 	require.NoError(t, err)
 	require.Equal(t, revInfo.CertificateIssuer, issuerID(rootIssuer))
 
-	// Serial should not appear on CRL.
+	// New serial should not appear on CRL.
 	crl = getCrlCertificateList(t, client, "pki")
 	thisCRLNumber := crl.Version
-	requireSerialNumberInCRL(t, crl, leafSerial)
-
+	requireSerialNumberInCRL(t, crl, leafSerial) // But the old one should.
 	now := time.Now()
 	graceInterval, _ := time.ParseDuration(gracePeriod)
 	expectedUpdate := lastCRLExpiry.Add(-1 * graceInterval)
@@ -1018,6 +1029,79 @@ func TestAutoRebuild(t *testing.T) {
 		t.Fatalf("shouldn't be here")
 	}
 
+	// This serial should exist in the delta WAL section for the mount...
+	resp, err = client.Logical().List("sys/raw/logical/" + pkiMount + "/" + deltaWALPath)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data)
+	require.NotEmpty(t, resp.Data["keys"])
+	require.Contains(t, resp.Data["keys"], normalizeSerial(newLeafSerial))
+
+	haveUpdatedDeltaCRL := false
+	interruptChan := time.After(4*newPeriod + delta)
+	for {
+		if haveUpdatedDeltaCRL {
+			break
+		}
+
+		select {
+		case <-interruptChan:
+			t.Fatalf("expected to regenerate delta CRL within a couple of periodicFunc invocations (plus %v grace period)", delta)
+		default:
+			// Check and see if there's a storage entry for the last rebuild
+			// serial. If so, validate the delta CRL contains this entry.
+			resp, err = client.Logical().List("sys/raw/logical/" + pkiMount + "/" + deltaWALPath)
+			require.NoError(t, err)
+			require.NotNil(t, resp)
+			require.NotEmpty(t, resp.Data)
+			require.NotEmpty(t, resp.Data["keys"])
+
+			haveRebuildMarker := false
+			for _, rawEntry := range resp.Data["keys"].([]interface{}) {
+				entry := rawEntry.(string)
+				if entry == deltaWALLastRevokedSerialName {
+					haveRebuildMarker = true
+					break
+				}
+			}
+
+			if !haveRebuildMarker {
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
+			// Read the marker and see if its correct.
+			resp, err = client.Logical().Read("sys/raw/logical/" + pkiMount + "/" + deltaWALLastBuildSerial)
+			require.NoError(t, err)
+			if resp == nil {
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
+			require.NotNil(t, resp)
+			require.NotEmpty(t, resp.Data)
+			require.NotEmpty(t, resp.Data["value"])
+
+			// Easy than JSON decoding...
+			if !strings.Contains(resp.Data["value"].(string), newLeafSerial) {
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
+			haveUpdatedDeltaCRL = true
+
+			// Ensure it has what we want.
+			deltaCrl := getParsedCrlAtPath(t, client, "/v1/pki/crl/delta").TBSCertList
+			if !requireSerialNumberInCRL(nil, deltaCrl, newLeafSerial) {
+				// Check if it is on the main CRL because its already regenerated.
+				mainCRL := getParsedCrlAtPath(t, client, "/v1/pki/crl").TBSCertList
+				requireSerialNumberInCRL(t, mainCRL, newLeafSerial)
+			}
+
+			break
+		}
+	}
+
 	// Now, wait until we're within the grace period... Then start prompting
 	// for regeneration.
 	if expectedUpdate.After(now) {
@@ -1026,7 +1110,7 @@ func TestAutoRebuild(t *testing.T) {
 
 	// Otherwise, the absolute latest we're willing to wait is some delta
 	// after CRL expiry (to let stuff regenerate &c).
-	interruptChan := time.After(lastCRLExpiry.Sub(now) + delta)
+	interruptChan = time.After(lastCRLExpiry.Sub(now) + delta)
 	for {
 		select {
 		case <-interruptChan:
@@ -1050,6 +1134,145 @@ func TestAutoRebuild(t *testing.T) {
 			return
 		}
 	}
+}
+
+func TestTidyIssuerAssociation(t *testing.T) {
+	t.Parallel()
+
+	b, s := createBackendWithStorage(t)
+
+	// Create a root CA.
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root example.com",
+		"issuer_name": "root",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data["certificate"])
+	require.NotEmpty(t, resp.Data["issuer_id"])
+	rootCert := resp.Data["certificate"].(string)
+	rootID := resp.Data["issuer_id"].(issuerID)
+
+	// Create a role for issuance.
+	_, err = CBWrite(b, s, "roles/local-testing", map[string]interface{}{
+		"allow_any_name":    true,
+		"enforce_hostnames": false,
+		"key_type":          "ec",
+		"ttl":               "75m",
+	})
+	require.NoError(t, err)
+
+	// Issue a leaf cert and ensure we can revoke it.
+	resp, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
+		"common_name": "testing",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Data["serial_number"])
+	leafSerial := resp.Data["serial_number"].(string)
+
+	_, err = CBWrite(b, s, "revoke", map[string]interface{}{
+		"serial_number": leafSerial,
+	})
+	require.NoError(t, err)
+
+	// This leaf's revInfo entry should have an issuer associated
+	// with it.
+	entry, err := s.Get(ctx, revokedPath+normalizeSerial(leafSerial))
+	require.NoError(t, err)
+	require.NotNil(t, entry)
+	require.NotNil(t, entry.Value)
+
+	var leafInfo revocationInfo
+	err = entry.DecodeJSON(&leafInfo)
+	require.NoError(t, err)
+	require.Equal(t, rootID, leafInfo.CertificateIssuer)
+
+	// Now remove the root and run tidy.
+	_, err = CBDelete(b, s, "issuer/default")
+	require.NoError(t, err)
+	_, err = CBWrite(b, s, "tidy", map[string]interface{}{
+		"tidy_revoked_cert_issuer_associations": true,
+	})
+	require.NoError(t, err)
+
+	// Wait for tidy to finish.
+	for {
+		time.Sleep(125 * time.Millisecond)
+
+		resp, err = CBRead(b, s, "tidy-status")
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.NotEmpty(t, resp.Data["state"])
+		state := resp.Data["state"].(string)
+
+		if state == "Finished" {
+			break
+		}
+		if state == "Error" {
+			t.Fatalf("unexpected state for tidy operation: Error:\nStatus: %v", resp.Data)
+		}
+	}
+
+	// Ensure we don't have an association on this leaf any more.
+	entry, err = s.Get(ctx, revokedPath+normalizeSerial(leafSerial))
+	require.NoError(t, err)
+	require.NotNil(t, entry)
+	require.NotNil(t, entry.Value)
+
+	err = entry.DecodeJSON(&leafInfo)
+	require.NoError(t, err)
+	require.Empty(t, leafInfo.CertificateIssuer)
+
+	// Now, re-import the root and try again.
+	resp, err = CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
+		"pem_bundle": rootCert,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotNil(t, resp.Data["imported_issuers"])
+	importedIssuers := resp.Data["imported_issuers"].([]string)
+	require.Equal(t, 1, len(importedIssuers))
+	newRootID := importedIssuers[0]
+	require.NotEmpty(t, newRootID)
+
+	// Re-run tidy...
+	_, err = CBWrite(b, s, "tidy", map[string]interface{}{
+		"tidy_revoked_cert_issuer_associations": true,
+	})
+	require.NoError(t, err)
+
+	// Wait for tidy to finish.
+	for {
+		time.Sleep(125 * time.Millisecond)
+
+		resp, err = CBRead(b, s, "tidy-status")
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.NotEmpty(t, resp.Data["state"])
+		state := resp.Data["state"].(string)
+
+		if state == "Finished" {
+			break
+		}
+		if state == "Error" {
+			t.Fatalf("unexpected state for tidy operation: Error:\nStatus: %v", resp.Data)
+		}
+	}
+
+	// Finally, double-check we associated things correctly.
+	entry, err = s.Get(ctx, revokedPath+normalizeSerial(leafSerial))
+	require.NoError(t, err)
+	require.NotNil(t, entry)
+	require.NotNil(t, entry.Value)
+
+	err = entry.DecodeJSON(&leafInfo)
+	require.NoError(t, err)
+	require.Equal(t, newRootID, string(leafInfo.CertificateIssuer))
 }
 
 func requestCrlFromBackend(t *testing.T, s logical.Storage, b *backend) *logical.Response {
