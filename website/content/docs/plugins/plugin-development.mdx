@@ -50,12 +50,12 @@ func main() {
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(os.Args[1:])
 
-    tlsConfig := apiClientMeta.GetTLSConfig()
-    tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
+	tlsConfig := apiClientMeta.GetTLSConfig()
+	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
 
 	err := plugin.ServeMultiplex(&plugin.ServeOpts{
 		BackendFactoryFunc: myPlugin.Factory,
-        TLSProviderFunc:    tlsProviderFunc,
+		TLSProviderFunc:    tlsProviderFunc,
 	})
 	if err != nil {
 		logger := hclog.New(&hclog.LoggerOptions{})
