@@ -10,6 +10,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
@@ -22,6 +23,7 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	"github.com/stretchr/testify/require"
 )
 
 // Tests converting back and forth between a CertBundle and a ParsedCertBundle.
@@ -907,6 +909,84 @@ func TestNotAfterValues(t *testing.T) {
 
 	if PermitNotAfterBehavior != 2 {
 		t.Fatalf("Expected PermitNotAfterBehavior=%v to have value 2", PermitNotAfterBehavior)
+	}
+}
+
+func TestKIDEquality(t *testing.T) {
+	type testCase struct {
+		Left  string
+		Right string
+		Equal bool
+	}
+
+	tests := []testCase{
+		{
+			"041481E63B8EB6E1CAA05083A826D160DA246ED18DF2",
+			"041481E63B8EB6E1CAA05083A826D160DA246ED18DF2",
+			true,
+		},
+		{
+			"3016801481E63B8EB6E1CAA05083A826D160DA246ED18DF2",
+			"3016801481E63B8EB6E1CAA05083A826D160DA246ED18DF2",
+			true,
+		},
+		{
+			"81E63B8EB6E1CAA05083A826D160DA246ED18DF2",
+			"041481E63B8EB6E1CAA05083A826D160DA246ED18DF2",
+			true,
+		},
+		{
+			"3016801481E63B8EB6E1CAA05083A826D160DA246ED18DF2",
+			"041481E63B8EB6E1CAA05083A826D160DA246ED18DF2",
+			true,
+		},
+		{
+			"3016801481E63B8EB6E1CAA05083A826D160DA246ED18DF2",
+			"81E63B8EB6E1CAA05083A826D160DA246ED18DF2",
+			true,
+		},
+		{
+			"041481E63B8EB6E1CAA05083A826D160DA246ED18DF3",
+			"041481E63B8EB6E1CAA05083A826D160DA246ED18DF2",
+			false,
+		},
+		{
+			// The top is truncated by one octet (length 21 bytes but 20 bytes of
+			// data) and the latter has the correct length value and so decodes
+			// correctly. We assume the former probably got corrupted or something
+			// and so this is a correct match (the successfully decoded variant is
+			// a substring of the former).
+			"041581E63B8EB6E1CAA05083A826D160DA246ED18DF2",
+			"041481E63B8EB6E1CAA05083A826D160DA246ED18DF2",
+			true,
+		},
+		{
+			"041581E63B8EB6E1CAA05083A826D160DA246ED18DF3",
+			"041481E63B8EB6E1CAA05083A826D160DA246ED18DF2",
+			false,
+		},
+		{
+			"",
+			"",
+			false,
+		},
+		{
+			"041481E63B8EB6E1CAA05083A826D160DA246ED18DF2",
+			"",
+			false,
+		},
+	}
+
+	for index, tc := range tests {
+		left, err := hex.DecodeString(tc.Left)
+		require.NoError(t, err)
+		right, err := hex.DecodeString(tc.Right)
+		require.NoError(t, err)
+
+		got := AreKeyIdentifiersEqual(left, right)
+		if got != tc.Equal {
+			t.Fatalf("[%d]: when testing SKID/AKID equality (%v -- %v) - expected %v but got %v result from checker", index, tc.Left, tc.Right, tc.Equal, got)
+		}
 	}
 }
 

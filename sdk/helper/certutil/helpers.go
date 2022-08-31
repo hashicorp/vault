@@ -1324,3 +1324,85 @@ func CreateDeltaCRLIndicatorExt(completeCRLNumber int64) (pkix.Extension, error)
 		Value: bigNumValue,
 	}, nil
 }
+
+// This function swallows errors during parsing AKID/SKID values and returns
+// the original input instead.
+func parseSKIDAKIDValue(value []byte) []byte {
+	// There's two encodings of AKID/SKID here: a lot of implementations
+	// directly encode AKID as the value from the SKID field. However,
+	// the RFC notes:
+	//
+	//   AuthorityKeyIdentifier ::= SEQUENCE {
+	//      keyIdentifier             [0] KeyIdentifier           OPTIONAL,
+	//      authorityCertIssuer       [1] GeneralNames            OPTIONAL,
+	//      authorityCertSerialNumber [2] CertificateSerialNumber OPTIONAL  }
+	//
+	//   KeyIdentifier ::= OCTET STRING
+	//
+	// Which _technically_ means that it'll have a different encoding (e.g.,
+	// a header [0x30, 0x16, 0x80, 0x14] instead of [0x04, 0x14] for same
+	// AKID/SKID value).
+	type encodedAKID struct {
+		KeyIdentifier             []byte        `asn1:"optional"`
+		AuthorityCertIssuer       asn1.RawValue `asn1:"optional"`
+		AuthorityCertSerialNumber asn1.RawValue `asn1:"optional"`
+	}
+
+	var akid encodedAKID
+	var skid []byte
+
+	akidRest, akidErr := asn1.Unmarshal(value[:], &akid)
+	skidRest, skidErr := asn1.Unmarshal(value[:], &skid)
+
+	if akidErr == nil && len(akidRest) == 0 && len(akid.KeyIdentifier) > 0 {
+		// Technically we should ensure that AuthorityCertIssuer and
+		// AuthorityCertSerialNumber are empty before returning this
+		// response. However, we presently don't pass through the information
+		// to do that comparison correctly (if it was present), so we'll just
+		// return the KeyIdentifier here instead.
+		return akid.KeyIdentifier
+	}
+
+	if skidErr == nil && len(skidRest) == 0 {
+		// Just return the value!
+		return skid
+	}
+
+	// Otherwise, swallow both errors (treating it as an encoding error)
+	// and return the original input.
+	return value
+}
+
+// Attempts to correctly compare key identifiers (AKID/SKID) across various
+// direct encoding types (keyIdentifier). Left and right are interchangeable.
+func AreKeyIdentifiersEqual(left []byte, right []byte) bool {
+	// Avoid false-positives when either doesn't exist.
+	if len(left) == 0 || len(right) == 0 {
+		return false
+	}
+
+	// Obvious case. :-)
+	if bytes.Equal(left, right) {
+		return true
+	}
+
+	// Otherwise, try to parse each value and then do the comparison. Either
+	// of these might be in different formats.
+	parsedLeft := parseSKIDAKIDValue(left)
+	parsedRight := parseSKIDAKIDValue(right)
+
+	// If the two parsed values are now equal, it might've just been an
+	// encoding difference...
+	if bytes.Equal(parsedLeft, parsedRight) {
+		return true
+	}
+
+	// If one failed to parse, the other might be a suffix of it. Ensure
+	// though that both are at least 15 bytes to exclude errors caused by
+	// incorrect decoding.
+	if len(parsedLeft) >= 15 && len(parsedRight) >= 15 {
+		return bytes.HasSuffix(parsedLeft, parsedRight) || bytes.HasSuffix(parsedRight, parsedLeft)
+	}
+
+	return false
+}
