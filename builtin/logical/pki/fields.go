@@ -1,6 +1,10 @@
 package pki
 
-import "github.com/hashicorp/vault/sdk/framework"
+import (
+	"time"
+
+	"github.com/hashicorp/vault/sdk/framework"
+)
 
 const (
 	issuerRefParam = "issuer_ref"
@@ -449,7 +453,7 @@ and OCSP responses.`,
 beyond certificate expiration before it is removed
 from the backend storage and/or revocation list.
 Defaults to 72 hours.`,
-		Default: 259200, // 72h, but TypeDurationSecond currently requires defaults to be int
+		Default: int(defaultTidyConfig.SafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
 	}
 
 	return fields

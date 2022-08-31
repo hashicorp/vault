@@ -31,7 +31,7 @@ var defaultTidyConfig = tidyConfig{
 	CertStore:    false,
 	RevokedCerts: false,
 	IssuerAssocs: false,
-	SafetyBuffer: 259200 * time.Second,
+	SafetyBuffer: 72 * time.Hour,
 }
 
 func pathTidy(b *backend) *framework.Path {
@@ -74,7 +74,7 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 			"interval_duration": {
 				Type:        framework.TypeDurationSecond,
 				Description: `Interval at which to run an auto-tidy operation. This is the time between tidy invocations (after one finishes to the start of the next). Running a manual tidy will reset this duration.`,
-				Default:     43200, // 32h, but TypeDurationSecond currently requires the default to be an int.
+				Default:     int(defaultTidyConfig.Interval / time.Second), // TypeDurationSecond currently requires the default to be an int.
 			},
 		}),
 		Operations: map[logical.Operation]framework.OperationHandler{
