@@ -1,3 +1,15 @@
+```release-note:change
+auth: `GET /sys/auth` endpoint now returns an additional `deprecation_status` field in the response data for builtins.
+```
+```release-note:change
+auth: `GET /sys/auth/:name` endpoint now returns an additional `deprecation_status` field in the response data for builtins.
+```
+```release-note:change
+secrets: `GET /sys/mounts` endpoint now returns an additional `deprecation_status` field in the response data for builtins.
+```
+```release-note:change
+secrets: `GET /sys/mounts/:name` endpoint now returns an additional `deprecation_status` field in the response data for builtins.
+```
 ```release-note:improvement
-cli: Add Deprecation Status information to list commands.
+cli: `auth` and `secrets` list commands now show Deprecation Status for builtin plugins.
 ```
