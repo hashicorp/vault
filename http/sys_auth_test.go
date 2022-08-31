@@ -96,7 +96,7 @@ func TestSysEnableAuth(t *testing.T) {
 	TestServerAuth(t, addr, token)
 
 	resp := testHttpPost(t, token, addr+"/v1/sys/auth/foo", map[string]interface{}{
-		"type":        "noop",
+		"type":        "approle",
 		"description": "foo",
 	})
 	testResponseStatus(t, resp, 204)
@@ -114,8 +114,9 @@ func TestSysEnableAuth(t *testing.T) {
 		"data": map[string]interface{}{
 			"foo/": map[string]interface{}{
 				"description":             "foo",
-				"type":                    "noop",
+				"type":                    "approle",
 				"external_entropy_access": false,
+				"deprecation_status":      "supported",
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
@@ -151,8 +152,9 @@ func TestSysEnableAuth(t *testing.T) {
 		},
 		"foo/": map[string]interface{}{
 			"description":             "foo",
-			"type":                    "noop",
+			"type":                    "approle",
 			"external_entropy_access": false,
+			"deprecation_status":      "supported",
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),

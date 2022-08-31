@@ -42,7 +42,7 @@ func TestSecretsListCommand_Run(t *testing.T) {
 		{
 			"detailed",
 			[]string{"-detailed"},
-			"Default TTL",
+			"Deprecation Status",
 			0,
 		},
 	}

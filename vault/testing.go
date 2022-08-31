@@ -2290,11 +2290,20 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 }
 
 func (m *mockBuiltinRegistry) Contains(name string, pluginType consts.PluginType) bool {
+	for _, key := range m.Keys(pluginType) {
+		if key == name {
+			return true
+		}
+	}
 	return false
 }
 
 func (m *mockBuiltinRegistry) DeprecationStatus(name string, pluginType consts.PluginType) (consts.DeprecationStatus, bool) {
-	return consts.Supported, true
+	if m.Contains(name, pluginType) {
+		return consts.Supported, true
+	}
+
+	return consts.Unknown, false
 }
 
 type NoopAudit struct {

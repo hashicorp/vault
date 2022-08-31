@@ -665,6 +665,43 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	return nil
 }
 
+// builtinTypeFromMountEntry attempts to find a builtin PluginType associated
+// with the specified MountEntry. Returns consts.PluginTypeUnknown if not found.
+func (c *Core) builtinTypeFromMountEntry(ctx context.Context, entry *MountEntry) consts.PluginType {
+	if c.builtinRegistry == nil || entry == nil {
+		return consts.PluginTypeUnknown
+	}
+
+	builtinPluginType := func(name string, pluginType consts.PluginType) (consts.PluginType, bool) {
+		plugin, err := c.pluginCatalog.Get(ctx, name, pluginType, "")
+		if err == nil && plugin != nil && plugin.Builtin {
+			return plugin.Type, true
+		}
+		return consts.PluginTypeUnknown, false
+	}
+
+	// auth plugins have their own dedicated mount table
+	if pluginType, err := consts.ParsePluginType(entry.Table); err == nil {
+		if builtinType, ok := builtinPluginType(entry.Type, pluginType); ok {
+			return builtinType
+		}
+	}
+
+	// Check for possible matches
+	var builtinTypes []consts.PluginType
+	for _, pluginType := range [...]consts.PluginType{consts.PluginTypeSecrets, consts.PluginTypeDatabase} {
+		if builtinType, ok := builtinPluginType(entry.Type, pluginType); ok {
+			builtinTypes = append(builtinTypes, builtinType)
+		}
+	}
+
+	if len(builtinTypes) == 1 {
+		return builtinTypes[0]
+	}
+
+	return consts.PluginTypeUnknown
+}
+
 // Unmount is used to unmount a path. The boolean indicates whether the mount
 // was found.
 func (c *Core) unmount(ctx context.Context, path string) error {
