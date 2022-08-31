@@ -925,9 +925,12 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 	}
 
 	if data.SigningBundle != nil {
-		if (len(data.SigningBundle.Certificate.AuthorityKeyId) > 0 &&
-			!bytes.Equal(data.SigningBundle.Certificate.AuthorityKeyId, data.SigningBundle.Certificate.SubjectKeyId)) ||
-			data.Params.ForceAppendCaChain {
+		// See note in Verify about why these conditionals are necessary.
+		cert := data.SigningBundle.Certificate
+		haveAKID := len(cert.AuthorityKeyId) > 0
+		akidSKIDMismatch := haveAKID && !AreKeyIdentifiersEqual(cert.AuthorityKeyId, cert.SubjectKeyId)
+		isNotSelfSigned := !haveAKID && (!bytes.Equal(cert.RawIssuer, cert.RawSubject) || cert.CheckSignatureFrom(cert) != nil)
+		if akidSKIDMismatch || isNotSelfSigned || data.Params.ForceAppendCaChain {
 			var chain []*CertBlock
 
 			signingChain := data.SigningBundle.CAChain

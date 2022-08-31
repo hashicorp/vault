@@ -368,14 +368,37 @@ func (p *ParsedCertBundle) Verify() error {
 	certPath := p.GetCertificatePath()
 	if len(certPath) > 1 {
 		for i, caCert := range certPath[1:] {
-			if !caCert.Certificate.IsCA {
+			child := certPath[i].Certificate
+			parent := caCert.Certificate
+			if !parent.IsCA {
 				return fmt.Errorf("certificate %d of certificate chain is not a certificate authority", i+1)
 			}
-			if !bytes.Equal(certPath[i].Certificate.AuthorityKeyId, caCert.Certificate.SubjectKeyId) {
+
+			// Some CAs do not provision AKID/SKID, so we must resort to
+			// checking the issuer/subject link and validating the signature.
+			//
+			// However, when AKID is provisioned, we trust and validate it.
+			// This is a bit more involved, because some CAs like Microsoft AD
+			// have apparently changed techniques for encoding SKID/AKID over
+			// time, and others, like OpenSSL CA, simply copy the encoded SKID
+			// to the AKID field (making it an OCTET STRING instead of a
+			// SEQUENCE).
+			//
+			// Theoretically, SKID should always exist on a key, per RFC 5280
+			// Section 4.2.1.2:
+			//
+			//  > To facilitate certification path construction, this extension MUST
+			//  > appear in all conforming CA certificates
+			//
+			// However, we gracefully handle when AKID exists but SKID doesn't.
+			haveAKID := len(child.AuthorityKeyId) > 0 && len(child.SubjectKeyId) > 0
+			haveInvalidAKID := haveAKID && !AreKeyIdentifiersEqual(child.AuthorityKeyId, parent.SubjectKeyId)
+			haveBadManualParent := !haveAKID && (!bytes.Equal(child.RawIssuer, parent.RawSubject) || child.CheckSignatureFrom(parent) != nil)
+			if haveInvalidAKID || haveBadManualParent {
 				return fmt.Errorf("certificate %d of certificate chain ca trust path is incorrect (%q/%q) (%X/%X)",
 					i+1,
-					certPath[i].Certificate.Subject.CommonName, caCert.Certificate.Subject.CommonName,
-					certPath[i].Certificate.AuthorityKeyId, caCert.Certificate.SubjectKeyId)
+					child.Subject.CommonName, parent.Subject.CommonName,
+					child.AuthorityKeyId, parent.SubjectKeyId)
 			}
 		}
 	}
@@ -716,12 +739,13 @@ type CAInfoBundle struct {
 func (b *CAInfoBundle) GetCAChain() []*CertBlock {
 	chain := []*CertBlock{}
 
-	// Include issuing CA in Chain, not including Root Authority
-	if (len(b.Certificate.AuthorityKeyId) > 0 &&
-		!bytes.Equal(b.Certificate.AuthorityKeyId, b.Certificate.SubjectKeyId)) ||
-		(len(b.Certificate.AuthorityKeyId) == 0 &&
-			!bytes.Equal(b.Certificate.RawIssuer, b.Certificate.RawSubject)) {
-
+	// Include issuing CA in Chain, not including Root Authority.
+	//
+	// See note in Verify about why these conditionals are necessary.
+	haveAKID := len(b.Certificate.AuthorityKeyId) > 0
+	akidSKIDMismatch := haveAKID && !AreKeyIdentifiersEqual(b.Certificate.AuthorityKeyId, b.Certificate.SubjectKeyId)
+	isNotSelfSigned := !haveAKID && (!bytes.Equal(b.Certificate.RawIssuer, b.Certificate.RawSubject) || b.Certificate.CheckSignatureFrom(b.Certificate) != nil)
+	if akidSKIDMismatch || isNotSelfSigned {
 		chain = b.GetFullChain()
 	}
 

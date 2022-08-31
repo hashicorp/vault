@@ -439,8 +439,13 @@ func newCaChainOutput(parsedBundle *certutil.ParsedCertBundle, data *framework.F
 		for _, certBlock := range parsedBundle.CAChain {
 			cert := certBlock.Certificate
 
-			if (len(cert.AuthorityKeyId) > 0 && !bytes.Equal(cert.AuthorityKeyId, cert.SubjectKeyId)) ||
-				(len(cert.AuthorityKeyId) == 0 && (!bytes.Equal(cert.RawIssuer, cert.RawSubject) || cert.CheckSignatureFrom(cert) != nil)) {
+			// Include issuing CA in Chain, not including Root Authority.
+			//
+			// See note in Verify about why these conditionals are necessary.
+			haveAKID := len(cert.AuthorityKeyId) > 0
+			akidSKIDMismatch := haveAKID && !certutil.AreKeyIdentifiersEqual(cert.AuthorityKeyId, cert.SubjectKeyId)
+			isNotSelfSigned := !haveAKID && (!bytes.Equal(cert.RawIssuer, cert.RawSubject) || cert.CheckSignatureFrom(cert) != nil)
+			if akidSKIDMismatch || isNotSelfSigned {
 				// We aren't self-signed so add it to the list.
 				myChain = append(myChain, certBlock)
 			}
