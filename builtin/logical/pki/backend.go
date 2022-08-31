@@ -226,12 +226,12 @@ type (
 )
 
 const (
-	tidyStatusInactive tidyStatusState = iota
-	tidyStatusStarted
-	tidyStatusFinished
-	tidyStatusError
-	tidyStatusCancelling
-	tidyStatusCancelled
+	tidyStatusInactive   tidyStatusState = iota
+	tidyStatusStarted                    = iota
+	tidyStatusFinished                   = iota
+	tidyStatusError                      = iota
+	tidyStatusCancelling                 = iota
+	tidyStatusCancelled                  = iota
 )
 
 type tidyStatus struct {
@@ -240,6 +240,7 @@ type tidyStatus struct {
 	tidyCertStore     bool
 	tidyRevokedCerts  bool
 	tidyRevokedAssocs bool
+	pauseDuration     string
 
 	// Status
 	state                   tidyStatusState

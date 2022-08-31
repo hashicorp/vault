@@ -20,21 +20,23 @@ import (
 var tidyCancelledError = errors.New("tidy operation cancelled")
 
 type tidyConfig struct {
-	Enabled      bool          `json:"enabled"`
-	Interval     time.Duration `json:"interval_duration"`
-	CertStore    bool          `json:"tidy_cert_store"`
-	RevokedCerts bool          `json:"tidy_revoked_certs"`
-	IssuerAssocs bool          `json:"tidy_revoked_cert_issuer_associations"`
-	SafetyBuffer time.Duration `json:"safety_buffer"`
+	Enabled       bool          `json:"enabled"`
+	Interval      time.Duration `json:"interval_duration"`
+	CertStore     bool          `json:"tidy_cert_store"`
+	RevokedCerts  bool          `json:"tidy_revoked_certs"`
+	IssuerAssocs  bool          `json:"tidy_revoked_cert_issuer_associations"`
+	SafetyBuffer  time.Duration `json:"safety_buffer"`
+	PauseDuration time.Duration `json:"pause_duration"`
 }
 
 var defaultTidyConfig = tidyConfig{
-	Enabled:      false,
-	Interval:     12 * time.Hour,
-	CertStore:    false,
-	RevokedCerts: false,
-	IssuerAssocs: false,
-	SafetyBuffer: 72 * time.Hour,
+	Enabled:       false,
+	Interval:      12 * time.Hour,
+	CertStore:     false,
+	RevokedCerts:  false,
+	IssuerAssocs:  false,
+	SafetyBuffer:  72 * time.Hour,
+	PauseDuration: 0 * time.Second,
 }
 
 func pathTidy(b *backend) *framework.Path {
@@ -115,21 +117,32 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	tidyCertStore := d.Get("tidy_cert_store").(bool)
 	tidyRevokedCerts := d.Get("tidy_revoked_certs").(bool) || d.Get("tidy_revocation_list").(bool)
 	tidyRevokedAssocs := d.Get("tidy_revoked_cert_issuer_associations").(bool)
+	pauseDurationStr := d.Get("pause_duration").(string)
+	pauseDuration := 0 * time.Second
 
 	if safetyBuffer < 1 {
 		return logical.ErrorResponse("safety_buffer must be greater than zero"), nil
+	}
+
+	if pauseDurationStr != "" {
+		var err error
+		pauseDuration, err = time.ParseDuration(pauseDurationStr)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("Error parsing pause_duration: %v", err)), nil
+		}
 	}
 
 	bufferDuration := time.Duration(safetyBuffer) * time.Second
 
 	// Manual run with constructed configuration.
 	config := &tidyConfig{
-		Enabled:      true,
-		Interval:     0 * time.Second,
-		CertStore:    tidyCertStore,
-		RevokedCerts: tidyRevokedCerts,
-		IssuerAssocs: tidyRevokedAssocs,
-		SafetyBuffer: bufferDuration,
+		Enabled:       true,
+		Interval:      0 * time.Second,
+		CertStore:     tidyCertStore,
+		RevokedCerts:  tidyRevokedCerts,
+		IssuerAssocs:  tidyRevokedAssocs,
+		SafetyBuffer:  bufferDuration,
+		PauseDuration: pauseDuration,
 	}
 
 	if !atomic.CompareAndSwapUint32(b.tidyCASGuard, 0, 1) {
@@ -228,6 +241,11 @@ func (b *backend) doTidyCertStore(ctx context.Context, req *logical.Request, log
 			return tidyCancelledError
 		}
 
+		// Check for pause duration to reduce resource consumption.
+		if config.PauseDuration > (0 * time.Second) {
+			time.Sleep(config.PauseDuration)
+		}
+
 		certEntry, err := req.Storage.Get(ctx, "certs/"+serial)
 		if err != nil {
 			return fmt.Errorf("error fetching certificate %q: %w", serial, err)
@@ -302,6 +320,11 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 		// Check for cancel before continuing.
 		if atomic.CompareAndSwapUint32(b.tidyCancelCAS, 1, 0) {
 			return tidyCancelledError
+		}
+
+		// Check for pause duration to reduce resource consumption.
+		if config.PauseDuration > (0 * time.Second) {
+			time.Sleep(config.PauseDuration)
 		}
 
 		revokedEntry, err := req.Storage.Get(ctx, "revoked/"+serial)
@@ -428,9 +451,10 @@ func (b *backend) pathTidyCancelWrite(ctx context.Context, req *logical.Request,
 	//
 	// Unlock needs to occur prior to calling read.
 	b.tidyStatusLock.Lock()
-	if b.tidyStatus.state == tidyStatusStarted {
-		atomic.CompareAndSwapUint32(b.tidyCancelCAS, 0, 1)
-		b.tidyStatus.state = tidyStatusCancelling
+	if b.tidyStatus.state == tidyStatusStarted || atomic.LoadUint32(b.tidyCASGuard) == 1 {
+		if atomic.CompareAndSwapUint32(b.tidyCancelCAS, 0, 1) {
+			b.tidyStatus.state = tidyStatusCancelling
+		}
 	}
 	b.tidyStatusLock.Unlock()
 
@@ -449,17 +473,19 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"safety_buffer":              nil,
-			"tidy_cert_store":            nil,
-			"tidy_revoked_certs":         nil,
-			"state":                      "Inactive",
-			"error":                      nil,
-			"time_started":               nil,
-			"time_finished":              nil,
-			"message":                    nil,
-			"cert_store_deleted_count":   nil,
-			"revoked_cert_deleted_count": nil,
-			"missing_issuer_cert_count":  nil,
+			"safety_buffer":                         nil,
+			"tidy_cert_store":                       nil,
+			"tidy_revoked_certs":                    nil,
+			"tidy_revoked_cert_issuer_associations": nil,
+			"pause_duration":                        nil,
+			"state":                                 "Inactive",
+			"error":                                 nil,
+			"time_started":                          nil,
+			"time_finished":                         nil,
+			"message":                               nil,
+			"cert_store_deleted_count":              nil,
+			"revoked_cert_deleted_count":            nil,
+			"missing_issuer_cert_count":             nil,
 		},
 	}
 
@@ -471,6 +497,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	resp.Data["tidy_cert_store"] = b.tidyStatus.tidyCertStore
 	resp.Data["tidy_revoked_certs"] = b.tidyStatus.tidyRevokedCerts
 	resp.Data["tidy_revoked_cert_issuer_associations"] = b.tidyStatus.tidyRevokedAssocs
+	resp.Data["pause_duration"] = b.tidyStatus.pauseDuration
 	resp.Data["time_started"] = b.tidyStatus.timeStarted
 	resp.Data["message"] = b.tidyStatus.message
 	resp.Data["cert_store_deleted_count"] = b.tidyStatus.certStoreDeletedCount
@@ -515,6 +542,7 @@ func (b *backend) pathConfigAutoTidyRead(ctx context.Context, req *logical.Reque
 			"tidy_revoked_certs":                    config.RevokedCerts,
 			"tidy_revoked_cert_issuer_associations": config.IssuerAssocs,
 			"safety_buffer":                         int(config.SafetyBuffer / time.Second),
+			"pause_duration":                        config.PauseDuration.String(),
 		},
 	}, nil
 }
@@ -556,6 +584,13 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 		}
 	}
 
+	if pauseDurationRaw, ok := d.GetOk("pause_duration"); ok {
+		config.PauseDuration, err = time.ParseDuration(pauseDurationRaw.(string))
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("unable to parse given pause_duration: %v", err)), nil
+		}
+	}
+
 	if config.Enabled && !(config.CertStore || config.RevokedCerts || config.IssuerAssocs) {
 		return logical.ErrorResponse(fmt.Sprintf("Auto-tidy enabled but no tidy operations were requested. Enable at least one tidy operation to be run (tidy_cert_store / tidy_revoked_certs / tidy_revoked_cert_issuer_associations).")), nil
 	}
@@ -572,8 +607,10 @@ func (b *backend) tidyStatusStart(config *tidyConfig) {
 		tidyCertStore:     config.CertStore,
 		tidyRevokedCerts:  config.RevokedCerts,
 		tidyRevokedAssocs: config.IssuerAssocs,
-		state:             tidyStatusStarted,
-		timeStarted:       time.Now(),
+		pauseDuration:     config.PauseDuration.String(),
+
+		state:       tidyStatusStarted,
+		timeStarted: time.Now(),
 	}
 
 	metrics.SetGauge([]string{"secrets", "pki", "tidy", "start_time_epoch"}, float32(b.tidyStatus.timeStarted.Unix()))
