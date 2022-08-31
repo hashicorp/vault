@@ -82,12 +82,12 @@ Let's take a closer look at a snippet from the above main package.
 ```go
 	err := plugin.ServeMultiplex(&plugin.ServeOpts{
 		BackendFactoryFunc: myPlugin.Factory,
-        TLSProviderFunc:    tlsProviderFunc,
+		TLSProviderFunc:    tlsProviderFunc,
 	})
 ```
 
 The call to `plugin.ServeMultiplex` ensures that the plugin will use
-Vault's plugin [plugin
+Vault's [plugin
 multiplexing](/docs/plugins/plugin-architecture#plugin-multiplexing) feature.
 However, this plugin will not be multiplexed if it is run by a version of Vault
 that does not support multiplexing. Vault will simply fall back to a plugin
