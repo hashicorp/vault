@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -261,11 +262,22 @@ func agingRenew() func(string, int) (*Response, error) {
 	headers := http.Header{}
 
 	return func(leaseID string, increment int) (*Response, error) {
-		headers.Set("Age", strconv.Itoa(int(time.Since(origin))))
+		headers.Set("Age", strconv.Itoa(int(time.Since(origin).Seconds())))
+		secret := Secret{
+			LeaseID:       "lease_id",
+			Renewable:     true,
+			LeaseDuration: increment,
+		}
+		b, err := json.Marshal(&secret)
+
+		if err != nil {
+			return nil, err
+		}
+
 		return &Response{
 			Response: &http.Response{
 				Header: headers,
-				Body:   io.NopCloser(strings.NewReader(fmt.Sprintf(`{"lease_id": "%s", "increment": %d}`, leaseID, increment))),
+				Body:   io.NopCloser(strings.NewReader(string(b))),
 			},
 		}, nil
 	}
