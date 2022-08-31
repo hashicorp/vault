@@ -3,6 +3,7 @@ package pki
 import (
 	"context"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync/atomic"
@@ -16,22 +17,26 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+var tidyCancelledError = errors.New("tidy operation cancelled")
+
 type tidyConfig struct {
-	Enabled      bool          `json:"enabled"`
-	Interval     time.Duration `json:"interval_duration"`
-	CertStore    bool          `json:"tidy_cert_store"`
-	RevokedCerts bool          `json:"tidy_revoked_certs"`
-	IssuerAssocs bool          `json:"tidy_revoked_cert_issuer_associations"`
-	SafetyBuffer time.Duration `json:"safety_buffer"`
+	Enabled       bool          `json:"enabled"`
+	Interval      time.Duration `json:"interval_duration"`
+	CertStore     bool          `json:"tidy_cert_store"`
+	RevokedCerts  bool          `json:"tidy_revoked_certs"`
+	IssuerAssocs  bool          `json:"tidy_revoked_cert_issuer_associations"`
+	SafetyBuffer  time.Duration `json:"safety_buffer"`
+	PauseDuration time.Duration `json:"pause_duration"`
 }
 
 var defaultTidyConfig = tidyConfig{
-	Enabled:      false,
-	Interval:     12 * time.Hour,
-	CertStore:    false,
-	RevokedCerts: false,
-	IssuerAssocs: false,
-	SafetyBuffer: 72 * time.Hour,
+	Enabled:       false,
+	Interval:      12 * time.Hour,
+	CertStore:     false,
+	RevokedCerts:  false,
+	IssuerAssocs:  false,
+	SafetyBuffer:  72 * time.Hour,
+	PauseDuration: 0 * time.Second,
 }
 
 func pathTidy(b *backend) *framework.Path {
@@ -46,6 +51,20 @@ func pathTidy(b *backend) *framework.Path {
 		},
 		HelpSynopsis:    pathTidyHelpSyn,
 		HelpDescription: pathTidyHelpDesc,
+	}
+}
+
+func pathTidyCancel(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "tidy-cancel$",
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback:                  b.pathTidyCancelWrite,
+				ForwardPerformanceStandby: true,
+			},
+		},
+		HelpSynopsis:    pathTidyCancelHelpSyn,
+		HelpDescription: pathTidyCancelHelpDesc,
 	}
 }
 
@@ -98,21 +117,36 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	tidyCertStore := d.Get("tidy_cert_store").(bool)
 	tidyRevokedCerts := d.Get("tidy_revoked_certs").(bool) || d.Get("tidy_revocation_list").(bool)
 	tidyRevokedAssocs := d.Get("tidy_revoked_cert_issuer_associations").(bool)
+	pauseDurationStr := d.Get("pause_duration").(string)
+	pauseDuration := 0 * time.Second
 
 	if safetyBuffer < 1 {
 		return logical.ErrorResponse("safety_buffer must be greater than zero"), nil
+	}
+
+	if pauseDurationStr != "" {
+		var err error
+		pauseDuration, err = time.ParseDuration(pauseDurationStr)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("Error parsing pause_duration: %v", err)), nil
+		}
+
+		if pauseDuration < (0 * time.Second) {
+			return logical.ErrorResponse("received invalid, negative pause_duration"), nil
+		}
 	}
 
 	bufferDuration := time.Duration(safetyBuffer) * time.Second
 
 	// Manual run with constructed configuration.
 	config := &tidyConfig{
-		Enabled:      true,
-		Interval:     0 * time.Second,
-		CertStore:    tidyCertStore,
-		RevokedCerts: tidyRevokedCerts,
-		IssuerAssocs: tidyRevokedAssocs,
-		SafetyBuffer: bufferDuration,
+		Enabled:       true,
+		Interval:      0 * time.Second,
+		CertStore:     tidyCertStore,
+		RevokedCerts:  tidyRevokedCerts,
+		IssuerAssocs:  tidyRevokedAssocs,
+		SafetyBuffer:  bufferDuration,
+		PauseDuration: pauseDuration,
 	}
 
 	if !atomic.CompareAndSwapUint32(b.tidyCASGuard, 0, 1) {
@@ -148,6 +182,7 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 
 func (b *backend) startTidyOperation(req *logical.Request, config *tidyConfig) {
 	go func() {
+		atomic.StoreUint32(b.tidyCancelCAS, 0)
 		defer atomic.StoreUint32(b.tidyCASGuard, 0)
 
 		b.tidyStatusStart(config)
@@ -164,9 +199,14 @@ func (b *backend) startTidyOperation(req *logical.Request, config *tidyConfig) {
 				}
 			}
 
+			// Check for cancel before continuing.
+			if atomic.CompareAndSwapUint32(b.tidyCancelCAS, 1, 0) {
+				return tidyCancelledError
+			}
+
 			if config.RevokedCerts || config.IssuerAssocs {
 				if err := b.doTidyRevocationStore(ctx, req, logger, config); err != nil {
-					return nil
+					return err
 				}
 			}
 
@@ -200,6 +240,16 @@ func (b *backend) doTidyCertStore(ctx context.Context, req *logical.Request, log
 	for i, serial := range serials {
 		b.tidyStatusMessage(fmt.Sprintf("Tidying certificate store: checking entry %d of %d", i, serialCount))
 		metrics.SetGauge([]string{"secrets", "pki", "tidy", "cert_store_current_entry"}, float32(i))
+
+		// Check for cancel before continuing.
+		if atomic.CompareAndSwapUint32(b.tidyCancelCAS, 1, 0) {
+			return tidyCancelledError
+		}
+
+		// Check for pause duration to reduce resource consumption.
+		if config.PauseDuration > (0 * time.Second) {
+			time.Sleep(config.PauseDuration)
+		}
 
 		certEntry, err := req.Storage.Get(ctx, "certs/"+serial)
 		if err != nil {
@@ -271,6 +321,18 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 	for i, serial := range revokedSerials {
 		b.tidyStatusMessage(fmt.Sprintf("Tidying revoked certificates: checking certificate %d of %d", i, len(revokedSerials)))
 		metrics.SetGauge([]string{"secrets", "pki", "tidy", "revoked_cert_current_entry"}, float32(i))
+
+		// Check for cancel before continuing.
+		if atomic.CompareAndSwapUint32(b.tidyCancelCAS, 1, 0) {
+			return tidyCancelledError
+		}
+
+		// Check for pause duration to reduce resource consumption.
+		if config.PauseDuration > (0 * time.Second) {
+			b.revokeStorageLock.Unlock()
+			time.Sleep(config.PauseDuration)
+			b.revokeStorageLock.Lock()
+		}
 
 		revokedEntry, err := req.Storage.Get(ctx, "revoked/"+serial)
 		if err != nil {
@@ -379,6 +441,33 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 	return nil
 }
 
+func (b *backend) pathTidyCancelWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && !b.System().LocalMount() {
+		return nil, logical.ErrReadOnly
+	}
+
+	if atomic.LoadUint32(b.tidyCASGuard) == 0 {
+		resp := &logical.Response{}
+		resp.AddWarning("Tidy operation cannot be cancelled as none is currently running.")
+		return resp, nil
+	}
+
+	// Grab the status lock before writing the cancel atomic. This lets us
+	// update the status correctly as well, avoiding writing it if we're not
+	// presently running.
+	//
+	// Unlock needs to occur prior to calling read.
+	b.tidyStatusLock.Lock()
+	if b.tidyStatus.state == tidyStatusStarted || atomic.LoadUint32(b.tidyCASGuard) == 1 {
+		if atomic.CompareAndSwapUint32(b.tidyCancelCAS, 0, 1) {
+			b.tidyStatus.state = tidyStatusCancelling
+		}
+	}
+	b.tidyStatusLock.Unlock()
+
+	return b.pathTidyStatusRead(ctx, req, d)
+}
+
 func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	// If this node is a performance secondary return an ErrReadOnly so that the request gets forwarded,
 	// but only if the PKI backend is not a local mount.
@@ -391,17 +480,19 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"safety_buffer":              nil,
-			"tidy_cert_store":            nil,
-			"tidy_revoked_certs":         nil,
-			"state":                      "Inactive",
-			"error":                      nil,
-			"time_started":               nil,
-			"time_finished":              nil,
-			"message":                    nil,
-			"cert_store_deleted_count":   nil,
-			"revoked_cert_deleted_count": nil,
-			"missing_issuer_cert_count":  nil,
+			"safety_buffer":                         nil,
+			"tidy_cert_store":                       nil,
+			"tidy_revoked_certs":                    nil,
+			"tidy_revoked_cert_issuer_associations": nil,
+			"pause_duration":                        nil,
+			"state":                                 "Inactive",
+			"error":                                 nil,
+			"time_started":                          nil,
+			"time_finished":                         nil,
+			"message":                               nil,
+			"cert_store_deleted_count":              nil,
+			"revoked_cert_deleted_count":            nil,
+			"missing_issuer_cert_count":             nil,
 		},
 	}
 
@@ -413,6 +504,7 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	resp.Data["tidy_cert_store"] = b.tidyStatus.tidyCertStore
 	resp.Data["tidy_revoked_certs"] = b.tidyStatus.tidyRevokedCerts
 	resp.Data["tidy_revoked_cert_issuer_associations"] = b.tidyStatus.tidyRevokedAssocs
+	resp.Data["pause_duration"] = b.tidyStatus.pauseDuration
 	resp.Data["time_started"] = b.tidyStatus.timeStarted
 	resp.Data["message"] = b.tidyStatus.message
 	resp.Data["cert_store_deleted_count"] = b.tidyStatus.certStoreDeletedCount
@@ -432,6 +524,11 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 		resp.Data["error"] = b.tidyStatus.err.Error()
 		// Don't clear the message so that it serves as a hint about when
 		// the error occurred.
+	case tidyStatusCancelling:
+		resp.Data["state"] = "Cancelling"
+	case tidyStatusCancelled:
+		resp.Data["state"] = "Cancelled"
+		resp.Data["time_finished"] = b.tidyStatus.timeFinished
 	}
 
 	return resp, nil
@@ -452,6 +549,7 @@ func (b *backend) pathConfigAutoTidyRead(ctx context.Context, req *logical.Reque
 			"tidy_revoked_certs":                    config.RevokedCerts,
 			"tidy_revoked_cert_issuer_associations": config.IssuerAssocs,
 			"safety_buffer":                         int(config.SafetyBuffer / time.Second),
+			"pause_duration":                        config.PauseDuration.String(),
 		},
 	}, nil
 }
@@ -493,6 +591,17 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 		}
 	}
 
+	if pauseDurationRaw, ok := d.GetOk("pause_duration"); ok {
+		config.PauseDuration, err = time.ParseDuration(pauseDurationRaw.(string))
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("unable to parse given pause_duration: %v", err)), nil
+		}
+
+		if config.PauseDuration < (0 * time.Second) {
+			return logical.ErrorResponse("received invalid, negative pause_duration"), nil
+		}
+	}
+
 	if config.Enabled && !(config.CertStore || config.RevokedCerts || config.IssuerAssocs) {
 		return logical.ErrorResponse(fmt.Sprintf("Auto-tidy enabled but no tidy operations were requested. Enable at least one tidy operation to be run (tidy_cert_store / tidy_revoked_certs / tidy_revoked_cert_issuer_associations).")), nil
 	}
@@ -509,8 +618,10 @@ func (b *backend) tidyStatusStart(config *tidyConfig) {
 		tidyCertStore:     config.CertStore,
 		tidyRevokedCerts:  config.RevokedCerts,
 		tidyRevokedAssocs: config.IssuerAssocs,
-		state:             tidyStatusStarted,
-		timeStarted:       time.Now(),
+		pauseDuration:     config.PauseDuration.String(),
+
+		state:       tidyStatusStarted,
+		timeStarted: time.Now(),
 	}
 
 	metrics.SetGauge([]string{"secrets", "pki", "tidy", "start_time_epoch"}, float32(b.tidyStatus.timeStarted.Unix()))
@@ -524,6 +635,8 @@ func (b *backend) tidyStatusStop(err error) {
 	b.tidyStatus.err = err
 	if err == nil {
 		b.tidyStatus.state = tidyStatusFinished
+	} else if err == tidyCancelledError {
+		b.tidyStatus.state = tidyStatusCancelled
 	} else {
 		b.tidyStatus.state = tidyStatusError
 	}
@@ -595,6 +708,18 @@ current time, minus the value of 'safety_buffer', is greater than the
 expiration, it will be removed.
 `
 
+const pathTidyCancelHelpSyn = `
+Cancels a currently running tidy operation.
+`
+
+const pathTidyCancelHelpDesc = `
+This endpoint allows cancelling a currently running tidy operation.
+
+Periodically throughout the invocation of tidy, we'll check if the operation
+has been requested to be cancelled. If so, we'll stop the currently running
+tidy operation.
+`
+
 const pathTidyStatusHelpSyn = `
 Returns the status of the tidy operation.
 `
@@ -619,6 +744,16 @@ The result includes the following fields:
 * 'missing_issuer_cert_count': The number of revoked certificates which were missing a valid issuer reference
 `
 
-const pathConfigAutoTidySyn = ``
+const pathConfigAutoTidySyn = `
+Modifies the current configuration for automatic tidy execution.
+`
 
-const pathConfigAutoTidyDesc = ``
+const pathConfigAutoTidyDesc = `
+This endpoint accepts parameters to a tidy operation (see /tidy) that
+will be used for automatic tidy execution. This takes two extra parameters,
+enabled (to enable or disable auto-tidy) and interval_duration (which
+controls the frequency of auto-tidy execution).
+
+Once enabled, a tidy operation will be kicked off automatically, as if it
+were executed with the posted configuration.
+`

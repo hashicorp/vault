@@ -155,3 +155,81 @@ func TestAutoTidy(t *testing.T) {
 	require.Nil(t, err)
 	require.Nil(t, resp)
 }
+
+func TestTidyCancellation(t *testing.T) {
+	t.Parallel()
+
+	numLeaves := 100
+
+	b, s := createBackendWithStorage(t)
+
+	// Create a root, a role, and a bunch of leaves.
+	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root example.com",
+		"issuer_name": "root",
+		"ttl":         "20m",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+	_, err = CBWrite(b, s, "roles/local-testing", map[string]interface{}{
+		"allow_any_name":    true,
+		"enforce_hostnames": false,
+		"key_type":          "ec",
+	})
+	require.NoError(t, err)
+	for i := 0; i < numLeaves; i++ {
+		_, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
+			"common_name": "testing",
+			"ttl":         "1s",
+		})
+		require.NoError(t, err)
+	}
+
+	// Kick off a tidy operation (which runs in the background), but with
+	// a slow-ish pause between certificates.
+	_, err = CBWrite(b, s, "tidy", map[string]interface{}{
+		"tidy_cert_store": true,
+		"safety_buffer":   "1s",
+		"pause_duration":  "1s",
+	})
+
+	// If we wait six seconds, the operation should still be running. That's
+	// how we check that pause_duration works.
+	time.Sleep(3 * time.Second)
+
+	resp, err := CBRead(b, s, "tidy-status")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.Equal(t, resp.Data["state"], "Running")
+
+	// If we now cancel the operation, the response should say Cancelling.
+	cancelResp, err := CBWrite(b, s, "tidy-cancel", map[string]interface{}{})
+	require.NoError(t, err)
+	require.NotNil(t, cancelResp)
+	require.NotNil(t, cancelResp.Data)
+	state := cancelResp.Data["state"].(string)
+	howMany := cancelResp.Data["cert_store_deleted_count"].(uint)
+
+	if state == "Cancelled" {
+		// Rest of the test can't run; log and exit.
+		t.Log("Went to cancel the operation but response was already cancelled")
+		return
+	}
+
+	require.Equal(t, state, "Cancelling")
+
+	// Wait a little longer, and ensure we only processed at most 2 more certs
+	// after the cancellation respon.
+	time.Sleep(3 * time.Second)
+
+	statusResp, err := CBRead(b, s, "tidy-status")
+	require.NoError(t, err)
+	require.NotNil(t, statusResp)
+	require.NotNil(t, statusResp.Data)
+	require.Equal(t, statusResp.Data["state"], "Cancelled")
+	nowMany := statusResp.Data["cert_store_deleted_count"].(uint)
+	if howMany+3 <= nowMany {
+		t.Fatalf("expected to only process at most 3 more certificates, but processed (%v >>> %v) certs", nowMany, howMany)
+	}
+}

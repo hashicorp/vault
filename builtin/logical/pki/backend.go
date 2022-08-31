@@ -131,6 +131,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathRevoke(&b),
 			pathRevokeWithKey(&b),
 			pathTidy(&b),
+			pathTidyCancel(&b),
 			pathTidyStatus(&b),
 			pathConfigAutoTidy(&b),
 
@@ -184,6 +185,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 	}
 
 	b.tidyCASGuard = new(uint32)
+	b.tidyCancelCAS = new(uint32)
 	b.tidyStatus = &tidyStatus{state: tidyStatusInactive}
 	b.storage = conf.StorageView
 	b.backendUUID = conf.BackendUUID
@@ -205,6 +207,7 @@ type backend struct {
 	storage           logical.Storage
 	revokeStorageLock sync.RWMutex
 	tidyCASGuard      *uint32
+	tidyCancelCAS     *uint32
 
 	tidyStatusLock sync.RWMutex
 	tidyStatus     *tidyStatus
@@ -223,10 +226,12 @@ type (
 )
 
 const (
-	tidyStatusInactive tidyStatusState = iota
-	tidyStatusStarted
-	tidyStatusFinished
-	tidyStatusError
+	tidyStatusInactive   tidyStatusState = iota
+	tidyStatusStarted                    = iota
+	tidyStatusFinished                   = iota
+	tidyStatusError                      = iota
+	tidyStatusCancelling                 = iota
+	tidyStatusCancelled                  = iota
 )
 
 type tidyStatus struct {
@@ -235,6 +240,7 @@ type tidyStatus struct {
 	tidyCertStore     bool
 	tidyRevokedCerts  bool
 	tidyRevokedAssocs bool
+	pauseDuration     string
 
 	// Status
 	state                   tidyStatusState
