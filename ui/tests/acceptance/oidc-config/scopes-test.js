@@ -43,11 +43,12 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
   });
 
   test('it renders empty state when no scopes are configured', async function (assert) {
-    assert.expect(2);
+    assert.expect(3);
     this.server.get('/identity/oidc/scope', () => overrideMirageResponse(404));
 
     await visit(SCOPES_URL);
     assert.equal(currentURL(), '/vault/access/oidc/scopes');
+    assert.dom('[data-test-tab="scopes"]').hasClass('active', 'scopes tab is active');
     // check empty state
     assert
       .dom(SELECTORS.scopeEmptyState)
@@ -138,7 +139,7 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
 
     // delete scope
     await click(SELECTORS.scopeDeleteButton);
-    await click(SELECTORS.confirmDeleteButton);
+    await click(SELECTORS.confirmActionButton);
     assert.equal(
       flashMessage.latestMessage,
       'Scope deleted successfully',
@@ -241,7 +242,7 @@ module('Acceptance | oidc-config/scopes', function (hooks) {
 
     // try to delete scope
     await click(SELECTORS.scopeDeleteButton);
-    await click(SELECTORS.confirmDeleteButton);
+    await click(SELECTORS.confirmActionButton);
     assert.equal(
       flashMessage.latestMessage,
       'unable to delete scope "test-scope" because it is currently referenced by these providers: test-provider',

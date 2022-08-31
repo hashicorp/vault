@@ -7,7 +7,7 @@ export const SELECTORS = {
   oidcClientCreateButton: '[data-test-oidc-configure]',
   oidcRouteTabs: '[data-test-oidc-tabs]',
   oidcLandingImg: '[data-test-oidc-img]',
-  confirmDeleteButton: '[data-test-confirm-button="true"]',
+  confirmActionButton: '[data-test-confirm-button="true"]',
   inlineAlert: '[data-test-inline-alert]',
   // client route
   clientSaveButton: '[data-test-oidc-client-save]',
@@ -34,6 +34,15 @@ export const SELECTORS = {
   scopeEmptyState: '[data-test-oidc-scope-empty-state]',
   scopeCreateButtonEmptyState: '[data-test-oidc-scope-create-empty-state]',
   scopeCreateButton: '[data-test-oidc-scope-create]',
+
+  // key route
+  keySaveButton: '[data-test-oidc-key-save]',
+  keyCancelButton: '[data-test-oidc-key-cancel]',
+  keyDeleteButton: '[data-test-oidc-key-delete] button',
+  keyEditButton: '[data-test-oidc-key-edit]',
+  keyRotateButton: '[data-test-oidc-key-rotate] button',
+  keyDetailsTab: '[data-test-oidc-key-details]',
+  keyClientsTab: '[data-test-oidc-key-clients]',
 };
 
 export function overrideMirageResponse(httpStatus, data) {

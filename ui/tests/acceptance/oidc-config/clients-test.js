@@ -164,7 +164,7 @@ module('Acceptance | oidc-config/clients', function (hooks) {
     await click(SELECTORS.clientSaveButton);
     // immediately delete client, test transition
     await click(SELECTORS.clientDeleteButton);
-    await click(SELECTORS.confirmDeleteButton);
+    await click(SELECTORS.confirmActionButton);
     assert.equal(
       flashMessage.latestMessage,
       'Application deleted successfully',
@@ -179,7 +179,7 @@ module('Acceptance | oidc-config/clients', function (hooks) {
     // delete some-app client (last client)
     await click('[data-test-oidc-client-linked-block]');
     await click(SELECTORS.clientDeleteButton);
-    await click(SELECTORS.confirmDeleteButton);
+    await click(SELECTORS.confirmActionButton);
     assert.equal(
       currentRouteName(),
       'vault.cluster.access.oidc.index',
@@ -188,7 +188,7 @@ module('Acceptance | oidc-config/clients', function (hooks) {
   });
 
   test('it renders client list when clients exist', async function (assert) {
-    assert.expect(7);
+    assert.expect(8);
     this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
     this.server.get('/identity/oidc/client/some-app', () =>
       overrideMirageResponse(null, CLIENT_DATA_RESPONSE)
@@ -199,6 +199,7 @@ module('Acceptance | oidc-config/clients', function (hooks) {
       'vault.cluster.access.oidc.clients.index',
       'redirects to clients index route when clients exist'
     );
+    assert.dom('[data-test-tab="clients"]').hasClass('active', 'clients tab is active');
     assert
       .dom('[data-test-oidc-client-linked-block]')
       .hasText('some-app Client ID: whaT7KB0C3iBH1l3rXhd5HPf0n6vXU0s', 'displays linked block for client');
