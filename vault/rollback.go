@@ -17,7 +17,7 @@ import (
 // rollbackPeriod is how often we attempt rollbacks for all the backends.
 //
 // This is turned into a variable to allow test to check behavior without
-// waiting the full minute. See SetRollbackPeriodForTesting(...).
+// waiting the full minute. See CreateTestClusterWithRollbackPeriod(...).
 var rollbackPeriod = time.Minute
 
 // RollbackManager is responsible for performing rollbacks of partial

@@ -28,6 +28,8 @@ const (
 	deltaCRLPath                = "delta-crl"
 	deltaCRLPathSuffix          = "-delta"
 
+	autoTidyConfigPath = "config/auto-tidy"
+
 	// Used as a quick sanity check for a reference id lookups...
 	uuidLength = 36
 
@@ -35,9 +37,6 @@ const (
 	maxRolesToFindOnIssuerChange = 10
 
 	latestIssuerVersion = 1
-
-	headerIfModifiedSince = "If-Modified-Since"
-	headerLastModified    = "Last-Modified"
 )
 
 type keyID string
@@ -170,6 +169,7 @@ type localCRLConfigEntry struct {
 	LastCompleteNumberMap map[crlID]int64     `json:"last_complete_number_map"`
 	CRLExpirationMap      map[crlID]time.Time `json:"crl_expiration_map"`
 	LastModified          time.Time           `json:"last_modified"`
+	DeltaLastModified     time.Time           `json:"delta_last_modified"`
 }
 
 type keyConfigEntry struct {
@@ -1159,4 +1159,32 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 	}
 
 	return &result, nil
+}
+
+func (sc *storageContext) getAutoTidyConfig() (*tidyConfig, error) {
+	entry, err := sc.Storage.Get(sc.Context, autoTidyConfigPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var result tidyConfig
+	if entry == nil {
+		result = defaultTidyConfig
+		return &result, nil
+	}
+
+	if err = entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (sc *storageContext) writeAutoTidyConfig(config *tidyConfig) error {
+	entry, err := logical.StorageEntryJSON(autoTidyConfigPath, config)
+	if err != nil {
+		return err
+	}
+
+	return sc.Storage.Put(sc.Context, entry)
 }

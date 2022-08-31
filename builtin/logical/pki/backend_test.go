@@ -4046,7 +4046,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 
 	resp, err = CBWrite(b_root, s_root, "root/sign-intermediate", map[string]interface{}{
 		"csr":    intermediateData["csr"],
-		"format": "pem_bundle",
+		"format": "pem",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -4154,6 +4154,21 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 
 	// Verify that the certificates are signed by the intermediary CA key...
 	requireSignedBy(t, issuedCrt, intermediaryCaCert.PublicKey)
+
+	// Test that we can request that the root ca certificate not appear in the ca_chain field
+	resp, err = CBWrite(b_ext, s_ext, "issue/example", map[string]interface{}{
+		"common_name":             "test.example.com",
+		"ttl":                     "5m",
+		"remove_roots_from_chain": "true",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "error issuing certificate when removing self signed")
+	fullChain = strings.Join(resp.Data["ca_chain"].([]string), "\n")
+	if strings.Count(fullChain, intermediateCert) != 1 {
+		t.Fatalf("expected full chain to contain intermediate certificate; got %v occurrences", strings.Count(fullChain, intermediateCert))
+	}
+	if strings.Count(fullChain, rootCert) != 0 {
+		t.Fatalf("expected full chain to NOT contain root certificate; got %v occurrences", strings.Count(fullChain, rootCert))
+	}
 }
 
 func requireCertInCaChainArray(t *testing.T, chain []string, cert string, msgAndArgs ...interface{}) {
@@ -5143,10 +5158,10 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 	// last headers, otherwise the headers added after the last set operation
 	// leak into this copy... Yuck!
 	lastHeaders := client.Headers()
-	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/old-root/crl"} {
+	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/old-root/crl", "pki/cert/delta-crl", "pki/issuer/old-root/crl/delta"} {
 		t.Logf("path: %v", path)
 		field := "certificate"
-		if strings.HasPrefix(path, "pki/issuer") && strings.HasSuffix(path, "/crl") {
+		if strings.HasPrefix(path, "pki/issuer") && strings.Contains(path, "/crl") {
 			field = "crl"
 		}
 
@@ -5198,10 +5213,10 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 	afterNewCAGeneration := time.Now().Add(2 * time.Second)
 
 	// New root isn't the default, so it has fewer paths.
-	for _, path := range []string{"pki/issuer/new-root/json", "pki/issuer/new-root/crl"} {
+	for _, path := range []string{"pki/issuer/new-root/json", "pki/issuer/new-root/crl", "pki/issuer/new-root/crl/delta"} {
 		t.Logf("path: %v", path)
 		field := "certificate"
-		if strings.HasPrefix(path, "pki/issuer") && strings.HasSuffix(path, "/crl") {
+		if strings.HasPrefix(path, "pki/issuer") && strings.Contains(path, "/crl") {
 			field = "crl"
 		}
 
@@ -5244,10 +5259,10 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 	require.NoError(t, err)
 
 	// Reading both with the last modified date should return new values.
-	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/new-root/json", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl"} {
+	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/new-root/json", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl", "pki/cert/delta-crl", "pki/issuer/old-root/crl/delta", "pki/issuer/new-root/crl/delta"} {
 		t.Logf("path: %v", path)
 		field := "certificate"
-		if strings.HasPrefix(path, "pki/issuer") && strings.HasSuffix(path, "/crl") {
+		if strings.HasPrefix(path, "pki/issuer") && strings.Contains(path, "/crl") {
 			field = "crl"
 		}
 
@@ -5279,7 +5294,7 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// The above tests should say everything is cached.
-	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/new-root/json", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl"} {
+	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/new-root/json", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl", "pki/cert/delta-crl", "pki/issuer/old-root/crl/delta", "pki/issuer/new-root/crl/delta"} {
 		t.Logf("path: %v", path)
 
 		// Ensure that the CA is returned correctly if we give it the new time.
@@ -5311,10 +5326,10 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 	}
 
 	// CRL should be invalidated
-	for _, path := range []string{"pki/cert/crl", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl"} {
+	for _, path := range []string{"pki/cert/crl", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl", "pki/cert/delta-crl", "pki/issuer/old-root/crl/delta", "pki/issuer/new-root/crl/delta"} {
 		t.Logf("path: %v", path)
 		field := "certificate"
-		if strings.HasPrefix(path, "pki/issuer") && strings.HasSuffix(path, "/crl") {
+		if strings.HasPrefix(path, "pki/issuer") && strings.Contains(path, "/crl") {
 			field = "crl"
 		}
 
@@ -5328,13 +5343,58 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 		lastHeaders = client.Headers()
 	}
 
-	// Finally, if we send some time in the future, everything should be cached again!
+	// If we send some time in the future, everything should be cached again!
 	futureTime := time.Now().Add(30 * time.Second)
-	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/new-root/json", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl"} {
+	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/new-root/json", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl", "pki/cert/delta-crl", "pki/issuer/old-root/crl/delta", "pki/issuer/new-root/crl/delta"} {
 		t.Logf("path: %v", path)
 
 		// Ensure that the CA is returned correctly if we give it the new time.
 		client.AddHeader("If-Modified-Since", futureTime.Format(time.RFC1123))
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.Nil(t, resp)
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+	}
+
+	beforeThreeWaySwap := time.Now().Add(-2 * time.Second)
+
+	// Now, do a three-way swap of names (old->tmp; new->old; tmp->new). This
+	// should result in all names/CRLs being invalidated.
+	_, err = client.Logical().JSONMergePatch(ctx, "pki/issuer/old-root", map[string]interface{}{
+		"issuer_name": "tmp-root",
+	})
+	require.NoError(t, err)
+	_, err = client.Logical().JSONMergePatch(ctx, "pki/issuer/new-root", map[string]interface{}{
+		"issuer_name": "old-root",
+	})
+	require.NoError(t, err)
+	_, err = client.Logical().JSONMergePatch(ctx, "pki/issuer/tmp-root", map[string]interface{}{
+		"issuer_name": "new-root",
+	})
+	require.NoError(t, err)
+
+	afterThreeWaySwap := time.Now().Add(2 * time.Second)
+
+	for _, path := range []string{"pki/cert/ca", "pki/cert/crl", "pki/issuer/default/json", "pki/issuer/old-root/json", "pki/issuer/new-root/json", "pki/issuer/old-root/crl", "pki/issuer/new-root/crl", "pki/cert/delta-crl", "pki/issuer/old-root/crl/delta", "pki/issuer/new-root/crl/delta"} {
+		t.Logf("path: %v", path)
+		field := "certificate"
+		if strings.HasPrefix(path, "pki/issuer") && strings.Contains(path, "/crl") {
+			field = "crl"
+		}
+
+		// Ensure that the CA is elided if we give it the pre-update time.
+		client.AddHeader("If-Modified-Since", beforeThreeWaySwap.Format(time.RFC1123))
+		resp, err = client.Logical().Read(path)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.NotEmpty(t, resp.Data[field])
+		client.SetHeaders(lastHeaders)
+		lastHeaders = client.Headers()
+
+		// Ensure that the CA is returned correctly if we give it the after time.
+		client.AddHeader("If-Modified-Since", afterThreeWaySwap.Format(time.RFC1123))
 		resp, err = client.Logical().Read(path)
 		require.NoError(t, err)
 		require.Nil(t, resp)
