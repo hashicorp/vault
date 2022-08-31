@@ -144,7 +144,7 @@ on the upgrade procedure can be found in
 ## Plugin Multiplexing
 
 To avoid spawning multiple plugin processes for mounts of the same type,
-plugins can be made to implement plugin multiplexing. This allows a single
+plugins can implement plugin multiplexing. This allows a single
 plugin process to be used for multiple mounts of a given type. This single
 process will be multiplexed across all Vault namespaces for mounts of this
 type. Multiplexing a plugin does not affect the current behavior of existing
