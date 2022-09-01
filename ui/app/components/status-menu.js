@@ -21,6 +21,7 @@ export default class StatusMenu extends Component {
   @service currentCluster;
   @service auth;
   @service media;
+  @service router;
 
   get type() {
     return this.args.type || 'cluster';
@@ -31,8 +32,8 @@ export default class StatusMenu extends Component {
   }
 
   @action
-  handleClick(d) {
-    this.args.onLinkClick;
-    d.actions.close();
+  onLinkClick(routeArgs) {
+    this.router.transitionTo(...routeArgs);
+    this.args.onLinkClick();
   }
 }
