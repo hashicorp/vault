@@ -9,14 +9,13 @@
               <ul>
                 {{#if @cluster.anyReplicationEnabled}}
                   <li>
-                    <button
-                      class="link"
-                      type="button"
-                      disabled={{not this.auth.currentToken}}
-                      {{on "click" (fn @onLinkClick (array "vault.cluster.replication-dr-promote.details"))}}
+                    <LinkTo
+                      @route="vault.cluster.replication-dr-promote.details"
+                      @disabled={{not this.auth.currentToken}}
+                      {{on "click" @onLinkClick}}
                     >
                       <ReplicationModeSummary @mode="dr" @display="menu" @cluster={{@cluster}} />
-                    </button>
+                    </LinkTo>
                   </li>
                 {{/if}}
               </ul>
@@ -30,37 +29,37 @@
               <ul>
                 {{#if @cluster.anyReplicationEnabled}}
                   <li>
-                    <button
-                      class="link"
-                      type="button"
-                      disabled={{not this.auth.currentToken}}
-                      {{on "click" (fn @onLinkClick (array "vault.cluster.replication.mode.index" "dr"))}}
+                    <LinkTo
+                      @route="vault.cluster.replication.mode.index"
+                      @model="dr"
+                      @disabled={{not this.auth.currentToken}}
+                      {{on "click" @onLinkClick}}
                     >
                       <ReplicationModeSummary @mode="dr" @display="menu" @cluster={{@cluster}} />
-                    </button>
+                    </LinkTo>
                   </li>
                   <li>
                     {{#if (has-feature "Performance Replication")}}
-                      <button
-                        class="link"
-                        type="button"
-                        disabled={{not this.auth.currentToken}}
-                        {{on "click" (fn @onLinkClick (array "vault.cluster.replication.mode.index" "performance"))}}
+                      <LinkTo
+                        @route="vault.cluster.replication.mode.index"
+                        @model="performance"
+                        @disabled={{not this.auth.currentToken}}
+                        {{on "click" @onLinkClick}}
                       >
                         <ReplicationModeSummary @mode="performance" @display="menu" @cluster={{@cluster}} @tagName="span" />
-                      </button>
+                      </LinkTo>
                     {{else}}
                       <ReplicationModeSummary @mode="performance" @display="menu" @cluster={{@cluster}} @class="menu-item" />
                     {{/if}}
                   </li>
                 {{else}}
                   <li>
-                    <button class="link" type="button" {{on "click" (fn @onLinkClick (array "vault.cluster.replication"))}}>
+                    <LinkTo @route="vault.cluster.replication" {{on "click" @onLinkClick}}>
                       <div class="level is-mobile">
                         <span class="level-left">Enable</span>
                         <Icon @name="plus-circle" class="has-text-grey-light level-right" />
                       </div>
-                    </button>
+                    </LinkTo>
                   </li>
                 {{/if}}
               </ul>
@@ -78,16 +77,12 @@
         <li class="action">
           {{#if this.activeCluster.unsealed}}
             {{#if (and (has-permission "status" routeParams="seal") (not @cluster.dr.isSecondary))}}
-              <button
-                class="link"
-                type="button"
-                {{on "click" (fn @onLinkClick (array "vault.cluster.settings.seal" @cluster.name))}}
-              >
+              <LinkTo @route="vault.cluster.settings.seal" @model={{@cluster.name}} {{on "click" @onLinkClick}}>
                 <div class="level is-mobile">
                   <span class="level-left">Unsealed</span>
                   <Icon @name="check-circle" class="has-text-success level-right" />
                 </div>
-              </button>
+              </LinkTo>
             {{else}}
               <span class="menu-item">
                 <div class="level is-mobile">
@@ -118,31 +113,22 @@
         <ul class="menu-list">
           {{#if (and this.version.features (has-permission "status" routeParams="license") (not @cluster.dr.isSecondary))}}
             <li class="action">
-              <button
-                class="link"
-                type="button"
-                {{on "click" (fn @onLinkClick (array "vault.cluster.license" this.activeCluster.name))}}
-              >
+              <LinkTo @route="vault.cluster.license" @model={{this.activeCluster.name}} {{on "click" @onLinkClick}}>
                 <div class="level is-mobile">
                   <span class="level-left">License</span>
                   <Chevron class="has-text-grey-light level-right" />
                 </div>
-              </button>
+              </LinkTo>
             </li>
           {{/if}}
           {{#if (and @cluster.usingRaft (has-permission "status" routeParams="raft"))}}
             <li class="action">
-              {{! on click modifier breaks link in production builds on Ember 3.28.8  }}
-              <button
-                class="link"
-                type="button"
-                {{on "click" (fn @onLinkClick (array "vault.cluster.storage" this.activeCluster.name))}}
-              >
+              <LinkTo @route="vault.cluster.storage" @model={{this.activeCluster.name}} {{on "click" @onLinkClick}}>
                 <div class="level is-mobile">
                   <span class="level-left">Raft Storage</span>
                   <Chevron class="has-text-grey-light level-right" />
                 </div>
-              </button>
+              </LinkTo>
             </li>
           {{/if}}
         </ul>
@@ -150,12 +136,12 @@
       {{#if (and (has-permission "clients" routeParams="activity") (not @cluster.dr.isSecondary) this.auth.currentToken)}}
         <ul class="menu-list">
           <li class="action">
-            <button class="link" type="button" {{on "click" (fn @onLinkClick (array "vault.cluster.clients.current"))}}>
+            <LinkTo @route="vault.cluster.clients.current" {{on "click" @onLinkClick}}>
               <div class="level is-mobile">
                 <span class="level-left">Client count</span>
                 <Chevron class="has-text-grey-light level-right" />
               </div>
-            </button>
+            </LinkTo>
           </li>
         </ul>
       {{/if}}
