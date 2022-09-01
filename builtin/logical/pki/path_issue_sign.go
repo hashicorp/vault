@@ -1,9 +1,11 @@
 package pki
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"strings"
 	"time"
@@ -333,6 +335,8 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		return nil, fmt.Errorf("error converting raw cert bundle to cert bundle: %w", err)
 	}
 
+	caChainGen := newCaChainOutput(parsedBundle, data)
+
 	respData := map[string]interface{}{
 		"expiration":    int64(parsedBundle.Certificate.NotAfter.Unix()),
 		"serial_number": cb.SerialNumber,
@@ -342,8 +346,8 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	case "pem":
 		respData["issuing_ca"] = signingCB.Certificate
 		respData["certificate"] = cb.Certificate
-		if cb.CAChain != nil && len(cb.CAChain) > 0 {
-			respData["ca_chain"] = cb.CAChain
+		if caChainGen.containsChain() {
+			respData["ca_chain"] = caChainGen.pemEncodedChain()
 		}
 		if !useCSR {
 			respData["private_key"] = cb.PrivateKey
@@ -353,8 +357,8 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	case "pem_bundle":
 		respData["issuing_ca"] = signingCB.Certificate
 		respData["certificate"] = cb.ToPEMBundle()
-		if cb.CAChain != nil && len(cb.CAChain) > 0 {
-			respData["ca_chain"] = cb.CAChain
+		if caChainGen.containsChain() {
+			respData["ca_chain"] = caChainGen.pemEncodedChain()
 		}
 		if !useCSR {
 			respData["private_key"] = cb.PrivateKey
@@ -365,12 +369,8 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		respData["certificate"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
 		respData["issuing_ca"] = base64.StdEncoding.EncodeToString(signingBundle.CertificateBytes)
 
-		var caChain []string
-		for _, caCert := range parsedBundle.CAChain {
-			caChain = append(caChain, base64.StdEncoding.EncodeToString(caCert.Bytes))
-		}
-		if caChain != nil && len(caChain) > 0 {
-			respData["ca_chain"] = caChain
+		if caChainGen.containsChain() {
+			respData["ca_chain"] = caChainGen.derEncodedChain()
 		}
 
 		if !useCSR {
@@ -385,7 +385,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	switch {
 	case role.GenerateLease == nil:
 		return nil, fmt.Errorf("generate lease in role is nil")
-	case *role.GenerateLease == false:
+	case !*role.GenerateLease:
 		// If lease generation is disabled do not populate `Secret` field in
 		// the response
 		resp = &logical.Response{
@@ -427,6 +427,50 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	}
 
 	return resp, nil
+}
+
+type caChainOutput struct {
+	chain []*certutil.CertBlock
+}
+
+func newCaChainOutput(parsedBundle *certutil.ParsedCertBundle, data *framework.FieldData) caChainOutput {
+	if filterCaChain := data.Get("remove_roots_from_chain").(bool); filterCaChain {
+		var myChain []*certutil.CertBlock
+		for _, certBlock := range parsedBundle.CAChain {
+			cert := certBlock.Certificate
+
+			if (len(cert.AuthorityKeyId) > 0 && !bytes.Equal(cert.AuthorityKeyId, cert.SubjectKeyId)) ||
+				(len(cert.AuthorityKeyId) == 0 && (!bytes.Equal(cert.RawIssuer, cert.RawSubject) || cert.CheckSignatureFrom(cert) != nil)) {
+				// We aren't self-signed so add it to the list.
+				myChain = append(myChain, certBlock)
+			}
+		}
+		return caChainOutput{chain: myChain}
+	}
+
+	return caChainOutput{chain: parsedBundle.CAChain}
+}
+
+func (cac *caChainOutput) containsChain() bool {
+	return len(cac.chain) > 0
+}
+
+func (cac *caChainOutput) pemEncodedChain() []string {
+	var chain []string
+	for _, cert := range cac.chain {
+		block := pem.Block{Type: "CERTIFICATE", Bytes: cert.Bytes}
+		certificate := strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+		chain = append(chain, certificate)
+	}
+	return chain
+}
+
+func (cac *caChainOutput) derEncodedChain() []string {
+	var derCaChain []string
+	for _, caCert := range cac.chain {
+		derCaChain = append(derCaChain, base64.StdEncoding.EncodeToString(caCert.Bytes))
+	}
+	return derCaChain
 }
 
 const pathIssueHelpSyn = `

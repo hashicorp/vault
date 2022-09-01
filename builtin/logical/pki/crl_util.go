@@ -320,7 +320,7 @@ func (cb *crlBuilder) clearDeltaWAL(sc *storageContext, walSerials []string) err
 	return nil
 }
 
-func (cb *crlBuilder) rebuildDeltaCRLsIfForced(sc *storageContext) error {
+func (cb *crlBuilder) rebuildDeltaCRLsIfForced(sc *storageContext, override bool) error {
 	// Delta CRLs use the same expiry duration as the complete CRL. Because
 	// we always rebuild the complete CRL and then the delta CRL, we can
 	// be assured that the delta CRL always expires after a complete CRL,
@@ -355,7 +355,7 @@ func (cb *crlBuilder) rebuildDeltaCRLsIfForced(sc *storageContext) error {
 	now := time.Now()
 	last := cb.lastDeltaRebuildCheck
 	nextRebuildCheck := last.Add(deltaRebuildDuration)
-	if now.Before(nextRebuildCheck) {
+	if !override && now.Before(nextRebuildCheck) {
 		// If we're still before the time of our next rebuild check, we can
 		// safely return here even if we have certs. We'll wait for a bit,
 		// retrigger this check, and then do the rebuild.
@@ -371,7 +371,7 @@ func (cb *crlBuilder) rebuildDeltaCRLsIfForced(sc *storageContext) error {
 	// Fetch two storage entries to see if we actually need to do this
 	// rebuild, given we're within the window.
 	lastWALEntry, err := sc.Storage.Get(sc.Context, deltaWALLastRevokedSerial)
-	if err != nil || lastWALEntry == nil || lastWALEntry.Value == nil {
+	if err != nil || !override && (lastWALEntry == nil || lastWALEntry.Value == nil) {
 		// If this entry does not exist, we don't need to rebuild the
 		// delta WAL due to the expiration assumption above. There must
 		// not have been any new revocations. Since err should be nil
@@ -384,7 +384,7 @@ func (cb *crlBuilder) rebuildDeltaCRLsIfForced(sc *storageContext) error {
 		return err
 	}
 
-	if lastBuildEntry != nil && lastBuildEntry.Value != nil {
+	if !override && lastBuildEntry != nil && lastBuildEntry.Value != nil {
 		// If the last build entry doesn't exist, we still want to build a
 		// new delta WAL, since this could be our very first time doing so.
 		//
@@ -1103,7 +1103,7 @@ func getRevokedCertEntries(sc *storageContext, issuerIDCertMap map[issuerID]*x50
 			// TODO: In this case, remove it and continue? How likely is this to
 			// happen? Alternately, could skip it entirely, or could implement a
 			// delete function so that there is a way to remove these
-			return nil, nil, errutil.InternalError{Err: fmt.Sprintf("found revoked serial but actual certificate is empty")}
+			return nil, nil, errutil.InternalError{Err: "found revoked serial but actual certificate is empty"}
 		}
 
 		err = revokedEntry.DecodeJSON(&revInfo)

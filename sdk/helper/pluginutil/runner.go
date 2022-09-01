@@ -5,7 +5,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
@@ -15,7 +15,8 @@ import (
 // Looker defines the plugin Lookup function that looks into the plugin catalog
 // for available plugins and returns a PluginRunner
 type Looker interface {
-	LookupPlugin(context.Context, string, consts.PluginType) (*PluginRunner, error)
+	LookupPlugin(ctx context.Context, pluginName string, pluginType consts.PluginType) (*PluginRunner, error)
+	LookupPluginVersion(ctx context.Context, pluginName string, pluginType consts.PluginType, version string) (*PluginRunner, error)
 }
 
 // RunnerUtil interface defines the functions needed by the runner to wrap the
