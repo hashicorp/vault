@@ -31,6 +31,10 @@ const (
 	// PluginCACertPEMEnv is an ENV name used for holding a CA PEM-encoded
 	// string. Used for testing.
 	PluginCACertPEMEnv = "VAULT_TESTING_PLUGIN_CA_PEM"
+
+	// PluginMultiplexingOptOut is a comma separated list of plugin names opted-out
+	// of the multiplexing feature even if the plugins supports it
+	PluginMultiplexingOptOut = "VAULT_PLUGIN_MULTIPLEXING_OPT_OUT"
 )
 
 // OptionallyEnableMlock determines if mlock should be called, and if so enables

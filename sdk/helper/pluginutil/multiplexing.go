@@ -1,13 +1,16 @@
 package pluginutil
 
 import (
-	context "context"
+	"context"
 	"fmt"
+	"os"
+	"strings"
 
-	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
+	"golang.org/x/exp/slices"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-	status "google.golang.org/grpc/status"
+	"google.golang.org/grpc/status"
 )
 
 type PluginMultiplexingServerImpl struct {
@@ -16,15 +19,20 @@ type PluginMultiplexingServerImpl struct {
 	Supported bool
 }
 
-func (pm PluginMultiplexingServerImpl) MultiplexingSupport(ctx context.Context, req *MultiplexingSupportRequest) (*MultiplexingSupportResponse, error) {
+func (pm PluginMultiplexingServerImpl) MultiplexingSupport(_ context.Context, _ *MultiplexingSupportRequest) (*MultiplexingSupportResponse, error) {
 	return &MultiplexingSupportResponse{
 		Supported: pm.Supported,
 	}, nil
 }
 
-func MultiplexingSupported(ctx context.Context, cc grpc.ClientConnInterface) (bool, error) {
+func MultiplexingSupported(ctx context.Context, cc grpc.ClientConnInterface, name string) (bool, error) {
 	if cc == nil {
 		return false, fmt.Errorf("client connection is nil")
+	}
+
+	out := strings.Split(os.Getenv(PluginMultiplexingOptOut), ",")
+	if slices.Contains(out, name) {
+		return false, nil
 	}
 
 	req := new(MultiplexingSupportRequest)
