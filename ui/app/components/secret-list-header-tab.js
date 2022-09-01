@@ -14,7 +14,6 @@
  * @param {string} [path] - set on options-for-backend this tells us the specifics of the URL the query should hit.
  * @param {string} label - The name displayed on the tab.   Set on the options-for-backend.
  * @param {string} [tab] - The name of the tab.  Set on the options-for-backend.
- * @param {boolean} [false] - If this is for an engine use the link-to-external engine method.
  *
  */
 import Component from '@glimmer/component';
@@ -28,10 +27,6 @@ export default class SecretListHeaderTab extends Component {
   constructor() {
     super(...arguments);
     this.fetchCapabilities();
-  }
-
-  get isEngine() {
-    return this.args.isEngine || false;
   }
 
   pathQuery(backend, path) {
