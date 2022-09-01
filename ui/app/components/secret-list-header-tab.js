@@ -23,7 +23,6 @@ import { inject as service } from '@ember/service';
 export default class SecretListHeaderTab extends Component {
   @service store;
   @tracked dontShowTab;
-
   constructor() {
     super(...arguments);
     this.fetchCapabilities();
