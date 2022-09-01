@@ -4,15 +4,14 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 /**
  * @module KeyValueHeader
- * KeyValueHeader components show breadcrumbs.
+ * KeyValueHeader components show breadcrumbs for secret engines.
  *
  * @example
  * ```js
- * <KeyValueHeader @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{this.mode}} @root={{@root}}/>
  * ```
  * @param {string} [mode=null] - Used to set the currentPath.
  * @param {string} [baseKey=null] - Used to generate the path backward.
- * @param {string} [currentPath=null] - requiredParam is...
  * @param {string} [path=null] - The fallback path.
  * @param {string} [root=null] - Used to set the secretPath.
  * @param {boolean} [showCurrent=true] - Boolean to show the second part of the breadcrumb, ex: the secret's name.
@@ -32,13 +31,10 @@ export default class KeyValueHeader extends Component {
   }
 
   get currentPath() {
-    const mode = this.args.mode;
-    const path = this.args.path;
-    const showCurrent = this.showCurrent;
-    if (!mode || showCurrent === false) {
-      return path;
+    if (!this.args.mode || this.showCurrent === false) {
+      return this.args.path;
     }
-    return `vault.cluster.secrets.backend.${mode}`;
+    return `vault.cluster.secrets.backend.${this.args.mode}`;
   }
 
   get secretPath() {
