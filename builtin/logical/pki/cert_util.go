@@ -174,7 +174,7 @@ func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, pr
 	case strings.HasPrefix(prefix, "revoked/"):
 		legacyPath = "revoked/" + colonSerial
 		path = "revoked/" + hyphenSerial
-	case serial == legacyCRLPath:
+	case serial == legacyCRLPath || serial == deltaCRLPath:
 		if err = b.crlBuilder.rebuildIfForced(ctx, b, req); err != nil {
 			return nil, err
 		}
@@ -182,6 +182,14 @@ func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, pr
 		path, err = sc.resolveIssuerCRLPath(defaultRef)
 		if err != nil {
 			return nil, err
+		}
+
+		if serial == deltaCRLPath {
+			if sc.Backend.useLegacyBundleCaStorage() {
+				return nil, fmt.Errorf("refusing to serve delta CRL with legacy CA bundle")
+			}
+
+			path += deltaCRLPathSuffix
 		}
 	default:
 		legacyPath = "certs/" + colonSerial
@@ -745,11 +753,10 @@ func signCert(b *backend,
 
 	csrString := data.apiData.Get("csr").(string)
 	if csrString == "" {
-		return nil, errutil.UserError{Err: fmt.Sprintf("\"csr\" is empty")}
+		return nil, errutil.UserError{Err: "\"csr\" is empty"}
 	}
 
-	pemBytes := []byte(csrString)
-	pemBlock, pemBytes := pem.Decode(pemBytes)
+	pemBlock, _ := pem.Decode([]byte(csrString))
 	if pemBlock == nil {
 		return nil, errutil.UserError{Err: "csr contains no data"}
 	}
@@ -1195,8 +1202,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		if csr != nil && data.role.UseCSRSANs {
 			if len(csr.IPAddresses) > 0 {
 				if !data.role.AllowIPSANs {
-					return nil, errutil.UserError{Err: fmt.Sprintf(
-						"IP Subject Alternative Names are not allowed in this role, but was provided some via CSR")}
+					return nil, errutil.UserError{Err: "IP Subject Alternative Names are not allowed in this role, but was provided some via CSR"}
 				}
 				ipAddresses = csr.IPAddresses
 			}
@@ -1225,8 +1231,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			if len(csr.URIs) > 0 {
 				if len(data.role.AllowedURISANs) == 0 {
 					return nil, errutil.UserError{
-						Err: fmt.Sprintf(
-							"URI Subject Alternative Names are not allowed in this role, but were provided via CSR"),
+						Err: "URI Subject Alternative Names are not allowed in this role, but were provided via CSR",
 					}
 				}
 
@@ -1235,8 +1240,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 					valid := validateURISAN(b, data, uri.String())
 					if !valid {
 						return nil, errutil.UserError{
-							Err: fmt.Sprintf(
-								"URI Subject Alternative Names were provided via CSR which are not valid for this role"),
+							Err: "URI Subject Alternative Names were provided via CSR which are not valid for this role",
 						}
 					}
 
@@ -1248,8 +1252,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			if len(uriAlt) > 0 {
 				if len(data.role.AllowedURISANs) == 0 {
 					return nil, errutil.UserError{
-						Err: fmt.Sprintf(
-							"URI Subject Alternative Names are not allowed in this role, but were provided via the API"),
+						Err: "URI Subject Alternative Names are not allowed in this role, but were provided via the API",
 					}
 				}
 
@@ -1257,8 +1260,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 					valid := validateURISAN(b, data, uri)
 					if !valid {
 						return nil, errutil.UserError{
-							Err: fmt.Sprintf(
-								"URI Subject Alternative Names were provided via the API which are not valid for this role"),
+							Err: "URI Subject Alternative Names were provided via the API which are not valid for this role",
 						}
 					}
 
@@ -1307,8 +1309,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		}
 		if ttl > 0 && notAfterAlt != "" {
 			return nil, errutil.UserError{
-				Err: fmt.Sprintf(
-					"Either ttl or not_after should be provided. Both should not be provided in the same request."),
+				Err: "Either ttl or not_after should be provided. Both should not be provided in the same request.",
 			}
 		}
 
@@ -1516,9 +1517,7 @@ func handleOtherCSRSANs(in *x509.CertificateRequest, sans map[string][]string) e
 		return err
 	}
 	if len(certTemplate.ExtraExtensions) > 0 {
-		for _, v := range certTemplate.ExtraExtensions {
-			in.ExtraExtensions = append(in.ExtraExtensions, v)
-		}
+		in.ExtraExtensions = append(in.ExtraExtensions, certTemplate.ExtraExtensions...)
 	}
 	return nil
 }

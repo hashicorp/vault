@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
 	"net/http"
 	"time"
@@ -26,14 +27,14 @@ import (
 const (
 	ocspReqParam            = "req"
 	ocspResponseContentType = "application/ocsp-response"
+	maximumRequestSize      = 2048 // A normal simple request is 87 bytes, so give us some buffer
 )
 
 type ocspRespInfo struct {
-	formattedSerialNumber string
-	serialNumber          *big.Int
-	ocspStatus            int
-	revocationTimeUTC     *time.Time
-	issuerID              issuerID
+	serialNumber      *big.Int
+	ocspStatus        int
+	revocationTimeUTC *time.Time
+	issuerID          issuerID
 }
 
 // These response variables should not be mutated, instead treat them as constants
@@ -127,7 +128,7 @@ func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, dat
 			// Since we were not able to find a matching issuer for the incoming request
 			// generate an Unknown OCSP response. This might turn into an Unauthorized if
 			// we find out that we don't have a default issuer or it's missing the proper Usage flags
-			return generateUnknownResponse(sc, ocspReq), nil
+			return generateUnknownResponse(cfg, sc, ocspReq), nil
 		}
 		if errors.Is(err, ErrMissingOcspUsage) {
 			// If we did find a matching issuer but aren't allowed to sign, the spec says
@@ -139,7 +140,7 @@ func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, dat
 		return logAndReturnInternalError(b, err), nil
 	}
 
-	byteResp, err := genResponse(caBundle, ocspStatus, ocspReq.HashAlgorithm)
+	byteResp, err := genResponse(cfg, caBundle, ocspStatus, ocspReq.HashAlgorithm)
 	if err != nil {
 		return logAndReturnInternalError(b, err), nil
 	}
@@ -153,7 +154,7 @@ func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, dat
 	}, nil
 }
 
-func generateUnknownResponse(sc *storageContext, ocspReq *ocsp.Request) *logical.Response {
+func generateUnknownResponse(cfg *crlConfig, sc *storageContext, ocspReq *ocsp.Request) *logical.Response {
 	// Generate an Unknown OCSP response, signing with the default issuer from the mount as we did
 	// not match the request's issuer. If no default issuer can be used, return with Unauthorized as there
 	// isn't much else we can do at this point.
@@ -187,7 +188,7 @@ func generateUnknownResponse(sc *storageContext, ocspReq *ocsp.Request) *logical
 		ocspStatus:   ocsp.Unknown,
 	}
 
-	byteResp, err := genResponse(caBundle, info, ocspReq.HashAlgorithm)
+	byteResp, err := genResponse(cfg, caBundle, info, ocspReq.HashAlgorithm)
 	if err != nil {
 		return logAndReturnInternalError(sc.Backend, err)
 	}
@@ -210,18 +211,25 @@ func fetchDerEncodedRequest(request *logical.Request, data *framework.FieldData)
 			return nil, errors.New("no base64 encoded ocsp request was found")
 		}
 
+		if len(base64Req) >= maximumRequestSize {
+			return nil, errors.New("request is too large")
+		}
+
 		return base64.StdEncoding.DecodeString(base64Req)
 	case logical.UpdateOperation:
 		// POST bodies should contain the binary form of the DER request.
 		rawBody := request.HTTPRequest.Body
 		defer rawBody.Close()
 
-		buf := bytes.Buffer{}
-		_, err := buf.ReadFrom(rawBody)
+		requestBytes, err := io.ReadAll(io.LimitReader(rawBody, maximumRequestSize))
 		if err != nil {
 			return nil, err
 		}
-		return buf.Bytes(), nil
+
+		if len(requestBytes) >= maximumRequestSize {
+			return nil, errors.New("request is too large")
+		}
+		return requestBytes, nil
 	default:
 		return nil, fmt.Errorf("unsupported request method: %s", request.HTTPRequest.Method)
 	}
@@ -375,14 +383,18 @@ func doesRequestMatchIssuer(parsedBundle *certutil.ParsedCertBundle, req *ocsp.R
 	return bytes.Equal(req.IssuerKeyHash, issuerKeyHash) && bytes.Equal(req.IssuerNameHash, issuerNameHash), nil
 }
 
-func genResponse(caBundle *certutil.ParsedCertBundle, info *ocspRespInfo, reqHash crypto.Hash) ([]byte, error) {
+func genResponse(cfg *crlConfig, caBundle *certutil.ParsedCertBundle, info *ocspRespInfo, reqHash crypto.Hash) ([]byte, error) {
 	curTime := time.Now()
+	duration, err := time.ParseDuration(cfg.OcspExpiry)
+	if err != nil {
+		return nil, err
+	}
 	template := ocsp.Response{
 		IssuerHash:      reqHash,
 		Status:          info.ocspStatus,
 		SerialNumber:    info.serialNumber,
 		ThisUpdate:      curTime,
-		NextUpdate:      curTime,
+		NextUpdate:      curTime.Add(duration),
 		Certificate:     caBundle.Certificate,
 		ExtraExtensions: []pkix.Extension{},
 	}

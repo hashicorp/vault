@@ -39,13 +39,16 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
+	backendplugin "github.com/hashicorp/vault/sdk/plugin"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/copystructure"
@@ -556,10 +559,53 @@ func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.Plug
 	c.pluginCatalog.directory = fullPath
 
 	args := []string{fmt.Sprintf("--test.run=%s", testFunc)}
-	err = c.pluginCatalog.Set(context.Background(), name, pluginType, fileName, args, env, sum)
+	version := ""
+	err = c.pluginCatalog.Set(context.Background(), name, pluginType, version, fileName, args, env, sum)
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+// TestRunTestPlugin runs the testFunc which has already been registered to the
+// plugin catalog and returns a pluginClient. This can be called after calling
+// TestAddTestPlugin.
+func TestRunTestPlugin(t testing.T, c *Core, pluginType consts.PluginType, pluginName string) *pluginClient {
+	t.Helper()
+	config := TestPluginClientConfig(c, pluginType, pluginName)
+	client, err := c.pluginCatalog.NewPluginClient(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return client
+}
+
+func TestPluginClientConfig(c *Core, pluginType consts.PluginType, pluginName string) pluginutil.PluginClientConfig {
+	switch pluginType {
+	case consts.PluginTypeCredential, consts.PluginTypeSecrets:
+		dsv := TestDynamicSystemView(c, nil)
+		return pluginutil.PluginClientConfig{
+			Name:            pluginName,
+			PluginType:      pluginType,
+			PluginSets:      backendplugin.PluginSet,
+			HandshakeConfig: backendplugin.HandshakeConfig,
+			Logger:          log.NewNullLogger(),
+			AutoMTLS:        true,
+			IsMetadataMode:  false,
+			Wrapper:         dsv,
+		}
+	case consts.PluginTypeDatabase:
+		return pluginutil.PluginClientConfig{
+			Name:            pluginName,
+			PluginType:      pluginType,
+			PluginSets:      v5.PluginSets,
+			HandshakeConfig: v5.HandshakeConfig,
+			Logger:          log.NewNullLogger(),
+			AutoMTLS:        true,
+			IsMetadataMode:  false,
+		}
+	}
+	return pluginutil.PluginClientConfig{}
 }
 
 var (
@@ -2244,11 +2290,20 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 }
 
 func (m *mockBuiltinRegistry) Contains(name string, pluginType consts.PluginType) bool {
+	for _, key := range m.Keys(pluginType) {
+		if key == name {
+			return true
+		}
+	}
 	return false
 }
 
 func (m *mockBuiltinRegistry) DeprecationStatus(name string, pluginType consts.PluginType) (consts.DeprecationStatus, bool) {
-	return consts.Supported, true
+	if m.Contains(name, pluginType) {
+		return consts.Supported, true
+	}
+
+	return consts.Unknown, false
 }
 
 type NoopAudit struct {
@@ -2352,13 +2407,63 @@ func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
 	t.Fatalf("did not complete before deadline, err: %v", err)
 }
 
-// SetRollbackPeriodForTesting lets us modify the periodic func invocation
-// time period to some other value. Best practice is to set this, spin up
-// a test cluster and immediately reset the value back to the default, to
-// avoid impacting other tests too much. To that end, we return the original
-// value of that period.
-func SetRollbackPeriodForTesting(newPeriod time.Duration) time.Duration {
+// CreateTestClusterWithRollbackPeriod lets us modify the periodic func
+// invocation time period to some other value.
+//
+// Because multiple tests in the PKI mount use this helper, we've added
+// a lock around it and created the cluster immediately in this helper.
+// This ensures the tests don't race against each other.
+var rollbackPeriodLock sync.Mutex
+
+func CreateTestClusterWithRollbackPeriod(t testing.T, newPeriod time.Duration, base *CoreConfig, opts *TestClusterOptions) *TestCluster {
+	rollbackPeriodLock.Lock()
+	defer rollbackPeriodLock.Unlock()
+
+	// Set the period
 	oldPeriod := rollbackPeriod
+
+	// Create and start a new cluster.
 	rollbackPeriod = newPeriod
-	return oldPeriod
+	cluster := NewTestCluster(t, base, opts)
+	cluster.Start()
+
+	// Reset the period
+	rollbackPeriod = oldPeriod
+
+	// Return the cluster.
+	return cluster
+}
+
+// MakeTestPluginDir creates a temporary directory suitable for holding plugins.
+// This helper also resolves symlinks to make tests happy on OS X.
+func MakeTestPluginDir(t testing.T) (string, func(t testing.T)) {
+	if t != nil {
+		t.Helper()
+	}
+
+	dir, err := os.MkdirTemp("", "")
+	if err != nil {
+		if t == nil {
+			panic(err)
+		}
+		t.Fatal(err)
+	}
+
+	// OSX tempdir are /var, but actually symlinked to /private/var
+	dir, err = filepath.EvalSymlinks(dir)
+	if err != nil {
+		if t == nil {
+			panic(err)
+		}
+		t.Fatal(err)
+	}
+
+	return dir, func(t testing.T) {
+		if err := os.RemoveAll(dir); err != nil {
+			if t == nil {
+				panic(err)
+			}
+			t.Fatal(err)
+		}
+	}
 }

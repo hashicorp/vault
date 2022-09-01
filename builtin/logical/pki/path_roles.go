@@ -933,7 +933,7 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 	// no_store implies generate_lease := false
 	if entry.NoStore {
 		*entry.GenerateLease = false
-		if ok && generateLease.(bool) || !ok && (*oldEntry.GenerateLease == true) {
+		if ok && generateLease.(bool) || !ok && *oldEntry.GenerateLease {
 			warning = "mutually exclusive values no_store=true and generate_lease=true were both specified; no_store=true takes priority"
 		}
 	} else {

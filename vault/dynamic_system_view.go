@@ -234,13 +234,19 @@ func (d dynamicSystemView) NewPluginClient(ctx context.Context, config pluginuti
 // LookupPlugin looks for a plugin with the given name in the plugin catalog. It
 // returns a PluginRunner or an error if no plugin was found.
 func (d dynamicSystemView) LookupPlugin(ctx context.Context, name string, pluginType consts.PluginType) (*pluginutil.PluginRunner, error) {
+	return d.LookupPluginVersion(ctx, name, pluginType, "")
+}
+
+// LookupPluginVersion looks for a plugin with the given name and version in the plugin catalog. It
+// returns a PluginRunner or an error if no plugin was found.
+func (d dynamicSystemView) LookupPluginVersion(ctx context.Context, name string, pluginType consts.PluginType, version string) (*pluginutil.PluginRunner, error) {
 	if d.core == nil {
 		return nil, fmt.Errorf("system view core is nil")
 	}
 	if d.core.pluginCatalog == nil {
 		return nil, fmt.Errorf("system view core plugin catalog is nil")
 	}
-	r, err := d.core.pluginCatalog.Get(ctx, name, pluginType)
+	r, err := d.core.pluginCatalog.Get(ctx, name, pluginType, version)
 	if err != nil {
 		return nil, err
 	}

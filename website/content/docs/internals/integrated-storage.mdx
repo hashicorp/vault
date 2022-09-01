@@ -31,6 +31,12 @@ Raft is a consensus algorithm that is based on
 to Paxos, Raft is designed to have fewer states and a simpler, more
 understandable algorithm.
 
+The Raft protocol will not be fully covered here. However, a high level description is 
+provided to help you build a mental model. Refer to the 
+complete specification that's described in [this paper](https://raft.github.io/raft.pdf).
+
+#### Terminology
+
 There are a few key terms to know when discussing Raft:
 
 - **Leader** - At any given time, the peer set elects a single node to be the leader.
@@ -55,16 +61,14 @@ and managing when an entry is committed. The leader node is also the active Vaul
 - **Committed Entry** - An entry is considered _committed_ when it is durably stored
   on a quorum of nodes. An entry is applied once its committed.
 
-
-Raft is a complex protocol and will not be covered here in detail. We will, however, attempt to provide
-a high level description which may be useful for building a mental model. For those who
-want a more comprehensive understanding of Raft, the full specification is available in this
-[paper](https://raft.github.io/raft.pdf)).
+#### Node States
 
 Raft nodes are always in one of three states: follower, candidate, or leader. All
 nodes initially start out as a follower. In this state, nodes can accept log entries
 from a leader and cast votes. If no entries are received for a period of time, nodes
 will self-promote to the candidate state. In the candidate state, nodes request votes from their peers. If a candidate receives a quorum of votes, then it is promoted to a leader. The leader must accept new log entries and replicate to all the other followers.
+
+#### Writing Logs
 
 Once a cluster has a leader, it is able to accept new log entries. A client can
 request that a leader append a new log entry (from Raft's perspective, a log entry
@@ -75,16 +79,20 @@ is application specific; in Vault's case, we use
 [BoltDB](https://github.com/etcd-io/bbolt) to maintain a cluster state. Vault's writes
 are block until they are _committed_ and _applied_.
 
+#### Compacting Logs
+
 It would be undesirable to allow a replicated log to grow in an unbounded
-fashion. Raft provides a mechanism by which the current state is snapshotted and the
-log is compacted. Because of the FSM abstraction, restoring the state of the FSM must
-result in the same state as a replay of old logs. This allows Raft to capture the FSM
-state at a point in time and then remove all the logs that were used to reach that
-state. This is performed automatically without user intervention and prevents unbounded
-disk usage while also minimizing the time spent replaying logs. One of the advantages of
-using BoltDB is that it allows Vault's snapshots to be very light weight. Since
-Vault's data is already persisted to disk in BoltDB, the snapshot process just
-needs to truncate the raft logs.
+fashion. Raft provides a mechanism by which the current state is saved to 
+snapshots and its related logs are compacted. Because of the FSM abstraction, 
+restoring the state of the FSM must result in the same state as a replay of old 
+logs. This allows Raft to capture the FSM state at a point in time and then remove 
+all the logs that were used to reach that state. This is performed automatically 
+without user intervention and prevents unbounded disk usage while also minimizing 
+the time spent replaying logs. One of the advantages of using BoltDB is that it 
+allows Vault's snapshots to be very light weight. Since Vault's data is already 
+persisted to disk in BoltDB, the snapshot process just needs to truncate the raft logs.
+
+#### Quorum
 
 Consensus is fault-tolerant while a cluster has quorum.
 If a quorum of nodes is unavailable, it is impossible to process log entries or reason
@@ -100,6 +108,8 @@ of 5 can tolerate 2 node failures. The recommended configuration is to either
 run 3 or 5 Vault servers per cluster. This maximizes availability without
 greatly sacrificing performance. The [deployment table](#deployment-table) below
 summarizes the potential cluster size options and the fault tolerance of each.
+
+#### Performance
 
 In terms of performance, Raft is comparable to Paxos. Assuming stable leadership,
 committing a log entry requires a single round trip to half of the cluster.
@@ -130,8 +140,59 @@ will be encrypted by Vault's barrier.
 
 Vault does not currently offer automated dead server cleanup. If you wish to
 decommission a node, or a node dies and must be replaced, the node must manually
-be removed from the cluster with the `remove peer`
-[command](/docs/commands/operator/raft#remove-peer).
+be removed from the cluster with the `remove peer` [command](/docs/commands/operator/raft#remove-peer).
+
+### Quorum Management
+
+#### Autopilot
+
+An [Autopilot feature](https://www.vaultproject.io/docs/concepts/integrated-storage/autopilot) 
+is available since 1.7.x & later versions that include configurable parameters 
+for when a node is treated as healthy before it's considered an eligible voter in the 
+quorum list. Other features which may be enabled include the ability to remove nodes 
+considered as dead from the quorum list after a certain period.
+
+Autopilot is enabled by default in Vault 1.7+. The default configuration values 
+should work well for most Vault deployments, but they can be changed if needed.
+
+Autopilot includes stabilization logic for nodes joining the cluster.
+Recently joined nodes are 
+accepted as non-voter initially until they are in sync with matching Raft index 
+and only after a stability thresholds are they then full voting members.
+Setting the stability threshold too low can result in cluster instability as nodes will be
+counted as voters before they are capable of voting.
+
+As of Vault 1.7, a dead server cleanup capability is available. With this feature 
+enabled, unhealthy nodes are automatically removed from the Raft cluster without 
+manual operator intervention. This is enabled via the [Autopilot API](https://www.vaultproject.io/api/system/storage/raftautopilot).
+If you wish to decommission a node manually, this can be done with the 
+`remove peer` [command](/docs/commands/operator/raft#remove-peer).
+
+#### Without Autopilot
+
+Older versions of Vault, 1.6.x & lower, as well as cases where Autopilot may be 
+disabled or misconfigured, behave differently.
+
+In scenarios involving those when a node joins a Raft cluster, it attempts to 
+catch up with the reset of the nodes through the data that it's replicating from 
+the leader. While in this initial synchronisation state, the node cannot 
+vote but is counted for the purposes of quorum. If a number of new nodes join 
+the cluster simultaneously or at similar times, and thereby exceeding the failure
+tolerance of the cluster, quorum may be lost and the cluster can fail.
+
+For example, consider a scenario where there is a 3-node cluster with a large 
+amount of data and a failure tolerance of 1. An additional 3 new nodes then 
+join the cluster. The cluster now consists of 6 nodes with a failure tolerance 
+of 2, but since all 3 nodes are still catching up, this will result in a loss of 
+quorum.
+
+* A 3 node cluster with a large amount of data that's at a failure tolerance of 1.
+* Another 3 new nodes then join the cluster together.
+* Now the cluster consists of 6 nodes with a failure tolerance of 2, but all 3 new nodes are still catching up, resulting in a loss of quorum.
+
+For this reason, we recommend ensuring new nodes have Raft indexes that are
+close to the leader before adding additional nodes. Raft indexes are visible via
+`vault status`.
 
 ### Deployment Table
 
@@ -186,3 +247,29 @@ failure scenario.
     </tr>
   </tbody>
 </table>
+
+### Minimums & Scaling
+
+The [Vault Reference Architecture](https://learn.hashicorp.com/tutorials/vault/raft-reference-architecture#recommended-architecture) 
+recommends a 5 node cluster to ensure a minimum failure tolerance of at least 2.
+
+It is good practise, wherever possible, to retain a failure tolerance of 2 or 
+more.
+
+A scaling approach can be pursued in the event of maintenance and other changes 
+where an additional pair of nodes (ie two) are added in an existing 5 node cluster 
+making for a 7 node cluster. Once new joiners are confirmed to be in sync then 
+the 2 older nodes can be stopped and or destroyed with the same processes being 
+repeated until all other nodes have been replaced. This use of additional nodes 
+on a temporary basis of a 7 node cluster arrangement, concluding back to 5 nodes, 
+may be one way to ensure sufficient failure tolerance is maintained and that 
+changes are made progressively in proportion to the cluster failure tolerance and 
+never exceeding the available failure tolerance in any given time.
+
+The intent with any change or scaling ought to be with the lose of quorum and 
+reduction of the quorum failure tolerances at the forefront and discouraging 
+any practises that compromise that.
+
+Scaling clusters up or down in pairs with 2 nodes each time also has the added 
+advantage of avoiding even numbers and it is always recommended to 
+allow for an odd number of total voters in any cluster.

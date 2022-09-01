@@ -64,6 +64,11 @@ var SignatureAlgorithmNames = map[string]x509.SignatureAlgorithm{
 	"ed25519":          x509.PureEd25519, // Duplicated for clarity; most won't expect the "Pure" prefix.
 }
 
+// OID for RFC 5280 Delta CRL Indicator CRL extension.
+//
+// > id-ce-deltaCRLIndicator OBJECT IDENTIFIER ::= { id-ce 27 }
+var DeltaCRLIndicatorOID = asn1.ObjectIdentifier([]int{2, 5, 29, 27})
+
 // GetHexFormatted returns the byte buffer formatted in hex with
 // the specified separator between bytes.
 func GetHexFormatted(buf []byte, sep string) string {
@@ -1295,4 +1300,27 @@ func CreateKeyBundleWithKeyGenerator(keyType string, keyBits int, randReader io.
 		return result, err
 	}
 	return result, nil
+}
+
+// CreateDeltaCRLIndicatorExt allows creating correctly formed delta CRLs
+// that point back to the last complete CRL that they're based on.
+func CreateDeltaCRLIndicatorExt(completeCRLNumber int64) (pkix.Extension, error) {
+	bigNum := big.NewInt(completeCRLNumber)
+	bigNumValue, err := asn1.Marshal(bigNum)
+	if err != nil {
+		return pkix.Extension{}, fmt.Errorf("unable to marshal complete CRL number (%v): %v", completeCRLNumber, err)
+	}
+	return pkix.Extension{
+		Id: DeltaCRLIndicatorOID,
+		// > When a conforming CRL issuer generates a delta CRL, the delta
+		// > CRL MUST include a critical delta CRL indicator extension.
+		Critical: true,
+		// This extension only includes the complete CRL number:
+		//
+		// > BaseCRLNumber ::= CRLNumber
+		//
+		// But, this needs to be encoded as a big number for encoding/asn1
+		// to work properly.
+		Value: bigNumValue,
+	}, nil
 }

@@ -349,6 +349,9 @@ func WaitForStandbyNode(t testing.T, core *vault.TestClusterCore) {
 		if isLeader, _, clusterAddr, _ := core.Core.Leader(); isLeader != true && clusterAddr != "" {
 			return
 		}
+		if core.Core.ActiveNodeReplicationState() == 0 {
+			return
+		}
 
 		time.Sleep(time.Second)
 	}

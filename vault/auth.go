@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	"github.com/hashicorp/go-uuid"
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -787,7 +787,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		backend, err = c.newCredentialBackend(ctx, entry, sysView, view)
 		if err != nil {
 			c.logger.Error("failed to create credential entry", "path", entry.Path, "error", err)
-			if plug, plugerr := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeCredential); plugerr == nil && !plug.Builtin {
+			if plug, plugerr := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeCredential, ""); plugerr == nil && !plug.Builtin {
 				// If we encounter an error instantiating the backend due to an error,
 				// skip backend initialization but register the entry to the mount table
 				// to preserve storage and path.
@@ -911,7 +911,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 
 	f, ok := c.credentialBackends[t]
 	if !ok {
-		plug, err := c.pluginCatalog.Get(ctx, t, consts.PluginTypeCredential)
+		plug, err := c.pluginCatalog.Get(ctx, t, consts.PluginTypeCredential, entry.Version)
 		if err != nil {
 			return nil, err
 		}
@@ -924,7 +924,6 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 			f = wrapFactoryCheckPerms(c, plugin.Factory)
 		}
 	}
-
 	// Set up conf to pass in plugin_name
 	conf := make(map[string]string)
 	for k, v := range entry.Options {
@@ -939,6 +938,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 	}
 
 	conf["plugin_type"] = consts.PluginTypeCredential.String()
+	conf["plugin_version"] = entry.Version
 
 	authLogger := c.baseLogger.Named(fmt.Sprintf("auth.%s.%s", t, entry.Accessor))
 	c.AddLogger(authLogger)

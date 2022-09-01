@@ -17,7 +17,8 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
+	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/audit"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/builtinplugins"
@@ -28,6 +29,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
@@ -170,6 +172,10 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"options": map[string]string{
 				"version": "1",
 			},
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 		"sys/": map[string]interface{}{
 			"type":                    "system",
@@ -183,9 +189,13 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"force_no_cache":              false,
 				"passthrough_request_headers": []string{"Accept"},
 			},
-			"local":     false,
-			"seal_wrap": true,
-			"options":   map[string]string(nil),
+			"local":           false,
+			"seal_wrap":       true,
+			"options":         map[string]string(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description":             "per-token private secret storage",
@@ -198,9 +208,13 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"max_lease_ttl":     resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 				"force_no_cache":    false,
 			},
-			"local":     true,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":           true,
+			"seal_wrap":       false,
+			"options":         map[string]string(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 		"identity/": map[string]interface{}{
 			"description":             "identity store",
@@ -214,9 +228,13 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"force_no_cache":              false,
 				"passthrough_request_headers": []string{"Authorization"},
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":           false,
+			"seal_wrap":       false,
+			"options":         map[string]string(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); len(diff) > 0 {
@@ -283,6 +301,10 @@ func TestSystemBackend_mount(t *testing.T) {
 			"options": map[string]string{
 				"version": "1",
 			},
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 		"sys/": map[string]interface{}{
 			"type":                    "system",
@@ -296,9 +318,13 @@ func TestSystemBackend_mount(t *testing.T) {
 				"force_no_cache":              false,
 				"passthrough_request_headers": []string{"Accept"},
 			},
-			"local":     false,
-			"seal_wrap": true,
-			"options":   map[string]string(nil),
+			"local":           false,
+			"seal_wrap":       true,
+			"options":         map[string]string(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description":             "per-token private secret storage",
@@ -311,9 +337,13 @@ func TestSystemBackend_mount(t *testing.T) {
 				"max_lease_ttl":     resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 				"force_no_cache":    false,
 			},
-			"local":     true,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":           true,
+			"seal_wrap":       false,
+			"options":         map[string]string(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 		"identity/": map[string]interface{}{
 			"description":             "identity store",
@@ -327,9 +357,13 @@ func TestSystemBackend_mount(t *testing.T) {
 				"force_no_cache":              false,
 				"passthrough_request_headers": []string{"Authorization"},
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":           false,
+			"seal_wrap":       false,
+			"options":         map[string]string(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 		"prod/secret/": map[string]interface{}{
 			"description":             "",
@@ -347,6 +381,10 @@ func TestSystemBackend_mount(t *testing.T) {
 			"options": map[string]string{
 				"version": "1",
 			},
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); len(diff) > 0 {
@@ -1816,9 +1854,13 @@ func TestSystemBackend_authTable(t *testing.T) {
 				"force_no_cache":    false,
 				"token_type":        "default-service",
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":           false,
+			"seal_wrap":       false,
+			"options":         map[string]string(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); diff != nil {
@@ -1880,9 +1922,13 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 				"force_no_cache":    false,
 				"token_type":        "default-service",
 			},
-			"local":     true,
-			"seal_wrap": true,
-			"options":   map[string]string{},
+			"local":           true,
+			"seal_wrap":       true,
+			"options":         map[string]string{},
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 		"token/": map[string]interface{}{
 			"type":                    "token",
@@ -1896,9 +1942,13 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 				"force_no_cache":    false,
 				"token_type":        "default-service",
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":           false,
+			"seal_wrap":       false,
+			"options":         map[string]string(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); diff != nil {
@@ -2891,21 +2941,25 @@ func TestSystemBackend_rotate(t *testing.T) {
 }
 
 func testSystemBackend(t *testing.T) logical.Backend {
+	t.Helper()
 	c, _, _ := TestCoreUnsealed(t)
 	return c.systemBackend
 }
 
 func testSystemBackendRaw(t *testing.T) logical.Backend {
+	t.Helper()
 	c, _, _ := TestCoreUnsealedRaw(t)
 	return c.systemBackend
 }
 
 func testCoreSystemBackend(t *testing.T) (*Core, logical.Backend, string) {
+	t.Helper()
 	c, _, root := TestCoreUnsealed(t)
 	return c, c.systemBackend, root
 }
 
 func testCoreSystemBackendRaw(t *testing.T) (*Core, logical.Backend, string) {
+	t.Helper()
 	c, _, root := TestCoreUnsealedRaw(t)
 	return c, c.systemBackend, root
 }
@@ -2942,6 +2996,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 		"args":    []string(nil),
 		"sha256":  "",
 		"builtin": true,
+		"version": c.pluginCatalog.getBuiltinVersion(consts.PluginTypeDatabase, "mysql-database-plugin"),
 	}
 	if !reflect.DeepEqual(actualRespData, expectedRespData) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actualRespData, expectedRespData)
@@ -2987,6 +3042,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 		"args":    []string{"--test"},
 		"sha256":  "31",
 		"builtin": false,
+		"version": "",
 	}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actual, expected)
@@ -3000,6 +3056,51 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	}
 
 	req = logical.TestRequest(t, logical.ReadOperation, "plugins/catalog/database/test-plugin")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if resp != nil || err != nil {
+		t.Fatalf("expected nil response, plugin not deleted correctly got resp: %v, err: %v", resp, err)
+	}
+
+	// Add a versioned plugin, and check we get the version back in the right form when we read.
+	req = logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
+	req.Data["version"] = "v0.1.0"
+	req.Data["sha_256"] = hex.EncodeToString([]byte{'1'})
+	req.Data["command"] = command
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || resp.Error() != nil {
+		t.Fatalf("err: %v %v", err, resp.Error())
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/catalog/database/test-plugin")
+	req.Data["version"] = "v0.1.0"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	actual = resp.Data
+	expected = map[string]interface{}{
+		"name":    "test-plugin",
+		"command": filepath.Base(file.Name()),
+		"args":    []string{"--test"},
+		"sha256":  "31",
+		"builtin": false,
+		"version": "v0.1.0",
+	}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actual, expected)
+	}
+
+	// Delete versioned plugin
+	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/catalog/database/test-plugin")
+	req.Data["version"] = "0.1.0"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/catalog/database/test-plugin")
+	req.Data["version"] = "0.1.0"
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if resp != nil || err != nil {
 		t.Fatalf("expected nil response, plugin not deleted correctly got resp: %v, err: %v", resp, err)
@@ -3221,6 +3322,10 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"options": map[string]string{
 					"version": "1",
 				},
+				"sha":             "",
+				"running_sha":     "",
+				"version":         "",
+				"running_version": "",
 			},
 			"sys/": map[string]interface{}{
 				"type":                    "system",
@@ -3234,9 +3339,13 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 					"force_no_cache":              false,
 					"passthrough_request_headers": []string{"Accept"},
 				},
-				"local":     false,
-				"seal_wrap": true,
-				"options":   map[string]string(nil),
+				"local":           false,
+				"seal_wrap":       true,
+				"options":         map[string]string(nil),
+				"sha":             "",
+				"running_sha":     "",
+				"version":         "",
+				"running_version": "",
 			},
 			"cubbyhole/": map[string]interface{}{
 				"description":             "per-token private secret storage",
@@ -3249,9 +3358,13 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 					"max_lease_ttl":     resp.Data["secret"].(map[string]interface{})["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 					"force_no_cache":    false,
 				},
-				"local":     true,
-				"seal_wrap": false,
-				"options":   map[string]string(nil),
+				"local":           true,
+				"seal_wrap":       false,
+				"options":         map[string]string(nil),
+				"sha":             "",
+				"running_sha":     "",
+				"version":         "",
+				"running_version": "",
 			},
 			"identity/": map[string]interface{}{
 				"description":             "identity store",
@@ -3265,9 +3378,13 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 					"force_no_cache":              false,
 					"passthrough_request_headers": []string{"Authorization"},
 				},
-				"local":     false,
-				"seal_wrap": false,
-				"options":   map[string]string(nil),
+				"local":           false,
+				"seal_wrap":       false,
+				"options":         map[string]string(nil),
+				"sha":             "",
+				"running_sha":     "",
+				"version":         "",
+				"running_version": "",
 			},
 		},
 		"auth": map[string]interface{}{
@@ -3286,6 +3403,10 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"uuid":                    resp.Data["auth"].(map[string]interface{})["token/"].(map[string]interface{})["uuid"],
 				"local":                   false,
 				"seal_wrap":               false,
+				"sha":                     "",
+				"running_sha":             "",
+				"version":                 "",
+				"running_version":         "",
 			},
 		},
 	}
@@ -4874,6 +4995,79 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 						t.Errorf("expected level of logger %q to match original config", logger.Name())
 					}
 				}
+			}
+		})
+	}
+}
+
+func TestSortVersionedPlugins(t *testing.T) {
+	versionedPlugin := func(typ consts.PluginType, name string, version string, builtin bool) pluginutil.VersionedPlugin {
+		return pluginutil.VersionedPlugin{
+			Type:    typ.String(),
+			Name:    name,
+			Version: version,
+			SHA256:  "",
+			Builtin: builtin,
+			SemanticVersion: func() *semver.Version {
+				if version != "" {
+					return semver.Must(semver.NewVersion(version))
+				}
+
+				return semver.Must(semver.NewVersion("0.0.0"))
+			}(),
+		}
+	}
+
+	differingTypes := []pluginutil.VersionedPlugin{
+		versionedPlugin(consts.PluginTypeSecrets, "c", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeDatabase, "c", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", false),
+	}
+	differingNames := []pluginutil.VersionedPlugin{
+		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "b", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "a", "1.0.0", false),
+	}
+	differingVersions := []pluginutil.VersionedPlugin{
+		versionedPlugin(consts.PluginTypeCredential, "c", "10.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "2.0.1", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "2.1.0", false),
+	}
+	versionedUnversionedAndBuiltin := []pluginutil.VersionedPlugin{
+		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", true),
+	}
+
+	for name, tc := range map[string][]pluginutil.VersionedPlugin{
+		"ascending types":    differingTypes,
+		"ascending names":    differingNames,
+		"ascending versions": differingVersions,
+		// Include differing versions twice so we can test out equality too.
+		"differing types, names and versions": append(differingTypes,
+			append(differingNames,
+				append(differingVersions, differingVersions...)...)...),
+		"mix of unversioned, versioned, and builtin": versionedUnversionedAndBuiltin,
+	} {
+		t.Run(name, func(t *testing.T) {
+			sortVersionedPlugins(tc)
+			for i := 1; i < len(tc); i++ {
+				previous := tc[i-1]
+				current := tc[i]
+				if current.Type > previous.Type {
+					continue
+				}
+				if current.Name > previous.Name {
+					continue
+				}
+				if current.SemanticVersion.GreaterThan(previous.SemanticVersion) {
+					continue
+				}
+				if current.Type == previous.Type && current.Name == previous.Name && current.SemanticVersion.Equal(previous.SemanticVersion) {
+					continue
+				}
+
+				t.Fatalf("versioned plugins at index %d and %d were not properly sorted: %+v, %+v", i-1, i, previous, current)
 			}
 		})
 	}
