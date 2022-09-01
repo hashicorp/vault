@@ -583,8 +583,6 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 	// list, and instead have them update the counter directly.  We need to do this so that we are looking at a static
 	// slice of possibly double counted serials.  Note that certsCounted is computed before the storage operation, so
 	// there may be some delay here.
-	metrics.SetGauge([]string{"secrets", "pki", "total_certificates_stored"}, float32(*b.certCount))
-	metrics.SetGauge([]string{"secrets", "pki", "total_revoked_certificates_stored"}, float32(*b.revokedCertCount))
 
 	// Sort the listed-entries first, to accommodate that delay.
 	sort.Slice(entries, func(i, j int) bool {
@@ -611,7 +609,7 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 		}
 		if entries[listEntriesIndex] == b.possibleDoubleCountedSerials[possibleDoubleCountIndex] {
 			// This represents a double-counted entry
-			b.decrementTotalCertificatesCount()
+			b.decrementTotalCertificatesCountNoReport()
 			listEntriesIndex = listEntriesIndex + 1
 			possibleDoubleCountIndex = possibleDoubleCountIndex + 1
 			continue
@@ -641,7 +639,7 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 		}
 		if revokedEntries[listRevokedEntriesIndex] == b.possibleDoubleCountedRevokedSerials[possibleRevokedDoubleCountIndex] {
 			// This represents a double-counted revoked entry
-			b.decrementTotalRevokedCertificatesCount()
+			b.decrementTotalRevokedCertificatesCountNoReport()
 			listRevokedEntriesIndex = listRevokedEntriesIndex + 1
 			possibleRevokedDoubleCountIndex = possibleRevokedDoubleCountIndex + 1
 			continue
@@ -659,6 +657,9 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 	b.possibleDoubleCountedRevokedSerials = nil
 	b.possibleDoubleCountedSerials = nil
 
+	metrics.SetGauge([]string{"secrets", "pki", "total_certificates_stored"}, float32(*b.certCount))
+	metrics.SetGauge([]string{"secrets", "pki", "total_revoked_certificates_stored"}, float32(*b.revokedCertCount))
+
 	return nil
 }
 
@@ -675,9 +676,15 @@ func (b *backend) incrementTotalCertificatesCount(certsCounted bool, newSerial s
 	}
 }
 
-func (b *backend) decrementTotalCertificatesCount() {
-	atomic.AddUint32(b.certCount, ^uint32(0))
+func (b *backend) decrementTotalCertificatesCountReport() {
+	b.decrementTotalCertificatesCountNoReport()
 	metrics.SetGauge([]string{"secrets", "pki", "total_certificates_stored"}, float32(*b.certCount))
+}
+
+// Called directly only by the initialize function to deduplicate the count, when we don't have a full count yet
+func (b *backend) decrementTotalCertificatesCountNoReport() {
+	atomic.AddUint32(b.certCount, ^uint32(0))
+
 }
 
 // The "certsCounted" boolean here should be loaded from the backend certsCounted before the corresponding storage call:
@@ -693,7 +700,12 @@ func (b *backend) incrementTotalRevokedCertificatesCount(certsCounted bool, newS
 	}
 }
 
-func (b *backend) decrementTotalRevokedCertificatesCount() {
-	atomic.AddUint32(b.revokedCertCount, ^uint32(0))
+func (b *backend) decrementTotalRevokedCertificatesCountReport() {
+	b.decrementTotalRevokedCertificatesCountNoReport()
 	metrics.SetGauge([]string{"secrets", "pki", "total_revoked_certificates_stored"}, float32(*b.revokedCertCount))
+}
+
+// Called directly only by the initialize function to deduplicate the count, when we don't have a full count yet
+func (b *backend) decrementTotalRevokedCertificatesCountNoReport() {
+	atomic.AddUint32(b.revokedCertCount, ^uint32(0))
 }
