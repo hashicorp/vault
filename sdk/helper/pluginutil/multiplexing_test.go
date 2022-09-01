@@ -16,7 +16,7 @@ func TestMultiplexingSupported(t *testing.T) {
 		cc   grpc.ClientConnInterface
 		name string
 	}
-	
+
 	type testCase struct {
 		name    string
 		args    args
@@ -42,6 +42,15 @@ func TestMultiplexingSupported(t *testing.T) {
 				cc:   &MockClientConnInterfaceNoop{},
 				name: "optedOutPlugin"},
 			env:  "optedOutPlugin",
+			want: false,
+		},
+		{
+			name: "multiplexing is not supported if plugin among one of the opted out",
+			args: args{
+				ctx:  context.Background(),
+				cc:   &MockClientConnInterfaceNoop{},
+				name: "optedOutPlugin"},
+			env:  "firstPlugin,optedOutPlugin,otherPlugin",
 			want: false,
 		},
 		{
