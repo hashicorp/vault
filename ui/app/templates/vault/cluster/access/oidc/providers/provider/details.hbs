@@ -4,6 +4,7 @@
       <ToolTip @verticalPosition="above" as |T|>
         <T.Trigger tabindex="-1">
           <ConfirmAction
+            data-test-oidc-provider-delete
             @disabled={{eq this.model.name "default"}}
             @buttonClasses="toolbar-link"
             @onConfirmAction={{this.delete}}
@@ -25,7 +26,10 @@
       <div class="toolbar-separator"></div>
     {{/if}}
     {{#if this.model.canEdit}}
-      <ToolbarLink @params={{array "vault.cluster.access.oidc.providers.provider.edit" this.model.name}}>
+      <ToolbarLink
+        data-test-oidc-provider-edit
+        @params={{array "vault.cluster.access.oidc.providers.provider.edit" this.model.name}}
+      >
         Edit provider
       </ToolbarLink>
     {{/if}}

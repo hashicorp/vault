@@ -43,6 +43,14 @@ export const SELECTORS = {
   keyRotateButton: '[data-test-oidc-key-rotate] button',
   keyDetailsTab: '[data-test-oidc-key-details]',
   keyClientsTab: '[data-test-oidc-key-clients]',
+
+  // provider route
+  providerSaveButton: '[data-test-oidc-provider-save]',
+  providerCancelButton: '[data-test-oidc-provider-cancel]',
+  providerDeleteButton: '[data-test-oidc-provider-delete] button',
+  providerEditButton: '[data-test-oidc-provider-edit]',
+  providerDetailsTab: '[data-test-oidc-provider-details]',
+  providerClientsTab: '[data-test-oidc-provider-clients]',
 };
 
 export function overrideMirageResponse(httpStatus, data) {
@@ -106,9 +114,9 @@ const deleteModelRecord = async (model) => {
 // MOCK RESPONSES:
 
 export const CLIENT_LIST_RESPONSE = {
-  keys: ['some-app', 'app-1'],
+  keys: ['test-app', 'app-1'],
   key_info: {
-    'some-app': {
+    'test-app': {
       assignments: ['allow_all'],
       client_id: 'whaT7KB0C3iBH1l3rXhd5HPf0n6vXU0s',
       client_secret: 'hvo_secret_nkJSTu2NVYqylXwFbFijsTxJHg4Ic4gqSJw7uOZ4FbSXcObngDkKoVsvyndrf2O8',
@@ -155,7 +163,9 @@ export const SCOPE_LIST_RESPONSE = {
 
 export const SCOPE_DATA_RESPONSE = {
   description: 'this is a test',
-  template: '{ test }',
+  template: `{
+    "groups": {{identity.entity.groups.names}}
+  }`,
 };
 
 export const PROVIDER_LIST_RESPONSE = {

@@ -65,7 +65,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
     assert
       .dom('[data-test-oidc-provider-title]')
       .hasText('Create provider', 'Form title renders correct text');
-    assert.dom('[data-test-oidc-provider-save]').hasText('Create', 'Save button has correct text');
+    assert.dom(SELECTORS.providerSaveButton).hasText('Create', 'Save button has correct text');
     assert
       .dom('[data-test-input="issuer"]')
       .hasAttribute('placeholder', 'e.g. https://example.com:8200', 'issuer placeholder text is correct');
@@ -75,7 +75,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
 
     // check validation errors
     await fillIn('[data-test-input="name"]', ' ');
-    await click('[data-test-oidc-provider-save]');
+    await click(SELECTORS.providerSaveButton);
 
     let validationErrors = findAll(SELECTORS.inlineAlert);
     assert
@@ -88,7 +88,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       .dom('[data-test-component="search-select"]#allowedClientIds')
       .exists('Limited radio button shows clients search select');
     await click('[data-test-component="search-select"]#allowedClientIds .ember-basic-dropdown-trigger');
-    assert.dom('li.ember-power-select-option').hasTextContaining('some-app', 'dropdown renders client name');
+    assert.dom('li.ember-power-select-option').hasTextContaining('test-app', 'dropdown renders client name');
     assert.dom('[data-test-smaller-id]').exists('renders smaller client id in dropdown');
 
     await click('label[for=allow-all]');
@@ -97,7 +97,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       .doesNotExist('Allow all radio button hides search select');
 
     await fillIn('[data-test-input="name"]', 'test-provider');
-    await click('[data-test-oidc-provider-save]');
+    await click(SELECTORS.providerSaveButton);
   });
 
   test('it should update provider', async function (assert) {
@@ -128,7 +128,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
     `);
 
     assert.dom('[data-test-oidc-provider-title]').hasText('Edit provider', 'Title renders correct text');
-    assert.dom('[data-test-oidc-provider-save]').hasText('Update', 'Save button has correct text');
+    assert.dom(SELECTORS.providerSaveButton).hasText('Update', 'Save button has correct text');
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
     assert
       .dom('[data-test-input="name"]')
@@ -139,7 +139,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
 
     assert.dom('[data-test-selected-option]').hasText('test-scope', 'model scope is selected');
     assert.dom('input#allow-all').isChecked('Allow all radio button is selected');
-    await click('[data-test-oidc-provider-save]');
+    await click(SELECTORS.providerSaveButton);
   });
 
   test('it should rollback attributes or unload record on cancel', async function (assert) {
@@ -155,7 +155,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       />
     `);
 
-    await click('[data-test-oidc-provider-cancel]');
+    await click(SELECTORS.providerCancelButton);
     assert.true(this.model.isDestroyed, 'New model is unloaded on cancel');
 
     this.store.pushPayload('oidc/provider', {
@@ -177,7 +177,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
     `);
 
     await click('label[for=limited]');
-    await click('[data-test-oidc-provider-cancel]');
+    await click(SELECTORS.providerCancelButton);
     assert.equal(this.model.allowed_client_ids, undefined, 'Model attributes rolled back on cancel');
   });
 
@@ -215,7 +215,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       />
     `);
     await fillIn('[data-test-input="name"]', 'some-provider');
-    await click('[data-test-oidc-provider-save]');
+    await click(SELECTORS.providerSaveButton);
     assert
       .dom(SELECTORS.inlineAlert)
       .hasText('There was an error submitting this form.', 'form error alert renders ');

@@ -51,20 +51,20 @@ module('Acceptance | oidc-config/keys', function (hooks) {
     await click('[data-test-tab="keys"]');
     assert.dom('[data-test-tab="keys"]').hasClass('active', 'keys tab is active');
     assert.equal(currentURL(), '/vault/access/oidc/keys');
-    assert.dom('[data-test-oidc-key-linked-block]').hasText('default');
+    assert.dom('[data-test-oidc-key-linked-block]').hasText('default', 'index page lists default key');
     await click('[data-test-popup-menu-trigger]');
 
     await click('[data-test-oidc-key-menu-link="edit"]');
     assert.equal(
       currentRouteName(),
       'vault.cluster.access.oidc.keys.key.edit',
-      'linked block popup menu navigates to edit'
+      'key linked block popup menu navigates to edit'
     );
     await click(SELECTORS.keyCancelButton);
     assert.equal(
       currentRouteName(),
       'vault.cluster.access.oidc.keys.key.details',
-      'edit form navigates back to details on cancel'
+      'key edit form navigates back to details on cancel'
     );
 
     // navigate to details from index page
@@ -72,7 +72,7 @@ module('Acceptance | oidc-config/keys', function (hooks) {
     assert.equal(
       currentRouteName(),
       'vault.cluster.access.oidc.keys.index',
-      'breadcrumb navigates back to list view'
+      'keys breadcrumb navigates back to list view'
     );
     await click('[data-test-popup-menu-trigger]');
     await click('[data-test-oidc-key-menu-link="details"]');
@@ -92,7 +92,7 @@ module('Acceptance | oidc-config/keys', function (hooks) {
     await visit(OIDC_BASE_URL + '/keys');
     // create a new key
     await click('[data-test-oidc-key-create]');
-    assert.equal(currentRouteName(), 'vault.cluster.access.oidc.keys.create', 'navigates to create form');
+    assert.equal(currentRouteName(), 'vault.cluster.access.oidc.keys.create', 'navigates to key create form');
     await fillIn('[data-test-input="name"]', 'test-key');
     // toggle ttls to false, testing it sets correct default duration
     await click('[data-test-input="rotationPeriod"]');

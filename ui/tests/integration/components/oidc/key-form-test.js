@@ -194,7 +194,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
         @onSave={{this.onSave}}
       />
     `);
-    await fillIn('[data-test-input="name"]', 'some-app');
+    await fillIn('[data-test-input="name"]', 'test-app');
     await click(SELECTORS.keySaveButton);
     assert
       .dom(SELECTORS.inlineAlert)
