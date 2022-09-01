@@ -46,13 +46,13 @@ module('Integration | Component | oidc/key-form', function (hooks) {
     `);
 
     assert.dom('[data-test-oidc-key-title]').hasText('Create key', 'Form title renders correct text');
-    assert.dom('[data-test-oidc-key-save]').hasText('Create', 'Save button has correct text');
+    assert.dom(SELECTORS.keySaveButton).hasText('Create', 'Save button has correct text');
     assert.dom('[data-test-input="algorithm"]').hasValue('RS256', 'default algorithm is correct');
     assert.equal(findAll('[data-test-field]').length, 4, 'renders all input fields');
 
     // check validation errors
     await fillIn('[data-test-input="name"]', ' ');
-    await click('[data-test-oidc-key-save]');
+    await click(SELECTORS.keySaveButton);
 
     let validationErrors = findAll(SELECTORS.inlineAlert);
     assert
@@ -62,7 +62,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
 
     assert.dom('label[for=limited] input').isDisabled('limit radio button disabled on create');
     await fillIn('[data-test-input="name"]', 'test-key');
-    await click('[data-test-oidc-key-save]');
+    await click(SELECTORS.keySaveButton);
   });
 
   test('it should update key and limit access to selected applications', async function (assert) {
@@ -91,7 +91,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
     `);
 
     assert.dom('[data-test-oidc-key-title]').hasText('Edit key', 'Title renders correct text');
-    assert.dom('[data-test-oidc-key-save]').hasText('Update', 'Save button has correct text');
+    assert.dom(SELECTORS.keySaveButton).hasText('Update', 'Save button has correct text');
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
     assert.dom('[data-test-input="name"]').hasValue('test-key', 'Name input is populated with model value');
     assert.dom('input#allow-all').isChecked('Allow all radio button is selected');
@@ -112,7 +112,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
       .dom('[data-test-component="search-select"]#allowedClientIds')
       .doesNotExist('Allow all radio button hides search select');
 
-    await click('[data-test-oidc-key-save]');
+    await click(SELECTORS.keySaveButton);
   });
 
   test('it should rollback attributes or unload record on cancel', async function (assert) {
@@ -128,7 +128,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
       />
     `);
 
-    await click('[data-test-oidc-key-cancel]');
+    await click(SELECTORS.keyCancelButton);
     assert.true(this.model.isDestroyed, 'New model is unloaded on cancel');
 
     this.store.pushPayload('oidc/key', {
@@ -148,7 +148,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
     `);
 
     await click('label[for=limited]');
-    await click('[data-test-oidc-key-cancel]');
+    await click(SELECTORS.keyCancelButton);
     assert.equal(this.model.allowed_client_ids, undefined, 'Model attributes rolled back on cancel');
   });
 
@@ -195,7 +195,7 @@ module('Integration | Component | oidc/key-form', function (hooks) {
       />
     `);
     await fillIn('[data-test-input="name"]', 'some-app');
-    await click('[data-test-oidc-key-save]');
+    await click(SELECTORS.keySaveButton);
     assert
       .dom(SELECTORS.inlineAlert)
       .hasText('There was an error submitting this form.', 'form error alert renders ');

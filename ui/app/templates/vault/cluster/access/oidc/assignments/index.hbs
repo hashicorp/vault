@@ -44,7 +44,7 @@
                     <LinkTo
                       @route="vault.cluster.access.oidc.assignments.assignment.details"
                       @model={{model.name}}
-                      @disabled={{not model.canRead}}
+                      @disabled={{eq model.canRead false}}
                       data-test-oidc-assignment-menu-link="details"
                     >
                       Details
@@ -54,7 +54,7 @@
                     <LinkTo
                       @route="vault.cluster.access.oidc.assignments.assignment.edit"
                       @model={{model.name}}
-                      @disabled={{not model.canEdit}}
+                      @disabled={{eq model.canEdit false}}
                       data-test-oidc-assignment-menu-link="edit"
                     >
                       Edit

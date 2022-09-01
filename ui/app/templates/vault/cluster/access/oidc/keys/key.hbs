@@ -5,7 +5,7 @@
         <ul>
           <li>
             <span class="sep">&#x0002f;</span>
-            <LinkTo @route="vault.cluster.access.oidc.keys">
+            <LinkTo @route="vault.cluster.access.oidc.keys" data-test-breadcrumb-link="oidc-keys">
               Keys
             </LinkTo>
           </li>
@@ -22,10 +22,10 @@
   <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
     <nav class="tabs" aria-label="tabs">
       <ul>
-        <LinkTo @route="vault.cluster.access.oidc.keys.key.details" @model={{this.model}}>
+        <LinkTo data-test-oidc-key-details @route="vault.cluster.access.oidc.keys.key.details" @model={{this.model}}>
           Details
         </LinkTo>
-        <LinkTo @route="vault.cluster.access.oidc.keys.key.clients" @model={{this.model}}>
+        <LinkTo data-test-oidc-key-clients @route="vault.cluster.access.oidc.keys.key.clients" @model={{this.model}}>
           Applications
         </LinkTo>
       </ul>

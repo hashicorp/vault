@@ -43,13 +43,14 @@ module('Acceptance | oidc-config/assignments', function (hooks) {
   });
 
   test('it renders only allow_all when no assignments are configured', async function (assert) {
-    assert.expect(3);
+    assert.expect(4);
 
     //* clear out test state
     await clearRecord(this.store, 'oidc/assignment', 'test-assignment');
 
     await visit(ASSIGNMENTS_URL);
     assert.equal(currentURL(), '/vault/access/oidc/assignments');
+    assert.dom('[data-test-tab="assignments"]').hasClass('active', 'assignments tab is active');
     assert
       .dom('[data-test-oidc-assignment-linked-block]')
       .includesText('allow_all', 'displays default assignment');
@@ -106,7 +107,7 @@ module('Acceptance | oidc-config/assignments', function (hooks) {
 
     // delete the assignment
     await click(SELECTORS.assignmentDeleteButton);
-    await click(SELECTORS.confirmDeleteButton);
+    await click(SELECTORS.confirmActionButton);
     assert.equal(
       flashMessage.latestMessage,
       'Assignment deleted successfully',

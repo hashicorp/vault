@@ -4,6 +4,7 @@
       <ToolTip @verticalPosition="above" as |T|>
         <T.Trigger tabindex="-1">
           <ConfirmAction
+            data-test-oidc-key-delete
             @disabled={{eq this.model.name "default"}}
             @buttonClasses="toolbar-link"
             @onConfirmAction={{this.delete}}
@@ -26,6 +27,7 @@
     {{/if}}
     {{#if this.model.canRotate}}
       <ConfirmAction
+        data-test-oidc-key-rotate
         @buttonClasses="toolbar-link"
         @onConfirmAction={{perform this.rotateKey}}
         @confirmTitle="Rotate this key?"
@@ -37,7 +39,7 @@
       </ConfirmAction>
     {{/if}}
     {{#if this.model.canEdit}}
-      <ToolbarLink @params={{array "vault.cluster.access.oidc.keys.key.edit" this.model.name}}>
+      <ToolbarLink data-test-oidc-key-edit @params={{array "vault.cluster.access.oidc.keys.key.edit" this.model.name}}>
         Edit key
       </ToolbarLink>
     {{/if}}

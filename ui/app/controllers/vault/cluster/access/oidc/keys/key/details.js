@@ -13,9 +13,9 @@ export default class OidcKeyDetailsController extends Controller {
   *rotateKey() {
     const adapter = this.store.adapterFor('oidc/key');
     yield adapter
-      .rotate(this.model.name, this.model.verificationTTL)
+      .rotate(this.model.name, this.model.verificationTtl)
       .then(() => {
-        this.flashMessages.success(`Success: ${this.model.name} connection was rotated`);
+        this.flashMessages.success(`Success: ${this.model.name} connection was rotated.`);
       })
       .catch((e) => {
         this.flashMessages.danger(e.errors);
