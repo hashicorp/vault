@@ -3,9 +3,10 @@ package pluginutil
 import (
 	"context"
 	"fmt"
-	"google.golang.org/grpc"
 	"reflect"
 	"testing"
+
+	"google.golang.org/grpc"
 
 	"google.golang.org/grpc/metadata"
 )
@@ -31,7 +32,8 @@ func TestMultiplexingSupported(t *testing.T) {
 			args: args{
 				ctx:  context.Background(),
 				cc:   &MockClientConnInterfaceNoop{},
-				name: "plugin"},
+				name: "plugin",
+			},
 			env:  "",
 			want: true,
 		},
@@ -40,7 +42,8 @@ func TestMultiplexingSupported(t *testing.T) {
 			args: args{
 				ctx:  context.Background(),
 				cc:   &MockClientConnInterfaceNoop{},
-				name: "optedOutPlugin"},
+				name: "optedOutPlugin",
+			},
 			env:  "optedOutPlugin",
 			want: false,
 		},
@@ -49,7 +52,8 @@ func TestMultiplexingSupported(t *testing.T) {
 			args: args{
 				ctx:  context.Background(),
 				cc:   &MockClientConnInterfaceNoop{},
-				name: "optedOutPlugin"},
+				name: "optedOutPlugin",
+			},
 			env:  "firstPlugin,optedOutPlugin,otherPlugin",
 			want: false,
 		},
@@ -58,7 +62,8 @@ func TestMultiplexingSupported(t *testing.T) {
 			args: args{
 				ctx:  context.Background(),
 				cc:   &MockClientConnInterfaceNoop{},
-				name: "plugin"},
+				name: "plugin",
+			},
 			env:  "optedOutPlugin",
 			want: true,
 		},
