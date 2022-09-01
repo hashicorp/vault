@@ -560,11 +560,12 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 }
 
 func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
-	b.tidyStatusLock.Lock()
-	defer b.tidyStatusLock.Unlock()
+	b.tidyStatusLock.RLock()
+	defer b.tidyStatusLock.RUnlock()
 	// For performance reasons, we can't lock on issuance/storage of certs until a list operation completes,
 	// but we want to limit possible miscounts / double-counts to over-counting, so we take the tidy lock which
-	// prevents (most) deletions
+	// prevents (most) deletions - in particular we take a read lock (sufficient to block the write lock in
+	// tidyStatusStart while allowing tidy to still acquire a read lock to report via its endpoint)
 
 	entries, err := b.storage.List(ctx, "certs/")
 	if err != nil {

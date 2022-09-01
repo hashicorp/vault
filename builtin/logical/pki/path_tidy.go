@@ -493,6 +493,8 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 			"cert_store_deleted_count":              nil,
 			"revoked_cert_deleted_count":            nil,
 			"missing_issuer_cert_count":             nil,
+			"current_cert_store_count":              nil,
+			"current_revoked_cert_count":            nil,
 		},
 	}
 
@@ -529,6 +531,14 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	case tidyStatusCancelled:
 		resp.Data["state"] = "Cancelled"
 		resp.Data["time_finished"] = b.tidyStatus.timeFinished
+	}
+
+	resp.Data["current_cert_store_count"] = b.certCount
+	resp.Data["current_revoked_cert_count"] = b.revokedCertCount
+
+	if !b.certsCounted.Load() {
+		resp.AddWarning("Certificates in storage are still being counted, current counts provided may be " +
+			"inaccurate")
 	}
 
 	return resp, nil
