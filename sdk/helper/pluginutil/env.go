@@ -33,7 +33,7 @@ const (
 	PluginCACertPEMEnv = "VAULT_TESTING_PLUGIN_CA_PEM"
 
 	// PluginMultiplexingOptOut is a comma separated list of plugin names opted-out
-	// of the multiplexing feature even if the plugins supports it
+	// of the multiplexing feature; for emergencies if mplexing ever causes issues
 	PluginMultiplexingOptOut = "VAULT_PLUGIN_MULTIPLEXING_OPT_OUT"
 )
 
