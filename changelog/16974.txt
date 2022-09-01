@@ -1,0 +1,3 @@
+```release-note:feature
+cli: Add a `--dev-no-kv` flag to prevent auto mounting a key-value secret backend when running a dev server
+```
