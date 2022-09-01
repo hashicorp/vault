@@ -685,7 +685,6 @@ func (b *backend) decrementTotalCertificatesCountReport() {
 // Called directly only by the initialize function to deduplicate the count, when we don't have a full count yet
 func (b *backend) decrementTotalCertificatesCountNoReport() {
 	atomic.AddUint32(b.certCount, ^uint32(0))
-
 }
 
 // The "certsCounted" boolean here should be loaded from the backend certsCounted before the corresponding storage call:
