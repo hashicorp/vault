@@ -447,6 +447,9 @@ func (p *Predict) policies() []string {
 	return policies
 }
 
+// mountInfos returns a map with mount paths as keys and MountOutputs as values
+// for the Vault server which the client is configured to communicate with.
+// Returns error if server communication fails.
 func (p *Predict) mountInfos() (map[string]*api.MountOutput, error) {
 	client := p.Client()
 	if client == nil {

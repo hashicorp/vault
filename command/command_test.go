@@ -47,11 +47,6 @@ var (
 		"transit":        transit.Factory,
 		"kv":             kv.Factory,
 	}
-
-	defaultTestClusterOptions = &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		NumCores:    1, // Default is 3, but we don't need that many
-	}
 )
 
 // assertNoTabs asserts the CLI help has no tab characters.
@@ -90,7 +85,7 @@ func testVaultServerAllBackends(tb testing.TB) (*api.Client, func()) {
 		AuditBackends:      auditBackends,
 		LogicalBackends:    logicalBackends,
 		BuiltinRegistry:    builtinplugins.Registry,
-	}, defaultTestClusterOptions)
+	})
 	return client, closer
 }
 
@@ -108,7 +103,7 @@ func testVaultServerUnsealWithKVVersion(tb testing.TB, kvVersion string) (*api.C
 		JSONFormat: logging.ParseEnvLogFormat() == logging.JSONFormat,
 	})
 
-	return testVaultServerCoreConfig(tb, &vault.CoreConfig{
+	return testVaultServerCoreConfigWithOpts(tb, &vault.CoreConfig{
 		DisableMlock:       true,
 		DisableCache:       true,
 		Logger:             logger,
@@ -138,12 +133,19 @@ func testVaultServerPluginDir(tb testing.TB, pluginDir string) (*api.Client, []s
 		LogicalBackends:    defaultVaultLogicalBackends,
 		PluginDirectory:    pluginDir,
 		BuiltinRegistry:    builtinplugins.Registry,
-	}, defaultTestClusterOptions)
+	})
+}
+
+func testVaultServerCoreConfig(tb testing.TB, coreConfig *vault.CoreConfig) (*api.Client, []string, func()) {
+	return testVaultServerCoreConfigWithOpts(tb, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1, // Default is 3, but we don't need that many
+	})
 }
 
 // testVaultServerCoreConfig creates a new vault cluster with the given core
 // configuration. This is a lower-level test helper.
-func testVaultServerCoreConfig(tb testing.TB, coreConfig *vault.CoreConfig, opts *vault.TestClusterOptions) (*api.Client, []string, func()) {
+func testVaultServerCoreConfigWithOpts(tb testing.TB, coreConfig *vault.CoreConfig, opts *vault.TestClusterOptions) (*api.Client, []string, func()) {
 	tb.Helper()
 
 	cluster := vault.NewTestCluster(benchhelpers.TBtoT(tb), coreConfig, opts)
