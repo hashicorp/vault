@@ -33,4 +33,5 @@ This announcement page is maintained and updated periodically to communicate imp
 
 
 *If you use **Standalone DB Engines** or **AppID (OSS)**, you should actively plan to migrate away from their usage. If you use these features and upgrade to Release 1.12, Vault will log error messages and shut down, and any attempts to add new mounts will result in an error.
+This behavior may temporarily be overridden when starting the Vault server by using the `VAULT_ALLOW_PENDING_REMOVAL_MOUNTS` environment variable until they are officially removed in Vault version 1.13.
 If you are still using these deprecated features and attempt to upgrade to 1.13 (the target feature removal timeframe), you will not be able to start up Vault without downgrading and migrating away from these features.
