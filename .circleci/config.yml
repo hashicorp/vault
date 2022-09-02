@@ -251,7 +251,7 @@ jobs:
               # Algorithm based on another comment in that issue: https://github.com/moby/moby/issues/20648#issuecomment-883082789.
               # jq does a consistent sort to ensure any concurrent deletes agree on the correct network to delete.
               # Sorts by:
-              #   1. Number of containers attached in descending order (hopefully only ever one network gets attached to at most)
+              #   1. Number of containers attached in descending order (should only be possible for one network to be > 0)
               #   2. Then by ascending creation time
               # We then discard the first network and delete the rest.
               docker network inspect \
@@ -502,7 +502,7 @@ jobs:
               # Algorithm based on another comment in that issue: https://github.com/moby/moby/issues/20648#issuecomment-883082789.
               # jq does a consistent sort to ensure any concurrent deletes agree on the correct network to delete.
               # Sorts by:
-              #   1. Number of containers attached in descending order (hopefully only ever one network gets attached to at most)
+              #   1. Number of containers attached in descending order (should only be possible for one network to be > 0)
               #   2. Then by ascending creation time
               # We then discard the first network and delete the rest.
               docker network inspect \
@@ -705,7 +705,7 @@ jobs:
               # Algorithm based on another comment in that issue: https://github.com/moby/moby/issues/20648#issuecomment-883082789.
               # jq does a consistent sort to ensure any concurrent deletes agree on the correct network to delete.
               # Sorts by:
-              #   1. Number of containers attached in descending order (hopefully only ever one network gets attached to at most)
+              #   1. Number of containers attached in descending order (should only be possible for one network to be > 0)
               #   2. Then by ascending creation time
               # We then discard the first network and delete the rest.
               docker network inspect \
@@ -1018,7 +1018,7 @@ jobs:
               # Algorithm based on another comment in that issue: https://github.com/moby/moby/issues/20648#issuecomment-883082789.
               # jq does a consistent sort to ensure any concurrent deletes agree on the correct network to delete.
               # Sorts by:
-              #   1. Number of containers attached in descending order (hopefully only ever one network gets attached to at most)
+              #   1. Number of containers attached in descending order (should only be possible for one network to be > 0)
               #   2. Then by ascending creation time
               # We then discard the first network and delete the rest.
               docker network inspect \
