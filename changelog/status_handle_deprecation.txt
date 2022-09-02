@@ -11,5 +11,8 @@ secrets: `enable` command now returns an error for deprecated secrets engines.
 secrets: `POST /sys/mount/:type` endpoint now reports an error for deprecated auth secrets engines.
 ```
 ```release-note:improvement
+core: Add `VAULT_ALLOW_PENDING_REMOVAL_MOUNTS` to override Pending Removal shutdown and error on mount.
+```
+```release-note:improvement
 core: Handle and log deprecated builtin mounts
 ```
