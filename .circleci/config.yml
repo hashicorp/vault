@@ -258,7 +258,7 @@ jobs:
                 $(docker network list --no-trunc --filter='name=vaulttest' --quiet) \
                 | jq -r 'map({"attached": .Containers | keys | length, "created": .Created, "id": .Id}) | sort_by(-.attached, .created)[] | .id' \
                 | sed 1d \
-                | xargs -n 1 docker network remove
+                | xargs -r -n 1 docker network remove
             fi
 
 
@@ -509,7 +509,7 @@ jobs:
                 $(docker network list --no-trunc --filter='name=vaulttest' --quiet) \
                 | jq -r 'map({"attached": .Containers | keys | length, "created": .Created, "id": .Id}) | sort_by(-.attached, .created)[] | .id' \
                 | sed 1d \
-                | xargs -n 1 docker network remove
+                | xargs -r -n 1 docker network remove
             fi
 
 
@@ -712,7 +712,7 @@ jobs:
                 $(docker network list --no-trunc --filter='name=vaulttest' --quiet) \
                 | jq -r 'map({"attached": .Containers | keys | length, "created": .Created, "id": .Id}) | sort_by(-.attached, .created)[] | .id' \
                 | sed 1d \
-                | xargs -n 1 docker network remove
+                | xargs -r -n 1 docker network remove
             fi
 
 
@@ -1025,7 +1025,7 @@ jobs:
                 $(docker network list --no-trunc --filter='name=vaulttest' --quiet) \
                 | jq -r 'map({"attached": .Containers | keys | length, "created": .Created, "id": .Id}) | sort_by(-.attached, .created)[] | .id' \
                 | sed 1d \
-                | xargs -n 1 docker network remove
+                | xargs -r -n 1 docker network remove
             fi
 
 
