@@ -1,14 +1,16 @@
-import Engine from 'ember-engines/engine';
+import Engine from '@ember/engine';
+
 import loadInitializers from 'ember-load-initializers';
-import Resolver from './resolver';
+import Resolver from 'ember-resolver';
+
 import config from './config/environment';
 
 const { modulePrefix } = config;
-/* eslint-disable ember/avoid-leaking-state-in-ember-objects */
-const Eng = Engine.extend({
-  modulePrefix,
-  Resolver,
-  dependencies: {
+
+export default class PkiEngine extends Engine {
+  modulePrefix = modulePrefix;
+  Resolver = Resolver;
+  dependencies = {
     services: [
       'auth',
       'flash-messages',
@@ -21,9 +23,7 @@ const Eng = Engine.extend({
       'secret-mount-path',
     ],
     externalRoutes: ['secrets'],
-  },
-});
+  };
+}
 
-loadInitializers(Eng, modulePrefix);
-
-export default Eng;
+loadInitializers(PkiEngine, modulePrefix);

@@ -1,17 +1,11 @@
-/* eslint-env node */
-/* eslint-disable ember/avoid-leaking-state-in-ember-objects */
 /* eslint-disable node/no-extraneous-require */
-'use strict';
+const { buildEngine } = require('ember-engines/lib/engine-addon');
 
-const EngineAddon = require('ember-engines/lib/engine-addon');
-
-module.exports = EngineAddon.extend({
+module.exports = buildEngine({
   name: 'pki',
-
-  lazyLoading: Object.freeze({
+  lazyLoading: {
     enabled: false,
-  }),
-
+  },
   isDevelopingAddon() {
     return true;
   },
