@@ -608,14 +608,14 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 		if possibleDoubleCountIndex >= len(b.possibleDoubleCountedSerials) {
 			break
 		}
-		if entries[listEntriesIndex] == b.possibleDoubleCountedSerials[possibleDoubleCountIndex] {
+		if entries[listEntriesIndex] == b.possibleDoubleCountedSerials[possibleDoubleCountIndex][6:] {
 			// This represents a double-counted entry
 			b.decrementTotalCertificatesCountNoReport()
 			listEntriesIndex = listEntriesIndex + 1
 			possibleDoubleCountIndex = possibleDoubleCountIndex + 1
 			continue
 		}
-		if entries[listEntriesIndex] < b.possibleDoubleCountedSerials[possibleDoubleCountIndex] {
+		if entries[listEntriesIndex] < b.possibleDoubleCountedSerials[possibleDoubleCountIndex][6:] {
 			listEntriesIndex = listEntriesIndex + 1
 			continue
 		}
@@ -638,18 +638,18 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 		if possibleRevokedDoubleCountIndex >= len(b.possibleDoubleCountedRevokedSerials) {
 			break
 		}
-		if revokedEntries[listRevokedEntriesIndex] == b.possibleDoubleCountedRevokedSerials[possibleRevokedDoubleCountIndex] {
+		if revokedEntries[listRevokedEntriesIndex] == b.possibleDoubleCountedRevokedSerials[possibleRevokedDoubleCountIndex][8:] {
 			// This represents a double-counted revoked entry
 			b.decrementTotalRevokedCertificatesCountNoReport()
 			listRevokedEntriesIndex = listRevokedEntriesIndex + 1
 			possibleRevokedDoubleCountIndex = possibleRevokedDoubleCountIndex + 1
 			continue
 		}
-		if revokedEntries[listRevokedEntriesIndex] < b.possibleDoubleCountedRevokedSerials[possibleRevokedDoubleCountIndex] {
+		if revokedEntries[listRevokedEntriesIndex] < b.possibleDoubleCountedRevokedSerials[possibleRevokedDoubleCountIndex][8:] {
 			listRevokedEntriesIndex = listRevokedEntriesIndex + 1
 			continue
 		}
-		if revokedEntries[listRevokedEntriesIndex] > b.possibleDoubleCountedRevokedSerials[possibleRevokedDoubleCountIndex] {
+		if revokedEntries[listRevokedEntriesIndex] > b.possibleDoubleCountedRevokedSerials[possibleRevokedDoubleCountIndex][8:] {
 			possibleRevokedDoubleCountIndex = possibleRevokedDoubleCountIndex + 1
 			continue
 		}
@@ -669,7 +669,7 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 func (b *backend) incrementTotalCertificatesCount(certsCounted bool, newSerial string) {
 	atomic.AddUint32(b.certCount, 1)
 	switch {
-	case !certsCounted && b.possibleDoubleCountedSerials != nil:
+	case !certsCounted:
 		// This is unsafe, but a good best-attempt
 		b.possibleDoubleCountedSerials = append(b.possibleDoubleCountedSerials, newSerial)
 	default:
@@ -692,7 +692,7 @@ func (b *backend) decrementTotalCertificatesCountNoReport() {
 func (b *backend) incrementTotalRevokedCertificatesCount(certsCounted bool, newSerial string) {
 	atomic.AddUint32(b.revokedCertCount, 1)
 	switch {
-	case !certsCounted && b.possibleDoubleCountedRevokedSerials != nil:
+	case !certsCounted:
 		// This is unsafe, but a good best-attempt
 		b.possibleDoubleCountedRevokedSerials = append(b.possibleDoubleCountedRevokedSerials, newSerial)
 	default:

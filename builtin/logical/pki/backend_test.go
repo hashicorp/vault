@@ -27,6 +27,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -5478,6 +5479,109 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 		client.SetHeaders(lastHeaders)
 		lastHeaders = client.Headers()
 	}
+}
+
+func TestBackend_InitializeCertificateCounts(t *testing.T) {
+	t.Parallel()
+	b, s := createBackendWithStorage(t)
+	ctx := context.Background()
+
+	// Set up an Issuer and Role
+	// We need a root certificate to write/revoke certificates with
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected ca info")
+	}
+
+	// Create a role
+	_, err = CBWrite(b, s, "roles/example", map[string]interface{}{
+		"allowed_domains":    "myvault.com",
+		"allow_bare_domains": true,
+		"allow_subdomains":   true,
+		"max_ttl":            "2h",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Put certificates A, B, C, D, E in backend
+	var certificates []string = []string{"a", "b", "c", "d", "e"}
+	var serials = make([]string, 5)
+	for i, cn := range certificates {
+		resp, err = CBWrite(b, s, "issue/example", map[string]interface{}{
+			"common_name": cn + ".myvault.com",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		serials[i] = resp.Data["serial_number"].(string)
+	}
+
+	// Revoke certificates A + B
+	var revocations = serials[0:2]
+	for _, key := range revocations {
+		resp, err = CBWrite(b, s, "revoke", map[string]interface{}{
+			"serial_number": key,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Assert initialize from clean is correct:
+	b.initializeStoredCertificateCounts(ctx)
+	if *b.certCount != 6 {
+		t.Fatalf("Failed to count six certificates root,A,B,C,D,E, instead counted %d certs", *b.certCount)
+	}
+	if *b.revokedCertCount != 2 {
+		t.Fatalf("Failed to count two revoked certificates A+B, instead counted %d certs", *b.revokedCertCount)
+	}
+
+	// Simulates listing while initialize in progress, by "restarting it"
+	atomic.StoreUint32(b.certCount, 0)
+	atomic.StoreUint32(b.revokedCertCount, 0)
+	b.certsCounted.Store(false)
+
+	// Revoke certificates C, D
+	var dirtyRevocations = serials[2:4]
+	for _, key := range dirtyRevocations {
+		resp, err = CBWrite(b, s, "revoke", map[string]interface{}{
+			"serial_number": key,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Put certificates F, G in the backend
+	var dirtyCertificates = []string{"f", "g"}
+	for _, cn := range dirtyCertificates {
+		resp, err = CBWrite(b, s, "issue/example", map[string]interface{}{
+			"common_name": cn + ".myvault.com",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Run initialize
+	b.initializeStoredCertificateCounts(ctx)
+
+	// Test certificate count
+	if *(b.certCount) != 8 {
+		t.Fatalf("Failed to initialize count of certificates root, A,B,C,D,E,F,G counted %d certs", *(b.certCount))
+	}
+
+	if *(b.revokedCertCount) != 4 {
+		t.Fatalf("Failed to count revoked certificates A,B,C,D counted %d certs", *(b.revokedCertCount))
+	}
+
+	return
 }
 
 var (
