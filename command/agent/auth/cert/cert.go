@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
@@ -20,6 +21,9 @@ type certMethod struct {
 	caCert     string
 	clientCert string
 	clientKey  string
+
+	coalesceInterval time.Duration
+	watcher          *Watcher
 
 	// Client is the cached client to use if cert info was provided.
 	client *api.Client
@@ -73,6 +77,41 @@ func NewCertAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 				return nil, errors.New("could not convert 'cert_key' config value to string")
 			}
 		}
+
+		coalesceIntervalRaw, ok := conf.Config["coalesce_interval"]
+		if ok {
+			coalesceIntervalStr, ok := coalesceIntervalRaw.(string)
+			if !ok {
+				return nil, errors.New("could not convert 'coalesce_interval' config value to string")
+			}
+
+			coalesceInterval, err := time.ParseDuration(coalesceIntervalStr)
+			if err != nil {
+				return nil, fmt.Errorf("could not convert 'coalesce_interval' config value to time.Duration: %w", err)
+			}
+
+			c.coalesceInterval = coalesceInterval
+		} else {
+			c.coalesceInterval = time.Second
+		}
+	}
+
+	if c.clientCert != "" || c.clientKey != "" {
+		watcher, err := NewRateLimitedFileWatcher([]string{c.clientCert, c.clientKey}, c.logger, c.coalesceInterval)
+		if err != nil {
+			return nil, fmt.Errorf("could not initialize certificate watcher: %w", err)
+		}
+
+		c.watcher = &watcher
+		watcher.Start(context.Background())
+
+		go func() {
+			for event := range watcher.EventsCh() {
+				c.logger.Debug("certificate reload triggered. invalidating client", "event", event)
+				c.client = nil
+			}
+		}()
+
 	}
 
 	return c, nil
@@ -96,7 +135,11 @@ func (c *certMethod) NewCreds() chan struct{} {
 
 func (c *certMethod) CredSuccess() {}
 
-func (c *certMethod) Shutdown() {}
+func (c *certMethod) Shutdown() {
+	if c.watcher != nil {
+		(*c.watcher).Stop()
+	}
+}
 
 // AuthClient uses the existing client's address and returns a new client with
 // the auto-auth method's certificate information if that's provided in its
