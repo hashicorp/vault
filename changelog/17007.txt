@@ -1,3 +1,3 @@
 ```release-note:bug
-cli: fixes "unable to convert identity policies to expected format" error when "identity_policies" is nil
+auth/token: fixes an edge case bug that "identity_policies" is nil and causes cli vault login error
 ```
