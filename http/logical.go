@@ -71,6 +71,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 				return nil, nil, http.StatusBadRequest, nil
 			}
 			if list {
+				queryVals.Del("list")
 				op = logical.ListOperation
 				if !strings.HasSuffix(path, "/") {
 					path += "/"
@@ -78,9 +79,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 			}
 		}
 
-		if !list {
-			data = parseQuery(queryVals)
-		}
+		data = parseQuery(queryVals)
 
 		switch {
 		case strings.HasPrefix(path, "sys/pprof/"):
