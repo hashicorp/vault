@@ -39,7 +39,7 @@ Usage: vault read [options] PATH
   Read entity details of a given ID:
 
       $ vault read identity/entity/id/2f09126d-d161-abb8-2241-555886491d97
-	
+
   Generate dynamic AWS credentials for a my-role:
 
       $ vault read aws/creds/my-role
