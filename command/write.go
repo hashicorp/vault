@@ -64,7 +64,7 @@ Usage: vault write [options] PATH [DATA K=V...]
   Configure access to Consul by providing an access token:
 
       $ echo $MY_TOKEN | vault write consul/config/access token=-
-	
+
   Create a token
       $ vault write auth/token/create policies="admin" policies="secops" ttl=8h num_uses=3
 
