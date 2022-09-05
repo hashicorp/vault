@@ -45,9 +45,9 @@ func (b *BackendPluginClientV5) Cleanup(ctx context.Context) {
 // the backend for external plugins, or a concrete implementation of the
 // backend if it is a builtin backend. The backend is returned as a
 // logical.Backend interface.
-func NewBackendV5(ctx context.Context, pluginName string, pluginType consts.PluginType, sys pluginutil.LookRunnerUtil, conf *logical.BackendConfig) (logical.Backend, error) {
+func NewBackendV5(ctx context.Context, pluginName string, pluginType consts.PluginType, pluginVersion string, sys pluginutil.LookRunnerUtil, conf *logical.BackendConfig) (logical.Backend, error) {
 	// Look for plugin in the plugin catalog
-	pluginRunner, err := sys.LookupPlugin(ctx, pluginName, pluginType)
+	pluginRunner, err := sys.LookupPluginVersion(ctx, pluginName, pluginType, pluginVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -74,6 +74,7 @@ func NewBackendV5(ctx context.Context, pluginName string, pluginType consts.Plug
 			Name:            pluginName,
 			PluginSets:      PluginSet,
 			PluginType:      pluginType,
+			Version:         pluginVersion,
 			HandshakeConfig: HandshakeConfig,
 			Logger:          conf.Logger.Named(pluginName),
 			AutoMTLS:        true,
