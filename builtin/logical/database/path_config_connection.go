@@ -312,7 +312,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 			var versionedCandidates []pluginutil.VersionedPlugin
 			for _, plugin := range plugins {
-				if !plugin.Builtin && plugin.Name == config.PluginName && plugin.SemanticVersion != nil {
+				if !plugin.Builtin && plugin.Name == config.PluginName && plugin.Version != "" {
 					versionedCandidates = append(versionedCandidates, plugin)
 				}
 			}
