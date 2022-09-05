@@ -42,7 +42,7 @@ Usage: vault read [options] PATH
 	
   Generate dynamic AWS credentials for a my-role:
 
-  	$ vault read aws/creds/my-role
+      $ vault read aws/creds/my-role
 
   For a full list of examples and paths, please see the documentation that
   corresponds to the secrets engine in use.
