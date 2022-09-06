@@ -2387,6 +2387,10 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 		if role.SecretIDNumUses > 0 && numUses > role.SecretIDNumUses {
 			return logical.ErrorResponse("num_uses cannot be higher than the role's secret_id_num_uses"), nil
 		}
+		if numUses == 0 && role.SecretIDNumUses > 0 {
+			return logical.ErrorResponse("secret_id_num_uses is set in the associated role. " +
+				"Please remove num_uses from the request or set it to a value less than secret_id_num_uses"), nil
+		}
 	} else {
 		numUses = role.SecretIDNumUses
 	}
@@ -2400,7 +2404,11 @@ func (b *backend) handleRoleSecretIDCommon(ctx context.Context, req *logical.Req
 		if role.SecretIDTTL > 0 && ttl > role.SecretIDTTL {
 			return logical.ErrorResponse("ttl cannot be longer than the role's secret_id_ttl"), nil
 		}
-		if ttl > b.System().MaxLeaseTTL() {
+		if ttl == 0 && (role.SecretIDTTL > 0 || b.System().MaxLeaseTTL() > 0) {
+			return logical.ErrorResponse("secret_id_ttl is set on the role or max_lease_ttl is set on " +
+				"the backend. Please remove ttl from the request or set it to be less than these values"), nil
+		}
+		if b.System().MaxLeaseTTL() > 0 && ttl > b.System().MaxLeaseTTL() {
 			return logical.ErrorResponse("ttl cannot be longer than the backend's max ttl"), nil
 		}
 	} else {
