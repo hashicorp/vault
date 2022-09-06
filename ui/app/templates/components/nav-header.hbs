@@ -1,5 +1,5 @@
 <nav class="navbar">
-  <LinkStatus />
+  <LinkStatus @status={{this.currentCluster.cluster.hcpLinkStatus}} />
 
   <div class="navbar-actions">
     <div class="navbar-brand" data-test-navheader-home>

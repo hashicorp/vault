@@ -14,23 +14,19 @@ module('Integration | Component | link-status', function (hooks) {
   });
 
   test('it does not render disconnected status', async function (assert) {
-    this.server.get('sys/seal-status', () => ({ hcp_link_status: 'disconnected' }));
-
-    await render(hbs`<LinkStatus />`);
+    await render(hbs`<LinkStatus @status="disconnected" />`);
 
     assert.dom('.navbar-status').doesNotExist('Banner is hidden for disconnected state');
   });
 
   test('it renders connected status', async function (assert) {
-    this.server.get('sys/seal-status', () => ({ hcp_link_status: 'connected' }));
-
-    await render(hbs`<LinkStatus />`);
+    await render(hbs`<LinkStatus @status="connected" />`);
 
     assert.dom('.navbar-status').hasClass('connected', 'Correct class renders for connected state');
     assert
       .dom('[data-test-link-status]')
       .hasText(
-        'This self-managed Vault is linked to the HashiCorp Cloud Platform',
+        'This self-managed Vault is linked to the HashiCorp Cloud Platform.',
         'Copy renders for connected state'
       );
     assert
