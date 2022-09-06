@@ -68,14 +68,14 @@ module('Acceptance | oidc-config/clients', function (hooks) {
     assert.expect(21);
 
     //* clear out test state
-    await clearRecord(this.store, 'oidc/client', 'some-app');
+    await clearRecord(this.store, 'oidc/client', 'test-app');
     await clearRecord(this.store, 'oidc/client', 'test-app');
     await clearRecord(this.store, 'oidc/assignment', 'assignment-1');
 
     await visit(OIDC_BASE_URL + '/clients/create');
     // create a new application
     assert.equal(currentRouteName(), 'vault.cluster.access.oidc.clients.create', 'navigates to create form');
-    await fillIn('[data-test-input="name"]', 'some-app');
+    await fillIn('[data-test-input="name"]', 'test-app');
     await click('[data-test-toggle-group="More options"]');
     // toggle ttls to false, testing it sets correct default duration
     await click('[data-test-input="idTokenTtl"]');
@@ -84,7 +84,7 @@ module('Acceptance | oidc-config/clients', function (hooks) {
 
     assert.equal(
       flashMessage.latestMessage,
-      'Successfully created the application some-app.',
+      'Successfully created the application test-app.',
       'renders success flash upon client creation'
     );
     assert.equal(
@@ -138,7 +138,7 @@ module('Acceptance | oidc-config/clients', function (hooks) {
     await click(SELECTORS.clientSaveButton);
     assert.equal(
       flashMessage.latestMessage,
-      'Successfully updated the application some-app.',
+      'Successfully updated the application test-app.',
       'renders success flash upon client updating'
     );
     assert.equal(
@@ -160,7 +160,7 @@ module('Acceptance | oidc-config/clients', function (hooks) {
 
     // create another client
     await visit(OIDC_BASE_URL + '/clients/create');
-    await fillIn('[data-test-input="name"]', 'test-app');
+    await fillIn('[data-test-input="name"]', 'app-to-delete');
     await click(SELECTORS.clientSaveButton);
     // immediately delete client, test transition
     await click(SELECTORS.clientDeleteButton);
@@ -176,7 +176,7 @@ module('Acceptance | oidc-config/clients', function (hooks) {
       'navigates back to list view after delete'
     );
 
-    // delete some-app client (last client)
+    // delete last client
     await click('[data-test-oidc-client-linked-block]');
     await click(SELECTORS.clientDeleteButton);
     await click(SELECTORS.confirmActionButton);
@@ -190,9 +190,9 @@ module('Acceptance | oidc-config/clients', function (hooks) {
   test('it renders client list when clients exist', async function (assert) {
     assert.expect(8);
     this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
-    this.server.get('/identity/oidc/client/some-app', () =>
-      overrideMirageResponse(null, CLIENT_DATA_RESPONSE)
-    );
+    // this.server.get('/identity/oidc/client/test-app', () =>
+    //   overrideMirageResponse(null, CLIENT_DATA_RESPONSE)
+    // );
     await visit(OIDC_BASE_URL);
     assert.equal(
       currentRouteName(),
@@ -202,7 +202,7 @@ module('Acceptance | oidc-config/clients', function (hooks) {
     assert.dom('[data-test-tab="clients"]').hasClass('active', 'clients tab is active');
     assert
       .dom('[data-test-oidc-client-linked-block]')
-      .hasText('some-app Client ID: whaT7KB0C3iBH1l3rXhd5HPf0n6vXU0s', 'displays linked block for client');
+      .hasText('test-app Client ID: whaT7KB0C3iBH1l3rXhd5HPf0n6vXU0s', 'displays linked block for client');
 
     // navigates to/from create, edit, detail views from list view
     await click('[data-test-oidc-client-create]');
@@ -246,12 +246,12 @@ module('Acceptance | oidc-config/clients', function (hooks) {
   test('it renders client details and providers', async function (assert) {
     assert.expect(10);
     this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
-    this.server.get('/identity/oidc/client/some-app', () =>
+    this.server.get('/identity/oidc/client/test-app', () =>
       overrideMirageResponse(null, CLIENT_DATA_RESPONSE)
     );
     await visit(OIDC_BASE_URL);
     await click('[data-test-oidc-client-linked-block]');
-    assert.dom('[data-test-oidc-client-header]').hasText('some-app', 'renders application name as title');
+    assert.dom('[data-test-oidc-client-header]').hasText('test-app', 'renders application name as title');
     assert.dom(SELECTORS.clientDetailsTab).hasClass('active', 'details tab is active');
     assert.dom(SELECTORS.clientDeleteButton).exists('toolbar renders delete option');
     assert.dom(SELECTORS.clientEditButton).exists('toolbar renders edit button');
@@ -264,7 +264,7 @@ module('Acceptance | oidc-config/clients', function (hooks) {
       'navigates to client providers route'
     );
     assert.dom(SELECTORS.clientProvidersTab).hasClass('active', 'providers tab is active');
-    assert.dom('[data-test-oidc-provider="default"]').exists('default provider shows');
+    assert.dom('[data-test-oidc-provider-linked-block]').hasText('default', 'shows default provider');
     assert.dom(SELECTORS.clientDeleteButton).doesNotExist('provider tab does not have delete option');
     assert.dom(SELECTORS.clientEditButton).doesNotExist('provider tab does not have edit button');
   });
@@ -272,16 +272,16 @@ module('Acceptance | oidc-config/clients', function (hooks) {
   test('it hides delete and edit when no permission', async function (assert) {
     assert.expect(5);
     this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
-    this.server.get('/identity/oidc/client/some-app', () =>
+    this.server.get('/identity/oidc/client/test-app', () =>
       overrideMirageResponse(null, CLIENT_DATA_RESPONSE)
     );
     this.server.post('/sys/capabilities-self', () =>
-      overrideCapabilities(OIDC_BASE_URL + '/client/some-app', ['read'])
+      overrideCapabilities(OIDC_BASE_URL + '/client/test-app', ['read'])
     );
 
     await visit(OIDC_BASE_URL);
     await click('[data-test-oidc-client-linked-block]');
-    assert.dom('[data-test-oidc-client-header]').hasText('some-app', 'renders application name as title');
+    assert.dom('[data-test-oidc-client-header]').hasText('test-app', 'renders application name as title');
     assert.dom(SELECTORS.clientDetailsTab).hasClass('active', 'details tab is active');
     assert.dom(SELECTORS.clientDeleteButton).doesNotExist('delete option is hidden');
     assert.dom(SELECTORS.clientEditButton).doesNotExist('edit button is hidden');
