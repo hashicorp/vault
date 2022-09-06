@@ -429,14 +429,14 @@ func (c *PluginCatalog) getBackendPluginType(ctx context.Context, pluginRunner *
 	}
 
 	if attemptV4 {
-		c.logger.Debug("failed to dispense v5 backend plugin", "name", pluginRunner.Name, "error", err)
+		c.logger.Debug("failed to dispense v5 backend plugin", "name", pluginRunner.Name)
 		config.AutoMTLS = false
 		config.IsMetadataMode = true
 		// attempt to run as a v4 backend plugin
 		client, err = backendplugin.NewPluginClient(ctx, nil, pluginRunner, log.NewNullLogger(), true)
 		if err != nil {
-			c.logger.Debug("failed to dispense v4 backend plugin", "name", pluginRunner.Name, "error", err)
 			merr = multierror.Append(merr, fmt.Errorf("failed to dispense v4 backend plugin: %w", err))
+			c.logger.Debug("failed to dispense v4 backend plugin", "name", pluginRunner.Name, "error", merr)
 			return consts.PluginTypeUnknown, merr.ErrorOrNil()
 		}
 		c.logger.Debug("successfully dispensed v4 backend plugin", "name", pluginRunner.Name)
