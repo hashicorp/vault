@@ -41,18 +41,18 @@ func compilePlugin(t *testing.T, typ consts.PluginType) (name string, shasum str
 	t.Helper()
 
 	var pluginType, pluginName, builtinDirectory string
-	var once sync.Once
+	var once *sync.Once
 	switch typ {
 	case consts.PluginTypeCredential:
 		pluginType = "approle"
 		pluginName = "vault-plugin-auth-" + pluginType
 		builtinDirectory = "credential"
-		once = compileAuthOnce
+		once = &compileAuthOnce
 	case consts.PluginTypeSecrets:
 		pluginType = "consul"
 		pluginName = "vault-plugin-secrets-" + pluginType
 		builtinDirectory = "logical"
-		once = compileSecretOnce
+		once = &compileSecretOnce
 	default:
 		t.Fatal(typ.String())
 	}
