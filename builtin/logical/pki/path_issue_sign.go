@@ -385,7 +385,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	switch {
 	case role.GenerateLease == nil:
 		return nil, fmt.Errorf("generate lease in role is nil")
-	case *role.GenerateLease == false:
+	case !*role.GenerateLease:
 		// If lease generation is disabled do not populate `Secret` field in
 		// the response
 		resp = &logical.Response{

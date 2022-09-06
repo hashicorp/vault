@@ -183,3 +183,13 @@ func (v testSystemView) LookupPlugin(context.Context, string, consts.PluginType)
 		},
 	}, nil
 }
+
+func (v testSystemView) LookupPluginVersion(context.Context, string, consts.PluginType, string) (*pluginutil.PluginRunner, error) {
+	return &pluginutil.PluginRunner{
+		Name:    "test-plugin-runner",
+		Builtin: true,
+		BuiltinFactory: func() (interface{}, error) {
+			return v.factory, nil
+		},
+	}, nil
+}

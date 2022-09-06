@@ -128,9 +128,11 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathSign(&b),
 			pathIssue(&b),
 			pathRotateCRL(&b),
+			pathRotateDeltaCRL(&b),
 			pathRevoke(&b),
 			pathRevokeWithKey(&b),
 			pathTidy(&b),
+			pathTidyCancel(&b),
 			pathTidyStatus(&b),
 			pathConfigAutoTidy(&b),
 
@@ -184,6 +186,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 	}
 
 	b.tidyCASGuard = new(uint32)
+	b.tidyCancelCAS = new(uint32)
 	b.tidyStatus = &tidyStatus{state: tidyStatusInactive}
 	b.storage = conf.StorageView
 	b.backendUUID = conf.BackendUUID
@@ -205,6 +208,7 @@ type backend struct {
 	storage           logical.Storage
 	revokeStorageLock sync.RWMutex
 	tidyCASGuard      *uint32
+	tidyCancelCAS     *uint32
 
 	tidyStatusLock sync.RWMutex
 	tidyStatus     *tidyStatus
@@ -223,10 +227,12 @@ type (
 )
 
 const (
-	tidyStatusInactive tidyStatusState = iota
-	tidyStatusStarted
-	tidyStatusFinished
-	tidyStatusError
+	tidyStatusInactive   tidyStatusState = iota
+	tidyStatusStarted                    = iota
+	tidyStatusFinished                   = iota
+	tidyStatusError                      = iota
+	tidyStatusCancelling                 = iota
+	tidyStatusCancelled                  = iota
 )
 
 type tidyStatus struct {
@@ -235,6 +241,7 @@ type tidyStatus struct {
 	tidyCertStore     bool
 	tidyRevokedCerts  bool
 	tidyRevokedAssocs bool
+	pauseDuration     string
 
 	// Status
 	state                   tidyStatusState
@@ -438,7 +445,7 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		// If a delta CRL was rebuilt above as part of the complete CRL rebuild,
 		// this will be a no-op. However, if we do need to rebuild delta CRLs,
 		// this would cause us to do so.
-		if err := b.crlBuilder.rebuildDeltaCRLsIfForced(sc); err != nil {
+		if err := b.crlBuilder.rebuildDeltaCRLsIfForced(sc, false); err != nil {
 			return err
 		}
 

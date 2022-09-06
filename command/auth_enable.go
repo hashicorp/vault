@@ -37,6 +37,7 @@ type AuthEnableCommand struct {
 	flagExternalEntropyAccess     bool
 	flagTokenType                 string
 	flagVersion                   int
+	flagPluginVersion             string
 }
 
 func (c *AuthEnableCommand) Synopsis() string {
@@ -199,6 +200,13 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 		Usage:   "Select the version of the auth method to run. Not supported by all auth methods.",
 	})
 
+	f.StringVar(&StringVar{
+		Name:    "plugin-version",
+		Target:  &c.flagPluginVersion,
+		Default: "",
+		Usage:   "Select the version of the plugin to enable.",
+	})
+
 	return set
 }
 
@@ -262,6 +270,7 @@ func (c *AuthEnableCommand) Run(args []string) int {
 
 	authOpts := &api.EnableAuthOptions{
 		Type:                  authType,
+		Version:               c.flagPluginVersion,
 		Description:           c.flagDescription,
 		Local:                 c.flagLocal,
 		SealWrap:              c.flagSealWrap,

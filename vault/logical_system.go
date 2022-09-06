@@ -620,7 +620,8 @@ func getVersion(d *framework.FieldData) (string, error) {
 		}
 
 		// Canonicalize the version string.
-		version = semanticVersion.String()
+		// Add the 'v' back in, since semantic version strips it out, and we want to be consistent with internal plugins.
+		version = "v" + semanticVersion.String()
 	}
 
 	return version, nil
@@ -878,7 +879,7 @@ func (b *SystemBackend) handleRekeyDeleteRecovery(ctx context.Context, req *logi
 	return b.handleRekeyDelete(ctx, req, data, true)
 }
 
-func mountInfo(entry *MountEntry) map[string]interface{} {
+func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[string]interface{} {
 	info := map[string]interface{}{
 		"type":                    entry.Type,
 		"description":             entry.Description,
@@ -888,6 +889,10 @@ func mountInfo(entry *MountEntry) map[string]interface{} {
 		"external_entropy_access": entry.ExternalEntropyAccess,
 		"options":                 entry.Options,
 		"uuid":                    entry.UUID,
+		"version":                 entry.Version,
+		"sha":                     entry.Sha,
+		"running_version":         entry.RunningVersion,
+		"running_sha":             entry.RunningSha,
 	}
 	entryConfig := map[string]interface{}{
 		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
@@ -918,6 +923,11 @@ func mountInfo(entry *MountEntry) map[string]interface{} {
 		entryConfig["token_type"] = entry.Config.TokenType.String()
 	}
 
+	// Add deprecation status only if it exists
+	builtinType := b.Core.builtinTypeFromMountEntry(ctx, entry)
+	if status, ok := b.Core.builtinRegistry.DeprecationStatus(entry.Type, builtinType); ok {
+		info["deprecation_status"] = status.String()
+	}
 	info["config"] = entryConfig
 
 	return info
@@ -952,7 +962,8 @@ func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Reque
 		}
 
 		// Populate mount info
-		info := mountInfo(entry)
+		info := b.mountInfo(ctx, entry)
+
 		resp.Data[entry.Path] = info
 	}
 
@@ -981,6 +992,14 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	sealWrap := data.Get("seal_wrap").(bool)
 	externalEntropyAccess := data.Get("external_entropy_access").(bool)
 	options := data.Get("options").(map[string]string)
+	version := data.Get("version").(string)
+	if version != "" {
+		v, err := semver.NewSemver(version)
+		if err != nil {
+			return nil, err
+		}
+		version = "v" + v.String()
+	}
 
 	var config MountConfig
 	var apiConfig APIMountConfig
@@ -1123,6 +1142,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		SealWrap:              sealWrap,
 		ExternalEntropyAccess: externalEntropyAccess,
 		Options:               options,
+		Version:               version,
 	}
 
 	// Attempt mount
@@ -1145,7 +1165,7 @@ func (b *SystemBackend) handleReadMount(ctx context.Context, req *logical.Reques
 	}
 
 	return &logical.Response{
-		Data: mountInfo(entry),
+		Data: b.mountInfo(ctx, entry),
 	}, nil
 }
 
@@ -2135,7 +2155,7 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 			continue
 		}
 
-		info := mountInfo(entry)
+		info := b.mountInfo(ctx, entry)
 		resp.Data[entry.Path] = info
 	}
 
@@ -2169,7 +2189,7 @@ func (b *SystemBackend) handleReadAuth(ctx context.Context, req *logical.Request
 		}
 
 		return &logical.Response{
-			Data: mountInfo(entry),
+			Data: b.mountInfo(ctx, entry),
 		}, nil
 	}
 
@@ -2223,6 +2243,14 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	sealWrap := data.Get("seal_wrap").(bool)
 	externalEntropyAccess := data.Get("external_entropy_access").(bool)
 	options := data.Get("options").(map[string]string)
+	version := data.Get("version").(string)
+	if version != "" {
+		v, err := semver.NewSemver(version)
+		if err != nil {
+			return nil, err
+		}
+		version = "v" + v.String()
+	}
 
 	var config MountConfig
 	var apiConfig APIMountConfig
@@ -2354,6 +2382,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		SealWrap:              sealWrap,
 		ExternalEntropyAccess: externalEntropyAccess,
 		Options:               options,
+		Version:               version,
 	}
 
 	// Attempt enabling
@@ -3826,7 +3855,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		if ns.ID == entry.NamespaceID && hasAccess(ctx, entry) {
 			if isAuthed {
 				// If this is an authed request return all the mount info
-				secretMounts[entry.Path] = mountInfo(entry)
+				secretMounts[entry.Path] = b.mountInfo(ctx, entry)
 			} else {
 				secretMounts[entry.Path] = map[string]interface{}{
 					"type":        entry.Type,
@@ -3853,7 +3882,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		if ns.ID == entry.NamespaceID && hasAccess(ctx, entry) {
 			if isAuthed {
 				// If this is an authed request return all the mount info
-				authMounts[entry.Path] = mountInfo(entry)
+				authMounts[entry.Path] = b.mountInfo(ctx, entry)
 			} else {
 				authMounts[entry.Path] = map[string]interface{}{
 					"type":        entry.Type,
@@ -3911,7 +3940,7 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 		return errResp, logical.ErrPermissionDenied
 	}
 	resp := &logical.Response{
-		Data: mountInfo(me),
+		Data: b.mountInfo(ctx, me),
 	}
 	resp.Data["path"] = me.Path
 

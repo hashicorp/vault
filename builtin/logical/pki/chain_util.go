@@ -267,9 +267,7 @@ func (sc *storageContext) rebuildIssuersChains(referenceCert *issuerEntry /* opt
 			continue
 		}
 
-		for _, child := range children {
-			toVisit = append(toVisit, child)
-		}
+		toVisit = append(toVisit, children...)
 	}
 
 	// Setup the toVisit queue.
@@ -582,9 +580,7 @@ func processAnyCliqueOrCycle(
 						continue
 					}
 
-					for _, child := range children {
-						cliquesToProcess = append(cliquesToProcess, child)
-					}
+					cliquesToProcess = append(cliquesToProcess, children...)
 
 					// While we're here, add this cycle node to the closure.
 					closure[cycleNode] = true

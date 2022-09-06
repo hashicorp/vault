@@ -463,5 +463,17 @@ Defaults to 72 hours.`,
 		Default: int(defaultTidyConfig.SafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
 	}
 
+	fields["pause_duration"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `The amount of time to wait between processing
+certificates. This allows operators to change the execution profile
+of tidy to take consume less resources by slowing down how long it
+takes to run. Note that the entire list of certificates will be
+stored in memory during the entire tidy operation, but resources to
+read/process/update existing entries will be spread out over a
+greater period of time. By default this is zero seconds.`,
+		Default: "0s",
+	}
+
 	return fields
 }
