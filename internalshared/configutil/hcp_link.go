@@ -20,8 +20,6 @@ type HCPLinkConfig struct {
 	EnablePassThroughCapability bool                  `hcl:"enable_passthrough_capability"`
 	ClientID                    string                `hcl:"client_id"`
 	ClientSecret                string                `hcl:"client_secret"`
-	Hostname                    string                `hcl:"hostname"`
-	AuthURL                     string                `hcl:"auth_url"`
 }
 
 func parseCloud(result *SharedConfig, list *ast.ObjectList) error {

@@ -720,13 +720,6 @@ SEALFAIL:
 	} else {
 		if config.HCPLinkConf != nil {
 			diagnose.Test(ctx, "Check HCP Connection", func(ctx context.Context) error {
-				diagnose.Test(ctx, "Cloud config", func(ctx context.Context) error {
-					if config.HCPLinkConf.AuthURL != "" {
-						diagnose.Warn(ctx, "cloud config stanza contains auth_url. Note that auth_url is primarily used for dev/testing work")
-					}
-					return nil
-				})
-
 				hcpLink, err := hcp_link.NewHCPLink(config.HCPLinkConf, vaultCore, server.logger)
 				if err != nil || hcpLink == nil {
 					return fmt.Errorf("failed to start HCP link, %w", err)
