@@ -5,7 +5,7 @@
       {{#if (eq this.status "connected")}}
         This self-managed Vault is linked to the
         <a href="https://portal.cloud.hashicorp.com/sign-in" target="_blank" rel="noopener noreferrer">
-          HashiCorp Cloud Platform
+          HashiCorp Cloud Platform.
         </a>
       {{else if (eq this.status "401")}}
         {{! roughing in 401 and 500 connection statuses -- update strings once they are exposed by the API }}
