@@ -1,0 +1,3 @@
+```release-note:bug
+cli: Example vault read / write updated in help page.
+```
