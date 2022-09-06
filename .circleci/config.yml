@@ -125,7 +125,7 @@ jobs:
     - GOTESTSUM_VERSION: 0.5.2
   test-go-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.19.1
+    - image: docker.mirror.hashicorp.services/cimg/go:1.19
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -258,7 +258,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.19.1 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.19 \
               tail -f /dev/null
 
             # Run tests
@@ -364,7 +364,7 @@ jobs:
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.19.1
+    - image: docker.mirror.hashicorp.services/cimg/go:1.19
     resource_class: xlarge
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -493,7 +493,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.19.1 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.19 \
               tail -f /dev/null
 
             # Run tests
@@ -551,7 +551,7 @@ jobs:
     - GO_TAGS: ''
   test-go:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.19.1
+    - image: docker.mirror.hashicorp.services/cimg/go:1.19
     resource_class: large
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -680,7 +680,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.19.1 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.19 \
               tail -f /dev/null
 
             # Run tests
@@ -844,7 +844,7 @@ jobs:
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.19.1
+    - image: docker.mirror.hashicorp.services/cimg/go:1.19
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -977,7 +977,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.19.1 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.19 \
               tail -f /dev/null
 
             # Run tests
