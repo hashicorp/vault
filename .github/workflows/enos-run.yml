@@ -14,25 +14,28 @@ env:
   PKG_NAME: vault
 
 jobs:
+  # Generate Enos scenario matrix based on artifact-name input to test
+  generate-enos-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      enos-scenarios: ${{ steps.enos-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Create Enos scenario matrix
+        id: enos-matrix
+        run: ./.github/scripts/generate-enos-matrix.sh ${{ inputs.artifact-name }}
+  # Run Integration tests on generated Enos scenario matrix
   enos:
     name: Integration
+    needs: generate-enos-matrix
     strategy:
       fail-fast: false # don't fail as that can skip required cleanup steps for jobs
-      matrix:
-        # Run four scenarios to get a maximal distribution of variants in as
-        # few jobs as possible.
-        include:
-          - scenario: "smoke backend:consul consul_version:1.12.3 distro:ubuntu seal:awskms"
-            aws_region: "us-west-1"
-          - scenario: "smoke backend:raft consul_version:1.12.3 distro:ubuntu seal:shamir"
-            aws_region: "us-west-2"
-          - scenario: "upgrade backend:raft consul_version:1.11.7 distro:rhel seal:shamir"
-            aws_region: "us-west-1"
-          - scenario: "upgrade backend:consul consul_version:1.11.7 distro:rhel seal:awskms"
-            aws_region: "us-west-2"
+      matrix: ${{ fromJson(needs.generate-enos-matrix.outputs.enos-scenarios) }}
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      ARTIFACT_NAME: ${{ inputs.artifact-name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -71,6 +74,7 @@ jobs:
           unzip ${{steps.download.outputs.download-path}}/*.zip -d enos/support
           mv ${{steps.download.outputs.download-path}}/*.zip enos/support/vault.zip
           mkdir -p enos/support/terraform-plugin-cache
+          [[ ${{ env.ARTIFACT_NAME }} == *"ent"* ]] && echo "${{ secrets.VAULT_LICENSE }}" > ./enos/support/vault.hclic || true
       - name: Run Enos scenario
         id: run
         # Continue once and retry to handle occasional blips when creating
@@ -84,7 +88,7 @@ jobs:
           ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache
           ENOS_VAR_vault_bundle_path: ./support/vault.zip
         run: |
-          enos scenario run --timeout 60m0s --chdir ./enos ${{ matrix.scenario }} arch:amd64 builder:crt edition:oss
+          enos scenario run --timeout 60m0s --chdir ./enos ${{ matrix.scenario }}
       - name: Retry Enos scenario
         id: run_retry
         if: steps.run.outcome == 'failure'
@@ -96,7 +100,7 @@ jobs:
           ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache
           ENOS_VAR_vault_bundle_path: ./support/vault.zip
         run: |
-          enos scenario run --timeout 60m0s --chdir ./enos ${{ matrix.scenario }} arch:amd64 builder:crt edition:oss
+          enos scenario run --timeout 60m0s --chdir ./enos ${{ matrix.scenario }}
       - name: Destroy Enos scenario
         if: ${{ always() }}
         env:
@@ -107,9 +111,16 @@ jobs:
           ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache
           ENOS_VAR_vault_bundle_path: ./support/vault.zip
         run: |
-          enos scenario destroy --timeout 60m0s --chdir ./enos ${{ matrix.scenario }} arch:amd64 builder:crt edition:oss
-      - name: Output debug information on failure
-        if: ${{ failure() }}
+          enos scenario destroy --timeout 60m0s --chdir ./enos ${{ matrix.scenario }}
+      # Temporarily Disable debug output
+      # - name: Output debug information on failure
+      #   if: ${{ failure() }}
+      #   run: |
+      #     env
+      #     find ./enos -name "scenario.tf" -exec cat {} \;
+      - name: Cleanup Enos runtime directories
+        if: ${{ always() }}
         run: |
-          env
-          find ./enos -name "scenario.tf" -exec cat {} \;
+          rm -rf support
+          rm -rf .enos
+        working-directory: ./enos
