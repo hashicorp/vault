@@ -161,7 +161,8 @@ type ActivityLog struct {
 
 	// channel closed when deletion at startup is done
 	// (for unit test robustness)
-	retentionDone chan struct{}
+	retentionDone         chan struct{}
+	computationWorkerDone chan struct{}
 
 	// for testing: is config currently being invalidated. protected by l
 	configInvalidationInProgress bool
@@ -1062,15 +1063,19 @@ func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup) error {
 		go manager.activeFragmentWorker(ctx)
 
 		// Check for any intent log, in the background
-		go manager.precomputedQueryWorker(ctx)
+		manager.computationWorkerDone = make(chan struct{})
+		go func() {
+			manager.precomputedQueryWorker(ctx)
+			close(manager.computationWorkerDone)
+		}()
 
 		// Catch up on garbage collection
 		// Signal when this is done so that unit tests can proceed.
 		manager.retentionDone = make(chan struct{})
-		go func() {
-			manager.retentionWorker(ctx, time.Now(), manager.retentionMonths)
+		go func(months int) {
+			manager.retentionWorker(ctx, time.Now(), months)
 			close(manager.retentionDone)
-		}()
+		}(manager.retentionMonths)
 	}
 
 	return nil
@@ -1198,6 +1203,11 @@ func (a *ActivityLog) activeFragmentWorker(ctx context.Context) {
 		endOfMonth.Stop()
 	}
 
+	endOfMonthChannel := endOfMonth.C
+	if a.core.activityLogConfig.DisableTimers {
+		endOfMonthChannel = nil
+	}
+
 	writeFunc := func() {
 		ctx, cancel := context.WithTimeout(ctx, activitySegmentWriteTimeout)
 		defer cancel()
@@ -1212,6 +1222,7 @@ func (a *ActivityLog) activeFragmentWorker(ctx context.Context) {
 	a.l.RLock()
 	doneCh := a.doneCh
 	a.l.RUnlock()
+
 	for {
 		select {
 		case <-doneCh:
@@ -1241,7 +1252,7 @@ func (a *ActivityLog) activeFragmentWorker(ctx context.Context) {
 
 			// Simpler, but ticker.Reset was introduced in go 1.15:
 			// ticker.Reset(activitySegmentInterval)
-		case currentTime := <-endOfMonth.C:
+		case currentTime := <-endOfMonthChannel:
 			err := a.HandleEndOfMonth(ctx, currentTime.UTC())
 			if err != nil {
 				a.logger.Error("failed to perform end of month rotation", "error", err)
@@ -2165,6 +2176,10 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 // We expect the return value won't be checked, so log errors as they occur
 // (but for unit testing having the error return should help.)
 func (a *ActivityLog) retentionWorker(ctx context.Context, currentTime time.Time, retentionMonths int) error {
+	if a.core.activityLogConfig.DisableTimers {
+		return nil
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
