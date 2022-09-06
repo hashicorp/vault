@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/net/http2"
@@ -353,6 +354,7 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 				AppliedIndex:    0,
 				Term:            0,
 				DesiredSuffrage: "voter",
+				SDKVersion:      version.GetVersion().Version,
 			})
 		}
 	}
