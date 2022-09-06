@@ -258,6 +258,9 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 	importKey, err := b.decryptImportedKey(ctx, req.Storage, ciphertext, hashFn)
+	if err != nil {
+		return nil, err
+	}
 	err = p.Import(ctx, req.Storage, importKey, b.GetRandomReader())
 	if err != nil {
 		return nil, err
