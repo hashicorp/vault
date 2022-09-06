@@ -47,11 +47,12 @@ export default class NamedPathAdapter extends ApplicationAdapter {
   // GET request with list=true as query param
   async query(store, type, query) {
     const url = this.urlForQuery(query, type.modelName);
-    const { paramKey, filterFor } = query;
+    const { paramKey, filterFor, allowed_client_id } = query;
     // * 'paramKey' is a string of the param name (model attr) we're filtering for, e.g. 'client_id'
     // * 'filterFor' is an array of values to filter for (value type must match the attr type), e.g. array of ID strings
-    // example: the OidcProviderClientsRoute where we only want to list clients that are permitted to use the currently viewed provider
-    const response = await this.ajax(url, 'GET', { data: { list: true } });
+    // * 'allowed_client_id' is a valid query param to the /provider endpoint
+    let queryParams = { list: true, ...(allowed_client_id && { allowed_client_id }) };
+    const response = await this.ajax(url, 'GET', { data: queryParams });
 
     // filter LIST response only if key_info exists and query includes both 'paramKey' & 'filterFor'
     if (filterFor) assert('filterFor must be an array', Array.isArray(filterFor));
