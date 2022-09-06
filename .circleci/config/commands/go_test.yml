@@ -120,22 +120,6 @@ steps:
           export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
           if [ -z $TEST_DOCKER_NETWORK_ID ]; then
             TEST_DOCKER_NETWORK_ID=$(docker network create "${TEST_DOCKER_NETWORK_NAME}")
-
-            # Multiple concurrent calls to 'docker network create' can succeed and cause "ambiguous network" errors from docker,
-            # because multiple networks of the same name exist. By design: https://github.com/moby/moby/issues/20648#issuecomment-188215208.
-            # So we need to clean up any possible duplicate networks straight after creating.
-            #
-            # Algorithm based on another comment in that issue: https://github.com/moby/moby/issues/20648#issuecomment-883082789.
-            # jq does a consistent sort to ensure any concurrent deletes agree on the correct network to delete.
-            # Sorts by:
-            #   1. Number of containers attached in descending order (should only be possible for one network to be > 0)
-            #   2. Then by ascending creation time
-            # We then discard the first network and delete the rest.
-            docker network inspect \
-              $(docker network list --no-trunc --filter='name=vaulttest' --quiet) \
-              | jq -r 'map({"attached": .Containers | keys | length, "created": .Created, "id": .Id}) | sort_by(-.attached, .created)[] | .id' \
-              | sed 1d \
-              | xargs -r -n 1 docker network remove
           fi
 
 
@@ -150,7 +134,7 @@ steps:
             -e DOCKER_TLS_VERIFY \
             -e NO_PROXY \
             -e VAULT_TEST_LOG_DIR=<< parameters.log_dir >> \
-            --network vaulttest \
+            --network ${TEST_DOCKER_NETWORK_NAME} \
             << parameters.go_image >> \
             tail -f /dev/null)"
           mkdir workspace
