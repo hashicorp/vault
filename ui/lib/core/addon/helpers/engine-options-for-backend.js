@@ -15,7 +15,7 @@ const SECRET_BACKENDS = {
   },
 };
 
-export function optionsForBackend([backend, tab]) {
+export function engineOptionsForBackend([backend, tab]) {
   const selected = SECRET_BACKENDS[backend];
   let backendOptions;
 
@@ -33,4 +33,4 @@ export function optionsForBackend([backend, tab]) {
   return backendOptions;
 }
 
-export default buildHelper(optionsForBackend);
+export default buildHelper(engineOptionsForBackend);
