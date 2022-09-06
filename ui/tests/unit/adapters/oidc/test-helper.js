@@ -121,6 +121,36 @@ export default (test) => {
     }
   });
 
+  test('it passes allowed_client_id only when the param exists', async function (assert) {
+    const keyInfoModels = ['client', 'provider']; // these models have key_info on the LIST response
+    const { name, ...otherAttrs } = this.data; // excludes name from key_info data
+    const key_info = { [name]: { ...otherAttrs } };
+
+    this.server.get(`/identity/${this.modelName}`, (schema, req) => {
+      if (this.modelName === 'oidc/provider') {
+        assert.propEqual(
+          req.queryParams,
+          { list: 'true', allowed_client_id: 'a123' },
+          'request has allowed_client_id as query param'
+        );
+      } else {
+        assert.propEqual(req.queryParams, { list: 'true' }, 'request only has `list` param');
+      }
+      if (keyInfoModels.some((model) => this.modelName.includes(model))) {
+        return { data: { keys: [name], key_info } };
+      } else {
+        return { data: { keys: [name] } };
+      }
+    });
+
+    // only /provider accepts an allowed_client_id
+    if (this.modelName === 'oidc/provider') {
+      this.store.query(this.modelName, { allowed_client_id: 'a123' });
+    } else {
+      this.store.query(this.modelName, {});
+    }
+  });
+
   test('it should make request to correct endpoint on delete', async function (assert) {
     assert.expect(1);
 
