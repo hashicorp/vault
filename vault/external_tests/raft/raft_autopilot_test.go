@@ -435,21 +435,6 @@ func TestRaft_VotersStayVoters(t *testing.T) {
 
 	client := cluster.Cores[0].Client
 
-	writeConfig := func(config map[string]interface{}, expectError bool) {
-		resp, err := client.Logical().Write("sys/storage/raft/autopilot/configuration", config)
-		if expectError {
-			require.Error(t, err)
-			return
-		}
-		require.NoError(t, err)
-		require.Nil(t, resp)
-	}
-
-	writableConfig := map[string]interface{}{
-		"disable_upgrade_migration": "false",
-	}
-	writeConfig(writableConfig, false)
-
 	config, err := client.Sys().RaftAutopilotConfiguration()
 	require.NoError(t, err)
 	joinAndStabilizeAndPromote(t, cluster.Cores[1], client, cluster, config, "core-1", 2)
