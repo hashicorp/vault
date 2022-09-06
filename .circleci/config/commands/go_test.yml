@@ -116,9 +116,10 @@ steps:
           # reasons unclear.
           export DOCKER_API_VERSION=1.39
 
-          export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter='name=vaulttest')
+          TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
+          export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
           if [ -z $TEST_DOCKER_NETWORK_ID ]; then
-            TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
+            TEST_DOCKER_NETWORK_ID=$(docker network create "${TEST_DOCKER_NETWORK_NAME}")
 
             # Multiple concurrent calls to 'docker network create' can succeed and cause "ambiguous network" errors from docker,
             # because multiple networks of the same name exist. By design: https://github.com/moby/moby/issues/20648#issuecomment-188215208.
