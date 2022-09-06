@@ -294,7 +294,10 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		if pluginVersionRaw, ok := data.GetOk("plugin_version"); ok {
 			config.PluginVersion = pluginVersionRaw.(string)
 		}
-		if config.PluginVersion != "" {
+
+		unversionedPlugin, err := b.System().LookupPlugin(ctx, config.PluginName, consts.PluginTypeDatabase)
+		switch {
+		case config.PluginVersion != "":
 			semanticVersion, err := version.NewVersion(config.PluginVersion)
 			if err != nil {
 				return logical.ErrorResponse("version %q is not a valid semantic version: %s", config.PluginVersion, err), nil
@@ -302,9 +305,11 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 			// Canonicalize the version.
 			config.PluginVersion = "v" + semanticVersion.String()
-		} else {
-			// No version provided. Pin to the current latest version if any versioned
-			// plugins are registered.
+		case err == nil && !unversionedPlugin.Builtin:
+			// We'll select the unversioned plugin that's been registered.
+		case req.Operation == logical.CreateOperation:
+			// No version provided and no unversioned plugin of that name available.
+			// Pin to the current latest version if any versioned plugins are registered.
 			plugins, err := b.System().ListVersionedPlugins(ctx, consts.PluginTypeDatabase)
 			if err != nil {
 				return nil, err

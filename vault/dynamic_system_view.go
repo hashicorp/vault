@@ -251,7 +251,7 @@ func (d dynamicSystemView) LookupPluginVersion(ctx context.Context, name string,
 		return nil, err
 	}
 	if r == nil {
-		return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, name)
+		return nil, fmt.Errorf("%w: %s, version=%s", ErrPluginNotFound, name, version)
 	}
 
 	return r, nil

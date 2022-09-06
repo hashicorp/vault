@@ -1467,7 +1467,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 			return nil, err
 		}
 		if plug == nil {
-			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, t)
+			return nil, fmt.Errorf("%w: %s, version=%s", ErrPluginNotFound, t, entry.Version)
 		}
 
 		f = plugin.Factory
