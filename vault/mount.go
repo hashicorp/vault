@@ -463,6 +463,12 @@ func (c *Core) decodeMountTable(ctx context.Context, raw []byte) (*MountTable, e
 			continue
 		}
 
+		// Immediately shutdown the core if deprecated mounts are detected and VAULT_ALLOW_PENDING_REMOVAL_MOUNTS is unset
+		if err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeUnknown); err != nil {
+			c.logger.Error("shutting down core", "error", err)
+			c.Shutdown()
+		}
+
 		entry.namespace = ns
 		mountEntries = append(mountEntries, entry)
 	}
@@ -583,6 +589,11 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	// from replication.
 	if strutil.StrListContains(singletonMounts, entry.Type) {
 		addFilterablePath(c, viewPath)
+	}
+
+	// Detect and handle deprecated secrets engines
+	if err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeSecrets); err != nil {
+		return err
 	}
 
 	nilMount, err := preprocessMount(c, entry, view)
@@ -901,6 +912,54 @@ func (c *Core) taintMountEntry(ctx context.Context, nsID, mountPath string, upda
 		}
 	}
 
+	return nil
+}
+
+// handleDeprecatedMountEntry handles the Deprecation Status of the specified
+// mount entry's builtin engine as follows:
+//
+// * Supported - do nothing
+// * Deprecated - log a warning about builtin deprecation
+// * PendingRemoval - log an error about builtin deprecation and return an error
+// if VAULT_ALLOW_PENDING_REMOVAL_MOUNTS is unset
+// * Removed - log an error about builtin deprecation and return an error
+func (c *Core) handleDeprecatedMountEntry(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) error {
+	if c.builtinRegistry == nil || entry == nil {
+		return nil
+	}
+
+	// Allow type to be determined from mount entry when not otherwise specified
+	if pluginType == consts.PluginTypeUnknown {
+		pluginType = c.builtinTypeFromMountEntry(ctx, entry)
+	}
+
+	// Handle aliases
+	t := entry.Type
+	if alias, ok := mountAliases[t]; ok {
+		t = alias
+	}
+
+	status, ok := c.builtinRegistry.DeprecationStatus(t, pluginType)
+	if ok {
+		// Deprecation sublogger with some identifying information
+		dl := c.logger.With("name", t, "type", pluginType, "status", status, "path", entry.Path)
+		errDeprecatedMount := fmt.Errorf("mount entry associated with %s builtin", status)
+
+		switch status {
+		case consts.Deprecated:
+			dl.Warn(errDeprecatedMount.Error())
+
+		case consts.PendingRemoval:
+			dl.Error(errDeprecatedMount.Error())
+			if allow := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv); allow == "" {
+				return fmt.Errorf("could not mount %q: %w", t, errDeprecatedMount)
+			}
+			c.Logger().Info("mount allowed by environment variable", "env", consts.VaultAllowPendingRemovalMountsEnv)
+
+		case consts.Removed:
+			return fmt.Errorf("could not mount %s: %w", t, errDeprecatedMount)
+		}
+	}
 	return nil
 }
 

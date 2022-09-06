@@ -2385,6 +2385,11 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		Version:               version,
 	}
 
+	err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeCredential)
+	if err != nil {
+		return handleError(err)
+	}
+
 	// Attempt enabling
 	if err := b.Core.enableCredential(ctx, me); err != nil {
 		b.Backend.Logger().Error("error occurred during enable credential", "path", me.Path, "error", err)

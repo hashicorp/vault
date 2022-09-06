@@ -29,13 +29,15 @@ If you are an Enterprise user, we recommend that you consider migrating to Hashi
 
 ### Q: What should I do if I use Mount Filters, AppID, or any of the standalone DB engines?
 
-These features were deprecated in prior releases of Vault. We are targeting the removal of these features from the product in the Vault 1.11 release. Please plan to upgrade to these features before the release of Vault 1.11. Refer to the table below for a list of alternative features.
+These features were deprecated in prior releases of Vault. We are targeting the removal of these features from the product in the Vault 1.12 release. Please plan to upgrade to these features before the release of Vault 1.12. Refer to the table below for a list of alternative features.
 
 | Deprecated Feature    | Alternative Feature                                                                                                 |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | Mount Filters         | [Path Filters](https://www.vaultproject.io/api-docs/system/replication/replication-performance#create-paths-filter) |
 | AppID                 | [AppRole auth method](/docs/auth/approle)                                                                           |
 | Standalone DB engines | [Combined DB engines](/docs/secrets/databases)                                                                      |
+
+**Note:** After upgrading to 1.12, any attempt to unseal a core with one of the following features enabled will result in a core shutdown. This may temporarily be overridden using the `VAULT_ALLOW_PENDING_REMOVAL_MOUNTS` environment variable when launching the Vault server. These features will be officially removed from Vault in version 1.13 and this environment variable will not work. In order to upgrade to 1.13, you will have to completely disable all removed features.
 
 ### Q: What is the impact of removing support for X.509 certificates with signatures that use SHA-1?
 
