@@ -15,6 +15,7 @@
  * @param {string} label - The name displayed on the tab.   Set on the options-for-backend.
  * @param {string} [tab] - The name of the tab.  Set on the options-for-backend.
  * @param {boolean} [isEngine] - If used within an Ember engine, will need to modify how the links to routes are defined.
+ * @param {string} [link] - If within an engine provide the name of the link that is defined in the routes file fo the engine, example : 'overview'.
  *
  */
 import Component from '@glimmer/component';
