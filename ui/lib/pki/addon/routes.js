@@ -3,8 +3,7 @@ import buildRoutes from 'ember-engines/routes';
 export default buildRoutes(function () {
   this.route('overview');
   this.route('configuration', function () {
-    this.route('tidy'); // ARG TODO appear only to "tidy" the action. There is automatic-tidy, but that doesn't appear to be accounted for in the designs.
-    // the create route is setting up the configuration route where you have 3 options.
+    this.route('tidy');
     this.route('create', function () {
       this.route('index', { path: '/' });
       this.route('import-ca');
