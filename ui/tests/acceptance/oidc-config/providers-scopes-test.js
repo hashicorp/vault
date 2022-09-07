@@ -25,7 +25,7 @@ const flashMessage = create(fm);
 
 // OIDC_BASE_URL = '/vault/access/oidc'
 
-module('Acceptance | oidc-config/providers', function (hooks) {
+module('Acceptance |  oidc-config providers and scopes', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
@@ -80,7 +80,9 @@ module('Acceptance | oidc-config/providers', function (hooks) {
       'vault.cluster.access.oidc.scopes.index',
       'redirects to scopes index route when scopes exist'
     );
-    assert.dom('[data-test-oidc-scope-linked-block]').hasText('test-scope', 'displays linked block for test');
+    assert
+      .dom('[data-test-oidc-scope-linked-block="test-scope"]')
+      .exists('displays linked block for test scope');
 
     // navigates to/from create, edit, detail views from list view
     await click(SELECTORS.scopeCreateButton);
@@ -148,7 +150,7 @@ module('Acceptance | oidc-config/providers', function (hooks) {
       400
     );
     await visit(OIDC_BASE_URL + '/scopes');
-    await click('[data-test-oidc-scope-linked-block]');
+    await click('[data-test-oidc-scope-linked-block="test-scope"]');
     assert.dom('[data-test-oidc-scope-header]').hasText('test-scope', 'renders scope name');
     assert.dom(SELECTORS.scopeDetailsTab).hasClass('active', 'details tab is active');
 
