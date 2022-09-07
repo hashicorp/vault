@@ -2,6 +2,7 @@ package command
 
 import (
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
@@ -242,14 +243,23 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 		}
 
 		for _, b := range backends {
+			expectedResult := 0
+			status, _ := builtinplugins.Registry.DeprecationStatus(b, consts.PluginTypeSecrets)
+			allowDeprecated := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv)
+
+			// Need to handle deprecated builtins specially
+			if (status == consts.PendingRemoval && allowDeprecated == "") || status == consts.Removed {
+				expectedResult = 2
+			}
+
 			ui, cmd := testSecretsEnableCommand(t)
 			cmd.client = client
 
-			code := cmd.Run([]string{
+			actualResult := cmd.Run([]string{
 				b,
 			})
-			if exp := 0; code != exp {
-				t.Errorf("type %s, expected %d to be %d - %s", b, code, exp, ui.OutputWriter.String()+ui.ErrorWriter.String())
+			if actualResult != expectedResult {
+				t.Errorf("type: %s - got: %d, expected: %d - %s", b, actualResult, expectedResult, ui.OutputWriter.String()+ui.ErrorWriter.String())
 			}
 		}
 	})
