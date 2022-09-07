@@ -10,6 +10,18 @@ const DEFAULT_DISPLAY = {
   editComponent: 'secret-edit',
   listItemPartial: 'secret-list/item',
 };
+const ENGINE_SECRET_BACKENDS = {
+  pki: {
+    displayName: 'PKI',
+    navigateTree: false,
+    tabs: [
+      {
+        label: 'Overview',
+        link: 'overview',
+      },
+    ],
+  },
+};
 const SECRET_BACKENDS = {
   aws: {
     displayName: 'AWS',
@@ -166,8 +178,8 @@ const SECRET_BACKENDS = {
   },
 };
 
-export function optionsForBackend([backend, tab]) {
-  const selected = SECRET_BACKENDS[backend];
+export function optionsForBackend([backend, tab, isEngine]) {
+  const selected = isEngine ? ENGINE_SECRET_BACKENDS[backend] : SECRET_BACKENDS[backend];
   let backendOptions;
 
   if (selected && selected.tabs) {
