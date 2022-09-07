@@ -636,11 +636,6 @@ func ParseConfig(d, source string) (*Config, error) {
 		result.LogRequestsLevelRaw = ""
 	}
 
-	// if result.DetectDeadlocksRaw != nil {
-	// 	result.DetectDeadlocks = strings.ToLower(strings.TrimSpace(result.DetectDeadlocksRaw.(string)))
-	// 	result.DetectDeadlocksRaw = ""
-	// }
-
 	if result.EnableResponseHeaderRaftNodeIDRaw != nil {
 		if result.EnableResponseHeaderRaftNodeID, err = parseutil.ParseBool(result.EnableResponseHeaderRaftNodeIDRaw); err != nil {
 			return nil, err
