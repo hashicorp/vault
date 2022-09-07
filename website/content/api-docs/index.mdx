@@ -55,7 +55,7 @@ in periods. Otherwise, Vault will return a 404 unsupported path error.
 ## Namespaces
 
 When using [Namespaces](/docs/enterprise/namespaces) the final path of the API 
-request is determined relative to the `X-Vault-Namespace` header. For instance, 
+request is determined to be relative to the `X-Vault-Namespace` header. For instance, 
 if a request is to the URI `secret/foo` with the `X-Vault-Namespace` header set 
 to `ns1/ns2/`, then the resulting request path to Vault will be 
 `ns1/ns2/secret/foo`. 
