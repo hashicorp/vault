@@ -15,7 +15,7 @@
     class="list-item-row {{if (eq model.name 'allow_all') 'is-disabled'}}"
     @params={{array "vault.cluster.access.oidc.assignments.assignment.details" model.name}}
     @disabled={{eq model.name "allow_all"}}
-    data-test-oidc-assignment-linked-block
+    data-test-oidc-assignment-linked-block={{model.name}}
   >
     <div class="level is-mobile">
       <div class="level-left">
