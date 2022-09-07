@@ -73,7 +73,7 @@ attempts to replicate to a quorum of followers. Once the log entry is considered
 _committed_, it can be _applied_ to a finite state machine. The finite state machine
 is application specific; in Vault's case, we use
 [BoltDB](https://github.com/etcd-io/bbolt) to maintain a cluster state. Vault's writes
-are block until they are _committed_ and _applied_.
+are blocked until they are _committed_ and _applied_.
 
 It would be undesirable to allow a replicated log to grow in an unbounded
 fashion. Raft provides a mechanism by which the current state is snapshotted and the
