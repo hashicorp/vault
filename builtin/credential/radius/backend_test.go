@@ -36,7 +36,7 @@ func prepareRadiusTestContainer(t *testing.T) (func(), string, int) {
 		ImageRepo:     "jumanjiman/radiusd",
 		ImageTag:      "latest",
 		ContainerName: "radiusd",
-		Cmd:           []string{"-f", "-l", "stdout"},
+		Cmd:           []string{"-f", "-l", "stdout", "-X"},
 		Ports:         []string{"1812/udp"},
 		LogConsumer: func(s string) {
 			if t.Failed() {
