@@ -20,10 +20,6 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
  */
 
 export default class KeyValueHeader extends Component {
-  get isEngine() {
-    return this.args.isEngine || false;
-  }
-
   get showCurrent() {
     return this.args.showCurrent || true;
   }

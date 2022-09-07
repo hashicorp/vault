@@ -10,6 +10,18 @@ const DEFAULT_DISPLAY = {
   editComponent: 'secret-edit',
   listItemPartial: 'secret-list/item',
 };
+const ENGINE_SECRET_BACKENDS = {
+  pki: {
+    displayName: 'PKI',
+    navigateTree: false,
+    tabs: [
+      {
+        label: 'Overview',
+        link: 'overview',
+      },
+    ],
+  },
+};
 const SECRET_BACKENDS = {
   aws: {
     displayName: 'AWS',
@@ -166,10 +178,18 @@ const SECRET_BACKENDS = {
   },
 };
 
-export function optionsForBackend([backend, tab]) {
+export function optionsForBackend([backend, tab, isEngine]) {
   const selected = SECRET_BACKENDS[backend];
+  const selectedEngine = ENGINE_SECRET_BACKENDS[backend];
   let backendOptions;
-
+  if (isEngine) {
+    let tabData =
+      selectedEngine.tabs.findBy('name', tab) ||
+      selectedEngine.tabs.findBy('modelPrefix', tab) ||
+      selectedEngine.tabs[0];
+    backendOptions = assign({}, selectedEngine, tabData);
+    return backendOptions;
+  }
   if (selected && selected.tabs) {
     let tabData =
       selected.tabs.findBy('name', tab) || selected.tabs.findBy('modelPrefix', tab) || selected.tabs[0];

@@ -1,6 +1,4 @@
 import Component from '@glimmer/component';
-import { optionsForBackend } from 'core/helpers/options-for-backend';
-import { engineOptionsForBackend } from 'core/helpers/engine-options-for-backend';
 
 /**
  * @module SecretListHeader
@@ -25,15 +23,7 @@ import { engineOptionsForBackend } from 'core/helpers/engine-options-for-backend
  */
 
 export default class SecretListHeader extends Component {
-  get isEngine() {
-    return this.args.isEngine || false;
-  }
   get isKV() {
     return ['kv', 'generic'].includes(this.args.model.engineType);
-  }
-  get optionsForBackendHelper() {
-    return this.isEngine
-      ? engineOptionsForBackend([this.args.model.engineType])
-      : optionsForBackend([this.args.model.engineType]);
   }
 }
