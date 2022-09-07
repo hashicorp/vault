@@ -58,7 +58,7 @@ When using [Namespaces](/docs/enterprise/namespaces) the final path of the API
 request is determined to be relative to the `X-Vault-Namespace` header. For instance, 
 if a request is to the URI `secret/foo` with the `X-Vault-Namespace` header set 
 to `ns1/ns2/`, then the resulting request path to Vault will be 
-`ns1/ns2/secret/foo`. 
+Note that it is semantically equivalent to using the fullly qualified path rather than specifying the
 
 Note that it is semantically equivalent to using the full path rather than the 
 `X-Vault-Namespace` header, Vault will match the corresponding namespace 
