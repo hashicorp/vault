@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"golang.org/x/exp/slices"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -31,7 +31,7 @@ func MultiplexingSupported(ctx context.Context, cc grpc.ClientConnInterface, nam
 	}
 
 	out := strings.Split(os.Getenv(PluginMultiplexingOptOut), ",")
-	if slices.Contains(out, name) {
+	if strutil.StrListContains(out, name) {
 		return false, nil
 	}
 
