@@ -333,9 +333,8 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				addrStringVar.Default = c.flagAddress
 			} else {
 				addrStringVar.Default = "https://127.0.0.1:8200"
-				// if no VAULT_ADDR or -address provided then give warning.
 				if os.Getenv("VAULT_ADDR") == "" {
-					c.UI.Warn("WARNING: neither VAULT_ADDR nor the -address parameter is set. Defaulting to loopback address (https://127.0.0.1:8200).")
+					c.UI.Warn(wrapAtLength(fmt.Sprintf("WARNING! VAULT_ADDR and -address unset. Defaulting to %s.", addrStringVar.Default)))
 				}
 			}
 			f.StringVar(addrStringVar)
