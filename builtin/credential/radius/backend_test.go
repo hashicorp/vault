@@ -339,7 +339,8 @@ func testStepUserList(t *testing.T, users []string) logicaltest.TestStep {
 }
 
 func testStepUpdateUser(
-	t *testing.T, name string, policies string) logicaltest.TestStep {
+	t *testing.T, name string, policies string,
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "users/" + name,
