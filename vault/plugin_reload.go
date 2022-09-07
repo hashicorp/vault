@@ -10,6 +10,7 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/plugin"
 )
 
 // reloadMatchingPluginMounts reloads provided mounts, regardless of
@@ -147,8 +148,11 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 
 	// Only call Cleanup if backend is initialized
 	if re.backend != nil {
+		// Pass a context value so that the plugin client will call the
+		// appropriate cleanup method for reloading
+		reloadCtx := context.WithValue(ctx, plugin.ContextKeyPluginReload, "reload")
 		// Call backend's Cleanup routine
-		re.backend.Cleanup(ctx)
+		re.backend.Cleanup(reloadCtx)
 	}
 
 	view := re.storageView

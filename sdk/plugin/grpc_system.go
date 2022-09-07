@@ -107,6 +107,10 @@ func (s *gRPCSystemViewClient) LookupPlugin(_ context.Context, _ string, _ const
 	return nil, fmt.Errorf("cannot call LookupPlugin from a plugin backend")
 }
 
+func (s *gRPCSystemViewClient) LookupPluginVersion(_ context.Context, _ string, _ consts.PluginType, _ string) (*pluginutil.PluginRunner, error) {
+	return nil, fmt.Errorf("cannot call LookupPluginVersion from a plugin backend")
+}
+
 func (s *gRPCSystemViewClient) MlockEnabled() bool {
 	reply, err := s.client.MlockEnabled(context.Background(), &pb.Empty{})
 	if err != nil {

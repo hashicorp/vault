@@ -262,7 +262,7 @@ Prior to Vault 1.9, the Nomad Vault integration caused duplicate clients, result
 
 ### Q: Starting in Vault 1.7, Vault does not allow creating two aliases from the same auth mount under a single entity. What changed and how does this impact client counting?
 
-Prior to 1.9, customers could create more than one alias from the same auth mount under a single entity. However, we made a fix in Vault 1.9 to prevent this from occuring as a remediation for a security issue.
+Prior to 1.9, customers could create more than one alias from the same auth mount under a single entity. However, we made a fix in Vault 1.9 to prevent this from occurring as a remediation for a security issue.
 
 This could potentially impact the number of clients generated for customers. For example, pre Vault 1.9, a customer (using K8s, with many namespaces and services accounts in the cluster) could perform entity management by mapping multiple service accounts under different namespaces under a single entity. By default, each service account will create a unique entity. Post Vault 1.9, they can only map a single K8s cluster to a single K8s auth mount.
 

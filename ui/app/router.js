@@ -114,7 +114,9 @@ Router.map(function () {
         this.route('backends', { path: '/' });
         this.route('backend', { path: '/:backend' }, function () {
           this.mount('kmip');
-          // this.mount('pki'); // ARG TODO always comment out when pushing to main
+          if (config.environment !== 'production') {
+            this.mount('pki');
+          }
           this.route('index', { path: '/' });
           this.route('configuration');
           // because globs / params can't be empty,

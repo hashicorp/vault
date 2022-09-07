@@ -9,8 +9,27 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
+func TestRegisterPlugin(t *testing.T) {
+	mockVaultServer := httptest.NewServer(http.HandlerFunc(mockVaultHandlerRegister))
+	defer mockVaultServer.Close()
+
+	cfg := DefaultConfig()
+	cfg.Address = mockVaultServer.URL
+	client, err := NewClient(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = client.Sys().RegisterPluginWithContext(context.Background(), &RegisterPluginInput{
+		Version: "v1.0.0",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestListPlugins(t *testing.T) {
-	mockVaultServer := httptest.NewServer(http.HandlerFunc(mockVaultHandler))
+	mockVaultServer := httptest.NewServer(http.HandlerFunc(mockVaultHandlerList))
 	defer mockVaultServer.Close()
 
 	cfg := DefaultConfig()
@@ -44,7 +63,7 @@ func TestListPlugins(t *testing.T) {
 	}
 }
 
-func mockVaultHandler(w http.ResponseWriter, _ *http.Request) {
+func mockVaultHandlerList(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte(listUntypedResponse))
 }
 
@@ -77,3 +96,9 @@ const listUntypedResponse = `{
   "warnings": null,
   "auth": null
 }`
+
+func mockVaultHandlerRegister(w http.ResponseWriter, _ *http.Request) {
+	_, _ = w.Write([]byte(registerResponse))
+}
+
+const registerResponse = `{}`

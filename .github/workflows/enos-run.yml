@@ -17,6 +17,7 @@ jobs:
   enos:
     name: Integration
     strategy:
+      fail-fast: false # don't fail as that can skip required cleanup steps for jobs
       matrix:
         # Run four scenarios to get a maximal distribution of variants in as
         # few jobs as possible.

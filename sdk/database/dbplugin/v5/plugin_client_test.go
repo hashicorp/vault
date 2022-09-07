@@ -112,6 +112,10 @@ func (f *fakePluginClient) Conn() grpc.ClientConnInterface {
 	return nil
 }
 
+func (f *fakePluginClient) Reload() error {
+	return nil
+}
+
 func (f *fakePluginClient) Dispense(name string) (interface{}, error) {
 	return f.dispenseResp, f.dispenseErr
 }

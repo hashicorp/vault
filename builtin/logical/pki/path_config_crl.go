@@ -21,6 +21,8 @@ type crlConfig struct {
 	AutoRebuild            bool   `json:"auto_rebuild"`
 	AutoRebuildGracePeriod string `json:"auto_rebuild_grace_period"`
 	OcspExpiry             string `json:"ocsp_expiry"`
+	EnableDelta            bool   `json:"enable_delta"`
+	DeltaRebuildInterval   string `json:"delta_rebuild_interval"`
 }
 
 // Implicit default values for the config if it does not exist.
@@ -32,6 +34,8 @@ var defaultCrlConfig = crlConfig{
 	OcspExpiry:             "12h",
 	AutoRebuild:            false,
 	AutoRebuildGracePeriod: "12h",
+	EnableDelta:            false,
+	DeltaRebuildInterval:   "15m",
 }
 
 func pathConfigCRL(b *backend) *framework.Path {
@@ -67,6 +71,15 @@ the NextUpdate field); defaults to 12 hours`,
 				Description: `The time before the CRL expires to automatically rebuild it, when enabled. Must be shorter than the CRL expiry. Defaults to 12h.`,
 				Default:     "12h",
 			},
+			"enable_delta": {
+				Type:        framework.TypeBool,
+				Description: `Whether to enable delta CRLs between authoritative CRL rebuilds`,
+			},
+			"delta_rebuild_interval": {
+				Type:        framework.TypeString,
+				Description: `The time between delta CRL rebuilds if a new revocation has occurred. Must be shorter than the CRL expiry. Defaults to 15m.`,
+				Default:     "15m",
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -101,6 +114,8 @@ func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, _ *fram
 			"ocsp_expiry":               config.OcspExpiry,
 			"auto_rebuild":              config.AutoRebuild,
 			"auto_rebuild_grace_period": config.AutoRebuildGracePeriod,
+			"enable_delta":              config.EnableDelta,
+			"delta_rebuild_interval":    config.DeltaRebuildInterval,
 		},
 	}, nil
 }
@@ -155,13 +170,35 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		config.AutoRebuildGracePeriod = autoRebuildGracePeriod
 	}
 
-	if config.AutoRebuild {
-		expiry, _ := time.ParseDuration(config.Expiry)
-		gracePeriod, _ := time.ParseDuration(config.AutoRebuildGracePeriod)
+	if enableDeltaRaw, ok := d.GetOk("enable_delta"); ok {
+		config.EnableDelta = enableDeltaRaw.(bool)
+	}
 
+	if deltaRebuildIntervalRaw, ok := d.GetOk("delta_rebuild_interval"); ok {
+		deltaRebuildInterval := deltaRebuildIntervalRaw.(string)
+		if _, err := time.ParseDuration(deltaRebuildInterval); err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("given delta_rebuild_interval could not be decoded: %s", err)), nil
+		}
+		config.DeltaRebuildInterval = deltaRebuildInterval
+	}
+
+	expiry, _ := time.ParseDuration(config.Expiry)
+	if config.AutoRebuild {
+		gracePeriod, _ := time.ParseDuration(config.AutoRebuildGracePeriod)
 		if gracePeriod >= expiry {
 			return logical.ErrorResponse(fmt.Sprintf("CRL auto-rebuilding grace period (%v) must be strictly shorter than CRL expiry (%v) value when auto-rebuilding of CRLs is enabled", config.AutoRebuildGracePeriod, config.Expiry)), nil
 		}
+	}
+
+	if config.EnableDelta {
+		deltaRebuildInterval, _ := time.ParseDuration(config.DeltaRebuildInterval)
+		if deltaRebuildInterval >= expiry {
+			return logical.ErrorResponse(fmt.Sprintf("CRL delta rebuild window (%v) must be strictly shorter than CRL expiry (%v) value when delta CRLs are enabled", config.DeltaRebuildInterval, config.Expiry)), nil
+		}
+	}
+
+	if config.EnableDelta && !config.AutoRebuild {
+		return logical.ErrorResponse("Delta CRLs cannot be enabled when auto rebuilding is disabled as the complete CRL is always regenerated!"), nil
 	}
 
 	entry, err := logical.StorageEntryJSON("config/crl", config)

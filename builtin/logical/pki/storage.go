@@ -25,6 +25,10 @@ const (
 	legacyMigrationBundleLogKey = "config/legacyMigrationBundleLog"
 	legacyCertBundlePath        = "config/ca_bundle"
 	legacyCRLPath               = "crl"
+	deltaCRLPath                = "delta-crl"
+	deltaCRLPathSuffix          = "-delta"
+
+	autoTidyConfigPath = "config/auto-tidy"
 
 	// Used as a quick sanity check for a reference id lookups...
 	uuidLength = 36
@@ -155,13 +159,17 @@ type issuerEntry struct {
 	RevocationTime       int64                     `json:"revocation_time"`
 	RevocationTimeUTC    time.Time                 `json:"revocation_time_utc"`
 	AIAURIs              *certutil.URLEntries      `json:"aia_uris,omitempty"`
+	LastModified         time.Time                 `json:"last_modified"`
 	Version              uint                      `json:"version"`
 }
 
 type localCRLConfigEntry struct {
-	IssuerIDCRLMap   map[issuerID]crlID  `json:"issuer_id_crl_map"`
-	CRLNumberMap     map[crlID]int64     `json:"crl_number_map"`
-	CRLExpirationMap map[crlID]time.Time `json:"crl_expiration_map"`
+	IssuerIDCRLMap        map[issuerID]crlID  `json:"issuer_id_crl_map"`
+	CRLNumberMap          map[crlID]int64     `json:"crl_number_map"`
+	LastCompleteNumberMap map[crlID]int64     `json:"last_complete_number_map"`
+	CRLExpirationMap      map[crlID]time.Time `json:"crl_expiration_map"`
+	LastModified          time.Time           `json:"last_modified"`
+	DeltaLastModified     time.Time           `json:"delta_last_modified"`
 }
 
 type keyConfigEntry struct {
@@ -202,7 +210,7 @@ func (sc *storageContext) listKeys() ([]keyID, error) {
 
 func (sc *storageContext) fetchKeyById(keyId keyID) (*keyEntry, error) {
 	if len(keyId) == 0 {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki key: empty key identifier")}
+		return nil, errutil.InternalError{Err: "unable to fetch pki key: empty key identifier"}
 	}
 
 	entry, err := sc.Storage.Get(sc.Context, keyPrefix+keyId.String())
@@ -558,7 +566,7 @@ func (sc *storageContext) resolveKeyReference(reference string) (keyID, error) {
 // fetchIssuerById returns an issuerEntry based on issuerId, if none found an error is returned.
 func (sc *storageContext) fetchIssuerById(issuerId issuerID) (*issuerEntry, error) {
 	if len(issuerId) == 0 {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki issuer: empty issuer identifier")}
+		return nil, errutil.InternalError{Err: "unable to fetch pki issuer: empty issuer identifier"}
 	}
 
 	entry, err := sc.Storage.Get(sc.Context, issuerPrefix+issuerId.String())
@@ -619,6 +627,9 @@ func (sc *storageContext) upgradeIssuerIfRequired(issuer *issuerEntry) *issuerEn
 
 func (sc *storageContext) writeIssuer(issuer *issuerEntry) error {
 	issuerId := issuer.ID
+	if issuer.LastModified.IsZero() {
+		issuer.LastModified = time.Now().UTC()
+	}
 
 	json, err := logical.StorageEntryJSON(issuerPrefix+issuerId.String(), issuer)
 	if err != nil {
@@ -796,7 +807,7 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 }
 
 func areCertificatesEqual(cert1 *x509.Certificate, cert2 *x509.Certificate) bool {
-	return bytes.Compare(cert1.Raw, cert2.Raw) == 0
+	return bytes.Equal(cert1.Raw, cert2.Raw)
 }
 
 func (sc *storageContext) setLocalCRLConfig(mapping *localCRLConfigEntry) error {
@@ -827,6 +838,24 @@ func (sc *storageContext) getLocalCRLConfig() (*localCRLConfigEntry, error) {
 
 	if len(mapping.CRLNumberMap) == 0 {
 		mapping.CRLNumberMap = make(map[crlID]int64)
+	}
+
+	if len(mapping.LastCompleteNumberMap) == 0 {
+		mapping.LastCompleteNumberMap = make(map[crlID]int64)
+
+		// Since this might not exist on migration, we want to guess as
+		// to the last full CRL number was. This was likely the last
+		// value from CRLNumberMap if it existed, since we're just adding
+		// the mapping here in this block.
+		//
+		// After the next full CRL build, we will have set this value
+		// correctly, so it doesn't really matter in the long term if
+		// we're off here.
+		for id, number := range mapping.CRLNumberMap {
+			// Decrement by one, since CRLNumberMap is the future number,
+			// not the last built number.
+			mapping.LastCompleteNumberMap[id] = number - 1
+		}
 	}
 
 	if len(mapping.CRLExpirationMap) == 0 {
@@ -1130,4 +1159,32 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 	}
 
 	return &result, nil
+}
+
+func (sc *storageContext) getAutoTidyConfig() (*tidyConfig, error) {
+	entry, err := sc.Storage.Get(sc.Context, autoTidyConfigPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var result tidyConfig
+	if entry == nil {
+		result = defaultTidyConfig
+		return &result, nil
+	}
+
+	if err = entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (sc *storageContext) writeAutoTidyConfig(config *tidyConfig) error {
+	entry, err := logical.StorageEntryJSON(autoTidyConfigPath, config)
+	if err != nil {
+		return err
+	}
+
+	return sc.Storage.Put(sc.Context, entry)
 }

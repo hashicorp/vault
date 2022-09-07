@@ -30,10 +30,11 @@ import (
 )
 
 var (
-	pluginCatalogPath         = "core/plugin-catalog/"
-	ErrDirectoryNotConfigured = errors.New("could not set plugin, plugin directory is not configured")
-	ErrPluginNotFound         = errors.New("plugin not found in the catalog")
-	ErrPluginBadType          = errors.New("unable to determine plugin type")
+	pluginCatalogPath           = "core/plugin-catalog/"
+	ErrDirectoryNotConfigured   = errors.New("could not set plugin, plugin directory is not configured")
+	ErrPluginNotFound           = errors.New("plugin not found in the catalog")
+	ErrPluginConnectionNotFound = errors.New("plugin connection not found for client")
+	ErrPluginBadType            = errors.New("unable to determine plugin type")
 )
 
 // PluginCatalog keeps a record of plugins known to vault. External plugins need
@@ -78,13 +79,15 @@ type pluginClient struct {
 	logger log.Logger
 
 	// id is the connection ID
-	id string
+	id  string
+	pid int
 
 	// client handles the lifecycle of a plugin process
 	// multiplexed plugins share the same client
 	client      *plugin.Client
 	clientConn  grpc.ClientConnInterface
 	cleanupFunc func() error
+	reloadFunc  func() error
 
 	plugin.ClientProtocol
 }
@@ -148,6 +151,38 @@ func (p *pluginClient) Conn() grpc.ClientConnInterface {
 	return p.clientConn
 }
 
+func (p *pluginClient) Reload() error {
+	p.logger.Debug("reload external plugin process")
+	return p.reloadFunc()
+}
+
+// reloadExternalPlugin
+// This should be called with the write lock held.
+func (c *PluginCatalog) reloadExternalPlugin(name, id string) error {
+	extPlugin, ok := c.externalPlugins[name]
+	if !ok {
+		return fmt.Errorf("plugin client not found")
+	}
+	if !extPlugin.multiplexingSupport {
+		err := c.cleanupExternalPlugin(name, id)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	pc, ok := extPlugin.connections[id]
+	if !ok {
+		return fmt.Errorf("%w id: %s", ErrPluginConnectionNotFound, id)
+	}
+
+	delete(c.externalPlugins, name)
+	pc.client.Kill()
+	c.logger.Debug("killed external plugin process for reload", "name", name, "pid", pc.pid)
+
+	return nil
+}
+
 // Close calls the plugin client's cleanupFunc to do any necessary cleanup on
 // the plugin client and the PluginCatalog. This implements the
 // plugin.ClientProtocol interface.
@@ -167,19 +202,26 @@ func (c *PluginCatalog) cleanupExternalPlugin(name, id string) error {
 
 	pc, ok := extPlugin.connections[id]
 	if !ok {
-		return fmt.Errorf("plugin connection not found")
+		// this can happen if the backend is reloaded due to a plugin process
+		// being killed out of band
+		c.logger.Warn(ErrPluginConnectionNotFound.Error(), "id", id)
+		return fmt.Errorf("%w id: %s", ErrPluginConnectionNotFound, id)
 	}
 
 	delete(extPlugin.connections, id)
+	c.logger.Debug("removed plugin client connection", "id", id)
+
 	if !extPlugin.multiplexingSupport {
 		pc.client.Kill()
 
 		if len(extPlugin.connections) == 0 {
 			delete(c.externalPlugins, name)
 		}
+		c.logger.Debug("killed external plugin process", "name", name, "pid", pc.pid)
 	} else if len(extPlugin.connections) == 0 || pc.client.Exited() {
 		pc.client.Kill()
 		delete(c.externalPlugins, name)
+		c.logger.Debug("killed external multiplexed plugin process", "name", name, "pid", pc.pid)
 	}
 
 	return nil
@@ -252,6 +294,11 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 			defer c.lock.Unlock()
 			return c.cleanupExternalPlugin(pluginRunner.Name, id)
 		},
+		reloadFunc: func() error {
+			c.lock.Lock()
+			defer c.lock.Unlock()
+			return c.reloadExternalPlugin(pluginRunner.Name, id)
+		},
 	}
 
 	// Multiplexing support will always be false initially, but will be
@@ -264,9 +311,8 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 			pluginutil.Logger(config.Logger),
 			pluginutil.MetadataMode(config.IsMetadataMode),
 			pluginutil.MLock(c.mlockPlugins),
-
-			// NewPluginClient only supports AutoMTLS today
-			pluginutil.AutoMTLS(true),
+			pluginutil.AutoMTLS(config.AutoMTLS),
+			pluginutil.Runner(config.Wrapper),
 		)
 		if err != nil {
 			return nil, err
@@ -292,6 +338,12 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 	rpcClient, err := pc.client.Client()
 	if err != nil {
 		return nil, err
+	}
+
+	// get the external plugin pid
+	conf := pc.client.ReattachConfig()
+	if conf != nil {
+		pc.pid = conf.Pid
 	}
 
 	clientConn := rpcClient.(*plugin.GRPCClient).Conn
@@ -322,9 +374,8 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 }
 
 // getPluginTypeFromUnknown will attempt to run the plugin to determine the
-// type and if it supports multiplexing. It will first attempt to run as a
-// database plugin then a backend plugin. Both of these will be run in metadata
-// mode.
+// type. It will first attempt to run as a database plugin then a backend
+// plugin.
 func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log.Logger, plugin *pluginutil.PluginRunner) (consts.PluginType, error) {
 	merr := &multierror.Error{}
 	err := c.isDatabasePlugin(ctx, plugin)
@@ -333,43 +384,95 @@ func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log
 	}
 	merr = multierror.Append(merr, err)
 
-	// Attempt to run as backend plugin
-	client, err := backendplugin.NewPluginClient(ctx, nil, plugin, log.NewNullLogger(), true)
+	pluginType, err := c.getBackendPluginType(ctx, plugin)
 	if err == nil {
-		err := client.Setup(ctx, &logical.BackendConfig{})
+		return pluginType, nil
+	}
+	merr = multierror.Append(merr, err)
+
+	return consts.PluginTypeUnknown, merr
+}
+
+// getBackendPluginType returns an error if the plugin is not a backend plugin.
+func (c *PluginCatalog) getBackendPluginType(ctx context.Context, pluginRunner *pluginutil.PluginRunner) (consts.PluginType, error) {
+	merr := &multierror.Error{}
+	// Attempt to run as backend plugin
+	config := pluginutil.PluginClientConfig{
+		Name:            pluginRunner.Name,
+		PluginSets:      backendplugin.PluginSet,
+		HandshakeConfig: backendplugin.HandshakeConfig,
+		Logger:          log.NewNullLogger(),
+		IsMetadataMode:  false,
+		AutoMTLS:        true,
+	}
+
+	var client logical.Backend
+	var attemptV4 bool
+	// First, attempt to run as backend V5 plugin
+	c.logger.Debug("attempting to load backend plugin", "name", pluginRunner.Name)
+	pc, err := c.newPluginClient(ctx, pluginRunner, config)
+	if err == nil {
+		// we spawned a subprocess, so make sure to clean it up
+		defer c.cleanupExternalPlugin(pluginRunner.Name, pc.id)
+
+		// dispense the plugin so we can get its type
+		client, err = backendplugin.Dispense(pc.ClientProtocol, pc)
 		if err != nil {
-			return consts.PluginTypeUnknown, err
-		}
-
-		backendType := client.Type()
-		client.Cleanup(ctx)
-
-		switch backendType {
-		case logical.TypeCredential:
-			return consts.PluginTypeCredential, nil
-		case logical.TypeLogical:
-			return consts.PluginTypeSecrets, nil
+			merr = multierror.Append(merr, fmt.Errorf("failed to dispense plugin as backend v5: %w", err))
+			c.logger.Debug("failed to dispense v5 backend plugin", "name", pluginRunner.Name)
+			attemptV4 = true
+		} else {
+			c.logger.Debug("successfully dispensed v5 backend plugin", "name", pluginRunner.Name)
 		}
 	} else {
-		merr = multierror.Append(merr, err)
+		attemptV4 = true
+	}
+
+	if attemptV4 {
+		c.logger.Debug("failed to dispense v5 backend plugin", "name", pluginRunner.Name)
+		config.AutoMTLS = false
+		config.IsMetadataMode = true
+		// attempt to run as a v4 backend plugin
+		client, err = backendplugin.NewPluginClient(ctx, nil, pluginRunner, log.NewNullLogger(), true)
+		if err != nil {
+			merr = multierror.Append(merr, fmt.Errorf("failed to dispense v4 backend plugin: %w", err))
+			c.logger.Debug("failed to dispense v4 backend plugin", "name", pluginRunner.Name, "error", merr)
+			return consts.PluginTypeUnknown, merr.ErrorOrNil()
+		}
+		c.logger.Debug("successfully dispensed v4 backend plugin", "name", pluginRunner.Name)
+		defer client.Cleanup(ctx)
+	}
+
+	err = client.Setup(ctx, &logical.BackendConfig{})
+	if err != nil {
+		return consts.PluginTypeUnknown, err
+	}
+	backendType := client.Type()
+
+	switch backendType {
+	case logical.TypeCredential:
+		return consts.PluginTypeCredential, nil
+	case logical.TypeLogical:
+		return consts.PluginTypeSecrets, nil
 	}
 
 	if client == nil || client.Type() == logical.TypeUnknown {
-		logger.Warn("unknown plugin type",
-			"plugin name", plugin.Name,
+		c.logger.Warn("unknown plugin type",
+			"plugin name", pluginRunner.Name,
 			"error", merr.Error())
 	} else {
-		logger.Warn("unsupported plugin type",
-			"plugin name", plugin.Name,
+		c.logger.Warn("unsupported plugin type",
+			"plugin name", pluginRunner.Name,
 			"plugin type", client.Type().String(),
 			"error", merr.Error())
 	}
 
-	return consts.PluginTypeUnknown, nil
+	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as backend plugin: %w", err))
+
+	return consts.PluginTypeUnknown, merr.ErrorOrNil()
 }
 
-// isDatabasePlugin returns true if the plugin supports multiplexing. An error
-// is returned if the plugin is not a database plugin.
+// isDatabasePlugin returns an error if the plugin is not a database plugin.
 func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *pluginutil.PluginRunner) error {
 	merr := &multierror.Error{}
 	config := pluginutil.PluginClientConfig{
