@@ -190,9 +190,9 @@ module('Acceptance | oidc-config/clients', function (hooks) {
   test('it renders client list when clients exist', async function (assert) {
     assert.expect(8);
     this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
-    // this.server.get('/identity/oidc/client/test-app', () =>
-    //   overrideMirageResponse(null, CLIENT_DATA_RESPONSE)
-    // );
+    this.server.get('/identity/oidc/client/test-app', () =>
+      overrideMirageResponse(null, CLIENT_DATA_RESPONSE)
+    );
     await visit(OIDC_BASE_URL);
     assert.equal(
       currentRouteName(),
@@ -264,7 +264,9 @@ module('Acceptance | oidc-config/clients', function (hooks) {
       'navigates to client providers route'
     );
     assert.dom(SELECTORS.clientProvidersTab).hasClass('active', 'providers tab is active');
-    assert.dom('[data-test-oidc-provider-linked-block]').hasText('default', 'shows default provider');
+    assert
+      .dom('[data-test-oidc-provider-linked-block]')
+      .hasTextContaining('default', 'shows default provider');
     assert.dom(SELECTORS.clientDeleteButton).doesNotExist('provider tab does not have delete option');
     assert.dom(SELECTORS.clientEditButton).doesNotExist('provider tab does not have edit button');
   });
