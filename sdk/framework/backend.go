@@ -221,7 +221,7 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 	var ignored []string
 	for k, v := range req.Data {
 		raw[k] = v
-		if path.Fields[k] == nil {
+		if !path.TakesArbitraryInput && path.Fields[k] == nil {
 			ignored = append(ignored, k)
 		}
 	}
@@ -528,9 +528,16 @@ func (b *Backend) handleRootHelp(req *logical.Request) (*logical.Response, error
 	// names in the OAS document.
 	requestResponsePrefix := req.GetString("requestResponsePrefix")
 
+	// Generic mount paths will primarily be used for code generation purposes.
+	// This will result in dynamic mount paths being placed instead of
+	// hardcoded default paths. For example /auth/approle/login would be replaced
+	// with /auth/{mountPath}/login. This will be replaced for all secrets
+	// engines and auth methods that are enabled.
+	genericMountPaths, _ := req.Get("genericMountPaths").(bool)
+
 	// Build OpenAPI response for the entire backend
 	doc := NewOASDocument()
-	if err := documentPaths(b, requestResponsePrefix, doc); err != nil {
+	if err := documentPaths(b, requestResponsePrefix, genericMountPaths, doc); err != nil {
 		b.Logger().Warn("error generating OpenAPI", "error", err)
 	}
 

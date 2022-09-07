@@ -17,7 +17,8 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
+	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/audit"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/builtinplugins"
@@ -28,6 +29,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
@@ -170,6 +172,10 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"options": map[string]string{
 				"version": "1",
 			},
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 		"sys/": map[string]interface{}{
 			"type":                    "system",
@@ -183,9 +189,13 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"force_no_cache":              false,
 				"passthrough_request_headers": []string{"Accept"},
 			},
-			"local":     false,
-			"seal_wrap": true,
-			"options":   map[string]string(nil),
+			"local":           false,
+			"seal_wrap":       true,
+			"options":         map[string]string(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description":             "per-token private secret storage",
@@ -198,9 +208,13 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"max_lease_ttl":     resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 				"force_no_cache":    false,
 			},
-			"local":     true,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":           true,
+			"seal_wrap":       false,
+			"options":         map[string]string(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 		"identity/": map[string]interface{}{
 			"description":             "identity store",
@@ -214,9 +228,13 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"force_no_cache":              false,
 				"passthrough_request_headers": []string{"Authorization"},
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":           false,
+			"seal_wrap":       false,
+			"options":         map[string]string(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); len(diff) > 0 {
@@ -283,6 +301,10 @@ func TestSystemBackend_mount(t *testing.T) {
 			"options": map[string]string{
 				"version": "1",
 			},
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 		"sys/": map[string]interface{}{
 			"type":                    "system",
@@ -296,9 +318,13 @@ func TestSystemBackend_mount(t *testing.T) {
 				"force_no_cache":              false,
 				"passthrough_request_headers": []string{"Accept"},
 			},
-			"local":     false,
-			"seal_wrap": true,
-			"options":   map[string]string(nil),
+			"local":           false,
+			"seal_wrap":       true,
+			"options":         map[string]string(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description":             "per-token private secret storage",
@@ -311,9 +337,13 @@ func TestSystemBackend_mount(t *testing.T) {
 				"max_lease_ttl":     resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 				"force_no_cache":    false,
 			},
-			"local":     true,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":           true,
+			"seal_wrap":       false,
+			"options":         map[string]string(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 		"identity/": map[string]interface{}{
 			"description":             "identity store",
@@ -327,9 +357,13 @@ func TestSystemBackend_mount(t *testing.T) {
 				"force_no_cache":              false,
 				"passthrough_request_headers": []string{"Authorization"},
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":           false,
+			"seal_wrap":       false,
+			"options":         map[string]string(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 		"prod/secret/": map[string]interface{}{
 			"description":             "",
@@ -347,6 +381,10 @@ func TestSystemBackend_mount(t *testing.T) {
 			"options": map[string]string{
 				"version": "1",
 			},
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); len(diff) > 0 {
@@ -1708,7 +1746,7 @@ func TestSystemBackend_revokePrefixAuth_newUrl(t *testing.T) {
 			TTL: time.Hour,
 		},
 	}
-	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1772,7 +1810,7 @@ func TestSystemBackend_revokePrefixAuth_origUrl(t *testing.T) {
 			TTL: time.Hour,
 		},
 	}
-	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth)
+	err = exp.RegisterAuth(namespace.RootContext(nil), te, auth, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1816,9 +1854,13 @@ func TestSystemBackend_authTable(t *testing.T) {
 				"force_no_cache":    false,
 				"token_type":        "default-service",
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":           false,
+			"seal_wrap":       false,
+			"options":         map[string]string(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); diff != nil {
@@ -1880,9 +1922,13 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 				"force_no_cache":    false,
 				"token_type":        "default-service",
 			},
-			"local":     true,
-			"seal_wrap": true,
-			"options":   map[string]string{},
+			"local":           true,
+			"seal_wrap":       true,
+			"options":         map[string]string{},
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 		"token/": map[string]interface{}{
 			"type":                    "token",
@@ -1896,9 +1942,13 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 				"force_no_cache":    false,
 				"token_type":        "default-service",
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]string(nil),
+			"local":           false,
+			"seal_wrap":       false,
+			"options":         map[string]string(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"version":         "",
+			"running_version": "",
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); diff != nil {
@@ -2891,21 +2941,25 @@ func TestSystemBackend_rotate(t *testing.T) {
 }
 
 func testSystemBackend(t *testing.T) logical.Backend {
+	t.Helper()
 	c, _, _ := TestCoreUnsealed(t)
 	return c.systemBackend
 }
 
 func testSystemBackendRaw(t *testing.T) logical.Backend {
+	t.Helper()
 	c, _, _ := TestCoreUnsealedRaw(t)
 	return c.systemBackend
 }
 
 func testCoreSystemBackend(t *testing.T) (*Core, logical.Backend, string) {
+	t.Helper()
 	c, _, root := TestCoreUnsealed(t)
 	return c, c.systemBackend, root
 }
 
 func testCoreSystemBackendRaw(t *testing.T) (*Core, logical.Backend, string) {
+	t.Helper()
 	c, _, root := TestCoreUnsealedRaw(t)
 	return c, c.systemBackend, root
 }
@@ -2942,6 +2996,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 		"args":    []string(nil),
 		"sha256":  "",
 		"builtin": true,
+		"version": c.pluginCatalog.getBuiltinVersion(consts.PluginTypeDatabase, "mysql-database-plugin"),
 	}
 	if !reflect.DeepEqual(actualRespData, expectedRespData) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actualRespData, expectedRespData)
@@ -2987,6 +3042,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 		"args":    []string{"--test"},
 		"sha256":  "31",
 		"builtin": false,
+		"version": "",
 	}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actual, expected)
@@ -3000,6 +3056,51 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	}
 
 	req = logical.TestRequest(t, logical.ReadOperation, "plugins/catalog/database/test-plugin")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if resp != nil || err != nil {
+		t.Fatalf("expected nil response, plugin not deleted correctly got resp: %v, err: %v", resp, err)
+	}
+
+	// Add a versioned plugin, and check we get the version back in the right form when we read.
+	req = logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
+	req.Data["version"] = "v0.1.0"
+	req.Data["sha_256"] = hex.EncodeToString([]byte{'1'})
+	req.Data["command"] = command
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || resp.Error() != nil {
+		t.Fatalf("err: %v %v", err, resp.Error())
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/catalog/database/test-plugin")
+	req.Data["version"] = "v0.1.0"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	actual = resp.Data
+	expected = map[string]interface{}{
+		"name":    "test-plugin",
+		"command": filepath.Base(file.Name()),
+		"args":    []string{"--test"},
+		"sha256":  "31",
+		"builtin": false,
+		"version": "v0.1.0",
+	}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actual, expected)
+	}
+
+	// Delete versioned plugin
+	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/catalog/database/test-plugin")
+	req.Data["version"] = "0.1.0"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/catalog/database/test-plugin")
+	req.Data["version"] = "0.1.0"
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if resp != nil || err != nil {
 		t.Fatalf("expected nil response, plugin not deleted correctly got resp: %v, err: %v", resp, err)
@@ -3221,6 +3322,10 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"options": map[string]string{
 					"version": "1",
 				},
+				"sha":             "",
+				"running_sha":     "",
+				"version":         "",
+				"running_version": "",
 			},
 			"sys/": map[string]interface{}{
 				"type":                    "system",
@@ -3234,9 +3339,13 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 					"force_no_cache":              false,
 					"passthrough_request_headers": []string{"Accept"},
 				},
-				"local":     false,
-				"seal_wrap": true,
-				"options":   map[string]string(nil),
+				"local":           false,
+				"seal_wrap":       true,
+				"options":         map[string]string(nil),
+				"sha":             "",
+				"running_sha":     "",
+				"version":         "",
+				"running_version": "",
 			},
 			"cubbyhole/": map[string]interface{}{
 				"description":             "per-token private secret storage",
@@ -3249,9 +3358,13 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 					"max_lease_ttl":     resp.Data["secret"].(map[string]interface{})["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 					"force_no_cache":    false,
 				},
-				"local":     true,
-				"seal_wrap": false,
-				"options":   map[string]string(nil),
+				"local":           true,
+				"seal_wrap":       false,
+				"options":         map[string]string(nil),
+				"sha":             "",
+				"running_sha":     "",
+				"version":         "",
+				"running_version": "",
 			},
 			"identity/": map[string]interface{}{
 				"description":             "identity store",
@@ -3265,9 +3378,13 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 					"force_no_cache":              false,
 					"passthrough_request_headers": []string{"Authorization"},
 				},
-				"local":     false,
-				"seal_wrap": false,
-				"options":   map[string]string(nil),
+				"local":           false,
+				"seal_wrap":       false,
+				"options":         map[string]string(nil),
+				"sha":             "",
+				"running_sha":     "",
+				"version":         "",
+				"running_version": "",
 			},
 		},
 		"auth": map[string]interface{}{
@@ -3286,6 +3403,10 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"uuid":                    resp.Data["auth"].(map[string]interface{})["token/"].(map[string]interface{})["uuid"],
 				"local":                   false,
 				"seal_wrap":               false,
+				"sha":                     "",
+				"running_sha":             "",
+				"version":                 "",
+				"running_version":         "",
 			},
 		},
 	}
@@ -3408,6 +3529,59 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_OASGenericMount(t *testing.T) {
+	_, b, rootToken := testCoreSystemBackend(t)
+	var oapi map[string]interface{}
+
+	// Check that default paths are present with a root token
+	req := logical.TestRequest(t, logical.ReadOperation, "internal/specs/openapi")
+	req.Data["generic_mount_paths"] = true
+	req.ClientToken = rootToken
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	body := resp.Data["http_raw_body"].([]byte)
+	err = jsonutil.DecodeJSON(body, &oapi)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	doc, err := framework.NewOASDocumentFromMap(oapi)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pathSamples := []struct {
+		path string
+		tag  string
+	}{
+		{"/auth/{mountPath}/lookup", "auth"},
+		{"/{mountPath}/{path}", "secrets"},
+		{"/identity/group/id", "identity"},
+		{"/{mountPath}/.*", "secrets"},
+		{"/sys/policy", "system"},
+	}
+
+	for _, path := range pathSamples {
+		if doc.Paths[path.path] == nil {
+			t.Fatalf("didn't find expected path '%s'.", path)
+		}
+		tag := doc.Paths[path.path].Get.Tags[0]
+		if tag != path.tag {
+			t.Fatalf("path: %s; expected tag: %s, actual: %s", path.path, tag, path.tag)
+		}
+	}
+
+	// Simple check of response size (which is much larger than most
+	// Vault responses), mainly to catch mass omission of expected path data.
+	const minLen = 70000
+	if len(body) < minLen {
+		t.Fatalf("response size too small; expected: min %d, actual: %d", minLen, len(body))
+	}
+}
+
 func TestSystemBackend_OpenAPI(t *testing.T) {
 	_, b, rootToken := testCoreSystemBackend(t)
 	var oapi map[string]interface{}
@@ -3477,7 +3651,7 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 
 	for _, path := range pathSamples {
 		if doc.Paths[path.path] == nil {
-			t.Fatalf("didn't find expected path '%s'.", path)
+			t.Fatalf("didn't find expected path %q.", path)
 		}
 		tag := doc.Paths[path.path].Get.Tags[0]
 		if tag != path.tag {
@@ -3485,9 +3659,9 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 		}
 	}
 
-	// Simple sanity check of response size (which is much larger than most
+	// Simple check of response size (which is much larger than most
 	// Vault responses), mainly to catch mass omission of expected path data.
-	minLen := 70000
+	const minLen = 70000
 	if len(body) < minLen {
 		t.Fatalf("response size too small; expected: min %d, actual: %d", minLen, len(body))
 	}
@@ -3564,7 +3738,7 @@ func TestSystemBackend_PathWildcardPreflight(t *testing.T) {
 		ClientToken: te.ID,
 		Accessor:    te.Accessor,
 		Orphan:      true,
-	}); err != nil {
+	}, ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -4554,5 +4728,347 @@ func TestProcessLimit(t *testing.T) {
 				t.Errorf("error was: %v", err)
 			}
 		}
+	}
+}
+
+func validateLevel(level string, logger hclog.Logger) bool {
+	switch level {
+	case "trace":
+		return logger.IsTrace()
+	case "debug":
+		return logger.IsDebug()
+	case "notice", "info", "":
+		return logger.IsInfo()
+	case "warn", "warning":
+		return logger.IsWarn()
+	case "err", "error":
+		return logger.IsError()
+	}
+
+	return false
+}
+
+func TestSystemBackend_Loggers(t *testing.T) {
+	testCases := []struct {
+		level       string
+		expectError bool
+	}{
+		{
+			"trace",
+			false,
+		},
+		{
+			"debug",
+			false,
+		},
+		{
+			"notice",
+			false,
+		},
+		{
+			"info",
+			false,
+		},
+		{
+			"warn",
+			false,
+		},
+		{
+			"warning",
+			false,
+		},
+		{
+			"err",
+			false,
+		},
+		{
+			"error",
+			false,
+		},
+		{
+			"",
+			true,
+		},
+		{
+			"invalid",
+			true,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+
+		t.Run(fmt.Sprintf("all-loggers-%s", tc.level), func(t *testing.T) {
+			t.Parallel()
+
+			core, b, _ := testCoreSystemBackend(t)
+
+			req := &logical.Request{
+				Path:      "loggers",
+				Operation: logical.UpdateOperation,
+				Data: map[string]interface{}{
+					"level": tc.level,
+				},
+			}
+
+			resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+			respIsError := resp != nil && resp.IsError()
+
+			if err != nil || (!tc.expectError && respIsError) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			if tc.expectError && !respIsError {
+				t.Fatalf("expected response error, resp: %#v", resp)
+			}
+
+			if !tc.expectError {
+				for _, logger := range core.allLoggers {
+					if !validateLevel(tc.level, logger) {
+						t.Fatalf("expected logger %q to be %q", logger.Name(), tc.level)
+					}
+				}
+			}
+
+			req = &logical.Request{
+				Path:      fmt.Sprintf("loggers"),
+				Operation: logical.DeleteOperation,
+			}
+
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			for _, logger := range core.allLoggers {
+				if !validateLevel(core.logLevel, logger) {
+					t.Errorf("expected level of logger %q to match original config", logger.Name())
+				}
+			}
+		})
+	}
+}
+
+func TestSystemBackend_LoggersByName(t *testing.T) {
+	testCases := []struct {
+		logger            string
+		level             string
+		expectWriteError  bool
+		expectDeleteError bool
+	}{
+		{
+			"core",
+			"trace",
+			false,
+			false,
+		},
+		{
+			"token",
+			"debug",
+			false,
+			false,
+		},
+		{
+			"audit",
+			"notice",
+			false,
+			false,
+		},
+		{
+			"expiration",
+			"info",
+			false,
+			false,
+		},
+		{
+			"policy",
+			"warn",
+			false,
+			false,
+		},
+		{
+			"activity",
+			"warning",
+			false,
+			false,
+		},
+		{
+			"identity",
+			"err",
+			false,
+			false,
+		},
+		{
+			"rollback",
+			"error",
+			false,
+			false,
+		},
+		{
+			"system",
+			"",
+			true,
+			false,
+		},
+		{
+			"quotas",
+			"invalid",
+			true,
+			false,
+		},
+		{
+			"",
+			"info",
+			true,
+			true,
+		},
+		{
+			"does_not_exist",
+			"error",
+			true,
+			true,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+
+		t.Run(fmt.Sprintf("loggers-by-name-%s", tc.logger), func(t *testing.T) {
+			t.Parallel()
+
+			core, b, _ := testCoreSystemBackend(t)
+
+			req := &logical.Request{
+				Path:      fmt.Sprintf("loggers/%s", tc.logger),
+				Operation: logical.UpdateOperation,
+				Data: map[string]interface{}{
+					"name":  tc.logger,
+					"level": tc.level,
+				},
+			}
+
+			resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+			respIsError := resp != nil && resp.IsError()
+
+			if err != nil || (!tc.expectWriteError && respIsError) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			if tc.expectWriteError && !respIsError {
+				t.Fatalf("expected response error, resp: %#v", resp)
+			}
+
+			if !tc.expectWriteError {
+				for _, logger := range core.allLoggers {
+					if logger.Name() != tc.logger && !validateLevel(core.logLevel, logger) {
+						t.Errorf("expected level of logger %q to be unchanged", logger.Name())
+					}
+
+					if !validateLevel(tc.level, logger) {
+						t.Fatalf("expected logger %q to be %q", logger.Name(), tc.level)
+					}
+				}
+			}
+
+			req = &logical.Request{
+				Path:      fmt.Sprintf("loggers/%s", tc.logger),
+				Operation: logical.DeleteOperation,
+				Data: map[string]interface{}{
+					"name": tc.logger,
+				},
+			}
+
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			respIsError = resp != nil && resp.IsError()
+
+			if err != nil || (!tc.expectDeleteError && respIsError) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			if tc.expectDeleteError && !respIsError {
+				t.Fatalf("expected response error, resp: %#v", resp)
+			}
+
+			if !tc.expectDeleteError {
+				for _, logger := range core.allLoggers {
+					if !validateLevel(core.logLevel, logger) {
+						t.Errorf("expected level of logger %q to match original config", logger.Name())
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestSortVersionedPlugins(t *testing.T) {
+	versionedPlugin := func(typ consts.PluginType, name string, version string, builtin bool) pluginutil.VersionedPlugin {
+		return pluginutil.VersionedPlugin{
+			Type:    typ.String(),
+			Name:    name,
+			Version: version,
+			SHA256:  "",
+			Builtin: builtin,
+			SemanticVersion: func() *semver.Version {
+				if version != "" {
+					return semver.Must(semver.NewVersion(version))
+				}
+
+				return semver.Must(semver.NewVersion("0.0.0"))
+			}(),
+		}
+	}
+
+	differingTypes := []pluginutil.VersionedPlugin{
+		versionedPlugin(consts.PluginTypeSecrets, "c", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeDatabase, "c", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", false),
+	}
+	differingNames := []pluginutil.VersionedPlugin{
+		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "b", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "a", "1.0.0", false),
+	}
+	differingVersions := []pluginutil.VersionedPlugin{
+		versionedPlugin(consts.PluginTypeCredential, "c", "10.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "2.0.1", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "2.1.0", false),
+	}
+	versionedUnversionedAndBuiltin := []pluginutil.VersionedPlugin{
+		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "", false),
+		versionedPlugin(consts.PluginTypeCredential, "c", "1.0.0", true),
+	}
+
+	for name, tc := range map[string][]pluginutil.VersionedPlugin{
+		"ascending types":    differingTypes,
+		"ascending names":    differingNames,
+		"ascending versions": differingVersions,
+		// Include differing versions twice so we can test out equality too.
+		"differing types, names and versions": append(differingTypes,
+			append(differingNames,
+				append(differingVersions, differingVersions...)...)...),
+		"mix of unversioned, versioned, and builtin": versionedUnversionedAndBuiltin,
+	} {
+		t.Run(name, func(t *testing.T) {
+			sortVersionedPlugins(tc)
+			for i := 1; i < len(tc); i++ {
+				previous := tc[i-1]
+				current := tc[i]
+				if current.Type > previous.Type {
+					continue
+				}
+				if current.Name > previous.Name {
+					continue
+				}
+				if current.SemanticVersion.GreaterThan(previous.SemanticVersion) {
+					continue
+				}
+				if current.Type == previous.Type && current.Name == previous.Name && current.SemanticVersion.Equal(previous.SemanticVersion) {
+					continue
+				}
+
+				t.Fatalf("versioned plugins at index %d and %d were not properly sorted: %+v, %+v", i-1, i, previous, current)
+			}
+		})
 	}
 }

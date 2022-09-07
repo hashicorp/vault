@@ -8,7 +8,7 @@ description: |-
 
 # Standalone Server with TLS
 
-~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3.6+ with this chart.
+@include 'helm/version.mdx'
 
 This example can be used to set up a single server Vault cluster using TLS.
 
@@ -18,35 +18,42 @@ This example can be used to set up a single server Vault cluster using TLS.
 
 ## 1. Create key & certificate using Kubernetes CA
 
-There are three variables that will be used in this example.
+There are four variables that will be used in this example.
 
 ```bash
 # SERVICE is the name of the Vault service in Kubernetes.
 # It does not have to match the actual running service, though it may help for consistency.
-SERVICE=vault-server-tls
+export SERVICE=vault-server-tls
 
 # NAMESPACE where the Vault service is running.
-NAMESPACE=vault-namespace
+export NAMESPACE=vault-namespace
 
 # SECRET_NAME to create in the Kubernetes secrets store.
-SECRET_NAME=vault-server-tls
+export SECRET_NAME=vault-server-tls
 
 # TMPDIR is a temporary working directory.
-TMPDIR=/tmp
+export TMPDIR=/tmp
+
+# CSR_NAME will be the name of our certificate signing request as seen by Kubernetes.
+export CSR_NAME=vault-csr
 ```
 
 1. Create a key for Kubernetes to sign.
 
-   ```bash
-   openssl genrsa -out ${TMPDIR}/vault.key 2048
+   ```shell-session
+   $ openssl genrsa -out ${TMPDIR}/vault.key 2048
+   Generating RSA private key, 2048 bit long modulus
+...................................................................................................+++
+...............+++
+e is 65537 (0x10001)
    ```
 
 2. Create a Certificate Signing Request (CSR).
 
    1. Create a file `${TMPDIR}/csr.conf` with the following contents:
 
-      ```
-      $ cat <<EOF >${TMPDIR}/csr.conf
+      ```bash
+      cat <<EOF >${TMPDIR}/csr.conf
       [req]
       req_extensions = v3_req
       distinguished_name = req_distinguished_name
@@ -67,25 +74,30 @@ TMPDIR=/tmp
 
    2. Create a CSR.
 
-      ```bash
-      openssl req -new -key ${TMPDIR}/vault.key -subj "/CN=${SERVICE}.${NAMESPACE}.svc" -out ${TMPDIR}/server.csr -config ${TMPDIR}/csr.conf
+      ```shell-session
+      $ openssl req -new -key ${TMPDIR}/vault.key \
+          -subj "/O=system:nodes/CN=system:node:${SERVICE}.${NAMESPACE}.svc" \
+          -out ${TMPDIR}/server.csr \
+          -config ${TMPDIR}/csr.conf
       ```
 
 3. Create the certificate
 
+   ~> **Important Note:** If you are using EKS, certificate signing requirements have changed.  As per the AWS [certificate signing](https://docs.aws.amazon.com/eks/latest/userguide/cert-signing.html) documentation, EKS version `1.22` and later now requires the `signerName` to be `beta.eks.amazonaws.com/app-serving`, otherwise, the CSR will be approved but the certificate will not be issued.
+
    1. Create a file `${TMPDIR}/csr.yaml` with the following contents:
 
-      ```
-      $ export CSR_NAME=vault-csr
-      $ cat <<EOF >${TMPDIR}/csr.yaml
-      apiVersion: certificates.k8s.io/v1beta1
+      ```bash
+      cat <<EOF >${TMPDIR}/csr.yaml
+      apiVersion: certificates.k8s.io/v1
       kind: CertificateSigningRequest
       metadata:
         name: ${CSR_NAME}
       spec:
         groups:
         - system:authenticated
-        request: $(cat ${TMPDIR}/server.csr | base64 | tr -d '\n')
+        request: $(cat ${TMPDIR}/server.csr | base64 | tr -d '\r\n')
+        signerName: kubernetes.io/kubelet-serving
         usages:
         - digital signature
         - key encipherment
@@ -93,12 +105,11 @@ TMPDIR=/tmp
       EOF
       ```
 
-      -> `CSR_NAME` can be any name you want. It's the name of the CSR as seen by Kubernetes
-
    2. Send the CSR to Kubernetes.
 
-      ```bash
-      kubectl create -f ${TMPDIR}/csr.yaml
+      ```shell-session
+      $ kubectl create -f ${TMPDIR}/csr.yaml
+      certificatesigningrequest.certificates.k8s.io/vault-csr created
       ```
 
       -> If this process is automated, you may need to wait to ensure the CSR has been received and stored:
@@ -106,16 +117,24 @@ TMPDIR=/tmp
 
    3. Approve the CSR in Kubernetes.
 
-      ```bash
-      kubectl certificate approve ${CSR_NAME}
+      ```shell-session
+      $ kubectl certificate approve ${CSR_NAME}
+      certificatesigningrequest.certificates.k8s.io/vault-csr approved
+      ```
+
+   4. Verify that the certificate was approved and issued.
+      ```shell-session
+      $ kubectl get csr ${CSR_NAME}
+      NAME        AGE     SIGNERNAME                                    REQUESTOR                        CONDITION
+      vault-csr   1m13s   kubernetes.io/kubelet-serving                 kubernetes-admin                 Approved,Issued
       ```
 
 ## 2. Store key, cert, and Kubernetes CA into Kubernetes secrets store
 
 1. Retrieve the certificate.
 
-   ```bash
-   serverCert=$(kubectl get csr ${CSR_NAME} -o jsonpath='{.status.certificate}')
+   ```shell-session
+   $ serverCert=$(kubectl get csr ${CSR_NAME} -o jsonpath='{.status.certificate}')
    ```
 
    -> If this process is automated, you may need to wait to ensure the certificate has been created.
@@ -123,30 +142,33 @@ TMPDIR=/tmp
 
 2. Write the certificate out to a file.
 
-   ```bash
-   echo "${serverCert}" | openssl base64 -d -A -out ${TMPDIR}/vault.crt
+   ```shell-session
+   $ echo "${serverCert}" | openssl base64 -d -A -out ${TMPDIR}/vault.crt
    ```
 
 3. Retrieve Kubernetes CA.
 
-   ```bash
-   kubectl config view --raw --minify --flatten -o jsonpath='{.clusters[].cluster.certificate-authority-data}' | base64 -d > ${TMPDIR}/vault.ca
+   ```shell-session
+   $ kubectl config view --raw --minify --flatten -o jsonpath='{.clusters[].cluster.certificate-authority-data}' | base64 -d > ${TMPDIR}/vault.ca
    ```
 
 4. Create the namespace.
 
-    ```bash
-    kubectl create namespace ${NAMESPACE}
+    ```shell-session
+    $ kubectl create namespace ${NAMESPACE}
+    namespace/vault-namespace created
     ```
 
 5. Store the key, cert, and Kubernetes CA into Kubernetes secrets.
 
-   ```bash
-   kubectl create secret generic ${SECRET_NAME} \
-           --namespace ${NAMESPACE} \
-           --from-file=vault.key=${TMPDIR}/vault.key \
-           --from-file=vault.crt=${TMPDIR}/vault.crt \
-           --from-file=vault.ca=${TMPDIR}/vault.ca
+   ```shell-session
+   $ kubectl create secret generic ${SECRET_NAME} \
+       --namespace ${NAMESPACE} \
+       --from-file=vault.key=${TMPDIR}/vault.key \
+       --from-file=vault.crt=${TMPDIR}/vault.crt \
+       --from-file=vault.ca=${TMPDIR}/vault.ca
+
+   # secret/vault-server-tls created
    ```
 
 ## 3. Helm Configuration
@@ -164,9 +186,16 @@ server:
   extraEnvironmentVars:
     VAULT_CACERT: /vault/userconfig/vault-server-tls/vault.ca
 
-  extraVolumes:
-    - type: secret
-      name: vault-server-tls # Matches the ${SECRET_NAME} from above
+  volumes:
+    - name: userconfig-vault-server-tls
+      secret:
+        defaultMode: 420
+        secretName: vault-server-tls # Matches the ${SECRET_NAME} from above
+
+  volumeMounts:
+    - mountPath: /vault/userconfig/vault-server-tls
+      name: userconfig-vault-server-tls
+      readOnly: true
 
   standalone:
     enabled: true

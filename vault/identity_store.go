@@ -1094,7 +1094,7 @@ func (i *IdentityStore) CreateEntity(ctx context.Context) (*identity.Entity, err
 			nsLabel,
 		})
 
-	return entity, nil
+	return entity.Clone()
 }
 
 // CreateOrFetchEntity creates a new entity. This is used by core to
@@ -1209,7 +1209,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 	// Update MemDB and persist entity object
 	err = i.upsertEntityInTxn(ctx, txn, entity, nil, true)
 	if err != nil {
-		return nil, false, err
+		return entity, entityCreated, err
 	}
 
 	txn.Commit()
@@ -1223,7 +1223,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 // names match or no metadata is different, -1 is returned.
 func changedAliasIndex(entity *identity.Entity, alias *logical.Alias) int {
 	for i, a := range entity.Aliases {
-		if a.Name == alias.Name && !strutil.EqualStringMaps(a.Metadata, alias.Metadata) {
+		if a.Name == alias.Name && a.MountAccessor == alias.MountAccessor && !strutil.EqualStringMaps(a.Metadata, alias.Metadata) {
 			return i
 		}
 	}

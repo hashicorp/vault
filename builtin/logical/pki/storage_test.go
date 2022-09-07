@@ -14,14 +14,16 @@ import (
 var ctx = context.Background()
 
 func Test_ConfigsRoundTrip(t *testing.T) {
-	_, s := createBackendWithStorage(t)
+	t.Parallel()
+	b, s := createBackendWithStorage(t)
+	sc := b.makeStorageContext(ctx, s)
 
 	// Verify we handle nothing stored properly
-	keyConfigEmpty, err := getKeysConfig(ctx, s)
+	keyConfigEmpty, err := sc.getKeysConfig()
 	require.NoError(t, err)
 	require.Equal(t, &keyConfigEntry{}, keyConfigEmpty)
 
-	issuerConfigEmpty, err := getIssuersConfig(ctx, s)
+	issuerConfigEmpty, err := sc.getIssuersConfig()
 	require.NoError(t, err)
 	require.Equal(t, &issuerConfigEntry{}, issuerConfigEmpty)
 
@@ -33,66 +35,70 @@ func Test_ConfigsRoundTrip(t *testing.T) {
 		DefaultIssuerId: genIssuerId(),
 	}
 
-	err = setKeysConfig(ctx, s, origKeyConfig)
+	err = sc.setKeysConfig(origKeyConfig)
 	require.NoError(t, err)
-	err = setIssuersConfig(ctx, s, origIssuerConfig)
+	err = sc.setIssuersConfig(origIssuerConfig)
 	require.NoError(t, err)
 
-	keyConfig, err := getKeysConfig(ctx, s)
+	keyConfig, err := sc.getKeysConfig()
 	require.NoError(t, err)
 	require.Equal(t, origKeyConfig, keyConfig)
 
-	issuerConfig, err := getIssuersConfig(ctx, s)
+	issuerConfig, err := sc.getIssuersConfig()
 	require.NoError(t, err)
 	require.Equal(t, origIssuerConfig, issuerConfig)
 }
 
 func Test_IssuerRoundTrip(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
+	sc := b.makeStorageContext(ctx, s)
 	issuer1, key1 := genIssuerAndKey(t, b, s)
 	issuer2, key2 := genIssuerAndKey(t, b, s)
 
 	// We get an error when issuer id not found
-	_, err := fetchIssuerById(ctx, s, issuer1.ID)
+	_, err := sc.fetchIssuerById(issuer1.ID)
 	require.Error(t, err)
 
 	// We get an error when key id not found
-	_, err = fetchKeyById(ctx, s, key1.ID)
+	_, err = sc.fetchKeyById(key1.ID)
 	require.Error(t, err)
 
 	// Now write out our issuers and keys
-	err = writeKey(ctx, s, key1)
+	err = sc.writeKey(key1)
 	require.NoError(t, err)
-	err = writeIssuer(ctx, s, &issuer1)
-	require.NoError(t, err)
-
-	err = writeKey(ctx, s, key2)
-	require.NoError(t, err)
-	err = writeIssuer(ctx, s, &issuer2)
+	err = sc.writeIssuer(&issuer1)
 	require.NoError(t, err)
 
-	fetchedKey1, err := fetchKeyById(ctx, s, key1.ID)
+	err = sc.writeKey(key2)
+	require.NoError(t, err)
+	err = sc.writeIssuer(&issuer2)
 	require.NoError(t, err)
 
-	fetchedIssuer1, err := fetchIssuerById(ctx, s, issuer1.ID)
+	fetchedKey1, err := sc.fetchKeyById(key1.ID)
+	require.NoError(t, err)
+
+	fetchedIssuer1, err := sc.fetchIssuerById(issuer1.ID)
 	require.NoError(t, err)
 
 	require.Equal(t, &key1, fetchedKey1)
 	require.Equal(t, &issuer1, fetchedIssuer1)
 
-	keys, err := listKeys(ctx, s)
+	keys, err := sc.listKeys()
 	require.NoError(t, err)
 
 	require.ElementsMatch(t, []keyID{key1.ID, key2.ID}, keys)
 
-	issuers, err := listIssuers(ctx, s)
+	issuers, err := sc.listIssuers()
 	require.NoError(t, err)
 
 	require.ElementsMatch(t, []issuerID{issuer1.ID, issuer2.ID}, issuers)
 }
 
 func Test_KeysIssuerImport(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
+	sc := b.makeStorageContext(ctx, s)
 
 	issuer1, key1 := genIssuerAndKey(t, b, s)
 	issuer2, key2 := genIssuerAndKey(t, b, s)
@@ -103,21 +109,21 @@ func Test_KeysIssuerImport(t *testing.T) {
 	issuer1.ID = ""
 	issuer1.KeyID = ""
 
-	key1Ref1, existing, err := importKey(ctx, b, s, key1.PrivateKey, "key1", key1.PrivateKeyType)
+	key1Ref1, existing, err := sc.importKey(key1.PrivateKey, "key1", key1.PrivateKeyType)
 	require.NoError(t, err)
 	require.False(t, existing)
 	require.Equal(t, strings.TrimSpace(key1.PrivateKey), strings.TrimSpace(key1Ref1.PrivateKey))
 
 	// Make sure if we attempt to re-import the same private key, no import/updates occur.
 	// So the existing flag should be set to true, and we do not update the existing Name field.
-	key1Ref2, existing, err := importKey(ctx, b, s, key1.PrivateKey, "ignore-me", key1.PrivateKeyType)
+	key1Ref2, existing, err := sc.importKey(key1.PrivateKey, "ignore-me", key1.PrivateKeyType)
 	require.NoError(t, err)
 	require.True(t, existing)
 	require.Equal(t, key1.PrivateKey, key1Ref1.PrivateKey)
 	require.Equal(t, key1Ref1.ID, key1Ref2.ID)
 	require.Equal(t, key1Ref1.Name, key1Ref2.Name)
 
-	issuer1Ref1, existing, err := importIssuer(ctx, b, s, issuer1.Certificate, "issuer1")
+	issuer1Ref1, existing, err := sc.importIssuer(issuer1.Certificate, "issuer1")
 	require.NoError(t, err)
 	require.False(t, existing)
 	require.Equal(t, strings.TrimSpace(issuer1.Certificate), strings.TrimSpace(issuer1Ref1.Certificate))
@@ -126,7 +132,7 @@ func Test_KeysIssuerImport(t *testing.T) {
 
 	// Make sure if we attempt to re-import the same issuer, no import/updates occur.
 	// So the existing flag should be set to true, and we do not update the existing Name field.
-	issuer1Ref2, existing, err := importIssuer(ctx, b, s, issuer1.Certificate, "ignore-me")
+	issuer1Ref2, existing, err := sc.importIssuer(issuer1.Certificate, "ignore-me")
 	require.NoError(t, err)
 	require.True(t, existing)
 	require.Equal(t, strings.TrimSpace(issuer1.Certificate), strings.TrimSpace(issuer1Ref1.Certificate))
@@ -134,14 +140,14 @@ func Test_KeysIssuerImport(t *testing.T) {
 	require.Equal(t, key1Ref1.ID, issuer1Ref2.KeyID)
 	require.Equal(t, issuer1Ref1.Name, issuer1Ref2.Name)
 
-	err = writeIssuer(ctx, s, &issuer2)
+	err = sc.writeIssuer(&issuer2)
 	require.NoError(t, err)
 
-	err = writeKey(ctx, s, key2)
+	err = sc.writeKey(key2)
 	require.NoError(t, err)
 
 	// Same double import tests as above, but make sure if the previous was created through writeIssuer not importIssuer.
-	issuer2Ref, existing, err := importIssuer(ctx, b, s, issuer2.Certificate, "ignore-me")
+	issuer2Ref, existing, err := sc.importIssuer(issuer2.Certificate, "ignore-me")
 	require.NoError(t, err)
 	require.True(t, existing)
 	require.Equal(t, strings.TrimSpace(issuer2.Certificate), strings.TrimSpace(issuer2Ref.Certificate))
@@ -150,12 +156,47 @@ func Test_KeysIssuerImport(t *testing.T) {
 	require.Equal(t, issuer2.KeyID, issuer2Ref.KeyID)
 
 	// Same double import tests as above, but make sure if the previous was created through writeKey not importKey.
-	key2Ref, existing, err := importKey(ctx, b, s, key2.PrivateKey, "ignore-me", key2.PrivateKeyType)
+	key2Ref, existing, err := sc.importKey(key2.PrivateKey, "ignore-me", key2.PrivateKeyType)
 	require.NoError(t, err)
 	require.True(t, existing)
 	require.Equal(t, key2.PrivateKey, key2Ref.PrivateKey)
 	require.Equal(t, key2.ID, key2Ref.ID)
 	require.Equal(t, "", key2Ref.Name)
+}
+
+func Test_IssuerUpgrade(t *testing.T) {
+	t.Parallel()
+	b, s := createBackendWithStorage(t)
+	sc := b.makeStorageContext(ctx, s)
+
+	// Make sure that we add OCSP signing to v0 issuers if CRLSigning is enabled
+	issuer, _ := genIssuerAndKey(t, b, s)
+	issuer.Version = 0
+	issuer.Usage.ToggleUsage(OCSPSigningUsage)
+
+	err := sc.writeIssuer(&issuer)
+	require.NoError(t, err, "failed writing out issuer")
+
+	newIssuer, err := sc.fetchIssuerById(issuer.ID)
+	require.NoError(t, err, "failed fetching issuer")
+
+	require.Equal(t, uint(1), newIssuer.Version)
+	require.True(t, newIssuer.Usage.HasUsage(OCSPSigningUsage))
+
+	// If CRLSigning is not present on a v0, we should not have OCSP signing after upgrade.
+	issuer, _ = genIssuerAndKey(t, b, s)
+	issuer.Version = 0
+	issuer.Usage.ToggleUsage(OCSPSigningUsage)
+	issuer.Usage.ToggleUsage(CRLSigningUsage)
+
+	err = sc.writeIssuer(&issuer)
+	require.NoError(t, err, "failed writing out issuer")
+
+	newIssuer, err = sc.fetchIssuerById(issuer.ID)
+	require.NoError(t, err, "failed fetching issuer")
+
+	require.Equal(t, uint(1), newIssuer.Version)
+	require.False(t, newIssuer.Usage.HasUsage(OCSPSigningUsage))
 }
 
 func genIssuerAndKey(t *testing.T, b *backend, s logical.Storage) (issuerEntry, keyEntry) {
@@ -177,6 +218,8 @@ func genIssuerAndKey(t *testing.T, b *backend, s logical.Storage) (issuerEntry, 
 		Certificate:  strings.TrimSpace(certBundle.Certificate) + "\n",
 		CAChain:      certBundle.CAChain,
 		SerialNumber: certBundle.SerialNumber,
+		Usage:        AllIssuerUsages,
+		Version:      latestIssuerVersion,
 	}
 
 	return pkiIssuer, pkiKey
@@ -195,7 +238,8 @@ func genCertBundle(t *testing.T, b *backend, s logical.Storage) *certutil.CertBu
 			"ttl":      3600,
 		},
 	}
-	_, _, role, respErr := b.getGenerationParams(ctx, s, apiData)
+	sc := b.makeStorageContext(ctx, s)
+	_, _, role, respErr := getGenerationParams(sc, apiData)
 	require.Nil(t, respErr)
 
 	input := &inputBundle{
@@ -207,7 +251,7 @@ func genCertBundle(t *testing.T, b *backend, s logical.Storage) *certutil.CertBu
 		apiData: apiData,
 		role:    role,
 	}
-	parsedCertBundle, err := generateCert(ctx, b, input, nil, true, b.GetRandomReader())
+	parsedCertBundle, err := generateCert(sc, input, nil, true, b.GetRandomReader())
 
 	require.NoError(t, err)
 	certBundle, err := parsedCertBundle.ToCertBundle()

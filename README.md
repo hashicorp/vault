@@ -40,11 +40,11 @@ The key features of Vault are:
   having to design their own encryption methods.
 
 * **Leasing and Renewal**: All secrets in Vault have a _lease_ associated
-  with it. At the end of the lease, Vault will automatically revoke that
+  with them. At the end of the lease, Vault will automatically revoke that
   secret. Clients are able to renew leases via built-in renew APIs.
 
 * **Revocation**: Vault has built-in support for secret revocation. Vault
-  can revoke not only single secrets, but a tree of secrets, for example
+  can revoke not only single secrets, but a tree of secrets, for example,
   all secrets read by a specific user, or all secrets of a particular type.
   Revocation assists in key rolling as well as locking down systems in the
   case of an intrusion.
@@ -71,11 +71,11 @@ Developing Vault
 
 If you wish to work on Vault itself or any of its built-in systems, you'll
 first need [Go](https://www.golang.org) installed on your machine. Go version
-1.17.11+ is *required*.
+1.18.5+ is *required*.
 
 For local dev first make sure Go is properly installed, including setting up a
 [GOPATH](https://golang.org/doc/code.html#GOPATH). Ensure that `$GOPATH/bin` is in
-your path as some distributions bundle old version of build tools. Next, clone this
+your path as some distributions bundle the old version of build tools. Next, clone this
 repository. Vault uses [Go Modules](https://github.com/golang/go/wiki/Modules),
 so it is recommended that you clone the repository ***outside*** of the GOPATH.
 You can then download any required build tools by bootstrapping your environment:

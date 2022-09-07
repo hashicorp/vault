@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/asaskevich/govalidator"
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -58,8 +57,8 @@ func validateURLs(urls []string) string {
 	return ""
 }
 
-func getURLs(ctx context.Context, req *logical.Request) (*certutil.URLEntries, error) {
-	entry, err := req.Storage.Get(ctx, "urls")
+func getGlobalAIAURLs(ctx context.Context, storage logical.Storage) (*certutil.URLEntries, error) {
+	entry, err := storage.Get(ctx, "urls")
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +80,7 @@ func getURLs(ctx context.Context, req *logical.Request) (*certutil.URLEntries, e
 	return entries, nil
 }
 
-func writeURLs(ctx context.Context, req *logical.Request, entries *certutil.URLEntries) error {
+func writeURLs(ctx context.Context, storage logical.Storage, entries *certutil.URLEntries) error {
 	entry, err := logical.StorageEntryJSON("urls", entries)
 	if err != nil {
 		return err
@@ -90,7 +89,7 @@ func writeURLs(ctx context.Context, req *logical.Request, entries *certutil.URLE
 		return fmt.Errorf("unable to marshal entry into JSON")
 	}
 
-	err = req.Storage.Put(ctx, entry)
+	err = storage.Put(ctx, entry)
 	if err != nil {
 		return err
 	}
@@ -99,20 +98,24 @@ func writeURLs(ctx context.Context, req *logical.Request, entries *certutil.URLE
 }
 
 func (b *backend) pathReadURL(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	entries, err := getURLs(ctx, req)
+	entries, err := getGlobalAIAURLs(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
 	resp := &logical.Response{
-		Data: structs.New(entries).Map(),
+		Data: map[string]interface{}{
+			"issuing_certificates":    entries.IssuingCertificates,
+			"crl_distribution_points": entries.CRLDistributionPoints,
+			"ocsp_servers":            entries.OCSPServers,
+		},
 	}
 
 	return resp, nil
 }
 
 func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	entries, err := getURLs(ctx, req)
+	entries, err := getGlobalAIAURLs(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -121,25 +124,25 @@ func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *
 		entries.IssuingCertificates = urlsInt.([]string)
 		if badURL := validateURLs(entries.IssuingCertificates); badURL != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"invalid URL found in issuing certificates: %s", badURL)), nil
+				"invalid URL found in Authority Information Access (AIA) parameter issuing_certificates: %s", badURL)), nil
 		}
 	}
 	if urlsInt, ok := data.GetOk("crl_distribution_points"); ok {
 		entries.CRLDistributionPoints = urlsInt.([]string)
 		if badURL := validateURLs(entries.CRLDistributionPoints); badURL != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"invalid URL found in CRL distribution points: %s", badURL)), nil
+				"invalid URL found in Authority Information Access (AIA) parameter crl_distribution_points: %s", badURL)), nil
 		}
 	}
 	if urlsInt, ok := data.GetOk("ocsp_servers"); ok {
 		entries.OCSPServers = urlsInt.([]string)
 		if badURL := validateURLs(entries.OCSPServers); badURL != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"invalid URL found in OCSP servers: %s", badURL)), nil
+				"invalid URL found in Authority Information Access (AIA) parameter ocsp_servers: %s", badURL)), nil
 		}
 	}
 
-	return nil, writeURLs(ctx, req, entries)
+	return nil, writeURLs(ctx, req.Storage, entries)
 }
 
 const pathConfigURLsHelpSyn = `

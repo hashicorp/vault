@@ -26,7 +26,7 @@ applications that need to interoperate.
 Vault replication addresses both of these needs in providing consistency,
 scalability, and highly-available disaster recovery.
 
-Note: Using replication requires a storage backend that supports transactional updates, such as Consul.
+Note: Using replication requires a storage backend that supports transactional updates, such as [Integrated Storage](/docs/concepts/integrated-storage) or Consul.
 
 ## Architecture
 
@@ -121,6 +121,8 @@ original primary on the election of the DR secondary.
 
 DR is designed to be a mechanism to protect against catastrophic failure of entire clusters.
 They do not forward service read or write requests until they are elected and become a new primary.
+
+-> **Note**: Unlike with Performance Replication, local secret engines, auth methods and audit devices are replicated to a DR secondary.
 
 
 For more information on the capabilities of performance and disaster recovery replication, see the Vault Replication [API Documentation](/api-docs/system/replication).

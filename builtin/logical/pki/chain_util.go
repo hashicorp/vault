@@ -2,12 +2,11 @@ package pki
 
 import (
 	"bytes"
-	"context"
 	"crypto/x509"
 	"fmt"
 	"sort"
 
-	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 )
 
 func prettyIssuer(issuerIdEntryMap map[issuerID]*issuerEntry, issuer issuerID) string {
@@ -18,7 +17,7 @@ func prettyIssuer(issuerIdEntryMap map[issuerID]*issuerEntry, issuer issuerID) s
 	return "[" + string(issuer) + "]"
 }
 
-func rebuildIssuersChains(ctx context.Context, s logical.Storage, referenceCert *issuerEntry /* optional */) error {
+func (sc *storageContext) rebuildIssuersChains(referenceCert *issuerEntry /* optional */) error {
 	// This function rebuilds the CAChain field of all known issuers. This
 	// function should usually be invoked when a new issuer is added to the
 	// pool of issuers.
@@ -42,7 +41,7 @@ func rebuildIssuersChains(ctx context.Context, s logical.Storage, referenceCert 
 	// themselves.
 	//
 	// To begin, we fetch all known issuers from disk.
-	issuers, err := listIssuers(ctx, s)
+	issuers, err := sc.listIssuers()
 	if err != nil {
 		return fmt.Errorf("unable to list issuers to build chain: %v", err)
 	}
@@ -58,7 +57,7 @@ func rebuildIssuersChains(ctx context.Context, s logical.Storage, referenceCert 
 		// Otherwise, the only entry in the chain (that we know about) is the
 		// certificate itself.
 		referenceCert.CAChain = []string{referenceCert.Certificate}
-		return writeIssuer(ctx, s, referenceCert)
+		return sc.writeIssuer(referenceCert)
 	}
 
 	// Our provided reference cert might not be in the list of issuers. In
@@ -115,7 +114,7 @@ func rebuildIssuersChains(ctx context.Context, s logical.Storage, referenceCert 
 			stored = referenceCert
 		} else {
 			// Otherwise, fetch it from disk.
-			stored, err = fetchIssuerById(ctx, s, identifier)
+			stored, err = sc.fetchIssuerById(identifier)
 			if err != nil {
 				return fmt.Errorf("unable to fetch issuer %v to build chain: %v", identifier, err)
 			}
@@ -268,9 +267,7 @@ func rebuildIssuersChains(ctx context.Context, s logical.Storage, referenceCert 
 			continue
 		}
 
-		for _, child := range children {
-			toVisit = append(toVisit, child)
-		}
+		toVisit = append(toVisit, children...)
 	}
 
 	// Setup the toVisit queue.
@@ -375,6 +372,10 @@ func rebuildIssuersChains(ctx context.Context, s logical.Storage, referenceCert 
 				}
 			}
 
+			if len(parentCerts) > 1024*1024*1024 {
+				return errutil.InternalError{Err: fmt.Sprintf("error building certificate chain, %d is too many parent certs",
+					len(parentCerts))}
+			}
 			includedParentCerts := make(map[string]bool, len(parentCerts)+1)
 			includedParentCerts[entry.Certificate] = true
 			for _, parentCert := range append(roots, intermediates...) {
@@ -419,7 +420,7 @@ func rebuildIssuersChains(ctx context.Context, s logical.Storage, referenceCert 
 	for _, issuer := range issuers {
 		entry := issuerIdEntryMap[issuer]
 
-		err := writeIssuer(ctx, s, entry)
+		err := sc.writeIssuer(entry)
 		if err != nil {
 			pretty := prettyIssuer(issuerIdEntryMap, issuer)
 			return fmt.Errorf("failed to persist issuer (%v) chain to disk: %v", pretty, err)
@@ -579,9 +580,7 @@ func processAnyCliqueOrCycle(
 						continue
 					}
 
-					for _, child := range children {
-						cliquesToProcess = append(cliquesToProcess, child)
-					}
+					cliquesToProcess = append(cliquesToProcess, children...)
 
 					// While we're here, add this cycle node to the closure.
 					closure[cycleNode] = true
@@ -1162,6 +1161,9 @@ func findAllCyclesWithNode(
 					}
 				}
 
+				if len(path) > 1024*1024*1024 {
+					return nil, errutil.InternalError{Err: fmt.Sprintf("Error updating certificate path: path of length %d is too long", len(path))}
+				}
 				// Make sure to deep copy the path.
 				newPath := make([]issuerID, 0, len(path)+1)
 				newPath = append(newPath, path...)

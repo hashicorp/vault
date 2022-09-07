@@ -221,7 +221,7 @@ $ curl \
 
 This endpoint revokes a DR secondary's ability to connect to the DR primary cluster;
 the DR secondary will immediately be disconnected and will not be allowed to
-connect again unless given a new activation token.
+connect again unless given a new activation token.  This command can be run from any node on the DR primary cluster.
 
 | Method | Path                                           |
 | :----- | :--------------------------------------------- |
@@ -327,7 +327,7 @@ secondaries, and there should never be more than one primary at a time.
 If the DR secondary's primary cluster is also in a performance replication set,
 the DR secondary will be promoted into that replication set. Care should be
 taken when promoting to ensure multiple performance primary clusters are not
-activate at the same time.
+active at the same time.
 
 If the DR secondary's primary cluster is a performance secondary, the promoted
 cluster will attempt to connect to the performance primary cluster using the

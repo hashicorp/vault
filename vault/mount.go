@@ -12,7 +12,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -328,6 +328,12 @@ type MountEntry struct {
 	// without separately managing their locks individually. See SyncCache() for
 	// the specific values that are being cached.
 	synthesizedConfigCache sync.Map
+
+	// version info
+	Version        string `json:"version,omitempty"`
+	Sha            string `json:"sha,omitempty"`
+	RunningVersion string `json:"running_version,omitempty"`
+	RunningSha     string `json:"running_sha,omitempty"`
 }
 
 // MountConfig is used to hold settable options
@@ -391,6 +397,15 @@ func (e *MountEntry) APIPath() string {
 	return e.namespace.Path + path
 }
 
+// APIPathNoNamespace returns the API Path without the namespace for the given mount entry
+func (e *MountEntry) APIPathNoNamespace() string {
+	path := e.Path
+	if e.Table == credentialTableType {
+		path = credentialRoutePrefix + path
+	}
+	return path
+}
+
 // SyncCache syncs tunable configuration values to the cache. In the case of
 // cached values, they should be retrieved via synthesizedConfigCache.Load()
 // instead of accessing them directly through MountConfig.
@@ -446,6 +461,12 @@ func (c *Core) decodeMountTable(ctx context.Context, raw []byte) (*MountTable, e
 		if ns == nil {
 			c.logger.Error("namespace on mount entry not found", "namespace_id", entry.NamespaceID, "mount_path", entry.Path, "mount_description", entry.Description)
 			continue
+		}
+
+		// Immediately shutdown the core if deprecated mounts are detected and VAULT_ALLOW_PENDING_REMOVAL_MOUNTS is unset
+		if err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeUnknown); err != nil {
+			c.logger.Error("shutting down core", "error", err)
+			c.Shutdown()
 		}
 
 		entry.namespace = ns
@@ -570,6 +591,11 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 		addFilterablePath(c, viewPath)
 	}
 
+	// Detect and handle deprecated secrets engines
+	if err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeSecrets); err != nil {
+		return err
+	}
+
 	nilMount, err := preprocessMount(c, entry, view)
 	if err != nil {
 		return err
@@ -648,6 +674,43 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 		c.logger.Info("successful mount", "namespace", entry.Namespace().Path, "path", entry.Path, "type", entry.Type)
 	}
 	return nil
+}
+
+// builtinTypeFromMountEntry attempts to find a builtin PluginType associated
+// with the specified MountEntry. Returns consts.PluginTypeUnknown if not found.
+func (c *Core) builtinTypeFromMountEntry(ctx context.Context, entry *MountEntry) consts.PluginType {
+	if c.builtinRegistry == nil || entry == nil {
+		return consts.PluginTypeUnknown
+	}
+
+	builtinPluginType := func(name string, pluginType consts.PluginType) (consts.PluginType, bool) {
+		plugin, err := c.pluginCatalog.Get(ctx, name, pluginType, "")
+		if err == nil && plugin != nil && plugin.Builtin {
+			return plugin.Type, true
+		}
+		return consts.PluginTypeUnknown, false
+	}
+
+	// auth plugins have their own dedicated mount table
+	if pluginType, err := consts.ParsePluginType(entry.Table); err == nil {
+		if builtinType, ok := builtinPluginType(entry.Type, pluginType); ok {
+			return builtinType
+		}
+	}
+
+	// Check for possible matches
+	var builtinTypes []consts.PluginType
+	for _, pluginType := range [...]consts.PluginType{consts.PluginTypeSecrets, consts.PluginTypeDatabase} {
+		if builtinType, ok := builtinPluginType(entry.Type, pluginType); ok {
+			builtinTypes = append(builtinTypes, builtinType)
+		}
+	}
+
+	if len(builtinTypes) == 1 {
+		return builtinTypes[0]
+	}
+
+	return consts.PluginTypeUnknown
 }
 
 // Unmount is used to unmount a path. The boolean indicates whether the mount
@@ -849,6 +912,54 @@ func (c *Core) taintMountEntry(ctx context.Context, nsID, mountPath string, upda
 		}
 	}
 
+	return nil
+}
+
+// handleDeprecatedMountEntry handles the Deprecation Status of the specified
+// mount entry's builtin engine as follows:
+//
+// * Supported - do nothing
+// * Deprecated - log a warning about builtin deprecation
+// * PendingRemoval - log an error about builtin deprecation and return an error
+// if VAULT_ALLOW_PENDING_REMOVAL_MOUNTS is unset
+// * Removed - log an error about builtin deprecation and return an error
+func (c *Core) handleDeprecatedMountEntry(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) error {
+	if c.builtinRegistry == nil || entry == nil {
+		return nil
+	}
+
+	// Allow type to be determined from mount entry when not otherwise specified
+	if pluginType == consts.PluginTypeUnknown {
+		pluginType = c.builtinTypeFromMountEntry(ctx, entry)
+	}
+
+	// Handle aliases
+	t := entry.Type
+	if alias, ok := mountAliases[t]; ok {
+		t = alias
+	}
+
+	status, ok := c.builtinRegistry.DeprecationStatus(t, pluginType)
+	if ok {
+		// Deprecation sublogger with some identifying information
+		dl := c.logger.With("name", t, "type", pluginType, "status", status, "path", entry.Path)
+		errDeprecatedMount := fmt.Errorf("mount entry associated with %s builtin", status)
+
+		switch status {
+		case consts.Deprecated:
+			dl.Warn(errDeprecatedMount.Error())
+
+		case consts.PendingRemoval:
+			dl.Error(errDeprecatedMount.Error())
+			if allow := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv); allow == "" {
+				return fmt.Errorf("could not mount %q: %w", t, errDeprecatedMount)
+			}
+			c.Logger().Info("mount allowed by environment variable", "env", consts.VaultAllowPendingRemovalMountsEnv)
+
+		case consts.Removed:
+			return fmt.Errorf("could not mount %s: %w", t, errDeprecatedMount)
+		}
+	}
 	return nil
 }
 
@@ -1410,12 +1521,12 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 
 	f, ok := c.logicalBackends[t]
 	if !ok {
-		plug, err := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeSecrets)
+		plug, err := c.pluginCatalog.Get(ctx, t, consts.PluginTypeSecrets, entry.Version)
 		if err != nil {
 			return nil, err
 		}
 		if plug == nil {
-			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, entry.Type)
+			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, t)
 		}
 
 		f = plugin.Factory
@@ -1423,7 +1534,6 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 			f = wrapFactoryCheckPerms(c, plugin.Factory)
 		}
 	}
-
 	// Set up conf to pass in plugin_name
 	conf := make(map[string]string)
 	for k, v := range entry.Options {

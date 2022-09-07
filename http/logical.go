@@ -71,6 +71,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 				return nil, nil, http.StatusBadRequest, nil
 			}
 			if list {
+				queryVals.Del("list")
 				op = logical.ListOperation
 				if !strings.HasSuffix(path, "/") {
 					path += "/"
@@ -78,9 +79,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 			}
 		}
 
-		if !list {
-			data = parseQuery(queryVals)
-		}
+		data = parseQuery(queryVals)
 
 		switch {
 		case strings.HasPrefix(path, "sys/pprof/"):
@@ -103,10 +102,11 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		bufferedBody := newBufferedReader(r.Body)
 		r.Body = bufferedBody
 
-		// If we are uploading a snapshot we don't want to parse it. Instead
-		// we will simply add the HTTP request to the logical request object
-		// for later consumption.
-		if path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" {
+		// If we are uploading a snapshot or receiving an ocsp-request (which
+		// is der encoded) we don't want to parse it. Instead, we will simply
+		// add the HTTP request to the logical request object for later consumption.
+		contentType := r.Header.Get("Content-Type")
+		if path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" || isOcspRequest(contentType) {
 			passHTTPReq = true
 			origBody = r.Body
 		} else {
@@ -121,7 +121,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 				return nil, nil, status, fmt.Errorf("error reading data")
 			}
 
-			if isForm(head, r.Header.Get("Content-Type")) {
+			if isForm(head, contentType) {
 				formData, err := parseFormRequest(r)
 				if err != nil {
 					status := http.StatusBadRequest
@@ -178,6 +178,8 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 			path += "/"
 		}
 
+		data = parseQuery(r.URL.Query())
+
 	case "OPTIONS", "HEAD":
 	default:
 		return nil, nil, http.StatusMethodNotAllowed, nil
@@ -205,6 +207,15 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 	}
 
 	return req, origBody, 0, nil
+}
+
+func isOcspRequest(contentType string) bool {
+	contentType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return false
+	}
+
+	return contentType == "application/ocsp-request"
 }
 
 func buildLogicalPath(r *http.Request) (string, int, error) {

@@ -377,8 +377,8 @@ export default Service.extend({
   },
 
   async authSuccess(options, response) {
-    // persist selectedAuth to sessionStorage to rehydrate auth form on logout
-    sessionStorage.setItem('selectedAuth', options.selectedAuth);
+    // persist selectedAuth to localStorage to rehydrate auth form on logout
+    localStorage.setItem('selectedAuth', options.selectedAuth);
     const authData = await this.persistAuthData(options, response, this.namespaceService.path);
     await this.permissions.getPaths.perform();
     return authData;
@@ -397,8 +397,8 @@ export default Service.extend({
   },
 
   getAuthType() {
-    // check sessionStorage first
-    const selectedAuth = sessionStorage.getItem('selectedAuth');
+    // check localStorage first
+    const selectedAuth = localStorage.getItem('selectedAuth');
     if (selectedAuth) return selectedAuth;
     // fallback to authData which discerns backend type from token
     return this.authData ? this.authData.backend.type : null;
@@ -441,4 +441,21 @@ export default Service.extend({
       backend: BACKENDS.findBy('type', backend),
     });
   }),
+
+  getOktaNumberChallengeAnswer(nonce, mount) {
+    const url = `/v1/auth/${mount}/verify/${nonce}`;
+    return this.ajax(url, 'GET', {}).then(
+      (resp) => {
+        return resp.data.correct_answer;
+      },
+      (e) => {
+        // if error status is 404, return and keep polling for a response
+        if (e.status === 404) {
+          return null;
+        } else {
+          throw e;
+        }
+      }
+    );
+  },
 });

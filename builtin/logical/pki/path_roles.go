@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -237,6 +238,13 @@ SHA-2-512. Defaults to 0 to automatically detect based on key length
 (SHA-2-256 for RSA keys, and matching the curve size for NIST P-Curves).`,
 			},
 
+			"use_pss": {
+				Type:    framework.TypeBool,
+				Default: false,
+				Description: `Whether or not to use PSS signatures when using a
+RSA key-type issuer. Defaults to false.`,
+			},
+
 			"key_usage": {
 				Type:    framework.TypeCommaStringSlice,
 				Default: []string{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
@@ -381,6 +389,21 @@ for "generate_lease".`,
 				Description: `If set to false, makes the 'common_name' field optional while generating a certificate.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Require Common Name",
+				},
+			},
+
+			"cn_validations": {
+				Type:    framework.TypeCommaStringSlice,
+				Default: []string{"email", "hostname"},
+				Description: `List of allowed validations to run against the
+Common Name field. Values can include 'email' to validate the CN is a email
+address, 'hostname' to validate the CN is a valid hostname (potentially
+including wildcards). When multiple validations are specified, these take
+OR semantics (either email OR hostname are allowed). The special value
+'disabled' allows disabling all CN name validations, allowing for arbitrary
+non-Hostname, non-Email address CNs.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Common Name Validations",
 				},
 			},
 
@@ -565,6 +588,18 @@ func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*ro
 		modified = true
 	}
 
+	// Update CN Validations to be the present default, "email,hostname"
+	if len(result.CNValidations) == 0 {
+		result.CNValidations = []string{"email", "hostname"}
+		modified = true
+	}
+
+	// Ensure the role is valid after updating.
+	_, err = validateRole(b, &result, ctx, s)
+	if err != nil {
+		return nil, err
+	}
+
 	if modified && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
 		jsonEntry, err := logical.StorageEntryJSON("role/"+n, &result)
 		if err != nil {
@@ -645,6 +680,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		KeyType:                       data.Get("key_type").(string),
 		KeyBits:                       data.Get("key_bits").(int),
 		SignatureBits:                 data.Get("signature_bits").(int),
+		UsePSS:                        data.Get("use_pss").(bool),
 		UseCSRCommonName:              data.Get("use_csr_common_name").(bool),
 		UseCSRSANs:                    data.Get("use_csr_sans").(bool),
 		KeyUsage:                      data.Get("key_usage").([]string),
@@ -660,6 +696,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		GenerateLease:                 new(bool),
 		NoStore:                       data.Get("no_store").(bool),
 		RequireCN:                     data.Get("require_cn").(bool),
+		CNValidations:                 data.Get("cn_validations").([]string),
 		AllowedSerialNumbers:          data.Get("allowed_serial_numbers").([]string),
 		PolicyIdentifiers:             getPolicyIdentifier(data, nil),
 		BasicConstraintsValidForNonCA: data.Get("basic_constraints_valid_for_non_ca").(bool),
@@ -698,6 +735,9 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		}
 	} else {
 		*entry.GenerateLease = data.Get("generate_lease").(bool)
+		if *entry.GenerateLease {
+			warning = "it is encouraged to disable generate_lease and rely on PKI's native capabilities when possible; this option can cause Vault-wide issues with large numbers of issued certificates"
+		}
 	}
 
 	resp, err := validateRole(b, entry, ctx, req.Storage)
@@ -765,7 +805,8 @@ func validateRole(b *backend, entry *roleEntry, ctx context.Context, s logical.S
 	}
 	// Check that the issuers reference set resolves to something
 	if !b.useLegacyBundleCaStorage() {
-		issuerId, err := resolveIssuerReference(ctx, s, entry.Issuer)
+		sc := b.makeStorageContext(ctx, s)
+		issuerId, err := sc.resolveIssuerReference(entry.Issuer)
 		if err != nil {
 			if issuerId == IssuerRefNotFound {
 				resp = &logical.Response{}
@@ -779,6 +820,12 @@ func validateRole(b *backend, entry *roleEntry, ctx context.Context, s logical.S
 			}
 		}
 
+	}
+
+	// Ensures CNValidations are alright
+	entry.CNValidations, err = checkCNValidations(entry.CNValidations)
+	if err != nil {
+		return nil, errutil.UserError{Err: err.Error()}
 	}
 
 	return resp, nil
@@ -833,6 +880,7 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 		KeyType:                       getWithExplicitDefault(data, "key_type", oldEntry.KeyType).(string),
 		KeyBits:                       getWithExplicitDefault(data, "key_bits", oldEntry.KeyBits).(int),
 		SignatureBits:                 getWithExplicitDefault(data, "signature_bits", oldEntry.SignatureBits).(int),
+		UsePSS:                        getWithExplicitDefault(data, "use_pss", oldEntry.UsePSS).(bool),
 		UseCSRCommonName:              getWithExplicitDefault(data, "use_csr_common_name", oldEntry.UseCSRCommonName).(bool),
 		UseCSRSANs:                    getWithExplicitDefault(data, "use_csr_sans", oldEntry.UseCSRSANs).(bool),
 		KeyUsage:                      getWithExplicitDefault(data, "key_usage", oldEntry.KeyUsage).([]string),
@@ -848,6 +896,7 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 		GenerateLease:                 new(bool),
 		NoStore:                       getWithExplicitDefault(data, "no_store", oldEntry.NoStore).(bool),
 		RequireCN:                     getWithExplicitDefault(data, "require_cn", oldEntry.RequireCN).(bool),
+		CNValidations:                 getWithExplicitDefault(data, "cn_validations", oldEntry.CNValidations).([]string),
 		AllowedSerialNumbers:          getWithExplicitDefault(data, "allowed_serial_numbers", oldEntry.AllowedSerialNumbers).([]string),
 		PolicyIdentifiers:             getPolicyIdentifier(data, &oldEntry.PolicyIdentifiers),
 		BasicConstraintsValidForNonCA: getWithExplicitDefault(data, "basic_constraints_valid_for_non_ca", oldEntry.BasicConstraintsValidForNonCA).(bool),
@@ -884,7 +933,7 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 	// no_store implies generate_lease := false
 	if entry.NoStore {
 		*entry.GenerateLease = false
-		if ok && generateLease.(bool) || !ok && (*oldEntry.GenerateLease == true) {
+		if ok && generateLease.(bool) || !ok && *oldEntry.GenerateLease {
 			warning = "mutually exclusive values no_store=true and generate_lease=true were both specified; no_store=true takes priority"
 		}
 	} else {
@@ -892,6 +941,10 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 			*entry.GenerateLease = data.Get("generate_lease").(bool)
 		} else {
 			entry.GenerateLease = oldEntry.GenerateLease
+		}
+
+		if *entry.GenerateLease {
+			warning = "it is encouraged to disable generate_lease and rely on PKI's native capabilities when possible; this option can cause Vault-wide issues with large numbers of issued certificates"
 		}
 	}
 
@@ -1000,59 +1053,61 @@ func parseExtKeyUsages(role *roleEntry) certutil.CertExtKeyUsage {
 type roleEntry struct {
 	LeaseMax                      string        `json:"lease_max"`
 	Lease                         string        `json:"lease"`
-	DeprecatedMaxTTL              string        `json:"max_ttl" mapstructure:"max_ttl"`
-	DeprecatedTTL                 string        `json:"ttl" mapstructure:"ttl"`
-	TTL                           time.Duration `json:"ttl_duration" mapstructure:"ttl_duration"`
-	MaxTTL                        time.Duration `json:"max_ttl_duration" mapstructure:"max_ttl_duration"`
-	AllowLocalhost                bool          `json:"allow_localhost" mapstructure:"allow_localhost"`
-	AllowedBaseDomain             string        `json:"allowed_base_domain" mapstructure:"allowed_base_domain"`
+	DeprecatedMaxTTL              string        `json:"max_ttl"`
+	DeprecatedTTL                 string        `json:"ttl"`
+	TTL                           time.Duration `json:"ttl_duration"`
+	MaxTTL                        time.Duration `json:"max_ttl_duration"`
+	AllowLocalhost                bool          `json:"allow_localhost"`
+	AllowedBaseDomain             string        `json:"allowed_base_domain"`
 	AllowedDomainsOld             string        `json:"allowed_domains,omitempty"`
-	AllowedDomains                []string      `json:"allowed_domains_list" mapstructure:"allowed_domains"`
+	AllowedDomains                []string      `json:"allowed_domains_list"`
 	AllowedDomainsTemplate        bool          `json:"allowed_domains_template"`
 	AllowBaseDomain               bool          `json:"allow_base_domain"`
-	AllowBareDomains              bool          `json:"allow_bare_domains" mapstructure:"allow_bare_domains"`
-	AllowTokenDisplayName         bool          `json:"allow_token_displayname" mapstructure:"allow_token_displayname"`
-	AllowSubdomains               bool          `json:"allow_subdomains" mapstructure:"allow_subdomains"`
-	AllowGlobDomains              bool          `json:"allow_glob_domains" mapstructure:"allow_glob_domains"`
-	AllowWildcardCertificates     *bool         `json:"allow_wildcard_certificates,omitempty" mapstructure:"allow_wildcard_certificates"`
-	AllowAnyName                  bool          `json:"allow_any_name" mapstructure:"allow_any_name"`
-	EnforceHostnames              bool          `json:"enforce_hostnames" mapstructure:"enforce_hostnames"`
-	AllowIPSANs                   bool          `json:"allow_ip_sans" mapstructure:"allow_ip_sans"`
-	ServerFlag                    bool          `json:"server_flag" mapstructure:"server_flag"`
-	ClientFlag                    bool          `json:"client_flag" mapstructure:"client_flag"`
-	CodeSigningFlag               bool          `json:"code_signing_flag" mapstructure:"code_signing_flag"`
-	EmailProtectionFlag           bool          `json:"email_protection_flag" mapstructure:"email_protection_flag"`
-	UseCSRCommonName              bool          `json:"use_csr_common_name" mapstructure:"use_csr_common_name"`
-	UseCSRSANs                    bool          `json:"use_csr_sans" mapstructure:"use_csr_sans"`
-	KeyType                       string        `json:"key_type" mapstructure:"key_type"`
-	KeyBits                       int           `json:"key_bits" mapstructure:"key_bits"`
-	SignatureBits                 int           `json:"signature_bits" mapstructure:"signature_bits"`
-	MaxPathLength                 *int          `json:",omitempty" mapstructure:"max_path_length"`
+	AllowBareDomains              bool          `json:"allow_bare_domains"`
+	AllowTokenDisplayName         bool          `json:"allow_token_displayname"`
+	AllowSubdomains               bool          `json:"allow_subdomains"`
+	AllowGlobDomains              bool          `json:"allow_glob_domains"`
+	AllowWildcardCertificates     *bool         `json:"allow_wildcard_certificates,omitempty"`
+	AllowAnyName                  bool          `json:"allow_any_name"`
+	EnforceHostnames              bool          `json:"enforce_hostnames"`
+	AllowIPSANs                   bool          `json:"allow_ip_sans"`
+	ServerFlag                    bool          `json:"server_flag"`
+	ClientFlag                    bool          `json:"client_flag"`
+	CodeSigningFlag               bool          `json:"code_signing_flag"`
+	EmailProtectionFlag           bool          `json:"email_protection_flag"`
+	UseCSRCommonName              bool          `json:"use_csr_common_name"`
+	UseCSRSANs                    bool          `json:"use_csr_sans"`
+	KeyType                       string        `json:"key_type"`
+	KeyBits                       int           `json:"key_bits"`
+	UsePSS                        bool          `json:"use_pss"`
+	SignatureBits                 int           `json:"signature_bits"`
+	MaxPathLength                 *int          `json:",omitempty"`
 	KeyUsageOld                   string        `json:"key_usage,omitempty"`
-	KeyUsage                      []string      `json:"key_usage_list" mapstructure:"key_usage"`
-	ExtKeyUsage                   []string      `json:"extended_key_usage_list" mapstructure:"extended_key_usage"`
+	KeyUsage                      []string      `json:"key_usage_list"`
+	ExtKeyUsage                   []string      `json:"extended_key_usage_list"`
 	OUOld                         string        `json:"ou,omitempty"`
-	OU                            []string      `json:"ou_list" mapstructure:"ou"`
+	OU                            []string      `json:"ou_list"`
 	OrganizationOld               string        `json:"organization,omitempty"`
-	Organization                  []string      `json:"organization_list" mapstructure:"organization"`
-	Country                       []string      `json:"country" mapstructure:"country"`
-	Locality                      []string      `json:"locality" mapstructure:"locality"`
-	Province                      []string      `json:"province" mapstructure:"province"`
-	StreetAddress                 []string      `json:"street_address" mapstructure:"street_address"`
-	PostalCode                    []string      `json:"postal_code" mapstructure:"postal_code"`
+	Organization                  []string      `json:"organization_list"`
+	Country                       []string      `json:"country"`
+	Locality                      []string      `json:"locality"`
+	Province                      []string      `json:"province"`
+	StreetAddress                 []string      `json:"street_address"`
+	PostalCode                    []string      `json:"postal_code"`
 	GenerateLease                 *bool         `json:"generate_lease,omitempty"`
-	NoStore                       bool          `json:"no_store" mapstructure:"no_store"`
-	RequireCN                     bool          `json:"require_cn" mapstructure:"require_cn"`
-	AllowedOtherSANs              []string      `json:"allowed_other_sans" mapstructure:"allowed_other_sans"`
-	AllowedSerialNumbers          []string      `json:"allowed_serial_numbers" mapstructure:"allowed_serial_numbers"`
-	AllowedURISANs                []string      `json:"allowed_uri_sans" mapstructure:"allowed_uri_sans"`
+	NoStore                       bool          `json:"no_store"`
+	RequireCN                     bool          `json:"require_cn"`
+	CNValidations                 []string      `json:"cn_validations"`
+	AllowedOtherSANs              []string      `json:"allowed_other_sans"`
+	AllowedSerialNumbers          []string      `json:"allowed_serial_numbers"`
+	AllowedURISANs                []string      `json:"allowed_uri_sans"`
 	AllowedURISANsTemplate        bool          `json:"allowed_uri_sans_template"`
-	PolicyIdentifiers             []string      `json:"policy_identifiers" mapstructure:"policy_identifiers"`
-	ExtKeyUsageOIDs               []string      `json:"ext_key_usage_oids" mapstructure:"ext_key_usage_oids"`
-	BasicConstraintsValidForNonCA bool          `json:"basic_constraints_valid_for_non_ca" mapstructure:"basic_constraints_valid_for_non_ca"`
-	NotBeforeDuration             time.Duration `json:"not_before_duration" mapstructure:"not_before_duration"`
-	NotAfter                      string        `json:"not_after" mapstructure:"not_after"`
-	Issuer                        string        `json:"issuer" mapstructure:"issuer"`
+	PolicyIdentifiers             []string      `json:"policy_identifiers"`
+	ExtKeyUsageOIDs               []string      `json:"ext_key_usage_oids"`
+	BasicConstraintsValidForNonCA bool          `json:"basic_constraints_valid_for_non_ca"`
+	NotBeforeDuration             time.Duration `json:"not_before_duration"`
+	NotAfter                      string        `json:"not_after"`
+	Issuer                        string        `json:"issuer"`
 }
 
 func (r *roleEntry) ToResponseData() map[string]interface{} {
@@ -1080,6 +1135,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"key_type":                           r.KeyType,
 		"key_bits":                           r.KeyBits,
 		"signature_bits":                     r.SignatureBits,
+		"use_pss":                            r.UsePSS,
 		"key_usage":                          r.KeyUsage,
 		"ext_key_usage":                      r.ExtKeyUsage,
 		"ext_key_usage_oids":                 r.ExtKeyUsageOIDs,
@@ -1095,6 +1151,7 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		"allowed_serial_numbers":             r.AllowedSerialNumbers,
 		"allowed_uri_sans":                   r.AllowedURISANs,
 		"require_cn":                         r.RequireCN,
+		"cn_validations":                     r.CNValidations,
 		"policy_identifiers":                 r.PolicyIdentifiers,
 		"basic_constraints_valid_for_non_ca": r.BasicConstraintsValidForNonCA,
 		"not_before_duration":                int64(r.NotBeforeDuration.Seconds()),
@@ -1108,6 +1165,52 @@ func (r *roleEntry) ToResponseData() map[string]interface{} {
 		responseData["generate_lease"] = r.GenerateLease
 	}
 	return responseData
+}
+
+func checkCNValidations(validations []string) ([]string, error) {
+	var haveDisabled bool
+	var haveEmail bool
+	var haveHostname bool
+
+	var result []string
+
+	if len(validations) == 0 {
+		return []string{"email", "hostname"}, nil
+	}
+
+	for _, validation := range validations {
+		switch strings.ToLower(validation) {
+		case "disabled":
+			if haveDisabled {
+				return nil, fmt.Errorf("cn_validations value incorrect: `disabled` specified multiple times")
+			}
+			haveDisabled = true
+		case "email":
+			if haveEmail {
+				return nil, fmt.Errorf("cn_validations value incorrect: `email` specified multiple times")
+			}
+			haveEmail = true
+		case "hostname":
+			if haveHostname {
+				return nil, fmt.Errorf("cn_validations value incorrect: `hostname` specified multiple times")
+			}
+			haveHostname = true
+		default:
+			return nil, fmt.Errorf("cn_validations value incorrect: unknown type: `%s`", validation)
+		}
+
+		result = append(result, strings.ToLower(validation))
+	}
+
+	if !haveDisabled && !haveEmail && !haveHostname {
+		return nil, fmt.Errorf("cn_validations value incorrect: must specify a value (`email` and/or `hostname`) or `disabled`")
+	}
+
+	if haveDisabled && (haveEmail || haveHostname) {
+		return nil, fmt.Errorf("cn_validations value incorrect: cannot specify `disabled` along with `email` or `hostname`")
+	}
+
+	return result, nil
 }
 
 const pathListRolesHelpSyn = `List the existing roles in this backend`

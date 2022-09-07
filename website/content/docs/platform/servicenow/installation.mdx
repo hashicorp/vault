@@ -36,7 +36,7 @@ description: Installation steps for the Vault ServiceNow Credential Resolver.
   must set `cache.use_auto_auth_token = true`, and the `listener`, `vault` and
   `auto_auth` blocks are also required to set up a working Agent, e.g.:
 
-  ```
+  ```hcl
   listener "tcp" {
     address = "127.0.0.1:8200"
     tls_disable = false

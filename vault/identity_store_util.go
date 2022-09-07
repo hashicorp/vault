@@ -595,7 +595,7 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 		default:
 			i.logger.Warn("alias is already tied to a different entity; these entities are being merged", "alias_id", alias.ID, "other_entity_id", aliasByFactors.CanonicalID, "entity_aliases", entity.Aliases, "alias_by_factors", aliasByFactors)
 
-			respErr, intErr := i.mergeEntity(ctx, txn, entity, []string{aliasByFactors.CanonicalID}, true, false, true, persist)
+			respErr, intErr := i.mergeEntityAsPartOfUpsert(ctx, txn, entity, aliasByFactors.CanonicalID, persist)
 			switch {
 			case respErr != nil:
 				return respErr
@@ -604,7 +604,7 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 			}
 
 			// The entity and aliases will be loaded into memdb and persisted
-			// as a result of the merge so we are done here
+			// as a result of the merge, so we are done here
 			return nil
 		}
 
@@ -1473,19 +1473,23 @@ func (i *IdentityStore) sanitizeAndUpsertGroup(ctx context.Context, group *ident
 	}
 
 	// Remove duplicate entity IDs and check if all IDs are valid
-	group.MemberEntityIDs = strutil.RemoveDuplicates(group.MemberEntityIDs, false)
-	for _, entityID := range group.MemberEntityIDs {
-		entity, err := i.MemDBEntityByID(entityID, false)
-		if err != nil {
-			return fmt.Errorf("failed to validate entity ID %q: %w", entityID, err)
-		}
-		if entity == nil {
-			return fmt.Errorf("invalid entity ID %q", entityID)
+	if group.MemberEntityIDs != nil {
+		group.MemberEntityIDs = strutil.RemoveDuplicates(group.MemberEntityIDs, false)
+		for _, entityID := range group.MemberEntityIDs {
+			entity, err := i.MemDBEntityByID(entityID, false)
+			if err != nil {
+				return fmt.Errorf("failed to validate entity ID %q: %w", entityID, err)
+			}
+			if entity == nil {
+				return fmt.Errorf("invalid entity ID %q", entityID)
+			}
 		}
 	}
 
 	// Remove duplicate policies
-	group.Policies = strutil.RemoveDuplicates(group.Policies, false)
+	if group.Policies != nil {
+		group.Policies = strutil.RemoveDuplicates(group.Policies, false)
+	}
 
 	txn := i.db.Txn(true)
 	defer txn.Abort()

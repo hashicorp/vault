@@ -1,9 +1,11 @@
 package pki
 
 import (
+	"bytes"
 	"context"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"strconv"
@@ -13,37 +15,6 @@ import (
 
 	"github.com/hashicorp/vault/sdk/logical"
 )
-
-func CBReq(b *backend, s logical.Storage, operation logical.Operation, path string, data map[string]interface{}) (*logical.Response, error) {
-	resp, err := b.HandleRequest(context.Background(), &logical.Request{
-		Operation:  operation,
-		Path:       path,
-		Data:       data,
-		Storage:    s,
-		MountPoint: "pki/",
-	})
-	if err != nil || resp == nil {
-		return resp, err
-	}
-
-	if msg, ok := resp.Data["error"]; ok && msg != nil && len(msg.(string)) > 0 {
-		return resp, fmt.Errorf("%s", msg)
-	}
-
-	return resp, nil
-}
-
-func CBRead(b *backend, s logical.Storage, path string) (*logical.Response, error) {
-	return CBReq(b, s, logical.ReadOperation, path, make(map[string]interface{}))
-}
-
-func CBWrite(b *backend, s logical.Storage, path string, data map[string]interface{}) (*logical.Response, error) {
-	return CBReq(b, s, logical.UpdateOperation, path, data)
-}
-
-func CBDelete(b *backend, s logical.Storage, path string) (*logical.Response, error) {
-	return CBReq(b, s, logical.DeleteOperation, path, make(map[string]interface{}))
-}
 
 // For speed, all keys are ECDSA.
 type CBGenerateKey struct {
@@ -144,6 +115,7 @@ type CBGenerateIntermediate struct {
 	Existing           bool
 	Name               string
 	CommonName         string
+	SKID               string
 	Parent             string
 	ImportErrorMessage string
 }
@@ -182,12 +154,31 @@ func (c CBGenerateIntermediate) Run(t testing.TB, b *backend, s logical.Storage,
 	if len(c.CommonName) > 0 {
 		data["common_name"] = c.CommonName
 	}
+	if len(c.SKID) > 0 {
+		// Copy the SKID from an existing, already-issued cert.
+		otherPEM := knownCerts[c.SKID]
+		otherCert := ToCertificate(t, otherPEM)
+
+		data["skid"] = hex.EncodeToString(otherCert.SubjectKeyId)
+	}
+
 	resp, err = CBWrite(b, s, url, data)
 	if err != nil {
 		t.Fatalf("failed to sign CSR for issuer (%v): %v / body: %v", c.Name, err, data)
 	}
 
 	knownCerts[c.Name] = strings.TrimSpace(resp.Data["certificate"].(string))
+
+	// Verify SKID if one was requested.
+	if len(c.SKID) > 0 {
+		otherPEM := knownCerts[c.SKID]
+		otherCert := ToCertificate(t, otherPEM)
+		ourCert := ToCertificate(t, knownCerts[c.Name])
+
+		if !bytes.Equal(otherCert.SubjectKeyId, ourCert.SubjectKeyId) {
+			t.Fatalf("Expected two certs to have equal SKIDs but differed: them: %v vs us: %v", otherCert.SubjectKeyId, ourCert.SubjectKeyId)
+		}
+	}
 
 	// Set the signed intermediate
 	url = "intermediate/set-signed"
@@ -544,7 +535,7 @@ func (c CBIssueLeaf) RevokeLeaf(t testing.TB, b *backend, s logical.Storage, kno
 		t.Fatalf("failed to revoke issued certificate (%v) under role %v / issuer %v: expected response parameter revocation_time was missing from response:\n%v", api_serial, c.Role, c.Issuer, resp.Data)
 	}
 
-	if !hasCRL && isDefault {
+	if !hasCRL {
 		// Nothing further we can test here. We could re-enable CRL building
 		// and check that it works, but that seems like a stretch. Other
 		// issuers might be functionally the same as this issuer (and thus
@@ -623,7 +614,7 @@ func (c CBIssueLeaf) RevokeLeaf(t testing.TB, b *backend, s logical.Storage, kno
 			}
 		}
 
-		t.Fatalf("expected to find certificate with serial [%v] on issuer %v's CRL but was missing: %v revoked certs\n\nCRL:\n[%v]\n\nLeaf:\n[%v]\n\nIssuer:\n[%v]\n", api_serial, c.Issuer, len(crl.TBSCertList.RevokedCertificates), raw_crl, raw_cert, raw_issuer)
+		t.Fatalf("expected to find certificate with serial [%v] on issuer %v's CRL but was missing: %v revoked certs\n\nCRL:\n[%v]\n\nLeaf:\n[%v]\n\nIssuer (hasCRL: %v):\n[%v]\n", api_serial, c.Issuer, len(crl.TBSCertList.RevokedCertificates), raw_crl, raw_cert, hasCRL, raw_issuer)
 	}
 }
 
@@ -860,6 +851,7 @@ var chainBuildingTestCases = []CBTestScenario{
 				Existing:   true,
 				Name:       "cross-old-new",
 				CommonName: "root-new",
+				SKID:       "root-new-a",
 				// Which old issuer is used here doesn't matter as they have
 				// the same CN and key.
 				Parent: "root-old-a",
@@ -918,6 +910,7 @@ var chainBuildingTestCases = []CBTestScenario{
 				Existing:   true,
 				Name:       "cross-new-old",
 				CommonName: "root-old",
+				SKID:       "root-old-a",
 				// Which new issuer is used here doesn't matter as they have
 				// the same CN and key.
 				Parent: "root-new-a",
@@ -1603,6 +1596,7 @@ var chainBuildingTestCases = []CBTestScenario{
 }
 
 func Test_CAChainBuilding(t *testing.T) {
+	t.Parallel()
 	for testIndex, testCase := range chainBuildingTestCases {
 		b, s := createBackendWithStorage(t)
 
@@ -1636,9 +1630,10 @@ func BenchmarkChainBuilding(benchies *testing.B) {
 
 			// Run the benchmark.
 			ctx := context.Background()
+			sc := b.makeStorageContext(ctx, s)
 			bench.StartTimer()
 			for n := 0; n < bench.N; n++ {
-				rebuildIssuersChains(ctx, s, nil)
+				sc.rebuildIssuersChains(nil)
 			}
 		})
 	}

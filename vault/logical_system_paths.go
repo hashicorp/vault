@@ -288,6 +288,50 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 			},
 		},
+		{
+			Pattern: "loggers$",
+			Fields: map[string]*framework.FieldSchema{
+				"level": {
+					Type: framework.TypeString,
+					Description: "Log verbosity level. Supported values (in order of detail) are " +
+						"\"trace\", \"debug\", \"info\", \"warn\", and \"error\".",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleLoggersWrite,
+					Summary:  "Modify the log level for all existing loggers.",
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: b.handleLoggersDelete,
+					Summary:  "Revert the all loggers to use log level provided in config.",
+				},
+			},
+		},
+		{
+			Pattern: "loggers/" + framework.MatchAllRegex("name"),
+			Fields: map[string]*framework.FieldSchema{
+				"name": {
+					Type:        framework.TypeString,
+					Description: "The name of the logger to be modified.",
+				},
+				"level": {
+					Type: framework.TypeString,
+					Description: "Log verbosity level. Supported values (in order of detail) are " +
+						"\"trace\", \"debug\", \"info\", \"warn\", and \"error\".",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleLoggersByNameWrite,
+					Summary:  "Modify the log level of a single logger.",
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: b.handleLoggersByNameDelete,
+					Summary:  "Revert a single logger to use log level provided in config.",
+				},
+			},
+		},
 	}
 }
 
@@ -722,6 +766,10 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 				Type:        framework.TypeStringSlice,
 				Description: strings.TrimSpace(sysHelp["plugin-catalog_env"][0]),
 			},
+			"version": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -899,6 +947,12 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				"context": {
 					Type:        framework.TypeString,
 					Description: "Context string appended to every operationId",
+				},
+				"generic_mount_paths": {
+					Type:        framework.TypeBool,
+					Description: "Use generic mount paths",
+					Query:       true,
+					Default:     false,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -1546,6 +1600,10 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Type:        framework.TypeKVPairs,
 					Description: strings.TrimSpace(sysHelp["auth_options"][0]),
 				},
+				"version": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
+				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
@@ -1745,6 +1803,8 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["wrap"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["wrap"][1]),
+
+			TakesArbitraryInput: true,
 		},
 
 		{
@@ -1914,6 +1974,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 				"options": {
 					Type:        framework.TypeKVPairs,
 					Description: strings.TrimSpace(sysHelp["mount_options"][0]),
+				},
+				"version": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
 				},
 			},
 

@@ -13,6 +13,7 @@ Router.map(function () {
       this.route('oidc-provider', { path: '/identity/oidc/provider/:provider_name/authorize' });
       this.route('oidc-callback', { path: '/auth/*auth_path/oidc/callback' });
       this.route('auth');
+      this.route('redirect');
       this.route('init');
       this.route('logout');
       this.mount('open-api-explorer', { path: '/api-explorer' });
@@ -113,6 +114,9 @@ Router.map(function () {
         this.route('backends', { path: '/' });
         this.route('backend', { path: '/:backend' }, function () {
           this.mount('kmip');
+          if (config.environment !== 'production') {
+            this.mount('pki');
+          }
           this.route('index', { path: '/' });
           this.route('configuration');
           // because globs / params can't be empty,

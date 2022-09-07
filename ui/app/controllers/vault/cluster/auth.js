@@ -85,5 +85,9 @@ export default Controller.extend({
         mfaErrors: null,
       });
     },
+    cancelAuthentication() {
+      this.set('cancelAuth', true);
+      this.set('waitingForOktaNumberChallenge', false);
+    },
   },
 });

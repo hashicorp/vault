@@ -708,7 +708,7 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 }
 
 func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
-	cleanup, connURL := mongodb.PrepareTestContainerWithDatabase(t, "latest", "vaulttestdb")
+	cleanup, connURL := mongodb.PrepareTestContainerWithDatabase(t, "5.0.10", "vaulttestdb")
 	defer cleanup()
 
 	uc := userCreator(func(t *testing.T, username, password string) {
@@ -1379,6 +1379,7 @@ func setupMockDB(b *databaseBackend) *mockNewDatabase {
 	mockDB := &mockNewDatabase{}
 	mockDB.On("Initialize", mock.Anything, mock.Anything).Return(v5.InitializeResponse{}, nil)
 	mockDB.On("Close").Return(nil)
+	mockDB.On("Type").Return("mock", nil)
 	dbw := databaseVersionWrapper{
 		v5: mockDB,
 	}

@@ -17,13 +17,14 @@ import (
 	"github.com/hashicorp/go-discover"
 	discoverk8s "github.com/hashicorp/go-discover/provider/k8s"
 	"github.com/hashicorp/go-hclog"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/net/http2"
@@ -220,6 +221,7 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 
 	c.raftTLSRotationStopCh = make(chan struct{})
 	logger := c.logger.Named("raft")
+	c.AddLogger(logger)
 
 	if c.isRaftHAOnly() {
 		return c.raftTLSRotateDirect(ctx, logger, c.raftTLSRotationStopCh)
@@ -352,6 +354,7 @@ func (c *Core) raftTLSRotatePhased(ctx context.Context, logger hclog.Logger, raf
 				AppliedIndex:    0,
 				Term:            0,
 				DesiredSuffrage: "voter",
+				SDKVersion:      version.GetVersion().Version,
 			})
 		}
 	}
@@ -659,7 +662,7 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool, sealNode bool) func(co
 			// The snapshot contained a root key or keyring we couldn't
 			// recover
 			switch c.seal.BarrierType() {
-			case wrapping.Shamir:
+			case wrapping.WrapperTypeShamir:
 				// If we are a shamir seal we can't do anything. Just
 				// seal all nodes.
 
@@ -803,7 +806,7 @@ func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo) (*raftInformati
 		return nil, err
 	}
 
-	if sealConfig.Type != c.seal.BarrierType() {
+	if sealConfig.Type != c.seal.BarrierType().String() {
 		return nil, fmt.Errorf("mismatching seal types between raft leader (%s) and follower (%s)", sealConfig.Type, c.seal.BarrierType())
 	}
 
@@ -816,7 +819,7 @@ func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo) (*raftInformati
 		return nil, fmt.Errorf("error decoding raft bootstrap challenge: %w", err)
 	}
 
-	eBlob := &wrapping.EncryptedBlobInfo{}
+	eBlob := &wrapping.BlobInfo{}
 	if err := proto.Unmarshal(challengeRaw, eBlob); err != nil {
 		return nil, fmt.Errorf("error decoding raft bootstrap challenge: %w", err)
 	}
@@ -832,11 +835,6 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 	raftBackend := c.getRaftBackend()
 	if raftBackend == nil {
 		return false, errors.New("raft backend not in use")
-	}
-
-	if err := raftBackend.SetDesiredSuffrage(nonVoter); err != nil {
-		c.logger.Error("failed to set desired suffrage for this node", "error", err)
-		return false, nil
 	}
 
 	init, err := c.InitializedLocally(ctx)
@@ -917,8 +915,8 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		// If we're using Shamir and using raft for both physical and HA, we
 		// need to block until the node is unsealed, unless retry is set to
 		// false.
-		if c.seal.BarrierType() == wrapping.Shamir && !c.isRaftHAOnly() {
-			c.raftInfo = raftInfo
+		if c.seal.BarrierType() == wrapping.WrapperTypeShamir && !c.isRaftHAOnly() {
+			c.raftInfo.Store(raftInfo)
 			if err := c.seal.SetBarrierConfig(ctx, raftInfo.leaderBarrierConfig); err != nil {
 				return err
 			}
@@ -928,7 +926,8 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			}
 
 			// Wait until unseal keys are supplied
-			c.raftInfo.joinInProgress = true
+			raftInfo.joinInProgress = true
+			c.raftInfo.Store(raftInfo)
 			if atomic.LoadUint32(c.postUnsealStarted) != 1 {
 				return errors.New("waiting for unseal keys to be supplied")
 			}
@@ -939,9 +938,9 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			return fmt.Errorf("failed to send answer to raft leader node: %w", err)
 		}
 
-		if c.seal.BarrierType() == wrapping.Shamir && !isRaftHAOnly {
+		if c.seal.BarrierType() == wrapping.WrapperTypeShamir && !isRaftHAOnly {
 			// Reset the state
-			c.raftInfo = nil
+			c.raftInfo.Store((*raftInformation)(nil))
 
 			// In case of Shamir unsealing, inform the unseal process that raft join is completed
 			close(c.raftJoinDoneCh)
@@ -962,10 +961,21 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 		if err != nil {
 			return fmt.Errorf("failed to check if core is initialized: %w", err)
 		}
-		if init && !isRaftHAOnly {
+
+		// InitializedLocally will return non-nil before HA backends are
+		// initialized. c.Initialized(ctx) checks InitializedLocally first, so
+		// we can't use that generically for both cases. Instead check
+		// raftBackend.Initialized() directly for the HA-Only case.
+		if (!isRaftHAOnly && init) || (isRaftHAOnly && raftBackend.Initialized()) {
 			c.logger.Info("returning from raft join as the node is initialized")
 			return nil
 		}
+
+		if err := raftBackend.SetDesiredSuffrage(nonVoter); err != nil {
+			c.logger.Error("failed to set desired suffrage for this node", "error", err)
+			return nil
+		}
+
 		challengeCh := make(chan *raftInformation)
 		var expandedJoinInfos []*raft.LeaderJoinInfo
 		for _, leaderInfo := range leaderInfos {
@@ -1000,15 +1010,19 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 
 		select {
 		case <-ctx.Done():
+			err = ctx.Err()
 		case raftInfo := <-challengeCh:
 			if raftInfo != nil {
 				err = answerChallenge(ctx, raftInfo)
 				if err == nil {
 					return nil
 				}
+			} else {
+				// Return an error so we can retry_join
+				err = fmt.Errorf("failed to get raft challenge")
 			}
 		}
-		return fmt.Errorf("timed out on raft join: %w", ctx.Err())
+		return err
 	}
 
 	switch retryFailures {
@@ -1260,7 +1274,7 @@ func (c *Core) RaftBootstrap(ctx context.Context, onInit bool) error {
 }
 
 func (c *Core) isRaftUnseal() bool {
-	return c.raftInfo != nil
+	return c.raftInfo.Load().(*raftInformation) != nil
 }
 
 type answerRespData struct {

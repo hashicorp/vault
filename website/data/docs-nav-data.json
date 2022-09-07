@@ -1174,7 +1174,16 @@
       },
       {
         "title": "Transit",
-        "path": "secrets/transit"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secrets/transit"
+          },
+          {
+            "title": "Import Key Wrapping Guide",
+            "path": "secrets/transit/key-wrapping-guide"
+          }
+        ]
       },
       {
         "title": "Venafi (Certificates)",
@@ -1226,7 +1235,48 @@
           },
           {
             "title": "OIDC Providers",
-            "path": "auth/jwt/oidc_providers"
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "auth/jwt/oidc-providers"
+              },
+              {
+                "title": "Auth0",
+                "path": "auth/jwt/oidc-providers/auth0"
+              },
+              {
+                "title": "Azure AD",
+                "path": "auth/jwt/oidc-providers/azuread"
+              },
+              {
+                "title": "Forgerock",
+                "path": "auth/jwt/oidc-providers/forgerock"
+              },
+              {
+                "title": "Gitlab",
+                "path": "auth/jwt/oidc-providers/gitlab"
+              },
+              {
+                "title": "Google",
+                "path": "auth/jwt/oidc-providers/google"
+              },
+              {
+                "title": "Keycloak",
+                "path": "auth/jwt/oidc-providers/keycloak"
+              },
+              {
+                "title": "Kubernetes",
+                "path": "auth/jwt/oidc-providers/kubernetes"
+              },
+              {
+                "title": "Okta",
+                "path": "auth/jwt/oidc-providers/okta"
+              },
+              {
+                "title": "SecureAuth",
+                "path": "auth/jwt/oidc-providers/secureauth"
+              }
+            ]
           }
         ]
       },
@@ -1353,6 +1403,32 @@
         "path": "platform"
       },
       {
+        "title": "AWS",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "platform/aws"
+          },
+          {
+            "title": "Vault Lambda Extension",
+            "path": "platform/aws/lambda-extension"
+          },
+          {
+            "title": "Running Vault",
+            "path": "platform/aws/run"
+          }
+        ]
+      },
+      {
+        "title": "GitHub",
+        "routes": [
+          {
+            "title": "GitHub Actions",
+            "path": "platform/github-actions"
+          }
+        ]
+      },
+      {
         "title": "Kubernetes",
         "routes": [
           {
@@ -1386,6 +1462,10 @@
               {
                 "title": "Configuration",
                 "path": "platform/k8s/helm/configuration"
+              },
+              {
+                "title": "Terraform",
+                "path": "platform/k8s/helm/terraform"
               },
               {
                 "title": "Examples",
@@ -1495,44 +1575,6 @@
         ]
       },
       {
-        "title": "AWS",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "platform/aws"
-          },
-          {
-            "title": "Vault Lambda Extension",
-            "path": "platform/aws/lambda-extension"
-          },
-          {
-            "title": "Running Vault",
-            "path": "platform/aws/run"
-          }
-        ]
-      },
-      {
-        "title": "ServiceNow",
-        "routes": [
-          {
-            "title": "Overview",
-            "path": "platform/servicenow"
-          },
-          {
-            "title": "Installation",
-            "path": "platform/servicenow/installation"
-          },
-          {
-            "title": "Configuration",
-            "path": "platform/servicenow/configuration"
-          },
-          {
-            "title": "Troubleshooting",
-            "path": "platform/servicenow/troubleshooting"
-          }
-        ]
-      },
-      {
         "title": "Microsoft SQL Server EKM provider",
         "routes": [
           {
@@ -1554,6 +1596,31 @@
           {
             "title": "Troubleshooting",
             "path": "platform/mssql/troubleshooting"
+          },
+          {
+            "title": "Release Notes",
+            "path": "platform/mssql/changelog"
+          }
+        ]
+      },
+      {
+        "title": "ServiceNow",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "platform/servicenow"
+          },
+          {
+            "title": "Installation",
+            "path": "platform/servicenow/installation"
+          },
+          {
+            "title": "Configuration",
+            "path": "platform/servicenow/configuration"
+          },
+          {
+            "title": "Troubleshooting",
+            "path": "platform/servicenow/troubleshooting"
           }
         ]
       }
@@ -1808,6 +1875,10 @@
       {
         "title": "Overview",
         "path": "release-notes"
+      },
+      {
+        "title": "1.11.0",
+        "path": "release-notes/1.11.0"
       },
       {
         "title": "1.10.0",

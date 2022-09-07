@@ -116,16 +116,16 @@ func (c *KVGetCommand) Run(args []string) int {
 	mountFlagSyntax := (c.flagMount != "")
 
 	var (
-		mountPath   string
-		partialPath string
-		v2          bool
+		mountPath string
+		v2        bool
 	)
+
+	// Ignore leading slash
+	partialPath := strings.TrimPrefix(args[0], "/")
 
 	// Parse the paths and grab the KV version
 	if mountFlagSyntax {
 		// In this case, this arg is the secret path (e.g. "foo").
-		partialPath = args[0]
-
 		mountPath = sanitizePath(c.flagMount)
 		_, v2, err = isKVv2(mountPath, client)
 		if err != nil {
@@ -135,8 +135,6 @@ func (c *KVGetCommand) Run(args []string) int {
 	} else {
 		// In this case, this arg is a path-like combination of mountPath/secretPath.
 		// (e.g. "secret/foo")
-		partialPath = args[0]
-
 		mountPath, v2, err = isKVv2(partialPath, client)
 		if err != nil {
 			c.UI.Error(err.Error())

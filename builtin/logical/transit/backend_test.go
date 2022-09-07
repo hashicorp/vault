@@ -744,7 +744,7 @@ func testAccStepRewrap(
 			verString := splitStrings[1][1:]
 			ver, err := strconv.Atoi(verString)
 			if err != nil {
-				return fmt.Errorf("error pulling out version from verString '%s', ciphertext was %s", verString, d.Ciphertext)
+				return fmt.Errorf("error pulling out version from verString %q, ciphertext was %s", verString, d.Ciphertext)
 			}
 			if ver != expectedVer {
 				return fmt.Errorf("did not get expected version")
@@ -856,7 +856,7 @@ func testAccStepWriteDatakey(t *testing.T, name string,
 				dataKeyInfo["plaintext"] = d.Plaintext
 				plainBytes, err := base64.StdEncoding.DecodeString(d.Plaintext)
 				if err != nil {
-					return fmt.Errorf("could not base64 decode plaintext string '%s'", d.Plaintext)
+					return fmt.Errorf("could not base64 decode plaintext string %q", d.Plaintext)
 				}
 				if len(plainBytes)*8 != bits {
 					return fmt.Errorf("returned key does not have correct bit length")
@@ -883,7 +883,7 @@ func testAccStepDecryptDatakey(t *testing.T, name string,
 			}
 
 			if d.Plaintext != dataKeyInfo["plaintext"].(string) {
-				return fmt.Errorf("plaintext mismatch: got '%s', expected '%s', decryptData was %#v", d.Plaintext, dataKeyInfo["plaintext"].(string), resp.Data)
+				return fmt.Errorf("plaintext mismatch: got %q, expected %q, decryptData was %#v", d.Plaintext, dataKeyInfo["plaintext"].(string), resp.Data)
 			}
 			return nil
 		},

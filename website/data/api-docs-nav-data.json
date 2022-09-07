@@ -415,8 +415,7 @@
       },
       {
         "title": "<code>/sys/generate-recovery-token</code>",
-        "path": "system/generate-recovery-token",
-        "hidden": true
+        "path": "system/generate-recovery-token"
       },
       {
         "title": "<code>/sys/generate-root</code>",
@@ -481,6 +480,10 @@
       {
         "title": "<code>/sys/license/status</code>",
         "path": "system/license"
+      },
+      {
+        "title": "<code>/sys/loggers</code>",
+        "path": "system/loggers"
       },
       {
         "title": "<code>/sys/managed-keys <sup>ENT</sup></code>",

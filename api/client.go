@@ -347,8 +347,6 @@ func (c *Config) ReadEnvironment() error {
 	}
 	if v := os.Getenv(EnvVaultAgentAddr); v != "" {
 		envAgentAddress = v
-	} else if v := os.Getenv(EnvVaultAgentAddress); v != "" {
-		envAgentAddress = v
 	}
 	if v := os.Getenv(EnvVaultMaxRetries); v != "" {
 		maxRetries, err := strconv.ParseUint(v, 10, 32)
@@ -391,12 +389,6 @@ func (c *Config) ReadEnvironment() error {
 		envInsecure, err = strconv.ParseBool(v)
 		if err != nil {
 			return fmt.Errorf("could not parse VAULT_SKIP_VERIFY")
-		}
-	} else if v := os.Getenv(EnvVaultInsecure); v != "" {
-		var err error
-		envInsecure, err = strconv.ParseBool(v)
-		if err != nil {
-			return fmt.Errorf("could not parse VAULT_INSECURE")
 		}
 	}
 	if v := os.Getenv(EnvVaultSRVLookup); v != "" {
@@ -468,6 +460,51 @@ func (c *Config) ReadEnvironment() error {
 	}
 
 	return nil
+}
+
+// ParseAddress transforms the provided address into a url.URL and handles
+// the case of Unix domain sockets by setting the DialContext in the
+// configuration's HttpClient.Transport. This function must be called with
+// c.modifyLock held for write access.
+func (c *Config) ParseAddress(address string) (*url.URL, error) {
+	u, err := url.Parse(address)
+	if err != nil {
+		return nil, err
+	}
+
+	c.Address = address
+
+	if strings.HasPrefix(address, "unix://") {
+		// When the address begins with unix://, always change the transport's
+		// DialContext (to match previous behaviour)
+		socket := strings.TrimPrefix(address, "unix://")
+
+		if transport, ok := c.HttpClient.Transport.(*http.Transport); ok {
+			transport.DialContext = func(context.Context, string, string) (net.Conn, error) {
+				return net.Dial("unix", socket)
+			}
+
+			// Since the address points to a unix domain socket, the scheme in the
+			// *URL would be set to `unix`. The *URL in the client is expected to
+			// be pointing to the protocol used in the application layer and not to
+			// the transport layer. Hence, setting the fields accordingly.
+			u.Scheme = "http"
+			u.Host = socket
+			u.Path = ""
+		} else {
+			return nil, fmt.Errorf("attempting to specify unix:// address with non-transport transport")
+		}
+	} else if strings.HasPrefix(c.Address, "unix://") {
+		// When the address being set does not begin with unix:// but the previous
+		// address in the Config did, change the transport's DialContext back to
+		// use the default configuration that cleanhttp uses.
+
+		if transport, ok := c.HttpClient.Transport.(*http.Transport); ok {
+			transport.DialContext = cleanhttp.DefaultPooledTransport().DialContext
+		}
+	}
+
+	return u, nil
 }
 
 func parseRateLimit(val string) (rate float64, burst int, err error) {
@@ -542,25 +579,9 @@ func NewClient(c *Config) (*Client, error) {
 		address = c.AgentAddress
 	}
 
-	u, err := url.Parse(address)
+	u, err := c.ParseAddress(address)
 	if err != nil {
 		return nil, err
-	}
-
-	if strings.HasPrefix(address, "unix://") {
-		socket := strings.TrimPrefix(address, "unix://")
-		transport := c.HttpClient.Transport.(*http.Transport)
-		transport.DialContext = func(context.Context, string, string) (net.Conn, error) {
-			return net.Dial("unix", socket)
-		}
-
-		// Since the address points to a unix domain socket, the scheme in the
-		// *URL would be set to `unix`. The *URL in the client is expected to
-		// be pointing to the protocol used in the application layer and not to
-		// the transport layer. Hence, setting the fields accordingly.
-		u.Scheme = "http"
-		u.Host = socket
-		u.Path = ""
 	}
 
 	client := &Client{
@@ -621,14 +642,11 @@ func (c *Client) SetAddress(addr string) error {
 	c.modifyLock.Lock()
 	defer c.modifyLock.Unlock()
 
-	parsedAddr, err := url.Parse(addr)
+	parsedAddr, err := c.config.ParseAddress(addr)
 	if err != nil {
 		return errwrap.Wrapf("failed to set address: {{err}}", err)
 	}
 
-	c.config.modifyLock.Lock()
-	c.config.Address = addr
-	c.config.modifyLock.Unlock()
 	c.addr = parsedAddr
 	return nil
 }
@@ -718,6 +736,42 @@ func (c *Client) SetMaxRetries(retries int) {
 	defer c.config.modifyLock.Unlock()
 
 	c.config.MaxRetries = retries
+}
+
+func (c *Client) SetMaxIdleConnections(idle int) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.HttpClient.Transport.(*http.Transport).MaxIdleConns = idle
+}
+
+func (c *Client) MaxIdleConnections() int {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	return c.config.HttpClient.Transport.(*http.Transport).MaxIdleConns
+}
+
+func (c *Client) SetDisableKeepAlives(disable bool) {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.Lock()
+	defer c.config.modifyLock.Unlock()
+
+	c.config.HttpClient.Transport.(*http.Transport).DisableKeepAlives = disable
+}
+
+func (c *Client) DisableKeepAlives() bool {
+	c.modifyLock.RLock()
+	defer c.modifyLock.RUnlock()
+	c.config.modifyLock.RLock()
+	defer c.config.modifyLock.RUnlock()
+
+	return c.config.HttpClient.Transport.(*http.Transport).DisableKeepAlives
 }
 
 func (c *Client) MaxRetries() int {

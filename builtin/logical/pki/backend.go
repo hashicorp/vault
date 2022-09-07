@@ -75,19 +75,27 @@ func Backend(conf *logical.BackendConfig) *backend {
 				"ca/pem",
 				"ca_chain",
 				"ca",
+				"crl/delta",
+				"crl/delta/pem",
 				"crl/pem",
 				"crl",
 				"issuer/+/crl/der",
 				"issuer/+/crl/pem",
 				"issuer/+/crl",
+				"issuer/+/crl/delta/der",
+				"issuer/+/crl/delta/pem",
+				"issuer/+/crl/delta",
 				"issuer/+/pem",
 				"issuer/+/der",
 				"issuer/+/json",
-				"issuers",
+				"issuers/", // LIST operations append a '/' to the requested path
+				"ocsp",     // OCSP POST
+				"ocsp/*",   // OCSP GET
 			},
 
 			LocalStorage: []string{
-				"revoked/",
+				revokedPath,
+				deltaWALPath,
 				legacyCRLPath,
 				"crls/",
 				"certs/",
@@ -120,9 +128,13 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathSign(&b),
 			pathIssue(&b),
 			pathRotateCRL(&b),
+			pathRotateDeltaCRL(&b),
 			pathRevoke(&b),
+			pathRevokeWithKey(&b),
 			pathTidy(&b),
+			pathTidyCancel(&b),
 			pathTidyStatus(&b),
+			pathConfigAutoTidy(&b),
 
 			// Issuer APIs
 			pathListIssuers(&b),
@@ -140,6 +152,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathCrossSignIntermediate(&b),
 			pathConfigIssuers(&b),
 			pathReplaceRoot(&b),
+			pathRevokeIssuer(&b),
 
 			// Key APIs
 			pathListKeys(&b),
@@ -156,6 +169,10 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathFetchValidRaw(&b),
 			pathFetchValid(&b),
 			pathFetchListCerts(&b),
+
+			// OCSP APIs
+			buildPathOcspGet(&b),
+			buildPathOcspPost(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -168,15 +185,19 @@ func Backend(conf *logical.BackendConfig) *backend {
 		PeriodicFunc:   b.periodicFunc,
 	}
 
-	b.crlLifetime = time.Hour * 72
 	b.tidyCASGuard = new(uint32)
+	b.tidyCancelCAS = new(uint32)
 	b.tidyStatus = &tidyStatus{state: tidyStatusInactive}
 	b.storage = conf.StorageView
 	b.backendUUID = conf.BackendUUID
 
 	b.pkiStorageVersion.Store(0)
 
-	b.crlBuilder = &crlBuilder{}
+	b.crlBuilder = newCRLBuilder()
+
+	// Delay the first tidy until after we've started up.
+	b.lastTidy = time.Now()
+
 	return &b
 }
 
@@ -185,12 +206,13 @@ type backend struct {
 
 	backendUUID       string
 	storage           logical.Storage
-	crlLifetime       time.Duration
 	revokeStorageLock sync.RWMutex
 	tidyCASGuard      *uint32
+	tidyCancelCAS     *uint32
 
 	tidyStatusLock sync.RWMutex
 	tidyStatus     *tidyStatus
+	lastTidy       time.Time
 
 	pkiStorageVersion atomic.Value
 	crlBuilder        *crlBuilder
@@ -205,17 +227,21 @@ type (
 )
 
 const (
-	tidyStatusInactive tidyStatusState = iota
-	tidyStatusStarted
-	tidyStatusFinished
-	tidyStatusError
+	tidyStatusInactive   tidyStatusState = iota
+	tidyStatusStarted                    = iota
+	tidyStatusFinished                   = iota
+	tidyStatusError                      = iota
+	tidyStatusCancelling                 = iota
+	tidyStatusCancelled                  = iota
 )
 
 type tidyStatus struct {
 	// Parameters used to initiate the operation
-	safetyBuffer     int
-	tidyCertStore    bool
-	tidyRevokedCerts bool
+	safetyBuffer      int
+	tidyCertStore     bool
+	tidyRevokedCerts  bool
+	tidyRevokedAssocs bool
+	pauseDuration     string
 
 	// Status
 	state                   tidyStatusState
@@ -225,6 +251,7 @@ type tidyStatus struct {
 	message                 string
 	certStoreDeletedCount   uint
 	revokedCertDeletedCount uint
+	missingIssuerCertCount  uint
 }
 
 const backendHelp = `
@@ -293,6 +320,11 @@ func (b *backend) metricsWrap(callType string, roleMode int, ofunc roleOperation
 
 // initialize is used to perform a possible PKI storage migration if needed
 func (b *backend) initialize(ctx context.Context, _ *logical.InitializationRequest) error {
+	sc := b.makeStorageContext(ctx, b.storage)
+	if err := b.crlBuilder.reloadConfigIfRequired(sc); err != nil {
+		return err
+	}
+
 	// Grab the lock prior to the updating of the storage lock preventing us flipping
 	// the storage flag midway through the request stream of other requests.
 	b.issuersLock.Lock()
@@ -363,17 +395,135 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 			b.crlBuilder.requestRebuildIfActiveNode(b)
 		}()
 	case strings.HasPrefix(key, issuerPrefix):
-		// If an issuer has changed on the primary, we need to schedule an update of our CRL,
-		// the primary cluster would have done it already, but the CRL is cluster specific so
-		// force a rebuild of ours.
 		if !b.useLegacyBundleCaStorage() {
+			// See note in updateDefaultIssuerId about why this is necessary.
+			// We do this ahead of CRL rebuilding just so we know that things
+			// are stale.
+			b.crlBuilder.invalidateCRLBuildTime()
+
+			// If an issuer has changed on the primary, we need to schedule an update of our CRL,
+			// the primary cluster would have done it already, but the CRL is cluster specific so
+			// force a rebuild of ours.
 			b.crlBuilder.requestRebuildIfActiveNode(b)
 		} else {
 			b.Logger().Debug("Ignoring invalidation updates for issuer as the PKI migration has yet to complete.")
 		}
+	case key == "config/crl":
+		// We may need to reload our OCSP status flag
+		b.crlBuilder.markConfigDirty()
+	case key == storageIssuerConfig:
+		b.crlBuilder.invalidateCRLBuildTime()
 	}
 }
 
 func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) error {
-	return b.crlBuilder.rebuildIfForced(ctx, b, request)
+	sc := b.makeStorageContext(ctx, request.Storage)
+
+	doCRL := func() error {
+		// First attempt to reload the CRL configuration.
+		if err := b.crlBuilder.reloadConfigIfRequired(sc); err != nil {
+			return err
+		}
+
+		// As we're (below) modifying the backing storage, we need to ensure
+		// we're not on a standby/secondary node.
+		if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) ||
+			b.System().ReplicationState().HasState(consts.ReplicationDRSecondary) {
+			return nil
+		}
+
+		// Check if we're set to auto rebuild and a CRL is set to expire.
+		if err := b.crlBuilder.checkForAutoRebuild(sc); err != nil {
+			return err
+		}
+
+		// Then attempt to rebuild the CRLs if required.
+		if err := b.crlBuilder.rebuildIfForced(ctx, b, request); err != nil {
+			return err
+		}
+
+		// If a delta CRL was rebuilt above as part of the complete CRL rebuild,
+		// this will be a no-op. However, if we do need to rebuild delta CRLs,
+		// this would cause us to do so.
+		if err := b.crlBuilder.rebuildDeltaCRLsIfForced(sc, false); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	doAutoTidy := func() error {
+		// As we're (below) modifying the backing storage, we need to ensure
+		// we're not on a standby/secondary node.
+		if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) ||
+			b.System().ReplicationState().HasState(consts.ReplicationDRSecondary) {
+			return nil
+		}
+
+		config, err := sc.getAutoTidyConfig()
+		if err != nil {
+			return err
+		}
+
+		if !config.Enabled || config.Interval <= 0*time.Second {
+			return nil
+		}
+
+		// Check if we should run another tidy...
+		now := time.Now()
+		b.tidyStatusLock.RLock()
+		nextOp := b.lastTidy.Add(config.Interval)
+		b.tidyStatusLock.RUnlock()
+		if now.Before(nextOp) {
+			return nil
+		}
+
+		// Ensure a tidy isn't already running... If it is, we'll trigger
+		// again when the running one finishes.
+		if !atomic.CompareAndSwapUint32(b.tidyCASGuard, 0, 1) {
+			return nil
+		}
+
+		// Prevent ourselves from starting another tidy operation while
+		// this one is still running. This operation runs in the background
+		// and has a separate error reporting mechanism.
+		b.tidyStatusLock.Lock()
+		b.lastTidy = now
+		b.tidyStatusLock.Unlock()
+
+		// Because the request from the parent storage will be cleared at
+		// some point (and potentially reused) -- due to tidy executing in
+		// a background goroutine -- we need to copy the storage entry off
+		// of the backend instead.
+		backendReq := &logical.Request{
+			Storage: b.storage,
+		}
+
+		b.startTidyOperation(backendReq, config)
+		return nil
+	}
+
+	crlErr := doCRL()
+	tidyErr := doAutoTidy()
+
+	if crlErr != nil && tidyErr != nil {
+		return fmt.Errorf("Error building CRLs:\n - %v\n\nError running auto-tidy:\n - %v\n", crlErr, tidyErr)
+	}
+
+	if crlErr != nil {
+		return fmt.Errorf("Error building CRLs:\n - %v\n", crlErr)
+	}
+
+	if tidyErr != nil {
+		return fmt.Errorf("Error running auto-tidy:\n - %v\n", tidyErr)
+	}
+
+	// Check if the CRL was invalidated due to issuer swap and update
+	// accordingly.
+	if err := b.crlBuilder.flushCRLBuildTimeInvalidation(sc); err != nil {
+		return err
+	}
+
+	// All good!
+	return nil
 }

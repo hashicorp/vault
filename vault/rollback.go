@@ -14,10 +14,11 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-const (
-	// rollbackPeriod is how often we attempt rollbacks for all the backends
-	rollbackPeriod = time.Minute
-)
+// rollbackPeriod is how often we attempt rollbacks for all the backends.
+//
+// This is turned into a variable to allow test to check behavior without
+// waiting the full minute. See CreateTestClusterWithRollbackPeriod(...).
+var rollbackPeriod = time.Minute
 
 // RollbackManager is responsible for performing rollbacks of partial
 // secrets within logical backends.
@@ -164,7 +165,7 @@ func (m *RollbackManager) startOrLookupRollback(ctx context.Context, fullPath st
 
 // attemptRollback invokes a RollbackOperation for the given path
 func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, rs *rollbackState, grabStatelock bool) (err error) {
-	defer metrics.MeasureSince([]string{"rollback", "attempt", strings.Replace(fullPath, "/", "-", -1)}, time.Now())
+	defer metrics.MeasureSince([]string{"rollback", "attempt", strings.ReplaceAll(fullPath, "/", "-")}, time.Now())
 
 	defer func() {
 		rs.lastError = err

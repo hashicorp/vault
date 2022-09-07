@@ -716,7 +716,7 @@ func (b *LoginMFABackend) handleMFALoginValidate(ctx context.Context, req *logic
 	}
 
 	// MFA validation has passed. Let's generate the token
-	resp, err := b.Core.LoginMFACreateToken(ctx, cachedResponseAuth.RequestPath, cachedResponseAuth.CachedAuth)
+	resp, err := b.Core.LoginMFACreateToken(ctx, cachedResponseAuth.RequestPath, cachedResponseAuth.CachedAuth, req.Data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a token. error: %v", err)
 	}
@@ -742,7 +742,7 @@ func (c *Core) teardownLoginMFA() error {
 
 // LoginMFACreateToken creates a token after the login MFA is validated.
 // It also applies the lease quotas on the original login request path.
-func (c *Core) LoginMFACreateToken(ctx context.Context, reqPath string, cachedAuth *logical.Auth) (*logical.Response, error) {
+func (c *Core) LoginMFACreateToken(ctx context.Context, reqPath string, cachedAuth *logical.Auth, loginRequestData map[string]interface{}) (*logical.Response, error) {
 	auth := cachedAuth
 	resp := &logical.Response{
 		Auth: auth,
@@ -761,6 +761,7 @@ func (c *Core) LoginMFACreateToken(ctx context.Context, reqPath string, cachedAu
 	quotaResp, quotaErr := c.applyLeaseCountQuota(ctx, &quotas.Request{
 		Path:          reqPath,
 		MountPath:     strings.TrimPrefix(mountPoint, ns.Path),
+		Role:          c.DetermineRoleFromLoginRequest(mountPoint, loginRequestData, ctx),
 		NamespacePath: ns.Path,
 	})
 
@@ -780,7 +781,7 @@ func (c *Core) LoginMFACreateToken(ctx context.Context, reqPath string, cachedAu
 	// note that we don't need to handle the error for the following function right away.
 	// The function takes the response as in input variable and modify it. So, the returned
 	// arguments are resp and err.
-	leaseGenerated, resp, err := c.LoginCreateToken(ctx, ns, reqPath, mountPoint, resp)
+	leaseGenerated, resp, err := c.LoginCreateToken(ctx, ns, reqPath, mountPoint, resp, loginRequestData)
 
 	if quotaResp.Access != nil {
 		quotaAckErr := c.ackLeaseQuota(quotaResp.Access, leaseGenerated)
@@ -1360,6 +1361,13 @@ func (b *LoginMFABackend) mfaLoginEnforcementConfigByNameAndNamespace(name, name
 func (b *LoginMFABackend) mfaLoginEnforcementConfigToMap(eConfig *mfa.MFAEnforcementConfig) (map[string]interface{}, error) {
 	resp := make(map[string]interface{})
 	resp["name"] = eConfig.Name
+	ns, err := b.namespacer.NamespaceByID(context.Background(), eConfig.NamespaceID)
+	if err != nil {
+		return nil, err
+	}
+	if ns != nil {
+		resp["namespace_path"] = ns.Path
+	}
 	resp["namespace_id"] = eConfig.NamespaceID
 	resp["mfa_method_ids"] = append([]string{}, eConfig.MFAMethodIDs...)
 	resp["auth_method_accessors"] = append([]string{}, eConfig.AuthMethodAccessors...)
@@ -1416,6 +1424,13 @@ func (b *MFABackend) mfaConfigToMap(mConfig *mfa.Config) (map[string]interface{}
 	respData["id"] = mConfig.ID
 	respData["name"] = mConfig.Name
 	respData["namespace_id"] = mConfig.NamespaceID
+	ns, err := b.namespacer.NamespaceByID(context.Background(), mConfig.NamespaceID)
+	if err != nil {
+		return nil, err
+	}
+	if ns != nil {
+		respData["namespace_path"] = ns.Path
+	}
 
 	return respData, nil
 }
@@ -1738,13 +1753,13 @@ func formatUsername(format string, alias *identity.Alias, entity *identity.Entit
 	}
 
 	username := format
-	username = strings.Replace(username, "{{alias.name}}", alias.Name, -1)
-	username = strings.Replace(username, "{{entity.name}}", entity.Name, -1)
+	username = strings.ReplaceAll(username, "{{alias.name}}", alias.Name)
+	username = strings.ReplaceAll(username, "{{entity.name}}", entity.Name)
 	for k, v := range alias.Metadata {
-		username = strings.Replace(username, fmt.Sprintf("{{alias.metadata.%s}}", k), v, -1)
+		username = strings.ReplaceAll(username, fmt.Sprintf("{{alias.metadata.%s}}", k), v)
 	}
 	for k, v := range entity.Metadata {
-		username = strings.Replace(username, fmt.Sprintf("{{entity.metadata.%s}}", k), v, -1)
+		username = strings.ReplaceAll(username, fmt.Sprintf("{{entity.metadata.%s}}", k), v)
 	}
 	return username
 }

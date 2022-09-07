@@ -1,0 +1,115 @@
+---
+name: enos
+
+on:
+  # Only trigger this working using workflow_call. It assumes that secrets are
+  # being inherited from the caller.
+  workflow_call:
+    inputs:
+      artifact-name:
+        required: true
+        type: string
+
+env:
+  PKG_NAME: vault
+
+jobs:
+  enos:
+    name: Integration
+    strategy:
+      fail-fast: false # don't fail as that can skip required cleanup steps for jobs
+      matrix:
+        # Run four scenarios to get a maximal distribution of variants in as
+        # few jobs as possible.
+        include:
+          - scenario: "smoke backend:consul consul_version:1.12.3 distro:ubuntu seal:awskms"
+            aws_region: "us-west-1"
+          - scenario: "smoke backend:raft consul_version:1.12.3 distro:ubuntu seal:shamir"
+            aws_region: "us-west-2"
+          - scenario: "upgrade backend:raft consul_version:1.11.7 distro:rhel seal:shamir"
+            aws_region: "us-west-1"
+          - scenario: "upgrade backend:consul consul_version:1.11.7 distro:rhel seal:awskms"
+            aws_region: "us-west-2"
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          # the Terraform wrapper will break Terraform execution in Enos because
+          # it changes the output to text when we expect it to be JSON.
+          terraform_wrapper: false
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ matrix.aws_region }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-skip-session-tagging: true
+          role-duration-seconds: 3600
+      - name: Set up Enos
+        uses: hashicorp/action-setup-enos@v1
+        with:
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      - name: Set up AWS SSH private key
+        run: |
+          mkdir -p ./enos/support
+          echo "${{ secrets.ENOS_CI_SSH_KEY }}" > ./enos/support/private_key.pem
+          chmod 600 ./enos/support/private_key.pem
+      - name: Download Linux AMD64 Vault bundle
+        id: download
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ./enos/support/downloads
+      - name: Prepare for scenario execution
+        run: |
+          unzip ${{steps.download.outputs.download-path}}/*.zip -d enos/support
+          mv ${{steps.download.outputs.download-path}}/*.zip enos/support/vault.zip
+          mkdir -p enos/support/terraform-plugin-cache
+      - name: Run Enos scenario
+        id: run
+        # Continue once and retry to handle occasional blips when creating
+        # infrastructure.
+        continue-on-error: true
+        env:
+          ENOS_VAR_aws_region: ${{ matrix.aws_region }}
+          ENOS_VAR_aws_ssh_keypair_name: enos-ci-ssh-key
+          ENOS_VAR_aws_ssh_private_key_path: ./support/private_key.pem
+          ENOS_VAR_tfc_api_token: ${{ secrets.TF_API_TOKEN }}
+          ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache
+          ENOS_VAR_vault_bundle_path: ./support/vault.zip
+        run: |
+          enos scenario run --timeout 60m0s --chdir ./enos ${{ matrix.scenario }} arch:amd64 builder:crt edition:oss
+      - name: Retry Enos scenario
+        id: run_retry
+        if: steps.run.outcome == 'failure'
+        env:
+          ENOS_VAR_aws_region: ${{ matrix.aws_region }}
+          ENOS_VAR_aws_ssh_keypair_name: enos-ci-ssh-key
+          ENOS_VAR_aws_ssh_private_key_path: ./support/private_key.pem
+          ENOS_VAR_tfc_api_token: ${{ secrets.TF_API_TOKEN }}
+          ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache
+          ENOS_VAR_vault_bundle_path: ./support/vault.zip
+        run: |
+          enos scenario run --timeout 60m0s --chdir ./enos ${{ matrix.scenario }} arch:amd64 builder:crt edition:oss
+      - name: Destroy Enos scenario
+        if: ${{ always() }}
+        env:
+          ENOS_VAR_aws_region: ${{ matrix.aws_region }}
+          ENOS_VAR_aws_ssh_keypair_name: enos-ci-ssh-key
+          ENOS_VAR_aws_ssh_private_key_path: ./support/private_key.pem
+          ENOS_VAR_tfc_api_token: ${{ secrets.TF_API_TOKEN }}
+          ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache
+          ENOS_VAR_vault_bundle_path: ./support/vault.zip
+        run: |
+          enos scenario destroy --timeout 60m0s --chdir ./enos ${{ matrix.scenario }} arch:amd64 builder:crt edition:oss
+      - name: Output debug information on failure
+        if: ${{ failure() }}
+        run: |
+          env
+          find ./enos -name "scenario.tf" -exec cat {} \;

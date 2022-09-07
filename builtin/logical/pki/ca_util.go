@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func (b *backend) getGenerationParams(ctx context.Context, storage logical.Storage, data *framework.FieldData) (exported bool, format string, role *roleEntry, errorResp *logical.Response) {
+func getGenerationParams(sc *storageContext, data *framework.FieldData) (exported bool, format string, role *roleEntry, errorResp *logical.Response) {
 	exportedStr := data.Get("exported").(string)
 	switch exportedStr {
 	case "exported":
@@ -37,7 +37,8 @@ func (b *backend) getGenerationParams(ctx context.Context, storage logical.Stora
 			`the "format" path parameter must be "pem", "der", or "pem_bundle"`)
 		return
 	}
-	keyType, keyBits, err := getKeyTypeAndBitsForRole(ctx, b, storage, data)
+
+	keyType, keyBits, err := sc.getKeyTypeAndBitsForRole(data)
 	if err != nil {
 		errorResp = logical.ErrorResponse(err.Error())
 		return
@@ -48,6 +49,7 @@ func (b *backend) getGenerationParams(ctx context.Context, storage logical.Stora
 		KeyType:                   keyType,
 		KeyBits:                   keyBits,
 		SignatureBits:             data.Get("signature_bits").(int),
+		UsePSS:                    data.Get("use_pss").(bool),
 		AllowLocalhost:            true,
 		AllowAnyName:              true,
 		AllowIPSANs:               true,
@@ -64,6 +66,7 @@ func (b *backend) getGenerationParams(ctx context.Context, storage logical.Stora
 		StreetAddress:             data.Get("street_address").([]string),
 		PostalCode:                data.Get("postal_code").([]string),
 		NotBeforeDuration:         time.Duration(data.Get("not_before_duration").(int)) * time.Second,
+		CNValidations:             []string{"disabled"},
 	}
 	*role.AllowWildcardCertificates = true
 
@@ -74,7 +77,10 @@ func (b *backend) getGenerationParams(ctx context.Context, storage logical.Stora
 	return
 }
 
-func generateCABundle(ctx context.Context, b *backend, input *inputBundle, data *certutil.CreationBundle, randomSource io.Reader) (*certutil.ParsedCertBundle, error) {
+func generateCABundle(sc *storageContext, input *inputBundle, data *certutil.CreationBundle, randomSource io.Reader) (*certutil.ParsedCertBundle, error) {
+	ctx := sc.Context
+	b := sc.Backend
+
 	if kmsRequested(input) {
 		keyId, err := getManagedKeyId(input.apiData)
 		if err != nil {
@@ -89,7 +95,7 @@ func generateCABundle(ctx context.Context, b *backend, input *inputBundle, data 
 			return nil, err
 		}
 
-		keyEntry, err := getExistingKeyFromRef(ctx, input.req.Storage, keyRef)
+		keyEntry, err := sc.getExistingKeyFromRef(keyRef)
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +114,10 @@ func generateCABundle(ctx context.Context, b *backend, input *inputBundle, data 
 	return certutil.CreateCertificateWithRandomSource(data, randomSource)
 }
 
-func generateCSRBundle(ctx context.Context, b *backend, input *inputBundle, data *certutil.CreationBundle, addBasicConstraints bool, randomSource io.Reader) (*certutil.ParsedCSRBundle, error) {
+func generateCSRBundle(sc *storageContext, input *inputBundle, data *certutil.CreationBundle, addBasicConstraints bool, randomSource io.Reader) (*certutil.ParsedCSRBundle, error) {
+	ctx := sc.Context
+	b := sc.Backend
+
 	if kmsRequested(input) {
 		keyId, err := getManagedKeyId(input.apiData)
 		if err != nil {
@@ -124,7 +133,7 @@ func generateCSRBundle(ctx context.Context, b *backend, input *inputBundle, data
 			return nil, err
 		}
 
-		key, err := getExistingKeyFromRef(ctx, input.req.Storage, keyRef)
+		key, err := sc.getExistingKeyFromRef(keyRef)
 		if err != nil {
 			return nil, err
 		}
@@ -150,7 +159,7 @@ func parseCABundle(ctx context.Context, b *backend, bundle *certutil.CertBundle)
 	return bundle.ToParsedCertBundle()
 }
 
-func getKeyTypeAndBitsForRole(ctx context.Context, b *backend, storage logical.Storage, data *framework.FieldData) (string, int, error) {
+func (sc *storageContext) getKeyTypeAndBitsForRole(data *framework.FieldData) (string, int, error) {
 	exportedStr := data.Get("exported").(string)
 	var keyType string
 	var keyBits int
@@ -179,7 +188,7 @@ func getKeyTypeAndBitsForRole(ctx context.Context, b *backend, storage logical.S
 			return "", 0, errors.New("unable to determine managed key id" + err.Error())
 		}
 
-		pubKeyManagedKey, err := getManagedKeyPublicKey(ctx, b, keyId)
+		pubKeyManagedKey, err := getManagedKeyPublicKey(sc.Context, sc.Backend, keyId)
 		if err != nil {
 			return "", 0, errors.New("failed to lookup public key from managed key: " + err.Error())
 		}
@@ -187,7 +196,7 @@ func getKeyTypeAndBitsForRole(ctx context.Context, b *backend, storage logical.S
 	}
 
 	if existingKeyRequestedFromFieldData(data) {
-		existingPubKey, err := getExistingPublicKey(ctx, b, storage, data)
+		existingPubKey, err := sc.getExistingPublicKey(data)
 		if err != nil {
 			return "", 0, errors.New("failed to lookup public key from existing key: " + err.Error())
 		}
@@ -198,20 +207,20 @@ func getKeyTypeAndBitsForRole(ctx context.Context, b *backend, storage logical.S
 	return string(privateKeyType), keyBits, err
 }
 
-func getExistingPublicKey(ctx context.Context, b *backend, s logical.Storage, data *framework.FieldData) (crypto.PublicKey, error) {
+func (sc *storageContext) getExistingPublicKey(data *framework.FieldData) (crypto.PublicKey, error) {
 	keyRef, err := getKeyRefWithErr(data)
 	if err != nil {
 		return nil, err
 	}
-	id, err := resolveKeyReference(ctx, s, keyRef)
+	id, err := sc.resolveKeyReference(keyRef)
 	if err != nil {
 		return nil, err
 	}
-	key, err := fetchKeyById(ctx, s, id)
+	key, err := sc.fetchKeyById(id)
 	if err != nil {
 		return nil, err
 	}
-	return getPublicKey(ctx, b, key)
+	return getPublicKey(sc.Context, sc.Backend, key)
 }
 
 func getKeyTypeAndBitsFromPublicKeyForRole(pubKey crypto.PublicKey) (certutil.PrivateKeyType, int, error) {
@@ -232,12 +241,12 @@ func getKeyTypeAndBitsFromPublicKeyForRole(pubKey crypto.PublicKey) (certutil.Pr
 	return keyType, keyBits, nil
 }
 
-func getExistingKeyFromRef(ctx context.Context, s logical.Storage, keyRef string) (*keyEntry, error) {
-	keyId, err := resolveKeyReference(ctx, s, keyRef)
+func (sc *storageContext) getExistingKeyFromRef(keyRef string) (*keyEntry, error) {
+	keyId, err := sc.resolveKeyReference(keyRef)
 	if err != nil {
 		return nil, err
 	}
-	return fetchKeyById(ctx, s, keyId)
+	return sc.fetchKeyById(keyId)
 }
 
 func existingKeyGeneratorFromBytes(key *keyEntry) certutil.KeyGenerator {

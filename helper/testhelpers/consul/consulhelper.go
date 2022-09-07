@@ -27,7 +27,7 @@ func (c *Config) APIConfig() *consulapi.Config {
 // the Consul version used will be given by the environment variable
 // CONSUL_DOCKER_VERSION, or if that's empty, whatever we've hardcoded as the
 // the latest Consul version.
-func PrepareTestContainer(t *testing.T, version string, isEnterprise bool, bootstrap bool) (func(), *Config) {
+func PrepareTestContainer(t *testing.T, version string, isEnterprise bool, doBootstrapSetup bool) (func(), *Config) {
 	t.Helper()
 
 	if retAddress := os.Getenv("CONSUL_HTTP_ADDR"); retAddress != "" {
@@ -119,7 +119,7 @@ func PrepareTestContainer(t *testing.T, version string, isEnterprise bool, boots
 
 		// New default behavior
 		var consulToken string
-		if bootstrap {
+		if doBootstrapSetup {
 			aclbootstrap, _, err := consul.ACL().Bootstrap()
 			if err != nil {
 				return nil, err

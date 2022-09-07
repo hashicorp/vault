@@ -10,10 +10,12 @@ import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"net"
 	"net/url"
 	"regexp"
@@ -83,29 +85,29 @@ func getFormat(data *framework.FieldData) string {
 // fetchCAInfo will fetch the CA info, will return an error if no ca info exists, this does NOT support
 // loading using the legacyBundleShimID and should be used with care. This should be called only once
 // within the request path otherwise you run the risk of a race condition with the issuer migration on perf-secondaries.
-func fetchCAInfo(ctx context.Context, b *backend, req *logical.Request, issuerRef string, usage issuerUsage) (*certutil.CAInfoBundle, error) {
+func (sc *storageContext) fetchCAInfo(issuerRef string, usage issuerUsage) (*certutil.CAInfoBundle, error) {
 	var issuerId issuerID
 
-	if b.useLegacyBundleCaStorage() {
+	if sc.Backend.useLegacyBundleCaStorage() {
 		// We have not completed the migration so attempt to load the bundle from the legacy location
-		b.Logger().Info("Using legacy CA bundle as PKI migration has not completed.")
+		sc.Backend.Logger().Info("Using legacy CA bundle as PKI migration has not completed.")
 		issuerId = legacyBundleShimID
 	} else {
 		var err error
-		issuerId, err = resolveIssuerReference(ctx, req.Storage, issuerRef)
+		issuerId, err = sc.resolveIssuerReference(issuerRef)
 		if err != nil {
 			// Usually a bad label from the user or mis-configured default.
 			return nil, errutil.UserError{Err: err.Error()}
 		}
 	}
 
-	return fetchCAInfoByIssuerId(ctx, b, req, issuerId, usage)
+	return sc.fetchCAInfoByIssuerId(issuerId, usage)
 }
 
 // fetchCAInfoByIssuerId will fetch the CA info, will return an error if no ca info exists for the given issuerId.
 // This does support the loading using the legacyBundleShimID
-func fetchCAInfoByIssuerId(ctx context.Context, b *backend, req *logical.Request, issuerId issuerID, usage issuerUsage) (*certutil.CAInfoBundle, error) {
-	entry, bundle, err := fetchCertBundleByIssuerId(ctx, req.Storage, issuerId, true)
+func (sc *storageContext) fetchCAInfoByIssuerId(issuerId issuerID, usage issuerUsage) (*certutil.CAInfoBundle, error) {
+	entry, bundle, err := sc.fetchCertBundleByIssuerId(issuerId, true)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -121,7 +123,7 @@ func fetchCAInfoByIssuerId(ctx context.Context, b *backend, req *logical.Request
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error while attempting to use issuer %v: %v", issuerId, err)}
 	}
 
-	parsedBundle, err := parseCABundle(ctx, b, bundle)
+	parsedBundle, err := parseCABundle(sc.Context, sc.Backend, bundle)
 	if err != nil {
 		return nil, errutil.InternalError{Err: err.Error()}
 	}
@@ -137,15 +139,20 @@ func fetchCAInfoByIssuerId(ctx context.Context, b *backend, req *logical.Request
 		ParsedCertBundle:     *parsedBundle,
 		URLs:                 nil,
 		LeafNotAfterBehavior: entry.LeafNotAfterBehavior,
+		RevocationSigAlg:     entry.RevocationSigAlg,
 	}
 
-	entries, err := getURLs(ctx, req)
+	entries, err := entry.GetAIAURLs(sc)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
 	}
 	caInfo.URLs = entries
 
 	return caInfo, nil
+}
+
+func fetchCertBySerialBigInt(ctx context.Context, b *backend, req *logical.Request, prefix string, serial *big.Int) (*logical.StorageEntry, error) {
+	return fetchCertBySerial(ctx, b, req, prefix, serialFromBigInt(serial))
 }
 
 // Allows fetching certificates from the backend; it handles the slightly
@@ -159,7 +166,7 @@ func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, pr
 	var certEntry *logical.StorageEntry
 
 	hyphenSerial := normalizeSerial(serial)
-	colonSerial := strings.Replace(strings.ToLower(serial), "-", ":", -1)
+	colonSerial := strings.ReplaceAll(strings.ToLower(serial), "-", ":")
 
 	switch {
 	// Revoked goes first as otherwise crl get hardcoded paths which fail if
@@ -167,13 +174,22 @@ func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, pr
 	case strings.HasPrefix(prefix, "revoked/"):
 		legacyPath = "revoked/" + colonSerial
 		path = "revoked/" + hyphenSerial
-	case serial == legacyCRLPath:
+	case serial == legacyCRLPath || serial == deltaCRLPath:
 		if err = b.crlBuilder.rebuildIfForced(ctx, b, req); err != nil {
 			return nil, err
 		}
-		path, err = resolveIssuerCRLPath(ctx, b, req.Storage, defaultRef)
+		sc := b.makeStorageContext(ctx, req.Storage)
+		path, err = sc.resolveIssuerCRLPath(defaultRef)
 		if err != nil {
 			return nil, err
+		}
+
+		if serial == deltaCRLPath {
+			if sc.Backend.useLegacyBundleCaStorage() {
+				return nil, fmt.Errorf("refusing to serve delta CRL with legacy CA bundle")
+			}
+
+			path += deltaCRLPathSuffix
 		}
 	default:
 		legacyPath = "certs/" + colonSerial
@@ -241,6 +257,54 @@ func validateURISAN(b *backend, data *inputBundle, uri string) bool {
 		}
 	}
 	return valid
+}
+
+// Validates a given common name, ensuring its either a email or a hostname
+// after validating it according to the role parameters, or disables
+// validation altogether.
+func validateCommonName(b *backend, data *inputBundle, name string) string {
+	isDisabled := len(data.role.CNValidations) == 1 && data.role.CNValidations[0] == "disabled"
+	if isDisabled {
+		return ""
+	}
+
+	if validateNames(b, data, []string{name}) != "" {
+		return name
+	}
+
+	// Validations weren't disabled, but the role lacked CN Validations, so
+	// don't restrict types. This case is hit in certain existing tests.
+	if len(data.role.CNValidations) == 0 {
+		return ""
+	}
+
+	// If there's an at in the data, ensure email type validation is allowed.
+	// Otherwise, ensure hostname is allowed.
+	if strings.Contains(name, "@") {
+		var allowsEmails bool
+		for _, validation := range data.role.CNValidations {
+			if validation == "email" {
+				allowsEmails = true
+				break
+			}
+		}
+		if !allowsEmails {
+			return name
+		}
+	} else {
+		var allowsHostnames bool
+		for _, validation := range data.role.CNValidations {
+			if validation == "hostname" {
+				allowsHostnames = true
+				break
+			}
+		}
+		if !allowsHostnames {
+			return name
+		}
+	}
+
+	return ""
 }
 
 // Given a set of requested names for a certificate, verifies that all of them
@@ -593,13 +657,15 @@ func validateSerialNumber(data *inputBundle, serialNumber string) string {
 	}
 }
 
-func generateCert(ctx context.Context,
-	b *backend,
+func generateCert(sc *storageContext,
 	input *inputBundle,
 	caSign *certutil.CAInfoBundle,
 	isCA bool,
 	randomSource io.Reader) (*certutil.ParsedCertBundle, error,
 ) {
+	ctx := sc.Context
+	b := sc.Backend
+
 	if input.role == nil {
 		return nil, errutil.InternalError{Err: "no role found in data bundle"}
 	}
@@ -621,8 +687,9 @@ func generateCert(ctx context.Context,
 		data.Params.PermittedDNSDomains = input.apiData.Get("permitted_dns_domains").([]string)
 
 		if data.SigningBundle == nil {
-			// Generating a self-signed root certificate
-			entries, err := getURLs(ctx, input.req)
+			// Generating a self-signed root certificate. Since we have no
+			// issuer entry yet, we default to the global URLs.
+			entries, err := getGlobalAIAURLs(ctx, sc.Storage)
 			if err != nil {
 				return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
 			}
@@ -636,7 +703,7 @@ func generateCert(ctx context.Context,
 		}
 	}
 
-	parsedBundle, err := generateCABundle(ctx, b, input, data, randomSource)
+	parsedBundle, err := generateCABundle(sc, input, data, randomSource)
 	if err != nil {
 		return nil, err
 	}
@@ -646,7 +713,9 @@ func generateCert(ctx context.Context,
 
 // N.B.: This is only meant to be used for generating intermediate CAs.
 // It skips some sanity checks.
-func generateIntermediateCSR(ctx context.Context, b *backend, input *inputBundle, randomSource io.Reader) (*certutil.ParsedCSRBundle, error) {
+func generateIntermediateCSR(sc *storageContext, input *inputBundle, randomSource io.Reader) (*certutil.ParsedCSRBundle, error) {
+	b := sc.Backend
+
 	creation, err := generateCreationBundle(b, input, nil, nil)
 	if err != nil {
 		return nil, err
@@ -656,7 +725,7 @@ func generateIntermediateCSR(ctx context.Context, b *backend, input *inputBundle
 	}
 
 	addBasicConstraints := input.apiData != nil && input.apiData.Get("add_basic_constraints").(bool)
-	parsedBundle, err := generateCSRBundle(ctx, b, input, creation, addBasicConstraints, randomSource)
+	parsedBundle, err := generateCSRBundle(sc, input, creation, addBasicConstraints, randomSource)
 	if err != nil {
 		return nil, err
 	}
@@ -676,11 +745,10 @@ func signCert(b *backend,
 
 	csrString := data.apiData.Get("csr").(string)
 	if csrString == "" {
-		return nil, errutil.UserError{Err: fmt.Sprintf("\"csr\" is empty")}
+		return nil, errutil.UserError{Err: "\"csr\" is empty"}
 	}
 
-	pemBytes := []byte(csrString)
-	pemBlock, pemBytes := pem.Decode(pemBytes)
+	pemBlock, _ := pem.Decode([]byte(csrString))
 	if pemBlock == nil {
 		return nil, errutil.UserError{Err: "csr contains no data"}
 	}
@@ -783,22 +851,24 @@ func signCert(b *backend,
 		// We update the value of KeyBits and SignatureBits here (from the
 		// role), using the specified key type. This allows us to convert
 		// the default value (0) for SignatureBits and KeyBits to a
-		// meaningful value. In the event KeyBits takes a zero value, we also
-		// update that to a new value.
+		// meaningful value.
 		//
-		// This is mandatory because on some roles, with KeyType any, we'll
-		// set a default SignatureBits to 0, but this will need to be updated
-		// in order to behave correctly during signing.
-		roleBitsWasZero := data.role.KeyBits == 0
-		if data.role.KeyBits, data.role.SignatureBits, err = certutil.ValidateDefaultOrValueKeyTypeSignatureLength(actualKeyType, data.role.KeyBits, data.role.SignatureBits); err != nil {
+		// We ignore the role's original KeyBits value if the KeyType is any
+		// as legacy (pre-1.10) roles had default values that made sense only
+		// for RSA keys (key_bits=2048) and the older code paths ignored the role value
+		// set for KeyBits when KeyType was set to any. This also enforces the
+		// docs saying when key_type=any, we only enforce our specified minimums
+		// for signing operations
+		if data.role.KeyBits, data.role.SignatureBits, err = certutil.ValidateDefaultOrValueKeyTypeSignatureLength(
+			actualKeyType, 0, data.role.SignatureBits); err != nil {
 			return nil, errutil.InternalError{Err: fmt.Sprintf("unknown internal error updating default values: %v", err)}
 		}
 
-		// We're using the KeyBits field as a minimum value, and P-224 is safe
+		// We're using the KeyBits field as a minimum value below, and P-224 is safe
 		// and a previously allowed value. However, the above call defaults
-		// to P-256 as that's a saner default than P-224 (w.r.t. generation).
-		// So, override our fake Role value if it was previously zero.
-		if actualKeyType == "ec" && roleBitsWasZero {
+		// to P-256 as that's a saner default than P-224 (w.r.t. generation), so
+		// override it here to allow 224 as the smallest size we permit.
+		if actualKeyType == "ec" {
 			data.role.KeyBits = 224
 		}
 	}
@@ -857,9 +927,10 @@ func signCert(b *backend,
 
 // otherNameRaw describes a name related to a certificate which is not in one
 // of the standard name formats. RFC 5280, 4.2.1.6:
-// OtherName ::= SEQUENCE {
-//      type-id    OBJECT IDENTIFIER,
-//      value      [0] EXPLICIT ANY DEFINED BY type-id }
+//
+//	OtherName ::= SEQUENCE {
+//	     type-id    OBJECT IDENTIFIER,
+//	     value      [0] EXPLICIT ANY DEFINED BY type-id }
 type otherNameRaw struct {
 	TypeID asn1.ObjectIdentifier
 	Value  asn1.RawValue
@@ -1049,7 +1120,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		// Check the CN. This ensures that the CN is checked even if it's
 		// excluded from SANs.
 		if cn != "" {
-			badName := validateNames(b, data, []string{cn})
+			badName := validateCommonName(b, data, cn)
 			if len(badName) != 0 {
 				return nil, errutil.UserError{Err: fmt.Sprintf(
 					"common name %s not allowed by this role", badName)}
@@ -1123,8 +1194,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		if csr != nil && data.role.UseCSRSANs {
 			if len(csr.IPAddresses) > 0 {
 				if !data.role.AllowIPSANs {
-					return nil, errutil.UserError{Err: fmt.Sprintf(
-						"IP Subject Alternative Names are not allowed in this role, but was provided some via CSR")}
+					return nil, errutil.UserError{Err: "IP Subject Alternative Names are not allowed in this role, but was provided some via CSR"}
 				}
 				ipAddresses = csr.IPAddresses
 			}
@@ -1139,7 +1209,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 					parsedIP := net.ParseIP(v)
 					if parsedIP == nil {
 						return nil, errutil.UserError{Err: fmt.Sprintf(
-							"the value '%s' is not a valid IP address", v)}
+							"the value %q is not a valid IP address", v)}
 					}
 					ipAddresses = append(ipAddresses, parsedIP)
 				}
@@ -1153,8 +1223,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			if len(csr.URIs) > 0 {
 				if len(data.role.AllowedURISANs) == 0 {
 					return nil, errutil.UserError{
-						Err: fmt.Sprintf(
-							"URI Subject Alternative Names are not allowed in this role, but were provided via CSR"),
+						Err: "URI Subject Alternative Names are not allowed in this role, but were provided via CSR",
 					}
 				}
 
@@ -1163,8 +1232,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 					valid := validateURISAN(b, data, uri.String())
 					if !valid {
 						return nil, errutil.UserError{
-							Err: fmt.Sprintf(
-								"URI Subject Alternative Names were provided via CSR which are not valid for this role"),
+							Err: "URI Subject Alternative Names were provided via CSR which are not valid for this role",
 						}
 					}
 
@@ -1176,8 +1244,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			if len(uriAlt) > 0 {
 				if len(data.role.AllowedURISANs) == 0 {
 					return nil, errutil.UserError{
-						Err: fmt.Sprintf(
-							"URI Subject Alternative Names are not allowed in this role, but were provided via the API"),
+						Err: "URI Subject Alternative Names are not allowed in this role, but were provided via the API",
 					}
 				}
 
@@ -1185,8 +1252,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 					valid := validateURISAN(b, data, uri)
 					if !valid {
 						return nil, errutil.UserError{
-							Err: fmt.Sprintf(
-								"URI Subject Alternative Names were provided via the API which are not valid for this role"),
+							Err: "URI Subject Alternative Names were provided via the API which are not valid for this role",
 						}
 					}
 
@@ -1194,7 +1260,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 					if parsedURI == nil || err != nil {
 						return nil, errutil.UserError{
 							Err: fmt.Sprintf(
-								"the provided URI Subject Alternative Name '%s' is not a valid URI", uri),
+								"the provided URI Subject Alternative Name %q is not a valid URI", uri),
 						}
 					}
 
@@ -1235,8 +1301,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		}
 		if ttl > 0 && notAfterAlt != "" {
 			return nil, errutil.UserError{
-				Err: fmt.Sprintf(
-					"Either ttl or not_after should be provided. Both should not be provided in the same request."),
+				Err: "Either ttl or not_after should be provided. Both should not be provided in the same request.",
 			}
 		}
 
@@ -1285,6 +1350,27 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		}
 	}
 
+	// Parse SKID from the request for cross-signing.
+	var skid []byte
+	{
+		if rawSKIDValue, ok := data.apiData.GetOk("skid"); ok {
+			// Handle removing common separators to make copy/paste from tool
+			// output easier. Chromium uses space, OpenSSL uses colons, and at
+			// one point, Vault had preferred dash as a separator for hex
+			// strings.
+			var err error
+			skidValue := rawSKIDValue.(string)
+			for _, separator := range []string{":", "-", " "} {
+				skidValue = strings.ReplaceAll(skidValue, separator, "")
+			}
+
+			skid, err = hex.DecodeString(skidValue)
+			if err != nil {
+				return nil, errutil.UserError{Err: fmt.Sprintf("cannot parse requested SKID value as hex: %v", err)}
+			}
+		}
+	}
+
 	creation := &certutil.CreationBundle{
 		Params: &certutil.CreationParameters{
 			Subject:                       subject,
@@ -1296,6 +1382,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			KeyType:                       data.role.KeyType,
 			KeyBits:                       data.role.KeyBits,
 			SignatureBits:                 data.role.SignatureBits,
+			UsePSS:                        data.role.UsePSS,
 			NotAfter:                      notAfter,
 			KeyUsage:                      x509.KeyUsage(parseKeyUsages(data.role.KeyUsage)),
 			ExtKeyUsage:                   parseExtKeyUsages(data.role),
@@ -1304,6 +1391,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 			BasicConstraintsValidForNonCA: data.role.BasicConstraintsValidForNonCA,
 			NotBeforeDuration:             data.role.NotBeforeDuration,
 			ForceAppendCaChain:            caSign != nil,
+			SKID:                          skid,
 		},
 		SigningBundle: caSign,
 		CSR:           csr,
@@ -1315,7 +1403,7 @@ func generateCreationBundle(b *backend, data *inputBundle, caSign *certutil.CAIn
 		return creation, nil
 	}
 
-	// This will have been read in from the getURLs function
+	// This will have been read in from the getGlobalAIAURLs function
 	creation.Params.URLs = caSign.URLs
 
 	// If the max path length in the role is not nil, it was specified at
@@ -1421,9 +1509,7 @@ func handleOtherCSRSANs(in *x509.CertificateRequest, sans map[string][]string) e
 		return err
 	}
 	if len(certTemplate.ExtraExtensions) > 0 {
-		for _, v := range certTemplate.ExtraExtensions {
-			in.ExtraExtensions = append(in.ExtraExtensions, v)
-		}
+		in.ExtraExtensions = append(in.ExtraExtensions, certTemplate.ExtraExtensions...)
 	}
 	return nil
 }

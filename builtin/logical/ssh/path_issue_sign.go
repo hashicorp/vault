@@ -24,6 +24,8 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+var containsTemplateRegex = regexp.MustCompile(`{{.+?}}`)
+
 var ecCurveBitsToAlgoName = map[int]string{
 	256: ssh.KeyAlgoECDSA256,
 	384: ssh.KeyAlgoECDSA384,
@@ -63,12 +65,19 @@ func (b *backend) pathSignIssueCertificateHelper(ctx context.Context, req *logic
 
 	var parsedPrincipals []string
 	if certificateType == ssh.HostCert {
-		parsedPrincipals, err = b.calculateValidPrincipals(data, req, role, "", role.AllowedDomains, validateValidPrincipalForHosts(role))
+		parsedPrincipals, err = b.calculateValidPrincipals(data, req, role, "", role.AllowedDomains, role.AllowedDomainsTemplate, validateValidPrincipalForHosts(role))
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
 	} else {
-		parsedPrincipals, err = b.calculateValidPrincipals(data, req, role, role.DefaultUser, role.AllowedUsers, strutil.StrListContains)
+		defaultPrincipal := role.DefaultUser
+		if role.DefaultUserTemplate {
+			defaultPrincipal, err = b.renderPrincipal(role.DefaultUser, req)
+			if err != nil {
+				return nil, err
+			}
+		}
+		parsedPrincipals, err = b.calculateValidPrincipals(data, req, role, defaultPrincipal, role.AllowedUsers, role.AllowedUsersTemplate, strutil.StrListContains)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
@@ -134,7 +143,24 @@ func (b *backend) pathSignIssueCertificateHelper(ctx context.Context, req *logic
 	return response, nil
 }
 
-func (b *backend) calculateValidPrincipals(data *framework.FieldData, req *logical.Request, role *sshRole, defaultPrincipal, principalsAllowedByRole string, validatePrincipal func([]string, string) bool) ([]string, error) {
+func (b *backend) renderPrincipal(principal string, req *logical.Request) (string, error) {
+	// Look for templating markers {{ .* }}
+	matched := containsTemplateRegex.MatchString(principal)
+	if matched {
+		if req.EntityID != "" {
+			// Retrieve principal based on template + entityID from request.
+			renderedPrincipal, err := framework.PopulateIdentityTemplate(principal, req.EntityID, b.System())
+			if err != nil {
+				return "", fmt.Errorf("template '%s' could not be rendered -> %s", principal, err)
+			}
+			return renderedPrincipal, nil
+		}
+	}
+	// Static principal
+	return principal, nil
+}
+
+func (b *backend) calculateValidPrincipals(data *framework.FieldData, req *logical.Request, role *sshRole, defaultPrincipal, principalsAllowedByRole string, enableTemplating bool, validatePrincipal func([]string, string) bool) ([]string, error) {
 	validPrincipals := ""
 	validPrincipalsRaw, ok := data.GetOk("valid_principals")
 	if ok {
@@ -147,24 +173,13 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, req *logic
 	// Build list of allowed Principals from template and static principalsAllowedByRole
 	var allowedPrincipals []string
 	for _, principal := range strutil.RemoveDuplicates(strutil.ParseStringSlice(principalsAllowedByRole, ","), false) {
-		if role.AllowedUsersTemplate {
-			// Look for templating markers {{ .* }}
-			matched, _ := regexp.MatchString(`{{.+?}}`, principal)
-			if matched {
-				if req.EntityID != "" {
-					// Retrieve principal based on template + entityID from request.
-					templatePrincipal, err := framework.PopulateIdentityTemplate(principal, req.EntityID, b.System())
-					if err == nil {
-						// Template returned a principal
-						allowedPrincipals = append(allowedPrincipals, templatePrincipal)
-					} else {
-						return nil, fmt.Errorf("template '%s' could not be rendered -> %s", principal, err)
-					}
-				}
-			} else {
-				// Static principal or err template
-				allowedPrincipals = append(allowedPrincipals, principal)
+		if enableTemplating {
+			rendered, err := b.renderPrincipal(principal, req)
+			if err != nil {
+				return nil, err
 			}
+			// Template returned a principal
+			allowedPrincipals = append(allowedPrincipals, rendered)
 		} else {
 			// Static principal
 			allowedPrincipals = append(allowedPrincipals, principal)
@@ -313,7 +328,7 @@ func (b *backend) calculateExtensions(data *framework.FieldData, req *logical.Re
 	if role.DefaultExtensionsTemplate {
 		for extensionKey, extensionValue := range role.DefaultExtensions {
 			// Look for templating markers {{ .* }}
-			matched, _ := regexp.MatchString(`^{{.+?}}$`, extensionValue)
+			matched := containsTemplateRegex.MatchString(extensionValue)
 			if matched {
 				if req.EntityID != "" {
 					// Retrieve extension value based on template + entityID from request.
