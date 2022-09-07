@@ -31,10 +31,6 @@ export default class SecretListHeaderTab extends Component {
     this.fetchCapabilities();
   }
 
-  get isEngine() {
-    return this.args.isEngine || false;
-  }
-
   pathQuery(backend, path) {
     return {
       id: `${backend}/${path}/`,
