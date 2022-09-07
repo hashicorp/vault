@@ -181,6 +181,7 @@ const SECRET_BACKENDS = {
 export function optionsForBackend([backend, tab, isEngine]) {
   const selected = isEngine ? ENGINE_SECRET_BACKENDS[backend] : SECRET_BACKENDS[backend];
   let backendOptions;
+
   if (selected && selected.tabs) {
     let tabData =
       selected.tabs.findBy('name', tab) || selected.tabs.findBy('modelPrefix', tab) || selected.tabs[0];
