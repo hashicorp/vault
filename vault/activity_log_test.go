@@ -1789,7 +1789,12 @@ func TestActivityLog_Export(t *testing.T) {
 	october := timeutil.StartOfMonth(time.Date(2020, 10, 1, 0, 0, 0, 0, time.UTC))
 	november := timeutil.StartOfMonth(time.Date(2020, 11, 1, 0, 0, 0, 0, time.UTC))
 
-	core, _, _, _ := TestCoreUnsealedWithMetrics(t)
+	core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		ActivityLogConfig: ActivityLogCoreConfig{
+			DisableTimers: true,
+			ForceEnable:   true,
+		},
+	})
 	a := core.activityLog
 	ctx := namespace.RootContext(nil)
 
@@ -2280,8 +2285,16 @@ func TestActivityLog_CalculatePrecomputedQueriesWithMixedTWEs(t *testing.T) {
 	october := timeutil.StartOfMonth(time.Date(2020, 10, 1, 0, 0, 0, 0, time.UTC))
 	november := timeutil.StartOfMonth(time.Date(2020, 11, 1, 0, 0, 0, 0, time.UTC))
 
-	core, _, _, sink := TestCoreUnsealedWithMetrics(t)
+	conf := &CoreConfig{
+		ActivityLogConfig: ActivityLogCoreConfig{
+			ForceEnable:   true,
+			DisableTimers: true,
+		},
+	}
+	sink := SetupMetrics(conf)
+	core, _, _ := TestCoreUnsealedWithConfig(t, conf)
 	a := core.activityLog
+	<-a.computationWorkerDone
 	ctx := namespace.RootContext(nil)
 
 	// Generate overlapping sets of entity IDs from this list.
@@ -2706,7 +2719,14 @@ func TestActivityLog_Precompute(t *testing.T) {
 	october := timeutil.StartOfMonth(time.Date(2020, 10, 1, 0, 0, 0, 0, time.UTC))
 	november := timeutil.StartOfMonth(time.Date(2020, 11, 1, 0, 0, 0, 0, time.UTC))
 
-	core, _, _, sink := TestCoreUnsealedWithMetrics(t)
+	conf := &CoreConfig{
+		ActivityLogConfig: ActivityLogCoreConfig{
+			ForceEnable:   true,
+			DisableTimers: true,
+		},
+	}
+	sink := SetupMetrics(conf)
+	core, _, _ := TestCoreUnsealedWithConfig(t, conf)
 	a := core.activityLog
 	ctx := namespace.RootContext(nil)
 
@@ -3040,7 +3060,12 @@ func TestActivityLog_Precompute_SkipMonth(t *testing.T) {
 	november := timeutil.StartOfMonth(time.Date(2020, 11, 1, 0, 0, 0, 0, time.UTC))
 	december := timeutil.StartOfMonth(time.Date(2020, 12, 1, 0, 0, 0, 0, time.UTC))
 
-	core, _, _, _ := TestCoreUnsealedWithMetrics(t)
+	core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		ActivityLogConfig: ActivityLogCoreConfig{
+			ForceEnable:   true,
+			DisableTimers: true,
+		},
+	})
 	a := core.activityLog
 	ctx := namespace.RootContext(nil)
 
@@ -3221,7 +3246,14 @@ func TestActivityLog_PrecomputeNonEntityTokensWithID(t *testing.T) {
 	october := timeutil.StartOfMonth(time.Date(2020, 10, 1, 0, 0, 0, 0, time.UTC))
 	november := timeutil.StartOfMonth(time.Date(2020, 11, 1, 0, 0, 0, 0, time.UTC))
 
-	core, _, _, sink := TestCoreUnsealedWithMetrics(t)
+	conf := &CoreConfig{
+		ActivityLogConfig: ActivityLogCoreConfig{
+			ForceEnable:   true,
+			DisableTimers: true,
+		},
+	}
+	sink := SetupMetrics(conf)
+	core, _, _ := TestCoreUnsealedWithConfig(t, conf)
 	a := core.activityLog
 	ctx := namespace.RootContext(nil)
 
