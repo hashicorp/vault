@@ -116,7 +116,6 @@
     "ember-export-application-global": "^2.0.1",
     "ember-fetch": "^8.1.1",
     "ember-inflector": "4.0.2",
-    "ember-link-action": "^1.0.0",
     "ember-load-initializers": "^2.1.2",
     "ember-maybe-import-regenerator": "^0.1.6",
     "ember-maybe-in-element": "^2.0.3",

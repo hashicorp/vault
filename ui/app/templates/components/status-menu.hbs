@@ -14,13 +14,10 @@
   <d.Content @defaultClass={{concat "status-menu-content status-menu-content-" this.type}}>
     {{#if (eq this.type "user")}}
       {{#if (and this.cluster.name this.auth.currentToken)}}
-        <AuthInfo @activeClusterName={{this.cluster.name}} @onLinkClick={{action this.onLinkClick}} />
+        <AuthInfo @activeClusterName={{this.cluster.name}} @onLinkClick={{action "onLinkClick" null}} />
       {{/if}}
     {{else}}
-      <ClusterInfo
-        @cluster={{this.cluster}}
-        @onLinkClick={{action (queue (action this.onLinkClick) (action d.actions.close))}}
-      />
+      <ClusterInfo @cluster={{this.cluster}} @onLinkClick={{action "onLinkClick" d}} />
     {{/if}}
   </d.Content>
 </BasicDropdown>
