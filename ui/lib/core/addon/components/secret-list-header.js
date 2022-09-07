@@ -19,16 +19,10 @@ import Component from '@glimmer/component';
  * @param {object} model - Model used to pull information about icon and title and backend type for navigation.
  * @param {string} [baseKey] - Provided for navigation on the breadcrumbs.
  * @param {object} [backendCrumb] - Includes label, text, path and model ID.
- * @param {string} [baseKey] - Passthrough variable to the component KeyValueHeader.
- * @param {booelan} [isEngine=false] - If it's an engine we need to use the Ember Engines link-to-external and not the LinkTo component.
-
+ * @param {boolean} [isEngine=false] - Changes link type if the component is being used inside an Ember engine.
  */
 
 export default class SecretListHeader extends Component {
-  get isEngine() {
-    return this.args.isEngine || false;
-  }
-
   get isKV() {
     return ['kv', 'generic'].includes(this.args.model.engineType);
   }
