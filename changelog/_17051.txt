@@ -1,0 +1,3 @@
+```release-note:improvement
+website/docs: adds a link to the vault-plugin-database-cloudsql plugin.
+```
