@@ -7,5 +7,6 @@ import clients from './clients';
 import db from './db';
 import kms from './kms';
 import mfaConfig from './mfa-config';
+import hcpLink from './hcp-link';
 
-export { base, activity, mfaLogin, mfaConfig, clients, db, kms };
+export { base, activity, mfaLogin, mfaConfig, clients, db, kms, hcpLink };

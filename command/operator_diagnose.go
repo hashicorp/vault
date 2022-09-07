@@ -33,6 +33,7 @@ import (
 	srconsul "github.com/hashicorp/vault/serviceregistration/consul"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/diagnose"
+	"github.com/hashicorp/vault/vault/hcp_link"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -711,6 +712,43 @@ SEALFAIL:
 		}
 		return nil
 	})
+
+	// Checking HCP link to make sure Vault could connect to SCADA.
+	// If it could not connect to SCADA in 5 seconds, diagnose reports an issue
+	if !constants.IsEnterprise {
+		diagnose.Skipped(ctx, "HCP link check will not run on OSS Vault.")
+	} else {
+		if config.HCPLinkConf != nil {
+			diagnose.Test(ctx, "Check HCP Connection", func(ctx context.Context) error {
+				hcpLink, err := hcp_link.NewHCPLink(config.HCPLinkConf, vaultCore, server.logger)
+				if err != nil || hcpLink == nil {
+					return fmt.Errorf("failed to start HCP link, %w", err)
+				}
+
+				// check if a SCADA session is established successfully
+				deadline := time.Now().Add(5 * time.Second)
+				linkSessionStatus := "disconnected"
+				for time.Now().Before(deadline) {
+					linkSessionStatus = hcpLink.GetScadaSessionStatus()
+					if linkSessionStatus == "connected" {
+						break
+					}
+					time.Sleep(500 * time.Millisecond)
+				}
+				if linkSessionStatus != "connected" {
+					return fmt.Errorf("failed to connect to HCP in 5 seconds. HCP session status is: %s", linkSessionStatus)
+				}
+
+				err = hcpLink.Shutdown()
+				if err != nil {
+					return fmt.Errorf("failed to shutdown HCP link: %w", err)
+				}
+
+				return nil
+			})
+		}
+	}
+
 	return nil
 }
 

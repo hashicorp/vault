@@ -833,7 +833,8 @@ func Test_RSA_PSS(t *testing.T) {
 		tabs[i] = strings.Repeat("\t", i)
 	}
 
-	test_RSA_PSS := func(p *Policy, rsaKey *rsa.PrivateKey, hashType HashType, marshalingType MarshalingType) {
+	test_RSA_PSS := func(t *testing.T, p *Policy, rsaKey *rsa.PrivateKey, hashType HashType,
+		marshalingType MarshalingType) {
 		unsaltedOptions := SigningOptions{
 			HashAlgorithm: hashType,
 			Marshaling:    marshalingType,
@@ -851,6 +852,11 @@ func Test_RSA_PSS(t *testing.T) {
 		t.Log(tabs[3], "Make an automatic signature")
 		sig, err := p.Sign(0, nil, input, hashType, sigAlgorithm, marshalingType)
 		if err != nil {
+			// A bit of a hack but FIPS go does not support some hash types
+			if isUnsupportedGoHashType(hashType, err) {
+				t.Skip(tabs[4], "skipping test as FIPS Go does not support hash type")
+				return
+			}
 			t.Fatal(tabs[4], "❌ Failed to automatically sign:", err)
 		}
 
@@ -950,8 +956,21 @@ func Test_RSA_PSS(t *testing.T) {
 			// 3. For each marshaling type...
 			for marshalingName, marshalingType := range MarshalingTypeMap {
 				t.Log(tabs[2], "Marshaling type:", marshalingName)
-				test_RSA_PSS(p, rsaKey, hashType, marshalingType)
+				testName := fmt.Sprintf("%s-%s-%s", rsaKeyType, hashAlgorithm, marshalingName)
+				t.Run(testName, func(t *testing.T) { test_RSA_PSS(t, p, rsaKey, hashType, marshalingType) })
 			}
 		}
 	}
+}
+
+// Normal Go builds support all the hash functions for RSA_PSS signatures but the
+// FIPS Go build does not support at this time the SHA3 hashes as FIPS 140_2 does
+// not accept them.
+func isUnsupportedGoHashType(hashType HashType, err error) bool {
+	switch hashType {
+	case HashTypeSHA3224, HashTypeSHA3256, HashTypeSHA3384, HashTypeSHA3512:
+		return strings.Contains(err.Error(), "unsupported hash function")
+	}
+
+	return false
 }

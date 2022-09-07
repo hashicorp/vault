@@ -141,7 +141,7 @@ func newRegistry() *registry {
 			"azure":    {Factory: logicalAzure.Factory},
 			"cassandra": {
 				Factory:           logicalCass.Factory,
-				DeprecationStatus: consts.Deprecated,
+				DeprecationStatus: consts.PendingRemoval,
 			},
 			"consul":     {Factory: logicalConsul.Factory},
 			"gcp":        {Factory: logicalGcp.Factory},
@@ -150,23 +150,23 @@ func newRegistry() *registry {
 			"kv":         {Factory: logicalKv.Factory},
 			"mongodb": {
 				Factory:           logicalMongo.Factory,
-				DeprecationStatus: consts.Deprecated,
+				DeprecationStatus: consts.PendingRemoval,
 			},
 			"mongodbatlas": {Factory: logicalMongoAtlas.Factory},
 			"mssql": {
 				Factory:           logicalMssql.Factory,
-				DeprecationStatus: consts.Deprecated,
+				DeprecationStatus: consts.PendingRemoval,
 			},
 			"mysql": {
 				Factory:           logicalMysql.Factory,
-				DeprecationStatus: consts.Deprecated,
+				DeprecationStatus: consts.PendingRemoval,
 			},
 			"nomad":    {Factory: logicalNomad.Factory},
 			"openldap": {Factory: logicalOpenLDAP.Factory},
 			"pki":      {Factory: logicalPki.Factory},
 			"postgresql": {
 				Factory:           logicalPostgres.Factory,
-				DeprecationStatus: consts.Deprecated,
+				DeprecationStatus: consts.PendingRemoval,
 			},
 			"rabbitmq":  {Factory: logicalRabbit.Factory},
 			"ssh":       {Factory: logicalSsh.Factory},

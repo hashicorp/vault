@@ -29,6 +29,8 @@ type SharedConfig struct {
 
 	Telemetry *Telemetry `hcl:"telemetry"`
 
+	HCPLinkConf *HCPLinkConfig `hcl:"cloud"`
+
 	DefaultMaxRequestDuration    time.Duration `hcl:"-"`
 	DefaultMaxRequestDurationRaw interface{}   `hcl:"default_max_request_duration"`
 
@@ -136,6 +138,13 @@ func ParseConfig(d string) (*SharedConfig, error) {
 		result.found("telemetry", "Telemetry")
 		if err := parseTelemetry(&result, o); err != nil {
 			return nil, fmt.Errorf("error parsing 'telemetry': %w", err)
+		}
+	}
+
+	if o := list.Filter("cloud"); len(o.Items) > 0 {
+		result.found("cloud", "Cloud")
+		if err := parseCloud(&result, o); err != nil {
+			return nil, fmt.Errorf("error parsing 'cloud': %w", err)
 		}
 	}
 

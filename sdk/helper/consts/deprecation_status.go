@@ -1,5 +1,7 @@
 package consts
 
+const VaultAllowPendingRemovalMountsEnv = "VAULT_ALLOW_PENDING_REMOVAL_MOUNTS"
+
 // DeprecationStatus represents the current deprecation state for builtins
 type DeprecationStatus uint32
 
