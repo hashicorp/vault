@@ -38,6 +38,11 @@ func prepareRadiusTestContainer(t *testing.T) (func(), string, int) {
 		ContainerName: "radiusd",
 		Cmd:           []string{"-f", "-l", "stdout"},
 		Ports:         []string{"1812/udp"},
+		LogConsumer: func(s string) {
+			if t.Failed() {
+				t.Logf("container logs: %s", s)
+			}
+		},
 	})
 	if err != nil {
 		t.Fatalf("Could not start docker radiusd: %s", err)
