@@ -243,7 +243,7 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 		}
 
 		for _, b := range backends {
-			var expectedResult int = 0
+			expectedResult := 0
 			status, _ := builtinplugins.Registry.DeprecationStatus(b, consts.PluginTypeSecrets)
 			allowDeprecated := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv)
 
