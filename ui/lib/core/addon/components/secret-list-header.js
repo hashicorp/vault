@@ -25,14 +25,6 @@ import { engineOptionsForBackend } from 'core/helpers/engine-options-for-backend
  */
 
 export default class SecretListHeader extends Component {
-  get isConfigure() {
-    return this.args.isConfigure || false;
-  }
-
-  get isCertTab() {
-    return this.args.isCertTab || false;
-  }
-
   get isEngine() {
     return this.args.isEngine || false;
   }

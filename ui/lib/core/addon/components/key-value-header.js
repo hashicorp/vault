@@ -27,6 +27,7 @@ export default class KeyValueHeader extends Component {
   get showCurrent() {
     return this.args.showCurrent || true;
   }
+
   get linkToPaths() {
     return this.args.linkToPaths || true;
   }
