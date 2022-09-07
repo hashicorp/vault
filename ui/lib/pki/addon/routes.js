@@ -2,13 +2,17 @@ import buildRoutes from 'ember-engines/routes';
 
 export default buildRoutes(function () {
   this.route('overview');
-  this.route('configuration'); // ARG TODO return to "Edit Configuration" depending on convo with Ivana
-  this.route('configure', function () {
-    // configure the engines tidy, crl, or url
+  this.route('configuration', function () {
     this.route('tidy'); // ARG TODO appear only to "tidy" the action. There is automatic-tidy, but that doesn't appear to be accounted for in the designs.
+    // the create route is setting up the configuration route where you have 3 options.
+    this.route('create', function () {
+      this.route('import-ca');
+      this.route('generate-root');
+      this.route('generate-csr');
+    });
+    this.route('edit');
   });
   this.route('roles', function () {
-    this.route('index', { path: '/' });
     this.route('create');
     this.route('role', { path: '/:name' }, function () {
       this.route('details');
@@ -16,7 +20,6 @@ export default buildRoutes(function () {
     });
   });
   this.route('issuers', function () {
-    this.route('index', { path: '/' });
     this.route('create');
     this.route('issuer', { path: '/:name' }, function () {
       this.route('details');
@@ -24,7 +27,6 @@ export default buildRoutes(function () {
     });
   });
   this.route('certificates', function () {
-    this.route('index', { path: '/' });
     this.route('create');
     this.route('certificate', { path: '/:name' }, function () {
       this.route('details');
@@ -32,7 +34,6 @@ export default buildRoutes(function () {
     });
   });
   this.route('keys', function () {
-    this.route('index', { path: '/' });
     this.route('create');
     this.route('key', { path: '/:name' }, function () {
       this.route('details');

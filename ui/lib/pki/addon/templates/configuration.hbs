@@ -1,40 +1,41 @@
-<SecretListHeader
-  @model={{this.model}}
-  @backendCrumb={{hash
-    label=this.model.id
-    text=this.model.id
-    path="vault.cluster.secrets.backend.list-root"
-    model=this.model.id
-  }}
-  @isEngine={{true}}
-/>
-<Toolbar>
-  <ToolbarActions>
-    <ToolbarLink @params={{array "configure.tidy"}}>
-      Tidy
-    </ToolbarLink>
-    <ToolbarLink @params={{array "configure"}}>
-      Edit configuration WIP route location?
-    </ToolbarLink>
-  </ToolbarActions>
-</Toolbar>
+{{#if (eq this.currentRouteName "vault.cluster.secrets.backend.pki.configuration.index")}}
+  <SecretListHeader
+    @model={{this.model}}
+    @backendCrumb={{hash
+      label=this.model.id
+      text=this.model.id
+      path="vault.cluster.secrets.backend.list-root"
+      model=this.model.id
+    }}
+    @isEngine={{true}}
+  />
+  <Toolbar>
+    <ToolbarActions>
+      <ToolbarLink @params={{array "configuration.tidy"}}>
+        Tidy
+      </ToolbarLink>
+      <ToolbarLink @params={{array "configuration.edit"}}>
+        Edit configuration WIP route location?
+      </ToolbarLink>
+    </ToolbarActions>
+  </Toolbar>
 
-<div class="form-section">
-  <label class="title has-padding-top is-5">
-    URLs
-  </label>
-</div>
-<div class="form-section">
-  <label class="title has-padding-top is-5">
-    CRL
-  </label>
-</div>
-<div class="form-section">
-  <label class="title has-padding-top is-5">
-    Mount Configuration
-  </label>
-  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-    {{!-- {{#each-in this.model.customMetadata as |key value|}}
+  <div class="form-section">
+    <label class="title has-padding-top is-5">
+      URLs
+    </label>
+  </div>
+  <div class="form-section">
+    <label class="title has-padding-top is-5">
+      CRL
+    </label>
+  </div>
+  <div class="form-section">
+    <label class="title has-padding-top is-5">
+      Mount Configuration
+    </label>
+    <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+      {{!-- {{#each-in this.model.customMetadata as |key value|}}
     <InfoTableRow @alwaysRender={{false}} @label={{key}} @value={{value}} />
   {{else if this.noReadAccess}}
     <EmptyState
@@ -55,6 +56,9 @@
       {{/if}}
     </EmptyState>
   {{/each-in}} --}}
+    </div>
   </div>
-
-</div>
+{{else}}
+  {{! other routes like configuration.tidy }}
+  {{outlet}}
+{{/if}}
