@@ -1001,6 +1001,10 @@
             "path": "secrets/databases/redshift"
           },
           {
+            "title": "Redis",
+            "path": "secrets/databases/redis"
+          },
+          {
             "title": "Snowflake",
             "path": "secrets/databases/snowflake"
           },
