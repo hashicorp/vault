@@ -853,15 +853,17 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 
 		version := c.getBuiltinVersion(pluginType, plugin)
 		semanticVersion, err := semver.NewVersion(version)
+		deprecationStatus, _ := c.builtinRegistry.DeprecationStatus(plugin, pluginType)
 		if err != nil {
 			return nil, err
 		}
 		result = append(result, pluginutil.VersionedPlugin{
-			Name:            plugin,
-			Type:            pluginType.String(),
-			Version:         version,
-			Builtin:         true,
-			SemanticVersion: semanticVersion,
+			Name:              plugin,
+			Type:              pluginType.String(),
+			Version:           version,
+			Builtin:           true,
+			SemanticVersion:   semanticVersion,
+			DeprecationStatus: deprecationStatus.String(),
 		})
 	}
 

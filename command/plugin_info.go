@@ -114,6 +114,10 @@ func (c *PluginInfoCommand) Run(args []string) int {
 		"sha256":  resp.SHA256,
 	}
 
+	if resp.DeprecationStatus != "" {
+		data["deprecation_status"] = resp.DeprecationStatus
+	}
+
 	if c.flagField != "" {
 		return PrintRawField(c.UI, data, c.flagField)
 	}
