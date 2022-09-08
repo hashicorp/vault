@@ -91,6 +91,9 @@ type Backend struct {
 	// BackendType is the logical.BackendType for the backend implementation
 	BackendType logical.BackendType
 
+	// PluginVersion is the optional version that will be self-reported
+	PluginVersion string
+
 	logger  log.Logger
 	system  logical.SystemView
 	once    sync.Once
@@ -426,6 +429,13 @@ func (b *Backend) System() logical.SystemView {
 // Type returns the backend type
 func (b *Backend) Type() logical.BackendType {
 	return b.BackendType
+}
+
+// Version returns the plugin version information
+func (b *Backend) Version() logical.VersionInfo {
+	return logical.VersionInfo{
+		Version: b.PluginVersion,
+	}
 }
 
 // Route looks up the path that would be used for a given path string.

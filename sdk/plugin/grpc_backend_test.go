@@ -147,6 +147,16 @@ func TestGRPCBackendPlugin_Initialize(t *testing.T) {
 	}
 }
 
+func TestGRPCBackendPlugin_Version(t *testing.T) {
+	b, cleanup := testGRPCBackend(t)
+	defer cleanup()
+
+	version := b.Version().Version
+	if version != "mock" {
+		t.Fatalf("Got version %s, expected 'mock'", version)
+	}
+}
+
 func testGRPCBackend(t *testing.T) (logical.Backend, func()) {
 	// Create a mock provider
 	pluginMap := map[string]gplugin.Plugin{

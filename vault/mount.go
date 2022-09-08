@@ -624,6 +624,9 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 		}
 	}
 
+	// update the entry running version with the backend's reported version
+	entry.RunningVersion = backend.Version().Version
+
 	addPathCheckers(c, entry, backend, viewPath)
 
 	c.setCoreBackend(entry, backend, view)
@@ -1735,15 +1738,15 @@ func (c *Core) singletonMountTables() (mounts, auth *MountTable) {
 func (c *Core) setCoreBackend(entry *MountEntry, backend logical.Backend, view *BarrierView) {
 	switch entry.Type {
 	case systemMountType:
-		c.systemBackend = backend.(*SystemBackend)
+		c.systemBackend = backend.(builtinVersionBackend).backend.(*SystemBackend)
 		c.systemBarrierView = view
 	case cubbyholeMountType:
-		ch := backend.(*CubbyholeBackend)
+		ch := backend.(builtinVersionBackend).backend.(*CubbyholeBackend)
 		ch.saltUUID = entry.UUID
 		ch.storageView = view
 		c.cubbyholeBackend = ch
 	case identityMountType:
-		c.identityStore = backend.(*IdentityStore)
+		c.identityStore = backend.(builtinVersionBackend).backend.(*IdentityStore)
 	}
 }
 

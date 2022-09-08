@@ -415,7 +415,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"options":         map[string]interface{}{"version": "1"},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"sys/": map[string]interface{}{
@@ -486,7 +486,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 			"options":         map[string]interface{}{"version": "1"},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"sys/": map[string]interface{}{

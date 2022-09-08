@@ -98,3 +98,12 @@ func (b *BackendTracingMiddleware) Type() logical.BackendType {
 	b.logger.Trace("type", "status", "started")
 	return b.next.Type()
 }
+
+func (b *BackendTracingMiddleware) Version() logical.VersionInfo {
+	defer func(then time.Time) {
+		b.logger.Trace("version", "status", "finished", "took", time.Since(then))
+	}(time.Now())
+
+	b.logger.Trace("version", "status", "started")
+	return b.next.Version()
+}

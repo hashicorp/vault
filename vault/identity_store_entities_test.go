@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -705,7 +705,7 @@ func TestIdentityStore_LoadingEntities(t *testing.T) {
 		t.Fatalf("failed to fetch identity store from router")
 	}
 
-	is := identitystore.(*IdentityStore)
+	is := identitystore.(builtinVersionBackend).backend.(*IdentityStore)
 
 	registerData := map[string]interface{}{
 		"name":     "testentityname",

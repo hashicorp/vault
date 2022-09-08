@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	log "github.com/hashicorp/go-hclog"
-	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
@@ -264,5 +264,16 @@ func (b *backendGRPCPluginServer) Type(ctx context.Context, _ *pb.Empty) (*pb.Ty
 
 	return &pb.TypeReply{
 		Type: uint32(backend.Type()),
+	}, nil
+}
+
+func (b *backendGRPCPluginServer) Version(ctx context.Context, _ *pb.Empty) (*pb.VersionReply, error) {
+	backend, _, err := b.getBackendAndBrokeredClient(ctx)
+	if err != nil {
+		return &pb.VersionReply{}, err
+	}
+
+	return &pb.VersionReply{
+		Version: backend.Version().Version,
 	}, nil
 }

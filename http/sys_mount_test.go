@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/vault/sdk/logical"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/vault"
@@ -44,7 +45,7 @@ func TestSysMounts(t *testing.T) {
 				"options":         map[string]interface{}{"version": "1"},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"sys/": map[string]interface{}{
@@ -115,7 +116,7 @@ func TestSysMounts(t *testing.T) {
 			"options":         map[string]interface{}{"version": "1"},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"sys/": map[string]interface{}{
@@ -233,7 +234,7 @@ func TestSysMount(t *testing.T) {
 				"options":         map[string]interface{}{"version": "1"},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"secret/": map[string]interface{}{
@@ -250,7 +251,7 @@ func TestSysMount(t *testing.T) {
 				"options":         map[string]interface{}{"version": "1"},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"sys/": map[string]interface{}{
@@ -321,7 +322,7 @@ func TestSysMount(t *testing.T) {
 			"options":         map[string]interface{}{"version": "1"},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"secret/": map[string]interface{}{
@@ -338,7 +339,7 @@ func TestSysMount(t *testing.T) {
 			"options":         map[string]interface{}{"version": "1"},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"sys/": map[string]interface{}{
@@ -491,7 +492,7 @@ func TestSysRemount(t *testing.T) {
 				"options":         map[string]interface{}{},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"secret/": map[string]interface{}{
@@ -508,7 +509,7 @@ func TestSysRemount(t *testing.T) {
 				"options":         map[string]interface{}{"version": "1"},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"sys/": map[string]interface{}{
@@ -579,7 +580,7 @@ func TestSysRemount(t *testing.T) {
 			"options":         map[string]interface{}{},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"secret/": map[string]interface{}{
@@ -596,7 +597,7 @@ func TestSysRemount(t *testing.T) {
 			"options":         map[string]interface{}{"version": "1"},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"sys/": map[string]interface{}{
@@ -714,7 +715,7 @@ func TestSysUnmount(t *testing.T) {
 				"options":         map[string]interface{}{"version": "1"},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"sys/": map[string]interface{}{
@@ -785,7 +786,7 @@ func TestSysUnmount(t *testing.T) {
 			"options":         map[string]interface{}{"version": "1"},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"sys/": map[string]interface{}{
@@ -989,7 +990,7 @@ func TestSysTuneMount(t *testing.T) {
 				"options":         map[string]interface{}{},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"secret/": map[string]interface{}{
@@ -1006,7 +1007,7 @@ func TestSysTuneMount(t *testing.T) {
 				"options":         map[string]interface{}{"version": "1"},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"sys/": map[string]interface{}{
@@ -1077,7 +1078,7 @@ func TestSysTuneMount(t *testing.T) {
 			"options":         map[string]interface{}{},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"secret/": map[string]interface{}{
@@ -1094,7 +1095,7 @@ func TestSysTuneMount(t *testing.T) {
 			"options":         map[string]interface{}{"version": "1"},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"sys/": map[string]interface{}{
@@ -1238,7 +1239,7 @@ func TestSysTuneMount(t *testing.T) {
 				"options":         map[string]interface{}{"version": "1"},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"secret/": map[string]interface{}{
@@ -1255,7 +1256,7 @@ func TestSysTuneMount(t *testing.T) {
 				"options":         map[string]interface{}{"version": "1"},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"sys/": map[string]interface{}{
@@ -1326,7 +1327,7 @@ func TestSysTuneMount(t *testing.T) {
 			"options":         map[string]interface{}{"version": "1"},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"secret/": map[string]interface{}{
@@ -1343,7 +1344,7 @@ func TestSysTuneMount(t *testing.T) {
 			"options":         map[string]interface{}{"version": "1"},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"sys/": map[string]interface{}{

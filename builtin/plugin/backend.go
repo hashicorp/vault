@@ -10,7 +10,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/go-multierror"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	v5 "github.com/hashicorp/vault/builtin/plugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -79,6 +79,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*PluginBackend, 
 	// Get SpecialPaths and BackendType
 	paths := raw.SpecialPaths()
 	btype := raw.Type()
+	runningVersion := raw.Version().Version
 
 	// Cleanup meta plugin backend
 	raw.Cleanup(ctx)
@@ -86,8 +87,9 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*PluginBackend, 
 	// Initialize b.Backend with dummy backend since plugin
 	// backends will need to be lazy loaded.
 	b.Backend = &framework.Backend{
-		PathsSpecial: paths,
-		BackendType:  btype,
+		PathsSpecial:  paths,
+		BackendType:   btype,
+		PluginVersion: runningVersion,
 	}
 
 	b.config = conf
@@ -285,4 +287,11 @@ func (b *PluginBackend) Type() logical.BackendType {
 	b.RLock()
 	defer b.RUnlock()
 	return b.Backend.Type()
+}
+
+// Version is a thin wrapper used to ensure we grab the lock for race purposes
+func (b *PluginBackend) Version() logical.VersionInfo {
+	b.RLock()
+	defer b.RUnlock()
+	return b.Backend.Version()
 }

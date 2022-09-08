@@ -242,6 +242,11 @@ func TestCore_EnableExternalPlugin_MultipleVersions(t *testing.T) {
 			if raw.(*routeEntry).mountEntry.Version != tc.mountVersion {
 				t.Errorf("Expected mount to be version %s but got %s", tc.mountVersion, raw.(*routeEntry).mountEntry.Version)
 			}
+
+			// we don't override the running version of non-builtins, and they don't have the version set explicitly (yet)
+			if raw.(*routeEntry).mountEntry.RunningVersion != "" {
+				t.Errorf("Expected mount to have no version but got %s", raw.(*routeEntry).mountEntry.RunningVersion)
+			}
 		})
 	}
 }

@@ -84,7 +84,8 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	}
 
 	b.Backend = &framework.Backend{
-		Help: strings.TrimSpace(sysHelpRoot),
+		PluginVersion: logical.BuiltinVersion.Version,
+		Help:          strings.TrimSpace(sysHelpRoot),
 
 		PathsSpecial: &logical.Paths{
 			Root: []string{

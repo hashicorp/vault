@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -182,6 +182,7 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 	if backendType != logical.TypeCredential {
 		return fmt.Errorf("cannot mount %q of type %q as an auth backend", entry.Type, backendType)
 	}
+	entry.RunningVersion = backend.Version().Version
 
 	addPathCheckers(c, entry, backend, viewPath)
 
@@ -841,7 +842,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 
 		// Check if this is the token store
 		if entry.Type == "token" {
-			c.tokenStore = backend.(*TokenStore)
+			c.tokenStore = backend.(builtinVersionBackend).backend.(*TokenStore)
 
 			// At some point when this isn't beta we may persist this but for
 			// now always set it on mount
@@ -850,7 +851,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			// this is loaded *after* the normal mounts, including cubbyhole
 			c.router.tokenStoreSaltFunc = c.tokenStore.Salt
 			if !c.IsDRSecondary() {
-				c.tokenStore.cubbyholeBackend = c.router.MatchingBackend(ctx, cubbyholeMountPath).(*CubbyholeBackend)
+				c.tokenStore.cubbyholeBackend = c.router.MatchingBackend(ctx, cubbyholeMountPath).(builtinVersionBackend).backend.(*CubbyholeBackend)
 			}
 		}
 

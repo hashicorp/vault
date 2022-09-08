@@ -4,6 +4,7 @@ import (
 	"context"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/sdk/version"
 )
 
 // BackendType is the type of backend that is being implemented
@@ -85,6 +86,9 @@ type Backend interface {
 
 	// Type returns the BackendType for the particular backend
 	Type() BackendType
+
+	// Version returns the version for the backend
+	Version() VersionInfo
 }
 
 // BackendConfig is provided to the factory to initialize the backend
@@ -137,3 +141,12 @@ type Auditor interface {
 	AuditRequest(ctx context.Context, input *LogInput) error
 	AuditResponse(ctx context.Context, input *LogInput) error
 }
+
+type VersionInfo struct {
+	Version string
+}
+
+var (
+	EmptyVersion   = VersionInfo{""}
+	BuiltinVersion = VersionInfo{version.GetVersion().Version + "+builtin"}
+)

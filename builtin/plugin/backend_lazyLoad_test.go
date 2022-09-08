@@ -160,6 +160,10 @@ func (b *testBackend) InvalidateKey(context.Context, string) {
 	panic("not needed")
 }
 
+func (b *testBackend) Version() logical.VersionInfo {
+	return logical.EmptyVersion
+}
+
 //------------------------------------------------------------------
 
 type testSystemView struct {
