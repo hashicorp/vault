@@ -19,8 +19,8 @@ require (
 	cloud.google.com/go/spanner v1.5.1
 	cloud.google.com/go/storage v1.10.0
 	github.com/Azure/azure-storage-blob-go v0.14.0
-	github.com/Azure/go-autorest/autorest v0.11.24
-	github.com/Azure/go-autorest/autorest/adal v0.9.18
+	github.com/Azure/go-autorest/autorest v0.11.21
+	github.com/Azure/go-autorest/autorest/adal v0.9.16
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/SAP/go-hdb v0.14.1
 	github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a
@@ -58,8 +58,8 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/google/tink/go v1.6.1
-	github.com/hashicorp/cap v0.2.1-0.20220727210936-60cd1534e220
-	github.com/hashicorp/consul-template v0.29.2
+	github.com/hashicorp/cap v0.1.1
+	github.com/hashicorp/consul-template v0.27.0
 	github.com/hashicorp/consul/api v1.14.0
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
@@ -67,14 +67,12 @@ require (
 	github.com/hashicorp/go-gcp-common v0.8.0
 	github.com/hashicorp/go-hclog v1.2.2
 	github.com/hashicorp/go-kms-wrapping v0.7.1
-	github.com/hashicorp/go-kms-wrapping/v2 v2.0.6-0.20220722192355-a843f53fa48d
-	github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.4
+	github.com/hashicorp/go-kms-wrapping/v2 v2.0.0
+	github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.0
 	github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2 v2.0.1
 	github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2 v2.0.0
-	github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.1
 	github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2 v2.0.0
 	github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2 v2.0.0
-	github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.1
 	github.com/hashicorp/go-memdb v1.3.3
 	github.com/hashicorp/go-msgpack v1.1.5
 	github.com/hashicorp/go-multierror v1.1.1
@@ -86,7 +84,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/base62 v0.1.2
 	github.com/hashicorp/go-secure-stdlib/gatedwriter v0.1.1
 	github.com/hashicorp/go-secure-stdlib/kv-builder v0.1.2
-	github.com/hashicorp/go-secure-stdlib/mlock v0.1.2
+	github.com/hashicorp/go-secure-stdlib/mlock v0.1.1
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.6
 	github.com/hashicorp/go-secure-stdlib/password v0.1.1
 	github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1
@@ -104,25 +102,24 @@ require (
 	github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c
 	github.com/hashicorp/raft-snapshot v1.0.4
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.12.0
-	github.com/hashicorp/vault-plugin-auth-azure v0.11.0
+	github.com/hashicorp/vault-plugin-auth-azure v0.9.2
 	github.com/hashicorp/vault-plugin-auth-centrify v0.12.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.12.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.13.2-0.20220722185016-9e4fddb995e5
-	github.com/hashicorp/vault-plugin-auth-jwt v0.13.2-0.20220728183411-0edf6ecc0b37
+	github.com/hashicorp/vault-plugin-auth-jwt v0.13.1
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.7.3
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.13.0
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.12.1
 	github.com/hashicorp/vault-plugin-auth-oci v0.11.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.7.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.11.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.7.0
-	github.com/hashicorp/vault-plugin-database-snowflake v0.5.1
+	github.com/hashicorp/vault-plugin-database-snowflake v0.3.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.13.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.12.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.13.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.6.6-0.20220617175110-38223d8fabc9
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.7-0.20220617175201-b16d1500db6e
-	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.1.1
 	github.com/hashicorp/vault-plugin-secrets-kv v0.12.1
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.7.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.8.0
@@ -186,12 +183,12 @@ require (
 	go.opentelemetry.io/otel/trace v0.20.0
 	go.uber.org/atomic v1.9.0
 	go.uber.org/goleak v1.1.12
-	golang.org/x/crypto v0.0.0-20220817201139-bc19a97f63c8
+	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
 	golang.org/x/net v0.0.0-20220722155237-a158d28d115b
 	golang.org/x/oauth2 v0.0.0-20220524215830-622c5d57e401
 	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
-	golang.org/x/tools v0.1.12
+	golang.org/x/tools v0.1.9
 	google.golang.org/api v0.83.0
 	google.golang.org/grpc v1.47.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
@@ -214,8 +211,8 @@ require (
 	github.com/Azure/azure-sdk-for-go v62.0.0+incompatible // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
-	github.com/Azure/go-autorest/autorest/azure/auth v0.5.11 // indirect
-	github.com/Azure/go-autorest/autorest/azure/cli v0.4.5 // indirect
+	github.com/Azure/go-autorest/autorest/azure/auth v0.5.8 // indirect
+	github.com/Azure/go-autorest/autorest/azure/cli v0.4.4 // indirect
 	github.com/Azure/go-autorest/autorest/date v0.3.0 // indirect
 	github.com/Azure/go-autorest/autorest/to v0.4.0 // indirect
 	github.com/Azure/go-autorest/autorest/validation v0.3.1 // indirect
@@ -363,7 +360,7 @@ require (
 	github.com/renier/xmlrpc v0.0.0-20170708154548-ce4a1a486c03 // indirect
 	github.com/rogpeppe/go-internal v1.8.1 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
-	github.com/snowflakedb/gosnowflake v1.6.3 // indirect
+	github.com/snowflakedb/gosnowflake v1.6.1 // indirect
 	github.com/softlayer/softlayer-go v0.0.0-20180806151055-260589d94c7d // indirect
 	github.com/sony/gobreaker v0.4.2-0.20210216022020-dd874f9dd33b // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
@@ -389,7 +386,7 @@ require (
 	go.opentelemetry.io/otel/metric v0.20.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.1 // indirect
-	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
+	golang.org/x/mod v0.6.0-dev // indirect
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20220411224347-583f2d630306 // indirect
