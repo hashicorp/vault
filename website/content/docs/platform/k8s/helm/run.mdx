@@ -439,7 +439,7 @@ $ kubectl delete pod <name of Vault pod>
 If Vault is deployed using `ha` mode, the standby pods must be upgraded first.
 Vault has K8s service discovery built in (when enabled in the server configuration) and
 will automatically change the labels of the pod with its current leader status. These labels 
-can be used to filter the pods:
+can be used to filter the pods.
 
 For example, filter all pods that are Vault standbys:
 
