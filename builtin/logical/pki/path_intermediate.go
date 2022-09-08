@@ -95,7 +95,7 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		req:     req,
 		apiData: data,
 	}
-	parsedBundle, err := generateIntermediateCSR(sc, input, b.Backend.GetRandomReader())
+	parsedBundle, warnings, err := generateIntermediateCSR(sc, input, b.Backend.GetRandomReader())
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -160,6 +160,8 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		return nil, err
 	}
 	resp.Data["key_id"] = myKey.ID
+
+	resp = addWarnings(resp, warnings)
 
 	return resp, nil
 }

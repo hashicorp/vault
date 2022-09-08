@@ -350,3 +350,12 @@ func (sc *storageContext) isIfModifiedSinceBeforeLastModified(helper *IfModified
 
 	return false, nil
 }
+
+func addWarnings(resp *logical.Response, warnings []string) *logical.Response {
+	if warnings != nil && len(warnings) > 0 {
+		for _, warning := range warnings {
+			resp.AddWarning(warning)
+		}
+	}
+	return resp
+}
