@@ -63,11 +63,10 @@ export default class InfoTableItemArray extends Component {
   }
 
   async checkWildcardInArray() {
-    if (!this.displayArray) {
+    if (!this.args.displayArray) {
       return;
     }
-    let filteredArray = await this.displayArray.filter((item) => isWildcardString(item));
-
+    let filteredArray = await this.args.displayArray.filter((item) => isWildcardString([item]));
     this.wildcardInDisplayArray = filteredArray.length > 0 ? true : false;
   }
 
