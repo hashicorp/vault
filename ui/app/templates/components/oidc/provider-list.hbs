@@ -2,7 +2,7 @@
   <LinkedBlock
     class="list-item-row"
     @params={{array "vault.cluster.access.oidc.providers.provider.details" provider.name}}
-    data-test-oidc-provider={{provider.name}}
+    data-test-oidc-provider-linked-block={{provider.name}}
   >
     <div class="level is-mobile">
       <div class="level-left">
@@ -27,6 +27,7 @@
                     @route="vault.cluster.access.oidc.providers.provider.details"
                     @model={{provider.name}}
                     @disabled={{not provider.canRead}}
+                    data-test-oidc-provider-menu-link="details"
                   >
                     Details
                   </LinkTo>
@@ -36,6 +37,7 @@
                     @route="vault.cluster.access.oidc.providers.provider.edit"
                     @model={{provider.name}}
                     @disabled={{not provider.canEdit}}
+                    data-test-oidc-provider-menu-link="edit"
                   >
                     Edit
                   </LinkTo>

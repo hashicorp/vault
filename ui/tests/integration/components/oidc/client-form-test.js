@@ -61,7 +61,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
   test('it should save new client', async function (assert) {
     assert.expect(14);
 
-    this.server.post('/identity/oidc/client/some-app', (schema, req) => {
+    this.server.post('/identity/oidc/client/test-app', (schema, req) => {
       assert.ok(true, 'Request made to save client');
       return JSON.parse(req.requestBody);
     });
@@ -110,25 +110,25 @@ module('Integration | Component | oidc/client-form', function (hooks) {
 
     await clickTrigger();
     assert.dom('li.ember-power-select-option').hasText('assignment-1', 'dropdown renders assignments');
-    await fillIn('[data-test-input="name"]', 'some-app');
+    await fillIn('[data-test-input="name"]', 'test-app');
     await click(SELECTORS.clientSaveButton);
   });
 
   test('it should update client', async function (assert) {
     assert.expect(11);
 
-    this.server.post('/identity/oidc/client/some-app', (schema, req) => {
+    this.server.post('/identity/oidc/client/test-app', (schema, req) => {
       assert.ok(true, 'Request made to save client');
       return JSON.parse(req.requestBody);
     });
 
     this.store.pushPayload('oidc/client', {
       modelName: 'oidc/client',
-      name: 'some-app',
+      name: 'test-app',
       clientType: 'public',
     });
 
-    this.model = this.store.peekRecord('oidc/client', 'some-app');
+    this.model = this.store.peekRecord('oidc/client', 'test-app');
     this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
 
     await render(hbs`
@@ -142,7 +142,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     assert.dom('[data-test-oidc-client-title]').hasText('Edit application', 'Title renders correct text');
     assert.dom(SELECTORS.clientSaveButton).hasText('Update', 'Save button has correct text');
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
-    assert.dom('[data-test-input="name"]').hasValue('some-app', 'Name input is populated with model value');
+    assert.dom('[data-test-input="name"]').hasValue('test-app', 'Name input is populated with model value');
     assert.dom('[data-test-input="key"]').isDisabled('Signing key input is disabled');
     assert.dom('[data-test-input="key"]').hasValue('default', 'Key input populated with default');
     assert.dom('[data-test-input="clientType"] input').isDisabled('client type input is disabled on edit');
@@ -171,11 +171,11 @@ module('Integration | Component | oidc/client-form', function (hooks) {
 
     this.store.pushPayload('oidc/client', {
       modelName: 'oidc/client',
-      name: 'some-app',
+      name: 'test-app',
       assignments: ['allow_all'],
       redirectUris: [],
     });
-    this.model = this.store.peekRecord('oidc/client', 'some-app');
+    this.model = this.store.peekRecord('oidc/client', 'test-app');
 
     await render(hbs`
       <Oidc::ClientForm
@@ -241,7 +241,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
         @onSave={{this.onSave}}
       />
     `);
-    await fillIn('[data-test-input="name"]', 'some-app');
+    await fillIn('[data-test-input="name"]', 'test-app');
     await click(SELECTORS.clientSaveButton);
     assert
       .dom(SELECTORS.inlineAlert)
