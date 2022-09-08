@@ -61,25 +61,23 @@
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
   <InfoTableRow @label="Name" @value={{@model.name}} />
   <InfoTableRow
+    @label="Entities"
     @type="array"
     @value={{@model.entityIds}}
     @model={{@model}}
     @isLink={{true}}
-    @label="Entities"
     @modelType="oidc/assignment"
-    @viewAll="entities."
     @itemRoute={{(array "vault.cluster.access.identity.show" "entities" "details")}}
     @alwaysRender={{true}}
     @toggleViewAll={{true}}
   />
   <InfoTableRow
+    @label="Groups"
     @type="array"
     @value={{@model.groupIds}}
     @model={{@model}}
     @isLink={{true}}
-    @label="Groups"
     @modelType="oidc/assignment"
-    @viewAll="groups."
     @itemRoute={{(array "vault.cluster.access.identity.show" "groups" "details")}}
     @alwaysRender={{true}}
     @doNotTruncate={{true}}
