@@ -5511,7 +5511,7 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 
 	// Put certificates A, B, C, D, E in backend
 	var certificates []string = []string{"a", "b", "c", "d", "e"}
-	var serials = make([]string, 5)
+	serials := make([]string, 5)
 	for i, cn := range certificates {
 		resp, err = CBWrite(b, s, "issue/example", map[string]interface{}{
 			"common_name": cn + ".myvault.com",
@@ -5523,7 +5523,7 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 	}
 
 	// Revoke certificates A + B
-	var revocations = serials[0:2]
+	revocations := serials[0:2]
 	for _, key := range revocations {
 		resp, err = CBWrite(b, s, "revoke", map[string]interface{}{
 			"serial_number": key,
@@ -5548,7 +5548,7 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 	b.certsCounted.Store(false)
 
 	// Revoke certificates C, D
-	var dirtyRevocations = serials[2:4]
+	dirtyRevocations := serials[2:4]
 	for _, key := range dirtyRevocations {
 		resp, err = CBWrite(b, s, "revoke", map[string]interface{}{
 			"serial_number": key,
@@ -5559,7 +5559,7 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 	}
 
 	// Put certificates F, G in the backend
-	var dirtyCertificates = []string{"f", "g"}
+	dirtyCertificates := []string{"f", "g"}
 	for _, cn := range dirtyCertificates {
 		resp, err = CBWrite(b, s, "issue/example", map[string]interface{}{
 			"common_name": cn + ".myvault.com",

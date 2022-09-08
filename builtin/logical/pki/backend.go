@@ -608,14 +608,14 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 		if possibleDoubleCountIndex >= len(b.possibleDoubleCountedSerials) {
 			break
 		}
-		if entries[listEntriesIndex] == b.possibleDoubleCountedSerials[possibleDoubleCountIndex][6:] {
+		if entries[listEntriesIndex] == b.possibleDoubleCountedSerials[possibleDoubleCountIndex] {
 			// This represents a double-counted entry
 			b.decrementTotalCertificatesCountNoReport()
 			listEntriesIndex = listEntriesIndex + 1
 			possibleDoubleCountIndex = possibleDoubleCountIndex + 1
 			continue
 		}
-		if entries[listEntriesIndex] < b.possibleDoubleCountedSerials[possibleDoubleCountIndex][6:] {
+		if entries[listEntriesIndex] < b.possibleDoubleCountedSerials[possibleDoubleCountIndex] {
 			listEntriesIndex = listEntriesIndex + 1
 			continue
 		}
@@ -638,18 +638,18 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 		if possibleRevokedDoubleCountIndex >= len(b.possibleDoubleCountedRevokedSerials) {
 			break
 		}
-		if revokedEntries[listRevokedEntriesIndex] == b.possibleDoubleCountedRevokedSerials[possibleRevokedDoubleCountIndex][8:] {
+		if revokedEntries[listRevokedEntriesIndex] == b.possibleDoubleCountedRevokedSerials[possibleRevokedDoubleCountIndex] {
 			// This represents a double-counted revoked entry
 			b.decrementTotalRevokedCertificatesCountNoReport()
 			listRevokedEntriesIndex = listRevokedEntriesIndex + 1
 			possibleRevokedDoubleCountIndex = possibleRevokedDoubleCountIndex + 1
 			continue
 		}
-		if revokedEntries[listRevokedEntriesIndex] < b.possibleDoubleCountedRevokedSerials[possibleRevokedDoubleCountIndex][8:] {
+		if revokedEntries[listRevokedEntriesIndex] < b.possibleDoubleCountedRevokedSerials[possibleRevokedDoubleCountIndex] {
 			listRevokedEntriesIndex = listRevokedEntriesIndex + 1
 			continue
 		}
-		if revokedEntries[listRevokedEntriesIndex] > b.possibleDoubleCountedRevokedSerials[possibleRevokedDoubleCountIndex][8:] {
+		if revokedEntries[listRevokedEntriesIndex] > b.possibleDoubleCountedRevokedSerials[possibleRevokedDoubleCountIndex] {
 			possibleRevokedDoubleCountIndex = possibleRevokedDoubleCountIndex + 1
 			continue
 		}
@@ -671,6 +671,9 @@ func (b *backend) incrementTotalCertificatesCount(certsCounted bool, newSerial s
 	switch {
 	case !certsCounted:
 		// This is unsafe, but a good best-attempt
+		if strings.HasPrefix(newSerial, "certs/") {
+			newSerial = newSerial[6:]
+		}
 		b.possibleDoubleCountedSerials = append(b.possibleDoubleCountedSerials, newSerial)
 	default:
 		metrics.SetGauge([]string{"secrets", "pki", "total_certificates_stored"}, float32(*b.certCount))
@@ -694,6 +697,9 @@ func (b *backend) incrementTotalRevokedCertificatesCount(certsCounted bool, newS
 	switch {
 	case !certsCounted:
 		// This is unsafe, but a good best-attempt
+		if strings.HasPrefix(newSerial, "revoked/") { // allow passing in the path (revoked/serial) OR the serial
+			newSerial = newSerial[8:]
+		}
 		b.possibleDoubleCountedRevokedSerials = append(b.possibleDoubleCountedRevokedSerials, newSerial)
 	default:
 		metrics.SetGauge([]string{"secrets", "pki", "total_revoked_certificates_stored"}, float32(*b.revokedCertCount))
