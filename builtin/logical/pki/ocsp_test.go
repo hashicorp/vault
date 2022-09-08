@@ -316,8 +316,9 @@ func TestOcsp_RevokedCertHasIssuerWithoutAKey(t *testing.T) {
 // the response to the caller on its behalf.
 //
 // NOTE: This test is a bit at the mercy of iteration order of the issuer ids.
-//       If it becomes flaky, most likely something is wrong in the code
-//       and not the test.
+//
+//	If it becomes flaky, most likely something is wrong in the code
+//	and not the test.
 func TestOcsp_MultipleMatchingIssuersOneWithoutSigningUsage(t *testing.T) {
 	b, s, testEnv := setupOcspEnv(t, "ec")
 

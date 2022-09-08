@@ -278,7 +278,8 @@ func (b *backend) secretAccessKeysCreate(
 	ctx context.Context,
 	s logical.Storage,
 	displayName, policyName string,
-	role *awsRoleEntry) (*logical.Response, error) {
+	role *awsRoleEntry,
+) (*logical.Response, error) {
 	iamClient, err := b.clientIAM(ctx, s)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil

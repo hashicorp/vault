@@ -121,7 +121,7 @@ jobs:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
     - GO_VERSION: 1.19.1
-    - GOFUMPT_VERSION: 0.2.1
+    - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-remote-docker:
     docker:
@@ -352,6 +352,7 @@ jobs:
     - checkout
     - run:
         command: |
+          echo "Using gofumpt version ${GOFUMPT_VERSION}"
           go install "mvdan.cc/gofumpt@v${GOFUMPT_VERSION}"
           make fmt
           if ! git diff --exit-code; then
@@ -363,7 +364,7 @@ jobs:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
     - GO_VERSION: 1.19.1
-    - GOFUMPT_VERSION: 0.2.1
+    - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race:
     docker:
@@ -849,7 +850,7 @@ jobs:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
     - GO_VERSION: 1.19.1
-    - GOFUMPT_VERSION: 0.2.1
+    - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
