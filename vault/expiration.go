@@ -137,7 +137,7 @@ type ExpirationManager struct {
 	quitCh             chan struct{}
 
 	// do not hold coreStateLock in any API handler code - it is already held
-	coreStateLock     *RWMutex
+	coreStateLock     RWMutex
 	quitContext       context.Context
 	leaseCheckCounter *uint32
 
@@ -223,10 +223,9 @@ func (r *revocationJob) Execute() error {
 	default:
 	}
 
-	coreStateLock := *r.m.coreStateLock
-	coreStateLock.RLock()
+	r.m.coreStateLock.RLock()
 	err := r.m.Revoke(revokeCtx, r.leaseID)
-	coreStateLock.RUnlock()
+	r.m.coreStateLock.RUnlock()
 
 	return err
 }
@@ -343,7 +342,7 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		restoreLocks: locksutil.CreateLocks(),
 		quitCh:       make(chan struct{}),
 
-		coreStateLock:     &c.stateLock,
+		coreStateLock:     c.stateLock,
 		quitContext:       c.activeContext,
 		leaseCheckCounter: new(uint32),
 
@@ -2566,9 +2565,8 @@ func (m *ExpirationManager) getNamespaceFromLeaseID(ctx context.Context, leaseID
 }
 
 func (m *ExpirationManager) getLeaseMountAccessorLocked(ctx context.Context, leaseID string) string {
-	coreStateLock := *m.coreStateLock
-	coreStateLock.RLock()
-	defer coreStateLock.RUnlock()
+	m.coreStateLock.RLock()
+	defer m.coreStateLock.RUnlock()
 	return m.getLeaseMountAccessor(ctx, leaseID)
 }
 

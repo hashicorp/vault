@@ -3505,7 +3505,7 @@ func TestExpiration_listIrrevocableLeases_includeAll(t *testing.T) {
 func TestDeadlockExit(t *testing.T) {
 	if os.Getenv("TEST_DEADLOCK_WITH_EXIT") == "1" {
 		testCore, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{DetectDeadlocks: "statelock"})
-		coreStateLock := *testCore.expiration.coreStateLock
+		coreStateLock := testCore.expiration.coreStateLock
 		go coreStateLock.Lock()
 		go coreStateLock.Lock()
 		return
