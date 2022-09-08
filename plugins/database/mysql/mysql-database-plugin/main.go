@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/hashicorp/vault/plugins/database/mysql"
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 )
 
 func main() {

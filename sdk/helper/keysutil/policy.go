@@ -45,6 +45,9 @@ import (
 const (
 	Kdf_hmac_sha256_counter = iota // built-in helper
 	Kdf_hkdf_sha256                // golang.org/x/crypto/hkdf
+
+	HmacMinKeySize = 256 / 8
+	HmacMaxKeySize = 4096 / 8
 )
 
 // Or this one...we need the default of zero to be the original AES256-GCM96
@@ -59,6 +62,7 @@ const (
 	KeyType_ECDSA_P521
 	KeyType_AES128_GCM96
 	KeyType_RSA3072
+	KeyType_HMAC
 )
 
 const (
@@ -160,6 +164,8 @@ func (kt KeyType) String() string {
 		return "rsa-3072"
 	case KeyType_RSA4096:
 		return "rsa-4096"
+	case KeyType_HMAC:
+		return "hmac"
 	}
 
 	return "[unknown]"
@@ -318,9 +324,10 @@ type Policy struct {
 	// served after a delete.
 	deleted uint32
 
-	Name string      `json:"name"`
-	Key  []byte      `json:"key,omitempty"` // DEPRECATED
-	Keys keyEntryMap `json:"keys"`
+	Name    string      `json:"name"`
+	Key     []byte      `json:"key,omitempty"`      // DEPRECATED
+	KeySize int         `json:"key_size,omitempty"` // For algorithms with variable key sizes
+	Keys    keyEntryMap `json:"keys"`
 
 	// Derived keys MUST provide a context and the master underlying key is
 	// never used. If convergent encryption is true, the context will be used
@@ -1025,10 +1032,13 @@ func (p *Policy) HMACKey(version int) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if p.Type == KeyType_HMAC {
+		return keyEntry.Key, nil
+	}
 	if keyEntry.HMACKey == nil {
 		return nil, fmt.Errorf("no HMAC key exists for that key version")
 	}
-
 	return keyEntry.HMACKey, nil
 }
 
@@ -1386,19 +1396,25 @@ func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte
 		DeprecatedCreationTime: now.Unix(),
 	}
 
-	hmacKey, err := uuid.GenerateRandomBytesWithReader(32, randReader)
-	if err != nil {
-		return err
+	if p.Type != KeyType_HMAC {
+		hmacKey, err := uuid.GenerateRandomBytesWithReader(32, randReader)
+		if err != nil {
+			return err
+		}
+		entry.HMACKey = hmacKey
 	}
-	entry.HMACKey = hmacKey
 
 	if (p.Type == KeyType_AES128_GCM96 && len(key) != 16) ||
-		((p.Type == KeyType_AES256_GCM96 || p.Type == KeyType_ChaCha20_Poly1305) && len(key) != 32) {
+		((p.Type == KeyType_AES256_GCM96 || p.Type == KeyType_ChaCha20_Poly1305) && len(key) != 32) ||
+		(p.Type == KeyType_HMAC && (len(key) < HmacMinKeySize || len(key) > HmacMaxKeySize)) {
 		return fmt.Errorf("invalid key size %d bytes for key type %s", len(key), p.Type)
 	}
 
-	if p.Type == KeyType_AES128_GCM96 || p.Type == KeyType_AES256_GCM96 || p.Type == KeyType_ChaCha20_Poly1305 {
+	if p.Type == KeyType_AES128_GCM96 || p.Type == KeyType_AES256_GCM96 || p.Type == KeyType_ChaCha20_Poly1305 || p.Type == KeyType_HMAC {
 		entry.Key = key
+		if p.Type == KeyType_HMAC {
+			p.KeySize = len(key)
+		}
 	} else {
 		parsedPrivateKey, err := x509.ParsePKCS8PrivateKey(key)
 		if err != nil {
@@ -1549,11 +1565,16 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 	entry.HMACKey = hmacKey
 
 	switch p.Type {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_HMAC:
 		// Default to 256 bit key
 		numBytes := 32
 		if p.Type == KeyType_AES128_GCM96 {
 			numBytes = 16
+		} else if p.Type == KeyType_HMAC {
+			numBytes := p.KeySize
+			if numBytes < HmacMinKeySize || numBytes > HmacMaxKeySize {
+				return fmt.Errorf("invalid key size for HMAC key, must be between %d and %d bytes", HmacMinKeySize, HmacMaxKeySize)
+			}
 		}
 		newKey, err := uuid.GenerateRandomBytesWithReader(numBytes, randReader)
 		if err != nil {

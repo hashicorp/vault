@@ -43,6 +43,7 @@ export default Model.extend({
   sealProgress: alias('leaderNode.progress'),
   sealType: alias('leaderNode.type'),
   storageType: alias('leaderNode.storageType'),
+  hcpLinkStatus: alias('leaderNode.hcpLinkStatus'),
   hasProgress: gte('sealProgress', 1),
   usingRaft: equal('storageType', 'raft'),
 

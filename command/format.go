@@ -331,6 +331,12 @@ func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, da
 		out = append(out, fmt.Sprintf("Cluster ID | %s", status.ClusterID))
 	}
 
+	// Output if HCP link is configured
+	if status.HCPLinkStatus != "" {
+		out = append(out, fmt.Sprintf("HCP Link Status | %s", status.HCPLinkStatus))
+		out = append(out, fmt.Sprintf("HCP Link Resource ID | %s", status.HCPLinkResourceID))
+	}
+
 	// Output if HA is enabled
 	out = append(out, fmt.Sprintf("HA Enabled | %t", status.HAEnabled))
 

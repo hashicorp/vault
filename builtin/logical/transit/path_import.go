@@ -177,6 +177,8 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 		polReq.KeyType = keysutil.KeyType_RSA3072
 	case "rsa-4096":
 		polReq.KeyType = keysutil.KeyType_RSA4096
+	case "hmac":
+		polReq.KeyType = keysutil.KeyType_HMAC
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type: %v", keyType)), logical.ErrInvalidRequest
 	}
@@ -256,6 +258,9 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 	importKey, err := b.decryptImportedKey(ctx, req.Storage, ciphertext, hashFn)
+	if err != nil {
+		return nil, err
+	}
 	err = p.Import(ctx, req.Storage, importKey, b.GetRandomReader())
 	if err != nil {
 		return nil, err

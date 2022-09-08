@@ -180,8 +180,8 @@ func Test_RegistryStatus(t *testing.T) {
 		},
 		{
 			name:       "deprecated builtin lookup",
-			builtin:    "mongodb",
-			pluginType: consts.PluginTypeSecrets,
+			builtin:    "pcf",
+			pluginType: consts.PluginTypeCredential,
 			want:       consts.Deprecated,
 			wantOk:     true,
 		},

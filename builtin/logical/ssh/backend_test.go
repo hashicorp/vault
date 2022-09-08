@@ -2120,7 +2120,8 @@ func testDefaultUserTemplate(t *testing.T, testDefaultUserTemplate string,
 
 func testAllowedPrincipalsTemplate(t *testing.T, testAllowedDomainsTemplate string,
 	expectedValidPrincipal string, testEntityMetadata map[string]string,
-	roleConfigPayload map[string]interface{}, signingPayload map[string]interface{}) {
+	roleConfigPayload map[string]interface{}, signingPayload map[string]interface{},
+) {
 	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
 	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
@@ -2169,7 +2170,8 @@ func testAllowedPrincipalsTemplate(t *testing.T, testAllowedDomainsTemplate stri
 }
 
 func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
-	expectedValidPrincipal string, testEntityMetadata map[string]string) {
+	expectedValidPrincipal string, testEntityMetadata map[string]string,
+) {
 	testAllowedPrincipalsTemplate(
 		t, testAllowedUsersTemplate,
 		expectedValidPrincipal, testEntityMetadata,
