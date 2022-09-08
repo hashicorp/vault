@@ -441,7 +441,7 @@ Vault has K8s service discovery built in (when enabled in the server configurati
 will automatically change the labels of the pod with its current leader status. These labels 
 can be used to filter the pods.
 
-For example, filter all pods that are Vault standbys:
+For example, select all pods that are Vault standbys:
 
 ```shell-session
 $ kubectl get pods -l vault-active=false
