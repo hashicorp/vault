@@ -1145,13 +1145,19 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		Version:               version,
 	}
 
+	// Detect and handle deprecated secrets engines
+	resp, err := b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeSecrets)
+	if err != nil {
+		return handleError(err)
+	}
+
 	// Attempt mount
 	if err := b.Core.mount(ctx, me); err != nil {
 		b.Backend.Logger().Error("error occurred during enable mount", "path", me.Path, "error", err)
 		return handleError(err)
 	}
 
-	return nil, nil
+	return resp, nil
 }
 
 func (b *SystemBackend) handleReadMount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -2385,7 +2391,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		Version:               version,
 	}
 
-	err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeCredential)
+	resp, err := b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeCredential)
 	if err != nil {
 		return handleError(err)
 	}
@@ -2395,7 +2401,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		b.Backend.Logger().Error("error occurred during enable credential", "path", me.Path, "error", err)
 		return handleError(err)
 	}
-	return nil, nil
+	return resp, nil
 }
 
 // handleDisableAuth is used to disable a credential backend
