@@ -330,9 +330,6 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       'vault.cluster.access.oidc.scopes.index',
       'navigates back to list view after delete'
     );
-
-    //* cleanup scope
-    await clearRecord(this.store, 'oidc/scope', 'test-scope');
   });
 
   // LIST PROVIDERS
