@@ -437,11 +437,20 @@ $ kubectl delete pod <name of Vault pod>
 ```
 
 If Vault is deployed using `ha` mode, the standby pods must be upgraded first.
-To identify which pod is currently the active primary, run the following command
-on each Vault pod:
+Vault has K8s service discovery built in (when enabled in the server configuration) and
+will automatically change the labels of the pod with its current leader status. These labels 
+can be used to filter the pods.
+
+For example, select all pods that are Vault standbys:
 
 ```shell-session
-$ kubectl exec -ti <name of pod> -- vault status | grep "HA Mode"
+$ kubectl get pods -l vault-active=false
+```
+
+Select the active Vault pod:
+
+```shell-session
+$ kubectl get pods -l vault-active=true
 ```
 
 Next, delete every pod that is not the active primary:
