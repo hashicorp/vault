@@ -64,13 +64,12 @@
       {{else}}
         {{#if (eq @type "array")}}
           <InfoTableItemArray
+            @label={{@label}}
             @backend={{@backend}}
             @displayArray={{@value}}
             @isLink={{@isLink}}
-            @label={{@label}}
             @modelType={{@modelType}}
             @queryParam={{@queryParam}}
-            @viewAll={{@viewAll}}
             @wildcardLabel={{@wildcardLabel}}
             @rootRoute={{@rootRoute}}
             @itemRoute={{@itemRoute}}

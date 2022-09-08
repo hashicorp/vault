@@ -15,6 +15,7 @@ import { isWildcardString } from 'vault/helpers/is-wildcard-string';
  * @example
  * ```js
  * <InfoTableItemArray
+ * @label="Roles"
  * @displayArray={{['test-1','test-2','test-3']}}
  * @isLink={{true}}
  * @rootRoute="vault.cluster.secrets.backend.list-root"
@@ -22,18 +23,17 @@ import { isWildcardString } from 'vault/helpers/is-wildcard-string';
  * @modelType="transform/role"
  * @queryParam="role"
  * @backend="transform"
- * viewAll="roles"/>
  * ```
  *
- * @param displayArray=null {array} - The array of data to be displayed.  If there are more than 10 items in the array only five will show and a count of the other number in the array will show.
- * @param [isLink] {Boolean} - Indicates if the item should contain a link-to component.  Only setup for arrays, but this could be changed if needed.
- * @param [rootRoute="vault.cluster.secrets.backend.list-root"] - {string || array} - Tells what route the link should go to when selecting "view all". If the route requires more than one dynamic param, insert an array.
- * @param [itemRoute=vault.cluster.secrets.backend.show] - {string || array} - Tells what route the link should go to when selecting the individual item. If the route requires more than one dynamic param, insert an array.
- * @param [modelType] {string} - Tells which model you want data for the allOptions to be returned from.  Used in conjunction with the the isLink.
- * @param [wildcardLabel] {String} - when you want the component to return a count on the model for options returned when using a wildcard you must provide a label of the count e.g. role.  Should be singular.
- * @param [backend] {String} - To specify which backend to point the link to.
- * @param [viewAll] {String} - Specify the word at the end of the link View all "roles".
- * @param [doNotTruncate=false] {Boolean} - Determines whether to show the View all "roles" link.
+ * @param {string} label - used to render lowercased display text for "View all <label>."
+ * @param {array} displayArray - The array of data to be displayed. (In InfoTableRow this comes from the @value arg.) If the array length > 10, and @doNotTruncate is false only 5 will show with a count of the number hidden.
+ * @param {boolean} [isLink]  - Indicates if the item should contain a link-to component.  Only setup for arrays, but this could be changed if needed.
+ * @param {string || array} [rootRoute="vault.cluster.secrets.backend.list-root"] -  Tells what route the link should go to when selecting "view all". If the route requires more than one dynamic param, insert an array.
+ * @param {string || array} [itemRoute=vault.cluster.secrets.backend.show] - Tells what route the link should go to when selecting the individual item. If the route requires more than one dynamic param, insert an array.
+ * @param {string} [modelType]  - Tells which model you want data for the allOptions to be returned from.  Used in conjunction with the the isLink.
+ * @param {string} [wildcardLabel]  - when you want the component to return a count on the model for options returned when using a wildcard you must provide a label of the count e.g. role.  Should be singular.
+ * @param {string} [backend] - To specify which backend to point the link to.
+ * @param {boolean} [doNotTruncate=false] - Determines whether to show the View all "roles" link.
  */
 export default class InfoTableItemArray extends Component {
   @tracked allOptions = null;
@@ -48,20 +48,16 @@ export default class InfoTableItemArray extends Component {
     return this.args.itemRoute || 'vault.cluster.secrets.backend.show';
   }
 
-  get displayArray() {
-    return this.args.displayArray || null;
-  }
-
   get doNotTruncate() {
     return this.args.doNotTruncate || false;
   }
 
-  get displayArrayAmended() {
-    let { displayArray } = this;
+  get displayArrayTruncated() {
+    let { displayArray } = this.args;
     if (!displayArray) return null;
     if ((displayArray.length >= 10) & !this.args.doNotTruncate) {
       // if array greater than 10 in length only display the first 5
-      displayArray = displayArray.slice(0, 5);
+      return displayArray.slice(0, 5);
     }
     return displayArray;
   }

@@ -38,16 +38,15 @@
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
   <InfoTableRow @label="Name" @value={{this.model.name}} @alwaysRender={{true}} />
   <InfoTableRow @label="Issuer URL" @value={{this.model.issuer}} @addCopyButton={{true}} @alwaysRender={{true}} />
-  <InfoTableRow @label="Scopes">
-    {{#if (gt @model.scopesSupported.length 0)}}
-      {{#each @model.scopesSupported as |scope|}}
-        <LinkTo @route="vault.cluster.access.oidc.scopes.scope.details" @model={{scope}}>
-          {{scope}}
-        </LinkTo>
-        ,
-      {{/each}}
-    {{else}}
-      -
-    {{/if}}
-  </InfoTableRow>
+  <InfoTableRow
+    @label="Scopes"
+    @type="array"
+    @value={{@model.scopesSupported}}
+    @model={{@model}}
+    @isLink={{true}}
+    @modelType="oidc/scope"
+    @itemRoute={{"vault.cluster.access.oidc.scopes.scope.details"}}
+    @alwaysRender={{true}}
+    @doNotTruncate={{true}}
+  />
 </div>
