@@ -19,8 +19,8 @@ require (
 	cloud.google.com/go/spanner v1.5.1
 	cloud.google.com/go/storage v1.10.0
 	github.com/Azure/azure-storage-blob-go v0.14.0
-	github.com/Azure/go-autorest/autorest v0.11.21
-	github.com/Azure/go-autorest/autorest/adal v0.9.16
+	github.com/Azure/go-autorest/autorest v0.11.24
+	github.com/Azure/go-autorest/autorest/adal v0.9.18
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/SAP/go-hdb v0.14.1
 	github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a
@@ -67,7 +67,7 @@ require (
 	github.com/hashicorp/go-gcp-common v0.8.0
 	github.com/hashicorp/go-hclog v1.2.2
 	github.com/hashicorp/go-kms-wrapping v0.7.1
-	github.com/hashicorp/go-kms-wrapping/v2 v2.0.0
+	github.com/hashicorp/go-kms-wrapping/v2 v2.0.5
 	github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.0
 	github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2 v2.0.1
 	github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2 v2.0.0
@@ -184,7 +184,7 @@ require (
 	go.opentelemetry.io/otel/trace v0.20.0
 	go.uber.org/atomic v1.9.0
 	go.uber.org/goleak v1.1.12
-	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
+	golang.org/x/crypto v0.0.0-20220313003712-b769efc7c000
 	golang.org/x/net v0.0.0-20220722155237-a158d28d115b
 	golang.org/x/oauth2 v0.0.0-20220524215830-622c5d57e401
 	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f
@@ -212,8 +212,8 @@ require (
 	github.com/Azure/azure-sdk-for-go v62.0.0+incompatible // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
-	github.com/Azure/go-autorest/autorest/azure/auth v0.5.8 // indirect
-	github.com/Azure/go-autorest/autorest/azure/cli v0.4.4 // indirect
+	github.com/Azure/go-autorest/autorest/azure/auth v0.5.11 // indirect
+	github.com/Azure/go-autorest/autorest/azure/cli v0.4.5 // indirect
 	github.com/Azure/go-autorest/autorest/date v0.3.0 // indirect
 	github.com/Azure/go-autorest/autorest/to v0.4.0 // indirect
 	github.com/Azure/go-autorest/autorest/validation v0.3.1 // indirect
@@ -310,6 +310,8 @@ require (
 	github.com/hashicorp/cronexpr v1.1.1 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-kms-wrapping/entropy v0.1.0 // indirect
+	github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.1 // indirect
+	github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.1 // indirect
 	github.com/hashicorp/go-secure-stdlib/fileutil v0.1.0 // indirect
 	github.com/hashicorp/go-slug v0.7.0 // indirect
 	github.com/hashicorp/go-tfe v0.20.0 // indirect
@@ -317,6 +319,7 @@ require (
 	github.com/hashicorp/logutils v1.0.0 // indirect
 	github.com/hashicorp/mdns v1.0.4 // indirect
 	github.com/hashicorp/serf v0.9.7 // indirect
+	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.1.1 // indirect
 	github.com/hashicorp/vault/api/auth/kubernetes v0.2.0 // indirect
 	github.com/hashicorp/vic v1.5.1-0.20190403131502-bbfe86ec9443 // indirect
 	github.com/hashicorp/yamux v0.0.0-20211028200310-0bc27b27de87 // indirect

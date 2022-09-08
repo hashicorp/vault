@@ -1023,6 +1023,8 @@ github.com/hashicorp/go-kms-wrapping/entropy v0.1.0 h1:xuTi5ZwjimfpvpL09jDE71smC
 github.com/hashicorp/go-kms-wrapping/entropy v0.1.0/go.mod h1:d1g9WGtAunDNpek8jUIEJnBlbgKS1N2Q61QkHiZyR1g=
 github.com/hashicorp/go-kms-wrapping/v2 v2.0.0 h1:hKWzjzqfUi1HtpBEJ9tLKlRya1u6kRQGZAW9OFR+ia8=
 github.com/hashicorp/go-kms-wrapping/v2 v2.0.0/go.mod h1:H+TfVXu/Eyi6Ccs4EoT8pa3gR5lRh12sw4AOq6XkXCg=
+github.com/hashicorp/go-kms-wrapping/v2 v2.0.5 h1:rOFDv+3k05mnW0oaDLffhVUwg03Csn0mvfO98Wdd2bE=
+github.com/hashicorp/go-kms-wrapping/v2 v2.0.5/go.mod h1:sDQAfwJGv25uGPZA04x87ERglCG6avnRcBT9wYoMII8=
 github.com/hashicorp/go-kms-wrapping/v2 v2.0.6-0.20220722192355-a843f53fa48d h1:mOtPXWIp4cWKNt9S55IuYAdyUgNtCfUAEVIjcXDx59E=
 github.com/hashicorp/go-kms-wrapping/v2 v2.0.6-0.20220722192355-a843f53fa48d/go.mod h1:sDQAfwJGv25uGPZA04x87ERglCG6avnRcBT9wYoMII8=
 github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.0 h1:fcqS+xjtWjBKKFIo1Dx34frnQVtVgxbbyc9Lv/OwTbA=
@@ -1992,7 +1994,10 @@ golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97 h1:/UOmuWzQfxxo9UtlXMwuQU
 golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
 golang.org/x/crypto v0.0.0-20210817164053-32db794688a5/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
 golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
+golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3 h1:0es+/5331RGQPcXlMfP+WrnIIS6dNnNRe0WB02W0F4M=
 golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
+golang.org/x/crypto v0.0.0-20220313003712-b769efc7c000 h1:SL+8VVnkqyshUSz5iNnXtrBQzvFF2SkROm6t5RczFAE=
+golang.org/x/crypto v0.0.0-20220313003712-b769efc7c000/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
 golang.org/x/crypto v0.0.0-20220817201139-bc19a97f63c8 h1:GIAS/yBem/gq2MUqgNIzUHW7cJMmx3TGZOrnyYaNQ6c=
 golang.org/x/crypto v0.0.0-20220817201139-bc19a97f63c8/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
 golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
