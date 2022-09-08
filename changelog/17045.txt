@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/azure: Add documentation around permanently deleting Azure objects created by Vault.
+```
