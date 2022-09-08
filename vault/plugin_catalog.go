@@ -348,20 +348,14 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 
 	clientConn := rpcClient.(*plugin.GRPCClient).Conn
 
-	muxed, err := pluginutil.MultiplexingSupported(ctx, clientConn)
+	muxed, err := pluginutil.MultiplexingSupported(ctx, clientConn, config.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	if muxed {
-		// Wrap rpcClient with our implementation so that we can inject the
-		// ID into the context
-		pc.clientConn = &pluginClientConn{
-			ClientConn: clientConn,
-			id:         id,
-		}
-	} else {
-		pc.clientConn = clientConn
+	pc.clientConn = &pluginClientConn{
+		ClientConn: clientConn,
+		id:         id,
 	}
 
 	pc.ClientProtocol = rpcClient
@@ -429,14 +423,14 @@ func (c *PluginCatalog) getBackendPluginType(ctx context.Context, pluginRunner *
 	}
 
 	if attemptV4 {
-		c.logger.Debug("failed to dispense v5 backend plugin", "name", pluginRunner.Name, "error", err)
+		c.logger.Debug("failed to dispense v5 backend plugin", "name", pluginRunner.Name)
 		config.AutoMTLS = false
 		config.IsMetadataMode = true
 		// attempt to run as a v4 backend plugin
 		client, err = backendplugin.NewPluginClient(ctx, nil, pluginRunner, log.NewNullLogger(), true)
 		if err != nil {
-			c.logger.Debug("failed to dispense v4 backend plugin", "name", pluginRunner.Name, "error", err)
 			merr = multierror.Append(merr, fmt.Errorf("failed to dispense v4 backend plugin: %w", err))
+			c.logger.Debug("failed to dispense v4 backend plugin", "name", pluginRunner.Name, "error", merr)
 			return consts.PluginTypeUnknown, merr.ErrorOrNil()
 		}
 		c.logger.Debug("successfully dispensed v4 backend plugin", "name", pluginRunner.Name)

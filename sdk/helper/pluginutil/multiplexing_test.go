@@ -6,8 +6,81 @@ import (
 	"reflect"
 	"testing"
 
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
+
+func TestMultiplexingSupported(t *testing.T) {
+	type args struct {
+		ctx  context.Context
+		cc   grpc.ClientConnInterface
+		name string
+	}
+
+	type testCase struct {
+		name    string
+		args    args
+		env     string
+		want    bool
+		wantErr bool
+	}
+
+	tests := []testCase{
+		{
+			name: "multiplexing is supported if plugin is not opted out",
+			args: args{
+				ctx:  context.Background(),
+				cc:   &MockClientConnInterfaceNoop{},
+				name: "plugin",
+			},
+			env:  "",
+			want: true,
+		},
+		{
+			name: "multiplexing is not supported if plugin is opted out",
+			args: args{
+				ctx:  context.Background(),
+				cc:   &MockClientConnInterfaceNoop{},
+				name: "optedOutPlugin",
+			},
+			env:  "optedOutPlugin",
+			want: false,
+		},
+		{
+			name: "multiplexing is not supported if plugin among one of the opted out",
+			args: args{
+				ctx:  context.Background(),
+				cc:   &MockClientConnInterfaceNoop{},
+				name: "optedOutPlugin",
+			},
+			env:  "firstPlugin,optedOutPlugin,otherPlugin",
+			want: false,
+		},
+		{
+			name: "multiplexing is supported if different plugin is opted out",
+			args: args{
+				ctx:  context.Background(),
+				cc:   &MockClientConnInterfaceNoop{},
+				name: "plugin",
+			},
+			env:  "optedOutPlugin",
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(PluginMultiplexingOptOut, tt.env)
+			got, err := MultiplexingSupported(tt.args.ctx, tt.args.cc, tt.args.name)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("MultiplexingSupported() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("MultiplexingSupported() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
 
 func TestGetMultiplexIDFromContext(t *testing.T) {
 	type testCase struct {
@@ -70,4 +143,15 @@ func idCtx(t *testing.T, ids ...string) context.Context {
 		md.Append(MultiplexingCtxKey, id)
 	}
 	return metadata.NewIncomingContext(ctx, md)
+}
+
+type MockClientConnInterfaceNoop struct{}
+
+func (m *MockClientConnInterfaceNoop) Invoke(_ context.Context, _ string, _ interface{}, reply interface{}, _ ...grpc.CallOption) error {
+	reply.(*MultiplexingSupportResponse).Supported = true
+	return nil
+}
+
+func (m *MockClientConnInterfaceNoop) NewStream(_ context.Context, _ *grpc.StreamDesc, _ string, _ ...grpc.CallOption) (grpc.ClientStream, error) {
+	return nil, nil
 }

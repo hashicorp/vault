@@ -1145,13 +1145,19 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		Version:               version,
 	}
 
+	// Detect and handle deprecated secrets engines
+	resp, err := b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeSecrets)
+	if err != nil {
+		return handleError(err)
+	}
+
 	// Attempt mount
 	if err := b.Core.mount(ctx, me); err != nil {
 		b.Backend.Logger().Error("error occurred during enable mount", "path", me.Path, "error", err)
 		return handleError(err)
 	}
 
-	return nil, nil
+	return resp, nil
 }
 
 func (b *SystemBackend) handleReadMount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -2385,12 +2391,17 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		Version:               version,
 	}
 
+	resp, err := b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeCredential)
+	if err != nil {
+		return handleError(err)
+	}
+
 	// Attempt enabling
 	if err := b.Core.enableCredential(ctx, me); err != nil {
 		b.Backend.Logger().Error("error occurred during enable credential", "path", me.Path, "error", err)
 		return handleError(err)
 	}
-	return nil, nil
+	return resp, nil
 }
 
 // handleDisableAuth is used to disable a credential backend
@@ -4241,20 +4252,22 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 }
 
 type SealStatusResponse struct {
-	Type         string `json:"type"`
-	Initialized  bool   `json:"initialized"`
-	Sealed       bool   `json:"sealed"`
-	T            int    `json:"t"`
-	N            int    `json:"n"`
-	Progress     int    `json:"progress"`
-	Nonce        string `json:"nonce"`
-	Version      string `json:"version"`
-	BuildDate    string `json:"build_date"`
-	Migration    bool   `json:"migration"`
-	ClusterName  string `json:"cluster_name,omitempty"`
-	ClusterID    string `json:"cluster_id,omitempty"`
-	RecoverySeal bool   `json:"recovery_seal"`
-	StorageType  string `json:"storage_type,omitempty"`
+	Type              string `json:"type"`
+	Initialized       bool   `json:"initialized"`
+	Sealed            bool   `json:"sealed"`
+	T                 int    `json:"t"`
+	N                 int    `json:"n"`
+	Progress          int    `json:"progress"`
+	Nonce             string `json:"nonce"`
+	Version           string `json:"version"`
+	BuildDate         string `json:"build_date"`
+	Migration         bool   `json:"migration"`
+	ClusterName       string `json:"cluster_name,omitempty"`
+	ClusterID         string `json:"cluster_id,omitempty"`
+	RecoverySeal      bool   `json:"recovery_seal"`
+	StorageType       string `json:"storage_type,omitempty"`
+	HCPLinkStatus     string `json:"hcp_link_status,omitempty"`
+	HCPLinkResourceID string `json:"hcp_link_resource_ID,omitempty"`
 }
 
 func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error) {
@@ -4275,8 +4288,10 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		return nil, err
 	}
 
+	hcpLinkStatus, resourceIDonHCP := core.GetHCPLinkStatus()
+
 	if sealConfig == nil {
-		return &SealStatusResponse{
+		s := &SealStatusResponse{
 			Type:         core.SealAccess().BarrierType().String(),
 			Initialized:  initialized,
 			Sealed:       true,
@@ -4284,7 +4299,14 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 			StorageType:  core.StorageType(),
 			Version:      version.GetVersion().VersionNumber(),
 			BuildDate:    version.BuildDate,
-		}, nil
+		}
+
+		if resourceIDonHCP != "" {
+			s.HCPLinkStatus = hcpLinkStatus
+			s.HCPLinkResourceID = resourceIDonHCP
+		}
+
+		return s, nil
 	}
 
 	// Fetch the local cluster name and identifier
@@ -4303,7 +4325,7 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 
 	progress, nonce := core.SecretProgress()
 
-	return &SealStatusResponse{
+	s := &SealStatusResponse{
 		Type:         sealConfig.Type,
 		Initialized:  initialized,
 		Sealed:       sealed,
@@ -4318,7 +4340,14 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		ClusterID:    clusterID,
 		RecoverySeal: core.SealAccess().RecoveryKeySupported(),
 		StorageType:  core.StorageType(),
-	}, nil
+	}
+
+	if resourceIDonHCP != "" {
+		s.HCPLinkStatus = hcpLinkStatus
+		s.HCPLinkResourceID = resourceIDonHCP
+	}
+
+	return s, nil
 }
 
 type LeaderResponse struct {

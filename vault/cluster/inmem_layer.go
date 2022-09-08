@@ -126,7 +126,7 @@ func (l *InmemLayer) Dial(addr string, timeout time.Duration, tlsConfig *tls.Con
 	}
 
 	if l.logger.IsDebug() {
-		l.logger.Debug("dailing connection", "node", l.addr, "remote", addr, "alpn", alpn)
+		l.logger.Debug("dialing connection", "node", l.addr, "remote", addr, "alpn", alpn)
 	}
 
 	if connectionCh != nil {

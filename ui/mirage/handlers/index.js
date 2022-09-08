@@ -8,5 +8,6 @@ import kms from './kms';
 import mfaConfig from './mfa-config';
 import mfaLogin from './mfa-login';
 import oidcConfig from './oidc-config';
+import hcpLink from './hcp-link';
 
-export { base, activity, clients, db, kms, mfaConfig, mfaLogin, oidcConfig };
+export { base, activity, clients, db, kms, mfaConfig, mfaLogin, oidcConfig, hcpLink };
