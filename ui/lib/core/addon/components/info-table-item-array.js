@@ -48,20 +48,16 @@ export default class InfoTableItemArray extends Component {
     return this.args.itemRoute || 'vault.cluster.secrets.backend.show';
   }
 
-  get displayArray() {
-    return this.args.displayArray || null;
-  }
-
   get doNotTruncate() {
     return this.args.doNotTruncate || false;
   }
 
   get displayArrayTruncated() {
-    let { displayArray } = this;
+    let { displayArray } = this.args;
     if (!displayArray) return null;
     if ((displayArray.length >= 10) & !this.args.doNotTruncate) {
       // if array greater than 10 in length only display the first 5
-      displayArray = displayArray.slice(0, 5);
+      return displayArray.slice(0, 5);
     }
     return displayArray;
   }

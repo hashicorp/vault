@@ -45,15 +45,15 @@
             ,&nbsp;
           {{/if}}
           {{#unless this.doNotTruncate}}
-            {{#if (and (eq name this.displayArrayTruncated.lastObject) (gte this.displayArray.length 10))}}
+            {{#if (and (eq name this.displayArrayTruncated.lastObject) (gte @displayArray.length 10))}}
               {{! dec is a math helper that decrements by 5 the length of the array ex: 11-5 = "and 6 others."}}
-              <span data-test-and={{dec 5 this.displayArray.length}}>
+              <span data-test-and={{dec 5 @displayArray.length}}>
                 &nbsp;and
-                {{dec 5 this.displayArray.length}}
+                {{dec 5 @displayArray.length}}
                 others.&nbsp;
               </span>
             {{/if}}
-            {{#if (and (eq name this.displayArrayTruncated.lastObject) (gte this.displayArray.length 10))}}
+            {{#if (and (eq name this.displayArrayTruncated.lastObject) (gte @displayArray.length 10))}}
               {{#if (is-array @rootRoute)}}
                 <LinkTo @route={{(get @rootRoute "0")}} @model={{(get @rootRoute "1")}}>
                   <span data-test-view-all={{lowercase @label}}>View all {{lowercase @label}}.</span>
