@@ -58,8 +58,8 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/google/tink/go v1.6.1
-	github.com/hashicorp/cap v0.1.1
-	github.com/hashicorp/consul-template v0.27.0
+	github.com/hashicorp/cap v0.2.1-0.20220727210936-60cd1534e220
+	github.com/hashicorp/consul-template v0.29.2
 	github.com/hashicorp/consul/api v1.14.0
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
@@ -67,12 +67,14 @@ require (
 	github.com/hashicorp/go-gcp-common v0.8.0
 	github.com/hashicorp/go-hclog v1.2.2
 	github.com/hashicorp/go-kms-wrapping v0.7.1
-	github.com/hashicorp/go-kms-wrapping/v2 v2.0.5
-	github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.0
+	github.com/hashicorp/go-kms-wrapping/v2 v2.0.6-0.20220722192355-a843f53fa48d
+	github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.4
 	github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2 v2.0.1
 	github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2 v2.0.0
+	github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.1
 	github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2 v2.0.0
 	github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2 v2.0.0
+	github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.1
 	github.com/hashicorp/go-memdb v1.3.3
 	github.com/hashicorp/go-msgpack v1.1.5
 	github.com/hashicorp/go-multierror v1.1.1
@@ -84,7 +86,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/base62 v0.1.2
 	github.com/hashicorp/go-secure-stdlib/gatedwriter v0.1.1
 	github.com/hashicorp/go-secure-stdlib/kv-builder v0.1.2
-	github.com/hashicorp/go-secure-stdlib/mlock v0.1.1
+	github.com/hashicorp/go-secure-stdlib/mlock v0.1.2
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.6
 	github.com/hashicorp/go-secure-stdlib/password v0.1.1
 	github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1
@@ -103,24 +105,25 @@ require (
 	github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c
 	github.com/hashicorp/raft-snapshot v1.0.4
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.12.0
-	github.com/hashicorp/vault-plugin-auth-azure v0.9.2
+	github.com/hashicorp/vault-plugin-auth-azure v0.11.0
 	github.com/hashicorp/vault-plugin-auth-centrify v0.12.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.12.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.13.2-0.20220722185016-9e4fddb995e5
-	github.com/hashicorp/vault-plugin-auth-jwt v0.13.1
+	github.com/hashicorp/vault-plugin-auth-jwt v0.13.2-0.20220728183411-0edf6ecc0b37
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.7.3
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.12.1
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.13.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.11.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.7.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.11.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.7.0
-	github.com/hashicorp/vault-plugin-database-snowflake v0.3.0
+	github.com/hashicorp/vault-plugin-database-snowflake v0.5.1
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.13.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.12.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.13.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.6.6-0.20220617175110-38223d8fabc9
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.7-0.20220617175201-b16d1500db6e
+	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.1.1
 	github.com/hashicorp/vault-plugin-secrets-kv v0.12.1
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.7.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.8.0
@@ -184,12 +187,12 @@ require (
 	go.opentelemetry.io/otel/trace v0.20.0
 	go.uber.org/atomic v1.9.0
 	go.uber.org/goleak v1.1.12
-	golang.org/x/crypto v0.0.0-20220313003712-b769efc7c000
-	golang.org/x/net v0.0.0-20220722155237-a158d28d115b
+	golang.org/x/crypto v0.0.0-20220817201139-bc19a97f63c8
+	golang.org/x/net v0.0.0-20220607020251-c690dde0001d
 	golang.org/x/oauth2 v0.0.0-20220524215830-622c5d57e401
-	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f
+	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
-	golang.org/x/tools v0.1.9
+	golang.org/x/tools v0.1.5
 	google.golang.org/api v0.83.0
 	google.golang.org/grpc v1.47.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
@@ -244,7 +247,6 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/speakeasy v0.1.0 // indirect
 	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
-	github.com/briankassouf/jose v0.9.2-0.20180619214549-d2569464773f // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cenkalti/backoff/v4 v4.1.1 // indirect
 	github.com/centrify/cloud-golang-sdk v0.0.0-20210923165758-a8c48d049166 // indirect
@@ -310,8 +312,6 @@ require (
 	github.com/hashicorp/cronexpr v1.1.1 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-kms-wrapping/entropy v0.1.0 // indirect
-	github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.1 // indirect
-	github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.1 // indirect
 	github.com/hashicorp/go-secure-stdlib/fileutil v0.1.0 // indirect
 	github.com/hashicorp/go-slug v0.7.0 // indirect
 	github.com/hashicorp/go-tfe v0.20.0 // indirect
@@ -319,7 +319,6 @@ require (
 	github.com/hashicorp/logutils v1.0.0 // indirect
 	github.com/hashicorp/mdns v1.0.4 // indirect
 	github.com/hashicorp/serf v0.9.7 // indirect
-	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.1.1 // indirect
 	github.com/hashicorp/vault/api/auth/kubernetes v0.2.0 // indirect
 	github.com/hashicorp/vic v1.5.1-0.20190403131502-bbfe86ec9443 // indirect
 	github.com/hashicorp/yamux v0.0.0-20211028200310-0bc27b27de87 // indirect
@@ -380,7 +379,7 @@ require (
 	github.com/renier/xmlrpc v0.0.0-20170708154548-ce4a1a486c03 // indirect
 	github.com/rogpeppe/go-internal v1.8.1 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
-	github.com/snowflakedb/gosnowflake v1.6.1 // indirect
+	github.com/snowflakedb/gosnowflake v1.6.3 // indirect
 	github.com/softlayer/softlayer-go v0.0.0-20180806151055-260589d94c7d // indirect
 	github.com/sony/gobreaker v0.4.2-0.20210216022020-dd874f9dd33b // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
@@ -406,8 +405,8 @@ require (
 	go.opentelemetry.io/otel/metric v0.20.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.1 // indirect
-	golang.org/x/mod v0.6.0-dev // indirect
-	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
+	golang.org/x/mod v0.4.2 // indirect
+	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20220411224347-583f2d630306 // indirect
 	golang.org/x/xerrors v0.0.0-20220517211312-f3a8303e98df // indirect
