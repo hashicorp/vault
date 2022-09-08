@@ -6,6 +6,7 @@ import ENV from 'vault/config/environment';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import { create } from 'ember-cli-page-object';
+import { clickTrigger, selectChoose } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
 import fm from 'vault/tests/pages/components/flash-message';
 import {
@@ -229,8 +230,8 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       'navigates to provider create form'
     );
     await fillIn('[data-test-input="name"]', 'test-provider');
-    await click('[data-test-component="search-select"]#scopesSupported .ember-basic-dropdown-trigger');
-    await searchSelect.options.objectAt(0).click();
+    await clickTrigger('#scopesSupported');
+    await selectChoose('#scopesSupported', 'test-scope');
     await click(SELECTORS.providerSaveButton);
     assert.equal(
       flashMessage.latestMessage,
@@ -342,8 +343,8 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     assert.dom('[data-test-tab="providers"]').hasClass('active', 'providers tab is active');
     assert.equal(currentURL(), '/vault/access/oidc/providers');
     assert
-      .dom('[data-test-oidc-provider-linked-block]')
-      .hasTextContaining('default', 'index page lists default provider');
+      .dom('[data-test-oidc-provider-linked-block="default"]')
+      .exists('index page lists default provider');
     await click('[data-test-popup-menu-trigger]');
 
     await click('[data-test-oidc-provider-menu-link="edit"]');
@@ -366,7 +367,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       'vault.cluster.access.oidc.providers.index',
       'providers breadcrumb navigates back to list view'
     );
-    await click('[data-test-popup-menu-trigger]');
+    await click('[data-test-oidc-provider-linked-block="default"] [data-test-popup-menu-trigger]');
     await click('[data-test-oidc-provider-menu-link="details"]');
     assert.dom(SELECTORS.providerDeleteButton).isDisabled('delete button is disabled for default provider');
   });

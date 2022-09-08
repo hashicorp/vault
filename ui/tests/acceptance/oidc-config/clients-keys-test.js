@@ -178,7 +178,7 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
   });
 
   test('it creates, rotates and deletes a key', async function (assert) {
-    assert.expect(12);
+    assert.expect(10);
     // mock client list so OIDC url does not redirect to landing page
     this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
     this.server.post('/identity/oidc/key/test-key/rotate', (schema, req) => {
@@ -258,9 +258,7 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
       'navigates to client providers route'
     );
     assert.dom(SELECTORS.clientProvidersTab).hasClass('active', 'providers tab is active');
-    assert
-      .dom('[data-test-oidc-provider-linked-block]')
-      .hasTextContaining('default', 'shows default provider');
+    assert.dom('[data-test-oidc-provider-linked-block="default"]').exists('lists default provider');
   });
 
   test('it hides delete and edit client when no permission', async function (assert) {
