@@ -20,12 +20,27 @@ func TestSplit_invalid(t *testing.T) {
 		t.Fatalf("expect error")
 	}
 
-	if _, err := Split(secret, 10, 1); err == nil {
-		t.Fatalf("expect error")
-	}
-
 	if _, err := Split(nil, 3, 2); err == nil {
 		t.Fatalf("expect error")
+	}
+}
+
+func TestSplit_single(t *testing.T) {
+	secret := []byte("test")
+
+	out, err := Split(secret, 5, 1)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if len(out) != 5 {
+		t.Fatalf("bad: %v", out)
+	}
+
+	for _, share := range out {
+		if len(share) != len(secret)+1 {
+			t.Fatalf("bad: %v", out)
+		}
 	}
 }
 
@@ -78,6 +93,29 @@ func TestCombine_invalid(t *testing.T) {
 	}
 	if _, err := Combine(parts); err == nil {
 		t.Fatalf("should err")
+	}
+}
+
+func TestCombine_single(t *testing.T) {
+	secret := []byte("test")
+
+	out, err := Split(secret, 5, 1)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// All of the parts should be able to "combine"
+	for i := 0; i < 5; i++ {
+		parts := [][]byte{out[i]}
+		recomb, err := Combine(parts)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		if !bytes.Equal(recomb, secret) {
+			t.Errorf("parts: (i:%d) %v", i, parts)
+			t.Fatalf("bad: %v %v", recomb, secret)
+		}
 	}
 }
 

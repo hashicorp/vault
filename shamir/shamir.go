@@ -132,8 +132,8 @@ func Split(secret []byte, parts, threshold int) ([][]byte, error) {
 	if parts > 255 {
 		return nil, fmt.Errorf("parts cannot exceed 255")
 	}
-	if threshold < 2 {
-		return nil, fmt.Errorf("threshold must be at least 2")
+	if threshold < 1 {
+		return nil, fmt.Errorf("threshold must be at least 1")
 	}
 	if threshold > 255 {
 		return nil, fmt.Errorf("threshold cannot exceed 255")
@@ -182,9 +182,9 @@ func Split(secret []byte, parts, threshold int) ([][]byte, error) {
 // Combine is used to reverse a Split and reconstruct a secret
 // once a `threshold` number of parts are available.
 func Combine(parts [][]byte) ([]byte, error) {
-	// Verify enough parts provided
-	if len(parts) < 2 {
-		return nil, fmt.Errorf("less than two parts cannot be used to reconstruct the secret")
+	// Verify some parts provided
+	if len(parts) < 1 {
+		return nil, fmt.Errorf("no parts cannot be used to reconstruct the secret")
 	}
 
 	// Verify the parts are all the same length
