@@ -198,13 +198,16 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
       'vault.cluster.access.oidc.index',
       'redirects to call to action if only existing client is deleted'
     );
-    //* clear out test state
+    //* clean up test state
     await clearRecord(this.store, 'oidc/assignment', 'assignment-inline');
   });
 
   test('it creates, updates, and deletes an assignment', async function (assert) {
     assert.expect(12);
     await visit(OIDC_BASE_URL + '/assignments');
+
+    //* ensure clean test state
+    await clearRecord(this.store, 'oidc/assignment', 'test-assignment');
 
     // create a new assignment
     await click(SELECTORS.assignmentCreateButton);
@@ -313,7 +316,7 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
     assert.equal(
       currentRouteName(),
       'vault.cluster.access.oidc.assignments.assignment.details',
-      'popup menu navigates to details'
+      'popup menu navigates to assignment details'
     );
   });
 
