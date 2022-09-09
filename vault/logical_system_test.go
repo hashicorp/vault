@@ -3000,7 +3000,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 		"sha256":             "",
 		"builtin":            true,
 		"version":            c.pluginCatalog.getBuiltinVersion(consts.PluginTypeDatabase, "mysql-database-plugin"),
-		"deprecation_status": deprecationStatus,
+		"deprecation_status": deprecationStatus.String(),
 	}
 	if !reflect.DeepEqual(actualRespData, expectedRespData) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actualRespData, expectedRespData)
