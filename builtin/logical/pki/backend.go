@@ -658,8 +658,8 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 	b.possibleDoubleCountedRevokedSerials = nil
 	b.possibleDoubleCountedSerials = nil
 
-	metrics.SetGauge([]string{"secrets", "pki", "total_certificates_stored"}, float32(*b.certCount))
-	metrics.SetGauge([]string{"secrets", "pki", "total_revoked_certificates_stored"}, float32(*b.revokedCertCount))
+	metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_certificates_stored"}, float32(*b.certCount))
+	metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_revoked_certificates_stored"}, float32(*b.revokedCertCount))
 
 	return nil
 }
@@ -676,13 +676,13 @@ func (b *backend) incrementTotalCertificatesCount(certsCounted bool, newSerial s
 		}
 		b.possibleDoubleCountedSerials = append(b.possibleDoubleCountedSerials, newSerial)
 	default:
-		metrics.SetGauge([]string{"secrets", "pki", "total_certificates_stored"}, float32(*b.certCount))
+		metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_certificates_stored"}, float32(*b.certCount))
 	}
 }
 
 func (b *backend) decrementTotalCertificatesCountReport() {
 	b.decrementTotalCertificatesCountNoReport()
-	metrics.SetGauge([]string{"secrets", "pki", "total_certificates_stored"}, float32(*b.certCount))
+	metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_certificates_stored"}, float32(*b.certCount))
 }
 
 // Called directly only by the initialize function to deduplicate the count, when we don't have a full count yet
@@ -702,13 +702,13 @@ func (b *backend) incrementTotalRevokedCertificatesCount(certsCounted bool, newS
 		}
 		b.possibleDoubleCountedRevokedSerials = append(b.possibleDoubleCountedRevokedSerials, newSerial)
 	default:
-		metrics.SetGauge([]string{"secrets", "pki", "total_revoked_certificates_stored"}, float32(*b.revokedCertCount))
+		metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_revoked_certificates_stored"}, float32(*b.revokedCertCount))
 	}
 }
 
 func (b *backend) decrementTotalRevokedCertificatesCountReport() {
 	b.decrementTotalRevokedCertificatesCountNoReport()
-	metrics.SetGauge([]string{"secrets", "pki", "total_revoked_certificates_stored"}, float32(*b.revokedCertCount))
+	metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_revoked_certificates_stored"}, float32(*b.revokedCertCount))
 }
 
 // Called directly only by the initialize function to deduplicate the count, when we don't have a full count yet

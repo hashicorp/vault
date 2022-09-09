@@ -3823,16 +3823,28 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 
 	// Check the cert-count metrics
 	expectedCertCountGaugeMetrics := map[string]float32{
-		"secrets.pki.total_revoked_certificates_stored": 1,
-		"secrets.pki.total_certificates_stored":         1,
+		"total_revoked_certificates_stored": 1,
+		"total_certificates_stored":         1,
 	}
+	backendUUID := ""
 	mostRecentInterval := inmemSink.Data()[len(inmemSink.Data())-1]
 	for gauge, value := range expectedCertCountGaugeMetrics {
-		if _, ok := mostRecentInterval.Gauges[gauge]; !ok {
-			t.Fatalf("Expected metrics to include a value for gauge %s", gauge)
+		expandedGaugeName := ""
+		for _, createdGauge := range mostRecentInterval.Gauges {
+			if strings.HasSuffix(createdGauge.Name, gauge) {
+				expandedGaugeName = createdGauge.Name
+				backendUUID = strings.Split(expandedGaugeName, ".")[2]
+				break
+			}
 		}
-		if value != mostRecentInterval.Gauges[gauge].Value {
-			t.Fatalf("Expected value metric %s to be %f but got %f", gauge, value, mostRecentInterval.Gauges[gauge].Value)
+		if expandedGaugeName == "" {
+			t.Fatalf("No Gauge Found ending with %s", gauge)
+		}
+		if _, ok := mostRecentInterval.Gauges[expandedGaugeName]; !ok {
+			t.Fatalf("Expected metrics to include a value for gauge %s", expandedGaugeName)
+		}
+		if value != mostRecentInterval.Gauges[expandedGaugeName].Value {
+			t.Fatalf("Expected value metric %s to be %f but got %f", expandedGaugeName, value, mostRecentInterval.Gauges[expandedGaugeName].Value)
 		}
 	}
 
@@ -3926,15 +3938,15 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	{
 		// Map of gauges to expected value
 		expectedGauges := map[string]float32{
-			"secrets.pki.tidy.cert_store_current_entry":             0,
-			"secrets.pki.tidy.cert_store_total_entries":             1,
-			"secrets.pki.tidy.revoked_cert_current_entry":           0,
-			"secrets.pki.tidy.revoked_cert_total_entries":           1,
-			"secrets.pki.tidy.start_time_epoch":                     0,
-			"secrets.pki.total_certificates_stored":                 0,
-			"secrets.pki.total_revoked_certificates_stored":         0,
-			"secrets.pki.tidy.cert_store_total_entries_remaining":   0,
-			"secrets.pki.tidy.revoked_cert_total_entries_remaining": 0,
+			"secrets.pki.tidy.cert_store_current_entry":                         0,
+			"secrets.pki.tidy.cert_store_total_entries":                         1,
+			"secrets.pki.tidy.revoked_cert_current_entry":                       0,
+			"secrets.pki.tidy.revoked_cert_total_entries":                       1,
+			"secrets.pki.tidy.start_time_epoch":                                 0,
+			"secrets.pki." + backendUUID + ".total_certificates_stored":         0,
+			"secrets.pki." + backendUUID + ".total_revoked_certificates_stored": 0,
+			"secrets.pki.tidy.cert_store_total_entries_remaining":               0,
+			"secrets.pki.tidy.revoked_cert_total_entries_remaining":             0,
 		}
 		// Map of counters to the sum of the metrics for that counter
 		expectedCounters := map[string]float64{
