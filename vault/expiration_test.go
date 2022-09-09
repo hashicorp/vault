@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"reflect"
 	"sort"
 	"strings"
@@ -27,6 +26,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
+	"github.com/sasha-s/go-deadlock"
 )
 
 var testImagePull sync.Once
@@ -3499,22 +3499,50 @@ func TestExpiration_listIrrevocableLeases_includeAll(t *testing.T) {
 	}
 }
 
-// The deadlock detection library will print out its detection and os.exit(3).
-// Here we invoke it in a separate process to capture the output and allow it
-// to exit
-func TestDeadlockExit(t *testing.T) {
-	if os.Getenv("TEST_DEADLOCK_WITH_EXIT") == "1" {
-		testCore, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{DetectDeadlocks: "statelock"})
-		coreStateLock := testCore.expiration.coreStateLock
-		go coreStateLock.Lock()
-		go coreStateLock.Lock()
-		return
+func InduceDeadlock(t *testing.T, vaultcore *Core, expected uint32) {
+	defer RestoreDeadlockOpts()()
+	var deadlocks uint32
+	deadlock.Opts.OnPotentialDeadlock = func() {
+		atomic.AddUint32(&deadlocks, 1)
 	}
-	cmd, serr := exec.Command(os.Args[0], "test", "-run=TestDeadlockExit"), new(strings.Builder)
-	cmd.Env = append(os.Environ(), "TEST_DEADLOCK_WITH_EXIT=1")
-	cmd.Stderr = serr
-	cmd.Run()
-	if !strings.Contains(serr.String(), "POTENTIAL DEADLOCK:") {
-		t.Fatalf("Intentionally induced deadlock was not caught")
+	var mtx deadlock.Mutex
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		vaultcore.expiration.coreStateLock.Lock()
+		mtx.Lock()
+		mtx.Unlock()
+		vaultcore.expiration.coreStateLock.Unlock()
+	}()
+	wg.Wait()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		mtx.Lock()
+		vaultcore.expiration.coreStateLock.RLock()
+		vaultcore.expiration.coreStateLock.RUnlock()
+		mtx.Unlock()
+	}()
+	wg.Wait()
+	if atomic.LoadUint32(&deadlocks) != expected {
+		t.Fatalf("expected 1 deadlock, detected %d", deadlocks)
+	}
+}
+
+func TestDetectedDeadlock(t *testing.T) {
+	testCore, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{DetectDeadlocks: "statelock"})
+	InduceDeadlock(t, testCore, 1)
+}
+
+func TestDefaultDeadlock(t *testing.T) {
+	testCore, _, _ := TestCoreUnsealed(t)
+	InduceDeadlock(t, testCore, 0)
+}
+
+func RestoreDeadlockOpts() func() {
+	opts := deadlock.Opts
+	return func() {
+		deadlock.Opts = opts
 	}
 }
