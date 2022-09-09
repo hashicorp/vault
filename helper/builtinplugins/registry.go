@@ -13,6 +13,7 @@ import (
 	dbCouchbase "github.com/hashicorp/vault-plugin-database-couchbase"
 	dbElastic "github.com/hashicorp/vault-plugin-database-elasticsearch"
 	dbMongoAtlas "github.com/hashicorp/vault-plugin-database-mongodbatlas"
+	dbRedis "github.com/hashicorp/vault-plugin-database-redis"
 	dbRedisElastiCache "github.com/hashicorp/vault-plugin-database-redis-elasticache"
 	dbSnowflake "github.com/hashicorp/vault-plugin-database-snowflake"
 	logicalAd "github.com/hashicorp/vault-plugin-secrets-ad/plugin"
@@ -132,8 +133,9 @@ func newRegistry() *registry {
 			"mongodbatlas-database-plugin":      {Factory: dbMongoAtlas.New},
 			"mssql-database-plugin":             {Factory: dbMssql.New},
 			"postgresql-database-plugin":        {Factory: dbPostgres.New},
-			"redis-elasticache-database-plugin": {Factory: dbRedisElastiCache.New},
 			"redshift-database-plugin":          {Factory: dbRedshift.New},
+			"redis-database-plugin":             {Factory: dbRedis.New},
+			"redis-elasticache-database-plugin": {Factory: dbRedisElastiCache.New},
 			"snowflake-database-plugin":         {Factory: dbSnowflake.New},
 		},
 		logicalBackends: map[string]logicalBackend{

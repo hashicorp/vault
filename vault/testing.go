@@ -513,7 +513,7 @@ func TestDynamicSystemView(c *Core, ns *namespace.Namespace) *dynamicSystemView 
 
 // TestAddTestPlugin registers the testFunc as part of the plugin command to the
 // plugin catalog. If provided, uses tmpDir as the plugin directory.
-func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.PluginType, testFunc string, env []string, tempDir string) {
+func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.PluginType, version string, testFunc string, env []string, tempDir string) {
 	file, err := os.Open(os.Args[0])
 	if err != nil {
 		t.Fatal(err)
@@ -575,7 +575,6 @@ func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.Plug
 	c.pluginCatalog.directory = fullPath
 
 	args := []string{fmt.Sprintf("--test.run=%s", testFunc)}
-	version := ""
 	err = c.pluginCatalog.Set(context.Background(), name, pluginType, version, fileName, args, env, sum)
 	if err != nil {
 		t.Fatal(err)
@@ -2296,6 +2295,7 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 			"postgresql-database-plugin",
 			"redis-elasticache-database-plugin",
 			"redshift-database-plugin",
+			"redis-database-plugin",
 			"snowflake-database-plugin",
 		}
 	case consts.PluginTypeCredential:

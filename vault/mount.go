@@ -306,7 +306,7 @@ const mountStateUnmounting = "unmounting"
 type MountEntry struct {
 	Table                 string            `json:"table"`                             // The table it belongs to
 	Path                  string            `json:"path"`                              // Mount Path
-	Type                  string            `json:"type"`                              // Logical backend Type
+	Type                  string            `json:"type"`                              // Logical backend Type. NB: This is the plugin name, e.g. my-vault-plugin, NOT plugin type (e.g. auth).
 	Description           string            `json:"description"`                       // User-provided description
 	UUID                  string            `json:"uuid"`                              // Barrier view UUID
 	BackendAwareUUID      string            `json:"backend_aware_uuid"`                // UUID that can be used by the backend as a helper when a consistent value is needed outside of storage.
@@ -330,9 +330,9 @@ type MountEntry struct {
 	synthesizedConfigCache sync.Map
 
 	// version info
-	Version        string `json:"version,omitempty"`
-	Sha            string `json:"sha,omitempty"`
-	RunningVersion string `json:"running_version,omitempty"`
+	Version        string `json:"version,omitempty"`         // The semantic version of the mounted plugin, e.g. v1.2.3.
+	Sha            string `json:"sha,omitempty"`             // The SHA256 sum of the plugin binary.
+	RunningVersion string `json:"running_version,omitempty"` // The semantic version of the mounted plugin as reported by the plugin.
 	RunningSha     string `json:"running_sha,omitempty"`
 }
 
@@ -1526,7 +1526,11 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 			return nil, err
 		}
 		if plug == nil {
-			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, t)
+			errContext := t
+			if entry.Version != "" {
+				errContext += fmt.Sprintf(", version=%s", entry.Version)
+			}
+			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, errContext)
 		}
 
 		f = plugin.Factory
@@ -1548,6 +1552,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	}
 
 	conf["plugin_type"] = consts.PluginTypeSecrets.String()
+	conf["plugin_version"] = entry.Version
 
 	backendLogger := c.baseLogger.Named(fmt.Sprintf("secrets.%s.%s", t, entry.Accessor))
 	c.AddLogger(backendLogger)
