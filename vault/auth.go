@@ -916,7 +916,11 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 			return nil, err
 		}
 		if plug == nil {
-			return nil, fmt.Errorf("%w: %s, version=%s", ErrPluginNotFound, t, entry.Version)
+			errContext := t
+			if entry.Version != "" {
+				errContext += fmt.Sprintf(", version=%s", entry.Version)
+			}
+			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, errContext)
 		}
 
 		f = plugin.Factory
