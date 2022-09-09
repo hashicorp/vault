@@ -36,9 +36,10 @@ import { action } from '@ember/object';
  * @param {boolean} [renderItemName=false] - If true renders the item name instead of its id
  */
 export default class InfoTableItemArray extends Component {
+  @service store;
   @tracked allOptions = null;
   @tracked itemNameById; // object is only created if renderItemName=true
-  @service store;
+  @tracked fetchComplete = false;
 
   get rootRoute() {
     return this.args.rootRoute || 'vault.cluster.secrets.backend.list-root';
@@ -82,6 +83,6 @@ export default class InfoTableItemArray extends Component {
         });
       }
     }
-    return await this.store.query(this.args.modelType, {});
+    this.fetchComplete = true;
   }
 }
