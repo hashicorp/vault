@@ -1,3 +1,3 @@
 import Route from '@ember/routing/route';
 
-export default class CertificatesRoute extends Route {}
+export default class PkiCertificatesRoute extends Route {}
