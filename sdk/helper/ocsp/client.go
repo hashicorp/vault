@@ -108,7 +108,7 @@ type Client struct {
 	caRoot map[string]*x509.Certificate
 	// certPOol includes the CA certificates.
 	certPool              *x509.CertPool
-	ocspResponseCache     map[certIDKey]ocspCachedResponse
+	ocspResponseCache     map[certIDKey]*ocspCachedResponse
 	ocspResponseCacheLock sync.RWMutex
 	// cacheUpdated is true if the memory cache is updated
 	cacheUpdated bool
@@ -302,7 +302,7 @@ func (c *Client) checkOCSPResponseCache(encodedCertID *certIDKey, subject, issue
 	gotValueFromCache := c.ocspResponseCache[*encodedCertID]
 	c.ocspResponseCacheLock.RUnlock()
 
-	status, err := c.extractOCSPCacheResponseValue(&gotValueFromCache, subject, issuer)
+	status, err := c.extractOCSPCacheResponseValue(gotValueFromCache, subject, issuer)
 	if err != nil {
 		return nil, err
 	}
@@ -519,7 +519,7 @@ func (c *Client) getRevocationStatus(ctx context.Context, subject, issuer *x509.
 	}
 	v := ocspCachedResponse{time: float64(time.Now().UTC().Unix()), resp: base64.StdEncoding.EncodeToString(ocspResBytes)}
 	c.ocspResponseCacheLock.Lock()
-	c.ocspResponseCache[*encodedCertID] = v
+	c.ocspResponseCache[*encodedCertID] = &v
 	c.cacheUpdated = true
 	c.ocspResponseCacheLock.Unlock()
 	return ret, nil
@@ -744,7 +744,16 @@ func (c *Client) readOCSPCache(ctx context.Context, storage logical.Storage) err
 		if err != nil {
 			return err
 		}
-		c.ocspResponseCache[*key] = ocspCachedResponse{time: v[0].(float64), resp: v[1].(string)}
+		var time float64
+		if jn, ok := v[0].(json.Number); ok {
+			time, err = jn.Float64()
+			if err != nil {
+				return err
+			}
+		} else {
+			time = v[0].(float64)
+		}
+		c.ocspResponseCache[*key] = &ocspCachedResponse{time: time, resp: v[1].(string)}
 	}
 	return nil
 }
@@ -752,7 +761,7 @@ func (c *Client) readOCSPCache(ctx context.Context, storage logical.Storage) err
 func New(logFactory func() hclog.Logger) *Client {
 	c := Client{
 		caRoot:            make(map[string]*x509.Certificate),
-		ocspResponseCache: make(map[certIDKey]ocspCachedResponse),
+		ocspResponseCache: make(map[certIDKey]*ocspCachedResponse),
 		logFactory:        logFactory,
 	}
 
@@ -809,9 +818,7 @@ func (c *Client) WriteCache(ctx context.Context, storage logical.Storage) error 
 	c.ocspResponseCacheLock.Lock()
 	defer c.ocspResponseCacheLock.Unlock()
 	if c.cacheUpdated {
-		if c.cacheUpdated {
-			return c.writeOCSPCache(ctx, storage)
-		}
+		return c.writeOCSPCache(ctx, storage)
 		c.cacheUpdated = false
 	}
 	return nil
