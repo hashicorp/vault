@@ -12,10 +12,11 @@ on:
 
 env:
   PKG_NAME: vault
+  ARTIFACT_NAME: ${{ inputs.artifact-name }}
 
 jobs:
-  # Generate Enos scenario matrix based on artifact-name input to test
-  generate-enos-matrix:
+  # Read Enos scenario matrix file based on artifact-name input to test
+  read-enos-matrix:
     runs-on: ubuntu-latest
     outputs:
       enos-scenarios: ${{ steps.enos-matrix.outputs.matrix }}
@@ -24,18 +25,17 @@ jobs:
         uses: actions/checkout@v3
       - name: Create Enos scenario matrix
         id: enos-matrix
-        run: ./.github/scripts/generate-enos-matrix.sh ${{ inputs.artifact-name }}
-  # Run Integration tests on generated Enos scenario matrix
+        run: [[ ${{ env.ARTIFACT_NAME }} == *"ent"* ]] && echo "::set-output name=matrix::$(cat ./.github/scripts/ent.json)" || echo "::set-output name=matrix::$(cat ./.github/scripts/oss.json)"
+  # Run Integration tests on Enos scenario matrix
   enos:
     name: Integration
-    needs: generate-enos-matrix
+    needs: read-enos-matrix
     strategy:
       fail-fast: false # don't fail as that can skip required cleanup steps for jobs
-      matrix: ${{ fromJson(needs.generate-enos-matrix.outputs.enos-scenarios) }}
+      matrix: ${{ fromJson(needs.read-enos-matrix.outputs.enos-scenarios) }}
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
-      ARTIFACT_NAME: ${{ inputs.artifact-name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
