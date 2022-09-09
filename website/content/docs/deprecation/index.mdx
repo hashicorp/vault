@@ -10,6 +10,38 @@ description: |-
 
 This announcement page is maintained and updated periodically to communicate important decisions made concerning End of Support(EoS) for Vault features as well as features we have removed or disabled from the product. We document the removal of features, enable the community with a plan and timeline for eventual deprecations, and supply alternative paths to explore and evaluate to minimize business disruptions. If you have questions or concerns about a deprecated feature, please create a topic on [the community forum](https://discuss.hashicorp.com/c/vault/30) or raise a ticket with your support team. Please refer to the [FAQ](/docs/deprecation/faq) page for frequently asked questions concerning Vault feature deprecations.
 
+## Deprecation Status
+
+There are values for Deprecation Status: Supported, Deprecated, Pending Removal, and Removed.
+
+### Supported
+
+This status reflects a feature which is still supported. There is no unique behavior or functionality associated with this status.
+
+### Deprecated
+
+This status reflects a feature which has been marked for Deprecation in a later release of Vault. This is the first phase of the deprecation process. A status of `Deprecated` has two effects:
+
+1) All attempts to utilize this feature will result in `Warn`-level messages in the Vault log.
+2) All attempts to access an endpoint which supports this feature will result in `warnings` in the Response.
+
+### Pending Removal
+
+This status reflects a feature which has been officially deprecated in this release of Vault. This is the first phase in the process that fundamentally alters the behavior of Vault. The effects are two-fold:
+
+1) Any pre-existing mount will cause Vault to log an `Error`-level message in the Vault log and automatically shutdown after starting up after upgrade.
+2) Any new mount of the `Pending Removal` feature will fail and log an `Error`-level message to the Vault log and CLI/API.
+
+#### `VAULT_ALLOW_PENDING_REMOVAL_MOUNTS`
+
+The `Pending Removal` behavior may be overriden using a new environment variable: `VAULT_ALLOW_PENDING_REMOVAL_MOUNTS`. This environment variable effectively allows all `Pending Removal` features to be treated as `Deprecated`.
+
+### Removed
+
+This status reflects a feature which has been officially removed from Vault. This is the last phase of the deprecation process. During this phase, the code for this feature has been officially removed from Vault. In order to start Vault, any offending features must be removed by first downgrading Vault and carefully replacing `Removed` features as shown in the table below.
+
+## Feature deprecations
+
 **Deprecation Announcement**: This indicates the release version during which the announcement was made to deprecate a feature.
 
 **End of Support**: This indicates when a deprecated feature becomes unsupported. Consult the table below and consider the timeline provided to upgrade. If you use Vault Enterprise and require help with a deprecated feature, the Vault Support Team will provide limited support. However, we will not provide software patches or bug fixes. Refer to the [HashiCorp Support Policy](https://support.hashicorp.com/hc/en-us/articles/360021185113-Support-Period-and-End-of-Life-EOL-Policy) to understand our product support timeline.
