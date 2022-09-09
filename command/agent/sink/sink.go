@@ -10,10 +10,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/vault/command/agent/auth"
-
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/agent/auth"
 	"github.com/hashicorp/vault/helper/dhutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
