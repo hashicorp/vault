@@ -219,7 +219,7 @@ func TestUnitCheckOCSPResponseCache(t *testing.T) {
 	// invalid validity
 	c.ocspResponseCache[dummyKey] = &ocspCachedResponse{float64(currentTime - 1000), actualOcspResponse}
 	ost, err = c.checkOCSPResponseCache(&dummyKey, subject, nil)
-	if err == nil {
+	if err == nil && isValidOCSPStatus(ost.code) {
 		t.Fatalf("should have failed.")
 	}
 }
@@ -227,7 +227,7 @@ func TestUnitCheckOCSPResponseCache(t *testing.T) {
 func TestUnitValidateOCSP(t *testing.T) {
 	ocspRes := &ocsp.Response{}
 	ost, err := validateOCSP(ocspRes)
-	if err == nil {
+	if err == nil && isValidOCSPStatus(ost.code) {
 		t.Fatalf("should have failed.")
 	}
 
