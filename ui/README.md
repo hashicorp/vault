@@ -33,10 +33,11 @@ This README outlines the details of collaborating on this Ember application.
 
 You will need the following things properly installed on your computer.
 
-- [Node.js](https://nodejs.org/) (with NPM)
-- [Yarn](https://yarnpkg.com/en/)
-- [Git](https://git-scm.com/)
-- [Ember CLI](https://ember-cli.com/)
+* [Git](https://git-scm.com/)
+* [Node.js](https://nodejs.org/)
+* [Yarn](https://yarnpkg.com/)
+* [Ember CLI](https://cli.emberjs.com/release/)
+* [Google Chrome](https://google.com/chrome/)
 - [lint-staged\*](https://www.npmjs.com/package/lint-staged)
 
 \* lint-staged is an optional dependency - running `yarn` will install it.
@@ -127,8 +128,8 @@ setting `VAULT_UI` environment variable.
 
 ## Further Reading / Useful Links
 
-- [ember.js](http://emberjs.com/)
-- [ember-cli](https://ember-cli.com/)
-- Development Browser Extensions
-  - [ember inspector for chrome](https://chrome.google.com/webstore/detail/ember-inspector/bmdblncegkenkacieihfhpjfppoconhi)
-  - [ember inspector for firefox](https://addons.mozilla.org/en-US/firefox/addon/ember-inspector/)
+* [ember.js](https://emberjs.com/)
+* [ember-cli](https://cli.emberjs.com/release/)
+* Development Browser Extensions
+  * [ember inspector for chrome](https://chrome.google.com/webstore/detail/ember-inspector/bmdblncegkenkacieihfhpjfppoconhi)
+  * [ember inspector for firefox](https://addons.mozilla.org/en-US/firefox/addon/ember-inspector/)

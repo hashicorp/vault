@@ -4,10 +4,10 @@
 module.exports = function (environment) {
   let ENV = {
     modulePrefix: 'vault',
-    environment: environment,
+    environment,
     rootURL: '/ui/',
     serviceWorkerScope: '/v1/sys/storage/raft/snapshot',
-    locationType: 'auto',
+    locationType: 'history',
     EmberENV: {
       FEATURES: {
         // Here you can enable experimental features on an ember canary build
