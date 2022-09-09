@@ -28,6 +28,8 @@ func newMockProxier(responses []*SendResponse) *mockProxier {
 	}
 }
 
+func (p *mockProxier) UpdateIndexState(newIndex string) {}
+
 func (p *mockProxier) Send(ctx context.Context, req *SendRequest) (*SendResponse, error) {
 	if p.responseIndex >= len(p.proxiedResponses) {
 		return nil, fmt.Errorf("index out of bounds: responseIndex = %d, responses = %d", p.responseIndex, len(p.proxiedResponses))
@@ -70,6 +72,8 @@ type mockTokenVerifierProxier struct {
 	currentToken string
 }
 
+func (p *mockTokenVerifierProxier) UpdateIndexState(newIndex string) {}
+
 func (p *mockTokenVerifierProxier) Send(ctx context.Context, req *SendRequest) (*SendResponse, error) {
 	p.currentToken = req.Token
 	resp := newTestSendResponse(http.StatusOK,
@@ -86,6 +90,8 @@ type mockDelayProxier struct {
 	cacheableResp bool
 	delay         int
 }
+
+func (p *mockDelayProxier) UpdateIndexState(newIndex string) {}
 
 func (p *mockDelayProxier) Send(ctx context.Context, req *SendRequest) (*SendResponse, error) {
 	if p.delay > 0 {
