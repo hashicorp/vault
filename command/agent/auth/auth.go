@@ -58,6 +58,7 @@ type AuthHandler struct {
 	minBackoff                   time.Duration
 	enableReauthOnNewCredentials bool
 	enableTemplateTokenCh        bool
+	exitOnError                  bool
 }
 
 type AuthHandlerConfig struct {
@@ -69,6 +70,7 @@ type AuthHandlerConfig struct {
 	Token                        string
 	EnableReauthOnNewCredentials bool
 	EnableTemplateTokenCh        bool
+	ExitOnError                  bool
 }
 
 func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
@@ -86,6 +88,7 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		maxBackoff:                   conf.MaxBackoff,
 		enableReauthOnNewCredentials: conf.EnableReauthOnNewCredentials,
 		enableTemplateTokenCh:        conf.EnableTemplateTokenCh,
+		exitOnError:                  conf.ExitOnError,
 	}
 
 	return ah
@@ -167,6 +170,11 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			clientToUse, err = am.(AuthMethodWithClient).AuthClient(ah.client)
 			if err != nil {
 				ah.logger.Error("error creating client for authentication call", "error", err, "backoff", backoff)
+
+				if ah.exitOnError {
+					return err
+				}
+
 				backoffOrQuit(ctx, backoff)
 				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
 				continue
@@ -190,6 +198,11 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			secret, err = clientToUse.Auth().Token().LookupSelfWithContext(ctx)
 			if err != nil {
 				ah.logger.Error("could not look up token", "err", err, "backoff", backoff)
+
+				if ah.exitOnError {
+					return err
+				}
+
 				backoffOrQuit(ctx, backoff)
 				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
 				continue
@@ -207,6 +220,11 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			path, header, data, err = am.Authenticate(ctx, ah.client)
 			if err != nil {
 				ah.logger.Error("error getting path or data from method", "error", err, "backoff", backoff)
+
+				if ah.exitOnError {
+					return err
+				}
+
 				backoffOrQuit(ctx, backoff)
 				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
 				continue
@@ -217,6 +235,11 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			wrapClient, err := clientToUse.Clone()
 			if err != nil {
 				ah.logger.Error("error creating client for wrapped call", "error", err, "backoff", backoff)
+
+				if ah.exitOnError {
+					return err
+				}
+
 				backoffOrQuit(ctx, backoff)
 				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
 				continue
@@ -239,6 +262,11 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			// Check errors/sanity
 			if err != nil {
 				ah.logger.Error("error authenticating", "error", err, "backoff", backoff)
+
+				if ah.exitOnError {
+					return err
+				}
+
 				backoffOrQuit(ctx, backoff)
 				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
 				continue
@@ -249,12 +277,22 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		case ah.wrapTTL > 0:
 			if secret.WrapInfo == nil {
 				ah.logger.Error("authentication returned nil wrap info", "backoff", backoff)
+
+				if ah.exitOnError {
+					return err
+				}
+
 				backoffOrQuit(ctx, backoff)
 				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
 				continue
 			}
 			if secret.WrapInfo.Token == "" {
 				ah.logger.Error("authentication returned empty wrapped client token", "backoff", backoff)
+
+				if ah.exitOnError {
+					return err
+				}
+
 				backoffOrQuit(ctx, backoff)
 				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
 				continue
@@ -262,6 +300,11 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			wrappedResp, err := jsonutil.EncodeJSON(secret.WrapInfo)
 			if err != nil {
 				ah.logger.Error("failed to encode wrapinfo", "error", err, "backoff", backoff)
+
+				if ah.exitOnError {
+					return err
+				}
+
 				backoffOrQuit(ctx, backoff)
 				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
 				continue
@@ -316,7 +359,12 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			Secret: secret,
 		})
 		if err != nil {
-			ah.logger.Error("error creating lifetime watcher, backing off and retrying", "error", err, "backoff", backoff)
+			ah.logger.Error("error creating lifetime watcher", "error", err, "backoff", backoff)
+
+			if ah.exitOnError {
+				return err
+			}
+
 			backoffOrQuit(ctx, backoff)
 			metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
 			continue
