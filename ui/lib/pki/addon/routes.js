@@ -3,6 +3,7 @@ import buildRoutes from 'ember-engines/routes';
 export default buildRoutes(function () {
   this.route('overview');
   this.route('configuration', function () {
+    this.route('index', { path: '/' });
     this.route('tidy');
     this.route('create', function () {
       this.route('index', { path: '/' });
@@ -11,6 +12,7 @@ export default buildRoutes(function () {
       this.route('generate-csr');
     });
     this.route('edit');
+    this.route('details');
   });
   this.route('roles', function () {
     this.route('create');
