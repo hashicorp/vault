@@ -119,7 +119,7 @@ steps:
           TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
           export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
           if [ -z $TEST_DOCKER_NETWORK_ID ]; then
-            docker network prune -f
+            docker network prune
             TEST_DOCKER_NETWORK_ID=$(docker network create "${TEST_DOCKER_NETWORK_NAME}")
           fi
 
