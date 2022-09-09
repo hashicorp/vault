@@ -60,9 +60,9 @@ func (c *PluginListCommand) Flags() *FlagSets {
 		Name:    "detailed",
 		Target:  &c.flagDetailed,
 		Default: false,
-		Usage: "Print detailed plugin information such as plugin type and " +
-			"for each plugin. This option is only applicable to " +
-			"table-formatted output.",
+		Usage: "Print detailed plugin information such as plugin type, " +
+			"version, and deprecation status for each plugin. This option " +
+			"is only applicable to table-formatted output.",
 	})
 
 	return set
