@@ -2294,6 +2294,7 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 			"mssql-database-plugin",
 			"postgresql-database-plugin",
 			"redshift-database-plugin",
+			"redis-database-plugin",
 			"snowflake-database-plugin",
 		}
 	case consts.PluginTypeCredential:
