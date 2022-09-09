@@ -12,19 +12,19 @@ This announcement page is maintained and updated periodically to communicate imp
 
 ## Deprecation Status
 
-As of version 1.12, Vault implements a multi-phased approach to deprecation. The intent of this approach is to provide sufficient warning that a feature will be removed and safe handling of stored data when the associated associated feature has been removed.
+As of version 1.12, Vault implements a multi-phased approach to deprecation. The intent of this approach is to provide sufficient warning that a feature will be removed and safe handling of stored data when the associated feature has been removed.
 
-The phases of deprecation are also known as "Deprecation Status". These statuses are currently reflected in builtin plugins and are exposed via the Vault `auth`, `secrets`, and `plugins` API endpoints and CLI. For more information, refer to the corresponding documentation.
+The phases of deprecation are also known as "Deprecation Status". These statuses are currently reflected in builtin plugins and are exposed via the Vault `auth`, `secrets`, and `plugins` CLI/API endpoints. For more information, refer to the corresponding documentation.
 
 The four phases of deprecation are: `Supported`, `Deprecated`, `Pending Removal`, and `Removed`.
 
 ### Supported
 
-This status is the default, and reflects a feature which is still supported. There is no unique behavior or functionality associated with this status.
+This is the default status and reflects a feature which is still supported. There is no unique behavior or functionality associated with this status.
 
 ### Deprecated
 
-This status reflects a feature which has been marked for Deprecation in a later release of Vault. This is the first phase of the deprecation process. A status of `Deprecated` has two effects:
+This status reflects a feature which has been marked for deprecation in a later release of Vault. This is the first phase of the deprecation process. A status of `Deprecated` has two effects:
 
 1) All attempts to utilize this feature will result in `Warn`-level messages in the Vault log.
 2) All attempts to access an endpoint which supports this feature will result in `warnings` in the Response.
