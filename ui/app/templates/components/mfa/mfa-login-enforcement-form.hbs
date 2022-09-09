@@ -10,7 +10,7 @@
     spellcheck="false"
     value={{@model.name}}
     disabled={{not @model.isNew}}
-    class="input field"
+    class="input field {{if this.errors.name.errors 'has-error-border'}}"
     data-test-mlef-input="name"
     {{on "input" (pipe (pick "target.value") (fn (mut @model.name)))}}
   />

@@ -1,5 +1,5 @@
 {{! template-lint-configure simple-unless "warn" }}
-<div class="field" data-test-field>
+<div class="field" data-test-field={{or @attr.name true}}>
   {{#unless
     (or
       (eq @attr.type "boolean")
@@ -21,9 +21,9 @@
   {{/unless}}
   {{#if @attr.options.possibleValues}}
     {{#if (eq @attr.options.editType "radio")}}
-      <div class="control columns is-gapless" data-test-radio-input>
+      <div class="control columns" data-test-radio-input>
         {{#each (path-or-array @attr.options.possibleValues @model) as |val|}}
-          <div class="column is-1 is-flex-center has-text-grey" data-test-input={{@attr.name}}>
+          <div class="column is-narrow is-flex-center has-text-grey has-right-margin-s" data-test-input={{@attr.name}}>
             <RadioButton
               class="radio"
               name={{@attr.name}}
@@ -32,6 +32,7 @@
               @value={{or val.value val}}
               @onChange={{this.setAndBroadcast}}
               @groupValue={{(get @model this.valuePath)}}
+              @disabled={{and @attr.options.editDisabled (not @model.isNew)}}
             />
             <label for={{or val.value val}} class="has-left-margin-xs">
               {{or val.value val}}
@@ -91,8 +92,13 @@
         @selectLimit={{@attr.options.selectLimit}}
         @backend={{@model.backend}}
         @disallowNewItems={{@attr.options.onlyAllowExisting}}
+        @labelClass={{@labelClass}}
+        class={{if this.validationError "dropdown-has-error-border"}}
       />
     </div>
+    {{#if this.validationError}}
+      <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
+    {{/if}}
   {{else if (eq @attr.options.editType "mountAccessor")}}
     <MountAccessorSelect
       @name={{@attr.name}}
@@ -163,9 +169,9 @@
           <span>
             {{@attr.options.subText}}
             {{#if @attr.options.docLink}}
-              <a href={{@attr.options.docLink}} target="_blank" rel="noopener noreferrer">
+              <DocLink @path={{@attr.options.docLink}}>
                 See our documentation
-              </a>
+              </DocLink>
               for help.
             {{/if}}
           </span>
@@ -173,9 +179,9 @@
           <span>
             {{or @attr.options.defaultSubText "Vault will use the engine default."}}
             {{#if @attr.options.docLink}}
-              <a href={{@attr.options.docLink}} target="_blank" rel="noopener noreferrer">
+              <DocLink @path={{@attr.options.docLink}}>
                 See our documentation
-              </a>
+              </DocLink>
               for help.
             {{/if}}
           </span>
@@ -240,38 +246,41 @@
         />
       {{else if (eq @attr.options.editType "json")}}
         {{! JSON Editor }}
-        <JsonEditor
-          data-test-input={{@attr.name}}
-          @title={{this.labelString}}
-          @value={{if
-            (get @model this.valuePath)
-            (stringify (jsonify (get @model this.valuePath)))
-            @attr.options.defaultValue
-          }}
-          @valueUpdated={{fn this.codemirrorUpdated true}}
-          @theme={{or @attr.options.theme "hashi"}}
-          @helpText={{@attr.options.helpText}}
-        >
-          {{#if @attr.options.allowReset}}
-            <button
-              type="button"
-              class="toolbar-link"
-              disabled={{not (get @model this.valuePath)}}
-              onClick={{this.setAndBroadcast}}
-              data-test-json-clear-button
-            >
-              Clear
-              <Icon @name="reload" />
-            </button>
-          {{/if}}
-        </JsonEditor>
+        {{#let (get @model this.valuePath) as |value|}}
+          <JsonEditor
+            data-test-input={{@attr.name}}
+            @title={{this.labelString}}
+            @value={{if
+              value
+              (if (eq @attr.options.mode "ruby") value (stringify (jsonify value)))
+              @attr.options.defaultValue
+            }}
+            @valueUpdated={{fn this.codemirrorUpdated true}}
+            @theme={{or @attr.options.theme "hashi"}}
+            @helpText={{@attr.options.helpText}}
+            @mode={{@attr.options.mode}}
+          >
+            {{#if @attr.options.allowReset}}
+              <button
+                type="button"
+                class="toolbar-link"
+                disabled={{not value}}
+                onClick={{this.setAndBroadcast}}
+                data-test-json-clear-button
+              >
+                Clear
+                <Icon @name="reload" />
+              </button>
+            {{/if}}
+          </JsonEditor>
+        {{/let}}
         {{#if @attr.options.subText}}
           <p class="sub-text">
             {{@attr.options.subText}}
             {{#if @attr.options.docLink}}
-              <a href={{@attr.options.docLink}} target="_blank" rel="noopener noreferrer">
+              <DocLink @path={{@attr.options.docLink}}>
                 See our documentation
-              </a>
+              </DocLink>
               for help.
             {{/if}}
           </p>
@@ -282,6 +291,7 @@
           data-test-input={{@attr.name}}
           id={{@attr.name}}
           readonly={{this.isReadOnly}}
+          disabled={{and @attr.options.editDisabled (not @model.isNew)}}
           autocomplete="off"
           spellcheck="false"
           value={{or (get @model this.valuePath) @attr.options.defaultValue}}
