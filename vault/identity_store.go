@@ -112,6 +112,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 
 			return nil
 		},
+		PluginVersion: logical.BuiltinVersion.Version,
 	}
 
 	iStore.oidcCache = newOIDCCache(cache.NoExpiration, cache.NoExpiration)

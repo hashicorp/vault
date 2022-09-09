@@ -433,7 +433,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -450,7 +450,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"identity/": map[string]interface{}{
@@ -468,7 +468,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 		},
@@ -504,7 +504,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -521,7 +521,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"identity/": map[string]interface{}{
@@ -539,7 +539,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 	}

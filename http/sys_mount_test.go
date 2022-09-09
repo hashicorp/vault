@@ -63,7 +63,7 @@ func TestSysMounts(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -80,7 +80,7 @@ func TestSysMounts(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"identity/": map[string]interface{}{
@@ -98,7 +98,7 @@ func TestSysMounts(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 		},
@@ -134,7 +134,7 @@ func TestSysMounts(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -151,7 +151,7 @@ func TestSysMounts(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"identity/": map[string]interface{}{
@@ -169,7 +169,7 @@ func TestSysMounts(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 	}
@@ -269,7 +269,7 @@ func TestSysMount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -286,7 +286,7 @@ func TestSysMount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"identity/": map[string]interface{}{
@@ -304,7 +304,7 @@ func TestSysMount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 		},
@@ -357,7 +357,7 @@ func TestSysMount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -374,7 +374,7 @@ func TestSysMount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"identity/": map[string]interface{}{
@@ -392,7 +392,7 @@ func TestSysMount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 	}
@@ -527,7 +527,7 @@ func TestSysRemount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -544,7 +544,7 @@ func TestSysRemount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"identity/": map[string]interface{}{
@@ -562,7 +562,7 @@ func TestSysRemount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 		},
@@ -615,7 +615,7 @@ func TestSysRemount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -632,7 +632,7 @@ func TestSysRemount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"identity/": map[string]interface{}{
@@ -650,7 +650,7 @@ func TestSysRemount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 	}
@@ -733,7 +733,7 @@ func TestSysUnmount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -750,7 +750,7 @@ func TestSysUnmount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"identity/": map[string]interface{}{
@@ -768,7 +768,7 @@ func TestSysUnmount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 		},
@@ -804,7 +804,7 @@ func TestSysUnmount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -821,7 +821,7 @@ func TestSysUnmount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"identity/": map[string]interface{}{
@@ -839,7 +839,7 @@ func TestSysUnmount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 	}
@@ -1025,7 +1025,7 @@ func TestSysTuneMount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -1042,7 +1042,7 @@ func TestSysTuneMount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"identity/": map[string]interface{}{
@@ -1060,7 +1060,7 @@ func TestSysTuneMount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 		},
@@ -1113,7 +1113,7 @@ func TestSysTuneMount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -1130,7 +1130,7 @@ func TestSysTuneMount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"identity/": map[string]interface{}{
@@ -1148,7 +1148,7 @@ func TestSysTuneMount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 	}
@@ -1274,7 +1274,7 @@ func TestSysTuneMount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -1291,7 +1291,7 @@ func TestSysTuneMount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 			"identity/": map[string]interface{}{
@@ -1309,7 +1309,7 @@ func TestSysTuneMount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 				"version":         "",
 			},
 		},
@@ -1362,7 +1362,7 @@ func TestSysTuneMount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -1379,7 +1379,7 @@ func TestSysTuneMount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 		"identity/": map[string]interface{}{
@@ -1397,7 +1397,7 @@ func TestSysTuneMount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 			"version":         "",
 		},
 	}

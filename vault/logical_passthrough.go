@@ -57,7 +57,8 @@ func LeaseSwitchedPassthroughBackend(ctx context.Context, conf *logical.BackendC
 				HelpDescription: strings.TrimSpace(passthroughHelpDescription),
 			},
 		},
-		BackendType: logical.TypeLogical,
+		BackendType:   logical.TypeLogical,
+		PluginVersion: logical.BuiltinVersion.Version,
 	}
 
 	b.Backend.Secrets = []*framework.Secret{

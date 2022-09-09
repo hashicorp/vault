@@ -1612,6 +1612,7 @@ func (c *Core) defaultMountTable() *MountTable {
 			Options: map[string]string{
 				"version": "2",
 			},
+			RunningVersion: logical.BuiltinVersion.Version,
 		}
 		table.Entries = append(table.Entries, kvMount)
 	}
@@ -1646,6 +1647,7 @@ func (c *Core) requiredMountTable() *MountTable {
 		Accessor:         cubbyholeAccessor,
 		Local:            true,
 		BackendAwareUUID: cubbyholeBackendUUID,
+		RunningVersion:   logical.BuiltinVersion.Version,
 	}
 
 	sysUUID, err := uuid.GenerateUUID()
@@ -1672,6 +1674,7 @@ func (c *Core) requiredMountTable() *MountTable {
 		Config: MountConfig{
 			PassthroughRequestHeaders: []string{"Accept"},
 		},
+		RunningVersion: logical.BuiltinVersion.Version,
 	}
 
 	identityUUID, err := uuid.GenerateUUID()
@@ -1697,6 +1700,7 @@ func (c *Core) requiredMountTable() *MountTable {
 		Config: MountConfig{
 			PassthroughRequestHeaders: []string{"Authorization"},
 		},
+		RunningVersion: logical.BuiltinVersion.Version,
 	}
 
 	table.Entries = append(table.Entries, cubbyholeMount)

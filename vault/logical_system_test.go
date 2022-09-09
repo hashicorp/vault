@@ -304,7 +304,7 @@ func TestSystemBackend_mount(t *testing.T) {
 			"sha":             "",
 			"running_sha":     "",
 			"version":         "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 		},
 		"sys/": map[string]interface{}{
 			"type":                    "system",
@@ -324,7 +324,7 @@ func TestSystemBackend_mount(t *testing.T) {
 			"sha":             "",
 			"running_sha":     "",
 			"version":         "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description":             "per-token private secret storage",
@@ -343,7 +343,7 @@ func TestSystemBackend_mount(t *testing.T) {
 			"sha":             "",
 			"running_sha":     "",
 			"version":         "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 		},
 		"identity/": map[string]interface{}{
 			"description":             "identity store",
@@ -363,7 +363,7 @@ func TestSystemBackend_mount(t *testing.T) {
 			"sha":             "",
 			"running_sha":     "",
 			"version":         "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 		},
 		"prod/secret/": map[string]interface{}{
 			"description":             "",
@@ -384,7 +384,7 @@ func TestSystemBackend_mount(t *testing.T) {
 			"sha":             "",
 			"running_sha":     "",
 			"version":         "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); len(diff) > 0 {

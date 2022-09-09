@@ -15,7 +15,8 @@ import (
 func CubbyholeBackendFactory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := &CubbyholeBackend{}
 	b.Backend = &framework.Backend{
-		Help: strings.TrimSpace(cubbyholeHelp),
+		Help:          strings.TrimSpace(cubbyholeHelp),
+		PluginVersion: logical.BuiltinVersion.Version,
 	}
 
 	b.Backend.Paths = append(b.Backend.Paths, b.paths()...)
