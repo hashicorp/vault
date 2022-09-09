@@ -224,14 +224,19 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 		certName = d.Get("name").(string)
 	}
 
-	// Load the trusted certificates
-	roots, trusted, trustedNonCAs := b.loadTrustedCerts(ctx, req.Storage, certName)
+	// Load the trusted certificates and other details
+	roots, trusted, trustedNonCAs, ocspServersOverride := b.loadTrustedCerts(ctx, req.Storage, certName)
 
 	// Get the list of full chains matching the connection and validates the
 	// certificate itself
 	trustedChains, err := validateConnState(roots, connState)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	var extraCas []*x509.Certificate
+	for _, t := range trusted {
+		extraCas = append(extraCas, t.Certificates...)
 	}
 
 	// If trustedNonCAs is not empty it means that client had registered a non-CA cert
@@ -241,9 +246,14 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 			tCert := trustedNonCA.Certificates[0]
 			// Check for client cert being explicitly listed in the config (and matching other constraints)
 			if tCert.SerialNumber.Cmp(clientCert.SerialNumber) == 0 &&
-				bytes.Equal(tCert.AuthorityKeyId, clientCert.AuthorityKeyId) &&
-				b.matchesConstraints(clientCert, trustedNonCA.Certificates, trustedNonCA) {
-				return trustedNonCA, nil, nil
+				bytes.Equal(tCert.AuthorityKeyId, clientCert.AuthorityKeyId) {
+				matches, err := b.matchesConstraints(ctx, clientCert, trustedNonCA.Certificates, trustedNonCA, extraCas, ocspServersOverride)
+				if err != nil {
+					return nil, nil, err
+				}
+				if matches {
+					return trustedNonCA, nil, nil
+				}
 			}
 		}
 	}
@@ -260,10 +270,15 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 		for _, tCert := range trust.Certificates { // For each certificate in the entry
 			for _, chain := range trustedChains { // For each root chain that we matched
 				for _, cCert := range chain { // For each cert in the matched chain
-					if tCert.Equal(cCert) && // ParsedCert intersects with matched chain
-						b.matchesConstraints(clientCert, chain, trust) { // validate client cert + matched chain against the config
-						// Add the match to the list
-						matches = append(matches, trust)
+					if tCert.Equal(cCert) { // ParsedCert intersects with matched chain
+						match, err := b.matchesConstraints(ctx, clientCert, chain, trust, extraCas, ocspServersOverride) // validate client cert + matched chain against the config
+						if err != nil {
+							return nil, nil, err
+						}
+						if match {
+							// Add the match to the list
+							matches = append(matches, trust)
+						}
 					}
 				}
 			}
@@ -279,8 +294,9 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 	return matches[0], nil, nil
 }
 
-func (b *backend) matchesConstraints(clientCert *x509.Certificate, trustedChain []*x509.Certificate, config *ParsedCert) bool {
-	return !b.checkForChainInCRLs(trustedChain) &&
+func (b *backend) matchesConstraints(ctx context.Context, clientCert *x509.Certificate, trustedChain []*x509.Certificate,
+	config *ParsedCert, extraCas []*x509.Certificate, ocspServersOverride []string) (bool, error) {
+	soFar := !b.checkForChainInCRLs(trustedChain) &&
 		b.matchesNames(clientCert, config) &&
 		b.matchesCommonName(clientCert, config) &&
 		b.matchesDNSSANs(clientCert, config) &&
@@ -288,6 +304,14 @@ func (b *backend) matchesConstraints(clientCert *x509.Certificate, trustedChain 
 		b.matchesURISANs(clientCert, config) &&
 		b.matchesOrganizationalUnits(clientCert, config) &&
 		b.matchesCertificateExtensions(clientCert, config)
+	if config.Entry.OcspEnabled {
+		ocspGood, err := b.checkForChainInOCSP(ctx, trustedChain, extraCas, ocspServersOverride)
+		if err != nil {
+			return false, err
+		}
+		soFar = soFar && ocspGood
+	}
+	return soFar, nil
 }
 
 // matchesNames verifies that the certificate matches at least one configured
@@ -478,7 +502,7 @@ func (b *backend) certificateExtensionsMetadata(clientCert *x509.Certificate, co
 }
 
 // loadTrustedCerts is used to load all the trusted certificates from the backend
-func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage, certName string) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert) {
+func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage, certName string) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert, ocspServersOverride []string) {
 	pool = x509.NewCertPool()
 	trusted = make([]*ParsedCert, 0)
 	trustedNonCAs = make([]*ParsedCert, 0)
@@ -512,6 +536,8 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 			b.Logger().Error("failed to parse certificate", "name", name)
 			continue
 		}
+		parsed = append(parsed, parsePEM([]byte(entry.OcspCaCertificates))...)
+
 		if !parsed[0].IsCA {
 			trustedNonCAs = append(trustedNonCAs, &ParsedCert{
 				Entry:        entry,
@@ -528,8 +554,20 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 				Certificates: parsed,
 			})
 		}
+		ocspServersOverride = entry.OcspServersOverride
 	}
 	return
+}
+
+func (b *backend) checkForChainInOCSP(ctx context.Context, chain []*x509.Certificate, extraCas []*x509.Certificate, ocspServersOverride []string) (bool, error) {
+	if b.ocspDisabled || len(chain) < 2 {
+		return true, nil
+	}
+	err := b.ocspClient.VerifyPeerCertificate(ctx, [][]*x509.Certificate{chain}, extraCas, ocspServersOverride)
+	if err != nil {
+		return false, nil
+	}
+	return true, nil
 }
 
 func (b *backend) checkForChainInCRLs(chain []*x509.Certificate) bool {

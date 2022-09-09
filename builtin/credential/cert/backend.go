@@ -2,6 +2,8 @@ package cert
 
 import (
 	"context"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/sdk/helper/ocsp"
 	"strings"
 	"sync"
 
@@ -12,6 +14,10 @@ import (
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
 	if err := b.Setup(ctx, conf); err != nil {
+		return nil, err
+	}
+
+	if err := b.ocspClient.ReadCache(ctx, conf.StorageView); err != nil {
 		return nil, err
 	}
 	return b, nil
@@ -33,13 +39,16 @@ func Backend() *backend {
 			pathCerts(&b),
 			pathCRLs(&b),
 		},
-		AuthRenew:   b.pathLoginRenew,
-		Invalidate:  b.invalidate,
-		BackendType: logical.TypeCredential,
+		AuthRenew:    b.pathLoginRenew,
+		Invalidate:   b.invalidate,
+		BackendType:  logical.TypeCredential,
+		PeriodicFunc: b.periodFunc,
 	}
 
 	b.crlUpdateMutex = &sync.RWMutex{}
-
+	b.ocspClient = ocsp.New(func() hclog.Logger {
+		return b.Logger()
+	})
 	return &b
 }
 
@@ -48,7 +57,9 @@ type backend struct {
 	MapCertId *framework.PathMap
 
 	crls           map[string]CRLInfo
+	ocspDisabled   bool
 	crlUpdateMutex *sync.RWMutex
+	ocspClient     *ocsp.Client
 }
 
 func (b *backend) invalidate(_ context.Context, key string) {
@@ -58,6 +69,10 @@ func (b *backend) invalidate(_ context.Context, key string) {
 		defer b.crlUpdateMutex.Unlock()
 		b.crls = nil
 	}
+}
+
+func (b *backend) periodFunc(ctx context.Context, request *logical.Request) error {
+	return b.ocspClient.WriteCache(ctx, request.Storage)
 }
 
 const backendHelp = `

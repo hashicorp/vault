@@ -47,7 +47,22 @@ Must be x509 PEM encoded.`,
 					EditType: "file",
 				},
 			},
-
+			"ocsp_enabled": {
+				Type:        framework.TypeBool,
+				Description: `Whether to attempt OCSP verification of certificates at login`,
+			},
+			"ocsp_ca_certificates": {
+				Type:        framework.TypeString,
+				Description: `Any additional CA certificates needed to communicate with OCSP servers`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					EditType: "file",
+				},
+			},
+			"ocsp_servers_override": {
+				Type: framework.TypeCommaStringSlice,
+				Description: `A comma-separated list of OCSP server addresses.  If unset, the OCSP server is determined 
+from the AuthorityInformationAccess extension on the certificate being inspected.`,
+			},
 			"allowed_names": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of names.
@@ -294,8 +309,17 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	if certificateRaw, ok := d.GetOk("certificate"); ok {
 		cert.Certificate = certificateRaw.(string)
 	}
+	if ocspCertificatesRaw, ok := d.GetOk("ocsp_ca_certificates"); ok {
+		cert.OcspCaCertificates = ocspCertificatesRaw.(string)
+	}
+	if ocspEnabledRaw, ok := d.GetOk("ocsp_enabled"); ok {
+		cert.OcspEnabled = ocspEnabledRaw.(bool)
+	}
 	if displayNameRaw, ok := d.GetOk("display_name"); ok {
 		cert.DisplayName = displayNameRaw.(string)
+	}
+	if ocspServerOverrides, ok := d.GetOk("ocsp_servers_override"); ok {
+		cert.OcspServersOverride = ocspServerOverrides.([]string)
 	}
 	if allowedNamesRaw, ok := d.GetOk("allowed_names"); ok {
 		cert.AllowedNames = allowedNamesRaw.([]string)
@@ -424,6 +448,9 @@ type CertEntry struct {
 
 	Name                       string
 	Certificate                string
+	OcspCaCertificates         string
+	OcspEnabled                bool
+	OcspServersOverride        []string
 	DisplayName                string
 	Policies                   []string
 	TTL                        time.Duration

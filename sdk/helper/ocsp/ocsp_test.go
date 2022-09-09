@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hashicorp/go-hclog"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -29,22 +30,22 @@ func TestOCSP(t *testing.T) {
 		"false",
 	}
 	targetURL := []string{
+		"https://sfcdev1.blob.core.windows.net/",
 		"https://sfctest0.snowflakecomputing.com/",
 		"https://s3-us-west-2.amazonaws.com/sfc-snowsql-updates/?prefix=1.1/windows_x86_64",
-		"https://sfcdev1.blob.core.windows.net/",
 	}
 
 	c := New(testLogFactory)
 	transports := []*http.Transport{
-		snowflakeInsecureTransport,
-		c.NewTransport(),
+		newInsecureOcspTransport(nil),
+		c.NewTransport(nil, nil),
 	}
 
 	for _, enabled := range cacheServerEnabled {
 		for _, tgt := range targetURL {
 			_ = os.Setenv(cacheServerEnabledEnv, enabled)
 			//_ = os.Remove(cacheFileName) // clear cache file
-			c.ocspResponseCache = make(map[certIDKey][]interface{})
+			c.ocspResponseCache = make(map[certIDKey]*ocspCachedResponse)
 			for _, tr := range transports {
 				c := &http.Client{
 					Transport: tr,
@@ -186,7 +187,7 @@ func TestUnitCheckOCSPResponseCache(t *testing.T) {
 	}
 	b64Key := base64.StdEncoding.EncodeToString([]byte("DUMMY_VALUE"))
 	currentTime := float64(time.Now().UTC().Unix())
-	c.ocspResponseCache[dummyKey0] = []interface{}{currentTime, b64Key}
+	c.ocspResponseCache[dummyKey0] = &ocspCachedResponse{currentTime, b64Key}
 	subject := &x509.Certificate{}
 	issuer := &x509.Certificate{}
 	ost, err := c.checkOCSPResponseCache(&dummyKey, subject, issuer)
@@ -197,7 +198,7 @@ func TestUnitCheckOCSPResponseCache(t *testing.T) {
 		t.Fatalf("should have failed. expected: %v, got: %v", ocspMissedCache, ost.code)
 	}
 	// old timestamp
-	c.ocspResponseCache[dummyKey] = []interface{}{float64(1395054952), b64Key}
+	c.ocspResponseCache[dummyKey] = &ocspCachedResponse{float64(1395054952), b64Key}
 	ost, err = c.checkOCSPResponseCache(&dummyKey, subject, issuer)
 	if err != nil {
 		t.Fatal(err)
@@ -206,7 +207,7 @@ func TestUnitCheckOCSPResponseCache(t *testing.T) {
 		t.Fatalf("should have failed. expected: %v, got: %v", ocspCacheExpired, ost.code)
 	}
 	// future timestamp
-	c.ocspResponseCache[dummyKey] = []interface{}{float64(1805054952), b64Key}
+	c.ocspResponseCache[dummyKey] = &ocspCachedResponse{float64(1805054952), b64Key}
 	ost, err = c.checkOCSPResponseCache(&dummyKey, subject, issuer)
 	if err == nil {
 		t.Fatalf("should have failed.")
@@ -220,27 +221,14 @@ func TestUnitCheckOCSPResponseCache(t *testing.T) {
 		"koRzw/UU7zKsqiTB0ZN/rgJp+MocTdqQSGKvbZyR8d4u8eNQqi1x4Pk3yO/pftANFaJKGB+JPgKS3PQAqJaXcipNcEfqtl7y4PO6kqA" +
 		"Jb4xI/OTXIrRA5TsT4cCioE"
 	// issuer is not a true issuer certificate
-	c.ocspResponseCache[dummyKey] = []interface{}{float64(currentTime - 1000), actualOcspResponse}
+	c.ocspResponseCache[dummyKey] = &ocspCachedResponse{float64(currentTime - 1000), actualOcspResponse}
 	ost, err = c.checkOCSPResponseCache(&dummyKey, subject, issuer)
 	if err == nil {
 		t.Fatalf("should have failed.")
 	}
 	// invalid validity
-	c.ocspResponseCache[dummyKey] = []interface{}{float64(currentTime - 1000), actualOcspResponse}
+	c.ocspResponseCache[dummyKey] = &ocspCachedResponse{float64(currentTime - 1000), actualOcspResponse}
 	ost, err = c.checkOCSPResponseCache(&dummyKey, subject, nil)
-	if err == nil {
-		t.Fatalf("should have failed.")
-	}
-	// wrong timestamp type
-	c.ocspResponseCache[dummyKey] = []interface{}{uint32(currentTime - 1000), 123456}
-	ost, err = c.checkOCSPResponseCache(&dummyKey, subject, issuer)
-	if err == nil {
-		t.Fatalf("should have failed.")
-	}
-
-	// wrong value type
-	c.ocspResponseCache[dummyKey] = []interface{}{float64(currentTime - 1000), 123456}
-	ost, err = c.checkOCSPResponseCache(&dummyKey, subject, issuer)
 	if err == nil {
 		t.Fatalf("should have failed.")
 	}
@@ -338,13 +326,14 @@ func TestOCSPRetry(t *testing.T) {
 		success: true,
 		body:    []byte{1, 2, 3},
 		logger:  hclog.New(hclog.DefaultOptions),
+		t:       t,
 	}
-	res, b, st := c.retryOCSP(
+	res, b, st, err := c.retryOCSP(
 		context.TODO(),
 		client, fakeRequestFunc,
 		dummyOCSPHost,
-		make(map[string]string), []byte{0}, certs[len(certs)-1], 10*time.Second)
-	if st.err == nil {
+		make(map[string]string), []byte{0}, certs[len(certs)-1])
+	if err == nil {
 		fmt.Printf("should fail: %v, %v, %v\n", res, b, st)
 	}
 	client = &fakeHTTPClient{
@@ -352,13 +341,14 @@ func TestOCSPRetry(t *testing.T) {
 		success: true,
 		body:    []byte{1, 2, 3},
 		logger:  hclog.New(hclog.DefaultOptions),
+		t:       t,
 	}
-	res, b, st = c.retryOCSP(
+	res, b, st, err = c.retryOCSP(
 		context.TODO(),
 		client, fakeRequestFunc,
 		dummyOCSPHost,
-		make(map[string]string), []byte{0}, certs[len(certs)-1], 5*time.Second)
-	if st.err == nil {
+		make(map[string]string), []byte{0}, certs[len(certs)-1])
+	if err == nil {
 		fmt.Printf("should fail: %v, %v, %v\n", res, b, st)
 	}
 }
@@ -374,10 +364,11 @@ func TestOCSPCacheServerRetry(t *testing.T) {
 		success: true,
 		body:    []byte{1, 2, 3},
 		logger:  hclog.New(hclog.DefaultOptions),
+		t:       t,
 	}
-	res, st := c.checkOCSPCacheServer(
+	res, _, err := c.checkOCSPCacheServer(
 		context.TODO(), client, fakeRequestFunc, dummyOCSPHost, 20*time.Second)
-	if st.err == nil {
+	if err == nil {
 		t.Errorf("should fail: %v", res)
 	}
 	client = &fakeHTTPClient{
@@ -385,10 +376,11 @@ func TestOCSPCacheServerRetry(t *testing.T) {
 		success: true,
 		body:    []byte{1, 2, 3},
 		logger:  hclog.New(hclog.DefaultOptions),
+		t:       t,
 	}
-	res, st = c.checkOCSPCacheServer(
+	res, _, err = c.checkOCSPCacheServer(
 		context.TODO(), client, fakeRequestFunc, dummyOCSPHost, 10*time.Second)
-	if st.err == nil {
+	if err == nil {
 		t.Errorf("should fail: %v", res)
 	}
 }
@@ -482,7 +474,7 @@ func TestCanEarlyExitForOCSP(t *testing.T) {
 	}
 	c := New(testLogFactory)
 	for idx, tt := range testcases {
-		ocspFailOpen = OCSPFailOpenTrue
+		c.ocspFailOpen = OCSPFailOpenTrue
 		expectedLen := len(tt.results)
 		if tt.resultLen > 0 {
 			expectedLen = tt.resultLen
@@ -491,7 +483,7 @@ func TestCanEarlyExitForOCSP(t *testing.T) {
 		if !(tt.retFailOpen == nil && r == nil) && !(tt.retFailOpen != nil && r != nil && tt.retFailOpen.code == r.code) {
 			t.Fatalf("%d: failed to match return. expected: %v, got: %v", idx, tt.retFailOpen, r)
 		}
-		ocspFailOpen = OCSPFailOpenFalse
+		c.ocspFailOpen = OCSPFailOpenFalse
 		r = c.canEarlyExitForOCSP(tt.results, expectedLen)
 		if !(tt.retFailClosed == nil && r == nil) && !(tt.retFailClosed != nil && r != nil && tt.retFailClosed.code == r.code) {
 			t.Fatalf("%d: failed to match return. expected: %v, got: %v", idx, tt.retFailClosed, r)
@@ -503,4 +495,74 @@ var testLogger = hclog.New(hclog.DefaultOptions)
 
 func testLogFactory() hclog.Logger {
 	return testLogger
+}
+
+type fakeHTTPClient struct {
+	cnt     int    // number of retry
+	success bool   // return success after retry in cnt times
+	timeout bool   // timeout
+	body    []byte // return body
+	t       *testing.T
+	logger  hclog.Logger
+}
+
+func (c *fakeHTTPClient) Do(req *http.Request) (*http.Response, error) {
+	c.cnt--
+	if c.cnt < 0 {
+		c.cnt = 0
+	}
+	c.t.Log("fakeHTTPClient.cnt", c.cnt)
+
+	var retcode int
+	if c.success && c.cnt == 0 {
+		retcode = 200
+	} else {
+		if c.timeout {
+			// simulate timeout
+			time.Sleep(time.Second * 1)
+			return nil, &fakeHTTPError{
+				err:     "Whatever reason (Client.Timeout exceeded while awaiting headers)",
+				timeout: true,
+			}
+		}
+		retcode = 0
+	}
+
+	ret := &http.Response{
+		StatusCode: retcode,
+		Body:       &fakeResponseBody{body: c.body},
+	}
+	return ret, nil
+}
+
+type fakeHTTPError struct {
+	err     string
+	timeout bool
+}
+
+func (e *fakeHTTPError) Error() string   { return e.err }
+func (e *fakeHTTPError) Timeout() bool   { return e.timeout }
+func (e *fakeHTTPError) Temporary() bool { return true }
+
+type fakeResponseBody struct {
+	body []byte
+	cnt  int
+}
+
+func (b *fakeResponseBody) Read(p []byte) (n int, err error) {
+	if b.cnt == 0 {
+		copy(p, b.body)
+		b.cnt = 1
+		return len(b.body), nil
+	}
+	b.cnt = 0
+	return 0, io.EOF
+}
+
+func (b *fakeResponseBody) Close() error {
+	return nil
+}
+
+func fakeRequestFunc(_, _ string, _ io.Reader) (*http.Request, error) {
+	return nil, nil
 }
