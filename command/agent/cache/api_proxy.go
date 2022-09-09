@@ -135,10 +135,6 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 		return nil, err
 	}
 
-	if resp != nil && fwReq != nil {
-		fmt.Printf("Violet: req headers = %s, resp headers = %s", fwReq.Headers, resp.Header)
-	}
-
 	if newState != "" {
 		ap.UpdateIndexState(newState)
 	}
