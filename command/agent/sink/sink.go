@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/vault/command/agent/auth"
+
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/dhutil"
@@ -69,7 +71,7 @@ func NewSinkServer(conf *SinkServerConfig) *SinkServer {
 
 // Run executes the server's run loop, which is responsible for reading
 // in new tokens and pushing them out to the various sinks.
-func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*SinkConfig) error {
+func (ss *SinkServer) Run(ctx context.Context, incoming chan auth.AuthHandlerOutput, sinks []*SinkConfig) error {
 	latestToken := new(string)
 	writeSink := func(currSink *SinkConfig, currToken string) error {
 		if currToken != *latestToken {
@@ -111,8 +113,12 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 		case <-ctx.Done():
 			return nil
 
-		case token := <-incoming:
+		case ahOutput := <-incoming:
 			if len(sinks) > 0 {
+				token := ahOutput.Token
+				if ss.client != nil {
+					ss.client.WithRequestCallbacks(api.RequireState(ahOutput.VaultIndex))
+				}
 				if token != *latestToken {
 
 					// Drain the existing funcs

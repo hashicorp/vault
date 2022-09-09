@@ -47,9 +47,10 @@ type AuthConfig struct {
 // AuthHandler is responsible for keeping a token alive and renewed and passing
 // new tokens to the sink server
 type AuthHandler struct {
-	OutputCh                     chan string
+	OutputCh                     chan AuthHandlerOutput
 	TemplateTokenCh              chan string
 	token                        string
+	vaultIndex                   string
 	logger                       hclog.Logger
 	client                       *api.Client
 	random                       *rand.Rand
@@ -58,6 +59,11 @@ type AuthHandler struct {
 	minBackoff                   time.Duration
 	enableReauthOnNewCredentials bool
 	enableTemplateTokenCh        bool
+}
+
+type AuthHandlerOutput struct {
+	Token      string
+	VaultIndex string
 }
 
 type AuthHandlerConfig struct {
@@ -75,7 +81,7 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 	ah := &AuthHandler{
 		// This is buffered so that if we try to output after the sink server
 		// has been shut down, during agent shutdown, we won't block
-		OutputCh:                     make(chan string, 1),
+		OutputCh:                     make(chan AuthHandlerOutput, 1),
 		TemplateTokenCh:              make(chan string, 1),
 		token:                        conf.Token,
 		logger:                       conf.Logger,
@@ -179,7 +185,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		// the only source of retry/backoff.
 		clientToUse.SetMaxRetries(0)
 
-		var secret *api.Secret = new(api.Secret)
+		secret := new(api.Secret)
 		if first && ah.token != "" {
 			ah.logger.Debug("using preloaded token")
 
@@ -235,6 +241,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		// This should only happen if there's no preloaded token (regular auto-auth login)
 		//  or if a preloaded token has expired and is now switching to auto-auth.
 		if secret.Auth == nil {
+			clientToUse = clientToUse.WithResponseCallbacks(api.RecordState(&ah.vaultIndex))
 			secret, err = clientToUse.Logical().WriteWithContext(ctx, path, data)
 			// Check errors/sanity
 			if err != nil {
@@ -267,7 +274,10 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				continue
 			}
 			ah.logger.Info("authentication successful, sending wrapped token to sinks and pausing")
-			ah.OutputCh <- string(wrappedResp)
+			ah.OutputCh <- AuthHandlerOutput{
+				Token:      string(wrappedResp),
+				VaultIndex: ah.vaultIndex,
+			}
 			if ah.enableTemplateTokenCh {
 				ah.TemplateTokenCh <- string(wrappedResp)
 			}
@@ -299,7 +309,10 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				continue
 			}
 			ah.logger.Info("authentication successful, sending token to sinks")
-			ah.OutputCh <- secret.Auth.ClientToken
+			ah.OutputCh <- AuthHandlerOutput{
+				Token:      secret.Auth.ClientToken,
+				VaultIndex: ah.vaultIndex,
+			}
 			if ah.enableTemplateTokenCh {
 				ah.TemplateTokenCh <- secret.Auth.ClientToken
 			}

@@ -1107,7 +1107,7 @@ func (c *AgentCommand) handleMetrics() http.Handler {
 		w.Header().Set("Content-Type", resp.Data[logical.HTTPContentType].(string))
 		switch v := resp.Data[logical.HTTPRawBody].(type) {
 		case string:
-			w.WriteHeader((status))
+			w.WriteHeader(status)
 			w.Write([]byte(v))
 		case []byte:
 			w.WriteHeader(status)
