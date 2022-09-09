@@ -12,11 +12,15 @@ This announcement page is maintained and updated periodically to communicate imp
 
 ## Deprecation Status
 
-There are values for Deprecation Status: Supported, Deprecated, Pending Removal, and Removed.
+As of version 1.12, Vault implements a multi-phased approach to deprecation. The intent of this approach is to provide sufficient warning that a feature will be removed and safe handling of stored data when the associated associated feature has been removed.
+
+The phases of deprecation are also known as "Deprecation Status". These statuses are currently reflected in builtin plugins and are exposed via the Vault `auth`, `secrets`, and `plugins` API endpoints and CLI. For more information, refer to the corresponding documentation.
+
+The four phases of deprecation are: `Supported`, `Deprecated`, `Pending Removal`, and `Removed`.
 
 ### Supported
 
-This status reflects a feature which is still supported. There is no unique behavior or functionality associated with this status.
+This status is the default, and reflects a feature which is still supported. There is no unique behavior or functionality associated with this status.
 
 ### Deprecated
 
@@ -29,7 +33,7 @@ This status reflects a feature which has been marked for Deprecation in a later 
 
 This status reflects a feature which has been officially deprecated in this release of Vault. This is the first phase in the process that fundamentally alters the behavior of Vault. The effects are two-fold:
 
-1) Any pre-existing mount will cause Vault to log an `Error`-level message in the Vault log and automatically shutdown after starting up after upgrade.
+1) After an upgrade, any pre-existing mount will cause Vault to log an `Error`-level message in the Vault log and automatically shutdown.
 2) Any new mount of the `Pending Removal` feature will fail and log an `Error`-level message to the Vault log and CLI/API.
 
 #### `VAULT_ALLOW_PENDING_REMOVAL_MOUNTS`
