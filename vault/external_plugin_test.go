@@ -21,7 +21,8 @@ import (
 var (
 	compileAuthOnce   sync.Once
 	compileSecretOnce sync.Once
-	pluginBytes       []byte
+	authPluginBytes   []byte
+	secretPluginBytes []byte
 )
 
 func testCoreWithPlugin(t *testing.T, typ consts.PluginType) (*Core, string, string) {
@@ -42,17 +43,20 @@ func compilePlugin(t *testing.T, typ consts.PluginType) (name string, shasum str
 
 	var pluginType, pluginName, builtinDirectory string
 	var once *sync.Once
+	var pluginBytes *[]byte
 	switch typ {
 	case consts.PluginTypeCredential:
 		pluginType = "approle"
 		pluginName = "vault-plugin-auth-" + pluginType
 		builtinDirectory = "credential"
 		once = &compileAuthOnce
+		pluginBytes = &authPluginBytes
 	case consts.PluginTypeSecrets:
 		pluginType = "consul"
 		pluginName = "vault-plugin-secrets-" + pluginType
 		builtinDirectory = "logical"
 		once = &compileSecretOnce
+		pluginBytes = &secretPluginBytes
 	default:
 		t.Fatal(typ.String())
 	}
@@ -80,7 +84,7 @@ func compilePlugin(t *testing.T, typ consts.PluginType) (name string, shasum str
 		if err != nil {
 			t.Fatal(fmt.Errorf("error running go build %v output: %s", err, output))
 		}
-		pluginBytes, err = os.ReadFile(pluginPath)
+		*pluginBytes, err = os.ReadFile(pluginPath)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -89,14 +93,14 @@ func compilePlugin(t *testing.T, typ consts.PluginType) (name string, shasum str
 	// write the cached plugin if necessary
 	var err error
 	if _, err := os.Stat(pluginPath); os.IsNotExist(err) {
-		err = os.WriteFile(pluginPath, pluginBytes, 0o777)
+		err = os.WriteFile(pluginPath, *pluginBytes, 0o777)
 	}
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	sha := sha256.New()
-	_, err = sha.Write(pluginBytes)
+	_, err = sha.Write(*pluginBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
