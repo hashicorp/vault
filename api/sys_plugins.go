@@ -36,7 +36,7 @@ type PluginDetails struct {
 	Name              string `json:"name"`
 	Version           string `json:"version,omitempty"`
 	Builtin           bool   `json:"builtin"`
-	DeprecationStatus string `json:"deprecation_status,omitempty"`
+	DeprecationStatus string `json:"deprecation_status,omitempty" mapstructure:"deprecation_status"`
 }
 
 // ListPlugins wraps ListPluginsWithContext using context.Background.
