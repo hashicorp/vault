@@ -390,6 +390,7 @@ func TestPredict_Plugins(t *testing.T) {
 				"rabbitmq",
 				"radius",
 				"redis-database-plugin",
+				"redis-elasticache-database-plugin",
 				"redshift-database-plugin",
 				"snowflake-database-plugin",
 				"ssh",
