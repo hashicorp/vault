@@ -44,7 +44,7 @@ Usage: vault plugin list [options] [TYPE]
 
   List all available plugins with detailed output:
 
-	  $ vault plugin list -detailed
+      $ vault plugin list -detailed
 
 ` + c.Flags().Help()
 
