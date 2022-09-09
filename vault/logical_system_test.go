@@ -2989,14 +2989,18 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	// Get deprecation status directly from the registry so we can compare it to the API response
+	deprecationStatus, _ := c.builtinRegistry.DeprecationStatus("mysql-database-plugin", consts.PluginTypeDatabase)
+
 	actualRespData := resp.Data
 	expectedRespData := map[string]interface{}{
-		"name":    "mysql-database-plugin",
-		"command": "",
-		"args":    []string(nil),
-		"sha256":  "",
-		"builtin": true,
-		"version": c.pluginCatalog.getBuiltinVersion(consts.PluginTypeDatabase, "mysql-database-plugin"),
+		"name":               "mysql-database-plugin",
+		"command":            "",
+		"args":               []string(nil),
+		"sha256":             "",
+		"builtin":            true,
+		"version":            c.pluginCatalog.getBuiltinVersion(consts.PluginTypeDatabase, "mysql-database-plugin"),
+		"deprecation_status": deprecationStatus,
 	}
 	if !reflect.DeepEqual(actualRespData, expectedRespData) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actualRespData, expectedRespData)
