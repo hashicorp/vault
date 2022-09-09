@@ -24,9 +24,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -66,31 +64,13 @@ const (
 const ocspCacheKey = "ocsp_cache"
 
 const (
-	// defaultOCSPCacheServerTimeout is the total timeout for OCSP cache server.
-	defaultOCSPCacheServerTimeout = 5 * time.Second
-
 	// defaultOCSPResponderTimeout is the total timeout for OCSP responder.
 	defaultOCSPResponderTimeout = 10 * time.Second
 )
 
 const (
-	cacheFileBaseName = "ocsp_response_cache.json"
 	// cacheExpire specifies cache data expiration time in seconds.
-	cacheExpire           = float64(24 * 60 * 60)
-	cacheServerURL        = "http://ocsp.snowflakecomputing.com"
-	cacheServerEnabledEnv = "SF_OCSP_RESPONSE_CACHE_SERVER_ENABLED"
-	cacheServerURLEnv     = "SF_OCSP_RESPONSE_CACHE_SERVER_URL"
-	cacheDirEnv           = "SF_OCSP_RESPONSE_CACHE_DIR"
-	ocspRetryURLEnv       = "SF_OCSP_RESPONSE_RETRY_URL"
-)
-
-const (
-	ocspTestInjectValidityErrorEnv        = "SF_OCSP_TEST_INJECT_VALIDITY_ERROR"
-	ocspTestInjectUnknownStatusEnv        = "SF_OCSP_TEST_INJECT_UNKNOWN_STATUS"
-	ocspTestResponseCacheServerTimeoutEnv = "SF_OCSP_TEST_OCSP_RESPONSE_CACHE_SERVER_TIMEOUT"
-	ocspTestResponderTimeoutEnv           = "SF_OCSP_TEST_OCSP_RESPONDER_TIMEOUT"
-	ocspTestResponderURLEnv               = "SF_OCSP_TEST_RESPONDER_URL"
-	ocspTestNoOCSPURLEnv                  = "SF_OCSP_TEST_NO_OCSP_RESPONDER_URL"
+	cacheExpire = float64(24 * 60 * 60)
 )
 
 const (
@@ -131,18 +111,10 @@ const (
 	ocspStatusRevoked          ocspStatusCode = -2
 	ocspStatusUnknown          ocspStatusCode = -3
 	ocspStatusOthers           ocspStatusCode = -4
-	ocspNoServer               ocspStatusCode = -5
-	ocspFailedParseOCSPHost    ocspStatusCode = -6
-	ocspFailedComposeRequest   ocspStatusCode = -7
-	ocspFailedDecomposeRequest ocspStatusCode = -8
-	ocspFailedSubmit           ocspStatusCode = -9
-	ocspFailedResponse         ocspStatusCode = -10
-	ocspFailedExtractResponse  ocspStatusCode = -11
-	ocspFailedParseResponse    ocspStatusCode = -12
-	ocspInvalidValidity        ocspStatusCode = -13
-	ocspMissedCache            ocspStatusCode = -14
-	ocspCacheExpired           ocspStatusCode = -15
-	ocspFailedDecodeResponse   ocspStatusCode = -16
+	ocspFailedDecomposeRequest ocspStatusCode = -5
+	ocspInvalidValidity        ocspStatusCode = -6
+	ocspMissedCache            ocspStatusCode = -7
+	ocspCacheExpired           ocspStatusCode = -8
 )
 
 // copied from crypto/ocsp.go
@@ -214,10 +186,6 @@ func isInValidityRange(currTime, thisUpdate, nextUpdate time.Time) bool {
 		return false
 	}
 	return true
-}
-
-func isTestInvalidValidity() bool {
-	return strings.EqualFold(os.Getenv(ocspTestInjectValidityErrorEnv), "true")
 }
 
 func extractCertIDKeyFromRequest(ocspReq []byte) (*certIDKey, *ocspStatus) {
@@ -295,9 +263,6 @@ func decodeCertIDKey(k *certIDKey) (string, error) {
 }
 
 func (c *Client) checkOCSPResponseCache(encodedCertID *certIDKey, subject, issuer *x509.Certificate) (*ocspStatus, error) {
-	if strings.EqualFold(os.Getenv(cacheServerEnabledEnv), "false") {
-		return &ocspStatus{code: ocspNoServer}, nil
-	}
 	c.ocspResponseCacheLock.RLock()
 	gotValueFromCache := c.ocspResponseCache[*encodedCertID]
 	c.ocspResponseCacheLock.RUnlock()
@@ -325,11 +290,11 @@ func validateOCSP(ocspRes *ocsp.Response) (*ocspStatus, error) {
 	if ocspRes == nil {
 		return nil, errors.New("OCSP Response is nil")
 	}
-	if isTestInvalidValidity() || !isInValidityRange(curTime, ocspRes.ThisUpdate, ocspRes.NextUpdate) {
-		return nil, fmt.Errorf("invalid validity: producedAt: %v, thisUpdate: %v, nextUpdate: %v", ocspRes.ProducedAt, ocspRes.ThisUpdate, ocspRes.NextUpdate)
-	}
-	if isTestUnknownStatus() {
-		ocspRes.Status = ocsp.Unknown
+	if !isInValidityRange(curTime, ocspRes.ThisUpdate, ocspRes.NextUpdate) {
+		return &ocspStatus{
+			code: ocspInvalidValidity,
+			err:  fmt.Errorf("invalid validity: producedAt: %v, thisUpdate: %v, nextUpdate: %v", ocspRes.ProducedAt, ocspRes.ThisUpdate, ocspRes.NextUpdate),
+		}, nil
 	}
 	return returnOCSPStatus(ocspRes), nil
 }
@@ -356,49 +321,6 @@ func returnOCSPStatus(ocspRes *ocsp.Response) *ocspStatus {
 			err:  fmt.Errorf("OCSP others. %v", ocspRes.Status),
 		}
 	}
-}
-
-func isTestUnknownStatus() bool {
-	return strings.EqualFold(os.Getenv(ocspTestInjectUnknownStatusEnv), "true")
-}
-
-func (c *Client) checkOCSPCacheServer(
-	ctx context.Context,
-	client clientInterface,
-	req requestFunc,
-	ocspServerHost *url.URL,
-	totalTimeout time.Duration) (
-	cacheContent *map[string][]interface{},
-	ocspS *ocspStatus, err error) {
-	var respd map[string][]interface{}
-
-	request, err := req("GET", ocspServerHost.Hostname(), nil)
-	if err != nil {
-		return nil, nil, err
-	}
-	res, err := client.Do(request)
-	if err != nil {
-		return nil, nil, err
-	} // newRetryHTTP(ctx, client, req, ocspServerHost, headers, totalTimeout).execute()
-
-	defer res.Body.Close()
-	c.Logger().Debug("StatusCode from OCSP Cache Server", "statusCode", res.StatusCode)
-	if res.StatusCode != http.StatusOK {
-		return nil, nil, fmt.Errorf("HTTP code is not OK. %v: %v", res.StatusCode, res.Status)
-	}
-	c.Logger().Debug("reading contents")
-
-	dec := json.NewDecoder(res.Body)
-	for {
-		if err := dec.Decode(&respd); err == io.EOF {
-			break
-		} else if err != nil {
-			return nil, nil, err
-		}
-	}
-	return &respd, &ocspStatus{
-		code: ocspSuccess,
-	}, nil
 }
 
 // retryOCSP is the second level of retry method if the returned contents are corrupted. It often happens with OCSP
@@ -695,8 +617,6 @@ func (c *Client) extractOCSPCacheResponseValue(cacheValue *ocspCachedResponse, s
 	return validateOCSP(r)
 }
 
-const storageValueKey = "backingStore"
-
 // writeOCSPCache writes a OCSP Response cache
 func (c *Client) writeOCSPCache(ctx context.Context, storage logical.Storage) error {
 	c.Logger().Debug("writing OCSP Response cache file")
@@ -744,16 +664,16 @@ func (c *Client) readOCSPCache(ctx context.Context, storage logical.Storage) err
 		if err != nil {
 			return err
 		}
-		var time float64
+		var ts float64
 		if jn, ok := v[0].(json.Number); ok {
-			time, err = jn.Float64()
+			ts, err = jn.Float64()
 			if err != nil {
 				return err
 			}
 		} else {
-			time = v[0].(float64)
+			ts = v[0].(float64)
 		}
-		c.ocspResponseCache[*key] = &ocspCachedResponse{time: time, resp: v[1].(string)}
+		c.ocspResponseCache[*key] = &ocspCachedResponse{time: ts, resp: v[1].(string)}
 	}
 	return nil
 }
@@ -818,8 +738,11 @@ func (c *Client) WriteCache(ctx context.Context, storage logical.Storage) error 
 	c.ocspResponseCacheLock.Lock()
 	defer c.ocspResponseCacheLock.Unlock()
 	if c.cacheUpdated {
-		return c.writeOCSPCache(ctx, storage)
-		c.cacheUpdated = false
+		err := c.writeOCSPCache(ctx, storage)
+		if err == nil {
+			c.cacheUpdated = false
+		}
+		return err
 	}
 	return nil
 }

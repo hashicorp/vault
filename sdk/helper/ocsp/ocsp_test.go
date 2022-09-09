@@ -17,7 +17,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"testing"
 	"time"
 
@@ -25,10 +24,6 @@ import (
 )
 
 func TestOCSP(t *testing.T) {
-	cacheServerEnabled := []string{
-		"true",
-		"false",
-	}
 	targetURL := []string{
 		"https://sfcdev1.blob.core.windows.net/",
 		"https://sfctest0.snowflakecomputing.com/",
@@ -41,34 +36,29 @@ func TestOCSP(t *testing.T) {
 		c.NewTransport(nil, nil),
 	}
 
-	for _, enabled := range cacheServerEnabled {
-		for _, tgt := range targetURL {
-			_ = os.Setenv(cacheServerEnabledEnv, enabled)
-			//_ = os.Remove(cacheFileName) // clear cache file
-			c.ocspResponseCache = make(map[certIDKey]*ocspCachedResponse)
-			for _, tr := range transports {
-				c := &http.Client{
-					Transport: tr,
-					Timeout:   30 * time.Second,
-				}
-				req, err := http.NewRequest("GET", tgt, bytes.NewReader(nil))
-				if err != nil {
-					t.Fatalf("fail to create a request. err: %v", err)
-				}
-				res, err := c.Do(req)
-				if err != nil {
-					t.Fatalf("failed to GET contents. err: %v", err)
-				}
-				defer res.Body.Close()
-				_, err = ioutil.ReadAll(res.Body)
-				if err != nil {
-					t.Fatalf("failed to read content body for %v", tgt)
-				}
-
+	for _, tgt := range targetURL {
+		c.ocspResponseCache = make(map[certIDKey]*ocspCachedResponse)
+		for _, tr := range transports {
+			c := &http.Client{
+				Transport: tr,
+				Timeout:   30 * time.Second,
 			}
+			req, err := http.NewRequest("GET", tgt, bytes.NewReader(nil))
+			if err != nil {
+				t.Fatalf("fail to create a request. err: %v", err)
+			}
+			res, err := c.Do(req)
+			if err != nil {
+				t.Fatalf("failed to GET contents. err: %v", err)
+			}
+			defer res.Body.Close()
+			_, err = ioutil.ReadAll(res.Body)
+			if err != nil {
+				t.Fatalf("failed to read content body for %v", tgt)
+			}
+
 		}
 	}
-	_ = os.Unsetenv(cacheServerEnabledEnv)
 }
 
 type tcValidityRange struct {
@@ -350,38 +340,6 @@ func TestOCSPRetry(t *testing.T) {
 		make(map[string]string), []byte{0}, certs[len(certs)-1])
 	if err == nil {
 		fmt.Printf("should fail: %v, %v, %v\n", res, b, st)
-	}
-}
-
-func TestOCSPCacheServerRetry(t *testing.T) {
-	c := New(testLogFactory)
-	dummyOCSPHost := &url.URL{
-		Scheme: "https",
-		Host:   "dummyOCSPHost",
-	}
-	client := &fakeHTTPClient{
-		cnt:     3,
-		success: true,
-		body:    []byte{1, 2, 3},
-		logger:  hclog.New(hclog.DefaultOptions),
-		t:       t,
-	}
-	res, _, err := c.checkOCSPCacheServer(
-		context.TODO(), client, fakeRequestFunc, dummyOCSPHost, 20*time.Second)
-	if err == nil {
-		t.Errorf("should fail: %v", res)
-	}
-	client = &fakeHTTPClient{
-		cnt:     30,
-		success: true,
-		body:    []byte{1, 2, 3},
-		logger:  hclog.New(hclog.DefaultOptions),
-		t:       t,
-	}
-	res, _, err = c.checkOCSPCacheServer(
-		context.TODO(), client, fakeRequestFunc, dummyOCSPHost, 10*time.Second)
-	if err == nil {
-		t.Errorf("should fail: %v", res)
 	}
 }
 
