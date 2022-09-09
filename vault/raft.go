@@ -72,72 +72,74 @@ func (c *Core) startRaftBackend(ctx context.Context) (retErr error) {
 		return nil
 	}
 
-	// Retrieve the raft TLS information
-	raftTLSEntry, err := c.barrier.Get(ctx, raftTLSStoragePath)
-	if err != nil {
-		return err
-	}
-
 	var creating bool
 	var raftTLS *raft.TLSKeyring
-	switch raftTLSEntry {
-	case nil:
-		// If this is HA-only and no TLS keyring is found, that means the
-		// cluster has not been bootstrapped or joined. We return early here in
-		// this case. If we return here, the raft object has not been instantiated,
-		// and a bootstrap call should be made.
-		if c.isRaftHAOnly() {
-			c.logger.Trace("skipping raft backend setup during unseal, no bootstrap operation has been started yet")
-			return nil
-		}
-
-		// If we did not find a TLS keyring we will attempt to create one here.
-		// This happens after a storage migration process. This node is also
-		// marked to start as leader so we can write the new TLS Key. This is an
-		// error condition if there are already multiple nodes in the cluster,
-		// and the below storage write will fail. If the cluster is somehow in
-		// this state the unseal will fail and a cluster recovery will need to
-		// be done.
-		creating = true
-		raftTLSKey, err := raft.GenerateTLSKey(c.secureRandomReader)
+	if !raftBackend.Initialized() {
+		// Retrieve the raft TLS information
+		raftTLSEntry, err := c.barrier.Get(ctx, raftTLSStoragePath)
 		if err != nil {
 			return err
 		}
 
-		raftTLS = &raft.TLSKeyring{
-			Keys:        []*raft.TLSKey{raftTLSKey},
-			ActiveKeyID: raftTLSKey.ID,
+		switch raftTLSEntry {
+		case nil:
+			// If this is HA-only and no TLS keyring is found, that means the
+			// cluster has not been bootstrapped or joined. We return early here in
+			// this case. If we return here, the raft object has not been instantiated,
+			// and a bootstrap call should be made.
+			if c.isRaftHAOnly() {
+				c.logger.Trace("skipping raft backend setup during unseal, no bootstrap operation has been started yet")
+				return nil
+			}
+
+			// If we did not find a TLS keyring we will attempt to create one here.
+			// This happens after a storage migration process. This node is also
+			// marked to start as leader so we can write the new TLS Key. This is an
+			// error condition if there are already multiple nodes in the cluster,
+			// and the below storage write will fail. If the cluster is somehow in
+			// this state the unseal will fail and a cluster recovery will need to
+			// be done.
+			creating = true
+			raftTLSKey, err := raft.GenerateTLSKey(c.secureRandomReader)
+			if err != nil {
+				return err
+			}
+
+			raftTLS = &raft.TLSKeyring{
+				Keys:        []*raft.TLSKey{raftTLSKey},
+				ActiveKeyID: raftTLSKey.ID,
+			}
+		default:
+			raftTLS = new(raft.TLSKeyring)
+			if err := raftTLSEntry.DecodeJSON(raftTLS); err != nil {
+				return err
+			}
 		}
-	default:
-		raftTLS = new(raft.TLSKeyring)
-		if err := raftTLSEntry.DecodeJSON(raftTLS); err != nil {
+
+		hasState, err := raftBackend.HasState()
+		if err != nil {
 			return err
 		}
-	}
 
-	hasState, err := raftBackend.HasState()
-	if err != nil {
-		return err
-	}
+		// This can be hit on follower nodes that got their config updated to use
+		// raft for HA-only before they are joined to the cluster. Since followers
+		// in this case use shared storage, it doesn't return early from the TLS
+		// case above, but there's not raft state yet for the backend to call
+		// raft.SetupCluster.
+		if !hasState {
+			c.logger.Trace("skipping raft backend setup during unseal, no raft state found")
+			return nil
+		}
 
-	// This can be hit on follower nodes that got their config updated to use
-	// raft for HA-only before they are joined to the cluster. Since followers
-	// in this case use shared storage, it doesn't return early from the TLS
-	// case above, but there's not raft state yet for the backend to call
-	// raft.SetupCluster.
-	if !hasState {
-		c.logger.Trace("skipping raft backend setup during unseal, no raft state found")
-		return nil
-	}
+		raftBackend.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
 
-	raftBackend.SetRestoreCallback(c.raftSnapshotRestoreCallback(true, true))
-
-	if err := raftBackend.SetupCluster(ctx, raft.SetupOpts{
-		TLSKeyring:      raftTLS,
-		ClusterListener: c.getClusterListener(),
-		StartAsLeader:   creating,
-	}); err != nil {
-		return err
+		if err := raftBackend.SetupCluster(ctx, raft.SetupOpts{
+			TLSKeyring:      raftTLS,
+			ClusterListener: c.getClusterListener(),
+			StartAsLeader:   creating,
+		}); err != nil {
+			return err
+		}
 	}
 
 	defer func() {
