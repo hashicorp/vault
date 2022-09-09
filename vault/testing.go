@@ -225,6 +225,8 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 		conf.AuditBackends[k] = v
 	}
 
+	conf.ActivityLogConfig = opts.ActivityLogConfig
+
 	c, err := NewCore(conf)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -351,6 +353,10 @@ func TestCoreUnseal(core *Core, key []byte) (bool, error) {
 	return core.Unseal(key)
 }
 
+func TestCoreSeal(core *Core) error {
+	return core.sealInternal()
+}
+
 // TestCoreUnsealed returns a pure in-memory core that is already
 // initialized and unsealed.
 func TestCoreUnsealed(t testing.T) (*Core, [][]byte, string) {
@@ -359,16 +365,21 @@ func TestCoreUnsealed(t testing.T) (*Core, [][]byte, string) {
 	return testCoreUnsealed(t, core)
 }
 
+func SetupMetrics(conf *CoreConfig) *metrics.InmemSink {
+	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
+	conf.MetricSink = metricsutil.NewClusterMetricSink("test-cluster", inmemSink)
+	conf.MetricsHelper = metricsutil.NewMetricsHelper(inmemSink, false)
+	return inmemSink
+}
+
 func TestCoreUnsealedWithMetrics(t testing.T) (*Core, [][]byte, string, *metrics.InmemSink) {
 	t.Helper()
-	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
 	conf := &CoreConfig{
 		BuiltinRegistry: NewMockBuiltinRegistry(),
-		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
-		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
+	sink := SetupMetrics(conf)
 	core, keys, root := testCoreUnsealed(t, TestCoreWithSealAndUI(t, conf))
-	return core, keys, root, inmemSink
+	return core, keys, root, sink
 }
 
 // TestCoreUnsealedRaw returns a pure in-memory core that is already
@@ -389,19 +400,24 @@ func TestCoreUnsealedWithConfig(t testing.T, conf *CoreConfig) (*Core, [][]byte,
 
 func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
 	t.Helper()
+	token, keys := TestInitUnsealCore(t, core)
+
+	testCoreAddSecretMount(t, core, token)
+	return core, keys, token
+}
+
+func TestInitUnsealCore(t testing.T, core *Core) (string, [][]byte) {
 	keys, token := TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
 		}
 	}
-
 	if core.Sealed() {
 		t.Fatal("should not be sealed")
 	}
 
-	testCoreAddSecretMount(t, core, token)
-	return core, keys, token
+	return token, keys
 }
 
 func testCoreAddSecretMount(t testing.T, core *Core, token string) {

@@ -378,7 +378,6 @@ type MFACreds map[string][]string
 // InitializationRequest stores the parameters and context of an Initialize()
 // call being made to a logical.Backend.
 type InitializationRequest struct {
-
 	// Storage can be used to durably store and retrieve state.
 	Storage Storage
 }

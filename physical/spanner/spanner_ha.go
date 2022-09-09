@@ -320,9 +320,10 @@ OUTER:
 //
 // - lock does not exist
 //   - write the lock
+//
 // - lock exists
 //   - if key is empty or identity is the same or timestamp exceeds TTL
-//     - update the lock to self
+//   - update the lock to self
 func (l *Lock) writeLock() (bool, error) {
 	// Keep track of whether the lock was written
 	lockWritten := false

@@ -32,7 +32,7 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
     this.set('queryParam', 'role');
     this.set('backend', 'transform');
     this.set('wildcardLabel', 'role');
-    this.set('viewAll', 'roles');
+    this.set('label', 'Roles');
     run(() => {
       this.owner.unregister('service:store');
       this.owner.register('service:store', storeService);
@@ -58,13 +58,15 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
   });
 
   test('it renders links if isLink is true', async function (assert) {
-    await render(hbs`<InfoTableItemArray
-      @displayArray={{this.displayArray}}
-      @isLink={{this.isLink}}
-      @modelType={{this.modelType}}
-      @queryParam={{this.queryParam}}
-      @backend={{this.backend}}
-    />`);
+    await render(hbs`
+      <InfoTableItemArray
+        @displayArray={{this.displayArray}}
+        @isLink={{this.isLink}}
+        @modelType={{this.modelType}}
+        @queryParam={{this.queryParam}}
+        @backend={{this.backend}}
+      />
+    `);
     assert.equal(
       document.querySelectorAll('a > span').length,
       DISPLAY_ARRAY.length,
@@ -75,15 +77,15 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
   test('it renders a badge and view all if wildcard in display array && < 10', async function (assert) {
     const displayArrayWithWildcard = ['role-1', 'role-2', 'role-3', 'r*'];
     this.set('displayArrayWithWildcard', displayArrayWithWildcard);
-    await render(hbs`<InfoTableItemArray
+    await render(hbs`
+    <InfoTableItemArray
+      @label={{this.label}}
       @displayArray={{this.displayArrayWithWildcard}}
       @isLink={{this.isLink}}
       @modelType={{this.modelType}}
       @queryParam={{this.queryParam}}
       @backend={{this.backend}}
-      @viewAll={{this.viewAll}}
     />`);
-
     assert.equal(
       document.querySelectorAll('a > span').length,
       DISPLAY_ARRAY.length - 1,
@@ -92,6 +94,7 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
     // 6 here comes from the six roles setup in the store service.
     assert.dom('[data-test-count="6"]').exists('correctly counts with wildcard filter and shows the count');
     assert.dom('[data-test-view-all="roles"]').exists({ count: 1 }, 'renders 1 view all roles');
+    assert.dom('[data-test-view-all="roles"]').hasText('View all roles.', 'renders correct view all text');
   });
 
   test('it renders a badge and view all if wildcard in display array && >= 10', async function (assert) {
@@ -109,18 +112,20 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
       'role-10',
     ];
     this.set('displayArrayWithWildcard', displayArrayWithWildcard);
-    await render(hbs`<InfoTableItemArray
+    await render(hbs`
+    <InfoTableItemArray
+      @label={{this.label}}
       @displayArray={{this.displayArrayWithWildcard}}
       @isLink={{this.isLink}}
       @modelType={{this.modelType}}
       @queryParam={{this.queryParam}}
       @backend={{this.backend}}
-      @viewAll={{this.viewAll}}
     />`);
     const numberCutOffTruncatedArray = displayArrayWithWildcard.length - 5;
     assert.equal(document.querySelectorAll('a > span').length, 5, 'renders truncated array of five');
     assert
       .dom(`[data-test-and="${numberCutOffTruncatedArray}"]`)
       .exists('correctly counts with wildcard filter and shows the count');
+    assert.dom('[data-test-view-all="roles"]').hasText('View all roles.', 'renders correct view all text');
   });
 });

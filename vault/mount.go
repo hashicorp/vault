@@ -463,6 +463,12 @@ func (c *Core) decodeMountTable(ctx context.Context, raw []byte) (*MountTable, e
 			continue
 		}
 
+		// Immediately shutdown the core if deprecated mounts are detected and VAULT_ALLOW_PENDING_REMOVAL_MOUNTS is unset
+		if _, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeUnknown); err != nil {
+			c.logger.Error("shutting down core", "error", err)
+			c.Shutdown()
+		}
+
 		entry.namespace = ns
 		mountEntries = append(mountEntries, entry)
 	}
@@ -902,6 +908,59 @@ func (c *Core) taintMountEntry(ctx context.Context, nsID, mountPath string, upda
 	}
 
 	return nil
+}
+
+// handleDeprecatedMountEntry handles the Deprecation Status of the specified
+// mount entry's builtin engine as follows:
+//
+// * Supported - do nothing
+// * Deprecated - log a warning about builtin deprecation
+// * PendingRemoval - log an error about builtin deprecation and return an error
+// if VAULT_ALLOW_PENDING_REMOVAL_MOUNTS is unset
+// * Removed - log an error about builtin deprecation and return an error
+func (c *Core) handleDeprecatedMountEntry(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) (*logical.Response, error) {
+	if c.builtinRegistry == nil || entry == nil {
+		return nil, nil
+	}
+
+	// Allow type to be determined from mount entry when not otherwise specified
+	if pluginType == consts.PluginTypeUnknown {
+		pluginType = c.builtinTypeFromMountEntry(ctx, entry)
+	}
+
+	// Handle aliases
+	t := entry.Type
+	if alias, ok := mountAliases[t]; ok {
+		t = alias
+	}
+
+	status, ok := c.builtinRegistry.DeprecationStatus(t, pluginType)
+	if ok {
+		resp := &logical.Response{}
+		// Deprecation sublogger with some identifying information
+		dl := c.logger.With("name", t, "type", pluginType, "status", status, "path", entry.Path)
+		errDeprecatedMount := fmt.Errorf("mount entry associated with %s builtin", status)
+
+		switch status {
+		case consts.Deprecated:
+			dl.Warn(errDeprecatedMount.Error())
+			resp.AddWarning(errDeprecatedMount.Error())
+			return resp, nil
+
+		case consts.PendingRemoval:
+			dl.Error(errDeprecatedMount.Error())
+			if allow := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv); allow == "" {
+				return nil, fmt.Errorf("could not mount %q: %w", t, errDeprecatedMount)
+			}
+			resp.AddWarning(errDeprecatedMount.Error())
+			c.Logger().Info("mount allowed by environment variable", "env", consts.VaultAllowPendingRemovalMountsEnv)
+			return resp, nil
+
+		case consts.Removed:
+			return nil, fmt.Errorf("could not mount %s: %w", t, errDeprecatedMount)
+		}
+	}
+	return nil, nil
 }
 
 // remountForceInternal takes a copy of the mount entry for the path and fully unmounts

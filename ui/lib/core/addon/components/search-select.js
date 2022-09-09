@@ -15,13 +15,15 @@ import layout from '../templates/components/search-select';
  *
  * @param {string} id - The name of the form field
  * @param {Array} models - An array of model types to fetch from the API.
+ * @param {object} [queryObject] - object passed as query options to this.store.query(). NOTE: will override this.backend
  * @param {function} onChange - The onchange action for this form field. ** SEE UTIL ** search-select-has-many.js if selecting models from a hasMany relationship
  * @param {string | Array} inputValue -  A comma-separated string or an array of strings -- array of ids for models.
  * @param {string} label - Label for this form field
  * @param {string} fallbackComponent - name of component to be rendered if the API call 403s
  * @param {string} [backend] - name of the backend if the query for options needs additional information (eg. secret backend)
  * @param {boolean} [disallowNewItems=false] - Controls whether or not the user can add a new item if none found
- * @param {boolean} [passObject=false] - When true, the onChange callback returns an array of objects with id (string) and isNew (boolean)
+ * @param {boolean} [passObject=false] - When true, the onChange callback returns an array of objects with id (string) and isNew (boolean) (instead of an array of id strings)
+ * @param {array} [objectKeys=null] - Array of values that correlate to model attrs. When passObject=true, objectKeys are added to the passed object. NOTE: make 'id' as the first element in objectKeys if you do not want to override the default of 'id'
  * @param {string} [helpText] - Text to be displayed in the info tooltip for this form field
  * @param {number} [selectLimit] - A number that sets the limit to how many select options they can choose
  * @param {string} [subText] - Text to be displayed below the label
@@ -44,7 +46,6 @@ export default Component.extend({
   classNameBindings: ['displayInherit:display-inherit'],
   classNames: ['field', 'search-select'],
   store: service(),
-
   onChange: () => {},
   inputValue: computed(function () {
     return [];
@@ -56,7 +57,11 @@ export default Component.extend({
   shouldRenderName: false,
   disallowNewItems: false,
   passObject: false,
-
+  objectKeys: null,
+  idKey: computed('objectKeys', function () {
+    // if objectKeys exists, then use the first element of the array as the identifier
+    return this.objectKeys ? this.objectKeys[0] : 'id';
+  }),
   init() {
     this._super(...arguments);
     this.set('selectedOptions', this.inputValue || []);
@@ -73,7 +78,7 @@ export default Component.extend({
   },
   formatOptions: function (options) {
     options = options.toArray().map((option) => {
-      option.searchText = `${option.name} ${option.id}`;
+      option.searchText = `${option.name} ${option[this.idKey]}`;
       return option;
     });
     let allOptions = options.toArray().map((option) => {
@@ -81,15 +86,19 @@ export default Component.extend({
     });
     this.set('allOptions', allOptions); // used by filter-wildcard helper
     let formattedOptions = this.selectedOptions.map((option) => {
-      let matchingOption = options.findBy('id', option);
+      let matchingOption = options.findBy(this.idKey, option);
+      // an undefined matchingOption means a selectedOption, on edit, didn't match a model returned from the query and therefore doesn't exist
+      let addTooltip = matchingOption ? false : true; // add tooltip to let user know the selection can be discarded
       options.removeObject(matchingOption);
       return {
         id: option,
         name: matchingOption ? matchingOption.name : option,
         searchText: matchingOption ? matchingOption.searchText : option,
+        addTooltip,
+        // conditionally spread configured object if we're using the dynamic idKey
+        ...(this.idKey !== 'id' && this.customizeObject(matchingOption)),
       };
     });
-
     this.set('selectedOptions', formattedOptions);
     if (this.options) {
       options = this.options.concat(options).uniq();
@@ -103,6 +112,10 @@ export default Component.extend({
       }
       return;
     }
+    if (this.idKey !== 'id') {
+      // if passing a dynamic idKey, then display it in the dropdown beside the name
+      this.set('shouldRenderName', true);
+    }
     for (let modelType of this.models) {
       if (modelType.includes('identity')) {
         this.set('shouldRenderName', true);
@@ -111,6 +124,9 @@ export default Component.extend({
         let queryOptions = {};
         if (this.backend) {
           queryOptions = { backend: this.backend };
+        }
+        if (this.queryObject) {
+          queryOptions = this.queryObject;
         }
         let options = yield this.store.query(modelType, queryOptions);
         this.formatOptions(options);
@@ -135,11 +151,7 @@ export default Component.extend({
   }).on('didInsertElement'),
   handleChange() {
     if (this.selectedOptions.length && typeof this.selectedOptions.firstObject === 'object') {
-      if (this.passObject) {
-        this.onChange(Array.from(this.selectedOptions, (option) => ({ id: option.id, isNew: !!option.new })));
-      } else {
-        this.onChange(Array.from(this.selectedOptions, (option) => option.id));
-      }
+      this.onChange(Array.from(this.selectedOptions, (option) => this.customizeObject(option)));
     } else {
       this.onChange(this.selectedOptions);
     }
@@ -157,7 +169,7 @@ export default Component.extend({
   //----- adapted from ember-power-select-with-create
   addCreateOption(term, results) {
     if (this.shouldShowCreate(term, results)) {
-      const name = `Add new ${singularize(this.label)}: ${term}`;
+      const name = `Add new ${singularize(this.label || 'item')}: ${term}`;
       const suggestion = {
         __isSuggestion__: true,
         __value__: term,
@@ -172,7 +184,30 @@ export default Component.extend({
     return filterOptions(options || [], searchText, matcher);
   },
   // -----
-
+  customizeObject(option) {
+    if (!option) return;
+    // if passObject=true return object, otherwise return string of option id
+    if (this.passObject) {
+      let additionalKeys;
+      if (this.objectKeys) {
+        // pull attrs corresponding to objectKeys from model record, add to the selected option (object) and send to the parent
+        additionalKeys = Object.fromEntries(this.objectKeys.map((key) => [key, option[key]]));
+        // filter any undefined attrs, which means the model did not have a value for that attr
+        // no value could mean the model was not hydrated, the record is new or the model doesn't have that attribute
+        Object.keys(additionalKeys).forEach((key) => {
+          if (additionalKeys[key] === undefined) {
+            delete additionalKeys[key];
+          }
+        });
+      }
+      return {
+        id: option.id,
+        isNew: !!option.new,
+        ...additionalKeys,
+      };
+    }
+    return option.id;
+  },
   actions: {
     onChange(val) {
       this.onChange(val);

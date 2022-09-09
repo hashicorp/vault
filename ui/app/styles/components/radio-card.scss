@@ -3,16 +3,15 @@
   margin-bottom: $spacing-xs;
 }
 .radio-card {
-  width: 19rem;
   box-shadow: $box-shadow-low;
-  display: flex;
+  flex: 1 1 25%;
   flex-direction: column;
   justify-content: space-between;
   margin: $spacing-xs $spacing-m;
   border: $base-border;
   border-radius: $radius;
   transition: all ease-in-out $speed;
-
+  max-width: 60%;
   input[type='radio'] {
     position: absolute;
     z-index: 1;
