@@ -32,10 +32,11 @@ type ListPluginsResponse struct {
 }
 
 type PluginDetails struct {
-	Type    string `json:"string"`
-	Name    string `json:"name"`
-	Version string `json:"version,omitempty"`
-	Builtin bool   `json:"builtin"`
+	Type              string `json:"string"`
+	Name              string `json:"name"`
+	Version           string `json:"version,omitempty"`
+	Builtin           bool   `json:"builtin"`
+	DeprecationStatus string `json:"deprecation_status,omitempty" mapstructure:"deprecation_status"`
 }
 
 // ListPlugins wraps ListPluginsWithContext using context.Background.
@@ -158,11 +159,12 @@ type GetPluginInput struct {
 
 // GetPluginResponse is the response from the GetPlugin call.
 type GetPluginResponse struct {
-	Args    []string `json:"args"`
-	Builtin bool     `json:"builtin"`
-	Command string   `json:"command"`
-	Name    string   `json:"name"`
-	SHA256  string   `json:"sha256"`
+	Args              []string `json:"args"`
+	Builtin           bool     `json:"builtin"`
+	Command           string   `json:"command"`
+	Name              string   `json:"name"`
+	SHA256            string   `json:"sha256"`
+	DeprecationStatus string   `json:"deprecation_status,omitempty"`
 }
 
 // GetPlugin wraps GetPluginWithContext using context.Background.

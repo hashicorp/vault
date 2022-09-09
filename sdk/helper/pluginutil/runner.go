@@ -88,11 +88,12 @@ func (r *PluginRunner) RunMetadataMode(ctx context.Context, wrapper RunnerUtil, 
 // VersionedPlugin holds any versioning information stored about a plugin in the
 // plugin catalog.
 type VersionedPlugin struct {
-	Type    string `json:"type"` // string instead of consts.PluginType so that we get the string form in API responses.
-	Name    string `json:"name"`
-	Version string `json:"version"`
-	SHA256  string `json:"sha256,omitempty"`
-	Builtin bool   `json:"builtin"`
+	Type              string `json:"type"` // string instead of consts.PluginType so that we get the string form in API responses.
+	Name              string `json:"name"`
+	Version           string `json:"version"`
+	SHA256            string `json:"sha256,omitempty"`
+	Builtin           bool   `json:"builtin"`
+	DeprecationStatus string `json:"deprecation_status,omitempty"`
 
 	// Pre-parsed semver struct of the Version field
 	SemanticVersion *version.Version `json:"-"`

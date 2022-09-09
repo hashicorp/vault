@@ -572,6 +572,11 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 		"version": plugin.Version,
 	}
 
+	if plugin.Builtin {
+		status, _ := b.Core.builtinRegistry.DeprecationStatus(plugin.Name, plugin.Type)
+		data["deprecation_status"] = status.String()
+	}
+
 	return &logical.Response{
 		Data: data,
 	}, nil
