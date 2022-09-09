@@ -170,6 +170,11 @@ func (c *LeaseCache) SetPersistentStorage(storageIn *cacheboltdb.BoltStorage) {
 	c.ps = storageIn
 }
 
+// UpdateIndexState updates the vault index state with a newer index
+func (c *LeaseCache) UpdateIndexState(newIndex string) {
+	c.proxier.UpdateIndexState(newIndex)
+}
+
 // checkCacheForRequest checks the cache for a particular request based on its
 // computed ID. It returns a non-nil *SendResponse  if an entry is found.
 func (c *LeaseCache) checkCacheForRequest(id string) (*SendResponse, error) {

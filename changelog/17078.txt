@@ -1,3 +1,3 @@
 ```release-note:bug
-agent/consistency: Fix issue where X-Vault-Index header from auto-auth was not being passed to API proxy.
+agent/consistency: Fix issue with client consistency between auto-auth and other requests, ensuring token can be used on a different perf standby.
 ```

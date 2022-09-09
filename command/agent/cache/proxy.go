@@ -43,6 +43,7 @@ type CacheMeta struct {
 // these tasks combined together would serve the request received by the agent.
 type Proxier interface {
 	Send(ctx context.Context, req *SendRequest) (*SendResponse, error)
+	UpdateIndexState(string)
 }
 
 // NewSendResponse creates a new SendResponse and takes care of initializing its

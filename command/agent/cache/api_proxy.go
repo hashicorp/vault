@@ -58,6 +58,21 @@ func NewAPIProxy(config *APIProxyConfig) (Proxier, error) {
 	}, nil
 }
 
+// UpdateIndexState updates the vault index state with a newer index
+func (ap *APIProxy) UpdateIndexState(newState string) {
+	ap.l.Lock()
+	// We want to be using the "newest" states seen, but newer isn't well
+	// defined here.  There can be two states S1 and S2 which aren't strictly ordered:
+	// S1 could have a newer localindex and S2 could have a newer replicatedindex.  So
+	// we need to merge them.  But we can't merge them because we wouldn't be able to
+	// "sign" the resulting header because we don't have access to the HMAC key that
+	// Vault uses to do so.  So instead we compare any of the 0-2 saved states
+	// we have to the new header, keeping the newest 1-2 of these, and sending
+	// them to Vault to evaluate.
+	ap.lastIndexStates = api.MergeReplicationStates(ap.lastIndexStates, newState)
+	ap.l.Unlock()
+}
+
 func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, error) {
 	client, err := ap.client.Clone()
 	if err != nil {
@@ -120,18 +135,12 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 		return nil, err
 	}
 
+	if resp != nil && fwReq != nil {
+		fmt.Printf("Violet: req headers = %s, resp headers = %s", fwReq.Headers, resp.Header)
+	}
+
 	if newState != "" {
-		ap.l.Lock()
-		// We want to be using the "newest" states seen, but newer isn't well
-		// defined here.  There can be two states S1 and S2 which aren't strictly ordered:
-		// S1 could have a newer localindex and S2 could have a newer replicatedindex.  So
-		// we need to merge them.  But we can't merge them because we wouldn't be able to
-		// "sign" the resulting header because we don't have access to the HMAC key that
-		// Vault uses to do so.  So instead we compare any of the 0-2 saved states
-		// we have to the new header, keeping the newest 1-2 of these, and sending
-		// them to Vault to evaluate.
-		ap.lastIndexStates = api.MergeReplicationStates(ap.lastIndexStates, newState)
-		ap.l.Unlock()
+		ap.UpdateIndexState(newState)
 	}
 
 	// Before error checking from the request call, we'd want to initialize a SendResponse to

@@ -42,28 +42,31 @@ type SinkConfig struct {
 }
 
 type SinkServerConfig struct {
-	Logger        hclog.Logger
-	Client        *api.Client
-	Context       context.Context
-	ExitAfterAuth bool
+	Logger                    hclog.Logger
+	Client                    *api.Client
+	Context                   context.Context
+	LeaseCacheUpdateIndexFunc func(string)
+	ExitAfterAuth             bool
 }
 
 // SinkServer is responsible for pushing tokens to sinks
 type SinkServer struct {
-	logger        hclog.Logger
-	client        *api.Client
-	random        *rand.Rand
-	exitAfterAuth bool
-	remaining     *int32
+	logger                    hclog.Logger
+	client                    *api.Client
+	random                    *rand.Rand
+	leaseCacheUpdateIndexFunc func(string)
+	exitAfterAuth             bool
+	remaining                 *int32
 }
 
 func NewSinkServer(conf *SinkServerConfig) *SinkServer {
 	ss := &SinkServer{
-		logger:        conf.Logger,
-		client:        conf.Client,
-		random:        rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
-		exitAfterAuth: conf.ExitAfterAuth,
-		remaining:     new(int32),
+		logger:                    conf.Logger,
+		client:                    conf.Client,
+		random:                    rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
+		exitAfterAuth:             conf.ExitAfterAuth,
+		leaseCacheUpdateIndexFunc: conf.LeaseCacheUpdateIndexFunc,
+		remaining:                 new(int32),
 	}
 
 	return ss
@@ -116,8 +119,8 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan auth.AuthHandlerOut
 		case ahOutput := <-incoming:
 			if len(sinks) > 0 {
 				token := ahOutput.Token
-				if ss.client != nil {
-					ss.client.WithRequestCallbacks(api.RequireState(ahOutput.VaultIndex))
+				if ss.leaseCacheUpdateIndexFunc != nil {
+					ss.leaseCacheUpdateIndexFunc(ahOutput.VaultIndex)
 				}
 				if token != *latestToken {
 

@@ -241,8 +241,9 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		// This should only happen if there's no preloaded token (regular auto-auth login)
 		//  or if a preloaded token has expired and is now switching to auto-auth.
 		if secret.Auth == nil {
-			clientToUse = clientToUse.WithResponseCallbacks(api.RecordState(&ah.vaultIndex))
-			secret, err = clientToUse.Logical().WriteWithContext(ctx, path, data)
+			clientWithRecordState := clientToUse.WithResponseCallbacks(api.RecordState(&ah.vaultIndex))
+			// We use this new client for one request only, to prevent races.
+			secret, err = clientWithRecordState.Logical().WriteWithContext(ctx, path, data)
 			// Check errors/sanity
 			if err != nil {
 				ah.logger.Error("error authenticating", "error", err, "backoff", backoff)

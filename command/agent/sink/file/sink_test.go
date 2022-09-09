@@ -10,10 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/command/agent/auth"
-
 	hclog "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/command/agent/auth"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 )

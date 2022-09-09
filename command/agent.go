@@ -851,10 +851,16 @@ func (c *AgentCommand) Run(args []string) int {
 			Token:                        previousToken,
 		})
 
+		var leaseCacheUpdateIndexFunc func(string)
+		if leaseCache != nil {
+			leaseCacheUpdateIndexFunc = leaseCache.UpdateIndexState
+		}
+
 		ss := sink.NewSinkServer(&sink.SinkServerConfig{
-			Logger:        c.logger.Named("sink.server"),
-			Client:        ahClient,
-			ExitAfterAuth: exitAfterAuth,
+			Logger:                    c.logger.Named("sink.server"),
+			Client:                    ahClient,
+			LeaseCacheUpdateIndexFunc: leaseCacheUpdateIndexFunc,
+			ExitAfterAuth:             exitAfterAuth,
 		})
 
 		ts := template.NewServer(&template.ServerConfig{
