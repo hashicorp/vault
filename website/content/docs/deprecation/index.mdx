@@ -33,7 +33,7 @@ This status reflects a feature which has been marked for deprecation in a later 
 
 This status reflects a feature which has been officially deprecated in this release of Vault. This is the first phase in the process that fundamentally alters the behavior of Vault. The effects are two-fold:
 
-1) After an upgrade, any pre-existing mount will cause Vault to log an `Error`-level message in the Vault log and automatically shutdown.
+1) After an upgrade, any existing `Pending Removal` mount will cause Vault to log an `Error`-level message in the Vault log and automatically shutdown.
 2) Any new mount of the `Pending Removal` feature will fail and log an `Error`-level message to the Vault log and CLI/API.
 
 #### `VAULT_ALLOW_PENDING_REMOVAL_MOUNTS`
@@ -42,7 +42,10 @@ The `Pending Removal` behavior may be overriden using a new environment variable
 
 ### Removed
 
-This status reflects a feature which has been officially removed from Vault. This is the last phase of the deprecation process. During this phase, the code for this feature has been officially removed from Vault. In order to start Vault, any offending features must be removed by first downgrading Vault and carefully replacing `Removed` features as shown in the table below.
+This status reflects a feature which has been officially removed from Vault. `Removed` is the last phase of the deprecation process. During this phase, code for this feature no longer exists within Vault. In order to successfully upgrade, use of the `Removed` feature must be discontinued. To accomplish this:
+
+1) Downgrade Vault to a previous version
+2) Carefully replace any `Removed` or `Pending Removal` mount with the preferred alternative feature, as shown in the `Migration Path/Impact` column of the table below.
 
 ## Feature deprecations
 
