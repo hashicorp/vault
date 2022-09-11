@@ -83,7 +83,6 @@ func prepareTestContainer(t *testing.T, name, repo, version, password, db string
 
 func connectPostgres(password, repo string) docker.ServiceAdapter {
 	return func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
-		var host2 string
 		if repo == "bitnami/postgresql-repmgr" {
 			host = "127.0.0.1"
 		}
@@ -91,7 +90,7 @@ func connectPostgres(password, repo string) docker.ServiceAdapter {
 		u := url.URL{
 			Scheme:   "postgres",
 			User:     url.UserPassword("postgres", password),
-			Host:     fmt.Sprintf("%s:%d", host2, port),
+			Host:     fmt.Sprintf("%s:%d", host, port),
 			Path:     "postgres",
 			RawQuery: "sslmode=disable",
 		}
