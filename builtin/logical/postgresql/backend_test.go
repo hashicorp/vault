@@ -65,7 +65,7 @@ func TestBackend_basic(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	_, cleanup, connURL, _ := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -89,7 +89,7 @@ func TestBackend_roleCrud(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	_, cleanup, connURL, _ := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -115,7 +115,7 @@ func TestBackend_BlockStatements(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	_, cleanup, connURL, _ := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -145,7 +145,7 @@ func TestBackend_roleReadOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	_, cleanup, connURL, _ := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -176,7 +176,7 @@ func TestBackend_roleReadOnly_revocationSQL(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	_, cleanup, connURL, _ := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
 
 	connData := map[string]interface{}{

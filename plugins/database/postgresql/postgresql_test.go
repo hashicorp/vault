@@ -4,12 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 
+	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
@@ -18,7 +20,7 @@ import (
 )
 
 func getPostgreSQL(t *testing.T, options map[string]interface{}) (*PostgreSQL, func()) {
-	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	_, cleanup, connURL, _ := postgresql.PrepareTestContainer(t, "13.4-buster")
 
 	connectionDetails := map[string]interface{}{
 		"connection_url": connURL,
@@ -64,7 +66,7 @@ func TestPostgreSQL_InitializeWithStringVals(t *testing.T) {
 }
 
 func TestPostgreSQL_Initialize_ConnURLWithDSNFormat(t *testing.T) {
-	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	_, cleanup, connURL, _ := postgresql.PrepareTestContainer(t, "13.4-buster")
 	defer cleanup()
 
 	dsnConnURL, err := dbutil.ParseURL(connURL)
@@ -895,7 +897,7 @@ func TestUsernameGeneration(t *testing.T) {
 }
 
 func TestNewUser_CustomUsername(t *testing.T) {
-	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	_, cleanup, connURL, _ := postgresql.PrepareTestContainer(t, "13.4-buster")
 	defer cleanup()
 
 	type testCase struct {
@@ -989,4 +991,151 @@ func TestNewUser_CustomUsername(t *testing.T) {
 			require.Regexp(t, test.expectedRegex, newUserResp.Username)
 		})
 	}
+}
+
+// This is a long-running integration test which tests the functionality of Postgres's multi-host
+// connection strings. It uses two Postgres containers preconfigured with Replication Manager
+// provided by Bitnami. This test currently does not run in CI and must be run manually. This is
+// due to the test length, as it requires multiple sleep calls to ensure cluster setup and
+// primary node failover occurs before the test steps continue.
+//
+// To run the test, set the environment variable POSTGRES_MULTIHOST_NET to the value of
+// a docker network you've preconfigured, e.g.
+// `docker network create -d bridge postgres-repmgr`
+// `export POSTGRES_MULTIHOST_NET=postgres-repmgr`
+func TestPostgreSQL_Repmgr(t *testing.T) {
+	_, exists := os.LookupEnv("POSTGRES_MULTIHOST_NET")
+	if !exists {
+		t.Skipf("POSTGRES_MULTIHOST_NET not set, skipping test")
+	}
+
+	// Create 2 postgres-repmgr containers
+	db0, runner0, url0, container0 := testPostgreSQL_Repmgr_Container(t, "psql-repl-0")
+	_, _, url1, _ := testPostgreSQL_Repmgr_Container(t, "psql-repl-1")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
+	defer cancel()
+	time.Sleep(20 * time.Second)
+
+	// Write a user to the primary postgres node
+	_, err := db0.NewUser(ctx, dbplugin.NewUserRequest{
+		Statements: dbplugin.Statements{
+			Commands: []string{
+				`CREATE ROLE "ro" NOINHERIT;
+				GRANT SELECT ON ALL TABLES IN SCHEMA public TO "ro";`,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+
+	// Open a connection to both databases using the multihost connection string
+	connectionDetails := map[string]interface{}{
+		"connection_url": fmt.Sprintf("postgresql://{{username}}:{{password}}@%s,%s/postgres?target_session_attrs=read-write", getHost(url0), getHost(url1)),
+		"username":       "postgres",
+		"password":       "secret",
+	}
+	req := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+
+	db := new()
+	dbtesting.AssertInitialize(t, db, req)
+	if !db.Initialized {
+		t.Fatal("Database should be initialized")
+	}
+
+	// Add a user to the cluster, then stop the primary container
+	err = testPostgreSQL_Repmgr_AddUser(t, ctx, db)
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+
+	err = runner0.Stop(ctx, container0)
+	if err != nil {
+		t.Fatalf("failed to stop container '%s': %s", container0, err)
+	}
+
+	// Try adding a new user immediately - expect failure as the database
+	// cluster is still switch primaries
+	err = testPostgreSQL_Repmgr_AddUser(t, ctx, db)
+	if err.Error() != "unable to start transaction: failed to connect to `host=127.0.0.1 user=postgres database=postgres`: ValidateConnect failed (read only connection)" {
+		t.Fatalf("expected error was not received, got: %s", err)
+	}
+
+	time.Sleep(60 * time.Second)
+
+	err = testPostgreSQL_Repmgr_AddUser(t, ctx, db)
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+
+	err = runner0.Restart(ctx, container0)
+	if err != nil {
+		t.Fatalf("failed to restart container '%s': %s", container0, err)
+	}
+
+	time.Sleep(20 * time.Second)
+
+	err = testPostgreSQL_Repmgr_AddUser(t, ctx, db)
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+}
+
+func testPostgreSQL_Repmgr_Container(t *testing.T, name string) (*PostgreSQL, *docker.Runner, string, string) {
+	envVars := []string{
+		"REPMGR_PARTNER_NODES=psql-repl-0,psql-repl-1",
+		"REPMGR_PRIMARY_HOST=psql-repl-0",
+		"REPMGR_PASSWORD=repmgrpass",
+		"POSTGRESQL_PASSWORD=secret",
+		"REPMGR_NODE_NAME=" + name,
+		"REPMGR_NODE_NETWORK_NAME=" + name,
+	}
+
+	runner, cleanup, connURL, containerID := postgresql.PrepareTestContainerRepmgr(t, name, "13.4.0", envVars)
+	t.Cleanup(cleanup)
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": connURL,
+	}
+	req := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+	db := new()
+	dbtesting.AssertInitialize(t, db, req)
+	if !db.Initialized {
+		t.Fatal("Database should be initialized")
+	}
+	if err := db.Close(); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	return db, runner, connURL, containerID
+}
+
+func testPostgreSQL_Repmgr_AddUser(t *testing.T, ctx context.Context, db *PostgreSQL) error {
+	_, err := db.NewUser(ctx, dbplugin.NewUserRequest{
+		Statements: dbplugin.Statements{
+			Commands: []string{
+				`CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}' INHERIT;
+				GRANT ro TO "{{name}}";`,
+			},
+		},
+	})
+
+	return err
+}
+
+func getHost(url string) string {
+	splitCreds := strings.Split(url, "@")[1]
+
+	return strings.Split(splitCreds, "/")[0]
 }

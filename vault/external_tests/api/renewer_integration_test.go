@@ -90,7 +90,7 @@ func TestRenewer_Renew(t *testing.T) {
 		t.Run("database", func(t *testing.T) {
 			t.Parallel()
 
-			cleanup, pgURL := postgreshelper.PrepareTestContainer(t, "")
+			_, cleanup, pgURL, _ := postgreshelper.PrepareTestContainer(t, "")
 			defer cleanup()
 
 			if err := client.Sys().Mount("database", &api.MountInput{

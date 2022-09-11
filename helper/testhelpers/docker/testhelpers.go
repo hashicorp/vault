@@ -132,9 +132,15 @@ func (s ServiceURL) URL() *url.URL {
 type ServiceAdapter func(ctx context.Context, host string, port int) (ServiceConfig, error)
 
 func (d *Runner) StartService(ctx context.Context, connect ServiceAdapter) (*Service, error) {
-	container, hostIPs, err := d.Start(context.Background())
+	serv, _, err := d.StartNewService(ctx, true, connect)
+
+	return serv, err
+}
+
+func (d *Runner) StartNewService(ctx context.Context, addSuffix bool, connect ServiceAdapter) (*Service, string, error) {
+	container, hostIPs, containerID, err := d.Start(context.Background(), addSuffix)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	cleanup := func() {
@@ -171,7 +177,7 @@ func (d *Runner) StartService(ctx context.Context, connect ServiceAdapter) (*Ser
 	pieces := strings.Split(hostIPs[0], ":")
 	portInt, err := strconv.Atoi(pieces[1])
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	var config ServiceConfig
@@ -191,14 +197,14 @@ func (d *Runner) StartService(ctx context.Context, connect ServiceAdapter) (*Ser
 		if !d.RunOptions.DoNotAutoRemove {
 			cleanup()
 		}
-		return nil, err
+		return nil, "", err
 	}
 
 	return &Service{
 		Config:    config,
 		Cleanup:   cleanup,
 		Container: container,
-	}, nil
+	}, containerID, nil
 }
 
 type Service struct {
@@ -207,12 +213,15 @@ type Service struct {
 	Container *types.ContainerJSON
 }
 
-func (d *Runner) Start(ctx context.Context) (*types.ContainerJSON, []string, error) {
-	suffix, err := uuid.GenerateUUID()
-	if err != nil {
-		return nil, nil, err
+func (d *Runner) Start(ctx context.Context, addSuffix bool) (*types.ContainerJSON, []string, string, error) {
+	name := d.RunOptions.ContainerName
+	if addSuffix {
+		suffix, err := uuid.GenerateUUID()
+		if err != nil {
+			return nil, nil, "", err
+		}
+		name += "-" + suffix
 	}
-	name := d.RunOptions.ContainerName + "-" + suffix
 
 	cfg := &container.Config{
 		Hostname: name,
@@ -251,7 +260,7 @@ func (d *Runner) Start(ctx context.Context) (*types.ContainerJSON, []string, err
 			"password": d.RunOptions.AuthPassword,
 		}
 		if err := json.NewEncoder(&buf).Encode(auth); err != nil {
-			return nil, nil, err
+			return nil, nil, "", err
 		}
 		opts.RegistryAuth = base64.URLEncoding.EncodeToString(buf.Bytes())
 	}
@@ -262,47 +271,72 @@ func (d *Runner) Start(ctx context.Context) (*types.ContainerJSON, []string, err
 
 	c, err := d.DockerAPI.ContainerCreate(ctx, cfg, hostConfig, netConfig, nil, cfg.Hostname)
 	if err != nil {
-		return nil, nil, fmt.Errorf("container create failed: %v", err)
+		return nil, nil, "", fmt.Errorf("container create failed: %v", err)
 	}
 
 	for from, to := range d.RunOptions.CopyFromTo {
 		if err := copyToContainer(ctx, d.DockerAPI, c.ID, from, to); err != nil {
 			_ = d.DockerAPI.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{})
-			return nil, nil, err
+			return nil, nil, "", err
 		}
 	}
 
 	err = d.DockerAPI.ContainerStart(ctx, c.ID, types.ContainerStartOptions{})
 	if err != nil {
 		_ = d.DockerAPI.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{})
-		return nil, nil, fmt.Errorf("container start failed: %v", err)
+		return nil, nil, "", fmt.Errorf("container start failed: %v", err)
 	}
 
 	inspect, err := d.DockerAPI.ContainerInspect(ctx, c.ID)
 	if err != nil {
 		_ = d.DockerAPI.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{})
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 
 	var addrs []string
 	for _, port := range d.RunOptions.Ports {
 		pieces := strings.Split(port, "/")
 		if len(pieces) < 2 {
-			return nil, nil, fmt.Errorf("expected port of the form 1234/tcp, got: %s", port)
+			return nil, nil, "", fmt.Errorf("expected port of the form 1234/tcp, got: %s", port)
 		}
 		if d.RunOptions.NetworkID != "" {
 			addrs = append(addrs, fmt.Sprintf("%s:%s", cfg.Hostname, pieces[0]))
 		} else {
 			mapped, ok := inspect.NetworkSettings.Ports[nat.Port(port)]
 			if !ok || len(mapped) == 0 {
-				return nil, nil, fmt.Errorf("no port mapping found for %s", port)
+				return nil, nil, "", fmt.Errorf("no port mapping found for %s", port)
 			}
-
 			addrs = append(addrs, fmt.Sprintf("127.0.0.1:%s", mapped[0].HostPort))
 		}
 	}
 
-	return &inspect, addrs, nil
+	return &inspect, addrs, c.ID, nil
+}
+
+func (d *Runner) Stop(ctx context.Context, containerID string) error {
+	timeout := 5 * time.Second
+	err := d.DockerAPI.ContainerStop(ctx, containerID, &timeout)
+	if err != nil {
+		return err
+	}
+
+	err = d.DockerAPI.NetworkDisconnect(ctx, d.RunOptions.NetworkID, containerID, true)
+
+	return err
+}
+
+func (d *Runner) Restart(ctx context.Context, containerID string) error {
+	err := d.DockerAPI.ContainerStart(ctx, containerID, types.ContainerStartOptions{})
+	if err != nil {
+		return err
+	}
+
+	endp := &network.EndpointSettings{
+		NetworkID: d.RunOptions.NetworkID,
+	}
+	err = d.DockerAPI.NetworkConnect(ctx, d.RunOptions.NetworkID, containerID, endp)
+
+	return err
 }
 
 func copyToContainer(ctx context.Context, dapi *client.Client, containerID, from, to string) error {
