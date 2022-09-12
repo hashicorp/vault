@@ -17,6 +17,9 @@ var (
 	// ErrPermissionDenied is returned if the client is not authorized
 	ErrPermissionDenied = errors.New("permission denied")
 
+	// ErrInvalidCredentials is returned when the provided credentials are incorrect
+	ErrInvalidCredentials = errors.New("invalid credentials")
+
 	// ErrMultiAuthzPending is returned if the the request needs more
 	// authorizations
 	ErrMultiAuthzPending = errors.New("request needs further approval")
