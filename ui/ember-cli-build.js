@@ -40,6 +40,8 @@ const appConfig = {
   sassOptions: {
     sourceMap: false,
     onlyIncluded: true,
+    precision: 4,
+    includePaths: ['./node_modules/@hashicorp/design-system-tokens/dist/products/css'],
   },
   autoprefixer: {
     enabled: isTest || isProd,
