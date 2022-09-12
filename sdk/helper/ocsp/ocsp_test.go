@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-retryablehttp"
 	lru "github.com/hashicorp/golang-lru"
 	"io"
 	"io/ioutil"
@@ -434,15 +435,16 @@ func testLogFactory() hclog.Logger {
 }
 
 type fakeHTTPClient struct {
-	cnt     int    // number of retry
-	success bool   // return success after retry in cnt times
-	timeout bool   // timeout
-	body    []byte // return body
-	t       *testing.T
-	logger  hclog.Logger
+	cnt        int    // number of retry
+	success    bool   // return success after retry in cnt times
+	timeout    bool   // timeout
+	body       []byte // return body
+	t          *testing.T
+	logger     hclog.Logger
+	redirected bool
 }
 
-func (c *fakeHTTPClient) Do(req *http.Request) (*http.Response, error) {
+func (c *fakeHTTPClient) Do(_ *retryablehttp.Request) (*http.Response, error) {
 	c.cnt--
 	if c.cnt < 0 {
 		c.cnt = 0
@@ -450,7 +452,11 @@ func (c *fakeHTTPClient) Do(req *http.Request) (*http.Response, error) {
 	c.t.Log("fakeHTTPClient.cnt", c.cnt)
 
 	var retcode int
-	if c.success && c.cnt == 0 {
+	if !c.redirected {
+		c.redirected = true
+		c.cnt++
+		retcode = 405
+	} else if c.success && c.cnt == 1 {
 		retcode = 200
 	} else {
 		if c.timeout {
@@ -499,6 +505,6 @@ func (b *fakeResponseBody) Close() error {
 	return nil
 }
 
-func fakeRequestFunc(_, _ string, _ io.Reader) (*http.Request, error) {
+func fakeRequestFunc(_, _ string, _ interface{}) (*retryablehttp.Request, error) {
 	return nil, nil
 }

@@ -15,11 +15,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-retryablehttp"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/crypto/ocsp"
-	"io"
 	"io/ioutil"
 	"math/big"
 	"net"
@@ -34,10 +34,10 @@ import (
 // set to ocspModeFailClosed for fail closed mode
 type FailOpenMode uint32
 
-type requestFunc func(method, urlStr string, body io.Reader) (*http.Request, error)
+type requestFunc func(method, urlStr string, body interface{}) (*retryablehttp.Request, error)
 
 type clientInterface interface {
-	Do(req *http.Request) (*http.Response, error)
+	Do(req *retryablehttp.Request) (*http.Response, error)
 }
 
 const (
@@ -340,22 +340,41 @@ func (c *Client) retryOCSP(
 	reqBody []byte,
 	issuer *x509.Certificate) (ocspRes *ocsp.Response, ocspResBytes []byte, ocspS *ocspStatus, err error) {
 
-	request, err := req("POST", ocspHost.String(), bytes.NewBuffer(reqBody))
-	if err != nil {
-		return nil, nil, nil, err
+	origHost := *ocspHost
+	doRequest := func(request *retryablehttp.Request) (*http.Response, error) {
+		if err != nil {
+			return nil, err
+		}
+		if request != nil {
+			request = request.WithContext(ctx)
+			for k, v := range headers {
+				request.Header[k] = append(request.Header[k], v)
+			}
+		}
+		res, err := client.Do(request)
+		if err != nil {
+			return nil, err
+		}
+		c.Logger().Debug("StatusCode from OCSP Server:", "statusCode", res.StatusCode)
+		return res, err
 	}
-	if request != nil {
-		request = request.WithContext(ctx)
-		for k, v := range headers {
-			request.Header[k] = append(request.Header[k], v)
+
+	ocspHost.Path = ocspHost.Path + "/" + base64.StdEncoding.EncodeToString(reqBody)
+	var res *http.Response
+	request, err := req("GET", ocspHost.String(), nil)
+	if res, err = doRequest(request); err != nil {
+		return nil, nil, nil, err
+	} else {
+		defer res.Body.Close()
+	}
+	if res.StatusCode == http.StatusMethodNotAllowed {
+		request, err = req("POST", origHost.String(), bytes.NewBuffer(reqBody))
+		if res, err = doRequest(request); err != nil {
+			return nil, nil, nil, err
+		} else {
+			defer res.Body.Close()
 		}
 	}
-	res, err := client.Do(request)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	defer res.Body.Close()
-	c.Logger().Debug("StatusCode from OCSP Server:", "statusCode", res.StatusCode)
 	if res.StatusCode != http.StatusOK {
 		return nil, nil, nil, fmt.Errorf("HTTP code is not OK. %v: %v", res.StatusCode, res.Status)
 	}
@@ -411,13 +430,13 @@ func (c *Client) getRevocationStatus(ctx context.Context, subject, issuer *x509.
 		headers[httpHeaderHost] = hostname
 		timeout := defaultOCSPResponderTimeout
 
-		ocspClient := &http.Client{
-			Timeout:   timeout,
-			Transport: newInsecureOcspTransport(extraCas),
-		}
+		ocspClient := retryablehttp.NewClient()
+		ocspClient.HTTPClient.Timeout = timeout
+		ocspClient.HTTPClient.Transport = newInsecureOcspTransport(extraCas)
+
 		var ocspS *ocspStatus
 		ocspRes, _, ocspS, err = c.retryOCSP(
-			ctx, ocspClient, http.NewRequest, u, headers, ocspReq, issuer)
+			ctx, ocspClient, retryablehttp.NewRequest, u, headers, ocspReq, issuer)
 		if err != nil {
 			return nil, err
 		}
@@ -455,7 +474,7 @@ func isValidOCSPStatus(status ocspStatusCode) bool {
 }
 
 // VerifyPeerCertificate verifies all of certificate revocation status
-func (c *Client) VerifyPeerCertificate(ctx context.Context, verifiedChains [][]*x509.Certificate, extraCas []*x509.Certificate, ocspServersOverride []string, ocspFailureMode FailOpenMode) (err error) {
+func (c *Client) VerifyPeerCertificate(ctx context.Context, verifiedChains [][]*x509.Certificate, extraCas []*x509.Certificate, ocspServersOverride []string, ocspFailureMode FailOpenMode) error {
 	for i := 0; i < len(verifiedChains); i++ {
 		// Certificate signed by Root CA. This should be one before the last in the Certificate Chain
 		numberOfNoneRootCerts := len(verifiedChains[i]) - 1
@@ -510,7 +529,7 @@ func (c *Client) canEarlyExitForOCSP(results []*ocspStatus, chainSize int, ocspF
 	}
 	if len(msg) > 0 {
 		c.Logger().Warn(
-			"OCSP is set to fail-open, and could not retrieve OCSP based revocation checking but proceeding.", "detail", msg[1:])
+			"OCSP is set to fail-open, and could not retrieve OCSP based revocation checking but proceeding.", "detail", msg)
 	}
 	return nil
 }
