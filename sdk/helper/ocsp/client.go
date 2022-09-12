@@ -484,8 +484,6 @@ func (c *Client) getRevocationStatus(ctx context.Context, subject, issuer *x509.
 			ret = ocspStatuses[i]
 			ocspRes = ocspResponses[i]
 			break
-		} else {
-
 		}
 	}
 
