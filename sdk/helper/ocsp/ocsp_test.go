@@ -8,10 +8,10 @@ import (
 	"crypto"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"github.com/hashicorp/go-hclog"
+	lru "github.com/hashicorp/golang-lru"
 	"io"
 	"io/ioutil"
 	"net"
@@ -37,7 +37,7 @@ func TestOCSP(t *testing.T) {
 	}
 
 	for _, tgt := range targetURL {
-		c.ocspResponseCache = make(map[certIDKey]*ocspCachedResponse)
+		c.ocspResponseCache, _ = lru.New2Q(10)
 		for _, tr := range transports {
 			c := &http.Client{
 				Transport: tr,
@@ -175,9 +175,8 @@ func TestUnitCheckOCSPResponseCache(t *testing.T) {
 		IssuerKeyHash: "dummy1",
 		SerialNumber:  "dummy1",
 	}
-	b64Key := base64.StdEncoding.EncodeToString([]byte("DUMMY_VALUE"))
 	currentTime := float64(time.Now().UTC().Unix())
-	c.ocspResponseCache[dummyKey0] = &ocspCachedResponse{currentTime, b64Key}
+	c.ocspResponseCache.Add(dummyKey0, &ocspCachedResponse{time: currentTime})
 	subject := &x509.Certificate{}
 	issuer := &x509.Certificate{}
 	ost, err := c.checkOCSPResponseCache(&dummyKey, subject, issuer)
@@ -188,7 +187,7 @@ func TestUnitCheckOCSPResponseCache(t *testing.T) {
 		t.Fatalf("should have failed. expected: %v, got: %v", ocspMissedCache, ost.code)
 	}
 	// old timestamp
-	c.ocspResponseCache[dummyKey] = &ocspCachedResponse{float64(1395054952), b64Key}
+	c.ocspResponseCache.Add(dummyKey, &ocspCachedResponse{time: float64(1395054952)})
 	ost, err = c.checkOCSPResponseCache(&dummyKey, subject, issuer)
 	if err != nil {
 		t.Fatal(err)
@@ -196,28 +195,9 @@ func TestUnitCheckOCSPResponseCache(t *testing.T) {
 	if ost.code != ocspCacheExpired {
 		t.Fatalf("should have failed. expected: %v, got: %v", ocspCacheExpired, ost.code)
 	}
-	// future timestamp
-	c.ocspResponseCache[dummyKey] = &ocspCachedResponse{float64(1805054952), b64Key}
-	ost, err = c.checkOCSPResponseCache(&dummyKey, subject, issuer)
-	if err == nil {
-		t.Fatalf("should have failed.")
-	}
-	// actual OCSP but it fails to parse, because an invalid issuer certificate is given.
-	actualOcspResponse := "MIIB0woBAKCCAcwwggHIBgkrBgEFBQcwAQEEggG5MIIBtTCBnqIWBBSxPsNpA/i/RwHUmCYaCALvY2QrwxgPMjAxNz" +
-		"A1MTYyMjAwMDBaMHMwcTBJMAkGBSsOAwIaBQAEFN+qEuMosQlBk+KfQoLOR0BClVijBBSxPsNpA/i/RwHUmCYaCALvY2QrwwIQBOHnp" +
-		"Nxc8vNtwCtCuF0Vn4AAGA8yMDE3MDUxNjIyMDAwMFqgERgPMjAxNzA1MjMyMjAwMDBaMA0GCSqGSIb3DQEBCwUAA4IBAQCuRGwqQsKy" +
-		"IAAGHgezTfG0PzMYgGD/XRDhU+2i08WTJ4Zs40Lu88cBeRXWF3iiJSpiX3/OLgfI7iXmHX9/sm2SmeNWc0Kb39bk5Lw1jwezf8hcI9+" +
-		"mZHt60vhUgtgZk21SsRlTZ+S4VXwtDqB1Nhv6cnSnfrL2A9qJDZS2ltPNOwebWJnznDAs2dg+KxmT2yBXpHM1kb0EOolWvNgORbgIgB" +
-		"koRzw/UU7zKsqiTB0ZN/rgJp+MocTdqQSGKvbZyR8d4u8eNQqi1x4Pk3yO/pftANFaJKGB+JPgKS3PQAqJaXcipNcEfqtl7y4PO6kqA" +
-		"Jb4xI/OTXIrRA5TsT4cCioE"
-	// issuer is not a true issuer certificate
-	c.ocspResponseCache[dummyKey] = &ocspCachedResponse{float64(currentTime - 1000), actualOcspResponse}
-	ost, err = c.checkOCSPResponseCache(&dummyKey, subject, issuer)
-	if err == nil {
-		t.Fatalf("should have failed.")
-	}
+
 	// invalid validity
-	c.ocspResponseCache[dummyKey] = &ocspCachedResponse{float64(currentTime - 1000), actualOcspResponse}
+	c.ocspResponseCache.Add(dummyKey, &ocspCachedResponse{time: float64(currentTime - 1000)})
 	ost, err = c.checkOCSPResponseCache(&dummyKey, subject, nil)
 	if err == nil && isValidOCSPStatus(ost.code) {
 		t.Fatalf("should have failed.")

@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hashicorp/go-hclog"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/crypto/ocsp"
@@ -70,7 +71,9 @@ const (
 
 const (
 	// cacheExpire specifies cache data expiration time in seconds.
-	cacheExpire = float64(24 * 60 * 60)
+	cacheExpire        = float64(24 * 60 * 60)
+	cacheSize          = 10000
+	persistedCacheSize = 1000
 )
 
 const (
@@ -79,8 +82,11 @@ const (
 )
 
 type ocspCachedResponse struct {
-	time float64
-	resp string
+	time       float64
+	producedAt float64
+	thisUpdate float64
+	nextUpdate float64
+	status     ocspStatusCode
 }
 
 type Client struct {
@@ -88,7 +94,7 @@ type Client struct {
 	caRoot map[string]*x509.Certificate
 	// certPOol includes the CA certificates.
 	certPool              *x509.CertPool
-	ocspResponseCache     map[certIDKey]*ocspCachedResponse
+	ocspResponseCache     *lru.TwoQueueCache
 	ocspResponseCacheLock sync.RWMutex
 	// cacheUpdated is true if the memory cache is updated
 	cacheUpdated bool
@@ -264,10 +270,14 @@ func decodeCertIDKey(k *certIDKey) (string, error) {
 
 func (c *Client) checkOCSPResponseCache(encodedCertID *certIDKey, subject, issuer *x509.Certificate) (*ocspStatus, error) {
 	c.ocspResponseCacheLock.RLock()
-	gotValueFromCache := c.ocspResponseCache[*encodedCertID]
+	var cacheValue *ocspCachedResponse
+	v, ok := c.ocspResponseCache.Get(*encodedCertID)
+	if ok {
+		cacheValue = v.(*ocspCachedResponse)
+	}
 	c.ocspResponseCacheLock.RUnlock()
 
-	status, err := c.extractOCSPCacheResponseValue(gotValueFromCache, subject, issuer)
+	status, err := c.extractOCSPCacheResponseValue(cacheValue, subject, issuer)
 	if err != nil {
 		return nil, err
 	}
@@ -279,7 +289,7 @@ func (c *Client) checkOCSPResponseCache(encodedCertID *certIDKey, subject, issue
 
 func (c *Client) deleteOCSPCache(encodedCertID *certIDKey) {
 	c.ocspResponseCacheLock.Lock()
-	delete(c.ocspResponseCache, *encodedCertID)
+	c.ocspResponseCache.Remove(*encodedCertID)
 	c.cacheUpdated = true
 	c.ocspResponseCacheLock.Unlock()
 }
@@ -397,7 +407,7 @@ func (c *Client) getRevocationStatus(ctx context.Context, subject, issuer *x509.
 	}
 
 	var ret *ocspStatus
-	var ocspResBytes []byte
+	var ocspRes *ocsp.Response
 	for _, ocspHost := range ocspHosts {
 		u, err := url.Parse(ocspHost)
 		if err != nil {
@@ -417,9 +427,8 @@ func (c *Client) getRevocationStatus(ctx context.Context, subject, issuer *x509.
 			Timeout:   timeout,
 			Transport: newInsecureOcspTransport(extraCas),
 		}
-		var ocspRes *ocsp.Response
 		var ocspS *ocspStatus
-		ocspRes, ocspResBytes, ocspS, err = c.retryOCSP(
+		ocspRes, _, ocspS, err = c.retryOCSP(
 			ctx, ocspClient, http.NewRequest, u, headers, ocspReq, issuer)
 		if err != nil {
 			return nil, err
@@ -439,9 +448,15 @@ func (c *Client) getRevocationStatus(ctx context.Context, subject, issuer *x509.
 	if !isValidOCSPStatus(ret.code) {
 		return ret, nil
 	}
-	v := ocspCachedResponse{time: float64(time.Now().UTC().Unix()), resp: base64.StdEncoding.EncodeToString(ocspResBytes)}
+	v := ocspCachedResponse{
+		time:       float64(time.Now().UTC().Unix()),
+		producedAt: float64(ocspRes.ProducedAt.UTC().Unix()),
+		thisUpdate: float64(ocspRes.ThisUpdate.UTC().Unix()),
+		nextUpdate: float64(ocspRes.NextUpdate.UTC().Unix()),
+	}
+
 	c.ocspResponseCacheLock.Lock()
-	c.ocspResponseCache[*encodedCertID] = &v
+	c.ocspResponseCache.Add(encodedCertID, &v)
 	c.cacheUpdated = true
 	c.ocspResponseCacheLock.Unlock()
 	return ret, nil
@@ -599,35 +614,38 @@ func (c *Client) extractOCSPCacheResponseValue(cacheValue *ocspCachedResponse, s
 		}, nil
 	}
 
-	var err error
-	var r *ocsp.Response
-	var b []byte
-	b, err = base64.StdEncoding.DecodeString(cacheValue.resp)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode OCSP Response value in a cache. subject: %v, err: %v", subjectName, err)
-
-	}
-	// check the revocation status here
-	r, err = ocsp.ParseResponse(b, issuer)
-	if err != nil {
-		c.Logger().Warn("the second cache element is not a valid OCSP Response. Ignored.", "subject", subjectName)
-		return nil, fmt.Errorf("failed to parse OCSP Respose. subject: %v, err: %v", subjectName, err)
-	}
-
-	return validateOCSP(r)
+	return validateOCSP(&ocsp.Response{
+		ProducedAt: time.Unix(int64(cacheValue.producedAt), 0).UTC(),
+		ThisUpdate: time.Unix(int64(cacheValue.thisUpdate), 0).UTC(),
+		NextUpdate: time.Unix(int64(cacheValue.nextUpdate), 0).UTC(),
+		Status:     int(cacheValue.status),
+	})
 }
 
 // writeOCSPCache writes a OCSP Response cache
 func (c *Client) writeOCSPCache(ctx context.Context, storage logical.Storage) error {
 	c.Logger().Debug("writing OCSP Response cache file")
 
+	t := time.Now()
 	m := make(map[string][]interface{})
-	for k, entry := range c.ocspResponseCache {
-		cacheKeyInBase64, err := decodeCertIDKey(&k)
-		if err != nil {
-			return err
+	keys := c.ocspResponseCache.Keys()
+	if len(keys) > persistedCacheSize {
+		keys = keys[:persistedCacheSize]
+	}
+	for _, k := range keys {
+		e, ok := c.ocspResponseCache.Get(k)
+		if ok {
+			entry := e.(*ocspCachedResponse)
+			// Don't store if expired
+			if isInValidityRange(t, time.Unix(int64(entry.thisUpdate), 0), time.Unix(int64(entry.nextUpdate), 0)) {
+				key := k.(certIDKey)
+				cacheKeyInBase64, err := decodeCertIDKey(&key)
+				if err != nil {
+					return err
+				}
+				m[cacheKeyInBase64] = []interface{}{entry.status, entry.time, entry.producedAt, entry.thisUpdate, entry.nextUpdate}
+			}
 		}
-		m[cacheKeyInBase64] = []interface{}{entry.time, entry.resp}
 	}
 
 	v, err := jsonutil.EncodeJSONAndCompress(m, nil)
@@ -664,24 +682,35 @@ func (c *Client) readOCSPCache(ctx context.Context, storage logical.Storage) err
 		if err != nil {
 			return err
 		}
-		var ts float64
-		if jn, ok := v[0].(json.Number); ok {
-			ts, err = jn.Float64()
-			if err != nil {
-				return err
+		var times [4]float64
+		for i, t := range v[1:] {
+			if jn, ok := t.(json.Number); ok {
+				times[i], err = jn.Float64()
+				if err != nil {
+					return err
+				}
+			} else {
+				times[i] = t.(float64)
 			}
-		} else {
-			ts = v[0].(float64)
 		}
-		c.ocspResponseCache[*key] = &ocspCachedResponse{time: ts, resp: v[1].(string)}
+
+		c.ocspResponseCache.Add(*key, &ocspCachedResponse{
+			status:     ocspStatusCode(v[0].(int)),
+			time:       times[0],
+			producedAt: times[1],
+			thisUpdate: times[2],
+			nextUpdate: times[3],
+		})
 	}
+
 	return nil
 }
 
 func New(logFactory func() hclog.Logger) *Client {
+	cache, _ := lru.New2Q(cacheSize)
 	c := Client{
 		caRoot:            make(map[string]*x509.Certificate),
-		ocspResponseCache: make(map[certIDKey]*ocspCachedResponse),
+		ocspResponseCache: cache,
 		logFactory:        logFactory,
 	}
 
