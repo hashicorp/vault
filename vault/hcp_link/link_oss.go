@@ -17,3 +17,7 @@ func (h *WrappedHCPLinkVault) Shutdown() error {
 }
 
 func (h *WrappedHCPLinkVault) GetScadaSessionStatus() string { return Disconnected }
+
+func (h *WrappedHCPLinkVault) GetConnectionStatusMessage(scadaStatus string) string {
+	return scadaStatus
+}
