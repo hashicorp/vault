@@ -1,3 +1,3 @@
 ```release-note:improvement
-secrets/azure: Add documentation around permanently deleting Azure objects created by Vault.
+secrets/azure: Adds option to permanently delete AzureAD objects created by Vault.
 ```
