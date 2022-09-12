@@ -130,7 +130,7 @@ func TestSysEnableAuth(t *testing.T) {
 				"options":         map[string]interface{}{},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "approle"),
 				"version":         "",
 			},
 			"token/": map[string]interface{}{
@@ -168,7 +168,7 @@ func TestSysEnableAuth(t *testing.T) {
 			"options":         map[string]interface{}{},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "approle"),
 			"version":         "",
 		},
 		"token/": map[string]interface{}{

@@ -35,7 +35,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	return &b, nil
 }
 
-// backend is a thin wrapper around plugin.BackendPluginClientV5
+// backend is a thin wrapper around a builtin plugin or a plugin.BackendPluginClientV5
 type backend struct {
 	logical.Backend
 	mu sync.RWMutex
@@ -149,5 +149,9 @@ func (b *backend) InvalidateKey(ctx context.Context, key string) {
 }
 
 func (b *backend) IsExternal() bool {
-	return true
+	switch b.Backend.(type) {
+	case *plugin.BackendPluginClientV5:
+		return true
+	}
+	return false
 }
