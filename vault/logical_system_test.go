@@ -1929,7 +1929,7 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 			"sha":             "",
 			"running_sha":     "",
 			"version":         "",
-			"running_version": "",
+			"running_version": versions.DefaultBuiltinVersion,
 		},
 		"token/": map[string]interface{}{
 			"type":                    "token",

@@ -206,7 +206,7 @@ func TestCore_Mount_secrets_builtin_RunningVersion(t *testing.T) {
 
 	raw, _ := c.router.root.Get(match)
 	// we override the running version of builtins
-	if !strings.HasSuffix(raw.(*routeEntry).mountEntry.RunningVersion, "builtin") {
+	if !strings.Contains(raw.(*routeEntry).mountEntry.RunningVersion, "builtin") {
 		t.Errorf("Expected mount to have builtin version but got %s", raw.(*routeEntry).mountEntry.RunningVersion)
 	}
 }
