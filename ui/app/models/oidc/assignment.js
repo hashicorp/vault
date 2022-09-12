@@ -29,7 +29,6 @@ export default class OidcAssignmentModel extends Model {
 
   // CAPABILITIES
   @lazyCapabilities(apiPath`identity/oidc/assignment/${'name'}`, 'name') assignmentPath;
-  @lazyCapabilities(apiPath`identity/oidc/assignment`) assignmentsPath;
   get canRead() {
     return this.assignmentPath.get('canRead');
   }

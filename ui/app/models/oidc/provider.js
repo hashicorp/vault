@@ -47,7 +47,6 @@ export default class OidcProviderModel extends Model {
   }
 
   @lazyCapabilities(apiPath`identity/oidc/provider/${'name'}`, 'name') providerPath;
-  @lazyCapabilities(apiPath`identity/oidc/provider`) providersPath;
   get canRead() {
     return this.providerPath.get('canRead');
   }

@@ -23,7 +23,6 @@ export default class OidcScopeModel extends Model {
   }
 
   @lazyCapabilities(apiPath`identity/oidc/scope/${'name'}`, 'name') scopePath;
-  @lazyCapabilities(apiPath`identity/oidc/scope`) scopesPath;
   get canRead() {
     return this.scopePath.get('canRead');
   }
