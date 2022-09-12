@@ -55,16 +55,15 @@ in periods. Otherwise, Vault will return a 404 unsupported path error.
 ## Namespaces
 
 When using [Namespaces](/docs/enterprise/namespaces) the final path of the API 
-request is determined to be relative to the `X-Vault-Namespace` header. For instance, 
-if a request is to the URI `secret/foo` with the `X-Vault-Namespace` header set 
-to `ns1/ns2/`, then the resulting request path to Vault will be 
-Note that it is semantically equivalent to using the fullly qualified path rather than specifying the
+request is relative to the `X-Vault-Namespace` header. For instance, if a 
+request is to the URI `secret/foo` with the `X-Vault-Namespace` header set to 
+`ns1/ns2/`, then the resulting request path to Vault will be `ns1/ns2/secret/foo`.
 
 Note that it is semantically equivalent to using the full path rather than the 
 `X-Vault-Namespace` header, Vault will match the corresponding namespace 
-based on correlating user input. Similar results of a path may be achieved if 
+based on correlating user input. Similar path results may be achieved if 
 `X-Vault-Namespace` is set to `ns1/` with the request path of `ns2/secret/foo` 
-as well, or otherwise if `X-Vault-Namespace` omitted entirely and instead a 
+as well, or otherwise if `X-Vault-Namespace` is omitted entirely and instead a 
 complete path is provided such as: `ns1/ns2/secret/foo`.
 
 For example, the following two commands result in equivalent requests:
@@ -86,21 +85,14 @@ $ curl \
 
 ## API Operations
 
-All request data, body and response data to and from Vault is JSON except in a 
-few exceptional cases that are documented. Vault sets the `Content-Type` header 
-appropriately with its response and does not require it from the clients 
-request.
+Typically the request data, body and response data to and from Vault is in JSON. 
+Vault sets the `Content-Type` header appropriately with its response and does 
+not require it from the clients request.
 
-Authentication and Secret engines, that are also referred to as backends or 
-mounts, differ in their implementation of APIs according to functionality and 
-how they're authored.
-
-The demonstration below are using the `KVv1` secrets engine, which is a 
-simple Key/Value store. Please read the API documentation of secret engine or 
-authentication engine for detailed information on their use. 
-
-There are documented difference in the path schemes as well as other 
-functionality which may be applicable as for example with [`KVv2` compared to `KVv1`].
+The demonstration below are using the [`KVv1` secrets engine](/api-docs/secret/kv/kv-v1), which is a 
+simple Key/Value store. Please read [the API documentation of KV secret engines](/api-docs/secret/kv) 
+for details of `KVv1` compared to `KVv2` and how they differ in their URI paths 
+as well as the features available in version 2 of the KV secrets engine.
 
 For `KVv1`, reading a secret via the HTTP API is done by issuing a GET:
 
@@ -126,7 +118,7 @@ endpoints that consume parameters use `POST` instead and put the parameters in
 the request body.
 
 You can list secrets as well. To do this, either issue a GET with the query
-parameter `list=true`, or you use the `LIST` HTTP verb. For the `kv` secrets 
+parameter `list=true`, _or_ you use the `LIST` HTTP verb. For the `kv` secrets 
 engine, listing is allowed on directories only, which returns the keys at the 
 requested path:
 
