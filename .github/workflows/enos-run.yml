@@ -26,7 +26,8 @@ jobs:
       - name: Create Enos scenario matrix
         id: enos-matrix
         run: |
-          [[ ${{ env.ARTIFACT_NAME }} == *"ent"* ]] && echo "::set-output name=matrix::$(cat ./.github/scripts/ent.json)" || echo "::set-output name=matrix::$(cat ./.github/scripts/oss.json)"
+          [[ ${{ env.ARTIFACT_NAME }} == *"ent"* ]] && scenarioFile=$(cat ./.github/scripts/ent.json |jq -c .) || scenarioFile=$(cat ./.github/scripts/oss.json |jq -c .)
+          echo "::set-output name=matrix::$scenarioFile"
   # Run Integration tests on Enos scenario matrix
   enos:
     name: Integration
