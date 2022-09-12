@@ -6,6 +6,7 @@ import { singularize } from 'ember-inflector';
 import { resolve } from 'rsvp';
 import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-utils';
 import layout from '../templates/components/search-select';
+import { isWildcardString } from 'vault/helpers/is-wildcard-string';
 
 /**
  * @module SearchSelect
@@ -87,8 +88,9 @@ export default Component.extend({
     this.set('allOptions', allOptions); // used by filter-wildcard helper
     let formattedOptions = this.selectedOptions.map((option) => {
       let matchingOption = options.findBy(this.idKey, option);
-      // an undefined matchingOption means a selectedOption, on edit, didn't match a model returned from the query and therefore doesn't exist
-      let addTooltip = matchingOption ? false : true; // add tooltip to let user know the selection can be discarded
+      // an undefined matchingOption means a selectedOption, on edit, didn't match a model returned from the query
+      // this means it is a wildcard string or no longer exists
+      let addTooltip = matchingOption || isWildcardString([option]) ? false : true; // add tooltip to let user know the selection can be discarded
       options.removeObject(matchingOption);
       return {
         id: option,
