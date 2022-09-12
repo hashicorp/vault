@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     enos = {
-      source = "hashicorp.com/qti/enos"
+      source = "app.terraform.io/hashicorp-qti/enos"
     }
   }
 }
