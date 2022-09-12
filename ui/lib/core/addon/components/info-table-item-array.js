@@ -71,12 +71,12 @@ export default class InfoTableItemArray extends Component {
         if (err.httpStatus === 404) {
           return [];
         } else {
-          throw err;
+          return null;
         }
       });
-      this.allOptions = modelRecords.mapBy('id');
 
-      if (this.args.renderItemName) {
+      this.allOptions = modelRecords ? modelRecords.mapBy('id') : null;
+      if (this.args.renderItemName && modelRecords) {
         modelRecords.forEach(({ id, name }) => {
           // create key/value pair { item-id: item-name } for each record
           this.itemNameById = { ...this.itemNameById, [id]: name };

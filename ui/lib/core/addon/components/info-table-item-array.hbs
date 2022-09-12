@@ -8,9 +8,8 @@
             {{#if (is-wildcard-string item)}}
               {{#let (filter-wildcard item this.allOptions) as |wildcardCount|}}
                 <span>{{item}}</span>
-                <span class="tag is-light has-text-grey-dark" data-test-count="{{if wildcardCount wildcardCount 0}}">
-                  includes
-                  {{if wildcardCount wildcardCount 0}}
+                <span class="tag is-light has-text-grey-dark" data-test-count={{wildcardCount}}>
+                  {{if (not-eq wildcardCount undefined) (concat "includes " wildcardCount)}}
                   {{if (eq wildcardCount 1) @wildcardLabel (pluralize @wildcardLabel)}}
                 </span>
                 {{#if (eq this.displayArrayTruncated.lastObject item)}}
@@ -33,7 +32,7 @@
                   @model={{if @queryParam (concat @queryParam "/" item) item}}
                   data-test-item={{item}}
                 >
-                  <span>{{item}}</span>
+                  <span>{{or (get this.itemNameById item) item}}</span>
                 </LinkTo>
               {{/if}}
             {{/if}}
