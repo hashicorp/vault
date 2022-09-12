@@ -33,7 +33,7 @@ func TestOCSP(t *testing.T) {
 	c := New(testLogFactory)
 	transports := []*http.Transport{
 		newInsecureOcspTransport(nil),
-		c.NewTransport(nil, nil),
+		c.NewTransport(nil, nil, FailOpenFalse),
 	}
 
 	for _, tgt := range targetURL {
@@ -412,17 +412,15 @@ func TestCanEarlyExitForOCSP(t *testing.T) {
 	}
 	c := New(testLogFactory)
 	for idx, tt := range testcases {
-		c.ocspFailOpen = OCSPFailOpenTrue
 		expectedLen := len(tt.results)
 		if tt.resultLen > 0 {
 			expectedLen = tt.resultLen
 		}
-		r := c.canEarlyExitForOCSP(tt.results, expectedLen)
+		r := c.canEarlyExitForOCSP(tt.results, expectedLen, FailOpenTrue)
 		if !(tt.retFailOpen == nil && r == nil) && !(tt.retFailOpen != nil && r != nil && tt.retFailOpen.code == r.code) {
 			t.Fatalf("%d: failed to match return. expected: %v, got: %v", idx, tt.retFailOpen, r)
 		}
-		c.ocspFailOpen = OCSPFailOpenFalse
-		r = c.canEarlyExitForOCSP(tt.results, expectedLen)
+		r = c.canEarlyExitForOCSP(tt.results, expectedLen, FailOpenFalse)
 		if !(tt.retFailClosed == nil && r == nil) && !(tt.retFailClosed != nil && r != nil && tt.retFailClosed.code == r.code) {
 			t.Fatalf("%d: failed to match return. expected: %v, got: %v", idx, tt.retFailClosed, r)
 		}

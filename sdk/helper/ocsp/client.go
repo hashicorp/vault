@@ -27,13 +27,12 @@ import (
 	"net/url"
 	"strconv"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
-// OCSPFailOpenMode is OCSP fail open mode. OCSPFailOpenTrue by default and may
+// FailOpenMode is OCSP fail open mode. FailOpenTrue by default and may
 // set to ocspModeFailClosed for fail closed mode
-type OCSPFailOpenMode uint32
+type FailOpenMode uint32
 
 type requestFunc func(method, urlStr string, body io.Reader) (*http.Request, error)
 
@@ -49,11 +48,11 @@ const (
 )
 
 const (
-	ocspFailOpenNotSet OCSPFailOpenMode = iota
-	// OCSPFailOpenTrue represents OCSP fail open mode.
-	OCSPFailOpenTrue
-	// OCSPFailOpenFalse represents OCSP fail closed mode.
-	OCSPFailOpenFalse
+	ocspFailOpenNotSet FailOpenMode = iota
+	// FailOpenTrue represents OCSP fail open mode.
+	FailOpenTrue
+	// FailOpenFalse represents OCSP fail closed mode.
+	FailOpenFalse
 )
 
 const (
@@ -99,9 +98,6 @@ type Client struct {
 	// cacheUpdated is true if the memory cache is updated
 	cacheUpdated bool
 	logFactory   func() hclog.Logger
-
-	// OCSP fail open mode
-	ocspFailOpen OCSPFailOpenMode
 }
 
 type ocspStatusCode int
@@ -342,10 +338,7 @@ func (c *Client) retryOCSP(
 	ocspHost *url.URL,
 	headers map[string]string,
 	reqBody []byte,
-	issuer *x509.Certificate) (
-	ocspRes *ocsp.Response,
-	ocspResBytes []byte,
-	ocspS *ocspStatus, err error) {
+	issuer *x509.Certificate) (ocspRes *ocsp.Response, ocspResBytes []byte, ocspS *ocspStatus, err error) {
 
 	request, err := req("POST", ocspHost.String(), bytes.NewBuffer(reqBody))
 	if err != nil {
@@ -456,7 +449,7 @@ func (c *Client) getRevocationStatus(ctx context.Context, subject, issuer *x509.
 	}
 
 	c.ocspResponseCacheLock.Lock()
-	c.ocspResponseCache.Add(encodedCertID, &v)
+	c.ocspResponseCache.Add(*encodedCertID, &v)
 	c.cacheUpdated = true
 	c.ocspResponseCacheLock.Unlock()
 	return ret, nil
@@ -467,7 +460,7 @@ func isValidOCSPStatus(status ocspStatusCode) bool {
 }
 
 // VerifyPeerCertificate verifies all of certificate revocation status
-func (c *Client) VerifyPeerCertificate(ctx context.Context, verifiedChains [][]*x509.Certificate, extraCas []*x509.Certificate, ocspServersOverride []string) (err error) {
+func (c *Client) VerifyPeerCertificate(ctx context.Context, verifiedChains [][]*x509.Certificate, extraCas []*x509.Certificate, ocspServersOverride []string, ocspFailureMode FailOpenMode) (err error) {
 	for i := 0; i < len(verifiedChains); i++ {
 		// Certificate signed by Root CA. This should be one before the last in the Certificate Chain
 		numberOfNoneRootCerts := len(verifiedChains[i]) - 1
@@ -485,7 +478,7 @@ func (c *Client) VerifyPeerCertificate(ctx context.Context, verifiedChains [][]*
 		if err != nil {
 			return err
 		}
-		if r := c.canEarlyExitForOCSP(results, numberOfNoneRootCerts); r != nil {
+		if r := c.canEarlyExitForOCSP(results, numberOfNoneRootCerts, ocspFailureMode); r != nil {
 			return r.err
 		}
 	}
@@ -493,9 +486,9 @@ func (c *Client) VerifyPeerCertificate(ctx context.Context, verifiedChains [][]*
 	return nil
 }
 
-func (c *Client) canEarlyExitForOCSP(results []*ocspStatus, chainSize int) *ocspStatus {
+func (c *Client) canEarlyExitForOCSP(results []*ocspStatus, chainSize int, ocspFailureMode FailOpenMode) *ocspStatus {
 	msg := ""
-	if atomic.LoadUint32((*uint32)(&c.ocspFailOpen)) == (uint32)(OCSPFailOpenFalse) {
+	if ocspFailureMode == FailOpenFalse {
 		// Fail closed. any error is returned to stop connection
 		for _, r := range results {
 			if r.err != nil {
@@ -522,10 +515,7 @@ func (c *Client) canEarlyExitForOCSP(results []*ocspStatus, chainSize int) *ocsp
 	}
 	if len(msg) > 0 {
 		c.Logger().Warn(
-			"WARNING!!! Using fail-open to connect. Driver is connecting to an "+
-				"HTTPS endpoint without OCSP based Certificate Revocation checking "+
-				"as it could not obtain a valid OCSP Response to use from the CA OCSP "+
-				"responder", "detail", msg[1:])
+			"OCSP is set to fail-open, and could not retrieve OCSP based revocation checking but proceeding.", "detail", msg[1:])
 	}
 	return nil
 }
@@ -582,9 +572,9 @@ func (c *Client) GetAllRevocationStatus(ctx context.Context, verifiedChains, ext
 }
 
 // verifyPeerCertificateSerial verifies the certificate revocation status in serial.
-func (c *Client) verifyPeerCertificateSerial(extraCas []*x509.Certificate, ocspServersOverride []string) func(_ [][]byte, verifiedChains [][]*x509.Certificate) (err error) {
+func (c *Client) verifyPeerCertificateSerial(extraCas []*x509.Certificate, ocspServersOverride []string, ocspFailureMode FailOpenMode) func(_ [][]byte, verifiedChains [][]*x509.Certificate) (err error) {
 	return func(_ [][]byte, verifiedChains [][]*x509.Certificate) error {
-		return c.VerifyPeerCertificate(context.TODO(), verifiedChains, extraCas, ocspServersOverride)
+		return c.VerifyPeerCertificate(context.TODO(), verifiedChains, extraCas, ocspServersOverride, ocspFailureMode)
 	}
 }
 
@@ -624,7 +614,7 @@ func (c *Client) extractOCSPCacheResponseValue(cacheValue *ocspCachedResponse, s
 
 // writeOCSPCache writes a OCSP Response cache
 func (c *Client) writeOCSPCache(ctx context.Context, storage logical.Storage) error {
-	c.Logger().Debug("writing OCSP Response cache file")
+	c.Logger().Debug("writing OCSP Response cache entry")
 
 	t := time.Now()
 	m := make(map[string][]interface{})
@@ -693,9 +683,19 @@ func (c *Client) readOCSPCache(ctx context.Context, storage logical.Storage) err
 				times[i] = t.(float64)
 			}
 		}
+		var status int
+		if jn, ok := v[0].(json.Number); ok {
+			s, err := jn.Int64()
+			if err != nil {
+				return err
+			}
+			status = int(s)
+		} else {
+			status = v[0].(int)
+		}
 
 		c.ocspResponseCache.Add(*key, &ocspCachedResponse{
-			status:     ocspStatusCode(v[0].(int)),
+			status:     ocspStatusCode(status),
 			time:       times[0],
 			producedAt: times[1],
 			thisUpdate: times[2],
@@ -747,11 +747,11 @@ func newInsecureOcspTransport(extraCas []*x509.Certificate) *http.Transport {
 }
 
 // NewTransport includes the certificate revocation check with OCSP in sequential.
-func (c *Client) NewTransport(extraCas []*x509.Certificate, ocspServersOverride []string) *http.Transport {
+func (c *Client) NewTransport(extraCas []*x509.Certificate, ocspServersOverride []string, ocspFailureMode FailOpenMode) *http.Transport {
 	return &http.Transport{
 		TLSClientConfig: &tls.Config{
 			RootCAs:               c.certPool,
-			VerifyPeerCertificate: c.verifyPeerCertificateSerial(extraCas, ocspServersOverride),
+			VerifyPeerCertificate: c.verifyPeerCertificateSerial(extraCas, ocspServersOverride, ocspFailureMode),
 		},
 		MaxIdleConns:    10,
 		IdleConnTimeout: 30 * time.Minute,

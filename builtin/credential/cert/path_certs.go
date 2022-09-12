@@ -63,6 +63,11 @@ Must be x509 PEM encoded.`,
 				Description: `A comma-separated list of OCSP server addresses.  If unset, the OCSP server is determined 
 from the AuthorityInformationAccess extension on the certificate being inspected.`,
 			},
+			"ocsp_fail_open": {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: "If set to true, if an OCSP revocation cannot be made successfully, login will proceed rather.  If false, failing to get an OCSP status fails the request.",
+			},
 			"allowed_names": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated list of names.
@@ -315,11 +320,14 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	if ocspEnabledRaw, ok := d.GetOk("ocsp_enabled"); ok {
 		cert.OcspEnabled = ocspEnabledRaw.(bool)
 	}
-	if displayNameRaw, ok := d.GetOk("display_name"); ok {
-		cert.DisplayName = displayNameRaw.(string)
-	}
 	if ocspServerOverrides, ok := d.GetOk("ocsp_servers_override"); ok {
 		cert.OcspServersOverride = ocspServerOverrides.([]string)
+	}
+	if ocspFailOpen, ok := d.GetOk("ocsp_fail_open"); ok {
+		cert.OcspFailOpen = ocspFailOpen.(bool)
+	}
+	if displayNameRaw, ok := d.GetOk("display_name"); ok {
+		cert.DisplayName = displayNameRaw.(string)
 	}
 	if allowedNamesRaw, ok := d.GetOk("allowed_names"); ok {
 		cert.AllowedNames = allowedNamesRaw.([]string)
@@ -451,6 +459,7 @@ type CertEntry struct {
 	OcspCaCertificates         string
 	OcspEnabled                bool
 	OcspServersOverride        []string
+	OcspFailOpen               bool
 	DisplayName                string
 	Policies                   []string
 	TTL                        time.Duration
