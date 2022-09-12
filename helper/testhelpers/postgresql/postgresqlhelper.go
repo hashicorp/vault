@@ -64,9 +64,10 @@ func prepareTestContainer(t *testing.T, name, repo, version, password, db string
 		Ports:           []string{"5432/tcp"},
 		DoNotAutoRemove: doNotAutoRemove,
 	}
-	if repo == "bitnami/postgresql-repmgr" {
-		runOpts.NetworkID = os.Getenv("POSTGRES_MULTIHOST_NET")
-	}
+	// if repo == "bitnami/postgresql-repmgr" {
+	// 	// runOpts.NetworkID = os.Getenv("POSTGRES_MULTIHOST_NET")
+	// 	runOpts.NetworkID = os.Getenv("TEST_DOCKER_NETWORK_ID")
+	// }
 
 	runner, err := docker.NewServiceRunner(runOpts)
 	if err != nil {
@@ -83,9 +84,9 @@ func prepareTestContainer(t *testing.T, name, repo, version, password, db string
 
 func connectPostgres(password, repo string) docker.ServiceAdapter {
 	return func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
-		if repo == "bitnami/postgresql-repmgr" {
-			host = "127.0.0.1"
-		}
+		// if repo == "bitnami/postgresql-repmgr" {
+		// 	host = "127.0.0.1"
+		// }
 
 		u := url.URL{
 			Scheme:   "postgres",
