@@ -283,6 +283,7 @@ func (b *backendGRPCPluginClient) Type() logical.BackendType {
 
 func (b *backendGRPCPluginClient) Version() logical.VersionInfo {
 	reply, err := b.client.Version(b.doneCtx, &pb.Empty{})
+	// TODO: check for specific error for this rather than assume
 	if err != nil {
 		b.Logger().Debug("Error getting plugin version; assuming method is missing", "err", err)
 		return logical.EmptyVersion

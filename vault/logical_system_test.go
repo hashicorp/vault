@@ -175,7 +175,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"sha":             "",
 			"running_sha":     "",
 			"version":         "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 		},
 		"sys/": map[string]interface{}{
 			"type":                    "system",
@@ -195,7 +195,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"sha":             "",
 			"running_sha":     "",
 			"version":         "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description":             "per-token private secret storage",
@@ -214,7 +214,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"sha":             "",
 			"running_sha":     "",
 			"version":         "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 		},
 		"identity/": map[string]interface{}{
 			"description":             "identity store",
@@ -234,7 +234,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"sha":             "",
 			"running_sha":     "",
 			"version":         "",
-			"running_version": "",
+			"running_version": logical.BuiltinVersion.Version,
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); len(diff) > 0 {
@@ -3329,7 +3329,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"sha":             "",
 				"running_sha":     "",
 				"version":         "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 			},
 			"sys/": map[string]interface{}{
 				"type":                    "system",
@@ -3349,7 +3349,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"sha":             "",
 				"running_sha":     "",
 				"version":         "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 			},
 			"cubbyhole/": map[string]interface{}{
 				"description":             "per-token private secret storage",
@@ -3368,7 +3368,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"sha":             "",
 				"running_sha":     "",
 				"version":         "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 			},
 			"identity/": map[string]interface{}{
 				"description":             "identity store",
@@ -3388,7 +3388,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"sha":             "",
 				"running_sha":     "",
 				"version":         "",
-				"running_version": "",
+				"running_version": logical.BuiltinVersion.Version,
 			},
 		},
 		"auth": map[string]interface{}{
