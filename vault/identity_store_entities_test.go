@@ -705,7 +705,7 @@ func TestIdentityStore_LoadingEntities(t *testing.T) {
 		t.Fatalf("failed to fetch identity store from router")
 	}
 
-	is := identitystore.(builtinVersionBackend).backend.(*IdentityStore)
+	is := identitystore.(*IdentityStore)
 
 	registerData := map[string]interface{}{
 		"name":     "testentityname",

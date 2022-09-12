@@ -105,5 +105,8 @@ func (b *BackendTracingMiddleware) Version() logical.VersionInfo {
 	}(time.Now())
 
 	b.logger.Trace("version", "status", "started")
-	return b.next.Version()
+	if versioner, ok := b.next.(logical.Versioner); ok {
+		return versioner.Version()
+	}
+	return logical.EmptyVersion
 }

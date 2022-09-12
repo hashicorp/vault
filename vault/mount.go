@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -47,6 +48,11 @@ const (
 
 // ListingVisibilityType represents the types for listing visibility
 type ListingVisibilityType string
+
+// externaler allows us to check if a backend is running externally (i.e., over GRPC)
+type externaler interface {
+	IsExternal() bool
+}
 
 const (
 	// ListingVisibilityDefault is the default value for listing visibility
@@ -625,7 +631,15 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	}
 
 	// update the entry running version with the backend's reported version
-	entry.RunningVersion = backend.Version().Version
+	if versioner, ok := backend.(logical.Versioner); ok {
+		entry.RunningVersion = versioner.Version().Version
+	}
+	if entry.RunningVersion == "" {
+		// don't set the running version to a builtin if it is running as an external plugin
+		if externaler, ok := backend.(externaler); !ok || !externaler.IsExternal() {
+			entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
+		}
+	}
 
 	addPathCheckers(c, entry, backend, viewPath)
 
@@ -1612,7 +1626,7 @@ func (c *Core) defaultMountTable() *MountTable {
 			Options: map[string]string{
 				"version": "2",
 			},
-			RunningVersion: logical.BuiltinVersion.Version,
+			RunningVersion: versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 		}
 		table.Entries = append(table.Entries, kvMount)
 	}
@@ -1647,7 +1661,7 @@ func (c *Core) requiredMountTable() *MountTable {
 		Accessor:         cubbyholeAccessor,
 		Local:            true,
 		BackendAwareUUID: cubbyholeBackendUUID,
-		RunningVersion:   logical.BuiltinVersion.Version,
+		RunningVersion:   versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 	}
 
 	sysUUID, err := uuid.GenerateUUID()
@@ -1674,7 +1688,7 @@ func (c *Core) requiredMountTable() *MountTable {
 		Config: MountConfig{
 			PassthroughRequestHeaders: []string{"Accept"},
 		},
-		RunningVersion: logical.BuiltinVersion.Version,
+		RunningVersion: versions.DefaultBuiltinVersion,
 	}
 
 	identityUUID, err := uuid.GenerateUUID()
@@ -1700,7 +1714,7 @@ func (c *Core) requiredMountTable() *MountTable {
 		Config: MountConfig{
 			PassthroughRequestHeaders: []string{"Authorization"},
 		},
-		RunningVersion: logical.BuiltinVersion.Version,
+		RunningVersion: versions.DefaultBuiltinVersion,
 	}
 
 	table.Entries = append(table.Entries, cubbyholeMount)
@@ -1742,15 +1756,15 @@ func (c *Core) singletonMountTables() (mounts, auth *MountTable) {
 func (c *Core) setCoreBackend(entry *MountEntry, backend logical.Backend, view *BarrierView) {
 	switch entry.Type {
 	case systemMountType:
-		c.systemBackend = backend.(builtinVersionBackend).backend.(*SystemBackend)
+		c.systemBackend = backend.(*SystemBackend)
 		c.systemBarrierView = view
 	case cubbyholeMountType:
-		ch := backend.(builtinVersionBackend).backend.(*CubbyholeBackend)
+		ch := backend.(*CubbyholeBackend)
 		ch.saltUUID = entry.UUID
 		ch.storageView = view
 		c.cubbyholeBackend = ch
 	case identityMountType:
-		c.identityStore = backend.(builtinVersionBackend).backend.(*IdentityStore)
+		c.identityStore = backend.(*IdentityStore)
 	}
 }
 

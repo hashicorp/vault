@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -39,6 +39,12 @@ func (b *BackendPluginClientV5) Cleanup(ctx context.Context) {
 	}
 	b.Backend.Cleanup(ctx)
 	b.client.Reload()
+}
+
+// TODO: add version forwarding here
+
+func (b *BackendPluginClientV5) IsExternal() bool {
+	return true
 }
 
 // NewBackendV5 will return an instance of an RPC-based client implementation of

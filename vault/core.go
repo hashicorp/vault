@@ -1103,9 +1103,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	c.auditBackends = auditBackends
 
-	// hardcode builtin versions to all builtin plugins
-	c.logicalBackends = wrapMapAddBuiltinVersion(logicalBackends)
-	c.credentialBackends = wrapMapAddBuiltinVersion(credentialBackends)
+	c.logicalBackends = logicalBackends
+	c.credentialBackends = credentialBackends
 
 	uiStoragePrefix := systemBarrierPrefix + "ui"
 	c.uiConfig = NewUIConfig(conf.EnableUI, physical.NewView(c.physical, uiStoragePrefix), NewBarrierView(c.barrier, uiStoragePrefix))

@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -182,8 +183,16 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 	if backendType != logical.TypeCredential {
 		return fmt.Errorf("cannot mount %q of type %q as an auth backend", entry.Type, backendType)
 	}
-	entry.RunningVersion = backend.Version().Version
-
+	// update the entry running version with the backend's reported version
+	if versioner, ok := backend.(logical.Versioner); ok {
+		entry.RunningVersion = versioner.Version().Version
+	}
+	if entry.RunningVersion == "" {
+		// don't set the running version to a builtin if it is running as an external plugin
+		if externaler, ok := backend.(externaler); !ok || !externaler.IsExternal() {
+			entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
+		}
+	}
 	addPathCheckers(c, entry, backend, viewPath)
 
 	// If the mount is filtered or we are on a DR secondary we don't want to
@@ -842,7 +851,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 
 		// Check if this is the token store
 		if entry.Type == "token" {
-			c.tokenStore = backend.(builtinVersionBackend).backend.(*TokenStore)
+			c.tokenStore = backend.(*TokenStore)
 
 			// At some point when this isn't beta we may persist this but for
 			// now always set it on mount
@@ -851,7 +860,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			// this is loaded *after* the normal mounts, including cubbyhole
 			c.router.tokenStoreSaltFunc = c.tokenStore.Salt
 			if !c.IsDRSecondary() {
-				c.tokenStore.cubbyholeBackend = c.router.MatchingBackend(ctx, cubbyholeMountPath).(builtinVersionBackend).backend.(*CubbyholeBackend)
+				c.tokenStore.cubbyholeBackend = c.router.MatchingBackend(ctx, cubbyholeMountPath).(*CubbyholeBackend)
 			}
 		}
 

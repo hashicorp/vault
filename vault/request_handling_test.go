@@ -17,7 +17,7 @@ import (
 func TestRequestHandling_Wrapping(t *testing.T) {
 	core, _, root := TestCoreUnsealed(t)
 
-	core.logicalBackends["kv"] = wrapFactoryAddBuiltinVersion(PassthroughBackendFactory)
+	core.logicalBackends["kv"] = PassthroughBackendFactory
 
 	meUUID, _ := uuid.GenerateUUID()
 	err := core.mount(namespace.RootContext(nil), &MountEntry{

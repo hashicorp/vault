@@ -79,7 +79,10 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*PluginBackend, 
 	// Get SpecialPaths and BackendType
 	paths := raw.SpecialPaths()
 	btype := raw.Type()
-	runningVersion := raw.Version().Version
+	runningVersion := ""
+	if versioner, ok := raw.(logical.Versioner); ok {
+		runningVersion = versioner.Version().Version
+	}
 
 	// Cleanup meta plugin backend
 	raw.Cleanup(ctx)
@@ -293,5 +296,8 @@ func (b *PluginBackend) Type() logical.BackendType {
 func (b *PluginBackend) Version() logical.VersionInfo {
 	b.RLock()
 	defer b.RUnlock()
-	return b.Backend.Version()
+	if versioner, ok := b.Backend.(logical.Versioner); ok {
+		return versioner.Version()
+	}
+	return logical.EmptyVersion
 }

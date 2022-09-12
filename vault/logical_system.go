@@ -21,6 +21,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/hashicorp/vault/helper/versions"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/hashicorp/errwrap"
@@ -84,7 +85,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	}
 
 	b.Backend = &framework.Backend{
-		PluginVersion: logical.BuiltinVersion.Version,
+		PluginVersion: versions.DefaultBuiltinVersion,
 		Help:          strings.TrimSpace(sysHelpRoot),
 
 		PathsSpecial: &logical.Paths{

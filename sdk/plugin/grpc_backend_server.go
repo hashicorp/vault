@@ -273,7 +273,13 @@ func (b *backendGRPCPluginServer) Version(ctx context.Context, _ *pb.Empty) (*pb
 		return &pb.VersionReply{}, err
 	}
 
+	if versioner, ok := backend.(logical.Versioner); ok {
+		return &pb.VersionReply{
+			Version: versioner.Version().Version,
+		}, nil
+	}
+	// TODO: do we need to check builtinplugins?
 	return &pb.VersionReply{
-		Version: backend.Version().Version,
+		Version: "",
 	}, nil
 }

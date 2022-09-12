@@ -1076,7 +1076,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 				return nil, auth, retErr
 			}
 
-			if ptbe, ok := matchingBackend.(builtinVersionBackend).backend.(*PassthroughBackend); ok {
+			if ptbe, ok := matchingBackend.(*PassthroughBackend); ok {
 				if !ptbe.GeneratesLeases() {
 					registerLease = false
 					resp.Secret.Renewable = false

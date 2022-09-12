@@ -292,3 +292,7 @@ func (b *backendGRPCPluginClient) Version() logical.VersionInfo {
 		Version: reply.GetVersion(),
 	}
 }
+
+func (b *backendGRPCPluginClient) IsExternal() bool {
+	return true
+}

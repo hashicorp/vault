@@ -5,7 +5,7 @@ import (
 	"net/rpc"
 	"sync"
 
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin"
@@ -146,4 +146,8 @@ func (b *backend) InvalidateKey(ctx context.Context, key string) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	b.Backend.InvalidateKey(ctx, key)
+}
+
+func (b *backend) IsExternal() bool {
+	return true
 }
