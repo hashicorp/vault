@@ -359,12 +359,10 @@ func (c *Client) retryOCSP(
 	if res.StatusCode != http.StatusOK {
 		return nil, nil, nil, fmt.Errorf("HTTP code is not OK. %v: %v", res.StatusCode, res.Status)
 	}
-	c.Logger().Debug("reading contents")
 	ocspResBytes, err = ioutil.ReadAll(res.Body)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	c.Logger().Debug("parsing OCSP response")
 	ocspRes, err = ocsp.ParseResponse(ocspResBytes, issuer)
 	if err != nil {
 		return nil, nil, nil, err
@@ -377,8 +375,6 @@ func (c *Client) retryOCSP(
 
 // getRevocationStatus checks the certificate revocation status for subject using issuer certificate.
 func (c *Client) getRevocationStatus(ctx context.Context, subject, issuer *x509.Certificate, extraCas []*x509.Certificate, ocspServersOverride []string) (*ocspStatus, error) {
-	c.Logger().Debug("get-revocation-status", "subject", subject.Subject, "issuer", issuer.Subject)
-
 	status, ocspReq, encodedCertID, err := c.ValidateWithCache(subject, issuer)
 	if err != nil {
 		return nil, err
@@ -389,8 +385,7 @@ func (c *Client) getRevocationStatus(ctx context.Context, subject, issuer *x509.
 	if ocspReq == nil || encodedCertID == nil {
 		return status, nil
 	}
-	c.Logger().Debug("cache missed")
-	c.Logger().Debug("OCSP: ", "server", subject.OCSPServer)
+	c.Logger().Debug("cache missed", "server", subject.OCSPServer)
 	if len(subject.OCSPServer) == 0 && len(ocspServersOverride) == 0 {
 		return nil, fmt.Errorf("no OCSP responder URL: subject: %v", subject.Subject)
 	}
@@ -614,8 +609,7 @@ func (c *Client) extractOCSPCacheResponseValue(cacheValue *ocspCachedResponse, s
 
 // writeOCSPCache writes a OCSP Response cache
 func (c *Client) writeOCSPCache(ctx context.Context, storage logical.Storage) error {
-	c.Logger().Debug("writing OCSP Response cache entry")
-
+	c.Logger().Debug("writing OCSP Response cache")
 	t := time.Now()
 	m := make(map[string][]interface{})
 	keys := c.ocspResponseCache.Keys()
@@ -651,7 +645,7 @@ func (c *Client) writeOCSPCache(ctx context.Context, storage logical.Storage) er
 
 // readOCSPCache reads a OCSP Response cache from storage
 func (c *Client) readOCSPCache(ctx context.Context, storage logical.Storage) error {
-	c.Logger().Debug("reading OCSP Response cache entry")
+	c.Logger().Debug("reading OCSP Response cache")
 
 	entry, err := storage.Get(ctx, ocspCacheKey)
 	if err != nil {
