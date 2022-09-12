@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -299,6 +300,65 @@ func TestRaft_Backend_LargeValue(t *testing.T) {
 	}
 	if out != nil {
 		t.Fatal("expected response entry to be nil after a failed put")
+	}
+}
+
+// TestRaft_TransactionalBackend_GetTransactions tests that passing a slice of transactions to the
+// raft backend will populate values for any transactions that are Get operations.
+func TestRaft_TransactionalBackend_GetTransactions(t *testing.T) {
+	b, dir := getRaft(t, true, true)
+	defer os.RemoveAll(dir)
+
+	ctx := context.Background()
+	txns := make([]*physical.TxnEntry, 0)
+
+	// Add some seed values to our FSM, and prepare our slice of transactions at the same time
+	for i := 0; i < 5; i++ {
+		key := fmt.Sprintf("foo/%d", i)
+		err := b.fsm.Put(ctx, &physical.Entry{Key: key, Value: []byte(fmt.Sprintf("value-%d", i))})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		txns = append(txns, &physical.TxnEntry{
+			Operation: physical.GetOperation,
+			Entry: &physical.Entry{
+				Key: key,
+			},
+		})
+	}
+
+	// Add some additional transactions, so we have a mix of operations
+	for i := 0; i < 10; i++ {
+		txnEntry := &physical.TxnEntry{
+			Entry: &physical.Entry{
+				Key: fmt.Sprintf("lol-%d", i),
+			},
+		}
+
+		if i%2 == 0 {
+			txnEntry.Operation = physical.PutOperation
+			txnEntry.Entry.Value = []byte("lol")
+		} else {
+			txnEntry.Operation = physical.DeleteOperation
+		}
+
+		txns = append(txns, txnEntry)
+	}
+
+	err := b.Transaction(ctx, txns)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that our Get operations were populated with their values
+	for i, txn := range txns {
+		if txn.Operation == physical.GetOperation {
+			val := []byte(fmt.Sprintf("value-%d", i))
+			if !bytes.Equal(val, txn.Entry.Value) {
+				t.Fatalf("expected %s to equal %s but it didn't", hex.EncodeToString(val), hex.EncodeToString(txn.Entry.Value))
+			}
+		}
 	}
 }
 

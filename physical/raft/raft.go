@@ -1508,10 +1508,27 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 		return err
 	}
 
-	command := &LogData{
-		Operations: make([]*LogOperation, len(txns)),
+	// Partition our txns into read and write. The read ones will get updated via the FSM to
+	// support undo logs. The write ones we process like normal.
+	readTxns := make([]*physical.TxnEntry, 0)
+	writeTxns := make([]*physical.TxnEntry, 0)
+
+	for _, txn := range txns {
+		if txn.Operation == physical.GetOperation {
+			readTxns = append(readTxns, txn)
+		} else {
+			writeTxns = append(writeTxns, txn)
+		}
 	}
-	for i, txn := range txns {
+	err := b.fsm.Transaction(ctx, readTxns)
+	if err != nil {
+		return fmt.Errorf("error passing read transactions to the fsm: %w", err)
+	}
+
+	command := &LogData{
+		Operations: make([]*LogOperation, len(writeTxns)),
+	}
+	for i, txn := range writeTxns {
 		op := &LogOperation{}
 		switch txn.Operation {
 		case physical.PutOperation:
@@ -1535,8 +1552,9 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 	defer b.permitPool.Release()
 
 	b.l.RLock()
-	err := b.applyLog(ctx, command)
+	err = b.applyLog(ctx, command)
 	b.l.RUnlock()
+
 	return err
 }
 
