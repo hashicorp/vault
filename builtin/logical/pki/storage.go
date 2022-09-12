@@ -6,6 +6,7 @@ import (
 	"crypto"
 	"crypto/x509"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -115,7 +116,16 @@ func (i issuerUsage) Names() string {
 	var names []string
 	var builtUsage issuerUsage
 
-	for name, usage := range namedIssuerUsages {
+	// Return the known set of usages in a sorted order to not have Terraform state files flipping
+	// saying values are different when it's the same list in a different order.
+	keys := make([]string, 0, len(namedIssuerUsages))
+	for k := range namedIssuerUsages {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, name := range keys {
+		usage := namedIssuerUsages[name]
 		if i.HasUsage(usage) {
 			names = append(names, name)
 			builtUsage.ToggleUsage(usage)
