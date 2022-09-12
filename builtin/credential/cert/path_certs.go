@@ -13,6 +13,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const defaultOCSPCacheSize = 100
+
 func pathListCerts(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "certs/?",
@@ -67,6 +69,16 @@ from the AuthorityInformationAccess extension on the certificate being inspected
 				Type:        framework.TypeBool,
 				Default:     false,
 				Description: "If set to true, if an OCSP revocation cannot be made successfully, login will proceed rather.  If false, failing to get an OCSP status fails the request.",
+			},
+			"ocsp_query_all_servers": {
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: "If set to true, rather than accepting the first successful OCSP response, query all servers and consider the certificate valid only if all servers agree.",
+			},
+			"ocsp_cache_size": {
+				Type:        framework.TypeInt,
+				Default:     defaultOCSPCacheSize,
+				Description: "The size of the OCSP response cache.",
 			},
 			"allowed_names": {
 				Type: framework.TypeCommaStringSlice,
@@ -326,6 +338,12 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	if ocspFailOpen, ok := d.GetOk("ocsp_fail_open"); ok {
 		cert.OcspFailOpen = ocspFailOpen.(bool)
 	}
+	if ocspQueryAll, ok := d.GetOk("ocsp_query_all_servers"); ok {
+		cert.OcspQueryAllServers = ocspQueryAll.(bool)
+	}
+	if ocspCacheSize, ok := d.GetOk("ocsp_cache_size"); ok {
+		cert.OcspCacheSize = ocspCacheSize.(int)
+	}
 	if displayNameRaw, ok := d.GetOk("display_name"); ok {
 		cert.DisplayName = displayNameRaw.(string)
 	}
@@ -460,6 +478,8 @@ type CertEntry struct {
 	OcspEnabled                bool
 	OcspServersOverride        []string
 	OcspFailOpen               bool
+	OcspCacheSize              int
+	OcspQueryAllServers        bool
 	DisplayName                string
 	Policies                   []string
 	TTL                        time.Duration

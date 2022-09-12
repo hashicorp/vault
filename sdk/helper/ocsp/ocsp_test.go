@@ -8,6 +8,7 @@ import (
 	"crypto"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"github.com/hashicorp/go-hclog"
@@ -31,10 +32,13 @@ func TestOCSP(t *testing.T) {
 		"https://s3-us-west-2.amazonaws.com/sfc-snowsql-updates/?prefix=1.1/windows_x86_64",
 	}
 
-	c := New(testLogFactory)
+	conf := VerifyConfig{
+		OcspFailureMode: FailOpenFalse,
+	}
+	c := New(testLogFactory, 10)
 	transports := []*http.Transport{
 		newInsecureOcspTransport(nil),
-		c.NewTransport(nil, nil, FailOpenFalse),
+		c.NewTransport(&conf),
 	}
 
 	for _, tgt := range targetURL {
@@ -58,6 +62,50 @@ func TestOCSP(t *testing.T) {
 				t.Fatalf("failed to read content body for %v", tgt)
 			}
 
+		}
+	}
+}
+
+func TestMultiOCSP(t *testing.T) {
+	targetURL := []string{
+		"https://localhost:8200/v1/pki/ocsp",
+		"https://localhost:8200/v1/pki/ocsp",
+		"https://localhost:8200/v1/pki/ocsp",
+	}
+
+	b, _ := pem.Decode([]byte(vaultCert))
+	caCert, _ := x509.ParseCertificate(b.Bytes)
+	conf := VerifyConfig{
+		OcspFailureMode:     FailOpenFalse,
+		QueryAllServers:     true,
+		OcspServersOverride: targetURL,
+		ExtraCas:            []*x509.Certificate{caCert},
+	}
+	c := New(testLogFactory, 10)
+	transports := []*http.Transport{
+		newInsecureOcspTransport(conf.ExtraCas),
+		c.NewTransport(&conf),
+	}
+
+	tgt := "https://localhost:8200/v1/pki/ca/pem"
+	c.ocspResponseCache, _ = lru.New2Q(10)
+	for _, tr := range transports {
+		c := &http.Client{
+			Transport: tr,
+			Timeout:   30 * time.Second,
+		}
+		req, err := http.NewRequest("GET", tgt, bytes.NewReader(nil))
+		if err != nil {
+			t.Fatalf("fail to create a request. err: %v", err)
+		}
+		res, err := c.Do(req)
+		if err != nil {
+			t.Fatalf("failed to GET contents. err: %v", err)
+		}
+		defer res.Body.Close()
+		_, err = ioutil.ReadAll(res.Body)
+		if err != nil {
+			t.Fatalf("failed to read content body for %v", tgt)
 		}
 	}
 }
@@ -163,7 +211,7 @@ func TestUnitEncodeCertIDGood(t *testing.T) {
 }
 
 func TestUnitCheckOCSPResponseCache(t *testing.T) {
-	c := New(testLogFactory)
+	c := New(testLogFactory, 10)
 	dummyKey0 := certIDKey{
 		HashAlgorithm: crypto.SHA1,
 		NameHash:      "dummy0",
@@ -286,7 +334,7 @@ func getCert(addr string) []*x509.Certificate {
 }
 
 func TestOCSPRetry(t *testing.T) {
-	c := New(testLogFactory)
+	c := New(testLogFactory, 10)
 	certs := getCert("s3-us-west-2.amazonaws.com:443")
 	dummyOCSPHost := &url.URL{
 		Scheme: "https",
@@ -411,17 +459,17 @@ func TestCanEarlyExitForOCSP(t *testing.T) {
 			retFailClosed: &ocspStatus{ocspStatusRevoked, errors.New("revoked")},
 		},
 	}
-	c := New(testLogFactory)
+	c := New(testLogFactory, 10)
 	for idx, tt := range testcases {
 		expectedLen := len(tt.results)
 		if tt.resultLen > 0 {
 			expectedLen = tt.resultLen
 		}
-		r := c.canEarlyExitForOCSP(tt.results, expectedLen, FailOpenTrue)
+		r := c.canEarlyExitForOCSP(tt.results, expectedLen, &VerifyConfig{OcspFailureMode: FailOpenTrue})
 		if !(tt.retFailOpen == nil && r == nil) && !(tt.retFailOpen != nil && r != nil && tt.retFailOpen.code == r.code) {
 			t.Fatalf("%d: failed to match return. expected: %v, got: %v", idx, tt.retFailOpen, r)
 		}
-		r = c.canEarlyExitForOCSP(tt.results, expectedLen, FailOpenFalse)
+		r = c.canEarlyExitForOCSP(tt.results, expectedLen, &VerifyConfig{OcspFailureMode: FailOpenFalse})
 		if !(tt.retFailClosed == nil && r == nil) && !(tt.retFailClosed != nil && r != nil && tt.retFailClosed.code == r.code) {
 			t.Fatalf("%d: failed to match return. expected: %v, got: %v", idx, tt.retFailClosed, r)
 		}
@@ -508,3 +556,27 @@ func (b *fakeResponseBody) Close() error {
 func fakeRequestFunc(_, _ string, _ interface{}) (*retryablehttp.Request, error) {
 	return nil, nil
 }
+
+const vaultCert = `-----BEGIN CERTIFICATE-----
+MIIDuTCCAqGgAwIBAgIUA6VeVD1IB5rXcCZRAqPO4zr/GAMwDQYJKoZIhvcNAQEL
+BQAwcjELMAkGA1UEBhMCVVMxCzAJBgNVBAgMAlZBMREwDwYDVQQHDAhTb21lQ2l0
+eTESMBAGA1UECgwJTXlDb21wYW55MRMwEQYDVQQLDApNeURpdmlzaW9uMRowGAYD
+VQQDDBF3d3cuY29uaHVnZWNvLmNvbTAeFw0yMjA5MDcxOTA1MzdaFw0yNDA5MDYx
+OTA1MzdaMHIxCzAJBgNVBAYTAlVTMQswCQYDVQQIDAJWQTERMA8GA1UEBwwIU29t
+ZUNpdHkxEjAQBgNVBAoMCU15Q29tcGFueTETMBEGA1UECwwKTXlEaXZpc2lvbjEa
+MBgGA1UEAwwRd3d3LmNvbmh1Z2Vjby5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IB
+DwAwggEKAoIBAQDL9qzEXi4PIafSAqfcwcmjujFvbG1QZbI8swxnD+w8i4ufAQU5
+LDmvMrGo3ZbhJ0mCihYmFxpjhRdP2raJQ9TysHlPXHtDRpr9ckWTKBz2oIfqVtJ2
+qzteQkWCkDAO7kPqzgCFsMeoMZeONRkeGib0lEzQAbW/Rqnphg8zVVkyQ71DZ7Pc
+d5WkC2E28kKcSramhWfVFpxG3hSIrLOX2esEXteLRzKxFPf+gi413JZFKYIWrebP
+u5t0++MLNpuX322geoki4BWMjQsd47XILmxZ4aj33ScZvdrZESCnwP76hKIxg9mO
+lMxrqSWKVV5jHZrElSEj9LYJgDO1Y6eItn7hAgMBAAGjRzBFMAsGA1UdDwQEAwIE
+MDATBgNVHSUEDDAKBggrBgEFBQcDATAhBgNVHREEGjAYggtleGFtcGxlLmNvbYIJ
+bG9jYWxob3N0MA0GCSqGSIb3DQEBCwUAA4IBAQA5dPdf5SdtMwe2uSspO/EuWqbM
+497vMQBW1Ey8KRKasJjhvOVYMbe7De5YsnW4bn8u5pl0zQGF4hEtpmifAtVvziH/
+K+ritQj9VVNbLLCbFcg+b0kfjt4yrDZ64vWvIeCgPjG1Kme8gdUUWgu9dOud5gdx
+qg/tIFv4TRS/eIIymMlfd9owOD3Ig6S5fy4NaAJFAwXf8+3Rzuc+e7JSAPgAufjh
+tOTWinxvoiOLuYwo9CyGgq4qKBFsrY0aE0gdA7oTQkpbEbo2EbqiWUl/PTCl1Y4Z
+nSZ0n+4q9QC9RLrWwYTwh838d5RVLUst2mBKSA+vn7YkqmBJbdBC6nkd7n7H
+-----END CERTIFICATE-----
+`

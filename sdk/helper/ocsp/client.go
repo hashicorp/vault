@@ -11,14 +11,11 @@ import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-retryablehttp"
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/crypto/ocsp"
 	"io/ioutil"
 	"math/big"
@@ -45,6 +42,8 @@ const (
 	httpHeaderAccept        = "accept"
 	httpHeaderContentLength = "Content-Length"
 	httpHeaderHost          = "Host"
+	ocspRequestContentType  = "application/ocsp-request"
+	ocspResponseContentType = "application/ocsp-response"
 )
 
 const (
@@ -70,9 +69,7 @@ const (
 
 const (
 	// cacheExpire specifies cache data expiration time in seconds.
-	cacheExpire        = float64(24 * 60 * 60)
-	cacheSize          = 10000
-	persistedCacheSize = 1000
+	cacheExpire = float64(24 * 60 * 60)
 )
 
 const (
@@ -91,7 +88,7 @@ type ocspCachedResponse struct {
 type Client struct {
 	// caRoot includes the CA certificates.
 	caRoot map[string]*x509.Certificate
-	// certPOol includes the CA certificates.
+	// certPool includes the CA certificates.
 	certPool              *x509.CertPool
 	ocspResponseCache     *lru.TwoQueueCache
 	ocspResponseCacheLock sync.RWMutex
@@ -159,7 +156,7 @@ func (c *Client) getHashAlgorithmFromOID(target pkix.AlgorithmIdentifier) crypto
 			return hash
 		}
 	}
-	c.Logger().Error("no valid hash algorithm is found for the oid. Falling back to SHA1", "target", target)
+	//no valid hash algorithm is found for the oid. Falling back to SHA1
 	return crypto.SHA1
 }
 
@@ -393,7 +390,7 @@ func (c *Client) retryOCSP(
 }
 
 // getRevocationStatus checks the certificate revocation status for subject using issuer certificate.
-func (c *Client) getRevocationStatus(ctx context.Context, subject, issuer *x509.Certificate, extraCas []*x509.Certificate, ocspServersOverride []string) (*ocspStatus, error) {
+func (c *Client) getRevocationStatus(ctx context.Context, subject, issuer *x509.Certificate, conf *VerifyConfig) (*ocspStatus, error) {
 	status, ocspReq, encodedCertID, err := c.ValidateWithCache(subject, issuer)
 	if err != nil {
 		return nil, err
@@ -405,17 +402,21 @@ func (c *Client) getRevocationStatus(ctx context.Context, subject, issuer *x509.
 		return status, nil
 	}
 	c.Logger().Debug("cache missed", "server", subject.OCSPServer)
-	if len(subject.OCSPServer) == 0 && len(ocspServersOverride) == 0 {
+	if len(subject.OCSPServer) == 0 && len(conf.OcspServersOverride) == 0 {
 		return nil, fmt.Errorf("no OCSP responder URL: subject: %v", subject.Subject)
 	}
 	ocspHosts := subject.OCSPServer
-	if len(ocspServersOverride) > 0 {
-		ocspHosts = ocspServersOverride
+	if len(conf.OcspServersOverride) > 0 {
+		ocspHosts = conf.OcspServersOverride
 	}
 
-	var ret *ocspStatus
-	var ocspRes *ocsp.Response
-	for _, ocspHost := range ocspHosts {
+	var wg sync.WaitGroup
+
+	ocspStatuses := make([]*ocspStatus, len(ocspHosts))
+	ocspResponses := make([]*ocsp.Response, len(ocspHosts))
+	errors := make([]error, len(ocspHosts))
+
+	for i, ocspHost := range ocspHosts {
 		u, err := url.Parse(ocspHost)
 		if err != nil {
 			return nil, err
@@ -424,34 +425,70 @@ func (c *Client) getRevocationStatus(ctx context.Context, subject, issuer *x509.
 		hostname := u.Hostname()
 
 		headers := make(map[string]string)
-		headers[httpHeaderContentType] = "application/ocsp-request"
-		headers[httpHeaderAccept] = "application/ocsp-response"
+		headers[httpHeaderContentType] = ocspRequestContentType
+		headers[httpHeaderAccept] = ocspResponseContentType
 		headers[httpHeaderContentLength] = strconv.Itoa(len(ocspReq))
 		headers[httpHeaderHost] = hostname
 		timeout := defaultOCSPResponderTimeout
 
 		ocspClient := retryablehttp.NewClient()
 		ocspClient.HTTPClient.Timeout = timeout
-		ocspClient.HTTPClient.Transport = newInsecureOcspTransport(extraCas)
+		ocspClient.HTTPClient.Transport = newInsecureOcspTransport(conf.ExtraCas)
 
-		var ocspS *ocspStatus
-		ocspRes, _, ocspS, err = c.retryOCSP(
-			ctx, ocspClient, retryablehttp.NewRequest, u, headers, ocspReq, issuer)
-		if err != nil {
-			return nil, err
-		}
-		if ocspS.code != ocspSuccess {
-			return ocspS, nil
-		}
+		doRequest := func() error {
+			if conf.QueryAllServers {
+				defer wg.Done()
+			}
+			ocspRes, _, ocspS, err := c.retryOCSP(
+				ctx, ocspClient, retryablehttp.NewRequest, u, headers, ocspReq, issuer)
+			ocspResponses[i] = ocspRes
+			if err != nil {
+				errors[i] = err
+				return err
+			}
+			if ocspS.code != ocspSuccess {
+				ocspStatuses[i] = ocspS
+				return nil
+			}
 
-		ret, err = validateOCSP(ocspRes)
-		if err != nil {
-			return nil, err
+			ret, err := validateOCSP(ocspRes)
+			if err != nil {
+				errors[i] = err
+				return err
+			}
+			if isValidOCSPStatus(ret.code) {
+				ocspStatuses[i] = ret
+			}
+			return nil
 		}
-		if isValidOCSPStatus(ret.code) {
-			break
+		if conf.QueryAllServers {
+			wg.Add(1)
+			go doRequest()
+		} else {
+			err = doRequest()
+			if err == nil {
+				break
+			}
 		}
 	}
+	if conf.QueryAllServers {
+		wg.Wait()
+	}
+	// Good by default
+	var ret *ocspStatus = &ocspStatus{code: ocspStatusGood}
+	ocspRes := ocspResponses[0]
+	for i, _ := range ocspHosts {
+		if errors[i] != nil {
+			return nil, errors[i]
+		} else if ocspStatuses[i] != nil && (!conf.QueryAllServers || ocspStatuses[i].code != ocspStatusGood) {
+			ret = ocspStatuses[i]
+			ocspRes = ocspResponses[i]
+			break
+		} else {
+
+		}
+	}
+
 	if !isValidOCSPStatus(ret.code) {
 		return ret, nil
 	}
@@ -473,8 +510,15 @@ func isValidOCSPStatus(status ocspStatusCode) bool {
 	return status == ocspStatusGood || status == ocspStatusRevoked || status == ocspStatusUnknown
 }
 
+type VerifyConfig struct {
+	ExtraCas            []*x509.Certificate
+	OcspServersOverride []string
+	OcspFailureMode     FailOpenMode
+	QueryAllServers     bool
+}
+
 // VerifyPeerCertificate verifies all of certificate revocation status
-func (c *Client) VerifyPeerCertificate(ctx context.Context, verifiedChains [][]*x509.Certificate, extraCas []*x509.Certificate, ocspServersOverride []string, ocspFailureMode FailOpenMode) error {
+func (c *Client) VerifyPeerCertificate(ctx context.Context, verifiedChains [][]*x509.Certificate, conf *VerifyConfig) error {
 	for i := 0; i < len(verifiedChains); i++ {
 		// Certificate signed by Root CA. This should be one before the last in the Certificate Chain
 		numberOfNoneRootCerts := len(verifiedChains[i]) - 1
@@ -488,11 +532,11 @@ func (c *Client) VerifyPeerCertificate(ctx context.Context, verifiedChains [][]*
 			verifiedChains[i] = append(verifiedChains[i], rca)
 			numberOfNoneRootCerts++
 		}
-		results, err := c.GetAllRevocationStatus(ctx, verifiedChains[i], extraCas, ocspServersOverride)
+		results, err := c.GetAllRevocationStatus(ctx, verifiedChains[i], conf)
 		if err != nil {
 			return err
 		}
-		if r := c.canEarlyExitForOCSP(results, numberOfNoneRootCerts, ocspFailureMode); r != nil {
+		if r := c.canEarlyExitForOCSP(results, numberOfNoneRootCerts, conf); r != nil {
 			return r.err
 		}
 	}
@@ -500,9 +544,9 @@ func (c *Client) VerifyPeerCertificate(ctx context.Context, verifiedChains [][]*
 	return nil
 }
 
-func (c *Client) canEarlyExitForOCSP(results []*ocspStatus, chainSize int, ocspFailureMode FailOpenMode) *ocspStatus {
+func (c *Client) canEarlyExitForOCSP(results []*ocspStatus, chainSize int, conf *VerifyConfig) *ocspStatus {
 	msg := ""
-	if ocspFailureMode == FailOpenFalse {
+	if conf.OcspFailureMode == FailOpenFalse {
 		// Fail closed. any error is returned to stop connection
 		for _, r := range results {
 			if r.err != nil {
@@ -566,7 +610,7 @@ func (c *Client) ValidateWithCache(subject, issuer *x509.Certificate) (*ocspStat
 	return status, ocspReq, encodedCertID, nil
 }
 
-func (c *Client) GetAllRevocationStatus(ctx context.Context, verifiedChains, extraCas []*x509.Certificate, ocspServersOverride []string) ([]*ocspStatus, error) {
+func (c *Client) GetAllRevocationStatus(ctx context.Context, verifiedChains []*x509.Certificate, conf *VerifyConfig) ([]*ocspStatus, error) {
 	_, err := c.ValidateWithCacheForAllCertificates(verifiedChains)
 	if err != nil {
 		return nil, err
@@ -574,7 +618,7 @@ func (c *Client) GetAllRevocationStatus(ctx context.Context, verifiedChains, ext
 	n := len(verifiedChains) - 1
 	results := make([]*ocspStatus, n)
 	for j := 0; j < n; j++ {
-		results[j], err = c.getRevocationStatus(ctx, verifiedChains[j], verifiedChains[j+1], extraCas, ocspServersOverride)
+		results[j], err = c.getRevocationStatus(ctx, verifiedChains[j], verifiedChains[j+1], conf)
 		if err != nil {
 			return nil, err
 		}
@@ -586,9 +630,9 @@ func (c *Client) GetAllRevocationStatus(ctx context.Context, verifiedChains, ext
 }
 
 // verifyPeerCertificateSerial verifies the certificate revocation status in serial.
-func (c *Client) verifyPeerCertificateSerial(extraCas []*x509.Certificate, ocspServersOverride []string, ocspFailureMode FailOpenMode) func(_ [][]byte, verifiedChains [][]*x509.Certificate) (err error) {
+func (c *Client) verifyPeerCertificateSerial(conf *VerifyConfig) func(_ [][]byte, verifiedChains [][]*x509.Certificate) (err error) {
 	return func(_ [][]byte, verifiedChains [][]*x509.Certificate) error {
-		return c.VerifyPeerCertificate(context.TODO(), verifiedChains, extraCas, ocspServersOverride, ocspFailureMode)
+		return c.VerifyPeerCertificate(context.TODO(), verifiedChains, conf)
 	}
 }
 
@@ -626,6 +670,7 @@ func (c *Client) extractOCSPCacheResponseValue(cacheValue *ocspCachedResponse, s
 	})
 }
 
+/*
 // writeOCSPCache writes a OCSP Response cache
 func (c *Client) writeOCSPCache(ctx context.Context, storage logical.Storage) error {
 	c.Logger().Debug("writing OCSP Response cache")
@@ -718,8 +763,9 @@ func (c *Client) readOCSPCache(ctx context.Context, storage logical.Storage) err
 
 	return nil
 }
+*/
 
-func New(logFactory func() hclog.Logger) *Client {
+func New(logFactory func() hclog.Logger, cacheSize int) *Client {
 	cache, _ := lru.New2Q(cacheSize)
 	c := Client{
 		caRoot:            make(map[string]*x509.Certificate),
@@ -760,11 +806,21 @@ func newInsecureOcspTransport(extraCas []*x509.Certificate) *http.Transport {
 }
 
 // NewTransport includes the certificate revocation check with OCSP in sequential.
-func (c *Client) NewTransport(extraCas []*x509.Certificate, ocspServersOverride []string, ocspFailureMode FailOpenMode) *http.Transport {
+func (c *Client) NewTransport(conf *VerifyConfig) *http.Transport {
+	rootCAs := c.certPool
+	if rootCAs == nil {
+		rootCAs, _ = x509.SystemCertPool()
+	}
+	if rootCAs == nil {
+		rootCAs = x509.NewCertPool()
+	}
+	for _, c := range conf.ExtraCas {
+		rootCAs.AddCert(c)
+	}
 	return &http.Transport{
 		TLSClientConfig: &tls.Config{
-			RootCAs:               c.certPool,
-			VerifyPeerCertificate: c.verifyPeerCertificateSerial(extraCas, ocspServersOverride, ocspFailureMode),
+			RootCAs:               rootCAs,
+			VerifyPeerCertificate: c.verifyPeerCertificateSerial(conf),
 		},
 		MaxIdleConns:    10,
 		IdleConnTimeout: 30 * time.Minute,
@@ -776,6 +832,7 @@ func (c *Client) NewTransport(extraCas []*x509.Certificate, ocspServersOverride 
 	}
 }
 
+/*
 func (c *Client) WriteCache(ctx context.Context, storage logical.Storage) error {
 	c.ocspResponseCacheLock.Lock()
 	defer c.ocspResponseCacheLock.Unlock()
@@ -794,7 +851,7 @@ func (c *Client) ReadCache(ctx context.Context, storage logical.Storage) error {
 	defer c.ocspResponseCacheLock.Unlock()
 	return c.readOCSPCache(ctx, storage)
 }
-
+*/
 /*
                                  Apache License
                            Version 2.0, January 2004
