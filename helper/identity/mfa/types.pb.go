@@ -42,6 +42,7 @@ type Config struct {
 	// @inject_tag: sentinel:"-"
 	//
 	// Types that are assignable to Config:
+	//
 	//	*Config_TOTPConfig
 	//	*Config_OktaConfig
 	//	*Config_DuoConfig
@@ -589,6 +590,7 @@ type Secret struct {
 	// @inject_tag: sentinel:"-"
 	MethodName string `protobuf:"bytes,1,opt,name=method_name,json=methodName,proto3" json:"method_name,omitempty" sentinel:"-"`
 	// Types that are assignable to Value:
+	//
 	//	*Secret_TOTPSecret
 	Value isSecret_Value `protobuf_oneof:"value"`
 }

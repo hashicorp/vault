@@ -22,9 +22,9 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-/////////////////
+// ///////////////
 // Initialize()
-/////////////////
+// ///////////////
 type InitializeRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -324,9 +324,9 @@ func (x *NewUserResponse) GetUsername() string {
 	return ""
 }
 
-/////////////////
+// ///////////////
 // UpdateUser()
-/////////////////
+// ///////////////
 type UpdateUserRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -609,9 +609,9 @@ func (*UpdateUserResponse) Descriptor() ([]byte, []int) {
 	return file_sdk_database_dbplugin_v5_proto_database_proto_rawDescGZIP(), []int{9}
 }
 
-/////////////////
+// ///////////////
 // DeleteUser()
-/////////////////
+// ///////////////
 type DeleteUserRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -705,9 +705,9 @@ func (*DeleteUserResponse) Descriptor() ([]byte, []int) {
 	return file_sdk_database_dbplugin_v5_proto_database_proto_rawDescGZIP(), []int{11}
 }
 
-/////////////////
+// ///////////////
 // Type()
-/////////////////
+// ///////////////
 type TypeResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -755,9 +755,9 @@ func (x *TypeResponse) GetType() string {
 	return ""
 }
 
-/////////////////
+// ///////////////
 // General purpose
-/////////////////
+// ///////////////
 type Statements struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
