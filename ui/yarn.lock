@@ -2669,7 +2669,7 @@
     ember-cli-version-checker "^5.1.2"
     semver "^7.3.5"
 
-"@embroider/addon-shim@^1.5.0":
+"@embroider/addon-shim@^1.0.0":
   version "1.8.3"
   resolved "https://registry.yarnpkg.com/@embroider/addon-shim/-/addon-shim-1.8.3.tgz#2368510b8ce42d50d02cb3289c32e260dfa34bd9"
   integrity sha512-7pyHwzT6ESXc3nZsB8rfnirLkUhQWdvj6CkYH+0MUPN74mX4rslf7pnBqZE/KZkW3uBIaBYvU8fxi0hcKC/Paw==
@@ -3085,27 +3085,27 @@
   resolved "https://registry.yarnpkg.com/@handlebars/parser/-/parser-2.0.0.tgz#5e8b7298f31ff8f7b260e6b7363c7e9ceed7d9c5"
   integrity sha512-EP9uEDZv/L5Qh9IWuMUGJRfwhXJ4h1dqKTT4/3+tY0eu7sPis7xh23j61SYUnNF4vqCQvvUXpDo9Bh/+q1zASA==
 
-"@hashicorp/design-system-components@^1.0.4":
-  version "1.0.4"
-  resolved "https://registry.yarnpkg.com/@hashicorp/design-system-components/-/design-system-components-1.0.4.tgz#e258cad1a41b00db3363db25bfdafaa598326b98"
-  integrity sha512-aaOncgPH4yDEvQuFfOa/cwAOttxwbaEdaENEl+88EOi/HLUe0mdS2HgpC96w3sWhedE/xylCgSHz0DemIj5dJQ==
+"@hashicorp/design-system-components@^0.3.1":
+  version "0.3.2"
+  resolved "https://registry.yarnpkg.com/@hashicorp/design-system-components/-/design-system-components-0.3.2.tgz#16f06a2e36d9231d676167b68cfeb96f97bfd2c1"
+  integrity sha512-L1+n4ya5mMwJ14GyH5+cQrry3OhiW/VVeRzCwiwJYPr9LCnPuQzz4U4XHCn1JaZ7HYzRFAgW8g7AoyLl1R6bEg==
   dependencies:
-    "@hashicorp/design-system-tokens" "^1.0.0"
-    "@hashicorp/ember-flight-icons" "^2.0.12"
-    ember-auto-import "^2.4.1"
-    ember-cli-babel "^7.26.11"
-    ember-cli-htmlbars "^6.0.1"
+    "@hashicorp/design-system-tokens" "^0.7.0"
+    "@hashicorp/ember-flight-icons" "^2.0.1"
+    ember-auto-import "^2.2.3"
+    ember-cli-babel "^7.26.6"
+    ember-cli-htmlbars "^5.7.1"
     ember-cli-sass "^10.0.1"
-    ember-keyboard "^8.1.0"
+    ember-focus-trap "^1.0.1"
     ember-named-blocks-polyfill "^0.2.5"
     sass "^1.43.4"
 
-"@hashicorp/design-system-tokens@^1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@hashicorp/design-system-tokens/-/design-system-tokens-1.0.0.tgz#06ab55873ef444b0958a5192db310278c6501f0b"
-  integrity sha512-akziX9jiHnQ8KfJA6s8l+98Ukz30C5Lw7BpSPeTduOmdOlJv1uP7w4TV0hC6VIDMDrJrxIF5Y/HnpSCdQGlxQA==
+"@hashicorp/design-system-tokens@^0.7.0":
+  version "0.7.0"
+  resolved "https://registry.yarnpkg.com/@hashicorp/design-system-tokens/-/design-system-tokens-0.7.0.tgz#7a87ae8b800dca14fbcbd71da3301915d61801f4"
+  integrity sha512-sOv8iqlTAgpuiPypRVrYNkkFX/X9FZOAJTUL61Ru+EBVAQZZq/sjxFAoxBaebm0BqEXejjd9H9leYaVvHwOOgQ==
 
-"@hashicorp/ember-flight-icons@2.0.3", "@hashicorp/ember-flight-icons@^2.0.12":
+"@hashicorp/ember-flight-icons@2.0.3", "@hashicorp/ember-flight-icons@^2.0.1":
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/@hashicorp/ember-flight-icons/-/ember-flight-icons-2.0.3.tgz#a1c70faa4b75838aef280cd032489daf6a6f9954"
   integrity sha512-S1W8Yecu2zN9sN+HmIITV39/js8JgB/2WRTs0uw0HGMf5dHcRmJc7/5PMkWHQTW71GU7hs5Dna32klwWKkLEFw==
@@ -8250,7 +8250,7 @@ ember-assign-helper@^0.4.0:
     ember-cli-babel "^7.26.0"
     ember-cli-htmlbars "^6.0.0"
 
-ember-auto-import@2.4.2, ember-auto-import@^2.4.1:
+ember-auto-import@2.4.2, ember-auto-import@^2.2.3:
   version "2.4.2"
   resolved "https://registry.yarnpkg.com/ember-auto-import/-/ember-auto-import-2.4.2.tgz#d4d3bc6885a11cf124f606f5c37169bdf76e37ae"
   integrity sha512-REh+1aJWpTkvN42a/ga41OuRpUsSW7UQfPr2wPtYx56o/xoSNhVBXejy7yV9ObrkN7gogz6fs2xZwih5cOwpYg==
@@ -8729,17 +8729,7 @@ ember-cli-preprocess-registry@^3.3.0:
     debug "^3.0.1"
     process-relative-require "^1.0.0"
 
-ember-cli-sass@11.0.1:
-  version "11.0.1"
-  resolved "https://registry.yarnpkg.com/ember-cli-sass/-/ember-cli-sass-11.0.1.tgz#dc565764213a76973a83c0db9583cb79ba187dc5"
-  integrity sha512-RMlFPMK4kaB+67seF/IIoY3EC4rRd+L58q+lyElrxB3FcQTgph/qmGwtqf9Up7m3SDbPiA7cccCOSmgReMgCXA==
-  dependencies:
-    broccoli-funnel "^2.0.1"
-    broccoli-merge-trees "^3.0.1"
-    broccoli-sass-source-maps "^4.0.0"
-    ember-cli-version-checker "^2.1.0"
-
-ember-cli-sass@^10.0.1:
+ember-cli-sass@10.0.1, ember-cli-sass@^10.0.1:
   version "10.0.1"
   resolved "https://registry.yarnpkg.com/ember-cli-sass/-/ember-cli-sass-10.0.1.tgz#afa91eb7dfe3890be0390639d66976512e7d8edc"
   integrity sha512-dWVoX03O2Mot1dEB1AN3ofC8DDZb6iU4Kfkbr3WYi9S9bGVHrpR/ngsR7tuVBuTugTyG53FPtLLqYdqx7XjXdA==
@@ -9199,6 +9189,14 @@ ember-fetch@^8.1.1:
     node-fetch "^2.6.1"
     whatwg-fetch "^3.6.2"
 
+ember-focus-trap@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/ember-focus-trap/-/ember-focus-trap-1.0.1.tgz#a99565f6ce55d500b92a0965e79e3ad04219f157"
+  integrity sha512-ZUyq5ZkIuXp+ng9rCMkqBh36/V95PltL7iljStkma4+651xlAy3Z84L9WOu/uOJyVpNUxii8RJBbAySHV6c+RQ==
+  dependencies:
+    "@embroider/addon-shim" "^1.0.0"
+    focus-trap "^6.7.1"
+
 "ember-get-config@0.2.4 - 0.5.0":
   version "0.5.0"
   resolved "https://registry.yarnpkg.com/ember-get-config/-/ember-get-config-0.5.0.tgz#8195f3e4c0ff0742182c81ae54aad78d07a24bcf"
@@ -9224,16 +9222,6 @@ ember-inflector@4.0.2, "ember-inflector@^2.0.0 || ^3.0.0 || ^4.0.2", ember-infle
   integrity sha512-+oRstEa52mm0jAFzhr51/xtEWpCEykB3SEBr7vUg8YnXUZJ5hKNBppP938q8Zzr9XfJEbzrtDSGjhKwJCJv6FQ==
   dependencies:
     ember-cli-babel "^7.26.5"
-
-ember-keyboard@^8.1.0:
-  version "8.2.0"
-  resolved "https://registry.yarnpkg.com/ember-keyboard/-/ember-keyboard-8.2.0.tgz#d11fa7f0443606b7c1850bbd8253274a00046e11"
-  integrity sha512-h2kuS2irtIyvNbAMkGDlDTB4TPXwgmC6Nu9bIuGWoCjkGdgJbUg0VegfyRJ1TlxbIHlAelbqVpE8UhfgY5wEag==
-  dependencies:
-    "@embroider/addon-shim" "^1.5.0"
-    ember-destroyable-polyfill "^2.0.3"
-    ember-modifier "^2.1.2 || ^3.1.0 || ^4.0.0"
-    ember-modifier-manager-polyfill "^1.2.0"
 
 ember-load-initializers@^2.1.2:
   version "2.1.2"
@@ -9275,7 +9263,7 @@ ember-modifier-manager-polyfill@^1.1.0, ember-modifier-manager-polyfill@^1.2.0:
     ember-cli-version-checker "^2.1.2"
     ember-compatibility-helpers "^1.2.0"
 
-"ember-modifier@^2.1.2 || ^3.1.0 || ^4.0.0", ember-modifier@^3.0.0:
+ember-modifier@^3.0.0:
   version "3.2.7"
   resolved "https://registry.yarnpkg.com/ember-modifier/-/ember-modifier-3.2.7.tgz#f2d35b7c867cbfc549e1acd8d8903c5ecd02ea4b"
   integrity sha512-ezcPQhH8jUfcJQbbHji4/ZG/h0yyj1jRDknfYue/ypQS8fM8LrGcCMo0rjDZLzL1Vd11InjNs3BD7BdxFlzGoA==
@@ -10767,6 +10755,13 @@ flush-write-stream@^1.0.0:
   dependencies:
     inherits "^2.0.3"
     readable-stream "^2.3.6"
+
+focus-trap@^6.7.1:
+  version "6.9.4"
+  resolved "https://registry.yarnpkg.com/focus-trap/-/focus-trap-6.9.4.tgz#436da1a1d935c48b97da63cd8f361c6f3aa16444"
+  integrity sha512-v2NTsZe2FF59Y+sDykKY+XjqZ0cPfhq/hikWVL88BqLivnNiEffAsac6rP6H45ff9wG9LL5ToiDqrLEP9GX9mw==
+  dependencies:
+    tabbable "^5.3.3"
 
 follow-redirects@^1.0.0:
   version "1.14.0"
@@ -17002,6 +16997,11 @@ sync-disk-cache@^2.0.0:
     mkdirp "^0.5.0"
     rimraf "^3.0.0"
     username-sync "^1.0.2"
+
+tabbable@^5.3.3:
+  version "5.3.3"
+  resolved "https://registry.yarnpkg.com/tabbable/-/tabbable-5.3.3.tgz#aac0ff88c73b22d6c3c5a50b1586310006b47fbf"
+  integrity sha512-QD9qKY3StfbZqWOPLp0++pOrAVb/HbUi5xCc8cUo4XjP19808oaMiDzn0leBY5mCespIBM0CIZePzZjgzR83kA==
 
 table@^5.2.3:
   version "5.4.6"
