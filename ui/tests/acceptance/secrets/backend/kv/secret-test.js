@@ -23,13 +23,13 @@ import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 
 const consoleComponent = create(consoleClass);
 
-let writeSecret = async function (backend, path, key, val) {
+const writeSecret = async function (backend, path, key, val) {
   await listPage.visitRoot({ backend });
   await listPage.create();
   return editPage.createSecret(path, key, val);
 };
 
-let deleteEngine = async function (enginePath, assert) {
+const deleteEngine = async function (enginePath, assert) {
   await logout.visit();
   await authPage.login();
   await consoleComponent.runCommands([`delete sys/mounts/${enginePath}`]);
@@ -39,6 +39,17 @@ let deleteEngine = async function (enginePath, assert) {
     `Success! Data deleted (if it existed) at: sys/mounts/${enginePath}`,
     'Engine successfully deleted'
   );
+};
+
+const mountEngineGeneratePolicyToken = async (enginePath, secretPath, policy) => {
+  await consoleComponent.runCommands([
+    `write sys/mounts/${enginePath} type=kv options=version=2`,
+    `write sys/policies/acl/kv-v2-test-policy policy=${btoa(policy)}`,
+    // delete any kv previously written here so that tests can be re-run
+    `delete ${enginePath}/metadata/${secretPath}`,
+    'write -field=client_token auth/token/create policies=kv-v2-test-policy',
+  ]);
+  return consoleComponent.lastLogOutput;
 };
 
 module('Acceptance | secrets/secret/create', function (hooks) {
@@ -751,6 +762,84 @@ module('Acceptance | secrets/secret/create', function (hooks) {
     await settled(); // eslint-disable-line
     assert.dom('[data-test-component="empty-state"]').exists('secret has been deleted');
     assert.dom('[data-test-secret-undelete]').exists('undelete button shows');
+  });
+
+  test('version 2: policy includes "delete" capability for secret path but does not have "update" to /delete endpoint', async function (assert) {
+    const enginePath = 'kv-v2-soft-delete-only';
+    const secretPath = 'kv-v2-delete-capability-not-path';
+    const policy = `
+      path "${enginePath}/data/${secretPath}" { capabilities = ["create","read","update","delete","list"] }
+      path "${enginePath}/metadata/*" { capabilities = ["create","update","delete","list","read"] }
+      path "${enginePath}/undelete/*" { capabilities = ["update"] }
+    `;
+    const userToken = await mountEngineGeneratePolicyToken(enginePath, secretPath, policy);
+    await logout.visit();
+    await authPage.login(userToken);
+    await writeSecret(enginePath, secretPath, 'foo', 'bar');
+    // create multiple versions
+    await click('[data-test-secret-edit]');
+    await editPage.editSecret('foo2', 'bar2');
+    await click('[data-test-secret-edit]');
+    await editPage.editSecret('foo3', 'bar3');
+    // delete oldest version
+    await click('[data-test-popup-menu-trigger="version"]');
+    await click('[data-test-version-dropdown-link="1"]');
+    await click('[data-test-delete-open-modal]');
+    assert
+      .dom('[data-test-type-select="delete-version"]')
+      .hasText('Delete latest version', 'modal reads that it will delete latest version');
+    await click('input#delete-version');
+    await click('[data-test-modal-delete]');
+    await visit(`/vault/secrets/${enginePath}/show/${secretPath}?version=3`);
+    assert
+      .dom('[data-test-empty-state-title]')
+      .hasText(
+        'Version 3 of this secret has been deleted',
+        'empty state renders latest version has been deleted'
+      );
+    await visit(`/vault/secrets/${enginePath}/show/${secretPath}?version=1`);
+    assert.dom('[data-test-delete-open-modal]').hasText('Delete', 'version 1 has not been deleted');
+  });
+
+  test('version 2: policy has "update" to /delete endpoint but not "delete" capability for secret path', async function (assert) {
+    const enginePath = 'kv-v2-can-delete-version';
+    const secretPath = 'kv-v2-delete-path-not-capability';
+    const policy = `
+      path "${enginePath}/data/${secretPath}" { capabilities = ["create","read","update","list"] }
+      path "${enginePath}/metadata/*" { capabilities = ["create","update","delete","list","read"] }
+      path "${enginePath}/undelete/*" { capabilities = ["update"] }
+      path "${enginePath}/delete/*" { capabilities = ["update"] }
+    `;
+    const userToken = await mountEngineGeneratePolicyToken(enginePath, secretPath, policy);
+    await logout.visit();
+    await authPage.login(userToken);
+    await writeSecret(enginePath, secretPath, 'foo', 'bar');
+    // create multiple versions
+    await click('[data-test-secret-edit]');
+    await editPage.editSecret('foo2', 'bar2');
+    await click('[data-test-secret-edit]');
+    await editPage.editSecret('foo3', 'bar3');
+    // delete oldest version
+    await click('[data-test-popup-menu-trigger="version"]');
+    await click('[data-test-version-dropdown-link="1"]');
+    await click('[data-test-delete-open-modal]');
+    assert
+      .dom('[data-test-type-select="delete-version"]')
+      .hasText('Delete this version', 'delete option refers to "this" version');
+    assert
+      .dom('[data-test-delete-modal="delete-version"]')
+      .hasTextContaining('Version 1', 'modal reads that it will delete version 1');
+    await click('input#delete-version');
+    await click('[data-test-modal-delete]');
+    await visit(`/vault/secrets/${enginePath}/show/${secretPath}?version=3`);
+    assert.dom('[data-test-delete-open-modal]').hasText('Delete', 'latest version (3) has not been deleted');
+    await visit(`/vault/secrets/${enginePath}/show/${secretPath}?version=1`);
+    assert
+      .dom('[data-test-empty-state-title]')
+      .hasText(
+        'Version 1 of this secret has been deleted',
+        'empty state renders oldest version (1) has been deleted'
+      );
   });
 
   test('version 2 with path forward slash will show delete button', async function (assert) {
