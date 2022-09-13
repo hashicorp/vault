@@ -72,11 +72,6 @@ const (
 	cacheExpire = float64(24 * 60 * 60)
 )
 
-const (
-	tolerableValidityRatio = 100               // buffer for certificate revocation update time
-	maxClockSkew           = 900 * time.Second // buffer for clock skew
-)
-
 type ocspCachedResponse struct {
 	time       float64
 	producedAt float64
@@ -160,27 +155,9 @@ func (c *Client) getHashAlgorithmFromOID(target pkix.AlgorithmIdentifier) crypto
 	return crypto.SHA1
 }
 
-// calcTolerableValidity returns the maximum validity buffer
-func calcTolerableValidity(thisUpdate, nextUpdate time.Time) time.Duration {
-	return durationMax(nextUpdate.Sub(thisUpdate)/tolerableValidityRatio, maxClockSkew)
-}
-
-func durationMax(a, b time.Duration) time.Duration {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 // isInValidityRange checks the validity
-func isInValidityRange(currTime, thisUpdate, nextUpdate time.Time) bool {
-	if currTime.Sub(thisUpdate.Add(-maxClockSkew)) < 0 {
-		return false
-	}
-	if nextUpdate.Add(calcTolerableValidity(thisUpdate, nextUpdate)).Sub(currTime) < 0 {
-		return false
-	}
-	return true
+func isInValidityRange(currTime, nextUpdate time.Time) bool {
+	return !currTime.After(nextUpdate)
 }
 
 func extractCertIDKeyFromRequest(ocspReq []byte) (*certIDKey, *ocspStatus) {
@@ -289,7 +266,7 @@ func validateOCSP(ocspRes *ocsp.Response) (*ocspStatus, error) {
 	if ocspRes == nil {
 		return nil, errors.New("OCSP Response is nil")
 	}
-	if !isInValidityRange(curTime, ocspRes.ThisUpdate, ocspRes.NextUpdate) {
+	if !isInValidityRange(curTime, ocspRes.NextUpdate) {
 		return &ocspStatus{
 			code: ocspInvalidValidity,
 			err:  fmt.Errorf("invalid validity: producedAt: %v, thisUpdate: %v, nextUpdate: %v", ocspRes.ProducedAt, ocspRes.ThisUpdate, ocspRes.NextUpdate),

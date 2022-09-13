@@ -110,59 +110,6 @@ func TestMultiOCSP(t *testing.T) {
 	}
 }
 
-type tcValidityRange struct {
-	thisTime time.Time
-	nextTime time.Time
-	ret      bool
-}
-
-func TestUnitIsInValidityRange(t *testing.T) {
-	currentTime := time.Now()
-	testcases := []tcValidityRange{
-		{
-			// basic tests
-			thisTime: currentTime.Add(-100 * time.Second),
-			nextTime: currentTime.Add(maxClockSkew),
-			ret:      true,
-		},
-		{
-			// on the border
-			thisTime: currentTime.Add(maxClockSkew),
-			nextTime: currentTime.Add(maxClockSkew),
-			ret:      true,
-		},
-		{
-			// 1 earlier late
-			thisTime: currentTime.Add(maxClockSkew + 1*time.Second),
-			nextTime: currentTime.Add(maxClockSkew),
-			ret:      false,
-		},
-		{
-			// on the border
-			thisTime: currentTime.Add(-maxClockSkew),
-			nextTime: currentTime.Add(-maxClockSkew),
-			ret:      true,
-		},
-		{
-			// around the border
-			thisTime: currentTime.Add(-24*time.Hour - 40*time.Second),
-			nextTime: currentTime.Add(-24*time.Hour/time.Duration(100) - 40*time.Second),
-			ret:      false,
-		},
-		{
-			// on the border
-			thisTime: currentTime.Add(-48*time.Hour - 29*time.Minute),
-			nextTime: currentTime.Add(-48 * time.Hour / time.Duration(100)),
-			ret:      true,
-		},
-	}
-	for _, tc := range testcases {
-		if tc.ret != isInValidityRange(currentTime, tc.thisTime, tc.nextTime) {
-			t.Fatalf("failed to check validity. should be: %v, currentTime: %v, thisTime: %v, nextTime: %v", tc.ret, currentTime, tc.thisTime, tc.nextTime)
-		}
-	}
-}
-
 func TestUnitEncodeCertIDGood(t *testing.T) {
 	targetURLs := []string{
 		"faketestaccount.snowflakecomputing.com:443",
