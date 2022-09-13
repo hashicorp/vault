@@ -9,6 +9,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 var (
@@ -18,8 +19,9 @@ var (
 )
 
 type gRPCClient struct {
-	client  proto.DatabaseClient
-	doneCtx context.Context
+	client        proto.DatabaseClient
+	versionClient logical.VersionedClient
+	doneCtx       context.Context
 }
 
 func (c gRPCClient) Initialize(ctx context.Context, req InitializeRequest) (InitializeResponse, error) {

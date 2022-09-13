@@ -24,7 +24,6 @@ type DatabaseClient interface {
 	DeleteUser(ctx context.Context, in *DeleteUserRequest, opts ...grpc.CallOption) (*DeleteUserResponse, error)
 	Type(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TypeResponse, error)
 	Close(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
-	Version(ctx context.Context, in *VersionRequest, opts ...grpc.CallOption) (*VersionResponse, error)
 }
 
 type databaseClient struct {
@@ -89,15 +88,6 @@ func (c *databaseClient) Close(ctx context.Context, in *Empty, opts ...grpc.Call
 	return out, nil
 }
 
-func (c *databaseClient) Version(ctx context.Context, in *VersionRequest, opts ...grpc.CallOption) (*VersionResponse, error) {
-	out := new(VersionResponse)
-	err := c.cc.Invoke(ctx, "/dbplugin.v5.Database/Version", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // DatabaseServer is the server API for Database service.
 // All implementations must embed UnimplementedDatabaseServer
 // for forward compatibility
@@ -108,7 +98,6 @@ type DatabaseServer interface {
 	DeleteUser(context.Context, *DeleteUserRequest) (*DeleteUserResponse, error)
 	Type(context.Context, *Empty) (*TypeResponse, error)
 	Close(context.Context, *Empty) (*Empty, error)
-	Version(context.Context, *VersionRequest) (*VersionResponse, error)
 	mustEmbedUnimplementedDatabaseServer()
 }
 
@@ -133,9 +122,6 @@ func (UnimplementedDatabaseServer) Type(context.Context, *Empty) (*TypeResponse,
 }
 func (UnimplementedDatabaseServer) Close(context.Context, *Empty) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Close not implemented")
-}
-func (UnimplementedDatabaseServer) Version(context.Context, *VersionRequest) (*VersionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Version not implemented")
 }
 func (UnimplementedDatabaseServer) mustEmbedUnimplementedDatabaseServer() {}
 
@@ -258,24 +244,6 @@ func _Database_Close_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Database_Version_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(VersionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DatabaseServer).Version(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/dbplugin.v5.Database/Version",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DatabaseServer).Version(ctx, req.(*VersionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // Database_ServiceDesc is the grpc.ServiceDesc for Database service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -306,10 +274,6 @@ var Database_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Close",
 			Handler:    _Database_Close_Handler,
-		},
-		{
-			MethodName: "Version",
-			Handler:    _Database_Version_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

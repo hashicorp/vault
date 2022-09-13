@@ -38,7 +38,7 @@ func TestNewPluginClient(t *testing.T) {
 					dispenseResp: gRPCClient{client: fakeClient{}},
 					dispenseErr:  nil,
 				},
-				Database: gRPCClient{proto.NewDatabaseClient(nil), context.Context(nil)},
+				Database: gRPCClient{client: proto.NewDatabaseClient(nil), doneCtx: context.Context(nil)},
 			},
 			expectedErr: nil,
 		},

@@ -267,19 +267,18 @@ func (b *backendGRPCPluginServer) Type(ctx context.Context, _ *pb.Empty) (*pb.Ty
 	}, nil
 }
 
-func (b *backendGRPCPluginServer) Version(ctx context.Context, _ *pb.Empty) (*pb.VersionReply, error) {
+func (b *backendGRPCPluginServer) Version(ctx context.Context, _ *logical.Empty) (*logical.VersionReply, error) {
 	backend, _, err := b.getBackendAndBrokeredClient(ctx)
 	if err != nil {
-		return &pb.VersionReply{}, err
+		return &logical.VersionReply{}, err
 	}
 
 	if versioner, ok := backend.(logical.Versioner); ok {
-		return &pb.VersionReply{
+		return &logical.VersionReply{
 			Version: versioner.Version().Version,
 		}, nil
 	}
-	// TODO: do we need to check builtinplugins?
-	return &pb.VersionReply{
+	return &logical.VersionReply{
 		Version: "",
 	}, nil
 }

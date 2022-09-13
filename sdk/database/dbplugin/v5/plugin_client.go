@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 
-	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 type DatabasePluginClient struct {
@@ -55,6 +56,7 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, config plug
 		// This is an abstraction leak from go-plugin but it is necessary in
 		// order to enable multiplexing on multiplexed plugins
 		c.client = proto.NewDatabaseClient(pluginClient.Conn())
+		c.versionClient = logical.NewVersionedClient(pluginClient.Conn())
 
 		db = c
 	default:

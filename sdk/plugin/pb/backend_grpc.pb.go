@@ -53,8 +53,6 @@ type BackendClient interface {
 	Initialize(ctx context.Context, in *InitializeArgs, opts ...grpc.CallOption) (*InitializeReply, error)
 	// Type returns the BackendType for the particular backend
 	Type(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TypeReply, error)
-	// Version returns version information for the plugin.
-	Version(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*VersionReply, error)
 }
 
 type backendClient struct {
@@ -137,15 +135,6 @@ func (c *backendClient) Type(ctx context.Context, in *Empty, opts ...grpc.CallOp
 	return out, nil
 }
 
-func (c *backendClient) Version(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*VersionReply, error) {
-	out := new(VersionReply)
-	err := c.cc.Invoke(ctx, "/pb.Backend/Version", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // BackendServer is the server API for Backend service.
 // All implementations must embed UnimplementedBackendServer
 // for forward compatibility
@@ -185,8 +174,6 @@ type BackendServer interface {
 	Initialize(context.Context, *InitializeArgs) (*InitializeReply, error)
 	// Type returns the BackendType for the particular backend
 	Type(context.Context, *Empty) (*TypeReply, error)
-	// Version returns version information for the plugin.
-	Version(context.Context, *Empty) (*VersionReply, error)
 	mustEmbedUnimplementedBackendServer()
 }
 
@@ -217,9 +204,6 @@ func (UnimplementedBackendServer) Initialize(context.Context, *InitializeArgs) (
 }
 func (UnimplementedBackendServer) Type(context.Context, *Empty) (*TypeReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Type not implemented")
-}
-func (UnimplementedBackendServer) Version(context.Context, *Empty) (*VersionReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Version not implemented")
 }
 func (UnimplementedBackendServer) mustEmbedUnimplementedBackendServer() {}
 
@@ -378,24 +362,6 @@ func _Backend_Type_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Backend_Version_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BackendServer).Version(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.Backend/Version",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BackendServer).Version(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // Backend_ServiceDesc is the grpc.ServiceDesc for Backend service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -434,10 +400,6 @@ var Backend_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Type",
 			Handler:    _Backend_Type_Handler,
-		},
-		{
-			MethodName: "Version",
-			Handler:    _Backend_Version_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

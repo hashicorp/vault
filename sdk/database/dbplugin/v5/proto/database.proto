@@ -101,16 +101,4 @@ service Database {
     rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
     rpc Type(Empty) returns (TypeResponse);
     rpc Close(Empty) returns (Empty);
-    rpc Version(VersionRequest) returns (VersionResponse);
 }
-
-// Optional version interface.
-message VersionRequest {}
-
-message VersionResponse {
-    string version = 1;
-}
-
-//service DatabaseVersion {
-//    rpc Version(VersionRequest) returns (VersionResponse);
-//}

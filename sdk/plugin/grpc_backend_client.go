@@ -28,9 +28,10 @@ var _ logical.Backend = &backendGRPCPluginClient{}
 // backendPluginClient implements logical.Backend and is the
 // go-plugin client.
 type backendGRPCPluginClient struct {
-	broker       *plugin.GRPCBroker
-	client       pb.BackendClient
-	metadataMode bool
+	broker        *plugin.GRPCBroker
+	client        pb.BackendClient
+	versionClient logical.VersionedClient
+	metadataMode  bool
 
 	system logical.SystemView
 	logger log.Logger
@@ -282,7 +283,7 @@ func (b *backendGRPCPluginClient) Type() logical.BackendType {
 }
 
 func (b *backendGRPCPluginClient) Version() logical.VersionInfo {
-	reply, err := b.client.Version(b.doneCtx, &pb.Empty{})
+	reply, err := b.versionClient.Version(b.doneCtx, &logical.Empty{})
 	// TODO: check for specific error for this rather than assume
 	if err != nil {
 		b.Logger().Debug("Error getting plugin version; assuming method is missing", "err", err)
