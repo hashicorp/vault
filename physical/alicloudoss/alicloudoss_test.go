@@ -28,7 +28,7 @@ func TestAliCloudOSSBackend(t *testing.T) {
 		t.Fatalf("unable to create test client: %s", err)
 	}
 
-	var randInt = rand.New(rand.NewSource(time.Now().UnixNano())).Int()
+	randInt := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
 	bucket := fmt.Sprintf("vault-alibaba-testacc-%d", randInt)
 
 	err = conn.CreateBucket(bucket)

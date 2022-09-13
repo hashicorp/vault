@@ -149,6 +149,7 @@ func (c *OperatorMigrateCommand) Run(args []string) int {
 		c.UI.Error("Error: flag -start and -parallel can't be used together")
 		return 1
 	}
+
 	if c.flagConfig == "" {
 		c.UI.Error("Must specify exactly one config path using -config")
 		return 1

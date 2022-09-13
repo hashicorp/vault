@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
 
@@ -76,7 +77,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 	t.Run("integration", func(t *testing.T) {
 		t.Parallel()
 
-		pluginDir, cleanup := testPluginDir(t)
+		pluginDir, cleanup := vault.MakeTestPluginDir(t)
 		defer cleanup(t)
 
 		client, _, closer := testVaultServerPluginDir(t, pluginDir)
@@ -128,6 +129,101 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		}
 		if found {
 			t.Errorf("expected %q to not be in %q", pluginName, resp.PluginsByType)
+		}
+	})
+
+	t.Run("integration with version", func(t *testing.T) {
+		t.Parallel()
+
+		pluginDir, cleanup := vault.MakeTestPluginDir(t)
+		defer cleanup(t)
+
+		client, _, closer := testVaultServerPluginDir(t, pluginDir)
+		defer closer()
+
+		pluginName := "my-plugin"
+		_, _, version := testPluginCreateAndRegisterVersioned(t, client, pluginDir, pluginName, consts.PluginTypeCredential)
+
+		ui, cmd := testPluginDeregisterCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"-version=" + version,
+			consts.PluginTypeCredential.String(),
+			pluginName,
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "Success! Deregistered plugin (if it was registered): "
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+
+		resp, err := client.Sys().ListPlugins(&api.ListPluginsInput{
+			Type: consts.PluginTypeUnknown,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		found := false
+		for _, p := range resp.Details {
+			if p.Name == pluginName {
+				found = true
+			}
+		}
+		if found {
+			t.Errorf("expected %q to not be in %#v", pluginName, resp.Details)
+		}
+	})
+
+	t.Run("integration with missing version", func(t *testing.T) {
+		t.Parallel()
+
+		pluginDir, cleanup := vault.MakeTestPluginDir(t)
+		defer cleanup(t)
+
+		client, _, closer := testVaultServerPluginDir(t, pluginDir)
+		defer closer()
+
+		pluginName := "my-plugin"
+		testPluginCreateAndRegisterVersioned(t, client, pluginDir, pluginName, consts.PluginTypeCredential)
+
+		ui, cmd := testPluginDeregisterCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			consts.PluginTypeCredential.String(),
+			pluginName,
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "Success! Deregistered plugin (if it was registered): "
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+
+		resp, err := client.Sys().ListPlugins(&api.ListPluginsInput{
+			Type: consts.PluginTypeUnknown,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		found := false
+		for _, p := range resp.Details {
+			if p.Name == pluginName {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("expected %q to be in %#v", pluginName, resp.Details)
 		}
 	})
 

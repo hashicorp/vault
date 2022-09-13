@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -16,11 +15,11 @@ func secretCreds(b *backend) *framework.Secret {
 	return &framework.Secret{
 		Type: SecretCredsType,
 		Fields: map[string]*framework.FieldSchema{
-			"username": &framework.FieldSchema{
+			"username": {
 				Type:        framework.TypeString,
 				Description: "RabbitMQ username",
 			},
-			"password": &framework.FieldSchema{
+			"password": {
 				Type:        framework.TypeString,
 				Description: "Password for the RabbitMQ username",
 			},
@@ -63,7 +62,7 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	}
 
 	if _, err = client.DeleteUser(username); err != nil {
-		return nil, errwrap.Wrapf("could not delete user: {{err}}", err)
+		return nil, fmt.Errorf("could not delete user: %w", err)
 	}
 
 	return nil, nil

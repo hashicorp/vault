@@ -10,25 +10,27 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/armon/go-radix"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/physical"
-
-	radix "github.com/armon/go-radix"
 )
 
 // Verify interfaces are satisfied
-var _ physical.Backend = (*InmemBackend)(nil)
-var _ physical.HABackend = (*InmemHABackend)(nil)
-var _ physical.HABackend = (*TransactionalInmemHABackend)(nil)
-var _ physical.Lock = (*InmemLock)(nil)
-var _ physical.Transactional = (*TransactionalInmemBackend)(nil)
-var _ physical.Transactional = (*TransactionalInmemHABackend)(nil)
+var (
+	_ physical.Backend       = (*InmemBackend)(nil)
+	_ physical.HABackend     = (*InmemHABackend)(nil)
+	_ physical.HABackend     = (*TransactionalInmemHABackend)(nil)
+	_ physical.Lock          = (*InmemLock)(nil)
+	_ physical.Transactional = (*TransactionalInmemBackend)(nil)
+	_ physical.Transactional = (*TransactionalInmemHABackend)(nil)
+)
 
 var (
-	PutDisabledError    = errors.New("put operations disabled in inmem backend")
-	GetDisabledError    = errors.New("get operations disabled in inmem backend")
-	DeleteDisabledError = errors.New("delete operations disabled in inmem backend")
-	ListDisabledError   = errors.New("list operations disabled in inmem backend")
+	PutDisabledError      = errors.New("put operations disabled in inmem backend")
+	GetDisabledError      = errors.New("get operations disabled in inmem backend")
+	DeleteDisabledError   = errors.New("delete operations disabled in inmem backend")
+	ListDisabledError     = errors.New("list operations disabled in inmem backend")
+	GetInTxnDisabledError = errors.New("get operations inside transactions are disabled in inmem backend")
 )
 
 // InmemBackend is an in-memory only physical backend. It is useful
@@ -43,6 +45,7 @@ type InmemBackend struct {
 	failPut      *uint32
 	failDelete   *uint32
 	failList     *uint32
+	failGetInTxn *uint32
 	logOps       bool
 	maxValueSize int
 }
@@ -71,6 +74,7 @@ func NewInmem(conf map[string]string, logger log.Logger) (physical.Backend, erro
 		failPut:      new(uint32),
 		failDelete:   new(uint32),
 		failList:     new(uint32),
+		failGetInTxn: new(uint32),
 		logOps:       os.Getenv("VAULT_INMEM_LOG_ALL_OPS") != "",
 		maxValueSize: maxValueSize,
 	}, nil
@@ -98,6 +102,7 @@ func NewTransactionalInmem(conf map[string]string, logger log.Logger) (physical.
 			failPut:      new(uint32),
 			failDelete:   new(uint32),
 			failList:     new(uint32),
+			failGetInTxn: new(uint32),
 			logOps:       os.Getenv("VAULT_INMEM_LOG_ALL_OPS") != "",
 			maxValueSize: maxValueSize,
 		},
@@ -185,6 +190,14 @@ func (i *InmemBackend) FailGet(fail bool) {
 		val = 1
 	}
 	atomic.StoreUint32(i.failGet, val)
+}
+
+func (i *InmemBackend) FailGetInTxn(fail bool) {
+	var val uint32
+	if fail {
+		val = 1
+	}
+	atomic.StoreUint32(i.failGetInTxn, val)
 }
 
 // Delete is used to permanently delete an entry
@@ -278,13 +291,20 @@ func (i *InmemBackend) FailList(fail bool) {
 	atomic.StoreUint32(i.failList, val)
 }
 
-// Implements the transaction interface
+// Transaction implements the transaction interface
 func (t *TransactionalInmemBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
 	t.permitPool.Acquire()
 	defer t.permitPool.Release()
 
 	t.Lock()
 	defer t.Unlock()
+
+	failGetInTxn := atomic.LoadUint32(t.failGetInTxn)
+	for _, t := range txns {
+		if t.Operation == physical.GetOperation && failGetInTxn != 0 {
+			return GetInTxnDisabledError
+		}
+	}
 
 	return physical.GenericTransactionHandler(ctx, t, txns)
 }

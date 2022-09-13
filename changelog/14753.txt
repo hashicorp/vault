@@ -1,0 +1,3 @@
+```release-note:improvement
+api: Add ability to pass certificate as PEM bytes to api.Client.
+```

@@ -10,8 +10,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*PluginInfoCommand)(nil)
-var _ cli.CommandAutocomplete = (*PluginInfoCommand)(nil)
+var (
+	_ cli.Command             = (*PluginInfoCommand)(nil)
+	_ cli.CommandAutocomplete = (*PluginInfoCommand)(nil)
+)
 
 type PluginInfoCommand struct {
 	*BaseCommand
@@ -105,11 +107,12 @@ func (c *PluginInfoCommand) Run(args []string) int {
 	}
 
 	data := map[string]interface{}{
-		"args":    resp.Args,
-		"builtin": resp.Builtin,
-		"command": resp.Command,
-		"name":    resp.Name,
-		"sha256":  resp.SHA256,
+		"args":               resp.Args,
+		"builtin":            resp.Builtin,
+		"command":            resp.Command,
+		"name":               resp.Name,
+		"sha256":             resp.SHA256,
+		"deprecation_status": resp.DeprecationStatus,
 	}
 
 	if c.flagField != "" {

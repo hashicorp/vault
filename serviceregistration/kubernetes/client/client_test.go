@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"os"
 	"testing"
 
@@ -22,7 +23,7 @@ func TestClient(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	client, err := New(hclog.Default(), make(chan struct{}))
+	client, err := New(hclog.Default())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,8 +57,11 @@ func (e *env) TestGetPodNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error because pod is unfound")
 	}
+	if wrapped := errors.Unwrap(err); wrapped != nil {
+		err = wrapped
+	}
 	if _, ok := err.(*ErrNotFound); !ok {
-		t.Fatalf("expected *ErrNotFound but received %T", err)
+		t.Fatalf("expected *ErrNotFound but received %T (%s)", err, err)
 	}
 }
 
@@ -88,6 +92,9 @@ func (e *env) TestUpdatePodTagsNotFound(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected error because pod is unfound")
+	}
+	if wrapped := errors.Unwrap(err); wrapped != nil {
+		err = wrapped
 	}
 	if _, ok := err.(*ErrNotFound); !ok {
 		t.Fatalf("expected *ErrNotFound but received %T", err)

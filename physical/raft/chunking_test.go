@@ -12,7 +12,7 @@ import (
 	raftchunkingtypes "github.com/hashicorp/go-raftchunking/types"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
-	raftboltdb "github.com/hashicorp/vault/physical/raft/logstore"
+	"github.com/hashicorp/raft-boltdb/v2"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -81,7 +81,7 @@ func TestRaft_Chunking_Lifecycle(t *testing.T) {
 
 	t.Log("tearing down cluster")
 	require.NoError(b.TeardownCluster(nil))
-	require.NoError(b.fsm.db.Close())
+	require.NoError(b.fsm.getDB().Close())
 	require.NoError(b.stableStore.(*raftboltdb.BoltStore).Close())
 
 	t.Log("starting new backend")
@@ -195,6 +195,15 @@ func TestRaft_Chunking_AppliedIndex(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Write a value to fastforward the index
+	err = raft.Put(context.Background(), &physical.Entry{
+		Key:   "key",
+		Value: []byte("test"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	currentIndex := raft.AppliedIndex()
 	// Write some data
 	for i := 0; i < 10; i++ {
@@ -223,5 +232,4 @@ func TestRaft_Chunking_AppliedIndex(t *testing.T) {
 			t.Fatal("value is corrupt")
 		}
 	}
-
 }

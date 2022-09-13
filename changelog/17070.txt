@@ -1,0 +1,4 @@
+```release-note:feature
+**Redis DB Engine**: Adding the new Redis database engine that supports the generation of static and dynamic user
+roles and root credential rotation on a stand alone Redis server.
+```

@@ -6,7 +6,7 @@ export const storeMVP = {
   },
 };
 
-export default function(modelName) {
+export default function (modelName) {
   return [
     {
       adapterMethod: 'findRecord',

@@ -3,43 +3,59 @@ package transit
 import (
 	"context"
 	"encoding/base64"
-
-	"github.com/hashicorp/errwrap"
+	"fmt"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/mitchellh/mapstructure"
 )
+
+type DecryptBatchResponseItem struct {
+	// Plaintext for the ciphertext present in the corresponding batch
+	// request item
+	Plaintext string `json:"plaintext" structs:"plaintext" mapstructure:"plaintext"`
+
+	// Error, if set represents a failure encountered while encrypting a
+	// corresponding batch request item
+	Error string `json:"error,omitempty" structs:"error" mapstructure:"error"`
+}
 
 func (b *backend) pathDecrypt() *framework.Path {
 	return &framework.Path{
 		Pattern: "decrypt/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
-				Description: "Name of the policy",
+				Description: "Name of the key",
 			},
 
-			"ciphertext": &framework.FieldSchema{
+			"ciphertext": {
 				Type: framework.TypeString,
 				Description: `
 The ciphertext to decrypt, provided as returned by encrypt.`,
 			},
 
-			"context": &framework.FieldSchema{
+			"context": {
 				Type: framework.TypeString,
 				Description: `
 Base64 encoded context for key derivation. Required if key derivation is
 enabled.`,
 			},
 
-			"nonce": &framework.FieldSchema{
+			"nonce": {
 				Type: framework.TypeString,
 				Description: `
 Base64 encoded nonce value used during encryption. Must be provided if
 convergent encryption is enabled for this key and the key was generated with
 Vault 0.6.1. Not required for keys created in 0.6.2+.`,
+			},
+			"partial_failure_response_code": {
+				Type: framework.TypeInt,
+				Description: `
+Ordinarily, if a batch item fails to decrypt due to a bad input, but other batch items succeed, 
+the HTTP response code is 400 (Bad Request).  Some applications may want to treat partial failures differently.
+Providing the parameter returns the given response code integer instead of a 400 in this case.  If all values fail
+HTTP 400 is still returned.`,
 			},
 		},
 
@@ -57,9 +73,9 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 	var batchInputItems []BatchRequestItem
 	var err error
 	if batchInputRaw != nil {
-		err = mapstructure.Decode(batchInputRaw, &batchInputItems)
+		err = decodeDecryptBatchRequestItems(batchInputRaw, &batchInputItems)
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to parse batch input: {{err}}", err)
+			return nil, fmt.Errorf("failed to parse batch input: %w", err)
 		}
 
 		if len(batchInputItems) == 0 {
@@ -79,8 +95,11 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 	}
 
-	batchResponseItems := make([]BatchResponseItem, len(batchInputItems))
+	batchResponseItems := make([]DecryptBatchResponseItem, len(batchInputItems))
 	contextSet := len(batchInputItems[0].Context) != 0
+
+	userErrorInBatch := false
+	internalErrorInBatch := false
 
 	for i, item := range batchInputItems {
 		if (len(item.Context) == 0 && contextSet) || (len(item.Context) != 0 && !contextSet) {
@@ -88,6 +107,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 
 		if item.Ciphertext == "" {
+			userErrorInBatch = true
 			batchResponseItems[i].Error = "missing ciphertext to decrypt"
 			continue
 		}
@@ -96,6 +116,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 		if len(item.Context) != 0 {
 			batchInputItems[i].DecodedContext, err = base64.StdEncoding.DecodeString(item.Context)
 			if err != nil {
+				userErrorInBatch = true
 				batchResponseItems[i].Error = err.Error()
 				continue
 			}
@@ -105,6 +126,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 		if len(item.Nonce) != 0 {
 			batchInputItems[i].DecodedNonce, err = base64.StdEncoding.DecodeString(item.Nonce)
 			if err != nil {
+				userErrorInBatch = true
 				batchResponseItems[i].Error = err.Error()
 				continue
 			}
@@ -112,7 +134,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 	}
 
 	// Get the policy
-	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    d.Get("name").(string),
 	}, b.GetRandomReader())
@@ -126,6 +148,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 		p.Lock(false)
 	}
 
+	successesInBatch := false
 	for i, item := range batchInputItems {
 		if batchResponseItems[i].Error != "" {
 			continue
@@ -134,14 +157,15 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 		plaintext, err := p.Decrypt(item.DecodedContext, item.DecodedNonce, item.Ciphertext)
 		if err != nil {
 			switch err.(type) {
-			case errutil.UserError:
-				batchResponseItems[i].Error = err.Error()
-				continue
+			case errutil.InternalError:
+				internalErrorInBatch = true
 			default:
-				p.Unlock()
-				return nil, err
+				userErrorInBatch = true
 			}
+			batchResponseItems[i].Error = err.Error()
+			continue
 		}
+		successesInBatch = true
 		batchResponseItems[i].Plaintext = plaintext
 	}
 
@@ -153,6 +177,11 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 	} else {
 		if batchResponseItems[0].Error != "" {
 			p.Unlock()
+
+			if internalErrorInBatch {
+				return nil, errutil.InternalError{Err: batchResponseItems[0].Error}
+			}
+
 			return logical.ErrorResponse(batchResponseItems[0].Error), logical.ErrInvalidRequest
 		}
 		resp.Data = map[string]interface{}{
@@ -161,7 +190,8 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 	}
 
 	p.Unlock()
-	return resp, nil
+
+	return batchRequestResponse(d, resp, req, successesInBatch, userErrorInBatch, internalErrorInBatch)
 }
 
 const pathDecryptHelpSyn = `Decrypt a ciphertext value using a named key`

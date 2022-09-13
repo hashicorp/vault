@@ -92,13 +92,9 @@ div > .ember-power-select-options {
 .search-select-list-item {
   align-items: center;
   display: flex;
-  margin: 0 $spacing-m;
   padding: $spacing-xxs;
   justify-content: space-between;
-
-  &:not(:last-child) {
-    border-bottom: $light-border;
-  }
+  border-bottom: $light-border;
 
   .control .button {
     color: $grey-light;
@@ -128,4 +124,12 @@ div > .ember-power-select-options {
   position: absolute;
   width: 20px;
   top: 5px;
+}
+
+.search-icon {
+  margin-top: 4px;
+}
+
+.search-select.display-inherit {
+  display: inherit;
 }

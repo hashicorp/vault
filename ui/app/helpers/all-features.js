@@ -12,6 +12,7 @@ const ALL_FEATURES = [
   'Namespaces',
   'KMIP',
   'Entropy Augmentation',
+  'Transform Secrets Engine',
 ];
 
 export function allFeatures() {

@@ -1,16 +1,21 @@
 package raft
 
 import (
+	"bytes"
 	"context"
-	fmt "fmt"
+	"encoding/hex"
+	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"sort"
 	"testing"
 
-	proto "github.com/golang/protobuf/proto"
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/go-test/deep"
+	"github.com/golang/protobuf/proto"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 func getFSM(t testing.TB) (*FSM, string) {
@@ -25,9 +30,7 @@ func getFSM(t testing.TB) (*FSM, string) {
 		Level: hclog.Trace,
 	})
 
-	fsm, err := NewFSM(map[string]string{
-		"path": raftDir,
-	}, logger)
+	fsm, err := NewFSM(raftDir, "", logger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +40,7 @@ func getFSM(t testing.TB) (*FSM, string) {
 
 func TestFSM_Batching(t *testing.T) {
 	fsm, dir := getFSM(t)
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	var index uint64
 	var term uint64 = 1
@@ -51,9 +54,9 @@ func TestFSM_Batching(t *testing.T) {
 				Type:  raft.LogConfiguration,
 				Data: raft.EncodeConfiguration(raft.Configuration{
 					Servers: []raft.Server{
-						raft.Server{
-							Address: raft.ServerAddress("test"),
-							ID:      raft.ServerID("test"),
+						{
+							Address: "test",
+							ID:      "test",
 						},
 					},
 				}),
@@ -125,5 +128,89 @@ func TestFSM_Batching(t *testing.T) {
 
 	if latestConfig == nil && term > 1 {
 		t.Fatal("config wasn't updated")
+	}
+}
+
+func TestFSM_List(t *testing.T) {
+	fsm, dir := getFSM(t)
+	defer func() { _ = os.RemoveAll(dir) }()
+
+	ctx := context.Background()
+	count := 100
+	keys := rand.Perm(count)
+	var sorted []string
+	for _, k := range keys {
+		err := fsm.Put(ctx, &physical.Entry{Key: fmt.Sprintf("foo/%d/bar", k)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = fsm.Put(ctx, &physical.Entry{Key: fmt.Sprintf("foo/%d/baz", k)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		sorted = append(sorted, fmt.Sprintf("%d/", k))
+	}
+	sort.Strings(sorted)
+
+	got, err := fsm.List(ctx, "foo/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sort.Strings(got)
+	if diff := deep.Equal(sorted, got); len(diff) > 0 {
+		t.Fatal(diff)
+	}
+}
+
+func TestFSM_Transaction(t *testing.T) {
+	fsm, dir := getFSM(t)
+	defer func() { _ = os.RemoveAll(dir) }()
+
+	ctx := context.Background()
+	txns := make([]*physical.TxnEntry, 0, 10)
+
+	// Add 5 seed values to our FSM, and prepare our slice of GET transactions at the same time
+	for i := 0; i < 5; i++ {
+		key := fmt.Sprintf("foo/%d", i)
+		err := fsm.Put(ctx, &physical.Entry{Key: key, Value: []byte(fmt.Sprintf("value-%d", i))})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		txns = append(txns, &physical.TxnEntry{
+			Operation: physical.GetOperation,
+			Entry: &physical.Entry{
+				Key: key,
+			},
+		})
+	}
+
+	// Add 5 additional PUT transactions to overwrite our seed values. This will ensure that fsm.Transaction()
+	// gives us the original values back, and not these values.
+	for i := 0; i < 5; i++ {
+		key := fmt.Sprintf("foo/%d", i)
+		txns = append(txns, &physical.TxnEntry{
+			Operation: physical.PutOperation,
+			Entry: &physical.Entry{
+				Key:   key,
+				Value: []byte("lol"),
+			},
+		})
+	}
+
+	// Pass our slice of transactions to the FSM Transaction() method, which should populate the values for the GET operations
+	err := fsm.Transaction(ctx, txns)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that we got the values we expected
+	for i, txn := range txns {
+		if txn.Operation == physical.GetOperation {
+			val := []byte(fmt.Sprintf("value-%d", i))
+			if !bytes.Equal(val, txn.Entry.Value) {
+				t.Fatalf("expected %s to equal %s but it doesn't", hex.EncodeToString(val), hex.EncodeToString(txn.Entry.Value))
+			}
+		}
 	}
 }

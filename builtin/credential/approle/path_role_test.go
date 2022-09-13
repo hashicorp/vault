@@ -209,6 +209,9 @@ func TestAppRole_LocalSecretIDImmutability(t *testing.T) {
 		Storage:   storage,
 		Data:      roleData,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil || !resp.IsError() {
 		t.Fatalf("expected an error since local_secret_ids can't be overwritten")
 	}
@@ -592,7 +595,7 @@ func TestAppRole_CIDRSubset(t *testing.T) {
 	}
 
 	resp, err = b.HandleRequest(context.Background(), secretIDReq)
-	if resp != nil || resp.IsError() {
+	if resp != nil {
 		t.Fatalf("resp:%#v", resp)
 	}
 	if err == nil {
@@ -990,6 +993,34 @@ func TestAppRole_RoleSecretIDAccessorReadDelete(t *testing.T) {
 	}
 }
 
+func TestAppRoleSecretIDLookup(t *testing.T) {
+	b, storage := createBackendWithStorage(t)
+	createRole(t, b, storage, "role1", "a,b")
+
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Path:      "role/role1/secret-id-accessor/lookup",
+		Data: map[string]interface{}{
+			"secret_id_accessor": "invalid",
+		},
+	}
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	expected := &logical.Response{
+		Data: map[string]interface{}{
+			"http_content_type": "application/json",
+			"http_raw_body":     `{"request_id":"","lease_id":"","renewable":false,"lease_duration":0,"data":{"error":"failed to find accessor entry for secret_id_accessor: \"invalid\""},"wrap_info":null,"warnings":null,"auth":null}`,
+			"http_status_code":  404,
+		},
+	}
+	if !reflect.DeepEqual(resp, expected) {
+		t.Fatalf("resp:%#v expected:%#v", resp, expected)
+	}
+}
+
 func TestAppRoleRoleListSecretID(t *testing.T) {
 	var resp *logical.Response
 	var err error
@@ -1067,7 +1098,7 @@ func TestAppRole_RoleList(t *testing.T) {
 	}
 }
 
-func TestAppRole_RoleSecretID(t *testing.T) {
+func TestAppRole_RoleSecretIDWithoutFields(t *testing.T) {
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
@@ -1104,13 +1135,18 @@ func TestAppRole_RoleSecretID(t *testing.T) {
 	if resp.Data["secret_id"].(string) == "" {
 		t.Fatalf("failed to generate secret_id")
 	}
+	if resp.Data["secret_id_ttl"].(int64) != int64(roleData["secret_id_ttl"].(int)) {
+		t.Fatalf("secret_id_ttl has not defaulted to the role's secret id ttl")
+	}
+	if resp.Data["secret_id_num_uses"].(int) != roleData["secret_id_num_uses"].(int) {
+		t.Fatalf("secret_id_num_uses has not defaulted to the role's secret id num_uses")
+	}
 
 	roleSecretIDReq.Path = "role/role1/custom-secret-id"
 	roleCustomSecretIDData := map[string]interface{}{
 		"secret_id": "abcd123",
 	}
 	roleSecretIDReq.Data = roleCustomSecretIDData
-	roleSecretIDReq.Operation = logical.UpdateOperation
 	resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
@@ -1118,6 +1154,240 @@ func TestAppRole_RoleSecretID(t *testing.T) {
 
 	if resp.Data["secret_id"] != "abcd123" {
 		t.Fatalf("failed to set specific secret_id to role")
+	}
+	if resp.Data["secret_id_ttl"].(int64) != int64(roleData["secret_id_ttl"].(int)) {
+		t.Fatalf("secret_id_ttl has not defaulted to the role's secret id ttl")
+	}
+	if resp.Data["secret_id_num_uses"].(int) != roleData["secret_id_num_uses"].(int) {
+		t.Fatalf("secret_id_num_uses has not defaulted to the role's secret id num_uses")
+	}
+}
+
+func TestAppRole_RoleSecretIDWithValidFields(t *testing.T) {
+	type testCase struct {
+		name    string
+		payload map[string]interface{}
+	}
+
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	roleData := map[string]interface{}{
+		"policies":           "p,q,r,s",
+		"secret_id_num_uses": 0,
+		"secret_id_ttl":      0,
+		"token_ttl":          400,
+		"token_max_ttl":      500,
+	}
+	roleReq := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "role/role1",
+		Storage:   storage,
+		Data:      roleData,
+	}
+
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	testCases := []testCase{
+		{
+			name:    "finite num_uses ttl",
+			payload: map[string]interface{}{"secret_id": "finite", "ttl": 5, "num_uses": 5},
+		},
+		{
+			name:    "infinite num_uses and ttl",
+			payload: map[string]interface{}{"secret_id": "infinite", "ttl": 0, "num_uses": 0},
+		},
+		{
+			name:    "finite num_uses and infinite ttl",
+			payload: map[string]interface{}{"secret_id": "mixed1", "ttl": 0, "num_uses": 5},
+		},
+		{
+			name:    "infinite num_uses and finite ttl",
+			payload: map[string]interface{}{"secret_id": "mixed2", "ttl": 5, "num_uses": 0},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			roleSecretIDReq := &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "role/role1/secret-id",
+				Storage:   storage,
+			}
+			roleCustomSecretIDData := tc.payload
+			roleSecretIDReq.Data = roleCustomSecretIDData
+
+			resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("err:%v resp:%#v", err, resp)
+			}
+
+			if resp.Data["secret_id"].(string) == "" {
+				t.Fatalf("failed to generate secret_id")
+			}
+			if resp.Data["secret_id_ttl"].(int64) != int64(tc.payload["ttl"].(int)) {
+				t.Fatalf("secret_id_ttl has not been set by the 'ttl' field")
+			}
+			if resp.Data["secret_id_num_uses"].(int) != tc.payload["num_uses"].(int) {
+				t.Fatalf("secret_id_num_uses has not been set by the 'num_uses' field")
+			}
+
+			roleSecretIDReq.Path = "role/role1/custom-secret-id"
+			roleSecretIDReq.Data = roleCustomSecretIDData
+			resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("err:%v resp:%#v", err, resp)
+			}
+
+			if resp.Data["secret_id"] != tc.payload["secret_id"] {
+				t.Fatalf("failed to set specific secret_id to role")
+			}
+			if resp.Data["secret_id_ttl"].(int64) != int64(tc.payload["ttl"].(int)) {
+				t.Fatalf("secret_id_ttl has not been set by the 'ttl' field")
+			}
+			if resp.Data["secret_id_num_uses"].(int) != tc.payload["num_uses"].(int) {
+				t.Fatalf("secret_id_num_uses has not been set by the 'num_uses' field")
+			}
+		})
+	}
+}
+
+func TestAppRole_ErrorsRoleSecretIDWithInvalidFields(t *testing.T) {
+	type testCase struct {
+		name     string
+		payload  map[string]interface{}
+		expected string
+	}
+
+	type roleTestCase struct {
+		name    string
+		options map[string]interface{}
+		cases   []testCase
+	}
+
+	infiniteTestCases := []testCase{
+		{
+			name:     "infinite ttl",
+			payload:  map[string]interface{}{"secret_id": "abcd123", "num_uses": 1, "ttl": 0},
+			expected: "ttl cannot be longer than the role's secret_id_ttl",
+		},
+		{
+			name:     "infinite num_uses",
+			payload:  map[string]interface{}{"secret_id": "abcd123", "num_uses": 0, "ttl": 1},
+			expected: "num_uses cannot be higher than the role's secret_id_num_uses",
+		},
+	}
+
+	negativeTestCases := []testCase{
+		{
+			name:     "negative num_uses",
+			payload:  map[string]interface{}{"secret_id": "abcd123", "num_uses": -1, "ttl": 0},
+			expected: "num_uses cannot be negative",
+		},
+	}
+
+	roleTestCases := []roleTestCase{
+		{
+			name: "infinite role secret id ttl",
+			options: map[string]interface{}{
+				"secret_id_num_uses": 1,
+				"secret_id_ttl":      0,
+			},
+			cases: []testCase{
+				{
+					name:     "higher num_uses",
+					payload:  map[string]interface{}{"secret_id": "abcd123", "ttl": 0, "num_uses": 2},
+					expected: "num_uses cannot be higher than the role's secret_id_num_uses",
+				},
+			},
+		},
+		{
+			name: "infinite role num_uses",
+			options: map[string]interface{}{
+				"secret_id_num_uses": 0,
+				"secret_id_ttl":      1,
+			},
+			cases: []testCase{
+				{
+					name:     "longer ttl",
+					payload:  map[string]interface{}{"secret_id": "abcd123", "ttl": 2, "num_uses": 0},
+					expected: "ttl cannot be longer than the role's secret_id_ttl",
+				},
+			},
+		},
+		{
+			name: "finite role ttl and num_uses",
+			options: map[string]interface{}{
+				"secret_id_num_uses": 2,
+				"secret_id_ttl":      2,
+			},
+			cases: infiniteTestCases,
+		},
+		{
+			name: "mixed role ttl and num_uses",
+			options: map[string]interface{}{
+				"secret_id_num_uses": 400,
+				"secret_id_ttl":      500,
+			},
+			cases: negativeTestCases,
+		},
+	}
+
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	for i, rc := range roleTestCases {
+		roleData := map[string]interface{}{
+			"policies":      "p,q,r,s",
+			"token_ttl":     400,
+			"token_max_ttl": 500,
+		}
+		roleData["secret_id_num_uses"] = rc.options["secret_id_num_uses"]
+		roleData["secret_id_ttl"] = rc.options["secret_id_ttl"]
+
+		roleReq := &logical.Request{
+			Operation: logical.CreateOperation,
+			Path:      fmt.Sprintf("role/role%d", i),
+			Storage:   storage,
+			Data:      roleData,
+		}
+
+		resp, err = b.HandleRequest(context.Background(), roleReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%#v", err, resp)
+		}
+
+		for _, tc := range rc.cases {
+			t.Run(fmt.Sprintf("%s/%s", rc.name, tc.name), func(t *testing.T) {
+				roleSecretIDReq := &logical.Request{
+					Operation: logical.UpdateOperation,
+					Path:      fmt.Sprintf("role/role%d/secret-id", i),
+					Storage:   storage,
+				}
+				roleSecretIDReq.Data = tc.payload
+				resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
+				if err != nil || (resp != nil && !resp.IsError()) {
+					t.Fatalf("err:%v resp:%#v", err, resp)
+				}
+				if resp.Data["error"].(string) != tc.expected {
+					t.Fatalf("expected: %q, got: %q", tc.expected, resp.Data["error"].(string))
+				}
+
+				roleSecretIDReq.Path = fmt.Sprintf("role/role%d/custom-secret-id", i)
+				resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
+				if err != nil || (resp != nil && !resp.IsError()) {
+					t.Fatalf("err:%v resp:%#v", err, resp)
+				}
+				if resp.Data["error"].(string) != tc.expected {
+					t.Fatalf("expected: %q, got: %q", tc.expected, resp.Data["error"].(string))
+				}
+			})
+		}
 	}
 }
 
@@ -1820,6 +2090,136 @@ func TestAppRole_RoleWithTokenBoundCIDRsCRUD(t *testing.T) {
 	}
 }
 
+func TestAppRole_RoleWithTokenTypeCRUD(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	roleData := map[string]interface{}{
+		"policies":           "p,q,r,s",
+		"secret_id_num_uses": 10,
+		"secret_id_ttl":      300,
+		"token_ttl":          400,
+		"token_max_ttl":      500,
+		"token_num_uses":     600,
+		"token_type":         "default-service",
+	}
+	roleReq := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "role/role1",
+		Storage:   storage,
+		Data:      roleData,
+	}
+
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if 0 == len(resp.Warnings) {
+		t.Fatalf("bad:\nexpected warning in resp:%#v\n", resp.Warnings)
+	}
+
+	roleReq.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	expected := map[string]interface{}{
+		"bind_secret_id":     true,
+		"policies":           []string{"p", "q", "r", "s"},
+		"secret_id_num_uses": 10,
+		"secret_id_ttl":      300,
+		"token_ttl":          400,
+		"token_max_ttl":      500,
+		"token_num_uses":     600,
+		"token_type":         "service",
+	}
+
+	var expectedStruct roleStorageEntry
+	err = mapstructure.Decode(expected, &expectedStruct)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var actualStruct roleStorageEntry
+	err = mapstructure.Decode(resp.Data, &actualStruct)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectedStruct.RoleID = actualStruct.RoleID
+	if !reflect.DeepEqual(expectedStruct, actualStruct) {
+		t.Fatalf("bad:\nexpected:%#v\nactual:%#v\n", expectedStruct, actualStruct)
+	}
+
+	roleData = map[string]interface{}{
+		"role_id":            "test_role_id",
+		"policies":           "a,b,c,d",
+		"secret_id_num_uses": 100,
+		"secret_id_ttl":      3000,
+		"token_ttl":          4000,
+		"token_max_ttl":      5000,
+		"token_type":         "default-service",
+	}
+	roleReq.Data = roleData
+	roleReq.Operation = logical.UpdateOperation
+
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if 0 == len(resp.Warnings) {
+		t.Fatalf("bad:\nexpected a warning in resp:%#v\n", resp.Warnings)
+	}
+
+	roleReq.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	expected = map[string]interface{}{
+		"policies":           []string{"a", "b", "c", "d"},
+		"secret_id_num_uses": 100,
+		"secret_id_ttl":      3000,
+		"token_ttl":          4000,
+		"token_max_ttl":      5000,
+		"token_type":         "service",
+	}
+	err = mapstructure.Decode(expected, &expectedStruct)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = mapstructure.Decode(resp.Data, &actualStruct)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(expectedStruct, actualStruct) {
+		t.Fatalf("bad:\nexpected:%#v\nactual:%#v\n", expectedStruct, actualStruct)
+	}
+
+	// Delete test for role
+	roleReq.Path = "role/role1"
+	roleReq.Operation = logical.DeleteOperation
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	roleReq.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
+}
+
 func createRole(t *testing.T, b *backend, s logical.Storage, roleName, policies string) {
 	roleData := map[string]interface{}{
 		"policies":           policies,
@@ -1890,7 +2290,6 @@ func TestAppRole_TokenutilUpgrade(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			// Construct the storage entry object based on our test case.
 			tokenTypeKV := ""
 			if !tt.storageValMissing {
@@ -1927,6 +2326,95 @@ func TestAppRole_TokenutilUpgrade(t *testing.T) {
 			}
 			if diff := deep.Equal(resEntry, exp); diff != nil {
 				t.Fatal(diff)
+			}
+		})
+	}
+}
+
+func TestAppRole_SecretID_WithTTL(t *testing.T) {
+	tests := []struct {
+		name      string
+		roleName  string
+		ttl       int64
+		sysTTLCap bool
+	}{
+		{
+			"zero ttl",
+			"role-zero-ttl",
+			0,
+			false,
+		},
+		{
+			"custom ttl",
+			"role-custom-ttl",
+			60,
+			false,
+		},
+		{
+			"system ttl capped",
+			"role-sys-ttl-cap",
+			700000000,
+			true,
+		},
+	}
+
+	b, storage := createBackendWithStorage(t)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create role
+			roleData := map[string]interface{}{
+				"policies":      "default",
+				"secret_id_ttl": tt.ttl,
+			}
+
+			roleReq := &logical.Request{
+				Operation: logical.CreateOperation,
+				Path:      "role/" + tt.roleName,
+				Storage:   storage,
+				Data:      roleData,
+			}
+			resp, err := b.HandleRequest(context.Background(), roleReq)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("err:%v resp:%#v", err, resp)
+			}
+
+			// Generate secret ID
+			secretIDReq := &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "role/" + tt.roleName + "/secret-id",
+				Storage:   storage,
+			}
+			resp, err = b.HandleRequest(context.Background(), secretIDReq)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("err:%v resp:%#v", err, resp)
+			}
+
+			// Extract the "ttl" value from the response data if it exists
+			ttlRaw, okTTL := resp.Data["secret_id_ttl"]
+			if !okTTL {
+				t.Fatalf("expected TTL value in response")
+			}
+
+			var (
+				respTTL int64
+				ok      bool
+			)
+			respTTL, ok = ttlRaw.(int64)
+			if !ok {
+				t.Fatalf("expected ttl to be an integer, got: %s", err)
+			}
+
+			// Verify secret ID response for different cases
+			switch {
+			case tt.sysTTLCap:
+				if respTTL != int64(b.System().MaxLeaseTTL().Seconds()) {
+					t.Fatalf("expected TTL value to be system's max lease TTL, got: %d", respTTL)
+				}
+			default:
+				if respTTL != tt.ttl {
+					t.Fatalf("expected TTL value to be %d, got: %d", tt.ttl, respTTL)
+				}
 			}
 		})
 	}

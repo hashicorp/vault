@@ -8,10 +8,9 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-
-	"github.com/hashicorp/errwrap"
 )
 
+// ExternalTokenHelperPath should only be used in dev mode.
 // ExternalTokenHelperPath takes the configured path to a helper and expands it to
 // a full absolute path that can be executed. As of 0.5, the default token
 // helper is internal, to avoid problems running in dev mode (see GH-850 and
@@ -40,15 +39,17 @@ func ExternalTokenHelperPath(path string) (string, error) {
 
 var _ TokenHelper = (*ExternalTokenHelper)(nil)
 
+// ExternalTokenHelper should only be used in a dev mode. For all other cases,
+// InternalTokenHelper should be used.
 // ExternalTokenHelper is the struct that has all the logic for storing and retrieving
 // tokens from the token helper. The API for the helpers is simple: the
 // BinaryPath is executed within a shell with environment Env. The last argument
 // appended will be the operation, which is:
 //
-//   * "get" - Read the value of the token and write it to stdout.
-//   * "store" - Store the value of the token which is on stdin. Output
-//       nothing.
-//   * "erase" - Erase the contents stored. Output nothing.
+//   - "get" - Read the value of the token and write it to stdout.
+//   - "store" - Store the value of the token which is on stdin. Output
+//     nothing.
+//   - "erase" - Erase the contents stored. Output nothing.
 //
 // Any errors can be written on stdout. If the helper exits with a non-zero
 // exit code then the stderr will be made part of the error value.
@@ -64,7 +65,7 @@ func (h *ExternalTokenHelper) Erase() error {
 		return err
 	}
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("%q: {{err}}", string(output)), err)
+		return fmt.Errorf("%q: %w", string(output), err)
 	}
 	return nil
 }
@@ -79,7 +80,7 @@ func (h *ExternalTokenHelper) Get() (string, error) {
 	cmd.Stdout = &buf
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return "", errwrap.Wrapf(fmt.Sprintf("%q: {{err}}", stderr.String()), err)
+		return "", fmt.Errorf("%q: %w", stderr.String(), err)
 	}
 
 	return buf.String(), nil
@@ -94,7 +95,7 @@ func (h *ExternalTokenHelper) Store(v string) error {
 	}
 	cmd.Stdin = buf
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("%q: {{err}}", string(output)), err)
+		return fmt.Errorf("%q: %w", string(output), err)
 	}
 
 	return nil
@@ -105,7 +106,7 @@ func (h *ExternalTokenHelper) Path() string {
 }
 
 func (h *ExternalTokenHelper) cmd(op string) (*exec.Cmd, error) {
-	script := strings.Replace(h.BinaryPath, "\\", "\\\\", -1) + " " + op
+	script := strings.ReplaceAll(h.BinaryPath, "\\", "\\\\") + " " + op
 	cmd, err := ExecScript(script)
 	if err != nil {
 		return nil, err

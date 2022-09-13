@@ -33,13 +33,8 @@ func TestRetryHandlerSimple(t *testing.T) {
 	logger := hclog.NewNullLogger()
 	shutdownCh := make(chan struct{})
 	wait := &sync.WaitGroup{}
-	testPatch := &client.Patch{
-		Operation: client.Add,
-		Path:      "patch-path",
-		Value:     "true",
-	}
 
-	c, err := client.New(logger, shutdownCh)
+	c, err := client.New(logger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,17 +44,30 @@ func TestRetryHandlerSimple(t *testing.T) {
 		namespace:      kubetest.ExpectedNamespace,
 		podName:        kubetest.ExpectedPodName,
 		patchesToRetry: make(map[string]*client.Patch),
+		client:         c,
+		initialState:   sr.State{},
 	}
-	r.Run(shutdownCh, wait, c)
+	r.Run(shutdownCh, wait)
 
-	if testState.NumPatches() != 0 {
-		t.Fatal("expected no current patches")
+	// Initial number of patches upon Run from setting the initial state
+	initStatePatches := testState.NumPatches()
+	if initStatePatches == 0 {
+		t.Fatalf("expected number of states patches after initial patches to be non-zero")
 	}
-	r.Notify(c, testPatch)
+
+	// Send a new patch
+	testPatch := &client.Patch{
+		Operation: client.Add,
+		Path:      "patch-path",
+		Value:     "true",
+	}
+	r.Notify(testPatch)
+
 	// Wait ample until the next try should have occurred.
 	<-time.NewTimer(retryFreq * 2).C
-	if testState.NumPatches() != 1 {
-		t.Fatal("expected 1 patch")
+
+	if testState.NumPatches() != initStatePatches+1 {
+		t.Fatalf("expected 1 patch, got: %d", testState.NumPatches())
 	}
 }
 
@@ -78,8 +86,7 @@ func TestRetryHandlerAdd(t *testing.T) {
 	}
 
 	logger := hclog.NewNullLogger()
-	shutdownCh := make(chan struct{})
-	c, err := client.New(logger, shutdownCh)
+	c, err := client.New(logger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,6 +96,7 @@ func TestRetryHandlerAdd(t *testing.T) {
 		namespace:      "some-namespace",
 		podName:        "some-pod-name",
 		patchesToRetry: make(map[string]*client.Patch),
+		client:         c,
 	}
 
 	testPatch1 := &client.Patch{
@@ -113,34 +121,34 @@ func TestRetryHandlerAdd(t *testing.T) {
 	}
 
 	// Should be able to add all 4 patches.
-	r.Notify(c, testPatch1)
+	r.Notify(testPatch1)
 	if len(r.patchesToRetry) != 1 {
 		t.Fatal("expected 1 patch")
 	}
 
-	r.Notify(c, testPatch2)
+	r.Notify(testPatch2)
 	if len(r.patchesToRetry) != 2 {
 		t.Fatal("expected 2 patches")
 	}
 
-	r.Notify(c, testPatch3)
+	r.Notify(testPatch3)
 	if len(r.patchesToRetry) != 3 {
 		t.Fatal("expected 3 patches")
 	}
 
-	r.Notify(c, testPatch4)
+	r.Notify(testPatch4)
 	if len(r.patchesToRetry) != 4 {
 		t.Fatal("expected 4 patches")
 	}
 
 	// Adding a dupe should result in no change.
-	r.Notify(c, testPatch4)
+	r.Notify(testPatch4)
 	if len(r.patchesToRetry) != 4 {
 		t.Fatal("expected 4 patches")
 	}
 
 	// Adding a reversion should result in its twin being subtracted.
-	r.Notify(c, &client.Patch{
+	r.Notify(&client.Patch{
 		Operation: client.Add,
 		Path:      "four",
 		Value:     "false",
@@ -149,7 +157,7 @@ func TestRetryHandlerAdd(t *testing.T) {
 		t.Fatal("expected 4 patches")
 	}
 
-	r.Notify(c, &client.Patch{
+	r.Notify(&client.Patch{
 		Operation: client.Add,
 		Path:      "three",
 		Value:     "false",
@@ -158,7 +166,7 @@ func TestRetryHandlerAdd(t *testing.T) {
 		t.Fatal("expected 4 patches")
 	}
 
-	r.Notify(c, &client.Patch{
+	r.Notify(&client.Patch{
 		Operation: client.Add,
 		Path:      "two",
 		Value:     "false",
@@ -167,7 +175,7 @@ func TestRetryHandlerAdd(t *testing.T) {
 		t.Fatal("expected 4 patches")
 	}
 
-	r.Notify(c, &client.Patch{
+	r.Notify(&client.Patch{
 		Operation: client.Add,
 		Path:      "one",
 		Value:     "false",
@@ -201,7 +209,7 @@ func TestRetryHandlerRacesAndDeadlocks(t *testing.T) {
 		Value:     "true",
 	}
 
-	c, err := client.New(logger, shutdownCh)
+	c, err := client.New(logger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,6 +219,8 @@ func TestRetryHandlerRacesAndDeadlocks(t *testing.T) {
 		namespace:      kubetest.ExpectedNamespace,
 		podName:        kubetest.ExpectedPodName,
 		patchesToRetry: make(map[string]*client.Patch),
+		initialState:   sr.State{},
+		client:         c,
 	}
 
 	// Now hit it as quickly as possible to see if we can produce
@@ -221,20 +231,12 @@ func TestRetryHandlerRacesAndDeadlocks(t *testing.T) {
 	for i := 0; i < numRoutines; i++ {
 		go func() {
 			<-start
-			r.Notify(c, testPatch)
+			r.Notify(testPatch)
 			done <- true
 		}()
 		go func() {
 			<-start
-			r.Run(shutdownCh, wait, c)
-			done <- true
-		}()
-		go func() {
-			<-start
-			r.SetInitialState(func() error {
-				c.GetPod(kubetest.ExpectedNamespace, kubetest.ExpectedPodName)
-				return nil
-			})
+			r.Run(shutdownCh, wait)
 			done <- true
 		}()
 	}
@@ -242,7 +244,7 @@ func TestRetryHandlerRacesAndDeadlocks(t *testing.T) {
 
 	// Allow up to 5 seconds for everything to finish.
 	timer := time.NewTimer(5 * time.Second)
-	for i := 0; i < numRoutines*3; i++ {
+	for i := 0; i < numRoutines*2; i++ {
 		select {
 		case <-timer.C:
 			t.Fatal("test took too long to complete, check for deadlock")
@@ -284,11 +286,11 @@ func TestRetryHandlerAPIConnectivityProblemsInitialState(t *testing.T) {
 		IsSealed:             true,
 		IsActive:             true,
 		IsPerformanceStandby: true,
-	}, "")
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := reg.Run(shutdownCh, wait); err != nil {
+	if err := reg.Run(shutdownCh, wait, ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -375,11 +377,8 @@ func TestRetryHandlerAPIConnectivityProblemsNotifications(t *testing.T) {
 		IsSealed:             false,
 		IsActive:             false,
 		IsPerformanceStandby: false,
-	}, "")
+	})
 	if err != nil {
-		t.Fatal(err)
-	}
-	if err := reg.Run(shutdownCh, wait); err != nil {
 		t.Fatal(err)
 	}
 
@@ -393,6 +392,10 @@ func TestRetryHandlerAPIConnectivityProblemsNotifications(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := reg.NotifySealedStateChange(true); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := reg.Run(shutdownCh, wait, ""); err != nil {
 		t.Fatal(err)
 	}
 

@@ -10,7 +10,7 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 import layout from '../templates/components/navigate-input';
 
-const routeFor = function(type, mode, urls) {
+const routeFor = function (type, mode, urls) {
   const MODES = {
     secrets: 'vault.cluster.secrets.backend',
     'secrets-cert': 'vault.cluster.secrets.backend',
@@ -62,30 +62,30 @@ export default Component.extend(FocusOnInsertMixin, {
       return encodePath(param);
     });
 
-    this.get('router').transitionTo(...params);
+    this.router.transitionTo(...params);
   },
 
   shouldFocus: false,
 
   didReceiveAttrs() {
     this._super(...arguments);
-    if (!this.get('filter')) return;
+    if (!this.filter) return;
     schedule('afterRender', this, 'forceFocus');
   },
 
   keyForNav(key) {
-    if (this.get('mode') !== 'secrets-cert') {
+    if (this.mode !== 'secrets-cert') {
       return key;
     }
     return `cert/${key}`;
   },
-  onEnter: function(val) {
+  onEnter: function (val) {
     let { baseKey, mode } = this;
-    let extraParams = this.get('extraNavParams');
+    let extraParams = this.extraNavParams;
     if (mode.startsWith('secrets') && (!val || val === baseKey)) {
       return;
     }
-    if (this.get('filterMatchesKey') && !utils.keyIsFolder(val)) {
+    if (this.filterMatchesKey && !utils.keyIsFolder(val)) {
       let params = [routeFor('show', mode, this.urls), extraParams, this.keyForNav(val)].compact();
       this.transitionToRoute(...params);
     } else {
@@ -116,26 +116,26 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   // pop to the nearest parentKey or to the root
-  onEscape: function(val) {
+  onEscape: function (val) {
     var key = utils.parentKeyForKey(val) || '';
-    this.get('filterDidChange')(key);
+    this.filterDidChange(key);
     this.filterUpdated(key);
   },
 
-  onTab: function(event) {
-    var firstPartialMatch = this.get('firstPartialMatch.id');
+  onTab: function (event) {
+    var firstPartialMatch = this.firstPartialMatch.id;
     if (!firstPartialMatch) {
       return;
     }
     event.preventDefault();
-    this.get('filterDidChange')(firstPartialMatch);
+    this.filterDidChange(firstPartialMatch);
     this.filterUpdated(firstPartialMatch);
   },
 
   // as you type, navigates through the k/v tree
-  filterUpdated: function(val) {
-    var mode = this.get('mode');
-    if (mode === 'policies' || !this.get('shouldNavigateTree')) {
+  filterUpdated: function (val) {
+    var mode = this.mode;
+    if (mode === 'policies' || !this.shouldNavigateTree) {
       this.filterUpdatedNoNav(val, mode);
       return;
     }
@@ -176,7 +176,7 @@ export default Component.extend(FocusOnInsertMixin, {
     this.transitionToRoute(...args);
   },
 
-  filterUpdatedNoNav: function(val, mode) {
+  filterUpdatedNoNav: function (val, mode) {
     var key = val ? val.trim() : null;
     this.transitionToRoute(routeFor('list-root', mode, this.urls), {
       queryParams: {
@@ -187,22 +187,22 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   actions: {
-    handleInput: function(filter) {
-      this.get('filterDidChange')(filter);
+    handleInput: function (filter) {
+      this.filterDidChange(filter);
       debounce(this, 'filterUpdated', filter, 200);
     },
 
-    setFilterFocused: function(isFocused) {
-      this.get('filterFocusDidChange')(isFocused);
+    setFilterFocused: function (isFocused) {
+      this.filterFocusDidChange(isFocused);
     },
 
-    handleKeyPress: function(event) {
+    handleKeyPress: function (event) {
       if (event.keyCode === keys.TAB) {
         this.onTab(event);
       }
     },
 
-    handleKeyUp: function(event) {
+    handleKeyUp: function (event) {
       var keyCode = event.keyCode;
       let val = event.target.value;
       if (keyCode === keys.ENTER) {

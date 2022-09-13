@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Upgrade Ember-cli from 3.8 to 3.22.
+```

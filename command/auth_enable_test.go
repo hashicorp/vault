@@ -2,9 +2,11 @@ package command
 
 import (
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/mitchellh/cli"
@@ -48,6 +50,18 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 			"",
 			2,
 		},
+		{
+			"deprecated builtin with standard mount",
+			[]string{"app-id"},
+			"",
+			2,
+		},
+		{
+			"deprecated builtin with different mount",
+			[]string{"-path=/tmp", "app-id"},
+			"",
+			2,
+		},
 	}
 
 	for _, tc := range cases {
@@ -86,6 +100,12 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 		code := cmd.Run([]string{
 			"-path", "auth_integration/",
 			"-description", "The best kind of test",
+			"-audit-non-hmac-request-keys", "foo,bar",
+			"-audit-non-hmac-response-keys", "foo,bar",
+			"-passthrough-request-headers", "authorization,authentication",
+			"-passthrough-request-headers", "www-authentication",
+			"-allowed-response-headers", "authorization",
+			"-listing-visibility", "unauth",
 			"userpass",
 		})
 		if exp := 0; code != exp {
@@ -112,6 +132,18 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 		}
 		if exp := "The best kind of test"; authInfo.Description != exp {
 			t.Errorf("expected %q to be %q", authInfo.Description, exp)
+		}
+		if diff := deep.Equal([]string{"authorization,authentication", "www-authentication"}, authInfo.Config.PassthroughRequestHeaders); len(diff) > 0 {
+			t.Errorf("Failed to find expected values in PassthroughRequestHeaders. Difference is: %v", diff)
+		}
+		if diff := deep.Equal([]string{"authorization"}, authInfo.Config.AllowedResponseHeaders); len(diff) > 0 {
+			t.Errorf("Failed to find expected values in AllowedResponseHeaders. Difference is: %v", diff)
+		}
+		if diff := deep.Equal([]string{"foo,bar"}, authInfo.Config.AuditNonHMACRequestKeys); len(diff) > 0 {
+			t.Errorf("Failed to find expected values in AuditNonHMACRequestKeys. Difference is: %v", diff)
+		}
+		if diff := deep.Equal([]string{"foo,bar"}, authInfo.Config.AuditNonHMACResponseKeys); len(diff) > 0 {
+			t.Errorf("Failed to find expected values in AuditNonHMACResponseKeys. Difference is: %v", diff)
 		}
 	})
 
@@ -192,6 +224,16 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 		}
 
 		for _, b := range backends {
+			var expectedResult int = 0
+			status, _ := builtinplugins.Registry.DeprecationStatus(b, consts.PluginTypeCredential)
+			allowDeprecated := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv)
+
+			// Need to handle deprecated builtins specially
+			if (status == consts.PendingRemoval && allowDeprecated == "") || status == consts.Removed {
+				expectedResult = 2
+			}
+
+			// Not a builtin
 			if b == "token" {
 				continue
 			}
@@ -199,11 +241,11 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 			ui, cmd := testAuthEnableCommand(t)
 			cmd.client = client
 
-			code := cmd.Run([]string{
+			actualResult := cmd.Run([]string{
 				b,
 			})
-			if exp := 0; code != exp {
-				t.Errorf("type %s, expected %d to be %d - %s", b, code, exp, ui.OutputWriter.String()+ui.ErrorWriter.String())
+			if actualResult != expectedResult {
+				t.Errorf("type: %s - got: %d, expected: %d - %s", b, actualResult, expectedResult, ui.OutputWriter.String()+ui.ErrorWriter.String())
 			}
 		}
 	})

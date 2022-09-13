@@ -35,6 +35,9 @@
     "statsd_address":"bar",
     "statsite_address":"foo",
     "disable_hostname":true,
+    "usage_gauge_period": "5m",
+    "maximum_gauge_cardinality": 125,
+
     "circonus_api_token": "0",
     "circonus_api_app": "vault",
     "circonus_api_url": "http://api.circonus.com/v2",
@@ -49,6 +52,9 @@
     "circonus_broker_id": "0",
     "circonus_broker_select_tag": "dc:sfo",
     "prometheus_retention_time": "30s"
+  },
+  "sentinel": {
+    "additional_enabled_modules": ["http"]
   },
   "entropy": {
     "seal": {

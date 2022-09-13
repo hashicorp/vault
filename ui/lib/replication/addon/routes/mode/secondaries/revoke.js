@@ -6,7 +6,7 @@ export default Base.extend({
   },
 
   redirect(model) {
-    const replicationMode = this.get('replicationMode');
+    const replicationMode = this.replicationMode;
     if (!model.get(`${replicationMode}.isPrimary`) || !model.get('canRevokeSecondary')) {
       return this.transitionTo('index');
     }

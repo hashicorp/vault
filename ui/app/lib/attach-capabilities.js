@@ -1,8 +1,7 @@
-import DS from 'ember-data';
+import { belongsTo } from '@ember-data/model';
 import { assert, debug } from '@ember/debug';
 import { typeOf } from '@ember/utils';
 import { isArray } from '@ember/array';
-const { belongsTo } = DS;
 
 /*
  *
@@ -10,9 +9,9 @@ const { belongsTo } = DS;
  *
  * @param modelClass = An Ember Data model class
  * @param capabilities - an Object whose keys will added to the model class as related 'capabilities' models
- * and whose values should be functions that return the id of the related capabilites model
+ * and whose values should be functions that return the id of the related capabilities model
  *
- * definition of capabilities be done shorthand with the apiPath tagged template funtion
+ * definition of capabilities be done shorthand with the apiPath tagged template function
  *
  *
  * @usage

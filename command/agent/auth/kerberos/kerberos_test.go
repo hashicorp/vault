@@ -46,8 +46,25 @@ func TestNewKerberosAuthMethod(t *testing.T) {
 	}
 
 	authConfig = simpleAuthConfig()
-	if _, err := NewKerberosAuthMethod(authConfig); err != nil {
+	authMethod, err := NewKerberosAuthMethod(authConfig)
+	if err != nil {
 		t.Fatal(err)
+	}
+
+	// False by default
+	if actual := authMethod.(*kerberosMethod).loginCfg.DisableFASTNegotiation; actual {
+		t.Fatalf("disable_fast_negotation should be false, it wasn't: %t", actual)
+	}
+
+	authConfig.Config["disable_fast_negotiation"] = "true"
+	authMethod, err = NewKerberosAuthMethod(authConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// True from override
+	if actual := authMethod.(*kerberosMethod).loginCfg.DisableFASTNegotiation; !actual {
+		t.Fatalf("disable_fast_negotation should be true, it wasn't: %t", actual)
 	}
 }
 

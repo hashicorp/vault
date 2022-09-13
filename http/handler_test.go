@@ -15,8 +15,7 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
-
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -191,6 +190,72 @@ func TestHandler_cors(t *testing.T) {
 	}
 }
 
+func TestHandler_HostnameHeader(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		description   string
+		config        *vault.CoreConfig
+		headerPresent bool
+	}{
+		{
+			description:   "with no header configured",
+			config:        nil,
+			headerPresent: false,
+		},
+		{
+			description: "with header configured",
+			config: &vault.CoreConfig{
+				EnableResponseHeaderHostname: true,
+			},
+			headerPresent: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			var core *vault.Core
+
+			if tc.config == nil {
+				core, _, _ = vault.TestCoreUnsealed(t)
+			} else {
+				core, _, _ = vault.TestCoreUnsealedWithConfig(t, tc.config)
+			}
+
+			ln, addr := TestServer(t, core)
+			defer ln.Close()
+
+			req, err := http.NewRequest("GET", addr+"/v1/sys/seal-status", nil)
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			client := cleanhttp.DefaultClient()
+			resp, err := client.Do(req)
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			if resp == nil {
+				t.Fatal("nil response")
+			}
+
+			hnHeader := resp.Header.Get("X-Vault-Hostname")
+			if tc.headerPresent && hnHeader == "" {
+				t.Logf("header configured = %t", core.HostnameHeaderEnabled())
+				t.Fatal("missing 'X-Vault-Hostname' header entry in response")
+			}
+			if !tc.headerPresent && hnHeader != "" {
+				t.Fatal("didn't expect 'X-Vault-Hostname' header but it was present anyway")
+			}
+
+			rniHeader := resp.Header.Get("X-Vault-Raft-Node-ID")
+			if rniHeader != "" {
+				t.Fatalf("no raft node ID header was expected, since we're not running a raft cluster. instead, got %s", rniHeader)
+			}
+		})
+	}
+}
+
 func TestHandler_CacheControlNoStore(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
@@ -221,6 +286,71 @@ func TestHandler_CacheControlNoStore(t *testing.T) {
 
 	if actual != "no-store" {
 		t.Fatalf("bad: Cache-Control. Expected: 'no-store', Actual: %q", actual)
+	}
+}
+
+func TestHandler_InFlightRequest(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	req, err := http.NewRequest("GET", addr+"/v1/sys/in-flight-req", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	req.Header.Set(consts.AuthHeaderName, token)
+
+	client := cleanhttp.DefaultClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if resp == nil {
+		t.Fatalf("nil response")
+	}
+
+	var actual map[string]interface{}
+	testResponseStatus(t, resp, 200)
+	testResponseBody(t, resp, &actual)
+	if actual == nil || len(actual) == 0 {
+		t.Fatal("expected to get at least one in-flight request, got nil or zero length map")
+	}
+	for _, v := range actual {
+		reqInfo, ok := v.(map[string]interface{})
+		if !ok {
+			t.Fatal("failed to read in-flight request")
+		}
+		if reqInfo["request_path"] != "/v1/sys/in-flight-req" {
+			t.Fatalf("expected /v1/sys/in-flight-req in-flight request path, got %s", actual["request_path"])
+		}
+	}
+}
+
+// TestHandler_MissingToken tests the response / error code if a request comes
+// in with a missing client token. See
+// https://github.com/hashicorp/vault/issues/8377
+func TestHandler_MissingToken(t *testing.T) {
+	// core, _, token := vault.TestCoreUnsealed(t)
+	core, _, _ := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	req, err := http.NewRequest("GET", addr+"/v1/sys/internal/ui/mounts/cubbyhole", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	req.Header.Set(WrapTTLHeaderName, "60s")
+
+	client := cleanhttp.DefaultClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != 403 {
+		t.Fatalf("expected code 403, got: %d", resp.StatusCode)
 	}
 }
 
@@ -280,9 +410,13 @@ func TestSysMounts_headerAuth(t *testing.T) {
 					"max_lease_ttl":     json.Number("0"),
 					"force_no_cache":    false,
 				},
-				"local":     false,
-				"seal_wrap": false,
-				"options":   map[string]interface{}{"version": "1"},
+				"local":           false,
+				"seal_wrap":       false,
+				"options":         map[string]interface{}{"version": "1"},
+				"sha":             "",
+				"running_sha":     "",
+				"running_version": "",
+				"version":         "",
 			},
 			"sys/": map[string]interface{}{
 				"description":             "system endpoints used for control, policy and debugging",
@@ -294,9 +428,13 @@ func TestSysMounts_headerAuth(t *testing.T) {
 					"force_no_cache":              false,
 					"passthrough_request_headers": []interface{}{"Accept"},
 				},
-				"local":     false,
-				"seal_wrap": false,
-				"options":   interface{}(nil),
+				"local":           false,
+				"seal_wrap":       true,
+				"options":         interface{}(nil),
+				"sha":             "",
+				"running_sha":     "",
+				"running_version": "",
+				"version":         "",
 			},
 			"cubbyhole/": map[string]interface{}{
 				"description":             "per-token private secret storage",
@@ -307,22 +445,31 @@ func TestSysMounts_headerAuth(t *testing.T) {
 					"max_lease_ttl":     json.Number("0"),
 					"force_no_cache":    false,
 				},
-				"local":     true,
-				"seal_wrap": false,
-				"options":   interface{}(nil),
+				"local":           true,
+				"seal_wrap":       false,
+				"options":         interface{}(nil),
+				"sha":             "",
+				"running_sha":     "",
+				"running_version": "",
+				"version":         "",
 			},
 			"identity/": map[string]interface{}{
 				"description":             "identity store",
 				"type":                    "identity",
 				"external_entropy_access": false,
 				"config": map[string]interface{}{
-					"default_lease_ttl": json.Number("0"),
-					"max_lease_ttl":     json.Number("0"),
-					"force_no_cache":    false,
+					"default_lease_ttl":           json.Number("0"),
+					"max_lease_ttl":               json.Number("0"),
+					"force_no_cache":              false,
+					"passthrough_request_headers": []interface{}{"Authorization"},
 				},
-				"local":     false,
-				"seal_wrap": false,
-				"options":   interface{}(nil),
+				"local":           false,
+				"seal_wrap":       false,
+				"options":         interface{}(nil),
+				"sha":             "",
+				"running_sha":     "",
+				"running_version": "",
+				"version":         "",
 			},
 		},
 		"secret/": map[string]interface{}{
@@ -334,9 +481,13 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"max_lease_ttl":     json.Number("0"),
 				"force_no_cache":    false,
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]interface{}{"version": "1"},
+			"local":           false,
+			"seal_wrap":       false,
+			"options":         map[string]interface{}{"version": "1"},
+			"sha":             "",
+			"running_sha":     "",
+			"running_version": "",
+			"version":         "",
 		},
 		"sys/": map[string]interface{}{
 			"description":             "system endpoints used for control, policy and debugging",
@@ -348,9 +499,13 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"force_no_cache":              false,
 				"passthrough_request_headers": []interface{}{"Accept"},
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   interface{}(nil),
+			"local":           false,
+			"seal_wrap":       true,
+			"options":         interface{}(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"running_version": "",
+			"version":         "",
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description":             "per-token private secret storage",
@@ -361,22 +516,31 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"max_lease_ttl":     json.Number("0"),
 				"force_no_cache":    false,
 			},
-			"local":     true,
-			"seal_wrap": false,
-			"options":   interface{}(nil),
+			"local":           true,
+			"seal_wrap":       false,
+			"options":         interface{}(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"running_version": "",
+			"version":         "",
 		},
 		"identity/": map[string]interface{}{
 			"description":             "identity store",
 			"type":                    "identity",
 			"external_entropy_access": false,
 			"config": map[string]interface{}{
-				"default_lease_ttl": json.Number("0"),
-				"max_lease_ttl":     json.Number("0"),
-				"force_no_cache":    false,
+				"default_lease_ttl":           json.Number("0"),
+				"max_lease_ttl":               json.Number("0"),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []interface{}{"Authorization"},
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   interface{}(nil),
+			"local":           false,
+			"seal_wrap":       false,
+			"options":         interface{}(nil),
+			"sha":             "",
+			"running_sha":     "",
+			"running_version": "",
+			"version":         "",
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -540,7 +704,6 @@ func TestHandler_requestAuth(t *testing.T) {
 
 	rootCtx := namespace.RootContext(nil)
 	te, err := core.LookupToken(rootCtx, token)
-
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -560,7 +723,8 @@ func TestHandler_requestAuth(t *testing.T) {
 	for _, r := range []*http.Request{rWithVault, rWithAuthorization} {
 		req := logical.TestRequest(t, logical.ReadOperation, "test/path")
 		r = r.WithContext(rootCtx)
-		req, err = requestAuth(core, r, req)
+		requestAuth(r, req)
+		err = core.PopulateTokenEntry(rootCtx, req)
 		if err != nil {
 			t.Fatalf("err: %s", err)
 		}
@@ -585,26 +749,14 @@ func TestHandler_requestAuth(t *testing.T) {
 	}
 	req := logical.TestRequest(t, logical.ReadOperation, "test/path")
 
-	req, err = requestAuth(core, rNothing, req)
+	requestAuth(rNothing, req)
+	err = core.PopulateTokenEntry(rootCtx, req)
 	if err != nil {
 		t.Fatalf("expected no error, got %s", err)
 	}
 	if req.ClientToken != "" {
 		t.Fatalf("client token should not be filled, got %s", req.ClientToken)
 	}
-
-	rFragmentedHeader, err := http.NewRequest("GET", "v1/test/path", nil)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	rFragmentedHeader.Header.Set("Authorization", "Bearer something somewhat")
-	req = logical.TestRequest(t, logical.ReadOperation, "test/path")
-
-	_, err = requestAuth(core, rFragmentedHeader, req)
-	if err == nil {
-		t.Fatalf("expected an error, got none")
-	}
-
 }
 
 func TestHandler_getTokenFromReq(t *testing.T) {
@@ -655,7 +807,6 @@ func testNonPrintable(t *testing.T, disable bool) {
 	ln, addr := TestListener(t)
 	props := &vault.HandlerProperties{
 		Core:                  core,
-		MaxRequestSize:        DefaultMaxRequestSize,
 		DisablePrintableCheck: disable,
 	}
 	TestServerWithListenerAndProperties(t, ln, addr, core, props)

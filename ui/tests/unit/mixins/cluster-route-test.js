@@ -8,11 +8,12 @@ import {
   CLUSTER,
   CLUSTER_INDEX,
   DR_REPLICATION_SECONDARY,
-} from 'vault/mixins/cluster-route';
+  REDIRECT,
+} from 'vault/lib/route-paths';
 import { module, test } from 'qunit';
 import sinon from 'sinon';
 
-module('Unit | Mixin | cluster route', function() {
+module('Unit | Mixin | cluster route', function () {
   function createClusterRoute(
     clusterModel = {},
     methods = { router: {}, hasKeyData: () => false, authToken: () => null, transitionTo: () => {} }
@@ -24,7 +25,7 @@ module('Unit | Mixin | cluster route', function() {
     return ClusterRouteObject.create();
   }
 
-  test('#targetRouteName init', function(assert) {
+  test('#targetRouteName init', function (assert) {
     let subject = createClusterRoute({ needsInit: true });
     subject.routeName = CLUSTER;
     assert.equal(subject.targetRouteName(), INIT, 'forwards to INIT when cluster needs init');
@@ -46,7 +47,7 @@ module('Unit | Mixin | cluster route', function() {
     );
   });
 
-  test('#targetRouteName when #hasDataKey is true', function(assert) {
+  test('#targetRouteName when #hasDataKey is true', function (assert) {
     let subject = createClusterRoute(
       { needsInit: false, sealed: true },
       { hasKeyData: () => true, authToken: () => null }
@@ -67,7 +68,7 @@ module('Unit | Mixin | cluster route', function() {
     assert.equal(subject.targetRouteName(), AUTH, 'allowed to proceed to auth');
   });
 
-  test('#targetRouteName happy path forwards to CLUSTER route', function(assert) {
+  test('#targetRouteName happy path forwards to CLUSTER route', function (assert) {
     let subject = createClusterRoute(
       { needsInit: false, sealed: false, dr: { isSecondary: false } },
       { hasKeyData: () => false, authToken: () => 'a token' }
@@ -79,7 +80,7 @@ module('Unit | Mixin | cluster route', function() {
     assert.equal(subject.targetRouteName(), CLUSTER, 'forwards when unsealed and navigating to UNSEAL');
 
     subject.routeName = AUTH;
-    assert.equal(subject.targetRouteName(), CLUSTER, 'forwards when authenticated and navigating to AUTH');
+    assert.equal(subject.targetRouteName(), REDIRECT, 'forwards when authenticated and navigating to AUTH');
 
     subject.routeName = DR_REPLICATION_SECONDARY;
     assert.equal(
@@ -89,7 +90,29 @@ module('Unit | Mixin | cluster route', function() {
     );
   });
 
-  test('#transitionToTargetRoute', function(assert) {
+  test('#targetRouteName happy path when not authed forwards to AUTH', function (assert) {
+    let subject = createClusterRoute(
+      { needsInit: false, sealed: false, dr: { isSecondary: false } },
+      { hasKeyData: () => false, authToken: () => null }
+    );
+    subject.routeName = INIT;
+    assert.equal(subject.targetRouteName(), AUTH, 'forwards when inited and navigating to INIT');
+
+    subject.routeName = UNSEAL;
+    assert.equal(subject.targetRouteName(), AUTH, 'forwards when unsealed and navigating to UNSEAL');
+
+    subject.routeName = AUTH;
+    assert.equal(subject.targetRouteName(), AUTH, 'forwards when non-authenticated and navigating to AUTH');
+
+    subject.routeName = DR_REPLICATION_SECONDARY;
+    assert.equal(
+      subject.targetRouteName(),
+      AUTH,
+      'forwards when not a DR secondary and navigating to DR_REPLICATION_SECONDARY'
+    );
+  });
+
+  test('#transitionToTargetRoute', function (assert) {
     let redirectRouteURL = '/vault/secrets/secret/create';
     let subject = createClusterRoute({ needsInit: false, sealed: false });
     subject.router.currentURL = redirectRouteURL;
@@ -103,7 +126,7 @@ module('Unit | Mixin | cluster route', function() {
     spy.restore();
   });
 
-  test('#transitionToTargetRoute with auth as a target', function(assert) {
+  test('#transitionToTargetRoute with auth as a target', function (assert) {
     let subject = createClusterRoute({ needsInit: false, sealed: false });
     let spy = sinon.spy(subject, 'transitionTo');
     // in this case it's already transitioning to the AUTH route so we don't need to call transitionTo again
@@ -112,7 +135,7 @@ module('Unit | Mixin | cluster route', function() {
     spy.restore();
   });
 
-  test('#transitionToTargetRoute with auth target, coming from cluster route', function(assert) {
+  test('#transitionToTargetRoute with auth target, coming from cluster route', function (assert) {
     let subject = createClusterRoute({ needsInit: false, sealed: false });
     let spy = sinon.spy(subject, 'transitionTo');
     subject.transitionToTargetRoute({ targetName: CLUSTER_INDEX });

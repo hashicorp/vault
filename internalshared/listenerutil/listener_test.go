@@ -84,5 +84,4 @@ func TestUnixSocketListener(t *testing.T) {
 			t.Fatalf("failed to set permissions on the socket file")
 		}
 	})
-
 }

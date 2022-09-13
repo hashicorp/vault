@@ -105,7 +105,6 @@ func (b *backend) DB(ctx context.Context, s logical.Storage) (*gocql.Session, er
 	b.session = session
 
 	return session, err
-
 }
 
 // ResetDB forces a connection next time DB() is called.

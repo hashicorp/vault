@@ -1,60 +1,17 @@
-import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
-import Component from '@ember/component';
+import Component from '@glimmer/component';
+import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
-import { alias, or } from '@ember/object/computed';
+import { next } from '@ember/runloop';
 
-export default Component.extend({
-  tagName: '',
-  store: service(),
-  version: null,
-  useDefaultTrigger: false,
-  onRefresh() {},
+export default class SecretVersionMenu extends Component {
+  @service router;
 
-  deleteVersionPath: maybeQueryRecord(
-    'capabilities',
-    context => {
-      let [backend, id] = JSON.parse(context.version.id);
-      return {
-        id: `${backend}/delete/${id}`,
-      };
-    },
-    'version.id'
-  ),
-  canDeleteVersion: alias('deleteVersionPath.canUpdate'),
-  destroyVersionPath: maybeQueryRecord(
-    'capabilities',
-    context => {
-      let [backend, id] = JSON.parse(context.version.id);
-      return {
-        id: `${backend}/destroy/${id}`,
-      };
-    },
-    'version.id'
-  ),
-  canDestroyVersion: alias('destroyVersionPath.canUpdate'),
-  undeleteVersionPath: maybeQueryRecord(
-    'capabilities',
-    context => {
-      let [backend, id] = JSON.parse(context.version.id);
-      return {
-        id: `${backend}/undelete/${id}`,
-      };
-    },
-    'version.id'
-  ),
-  canUndeleteVersion: alias('undeleteVersionPath.canUpdate'),
+  onRefresh() {}
 
-  isFetchingVersionCapabilities: or(
-    'deleteVersionPath.isPending',
-    'destroyVersionPath.isPending',
-    'undeleteVersionPath.isPending'
-  ),
-  actions: {
-    deleteVersion(deleteType = 'destroy') {
-      return this.store
-        .adapterFor('secret-v2-version')
-        .v2DeleteOperation(this.store, this.version.id, deleteType)
-        .then(this.onRefresh);
-    },
-  },
-});
+  @action
+  closeDropdown(dropdown) {
+    // strange issue where closing dropdown triggers full transition which redirects to auth screen in production builds
+    // closing dropdown in next tick of run loop fixes it
+    next(() => dropdown.actions.close());
+  }
+}

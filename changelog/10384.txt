@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/database/influxdb: Fix issue where not all errors from InfluxDB were being handled
+```

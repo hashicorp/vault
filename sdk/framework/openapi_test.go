@@ -145,7 +145,6 @@ func TestOpenAPI_Regex(t *testing.T) {
 				t.Fatalf("Clean Regex error (%s). Expected %s, got %s", test.input, test.output, result)
 			}
 		}
-
 	})
 }
 
@@ -200,6 +199,12 @@ func TestOpenAPI_ExpandPattern(t *testing.T) {
 		{"^plugins/catalog/(?P<type>auth|database|secret)/?$", []string{
 			"plugins/catalog/{type}",
 		}},
+		{"(pathOne|pathTwo)/", []string{"pathOne/", "pathTwo/"}},
+		{"(pathOne|pathTwo)/" + GenericNameRegex("name"), []string{"pathOne/{name}", "pathTwo/{name}"}},
+		{
+			"(pathOne|path-2|Path_3)/" + GenericNameRegex("name"),
+			[]string{"Path_3/{name}", "path-2/{name}", "pathOne/{name}"},
+		},
 	}
 
 	for i, test := range tests {
@@ -266,7 +271,7 @@ func TestOpenAPI_SpecialPaths(t *testing.T) {
 			Root:            test.rootPaths,
 			Unauthenticated: test.unauthPaths,
 		}
-		err := documentPath(&path, sp, logical.TypeLogical, doc)
+		err := documentPath(&path, sp, "kv", false, logical.TypeLogical, doc)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -317,7 +322,86 @@ func TestOpenAPI_Paths(t *testing.T) {
 		testPath(t, p, sp, expected("legacy"))
 	})
 
-	t.Run("Operations", func(t *testing.T) {
+	t.Run("Operations - All Operations", func(t *testing.T) {
+		p := &Path{
+			Pattern: "foo/" + GenericNameRegex("id"),
+			Fields: map[string]*FieldSchema{
+				"id": {
+					Type:        TypeString,
+					Description: "id path parameter",
+				},
+				"flavors": {
+					Type:        TypeCommaStringSlice,
+					Description: "the flavors",
+				},
+				"name": {
+					Type:        TypeNameString,
+					Default:     "Larry",
+					Description: "the name",
+				},
+				"age": {
+					Type:          TypeInt,
+					Description:   "the age",
+					AllowedValues: []interface{}{1, 2, 3},
+					Required:      true,
+					DisplayAttrs: &DisplayAttributes{
+						Name:      "Age",
+						Sensitive: true,
+						Group:     "Some Group",
+						Value:     7,
+					},
+				},
+				"x-abc-token": {
+					Type:          TypeHeader,
+					Description:   "a header value",
+					AllowedValues: []interface{}{"a", "b", "c"},
+				},
+				"maximum": {
+					Type:        TypeInt64,
+					Description: "a maximum value",
+				},
+				"format": {
+					Type:        TypeString,
+					Description: "a query param",
+					Query:       true,
+				},
+			},
+			HelpSynopsis:    "Synopsis",
+			HelpDescription: "Description",
+			Operations: map[logical.Operation]OperationHandler{
+				logical.ReadOperation: &PathOperation{
+					Summary:     "My Summary",
+					Description: "My Description",
+				},
+				logical.UpdateOperation: &PathOperation{
+					Summary:     "Update Summary",
+					Description: "Update Description",
+				},
+				logical.CreateOperation: &PathOperation{
+					Summary:     "Create Summary",
+					Description: "Create Description",
+				},
+				logical.ListOperation: &PathOperation{
+					Summary:     "List Summary",
+					Description: "List Description",
+				},
+				logical.DeleteOperation: &PathOperation{
+					Summary:     "This shouldn't show up",
+					Unpublished: true,
+				},
+			},
+			DisplayAttrs: &DisplayAttributes{
+				Navigation: true,
+			},
+		}
+
+		sp := &logical.Paths{
+			Root: []string{"foo*"},
+		}
+		testPath(t, p, sp, expected("operations"))
+	})
+
+	t.Run("Operations - List Only", func(t *testing.T) {
 		p := &Path{
 			Pattern: "foo/" + GenericNameRegex("id"),
 			Fields: map[string]*FieldSchema{
@@ -360,25 +444,9 @@ func TestOpenAPI_Paths(t *testing.T) {
 			HelpSynopsis:    "Synopsis",
 			HelpDescription: "Description",
 			Operations: map[logical.Operation]OperationHandler{
-				logical.ReadOperation: &PathOperation{
-					Summary:     "My Summary",
-					Description: "My Description",
-				},
-				logical.UpdateOperation: &PathOperation{
-					Summary:     "Update Summary",
-					Description: "Update Description",
-				},
-				logical.CreateOperation: &PathOperation{
-					Summary:     "Create Summary",
-					Description: "Create Description",
-				},
 				logical.ListOperation: &PathOperation{
 					Summary:     "List Summary",
 					Description: "List Description",
-				},
-				logical.DeleteOperation: &PathOperation{
-					Summary:     "This shouldn't show up",
-					Unpublished: true,
 				},
 			},
 			DisplayAttrs: &DisplayAttributes{
@@ -389,7 +457,7 @@ func TestOpenAPI_Paths(t *testing.T) {
 		sp := &logical.Paths{
 			Root: []string{"foo*"},
 		}
-		testPath(t, p, sp, expected("operations"))
+		testPath(t, p, sp, expected("operations_list"))
 	})
 
 	t.Run("Responses", func(t *testing.T) {
@@ -451,11 +519,11 @@ func TestOpenAPI_OperationID(t *testing.T) {
 
 	for _, context := range []string{"", "bar"} {
 		doc := NewOASDocument()
-		err := documentPath(path1, nil, logical.TypeLogical, doc)
+		err := documentPath(path1, nil, "kv", false, logical.TypeLogical, doc)
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = documentPath(path2, nil, logical.TypeLogical, doc)
+		err = documentPath(path2, nil, "kv", false, logical.TypeLogical, doc)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -515,7 +583,7 @@ func TestOpenAPI_CustomDecoder(t *testing.T) {
 	}
 
 	docOrig := NewOASDocument()
-	err := documentPath(p, nil, logical.TypeLogical, docOrig)
+	err := documentPath(p, nil, "kv", false, logical.TypeLogical, docOrig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -578,7 +646,7 @@ func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) 
 	t.Helper()
 
 	doc := NewOASDocument()
-	if err := documentPath(path, sp, logical.TypeLogical, doc); err != nil {
+	if err := documentPath(path, sp, "kv", false, logical.TypeLogical, doc); err != nil {
 		t.Fatal(err)
 	}
 	doc.CreateOperationIDs("")
@@ -599,7 +667,7 @@ func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) 
 	}
 
 	if diff := deep.Equal(actual, expected); diff != nil {
-		//fmt.Println(string(docJSON)) // uncomment to debug generated JSON (very helpful when fixing tests)
+		// fmt.Println(string(docJSON)) // uncomment to debug generated JSON (very helpful when fixing tests)
 		t.Fatal(diff)
 	}
 }
@@ -630,7 +698,6 @@ func expected(name string) string {
 
 func mustJSONMarshal(t *testing.T, data interface{}) []byte {
 	j, err := json.MarshalIndent(data, "", "  ")
-
 	if err != nil {
 		t.Fatal(err)
 	}

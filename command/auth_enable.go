@@ -13,8 +13,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*AuthEnableCommand)(nil)
-var _ cli.CommandAutocomplete = (*AuthEnableCommand)(nil)
+var (
+	_ cli.Command             = (*AuthEnableCommand)(nil)
+	_ cli.CommandAutocomplete = (*AuthEnableCommand)(nil)
+)
 
 type AuthEnableCommand struct {
 	*BaseCommand
@@ -35,6 +37,7 @@ type AuthEnableCommand struct {
 	flagExternalEntropyAccess     bool
 	flagTokenType                 string
 	flagVersion                   int
+	flagPluginVersion             string
 }
 
 func (c *AuthEnableCommand) Synopsis() string {
@@ -115,15 +118,15 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACRequestKeys,
 		Target: &c.flagAuditNonHMACRequestKeys,
-		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
-			"devices in the request data object.",
+		Usage: "Key that will not be HMAC'd by audit devices in the request data object. " +
+			"To specify multiple values, specify this flag multiple times.",
 	})
 
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACResponseKeys,
 		Target: &c.flagAuditNonHMACResponseKeys,
-		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
-			"devices in the response data object.",
+		Usage: "Key that will not be HMAC'd by audit devices in the response data object. " +
+			"To specify multiple values, specify this flag multiple times.",
 	})
 
 	f.StringVar(&StringVar{
@@ -135,15 +138,15 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNamePassthroughRequestHeaders,
 		Target: &c.flagPassthroughRequestHeaders,
-		Usage: "Comma-separated string or list of request header values that " +
-			"will be sent to the plugin",
+		Usage: "Request header value that will be sent to the plugin. To specify multiple " +
+			"values, specify this flag multiple times.",
 	})
 
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAllowedResponseHeaders,
 		Target: &c.flagAllowedResponseHeaders,
-		Usage: "Comma-separated string or list of response header values that " +
-			"plugins will be allowed to set",
+		Usage: "Response header value that plugins will be allowed to set. To specify multiple " +
+			"values, specify this flag multiple times.",
 	})
 
 	f.StringVar(&StringVar{
@@ -195,6 +198,13 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 		Target:  &c.flagVersion,
 		Default: 0,
 		Usage:   "Select the version of the auth method to run. Not supported by all auth methods.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "plugin-version",
+		Target:  &c.flagPluginVersion,
+		Default: "",
+		Usage:   "Select the version of the plugin to enable.",
 	})
 
 	return set
@@ -260,6 +270,7 @@ func (c *AuthEnableCommand) Run(args []string) int {
 
 	authOpts := &api.EnableAuthOptions{
 		Type:                  authType,
+		Version:               c.flagPluginVersion,
 		Description:           c.flagDescription,
 		Local:                 c.flagLocal,
 		SealWrap:              c.flagSealWrap,

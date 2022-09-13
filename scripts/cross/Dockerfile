@@ -12,7 +12,7 @@ RUN apt-get update -y && apt-get install --no-install-recommends -y -q \
                          libltdl-dev \
                          libltdl7
 
-RUN curl -sL https://deb.nodesource.com/setup_10.x | bash -
+RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
 RUN curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
 RUN echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
 
@@ -31,11 +31,6 @@ ENV GOROOT /goroot
 ENV PATH $GOROOT/bin:$GOPATH/bin:$PATH
 
 RUN go get golang.org/x/tools/cmd/goimports
-RUN go get github.com/mitchellh/gox
-RUN go get github.com/hashicorp/go-bindata
-RUN go get github.com/hashicorp/go-bindata/go-bindata
-RUN go get github.com/elazarl/go-bindata-assetfs
-RUN go get github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
 
 RUN mkdir -p /gopath/src/github.com/hashicorp/vault
 WORKDIR /gopath/src/github.com/hashicorp/vault

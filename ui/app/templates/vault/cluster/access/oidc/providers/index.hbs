@@ -1,0 +1,9 @@
+<Toolbar>
+  <ToolbarActions>
+    <ToolbarLink data-test-oidc-provider-create @type="add" @params={{array "vault.cluster.access.oidc.providers.create"}}>
+      Create provider
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+
+<Oidc::ProviderList @model={{this.model}} />

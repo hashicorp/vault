@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"strings"
 	"time"
 
+	kvbuilder "github.com/hashicorp/go-secure-stdlib/kv-builder"
 	"github.com/hashicorp/vault/api"
-	kvbuilder "github.com/hashicorp/vault/internalshared/kv-builder"
 	"github.com/kr/text"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/mitchellh/mapstructure"
@@ -34,7 +35,7 @@ func extractListData(secret *api.Secret) ([]interface{}, bool) {
 
 // sanitizePath removes any leading or trailing things from a "path".
 func sanitizePath(s string) string {
-	return ensureNoTrailingSlash(ensureNoLeadingSlash(strings.TrimSpace(s)))
+	return ensureNoTrailingSlash(ensureNoLeadingSlash(s))
 }
 
 // ensureTrailingSlash ensures the given string has a trailing slash.
@@ -50,7 +51,7 @@ func ensureTrailingSlash(s string) string {
 	return s
 }
 
-// ensureNoTrailingSlash ensures the given string has a trailing slash.
+// ensureNoTrailingSlash ensures the given string does not have a trailing slash.
 func ensureNoTrailingSlash(s string) string {
 	s = strings.TrimSpace(s)
 	if s == "" {
@@ -63,7 +64,7 @@ func ensureNoTrailingSlash(s string) string {
 	return s
 }
 
-// ensureNoLeadingSlash ensures the given string has a trailing slash.
+// ensureNoLeadingSlash ensures the given string does not have a leading slash.
 func ensureNoLeadingSlash(s string) string {
 	s = strings.TrimSpace(s)
 	if s == "" {
@@ -191,6 +192,7 @@ func printKeyStatus(ks *api.KeyStatus) string {
 	return columnOutput([]string{
 		fmt.Sprintf("Key Term | %d", ks.Term),
 		fmt.Sprintf("Install Time | %s", ks.InstallTime.UTC().Format(time.RFC822)),
+		fmt.Sprintf("Encryption Count | %d", ks.Encryptions),
 	}, nil)
 }
 
@@ -259,17 +261,63 @@ func humanDuration(d time.Duration) string {
 // humanDurationInt prints the given int as if it were a time.Duration  number
 // of seconds.
 func humanDurationInt(i interface{}) interface{} {
-	switch i.(type) {
+	switch i := i.(type) {
 	case int:
-		return humanDuration(time.Duration(i.(int)) * time.Second)
+		return humanDuration(time.Duration(i) * time.Second)
 	case int64:
-		return humanDuration(time.Duration(i.(int64)) * time.Second)
+		return humanDuration(time.Duration(i) * time.Second)
 	case json.Number:
-		if i, err := i.(json.Number).Int64(); err == nil {
+		if i, err := i.Int64(); err == nil {
 			return humanDuration(time.Duration(i) * time.Second)
 		}
 	}
 
 	// If we don't know what type it is, just return the original value
 	return i
+}
+
+// parseFlagFile accepts a flag value returns the contets of that value. If the
+// value starts with '@', that indicates the value is a file and its content
+// should be read and returned. Otherwise, the raw value is returned.
+func parseFlagFile(raw string) (string, error) {
+	// check if the provided argument should be read from file
+	if len(raw) > 0 && raw[0] == '@' {
+		contents, err := ioutil.ReadFile(raw[1:])
+		if err != nil {
+			return "", fmt.Errorf("error reading file: %w", err)
+		}
+
+		return string(contents), nil
+	}
+
+	return raw, nil
+}
+
+func generateFlagWarnings(args []string) string {
+	var trailingFlags []string
+	for _, arg := range args {
+		if !strings.HasPrefix(arg, "-") {
+			continue
+		}
+
+		isGlobalFlag := false
+		trimmedArg, _, _ := strings.Cut(strings.TrimLeft(arg, "-"), "=")
+		for _, flag := range globalFlags {
+			if trimmedArg == flag {
+				isGlobalFlag = true
+			}
+		}
+		if isGlobalFlag {
+			continue
+		}
+
+		trailingFlags = append(trailingFlags, arg)
+	}
+
+	if len(trailingFlags) > 0 {
+		return fmt.Sprintf("Command flags must be provided before positional arguments. "+
+			"The following arguments will not be parsed as flags: [%s]", strings.Join(trailingFlags, ","))
+	} else {
+		return ""
+	}
 }

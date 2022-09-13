@@ -44,11 +44,11 @@ func TestServiceRegistration(t *testing.T) {
 		IsActive:             true,
 		IsPerformanceStandby: true,
 	}
-	reg, err := NewServiceRegistration(config, logger, state, "")
+	reg, err := NewServiceRegistration(config, logger, state)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := reg.Run(shutdownCh, &sync.WaitGroup{}); err != nil {
+	if err := reg.Run(shutdownCh, &sync.WaitGroup{}, ""); err != nil {
 		t.Fatal(err)
 	}
 

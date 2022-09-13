@@ -1,0 +1,4 @@
+contact_links:
+  - name: Ask a question
+    url: https://discuss.hashicorp.com/c/vault
+    about: For increased visibility, please post questions on the discussion forum.

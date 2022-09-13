@@ -18,16 +18,17 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
 
 const (
-	testPlaintext = "the quick brown fox"
+	testPlaintext = "The quick brown fox"
 )
 
-func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
+func createBackendWithStorage(t testing.TB) (*backend, logical.Storage) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
@@ -42,7 +43,7 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 	return b, config.StorageView
 }
 
-func createBackendWithSysView(t *testing.T) (*backend, logical.Storage) {
+func createBackendWithSysView(t testing.TB) (*backend, logical.Storage) {
 	sysView := logical.TestSystemView()
 	storage := &logical.InmemStorage{}
 
@@ -64,7 +65,7 @@ func createBackendWithSysView(t *testing.T) (*backend, logical.Storage) {
 	return b, storage
 }
 
-func createBackendWithSysViewWithStorage(t *testing.T, s logical.Storage) *backend {
+func createBackendWithSysViewWithStorage(t testing.TB, s logical.Storage) *backend {
 	sysView := logical.TestSystemView()
 
 	conf := &logical.BackendConfig{
@@ -85,7 +86,7 @@ func createBackendWithSysViewWithStorage(t *testing.T, s logical.Storage) *backe
 	return b
 }
 
-func createBackendWithForceNoCacheWithSysViewWithStorage(t *testing.T, s logical.Storage) *backend {
+func createBackendWithForceNoCacheWithSysViewWithStorage(t testing.TB, s logical.Storage) *backend {
 	sysView := logical.TestSystemView()
 	sysView.CachingDisabledVal = true
 
@@ -496,6 +497,7 @@ func testAccStepAdjustPolicyMinDecryption(t *testing.T, name string, minVer int)
 		},
 	}
 }
+
 func testAccStepAdjustPolicyMinEncryption(t *testing.T, name string, minVer int) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
@@ -606,7 +608,7 @@ func testAccStepReadPolicyWithVersions(t *testing.T, name string, expectNone, de
 			if d.MinEncryptionVersion != minEncryptionVersion {
 				return fmt.Errorf("bad: %#v", d)
 			}
-			if d.DeletionAllowed == true {
+			if d.DeletionAllowed {
 				return fmt.Errorf("bad: %#v", d)
 			}
 			if d.Derived != derived {
@@ -621,7 +623,8 @@ func testAccStepReadPolicyWithVersions(t *testing.T, name string, expectNone, de
 }
 
 func testAccStepEncrypt(
-	t *testing.T, name, plaintext string, decryptData map[string]interface{}) logicaltest.TestStep {
+	t *testing.T, name, plaintext string, decryptData map[string]interface{},
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "encrypt/" + name,
@@ -645,7 +648,8 @@ func testAccStepEncrypt(
 }
 
 func testAccStepEncryptUpsert(
-	t *testing.T, name, plaintext string, decryptData map[string]interface{}) logicaltest.TestStep {
+	t *testing.T, name, plaintext string, decryptData map[string]interface{},
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.CreateOperation,
 		Path:      "encrypt/" + name,
@@ -669,7 +673,8 @@ func testAccStepEncryptUpsert(
 }
 
 func testAccStepEncryptContext(
-	t *testing.T, name, plaintext, context string, decryptData map[string]interface{}) logicaltest.TestStep {
+	t *testing.T, name, plaintext, context string, decryptData map[string]interface{},
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "encrypt/" + name,
@@ -695,7 +700,8 @@ func testAccStepEncryptContext(
 }
 
 func testAccStepDecrypt(
-	t *testing.T, name, plaintext string, decryptData map[string]interface{}) logicaltest.TestStep {
+	t *testing.T, name, plaintext string, decryptData map[string]interface{},
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "decrypt/" + name,
@@ -723,7 +729,8 @@ func testAccStepDecrypt(
 }
 
 func testAccStepRewrap(
-	t *testing.T, name string, decryptData map[string]interface{}, expectedVer int) logicaltest.TestStep {
+	t *testing.T, name string, decryptData map[string]interface{}, expectedVer int,
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "rewrap/" + name,
@@ -742,7 +749,7 @@ func testAccStepRewrap(
 			verString := splitStrings[1][1:]
 			ver, err := strconv.Atoi(verString)
 			if err != nil {
-				return fmt.Errorf("error pulling out version from verString '%s', ciphertext was %s", verString, d.Ciphertext)
+				return fmt.Errorf("error pulling out version from verString %q, ciphertext was %s", verString, d.Ciphertext)
 			}
 			if ver != expectedVer {
 				return fmt.Errorf("did not get expected version")
@@ -755,7 +762,8 @@ func testAccStepRewrap(
 
 func testAccStepEncryptVX(
 	t *testing.T, name, plaintext string, decryptData map[string]interface{},
-	ver int, encryptHistory map[int]map[string]interface{}) logicaltest.TestStep {
+	ver int, encryptHistory map[int]map[string]interface{},
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "encrypt/" + name,
@@ -786,7 +794,8 @@ func testAccStepEncryptVX(
 
 func testAccStepLoadVX(
 	t *testing.T, name string, decryptData map[string]interface{},
-	ver int, encryptHistory map[int]map[string]interface{}) logicaltest.TestStep {
+	ver int, encryptHistory map[int]map[string]interface{},
+) logicaltest.TestStep {
 	// This is really a no-op to allow us to do data manip in the check function
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
@@ -799,7 +808,8 @@ func testAccStepLoadVX(
 }
 
 func testAccStepDecryptExpectFailure(
-	t *testing.T, name, plaintext string, decryptData map[string]interface{}) logicaltest.TestStep {
+	t *testing.T, name, plaintext string, decryptData map[string]interface{},
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "decrypt/" + name,
@@ -823,7 +833,8 @@ func testAccStepRotate(t *testing.T, name string) logicaltest.TestStep {
 
 func testAccStepWriteDatakey(t *testing.T, name string,
 	noPlaintext bool, bits int,
-	dataKeyInfo map[string]interface{}) logicaltest.TestStep {
+	dataKeyInfo map[string]interface{},
+) logicaltest.TestStep {
 	data := map[string]interface{}{}
 	subPath := "plaintext"
 	if noPlaintext {
@@ -854,7 +865,7 @@ func testAccStepWriteDatakey(t *testing.T, name string,
 				dataKeyInfo["plaintext"] = d.Plaintext
 				plainBytes, err := base64.StdEncoding.DecodeString(d.Plaintext)
 				if err != nil {
-					return fmt.Errorf("could not base64 decode plaintext string '%s'", d.Plaintext)
+					return fmt.Errorf("could not base64 decode plaintext string %q", d.Plaintext)
 				}
 				if len(plainBytes)*8 != bits {
 					return fmt.Errorf("returned key does not have correct bit length")
@@ -867,7 +878,8 @@ func testAccStepWriteDatakey(t *testing.T, name string,
 }
 
 func testAccStepDecryptDatakey(t *testing.T, name string,
-	dataKeyInfo map[string]interface{}) logicaltest.TestStep {
+	dataKeyInfo map[string]interface{},
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "decrypt/" + name,
@@ -881,7 +893,7 @@ func testAccStepDecryptDatakey(t *testing.T, name string,
 			}
 
 			if d.Plaintext != dataKeyInfo["plaintext"].(string) {
-				return fmt.Errorf("plaintext mismatch: got '%s', expected '%s', decryptData was %#v", d.Plaintext, dataKeyInfo["plaintext"].(string), resp.Data)
+				return fmt.Errorf("plaintext mismatch: got %q, expected %q, decryptData was %#v", d.Plaintext, dataKeyInfo["plaintext"].(string), resp.Data)
 			}
 			return nil
 		},
@@ -930,12 +942,12 @@ func testDerivedKeyUpgrade(t *testing.T, keyType keysutil.KeyType) {
 		t.Fatalf("bad KDF value by default; counter val is %d, KDF val is %d, policy is %#v", keysutil.Kdf_hmac_sha256_counter, p.KDF, *p)
 	}
 
-	derBytesOld, err := p.DeriveKey(keyContext, 1, 0)
+	derBytesOld, err := p.GetKey(keyContext, 1, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	derBytesOld2, err := p.DeriveKey(keyContext, 1, 0)
+	derBytesOld2, err := p.GetKey(keyContext, 1, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -949,12 +961,12 @@ func testDerivedKeyUpgrade(t *testing.T, keyType keysutil.KeyType) {
 		t.Fatal("expected no upgrade needed")
 	}
 
-	derBytesNew, err := p.DeriveKey(keyContext, 1, 64)
+	derBytesNew, err := p.GetKey(keyContext, 1, 64)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	derBytesNew2, err := p.DeriveKey(keyContext, 1, 64)
+	derBytesNew2, err := p.GetKey(keyContext, 1, 64)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -988,6 +1000,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 		Data: map[string]interface{}{
 			"derived":               false,
 			"convergent_encryption": true,
+			"type":                  keyType.String(),
 		},
 	}
 	resp, err := b.HandleRequest(context.Background(), req)
@@ -1008,6 +1021,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 		Data: map[string]interface{}{
 			"derived":               true,
 			"convergent_encryption": true,
+			"type":                  keyType.String(),
 		},
 	}
 	resp, err = b.HandleRequest(context.Background(), req)
@@ -1361,7 +1375,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 	wg := sync.WaitGroup{}
 
 	funcs := []string{"encrypt", "decrypt", "rotate", "change_min_version"}
-	//keys := []string{"test1", "test2", "test3", "test4", "test5"}
+	// keys := []string{"test1", "test2", "test3", "test4", "test5"}
 	keys := []string{"test1", "test2", "test3"}
 
 	// This is the goroutine loop
@@ -1383,7 +1397,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 
 		var chosenFunc, chosenKey string
 
-		//t.Errorf("Starting %d", id)
+		// t.Errorf("Starting %d", id)
 		for {
 			// Stop after 10 seconds
 			if time.Now().Sub(startTime) > 10*time.Second {
@@ -1408,7 +1422,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 			switch chosenFunc {
 			// Encrypt our plaintext and store the result
 			case "encrypt":
-				//t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
+				// t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
 				fd.Raw["plaintext"] = base64.StdEncoding.EncodeToString([]byte(testPlaintext))
 				fd.Schema = be.pathEncrypt().Fields
 				resp, err := be.pathEncryptWrite(context.Background(), req, fd)
@@ -1419,7 +1433,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 
 			// Rotate to a new key version
 			case "rotate":
-				//t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
+				// t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
 				fd.Schema = be.pathRotate().Fields
 				resp, err := be.pathRotateWrite(context.Background(), req, fd)
 				if err != nil {
@@ -1428,7 +1442,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 
 			// Decrypt the ciphertext and compare the result
 			case "decrypt":
-				//t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
+				// t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
 				ct := latestEncryptedText[chosenKey]
 				if ct == "" {
 					continue
@@ -1460,7 +1474,7 @@ func testPolicyFuzzingCommon(t *testing.T, be *backend) {
 
 			// Change the min version, which also tests the archive functionality
 			case "change_min_version":
-				//t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
+				// t.Errorf("%s, %s, %d", chosenFunc, chosenKey, id)
 				resp, err := be.pathPolicyRead(context.Background(), req, fd)
 				if err != nil {
 					t.Errorf("got an error reading policy %s: %v", chosenKey, err)
@@ -1514,5 +1528,192 @@ func TestBadInput(t *testing.T) {
 	_, err = b.HandleRequest(context.Background(), req)
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+func TestTransit_AutoRotateKeys(t *testing.T) {
+	tests := map[string]struct {
+		isDRSecondary   bool
+		isPerfSecondary bool
+		isStandby       bool
+		isLocal         bool
+		shouldRotate    bool
+	}{
+		"primary, no local mount": {
+			shouldRotate: true,
+		},
+		"DR secondary, no local mount": {
+			isDRSecondary: true,
+			shouldRotate:  false,
+		},
+		"perf standby, no local mount": {
+			isStandby:    true,
+			shouldRotate: false,
+		},
+		"perf secondary, no local mount": {
+			isPerfSecondary: true,
+			shouldRotate:    false,
+		},
+		"perf secondary, local mount": {
+			isPerfSecondary: true,
+			isLocal:         true,
+			shouldRotate:    true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(
+			name,
+			func(t *testing.T) {
+				var repState consts.ReplicationState
+				if test.isDRSecondary {
+					repState.AddState(consts.ReplicationDRSecondary)
+				}
+				if test.isPerfSecondary {
+					repState.AddState(consts.ReplicationPerformanceSecondary)
+				}
+				if test.isStandby {
+					repState.AddState(consts.ReplicationPerformanceStandby)
+				}
+
+				sysView := logical.TestSystemView()
+				sysView.ReplicationStateVal = repState
+				sysView.LocalMountVal = test.isLocal
+
+				storage := &logical.InmemStorage{}
+
+				conf := &logical.BackendConfig{
+					StorageView: storage,
+					System:      sysView,
+				}
+
+				b, _ := Backend(context.Background(), conf)
+				if b == nil {
+					t.Fatal("failed to create backend")
+				}
+
+				err := b.Backend.Setup(context.Background(), conf)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				// Write a key with the default auto rotate value (0/disabled)
+				req := &logical.Request{
+					Storage:   storage,
+					Operation: logical.UpdateOperation,
+					Path:      "keys/test1",
+				}
+				resp, err := b.HandleRequest(context.Background(), req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp != nil {
+					t.Fatal("expected nil response")
+				}
+
+				// Write a key with an auto rotate value one day in the future
+				req = &logical.Request{
+					Storage:   storage,
+					Operation: logical.UpdateOperation,
+					Path:      "keys/test2",
+					Data: map[string]interface{}{
+						"auto_rotate_period": 24 * time.Hour,
+					},
+				}
+				resp, err = b.HandleRequest(context.Background(), req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp != nil {
+					t.Fatal("expected nil response")
+				}
+
+				// Run the rotation check and ensure none of the keys have rotated
+				b.checkAutoRotateAfter = time.Now()
+				if err = b.autoRotateKeys(context.Background(), &logical.Request{Storage: storage}); err != nil {
+					t.Fatal(err)
+				}
+				req = &logical.Request{
+					Storage:   storage,
+					Operation: logical.ReadOperation,
+					Path:      "keys/test1",
+				}
+				resp, err = b.HandleRequest(context.Background(), req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp == nil {
+					t.Fatal("expected non-nil response")
+				}
+				if resp.Data["latest_version"] != 1 {
+					t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 1)
+				}
+
+				req.Path = "keys/test2"
+				resp, err = b.HandleRequest(context.Background(), req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp == nil {
+					t.Fatal("expected non-nil response")
+				}
+				if resp.Data["latest_version"] != 1 {
+					t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 1)
+				}
+
+				// Update auto rotate period on one key to be one nanosecond
+				p, _, err := b.GetPolicy(context.Background(), keysutil.PolicyRequest{
+					Storage: storage,
+					Name:    "test2",
+				}, b.GetRandomReader())
+				if err != nil {
+					t.Fatal(err)
+				}
+				if p == nil {
+					t.Fatal("expected non-nil policy")
+				}
+				p.AutoRotatePeriod = time.Nanosecond
+				err = p.Persist(context.Background(), storage)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				// Run the rotation check and validate the state of key rotations
+				b.checkAutoRotateAfter = time.Now()
+				if err = b.autoRotateKeys(context.Background(), &logical.Request{Storage: storage}); err != nil {
+					t.Fatal(err)
+				}
+				req = &logical.Request{
+					Storage:   storage,
+					Operation: logical.ReadOperation,
+					Path:      "keys/test1",
+				}
+				resp, err = b.HandleRequest(context.Background(), req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp == nil {
+					t.Fatal("expected non-nil response")
+				}
+				if resp.Data["latest_version"] != 1 {
+					t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 1)
+				}
+				req.Path = "keys/test2"
+				resp, err = b.HandleRequest(context.Background(), req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if resp == nil {
+					t.Fatal("expected non-nil response")
+				}
+				expectedVersion := 1
+				if test.shouldRotate {
+					expectedVersion = 2
+				}
+				if resp.Data["latest_version"] != expectedVersion {
+					t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], expectedVersion)
+				}
+			},
+		)
 	}
 }

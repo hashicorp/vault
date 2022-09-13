@@ -1,4 +1,4 @@
-import attr from 'ember-data/attr';
+import { attr } from '@ember-data/model';
 import Fragment from 'ember-data-model-fragments/fragment';
 
 export default Fragment.extend({
@@ -28,7 +28,7 @@ export default Fragment.extend({
   }),
   passthroughRequestHeaders: attr({
     label: 'Allowed passthrough request headers',
-    helpText: 'Headers to whitelist and pass from the request to the backend',
+    helpText: 'Headers to allow and pass from the request to the backend',
     editType: 'stringArray',
   }),
   tokenType: attr('string', {
