@@ -15,6 +15,7 @@ export default buildRoutes(function () {
     this.route('details');
   });
   this.route('roles', function () {
+    this.route('index', { path: '/' }); // ARG TODO remove
     this.route('create');
     this.route('role', { path: '/:name' }, function () {
       this.route('details');
