@@ -115,12 +115,6 @@ func (n *NoopBackend) Type() logical.BackendType {
 	return n.BackendType
 }
 
-func (n *NoopBackend) Version() logical.VersionInfo {
-	return logical.EmptyVersion
-}
-
-var _ logical.Backend = (*NoopBackend)(nil)
-
 // InitializableBackend is a backend that knows whether it has been initialized
 // properly.
 type InitializableBackend struct {
