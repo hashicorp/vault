@@ -20,8 +20,8 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	if err != nil {
 		return nil, err
 	}
-	if conf != nil {
-		b.initOCSPClient(bConf.OcspCacheSize)
+	if bConf != nil {
+		b.updatedConfig(bConf)
 	}
 	return b, nil
 }
@@ -56,10 +56,11 @@ type backend struct {
 	MapCertId *framework.PathMap
 
 	crls            map[string]CRLInfo
-	ocspDisabled    bool
+	ocspEnabled     bool
 	crlUpdateMutex  *sync.RWMutex
 	ocspClientMutex sync.RWMutex
 	ocspClient      *ocsp.Client
+	configUpdated   bool
 }
 
 func (b *backend) invalidate(_ context.Context, key string) {
@@ -68,6 +69,8 @@ func (b *backend) invalidate(_ context.Context, key string) {
 		b.crlUpdateMutex.Lock()
 		defer b.crlUpdateMutex.Unlock()
 		b.crls = nil
+	case key == "config":
+		b.configUpdated = true
 	}
 }
 
@@ -77,6 +80,14 @@ func (b *backend) initOCSPClient(cacheSize int) {
 	b.ocspClient = ocsp.New(func() hclog.Logger {
 		return b.Logger()
 	}, cacheSize)
+}
+
+func (b *backend) updatedConfig(config *config) error {
+	if config != nil {
+		b.initOCSPClient(config.OcspCacheSize)
+	}
+	b.configUpdated = false
+	return nil
 }
 
 const backendHelp = `

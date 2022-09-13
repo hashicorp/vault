@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 	lru "github.com/hashicorp/golang-lru"
 	"golang.org/x/crypto/ocsp"
-	"io/ioutil"
+	"io"
 	"math/big"
 	"net"
 	"net/http"
@@ -170,10 +170,6 @@ func durationMax(a, b time.Duration) time.Duration {
 		return a
 	}
 	return b
-}
-
-func durationMin(a, b time.Duration) time.Duration {
-	return durationMax(b, a)
 }
 
 // isInValidityRange checks the validity
@@ -375,7 +371,7 @@ func (c *Client) retryOCSP(
 	if res.StatusCode != http.StatusOK {
 		return nil, nil, nil, fmt.Errorf("HTTP code is not OK. %v: %v", res.StatusCode, res.Status)
 	}
-	ocspResBytes, err = ioutil.ReadAll(res.Body)
+	ocspResBytes, err = io.ReadAll(res.Body)
 	if err != nil {
 		return nil, nil, nil, err
 	}

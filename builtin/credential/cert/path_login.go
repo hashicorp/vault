@@ -82,6 +82,9 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 	if err != nil {
 		return nil, err
 	}
+	if b.configUpdated {
+		b.updatedConfig(config)
+	}
 
 	var matched *ParsedCert
 	if verifyResp, resp, err := b.verifyCredentials(ctx, req, data); err != nil {
@@ -154,6 +157,9 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	config, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, err
+	}
+	if b.configUpdated {
+		b.updatedConfig(config)
 	}
 
 	if !config.DisableBinding {
@@ -568,7 +574,7 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 }
 
 func (b *backend) checkForChainInOCSP(ctx context.Context, chain []*x509.Certificate, conf *ocsp.VerifyConfig) (bool, error) {
-	if b.ocspDisabled || len(chain) < 2 {
+	if !b.ocspEnabled || len(chain) < 2 {
 		return true, nil
 	}
 	b.ocspClientMutex.RLock()
