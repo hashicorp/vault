@@ -22,6 +22,11 @@ func pathConfig(b *backend) *framework.Path {
 				Default:     false,
 				Description: `If set, metadata of the certificate including the metadata corresponding to allowed_metadata_extensions will be stored in the alias. Defaults to false.`,
 			},
+			"ocsp_cache_size": {
+				Type:        framework.TypeInt,
+				Default:     100,
+				Description: `The size of the in memory OCSP response cache, shared by all configured certs`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
