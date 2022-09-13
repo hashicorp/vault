@@ -68,7 +68,7 @@ from the AuthorityInformationAccess extension on the certificate being inspected
 			"ocsp_fail_open": {
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: "If set to true, if an OCSP revocation cannot be made successfully, login will proceed rather.  If false, failing to get an OCSP status fails the request.",
+				Description: "If set to true, if an OCSP revocation cannot be made successfully, login will proceed rather than failing.  If false, failing to get an OCSP status fails the request.",
 			},
 			"ocsp_query_all_servers": {
 				Type:        framework.TypeBool,
