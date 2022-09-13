@@ -687,7 +687,7 @@ module('Integration | Component | search select', function (hooks) {
   test('it renders an info tooltip beside selection if does not match a record returned from query when passObject=false and idKey=id', async function (assert) {
     const models = ['some/model'];
     const spy = sinon.spy();
-    const inputValue = ['model-a-id', 'non-existent-model'];
+    const inputValue = ['model-a-id', 'non-existent-model', 'wildcard*'];
     this.set('models', models);
     this.set('onChange', spy);
     this.set('inputValue', inputValue);
@@ -700,16 +700,18 @@ module('Integration | Component | search select', function (hooks) {
         @passObject={{false}}
       />
     `);
-
-    assert.equal(component.selectedOptions.length, 2, 'there are two selected options');
+    assert.equal(component.selectedOptions.length, 3, 'there are three selected options');
     assert.dom('[data-test-selected-option="0"]').hasText('model-a-id');
     assert.dom('[data-test-selected-option="1"]').hasText('non-existent-model');
+    assert.dom('[data-test-selected-option="2"]').hasText('wildcard*');
     assert
       .dom('[data-test-selected-option="0"] [data-test-component="info-tooltip"]')
       .doesNotExist('does not render info tooltip for model that exists');
-
     assert
       .dom('[data-test-selected-option="1"] [data-test-component="info-tooltip"]')
       .exists('renders info tooltip for model not returned from query');
+    assert
+      .dom('[data-test-selected-option="2"] [data-test-component="info-tooltip"]')
+      .doesNotExist('does not render info tooltip for wildcard option');
   });
 });
