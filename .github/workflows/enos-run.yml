@@ -26,7 +26,7 @@ jobs:
       - name: Create Enos scenario matrix
         id: enos-matrix
         run: |
-          [[ ${{ env.ARTIFACT_NAME }} == *"ent"* ]] && scenarioFile=$(cat ./.github/scripts/ent.json |jq -c .) || scenarioFile=$(cat ./.github/scripts/oss.json |jq -c .)
+          [[ ${{ env.ARTIFACT_NAME }} == *"ent"* ]] && scenarioFile=$(cat ./.github/enos-run-matrices/ent.json |jq -c .) || scenarioFile=$(cat ./.github/enos-run-matrices/oss.json |jq -c .)
           echo "::set-output name=matrix::$scenarioFile"
   # Run Integration tests on Enos scenario matrix
   enos:
@@ -114,15 +114,9 @@ jobs:
           ENOS_VAR_vault_bundle_path: ./support/vault.zip
         run: |
           enos scenario destroy --timeout 60m0s --chdir ./enos ${{ matrix.scenario }}
-      # Temporarily Disable debug output
-      # - name: Output debug information on failure
-      #   if: ${{ failure() }}
-      #   run: |
-      #     env
-      #     find ./enos -name "scenario.tf" -exec cat {} \;
       - name: Cleanup Enos runtime directories
         if: ${{ always() }}
         run: |
-          rm -rf support
-          rm -rf .enos
-        working-directory: ./enos
+          rm -rf /tmp/enos*
+          rm -rf ./enos/support
+          rm -rf ./enos/.enos
