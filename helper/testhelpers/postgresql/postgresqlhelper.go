@@ -64,10 +64,10 @@ func prepareTestContainer(t *testing.T, name, repo, version, password, db string
 		Ports:           []string{"5432/tcp"},
 		DoNotAutoRemove: doNotAutoRemove,
 	}
-	// if repo == "bitnami/postgresql-repmgr" {
-	// 	// runOpts.NetworkID = os.Getenv("POSTGRES_MULTIHOST_NET")
-	// 	runOpts.NetworkID = os.Getenv("TEST_DOCKER_NETWORK_ID")
-	// }
+	if repo == "bitnami/postgresql-repmgr" {
+		// runOpts.NetworkID = os.Getenv("POSTGRES_MULTIHOST_NET")
+		runOpts.NetworkID = os.Getenv("TEST_DOCKER_NETWORK_ID")
+	}
 
 	runner, err := docker.NewServiceRunner(runOpts)
 	if err != nil {

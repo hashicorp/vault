@@ -1008,7 +1008,6 @@ func TestPostgreSQL_Repmgr(t *testing.T) {
 	// if !exists {
 	// 	t.Skipf("POSTGRES_MULTIHOST_NET not set, skipping test")
 	// }
-
 	os.Setenv("POSTGRES_MULTIHOST_NET", os.Getenv("TEST_DOCKER_NETWORK_ID"))
 
 	// Create 2 postgres-repmgr containers
@@ -1061,9 +1060,9 @@ func TestPostgreSQL_Repmgr(t *testing.T) {
 	}
 
 	// Try adding a new user immediately - expect failure as the database
-	// cluster is still switch primaries
+	// cluster is still switching primaries
 	err = testPostgreSQL_Repmgr_AddUser(t, ctx, db)
-	if err.Error() != "unable to start transaction: failed to connect to `host=127.0.0.1 user=postgres database=postgres`: ValidateConnect failed (read only connection)" {
+	if !strings.HasSuffix(err.Error(), "ValidateConnect failed (read only connection)") {
 		t.Fatalf("expected error was not received, got: %s", err)
 	}
 
