@@ -189,7 +189,8 @@ to specify where the configuration is.
 
 - `detect_deadlocks` `(string: "")` - Specifies the internal mutex locks that should be monitored for
   potential deadlocks. Currently supported value is `statelock`, which will cause "POTENTIAL DEADLOCK:"
-  to be logged when an attempt at a core state lock appears to be deadlocked.
+  to be logged when an attempt at a core state lock appears to be deadlocked. Enabling this can have
+  a negative effect on performance due to the tracking of each lock attempt.
 
 ### High Availability Parameters
 
