@@ -1085,6 +1085,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return NewIdentityStore(ctx, c, config, identityLogger)
 	}
 	addExtraLogicalBackends(c, logicalBackends)
+	c.logicalBackends = logicalBackends
 
 	credentialBackends := make(map[string]logical.Factory)
 	for k, f := range conf.CredentialBackends {
@@ -1096,15 +1097,13 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return NewTokenStore(ctx, tsLogger, c, config)
 	}
 	addExtraCredentialBackends(c, credentialBackends)
+	c.credentialBackends = credentialBackends
 
 	auditBackends := make(map[string]audit.Factory)
 	for k, f := range conf.AuditBackends {
 		auditBackends[k] = f
 	}
 	c.auditBackends = auditBackends
-
-	c.logicalBackends = logicalBackends
-	c.credentialBackends = credentialBackends
 
 	uiStoragePrefix := systemBarrierPrefix + "ui"
 	c.uiConfig = NewUIConfig(conf.EnableUI, physical.NewView(c.physical, uiStoragePrefix), NewBarrierView(c.barrier, uiStoragePrefix))
