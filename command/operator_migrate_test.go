@@ -11,14 +11,15 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/go-test/deep"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/testhelpers"
-	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -55,11 +56,10 @@ func TestMigration(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-
 		cmd := OperatorMigrateCommand{
 			logger: log.NewNullLogger(),
 		}
-		if err := cmd.migrateAll(context.Background(), from, to); err != nil {
+		if err := cmd.migrateAll(context.Background(), from, to, 1); err != nil {
 			t.Fatal(err)
 		}
 
@@ -99,7 +99,7 @@ func TestMigration(t *testing.T) {
 			logger:    log.NewNullLogger(),
 			flagStart: start,
 		}
-		if err := cmd.migrateAll(context.Background(), from, to); err != nil {
+		if err := cmd.migrateAll(context.Background(), from, to, 1); err != nil {
 			t.Fatal(err)
 		}
 
@@ -119,7 +119,7 @@ storage_source "src_type" {
 
 storage_destination "dest_type" {
   path = "dest_path"
-}`), 0644)
+}`), 0o644)
 		defer os.Remove(cfgName)
 
 		expCfg := &migratorConfig{
@@ -145,7 +145,7 @@ storage_destination "dest_type" {
 		}
 
 		verifyBad := func(cfg string) {
-			ioutil.WriteFile(cfgName, []byte(cfg), 0644)
+			ioutil.WriteFile(cfgName, []byte(cfg), 0o644)
 			_, err := cmd.loadMigratorConfig(cfgName)
 			if err == nil {
 				t.Fatalf("expected error but none received from: %v", cfg)
@@ -191,7 +191,6 @@ storage_destination "dest_type" {
 storage_destination "dest_type2" {
   path = "dest_path"
 }`)
-
 	})
 	t.Run("DFS Scan", func(t *testing.T) {
 		s, _ := physicalBackends["inmem"](map[string]string{}, nil)
@@ -205,9 +204,16 @@ storage_destination "dest_type2" {
 
 		l := randomLister{s}
 
-		var out []string
-		dfsScan(context.Background(), l, func(ctx context.Context, path string) error {
-			out = append(out, path)
+		type SafeAppend struct {
+			out []string
+			mux sync.Mutex
+		}
+		var outKeys = SafeAppend{}
+		parallel := 10
+		dfsScan(context.Background(), l, parallel, func(ctx context.Context, path string) error {
+			outKeys.mux.Lock()
+			outKeys.out = append(outKeys.out, path)
+			outKeys.mux.Unlock()
 			return nil
 		})
 
@@ -219,8 +225,11 @@ storage_destination "dest_type2" {
 			keys = append(keys, key)
 		}
 		sort.Strings(keys)
-		if !reflect.DeepEqual(keys, out) {
-			t.Fatalf("expected equal: %v, %v", keys, out)
+		outKeys.mux.Lock()
+		sort.Strings(outKeys.out)
+		outKeys.mux.Unlock()
+		if !reflect.DeepEqual(keys, outKeys.out) {
+			t.Fatalf("expected equal: %v, %v", keys, outKeys.out)
 		}
 	})
 }
