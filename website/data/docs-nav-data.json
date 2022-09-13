@@ -997,12 +997,12 @@
             "path": "secrets/databases/postgresql"
           },
           {
-            "title": "Redshift",
-            "path": "secrets/databases/redshift"
-          },
-          {
             "title": "Redis",
             "path": "secrets/databases/redis"
+          },
+          {
+            "title": "Redshift",
+            "path": "secrets/databases/redshift"
           },
           {
             "title": "Snowflake",
