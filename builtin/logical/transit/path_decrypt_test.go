@@ -208,6 +208,20 @@ func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
 			},
 			wantHTTPStatus: http.StatusBadRequest,
 		},
+		{
+			name: "batch-full-failure-overridden-response",
+			in: []interface{}{
+				map[string]interface{}{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[1].context},
+				map[string]interface{}{"ciphertext": encryptedItems[1].Ciphertext, "context": plaintextItems[0].context},
+			},
+			want: []DecryptBatchResponseItem{
+				{Error: "cipher: message authentication failed"},
+				{Error: "cipher: message authentication failed"},
+			},
+			params: map[string]interface{}{"partial_failure_response_code": http.StatusAccepted},
+			// Full failure, shouldn't affect status code
+			wantHTTPStatus: http.StatusBadRequest,
+		},
 	}
 
 	for _, tt := range tests {
