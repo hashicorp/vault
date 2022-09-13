@@ -87,7 +87,11 @@ func (b *backend) updatedConfig(config *config) error {
 	b.ocspClientMutex.Lock()
 	defer b.ocspClientMutex.Unlock()
 	if config != nil {
-		b.initOCSPClient(config.OcspCacheSize)
+		if b.ocspEnabled {
+			b.initOCSPClient(config.OcspCacheSize)
+		} else {
+			b.ocspClient = nil
+		}
 	}
 	b.configUpdated = false
 	return nil
