@@ -13,8 +13,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-const defaultOCSPCacheSize = 100
-
 func pathListCerts(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "certs/?",
@@ -74,11 +72,6 @@ from the AuthorityInformationAccess extension on the certificate being inspected
 				Type:        framework.TypeBool,
 				Default:     false,
 				Description: "If set to true, rather than accepting the first successful OCSP response, query all servers and consider the certificate valid only if all servers agree.",
-			},
-			"ocsp_cache_size": {
-				Type:        framework.TypeInt,
-				Default:     defaultOCSPCacheSize,
-				Description: "The size of the OCSP response cache.",
 			},
 			"allowed_names": {
 				Type: framework.TypeCommaStringSlice,

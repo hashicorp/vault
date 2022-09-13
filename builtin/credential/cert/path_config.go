@@ -8,6 +8,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const maxCacheSize = 100000
+
 func pathConfig(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config",
@@ -37,13 +39,23 @@ func pathConfig(b *backend) *framework.Path {
 }
 
 func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	disableBinding := data.Get("disable_binding").(bool)
-	enableIdentityAliasMetadata := data.Get("enable_identity_alias_metadata").(bool)
-	cacheSize := data.Get("ocsp_cache_size").(int)
-	config := config{
-		DisableBinding:              disableBinding,
-		EnableIdentityAliasMetadata: enableIdentityAliasMetadata,
-		OcspCacheSize:               cacheSize,
+	config, err := b.Config(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	if disableBindingRaw, ok := data.GetOk("disable_binding"); ok {
+		config.DisableBinding = disableBindingRaw.(bool)
+	}
+	if enableIdentityAliasMetadataRaw, ok := data.GetOk("enable_identity_alias_metadata"); ok {
+		config.EnableIdentityAliasMetadata = enableIdentityAliasMetadataRaw.(bool)
+	}
+	if cacheSizeRaw, ok := data.GetOk("ocsp_cache_size"); ok {
+		cacheSize := cacheSizeRaw.(int)
+		if cacheSize < 2 || cacheSize > maxCacheSize {
+			return logical.ErrorResponse("invalid cache size, must be >= 2 and <= %d", maxCacheSize), nil
+		}
+		config.OcspCacheSize = cacheSize
 	}
 	entry, err := logical.StorageEntryJSON("config", config)
 	if err != nil {
@@ -53,7 +65,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
-	b.updatedConfig(&config)
+	b.updatedConfig(config)
 	return nil, nil
 }
 

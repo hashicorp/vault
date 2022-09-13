@@ -312,7 +312,7 @@ func (b *backend) matchesConstraints(ctx context.Context, clientCert *x509.Certi
 		b.matchesOrganizationalUnits(clientCert, config) &&
 		b.matchesCertificateExtensions(clientCert, config)
 	if config.Entry.OcspEnabled {
-		ocspGood, err := b.checkForChainInOCSP(ctx, trustedChain, conf)
+		ocspGood, err := b.checkForCertInOCSP(ctx, clientCert, trustedChain, conf)
 		if err != nil {
 			return false, err
 		}
@@ -573,13 +573,13 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 	return
 }
 
-func (b *backend) checkForChainInOCSP(ctx context.Context, chain []*x509.Certificate, conf *ocsp.VerifyConfig) (bool, error) {
+func (b *backend) checkForCertInOCSP(ctx context.Context, clientCert *x509.Certificate, chain []*x509.Certificate, conf *ocsp.VerifyConfig) (bool, error) {
 	if !b.ocspEnabled || len(chain) < 2 {
 		return true, nil
 	}
 	b.ocspClientMutex.RLock()
 	defer b.ocspClientMutex.RUnlock()
-	err := b.ocspClient.VerifyPeerCertificate(ctx, [][]*x509.Certificate{chain}, conf)
+	err := b.ocspClient.VerifyLeafCertificate(ctx, clientCert, chain[0], conf)
 	if err != nil {
 		return false, nil
 	}

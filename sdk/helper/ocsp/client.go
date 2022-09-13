@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-retryablehttp"
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"golang.org/x/crypto/ocsp"
 	"io"
 	"math/big"
@@ -23,6 +24,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -157,7 +159,7 @@ func (c *Client) getHashAlgorithmFromOID(target pkix.AlgorithmIdentifier) crypto
 
 // isInValidityRange checks the validity
 func isInValidityRange(currTime, nextUpdate time.Time) bool {
-	return !currTime.After(nextUpdate)
+	return !nextUpdate.IsZero() && !currTime.After(nextUpdate)
 }
 
 func extractCertIDKeyFromRequest(ocspReq []byte) (*certIDKey, *ocspStatus) {
@@ -362,8 +364,8 @@ func (c *Client) retryOCSP(
 	}, nil
 }
 
-// getRevocationStatus checks the certificate revocation status for subject using issuer certificate.
-func (c *Client) getRevocationStatus(ctx context.Context, subject, issuer *x509.Certificate, conf *VerifyConfig) (*ocspStatus, error) {
+// GetRevocationStatus checks the certificate revocation status for subject using issuer certificate.
+func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.Certificate, conf *VerifyConfig) (*ocspStatus, error) {
 	status, ocspReq, encodedCertID, err := c.ValidateWithCache(subject, issuer)
 	if err != nil {
 		return nil, err
@@ -450,15 +452,37 @@ func (c *Client) getRevocationStatus(ctx context.Context, subject, issuer *x509.
 	// Good by default
 	var ret *ocspStatus = &ocspStatus{code: ocspStatusGood}
 	ocspRes := ocspResponses[0]
+	var firstError error
+	foundRevocation := false
 	for i, _ := range ocspHosts {
 		if errors[i] != nil {
-			return nil, errors[i]
-		} else if ocspStatuses[i] != nil && (!conf.QueryAllServers || ocspStatuses[i].code != ocspStatusGood) {
-			ret = ocspStatuses[i]
-			ocspRes = ocspResponses[i]
-			break
+			if firstError == nil {
+				firstError = errors[i]
+			}
+		} else if ocspStatuses[i] != nil {
+			switch ocspStatuses[i].code {
+			case ocspStatusRevoked:
+				foundRevocation = true
+				ret = ocspStatuses[i]
+				ocspRes = ocspResponses[i]
+				break
+			case ocspStatusGood:
+			//continue
+			case ocspStatusUnknown:
+				if !conf.QueryAllServers {
+					// We may want to use this as the overall result
+					ret = ocspStatuses[i]
+					ocspRes = ocspResponses[i]
+				}
+			}
 		}
 	}
+
+	// If no server reported the cert revoked, but we did have an error, report it
+	if !foundRevocation && firstError != nil {
+		return nil, firstError
+	}
+	// otherwise ret should contain a response for the overall request
 
 	if !isValidOCSPStatus(ret.code) {
 		return ret, nil
@@ -486,6 +510,28 @@ type VerifyConfig struct {
 	OcspServersOverride []string
 	OcspFailureMode     FailOpenMode
 	QueryAllServers     bool
+}
+
+// VerifyLeafCertificate verifies just the subject against it's direct issuer
+func (c *Client) VerifyLeafCertificate(ctx context.Context, subject, issuer *x509.Certificate, conf *VerifyConfig) error {
+	results, err := c.GetRevocationStatus(ctx, subject, issuer, conf)
+	if err != nil {
+		return err
+	}
+	if results.code == ocspStatusGood {
+		return nil
+	} else {
+		serial := issuer.SerialNumber
+		serialHex := strings.TrimSpace(certutil.GetHexFormatted(serial.Bytes(), ":"))
+		if results.code == ocspStatusRevoked {
+			return fmt.Errorf("certificate with serial number %s has been revoked", serialHex)
+		} else if conf.OcspFailureMode == FailOpenFalse {
+			return fmt.Errorf("unknown OCSP status for cert with serial number %s", strings.TrimSpace(certutil.GetHexFormatted(serial.Bytes(), ":")))
+		} else {
+			c.Logger().Warn("could not validate OCSP status for cert, but continuing in fail open mode", "serial", serialHex)
+		}
+	}
+	return nil
 }
 
 // VerifyPeerCertificate verifies all of certificate revocation status
@@ -589,7 +635,7 @@ func (c *Client) GetAllRevocationStatus(ctx context.Context, verifiedChains []*x
 	n := len(verifiedChains) - 1
 	results := make([]*ocspStatus, n)
 	for j := 0; j < n; j++ {
-		results[j], err = c.getRevocationStatus(ctx, verifiedChains[j], verifiedChains[j+1], conf)
+		results[j], err = c.GetRevocationStatus(ctx, verifiedChains[j], verifiedChains[j+1], conf)
 		if err != nil {
 			return nil, err
 		}
