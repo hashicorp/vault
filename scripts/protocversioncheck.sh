@@ -19,3 +19,5 @@ if [[ ${PROTOC_VERSION_ARR[0]} -lt ${PROTOC_VERSION_REQ[0]} ||
   echo "protoc should be at $PROTOC_VERSION_MIN; found $PROTOC_VERSION."
   exit 1
 fi
+
+echo "Using protoc version $PROTOC_VERSION"
