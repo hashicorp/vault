@@ -49,11 +49,6 @@ const (
 // ListingVisibilityType represents the types for listing visibility
 type ListingVisibilityType string
 
-// externaler allows us to check if a backend is running externally (i.e., over GRPC)
-type externaler interface {
-	IsExternal() bool
-}
-
 const (
 	// ListingVisibilityDefault is the default value for listing visibility
 	ListingVisibilityDefault ListingVisibilityType = ""
@@ -636,7 +631,7 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	}
 	if entry.RunningVersion == "" {
 		// don't set the running version to a builtin if it is running as an external plugin
-		if externaler, ok := backend.(externaler); !ok || !externaler.IsExternal() {
+		if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
 			entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
 		}
 	}

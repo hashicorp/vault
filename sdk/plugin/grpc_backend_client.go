@@ -6,15 +6,14 @@ import (
 	"math"
 	"sync/atomic"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var (
@@ -284,9 +283,13 @@ func (b *backendGRPCPluginClient) Type() logical.BackendType {
 
 func (b *backendGRPCPluginClient) Version() logical.VersionInfo {
 	reply, err := b.versionClient.Version(b.doneCtx, &logical.Empty{})
-	// TODO: check for specific error for this rather than assume
 	if err != nil {
-		b.Logger().Debug("Error getting plugin version; assuming method is missing", "err", err)
+		if stErr, ok := status.FromError(err); ok {
+			if stErr.Code() == codes.Unimplemented {
+				return logical.EmptyVersion
+			}
+		}
+		b.Logger().Warn("Unknown error getting plugin version", "err", err)
 		return logical.EmptyVersion
 	}
 	return logical.VersionInfo{

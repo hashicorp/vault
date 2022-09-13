@@ -143,3 +143,20 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 		Backend: backend,
 	}, nil
 }
+
+func (b *BackendPluginClient) Version() logical.VersionInfo {
+	if versioner, ok := b.Backend.(logical.Versioner); ok {
+		return versioner.Version()
+	}
+	return logical.EmptyVersion
+}
+
+func (b *BackendPluginClient) IsExternal() bool {
+	if externaler, ok := b.Backend.(logical.Externaler); ok {
+		return externaler.IsExternal()
+	}
+	return true // default to true since this is only used for GRPC plugins
+}
+
+var _ logical.Versioner = (*BackendPluginClient)(nil)
+var _ logical.Externaler = (*BackendPluginClient)(nil)

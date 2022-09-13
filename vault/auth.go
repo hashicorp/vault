@@ -189,7 +189,7 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 	}
 	if entry.RunningVersion == "" {
 		// don't set the running version to a builtin if it is running as an external plugin
-		if externaler, ok := backend.(externaler); !ok || !externaler.IsExternal() {
+		if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
 			entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
 		}
 	}

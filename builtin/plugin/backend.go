@@ -87,18 +87,33 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*PluginBackend, 
 	// Cleanup meta plugin backend
 	raw.Cleanup(ctx)
 
-	// Initialize b.Backend with dummy backend since plugin
+	// Initialize b.Backend with placeholder backend since plugin
 	// backends will need to be lazy loaded.
-	b.Backend = &framework.Backend{
-		PathsSpecial:  paths,
-		BackendType:   btype,
-		PluginVersion: runningVersion,
+	b.Backend = &placeholderBackend{
+		Backend: framework.Backend{
+			PathsSpecial:  paths,
+			BackendType:   btype,
+			PluginVersion: runningVersion,
+		},
 	}
 
 	b.config = conf
 
 	return &b, nil
 }
+
+// placeholderBackend is used a placeholder before a backend is lazy-loaded.
+// It is mostly used to mark that the backend is an external backend.
+type placeholderBackend struct {
+	framework.Backend
+}
+
+func (p *placeholderBackend) IsExternal() bool {
+	return true
+}
+
+var _ logical.Externaler = (*placeholderBackend)(nil)
+var _ logical.Versioner = (*placeholderBackend)(nil)
 
 // PluginBackend is a thin wrapper around plugin.BackendPluginClient
 type PluginBackend struct {
@@ -292,12 +307,19 @@ func (b *PluginBackend) Type() logical.BackendType {
 	return b.Backend.Type()
 }
 
-// Version is a thin wrapper used to ensure we grab the lock for race purposes
 func (b *PluginBackend) Version() logical.VersionInfo {
-	b.RLock()
-	defer b.RUnlock()
 	if versioner, ok := b.Backend.(logical.Versioner); ok {
 		return versioner.Version()
 	}
 	return logical.EmptyVersion
 }
+
+func (b *PluginBackend) IsExternal() bool {
+	if externaler, ok := b.Backend.(logical.Externaler); ok {
+		return externaler.IsExternal()
+	}
+	return false
+}
+
+var _ logical.Versioner = (*PluginBackend)(nil)
+var _ logical.Externaler = (*PluginBackend)(nil)
