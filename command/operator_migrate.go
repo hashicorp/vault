@@ -48,7 +48,6 @@ type migratorConfig struct {
 	StorageSource      *server.Storage `hcl:"-"`
 	StorageDestination *server.Storage `hcl:"-"`
 	ClusterAddr        string          `hcl:"cluster_addr"`
-	MaxParallel        string          `hcl:"max_parallel"`
 }
 
 func (c *OperatorMigrateCommand) Synopsis() string {
@@ -387,10 +386,6 @@ func dfsScan(ctx context.Context, source physical.Backend, maxParallel int, cb f
 		maxParallel = 1
 	}
 
-	// i, err := strconv.Atoi(maxParallel)
-	// if err != nil {
-	// 	return errwrap.Wrapf("failed to parse max_parallel: {{err}}", err)
-	// }
 	permitPool := physical.NewPermitPool(maxParallel)
 
 	for l := len(dfs); l > 0; l = len(dfs) {
