@@ -70,19 +70,22 @@ func (b *backend) invalidate(_ context.Context, key string) {
 		defer b.crlUpdateMutex.Unlock()
 		b.crls = nil
 	case key == "config":
+		// Is this really necessary?
+		b.ocspClientMutex.Lock()
+		defer b.ocspClientMutex.Unlock()
 		b.configUpdated = true
 	}
 }
 
 func (b *backend) initOCSPClient(cacheSize int) {
-	b.ocspClientMutex.Lock()
-	defer b.ocspClientMutex.Unlock()
 	b.ocspClient = ocsp.New(func() hclog.Logger {
 		return b.Logger()
 	}, cacheSize)
 }
 
 func (b *backend) updatedConfig(config *config) error {
+	b.ocspClientMutex.Lock()
+	defer b.ocspClientMutex.Unlock()
 	if config != nil {
 		b.initOCSPClient(config.OcspCacheSize)
 	}
