@@ -1520,9 +1520,12 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 			writeTxns = append(writeTxns, txn)
 		}
 	}
-	err := b.fsm.Transaction(ctx, readTxns)
-	if err != nil {
-		return fmt.Errorf("error passing read transactions to the fsm: %w", err)
+
+	if len(readTxns) > 0 {
+		err := b.fsm.Transaction(ctx, readTxns)
+		if err != nil {
+			return fmt.Errorf("error passing read transactions to the fsm: %w", err)
+		}
 	}
 
 	command := &LogData{
@@ -1552,7 +1555,7 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 	defer b.permitPool.Release()
 
 	b.l.RLock()
-	err = b.applyLog(ctx, command)
+	err := b.applyLog(ctx, command)
 	b.l.RUnlock()
 
 	return err
