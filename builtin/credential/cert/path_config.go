@@ -35,11 +35,12 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 	disableBinding := data.Get("disable_binding").(bool)
 	enableIdentityAliasMetadata := data.Get("enable_identity_alias_metadata").(bool)
 	cacheSize := data.Get("ocsp_cache_size").(int)
-	entry, err := logical.StorageEntryJSON("config", config{
+	config := config{
 		DisableBinding:              disableBinding,
 		EnableIdentityAliasMetadata: enableIdentityAliasMetadata,
 		OcspCacheSize:               cacheSize,
-	})
+	}
+	entry, err := logical.StorageEntryJSON("config", config)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +48,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
-	b.initOCSPClient(cacheSize)
+	b.updatedConfig(&config)
 	return nil, nil
 }
 
@@ -60,6 +61,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 	data := map[string]interface{}{
 		"disable_binding":                cfg.DisableBinding,
 		"enable_identity_alias_metadata": cfg.EnableIdentityAliasMetadata,
+		"ocsp_cache_size":                cfg.OcspCacheSize,
 	}
 
 	return &logical.Response{

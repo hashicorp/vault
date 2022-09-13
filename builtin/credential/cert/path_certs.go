@@ -341,9 +341,6 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	if ocspQueryAll, ok := d.GetOk("ocsp_query_all_servers"); ok {
 		cert.OcspQueryAllServers = ocspQueryAll.(bool)
 	}
-	if ocspCacheSize, ok := d.GetOk("ocsp_cache_size"); ok {
-		cert.OcspCacheSize = ocspCacheSize.(int)
-	}
 	if displayNameRaw, ok := d.GetOk("display_name"); ok {
 		cert.DisplayName = displayNameRaw.(string)
 	}
@@ -478,7 +475,6 @@ type CertEntry struct {
 	OcspEnabled                bool
 	OcspServersOverride        []string
 	OcspFailOpen               bool
-	OcspCacheSize              int
 	OcspQueryAllServers        bool
 	DisplayName                string
 	Policies                   []string
