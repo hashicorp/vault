@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -1008,7 +1007,7 @@ func TestPostgreSQL_Repmgr(t *testing.T) {
 	// if !exists {
 	// 	t.Skipf("POSTGRES_MULTIHOST_NET not set, skipping test")
 	// }
-	os.Setenv("POSTGRES_MULTIHOST_NET", os.Getenv("TEST_DOCKER_NETWORK_ID"))
+	// os.Setenv("POSTGRES_MULTIHOST_NET", os.Getenv("TEST_DOCKER_NETWORK_ID"))
 
 	// Create 2 postgres-repmgr containers
 	db0, runner0, url0, container0 := testPostgreSQL_Repmgr_Container(t, "psql-repl-0")
