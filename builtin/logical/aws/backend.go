@@ -54,7 +54,6 @@ func Backend() *backend {
 		},
 
 		Invalidate:        b.invalidate,
-		InitializeFunc:    b.initialize,
 		WALRollback:       b.walRollback,
 		WALRollbackMinAge: minAwsUserRollbackAge,
 		BackendType:       logical.TypeLogical,
@@ -93,12 +92,6 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 	case key == rootConfigPath:
 		b.clearClients()
 	}
-}
-
-func (b *backend) initialize(_ context.Context, _ *logical.InitializationRequest) error {
-	b.Logger().Info("***********Initialize method invoked***********\n")
-
-	return nil
 }
 
 // clearClients clears the backend's IAM and STS clients
