@@ -132,13 +132,15 @@ func (s ServiceURL) URL() *url.URL {
 type ServiceAdapter func(ctx context.Context, host string, port int) (ServiceConfig, error)
 
 func (d *Runner) StartService(ctx context.Context, connect ServiceAdapter) (*Service, error) {
-	serv, _, err := d.StartNewService(ctx, true, connect)
+	serv, _, err := d.StartNewService(ctx, true, false, connect)
 
 	return serv, err
 }
 
-func (d *Runner) StartNewService(ctx context.Context, addSuffix bool, connect ServiceAdapter) (*Service, string, error) {
-	container, hostIPs, containerID, err := d.Start(context.Background(), addSuffix)
+// addSuffix will add a random UUID to the end of the container name
+// forceLocalAddr will always return 127.0.0.1:1234 where 1234 is the mapped port
+func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr bool, connect ServiceAdapter) (*Service, string, error) {
+	container, hostIPs, containerID, err := d.Start(context.Background(), addSuffix, forceLocalAddr)
 	if err != nil {
 		return nil, "", err
 	}
@@ -213,7 +215,7 @@ type Service struct {
 	Container *types.ContainerJSON
 }
 
-func (d *Runner) Start(ctx context.Context, addSuffix bool) (*types.ContainerJSON, []string, string, error) {
+func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*types.ContainerJSON, []string, string, error) {
 	name := d.RunOptions.ContainerName
 	if addSuffix {
 		suffix, err := uuid.GenerateUUID()
@@ -299,7 +301,7 @@ func (d *Runner) Start(ctx context.Context, addSuffix bool) (*types.ContainerJSO
 		if len(pieces) < 2 {
 			return nil, nil, "", fmt.Errorf("expected port of the form 1234/tcp, got: %s", port)
 		}
-		if d.RunOptions.NetworkID != "" {
+		if d.RunOptions.NetworkID != "" && !forceLocalAddr {
 			addrs = append(addrs, fmt.Sprintf("%s:%s", cfg.Hostname, pieces[0]))
 		} else {
 			mapped, ok := inspect.NetworkSettings.Ports[nat.Port(port)]

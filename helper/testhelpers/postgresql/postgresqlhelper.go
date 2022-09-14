@@ -11,26 +11,30 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 )
 
-func PrepareTestContainer(t *testing.T, version string) (*docker.Runner, func(), string, string) {
+func PrepareTestContainer(t *testing.T, version string) (func(), string) {
 	env := []string{
 		"POSTGRES_PASSWORD=secret",
 		"POSTGRES_DB=database",
 	}
 
-	return prepareTestContainer(t, "postgres", "postgres", version, "secret", "database", true, false, env)
+	_, cleanup, url, _ := prepareTestContainer(t, "postgres", "postgres", version, "secret", "database", true, false, false, env)
+
+	return cleanup, url
 }
 
-func PrepareTestContainerWithPassword(t *testing.T, version, password string) (*docker.Runner, func(), string, string) {
+func PrepareTestContainerWithPassword(t *testing.T, version, password string) (func(), string) {
 	env := []string{
 		"POSTGRES_PASSWORD=" + password,
 		"POSTGRES_DB=database",
 	}
 
-	return prepareTestContainer(t, "postgres", "postgres", version, password, "database", true, false, env)
+	_, cleanup, url, _ := prepareTestContainer(t, "postgres", "postgres", version, password, "database", true, false, false, env)
+
+	return cleanup, url
 }
 
 func PrepareTestContainerRepmgr(t *testing.T, name, version string, envVars []string) (*docker.Runner, func(), string, string) {
-	return prepareTestContainer(t, name, "bitnami/postgresql-repmgr", version, "secret", "", false, true, envVars)
+	return prepareTestContainer(t, name, "bitnami/postgresql-repmgr", version, "secret", "", false, true, true, envVars)
 }
 
 func StopContainer(t *testing.T, ctx context.Context, runner *docker.Runner, containerID string) {
@@ -47,7 +51,7 @@ func RestartContainer(t *testing.T, ctx context.Context, runner *docker.Runner, 
 	}
 }
 
-func prepareTestContainer(t *testing.T, name, repo, version, password, db string, addSuffix, doNotAutoRemove bool, envVars []string) (*docker.Runner, func(), string, string) {
+func prepareTestContainer(t *testing.T, name, repo, version, password, db string, addSuffix, forceLocalAddr, doNotAutoRemove bool, envVars []string) (*docker.Runner, func(), string, string) {
 	if os.Getenv("PG_URL") != "" {
 		return nil, func() {}, "", os.Getenv("PG_URL")
 	}
@@ -65,8 +69,7 @@ func prepareTestContainer(t *testing.T, name, repo, version, password, db string
 		DoNotAutoRemove: doNotAutoRemove,
 	}
 	if repo == "bitnami/postgresql-repmgr" {
-		// runOpts.NetworkID = os.Getenv("POSTGRES_MULTIHOST_NET")
-		// runOpts.NetworkID = os.Getenv("TEST_DOCKER_NETWORK_ID")
+		runOpts.NetworkID = os.Getenv("POSTGRES_MULTIHOST_NET")
 	}
 
 	runner, err := docker.NewServiceRunner(runOpts)
@@ -74,7 +77,7 @@ func prepareTestContainer(t *testing.T, name, repo, version, password, db string
 		t.Fatalf("Could not start docker Postgres: %s", err)
 	}
 
-	svc, containerID, err := runner.StartNewService(context.Background(), addSuffix, connectPostgres(password, repo))
+	svc, containerID, err := runner.StartNewService(context.Background(), addSuffix, forceLocalAddr, connectPostgres(password, repo))
 	if err != nil {
 		t.Fatalf("Could not start docker Postgres: %s", err)
 	}
