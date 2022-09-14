@@ -69,7 +69,7 @@ func TestResponseUtil_RespondErrorCommon_basic(t *testing.T) {
 					"error": "error due to wrong credentials",
 				},
 			},
-			expectedErr: errors.New("error due to wrong credentials"),
+			expectedErr:    errors.New("error due to wrong credentials"),
 			expectedStatus: 400,
 		},
 	}
