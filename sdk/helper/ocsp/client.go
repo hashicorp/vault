@@ -453,7 +453,6 @@ func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.
 	var ret *ocspStatus = &ocspStatus{code: ocspStatusGood}
 	ocspRes := ocspResponses[0]
 	var firstError error
-	foundRevocation := false
 	for i, _ := range ocspHosts {
 		if errors[i] != nil {
 			if firstError == nil {
@@ -462,7 +461,6 @@ func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.
 		} else if ocspStatuses[i] != nil {
 			switch ocspStatuses[i].code {
 			case ocspStatusRevoked:
-				foundRevocation = true
 				ret = ocspStatuses[i]
 				ocspRes = ocspResponses[i]
 				break
@@ -479,7 +477,7 @@ func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.
 	}
 
 	// If no server reported the cert revoked, but we did have an error, report it
-	if !foundRevocation && firstError != nil {
+	if (ret == nil || ret.code == ocspStatusUnknown) && firstError != nil {
 		return nil, firstError
 	}
 	// otherwise ret should contain a response for the overall request
