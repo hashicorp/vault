@@ -38,15 +38,13 @@ func PrepareTestContainerRepmgr(t *testing.T, name, version string, envVars []st
 }
 
 func StopContainer(t *testing.T, ctx context.Context, runner *docker.Runner, containerID string) {
-	err := runner.Stop(ctx, containerID)
-	if err != nil {
+	if err := runner.Stop(ctx, containerID); err != nil {
 		t.Fatalf("Could not stop docker Postgres: %s", err)
 	}
 }
 
 func RestartContainer(t *testing.T, ctx context.Context, runner *docker.Runner, containerID string) {
-	err := runner.Restart(ctx, containerID)
-	if err != nil {
+	if err := runner.Restart(ctx, containerID); err != nil {
 		t.Fatalf("Could not restart docker Postgres: %s", err)
 	}
 }
@@ -101,8 +99,7 @@ func connectPostgres(password, repo string) docker.ServiceAdapter {
 		}
 		defer db.Close()
 
-		err = db.Ping()
-		if err != nil {
+		if err = db.Ping(); err != nil {
 			return nil, err
 		}
 		return docker.NewServiceURL(u), nil

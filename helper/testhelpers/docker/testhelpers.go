@@ -317,28 +317,23 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*ty
 
 func (d *Runner) Stop(ctx context.Context, containerID string) error {
 	timeout := 5 * time.Second
-	err := d.DockerAPI.ContainerStop(ctx, containerID, &timeout)
-	if err != nil {
+	if err := d.DockerAPI.ContainerStop(ctx, containerID, &timeout); err != nil {
 		return err
 	}
 
-	err = d.DockerAPI.NetworkDisconnect(ctx, d.RunOptions.NetworkID, containerID, true)
-
-	return err
+	return d.DockerAPI.NetworkDisconnect(ctx, d.RunOptions.NetworkID, containerID, true)
 }
 
 func (d *Runner) Restart(ctx context.Context, containerID string) error {
-	err := d.DockerAPI.ContainerStart(ctx, containerID, types.ContainerStartOptions{})
-	if err != nil {
+	if err := d.DockerAPI.ContainerStart(ctx, containerID, types.ContainerStartOptions{}); err != nil {
 		return err
 	}
 
-	endp := &network.EndpointSettings{
+	ends := &network.EndpointSettings{
 		NetworkID: d.RunOptions.NetworkID,
 	}
-	err = d.DockerAPI.NetworkConnect(ctx, d.RunOptions.NetworkID, containerID, endp)
 
-	return err
+	return d.DockerAPI.NetworkConnect(ctx, d.RunOptions.NetworkID, containerID, ends)
 }
 
 func copyToContainer(ctx context.Context, dapi *client.Client, containerID, from, to string) error {

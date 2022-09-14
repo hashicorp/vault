@@ -1009,15 +1009,16 @@ func TestPostgreSQL_Repmgr(t *testing.T) {
 		t.Skipf("POSTGRES_MULTIHOST_NET not set, skipping test")
 	}
 
-	// Create 2 postgres-repmgr containers that will connect to each other
-	db0, runner0, url0, container0 := testPostgreSQL_Repmgr_Container(t, "psql-repl-0")
-	_, _, url1, _ := testPostgreSQL_Repmgr_Container(t, "psql-repl-1")
+	// Run two postgres-repmgr containers in a replication cluster
+	db0, runner0, url0, container0 := testPostgreSQL_Repmgr_Container(t, "psql-repl-node-0")
+	_, _, url1, _ := testPostgreSQL_Repmgr_Container(t, "psql-repl-node-1")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
 	defer cancel()
-	time.Sleep(20 * time.Second)
 
-	// Write a user to the primary postgres node
+	time.Sleep(10 * time.Second)
+
+	// Write a read role to the cluster
 	_, err := db0.NewUser(ctx, dbplugin.NewUserRequest{
 		Statements: dbplugin.Statements{
 			Commands: []string{
@@ -1046,15 +1047,14 @@ func TestPostgreSQL_Repmgr(t *testing.T) {
 	if !db.Initialized {
 		t.Fatal("Database should be initialized")
 	}
+	defer db.Close()
 
 	// Add a user to the cluster, then stop the primary container
-	err = testPostgreSQL_Repmgr_AddUser(t, ctx, db)
-	if err != nil {
+	if err = testPostgreSQL_Repmgr_AddUser(t, ctx, db); err != nil {
 		t.Fatalf("no error expected, got: %s", err)
 	}
 
-	err = runner0.Stop(ctx, container0)
-	if err != nil {
+	if err = runner0.Stop(ctx, container0); err != nil {
 		t.Fatalf("failed to stop container '%s': %s", container0, err)
 	}
 
@@ -1065,22 +1065,19 @@ func TestPostgreSQL_Repmgr(t *testing.T) {
 		t.Fatalf("expected error was not received, got: %s", err)
 	}
 
-	time.Sleep(60 * time.Second)
+	time.Sleep(20 * time.Second)
 
-	err = testPostgreSQL_Repmgr_AddUser(t, ctx, db)
-	if err != nil {
+	if err = testPostgreSQL_Repmgr_AddUser(t, ctx, db); err != nil {
 		t.Fatalf("no error expected, got: %s", err)
 	}
 
-	err = runner0.Restart(ctx, container0)
-	if err != nil {
+	if err = runner0.Restart(ctx, container0); err != nil {
 		t.Fatalf("failed to restart container '%s': %s", container0, err)
 	}
 
-	time.Sleep(20 * time.Second)
+	time.Sleep(10 * time.Second)
 
-	err = testPostgreSQL_Repmgr_AddUser(t, ctx, db)
-	if err != nil {
+	if err = testPostgreSQL_Repmgr_AddUser(t, ctx, db); err != nil {
 		t.Fatalf("no error expected, got: %s", err)
 	}
 
@@ -1091,8 +1088,8 @@ func TestPostgreSQL_Repmgr(t *testing.T) {
 
 func testPostgreSQL_Repmgr_Container(t *testing.T, name string) (*PostgreSQL, *docker.Runner, string, string) {
 	envVars := []string{
-		"REPMGR_PARTNER_NODES=psql-repl-0,psql-repl-1",
-		"REPMGR_PRIMARY_HOST=psql-repl-0",
+		"REPMGR_PARTNER_NODES=psql-repl-node-0,psql-repl-node-1",
+		"REPMGR_PRIMARY_HOST=psql-repl-node-0",
 		"REPMGR_PASSWORD=repmgrpass",
 		"POSTGRESQL_PASSWORD=secret",
 		"REPMGR_NODE_NAME=" + name,
@@ -1114,6 +1111,7 @@ func testPostgreSQL_Repmgr_Container(t *testing.T, name string) (*PostgreSQL, *d
 	if !db.Initialized {
 		t.Fatal("Database should be initialized")
 	}
+
 	if err := db.Close(); err != nil {
 		t.Fatalf("err: %s", err)
 	}
