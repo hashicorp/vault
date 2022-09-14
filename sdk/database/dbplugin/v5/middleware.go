@@ -7,9 +7,10 @@ import (
 	"strings"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/grpc/status"
 )
 
@@ -17,13 +18,32 @@ import (
 // Tracing Middleware
 // ///////////////////////////////////////////////////
 
-var _ Database = databaseTracingMiddleware{}
+var (
+	_ Database          = databaseTracingMiddleware{}
+	_ logical.Versioner = databaseTracingMiddleware{}
+)
 
 // databaseTracingMiddleware wraps a implementation of Database and executes
 // trace logging on function call.
 type databaseTracingMiddleware struct {
 	next   Database
 	logger log.Logger
+}
+
+func (mw databaseTracingMiddleware) Version() (resp logical.VersionInfo) {
+	defer func(then time.Time) {
+		mw.logger.Trace("version",
+			"status", "finished",
+			"version", resp,
+			"took", time.Since(then))
+	}(time.Now())
+
+	mw.logger.Trace("version", "status", "started")
+	if versioner, ok := mw.next.(logical.Versioner); ok {
+		return versioner.Version()
+
+	}
+	return logical.EmptyVersion
 }
 
 func (mw databaseTracingMiddleware) Initialize(ctx context.Context, req InitializeRequest) (resp InitializeResponse, err error) {
@@ -98,7 +118,10 @@ func (mw databaseTracingMiddleware) Close() (err error) {
 // Metrics Middleware Domain
 // ///////////////////////////////////////////////////
 
-var _ Database = databaseMetricsMiddleware{}
+var (
+	_ Database          = databaseMetricsMiddleware{}
+	_ logical.Versioner = databaseMetricsMiddleware{}
+)
 
 // databaseMetricsMiddleware wraps an implementation of Databases and on
 // function call logs metrics about this instance.
@@ -106,6 +129,21 @@ type databaseMetricsMiddleware struct {
 	next Database
 
 	typeStr string
+}
+
+func (mw databaseMetricsMiddleware) Version() logical.VersionInfo {
+	defer func(now time.Time) {
+		metrics.MeasureSince([]string{"database", "Version"}, now)
+		metrics.MeasureSince([]string{"database", mw.typeStr, "Version"}, now)
+	}(time.Now())
+
+	metrics.IncrCounter([]string{"database", "Version"}, 1)
+	metrics.IncrCounter([]string{"database", mw.typeStr, "Version"}, 1)
+
+	if versioner, ok := mw.next.(logical.Versioner); ok {
+		return versioner.Version()
+	}
+	return logical.EmptyVersion
 }
 
 func (mw databaseMetricsMiddleware) Initialize(ctx context.Context, req InitializeRequest) (resp InitializeResponse, err error) {

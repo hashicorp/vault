@@ -13,7 +13,8 @@ import (
 )
 
 var (
-	_ Database = gRPCClient{}
+	_ Database          = gRPCClient{}
+	_ logical.Versioner = gRPCClient{}
 
 	ErrPluginShutdown = errors.New("plugin shutdown")
 )
@@ -22,6 +23,14 @@ type gRPCClient struct {
 	client        proto.DatabaseClient
 	versionClient logical.VersionedClient
 	doneCtx       context.Context
+}
+
+func (c gRPCClient) Version() logical.VersionInfo {
+	version, _ := c.versionClient.Version(context.Background(), &logical.Empty{})
+	if version != nil {
+		return logical.VersionInfo{Version: version.Version}
+	}
+	return logical.EmptyVersion
 }
 
 func (c gRPCClient) Initialize(ctx context.Context, req InitializeRequest) (InitializeResponse, error) {

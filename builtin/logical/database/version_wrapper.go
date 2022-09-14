@@ -9,6 +9,7 @@ import (
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -225,6 +226,21 @@ func (d databaseVersionWrapper) Close() error {
 
 	// v4 Database
 	return d.v4.Close()
+}
+
+func (d databaseVersionWrapper) Version() logical.VersionInfo {
+	// v5 Database
+	if d.isV5() {
+		if versioner, ok := d.v5.(logical.Versioner); ok {
+			return versioner.Version()
+		}
+	}
+
+	// v4 Database
+	if versioner, ok := d.v4.(logical.Versioner); ok {
+		return versioner.Version()
+	}
+	return logical.EmptyVersion
 }
 
 func (d databaseVersionWrapper) isV5() bool {

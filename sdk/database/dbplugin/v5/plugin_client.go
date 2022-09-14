@@ -10,9 +10,18 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+var _ logical.Versioner = (*DatabasePluginClient)(nil)
+
 type DatabasePluginClient struct {
 	client pluginutil.PluginClient
 	Database
+}
+
+func (dc *DatabasePluginClient) Version() logical.VersionInfo {
+	if versioner, ok := dc.Database.(logical.Versioner); ok {
+		return versioner.Version()
+	}
+	return logical.EmptyVersion
 }
 
 // This wraps the Close call and ensures we both close the database connection
