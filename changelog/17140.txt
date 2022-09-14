@@ -1,0 +1,3 @@
+```release-note:improvement
+**Plugin Multiplexing**: Ensure v5 backends are reinitialized upon reloads
+```
