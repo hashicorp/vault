@@ -450,7 +450,7 @@ func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.
 		wg.Wait()
 	}
 	// Good by default
-	var ret *ocspStatus = &ocspStatus{code: ocspStatusGood}
+	var ret *ocspStatus
 	ocspRes := ocspResponses[0]
 	var firstError error
 	for i, _ := range ocspHosts {
@@ -465,13 +465,13 @@ func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.
 				ocspRes = ocspResponses[i]
 				break
 			case ocspStatusGood:
-				// Use this response only if we
-				if ret == nil {
+				// Use this response only if we don't have a status already, or if what we have was unknown
+				if ret == nil || ret.code == ocspStatusUnknown {
 					ret = ocspStatuses[i]
 					ocspRes = ocspResponses[i]
 				}
 			case ocspStatusUnknown:
-				if !conf.QueryAllServers && ret == nil {
+				if ret == nil {
 					// We may want to use this as the overall result
 					ret = ocspStatuses[i]
 					ocspRes = ocspResponses[i]
