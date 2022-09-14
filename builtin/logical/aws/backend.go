@@ -8,6 +8,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -53,6 +54,7 @@ func Backend() *backend {
 		},
 
 		Invalidate:        b.invalidate,
+		InitializeFunc:    b.initialize,
 		WALRollback:       b.walRollback,
 		WALRollbackMinAge: minAwsUserRollbackAge,
 		BackendType:       logical.TypeLogical,
@@ -91,6 +93,12 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 	case key == rootConfigPath:
 		b.clearClients()
 	}
+}
+
+func (b *backend) initialize(_ context.Context, _ *logical.InitializationRequest) error {
+	b.Logger().Info("***********Initialize method invoked***********\n")
+
+	return nil
 }
 
 // clearClients clears the backend's IAM and STS clients

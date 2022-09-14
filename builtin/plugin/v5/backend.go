@@ -5,7 +5,8 @@ import (
 	"net/rpc"
 	"sync"
 
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
+
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin"
@@ -46,7 +47,7 @@ type backend struct {
 	canary string
 }
 
-func (b *backend) reloadBackend(ctx context.Context) error {
+func (b *backend) reloadBackend(ctx context.Context, req *logical.Request) error {
 	pluginName := b.config.Config["plugin_name"]
 	pluginType, err := consts.ParsePluginType(b.config.Config["plugin_type"])
 	if err != nil {
@@ -72,6 +73,12 @@ func (b *backend) reloadBackend(ctx context.Context) error {
 	}
 	b.Backend = nb
 
+	// Re-initialize the backend in case plugin was reloaded
+	// after it crashed
+	b.Backend.Initialize(ctx, &logical.InitializationRequest{
+		Storage: req.Storage,
+	})
+
 	return nil
 }
 
@@ -88,7 +95,7 @@ func (b *backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		// Reload plugin if it's an rpc.ErrShutdown
 		b.mu.Lock()
 		if b.canary == canary {
-			err := b.reloadBackend(ctx)
+			err := b.reloadBackend(ctx, req)
 			if err != nil {
 				b.mu.Unlock()
 				return nil, err
@@ -120,7 +127,7 @@ func (b *backend) HandleExistenceCheck(ctx context.Context, req *logical.Request
 		// Reload plugin if it's an rpc.ErrShutdown
 		b.mu.Lock()
 		if b.canary == canary {
-			err := b.reloadBackend(ctx)
+			err := b.reloadBackend(ctx, req)
 			if err != nil {
 				b.mu.Unlock()
 				return false, false, err
