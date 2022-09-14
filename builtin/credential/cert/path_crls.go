@@ -209,14 +209,24 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		if err != nil {
 			return nil, err
 		}
-	} else if cdpRaw, ok := d.GetOk("url"); ok {
-		cdl := cdpRaw.(string)
-		if cdl == "" {
+	} else if urlRaw, ok := d.GetOk("url"); ok {
+		url := urlRaw.(string)
+		if url == "" {
 			return logical.ErrorResponse("empty CRL url"), nil
 		}
-		_, err := url2.Parse(cdl)
+		_, err := url2.Parse(url)
 		if err != nil {
 			return logical.ErrorResponse("invalid CRL url: %v", err), nil
+		}
+		err = b.setCRL(ctx, req.Storage, nil, name, &CDPInfo{
+			Url: url,
+		})
+		if err != nil {
+			return nil, err
+		}
+		err = b.updateCRLs(ctx, req)
+		if err != nil {
+			return nil, err
 		}
 	} else {
 		return logical.ErrorResponse("one of 'crl' or 'url' must be provided"), nil
@@ -237,8 +247,11 @@ func (b *backend) setCRL(ctx context.Context, storage logical.Storage, certList 
 		CDP:     cdp,
 		Serials: map[string]RevokedSerialInfo{},
 	}
-	for _, revokedCert := range certList.TBSCertList.RevokedCertificates {
-		crlInfo.Serials[revokedCert.SerialNumber.String()] = RevokedSerialInfo{}
+
+	if certList != nil {
+		for _, revokedCert := range certList.TBSCertList.RevokedCertificates {
+			crlInfo.Serials[revokedCert.SerialNumber.String()] = RevokedSerialInfo{}
+		}
 	}
 
 	entry, err := logical.StorageEntryJSON("crls/"+name, crlInfo)
