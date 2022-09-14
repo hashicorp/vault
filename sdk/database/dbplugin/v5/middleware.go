@@ -41,7 +41,6 @@ func (mw databaseTracingMiddleware) Version() (resp logical.VersionInfo) {
 	mw.logger.Trace("version", "status", "started")
 	if versioner, ok := mw.next.(logical.Versioner); ok {
 		return versioner.Version()
-
 	}
 	return logical.EmptyVersion
 }
