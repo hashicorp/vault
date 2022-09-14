@@ -17,7 +17,7 @@ const validations = {
 };
 
 @withModelValidations(validations)
-export default class PkiRolesModel extends Model {
+export default class PkiRolesEngineModel extends Model {
   @attr('string', { readOnly: true }) backend;
   @attr('string', {
     label: 'Role name',
@@ -25,8 +25,14 @@ export default class PkiRolesModel extends Model {
     readOnly: true,
   })
   name;
-  // ARG TODO return to
-  useOpenAPI = true;
+
+  // defining as useOpenAPI does not work.
+  get useOpenAPI() {
+    return true;
+  }
+  getHelpUrl(backend) {
+    return `/v1/${backend}/roles/example?help=1`;
+  }
   @lazyCapabilities(apiPath`${'backend'}/roles/${'id'}`, 'backend', 'id') updatePath;
   get canDelete() {
     return this.updatePath.get('canCreate');

@@ -8,7 +8,7 @@
 
 {{#if (gt this.model.length 0)}}
   {{#each this.model as |model|}}
-    <LinkedBlock class="list-item-row" @params={{array "roles.role.details" model.id}}>
+    <LinkedBlock class="list-item-row" @params={{array "roles.role.details" model.id}} @linkPrefix={{this.mountPoint}}>
       <div class="level is-mobile">
         <div class="level-left">
           <div>
@@ -35,7 +35,7 @@
                   </li>
                   <li>
                     <LinkTo
-                      @route="vault.cluster.access.oidc.roles.role.edit"
+                      @route="roles.role.edit"
                       @model={{model.id}}
                       {{! ARG TODO return with permissions }}
                       {{!-- @disabled={{eq model.canEdit false}} --}}
