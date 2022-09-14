@@ -52,8 +52,10 @@ func (b *BackendPluginClientV5) Version() logical.VersionInfo {
 	return logical.EmptyVersion
 }
 
-var _ logical.Versioner = (*BackendPluginClientV5)(nil)
-var _ logical.Externaler = (*BackendPluginClientV5)(nil)
+var (
+	_ logical.Versioner  = (*BackendPluginClientV5)(nil)
+	_ logical.Externaler = (*BackendPluginClientV5)(nil)
+)
 
 // NewBackendV5 will return an instance of an RPC-based client implementation of
 // the backend for external plugins, or a concrete implementation of the

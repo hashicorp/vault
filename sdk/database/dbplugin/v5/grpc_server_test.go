@@ -830,5 +830,7 @@ func (e fakeDatabaseWithVersion) Close() error {
 	return nil
 }
 
-var _ Database = (*fakeDatabaseWithVersion)(nil)
-var _ logical.Versioner = (*fakeDatabaseWithVersion)(nil)
+var (
+	_ Database          = (*fakeDatabaseWithVersion)(nil)
+	_ logical.Versioner = (*fakeDatabaseWithVersion)(nil)
+)
