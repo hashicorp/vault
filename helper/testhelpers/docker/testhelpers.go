@@ -131,15 +131,17 @@ func (s ServiceURL) URL() *url.URL {
 // connection string (typically a URL) and nil, or empty string and an error.
 type ServiceAdapter func(ctx context.Context, host string, port int) (ServiceConfig, error)
 
+// This is now a wrapper function for StartNewService, passing the default values of
+// 'true' for addSuffix and 'false' for forceLocalAddr. Most tests can use this.
 func (d *Runner) StartService(ctx context.Context, connect ServiceAdapter) (*Service, error) {
 	serv, _, err := d.StartNewService(ctx, true, false, connect)
 
 	return serv, err
 }
 
-// addSuffix will add a random UUID to the end of the container name
-// forceLocalAddr will controls always returning the address in the
-// form of '127.0.0.1:1234' where 1234 is the mapped contrainer port
+// 'addSuffix' will add a random UUID to the end of the container name.
+// 'forceLocalAddr' will force the container address returned to be in the
+// form of '127.0.0.1:1234' where 1234 is the mapped contrainer port.
 func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr bool, connect ServiceAdapter) (*Service, string, error) {
 	container, hostIPs, containerID, err := d.Start(context.Background(), addSuffix, forceLocalAddr)
 	if err != nil {
