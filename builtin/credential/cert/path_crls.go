@@ -27,14 +27,14 @@ func pathCRLs(b *backend) *framework.Path {
 
 			"crl": {
 				Type: framework.TypeString,
-				Description: `The public certificate that should be trusted.
+				Description: `The public CRL that should be trusted to attest to certificates' validity statuses.
 May be DER or PEM encoded. Note: the expiration time
 is ignored; if the CRL is no longer valid, delete it
 using the same name as specified here.`,
 			},
 			"cdp": {
 				Type:        framework.TypeString,
-				Description: `The URL of a CRL distribution point.  Only one of crl or cdp parameters should be specified.`,
+				Description: `The URL of a CRL distribution point.  Only one of 'crl' or 'cdp' parameters should be specified.`,
 			},
 		},
 
@@ -271,10 +271,11 @@ Manage Certificate Revocation Lists checked during authentication.
 
 const pathCRLsHelpDesc = `
 This endpoint allows you to create, read, update, and delete the Certificate
-Revocation Lists checked during authentication.
+Revocation Lists checked during authentication, and/or CRL Distribution Point 
+URLs.
 
 When any CRLs are in effect, any login will check the trust chains sent by a
-client against the submitted CRLs. Any chain containing a serial number revoked
+client against the submitted or retrieved CRLs. Any chain containing a serial number revoked
 by one or more of the CRLs causes that chain to be marked as invalid for the
 authentication attempt. Conversely, *any* valid chain -- that is, a chain
 in which none of the serials are revoked by any CRL -- allows authentication.
