@@ -55,6 +55,7 @@ func (d GRPCDatabasePlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) err
 	}
 
 	proto.RegisterDatabaseServer(s, &server)
+	logical.RegisterVersionedServer(s, &server)
 	return nil
 }
 

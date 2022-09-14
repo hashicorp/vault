@@ -9,6 +9,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -17,6 +18,7 @@ var _ proto.DatabaseServer = &gRPCServer{}
 
 type gRPCServer struct {
 	proto.UnimplementedDatabaseServer
+	logical.UnimplementedVersionedServer
 
 	// holds the non-multiplexed Database
 	// when this is set the plugin does not support multiplexing
@@ -300,6 +302,19 @@ func (g *gRPCServer) Close(ctx context.Context, _ *proto.Empty) (*proto.Empty, e
 	}
 
 	return &proto.Empty{}, nil
+}
+
+// Version forwards the version request to the underlying Database implementation.
+func (g *gRPCServer) Version(ctx context.Context, _ *logical.Empty) (*logical.VersionReply, error) {
+	impl, err := g.getDatabaseInternal(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if versioner, ok := impl.(logical.Versioner); ok {
+		name, _ := impl.Type() // ignore the error, since this parameter is not really used
+		return &logical.VersionReply{PluginName: name, Version: versioner.Version().Version}, nil
+	}
+	return &logical.VersionReply{}, nil
 }
 
 func getStatementsFromProto(protoStmts *proto.Statements) (statements Statements) {

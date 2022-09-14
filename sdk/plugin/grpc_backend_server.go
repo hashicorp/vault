@@ -27,6 +27,7 @@ type backendInstance struct {
 
 type backendGRPCPluginServer struct {
 	pb.UnimplementedBackendServer
+	logical.UnimplementedVersionedServer
 
 	broker *plugin.GRPCBroker
 

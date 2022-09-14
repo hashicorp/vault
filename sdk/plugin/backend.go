@@ -51,6 +51,7 @@ func (b GRPCBackendPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server)
 	}
 
 	pb.RegisterBackendServer(s, &server)
+	logical.RegisterVersionedServer(s, &server)
 	return nil
 }
 

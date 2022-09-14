@@ -158,5 +158,7 @@ func (b *BackendPluginClient) IsExternal() bool {
 	return true // default to true since this is only used for GRPC plugins
 }
 
-var _ logical.Versioner = (*BackendPluginClient)(nil)
-var _ logical.Externaler = (*BackendPluginClient)(nil)
+var (
+	_ logical.Versioner  = (*BackendPluginClient)(nil)
+	_ logical.Externaler = (*BackendPluginClient)(nil)
+)

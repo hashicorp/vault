@@ -112,8 +112,10 @@ func (p *placeholderBackend) IsExternal() bool {
 	return true
 }
 
-var _ logical.Externaler = (*placeholderBackend)(nil)
-var _ logical.Versioner = (*placeholderBackend)(nil)
+var (
+	_ logical.Externaler = (*placeholderBackend)(nil)
+	_ logical.Versioner  = (*placeholderBackend)(nil)
+)
 
 // PluginBackend is a thin wrapper around plugin.BackendPluginClient
 type PluginBackend struct {
@@ -321,5 +323,7 @@ func (b *PluginBackend) IsExternal() bool {
 	return false
 }
 
-var _ logical.Versioner = (*PluginBackend)(nil)
-var _ logical.Externaler = (*PluginBackend)(nil)
+var (
+	_ logical.Versioner  = (*PluginBackend)(nil)
+	_ logical.Externaler = (*PluginBackend)(nil)
+)
