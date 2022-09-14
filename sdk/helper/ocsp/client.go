@@ -465,9 +465,13 @@ func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.
 				ocspRes = ocspResponses[i]
 				break
 			case ocspStatusGood:
-			//continue
+				// Use this response only if we
+				if ret == nil {
+					ret = ocspStatuses[i]
+					ocspRes = ocspResponses[i]
+				}
 			case ocspStatusUnknown:
-				if !conf.QueryAllServers {
+				if !conf.QueryAllServers && ret == nil {
 					// We may want to use this as the overall result
 					ret = ocspStatuses[i]
 					ocspRes = ocspResponses[i]
