@@ -122,6 +122,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"internal/ui/mounts",
 				"internal/ui/mounts/*",
 				"internal/ui/namespaces",
+				"internal/ui/resultant-acl",
 				"replication/performance/status",
 				"replication/dr/status",
 				"replication/dr/secondary/promote",
