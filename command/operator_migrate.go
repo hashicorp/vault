@@ -144,8 +144,13 @@ func (c *OperatorMigrateCommand) Run(args []string) int {
 	}
 	c.logger = logging.NewVaultLogger(log.LevelFromString(c.flagLogLevel))
 
-	if (c.flagStart != "") && c.flagParallel != 1 {
-		c.UI.Error("Error: flag -start and -parallel can't be used together")
+	if c.flagParallel < 1 || c.flagParallel > 2147483647 {
+		c.UI.Error("Error: argument to flag -parallel must be between 1 and 2147483647")
+		return 1
+	}
+
+	if (c.flagStart != "") && c.flagParallel >= 2 {
+		c.UI.Error("Error: flag -start and -parallel set to more than 1 can't be used together")
 		return 1
 	}
 
