@@ -1001,8 +1001,8 @@ func TestNewUser_CustomUsername(t *testing.T) {
 //
 // To run the test, set the environment variable POSTGRES_MULTIHOST_NET to the value of
 // a docker network you've preconfigured, e.g.
-// `docker network create -d bridge postgres-repmgr`
-// `export POSTGRES_MULTIHOST_NET=postgres-repmgr`
+// 'docker network create -d bridge postgres-repmgr'
+// 'export POSTGRES_MULTIHOST_NET=postgres-repmgr'
 func TestPostgreSQL_Repmgr(t *testing.T) {
 	_, exists := os.LookupEnv("POSTGRES_MULTIHOST_NET")
 	if !exists {
