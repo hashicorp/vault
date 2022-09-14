@@ -1,0 +1,3 @@
+```release-note:bug
+api: Allow internal/ui/resultant-acl API endpoint to be accessible without a token (while unauthenticated)
+```
