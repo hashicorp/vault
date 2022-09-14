@@ -32,7 +32,7 @@ May be DER or PEM encoded. Note: the expiration time
 is ignored; if the CRL is no longer valid, delete it
 using the same name as specified here.`,
 			},
-			"cdp": {
+			"url": {
 				Type:        framework.TypeString,
 				Description: `The URL of a CRL distribution point.  Only one of 'crl' or 'cdp' parameters should be specified.`,
 			},
@@ -209,17 +209,17 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		if err != nil {
 			return nil, err
 		}
-	} else if cdpRaw, ok := d.GetOk("cdp"); ok {
+	} else if cdpRaw, ok := d.GetOk("url"); ok {
 		cdl := cdpRaw.(string)
 		if cdl == "" {
-			return logical.ErrorResponse("empty CDP url"), nil
+			return logical.ErrorResponse("empty CRL url"), nil
 		}
 		_, err := url2.Parse(cdl)
 		if err != nil {
-			return logical.ErrorResponse("invalid CDP url: %v", err), nil
+			return logical.ErrorResponse("invalid CRL url: %v", err), nil
 		}
 	} else {
-		return logical.ErrorResponse("one of 'crl' or 'cdp' must be provided"), nil
+		return logical.ErrorResponse("one of 'crl' or 'url' must be provided"), nil
 	}
 
 	return nil, nil
