@@ -8,7 +8,6 @@ import (
 	"math/big"
 	url2 "net/url"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/fatih/structs"
@@ -82,9 +81,6 @@ func (b *backend) populateCRLs(ctx context.Context, storage logical.Storage) err
 		if err != nil {
 			b.crls = nil
 			return fmt.Errorf("error decoding CRL %q: %w", key, err)
-		}
-		if crlInfo.CDP != nil {
-			crlInfo.CDP.fetchOnce = &sync.Once{}
 		}
 		b.crls[key] = crlInfo
 	}
@@ -222,16 +218,6 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		if err != nil {
 			return logical.ErrorResponse("invalid CDP url: %v", err), nil
 		}
-		crl := &CRLInfo{
-			CDP: &CDPInfo{
-				Url:       cdl,
-				fetchOnce: &sync.Once{},
-			},
-		}
-		err = b.fetchCRL(ctx, req.Storage, name, crl)
-		if err != nil {
-			return nil, err
-		}
 	} else {
 		return logical.ErrorResponse("one of 'crl' or 'cdp' must be provided"), nil
 	}
@@ -268,9 +254,8 @@ func (b *backend) setCRL(ctx context.Context, storage logical.Storage, certList 
 }
 
 type CDPInfo struct {
-	Url        string     `json:"url" structs:"url" mapstructure:"url"`
-	ValidUntil time.Time  `json:"valid_until" structs:"valid_until" mapstructure:"valid_until"`
-	fetchOnce  *sync.Once `json:"-" structs:"-" mapstructure:"-"`
+	Url        string    `json:"url" structs:"url" mapstructure:"url"`
+	ValidUntil time.Time `json:"valid_until" structs:"valid_until" mapstructure:"valid_until"`
 }
 
 type CRLInfo struct {

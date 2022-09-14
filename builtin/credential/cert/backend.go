@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -40,9 +41,10 @@ func Backend() *backend {
 			pathCerts(&b),
 			pathCRLs(&b),
 		},
-		AuthRenew:   b.pathLoginRenew,
-		Invalidate:  b.invalidate,
-		BackendType: logical.TypeCredential,
+		AuthRenew:    b.pathLoginRenew,
+		Invalidate:   b.invalidate,
+		BackendType:  logical.TypeCredential,
+		PeriodicFunc: b.updateCRLs,
 	}
 
 	b.crlUpdateMutex = &sync.RWMutex{}
@@ -67,25 +69,18 @@ func (b *backend) invalidate(_ context.Context, key string) {
 	}
 }
 
-func (b *backend) updateCRL(ctx context.Context, storage logical.Storage, name string, crl CRLInfo) error {
-	if crl.CDP == nil {
-		return nil
+func (b *backend) fetchCRL(ctx context.Context, storage logical.Storage, name string, crl *CRLInfo, extraCas []*x509.Certificate) error {
+	roots, _ := x509.SystemCertPool()
+	if roots == nil {
+		roots = x509.NewCertPool()
 	}
-	var err error
-	crl.CDP.fetchOnce.Do(func() {
-		defer func() {
-			crl.CDP.fetchOnce = &sync.Once{}
-		}()
-		err = b.fetchCRL(ctx, storage, name, &crl)
-	})
-	return err
-}
-
-func (b *backend) fetchCRL(ctx context.Context, storage logical.Storage, name string, crl *CRLInfo) error {
+	for _, c := range extraCas {
+		roots.AddCert(c)
+	}
 	cli := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
+				RootCAs: roots,
 			},
 		},
 	}
@@ -105,6 +100,30 @@ func (b *backend) fetchCRL(ctx context.Context, storage logical.Storage, name st
 		}
 		crl.CDP.ValidUntil = certList.TBSCertList.NextUpdate
 		b.setCRL(ctx, storage, certList, name, crl.CDP)
+	}
+	return nil
+}
+
+func (b *backend) updateCRLs(ctx context.Context, req *logical.Request) error {
+	roots, _ := x509.SystemCertPool()
+	if roots == nil {
+		roots = x509.NewCertPool()
+	}
+	_, trusted, _ := b.loadTrustedCerts(ctx, req.Storage, "")
+
+	var certs []*x509.Certificate
+	for _, tC := range trusted {
+		for _, c := range tC.Certificates {
+			certs = append(certs, c)
+		}
+	}
+
+	for name, crl := range b.crls {
+		if crl.CDP != nil && time.Now().After(crl.CDP.ValidUntil) {
+			if err := b.fetchCRL(ctx, req.Storage, name, &crl, certs); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
