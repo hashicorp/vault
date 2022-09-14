@@ -232,6 +232,8 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		return logical.ErrorResponse("one of 'crl' or 'cdp' must be provided"), nil
 	}
 
 	return nil, nil
