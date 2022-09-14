@@ -42,25 +42,23 @@ export default class PkiRolesEngineModel extends Model {
   get canRead() {
     return this.updatePath.get('canRead');
   }
-  // ARG TODO confirm you need this
+
   @lazyCapabilities(apiPath`${'backend'}/issue/${'id'}`, 'backend', 'id') generatePath;
   get canReadIssue() {
     // ARG TODO was duplicate name, added Issue
     return this.generatePath.get('canUpdate');
   }
-  // ARG TODO confirm you need this
   @lazyCapabilities(apiPath`${'backend'}/sign/${'id'}`, 'backend', 'id') signPath;
   get canSign() {
     return this.signPath.get('canUpdate');
   }
-  // ARG TODO confirm you need this
   @lazyCapabilities(apiPath`${'backend'}/sign-verbatim/${'id'}`, 'backend', 'id') signVerbatimPath;
   get canSignVerbatim() {
     return this.signVerbatimPath.get('canUpdate');
   }
 
   // Form Fields not hidden in toggle options
-  _attributeMeta = null; // cache initial result of expandAttributeMeta in getter and return
+  _attributeMeta = null;
   get formFields() {
     if (!this._attributeMeta) {
       this._attributeMeta = expandAttributeMeta(this, ['name', 'clientType', 'redirectUris']);
@@ -70,7 +68,7 @@ export default class PkiRolesEngineModel extends Model {
 
   // Form fields hidden behind toggle options
   _fieldToAttrsGroups = null;
-  // ARG TODO: I removed 'allowedDomains' but I fairly certain it needs to be somewhere
+  // ARG TODO: I removed 'allowedDomains' but I'm fairly certain it needs to be somewhere. Confirm with design.
   get fieldGroups() {
     if (!this._fieldToAttrsGroups) {
       this._fieldToAttrsGroups = fieldToAttrs(this, [
