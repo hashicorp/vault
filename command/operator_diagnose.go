@@ -719,6 +719,12 @@ SEALFAIL:
 		diagnose.Skipped(ctx, "HCP link check will not run on OSS Vault.")
 	} else {
 		if config.HCPLinkConf != nil {
+			// we need to override API and Passthrough capabilities
+			// as they could not be initialized when Vault http handler
+			// is not fully initialized
+			config.HCPLinkConf.EnablePassThroughCapability = false
+			config.HCPLinkConf.EnableAPICapability = false
+
 			diagnose.Test(ctx, "Check HCP Connection", func(ctx context.Context) error {
 				hcpLink, err := hcp_link.NewHCPLink(config.HCPLinkConf, vaultCore, server.logger)
 				if err != nil || hcpLink == nil {
@@ -729,7 +735,7 @@ SEALFAIL:
 				deadline := time.Now().Add(5 * time.Second)
 				linkSessionStatus := "disconnected"
 				for time.Now().Before(deadline) {
-					linkSessionStatus = hcpLink.GetScadaSessionStatus()
+					linkSessionStatus = hcpLink.GetConnectionStatusMessage(hcpLink.GetScadaSessionStatus())
 					if linkSessionStatus == "connected" {
 						break
 					}

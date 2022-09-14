@@ -22,13 +22,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2"
-
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
+	"github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/mlock"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
@@ -2173,7 +2172,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupQuotas(ctx, false); err != nil {
 		return err
 	}
-
 	if err := c.setupHeaderHMACKey(ctx, false); err != nil {
 		return err
 	}
@@ -2259,7 +2257,7 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	defer func() {
 		if retErr != nil {
 			ctxCancelFunc()
-			c.preSeal()
+			_ = c.preSeal()
 		}
 	}()
 	c.logger.Info("post-unseal setup starting")
@@ -2271,9 +2269,9 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	}
 
 	// Purge these for safety in case of a rekey
-	c.seal.SetBarrierConfig(ctx, nil)
+	_ = c.seal.SetBarrierConfig(ctx, nil)
 	if c.seal.RecoveryKeySupported() {
-		c.seal.SetRecoveryConfig(ctx, nil)
+		_ = c.seal.SetRecoveryConfig(ctx, nil)
 	}
 
 	if err := unsealer.unseal(ctx, c.logger, c); err != nil {

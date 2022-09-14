@@ -550,6 +550,13 @@ func (f *FSM) Transaction(ctx context.Context, txns []*physical.TxnEntry) error 
 				err = b.Put([]byte(txn.Entry.Key), txn.Entry.Value)
 			case physical.DeleteOperation:
 				err = b.Delete([]byte(txn.Entry.Key))
+			case physical.GetOperation:
+				val := b.Get([]byte(txn.Entry.Key))
+				if len(val) > 0 {
+					newVal := make([]byte, len(val))
+					copy(newVal, val)
+					txn.Entry.Value = newVal
+				}
 			default:
 				return fmt.Errorf("%q is not a supported transaction operation", txn.Operation)
 			}
@@ -560,6 +567,7 @@ func (f *FSM) Transaction(ctx context.Context, txns []*physical.TxnEntry) error 
 
 		return nil
 	})
+
 	return err
 }
 

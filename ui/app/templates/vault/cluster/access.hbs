@@ -61,6 +61,13 @@
         </LinkTo>
       </li>
     {{/if}}
+    {{#if (has-permission "access" routeParams="oidc")}}
+      <li>
+        <LinkTo @route="vault.cluster.access.oidc" data-test-link="oidc">
+          OIDC Provider
+        </LinkTo>
+      </li>
+    {{/if}}
   </MenuSidebar>
   <div class="column is-9">
     {{outlet}}

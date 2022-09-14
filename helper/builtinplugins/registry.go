@@ -13,6 +13,8 @@ import (
 	dbCouchbase "github.com/hashicorp/vault-plugin-database-couchbase"
 	dbElastic "github.com/hashicorp/vault-plugin-database-elasticsearch"
 	dbMongoAtlas "github.com/hashicorp/vault-plugin-database-mongodbatlas"
+	dbRedis "github.com/hashicorp/vault-plugin-database-redis"
+	dbRedisElastiCache "github.com/hashicorp/vault-plugin-database-redis-elasticache"
 	dbSnowflake "github.com/hashicorp/vault-plugin-database-snowflake"
 	logicalAd "github.com/hashicorp/vault-plugin-secrets-ad/plugin"
 	logicalAlicloud "github.com/hashicorp/vault-plugin-secrets-alicloud"
@@ -122,17 +124,19 @@ func newRegistry() *registry {
 			"mysql-rds-database-plugin":    {Factory: dbMysql.New(dbMysql.DefaultLegacyUserNameTemplate)},
 			"mysql-legacy-database-plugin": {Factory: dbMysql.New(dbMysql.DefaultLegacyUserNameTemplate)},
 
-			"cassandra-database-plugin":     {Factory: dbCass.New},
-			"couchbase-database-plugin":     {Factory: dbCouchbase.New},
-			"elasticsearch-database-plugin": {Factory: dbElastic.New},
-			"hana-database-plugin":          {Factory: dbHana.New},
-			"influxdb-database-plugin":      {Factory: dbInflux.New},
-			"mongodb-database-plugin":       {Factory: dbMongo.New},
-			"mongodbatlas-database-plugin":  {Factory: dbMongoAtlas.New},
-			"mssql-database-plugin":         {Factory: dbMssql.New},
-			"postgresql-database-plugin":    {Factory: dbPostgres.New},
-			"redshift-database-plugin":      {Factory: dbRedshift.New},
-			"snowflake-database-plugin":     {Factory: dbSnowflake.New},
+			"cassandra-database-plugin":         {Factory: dbCass.New},
+			"couchbase-database-plugin":         {Factory: dbCouchbase.New},
+			"elasticsearch-database-plugin":     {Factory: dbElastic.New},
+			"hana-database-plugin":              {Factory: dbHana.New},
+			"influxdb-database-plugin":          {Factory: dbInflux.New},
+			"mongodb-database-plugin":           {Factory: dbMongo.New},
+			"mongodbatlas-database-plugin":      {Factory: dbMongoAtlas.New},
+			"mssql-database-plugin":             {Factory: dbMssql.New},
+			"postgresql-database-plugin":        {Factory: dbPostgres.New},
+			"redshift-database-plugin":          {Factory: dbRedshift.New},
+			"redis-database-plugin":             {Factory: dbRedis.New},
+			"redis-elasticache-database-plugin": {Factory: dbRedisElastiCache.New},
+			"snowflake-database-plugin":         {Factory: dbSnowflake.New},
 		},
 		logicalBackends: map[string]logicalBackend{
 			"ad":       {Factory: logicalAd.Factory},

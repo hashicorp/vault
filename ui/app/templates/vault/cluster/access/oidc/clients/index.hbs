@@ -1,0 +1,9 @@
+<Toolbar>
+  <ToolbarActions>
+    <ToolbarLink data-test-oidc-client-create @type="add" @params={{array "vault.cluster.access.oidc.clients.create"}}>
+      Create application
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+
+<Oidc::ClientList @model={{this.model}} />

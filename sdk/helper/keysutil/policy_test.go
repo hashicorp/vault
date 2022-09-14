@@ -834,7 +834,8 @@ func Test_RSA_PSS(t *testing.T) {
 	}
 
 	test_RSA_PSS := func(t *testing.T, p *Policy, rsaKey *rsa.PrivateKey, hashType HashType,
-		marshalingType MarshalingType) {
+		marshalingType MarshalingType,
+	) {
 		unsaltedOptions := SigningOptions{
 			HashAlgorithm: hashType,
 			Marshaling:    marshalingType,

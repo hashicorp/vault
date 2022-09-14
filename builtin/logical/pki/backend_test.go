@@ -5462,6 +5462,34 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 	}
 }
 
+// Verify that our default values are consistent when creating an issuer and when we do an
+// empty POST update to it. This will hopefully identify if we have different default values
+// for fields across the two APIs.
+func TestBackend_VerifyIssuerUpdateDefaultsMatchCreation(t *testing.T) {
+	t.Parallel()
+	b, s := createBackendWithStorage(t)
+
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "myvault.com",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed generating root issuer")
+
+	resp, err = CBRead(b, s, "issuer/default")
+	requireSuccessNonNilResponse(t, resp, err, "failed reading default issuer")
+	preUpdateValues := resp.Data
+
+	resp, err = CBWrite(b, s, "issuer/default", map[string]interface{}{})
+	requireSuccessNonNilResponse(t, resp, err, "failed updating default issuer with no values")
+
+	resp, err = CBRead(b, s, "issuer/default")
+	requireSuccessNonNilResponse(t, resp, err, "failed reading default issuer")
+	postUpdateValues := resp.Data
+
+	require.Equal(t, preUpdateValues, postUpdateValues,
+		"A value was updated based on the empty update of an issuer, "+
+			"most likely we have a different set of field parameters across create and update of issuers.")
+}
+
 var (
 	initTest  sync.Once
 	rsaCAKey  string

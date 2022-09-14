@@ -52,7 +52,7 @@
     {{#if (eq this.generateStep "chooseMethod")}}
       <div class="box is-marginless is-shadowless">
         <p>
-          Updating or promoting this cluster requires an operation token. Let's generate one by inputting the master key
+          Updating or promoting this cluster requires an operation token. Let's generate one by inputting the root key
           shares. If you'd like to encrypt the token with a PGP Key, please click "Provide PGP Key" below, otherwise we can
           begin generation of the Operation Token.
         </p>
@@ -100,7 +100,7 @@
       <div class="box is-marginless is-shadowless">
         <p>
           Below is the base-64 encoded PGP Key that will be used to encrypt the generated Operation Token. Next we'll enter
-          portions of the master key to generate an Operation Token. Click the "Generate Operation Token" button to proceed.
+          portions of the root key to generate an Operation Token. Click the "Generate Operation Token" button to proceed.
         </p>
         <div class="message is-list has-copy-button" tabindex="-1">
           <HoverCopyButton @copyValue={{this.pgp_key}} />

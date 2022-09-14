@@ -120,12 +120,12 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.18.5
-    - GOFUMPT_VERSION: 0.2.1
+    - GO_VERSION: 1.19.1
+    - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.18.5
+    - image: docker.mirror.hashicorp.services/cimg/go:1.19.1
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -243,6 +243,7 @@ jobs:
             TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
             export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
             if [ -z $TEST_DOCKER_NETWORK_ID ]; then
+              docker network prune -f
               TEST_DOCKER_NETWORK_ID=$(docker network create "${TEST_DOCKER_NETWORK_NAME}")
             fi
 
@@ -259,7 +260,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network ${TEST_DOCKER_NETWORK_NAME} \
-              docker.mirror.hashicorp.services/cimg/go:1.18.5 \
+              docker.mirror.hashicorp.services/cimg/go:1.19.1 \
               tail -f /dev/null)"
             mkdir workspace
             echo ${CONTAINER_ID} > workspace/container_id
@@ -352,6 +353,7 @@ jobs:
     - checkout
     - run:
         command: |
+          echo "Using gofumpt version ${GOFUMPT_VERSION}"
           go install "mvdan.cc/gofumpt@v${GOFUMPT_VERSION}"
           make fmt
           if ! git diff --exit-code; then
@@ -362,12 +364,12 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.18.5
-    - GOFUMPT_VERSION: 0.2.1
+    - GO_VERSION: 1.19.1
+    - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.18.5
+    - image: docker.mirror.hashicorp.services/cimg/go:1.19.1
     resource_class: xlarge
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -481,6 +483,7 @@ jobs:
             TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
             export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
             if [ -z $TEST_DOCKER_NETWORK_ID ]; then
+              docker network prune -f
               TEST_DOCKER_NETWORK_ID=$(docker network create "${TEST_DOCKER_NETWORK_NAME}")
             fi
 
@@ -497,7 +500,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network ${TEST_DOCKER_NETWORK_NAME} \
-              docker.mirror.hashicorp.services/cimg/go:1.18.5 \
+              docker.mirror.hashicorp.services/cimg/go:1.19.1 \
               tail -f /dev/null)"
             mkdir workspace
             echo ${CONTAINER_ID} > workspace/container_id
@@ -557,7 +560,7 @@ jobs:
     - GO_TAGS: ''
   test-go:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.18.5
+    - image: docker.mirror.hashicorp.services/cimg/go:1.19.1
     resource_class: large
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -671,6 +674,7 @@ jobs:
             TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
             export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
             if [ -z $TEST_DOCKER_NETWORK_ID ]; then
+              docker network prune -f
               TEST_DOCKER_NETWORK_ID=$(docker network create "${TEST_DOCKER_NETWORK_NAME}")
             fi
 
@@ -687,7 +691,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network ${TEST_DOCKER_NETWORK_NAME} \
-              docker.mirror.hashicorp.services/cimg/go:1.18.5 \
+              docker.mirror.hashicorp.services/cimg/go:1.19.1 \
               tail -f /dev/null)"
             mkdir workspace
             echo ${CONTAINER_ID} > workspace/container_id
@@ -848,12 +852,12 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.18.5
-    - GOFUMPT_VERSION: 0.2.1
+    - GO_VERSION: 1.19.1
+    - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.18.5
+    - image: docker.mirror.hashicorp.services/cimg/go:1.19.1
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -971,6 +975,7 @@ jobs:
             TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
             export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
             if [ -z $TEST_DOCKER_NETWORK_ID ]; then
+              docker network prune -f
               TEST_DOCKER_NETWORK_ID=$(docker network create "${TEST_DOCKER_NETWORK_NAME}")
             fi
 
@@ -987,7 +992,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network ${TEST_DOCKER_NETWORK_NAME} \
-              docker.mirror.hashicorp.services/cimg/go:1.18.5 \
+              docker.mirror.hashicorp.services/cimg/go:1.19.1 \
               tail -f /dev/null)"
             mkdir workspace
             echo ${CONTAINER_ID} > workspace/container_id

@@ -80,7 +80,7 @@ func (c *KVGetCommand) Flags() *FlagSets {
 }
 
 func (c *KVGetCommand) AutocompleteArgs() complete.Predictor {
-	return nil
+	return c.PredictVaultFiles()
 }
 
 func (c *KVGetCommand) AutocompleteFlags() complete.Flags {

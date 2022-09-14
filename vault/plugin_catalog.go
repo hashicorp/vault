@@ -348,20 +348,14 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 
 	clientConn := rpcClient.(*plugin.GRPCClient).Conn
 
-	muxed, err := pluginutil.MultiplexingSupported(ctx, clientConn)
+	muxed, err := pluginutil.MultiplexingSupported(ctx, clientConn, config.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	if muxed {
-		// Wrap rpcClient with our implementation so that we can inject the
-		// ID into the context
-		pc.clientConn = &pluginClientConn{
-			ClientConn: clientConn,
-			id:         id,
-		}
-	} else {
-		pc.clientConn = clientConn
+	pc.clientConn = &pluginClientConn{
+		ClientConn: clientConn,
+		id:         id,
 	}
 
 	pc.ClientProtocol = rpcClient
@@ -859,15 +853,17 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 
 		version := c.getBuiltinVersion(pluginType, plugin)
 		semanticVersion, err := semver.NewVersion(version)
+		deprecationStatus, _ := c.builtinRegistry.DeprecationStatus(plugin, pluginType)
 		if err != nil {
 			return nil, err
 		}
 		result = append(result, pluginutil.VersionedPlugin{
-			Name:            plugin,
-			Type:            pluginType.String(),
-			Version:         version,
-			Builtin:         true,
-			SemanticVersion: semanticVersion,
+			Name:              plugin,
+			Type:              pluginType.String(),
+			Version:           version,
+			Builtin:           true,
+			SemanticVersion:   semanticVersion,
+			DeprecationStatus: deprecationStatus.String(),
 		})
 	}
 

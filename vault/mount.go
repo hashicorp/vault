@@ -306,7 +306,7 @@ const mountStateUnmounting = "unmounting"
 type MountEntry struct {
 	Table                 string            `json:"table"`                             // The table it belongs to
 	Path                  string            `json:"path"`                              // Mount Path
-	Type                  string            `json:"type"`                              // Logical backend Type
+	Type                  string            `json:"type"`                              // Logical backend Type. NB: This is the plugin name, e.g. my-vault-plugin, NOT plugin type (e.g. auth).
 	Description           string            `json:"description"`                       // User-provided description
 	UUID                  string            `json:"uuid"`                              // Barrier view UUID
 	BackendAwareUUID      string            `json:"backend_aware_uuid"`                // UUID that can be used by the backend as a helper when a consistent value is needed outside of storage.
@@ -330,9 +330,9 @@ type MountEntry struct {
 	synthesizedConfigCache sync.Map
 
 	// version info
-	Version        string `json:"version,omitempty"`
-	Sha            string `json:"sha,omitempty"`
-	RunningVersion string `json:"running_version,omitempty"`
+	Version        string `json:"version,omitempty"`         // The semantic version of the mounted plugin, e.g. v1.2.3.
+	Sha            string `json:"sha,omitempty"`             // The SHA256 sum of the plugin binary.
+	RunningVersion string `json:"running_version,omitempty"` // The semantic version of the mounted plugin as reported by the plugin.
 	RunningSha     string `json:"running_sha,omitempty"`
 }
 
@@ -464,7 +464,7 @@ func (c *Core) decodeMountTable(ctx context.Context, raw []byte) (*MountTable, e
 		}
 
 		// Immediately shutdown the core if deprecated mounts are detected and VAULT_ALLOW_PENDING_REMOVAL_MOUNTS is unset
-		if err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeUnknown); err != nil {
+		if _, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeUnknown); err != nil {
 			c.logger.Error("shutting down core", "error", err)
 			c.Shutdown()
 		}
@@ -589,11 +589,6 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	// from replication.
 	if strutil.StrListContains(singletonMounts, entry.Type) {
 		addFilterablePath(c, viewPath)
-	}
-
-	// Detect and handle deprecated secrets engines
-	if err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeSecrets); err != nil {
-		return err
 	}
 
 	nilMount, err := preprocessMount(c, entry, view)
@@ -923,9 +918,9 @@ func (c *Core) taintMountEntry(ctx context.Context, nsID, mountPath string, upda
 // * PendingRemoval - log an error about builtin deprecation and return an error
 // if VAULT_ALLOW_PENDING_REMOVAL_MOUNTS is unset
 // * Removed - log an error about builtin deprecation and return an error
-func (c *Core) handleDeprecatedMountEntry(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) error {
+func (c *Core) handleDeprecatedMountEntry(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) (*logical.Response, error) {
 	if c.builtinRegistry == nil || entry == nil {
-		return nil
+		return nil, nil
 	}
 
 	// Allow type to be determined from mount entry when not otherwise specified
@@ -941,6 +936,7 @@ func (c *Core) handleDeprecatedMountEntry(ctx context.Context, entry *MountEntry
 
 	status, ok := c.builtinRegistry.DeprecationStatus(t, pluginType)
 	if ok {
+		resp := &logical.Response{}
 		// Deprecation sublogger with some identifying information
 		dl := c.logger.With("name", t, "type", pluginType, "status", status, "path", entry.Path)
 		errDeprecatedMount := fmt.Errorf("mount entry associated with %s builtin", status)
@@ -948,19 +944,23 @@ func (c *Core) handleDeprecatedMountEntry(ctx context.Context, entry *MountEntry
 		switch status {
 		case consts.Deprecated:
 			dl.Warn(errDeprecatedMount.Error())
+			resp.AddWarning(errDeprecatedMount.Error())
+			return resp, nil
 
 		case consts.PendingRemoval:
 			dl.Error(errDeprecatedMount.Error())
 			if allow := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv); allow == "" {
-				return fmt.Errorf("could not mount %q: %w", t, errDeprecatedMount)
+				return nil, fmt.Errorf("could not mount %q: %w", t, errDeprecatedMount)
 			}
+			resp.AddWarning(errDeprecatedMount.Error())
 			c.Logger().Info("mount allowed by environment variable", "env", consts.VaultAllowPendingRemovalMountsEnv)
+			return resp, nil
 
 		case consts.Removed:
-			return fmt.Errorf("could not mount %s: %w", t, errDeprecatedMount)
+			return nil, fmt.Errorf("could not mount %s: %w", t, errDeprecatedMount)
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 // remountForceInternal takes a copy of the mount entry for the path and fully unmounts
@@ -1526,7 +1526,11 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 			return nil, err
 		}
 		if plug == nil {
-			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, t)
+			errContext := t
+			if entry.Version != "" {
+				errContext += fmt.Sprintf(", version=%s", entry.Version)
+			}
+			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, errContext)
 		}
 
 		f = plugin.Factory
@@ -1548,6 +1552,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	}
 
 	conf["plugin_type"] = consts.PluginTypeSecrets.String()
+	conf["plugin_version"] = entry.Version
 
 	backendLogger := c.baseLogger.Named(fmt.Sprintf("secrets.%s.%s", t, entry.Accessor))
 	c.AddLogger(backendLogger)
