@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -232,6 +233,16 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 	trustedChains, err := validateConnState(roots, connState)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	// Make sure CRLs are up-to-date
+	for key, crl := range b.crls {
+		if crl.CDP != nil && time.Now().After(crl.CDP.ValidUntil) {
+			err := b.updateCRL(ctx, req.Storage, key, crl)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
 	}
 
 	// If trustedNonCAs is not empty it means that client had registered a non-CA cert
@@ -540,6 +551,7 @@ func (b *backend) checkForChainInCRLs(chain []*x509.Certificate) bool {
 			badChain = true
 			break
 		}
+
 	}
 	return badChain
 }

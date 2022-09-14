@@ -2,6 +2,10 @@ package cert
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"io"
+	"net/http"
 	"strings"
 	"sync"
 
@@ -12,6 +16,9 @@ import (
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
 	if err := b.Setup(ctx, conf); err != nil {
+		return nil, err
+	}
+	if err := b.populateCRLs(ctx, conf.StorageView); err != nil {
 		return nil, err
 	}
 	return b, nil
@@ -58,6 +65,48 @@ func (b *backend) invalidate(_ context.Context, key string) {
 		defer b.crlUpdateMutex.Unlock()
 		b.crls = nil
 	}
+}
+
+func (b *backend) updateCRL(ctx context.Context, storage logical.Storage, name string, crl CRLInfo) error {
+	if crl.CDP == nil {
+		return nil
+	}
+	var err error
+	crl.CDP.fetchOnce.Do(func() {
+		defer func() {
+			crl.CDP.fetchOnce = &sync.Once{}
+		}()
+		err = b.fetchCRL(ctx, storage, name, &crl)
+	})
+	return err
+}
+
+func (b *backend) fetchCRL(ctx context.Context, storage logical.Storage, name string, crl *CRLInfo) error {
+	cli := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
+
+	response, err := cli.Get(crl.CDP.Url)
+	if err != nil {
+		return err
+	}
+	if response.StatusCode == http.StatusOK {
+		body, err := io.ReadAll(response.Body)
+		if err != nil {
+			return err
+		}
+		certList, err := x509.ParseCRL(body)
+		if err != nil {
+			return err
+		}
+		crl.CDP.ValidUntil = certList.TBSCertList.NextUpdate
+		b.setCRL(ctx, storage, certList, name, crl.CDP)
+	}
+	return nil
 }
 
 const backendHelp = `

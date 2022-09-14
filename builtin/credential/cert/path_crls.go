@@ -3,9 +3,13 @@ package cert
 import (
 	"context"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"fmt"
 	"math/big"
+	url2 "net/url"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -28,6 +32,10 @@ func pathCRLs(b *backend) *framework.Path {
 May be DER or PEM encoded. Note: the expiration time
 is ignored; if the CRL is no longer valid, delete it
 using the same name as specified here.`,
+			},
+			"cdp": {
+				Type:        framework.TypeString,
+				Description: `The URL of a CRL distribution point.  Only one of crl or cdp parameters should be specified.`,
 			},
 		},
 
@@ -74,6 +82,9 @@ func (b *backend) populateCRLs(ctx context.Context, storage logical.Storage) err
 		if err != nil {
 			b.crls = nil
 			return fmt.Errorf("error decoding CRL %q: %w", key, err)
+		}
+		if crlInfo.CDP != nil {
+			crlInfo.CDP.fetchOnce = &sync.Once{}
 		}
 		b.crls[key] = crlInfo
 	}
@@ -188,24 +199,54 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 	if name == "" {
 		return logical.ErrorResponse(`"name" parameter cannot be empty`), nil
 	}
-	crl := d.Get("crl").(string)
+	if crlRaw, ok := d.GetOk("crl"); ok {
+		crl := crlRaw.(string)
+		certList, err := x509.ParseCRL([]byte(crl))
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("failed to parse CRL: %v", err)), nil
+		}
+		if certList == nil {
+			return logical.ErrorResponse("parsed CRL is nil"), nil
+		}
 
-	certList, err := x509.ParseCRL([]byte(crl))
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("failed to parse CRL: %v", err)), nil
-	}
-	if certList == nil {
-		return logical.ErrorResponse("parsed CRL is nil"), nil
+		err = b.setCRL(ctx, req.Storage, certList, name, nil)
+		if err != nil {
+			return nil, err
+		}
+	} else if cdpRaw, ok := d.GetOk("cdp"); ok {
+		cdl := cdpRaw.(string)
+		if cdl == "" {
+			return logical.ErrorResponse("empty CDP url"), nil
+		}
+		_, err := url2.Parse(cdl)
+		if err != nil {
+			return logical.ErrorResponse("invalid CDP url: %v", err), nil
+		}
+		crl := &CRLInfo{
+			CDP: &CDPInfo{
+				Url:       cdl,
+				fetchOnce: &sync.Once{},
+			},
+		}
+		err = b.fetchCRL(ctx, req.Storage, name, crl)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	if err := b.populateCRLs(ctx, req.Storage); err != nil {
-		return nil, err
+	return nil, nil
+}
+
+func (b *backend) setCRL(ctx context.Context, storage logical.Storage, certList *pkix.CertificateList, name string, cdp *CDPInfo) error {
+	if err := b.populateCRLs(ctx, storage); err != nil {
+		return err
 	}
 
 	b.crlUpdateMutex.Lock()
 	defer b.crlUpdateMutex.Unlock()
 
 	crlInfo := CRLInfo{
+		CDP:     cdp,
 		Serials: map[string]RevokedSerialInfo{},
 	}
 	for _, revokedCert := range certList.TBSCertList.RevokedCertificates {
@@ -214,18 +255,24 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 
 	entry, err := logical.StorageEntryJSON("crls/"+name, crlInfo)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	if err = req.Storage.Put(ctx, entry); err != nil {
-		return nil, err
+	if err = storage.Put(ctx, entry); err != nil {
+		return err
 	}
 
 	b.crls[name] = crlInfo
+	return err
+}
 
-	return nil, nil
+type CDPInfo struct {
+	Url        string     `json:"url" structs:"url" mapstructure:"url"`
+	ValidUntil time.Time  `json:"valid_until" structs:"valid_until" mapstructure:"valid_until"`
+	fetchOnce  *sync.Once `json:"-" structs:"-" mapstructure:"-"`
 }
 
 type CRLInfo struct {
+	CDP     *CDPInfo                     `json:"cdp" structs:"cdp" mapstructure:"cdp"`
 	Serials map[string]RevokedSerialInfo `json:"serials" structs:"serials" mapstructure:"serials"`
 }
 
