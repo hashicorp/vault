@@ -82,6 +82,12 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 		return nil, err
 	}
 
+	if b.crls == nil {
+		if err := b.populateCRLs(ctx, req.Storage); err != nil {
+			return nil, err
+		}
+	}
+
 	var matched *ParsedCert
 	if verifyResp, resp, err := b.verifyCredentials(ctx, req, data); err != nil {
 		return nil, err
