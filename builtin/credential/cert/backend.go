@@ -2,7 +2,6 @@ package cert
 
 import (
 	"context"
-	"crypto/tls"
 	"crypto/x509"
 	"io"
 	"net/http"
@@ -69,23 +68,8 @@ func (b *backend) invalidate(_ context.Context, key string) {
 	}
 }
 
-func (b *backend) fetchCRL(ctx context.Context, storage logical.Storage, name string, crl *CRLInfo, extraCas []*x509.Certificate) error {
-	roots, _ := x509.SystemCertPool()
-	if roots == nil {
-		roots = x509.NewCertPool()
-	}
-	for _, c := range extraCas {
-		roots.AddCert(c)
-	}
-	cli := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				RootCAs: roots,
-			},
-		},
-	}
-
-	response, err := cli.Get(crl.CDP.Url)
+func (b *backend) fetchCRL(ctx context.Context, storage logical.Storage, name string, crl *CRLInfo) error {
+	response, err := http.Get(crl.CDP.Url)
 	if err != nil {
 		return err
 	}
@@ -105,22 +89,9 @@ func (b *backend) fetchCRL(ctx context.Context, storage logical.Storage, name st
 }
 
 func (b *backend) updateCRLs(ctx context.Context, req *logical.Request) error {
-	roots, _ := x509.SystemCertPool()
-	if roots == nil {
-		roots = x509.NewCertPool()
-	}
-	_, trusted, _ := b.loadTrustedCerts(ctx, req.Storage, "")
-
-	var certs []*x509.Certificate
-	for _, tC := range trusted {
-		for _, c := range tC.Certificates {
-			certs = append(certs, c)
-		}
-	}
-
 	for name, crl := range b.crls {
 		if crl.CDP != nil && time.Now().After(crl.CDP.ValidUntil) {
-			if err := b.fetchCRL(ctx, req.Storage, name, &crl, certs); err != nil {
+			if err := b.fetchCRL(ctx, req.Storage, name, &crl); err != nil {
 				return err
 			}
 		}
