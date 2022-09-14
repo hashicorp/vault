@@ -4,7 +4,6 @@ import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { withModelValidations } from 'vault/decorators/model-validations';
 
 import fieldToAttrs from 'vault/utils/field-to-attrs';
-// import { combineFieldGroups } from 'vault/utils/openapi-to-attrs'; // ARG TODO likely I'll need this.
 
 const validations = {
   name: [
@@ -26,7 +25,7 @@ export default class PkiRolesEngineModel extends Model {
   })
   name;
 
-  // defining as useOpenAPI does not work.
+  // must be a getter so it can be added to the prototype needed in the pathHelp service on the line here: if (newModel.merged || modelProto.useOpenAPI !== true) {
   get useOpenAPI() {
     return true;
   }
@@ -89,18 +88,13 @@ export default class PkiRolesEngineModel extends Model {
           ],
         },
         {
-          'Key parameters': [
-            'keyType',
-            'keyBits',
-            'signatureBits', // ARG wasn't original a param
-          ],
+          'Key parameters': ['keyType', 'keyBits', 'signatureBits'],
         },
         {
           'Key usage': [
-            // ARG TODO Come back to this as there are a lot more here I don't have.
-            'DigitalSignature', // ARG it's capitalized in the docs, but confirm
+            'DigitalSignature', // ARG TODO: capitalized in the docs, but should confirm
             'KeyAgreement',
-            'KeyEncipherment', // ARG wasn't original a param
+            'KeyEncipherment',
           ],
         },
         { 'Policy identifiers': ['policy_identifiers'] },
