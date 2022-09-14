@@ -75,6 +75,7 @@ export default class PkiRolesEngineModel extends Model {
         { default: ['name'] },
         {
           'Domain handling': [
+            'allowedDomains',
             'allowedDomainTemplate',
             'allowBareDomains',
             'allowSubdomains',
@@ -93,6 +94,7 @@ export default class PkiRolesEngineModel extends Model {
             'DigitalSignature', // ARG TODO: capitalized in the docs, but should confirm
             'KeyAgreement',
             'KeyEncipherment',
+            'extKeyUsage', // ARG TODO: takes a list, but we have these as checkboxes from the options on the golang site: https://pkg.go.dev/crypto/x509#ExtKeyUsage
           ],
         },
         { 'Policy identifiers': ['policy_identifiers'] },
