@@ -41,11 +41,19 @@ func (b *BackendPluginClientV5) Cleanup(ctx context.Context) {
 	b.client.Reload()
 }
 
-// TODO: add version forwarding here
-
 func (b *BackendPluginClientV5) IsExternal() bool {
 	return true
 }
+
+func (b *BackendPluginClientV5) Version() logical.VersionInfo {
+	if versioner, ok := b.Backend.(logical.Versioner); ok {
+		return versioner.Version()
+	}
+	return logical.EmptyVersion
+}
+
+var _ logical.Versioner = (*BackendPluginClientV5)(nil)
+var _ logical.Externaler = (*BackendPluginClientV5)(nil)
 
 // NewBackendV5 will return an instance of an RPC-based client implementation of
 // the backend for external plugins, or a concrete implementation of the
