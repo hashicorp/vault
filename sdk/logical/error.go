@@ -18,6 +18,7 @@ var (
 	ErrPermissionDenied = errors.New("permission denied")
 
 	// ErrInvalidCredentials is returned when the provided credentials are incorrect
+	// This is used internally for user lockout purposes
 	ErrInvalidCredentials = errors.New("invalid credentials")
 
 	// ErrMultiAuthzPending is returned if the the request needs more
