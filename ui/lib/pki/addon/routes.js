@@ -24,7 +24,6 @@ export default buildRoutes(function () {
   });
   this.route('issuers', function () {
     this.route('index', { path: '/' });
-    this.route('create');
     this.route('issuer', { path: '/:id' }, function () {
       this.route('details');
       this.route('edit');

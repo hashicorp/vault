@@ -24,22 +24,12 @@
               <nav class="menu">
                 <ul class="menu-list">
                   <li>
-                    <LinkTo
-                      @route="roles.role.details"
-                      @model={{model.id}}
-                      {{! ARG TODO return with permissions }}
-                      {{!-- @disabled={{eq model.canRead false}} --}}
-                    >
+                    <LinkTo @route="roles.role.details" @model={{model.id}}>
                       Details
                     </LinkTo>
                   </li>
                   <li>
-                    <LinkTo
-                      @route="roles.role.edit"
-                      @model={{model.id}}
-                      {{! ARG TODO return with permissions }}
-                      {{!-- @disabled={{eq model.canEdit false}} --}}
-                    >
+                    <LinkTo @route="roles.role.edit" @model={{model.id}}>
                       Edit
                     </LinkTo>
                   </li>
@@ -52,12 +42,12 @@
     </LinkedBlock>
   {{/each}}
 {{else}}
-  <EmptyState @title="No roles yet">
+  <EmptyState @title="No issuers yet">
     <div>
-      <p>When created, roles will be listed here. Create a role to start generating certificates.</p>
+      <p>When created, issuers will be listed here. ARG TODO Language coming from design?</p>
       <div class="has-top-margin-m">
         <LinkTo @route="roles.create">
-          Create role
+          ARG TODO will change
         </LinkTo>
       </div>
     </div>

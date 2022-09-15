@@ -27,3 +27,64 @@
     </BasicDropdown>
   </ToolbarActions>
 </Toolbar>
+{{#if (gt this.model.length 0)}}
+  {{#each this.model as |model|}}
+    <LinkedBlock class="list-item-row" @params={{array "roles.role.details" model.id}} @linkPrefix={{this.mountPoint}}>
+      <div class="level is-mobile">
+        <div class="level-left">
+          <div>
+            <Icon @name="certificate" class="has-text-grey-light" />
+            <span class="has-text-weight-semibold is-underline">
+              {{model.id}}
+            </span>
+            <div class="is-flex-row has-left-margin-l has-top-margin-xs">
+              {{! if default_issuer is true (there can only be one) }}
+              <span class="tag has-text-grey-dark">default issuer</span>
+            </div>
+          </div>
+        </div>
+        <div class="level-right is-flex is-paddingless is-marginless">
+          <div class="level-item">
+            <PopupMenu>
+              <nav class="menu">
+                <ul class="menu-list">
+                  <li>
+                    <LinkTo
+                      @route="roles.role.details"
+                      @model={{model.id}}
+                      {{! ARG TODO return with permissions }}
+                      {{!-- @disabled={{eq model.canRead false}} --}}
+                    >
+                      Details
+                    </LinkTo>
+                  </li>
+                  <li>
+                    <LinkTo
+                      @route="roles.role.edit"
+                      @model={{model.id}}
+                      {{! ARG TODO return with permissions }}
+                      {{!-- @disabled={{eq model.canEdit false}} --}}
+                    >
+                      Edit
+                    </LinkTo>
+                  </li>
+                </ul>
+              </nav>
+            </PopupMenu>
+          </div>
+        </div>
+      </div>
+    </LinkedBlock>
+  {{/each}}
+{{else}}
+  <EmptyState @title="No roles yet">
+    <div>
+      <p>When created, roles will be listed here. Create a role to start generating certificates.</p>
+      <div class="has-top-margin-m">
+        <LinkTo @route="roles.create">
+          Create role
+        </LinkTo>
+      </div>
+    </div>
+  </EmptyState>
+{{/if}}
