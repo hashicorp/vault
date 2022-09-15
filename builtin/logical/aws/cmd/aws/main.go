@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/aws"
 	"github.com/hashicorp/vault/sdk/plugin"

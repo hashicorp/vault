@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/hashicorp/go-uuid"
-
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin"
@@ -75,9 +74,13 @@ func (b *backend) reloadBackend(ctx context.Context, req *logical.Request) error
 
 	// Re-initialize the backend in case plugin was reloaded
 	// after it crashed
-	b.Backend.Initialize(ctx, &logical.InitializationRequest{
+	err = b.Backend.Initialize(ctx, &logical.InitializationRequest{
 		Storage: req.Storage,
 	})
+
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
