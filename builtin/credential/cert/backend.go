@@ -3,6 +3,7 @@ package cert
 import (
 	"context"
 	"crypto/x509"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -83,9 +84,9 @@ func (b *backend) fetchCRL(ctx context.Context, storage logical.Storage, name st
 			return err
 		}
 		crl.CDP.ValidUntil = certList.TBSCertList.NextUpdate
-		b.setCRL(ctx, storage, certList, name, crl.CDP)
+		return b.setCRL(ctx, storage, certList, name, crl.CDP)
 	}
-	return nil
+	return fmt.Errorf("unexpected response code %d fetching CRL from %s", response.StatusCode, crl.CDP.Url)
 }
 
 func (b *backend) updateCRLs(ctx context.Context, req *logical.Request) error {

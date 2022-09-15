@@ -218,13 +218,23 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		if err != nil {
 			return logical.ErrorResponse("invalid CRL url: %v", err), nil
 		}
-		err = b.setCRL(ctx, req.Storage, nil, name, &CDPInfo{
-			Url: url,
-		})
-		if err != nil {
-			return nil, err
+
+		b.crlUpdateMutex.RLock()
+		if crl, ok := b.crls[name]; ok {
+			if crl.CDP != nil {
+				// Force a fetch for validation but also because it may be an updated URL
+				crl.CDP.ValidUntil = time.Now()
+			}
 		}
-		err = b.updateCRLs(ctx, req)
+		// Can't defer, it gets taken as a write lock in fetchCRL
+		b.crlUpdateMutex.RUnlock()
+
+		cdpInfo := &CDPInfo{
+			Url: url,
+		}
+		err = b.fetchCRL(ctx, req.Storage, name, &CRLInfo{
+			CDP: cdpInfo,
+		})
 		if err != nil {
 			return nil, err
 		}
