@@ -394,7 +394,11 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			return logical.ErrorResponse("error creating database object: %s", err), nil
 		}
 		config.ConnectionDetails = initResp.Config
-		config.PluginVersion = dbw.Version().Version
+		// don't override a manually specified plugin version
+		// but if it is empty, then add in the self-reported version for informational purposes
+		if config.PluginVersion == "" {
+			config.PluginVersion = dbw.Version().Version
+		}
 
 		b.Logger().Debug("created database object", "name", name, "plugin_name", config.PluginName)
 
