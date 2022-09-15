@@ -1623,16 +1623,18 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 	}
 
 	// populate command with our results
-	if fsmar.EntrySlice != nil {
-		for i, logOp := range command.Operations {
-			if logOp.OpType == getOp {
-				fsmEntry := fsmar.EntrySlice[i]
+	if fsmar.EntrySlice == nil {
+		return errors.New("entries on FSM response were empty")
+	}
 
-				// this should always be true because the entries in the slice were created in the same order as
-				// the command operations.
-				if logOp.Key == fsmEntry.Key && len(fsmEntry.Value) > 0 {
-					logOp.Value = fsmEntry.Value
-				}
+	for i, logOp := range command.Operations {
+		if logOp.OpType == getOp {
+			fsmEntry := fsmar.EntrySlice[i]
+
+			// this should always be true because the entries in the slice were created in the same order as
+			// the command operations.
+			if logOp.Key == fsmEntry.Key && len(fsmEntry.Value) > 0 {
+				logOp.Value = fsmEntry.Value
 			}
 		}
 	}
