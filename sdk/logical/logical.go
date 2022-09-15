@@ -143,14 +143,14 @@ type Externaler interface {
 	IsExternal() bool
 }
 
-type VersionInfo struct {
+type PluginVersion struct {
 	Version string
 }
 
-// Versioner is an optional interface to return version info.
-type Versioner interface {
-	// Version returns the version for the backend
-	Version() VersionInfo
+// PluginVersioner is an optional interface to return version info.
+type PluginVersioner interface {
+	// PluginVersion returns the version for the backend
+	PluginVersion() PluginVersion
 }
 
-var EmptyVersion = VersionInfo{""}
+var EmptyPluginVersion = PluginVersion{""}

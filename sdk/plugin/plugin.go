@@ -144,11 +144,11 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 	}, nil
 }
 
-func (b *BackendPluginClient) Version() logical.VersionInfo {
-	if versioner, ok := b.Backend.(logical.Versioner); ok {
-		return versioner.Version()
+func (b *BackendPluginClient) PluginVersion() logical.PluginVersion {
+	if versioner, ok := b.Backend.(logical.PluginVersioner); ok {
+		return versioner.PluginVersion()
 	}
-	return logical.EmptyVersion
+	return logical.EmptyPluginVersion
 }
 
 func (b *BackendPluginClient) IsExternal() bool {
@@ -159,6 +159,6 @@ func (b *BackendPluginClient) IsExternal() bool {
 }
 
 var (
-	_ logical.Versioner  = (*BackendPluginClient)(nil)
-	_ logical.Externaler = (*BackendPluginClient)(nil)
+	_ logical.PluginVersioner = (*BackendPluginClient)(nil)
+	_ logical.Externaler      = (*BackendPluginClient)(nil)
 )

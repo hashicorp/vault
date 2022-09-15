@@ -274,9 +274,9 @@ func (b *backendGRPCPluginServer) Version(ctx context.Context, _ *logical.Empty)
 		return &logical.VersionReply{}, err
 	}
 
-	if versioner, ok := backend.(logical.Versioner); ok {
+	if versioner, ok := backend.(logical.PluginVersioner); ok {
 		return &logical.VersionReply{
-			PluginVersion: versioner.Version().Version,
+			PluginVersion: versioner.PluginVersion().Version,
 		}, nil
 	}
 	return &logical.VersionReply{

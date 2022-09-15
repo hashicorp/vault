@@ -151,12 +151,12 @@ func TestGRPCBackendPlugin_Version(t *testing.T) {
 	b, cleanup := testGRPCBackend(t)
 	defer cleanup()
 
-	versioner, ok := b.(logical.Versioner)
+	versioner, ok := b.(logical.PluginVersioner)
 	if !ok {
-		t.Fatalf("Expected %T to implement logical.Versioner interface", b)
+		t.Fatalf("Expected %T to implement logical.PluginVersioner interface", b)
 	}
 
-	version := versioner.Version().Version
+	version := versioner.PluginVersion().Version
 	if version != "mock" {
 		t.Fatalf("Got version %s, expected 'mock'", version)
 	}

@@ -19,8 +19,8 @@ import (
 // ///////////////////////////////////////////////////
 
 var (
-	_ Database          = databaseTracingMiddleware{}
-	_ logical.Versioner = databaseTracingMiddleware{}
+	_ Database                = databaseTracingMiddleware{}
+	_ logical.PluginVersioner = databaseTracingMiddleware{}
 )
 
 // databaseTracingMiddleware wraps a implementation of Database and executes
@@ -30,7 +30,7 @@ type databaseTracingMiddleware struct {
 	logger log.Logger
 }
 
-func (mw databaseTracingMiddleware) Version() (resp logical.VersionInfo) {
+func (mw databaseTracingMiddleware) PluginVersion() (resp logical.PluginVersion) {
 	defer func(then time.Time) {
 		mw.logger.Trace("version",
 			"status", "finished",
@@ -39,10 +39,10 @@ func (mw databaseTracingMiddleware) Version() (resp logical.VersionInfo) {
 	}(time.Now())
 
 	mw.logger.Trace("version", "status", "started")
-	if versioner, ok := mw.next.(logical.Versioner); ok {
-		return versioner.Version()
+	if versioner, ok := mw.next.(logical.PluginVersioner); ok {
+		return versioner.PluginVersion()
 	}
-	return logical.EmptyVersion
+	return logical.EmptyPluginVersion
 }
 
 func (mw databaseTracingMiddleware) Initialize(ctx context.Context, req InitializeRequest) (resp InitializeResponse, err error) {
@@ -118,8 +118,8 @@ func (mw databaseTracingMiddleware) Close() (err error) {
 // ///////////////////////////////////////////////////
 
 var (
-	_ Database          = databaseMetricsMiddleware{}
-	_ logical.Versioner = databaseMetricsMiddleware{}
+	_ Database                = databaseMetricsMiddleware{}
+	_ logical.PluginVersioner = databaseMetricsMiddleware{}
 )
 
 // databaseMetricsMiddleware wraps an implementation of Databases and on
@@ -130,19 +130,19 @@ type databaseMetricsMiddleware struct {
 	typeStr string
 }
 
-func (mw databaseMetricsMiddleware) Version() logical.VersionInfo {
+func (mw databaseMetricsMiddleware) PluginVersion() logical.PluginVersion {
 	defer func(now time.Time) {
-		metrics.MeasureSince([]string{"database", "Version"}, now)
-		metrics.MeasureSince([]string{"database", mw.typeStr, "Version"}, now)
+		metrics.MeasureSince([]string{"database", "PluginVersion"}, now)
+		metrics.MeasureSince([]string{"database", mw.typeStr, "PluginVersion"}, now)
 	}(time.Now())
 
-	metrics.IncrCounter([]string{"database", "Version"}, 1)
-	metrics.IncrCounter([]string{"database", mw.typeStr, "Version"}, 1)
+	metrics.IncrCounter([]string{"database", "PluginVersion"}, 1)
+	metrics.IncrCounter([]string{"database", mw.typeStr, "PluginVersion"}, 1)
 
-	if versioner, ok := mw.next.(logical.Versioner); ok {
-		return versioner.Version()
+	if versioner, ok := mw.next.(logical.PluginVersioner); ok {
+		return versioner.PluginVersion()
 	}
-	return logical.EmptyVersion
+	return logical.EmptyPluginVersion
 }
 
 func (mw databaseMetricsMiddleware) Initialize(ctx context.Context, req InitializeRequest) (resp InitializeResponse, err error) {

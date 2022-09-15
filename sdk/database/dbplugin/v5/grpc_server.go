@@ -310,8 +310,8 @@ func (g *gRPCServer) Version(ctx context.Context, _ *logical.Empty) (*logical.Ve
 	if err != nil {
 		return nil, err
 	}
-	if versioner, ok := impl.(logical.Versioner); ok {
-		return &logical.VersionReply{PluginVersion: versioner.Version().Version}, nil
+	if versioner, ok := impl.(logical.PluginVersioner); ok {
+		return &logical.VersionReply{PluginVersion: versioner.PluginVersion().Version}, nil
 	}
 	return &logical.VersionReply{}, nil
 }

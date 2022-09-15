@@ -624,7 +624,7 @@ func TestGRPCServer_Version(t *testing.T) {
 				t.Fatalf("Actual code: %s Expected code: %s", actualCode, test.expectCode)
 			}
 
-			if !reflect.DeepEqual(resp.Version, test.expectedResp) {
+			if !reflect.DeepEqual(resp.PluginVersion, test.expectedResp) {
 				t.Fatalf("Actual response: %#v\nExpected response: %#v", resp, test.expectedResp)
 			}
 		})
@@ -802,8 +802,8 @@ type fakeDatabaseWithVersion struct {
 	version string
 }
 
-func (e fakeDatabaseWithVersion) Version() logical.VersionInfo {
-	return logical.VersionInfo{Version: e.version}
+func (e fakeDatabaseWithVersion) PluginVersion() logical.PluginVersion {
+	return logical.PluginVersion{Version: e.version}
 }
 
 func (e fakeDatabaseWithVersion) Initialize(_ context.Context, _ InitializeRequest) (InitializeResponse, error) {
@@ -831,6 +831,6 @@ func (e fakeDatabaseWithVersion) Close() error {
 }
 
 var (
-	_ Database          = (*fakeDatabaseWithVersion)(nil)
-	_ logical.Versioner = (*fakeDatabaseWithVersion)(nil)
+	_ Database                = (*fakeDatabaseWithVersion)(nil)
+	_ logical.PluginVersioner = (*fakeDatabaseWithVersion)(nil)
 )

@@ -80,8 +80,8 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*PluginBackend, 
 	paths := raw.SpecialPaths()
 	btype := raw.Type()
 	runningVersion := ""
-	if versioner, ok := raw.(logical.Versioner); ok {
-		runningVersion = versioner.Version().Version
+	if versioner, ok := raw.(logical.PluginVersioner); ok {
+		runningVersion = versioner.PluginVersion().Version
 	}
 
 	external := false
@@ -96,9 +96,9 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*PluginBackend, 
 	// backends will need to be lazy loaded.
 	b.Backend = &placeholderBackend{
 		Backend: framework.Backend{
-			PathsSpecial:  paths,
-			BackendType:   btype,
-			PluginVersion: runningVersion,
+			PathsSpecial:   paths,
+			BackendType:    btype,
+			RunningVersion: runningVersion,
 		},
 		external: external,
 	}
@@ -121,8 +121,8 @@ func (p *placeholderBackend) IsExternal() bool {
 }
 
 var (
-	_ logical.Externaler = (*placeholderBackend)(nil)
-	_ logical.Versioner  = (*placeholderBackend)(nil)
+	_ logical.Externaler      = (*placeholderBackend)(nil)
+	_ logical.PluginVersioner = (*placeholderBackend)(nil)
 )
 
 // PluginBackend is a thin wrapper around plugin.BackendPluginClient
@@ -317,11 +317,11 @@ func (b *PluginBackend) Type() logical.BackendType {
 	return b.Backend.Type()
 }
 
-func (b *PluginBackend) Version() logical.VersionInfo {
-	if versioner, ok := b.Backend.(logical.Versioner); ok {
-		return versioner.Version()
+func (b *PluginBackend) PluginVersion() logical.PluginVersion {
+	if versioner, ok := b.Backend.(logical.PluginVersioner); ok {
+		return versioner.PluginVersion()
 	}
-	return logical.EmptyVersion
+	return logical.EmptyPluginVersion
 }
 
 func (b *PluginBackend) IsExternal() bool {
@@ -332,6 +332,6 @@ func (b *PluginBackend) IsExternal() bool {
 }
 
 var (
-	_ logical.Versioner  = (*PluginBackend)(nil)
-	_ logical.Externaler = (*PluginBackend)(nil)
+	_ logical.PluginVersioner = (*PluginBackend)(nil)
+	_ logical.Externaler      = (*PluginBackend)(nil)
 )

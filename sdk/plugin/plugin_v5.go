@@ -45,16 +45,16 @@ func (b *BackendPluginClientV5) IsExternal() bool {
 	return true
 }
 
-func (b *BackendPluginClientV5) Version() logical.VersionInfo {
-	if versioner, ok := b.Backend.(logical.Versioner); ok {
-		return versioner.Version()
+func (b *BackendPluginClientV5) PluginVersion() logical.PluginVersion {
+	if versioner, ok := b.Backend.(logical.PluginVersioner); ok {
+		return versioner.PluginVersion()
 	}
-	return logical.EmptyVersion
+	return logical.EmptyPluginVersion
 }
 
 var (
-	_ logical.Versioner  = (*BackendPluginClientV5)(nil)
-	_ logical.Externaler = (*BackendPluginClientV5)(nil)
+	_ logical.PluginVersioner = (*BackendPluginClientV5)(nil)
+	_ logical.Externaler      = (*BackendPluginClientV5)(nil)
 )
 
 // NewBackendV5 will return an instance of an RPC-based client implementation of

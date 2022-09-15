@@ -59,7 +59,7 @@ func Backend() *backend {
 		BackendType: logical.TypeLogical,
 	}
 	b.internal = "bar"
-	b.PluginVersion = "mock"
+	b.RunningVersion = "mock"
 	return &b
 }
 

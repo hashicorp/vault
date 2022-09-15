@@ -626,8 +626,8 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	}
 
 	// update the entry running version with the backend's reported version
-	if versioner, ok := backend.(logical.Versioner); ok {
-		entry.RunningVersion = versioner.Version().Version
+	if versioner, ok := backend.(logical.PluginVersioner); ok {
+		entry.RunningVersion = versioner.PluginVersion().Version
 	}
 	if entry.RunningVersion == "" {
 		// don't set the running version to a builtin if it is running as an external plugin

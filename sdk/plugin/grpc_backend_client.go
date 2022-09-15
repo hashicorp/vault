@@ -281,18 +281,18 @@ func (b *backendGRPCPluginClient) Type() logical.BackendType {
 	return logical.BackendType(reply.Type)
 }
 
-func (b *backendGRPCPluginClient) Version() logical.VersionInfo {
+func (b *backendGRPCPluginClient) PluginVersion() logical.PluginVersion {
 	reply, err := b.versionClient.Version(b.doneCtx, &logical.Empty{})
 	if err != nil {
 		if stErr, ok := status.FromError(err); ok {
 			if stErr.Code() == codes.Unimplemented {
-				return logical.EmptyVersion
+				return logical.EmptyPluginVersion
 			}
 		}
 		b.Logger().Warn("Unknown error getting plugin version", "err", err)
-		return logical.EmptyVersion
+		return logical.EmptyPluginVersion
 	}
-	return logical.VersionInfo{
+	return logical.PluginVersion{
 		Version: reply.GetPluginVersion(),
 	}
 }

@@ -39,7 +39,7 @@ func TestNewPluginClient(t *testing.T) {
 					dispenseResp: gRPCClient{client: fakeClient{}},
 					dispenseErr:  nil,
 				},
-				Database: gRPCClient{client: proto.NewDatabaseClient(nil), versionClient: logical.NewVersionedClient(nil), doneCtx: context.Context(nil)},
+				Database: gRPCClient{client: proto.NewDatabaseClient(nil), versionClient: logical.NewPluginVersionClient(nil), doneCtx: context.Context(nil)},
 			},
 			expectedErr: nil,
 		},

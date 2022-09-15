@@ -99,14 +99,14 @@ func (b *BackendTracingMiddleware) Type() logical.BackendType {
 	return b.next.Type()
 }
 
-func (b *BackendTracingMiddleware) Version() logical.VersionInfo {
+func (b *BackendTracingMiddleware) PluginVersion() logical.PluginVersion {
 	defer func(then time.Time) {
 		b.logger.Trace("version", "status", "finished", "took", time.Since(then))
 	}(time.Now())
 
 	b.logger.Trace("version", "status", "started")
-	if versioner, ok := b.next.(logical.Versioner); ok {
-		return versioner.Version()
+	if versioner, ok := b.next.(logical.PluginVersioner); ok {
+		return versioner.PluginVersion()
 	}
-	return logical.EmptyVersion
+	return logical.EmptyPluginVersion
 }
