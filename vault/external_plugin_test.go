@@ -3,7 +3,6 @@ package vault
 import (
 	"context"
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -16,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 var (
@@ -126,34 +126,9 @@ func TestCore_EnableExternalPlugin(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			c, pluginName, pluginSHA256 := testCoreWithPlugin(t, tc.pluginType)
-			d := &framework.FieldData{
-				Raw: map[string]interface{}{
-					"name":    pluginName,
-					"sha256":  pluginSHA256,
-					"version": "v1.0.0",
-					"command": pluginName,
-				},
-				Schema: c.systemBackend.pluginsCatalogCRUDPath().Fields,
-			}
-			resp, err := c.systemBackend.handlePluginCatalogUpdate(context.Background(), nil, d)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if resp.Error() != nil {
-				t.Fatalf("%#v", resp)
-			}
+			registerPlugin(t, c.systemBackend, pluginName, tc.pluginType.String(), "1.0.0", pluginSHA256)
 
-			me := &MountEntry{
-				Table:   mountTable(tc.pluginType),
-				Path:    "foo",
-				Type:    pluginName,
-				Version: "v1.0.0",
-			}
-			enable := enableFunc(c, tc.pluginType)
-			err = enable(namespace.RootContext(nil), me)
-			if err != nil {
-				t.Fatalf("err: %v", err)
-			}
+			mountPlugin(t, c.systemBackend, pluginName, tc.pluginType, "v1.0.0")
 
 			match := c.router.MatchingMount(namespace.RootContext(nil), tc.routerPath)
 			if match != tc.expectedMatch {
@@ -168,6 +143,7 @@ func TestCore_EnableExternalPlugin_MultipleVersions(t *testing.T) {
 		pluginType       consts.PluginType
 		registerVersions []string
 		mountVersion     string
+		expectedVersion  string
 		routerPath       string
 		expectedMatch    string
 	}{
@@ -175,6 +151,7 @@ func TestCore_EnableExternalPlugin_MultipleVersions(t *testing.T) {
 			pluginType:       consts.PluginTypeCredential,
 			registerVersions: []string{"v1.0.0", "v1.0.1"},
 			mountVersion:     "v1.0.0",
+			expectedVersion:  "v1.0.0",
 			routerPath:       "auth/foo/bar",
 			expectedMatch:    "auth/foo/",
 		},
@@ -182,6 +159,7 @@ func TestCore_EnableExternalPlugin_MultipleVersions(t *testing.T) {
 			pluginType:       consts.PluginTypeSecrets,
 			registerVersions: []string{"v1.0.0", "v1.0.1"},
 			mountVersion:     "v1.0.0",
+			expectedVersion:  "v1.0.0",
 			routerPath:       "foo/bar",
 			expectedMatch:    "foo/",
 		},
@@ -189,6 +167,7 @@ func TestCore_EnableExternalPlugin_MultipleVersions(t *testing.T) {
 			pluginType:       consts.PluginTypeCredential,
 			registerVersions: []string{"v1.0.0", "v1.0.1"},
 			mountVersion:     "v1.0.1",
+			expectedVersion:  "v1.0.1",
 			routerPath:       "auth/foo/bar",
 			expectedMatch:    "auth/foo/",
 		},
@@ -196,6 +175,23 @@ func TestCore_EnableExternalPlugin_MultipleVersions(t *testing.T) {
 			pluginType:       consts.PluginTypeSecrets,
 			registerVersions: []string{"v1.0.0", "v1.0.1"},
 			mountVersion:     "v1.0.1",
+			expectedVersion:  "v1.0.1",
+			routerPath:       "foo/bar",
+			expectedMatch:    "foo/",
+		},
+		"enable external credential plugin, selects latest when version not specified": {
+			pluginType:       consts.PluginTypeCredential,
+			registerVersions: []string{"v1.0.0", "v1.0.1"},
+			mountVersion:     "",
+			expectedVersion:  "v1.0.1",
+			routerPath:       "auth/foo/bar",
+			expectedMatch:    "auth/foo/",
+		},
+		"enable external secrets plugin, selects latest when version not specified": {
+			pluginType:       consts.PluginTypeSecrets,
+			registerVersions: []string{"v1.0.0", "v1.0.1"},
+			mountVersion:     "",
+			expectedVersion:  "v1.0.1",
 			routerPath:       "foo/bar",
 			expectedMatch:    "foo/",
 		},
@@ -203,35 +199,10 @@ func TestCore_EnableExternalPlugin_MultipleVersions(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			c, pluginName, pluginSHA256 := testCoreWithPlugin(t, tc.pluginType)
 			for _, version := range tc.registerVersions {
-				d := &framework.FieldData{
-					Raw: map[string]interface{}{
-						"name":    pluginName,
-						"sha256":  pluginSHA256,
-						"version": version,
-						"command": pluginName,
-					},
-					Schema: c.systemBackend.pluginsCatalogCRUDPath().Fields,
-				}
-				resp, err := c.systemBackend.handlePluginCatalogUpdate(context.Background(), nil, d)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if resp.Error() != nil {
-					t.Fatalf("%#v", resp)
-				}
+				registerPlugin(t, c.systemBackend, pluginName, tc.pluginType.String(), version, pluginSHA256)
 			}
 
-			me := &MountEntry{
-				Table:   mountTable(tc.pluginType),
-				Path:    "foo",
-				Type:    pluginName,
-				Version: tc.mountVersion,
-			}
-			enable := enableFunc(c, tc.pluginType)
-			err := enable(namespace.RootContext(nil), me)
-			if err != nil {
-				t.Fatalf("err: %v", err)
-			}
+			mountPlugin(t, c.systemBackend, pluginName, tc.pluginType, tc.mountVersion)
 
 			match := c.router.MatchingMount(namespace.RootContext(nil), tc.routerPath)
 			if match != tc.expectedMatch {
@@ -239,8 +210,8 @@ func TestCore_EnableExternalPlugin_MultipleVersions(t *testing.T) {
 			}
 
 			raw, _ := c.router.root.Get(match)
-			if raw.(*routeEntry).mountEntry.Version != tc.mountVersion {
-				t.Errorf("Expected mount to be version %s but got %s", tc.mountVersion, raw.(*routeEntry).mountEntry.Version)
+			if raw.(*routeEntry).mountEntry.Version != tc.expectedVersion {
+				t.Errorf("Expected mount to be version %s but got %s", tc.expectedVersion, raw.(*routeEntry).mountEntry.Version)
 			}
 
 			// we don't override the running version of non-builtins, and they don't have the version set explicitly (yet)
@@ -270,32 +241,14 @@ func TestCore_EnableExternalPlugin_NoVersionsOkay(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			c, pluginName, pluginSHA256 := testCoreWithPlugin(t, tc.pluginType)
-			d := &framework.FieldData{
-				Raw: map[string]interface{}{
-					"name":    pluginName,
-					"sha256":  pluginSHA256,
-					"command": pluginName,
-				},
-				Schema: c.systemBackend.pluginsCatalogCRUDPath().Fields,
-			}
-			resp, err := c.systemBackend.handlePluginCatalogUpdate(context.Background(), nil, d)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if resp.Error() != nil {
-				t.Fatalf("%#v", resp)
+			// When an unversioned plugin is registered, mounting a plugin with no
+			// version specified should mount the unversioned plugin even if there
+			// are versioned plugins available.
+			for _, version := range []string{"", "v1.0.0"} {
+				registerPlugin(t, c.systemBackend, pluginName, tc.pluginType.String(), version, pluginSHA256)
 			}
 
-			me := &MountEntry{
-				Table: mountTable(tc.pluginType),
-				Path:  "foo",
-				Type:  pluginName,
-			}
-			enable := enableFunc(c, tc.pluginType)
-			err = enable(namespace.RootContext(nil), me)
-			if err != nil {
-				t.Fatalf("err: %v", err)
-			}
+			mountPlugin(t, c.systemBackend, pluginName, tc.pluginType, "")
 
 			match := c.router.MatchingMount(namespace.RootContext(nil), tc.routerPath)
 			if match != tc.expectedMatch {
@@ -329,32 +282,16 @@ func TestCore_EnableExternalCredentialPlugin_NoVersionOnRegister(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			c, pluginName, pluginSHA256 := testCoreWithPlugin(t, tc.pluginType)
-			d := &framework.FieldData{
-				Raw: map[string]interface{}{
-					"name":    pluginName,
-					"sha256":  pluginSHA256,
-					"command": pluginName,
-				},
-				Schema: c.systemBackend.pluginsCatalogCRUDPath().Fields,
-			}
-			resp, err := c.systemBackend.handlePluginCatalogUpdate(context.Background(), nil, d)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if resp.Error() != nil {
-				t.Fatalf("%#v", resp)
-			}
+			registerPlugin(t, c.systemBackend, pluginName, tc.pluginType.String(), "", pluginSHA256)
 
-			me := &MountEntry{
-				Table:   mountTable(tc.pluginType),
-				Path:    "foo",
-				Type:    pluginName,
-				Version: "v1.0.0",
+			req := logical.TestRequest(t, logical.UpdateOperation, mountPath(tc.pluginType))
+			req.Data = map[string]interface{}{
+				"type":    pluginName,
+				"version": "v1.0.0",
 			}
-			enable := enableFunc(c, tc.pluginType)
-			err = enable(namespace.RootContext(nil), me)
-			if err == nil || !errors.Is(err, ErrPluginNotFound) {
-				t.Fatalf("Expected to get plugin not found but got: %v", err)
+			resp, _ := c.systemBackend.HandleRequest(namespace.RootContext(nil), req)
+			if resp == nil || !resp.IsError() || !strings.Contains(resp.Error().Error(), ErrPluginNotFound.Error()) {
+				t.Fatalf("Expected to get plugin not found but got: %v", resp.Error())
 			}
 		})
 	}
@@ -390,24 +327,49 @@ func TestCore_EnableExternalCredentialPlugin_InvalidName(t *testing.T) {
 	}
 }
 
-func mountTable(pluginType consts.PluginType) string {
-	switch pluginType {
-	case consts.PluginTypeCredential:
-		return credentialTableType
-	case consts.PluginTypeSecrets:
-		return mountTableType
-	default:
-		panic("test does not support plugin type yet")
+func registerPlugin(t *testing.T, sys *SystemBackend, pluginName, pluginType, version, sha string) {
+	t.Helper()
+	req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("plugins/catalog/%s/%s", pluginType, pluginName))
+	req.Data = map[string]interface{}{
+		"name":    pluginName,
+		"command": pluginName,
+		"sha256":  sha,
+		"version": version,
+	}
+	resp, err := sys.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Error() != nil {
+		t.Fatalf("%#v", resp)
 	}
 }
 
-func enableFunc(c *Core, pluginType consts.PluginType) func(context.Context, *MountEntry) error {
+func mountPlugin(t *testing.T, sys *SystemBackend, pluginName string, pluginType consts.PluginType, version string) {
+	t.Helper()
+	req := logical.TestRequest(t, logical.UpdateOperation, mountPath(pluginType))
+	req.Data = map[string]interface{}{
+		"type": pluginName,
+	}
+	if version != "" {
+		req.Data["version"] = version
+	}
+	resp, err := sys.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Error() != nil {
+		t.Fatalf("%#v", resp)
+	}
+}
+
+func mountPath(pluginType consts.PluginType) string {
 	switch pluginType {
 	case consts.PluginTypeCredential:
-		return c.enableCredential
+		return "auth/foo"
 	case consts.PluginTypeSecrets:
-		return c.mount
+		return "mounts/foo"
 	default:
-		panic(pluginType.String())
+		panic("test does not support plugin type yet")
 	}
 }
