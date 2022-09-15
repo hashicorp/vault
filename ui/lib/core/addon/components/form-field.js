@@ -114,7 +114,7 @@ export default class FormFieldComponent extends Component {
   }
   @action
   setAndBroadcastTtl(value) {
-    const alwaysSendValue = this.valuePath === 'expiry' || this.valuePath === 'safetyBuffer';
+    const alwaysSendValue = this.valuePath === 'safetyBuffer';
     let valueToSet = value.enabled === true || alwaysSendValue ? `${value.seconds}s` : 0;
     this.setAndBroadcast(`${valueToSet}`);
   }

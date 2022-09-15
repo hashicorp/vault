@@ -39,6 +39,8 @@ export default Component.extend({
   actions: {
     save(section) {
       this.set('loading', true);
+      // if 0 returned from TTL component, reset expiry to default lease duration
+      if (Number(this.config.expiry) === 0) this.config.expiry = '72h';
       const config = this.config;
       config
         .save({
