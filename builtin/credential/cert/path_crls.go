@@ -205,6 +205,8 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 			return logical.ErrorResponse("parsed CRL is nil"), nil
 		}
 
+		b.crlUpdateMutex.Lock()
+		defer b.crlUpdateMutex.Unlock()
 		err = b.setCRL(ctx, req.Storage, certList, name, nil)
 		if err != nil {
 			return nil, err
@@ -219,15 +221,14 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 			return logical.ErrorResponse("invalid CRL url: %v", err), nil
 		}
 
-		b.crlUpdateMutex.RLock()
+		b.crlUpdateMutex.Lock()
+		defer b.crlUpdateMutex.Unlock()
 		if crl, ok := b.crls[name]; ok {
 			if crl.CDP != nil {
 				// Force a fetch for validation but also because it may be an updated URL
 				crl.CDP.ValidUntil = time.Time{}
 			}
 		}
-		// Can't defer, it gets taken as a write lock in fetchCRL
-		b.crlUpdateMutex.RUnlock()
 
 		cdpInfo := &CDPInfo{
 			Url: url,
@@ -249,9 +250,6 @@ func (b *backend) setCRL(ctx context.Context, storage logical.Storage, certList 
 	if err := b.populateCRLs(ctx, storage); err != nil {
 		return err
 	}
-
-	b.crlUpdateMutex.Lock()
-	defer b.crlUpdateMutex.Unlock()
 
 	crlInfo := CRLInfo{
 		CDP:     cdp,
