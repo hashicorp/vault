@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -621,6 +622,17 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	if backendType != logical.TypeLogical {
 		if entry.Type != "kv" && entry.Type != "system" && entry.Type != "cubbyhole" {
 			return fmt.Errorf(`unknown backend type: "%s"`, entry.Type)
+		}
+	}
+
+	// update the entry running version with the backend's reported version
+	if versioner, ok := backend.(logical.PluginVersioner); ok {
+		entry.RunningVersion = versioner.PluginVersion().Version
+	}
+	if entry.RunningVersion == "" {
+		// don't set the running version to a builtin if it is running as an external plugin
+		if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
+			entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
 		}
 	}
 
@@ -1609,6 +1621,7 @@ func (c *Core) defaultMountTable() *MountTable {
 			Options: map[string]string{
 				"version": "2",
 			},
+			RunningVersion: versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 		}
 		table.Entries = append(table.Entries, kvMount)
 	}
@@ -1643,6 +1656,7 @@ func (c *Core) requiredMountTable() *MountTable {
 		Accessor:         cubbyholeAccessor,
 		Local:            true,
 		BackendAwareUUID: cubbyholeBackendUUID,
+		RunningVersion:   versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 	}
 
 	sysUUID, err := uuid.GenerateUUID()
@@ -1669,6 +1683,7 @@ func (c *Core) requiredMountTable() *MountTable {
 		Config: MountConfig{
 			PassthroughRequestHeaders: []string{"Accept"},
 		},
+		RunningVersion: versions.DefaultBuiltinVersion,
 	}
 
 	identityUUID, err := uuid.GenerateUUID()
@@ -1694,6 +1709,7 @@ func (c *Core) requiredMountTable() *MountTable {
 		Config: MountConfig{
 			PassthroughRequestHeaders: []string{"Authorization"},
 		},
+		RunningVersion: versions.DefaultBuiltinVersion,
 	}
 
 	table.Entries = append(table.Entries, cubbyholeMount)

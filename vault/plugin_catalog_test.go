@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/plugins/database/postgresql"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -41,7 +42,7 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 		Name:    pluginName,
 		Type:    consts.PluginTypeDatabase,
 		Builtin: true,
-		Version: core.pluginCatalog.getBuiltinVersion(consts.PluginTypeDatabase, pluginName),
+		Version: versions.GetBuiltinVersion(consts.PluginTypeDatabase, pluginName),
 	}
 	expectedBuiltin.BuiltinFactory, _ = builtinplugins.Registry.Get(pluginName, consts.PluginTypeDatabase)
 
@@ -104,7 +105,7 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 		Name:    pluginName,
 		Type:    consts.PluginTypeDatabase,
 		Builtin: true,
-		Version: core.pluginCatalog.getBuiltinVersion(consts.PluginTypeDatabase, pluginName),
+		Version: versions.GetBuiltinVersion(consts.PluginTypeDatabase, pluginName),
 	}
 	expectedBuiltin.BuiltinFactory, _ = builtinplugins.Registry.Get(pluginName, consts.PluginTypeDatabase)
 

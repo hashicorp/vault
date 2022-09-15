@@ -137,3 +137,20 @@ type Auditor interface {
 	AuditRequest(ctx context.Context, input *LogInput) error
 	AuditResponse(ctx context.Context, input *LogInput) error
 }
+
+// Externaler allows us to check if a backend is running externally (i.e., over GRPC)
+type Externaler interface {
+	IsExternal() bool
+}
+
+type PluginVersion struct {
+	Version string
+}
+
+// PluginVersioner is an optional interface to return version info.
+type PluginVersioner interface {
+	// PluginVersion returns the version for the backend
+	PluginVersion() PluginVersion
+}
+
+var EmptyPluginVersion = PluginVersion{""}
