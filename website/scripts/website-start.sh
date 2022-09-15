@@ -5,7 +5,7 @@ PREVIEW_DIR=website-preview
 # The product for which we are building the deploy preview
 PRODUCT=vault
 # Preview mode, controls the UI rendered (either the product site or developer). Can be `io` or `developer`
-PREVIEW_MODE=developer
+PREVIEW_MODE=io
 
 should_pull=true
 
