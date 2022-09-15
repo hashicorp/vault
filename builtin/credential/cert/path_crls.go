@@ -49,10 +49,13 @@ using the same name as specified here.`,
 	}
 }
 
-func (b *backend) populateCRLs(ctx context.Context, storage logical.Storage) error {
+func (b *backend) populateCRLsWithoutLock(ctx context.Context, storage logical.Storage) error {
 	b.crlUpdateMutex.Lock()
 	defer b.crlUpdateMutex.Unlock()
+	return b.populateCRLs(ctx, storage)
+}
 
+func (b *backend) populateCRLs(ctx context.Context, storage logical.Storage) error {
 	if b.crls != nil {
 		return nil
 	}
@@ -136,7 +139,7 @@ func (b *backend) pathCRLDelete(ctx context.Context, req *logical.Request, d *fr
 		return logical.ErrorResponse(`"name" parameter cannot be empty`), nil
 	}
 
-	if err := b.populateCRLs(ctx, req.Storage); err != nil {
+	if err := b.populateCRLsWithoutLock(ctx, req.Storage); err != nil {
 		return nil, err
 	}
 
@@ -167,7 +170,7 @@ func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, d *fram
 		return logical.ErrorResponse(`"name" parameter must be set`), nil
 	}
 
-	if err := b.populateCRLs(ctx, req.Storage); err != nil {
+	if err := b.populateCRLsWithoutLock(ctx, req.Storage); err != nil {
 		return nil, err
 	}
 
@@ -223,12 +226,6 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 
 		b.crlUpdateMutex.Lock()
 		defer b.crlUpdateMutex.Unlock()
-		if crl, ok := b.crls[name]; ok {
-			if crl.CDP != nil {
-				// Force a fetch for validation but also because it may be an updated URL
-				crl.CDP.ValidUntil = time.Time{}
-			}
-		}
 
 		cdpInfo := &CDPInfo{
 			Url: url,
