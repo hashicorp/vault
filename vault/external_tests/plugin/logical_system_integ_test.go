@@ -1,4 +1,4 @@
-package vault_test
+package plugin_test
 
 import (
 	"context"
@@ -9,21 +9,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/namespace"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/sdk/physical/inmem"
 	lplugin "github.com/hashicorp/vault/sdk/plugin"
 	"github.com/hashicorp/vault/sdk/plugin/mock"
-	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -49,6 +43,7 @@ var credentialVersionMap = map[string]string{
 var testCtx = context.TODO()
 
 func TestSystemBackend_Plugin_secret(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		pluginVersion string
 	}{
@@ -65,6 +60,7 @@ func TestSystemBackend_Plugin_secret(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.pluginVersion, func(t *testing.T) {
+			t.Parallel()
 			cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical, tc.pluginVersion)
 			defer cluster.Cleanup()
 
@@ -105,6 +101,7 @@ func TestSystemBackend_Plugin_secret(t *testing.T) {
 }
 
 func TestSystemBackend_Plugin_auth(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		pluginVersion string
 	}{
@@ -121,6 +118,7 @@ func TestSystemBackend_Plugin_auth(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.pluginVersion, func(t *testing.T) {
+			t.Parallel()
 			cluster := testSystemBackendMock(t, 1, 1, logical.TypeCredential, tc.pluginVersion)
 			defer cluster.Cleanup()
 
@@ -161,6 +159,7 @@ func TestSystemBackend_Plugin_auth(t *testing.T) {
 }
 
 func TestSystemBackend_Plugin_MissingBinary(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		pluginVersion string
 	}{
@@ -177,6 +176,7 @@ func TestSystemBackend_Plugin_MissingBinary(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.pluginVersion, func(t *testing.T) {
+			t.Parallel()
 			cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical, tc.pluginVersion)
 			defer cluster.Cleanup()
 
@@ -220,6 +220,7 @@ func TestSystemBackend_Plugin_MissingBinary(t *testing.T) {
 }
 
 func TestSystemBackend_Plugin_MismatchType(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		pluginVersion string
 	}{
@@ -261,18 +262,22 @@ func TestSystemBackend_Plugin_MismatchType(t *testing.T) {
 
 func TestSystemBackend_Plugin_CatalogRemoved(t *testing.T) {
 	t.Run("secret", func(t *testing.T) {
+		t.Parallel()
 		testPlugin_CatalogRemoved(t, logical.TypeLogical, false, logicalVersionMap)
 	})
 
 	t.Run("auth", func(t *testing.T) {
+		t.Parallel()
 		testPlugin_CatalogRemoved(t, logical.TypeCredential, false, credentialVersionMap)
 	})
 
 	t.Run("secret-mount-existing", func(t *testing.T) {
+		t.Parallel()
 		testPlugin_CatalogRemoved(t, logical.TypeLogical, true, logicalVersionMap)
 	})
 
 	t.Run("auth-mount-existing", func(t *testing.T) {
+		t.Parallel()
 		testPlugin_CatalogRemoved(t, logical.TypeCredential, true, credentialVersionMap)
 	})
 }
@@ -294,6 +299,7 @@ func testPlugin_CatalogRemoved(t *testing.T, btype logical.BackendType, testMoun
 
 	for _, tc := range testCases {
 		t.Run(tc.pluginVersion, func(t *testing.T) {
+			t.Parallel()
 			cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical, tc.pluginVersion)
 			defer cluster.Cleanup()
 
@@ -356,29 +362,37 @@ func testPlugin_CatalogRemoved(t *testing.T, btype logical.BackendType, testMoun
 
 func TestSystemBackend_Plugin_continueOnError(t *testing.T) {
 	t.Run("secret", func(t *testing.T) {
+		t.Parallel()
 		t.Run("sha256_mismatch", func(t *testing.T) {
+			t.Parallel()
 			testPlugin_continueOnError(t, logical.TypeLogical, true, "mock-plugin", consts.PluginTypeSecrets)
 		})
 
 		t.Run("missing_plugin", func(t *testing.T) {
+			t.Parallel()
 			testPlugin_continueOnError(t, logical.TypeLogical, false, "mock-plugin", consts.PluginTypeSecrets)
 		})
 	})
 
 	t.Run("auth", func(t *testing.T) {
+		t.Parallel()
 		t.Run("sha256_mismatch", func(t *testing.T) {
+			t.Parallel()
 			testPlugin_continueOnError(t, logical.TypeCredential, true, "mock-plugin", consts.PluginTypeCredential)
 		})
 
 		t.Run("missing_plugin", func(t *testing.T) {
+			t.Parallel()
 			testPlugin_continueOnError(t, logical.TypeCredential, false, "mock-plugin", consts.PluginTypeCredential)
 		})
 
 		t.Run("sha256_mismatch", func(t *testing.T) {
+			t.Parallel()
 			testPlugin_continueOnError(t, logical.TypeCredential, true, "oidc", consts.PluginTypeCredential)
 		})
 
 		t.Run("missing_plugin", func(t *testing.T) {
+			t.Parallel()
 			testPlugin_continueOnError(t, logical.TypeCredential, false, "oidc", consts.PluginTypeCredential)
 		})
 	})
@@ -401,6 +415,7 @@ func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatc
 
 	for _, tc := range testCases {
 		t.Run(tc.pluginVersion, func(t *testing.T) {
+			t.Parallel()
 			cluster := testSystemBackendMock(t, 1, 1, btype, tc.pluginVersion)
 			defer cluster.Cleanup()
 
@@ -459,14 +474,15 @@ func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatc
 			// If it fails, it means unseal process failed
 			vault.TestWaitActive(t, core.Core)
 
+			env := []string{pluginutil.PluginCACertPEMEnv + "=" + cluster.CACertPEMFile}
 			// Re-add the plugin to the catalog
 			switch btype {
 			case logical.TypeLogical:
 				plugin := logicalVersionMap[tc.pluginVersion]
-				vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "", plugin, []string{}, cluster.TempDir)
+				vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "", plugin, env, cluster.TempDir)
 			case logical.TypeCredential:
 				plugin := credentialVersionMap[tc.pluginVersion]
-				vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeCredential, "", plugin, []string{}, cluster.TempDir)
+				vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeCredential, "", plugin, env, cluster.TempDir)
 			}
 
 			// Reload the plugin
@@ -503,6 +519,7 @@ func testPlugin_continueOnError(t *testing.T, btype logical.BackendType, mismatc
 }
 
 func TestSystemBackend_Plugin_autoReload(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		pluginVersion string
 	}{
@@ -519,6 +536,7 @@ func TestSystemBackend_Plugin_autoReload(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.pluginVersion, func(t *testing.T) {
+			t.Parallel()
 			cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical, tc.pluginVersion)
 			defer cluster.Cleanup()
 
@@ -578,6 +596,7 @@ func TestSystemBackend_Plugin_SealUnseal(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.pluginVersion, func(t *testing.T) {
+			t.Parallel()
 			cluster := testSystemBackendMock(t, 1, 1, logical.TypeLogical, tc.pluginVersion)
 			defer cluster.Cleanup()
 
@@ -642,6 +661,7 @@ func TestSystemBackend_Plugin_reload(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			testSystemBackend_PluginReload(t, tc.data, tc.backendType)
 		})
 	}
@@ -750,12 +770,12 @@ func testSystemBackendMock(t *testing.T, numCores, numMounts int, backendType lo
 	vault.TestWaitActive(t, core.Core)
 	client := core.Client
 
-	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
+	env := []string{pluginutil.PluginCACertPEMEnv + "=" + cluster.CACertPEMFile}
 
 	switch backendType {
 	case logical.TypeLogical:
 		plugin := logicalVersionMap[pluginVersion]
-		vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "", plugin, []string{}, tempDir)
+		vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "", plugin, env, tempDir)
 		for i := 0; i < numMounts; i++ {
 			// Alternate input styles for plugin_name on every other mount
 			options := map[string]interface{}{
@@ -771,7 +791,7 @@ func testSystemBackendMock(t *testing.T, numCores, numMounts int, backendType lo
 		}
 	case logical.TypeCredential:
 		plugin := credentialVersionMap[pluginVersion]
-		vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeCredential, "", plugin, []string{}, tempDir)
+		vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeCredential, "", plugin, env, tempDir)
 		for i := 0; i < numMounts; i++ {
 			// Alternate input styles for plugin_name on every other mount
 			options := map[string]interface{}{
@@ -824,8 +844,7 @@ func testSystemBackend_SingleCluster_Env(t *testing.T, env []string) *vault.Test
 	vault.TestWaitActive(t, core.Core)
 	client := core.Client
 
-	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
-
+	env = append([]string{pluginutil.PluginCACertPEMEnv + "=" + cluster.CACertPEMFile}, env...)
 	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "", "TestBackend_PluginMainEnv", env, tempDir)
 	options := map[string]interface{}{
 		"type": "mock-plugin",
@@ -1050,236 +1069,5 @@ func TestBackend_PluginMainEnv(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
-	}
-}
-
-func TestSystemBackend_InternalUIResultantACL(t *testing.T) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-	client := cluster.Cores[0].Client
-
-	resp, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-		Policies: []string{"default"},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil {
-		t.Fatal("nil response")
-	}
-	if resp.Auth == nil {
-		t.Fatal("nil auth")
-	}
-	if resp.Auth.ClientToken == "" {
-		t.Fatal("empty client token")
-	}
-
-	client.SetToken(resp.Auth.ClientToken)
-
-	resp, err = client.Logical().Read("sys/internal/ui/resultant-acl")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil {
-		t.Fatal("nil response")
-	}
-	if resp.Data == nil {
-		t.Fatal("nil data")
-	}
-
-	exp := map[string]interface{}{
-		"exact_paths": map[string]interface{}{
-			"auth/token/lookup-self": map[string]interface{}{
-				"capabilities": []interface{}{
-					"read",
-				},
-			},
-			"auth/token/renew-self": map[string]interface{}{
-				"capabilities": []interface{}{
-					"update",
-				},
-			},
-			"auth/token/revoke-self": map[string]interface{}{
-				"capabilities": []interface{}{
-					"update",
-				},
-			},
-			"sys/capabilities-self": map[string]interface{}{
-				"capabilities": []interface{}{
-					"update",
-				},
-			},
-			"sys/control-group/request": map[string]interface{}{
-				"capabilities": []interface{}{
-					"update",
-				},
-			},
-			"sys/internal/ui/resultant-acl": map[string]interface{}{
-				"capabilities": []interface{}{
-					"read",
-				},
-			},
-			"sys/leases/lookup": map[string]interface{}{
-				"capabilities": []interface{}{
-					"update",
-				},
-			},
-			"sys/leases/renew": map[string]interface{}{
-				"capabilities": []interface{}{
-					"update",
-				},
-			},
-			"sys/renew": map[string]interface{}{
-				"capabilities": []interface{}{
-					"update",
-				},
-			},
-			"sys/tools/hash": map[string]interface{}{
-				"capabilities": []interface{}{
-					"update",
-				},
-			},
-			"sys/wrapping/lookup": map[string]interface{}{
-				"capabilities": []interface{}{
-					"update",
-				},
-			},
-			"sys/wrapping/unwrap": map[string]interface{}{
-				"capabilities": []interface{}{
-					"update",
-				},
-			},
-			"sys/wrapping/wrap": map[string]interface{}{
-				"capabilities": []interface{}{
-					"update",
-				},
-			},
-		},
-		"glob_paths": map[string]interface{}{
-			"cubbyhole/": map[string]interface{}{
-				"capabilities": []interface{}{
-					"create",
-					"delete",
-					"list",
-					"read",
-					"update",
-				},
-			},
-			"sys/tools/hash/": map[string]interface{}{
-				"capabilities": []interface{}{
-					"update",
-				},
-			},
-		},
-		"root": false,
-	}
-
-	if diff := deep.Equal(resp.Data, exp); diff != nil {
-		t.Fatal(diff)
-	}
-}
-
-func TestSystemBackend_HAStatus(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Trace)
-	inm, err := inmem.NewTransactionalInmem(nil, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
-	inmha, err := inmem.NewInmemHA(nil, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	conf := &vault.CoreConfig{
-		Physical:   inm,
-		HAPhysical: inmha.(physical.HABackend),
-	}
-	opts := &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	}
-	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	vault.RetryUntil(t, 15*time.Second, func() error {
-		// Use standby deliberately to make sure it forwards
-		client := cluster.Cores[1].Client
-		resp, err := client.Sys().HAStatus()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if len(resp.Nodes) != len(cluster.Cores) {
-			return fmt.Errorf("expected %d nodes, got %d", len(cluster.Cores), len(resp.Nodes))
-		}
-		return nil
-	})
-}
-
-// TestSystemBackend_VersionHistory_unauthenticated tests the sys/version-history
-// endpoint without providing a token. Requests to the endpoint must be
-// authenticated and thus a 403 response is expected.
-func TestSystemBackend_VersionHistory_unauthenticated(t *testing.T) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-	client := cluster.Cores[0].Client
-
-	client.SetToken("")
-	resp, err := client.Logical().List("sys/version-history")
-
-	if resp != nil {
-		t.Fatalf("expected nil response, resp: %#v", resp)
-	}
-
-	respErr, ok := err.(*api.ResponseError)
-	if !ok {
-		t.Fatalf("unexpected error type: err: %#v", err)
-	}
-
-	if respErr.StatusCode != 403 {
-		t.Fatalf("expected response status to be 403, actual: %d", respErr.StatusCode)
-	}
-}
-
-// TestSystemBackend_VersionHistory_authenticated tests the sys/version-history
-// endpoint with authentication. Without synthetically altering the underlying
-// core/versions storage entries, a single version entry should exist.
-func TestSystemBackend_VersionHistory_authenticated(t *testing.T) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-	client := cluster.Cores[0].Client
-
-	resp, err := client.Logical().List("sys/version-history")
-	if err != nil || resp == nil {
-		t.Fatalf("request failed, err: %v, resp: %#v", err, resp)
-	}
-
-	var ok bool
-	var keys []interface{}
-	var keyInfo map[string]interface{}
-
-	if keys, ok = resp.Data["keys"].([]interface{}); !ok {
-		t.Fatalf("expected keys to be array, actual: %#v", resp.Data["keys"])
-	}
-
-	if keyInfo, ok = resp.Data["key_info"].(map[string]interface{}); !ok {
-		t.Fatalf("expected key_info to be map, actual: %#v", resp.Data["key_info"])
-	}
-
-	if len(keys) != 1 {
-		t.Fatalf("expected single version history entry for %q", version.Version)
-	}
-
-	if keyInfo[version.Version] == nil {
-		t.Fatalf("expected version %s to be present in key_info, actual: %#v", version.Version, keyInfo)
 	}
 }
