@@ -223,7 +223,7 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		if crl, ok := b.crls[name]; ok {
 			if crl.CDP != nil {
 				// Force a fetch for validation but also because it may be an updated URL
-				crl.CDP.ValidUntil = time.Now()
+				crl.CDP.ValidUntil = time.Time{}
 			}
 		}
 		// Can't defer, it gets taken as a write lock in fetchCRL
