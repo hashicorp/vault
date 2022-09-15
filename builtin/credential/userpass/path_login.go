@@ -89,6 +89,8 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	switch {
 	case !legacyPassword:
 		if err := bcrypt.CompareHashAndPassword(userPassword, passwordBytes); err != nil {
+			// The failed login info of existing users alone are tracked as only
+			// existing user's failed login information is stored in storage for optimization
 			if user == nil || userError != nil {
 				return logical.ErrorResponse("invalid username or password"), nil
 			}
@@ -96,6 +98,8 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		}
 	default:
 		if subtle.ConstantTimeCompare(userPassword, passwordBytes) != 1 {
+			// The failed login info of existing users alone are tracked as only
+			// existing user's failed login information is stored in storage for optimization
 			if user == nil || userError != nil {
 				return logical.ErrorResponse("invalid username or password"), nil
 			}
