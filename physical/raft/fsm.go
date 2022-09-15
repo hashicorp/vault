@@ -654,16 +654,16 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 					case deleteOp:
 						err = b.Delete([]byte(op.Key))
 					case getOp:
+						fsmEntry := &FSMEntry{
+							Key: op.Key,
+						}
 						val := b.Get([]byte(op.Key))
 						if len(val) > 0 {
 							newVal := make([]byte, len(val))
 							copy(newVal, val)
-							fsmEntry := &FSMEntry{
-								Key:   op.Key,
-								Value: newVal,
-							}
-							entrySlice = append(entrySlice, fsmEntry)
+							fsmEntry.Value = newVal
 						}
+						entrySlice = append(entrySlice, fsmEntry)
 					case restoreCallbackOp:
 						if f.restoreCb != nil {
 							// Kick off the restore callback function in a go routine
