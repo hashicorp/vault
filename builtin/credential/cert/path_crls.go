@@ -34,7 +34,7 @@ using the same name as specified here.`,
 			},
 			"url": {
 				Type:        framework.TypeString,
-				Description: `The URL of a CRL distribution point.  Only one of 'crl' or 'cdp' parameters should be specified.`,
+				Description: `The URL of a CRL distribution point.  Only one of 'crl' or 'url' parameters should be specified.`,
 			},
 		},
 
