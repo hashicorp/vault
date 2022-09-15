@@ -1,0 +1,3 @@
+```release-note:bug
+ldap: ensure usernames are normalized to lowercase when username_as_alias is set
+```

@@ -642,6 +642,18 @@ func TestBackend_basic_authbind_userfilter(t *testing.T) {
 			testAccStepLoginNoAttachedPolicies(t, "hermes conrad", "hermes"),
 		},
 	})
+
+	// Ensure the same entity is used regardless of case when username_as_alias has been set
+	cfg.UsernameAsAlias = true
+	entity_id = ""
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrl(t, cfg),
+			testAccStepLoginReturnsSameEntity(t, "hermes conrad", "hermes", &entity_id),
+			testAccStepLoginReturnsSameEntity(t, "Hermes conraD", "hermes", &entity_id),
+		},
+	})
 }
 
 func TestBackend_basic_authbind_metadata_name(t *testing.T) {
