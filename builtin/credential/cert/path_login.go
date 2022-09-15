@@ -130,6 +130,12 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, err
 	}
 
+	if b.crls == nil {
+		if err := b.populateCRLs(ctx, req.Storage); err != nil {
+			return nil, err
+		}
+	}
+
 	if !config.DisableBinding {
 		var matched *ParsedCert
 		if verifyResp, resp, err := b.verifyCredentials(ctx, req, d); err != nil {
