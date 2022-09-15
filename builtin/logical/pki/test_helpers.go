@@ -14,7 +14,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"hash"
-	"io/ioutil"
+	"io"
 	"strings"
 	"testing"
 
@@ -41,8 +41,7 @@ func createBackendWithStorage(t testing.TB) (*backend, logical.Storage) {
 }
 
 func mountPKIEndpoint(t testing.TB, client *api.Client, path string) {
-	var err error
-	err = client.Sys().Mount(path, &api.MountInput{
+	err := client.Sys().Mount(path, &api.MountInput{
 		Type: "pki",
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: "16h",
@@ -54,13 +53,13 @@ func mountPKIEndpoint(t testing.TB, client *api.Client, path string) {
 
 // Signing helpers
 func requireSignedBy(t *testing.T, cert *x509.Certificate, key crypto.PublicKey) {
-	switch key.(type) {
+	switch typedKey := key.(type) {
 	case *rsa.PublicKey:
-		requireRSASignedBy(t, cert, key.(*rsa.PublicKey))
+		requireRSASignedBy(t, cert, typedKey)
 	case *ecdsa.PublicKey:
-		requireECDSASignedBy(t, cert, key.(*ecdsa.PublicKey))
+		requireECDSASignedBy(t, cert, typedKey)
 	case ed25519.PublicKey:
-		requireED25519SignedBy(t, cert, key.(ed25519.PublicKey))
+		requireED25519SignedBy(t, cert, typedKey)
 	default:
 		require.Fail(t, "unknown public key type %#v", key)
 	}
@@ -181,42 +180,6 @@ func getParsedCrl(t *testing.T, client *api.Client, mountPoint string) *pkix.Cer
 	return getParsedCrlAtPath(t, client, path)
 }
 
-func getParsedCrlForIssuer(t *testing.T, client *api.Client, mountPoint string, issuer string) *pkix.CertificateList {
-	path := fmt.Sprintf("/v1/%v/issuer/%v/crl/der", mountPoint, issuer)
-	crl := getParsedCrlAtPath(t, client, path)
-
-	// Now fetch the issuer as well and verify the certificate
-	path = fmt.Sprintf("/v1/%v/issuer/%v/der", mountPoint, issuer)
-	req := client.NewRequest("GET", path)
-	resp, err := client.RawRequest(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	certBytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if len(certBytes) == 0 {
-		t.Fatalf("expected certificate in response body")
-	}
-
-	cert, err := x509.ParseCertificate(certBytes)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cert == nil {
-		t.Fatalf("expected parsed certificate")
-	}
-
-	if err := cert.CheckCRLSignature(crl); err != nil {
-		t.Fatalf("expected valid signature on CRL for issuer %v: %v", issuer, crl)
-	}
-
-	return crl
-}
-
 func getParsedCrlAtPath(t *testing.T, client *api.Client, path string) *pkix.CertificateList {
 	req := client.NewRequest("GET", path)
 	resp, err := client.RawRequest(req)
@@ -225,7 +188,7 @@ func getParsedCrlAtPath(t *testing.T, client *api.Client, path string) *pkix.Cer
 	}
 	defer resp.Body.Close()
 
-	crlBytes, err := ioutil.ReadAll(resp.Body)
+	crlBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -294,4 +257,28 @@ func CBList(b *backend, s logical.Storage, path string) (*logical.Response, erro
 
 func CBDelete(b *backend, s logical.Storage, path string) (*logical.Response, error) {
 	return CBReq(b, s, logical.DeleteOperation, path, make(map[string]interface{}))
+}
+
+func requireFieldsSetInResp(t *testing.T, resp *logical.Response, fields ...string) {
+	var missingFields []string
+	for _, field := range fields {
+		value, ok := resp.Data[field]
+		if !ok || value == nil {
+			missingFields = append(missingFields, field)
+		}
+	}
+
+	require.Empty(t, missingFields, "The following fields were required but missing from response:\n%v", resp.Data)
+}
+
+func requireSuccessNonNilResponse(t *testing.T, resp *logical.Response, err error, msgAndArgs ...interface{}) {
+	require.NoError(t, err, msgAndArgs...)
+	require.False(t, resp.IsError(), msgAndArgs...)
+	require.NotNil(t, resp, msgAndArgs...)
+}
+
+func requireSuccessNilResponse(t *testing.T, resp *logical.Response, err error, msgAndArgs ...interface{}) {
+	require.NoError(t, err, msgAndArgs...)
+	require.False(t, resp.IsError(), msgAndArgs...)
+	require.Nil(t, resp, msgAndArgs...)
 }

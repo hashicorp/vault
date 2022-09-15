@@ -93,20 +93,22 @@ func sealStatusRequestWithContext(ctx context.Context, c *Sys, r *Request) (*Sea
 }
 
 type SealStatusResponse struct {
-	Type         string `json:"type"`
-	Initialized  bool   `json:"initialized"`
-	Sealed       bool   `json:"sealed"`
-	T            int    `json:"t"`
-	N            int    `json:"n"`
-	Progress     int    `json:"progress"`
-	Nonce        string `json:"nonce"`
-	Version      string `json:"version"`
-	BuildDate    string `json:"build_date"`
-	Migration    bool   `json:"migration"`
-	ClusterName  string `json:"cluster_name,omitempty"`
-	ClusterID    string `json:"cluster_id,omitempty"`
-	RecoverySeal bool   `json:"recovery_seal"`
-	StorageType  string `json:"storage_type,omitempty"`
+	Type              string `json:"type"`
+	Initialized       bool   `json:"initialized"`
+	Sealed            bool   `json:"sealed"`
+	T                 int    `json:"t"`
+	N                 int    `json:"n"`
+	Progress          int    `json:"progress"`
+	Nonce             string `json:"nonce"`
+	Version           string `json:"version"`
+	BuildDate         string `json:"build_date"`
+	Migration         bool   `json:"migration"`
+	ClusterName       string `json:"cluster_name,omitempty"`
+	ClusterID         string `json:"cluster_id,omitempty"`
+	RecoverySeal      bool   `json:"recovery_seal"`
+	StorageType       string `json:"storage_type,omitempty"`
+	HCPLinkStatus     string `json:"hcp_link_status,omitempty"`
+	HCPLinkResourceID string `json:"hcp_link_resource_ID,omitempty"`
 }
 
 type UnsealOpts struct {

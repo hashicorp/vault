@@ -1,6 +1,6 @@
 # Multi-stage builder to avoid polluting users environment with wrong
 # architecture binaries.
-ARG VERSION=1.18.4
+ARG VERSION=1.19.1
 
 FROM golang:${VERSION} AS builder
 

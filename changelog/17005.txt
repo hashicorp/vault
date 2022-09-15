@@ -1,0 +1,13 @@
+```release-note:change
+auth: `auth enable` returns an error and `POST /sys/auth/:type` endpoint
+reports an error for `Pending Removal` auth methods.
+```
+```release-note:change
+secrets: `secrets enable` returns an error and `POST /sys/mount/:type` endpoint
+reports an error for `Pending Removal` secrets engines.
+```
+```release-note:improvement
+core: Handle and log deprecated builtin mounts. Introduces
+`VAULT_ALLOW_PENDING_REMOVAL_MOUNTS` to override shutdown and error when
+attempting to mount `Pending Removal` builtin plugins.
+```

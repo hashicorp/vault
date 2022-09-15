@@ -4,20 +4,27 @@ import (
 	"crypto"
 	"crypto/x509"
 	"fmt"
+	"math/big"
+	"net/http"
 	"regexp"
 	"strings"
-
-	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
 	managedKeyNameArg = "managed_key_name"
 	managedKeyIdArg   = "managed_key_id"
 	defaultRef        = "default"
+
+	// Constants for If-Modified-Since operation
+	headerIfModifiedSince = "If-Modified-Since"
+	headerLastModified    = "Last-Modified"
 )
 
 var (
@@ -27,7 +34,11 @@ var (
 )
 
 func serialFromCert(cert *x509.Certificate) string {
-	return strings.TrimSpace(certutil.GetHexFormatted(cert.SerialNumber.Bytes(), ":"))
+	return serialFromBigInt(cert.SerialNumber)
+}
+
+func serialFromBigInt(serial *big.Int) string {
+	return strings.TrimSpace(certutil.GetHexFormatted(serial.Bytes(), ":"))
 }
 
 func normalizeSerial(serial string) string {
@@ -106,7 +117,7 @@ func getKeyRefWithErr(data *framework.FieldData) (string, error) {
 	keyRef := getKeyRef(data)
 
 	if len(keyRef) == 0 {
-		return "", errutil.UserError{Err: fmt.Sprintf("missing argument key_ref for existing type")}
+		return "", errutil.UserError{Err: "missing argument key_ref for existing type"}
 	}
 
 	return keyRef, nil
@@ -207,4 +218,135 @@ func extractRef(data *framework.FieldData, paramName string) string {
 		return defaultRef
 	}
 	return value
+}
+
+func isStringArrayDifferent(a, b []string) bool {
+	if len(a) != len(b) {
+		return true
+	}
+
+	for i, v := range a {
+		if v != b[i] {
+			return true
+		}
+	}
+
+	return false
+}
+
+func hasHeader(header string, req *logical.Request) bool {
+	var hasHeader bool
+	headerValue := req.Headers[header]
+	if len(headerValue) > 0 {
+		hasHeader = true
+	}
+
+	return hasHeader
+}
+
+func parseIfNotModifiedSince(req *logical.Request) (time.Time, error) {
+	var headerTimeValue time.Time
+	headerValue := req.Headers[headerIfModifiedSince]
+
+	headerTimeValue, err := time.Parse(time.RFC1123, headerValue[0])
+	if err != nil {
+		return headerTimeValue, fmt.Errorf("failed to parse given value for '%s' header: %v", headerIfModifiedSince, err)
+	}
+
+	return headerTimeValue, nil
+}
+
+type ifModifiedReqType int
+
+const (
+	ifModifiedUnknown  ifModifiedReqType = iota
+	ifModifiedCA                         = iota
+	ifModifiedCRL                        = iota
+	ifModifiedDeltaCRL                   = iota
+)
+
+type IfModifiedSinceHelper struct {
+	req       *logical.Request
+	reqType   ifModifiedReqType
+	issuerRef issuerID
+}
+
+func sendNotModifiedResponseIfNecessary(helper *IfModifiedSinceHelper, sc *storageContext, resp *logical.Response) (bool, error) {
+	responseHeaders := map[string][]string{}
+	if !hasHeader(headerIfModifiedSince, helper.req) {
+		return false, nil
+	}
+
+	before, err := sc.isIfModifiedSinceBeforeLastModified(helper, responseHeaders)
+	if err != nil {
+		return false, err
+	}
+
+	if !before {
+		return false, nil
+	}
+
+	// Fill response
+	resp.Data = map[string]interface{}{
+		logical.HTTPContentType: "",
+		logical.HTTPStatusCode:  304,
+	}
+	resp.Headers = responseHeaders
+
+	return true, nil
+}
+
+func (sc *storageContext) isIfModifiedSinceBeforeLastModified(helper *IfModifiedSinceHelper, responseHeaders map[string][]string) (bool, error) {
+	// False return --> we were last modified _before_ the requester's
+	// time --> keep using the cached copy and return 304.
+	var err error
+	var lastModified time.Time
+	ifModifiedSince, err := parseIfNotModifiedSince(helper.req)
+	if err != nil {
+		return false, err
+	}
+
+	switch helper.reqType {
+	case ifModifiedCRL, ifModifiedDeltaCRL:
+		if sc.Backend.crlBuilder.invalidate.Load() {
+			// When we see the CRL is invalidated, respond with false
+			// regardless of what the local CRL state says. We've likely
+			// renamed some issuers or are about to rebuild a new CRL....
+			//
+			// We do this earlier, ahead of config load, as it saves us a
+			// potential error condition.
+			return false, nil
+		}
+
+		crlConfig, err := sc.getLocalCRLConfig()
+		if err != nil {
+			return false, err
+		}
+
+		lastModified = crlConfig.LastModified
+		if helper.reqType == ifModifiedDeltaCRL {
+			lastModified = crlConfig.DeltaLastModified
+		}
+	case ifModifiedCA:
+		issuerId, err := sc.resolveIssuerReference(string(helper.issuerRef))
+		if err != nil {
+			return false, err
+		}
+
+		issuer, err := sc.fetchIssuerById(issuerId)
+		if err != nil {
+			return false, err
+		}
+
+		lastModified = issuer.LastModified
+	default:
+		return false, fmt.Errorf("unknown if-modified-since request type: %v", helper.reqType)
+	}
+
+	if !lastModified.IsZero() && lastModified.Before(ifModifiedSince) {
+		responseHeaders[headerLastModified] = []string{lastModified.Format(http.TimeFormat)}
+		return true, nil
+	}
+
+	return false, nil
 }

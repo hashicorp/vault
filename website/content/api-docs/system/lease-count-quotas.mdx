@@ -17,6 +17,14 @@ A lease count quota must include a `max_leases` value with an optional `path`
 that can either be a namespace or mount, and can optionally include a path suffix following
 the mount to restrict more specific API paths.
 
+Upon creating a lease count quota, it will be populated with the current count of leases from this path. If there are
+more leases present than the specified `max_leases`, this will cause the lease count to go over the specified
+`max_leases`.
+
+The initial population process can cause a lot of work for Vault - and while creating one lease count quota
+is always fine, if you're planning to create — for example — thousands of lease count quotas for paths with
+millions of leases in an automated way, it is recommended to space out the creation requests.
+
 | Method | Path                            |
 | :----- | :------------------------------ |
 | `POST` | `/sys/quotas/lease-count/:name` |

@@ -54,7 +54,15 @@ type SystemView interface {
 
 	// LookupPlugin looks into the plugin catalog for a plugin with the given
 	// name. Returns a PluginRunner or an error if a plugin can not be found.
-	LookupPlugin(context.Context, string, consts.PluginType) (*pluginutil.PluginRunner, error)
+	LookupPlugin(ctx context.Context, pluginName string, pluginType consts.PluginType) (*pluginutil.PluginRunner, error)
+
+	// LookupPluginVersion looks into the plugin catalog for a plugin with the given
+	// name and version. Returns a PluginRunner or an error if a plugin can not be found.
+	LookupPluginVersion(ctx context.Context, pluginName string, pluginType consts.PluginType, version string) (*pluginutil.PluginRunner, error)
+
+	// ListVersionedPlugins returns information about all plugins of a certain
+	// type in the catalog, including any versioning information stored for them.
+	ListVersionedPlugins(ctx context.Context, pluginType consts.PluginType) ([]pluginutil.VersionedPlugin, error)
 
 	// NewPluginClient returns a client for managing the lifecycle of plugin
 	// processes
@@ -166,6 +174,14 @@ func (d StaticSystemView) ResponseWrapData(_ context.Context, data map[string]in
 
 func (d StaticSystemView) LookupPlugin(_ context.Context, _ string, _ consts.PluginType) (*pluginutil.PluginRunner, error) {
 	return nil, errors.New("LookupPlugin is not implemented in StaticSystemView")
+}
+
+func (d StaticSystemView) LookupPluginVersion(_ context.Context, _ string, _ consts.PluginType, _ string) (*pluginutil.PluginRunner, error) {
+	return nil, errors.New("LookupPluginVersion is not implemented in StaticSystemView")
+}
+
+func (d StaticSystemView) ListVersionedPlugins(_ context.Context, _ consts.PluginType) ([]pluginutil.VersionedPlugin, error) {
+	return nil, errors.New("ListVersionedPlugins is not implemented in StaticSystemView")
 }
 
 func (d StaticSystemView) MlockEnabled() bool {

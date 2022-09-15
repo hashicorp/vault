@@ -37,8 +37,8 @@ Create a new user or update an existing user. This path honors the distinction b
 ```json
 {
   "password": "superSecretPassword",
-  "policies": "admin,default",
-  "bound_cidrs": ["127.0.0.1/32", "128.252.0.0/16"]
+  "token_policies": ["admin", "default"],
+  "token_bound_cidrs": ["127.0.0.1/32", "128.252.0.0/16"]
 }
 ```
 
@@ -72,16 +72,30 @@ $ curl \
 
 ```json
 {
-  "request_id": "812229d7-a82e-0b20-c35b-81ce8c1b9fa6",
+  "request_id": "0ad1be52-9398-4b3c-f58b-98e427406471",
   "lease_id": "",
-  "lease_duration": 0,
   "renewable": false,
+  "lease_duration": 0,
   "data": {
-    "max_ttl": 0,
-    "policies": ["default", "dev"],
-    "ttl": 0
+    "token_bound_cidrs": [
+      "127.0.0.1",
+      "128.252.0.0/16"
+    ],
+    "token_explicit_max_ttl": 0,
+    "token_max_ttl": 0,
+    "token_no_default_policy": false,
+    "token_num_uses": 0,
+    "token_period": 0,
+    "token_policies": [
+      "admin",
+      "default"
+    ],
+    "token_ttl": 0,
+    "token_type": "default"
   },
-  "warnings": null
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
 }
 ```
 
@@ -148,13 +162,15 @@ Update policies for an existing user.
 ### Parameters
 
 - `username` `(string: <required>)` – The username for the user.
-- `policies` `(string: "")` – Comma-separated list of policies. If set to empty
+- `token_policies` `(array: [] or comma-delimited string: "")` - List of
+  policies to encode onto generated tokens. Depending on the auth method, this
+  list may be supplemented by user/group/other values.
 
 ### Sample Payload
 
 ```json
 {
-  "policies": ["policy1", "policy2"]
+  "token_policies": ["policy1", "policy2"]
 }
 ```
 
@@ -229,20 +245,36 @@ $ curl \
 
 ```json
 {
+  "request_id": "ae1882ba-f60a-7629-ce1a-6618c482de3e",
   "lease_id": "",
   "renewable": false,
   "lease_duration": 0,
   "data": null,
+  "wrap_info": null,
   "warnings": null,
   "auth": {
-    "client_token": "64d2a8f2-2a2f-5688-102b-e6088b76e344",
-    "accessor": "18bb8f89-826a-56ee-c65b-1736dc5ea27d",
-    "policies": ["default"],
+    "client_token": "hvs.CAESIJyeFmhLYRWVXPJStT3fDP1ZdFkon_otuk1sJUpkfk_WGh4KHGh2cy5xdW9XVHBnVUwwbzB1ZEhzZkpkRmVoU08",
+    "accessor": "iP2Lw1JXpjlALbgJSeIx51n7",
+    "policies": [
+      "default",
+      "policy1",
+      "policy2"
+    ],
+    "token_policies": [
+      "default",
+      "policy1",
+      "policy2"
+    ],
     "metadata": {
       "username": "mitchellh"
     },
-    "lease_duration": 7200,
-    "renewable": true
+    "lease_duration": 2764800,
+    "renewable": true,
+    "entity_id": "0660dce5-4f2c-926a-8b15-158901557d9d",
+    "token_type": "service",
+    "orphan": true,
+    "mfa_requirement": null,
+    "num_uses": 0
   }
 }
 ```

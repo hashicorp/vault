@@ -132,7 +132,11 @@ func ParamTestSealMigrationShamirToTransit_Post14(t *testing.T, logger hclog.Log
 
 	// Migrate the backend from shamir to transit.
 	opts.SealFunc = func() vault.Seal {
-		return tss.MakeSeal(t, sealKeyName)
+		seal, err := tss.MakeSeal(t, sealKeyName)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return seal
 	}
 
 	// Restart each follower with the new config, and migrate to Transit.
@@ -173,7 +177,11 @@ func ParamTestSealMigration_TransitToTransit(t *testing.T, logger hclog.Logger,
 	// Migrate the backend from transit to transit.
 	opts.UnwrapSealFunc = opts.SealFunc
 	opts.SealFunc = func() vault.Seal {
-		return tss2.MakeSeal(t, "transit-seal-key-2")
+		seal, err := tss2.MakeSeal(t, "transit-seal-key-2")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return seal
 	}
 	leaderIdx := migratePost14(t, storage, cluster, opts, cluster.RecoveryKeys)
 	validateMigration(t, storage, cluster, leaderIdx, verifySealConfigTransit)
@@ -279,7 +287,11 @@ func migrateFromShamirToTransit_Pre14(t *testing.T, logger hclog.Logger, storage
 		SkipInit:              true,
 		// N.B. Providing a transit seal puts us in migration mode.
 		SealFunc: func() vault.Seal {
-			return tss.MakeSeal(t, "transit-seal-key")
+			seal, err := tss.MakeSeal(t, "transit-seal-key")
+			if err != nil {
+				t.Fatal(err)
+			}
+			return seal
 		},
 	}
 	storage.Setup(&conf, &opts)
@@ -322,7 +334,8 @@ func migrateFromShamirToTransit_Pre14(t *testing.T, logger hclog.Logger, storage
 }
 
 func validateMigration(t *testing.T, storage teststorage.ReusableStorage,
-	cluster *vault.TestCluster, leaderIdx int, f func(t *testing.T, core *vault.TestClusterCore)) {
+	cluster *vault.TestCluster, leaderIdx int, f func(t *testing.T, core *vault.TestClusterCore),
+) {
 	t.Helper()
 
 	leader := cluster.Cores[leaderIdx]
@@ -681,7 +694,8 @@ func runShamir(t *testing.T, logger hclog.Logger, storage teststorage.ReusableSt
 
 // initializeTransit initializes a brand new backend storage with Transit.
 func InitializeTransit(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int,
-	tss *sealhelper.TransitSealServer, sealKeyName string) (*vault.TestCluster, *vault.TestClusterOptions) {
+	tss *sealhelper.TransitSealServer, sealKeyName string,
+) (*vault.TestCluster, *vault.TestClusterOptions) {
 	t.Helper()
 
 	baseClusterPort := basePort + 10
@@ -697,7 +711,11 @@ func InitializeTransit(t *testing.T, logger hclog.Logger, storage teststorage.Re
 		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
 		BaseClusterListenPort: baseClusterPort,
 		SealFunc: func() vault.Seal {
-			return tss.MakeSeal(t, sealKeyName)
+			seal, err := tss.MakeSeal(t, sealKeyName)
+			if err != nil {
+				t.Fatal(err)
+			}
+			return seal
 		},
 	}
 	storage.Setup(&conf, &opts)
