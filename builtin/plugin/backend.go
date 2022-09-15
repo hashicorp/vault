@@ -84,6 +84,11 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*PluginBackend, 
 		runningVersion = versioner.Version().Version
 	}
 
+	external := false
+	if externaler, ok := raw.(logical.Externaler); ok {
+		external = externaler.IsExternal()
+	}
+
 	// Cleanup meta plugin backend
 	raw.Cleanup(ctx)
 
@@ -95,6 +100,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*PluginBackend, 
 			BackendType:   btype,
 			PluginVersion: runningVersion,
 		},
+		external: external,
 	}
 
 	b.config = conf
@@ -106,10 +112,12 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*PluginBackend, 
 // It is mostly used to mark that the backend is an external backend.
 type placeholderBackend struct {
 	framework.Backend
+
+	external bool
 }
 
 func (p *placeholderBackend) IsExternal() bool {
-	return true
+	return p.external
 }
 
 var (

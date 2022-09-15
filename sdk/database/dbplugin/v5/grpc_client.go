@@ -21,14 +21,14 @@ var (
 
 type gRPCClient struct {
 	client        proto.DatabaseClient
-	versionClient logical.VersionedClient
+	versionClient logical.PluginVersionClient
 	doneCtx       context.Context
 }
 
 func (c gRPCClient) Version() logical.VersionInfo {
 	version, _ := c.versionClient.Version(context.Background(), &logical.Empty{})
 	if version != nil {
-		return logical.VersionInfo{Version: version.Version}
+		return logical.VersionInfo{Version: version.PluginVersion}
 	}
 	return logical.EmptyVersion
 }

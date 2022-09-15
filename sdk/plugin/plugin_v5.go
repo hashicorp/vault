@@ -127,7 +127,7 @@ func Dispense(rpcClient plugin.ClientProtocol, pluginClient pluginutil.PluginCli
 		// This is an abstraction leak from go-plugin but it is necessary in
 		// order to enable multiplexing on multiplexed plugins
 		c.client = pb.NewBackendClient(pluginClient.Conn())
-		c.versionClient = logical.NewVersionedClient(pluginClient.Conn())
+		c.versionClient = logical.NewPluginVersionClient(pluginClient.Conn())
 
 		backend = c
 	default:
@@ -161,7 +161,7 @@ func NewPluginClientV5(ctx context.Context, sys pluginutil.RunnerUtil, config pl
 		// This is an abstraction leak from go-plugin but it is necessary in
 		// order to enable multiplexing on multiplexed plugins
 		c.client = pb.NewBackendClient(pluginClient.Conn())
-		c.versionClient = logical.NewVersionedClient(pluginClient.Conn())
+		c.versionClient = logical.NewPluginVersionClient(pluginClient.Conn())
 
 		backend = c
 		transport = "gRPC"

@@ -51,14 +51,14 @@ func (b GRPCBackendPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server)
 	}
 
 	pb.RegisterBackendServer(s, &server)
-	logical.RegisterVersionedServer(s, &server)
+	logical.RegisterPluginVersionServer(s, &server)
 	return nil
 }
 
 func (b *GRPCBackendPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
 	ret := &backendGRPCPluginClient{
 		client:        pb.NewBackendClient(c),
-		versionClient: logical.NewVersionedClient(c),
+		versionClient: logical.NewPluginVersionClient(c),
 		clientConn:    c,
 		broker:        broker,
 		cleanupCh:     make(chan struct{}),

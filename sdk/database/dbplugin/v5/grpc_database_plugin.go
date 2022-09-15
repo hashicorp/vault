@@ -55,14 +55,14 @@ func (d GRPCDatabasePlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) err
 	}
 
 	proto.RegisterDatabaseServer(s, &server)
-	logical.RegisterVersionedServer(s, &server)
+	logical.RegisterPluginVersionServer(s, &server)
 	return nil
 }
 
 func (GRPCDatabasePlugin) GRPCClient(doneCtx context.Context, _ *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
 	client := gRPCClient{
 		client:        proto.NewDatabaseClient(c),
-		versionClient: logical.NewVersionedClient(c),
+		versionClient: logical.NewPluginVersionClient(c),
 		doneCtx:       doneCtx,
 	}
 	return client, nil

@@ -18,7 +18,7 @@ var _ proto.DatabaseServer = &gRPCServer{}
 
 type gRPCServer struct {
 	proto.UnimplementedDatabaseServer
-	logical.UnimplementedVersionedServer
+	logical.UnimplementedPluginVersionServer
 
 	// holds the non-multiplexed Database
 	// when this is set the plugin does not support multiplexing
@@ -311,8 +311,7 @@ func (g *gRPCServer) Version(ctx context.Context, _ *logical.Empty) (*logical.Ve
 		return nil, err
 	}
 	if versioner, ok := impl.(logical.Versioner); ok {
-		name, _ := impl.Type() // ignore the error, since this parameter is not really used
-		return &logical.VersionReply{PluginName: name, Version: versioner.Version().Version}, nil
+		return &logical.VersionReply{PluginVersion: versioner.Version().Version}, nil
 	}
 	return &logical.VersionReply{}, nil
 }

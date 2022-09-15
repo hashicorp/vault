@@ -27,7 +27,7 @@ type backendInstance struct {
 
 type backendGRPCPluginServer struct {
 	pb.UnimplementedBackendServer
-	logical.UnimplementedVersionedServer
+	logical.UnimplementedPluginVersionServer
 
 	broker *plugin.GRPCBroker
 
@@ -276,10 +276,10 @@ func (b *backendGRPCPluginServer) Version(ctx context.Context, _ *logical.Empty)
 
 	if versioner, ok := backend.(logical.Versioner); ok {
 		return &logical.VersionReply{
-			Version: versioner.Version().Version,
+			PluginVersion: versioner.Version().Version,
 		}, nil
 	}
 	return &logical.VersionReply{
-		Version: "",
+		PluginVersion: "",
 	}, nil
 }

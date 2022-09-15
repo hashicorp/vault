@@ -29,7 +29,7 @@ var _ logical.Backend = &backendGRPCPluginClient{}
 type backendGRPCPluginClient struct {
 	broker        *plugin.GRPCBroker
 	client        pb.BackendClient
-	versionClient logical.VersionedClient
+	versionClient logical.PluginVersionClient
 	metadataMode  bool
 
 	system logical.SystemView
@@ -293,7 +293,7 @@ func (b *backendGRPCPluginClient) Version() logical.VersionInfo {
 		return logical.EmptyVersion
 	}
 	return logical.VersionInfo{
-		Version: reply.GetVersion(),
+		Version: reply.GetPluginVersion(),
 	}
 }
 

@@ -65,7 +65,7 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, config plug
 		// This is an abstraction leak from go-plugin but it is necessary in
 		// order to enable multiplexing on multiplexed plugins
 		c.client = proto.NewDatabaseClient(pluginClient.Conn())
-		c.versionClient = logical.NewVersionedClient(pluginClient.Conn())
+		c.versionClient = logical.NewPluginVersionClient(pluginClient.Conn())
 
 		db = c
 	default:

@@ -7,12 +7,11 @@ message Empty {}
 
 // VersionReply is the reply for the Version method.
 message VersionReply {
-  string plugin_name = 1;
-  string version = 2;
+  string plugin_version = 1;
 }
 
-// Versioned is an optional RPC service implemented by plugins.
-service Versioned {
+// PluginVersion is an optional RPC service implemented by plugins.
+service PluginVersion {
   // Version returns version information for the plugin.
   rpc Version(Empty) returns (VersionReply);
 }
