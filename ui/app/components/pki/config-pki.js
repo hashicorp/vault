@@ -6,6 +6,7 @@ export default Component.extend({
   classNames: 'config-pki',
   flashMessages: service(),
   errors: null,
+  buildCrl: true,
   /*
    *
    * @param String
@@ -39,8 +40,8 @@ export default Component.extend({
   actions: {
     save(section) {
       this.set('loading', true);
-      // if 0 returned from TTL component, reset expiry to default lease duration
-      if (Number(this.config.expiry) === 0) this.config.expiry = '72h';
+      // set 'disable' here from buildCrl toggle state
+      this.config.set('disable', !this.buildCrl);
       const config = this.config;
       config
         .save({

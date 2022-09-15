@@ -51,13 +51,12 @@ export default Model.extend({
     return this.attrList(keys);
   }),
   //crl
+  disable: attr('boolean', { defaultValue: false }),
   expiry: attr({
+    label: 'CRL building enabled',
+    helperTextEnabled: 'The CRL will expire after',
     defaultValue: '72h',
     editType: 'ttl',
-    helperTextEnabled: 'The CRL will expire after',
-  }),
-  disable: attr('boolean', {
-    defaultValue: false,
-    subText: 'If disabled the CRL will not be built.',
+    hideToggle: true,
   }),
 });

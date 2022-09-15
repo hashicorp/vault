@@ -16,10 +16,23 @@
 
 <MessageError @model={{this.config}} @errors={{this.errors}} />
 <form {{action "save" this.section on="submit"}} class="box is-shadowless is-marginless is-fullwidth has-slim-padding">
-  {{#each (get this.config (concat this.section "Attrs")) as |attr|}}
-    <FormField @attr={{attr}} @model={{this.config}} @data-test-field={{attr.name}} />
-  {{/each}}
-  <div class="field is-grouped box is-fullwidth is-bottomless">
+  <Toggle
+    @name="show-build-crl"
+    @status="success"
+    @size="small"
+    @onChange={{action (mut this.buildCrl)}}
+    @checked={{this.buildCrl}}
+  >
+    {{#if this.buildCrl}}
+      {{#let (get this.config (concat this.section "Attrs")) as |crlAttrs|}}
+        <FormField @attr={{get crlAttrs "0"}} @model={{this.config}} @data-test-field="expiry" />
+      {{/let}}
+    {{else}}
+      <span class="field ttl-picker-label">CRL building disabled</span><br />
+      <div class="description has-text-grey">The CRL will not be built.</div>
+    {{/if}}
+  </Toggle>
+  <div class="field has-top-margin-m is-grouped box is-fullwidth is-bottomless">
     <div class="control">
       <button
         data-test-submit
