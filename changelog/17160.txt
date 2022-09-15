@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/gcp: bump github.com/hashicorp/vault-plugin-auth-gcp to v0.14.0
+```
