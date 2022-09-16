@@ -51,12 +51,12 @@ export default Model.extend({
     return this.attrList(keys);
   }),
   //crl
-  disable: attr('boolean', { defaultValue: false }),
   expiry: attr({
     label: 'CRL building enabled',
     helperTextEnabled: 'The CRL will expire after',
     defaultValue: '72h',
     editType: 'ttl',
-    hideToggle: true,
+    hideToggle: true, // this form field is wrapped by a toggle that sets the 'disable' attr
   }),
+  disable: attr('boolean', { defaultValue: false }),
 });

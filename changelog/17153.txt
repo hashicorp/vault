@@ -1,2 +1,2 @@
 ```release-note:improvement
-ui: add 'disable' param to pki crl configuration, update default lease duration when expiry is toggled off
+ui: add 'disable' param to pki crl configuration

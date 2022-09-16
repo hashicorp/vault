@@ -1,12 +1,12 @@
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
-import { get } from '@ember/object';
+import { get, computed } from '@ember/object';
 
 export default Component.extend({
   classNames: 'config-pki',
   flashMessages: service(),
   errors: null,
-  buildCrl: true,
+  buildCrl: computed.not('config.disable'),
   /*
    *
    * @param String
@@ -40,8 +40,10 @@ export default Component.extend({
   actions: {
     save(section) {
       this.set('loading', true);
-      // set 'disable' here from buildCrl toggle state
-      this.config.set('disable', !this.buildCrl);
+      if (section === 'crl') {
+        // set 'disable' here from buildCrl toggle state
+        this.config.set('disable', !this.buildCrl);
+      }
       const config = this.config;
       config
         .save({
