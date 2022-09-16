@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-multierror"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -98,7 +97,7 @@ func (b *backend) updateCRLs(ctx context.Context, req *logical.Request) error {
 	for name, crl := range b.crls {
 		if crl.CDP != nil && time.Now().After(crl.CDP.ValidUntil) {
 			if err := b.fetchCRL(ctx, req.Storage, name, &crl); err != nil {
-				err = multierror.Append(errs, err)
+				errs = multierror.Append(errs, err)
 			}
 		}
 	}
