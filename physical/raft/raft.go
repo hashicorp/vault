@@ -1633,8 +1633,13 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 
 			// this should always be true because the entries in the slice were created in the same order as
 			// the command operations.
-			if logOp.Key == fsmEntry.Key && len(fsmEntry.Value) > 0 {
-				logOp.Value = fsmEntry.Value
+			if logOp.Key == fsmEntry.Key {
+				if len(fsmEntry.Value) > 0 {
+					logOp.Value = fsmEntry.Value
+				}
+			} else {
+				// this shouldn't happen
+				return errors.New("entries in FSM response were out of order")
 			}
 		}
 	}
