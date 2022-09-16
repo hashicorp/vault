@@ -97,7 +97,7 @@ The phases of deprecation are also known as "Deprecation Status". These statuses
 
 The four phases of deprecation are: `Supported`, `Deprecated`, `Pending Removal`, and `Removed`.
 
-Note: Deprecation Status currently only applies to builtin `auth` and `secrets` plugins. All other plugins will report a status of `n/a`. This is expected behavior.
+Note: Deprecation Status currently only applies to builtin `auth` and `secrets` plugins. All external plugins will report a status of `n/a`. This is expected behavior.
 
 #### Supported
 
@@ -125,7 +125,7 @@ This status reflects a feature which has been officially deprecated in this rele
 
 The `Pending Removal` behavior may be overriden using a new environment variable: [`VAULT_ALLOW_PENDING_REMOVAL_MOUNTS`](/docs/commands/server#vault_allow_pending_removal_mounts). This environment variable effectively allows all `Pending Removal` features to be treated as `Deprecated`.
 
-#### REMOVED
+#### Removed
 
 This status reflects a feature which has been officially removed from Vault. `Removed` is the last phase of the deprecation process. During this phase, code for this feature no longer exists within Vault.
 
