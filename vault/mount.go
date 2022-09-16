@@ -331,8 +331,8 @@ type MountEntry struct {
 	synthesizedConfigCache sync.Map
 
 	// version info
-	Version        string `json:"version,omitempty"`         // The semantic version of the mounted plugin, e.g. v1.2.3.
-	RunningVersion string `json:"running_version,omitempty"` // The semantic version of the mounted plugin as reported by the plugin.
+	Version        string `json:"plugin_version,omitempty"`         // The semantic version of the mounted plugin, e.g. v1.2.3.
+	RunningVersion string `json:"running_plugin_version,omitempty"` // The semantic version of the mounted plugin as reported by the plugin.
 	RunningSha256  string `json:"running_sha256,omitempty"`
 }
 
