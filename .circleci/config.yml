@@ -751,7 +751,7 @@ jobs:
     - GO_TAGS: ''
   semgrep:
     docker:
-    - image: docker.mirror.hashicorp.services/returntocorp/semgrep:0.106.0
+    - image: docker.mirror.hashicorp.services/returntocorp/semgrep:0.113.0
     shell: /bin/sh
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
