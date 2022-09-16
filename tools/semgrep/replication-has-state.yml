@@ -55,5 +55,4 @@ rules:
             b.System().LocalMount() || !b.System().ReplicationState().HasState(<... consts.ReplicationPerformanceStandby ...>)
     message: "Invalid replication state handling of local mounts"
     languages: [go]
-    severity: ERROR 
-    
+    severity: ERROR
