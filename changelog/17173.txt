@@ -1,7 +1,0 @@
-```release-note:improvement
-auth/kerberos: Add remove_instance_name config to CLI and mount config, add config parameter to include group aliases found in LDAP
-```
-
-```release-note:bug
-auth/kerberos: Maintain headers set by the client
-```
