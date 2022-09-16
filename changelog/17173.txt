@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/kerberos: upgrade to v0.8.0
+```
