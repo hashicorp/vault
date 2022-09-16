@@ -97,19 +97,16 @@ export default class PkiRolesEngineModel extends Model {
             'extKeyUsage', // ARG TODO: takes a list, but we have these as checkboxes from the options on the golang site: https://pkg.go.dev/crypto/x509#ExtKeyUsage
           ],
         },
-        { 'Policy identifiers': ['policy_identifiers'] },
+        { 'Policy identifiers': ['policyIdentifiers'] },
         {
-          'Subject Alternative Name (SAN) Options': [
-            'allow_ip_sans',
-            'allowed_uri_sans',
-            'allowed_other_sans',
-          ],
+          'Subject Alternative Name (SAN) Options': ['allowIpSans', 'allowedUriSans', 'allowedOtherSans'],
         },
         {
           'Additional subject fields': [
             'allowed_serial_numbers',
-            'require_cn',
-            'use_csr_common_name',
+            'requireCn',
+            'useCsrCommonName',
+            'useCsrSans',
             'ou',
             'organization',
             'country',

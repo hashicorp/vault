@@ -42,6 +42,7 @@ export default class PkiIssuersEngineModel extends Model {
   //       'issuingCertifications',
   //       'crlDistributionPoints',
   //       'ocspServers',
+  //       'deltaCrlUrls', // new endpoint, mentioned in RFC, but need to confirm it's there.
   //     ]);
   //   }
   //   return this._attributeMeta;
