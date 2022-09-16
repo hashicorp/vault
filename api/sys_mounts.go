@@ -284,8 +284,7 @@ type MountOutput struct {
 	ExternalEntropyAccess bool              `json:"external_entropy_access" mapstructure:"external_entropy_access"`
 	Version               string            `json:"version"`
 	RunningVersion        string            `json:"running_version"`
-	Sha                   string            `json:"sha"`
-	RunningSha            string            `json:"running_sha"`
+	RunningSha256         string            `json:"running_sha256"`
 	DeprecationStatus     string            `json:"deprecation_status" mapstructure:"deprecation_status"`
 }
 

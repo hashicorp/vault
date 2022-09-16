@@ -897,9 +897,8 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[st
 		"options":                 entry.Options,
 		"uuid":                    entry.UUID,
 		"version":                 entry.Version,
-		"sha":                     entry.Sha,
 		"running_version":         entry.RunningVersion,
-		"running_sha":             entry.RunningSha,
+		"running_sha256":          entry.RunningSha256,
 	}
 	entryConfig := map[string]interface{}{
 		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),

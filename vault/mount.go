@@ -332,9 +332,8 @@ type MountEntry struct {
 
 	// version info
 	Version        string `json:"version,omitempty"`         // The semantic version of the mounted plugin, e.g. v1.2.3.
-	Sha            string `json:"sha,omitempty"`             // The SHA256 sum of the plugin binary.
 	RunningVersion string `json:"running_version,omitempty"` // The semantic version of the mounted plugin as reported by the plugin.
-	RunningSha     string `json:"running_sha,omitempty"`
+	RunningSha256  string `json:"running_sha256,omitempty"`
 }
 
 // MountConfig is used to hold settable options
