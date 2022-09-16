@@ -4,12 +4,13 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
-	"github.com/hashicorp/go-multierror"
 	"io"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/hashicorp/go-multierror"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
