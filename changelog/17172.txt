@@ -1,3 +1,0 @@
-```release-note:improvement
-secrets/terraform: upgrade to v0.6.0
-```
