@@ -24,7 +24,7 @@ import (
 	logicalKube "github.com/hashicorp/vault-plugin-secrets-kubernetes"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	logicalMongoAtlas "github.com/hashicorp/vault-plugin-secrets-mongodbatlas"
-	logicalOpenLDAP "github.com/hashicorp/vault-plugin-secrets-openldap"
+	logicalLDAP "github.com/hashicorp/vault-plugin-secrets-openldap"
 	logicalTerraform "github.com/hashicorp/vault-plugin-secrets-terraform"
 	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
@@ -166,7 +166,8 @@ func newRegistry() *registry {
 				DeprecationStatus: consts.PendingRemoval,
 			},
 			"nomad":    {Factory: logicalNomad.Factory},
-			"openldap": {Factory: logicalOpenLDAP.Factory},
+			"openldap": {Factory: logicalLDAP.Factory},
+			"ldap":     {Factory: logicalLDAP.Factory},
 			"pki":      {Factory: logicalPki.Factory},
 			"postgresql": {
 				Factory:           logicalPostgres.Factory,

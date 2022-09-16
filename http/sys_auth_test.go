@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/vault/helper/versions"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -128,7 +130,7 @@ func TestSysEnableAuth(t *testing.T) {
 				"options":         map[string]interface{}{},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "approle"),
 				"version":         "",
 			},
 			"token/": map[string]interface{}{
@@ -166,7 +168,7 @@ func TestSysEnableAuth(t *testing.T) {
 			"options":         map[string]interface{}{},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "approle"),
 			"version":         "",
 		},
 		"token/": map[string]interface{}{
@@ -531,7 +533,7 @@ func TestSysRemountAuth(t *testing.T) {
 				"options":         map[string]interface{}{},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 				"version":         "",
 			},
 			"token/": map[string]interface{}{
@@ -568,7 +570,7 @@ func TestSysRemountAuth(t *testing.T) {
 			"options":         map[string]interface{}{},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 			"version":         "",
 		},
 		"token/": map[string]interface{}{

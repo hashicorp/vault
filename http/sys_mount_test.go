@@ -7,9 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
-
 	"github.com/fatih/structs"
+	"github.com/go-test/deep"
+	"github.com/hashicorp/vault/helper/versions"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -44,7 +45,7 @@ func TestSysMounts(t *testing.T) {
 				"options":         map[string]interface{}{"version": "1"},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 				"version":         "",
 			},
 			"sys/": map[string]interface{}{
@@ -62,7 +63,7 @@ func TestSysMounts(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.DefaultBuiltinVersion,
 				"version":         "",
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -79,7 +80,7 @@ func TestSysMounts(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 				"version":         "",
 			},
 			"identity/": map[string]interface{}{
@@ -97,7 +98,7 @@ func TestSysMounts(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 				"version":         "",
 			},
 		},
@@ -115,7 +116,7 @@ func TestSysMounts(t *testing.T) {
 			"options":         map[string]interface{}{"version": "1"},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 			"version":         "",
 		},
 		"sys/": map[string]interface{}{
@@ -133,7 +134,7 @@ func TestSysMounts(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.DefaultBuiltinVersion,
 			"version":         "",
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -150,7 +151,7 @@ func TestSysMounts(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 			"version":         "",
 		},
 		"identity/": map[string]interface{}{
@@ -168,7 +169,7 @@ func TestSysMounts(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 			"version":         "",
 		},
 	}
@@ -233,7 +234,7 @@ func TestSysMount(t *testing.T) {
 				"options":         map[string]interface{}{"version": "1"},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 				"version":         "",
 			},
 			"secret/": map[string]interface{}{
@@ -250,7 +251,7 @@ func TestSysMount(t *testing.T) {
 				"options":         map[string]interface{}{"version": "1"},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 				"version":         "",
 			},
 			"sys/": map[string]interface{}{
@@ -268,7 +269,7 @@ func TestSysMount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.DefaultBuiltinVersion,
 				"version":         "",
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -285,7 +286,7 @@ func TestSysMount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 				"version":         "",
 			},
 			"identity/": map[string]interface{}{
@@ -303,7 +304,7 @@ func TestSysMount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 				"version":         "",
 			},
 		},
@@ -321,7 +322,7 @@ func TestSysMount(t *testing.T) {
 			"options":         map[string]interface{}{"version": "1"},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 			"version":         "",
 		},
 		"secret/": map[string]interface{}{
@@ -338,7 +339,7 @@ func TestSysMount(t *testing.T) {
 			"options":         map[string]interface{}{"version": "1"},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 			"version":         "",
 		},
 		"sys/": map[string]interface{}{
@@ -356,7 +357,7 @@ func TestSysMount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.DefaultBuiltinVersion,
 			"version":         "",
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -373,7 +374,7 @@ func TestSysMount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 			"version":         "",
 		},
 		"identity/": map[string]interface{}{
@@ -391,7 +392,7 @@ func TestSysMount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 			"version":         "",
 		},
 	}
@@ -491,7 +492,7 @@ func TestSysRemount(t *testing.T) {
 				"options":         map[string]interface{}{},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 				"version":         "",
 			},
 			"secret/": map[string]interface{}{
@@ -508,7 +509,7 @@ func TestSysRemount(t *testing.T) {
 				"options":         map[string]interface{}{"version": "1"},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 				"version":         "",
 			},
 			"sys/": map[string]interface{}{
@@ -526,7 +527,7 @@ func TestSysRemount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.DefaultBuiltinVersion,
 				"version":         "",
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -543,7 +544,7 @@ func TestSysRemount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 				"version":         "",
 			},
 			"identity/": map[string]interface{}{
@@ -561,7 +562,7 @@ func TestSysRemount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 				"version":         "",
 			},
 		},
@@ -579,7 +580,7 @@ func TestSysRemount(t *testing.T) {
 			"options":         map[string]interface{}{},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 			"version":         "",
 		},
 		"secret/": map[string]interface{}{
@@ -596,7 +597,7 @@ func TestSysRemount(t *testing.T) {
 			"options":         map[string]interface{}{"version": "1"},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 			"version":         "",
 		},
 		"sys/": map[string]interface{}{
@@ -614,7 +615,7 @@ func TestSysRemount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.DefaultBuiltinVersion,
 			"version":         "",
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -631,7 +632,7 @@ func TestSysRemount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 			"version":         "",
 		},
 		"identity/": map[string]interface{}{
@@ -649,7 +650,7 @@ func TestSysRemount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 			"version":         "",
 		},
 	}
@@ -714,7 +715,7 @@ func TestSysUnmount(t *testing.T) {
 				"options":         map[string]interface{}{"version": "1"},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 				"version":         "",
 			},
 			"sys/": map[string]interface{}{
@@ -732,7 +733,7 @@ func TestSysUnmount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.DefaultBuiltinVersion,
 				"version":         "",
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -749,7 +750,7 @@ func TestSysUnmount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 				"version":         "",
 			},
 			"identity/": map[string]interface{}{
@@ -767,7 +768,7 @@ func TestSysUnmount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 				"version":         "",
 			},
 		},
@@ -785,7 +786,7 @@ func TestSysUnmount(t *testing.T) {
 			"options":         map[string]interface{}{"version": "1"},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 			"version":         "",
 		},
 		"sys/": map[string]interface{}{
@@ -803,7 +804,7 @@ func TestSysUnmount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.DefaultBuiltinVersion,
 			"version":         "",
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -820,7 +821,7 @@ func TestSysUnmount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 			"version":         "",
 		},
 		"identity/": map[string]interface{}{
@@ -838,7 +839,7 @@ func TestSysUnmount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 			"version":         "",
 		},
 	}
@@ -989,7 +990,7 @@ func TestSysTuneMount(t *testing.T) {
 				"options":         map[string]interface{}{},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 				"version":         "",
 			},
 			"secret/": map[string]interface{}{
@@ -1006,7 +1007,7 @@ func TestSysTuneMount(t *testing.T) {
 				"options":         map[string]interface{}{"version": "1"},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 				"version":         "",
 			},
 			"sys/": map[string]interface{}{
@@ -1024,7 +1025,7 @@ func TestSysTuneMount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.DefaultBuiltinVersion,
 				"version":         "",
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -1041,7 +1042,7 @@ func TestSysTuneMount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 				"version":         "",
 			},
 			"identity/": map[string]interface{}{
@@ -1059,7 +1060,7 @@ func TestSysTuneMount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 				"version":         "",
 			},
 		},
@@ -1077,7 +1078,7 @@ func TestSysTuneMount(t *testing.T) {
 			"options":         map[string]interface{}{},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 			"version":         "",
 		},
 		"secret/": map[string]interface{}{
@@ -1094,7 +1095,7 @@ func TestSysTuneMount(t *testing.T) {
 			"options":         map[string]interface{}{"version": "1"},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 			"version":         "",
 		},
 		"sys/": map[string]interface{}{
@@ -1112,7 +1113,7 @@ func TestSysTuneMount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.DefaultBuiltinVersion,
 			"version":         "",
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -1129,7 +1130,7 @@ func TestSysTuneMount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 			"version":         "",
 		},
 		"identity/": map[string]interface{}{
@@ -1147,7 +1148,7 @@ func TestSysTuneMount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 			"version":         "",
 		},
 	}
@@ -1238,7 +1239,7 @@ func TestSysTuneMount(t *testing.T) {
 				"options":         map[string]interface{}{"version": "1"},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 				"version":         "",
 			},
 			"secret/": map[string]interface{}{
@@ -1255,7 +1256,7 @@ func TestSysTuneMount(t *testing.T) {
 				"options":         map[string]interface{}{"version": "1"},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 				"version":         "",
 			},
 			"sys/": map[string]interface{}{
@@ -1273,7 +1274,7 @@ func TestSysTuneMount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.DefaultBuiltinVersion,
 				"version":         "",
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -1290,7 +1291,7 @@ func TestSysTuneMount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 				"version":         "",
 			},
 			"identity/": map[string]interface{}{
@@ -1308,7 +1309,7 @@ func TestSysTuneMount(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 				"version":         "",
 			},
 		},
@@ -1326,7 +1327,7 @@ func TestSysTuneMount(t *testing.T) {
 			"options":         map[string]interface{}{"version": "1"},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 			"version":         "",
 		},
 		"secret/": map[string]interface{}{
@@ -1343,7 +1344,7 @@ func TestSysTuneMount(t *testing.T) {
 			"options":         map[string]interface{}{"version": "1"},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 			"version":         "",
 		},
 		"sys/": map[string]interface{}{
@@ -1361,7 +1362,7 @@ func TestSysTuneMount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 			"version":         "",
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -1378,7 +1379,7 @@ func TestSysTuneMount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 			"version":         "",
 		},
 		"identity/": map[string]interface{}{
@@ -1396,7 +1397,7 @@ func TestSysTuneMount(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 			"version":         "",
 		},
 	}
