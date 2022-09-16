@@ -759,7 +759,7 @@ jobs:
     - attach_workspace:
         at: .
     - run:
-        command: "# Alpine images can't run the make file due to a bash requirement. Run\n# semgrep explicitly here. \nexport PATH=\"$HOME/.local/bin:$PATH\" \nsemgrep --error --include '*.go' --exclude 'vendor' -f tools/semgrep/ci .\n"
+        command: "# Alpine images can't run the make file due to a bash requirement. Run\n# semgrep explicitly here. \nexport PATH=\"$HOME/.local/bin:$PATH\" \necho -n 'Semgrep Version: '\nsemgrep --version\nsemgrep --error --include '*.go' --exclude 'vendor' -f tools/semgrep/ci .\n"
         name: Run Semgrep Rules
   pre-flight-checks:
     machine:
