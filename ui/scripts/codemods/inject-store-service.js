@@ -1,6 +1,11 @@
-// jscodeshift can take a parser, like "babel", "babylon", "flow", "ts", or "tsx"
-// Read more: https://github.com/facebook/jscodeshift#parser
-// export const parser = 'babylon';
+import babylonParser from './jscodeshift-babylon-parser';
+
+// use babylon parser with decorators-legacy plugin
+export const parser = babylonParser;
+
+// example usage
+// npx jscodeshift -t ./scripts/codemods/inject-store-service.js ./app/**/*.js
+// pass -d for dry run (no files transformed)
 
 export default function transformer({ source }, api) {
   const j = api.jscodeshift;
