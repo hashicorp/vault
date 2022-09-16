@@ -49,7 +49,7 @@ using the same name as specified here.`,
 	}
 }
 
-func (b *backend) populateCRLsWithoutLock(ctx context.Context, storage logical.Storage) error {
+func (b *backend) lockThenpopulateCRLs(ctx context.Context, storage logical.Storage) error {
 	b.crlUpdateMutex.Lock()
 	defer b.crlUpdateMutex.Unlock()
 	return b.populateCRLs(ctx, storage)
@@ -139,7 +139,7 @@ func (b *backend) pathCRLDelete(ctx context.Context, req *logical.Request, d *fr
 		return logical.ErrorResponse(`"name" parameter cannot be empty`), nil
 	}
 
-	if err := b.populateCRLsWithoutLock(ctx, req.Storage); err != nil {
+	if err := b.lockThenpopulateCRLs(ctx, req.Storage); err != nil {
 		return nil, err
 	}
 
@@ -170,7 +170,7 @@ func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, d *fram
 		return logical.ErrorResponse(`"name" parameter must be set`), nil
 	}
 
-	if err := b.populateCRLsWithoutLock(ctx, req.Storage); err != nil {
+	if err := b.lockThenpopulateCRLs(ctx, req.Storage); err != nil {
 		return nil, err
 	}
 
