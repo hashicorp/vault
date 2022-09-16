@@ -270,7 +270,6 @@ func (c *AuthEnableCommand) Run(args []string) int {
 
 	authOpts := &api.EnableAuthOptions{
 		Type:                  authType,
-		PluginVersion:         c.flagPluginVersion,
 		Description:           c.flagDescription,
 		Local:                 c.flagLocal,
 		SealWrap:              c.flagSealWrap,
@@ -278,6 +277,7 @@ func (c *AuthEnableCommand) Run(args []string) int {
 		Config: api.AuthConfigInput{
 			DefaultLeaseTTL: c.flagDefaultLeaseTTL.String(),
 			MaxLeaseTTL:     c.flagMaxLeaseTTL.String(),
+			PluginVersion:   c.flagPluginVersion,
 		},
 		Options: c.flagOptions,
 	}
