@@ -9,6 +9,12 @@ description: The "plugin info" command displays information about a plugin in th
 The `plugin info` displays information about a plugin in the catalog.
 The plugin's type of "auth", "database", or "secret" must be included.
 
+## deprecation_status field
+
+As of 1.12, all builtin plugins will have an associated Deprecation
+Status. This status will be reflected in the `deprecation_status` key/value
+pair, seen below.
+
 ## Examples
 
 Display information about a plugin
@@ -16,13 +22,26 @@ Display information about a plugin
 ```shell-session
 $ vault plugin info auth my-custom-plugin
 
-Key        Value
----        -----
-args       []
-builtin    false
-command    my-custom-plugin
-name       my-custom-plugin
-sha256     d3f0a8be02f6c074cf38c9c99d4d04c9c6466249
+Key                   Value
+---                   -----
+args                  []
+builtin               false
+command               my-custom-plugin
+deprecation_status    n/a
+name                  my-custom-plugin
+sha256                d3f0a8be02f6c074cf38c9c99d4d04c9c6466249
+```
+
+```shell-session
+$ vault plugin info database postgresql-database-plugin
+Key                   Value
+---                   -----
+args                  []
+builtin               true
+command               n/a
+deprecation_status    supported
+name                  postgresql-database-plugin
+sha256                n/a
 ```
 
 ## Usage

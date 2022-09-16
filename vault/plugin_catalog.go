@@ -8,15 +8,15 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 	"sync"
 
 	log "github.com/hashicorp/go-hclog"
-	multierror "github.com/hashicorp/go-multierror"
-	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	semver "github.com/hashicorp/go-version"
+	"github.com/hashicorp/vault/helper/versions"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -24,7 +24,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	backendplugin "github.com/hashicorp/vault/sdk/plugin"
-	"github.com/hashicorp/vault/sdk/version"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -54,10 +53,6 @@ type PluginCatalog struct {
 	// plugin process.
 	externalPlugins map[string]*externalPlugin
 	mlockPlugins    bool
-
-	// once is used to ensure we only parse build info once.
-	once      sync.Once
-	buildInfo *debug.BuildInfo
 
 	lock sync.RWMutex
 }
@@ -348,20 +343,14 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 
 	clientConn := rpcClient.(*plugin.GRPCClient).Conn
 
-	muxed, err := pluginutil.MultiplexingSupported(ctx, clientConn)
+	muxed, err := pluginutil.MultiplexingSupported(ctx, clientConn, config.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	if muxed {
-		// Wrap rpcClient with our implementation so that we can inject the
-		// ID into the context
-		pc.clientConn = &pluginClientConn{
-			ClientConn: clientConn,
-			id:         id,
-		}
-	} else {
-		pc.clientConn = clientConn
+	pc.clientConn = &pluginClientConn{
+		ClientConn: clientConn,
+		id:         id,
 	}
 
 	pc.ClientProtocol = rpcClient
@@ -429,14 +418,14 @@ func (c *PluginCatalog) getBackendPluginType(ctx context.Context, pluginRunner *
 	}
 
 	if attemptV4 {
-		c.logger.Debug("failed to dispense v5 backend plugin", "name", pluginRunner.Name, "error", err)
+		c.logger.Debug("failed to dispense v5 backend plugin", "name", pluginRunner.Name)
 		config.AutoMTLS = false
 		config.IsMetadataMode = true
 		// attempt to run as a v4 backend plugin
 		client, err = backendplugin.NewPluginClient(ctx, nil, pluginRunner, log.NewNullLogger(), true)
 		if err != nil {
-			c.logger.Debug("failed to dispense v4 backend plugin", "name", pluginRunner.Name, "error", err)
 			merr = multierror.Append(merr, fmt.Errorf("failed to dispense v4 backend plugin: %w", err))
+			c.logger.Debug("failed to dispense v4 backend plugin", "name", pluginRunner.Name, "error", merr)
 			return consts.PluginTypeUnknown, merr.ErrorOrNil()
 		}
 		c.logger.Debug("successfully dispensed v4 backend plugin", "name", pluginRunner.Name)
@@ -636,7 +625,7 @@ func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.
 				Type:           pluginType,
 				Builtin:        true,
 				BuiltinFactory: factory,
-				Version:        c.getBuiltinVersion(pluginType, name),
+				Version:        versions.GetBuiltinVersion(pluginType, name),
 			}, nil
 		}
 	}
@@ -857,17 +846,19 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 			continue
 		}
 
-		version := c.getBuiltinVersion(pluginType, plugin)
+		version := versions.GetBuiltinVersion(pluginType, plugin)
 		semanticVersion, err := semver.NewVersion(version)
+		deprecationStatus, _ := c.builtinRegistry.DeprecationStatus(plugin, pluginType)
 		if err != nil {
 			return nil, err
 		}
 		result = append(result, pluginutil.VersionedPlugin{
-			Name:            plugin,
-			Type:            pluginType.String(),
-			Version:         version,
-			Builtin:         true,
-			SemanticVersion: semanticVersion,
+			Name:              plugin,
+			Type:              pluginType.String(),
+			Version:           version,
+			Builtin:           true,
+			SemanticVersion:   semanticVersion,
+			DeprecationStatus: deprecationStatus.String(),
 		})
 	}
 
@@ -877,43 +868,4 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 func isPluginType(s string) bool {
 	_, err := consts.ParsePluginType(s)
 	return err == nil
-}
-
-func (c *PluginCatalog) getBuiltinVersion(pluginType consts.PluginType, pluginName string) string {
-	defaultBuiltinVersion := "v" + version.GetVersion().Version + "+builtin.vault"
-
-	c.once.Do(func() {
-		c.buildInfo, _ = debug.ReadBuildInfo()
-	})
-
-	// Should never happen, means the binary was built without Go modules.
-	// Fall back to just the Vault version.
-	if c.buildInfo == nil {
-		return defaultBuiltinVersion
-	}
-
-	// Vault builtin plugins are all either:
-	// a) An external repo within the hashicorp org - return external repo version with +builtin
-	// b) Within the Vault repo itself - return Vault version with +builtin.vault
-	//
-	// The repo names are predictable, but follow slightly different patterns
-	// for each plugin type.
-	t := pluginType.String()
-	switch pluginType {
-	case consts.PluginTypeDatabase:
-		// Database plugin built-ins are registered as e.g. "postgresql-database-plugin"
-		pluginName = strings.TrimSuffix(pluginName, "-database-plugin")
-	case consts.PluginTypeSecrets:
-		// Repos use "secrets", pluginType.String() is "secret".
-		t = "secrets"
-	}
-	pluginModulePath := fmt.Sprintf("github.com/hashicorp/vault-plugin-%s-%s", t, pluginName)
-
-	for _, dep := range c.buildInfo.Deps {
-		if dep.Path == pluginModulePath {
-			return dep.Version + "+builtin"
-		}
-	}
-
-	return defaultBuiltinVersion
 }

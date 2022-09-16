@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	log "github.com/hashicorp/go-hclog"
-	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -28,13 +28,13 @@ func (b *BackendPluginClient) Cleanup(ctx context.Context) {
 	b.client.Kill()
 }
 
-// NewBackend will return an instance of an RPC-based client implementation of the backend for
+// NewBackendWithVersion will return an instance of an RPC-based client implementation of the backend for
 // external plugins, or a concrete implementation of the backend if it is a builtin backend.
 // The backend is returned as a logical.Backend interface. The isMetadataMode param determines whether
 // the plugin should run in metadata mode.
-func NewBackend(ctx context.Context, pluginName string, pluginType consts.PluginType, sys pluginutil.LookRunnerUtil, conf *logical.BackendConfig, isMetadataMode bool) (logical.Backend, error) {
+func NewBackendWithVersion(ctx context.Context, pluginName string, pluginType consts.PluginType, sys pluginutil.LookRunnerUtil, conf *logical.BackendConfig, isMetadataMode bool, version string) (logical.Backend, error) {
 	// Look for plugin in the plugin catalog
-	pluginRunner, err := sys.LookupPlugin(ctx, pluginName, pluginType)
+	pluginRunner, err := sys.LookupPluginVersion(ctx, pluginName, pluginType, version)
 	if err != nil {
 		return nil, err
 	}
@@ -64,6 +64,14 @@ func NewBackend(ctx context.Context, pluginName string, pluginType consts.Plugin
 	}
 
 	return backend, nil
+}
+
+// NewBackend will return an instance of an RPC-based client implementation of the backend for
+// external plugins, or a concrete implementation of the backend if it is a builtin backend.
+// The backend is returned as a logical.Backend interface. The isMetadataMode param determines whether
+// the plugin should run in metadata mode.
+func NewBackend(ctx context.Context, pluginName string, pluginType consts.PluginType, sys pluginutil.LookRunnerUtil, conf *logical.BackendConfig, isMetadataMode bool) (logical.Backend, error) {
+	return NewBackendWithVersion(ctx, pluginName, pluginType, sys, conf, isMetadataMode, "")
 }
 
 func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (logical.Backend, error) {
@@ -135,3 +143,22 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunne
 		Backend: backend,
 	}, nil
 }
+
+func (b *BackendPluginClient) PluginVersion() logical.PluginVersion {
+	if versioner, ok := b.Backend.(logical.PluginVersioner); ok {
+		return versioner.PluginVersion()
+	}
+	return logical.EmptyPluginVersion
+}
+
+func (b *BackendPluginClient) IsExternal() bool {
+	if externaler, ok := b.Backend.(logical.Externaler); ok {
+		return externaler.IsExternal()
+	}
+	return true // default to true since this is only used for GRPC plugins
+}
+
+var (
+	_ logical.PluginVersioner = (*BackendPluginClient)(nil)
+	_ logical.Externaler      = (*BackendPluginClient)(nil)
+)

@@ -39,37 +39,48 @@ func Function(name string, f interface{}) Opt {
 // - random
 //   - Randomly generated characters. This uses the charset specified in RandomCharset. Must include a length.
 //     Example: {{ rand 20 }}
+//
 // - truncate
 //   - Truncates the previous value to the specified length. Must include a maximum length.
 //     Example: {{ .DisplayName | truncate 10 }}
+//
 // - truncate_sha256
 //   - Truncates the previous value to the specified length. If the original length is greater than the length
 //     specified, the remaining characters will be sha256 hashed and appended to the end. The hash will be only the first 8 characters The maximum length will
 //     be no longer than the length specified.
 //     Example: {{ .DisplayName | truncate_sha256 30 }}
+//
 // - uppercase
 //   - Uppercases the previous value.
 //     Example: {{ .RoleName | uppercase }}
+//
 // - lowercase
 //   - Lowercases the previous value.
 //     Example: {{ .DisplayName | lowercase }}
+//
 // - replace
 //   - Performs a string find & replace
 //     Example: {{ .DisplayName | replace - _ }}
+//
 // - sha256
 //   - SHA256 hashes the previous value.
 //     Example: {{ .DisplayName | sha256 }}
+//
 // - base64
 //   - base64 encodes the previous value.
 //     Example: {{ .DisplayName | base64 }}
+//
 // - unix_time
 //   - Provides the current unix time in seconds.
 //     Example: {{ unix_time }}
+//
 // - unix_time_millis
 //   - Provides the current unix time in milliseconds.
 //     Example: {{ unix_time_millis }}
+//
 // - timestamp
 //   - Provides the current time. Must include a standard Go format string
+//
 // - uuid
 //   - Generates a UUID
 //     Example: {{ uuid }}

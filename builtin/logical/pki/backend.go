@@ -128,10 +128,13 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathSign(&b),
 			pathIssue(&b),
 			pathRotateCRL(&b),
+			pathRotateDeltaCRL(&b),
 			pathRevoke(&b),
 			pathRevokeWithKey(&b),
 			pathTidy(&b),
+			pathTidyCancel(&b),
 			pathTidyStatus(&b),
+			pathConfigAutoTidy(&b),
 
 			// Issuer APIs
 			pathListIssuers(&b),
@@ -183,6 +186,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 	}
 
 	b.tidyCASGuard = new(uint32)
+	b.tidyCancelCAS = new(uint32)
 	b.tidyStatus = &tidyStatus{state: tidyStatusInactive}
 	b.storage = conf.StorageView
 	b.backendUUID = conf.BackendUUID
@@ -190,6 +194,9 @@ func Backend(conf *logical.BackendConfig) *backend {
 	b.pkiStorageVersion.Store(0)
 
 	b.crlBuilder = newCRLBuilder()
+
+	// Delay the first tidy until after we've started up.
+	b.lastTidy = time.Now()
 
 	return &b
 }
@@ -201,9 +208,11 @@ type backend struct {
 	storage           logical.Storage
 	revokeStorageLock sync.RWMutex
 	tidyCASGuard      *uint32
+	tidyCancelCAS     *uint32
 
 	tidyStatusLock sync.RWMutex
 	tidyStatus     *tidyStatus
+	lastTidy       time.Time
 
 	pkiStorageVersion atomic.Value
 	crlBuilder        *crlBuilder
@@ -218,10 +227,12 @@ type (
 )
 
 const (
-	tidyStatusInactive tidyStatusState = iota
-	tidyStatusStarted
-	tidyStatusFinished
-	tidyStatusError
+	tidyStatusInactive   tidyStatusState = iota
+	tidyStatusStarted                    = iota
+	tidyStatusFinished                   = iota
+	tidyStatusError                      = iota
+	tidyStatusCancelling                 = iota
+	tidyStatusCancelled                  = iota
 )
 
 type tidyStatus struct {
@@ -230,6 +241,7 @@ type tidyStatus struct {
 	tidyCertStore     bool
 	tidyRevokedCerts  bool
 	tidyRevokedAssocs bool
+	pauseDuration     string
 
 	// Status
 	state                   tidyStatusState
@@ -405,34 +417,105 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 }
 
 func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) error {
-	// First attempt to reload the CRL configuration.
 	sc := b.makeStorageContext(ctx, request.Storage)
-	if err := b.crlBuilder.reloadConfigIfRequired(sc); err != nil {
-		return err
-	}
 
-	// As we're (below) modifying the backing storage, we need to ensure
-	// we're not on a standby/secondary node.
-	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) ||
-		b.System().ReplicationState().HasState(consts.ReplicationDRSecondary) {
+	doCRL := func() error {
+		// First attempt to reload the CRL configuration.
+		if err := b.crlBuilder.reloadConfigIfRequired(sc); err != nil {
+			return err
+		}
+
+		// As we're (below) modifying the backing storage, we need to ensure
+		// we're not on a standby/secondary node.
+		if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) ||
+			b.System().ReplicationState().HasState(consts.ReplicationDRSecondary) {
+			return nil
+		}
+
+		// Check if we're set to auto rebuild and a CRL is set to expire.
+		if err := b.crlBuilder.checkForAutoRebuild(sc); err != nil {
+			return err
+		}
+
+		// Then attempt to rebuild the CRLs if required.
+		if err := b.crlBuilder.rebuildIfForced(ctx, b, request); err != nil {
+			return err
+		}
+
+		// If a delta CRL was rebuilt above as part of the complete CRL rebuild,
+		// this will be a no-op. However, if we do need to rebuild delta CRLs,
+		// this would cause us to do so.
+		if err := b.crlBuilder.rebuildDeltaCRLsIfForced(sc, false); err != nil {
+			return err
+		}
+
 		return nil
 	}
 
-	// Check if we're set to auto rebuild and a CRL is set to expire.
-	if err := b.crlBuilder.checkForAutoRebuild(sc); err != nil {
-		return err
+	doAutoTidy := func() error {
+		// As we're (below) modifying the backing storage, we need to ensure
+		// we're not on a standby/secondary node.
+		if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) ||
+			b.System().ReplicationState().HasState(consts.ReplicationDRSecondary) {
+			return nil
+		}
+
+		config, err := sc.getAutoTidyConfig()
+		if err != nil {
+			return err
+		}
+
+		if !config.Enabled || config.Interval <= 0*time.Second {
+			return nil
+		}
+
+		// Check if we should run another tidy...
+		now := time.Now()
+		b.tidyStatusLock.RLock()
+		nextOp := b.lastTidy.Add(config.Interval)
+		b.tidyStatusLock.RUnlock()
+		if now.Before(nextOp) {
+			return nil
+		}
+
+		// Ensure a tidy isn't already running... If it is, we'll trigger
+		// again when the running one finishes.
+		if !atomic.CompareAndSwapUint32(b.tidyCASGuard, 0, 1) {
+			return nil
+		}
+
+		// Prevent ourselves from starting another tidy operation while
+		// this one is still running. This operation runs in the background
+		// and has a separate error reporting mechanism.
+		b.tidyStatusLock.Lock()
+		b.lastTidy = now
+		b.tidyStatusLock.Unlock()
+
+		// Because the request from the parent storage will be cleared at
+		// some point (and potentially reused) -- due to tidy executing in
+		// a background goroutine -- we need to copy the storage entry off
+		// of the backend instead.
+		backendReq := &logical.Request{
+			Storage: b.storage,
+		}
+
+		b.startTidyOperation(backendReq, config)
+		return nil
 	}
 
-	// Then attempt to rebuild the CRLs if required.
-	if err := b.crlBuilder.rebuildIfForced(ctx, b, request); err != nil {
-		return err
+	crlErr := doCRL()
+	tidyErr := doAutoTidy()
+
+	if crlErr != nil && tidyErr != nil {
+		return fmt.Errorf("Error building CRLs:\n - %v\n\nError running auto-tidy:\n - %v\n", crlErr, tidyErr)
 	}
 
-	// If a delta CRL was rebuilt above as part of the complete CRL rebuild,
-	// this will be a no-op. However, if we do need to rebuild delta CRLs,
-	// this would cause us to do so.
-	if err := b.crlBuilder.rebuildDeltaCRLsIfForced(sc); err != nil {
-		return err
+	if crlErr != nil {
+		return fmt.Errorf("Error building CRLs:\n - %v\n", crlErr)
+	}
+
+	if tidyErr != nil {
+		return fmt.Errorf("Error running auto-tidy:\n - %v\n", tidyErr)
 	}
 
 	// Check if the CRL was invalidated due to issuer swap and update

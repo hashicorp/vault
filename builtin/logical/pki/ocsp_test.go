@@ -316,8 +316,9 @@ func TestOcsp_RevokedCertHasIssuerWithoutAKey(t *testing.T) {
 // the response to the caller on its behalf.
 //
 // NOTE: This test is a bit at the mercy of iteration order of the issuer ids.
-//       If it becomes flaky, most likely something is wrong in the code
-//       and not the test.
+//
+//	If it becomes flaky, most likely something is wrong in the code
+//	and not the test.
 func TestOcsp_MultipleMatchingIssuersOneWithoutSigningUsage(t *testing.T) {
 	b, s, testEnv := setupOcspEnv(t, "ec")
 
@@ -608,12 +609,12 @@ func requireOcspResponseSignedBy(t *testing.T, ocspResp *ocsp.Response, key cryp
 	hasher.Write(ocspResp.TBSResponseData)
 	hashData := hasher.Sum(nil)
 
-	switch key.(type) {
+	switch typedKey := key.(type) {
 	case *rsa.PublicKey:
-		err := rsa.VerifyPKCS1v15(key.(*rsa.PublicKey), hashAlgo, hashData, ocspResp.Signature)
+		err := rsa.VerifyPKCS1v15(typedKey, hashAlgo, hashData, ocspResp.Signature)
 		require.NoError(t, err, "the ocsp response was not signed by the expected public rsa key.")
 	case *ecdsa.PublicKey:
-		verify := ecdsa.VerifyASN1(key.(*ecdsa.PublicKey), hashData, ocspResp.Signature)
+		verify := ecdsa.VerifyASN1(typedKey, hashData, ocspResp.Signature)
 		require.True(t, verify, "the certificate was not signed by the expected public ecdsa key.")
 	}
 }

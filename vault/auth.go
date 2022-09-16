@@ -7,9 +7,10 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -182,7 +183,16 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 	if backendType != logical.TypeCredential {
 		return fmt.Errorf("cannot mount %q of type %q as an auth backend", entry.Type, backendType)
 	}
-
+	// update the entry running version with the backend's reported version
+	if versioner, ok := backend.(logical.PluginVersioner); ok {
+		entry.RunningVersion = versioner.PluginVersion().Version
+	}
+	if entry.RunningVersion == "" {
+		// don't set the running version to a builtin if it is running as an external plugin
+		if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
+			entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
+		}
+	}
 	addPathCheckers(c, entry, backend, viewPath)
 
 	// If the mount is filtered or we are on a DR secondary we don't want to
@@ -911,12 +921,16 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 
 	f, ok := c.credentialBackends[t]
 	if !ok {
-		plug, err := c.pluginCatalog.Get(ctx, t, consts.PluginTypeCredential, "")
+		plug, err := c.pluginCatalog.Get(ctx, t, consts.PluginTypeCredential, entry.Version)
 		if err != nil {
 			return nil, err
 		}
 		if plug == nil {
-			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, t)
+			errContext := t
+			if entry.Version != "" {
+				errContext += fmt.Sprintf(", version=%s", entry.Version)
+			}
+			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, errContext)
 		}
 
 		f = plugin.Factory
@@ -938,6 +952,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 	}
 
 	conf["plugin_type"] = consts.PluginTypeCredential.String()
+	conf["plugin_version"] = entry.Version
 
 	authLogger := c.baseLogger.Named(fmt.Sprintf("auth.%s.%s", t, entry.Accessor))
 	c.AddLogger(authLogger)

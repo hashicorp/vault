@@ -9,17 +9,28 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 var (
-	_ Database = gRPCClient{}
+	_ Database                = gRPCClient{}
+	_ logical.PluginVersioner = gRPCClient{}
 
 	ErrPluginShutdown = errors.New("plugin shutdown")
 )
 
 type gRPCClient struct {
-	client  proto.DatabaseClient
-	doneCtx context.Context
+	client        proto.DatabaseClient
+	versionClient logical.PluginVersionClient
+	doneCtx       context.Context
+}
+
+func (c gRPCClient) PluginVersion() logical.PluginVersion {
+	version, _ := c.versionClient.Version(context.Background(), &logical.Empty{})
+	if version != nil {
+		return logical.PluginVersion{Version: version.PluginVersion}
+	}
+	return logical.EmptyPluginVersion
 }
 
 func (c gRPCClient) Initialize(ctx context.Context, req InitializeRequest) (InitializeResponse, error) {

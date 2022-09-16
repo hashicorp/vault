@@ -110,7 +110,7 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	cores := cluster.Cores
 
 	sys := vault.TestDynamicSystemView(cores[0].Core, nil)
-	vault.TestAddTestPlugin(t, cores[0].Core, "test-plugin", consts.PluginTypeDatabase, "TestPlugin_GRPC_Main", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "test-plugin", consts.PluginTypeDatabase, "", "TestPlugin_GRPC_Main", []string{}, "")
 
 	return cluster, sys
 }
@@ -139,7 +139,7 @@ func TestPlugin_Init(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
-	dbRaw, err := dbplugin.PluginFactory(namespace.RootContext(nil), "test-plugin", sys, log.NewNullLogger())
+	dbRaw, err := dbplugin.PluginFactoryVersion(namespace.RootContext(nil), "test-plugin", "", sys, log.NewNullLogger())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -163,7 +163,7 @@ func TestPlugin_CreateUser(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
-	db, err := dbplugin.PluginFactory(namespace.RootContext(nil), "test-plugin", sys, log.NewNullLogger())
+	db, err := dbplugin.PluginFactoryVersion(namespace.RootContext(nil), "test-plugin", "", sys, log.NewNullLogger())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -203,7 +203,7 @@ func TestPlugin_RenewUser(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
-	db, err := dbplugin.PluginFactory(namespace.RootContext(nil), "test-plugin", sys, log.NewNullLogger())
+	db, err := dbplugin.PluginFactoryVersion(namespace.RootContext(nil), "test-plugin", "", sys, log.NewNullLogger())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -237,7 +237,7 @@ func TestPlugin_RevokeUser(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
-	db, err := dbplugin.PluginFactory(namespace.RootContext(nil), "test-plugin", sys, log.NewNullLogger())
+	db, err := dbplugin.PluginFactoryVersion(namespace.RootContext(nil), "test-plugin", "", sys, log.NewNullLogger())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

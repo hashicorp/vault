@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Activity log goroutine management improvements to allow tests to be more deterministic.
+```

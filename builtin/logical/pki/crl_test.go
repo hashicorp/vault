@@ -235,7 +235,7 @@ func crlEnableDisableIntermediateTestForBackend(t *testing.T, withRoot bool) {
 		t.Fatal("expected signed intermediate info")
 	}
 	intermediateSignedData := resp.Data
-	var certs string = intermediateSignedData["certificate"].(string)
+	certs := intermediateSignedData["certificate"].(string)
 	caSerial := intermediateSignedData["serial_number"].(string)
 	caSerials := []string{caSerial}
 	if withRoot {
@@ -244,10 +244,12 @@ func crlEnableDisableIntermediateTestForBackend(t *testing.T, withRoot bool) {
 		caSerials = append(caSerials, rootSerial)
 	}
 
-	resp, err = CBWrite(b_int, s_int, "intermediate/set-signed", map[string]interface{}{
+	_, err = CBWrite(b_int, s_int, "intermediate/set-signed", map[string]interface{}{
 		"certificate": certs,
 	})
-
+	if err != nil {
+		t.Fatal(err)
+	}
 	crlEnableDisableTestForBackend(t, b_int, s_int, caSerials)
 }
 
@@ -404,7 +406,7 @@ func TestCrlRebuilder(t *testing.T) {
 
 	// Make sure we have ticked over to the next second
 	for {
-		diff := time.Now().Sub(crl1.ThisUpdate)
+		diff := time.Since(crl1.ThisUpdate)
 		if diff.Seconds() >= 1 {
 			break
 		}
@@ -876,14 +878,11 @@ func TestAutoRebuild(t *testing.T) {
 		// storage without barrier encryption.
 		EnableRaw: true,
 	}
-	oldPeriod := vault.SetRollbackPeriodForTesting(newPeriod)
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+	cluster := vault.CreateTestClusterWithRollbackPeriod(t, newPeriod, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
 	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
-	vault.SetRollbackPeriodForTesting(oldPeriod)
 
 	// Mount PKI
 	err := client.Sys().Mount("pki", &api.MountInput{
@@ -1100,8 +1099,6 @@ func TestAutoRebuild(t *testing.T) {
 				mainCRL := getParsedCrlAtPath(t, client, "/v1/pki/crl").TBSCertList
 				requireSerialNumberInCRL(t, mainCRL, newLeafSerial)
 			}
-
-			break
 		}
 	}
 

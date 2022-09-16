@@ -103,10 +103,10 @@ intermediate CAs and "permit" only for root CAs.`,
 	fields["usage"] = &framework.FieldSchema{
 		Type: framework.TypeCommaStringSlice,
 		Description: `Comma-separated list (or string slice) of usages for
-this issuer; valid values are "read-only", "issuing-certificates", and
-"crl-signing". Multiple values may be specified. Read-only is implicit
-and always set.`,
-		Default: []string{"read-only", "issuing-certificates", "crl-signing"},
+this issuer; valid values are "read-only", "issuing-certificates",
+"crl-signing", and "ocsp-signing". Multiple values may be specified. Read-only
+is implicit and always set.`,
+		Default: []string{"read-only", "issuing-certificates", "crl-signing", "ocsp-signing"},
 	}
 	fields["revocation_signature_algorithm"] = &framework.FieldSchema{
 		Type: framework.TypeString,
@@ -361,7 +361,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	if newUsage != issuer.Usage {
 		if issuer.Revoked && newUsage.HasUsage(IssuanceUsage) {
 			// Forbid allowing cert signing on its usage.
-			return logical.ErrorResponse(fmt.Sprintf("This issuer was revoked; unable to modify its usage to include certificate signing again. Reissue this certificate (preferably with a new key) and modify that entry instead.")), nil
+			return logical.ErrorResponse("This issuer was revoked; unable to modify its usage to include certificate signing again. Reissue this certificate (preferably with a new key) and modify that entry instead."), nil
 		}
 
 		// Ensure we deny adding CRL usage if the bits are missing from the
@@ -371,7 +371,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 			return nil, fmt.Errorf("unable to parse issuer's certificate: %v", err)
 		}
 		if (cert.KeyUsage&x509.KeyUsageCRLSign) == 0 && newUsage.HasUsage(CRLSigningUsage) {
-			return logical.ErrorResponse(fmt.Sprintf("This issuer's underlying certificate lacks the CRLSign KeyUsage value; unable to set CRLSigningUsage on this issuer as a result.")), nil
+			return logical.ErrorResponse("This issuer's underlying certificate lacks the CRLSign KeyUsage value; unable to set CRLSigningUsage on this issuer as a result."), nil
 		}
 
 		issuer.Usage = newUsage
@@ -576,7 +576,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 		if newUsage != issuer.Usage {
 			if issuer.Revoked && newUsage.HasUsage(IssuanceUsage) {
 				// Forbid allowing cert signing on its usage.
-				return logical.ErrorResponse(fmt.Sprintf("This issuer was revoked; unable to modify its usage to include certificate signing again. Reissue this certificate (preferably with a new key) and modify that entry instead.")), nil
+				return logical.ErrorResponse("This issuer was revoked; unable to modify its usage to include certificate signing again. Reissue this certificate (preferably with a new key) and modify that entry instead."), nil
 			}
 
 			cert, err := issuer.GetCertificate()
@@ -584,7 +584,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 				return nil, fmt.Errorf("unable to parse issuer's certificate: %v", err)
 			}
 			if (cert.KeyUsage&x509.KeyUsageCRLSign) == 0 && newUsage.HasUsage(CRLSigningUsage) {
-				return logical.ErrorResponse(fmt.Sprintf("This issuer's underlying certificate lacks the CRLSign KeyUsage value; unable to set CRLSigningUsage on this issuer as a result.")), nil
+				return logical.ErrorResponse("This issuer's underlying certificate lacks the CRLSign KeyUsage value; unable to set CRLSigningUsage on this issuer as a result."), nil
 			}
 
 			issuer.Usage = newUsage

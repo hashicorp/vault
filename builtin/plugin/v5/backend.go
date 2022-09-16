@@ -5,7 +5,7 @@ import (
 	"net/rpc"
 	"sync"
 
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin"
@@ -21,10 +21,11 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	if err != nil {
 		return nil, err
 	}
+	pluginVersion := conf.Config["plugin_version"]
 
 	sys := conf.System
 
-	raw, err := plugin.NewBackendV5(ctx, name, pluginType, sys, conf)
+	raw, err := plugin.NewBackendV5(ctx, name, pluginType, pluginVersion, sys, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +35,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	return &b, nil
 }
 
-// backend is a thin wrapper around plugin.BackendPluginClientV5
+// backend is a thin wrapper around a builtin plugin or a plugin.BackendPluginClientV5
 type backend struct {
 	logical.Backend
 	mu sync.RWMutex
@@ -51,6 +52,7 @@ func (b *backend) reloadBackend(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	pluginVersion := b.config.Config["plugin_version"]
 
 	b.Logger().Debug("plugin: reloading plugin backend", "plugin", pluginName)
 
@@ -60,7 +62,7 @@ func (b *backend) reloadBackend(ctx context.Context) error {
 	reloadCtx := context.WithValue(ctx, plugin.ContextKeyPluginReload, "reload")
 	b.Backend.Cleanup(reloadCtx)
 
-	nb, err := plugin.NewBackendV5(ctx, pluginName, pluginType, b.config.System, b.config)
+	nb, err := plugin.NewBackendV5(ctx, pluginName, pluginType, pluginVersion, b.config.System, b.config)
 	if err != nil {
 		return err
 	}
@@ -144,4 +146,12 @@ func (b *backend) InvalidateKey(ctx context.Context, key string) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	b.Backend.InvalidateKey(ctx, key)
+}
+
+func (b *backend) IsExternal() bool {
+	switch b.Backend.(type) {
+	case *plugin.BackendPluginClientV5:
+		return true
+	}
+	return false
 }

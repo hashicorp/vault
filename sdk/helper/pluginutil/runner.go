@@ -5,7 +5,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
@@ -15,7 +15,8 @@ import (
 // Looker defines the plugin Lookup function that looks into the plugin catalog
 // for available plugins and returns a PluginRunner
 type Looker interface {
-	LookupPlugin(context.Context, string, consts.PluginType) (*PluginRunner, error)
+	LookupPlugin(ctx context.Context, pluginName string, pluginType consts.PluginType) (*PluginRunner, error)
+	LookupPluginVersion(ctx context.Context, pluginName string, pluginType consts.PluginType, version string) (*PluginRunner, error)
 }
 
 // RunnerUtil interface defines the functions needed by the runner to wrap the
@@ -87,11 +88,12 @@ func (r *PluginRunner) RunMetadataMode(ctx context.Context, wrapper RunnerUtil, 
 // VersionedPlugin holds any versioning information stored about a plugin in the
 // plugin catalog.
 type VersionedPlugin struct {
-	Type    string `json:"type"` // string instead of consts.PluginType so that we get the string form in API responses.
-	Name    string `json:"name"`
-	Version string `json:"version"`
-	SHA256  string `json:"sha256,omitempty"`
-	Builtin bool   `json:"builtin"`
+	Type              string `json:"type"` // string instead of consts.PluginType so that we get the string form in API responses.
+	Name              string `json:"name"`
+	Version           string `json:"version"`
+	SHA256            string `json:"sha256,omitempty"`
+	Builtin           bool   `json:"builtin"`
+	DeprecationStatus string `json:"deprecation_status,omitempty"`
 
 	// Pre-parsed semver struct of the Version field
 	SemanticVersion *version.Version `json:"-"`

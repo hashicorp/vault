@@ -22,11 +22,21 @@ type ListPluginsResponse struct {
 	// PluginsByType is the list of plugins by type.
 	PluginsByType map[consts.PluginType][]string `json:"types"`
 
+	Details []PluginDetails `json:"details,omitempty"`
+
 	// Names is the list of names of the plugins.
 	//
 	// Deprecated: Newer server responses should be returning PluginsByType (json:
 	// "types") instead.
 	Names []string `json:"names"`
+}
+
+type PluginDetails struct {
+	Type              string `json:"string"`
+	Name              string `json:"name"`
+	Version           string `json:"version,omitempty"`
+	Builtin           bool   `json:"builtin"`
+	DeprecationStatus string `json:"deprecation_status,omitempty" mapstructure:"deprecation_status"`
 }
 
 // ListPlugins wraps ListPluginsWithContext using context.Background.
@@ -98,6 +108,7 @@ func (c *Sys) ListPluginsWithContext(ctx context.Context, i *ListPluginsInput) (
 
 	result := &ListPluginsResponse{
 		PluginsByType: make(map[consts.PluginType][]string),
+		Details:       []PluginDetails{},
 	}
 	if i.Type == consts.PluginTypeUnknown {
 		for _, pluginType := range consts.PluginTypes {
@@ -129,6 +140,12 @@ func (c *Sys) ListPluginsWithContext(ctx context.Context, i *ListPluginsInput) (
 		result.PluginsByType[i.Type] = respKeys
 	}
 
+	if detailed, ok := secret.Data["detailed"]; ok {
+		if err := mapstructure.Decode(detailed, &result.Details); err != nil {
+			return nil, err
+		}
+	}
+
 	return result, nil
 }
 
@@ -142,11 +159,12 @@ type GetPluginInput struct {
 
 // GetPluginResponse is the response from the GetPlugin call.
 type GetPluginResponse struct {
-	Args    []string `json:"args"`
-	Builtin bool     `json:"builtin"`
-	Command string   `json:"command"`
-	Name    string   `json:"name"`
-	SHA256  string   `json:"sha256"`
+	Args              []string `json:"args"`
+	Builtin           bool     `json:"builtin"`
+	Command           string   `json:"command"`
+	Name              string   `json:"name"`
+	SHA256            string   `json:"sha256"`
+	DeprecationStatus string   `json:"deprecation_status,omitempty"`
 }
 
 // GetPlugin wraps GetPluginWithContext using context.Background.
@@ -194,6 +212,9 @@ type RegisterPluginInput struct {
 
 	// SHA256 is the shasum of the plugin.
 	SHA256 string `json:"sha256,omitempty"`
+
+	// Version is the optional version of the plugin being registered
+	Version string `json:"version,omitempty"`
 }
 
 // RegisterPlugin wraps RegisterPluginWithContext using context.Background.
@@ -227,6 +248,9 @@ type DeregisterPluginInput struct {
 
 	// Type of the plugin. Required.
 	Type consts.PluginType `json:"type"`
+
+	// Version of the plugin. Optional.
+	Version string `json:"version,omitempty"`
 }
 
 // DeregisterPlugin wraps DeregisterPluginWithContext using context.Background.
@@ -242,7 +266,7 @@ func (c *Sys) DeregisterPluginWithContext(ctx context.Context, i *DeregisterPlug
 
 	path := catalogPathByType(i.Type, i.Name)
 	req := c.c.NewRequest(http.MethodDelete, path)
-
+	req.Params.Set("version", i.Version)
 	resp, err := c.c.rawRequestWithContext(ctx, req)
 	if err == nil {
 		defer resp.Body.Close()

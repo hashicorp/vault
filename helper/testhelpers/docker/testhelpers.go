@@ -17,6 +17,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/go-connections/nat"
@@ -33,6 +34,7 @@ type RunOptions struct {
 	ImageTag        string
 	ContainerName   string
 	Cmd             []string
+	Entrypoint      []string
 	Env             []string
 	NetworkID       string
 	CopyFromTo      map[string]string
@@ -193,14 +195,16 @@ func (d *Runner) StartService(ctx context.Context, connect ServiceAdapter) (*Ser
 	}
 
 	return &Service{
-		Config:  config,
-		Cleanup: cleanup,
+		Config:    config,
+		Cleanup:   cleanup,
+		Container: container,
 	}, nil
 }
 
 type Service struct {
-	Config  ServiceConfig
-	Cleanup func()
+	Config    ServiceConfig
+	Cleanup   func()
+	Container *types.ContainerJSON
 }
 
 func (d *Runner) Start(ctx context.Context) (*types.ContainerJSON, []string, error) {
@@ -221,6 +225,9 @@ func (d *Runner) Start(ctx context.Context) (*types.ContainerJSON, []string, err
 		for _, p := range d.RunOptions.Ports {
 			cfg.ExposedPorts[nat.Port(p)] = struct{}{}
 		}
+	}
+	if len(d.RunOptions.Entrypoint) > 0 {
+		cfg.Entrypoint = strslice.StrSlice(d.RunOptions.Entrypoint)
 	}
 
 	hostConfig := &container.HostConfig{

@@ -6,6 +6,7 @@ import (
 	"crypto"
 	"crypto/x509"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -27,6 +28,8 @@ const (
 	legacyCRLPath               = "crl"
 	deltaCRLPath                = "delta-crl"
 	deltaCRLPathSuffix          = "-delta"
+
+	autoTidyConfigPath = "config/auto-tidy"
 
 	// Used as a quick sanity check for a reference id lookups...
 	uuidLength = 36
@@ -113,7 +116,16 @@ func (i issuerUsage) Names() string {
 	var names []string
 	var builtUsage issuerUsage
 
-	for name, usage := range namedIssuerUsages {
+	// Return the known set of usages in a sorted order to not have Terraform state files flipping
+	// saying values are different when it's the same list in a different order.
+	keys := make([]string, 0, len(namedIssuerUsages))
+	for k := range namedIssuerUsages {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, name := range keys {
+		usage := namedIssuerUsages[name]
 		if i.HasUsage(usage) {
 			names = append(names, name)
 			builtUsage.ToggleUsage(usage)
@@ -208,7 +220,7 @@ func (sc *storageContext) listKeys() ([]keyID, error) {
 
 func (sc *storageContext) fetchKeyById(keyId keyID) (*keyEntry, error) {
 	if len(keyId) == 0 {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki key: empty key identifier")}
+		return nil, errutil.InternalError{Err: "unable to fetch pki key: empty key identifier"}
 	}
 
 	entry, err := sc.Storage.Get(sc.Context, keyPrefix+keyId.String())
@@ -564,7 +576,7 @@ func (sc *storageContext) resolveKeyReference(reference string) (keyID, error) {
 // fetchIssuerById returns an issuerEntry based on issuerId, if none found an error is returned.
 func (sc *storageContext) fetchIssuerById(issuerId issuerID) (*issuerEntry, error) {
 	if len(issuerId) == 0 {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki issuer: empty issuer identifier")}
+		return nil, errutil.InternalError{Err: "unable to fetch pki issuer: empty issuer identifier"}
 	}
 
 	entry, err := sc.Storage.Get(sc.Context, issuerPrefix+issuerId.String())
@@ -805,7 +817,7 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 }
 
 func areCertificatesEqual(cert1 *x509.Certificate, cert2 *x509.Certificate) bool {
-	return bytes.Compare(cert1.Raw, cert2.Raw) == 0
+	return bytes.Equal(cert1.Raw, cert2.Raw)
 }
 
 func (sc *storageContext) setLocalCRLConfig(mapping *localCRLConfigEntry) error {
@@ -1157,4 +1169,32 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 	}
 
 	return &result, nil
+}
+
+func (sc *storageContext) getAutoTidyConfig() (*tidyConfig, error) {
+	entry, err := sc.Storage.Get(sc.Context, autoTidyConfigPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var result tidyConfig
+	if entry == nil {
+		result = defaultTidyConfig
+		return &result, nil
+	}
+
+	if err = entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (sc *storageContext) writeAutoTidyConfig(config *tidyConfig) error {
+	entry, err := logical.StorageEntryJSON(autoTidyConfigPath, config)
+	if err != nil {
+		return err
+	}
+
+	return sc.Storage.Put(sc.Context, entry)
 }
