@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
+	"github.com/hashicorp/go-multierror"
 	"io"
 	"net/http"
 	"strings"
@@ -90,14 +91,15 @@ func (b *backend) fetchCRL(ctx context.Context, storage logical.Storage, name st
 }
 
 func (b *backend) updateCRLs(ctx context.Context, req *logical.Request) error {
+	var errs *multierror.Error
 	for name, crl := range b.crls {
 		if crl.CDP != nil && time.Now().After(crl.CDP.ValidUntil) {
 			if err := b.fetchCRL(ctx, req.Storage, name, &crl); err != nil {
-				return err
+				err = multierror.Append(errs, err)
 			}
 		}
 	}
-	return nil
+	return errs.ErrorOrNil()
 }
 
 const backendHelp = `
