@@ -91,6 +91,8 @@ func (b *backend) fetchCRL(ctx context.Context, storage logical.Storage, name st
 }
 
 func (b *backend) updateCRLs(ctx context.Context, req *logical.Request) error {
+	b.crlUpdateMutex.Lock()
+	defer b.crlUpdateMutex.Unlock()
 	var errs *multierror.Error
 	for name, crl := range b.crls {
 		if crl.CDP != nil && time.Now().After(crl.CDP.ValidUntil) {
