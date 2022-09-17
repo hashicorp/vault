@@ -2,8 +2,10 @@ package consul
 
 import (
 	"context"
+	"os"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -34,7 +36,8 @@ func Backend() *backend {
 		Secrets: []*framework.Secret{
 			secretToken(&b),
 		},
-		BackendType: logical.TypeLogical,
+		BackendType:    logical.TypeLogical,
+		RunningVersion: os.Getenv(consts.VaultOverrideVersionEnv),
 	}
 
 	return &b

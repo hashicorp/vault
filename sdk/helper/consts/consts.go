@@ -34,4 +34,7 @@ const (
 	ReplicationResolverALPN = "replication_resolver_v1"
 
 	VaultEnableFilePermissionsCheckEnv = "VAULT_ENABLE_FILE_PERMISSIONS_CHECK"
+
+	// VaultOverrideVersionEnv used in testing to override the reported running version
+	VaultOverrideVersionEnv = "VAULT_TESTING_OVERRIDE_VERSION"
 )

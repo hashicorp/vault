@@ -2,6 +2,7 @@ package approle
 
 import (
 	"context"
+	"os"
 	"sync"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -111,8 +112,9 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 				pathTidySecretID(b),
 			},
 		),
-		Invalidate:  b.invalidate,
-		BackendType: logical.TypeCredential,
+		Invalidate:     b.invalidate,
+		BackendType:    logical.TypeCredential,
+		RunningVersion: os.Getenv(consts.VaultOverrideVersionEnv),
 	}
 	return b, nil
 }
