@@ -83,6 +83,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 	}
 
 	if b.crls == nil {
+		// Probably invalidated due to replication, but we need these to proceed
 		if err := b.populateCRLs(ctx, req.Storage); err != nil {
 			return nil, err
 		}
@@ -552,6 +553,7 @@ func (b *backend) checkForChainInCRLs(chain []*x509.Certificate) bool {
 			badChain = true
 			break
 		}
+
 	}
 	return badChain
 }
