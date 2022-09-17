@@ -6,9 +6,9 @@ description: Vault has an HTTP API that can be used to control every aspect of V
 
 # HTTP API
 
-The Vault HTTP API gives you full access to Vault via HTTP. Every aspect of
-Vault can be controlled via this API. The Vault CLI uses the HTTP API to access
-Vault.
+The Vault HTTP API gives you full access to Vault using [REST like HTTP verbs](https://en.wikipedia.org/wiki/Representational_state_transfer). 
+Every aspect of Vault can be controlled using the APIs. The Vault CLI uses the 
+HTTP API to access Vault similar to all other consumers.
 
 All API routes are prefixed with `/v1/`.
 
@@ -44,7 +44,7 @@ authentication to Vault itself. These endpoints are specific to each auth
 method.
 
 Responses from auth login methods that generate an authentication token are
-sent back to the client via JSON. The resulting token should be saved on the
+sent back to the client in JSON. The resulting token should be saved on the
 client or passed via the `X-Vault-Token` or `Authorization` header for future requests.
 
 ## Parameter restrictions
@@ -56,10 +56,10 @@ in periods. Otherwise, Vault will return a 404 unsupported path error.
 
 When using [Namespaces](/docs/enterprise/namespaces) the final path of the API 
 request is relative to the `X-Vault-Namespace` header. For instance, if a 
-request is to the URI `secret/foo` with the `X-Vault-Namespace` header set to 
-`ns1/ns2/`, then the resulting request path to Vault will be `ns1/ns2/secret/foo`.
+request URI is `secret/foo` with the `X-Vault-Namespace` header set as `ns1/ns2/`, 
+then the resulting request path to Vault will be `ns1/ns2/secret/foo`.
 
-Note that it is semantically equivalent to using the full path rather than the 
+Note that it is semantically equivalent to use the full path rather than the 
 `X-Vault-Namespace` header, Vault will match the corresponding namespace 
 based on correlating user input. Similar path results may be achieved if 
 `X-Vault-Namespace` is set to `ns1/` with the request path of `ns2/secret/foo` 
@@ -89,12 +89,12 @@ Typically the request data, body and response data to and from Vault is in JSON.
 Vault sets the `Content-Type` header appropriately with its response and does 
 not require it from the clients request.
 
-The demonstration below are using the [`KVv1` secrets engine](/api-docs/secret/kv/kv-v1), which is a 
-simple Key/Value store. Please read [the API documentation of KV secret engines](/api-docs/secret/kv) 
+The demonstration below uses the [`KVv1` secrets engine](/api/secret/kv/kv-v1), which is a 
+simple Key/Value store. Please read [the API documentation of KV secret engines](/api/secret/kv) 
 for details of `KVv1` compared to `KVv2` and how they differ in their URI paths 
 as well as the features available in version 2 of the KV secrets engine.
 
-For `KVv1`, reading a secret via the HTTP API is done by issuing a GET:
+For `KVv1`, reading a secret using the HTTP API is done by issuing a GET:
 
 ```text
 /v1/secret/foo
@@ -112,13 +112,13 @@ $ curl \
     http://127.0.0.1:8200/v1/secret/foo
 ```
 
-A few endpoints consume query parameters via `GET` calls, but only if those
-parameters are not sensitive, as some load balancers will log these. Most
-endpoints that consume parameters use `POST` instead and put the parameters in
-the request body.
+A few endpoints consume calls with `GET` query string parameters, but only if 
+those parameters are not sensitive, especially since  some load balancers will 
+be able log these. Most endpoints that accept `POST` query string parameters 
+expect those parameters in the request body.
 
-You can list secrets as well. To do this, either issue a GET with the query
-parameter `list=true`, _or_ you use the `LIST` HTTP verb. For the `kv` secrets 
+You can list secrets as well. To do this, either issue a `GET` with the query
+string parameter `list=true`, or you use the `LIST` HTTP verb. For the `kv` secrets 
 engine, listing is allowed on directories only, which returns the keys at the 
 requested path:
 
@@ -132,7 +132,7 @@ $ curl \
 The API documentation uses `LIST` as the HTTP verb, but you can still use `GET`
 with the `?list=true` query string.
 
-To use an API that consumes data via request body, issue a `POST`:
+To make an API with specific data in request body, issue a `POST`:
 
 ```text
 /v1/secret/foo
@@ -162,6 +162,18 @@ client's stated intentions, Vault engines can implement an existence check to
 discover whether an operation is actually a create or update operation based on
 the data already stored within Vault. This makes permission management via ACLs
 more flexible.
+
+A [KVv2 example](api/secret/kv/kv-v2#sample-request-3) for the engine path of `secret` requires that URI is 
+appended with ***`data/`***  prior to the secret name (`baz`) such as:
+
+```shell-session
+$ curl \
+    -H "X-Vault-Token: f3b09679-3001-009d-2b80-9c306ab81aa6" \
+    -H "Content-Type: application/json" \
+    -X POST \
+    -d '{"data":{"value":"bar"}}' \
+    http://127.0.0.1:8200/v1/secret/data/baz
+```
 
 For more examples, please look at the Vault API client.
 
@@ -256,14 +268,13 @@ A common JSON structure is always returned to return errors:
 }
 ```
 
-This structure will be sent down for any HTTP status greater than
-or equal to 400.
+This structure will be returned for any HTTP status greater than or equal to 400.
 
 ## HTTP Status Codes
 
 The following HTTP status codes are used throughout the API. Vault tries to
-adhere to these whenever possible, but in some cases may not -- feel free to
-file a bug in that case to point our attention to it!
+adhere to these whenever possible, but in case it doesn't -- then feel free to 
+[raise a bug](https://github.com/hashicorp/vault/issues) for our attention!
 
 ~> _Note_: Applications should be prepared to accept both `200` and `204` as
 success. `204` is simply an indication that there is no response body to parse,
@@ -303,4 +314,3 @@ with arbitrarily large requests; this can be tuned per `listener` block in
 Vault's server configuration file.
 
 [agent]: /docs/agent#listener-stanza
-[`KVv2` compared to `KVv1`]: /api-docs/secret/kv
