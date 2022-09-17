@@ -119,11 +119,11 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 		cfg.MaxCallRecvMsgSize = int(val)
 	}
 
-	if maxCall, ok := conf["max_call_size"]; ok {
+	if maxSend, ok := conf["max_send_size"]; ok {
 		// grpc converts this to uint32 internally, so parse as that to avoid passing invalid values
-		val, err := strconv.ParseUint(maxCall, 10, 32)
+		val, err := strconv.ParseUint(maxSend, 10, 32)
 		if err != nil {
-			return nil, fmt.Errorf("value of 'max_call_size' (%v) could not be understood: %w", maxCall, err)
+			return nil, fmt.Errorf("value of 'max_send_size' (%v) could not be understood: %w", maxSend, err)
 		}
 		cfg.MaxCallSendMsgSize = int(val)
 	}
