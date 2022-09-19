@@ -41,6 +41,9 @@
               {{#if model.isDefault}}
                 <span class="tag has-text-grey-dark">default issuer</span>
               {{/if}}
+              {{#if model.issuerName}}
+                <span class="tag has-text-grey-dark">{{model.id}}</span>
+              {{/if}}
             </div>
           </div>
         </div>
