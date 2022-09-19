@@ -3764,6 +3764,22 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Check the metrics initialized in order to calculate backendUUID for /pki
+	// BackendUUID not consistent during tests with UUID from /sys/mounts/pki
+	metricsSuffix := "total_certificates_stored"
+	backendUUID := ""
+	mostRecentInterval := inmemSink.Data()[len(inmemSink.Data())-1]
+	for _, existingGauge := range mostRecentInterval.Gauges {
+		if strings.HasSuffix(existingGauge.Name, metricsSuffix) {
+			expandedGaugeName := existingGauge.Name
+			backendUUID = strings.Split(expandedGaugeName, ".")[2]
+			break
+		}
+	}
+	if backendUUID == "" {
+		t.Fatalf("No Gauge Found ending with %s", metricsSuffix)
+	}
+
 	// Set the cluster's certificate as the root CA in /pki
 	pemBundleRootCA := string(cluster.CACertPEM) + string(cluster.CAKeyPEM)
 	_, err = client.Logical().Write("pki/config/ca", map[string]interface{}{
@@ -3823,28 +3839,16 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 
 	// Check the cert-count metrics
 	expectedCertCountGaugeMetrics := map[string]float32{
-		"total_revoked_certificates_stored": 1,
-		"total_certificates_stored":         1,
+		"secrets.pki." + backendUUID + ".total_revoked_certificates_stored": 1,
+		"secrets.pki." + backendUUID + ".total_certificates_stored":         1,
 	}
-	backendUUID := ""
-	mostRecentInterval := inmemSink.Data()[len(inmemSink.Data())-1]
+	mostRecentInterval = inmemSink.Data()[len(inmemSink.Data())-1]
 	for gauge, value := range expectedCertCountGaugeMetrics {
-		expandedGaugeName := ""
-		for _, createdGauge := range mostRecentInterval.Gauges {
-			if strings.HasSuffix(createdGauge.Name, gauge) {
-				expandedGaugeName = createdGauge.Name
-				backendUUID = strings.Split(expandedGaugeName, ".")[2]
-				break
-			}
+		if _, ok := mostRecentInterval.Gauges[gauge]; !ok {
+			t.Fatalf("Expected metrics to include a value for gauge %s", gauge)
 		}
-		if expandedGaugeName == "" {
-			t.Fatalf("No Gauge Found ending with %s", gauge)
-		}
-		if _, ok := mostRecentInterval.Gauges[expandedGaugeName]; !ok {
-			t.Fatalf("Expected metrics to include a value for gauge %s", expandedGaugeName)
-		}
-		if value != mostRecentInterval.Gauges[expandedGaugeName].Value {
-			t.Fatalf("Expected value metric %s to be %f but got %f", expandedGaugeName, value, mostRecentInterval.Gauges[expandedGaugeName].Value)
+		if value != mostRecentInterval.Gauges[gauge].Value {
+			t.Fatalf("Expected value metric %s to be %f but got %f", gauge, value, mostRecentInterval.Gauges[gauge].Value)
 		}
 	}
 
