@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync"
 	"testing"
 	"time"
 
@@ -77,13 +78,16 @@ func TestCRLFetch(t *testing.T) {
 		SignatureAlgorithm: x509.SHA1WithRSA,
 	}
 
+	var crlBytesLock sync.Mutex
 	crlBytes, err := x509.CreateRevocationList(rand.Reader, revocationListTemplate, caBundle.Certificate, bundle.PrivateKey)
 	require.NoError(t, err)
 
 	var serverURL *url.URL
 	crlServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Host == serverURL.Host {
+			crlBytesLock.Lock()
 			w.Write(crlBytes)
+			crlBytesLock.Unlock()
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -156,9 +160,11 @@ func TestCRLFetch(t *testing.T) {
 		t.Fatalf("got error: %#v", *resp)
 	}
 
+	b.crlUpdateMutex.Lock()
 	if len(b.crls["testcrl"].Serials) != 1 {
 		t.Fatalf("wrong number of certs in CRL")
 	}
+	b.crlUpdateMutex.Unlock()
 
 	// Add a cert to the CRL, then wait to see if it gets automatically picked up
 	revocationListTemplate.RevokedCertificates = []pkix.RevokedCertificate{
@@ -175,10 +181,14 @@ func TestCRLFetch(t *testing.T) {
 	revocationListTemplate.NextUpdate = time.Now().Add(1 * time.Minute)
 	revocationListTemplate.Number = big.NewInt(2)
 
+	crlBytesLock.Lock()
 	crlBytes, err = x509.CreateRevocationList(rand.Reader, revocationListTemplate, caBundle.Certificate, bundle.PrivateKey)
+	crlBytesLock.Unlock()
 	require.NoError(t, err)
 	time.Sleep(60 * time.Millisecond)
+	b.crlUpdateMutex.Lock()
 	if len(b.crls["testcrl"].Serials) != 2 {
 		t.Fatalf("wrong number of certs in CRL")
 	}
+	b.crlUpdateMutex.Unlock()
 }
