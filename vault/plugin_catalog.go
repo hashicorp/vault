@@ -810,23 +810,20 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 		}
 	}
 
+	// getting the plugin version is best-effort, so errors are not fatal
 	runningVersion := logical.EmptyPluginVersion
+	var versionErr error
 	switch pluginType {
 	case consts.PluginTypeSecrets, consts.PluginTypeCredential:
-		runningVersion, err = c.getBackendRunningVersion(ctx, entryTmp)
-		if err != nil {
-			return nil, err
-		}
+		runningVersion, versionErr = c.getBackendRunningVersion(ctx, entryTmp)
 	case consts.PluginTypeDatabase:
-		runningVersion, err = c.getDatabaseRunningVersion(ctx, entryTmp)
-		if err != nil {
-			return nil, err
-		}
+		runningVersion, versionErr = c.getDatabaseRunningVersion(ctx, entryTmp)
 	default:
 		return nil, fmt.Errorf("unknown plugin type: %v", pluginType)
 	}
-
-	if version != "" && runningVersion.Version != "" && version != runningVersion.Version {
+	if versionErr != nil {
+		c.logger.Warn("Error determining plugin version", "error", versionErr)
+	} else if version != "" && runningVersion.Version != "" && version != runningVersion.Version {
 		c.logger.Warn("Plugin self-reported version did not match requested version", "plugin", name, "requestedVersion", version, "reportedVersion", runningVersion.Version)
 	}
 
