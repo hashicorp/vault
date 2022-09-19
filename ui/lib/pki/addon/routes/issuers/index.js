@@ -6,11 +6,11 @@ export default class PkiIssuersIndexRoute extends Route {
   @service secretMountPath;
   @service pathHelp;
 
-  async model() {
+  model() {
     // the pathHelp service is needed for adding openAPI to the model
-    await this.pathHelp.getNewModel('pki/pki-issuer-engine', 'pki');
+    this.pathHelp.getNewModel('pki/pki-issuer-engine', 'pki');
 
-    return await this.store
+    return this.store
       .query('pki/pki-issuer-engine', { backend: this.secretMountPath.currentPath })
       .catch((err) => {
         if (err.httpStatus === 404) {
