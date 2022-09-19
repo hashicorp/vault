@@ -1,6 +1,7 @@
 steps:
   - add_ssh_keys:
       fingerprints:
-        - "0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06"
+        # "CircleCI Additional SSH Key" associated with hc-github-team-secure-vault-core GitHub user
+        - "b8:e2:38:f8:5b:1b:82:f3:1f:23:fa:46:6e:95:e7:e9"
   - run: |
       git config --global url."git@github.com:".insteadOf https://github.com/

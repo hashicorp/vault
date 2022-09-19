@@ -8,6 +8,7 @@ steps:
   - run:
       name: make fmt
       command: |
+        echo "Using gofumpt version ${GOFUMPT_VERSION}"
         go install "mvdan.cc/gofumpt@v${GOFUMPT_VERSION}"
         make fmt
         if ! git diff --exit-code; then

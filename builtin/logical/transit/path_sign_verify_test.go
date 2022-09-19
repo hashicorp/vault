@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/constants"
+
 	"golang.org/x/crypto/ed25519"
 
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -832,7 +834,7 @@ func testTransit_SignVerify_RSA_PSS(t *testing.T, bits int) {
 	validSaltLengths := append(autoSaltLengths, nonAutoSaltLengths...)
 	t.Log("validSaltLengths:", validSaltLengths)
 
-	testCombinatorics := func(hashAlgorithm string, marshalingName string) {
+	testCombinatorics := func(t *testing.T, hashAlgorithm string, marshalingName string) {
 		t.Log("\t\t", "valid", "/", "invalid salt lengths")
 		for _, validSaltLength := range validSaltLengths {
 			for _, invalidSaltLength := range invalidSaltLengths {
@@ -906,7 +908,7 @@ func testTransit_SignVerify_RSA_PSS(t *testing.T, bits int) {
 		}
 	}
 
-	testAutoSignAndVerify := func(hashAlgorithm string, marshalingName string) {
+	testAutoSignAndVerify := func(t *testing.T, hashAlgorithm string, marshalingName string) {
 		t.Log("\t\t", "Make a signature with an implicit, automatic salt length")
 		req.Data = newReqData(hashAlgorithm, marshalingName)
 		t.Log("\t\t\t", "sign req data:", req.Data)
@@ -948,10 +950,18 @@ func testTransit_SignVerify_RSA_PSS(t *testing.T, bits int) {
 
 	for hashAlgorithm := range keysutil.HashTypeMap {
 		t.Log("Hash algorithm:", hashAlgorithm)
+
 		for marshalingName := range keysutil.MarshalingTypeMap {
 			t.Log("\t", "Marshaling type:", marshalingName)
-			testCombinatorics(hashAlgorithm, marshalingName)
-			testAutoSignAndVerify(hashAlgorithm, marshalingName)
+			testName := fmt.Sprintf("%s-%s", hashAlgorithm, marshalingName)
+			t.Run(testName, func(t *testing.T) {
+				if constants.IsFIPS() && strings.HasPrefix(hashAlgorithm, "sha3-") {
+					t.Skip("\t", "Skipping hashing algo on fips:", hashAlgorithm)
+				}
+
+				testCombinatorics(t, hashAlgorithm, marshalingName)
+				testAutoSignAndVerify(t, hashAlgorithm, marshalingName)
+			})
 		}
 	}
 }
