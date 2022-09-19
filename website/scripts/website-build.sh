@@ -1,3 +1,8 @@
+######################################################
+# NOTE: This file is managed by the Digital Team's   #
+# Terraform configuration @ hashicorp/mktg-terraform #
+######################################################
+
 # Repo which we are cloning and executing npm run build:deploy-preview within
 REPO_TO_CLONE=dev-portal
 # Set the subdirectory name for the base project
@@ -6,6 +11,8 @@ PREVIEW_DIR=website-preview
 CLONE_DIR=website-preview
 # The product for which we are building the deploy preview
 PRODUCT=vault
+# Preview mode, controls the UI rendered (either the product site or developer). Can be `io` or `developer`
+PREVIEW_MODE=io
 
 from_cache=false
 
@@ -28,4 +35,4 @@ fi
 cd "$PREVIEW_DIR"
 
 # Run the build:deploy-preview start script
-REPO=$PRODUCT DEV_IO=$PRODUCT IS_CONTENT_PREVIEW=true HASHI_ENV=project-preview npm run build:deploy-preview
+PREVIEW_MODE=$PREVIEW_MODE REPO=$PRODUCT HASHI_ENV=project-preview npm run build:deploy-preview
