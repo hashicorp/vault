@@ -195,7 +195,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 	// b isn't yet initialized with SystemView state; calling b.System() will
 	// result in a nil pointer dereference. Instead query BackendConfig's
-	// copy of SystemView instead.
+	// copy of SystemView.
 	cannotRebuildCRLs := conf.System.ReplicationState().HasState(consts.ReplicationPerformanceStandby) ||
 		conf.System.ReplicationState().HasState(consts.ReplicationDRSecondary)
 	b.crlBuilder = newCRLBuilder(!cannotRebuildCRLs)
