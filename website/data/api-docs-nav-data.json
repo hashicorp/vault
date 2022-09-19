@@ -102,16 +102,16 @@
             "path": "secret/databases/postgresql"
           },
           {
+            "title": "Redis",
+            "path": "secret/databases/redis"
+          },
+          {
             "title": "Redis ElastiCache",
             "path": "secret/databases/rediselasticache"
           },
           {
             "title": "Redshift",
             "path": "secret/databases/redshift"
-          },
-          {
-            "title": "Redis",
-            "path": "secret/databases/redis"
           },
           {
             "title": "Snowflake",
