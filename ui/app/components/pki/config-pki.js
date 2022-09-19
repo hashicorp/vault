@@ -1,12 +1,11 @@
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
-import { get, computed } from '@ember/object';
+import { get } from '@ember/object';
 
 export default Component.extend({
   classNames: 'config-pki',
   flashMessages: service(),
   errors: null,
-  buildCrl: computed.not('config.disable'),
   /*
    *
    * @param String
@@ -38,12 +37,12 @@ export default Component.extend({
   loading: false,
 
   actions: {
+    handleCrlTtl({ enabled, goSafeTimeString }) {
+      this.config.disable = !enabled; // when TTL enabled, config disable=false
+      this.config.expiry = goSafeTimeString;
+    },
     save(section) {
       this.set('loading', true);
-      if (section === 'crl') {
-        // set 'disable' here from buildCrl toggle state
-        this.config.set('disable', !this.buildCrl);
-      }
       const config = this.config;
       config
         .save({

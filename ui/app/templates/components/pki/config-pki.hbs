@@ -16,28 +16,21 @@
 
 <MessageError @model={{this.config}} @errors={{this.errors}} />
 <form {{action "save" this.section on="submit"}} class="box is-shadowless is-marginless is-fullwidth has-slim-padding">
-  {{#let (get this.config (concat this.section "Attrs")) as |sectionAttrs|}}
-    {{#if (eq this.section "crl")}}
-      <Toggle
-        @name="show-build-crl"
-        @status="success"
-        @size="small"
-        @onChange={{action (mut this.buildCrl)}}
-        @checked={{this.buildCrl}}
-      >
-        {{#if this.buildCrl}}
-          <FormField @attr={{get sectionAttrs "0"}} @model={{this.config}} @data-test-field="expiry" />
-        {{else}}
-          <span class="field ttl-picker-label">CRL building disabled</span><br />
-          <div class="description has-text-grey">The CRL will not be built.</div>
-        {{/if}}
-      </Toggle>
-    {{else}}
-      {{#each sectionAttrs as |attr|}}
-        <FormField @attr={{attr}} @model={{this.config}} @data-test-field={{attr.name}} />
-      {{/each}}
-    {{/if}}
-  {{/let}}
+  {{#if (eq this.section "crl")}}
+    <TtlPicker2
+      data-test-input="expiry"
+      @onChange={{action "handleCrlTtl"}}
+      @label={{if (get this.config "disable") "CRL building disabled" "CRL building enabled"}}
+      @helperTextDisabled="The CRL will not be built."
+      @helperTextEnabled="The CRL will expire after"
+      @initialValue={{get this.config "expiry"}}
+      @initialEnabled={{not (get this.config "disable")}}
+    />
+  {{else}}
+    {{#each (get this.config (concat this.section "Attrs")) as |attr|}}
+      <FormField @attr={{attr}} @model={{this.config}} @data-test-field={{attr.name}} />
+    {{/each}}
+  {{/if}}
   <div class="field has-top-margin-m is-grouped box is-fullwidth is-bottomless">
     <div class="control">
       <button

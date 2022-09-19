@@ -14,7 +14,7 @@ module('Integration | Component | config pki', function (hooks) {
   hooks.beforeEach(async function () {
     this.owner.lookup('service:flash-messages').registerTypes(['success']);
     this.store = this.owner.lookup('service:store');
-    this.config = this.store.createRecord('pki/pki-config');
+    this.config = await this.store.createRecord('pki/pki-config');
     this.mockConfigSave = function (saveFn) {
       const { tidyAttrs, crlAttrs, urlsAttrs } = this.config;
       return {
@@ -23,7 +23,6 @@ module('Integration | Component | config pki', function (hooks) {
         tidyAttrs,
         crlAttrs,
         urlsAttrs,
-        disable: false,
         set: () => {},
       };
     };
@@ -47,24 +46,31 @@ module('Integration | Component | config pki', function (hooks) {
 
   test('it renders crl section', async function (assert) {
     await setupAndRender(this, this.config, 'crl');
-    assert.ok(component.hasTitle, 'renders the title');
+    assert.false(this.config.disable, 'CRL config defaults disable=false');
+    assert.ok(component.hasTitle, 'renders form title');
     assert.equal(component.title, 'Certificate Revocation List (CRL) config');
-    assert.ok(component.text.startsWith('Set the duration for which the generated CRL'));
-    assert.equal(component.fields.length, 1);
-    assert.ok(component.fields.objectAt(0).labelText, 'Crl');
+    assert.ok(
+      component.text.startsWith('Set the duration for which the generated CRL'),
+      'renders form subtext'
+    );
     assert
-      .dom('[data-test-input="expiry"]')
-      .hasText(
-        'CRL building enabled The CRL will expire after seconds minutes hours days',
-        'renders enabled field title and subtext'
-      );
-    assert.dom('[data-test-toggle-input="show-build-crl"]').isChecked('defaults to enabling CRL build');
+      .dom('[data-test-toggle-label]')
+      .hasText('CRL building enabled The CRL will expire after', 'renders enabled field title and subtext');
+    assert.dom('[data-test-input="expiry"] input').isChecked('defaults to enabling CRL build');
     assert.dom('[data-test-ttl-value="CRL building enabled"]').hasValue('3', 'default value is 3 (72h)');
     assert.dom('[data-test-select="ttl-unit"]').hasValue('d', 'default unit value is days');
-    await click('[data-test-toggle-input="show-build-crl"]');
+    await click('[data-test-input="expiry"] input');
     assert
       .dom('[data-test-toggle-label]')
       .hasText('CRL building disabled The CRL will not be built.', 'renders disabled text when toggled off');
+
+    // assert 'disable' attr on pki-config model updates with toggle
+    assert.true(this.config.disable, 'when toggled off, sets CRL config to disable=true');
+    await click('[data-test-input="expiry"] input');
+    assert
+      .dom('[data-test-toggle-label]')
+      .hasText('CRL building enabled The CRL will expire after', 'toggles back to enabled text');
+    assert.false(this.config.disable, 'CRL config toggles back to disable=false');
   });
 
   test('it renders urls section', async function (assert) {
@@ -110,7 +116,7 @@ module('Integration | Component | config pki', function (hooks) {
       'config',
       this.mockConfigSave((options) => {
         assert.equal(options.adapterOptions.method, section, 'method passed to save');
-        assert.deepEqual(options.adapterOptions.fields, ['expiry', 'disable'], 'crl fields passed to save');
+        assert.deepEqual(options.adapterOptions.fields, ['expiry', 'disable'], 'CRL fields passed to save');
         return resolve();
       })
     );
@@ -119,15 +125,15 @@ module('Integration | Component | config pki', function (hooks) {
     component.submit();
   });
 
-  test('it initially sets toggle based on the config value', async function (assert) {
+  test('it correctly sets toggle when initial CRL config is disable=true', async function (assert) {
     assert.expect(3);
-    const { crlAttrs } = this.config;
-    this.set('config', { crlAttrs, expiry: '1m', disable: true });
-    await render(hbs`<Pki::ConfigPki @section="crl" @config={{config}} />`);
-    assert
-      .dom('[data-test-toggle-input="show-build-crl"]')
-      .isNotChecked('when crl config disable=true, toggle is off');
-    await click('[data-test-toggle-input="show-build-crl"]');
+    // change default config attrs
+    let configDisabled = this.config;
+    configDisabled.expiry = '1m';
+    configDisabled.disable = true;
+    await setupAndRender(this, configDisabled, 'crl');
+    assert.dom('[data-test-input="expiry"] input').isNotChecked('toggle disabled when CRL config disabled');
+    await click('[data-test-input="expiry"] input');
     assert
       .dom('[data-test-ttl-value="CRL building enabled"]')
       .hasValue('1', 'when toggled on shows last set expired value');
