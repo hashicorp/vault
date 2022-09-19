@@ -10,7 +10,7 @@ export default class PkiIssuersIndexRoute extends Route {
     // the pathHelp service is needed for adding openAPI to the model
     await this.pathHelp.getNewModel('pki/pki-issuer-engine', 'pki');
 
-    let response = await this.store
+    return await this.store
       .query('pki/pki-issuer-engine', { backend: this.secretMountPath.currentPath })
       .catch((err) => {
         if (err.httpStatus === 404) {
@@ -19,6 +19,5 @@ export default class PkiIssuersIndexRoute extends Route {
           throw err;
         }
       });
-    return response;
   }
 }

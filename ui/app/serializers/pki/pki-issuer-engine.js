@@ -1,8 +1,6 @@
 import ApplicationSerializer from '../application';
 
 export default class PkiIssuerEngineSerializer extends ApplicationSerializer {
-  primaryKey = 'id';
-
   // rehydrate each issuer model so all model attributes are accessible from the LIST response
   normalizeItems(payload) {
     if (payload.data) {

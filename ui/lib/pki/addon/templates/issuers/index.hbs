@@ -12,12 +12,12 @@
         <nav class="box menu">
           <ul class="menu-list">
             <li class="action">
-              <LinkTo @route="configuration.create.generate-root" {{on "click" D.actions.close}}>
+              <LinkTo @route="configuration.create.generate-root" {{on "click" (fn this.onLinkClick D)}}>
                 Root
               </LinkTo>
             </li>
             <li class="action">
-              <LinkTo @route="configuration.create.generate-csr" {{on "click" D.actions.close}}>
+              <LinkTo @route="configuration.create.generate-csr" {{on "click" (fn this.onLinkClick D)}}>
                 Intermediate CSR
               </LinkTo>
             </li>
