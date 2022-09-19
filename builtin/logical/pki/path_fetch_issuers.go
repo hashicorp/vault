@@ -103,10 +103,10 @@ intermediate CAs and "permit" only for root CAs.`,
 	fields["usage"] = &framework.FieldSchema{
 		Type: framework.TypeCommaStringSlice,
 		Description: `Comma-separated list (or string slice) of usages for
-this issuer; valid values are "read-only", "issuing-certificates", and
-"crl-signing". Multiple values may be specified. Read-only is implicit
-and always set.`,
-		Default: []string{"read-only", "issuing-certificates", "crl-signing"},
+this issuer; valid values are "read-only", "issuing-certificates",
+"crl-signing", and "ocsp-signing". Multiple values may be specified. Read-only
+is implicit and always set.`,
+		Default: []string{"read-only", "issuing-certificates", "crl-signing", "ocsp-signing"},
 	}
 	fields["revocation_signature_algorithm"] = &framework.FieldSchema{
 		Type: framework.TypeString,

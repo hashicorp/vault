@@ -513,7 +513,7 @@ func TestDynamicSystemView(c *Core, ns *namespace.Namespace) *dynamicSystemView 
 
 // TestAddTestPlugin registers the testFunc as part of the plugin command to the
 // plugin catalog. If provided, uses tmpDir as the plugin directory.
-func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.PluginType, testFunc string, env []string, tempDir string) {
+func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.PluginType, version string, testFunc string, env []string, tempDir string) {
 	file, err := os.Open(os.Args[0])
 	if err != nil {
 		t.Fatal(err)
@@ -575,7 +575,6 @@ func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.Plug
 	c.pluginCatalog.directory = fullPath
 
 	args := []string{fmt.Sprintf("--test.run=%s", testFunc)}
-	version := ""
 	err = c.pluginCatalog.Set(context.Background(), name, pluginType, version, fileName, args, env, sum)
 	if err != nil {
 		t.Fatal(err)
@@ -1215,6 +1214,7 @@ type TestClusterOptions struct {
 	// this stores the vault version that should be used for each core config
 	VersionMap        map[int]string
 	RedundancyZoneMap map[int]string
+	KVVersion         string
 }
 
 var DefaultNumCores = 3
@@ -2091,6 +2091,11 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 
 	TestWaitActive(t, leader.Core)
 
+	kvVersion := "1"
+	if opts != nil {
+		kvVersion = opts.KVVersion
+	}
+
 	// Existing tests rely on this; we can make a toggle to disable it
 	// later if we want
 	kvReq := &logical.Request{
@@ -2102,7 +2107,7 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 			"path":        "secret/",
 			"description": "key/value secret storage",
 			"options": map[string]string{
-				"version": "1",
+				"version": kvVersion,
 			},
 		},
 	}
@@ -2294,7 +2299,9 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 			"mongodbatlas-database-plugin",
 			"mssql-database-plugin",
 			"postgresql-database-plugin",
+			"redis-elasticache-database-plugin",
 			"redshift-database-plugin",
+			"redis-database-plugin",
 			"snowflake-database-plugin",
 		}
 	case consts.PluginTypeCredential:

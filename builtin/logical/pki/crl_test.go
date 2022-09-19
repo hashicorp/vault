@@ -388,7 +388,7 @@ func TestCrlRebuilder(t *testing.T) {
 	require.NoError(t, err)
 
 	req := &logical.Request{Storage: s}
-	cb := newCRLBuilder()
+	cb := newCRLBuilder(true /* can rebuild and write CRLs */)
 
 	// Force an initial build
 	err = cb.rebuild(ctx, b, req, true)

@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
@@ -264,7 +264,7 @@ func migrateFromTransitToShamir_Pre14(t *testing.T, logger hclog.Logger, storage
 	if err != nil {
 		t.Fatal(err)
 	}
-	verifyBarrierConfig(t, b, wrapping.Shamir, keyShares, keyThreshold, 1)
+	verifyBarrierConfig(t, b, wrapping.WrapperTypeShamir.String(), keyShares, keyThreshold, 1)
 	if r != nil {
 		t.Fatalf("expected nil recovery config, got: %#v", r)
 	}
@@ -536,7 +536,7 @@ func verifySealConfigShamir(t *testing.T, core *vault.TestClusterCore) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	verifyBarrierConfig(t, b, wrapping.Shamir, keyShares, keyThreshold, 1)
+	verifyBarrierConfig(t, b, wrapping.WrapperTypeShamir.String(), keyShares, keyThreshold, 1)
 	if r != nil {
 		t.Fatal("should not have recovery config for shamir")
 	}
@@ -548,8 +548,8 @@ func verifySealConfigTransit(t *testing.T, core *vault.TestClusterCore) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	verifyBarrierConfig(t, b, wrapping.Transit, 1, 1, 1)
-	verifyBarrierConfig(t, r, wrapping.Shamir, keyShares, keyThreshold, 0)
+	verifyBarrierConfig(t, b, wrapping.WrapperTypeTransit.String(), 1, 1, 1)
+	verifyBarrierConfig(t, r, wrapping.WrapperTypeShamir.String(), keyShares, keyThreshold, 0)
 }
 
 // verifyBarrierConfig verifies that a barrier configuration is correct.

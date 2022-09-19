@@ -17,4 +17,5 @@ type WrappedHCPLinkVault struct {
 type HCPLinkVaultInterface interface {
 	Shutdown() error
 	GetScadaSessionStatus() string
+	GetConnectionStatusMessage(string) string
 }

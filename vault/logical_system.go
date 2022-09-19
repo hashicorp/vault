@@ -21,6 +21,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/hashicorp/vault/helper/versions"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/hashicorp/errwrap"
@@ -84,7 +85,8 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	}
 
 	b.Backend = &framework.Backend{
-		Help: strings.TrimSpace(sysHelpRoot),
+		RunningVersion: versions.DefaultBuiltinVersion,
+		Help:           strings.TrimSpace(sysHelpRoot),
 
 		PathsSpecial: &logical.Paths{
 			Root: []string{
@@ -570,6 +572,11 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 		"sha256":  hex.EncodeToString(plugin.Sha256),
 		"builtin": plugin.Builtin,
 		"version": plugin.Version,
+	}
+
+	if plugin.Builtin {
+		status, _ := b.Core.builtinRegistry.DeprecationStatus(plugin.Name, plugin.Type)
+		data["deprecation_status"] = status.String()
 	}
 
 	return &logical.Response{

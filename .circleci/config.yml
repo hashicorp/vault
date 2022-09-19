@@ -243,6 +243,7 @@ jobs:
             TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
             export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
             if [ -z $TEST_DOCKER_NETWORK_ID ]; then
+              docker network prune -f
               TEST_DOCKER_NETWORK_ID=$(docker network create "${TEST_DOCKER_NETWORK_NAME}")
             fi
 
@@ -482,6 +483,7 @@ jobs:
             TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
             export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
             if [ -z $TEST_DOCKER_NETWORK_ID ]; then
+              docker network prune -f
               TEST_DOCKER_NETWORK_ID=$(docker network create "${TEST_DOCKER_NETWORK_NAME}")
             fi
 
@@ -672,6 +674,7 @@ jobs:
             TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
             export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
             if [ -z $TEST_DOCKER_NETWORK_ID ]; then
+              docker network prune -f
               TEST_DOCKER_NETWORK_ID=$(docker network create "${TEST_DOCKER_NETWORK_NAME}")
             fi
 
@@ -748,7 +751,7 @@ jobs:
     - GO_TAGS: ''
   semgrep:
     docker:
-    - image: docker.mirror.hashicorp.services/returntocorp/semgrep:0.106.0
+    - image: docker.mirror.hashicorp.services/returntocorp/semgrep:0.113.0
     shell: /bin/sh
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
@@ -756,7 +759,7 @@ jobs:
     - attach_workspace:
         at: .
     - run:
-        command: "# Alpine images can't run the make file due to a bash requirement. Run\n# semgrep explicitly here. \nexport PATH=\"$HOME/.local/bin:$PATH\" \nsemgrep --error --include '*.go' --exclude 'vendor' -f tools/semgrep/ci .\n"
+        command: "# Alpine images can't run the make file due to a bash requirement. Run\n# semgrep explicitly here. \nexport PATH=\"$HOME/.local/bin:$PATH\" \necho -n 'Semgrep Version: '\nsemgrep --version\nsemgrep --error --include '*.go' --exclude 'vendor' -f tools/semgrep/ci .\n"
         name: Run Semgrep Rules
   pre-flight-checks:
     machine:
@@ -972,6 +975,7 @@ jobs:
             TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
             export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
             if [ -z $TEST_DOCKER_NETWORK_ID ]; then
+              docker network prune -f
               TEST_DOCKER_NETWORK_ID=$(docker network create "${TEST_DOCKER_NETWORK_NAME}")
             fi
 

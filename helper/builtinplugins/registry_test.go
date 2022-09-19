@@ -86,12 +86,12 @@ func Test_RegistryKeyCounts(t *testing.T) {
 		{
 			name:       "number of database plugins",
 			pluginType: consts.PluginTypeDatabase,
-			want:       15,
+			want:       17,
 		},
 		{
 			name:       "number of secrets plugins",
 			pluginType: consts.PluginTypeSecrets,
-			want:       23,
+			want:       24,
 		},
 	}
 	for _, tt := range tests {

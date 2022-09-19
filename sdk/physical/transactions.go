@@ -2,8 +2,9 @@ package physical
 
 import (
 	"context"
+	"fmt"
 
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 )
 
 // TxnEntry is an operation that takes atomically as part of
@@ -11,6 +12,10 @@ import (
 type TxnEntry struct {
 	Operation Operation
 	Entry     *Entry
+}
+
+func (t *TxnEntry) String() string {
+	return fmt.Sprintf("Operation: %s. Entry: %s", t.Operation, t.Entry)
 }
 
 // Transactional is an optional interface for backends that
@@ -39,6 +44,19 @@ type PseudoTransactional interface {
 func GenericTransactionHandler(ctx context.Context, t PseudoTransactional, txns []*TxnEntry) (retErr error) {
 	rollbackStack := make([]*TxnEntry, 0, len(txns))
 	var dirty bool
+
+	// Update all of our GET transaction entries, so we can populate existing values back at the wal layer.
+	for _, txn := range txns {
+		if txn.Operation == GetOperation {
+			entry, err := t.GetInternal(ctx, txn.Entry.Key)
+			if err != nil {
+				return err
+			}
+			if entry != nil {
+				txn.Entry.Value = entry.Value
+			}
+		}
+	}
 
 	// We walk the transactions in order; each successful operation goes into a
 	// LIFO for rollback if we hit an error along the way
@@ -78,6 +96,7 @@ TxnWalk:
 				dirty = true
 				break TxnWalk
 			}
+
 			// Nothing existed so in fact rolling back requires a delete
 			var rollbackEntry *TxnEntry
 			if entry == nil {

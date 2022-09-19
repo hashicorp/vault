@@ -17,6 +17,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -415,7 +416,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"options":         map[string]interface{}{"version": "1"},
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 				"version":         "",
 			},
 			"sys/": map[string]interface{}{
@@ -433,7 +434,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.DefaultBuiltinVersion,
 				"version":         "",
 			},
 			"cubbyhole/": map[string]interface{}{
@@ -450,7 +451,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 				"version":         "",
 			},
 			"identity/": map[string]interface{}{
@@ -468,7 +469,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"options":         interface{}(nil),
 				"sha":             "",
 				"running_sha":     "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 				"version":         "",
 			},
 		},
@@ -486,7 +487,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 			"options":         map[string]interface{}{"version": "1"},
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 			"version":         "",
 		},
 		"sys/": map[string]interface{}{
@@ -504,7 +505,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.DefaultBuiltinVersion,
 			"version":         "",
 		},
 		"cubbyhole/": map[string]interface{}{
@@ -521,7 +522,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 			"version":         "",
 		},
 		"identity/": map[string]interface{}{
@@ -539,7 +540,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 			"options":         interface{}(nil),
 			"sha":             "",
 			"running_sha":     "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 			"version":         "",
 		},
 	}
