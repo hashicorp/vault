@@ -31,7 +31,7 @@ require (
 	github.com/armon/go-metrics v0.4.0
 	github.com/armon/go-radix v1.0.0
 	github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef
-	github.com/aws/aws-sdk-go v1.44.81
+	github.com/aws/aws-sdk-go v1.44.95
 	github.com/axiomhq/hyperloglog v0.0.0-20220105174342-98591331716a
 	github.com/cenkalti/backoff/v3 v3.2.2
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
@@ -108,28 +108,28 @@ require (
 	github.com/hashicorp/vault-plugin-auth-azure v0.11.0
 	github.com/hashicorp/vault-plugin-auth-centrify v0.12.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.12.0
-	github.com/hashicorp/vault-plugin-auth-gcp v0.13.2-0.20220722185016-9e4fddb995e5
-	github.com/hashicorp/vault-plugin-auth-jwt v0.13.2-0.20220728183411-0edf6ecc0b37
-	github.com/hashicorp/vault-plugin-auth-kerberos v0.7.3
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.13.0
+	github.com/hashicorp/vault-plugin-auth-gcp v0.14.0
+	github.com/hashicorp/vault-plugin-auth-jwt v0.14.0
+	github.com/hashicorp/vault-plugin-auth-kerberos v0.8.0
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.14.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.11.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.7.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.11.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.7.0
 	github.com/hashicorp/vault-plugin-database-redis v0.0.0-20220908195902-0ba5bda4e2ac
-	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.0.0-20220906175854-a98f5e44d6be
-	github.com/hashicorp/vault-plugin-database-snowflake v0.5.1
+	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.1.0
+	github.com/hashicorp/vault-plugin-database-snowflake v0.6.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.13.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.12.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.13.0
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.6.6-0.20220617175110-38223d8fabc9
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.14.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.7-0.20220617175201-b16d1500db6e
-	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.1.1
+	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.2.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.12.1
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.7.0
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.8.0
-	github.com/hashicorp/vault-plugin-secrets-terraform v0.5.0
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.9.0
+	github.com/hashicorp/vault-plugin-secrets-terraform v0.6.0
 	github.com/hashicorp/vault-testing-stepwise v0.1.2
 	github.com/hashicorp/vault/api v1.7.2
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
@@ -190,9 +190,9 @@ require (
 	go.uber.org/atomic v1.9.0
 	go.uber.org/goleak v1.1.12
 	golang.org/x/crypto v0.0.0-20220817201139-bc19a97f63c8
-	golang.org/x/net v0.0.0-20220607020251-c690dde0001d
+	golang.org/x/net v0.0.0-20220906165146-f3363e06e74c
 	golang.org/x/oauth2 v0.0.0-20220524215830-622c5d57e401
-	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a
+	golang.org/x/sys v0.0.0-20220728004956-3c1f35247d10
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	golang.org/x/tools v0.1.5
 	google.golang.org/api v0.83.0

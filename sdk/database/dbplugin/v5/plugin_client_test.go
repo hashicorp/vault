@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/mock"
 	"google.golang.org/grpc"
 )
@@ -38,7 +39,7 @@ func TestNewPluginClient(t *testing.T) {
 					dispenseResp: gRPCClient{client: fakeClient{}},
 					dispenseErr:  nil,
 				},
-				Database: gRPCClient{proto.NewDatabaseClient(nil), context.Context(nil)},
+				Database: gRPCClient{client: proto.NewDatabaseClient(nil), versionClient: logical.NewPluginVersionClient(nil), doneCtx: context.Context(nil)},
 			},
 			expectedErr: nil,
 		},

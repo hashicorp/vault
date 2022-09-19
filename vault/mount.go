@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -624,6 +625,17 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 		}
 	}
 
+	// update the entry running version with the backend's reported version
+	if versioner, ok := backend.(logical.PluginVersioner); ok {
+		entry.RunningVersion = versioner.PluginVersion().Version
+	}
+	if entry.RunningVersion == "" {
+		// don't set the running version to a builtin if it is running as an external plugin
+		if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
+			entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
+		}
+	}
+
 	addPathCheckers(c, entry, backend, viewPath)
 
 	c.setCoreBackend(entry, backend, view)
@@ -800,14 +812,14 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 			return err
 		}
 
-	case entry.Local, !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
+	case entry.Local, !c.IsPerfSecondary():
 		// Have writable storage, remove the whole thing
 		if err := logical.ClearViewWithLogging(ctx, view, c.logger.Named("secrets.deletion").With("namespace", ns.ID, "path", path)); err != nil {
 			c.logger.Error("failed to clear view for path being unmounted", "error", err, "path", path)
 			return err
 		}
 
-	case !entry.Local && c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
+	case !entry.Local && c.IsPerfSecondary():
 		if err := clearIgnoredPaths(ctx, c, backend, viewPath); err != nil {
 			return err
 		}
@@ -1221,7 +1233,7 @@ func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
 		// ensure this comes over. If we upgrade first, we simply don't
 		// create the mount, so we won't conflict when we sync. If this is
 		// local (e.g. cubbyhole) we do still add it.
-		if !foundRequired && (!c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || requiredMount.Local) {
+		if !foundRequired && (!c.IsPerfSecondary() || requiredMount.Local) {
 			c.mounts.Entries = append(c.mounts.Entries, requiredMount)
 			needPersist = true
 		}
@@ -1609,6 +1621,7 @@ func (c *Core) defaultMountTable() *MountTable {
 			Options: map[string]string{
 				"version": "2",
 			},
+			RunningVersion: versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 		}
 		table.Entries = append(table.Entries, kvMount)
 	}
@@ -1643,6 +1656,7 @@ func (c *Core) requiredMountTable() *MountTable {
 		Accessor:         cubbyholeAccessor,
 		Local:            true,
 		BackendAwareUUID: cubbyholeBackendUUID,
+		RunningVersion:   versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 	}
 
 	sysUUID, err := uuid.GenerateUUID()
@@ -1669,6 +1683,7 @@ func (c *Core) requiredMountTable() *MountTable {
 		Config: MountConfig{
 			PassthroughRequestHeaders: []string{"Accept"},
 		},
+		RunningVersion: versions.DefaultBuiltinVersion,
 	}
 
 	identityUUID, err := uuid.GenerateUUID()
@@ -1694,6 +1709,7 @@ func (c *Core) requiredMountTable() *MountTable {
 		Config: MountConfig{
 			PassthroughRequestHeaders: []string{"Authorization"},
 		},
+		RunningVersion: versions.DefaultBuiltinVersion,
 	}
 
 	table.Entries = append(table.Entries, cubbyholeMount)

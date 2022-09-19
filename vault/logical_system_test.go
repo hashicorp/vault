@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/random"
+	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -175,7 +176,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"sha":             "",
 			"running_sha":     "",
 			"version":         "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 		},
 		"sys/": map[string]interface{}{
 			"type":                    "system",
@@ -195,7 +196,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"sha":             "",
 			"running_sha":     "",
 			"version":         "",
-			"running_version": "",
+			"running_version": versions.DefaultBuiltinVersion,
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description":             "per-token private secret storage",
@@ -214,7 +215,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"sha":             "",
 			"running_sha":     "",
 			"version":         "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 		},
 		"identity/": map[string]interface{}{
 			"description":             "identity store",
@@ -234,7 +235,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"sha":             "",
 			"running_sha":     "",
 			"version":         "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); len(diff) > 0 {
@@ -304,7 +305,7 @@ func TestSystemBackend_mount(t *testing.T) {
 			"sha":             "",
 			"running_sha":     "",
 			"version":         "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 		},
 		"sys/": map[string]interface{}{
 			"type":                    "system",
@@ -324,7 +325,7 @@ func TestSystemBackend_mount(t *testing.T) {
 			"sha":             "",
 			"running_sha":     "",
 			"version":         "",
-			"running_version": "",
+			"running_version": versions.DefaultBuiltinVersion,
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description":             "per-token private secret storage",
@@ -343,7 +344,7 @@ func TestSystemBackend_mount(t *testing.T) {
 			"sha":             "",
 			"running_sha":     "",
 			"version":         "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 		},
 		"identity/": map[string]interface{}{
 			"description":             "identity store",
@@ -363,7 +364,7 @@ func TestSystemBackend_mount(t *testing.T) {
 			"sha":             "",
 			"running_sha":     "",
 			"version":         "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 		},
 		"prod/secret/": map[string]interface{}{
 			"description":             "",
@@ -384,7 +385,7 @@ func TestSystemBackend_mount(t *testing.T) {
 			"sha":             "",
 			"running_sha":     "",
 			"version":         "",
-			"running_version": "",
+			"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); len(diff) > 0 {
@@ -1928,7 +1929,7 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 			"sha":             "",
 			"running_sha":     "",
 			"version":         "",
-			"running_version": "",
+			"running_version": versions.DefaultBuiltinVersion,
 		},
 		"token/": map[string]interface{}{
 			"type":                    "token",
@@ -2999,7 +3000,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 		"args":               []string(nil),
 		"sha256":             "",
 		"builtin":            true,
-		"version":            c.pluginCatalog.getBuiltinVersion(consts.PluginTypeDatabase, "mysql-database-plugin"),
+		"version":            versions.GetBuiltinVersion(consts.PluginTypeDatabase, "mysql-database-plugin"),
 		"deprecation_status": deprecationStatus.String(),
 	}
 	if !reflect.DeepEqual(actualRespData, expectedRespData) {
@@ -3329,7 +3330,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"sha":             "",
 				"running_sha":     "",
 				"version":         "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 			},
 			"sys/": map[string]interface{}{
 				"type":                    "system",
@@ -3349,7 +3350,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"sha":             "",
 				"running_sha":     "",
 				"version":         "",
-				"running_version": "",
+				"running_version": versions.DefaultBuiltinVersion,
 			},
 			"cubbyhole/": map[string]interface{}{
 				"description":             "per-token private secret storage",
@@ -3368,7 +3369,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"sha":             "",
 				"running_sha":     "",
 				"version":         "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 			},
 			"identity/": map[string]interface{}{
 				"description":             "identity store",
@@ -3388,7 +3389,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"sha":             "",
 				"running_sha":     "",
 				"version":         "",
-				"running_version": "",
+				"running_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 			},
 		},
 		"auth": map[string]interface{}{

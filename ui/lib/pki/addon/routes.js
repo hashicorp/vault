@@ -15,29 +15,30 @@ export default buildRoutes(function () {
     this.route('details');
   });
   this.route('roles', function () {
+    this.route('index', { path: '/' }); // ARG TODO remove
     this.route('create');
-    this.route('role', { path: '/:name' }, function () {
+    this.route('role', { path: '/:id' }, function () {
       this.route('details');
       this.route('edit');
     });
   });
   this.route('issuers', function () {
     this.route('create');
-    this.route('issuer', { path: '/:name' }, function () {
+    this.route('issuer', { path: '/:id' }, function () {
       this.route('details');
       this.route('edit');
     });
   });
   this.route('certificates', function () {
     this.route('create');
-    this.route('certificate', { path: '/:name' }, function () {
+    this.route('certificate', { path: '/:id' }, function () {
       this.route('details');
       this.route('edit');
     });
   });
   this.route('keys', function () {
     this.route('create');
-    this.route('key', { path: '/:name' }, function () {
+    this.route('key', { path: '/:id' }, function () {
       this.route('details');
       this.route('edit');
     });
