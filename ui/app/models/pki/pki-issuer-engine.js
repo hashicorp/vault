@@ -21,12 +21,12 @@ export default class PkiIssuersEngineModel extends Model {
   })
   name;
 
-  // get useOpenAPI() {
-  //   return true;
-  // }
-  // getHelpUrl(backend) {
-  //   return `/v1/${backend}/issuers/example?help=1`;
-  // }
+  get useOpenAPI() {
+    return true;
+  }
+  getHelpUrl(backend) {
+    return `/v1/${backend}/issuer/example?help=1`;
+  }
 
   @attr('boolean') isDefault;
   @attr('string') issuerName;
