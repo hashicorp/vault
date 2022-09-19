@@ -458,9 +458,9 @@ func TestExternalPlugin_getBackendTypeVersion(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			//if version.Version != tc.setRunningVersion {
-			t.Errorf("Expected to get version %v but got %v", tc.setRunningVersion, version.Version)
-			//}
+			if version.Version != tc.setRunningVersion {
+				t.Errorf("Expected to get version %v but got %v", tc.setRunningVersion, version.Version)
+			}
 		})
 	}
 }
