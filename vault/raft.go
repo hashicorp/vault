@@ -635,7 +635,9 @@ func (c *Core) raftSnapshotRestoreCallback(grabLock bool, sealNode bool) func(co
 
 		if grabLock {
 			// Grab statelock
-			if stopped := grabLockOrStop(c.stateLock.Lock, c.stateLock.Unlock, c.standbyStopCh.Load().(chan struct{})); stopped {
+			l := newLockGrabber(c.stateLock.Lock, c.stateLock.Unlock, c.standbyStopCh.Load().(chan struct{}))
+			go l.grab()
+			if stopped := l.lockOrStop(); stopped {
 				c.logger.Error("did not apply snapshot; vault is shutting down")
 				return errors.New("did not apply snapshot; vault is shutting down")
 			}
