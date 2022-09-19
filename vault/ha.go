@@ -686,6 +686,7 @@ func newLockGrabber(lockFunc, unlockFunc func(), stopCh chan struct{}) *lockGrab
 		lockFunc:      lockFunc,
 		unlockFunc:    unlockFunc,
 		parentWaiting: true,
+		stopCh:        stopCh,
 	}
 }
 
