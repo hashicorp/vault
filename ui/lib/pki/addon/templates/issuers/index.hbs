@@ -35,11 +35,13 @@
           <div>
             <Icon @name="certificate" class="has-text-grey-light" />
             <span class="has-text-weight-semibold is-underline">
-              {{model.id}}
+              {{or model.issuerName model.id}}
             </span>
             <div class="is-flex-row has-left-margin-l has-top-margin-xs">
               {{! if default_issuer is true (there can only be one) }}
-              <span class="tag has-text-grey-dark">default issuer</span>
+              {{#if model.isDefault}}
+                <span class="tag has-text-grey-dark">default issuer</span>
+              {{/if}}
             </div>
           </div>
         </div>
@@ -49,22 +51,12 @@
               <nav class="menu">
                 <ul class="menu-list">
                   <li>
-                    <LinkTo
-                      @route="roles.role.details"
-                      @model={{model.id}}
-                      {{! ARG TODO return with permissions }}
-                      {{!-- @disabled={{eq model.canRead false}} --}}
-                    >
+                    <LinkTo @route="roles.role.details" @model={{model.id}}>
                       Details
                     </LinkTo>
                   </li>
                   <li>
-                    <LinkTo
-                      @route="roles.role.edit"
-                      @model={{model.id}}
-                      {{! ARG TODO return with permissions }}
-                      {{!-- @disabled={{eq model.canEdit false}} --}}
-                    >
+                    <LinkTo @route="roles.role.edit" @model={{model.id}}>
                       Edit
                     </LinkTo>
                   </li>

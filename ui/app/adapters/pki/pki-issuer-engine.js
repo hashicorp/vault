@@ -23,7 +23,6 @@ export default class PkiIssuerEngineAdapter extends ApplicationAdapter {
   async query(store, type, query) {
     const { backend, id } = query;
     let response = await this.ajax(this.urlForQuery(backend, id), 'GET', this.optionsForQuery(id));
-    console.log(response, 'response in query');
     return response;
   }
 }

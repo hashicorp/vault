@@ -19,7 +19,6 @@ export default class PkiIssuersIndexRoute extends Route {
           throw err;
         }
       });
-    console.log(response, 'response in index');
     return response;
   }
 }

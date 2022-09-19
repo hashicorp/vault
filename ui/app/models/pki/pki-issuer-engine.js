@@ -28,7 +28,8 @@ export default class PkiIssuersEngineModel extends Model {
   //   return `/v1/${backend}/issuers/example?help=1`;
   // }
 
-  @attr('object') keyInfo;
+  @attr('boolean') isDefault;
+  @attr('string') issuerName;
 
   // Form Fields not hidden in toggle options
   // _attributeMeta = null;
