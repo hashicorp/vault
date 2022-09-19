@@ -1096,8 +1096,8 @@ github.com/hashicorp/vault-plugin-auth-azure v0.11.0 h1:PY2CuGj2RX4paj1kjX3VC0Q3
 github.com/hashicorp/vault-plugin-auth-azure v0.11.0/go.mod h1:JkrWHfpu0pc6tQDBBAHAJ8oVqV70kUC5FubJIPwjKyA=
 github.com/hashicorp/vault-plugin-auth-centrify v0.12.0 h1:d2dDZoUlSBNiw+jfi/2wxPoz6iNU7W5RasuwFc/deYo=
 github.com/hashicorp/vault-plugin-auth-centrify v0.12.0/go.mod h1:3fDbIVdwA/hkOVhwktKHDX5lo4DqIUUVbBdwQNNvxHw=
-github.com/hashicorp/vault-plugin-auth-cf v0.12.0 h1:8X3Zlc6P/ih0MVhrPJ54iwiCyMVIcLwfBVpONuYddks=
-github.com/hashicorp/vault-plugin-auth-cf v0.12.0/go.mod h1:dr0cewrZ0SgpsPFkQ7Vf31J4xg+ylxM3Yv+dk1zWpEQ=
+github.com/hashicorp/vault-plugin-auth-cf v0.13.0 h1:Iu4nRoZrkaLbW4vJ8t/wYS8z5BG4VQI7nKpBuwPTpOU=
+github.com/hashicorp/vault-plugin-auth-cf v0.13.0/go.mod h1:Tktv1OXUjFobzjAU5qNJA8t1KC0109eu6Pcgm1uiwHg=
 github.com/hashicorp/vault-plugin-auth-gcp v0.14.0 h1:9qjpx7fJcz7WoFiazIktaJSvuqscR2v/drc+euW8v2M=
 github.com/hashicorp/vault-plugin-auth-gcp v0.14.0/go.mod h1:WNwaZN7NWy14xcy3otm1OXp5blcKgblUfvE16eYeUoQ=
 github.com/hashicorp/vault-plugin-auth-jwt v0.14.0 h1:Wzg9qqAdEh1DQwsKf2ruggqaSbIdeTaZfDmO1Nn7YqA=
