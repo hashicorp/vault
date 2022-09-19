@@ -42,12 +42,12 @@
     </LinkedBlock>
   {{/each}}
 {{else}}
-  <EmptyState @title="No issuers yet">
+  <EmptyState @title="No roles yet">
     <div>
-      <p>When created, issuers will be listed here. ARG TODO Language coming from design?</p>
+      <p>When created, roles will be listed here. Create a role to start generating certificates.</p>
       <div class="has-top-margin-m">
         <LinkTo @route="roles.create">
-          ARG TODO will change
+          Create role
         </LinkTo>
       </div>
     </div>

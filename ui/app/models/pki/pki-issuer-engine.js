@@ -1,5 +1,5 @@
 import Model, { attr } from '@ember-data/model';
-// import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
+import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { withModelValidations } from 'vault/decorators/model-validations';
 
 const validations = {
@@ -32,20 +32,20 @@ export default class PkiIssuersEngineModel extends Model {
   @attr('string') issuerName;
 
   // Form Fields not hidden in toggle options
-  // _attributeMeta = null;
-  // get formFields() {
-  //   if (!this._attributeMeta) {
-  //     this._attributeMeta = expandAttributeMeta(this, [
-  //       'name',
-  //       'leafNotAfterBehavior',
-  //       'usage',
-  //       'manualChain',
-  //       'issuingCertifications',
-  //       'crlDistributionPoints',
-  //       'ocspServers',
-  //       'deltaCrlUrls', // new endpoint, mentioned in RFC, but need to confirm it's there.
-  //     ]);
-  //   }
-  //   return this._attributeMeta;
-  // }
+  _attributeMeta = null;
+  get formFields() {
+    if (!this._attributeMeta) {
+      this._attributeMeta = expandAttributeMeta(this, [
+        'name',
+        'leafNotAfterBehavior',
+        'usage',
+        'manualChain',
+        'issuingCertifications',
+        'crlDistributionPoints',
+        'ocspServers',
+        'deltaCrlUrls', // new endpoint, mentioned in RFC, but need to confirm it's there.
+      ]);
+    }
+    return this._attributeMeta;
+  }
 }
