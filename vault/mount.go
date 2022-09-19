@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -609,7 +610,7 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	var backend logical.Backend
 	sysView := c.mountEntrySysView(entry)
 
-	backend, err = c.newLogicalBackend(ctx, entry, sysView, view)
+	backend, entry.RunningSha, err = c.newLogicalBackend(ctx, entry, sysView, view)
 	if err != nil {
 		return err
 	}
@@ -1420,7 +1421,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		var backend logical.Backend
 		// Create the new backend
 		sysView := c.mountEntrySysView(entry)
-		backend, err = c.newLogicalBackend(ctx, entry, sysView, view)
+		backend, entry.RunningSha, err = c.newLogicalBackend(ctx, entry, sysView, view)
 		if err != nil {
 			c.logger.Error("failed to create mount entry", "path", entry.Path, "error", err)
 			if !c.builtinRegistry.Contains(entry.Type, consts.PluginTypeSecrets) {
@@ -1524,25 +1525,30 @@ func (c *Core) unloadMounts(ctx context.Context) error {
 	return nil
 }
 
-// newLogicalBackend is used to create and configure a new logical backend by name
-func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView logical.SystemView, view logical.Storage) (logical.Backend, error) {
+// newLogicalBackend is used to create and configure a new logical backend by name.
+// It also returns the SHA256 of the plugin, if available.
+func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView logical.SystemView, view logical.Storage) (logical.Backend, string, error) {
 	t := entry.Type
 	if alias, ok := mountAliases[t]; ok {
 		t = alias
 	}
 
+	var runningSha string
 	f, ok := c.logicalBackends[t]
 	if !ok {
 		plug, err := c.pluginCatalog.Get(ctx, t, consts.PluginTypeSecrets, entry.Version)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		if plug == nil {
 			errContext := t
 			if entry.Version != "" {
 				errContext += fmt.Sprintf(", version=%s", entry.Version)
 			}
-			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, errContext)
+			return nil, "", fmt.Errorf("%w: %s", ErrPluginNotFound, errContext)
+		}
+		if len(plug.Sha256) > 0 {
+			runningSha = hex.EncodeToString(plug.Sha256)
 		}
 
 		f = plugin.Factory
@@ -1579,14 +1585,14 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	ctx = context.WithValue(ctx, "core_number", c.coreNumber)
 	b, err := f(ctx, config)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if b == nil {
-		return nil, fmt.Errorf("nil backend of type %q returned from factory", t)
+		return nil, "", fmt.Errorf("nil backend of type %q returned from factory", t)
 	}
 	addLicenseCallback(c, b)
 
-	return b, nil
+	return b, runningSha, nil
 }
 
 // defaultMountTable creates a default mount table

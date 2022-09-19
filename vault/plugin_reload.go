@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/namespace"
 
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin"
@@ -176,9 +176,9 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 	var backend logical.Backend
 	if !isAuth {
 		// Dispense a new backend
-		backend, err = c.newLogicalBackend(ctx, entry, sysView, view)
+		backend, _, err = c.newLogicalBackend(ctx, entry, sysView, view)
 	} else {
-		backend, err = c.newCredentialBackend(ctx, entry, sysView, view)
+		backend, _, err = c.newCredentialBackend(ctx, entry, sysView, view)
 	}
 	if err != nil {
 		return err
