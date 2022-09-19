@@ -46,7 +46,7 @@ type backend struct {
 	canary string
 }
 
-func (b *backend) reloadBackend(ctx context.Context, req *logical.Request) error {
+func (b *backend) reloadBackend(ctx context.Context, storage logical.Storage) error {
 	pluginName := b.config.Config["plugin_name"]
 	pluginType, err := consts.ParsePluginType(b.config.Config["plugin_type"])
 	if err != nil {
@@ -75,7 +75,7 @@ func (b *backend) reloadBackend(ctx context.Context, req *logical.Request) error
 	// Re-initialize the backend in case plugin was reloaded
 	// after it crashed
 	err = b.Backend.Initialize(ctx, &logical.InitializationRequest{
-		Storage: req.Storage,
+		Storage: storage,
 	})
 
 	if err != nil {
@@ -98,7 +98,7 @@ func (b *backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		// Reload plugin if it's an rpc.ErrShutdown
 		b.mu.Lock()
 		if b.canary == canary {
-			err := b.reloadBackend(ctx, req)
+			err := b.reloadBackend(ctx, req.Storage)
 			if err != nil {
 				b.mu.Unlock()
 				return nil, err
@@ -130,7 +130,7 @@ func (b *backend) HandleExistenceCheck(ctx context.Context, req *logical.Request
 		// Reload plugin if it's an rpc.ErrShutdown
 		b.mu.Lock()
 		if b.canary == canary {
-			err := b.reloadBackend(ctx, req)
+			err := b.reloadBackend(ctx, req.Storage)
 			if err != nil {
 				b.mu.Unlock()
 				return false, false, err
