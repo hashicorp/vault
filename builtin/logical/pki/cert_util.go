@@ -765,6 +765,10 @@ func signCert(b *backend,
 		return nil, nil, errutil.UserError{Err: fmt.Sprintf("certificate request could not be parsed: %v", err)}
 	}
 
+	if csr.PublicKeyAlgorithm == x509.UnknownPublicKeyAlgorithm || csr.PublicKey == nil {
+		return nil, nil, errutil.UserError{Err: "Refusing to sign CSR with empty PublicKey. This usually means the SubjectPublicKeyInfo field has an OID not recognized by Go, such as 1.2.840.113549.1.1.10 for rsaPSS."}
+	}
+
 	// This switch validates that the CSR key type matches the role and sets
 	// the value in the actualKeyType/actualKeyBits values.
 	actualKeyType := ""
