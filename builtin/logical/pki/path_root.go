@@ -239,7 +239,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	// Update the issuer to reflect the PSS status here for revocation; this
 	// allows CRL building to succeed if the root is using a managed key with
 	// only PSS support.
-	if input.role.KeyType == "rsa" && input.role.UsePSS {
+	/*if input.role.KeyType == "rsa" && input.role.UsePSS {
 		// The one time that it is safe (and good) to copy the
 		// SignatureAlgorithm field off the certificate (for the purposes of
 		// detecting PSS support) is when we've freshly generated it AND it
@@ -253,7 +253,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		if err := sc.writeIssuer(myIssuer); err != nil {
 			return nil, fmt.Errorf("unable to store PSS-updated issuer: %v", err)
 		}
-	}
+	}*/
 
 	// Also store it as just the certificate identified by serial number, so it
 	// can be revoked
@@ -311,13 +311,13 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		EnforceHostnames:          false,
 		KeyType:                   "any",
 		SignatureBits:             data.Get("signature_bits").(int),
-		UsePSS:                    data.Get("use_pss").(bool),
-		AllowedOtherSANs:          []string{"*"},
-		AllowedSerialNumbers:      []string{"*"},
-		AllowedURISANs:            []string{"*"},
-		NotAfter:                  data.Get("not_after").(string),
-		NotBeforeDuration:         time.Duration(data.Get("not_before_duration").(int)) * time.Second,
-		CNValidations:             []string{"disabled"},
+		// UsePSS:                    data.Get("use_pss").(bool),
+		AllowedOtherSANs:     []string{"*"},
+		AllowedSerialNumbers: []string{"*"},
+		AllowedURISANs:       []string{"*"},
+		NotAfter:             data.Get("not_after").(string),
+		NotBeforeDuration:    time.Duration(data.Get("not_before_duration").(int)) * time.Second,
+		CNValidations:        []string{"disabled"},
 	}
 	*role.AllowWildcardCertificates = true
 

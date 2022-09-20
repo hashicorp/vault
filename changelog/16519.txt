@@ -1,3 +1,0 @@
-```release-note:improvement
-secret/pki: Add RSA PSS signature support for issuing certificates, signing CRLs
-```

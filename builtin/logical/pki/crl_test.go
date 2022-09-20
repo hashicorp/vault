@@ -137,6 +137,10 @@ func TestBackend_CRLConfig(t *testing.T) {
 }
 
 func TestBackend_CRL_AllKeyTypeSigAlgos(t *testing.T) {
+	// PSS support and signature algorithm selection was removed from the
+	// API due to lack of support in Go.
+	return
+
 	type testCase struct {
 		KeyType string
 		KeyBits int

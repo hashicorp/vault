@@ -3546,13 +3546,13 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 
 	// Validate that we have not changed any defaults unknowingly
 	expectedData := map[string]interface{}{
-		"key_type":                           "rsa",
-		"use_csr_sans":                       true,
-		"client_flag":                        true,
-		"allowed_serial_numbers":             []interface{}{},
-		"generate_lease":                     false,
-		"signature_bits":                     json.Number("256"),
-		"use_pss":                            false,
+		"key_type":               "rsa",
+		"use_csr_sans":           true,
+		"client_flag":            true,
+		"allowed_serial_numbers": []interface{}{},
+		"generate_lease":         false,
+		"signature_bits":         json.Number("256"),
+		//"use_pss":                            false,
 		"allowed_domains":                    []interface{}{},
 		"allowed_uri_sans_template":          false,
 		"enforce_hostnames":                  true,
@@ -4500,6 +4500,10 @@ func (k KeySizeRegression) KeyTypeValues() []string {
 
 func RoleKeySizeRegressionHelper(t *testing.T, b *backend, s logical.Storage, index int, test KeySizeRegression) int {
 	tested := 0
+
+	if test.RoleUsePSS {
+		return 0
+	}
 
 	for _, caKeyType := range test.KeyTypeValues() {
 		for _, caKeyBits := range test.RoleKeyBits {

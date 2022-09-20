@@ -85,12 +85,12 @@ in the above RFC section.`,
 		},
 	}
 
-	fields["use_pss"] = &framework.FieldSchema{
-		Type:    framework.TypeBool,
-		Default: false,
-		Description: `Whether or not to use PSS signatures when using a
-RSA key-type issuer. Defaults to false.`,
-	}
+	/*fields["use_pss"] = &framework.FieldSchema{
+			Type:    framework.TypeBool,
+			Default: false,
+			Description: `Whether or not to use PSS signatures when using a
+	RSA key-type issuer. Defaults to false.`,
+		}*/
 
 	return path
 }

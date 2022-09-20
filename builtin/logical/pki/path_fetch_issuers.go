@@ -108,17 +108,17 @@ this issuer; valid values are "read-only", "issuing-certificates",
 is implicit and always set.`,
 		Default: []string{"read-only", "issuing-certificates", "crl-signing", "ocsp-signing"},
 	}
-	fields["revocation_signature_algorithm"] = &framework.FieldSchema{
-		Type: framework.TypeString,
-		Description: `Which x509.SignatureAlgorithm name to use for
-signing CRLs. This parameter allows differentiation between PKCS#1v1.5
-and PSS keys and choice of signature hash algorithm. The default (empty
-string) value is for Go to select the signature algorithm. This can fail
-if the underlying key does not support the requested signature algorithm,
-which may not be known at modification time (such as with PKCS#11 managed
-RSA keys).`,
-		Default: "",
-	}
+	/*fields["revocation_signature_algorithm"] = &framework.FieldSchema{
+			Type: framework.TypeString,
+			Description: `Which x509.SignatureAlgorithm name to use for
+	signing CRLs. This parameter allows differentiation between PKCS#1v1.5
+	and PSS keys and choice of signature hash algorithm. The default (empty
+	string) value is for Go to select the signature algorithm. This can fail
+	if the underlying key does not support the requested signature algorithm,
+	which may not be known at modification time (such as with PKCS#11 managed
+	RSA keys).`,
+			Default: "",
+		}*/
 	fields["issuing_certificates"] = &framework.FieldSchema{
 		Type: framework.TypeCommaStringSlice,
 		Description: `Comma-separated list of URLs to be used
@@ -207,25 +207,25 @@ func respondReadIssuer(issuer *issuerEntry) (*logical.Response, error) {
 		respManualChain = append(respManualChain, string(entity))
 	}
 
-	revSigAlgStr := issuer.RevocationSigAlg.String()
+	/*revSigAlgStr := issuer.RevocationSigAlg.String()
 	if issuer.RevocationSigAlg == x509.UnknownSignatureAlgorithm {
 		revSigAlgStr = ""
-	}
+	}*/
 
 	data := map[string]interface{}{
-		"issuer_id":                      issuer.ID,
-		"issuer_name":                    issuer.Name,
-		"key_id":                         issuer.KeyID,
-		"certificate":                    issuer.Certificate,
-		"manual_chain":                   respManualChain,
-		"ca_chain":                       issuer.CAChain,
-		"leaf_not_after_behavior":        issuer.LeafNotAfterBehavior.String(),
-		"usage":                          issuer.Usage.Names(),
-		"revocation_signature_algorithm": revSigAlgStr,
-		"revoked":                        issuer.Revoked,
-		"issuing_certificates":           []string{},
-		"crl_distribution_points":        []string{},
-		"ocsp_servers":                   []string{},
+		"issuer_id":               issuer.ID,
+		"issuer_name":             issuer.Name,
+		"key_id":                  issuer.KeyID,
+		"certificate":             issuer.Certificate,
+		"manual_chain":            respManualChain,
+		"ca_chain":                issuer.CAChain,
+		"leaf_not_after_behavior": issuer.LeafNotAfterBehavior.String(),
+		"usage":                   issuer.Usage.Names(),
+		//"revocation_signature_algorithm": revSigAlgStr,
+		"revoked":                 issuer.Revoked,
+		"issuing_certificates":    []string{},
+		"crl_distribution_points": []string{},
+		"ocsp_servers":            []string{},
 	}
 
 	if issuer.Revoked {
@@ -310,7 +310,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	// Revocation signature algorithm changes
-	revSigAlgStr := data.Get("revocation_signature_algorithm").(string)
+	/*revSigAlgStr := data.Get("revocation_signature_algorithm").(string)
 	revSigAlg, present := certutil.SignatureAlgorithmNames[strings.ToLower(revSigAlgStr)]
 	if !present && revSigAlgStr != "" {
 		var knownAlgos []string
@@ -324,7 +324,7 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 	}
 	if err := issuer.CanMaybeSignWithAlgo(revSigAlg); err != nil {
 		return nil, err
-	}
+	}*/
 
 	// AIA access changes
 	issuerCertificates := data.Get("issuing_certificates").([]string)
@@ -378,10 +378,10 @@ func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, da
 		modified = true
 	}
 
-	if revSigAlg != issuer.RevocationSigAlg {
+	/*if revSigAlg != issuer.RevocationSigAlg {
 		issuer.RevocationSigAlg = revSigAlg
 		modified = true
-	}
+	}*/
 
 	if issuer.AIAURIs == nil && (len(issuerCertificates) > 0 || len(crlDistributionPoints) > 0 || len(ocspServers) > 0) {
 		issuer.AIAURIs = &certutil.URLEntries{}
@@ -593,7 +593,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 	}
 
 	// Revocation signature algorithm changes
-	rawRevSigAlg, ok := data.GetOk("revocation_signature_algorithm")
+	/*rawRevSigAlg, ok := data.GetOk("revocation_signature_algorithm")
 	if ok {
 		revSigAlgStr := rawRevSigAlg.(string)
 		revSigAlg, present := certutil.SignatureAlgorithmNames[strings.ToLower(revSigAlgStr)]
@@ -616,7 +616,7 @@ func (b *backend) pathPatchIssuer(ctx context.Context, req *logical.Request, dat
 			issuer.RevocationSigAlg = revSigAlg
 			modified = true
 		}
-	}
+	}*/
 
 	// AIA access changes.
 	if issuer.AIAURIs == nil {

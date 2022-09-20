@@ -238,12 +238,12 @@ SHA-2-512. Defaults to 0 to automatically detect based on key length
 (SHA-2-256 for RSA keys, and matching the curve size for NIST P-Curves).`,
 			},
 
-			"use_pss": {
-				Type:    framework.TypeBool,
-				Default: false,
-				Description: `Whether or not to use PSS signatures when using a
-RSA key-type issuer. Defaults to false.`,
-			},
+			/*"use_pss": {
+							Type:    framework.TypeBool,
+							Default: false,
+							Description: `Whether or not to use PSS signatures when using a
+			RSA key-type issuer. Defaults to false.`,
+						},*/
 
 			"key_usage": {
 				Type:    framework.TypeCommaStringSlice,
@@ -659,28 +659,28 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 	name := data.Get("name").(string)
 
 	entry := &roleEntry{
-		MaxTTL:                        time.Duration(data.Get("max_ttl").(int)) * time.Second,
-		TTL:                           time.Duration(data.Get("ttl").(int)) * time.Second,
-		AllowLocalhost:                data.Get("allow_localhost").(bool),
-		AllowedDomains:                data.Get("allowed_domains").([]string),
-		AllowedDomainsTemplate:        data.Get("allowed_domains_template").(bool),
-		AllowBareDomains:              data.Get("allow_bare_domains").(bool),
-		AllowSubdomains:               data.Get("allow_subdomains").(bool),
-		AllowGlobDomains:              data.Get("allow_glob_domains").(bool),
-		AllowWildcardCertificates:     new(bool), // Handled specially below
-		AllowAnyName:                  data.Get("allow_any_name").(bool),
-		AllowedURISANsTemplate:        data.Get("allowed_uri_sans_template").(bool),
-		EnforceHostnames:              data.Get("enforce_hostnames").(bool),
-		AllowIPSANs:                   data.Get("allow_ip_sans").(bool),
-		AllowedURISANs:                data.Get("allowed_uri_sans").([]string),
-		ServerFlag:                    data.Get("server_flag").(bool),
-		ClientFlag:                    data.Get("client_flag").(bool),
-		CodeSigningFlag:               data.Get("code_signing_flag").(bool),
-		EmailProtectionFlag:           data.Get("email_protection_flag").(bool),
-		KeyType:                       data.Get("key_type").(string),
-		KeyBits:                       data.Get("key_bits").(int),
-		SignatureBits:                 data.Get("signature_bits").(int),
-		UsePSS:                        data.Get("use_pss").(bool),
+		MaxTTL:                    time.Duration(data.Get("max_ttl").(int)) * time.Second,
+		TTL:                       time.Duration(data.Get("ttl").(int)) * time.Second,
+		AllowLocalhost:            data.Get("allow_localhost").(bool),
+		AllowedDomains:            data.Get("allowed_domains").([]string),
+		AllowedDomainsTemplate:    data.Get("allowed_domains_template").(bool),
+		AllowBareDomains:          data.Get("allow_bare_domains").(bool),
+		AllowSubdomains:           data.Get("allow_subdomains").(bool),
+		AllowGlobDomains:          data.Get("allow_glob_domains").(bool),
+		AllowWildcardCertificates: new(bool), // Handled specially below
+		AllowAnyName:              data.Get("allow_any_name").(bool),
+		AllowedURISANsTemplate:    data.Get("allowed_uri_sans_template").(bool),
+		EnforceHostnames:          data.Get("enforce_hostnames").(bool),
+		AllowIPSANs:               data.Get("allow_ip_sans").(bool),
+		AllowedURISANs:            data.Get("allowed_uri_sans").([]string),
+		ServerFlag:                data.Get("server_flag").(bool),
+		ClientFlag:                data.Get("client_flag").(bool),
+		CodeSigningFlag:           data.Get("code_signing_flag").(bool),
+		EmailProtectionFlag:       data.Get("email_protection_flag").(bool),
+		KeyType:                   data.Get("key_type").(string),
+		KeyBits:                   data.Get("key_bits").(int),
+		SignatureBits:             data.Get("signature_bits").(int),
+		// UsePSS:                        data.Get("use_pss").(bool),
 		UseCSRCommonName:              data.Get("use_csr_common_name").(bool),
 		UseCSRSANs:                    data.Get("use_csr_sans").(bool),
 		KeyUsage:                      data.Get("key_usage").([]string),
@@ -859,28 +859,28 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 	}
 
 	entry := &roleEntry{
-		MaxTTL:                        getTimeWithExplicitDefault(data, "max_ttl", oldEntry.MaxTTL),
-		TTL:                           getTimeWithExplicitDefault(data, "ttl", oldEntry.TTL),
-		AllowLocalhost:                getWithExplicitDefault(data, "allow_localhost", oldEntry.AllowLocalhost).(bool),
-		AllowedDomains:                getWithExplicitDefault(data, "allowed_domains", oldEntry.AllowedDomains).([]string),
-		AllowedDomainsTemplate:        getWithExplicitDefault(data, "allowed_domains_template", oldEntry.AllowedDomainsTemplate).(bool),
-		AllowBareDomains:              getWithExplicitDefault(data, "allow_bare_domains", oldEntry.AllowBareDomains).(bool),
-		AllowSubdomains:               getWithExplicitDefault(data, "allow_subdomains", oldEntry.AllowSubdomains).(bool),
-		AllowGlobDomains:              getWithExplicitDefault(data, "allow_glob_domains", oldEntry.AllowGlobDomains).(bool),
-		AllowWildcardCertificates:     new(bool), // Handled specially below
-		AllowAnyName:                  getWithExplicitDefault(data, "allow_any_name", oldEntry.AllowAnyName).(bool),
-		AllowedURISANsTemplate:        getWithExplicitDefault(data, "allowed_uri_sans_template", oldEntry.AllowedURISANsTemplate).(bool),
-		EnforceHostnames:              getWithExplicitDefault(data, "enforce_hostnames", oldEntry.EnforceHostnames).(bool),
-		AllowIPSANs:                   getWithExplicitDefault(data, "allow_ip_sans", oldEntry.AllowIPSANs).(bool),
-		AllowedURISANs:                getWithExplicitDefault(data, "allowed_uri_sans", oldEntry.AllowedURISANs).([]string),
-		ServerFlag:                    getWithExplicitDefault(data, "server_flag", oldEntry.ServerFlag).(bool),
-		ClientFlag:                    getWithExplicitDefault(data, "client_flag", oldEntry.ClientFlag).(bool),
-		CodeSigningFlag:               getWithExplicitDefault(data, "code_signing_flag", oldEntry.CodeSigningFlag).(bool),
-		EmailProtectionFlag:           getWithExplicitDefault(data, "email_protection_flag", oldEntry.EmailProtectionFlag).(bool),
-		KeyType:                       getWithExplicitDefault(data, "key_type", oldEntry.KeyType).(string),
-		KeyBits:                       getWithExplicitDefault(data, "key_bits", oldEntry.KeyBits).(int),
-		SignatureBits:                 getWithExplicitDefault(data, "signature_bits", oldEntry.SignatureBits).(int),
-		UsePSS:                        getWithExplicitDefault(data, "use_pss", oldEntry.UsePSS).(bool),
+		MaxTTL:                    getTimeWithExplicitDefault(data, "max_ttl", oldEntry.MaxTTL),
+		TTL:                       getTimeWithExplicitDefault(data, "ttl", oldEntry.TTL),
+		AllowLocalhost:            getWithExplicitDefault(data, "allow_localhost", oldEntry.AllowLocalhost).(bool),
+		AllowedDomains:            getWithExplicitDefault(data, "allowed_domains", oldEntry.AllowedDomains).([]string),
+		AllowedDomainsTemplate:    getWithExplicitDefault(data, "allowed_domains_template", oldEntry.AllowedDomainsTemplate).(bool),
+		AllowBareDomains:          getWithExplicitDefault(data, "allow_bare_domains", oldEntry.AllowBareDomains).(bool),
+		AllowSubdomains:           getWithExplicitDefault(data, "allow_subdomains", oldEntry.AllowSubdomains).(bool),
+		AllowGlobDomains:          getWithExplicitDefault(data, "allow_glob_domains", oldEntry.AllowGlobDomains).(bool),
+		AllowWildcardCertificates: new(bool), // Handled specially below
+		AllowAnyName:              getWithExplicitDefault(data, "allow_any_name", oldEntry.AllowAnyName).(bool),
+		AllowedURISANsTemplate:    getWithExplicitDefault(data, "allowed_uri_sans_template", oldEntry.AllowedURISANsTemplate).(bool),
+		EnforceHostnames:          getWithExplicitDefault(data, "enforce_hostnames", oldEntry.EnforceHostnames).(bool),
+		AllowIPSANs:               getWithExplicitDefault(data, "allow_ip_sans", oldEntry.AllowIPSANs).(bool),
+		AllowedURISANs:            getWithExplicitDefault(data, "allowed_uri_sans", oldEntry.AllowedURISANs).([]string),
+		ServerFlag:                getWithExplicitDefault(data, "server_flag", oldEntry.ServerFlag).(bool),
+		ClientFlag:                getWithExplicitDefault(data, "client_flag", oldEntry.ClientFlag).(bool),
+		CodeSigningFlag:           getWithExplicitDefault(data, "code_signing_flag", oldEntry.CodeSigningFlag).(bool),
+		EmailProtectionFlag:       getWithExplicitDefault(data, "email_protection_flag", oldEntry.EmailProtectionFlag).(bool),
+		KeyType:                   getWithExplicitDefault(data, "key_type", oldEntry.KeyType).(string),
+		KeyBits:                   getWithExplicitDefault(data, "key_bits", oldEntry.KeyBits).(int),
+		SignatureBits:             getWithExplicitDefault(data, "signature_bits", oldEntry.SignatureBits).(int),
+		// UsePSS:                        getWithExplicitDefault(data, "use_pss", oldEntry.UsePSS).(bool),
 		UseCSRCommonName:              getWithExplicitDefault(data, "use_csr_common_name", oldEntry.UseCSRCommonName).(bool),
 		UseCSRSANs:                    getWithExplicitDefault(data, "use_csr_sans", oldEntry.UseCSRSANs).(bool),
 		KeyUsage:                      getWithExplicitDefault(data, "key_usage", oldEntry.KeyUsage).([]string),
@@ -1051,35 +1051,35 @@ func parseExtKeyUsages(role *roleEntry) certutil.CertExtKeyUsage {
 }
 
 type roleEntry struct {
-	LeaseMax                      string        `json:"lease_max"`
-	Lease                         string        `json:"lease"`
-	DeprecatedMaxTTL              string        `json:"max_ttl"`
-	DeprecatedTTL                 string        `json:"ttl"`
-	TTL                           time.Duration `json:"ttl_duration"`
-	MaxTTL                        time.Duration `json:"max_ttl_duration"`
-	AllowLocalhost                bool          `json:"allow_localhost"`
-	AllowedBaseDomain             string        `json:"allowed_base_domain"`
-	AllowedDomainsOld             string        `json:"allowed_domains,omitempty"`
-	AllowedDomains                []string      `json:"allowed_domains_list"`
-	AllowedDomainsTemplate        bool          `json:"allowed_domains_template"`
-	AllowBaseDomain               bool          `json:"allow_base_domain"`
-	AllowBareDomains              bool          `json:"allow_bare_domains"`
-	AllowTokenDisplayName         bool          `json:"allow_token_displayname"`
-	AllowSubdomains               bool          `json:"allow_subdomains"`
-	AllowGlobDomains              bool          `json:"allow_glob_domains"`
-	AllowWildcardCertificates     *bool         `json:"allow_wildcard_certificates,omitempty"`
-	AllowAnyName                  bool          `json:"allow_any_name"`
-	EnforceHostnames              bool          `json:"enforce_hostnames"`
-	AllowIPSANs                   bool          `json:"allow_ip_sans"`
-	ServerFlag                    bool          `json:"server_flag"`
-	ClientFlag                    bool          `json:"client_flag"`
-	CodeSigningFlag               bool          `json:"code_signing_flag"`
-	EmailProtectionFlag           bool          `json:"email_protection_flag"`
-	UseCSRCommonName              bool          `json:"use_csr_common_name"`
-	UseCSRSANs                    bool          `json:"use_csr_sans"`
-	KeyType                       string        `json:"key_type"`
-	KeyBits                       int           `json:"key_bits"`
-	UsePSS                        bool          `json:"use_pss"`
+	LeaseMax                  string        `json:"lease_max"`
+	Lease                     string        `json:"lease"`
+	DeprecatedMaxTTL          string        `json:"max_ttl"`
+	DeprecatedTTL             string        `json:"ttl"`
+	TTL                       time.Duration `json:"ttl_duration"`
+	MaxTTL                    time.Duration `json:"max_ttl_duration"`
+	AllowLocalhost            bool          `json:"allow_localhost"`
+	AllowedBaseDomain         string        `json:"allowed_base_domain"`
+	AllowedDomainsOld         string        `json:"allowed_domains,omitempty"`
+	AllowedDomains            []string      `json:"allowed_domains_list"`
+	AllowedDomainsTemplate    bool          `json:"allowed_domains_template"`
+	AllowBaseDomain           bool          `json:"allow_base_domain"`
+	AllowBareDomains          bool          `json:"allow_bare_domains"`
+	AllowTokenDisplayName     bool          `json:"allow_token_displayname"`
+	AllowSubdomains           bool          `json:"allow_subdomains"`
+	AllowGlobDomains          bool          `json:"allow_glob_domains"`
+	AllowWildcardCertificates *bool         `json:"allow_wildcard_certificates,omitempty"`
+	AllowAnyName              bool          `json:"allow_any_name"`
+	EnforceHostnames          bool          `json:"enforce_hostnames"`
+	AllowIPSANs               bool          `json:"allow_ip_sans"`
+	ServerFlag                bool          `json:"server_flag"`
+	ClientFlag                bool          `json:"client_flag"`
+	CodeSigningFlag           bool          `json:"code_signing_flag"`
+	EmailProtectionFlag       bool          `json:"email_protection_flag"`
+	UseCSRCommonName          bool          `json:"use_csr_common_name"`
+	UseCSRSANs                bool          `json:"use_csr_sans"`
+	KeyType                   string        `json:"key_type"`
+	KeyBits                   int           `json:"key_bits"`
+	// UsePSS                        bool          `json:"use_pss"`
 	SignatureBits                 int           `json:"signature_bits"`
 	MaxPathLength                 *int          `json:",omitempty"`
 	KeyUsageOld                   string        `json:"key_usage,omitempty"`
@@ -1112,30 +1112,30 @@ type roleEntry struct {
 
 func (r *roleEntry) ToResponseData() map[string]interface{} {
 	responseData := map[string]interface{}{
-		"ttl":                                int64(r.TTL.Seconds()),
-		"max_ttl":                            int64(r.MaxTTL.Seconds()),
-		"allow_localhost":                    r.AllowLocalhost,
-		"allowed_domains":                    r.AllowedDomains,
-		"allowed_domains_template":           r.AllowedDomainsTemplate,
-		"allow_bare_domains":                 r.AllowBareDomains,
-		"allow_token_displayname":            r.AllowTokenDisplayName,
-		"allow_subdomains":                   r.AllowSubdomains,
-		"allow_glob_domains":                 r.AllowGlobDomains,
-		"allow_wildcard_certificates":        r.AllowWildcardCertificates,
-		"allow_any_name":                     r.AllowAnyName,
-		"allowed_uri_sans_template":          r.AllowedURISANsTemplate,
-		"enforce_hostnames":                  r.EnforceHostnames,
-		"allow_ip_sans":                      r.AllowIPSANs,
-		"server_flag":                        r.ServerFlag,
-		"client_flag":                        r.ClientFlag,
-		"code_signing_flag":                  r.CodeSigningFlag,
-		"email_protection_flag":              r.EmailProtectionFlag,
-		"use_csr_common_name":                r.UseCSRCommonName,
-		"use_csr_sans":                       r.UseCSRSANs,
-		"key_type":                           r.KeyType,
-		"key_bits":                           r.KeyBits,
-		"signature_bits":                     r.SignatureBits,
-		"use_pss":                            r.UsePSS,
+		"ttl":                         int64(r.TTL.Seconds()),
+		"max_ttl":                     int64(r.MaxTTL.Seconds()),
+		"allow_localhost":             r.AllowLocalhost,
+		"allowed_domains":             r.AllowedDomains,
+		"allowed_domains_template":    r.AllowedDomainsTemplate,
+		"allow_bare_domains":          r.AllowBareDomains,
+		"allow_token_displayname":     r.AllowTokenDisplayName,
+		"allow_subdomains":            r.AllowSubdomains,
+		"allow_glob_domains":          r.AllowGlobDomains,
+		"allow_wildcard_certificates": r.AllowWildcardCertificates,
+		"allow_any_name":              r.AllowAnyName,
+		"allowed_uri_sans_template":   r.AllowedURISANsTemplate,
+		"enforce_hostnames":           r.EnforceHostnames,
+		"allow_ip_sans":               r.AllowIPSANs,
+		"server_flag":                 r.ServerFlag,
+		"client_flag":                 r.ClientFlag,
+		"code_signing_flag":           r.CodeSigningFlag,
+		"email_protection_flag":       r.EmailProtectionFlag,
+		"use_csr_common_name":         r.UseCSRCommonName,
+		"use_csr_sans":                r.UseCSRSANs,
+		"key_type":                    r.KeyType,
+		"key_bits":                    r.KeyBits,
+		"signature_bits":              r.SignatureBits,
+		//"use_pss":                            r.UsePSS,
 		"key_usage":                          r.KeyUsage,
 		"ext_key_usage":                      r.ExtKeyUsage,
 		"ext_key_usage_oids":                 r.ExtKeyUsageOIDs,

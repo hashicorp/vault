@@ -45,11 +45,11 @@ func getGenerationParams(sc *storageContext, data *framework.FieldData) (exporte
 	}
 
 	role = &roleEntry{
-		TTL:                       time.Duration(data.Get("ttl").(int)) * time.Second,
-		KeyType:                   keyType,
-		KeyBits:                   keyBits,
-		SignatureBits:             data.Get("signature_bits").(int),
-		UsePSS:                    data.Get("use_pss").(bool),
+		TTL:           time.Duration(data.Get("ttl").(int)) * time.Second,
+		KeyType:       keyType,
+		KeyBits:       keyBits,
+		SignatureBits: data.Get("signature_bits").(int),
+		// UsePSS:                    data.Get("use_pss").(bool),
 		AllowLocalhost:            true,
 		AllowAnyName:              true,
 		AllowIPSANs:               true,

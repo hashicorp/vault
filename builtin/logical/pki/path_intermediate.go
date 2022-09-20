@@ -73,11 +73,11 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		Default: 0,
 	}
 	data.Raw["signature_bits"] = 0
-	data.Schema["use_pss"] = &framework.FieldSchema{
+	/*data.Schema["use_pss"] = &framework.FieldSchema{
 		Type:    framework.TypeBool,
 		Default: false,
 	}
-	data.Raw["use_pss"] = false
+	data.Raw["use_pss"] = false*/
 
 	sc := b.makeStorageContext(ctx, req.Storage)
 	exported, format, role, errorResp := getGenerationParams(sc, data)
