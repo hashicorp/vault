@@ -535,7 +535,7 @@ func (c *PluginCatalog) getDatabaseRunningVersion(ctx context.Context, pluginRun
 		AutoMTLS:        true,
 	}
 
-	// Attempt to run as database V5 or V6 multiplexed plugin
+	// Attempt to run as database V5+ multiplexed plugin
 	c.logger.Debug("attempting to load database plugin as v5", "name", pluginRunner.Name)
 	v5Client, err := c.newPluginClient(ctx, pluginRunner, config)
 	if err == nil {
@@ -593,7 +593,7 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 		AutoMTLS:        true,
 	}
 
-	// Attempt to run as database V5 or V6 multiplexed plugin
+	// Attempt to run as database V5+ multiplexed plugin
 	c.logger.Debug("attempting to load database plugin as v5", "name", pluginRunner.Name)
 	v5Client, err := c.newPluginClient(ctx, pluginRunner, config)
 	if err == nil {
@@ -825,6 +825,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 		c.logger.Warn("Error determining plugin version", "error", versionErr)
 	} else if version != "" && runningVersion.Version != "" && version != runningVersion.Version {
 		c.logger.Warn("Plugin self-reported version did not match requested version", "plugin", name, "requestedVersion", version, "reportedVersion", runningVersion.Version)
+		return nil, ErrPluginNotFound
 	}
 
 	entry := &pluginutil.PluginRunner{

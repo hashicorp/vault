@@ -2,7 +2,6 @@ package approle
 
 import (
 	"context"
-	"os"
 	"sync"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -18,6 +17,9 @@ const (
 	secretIDAccessorPrefix      = "accessor/"
 	secretIDAccessorLocalPrefix = "accessor_local/"
 )
+
+// ReportedVersion is used to report a specific version to Vault.
+var ReportedVersion = ""
 
 type backend struct {
 	*framework.Backend
@@ -114,7 +116,7 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 		),
 		Invalidate:     b.invalidate,
 		BackendType:    logical.TypeCredential,
-		RunningVersion: os.Getenv(consts.VaultOverrideVersionEnv),
+		RunningVersion: ReportedVersion,
 	}
 	return b, nil
 }

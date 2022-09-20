@@ -22,17 +22,14 @@ import (
 )
 
 var (
-	compileAuthOnce     sync.Once
-	compileDatabaseOnce sync.Once
-	compileSecretOnce   sync.Once
-	authPluginBytes     []byte
-	databasePluginBytes []byte
-	secretPluginBytes   []byte
+	pluginCacheLock sync.Mutex
+	pluginCache     = map[string][]byte{}
 )
 
-func testCoreWithPlugin(t *testing.T, typ consts.PluginType) (*Core, string, string) {
+// version is used to override the plugin's self-reported version
+func testCoreWithPlugin(t *testing.T, typ consts.PluginType, version string) (*Core, string, string) {
 	t.Helper()
-	pluginName, pluginSHA256, pluginDir := compilePlugin(t, typ)
+	pluginName, pluginSHA256, pluginDir := compilePlugin(t, typ, version)
 	conf := &CoreConfig{
 		BuiltinRegistry: NewMockBuiltinRegistry(),
 		PluginDirectory: pluginDir,
@@ -42,35 +39,46 @@ func testCoreWithPlugin(t *testing.T, typ consts.PluginType) (*Core, string, str
 	return core, pluginName, pluginSHA256
 }
 
-// to mount a plugin, we need a working binary plugin, so we compile one here.
-func compilePlugin(t *testing.T, typ consts.PluginType) (name string, shasum string, pluginDir string) {
+func getPlugin(t *testing.T, typ consts.PluginType) (string, string, string, string) {
 	t.Helper()
+	var pluginName string
+	var pluginType string
+	var pluginMain string
+	var pluginVersionLocation string
 
-	var pluginType, pluginName, pluginMain string
-	var once *sync.Once
-	var pluginBytes *[]byte
 	switch typ {
 	case consts.PluginTypeCredential:
 		pluginType = "approle"
 		pluginName = "vault-plugin-auth-" + pluginType
 		pluginMain = filepath.Join("builtin", "credential", pluginType, "cmd", pluginType, "main.go")
-		once = &compileAuthOnce
-		pluginBytes = &authPluginBytes
+		pluginVersionLocation = fmt.Sprintf("github.com/hashicorp/vault/builtin/credential/%s.ReportedVersion", pluginType)
 	case consts.PluginTypeSecrets:
 		pluginType = "consul"
 		pluginName = "vault-plugin-secrets-" + pluginType
 		pluginMain = filepath.Join("builtin", "logical", pluginType, "cmd", pluginType, "main.go")
-		once = &compileSecretOnce
-		pluginBytes = &secretPluginBytes
+		pluginVersionLocation = fmt.Sprintf("github.com/hashicorp/vault/builtin/logical/%s.ReportedVersion", pluginType)
 	case consts.PluginTypeDatabase:
 		pluginType = "postgresql"
 		pluginName = "vault-plugin-database-" + pluginType
 		pluginMain = filepath.Join("plugins", "database", pluginType, fmt.Sprintf("%s-database-plugin", pluginType), "main.go")
-		once = &compileDatabaseOnce
-		pluginBytes = &databasePluginBytes
+		pluginVersionLocation = fmt.Sprintf("github.com/hashicorp/vault/plugins/database/%s.ReportedVersion", pluginType)
 	default:
 		t.Fatal(typ.String())
 	}
+	return pluginName, pluginType, pluginMain, pluginVersionLocation
+}
+
+// to mount a plugin, we need a working binary plugin, so we compile one here.
+// pluginVersion is used to override the plugin's self-reported version
+func compilePlugin(t *testing.T, typ consts.PluginType, pluginVersion string) (pluginName string, shasum string, pluginDir string) {
+	t.Helper()
+
+	pluginName, pluginType, pluginMain, pluginVersionLocation := getPlugin(t, typ)
+
+	pluginCacheLock.Lock()
+	defer pluginCacheLock.Unlock()
+
+	var pluginBytes []byte
 
 	dir := ""
 	// detect if we are in the "vault/" or the root directory and compensate
@@ -87,31 +95,41 @@ func compilePlugin(t *testing.T, typ consts.PluginType) (name string, shasum str
 
 	pluginPath := path.Join(pluginDir, pluginName)
 
+	key := fmt.Sprintf("%s %s %s", pluginName, pluginType, pluginVersion)
 	// cache the compilation to only run once
-	once.Do(func() {
-		cmd := exec.Command("go", "build", "-o", pluginPath, pluginMain)
+	var ok bool
+	pluginBytes, ok = pluginCache[key]
+	if !ok {
+		// we need to compile
+		line := []string{"build"}
+		if pluginVersion != "" {
+			line = append(line, "-ldflags", fmt.Sprintf("-X %s=%s", pluginVersionLocation, pluginVersion))
+		}
+		line = append(line, "-o", pluginPath, pluginMain)
+		cmd := exec.Command("go", line...)
 		cmd.Dir = dir
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Fatal(fmt.Errorf("error running go build %v output: %s", err, output))
 		}
-		*pluginBytes, err = os.ReadFile(pluginPath)
+		pluginCache[key], err = os.ReadFile(pluginPath)
 		if err != nil {
 			t.Fatal(err)
 		}
-	})
+		pluginBytes = pluginCache[key]
+	}
 
 	// write the cached plugin if necessary
 	var err error
 	if _, err := os.Stat(pluginPath); os.IsNotExist(err) {
-		err = os.WriteFile(pluginPath, *pluginBytes, 0o777)
+		err = os.WriteFile(pluginPath, pluginBytes, 0o777)
 	}
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	sha := sha256.New()
-	_, err = sha.Write(*pluginBytes)
+	_, err = sha.Write(pluginBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +154,7 @@ func TestCore_EnableExternalPlugin(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			c, pluginName, pluginSHA256 := testCoreWithPlugin(t, tc.pluginType)
+			c, pluginName, pluginSHA256 := testCoreWithPlugin(t, tc.pluginType, "")
 			d := &framework.FieldData{
 				Raw: map[string]interface{}{
 					"name":    pluginName,
@@ -212,7 +230,7 @@ func TestCore_EnableExternalPlugin_MultipleVersions(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			c, pluginName, pluginSHA256 := testCoreWithPlugin(t, tc.pluginType)
+			c, pluginName, pluginSHA256 := testCoreWithPlugin(t, tc.pluginType, "")
 			for _, version := range tc.registerVersions {
 				d := &framework.FieldData{
 					Raw: map[string]interface{}{
@@ -280,7 +298,7 @@ func TestCore_EnableExternalPlugin_NoVersionsOkay(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			c, pluginName, pluginSHA256 := testCoreWithPlugin(t, tc.pluginType)
+			c, pluginName, pluginSHA256 := testCoreWithPlugin(t, tc.pluginType, "")
 			d := &framework.FieldData{
 				Raw: map[string]interface{}{
 					"name":    pluginName,
@@ -339,7 +357,7 @@ func TestCore_EnableExternalCredentialPlugin_NoVersionOnRegister(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			c, pluginName, pluginSHA256 := testCoreWithPlugin(t, tc.pluginType)
+			c, pluginName, pluginSHA256 := testCoreWithPlugin(t, tc.pluginType, "")
 			d := &framework.FieldData{
 				Raw: map[string]interface{}{
 					"name":    pluginName,
@@ -383,7 +401,7 @@ func TestCore_EnableExternalCredentialPlugin_InvalidName(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			c, pluginName, pluginSHA256 := testCoreWithPlugin(t, tc.pluginType)
+			c, pluginName, pluginSHA256 := testCoreWithPlugin(t, tc.pluginType, "")
 			d := &framework.FieldData{
 				Raw: map[string]interface{}{
 					"name":    pluginName,
@@ -420,12 +438,12 @@ func TestExternalPlugin_getBackendTypeVersion(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			c, pluginName, pluginSHA256 := testCoreWithPlugin(t, tc.pluginType)
+			c, pluginName, pluginSHA256 := testCoreWithPlugin(t, tc.pluginType, tc.setRunningVersion)
 			d := &framework.FieldData{
 				Raw: map[string]interface{}{
 					"name":    pluginName,
 					"sha256":  pluginSHA256,
-					"version": "v1.0.0",
+					"version": tc.setRunningVersion,
 					"command": pluginName,
 				},
 				Schema: c.systemBackend.pluginsCatalogCRUDPath().Fields,
@@ -444,7 +462,6 @@ func TestExternalPlugin_getBackendTypeVersion(t *testing.T) {
 				Name:    pluginName,
 				Command: commandFull,
 				Args:    nil,
-				Env:     []string{consts.VaultOverrideVersionEnv + "=" + tc.setRunningVersion},
 				Sha256:  shaBytes,
 				Builtin: false,
 			}

@@ -2,6 +2,7 @@ package dbplugin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -308,22 +309,34 @@ func (g *gRPCServer) Close(ctx context.Context, _ *proto.Empty) (*proto.Empty, e
 	return &proto.Empty{}, nil
 }
 
-// Version forwards the version request to the underlying Database implementation.
-func (g *gRPCServer) Version(ctx context.Context, _ *logical.Empty) (*logical.VersionReply, error) {
+// getOrForceCreateDatabase will create a database even if the multiplexing ID is not present
+func (g *gRPCServer) getOrForceCreateDatabase(ctx context.Context) (Database, error) {
 	impl, err := g.getOrCreateDatabase(ctx)
-	if err != nil {
+	if errors.Is(err, pluginutil.ErrNoMultiplexingIDFound) {
 		// if this is called without a multiplexing context, like from the plugin catalog directly,
 		// then we won't have a database ID, so let's generate a new database instance
-		g.Lock()
-		defer g.Unlock()
 		id, err := base62.Random(10)
 		if err != nil {
 			return nil, err
 		}
+
+		g.Lock()
+		defer g.Unlock()
 		impl, err = g.createDatabase(id)
 		if err != nil {
 			return nil, err
 		}
+	} else if err != nil {
+		return nil, err
+	}
+	return impl, nil
+}
+
+// Version forwards the version request to the underlying Database implementation.
+func (g *gRPCServer) Version(ctx context.Context, _ *logical.Empty) (*logical.VersionReply, error) {
+	impl, err := g.getOrForceCreateDatabase(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	if versioner, ok := impl.(logical.PluginVersioner); ok {

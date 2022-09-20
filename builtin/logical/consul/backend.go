@@ -2,12 +2,13 @@ package consul
 
 import (
 	"context"
-	"os"
 
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+// ReportedVersion is used to report a specific version to Vault.
+var ReportedVersion = ""
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
@@ -37,7 +38,7 @@ func Backend() *backend {
 			secretToken(&b),
 		},
 		BackendType:    logical.TypeLogical,
-		RunningVersion: os.Getenv(consts.VaultOverrideVersionEnv),
+		RunningVersion: ReportedVersion,
 	}
 
 	return &b

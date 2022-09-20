@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 
@@ -13,7 +12,6 @@ import (
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -50,6 +48,9 @@ var (
 	// singleQuotedPhrases finds substrings like 'hello'
 	// and pulls them out with the quotes included.
 	singleQuotedPhrases = regexp.MustCompile(`('.*?')`)
+
+	// ReportedVersion is used to report a specific version to Vault.
+	ReportedVersion = ""
 )
 
 func New() (interface{}, error) {
@@ -474,7 +475,7 @@ func (p *PostgreSQL) secretValues() map[string]string {
 }
 
 func (p *PostgreSQL) PluginVersion() logical.PluginVersion {
-	return logical.PluginVersion{Version: os.Getenv(consts.VaultOverrideVersionEnv)}
+	return logical.PluginVersion{Version: ReportedVersion}
 }
 
 // containsMultilineStatement is a best effort to determine whether
