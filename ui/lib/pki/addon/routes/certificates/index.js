@@ -4,7 +4,6 @@ import { inject as service } from '@ember/service';
 export default class PkiCertificatesIndexRoute extends Route {
   @service store;
   @service secretMountPath;
-  @service pathHelp;
 
   model() {
     return this.store
