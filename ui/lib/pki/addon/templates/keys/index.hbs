@@ -12,21 +12,18 @@
   certificates represent a public assertion of an identity, private keys represent the private part of that identity, a
   secret used to prove who they are and who they trust.</p>
 {{#if (gt this.model.length 0)}}
-  {{#each this.model as |model|}}
-    <LinkedBlock class="list-item-row" @params={{array "roles.role.details" model.id}} @linkPrefix={{this.mountPoint}}>
+  {{#each this.model as |pkiKey|}}
+    <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiKey.id}} @linkPrefix={{this.mountPoint}}>
       <div class="level is-mobile">
         <div class="level-left">
           <div>
             <Icon @name="certificate" class="has-text-grey-light" />
             <span class="has-text-weight-semibold is-underline">
-              {{model.id}}
+              {{pkiKey.id}}
             </span>
             <div class="is-flex-row has-left-margin-l has-top-margin-xs">
-              {{#if model.isDefault}}
-                <span class="tag has-text-grey-dark">default issuer</span>
-              {{/if}}
-              {{#if model.keyName}}
-                <span class="tag has-text-grey-dark">{{model.keyName}}</span>
+              {{#if pkiKey.keyName}}
+                <span class="tag has-text-grey-dark">{{pkiKey.keyName}}</span>
               {{/if}}
             </div>
           </div>
@@ -37,12 +34,12 @@
               <nav class="menu">
                 <ul class="menu-list">
                   <li>
-                    <LinkTo @route="keys.key.details" @model={{model.id}}>
+                    <LinkTo @route="keys.key.details" @model={{pkiKey.id}}>
                       Details
                     </LinkTo>
                   </li>
                   <li>
-                    <LinkTo @route="keys.key.edit" @model={{model.id}}>
+                    <LinkTo @route="keys.key.edit" @model={{pkiKey.id}}>
                       Edit
                     </LinkTo>
                   </li>

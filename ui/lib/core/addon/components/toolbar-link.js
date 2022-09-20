@@ -23,14 +23,10 @@ import Component from '@glimmer/component';
 
 export default class ToolbarLinkComponent extends Component {
   get glyph() {
-    // not ideal logic, but updating old system to allow for other kinds of icons
-    if (this.args.type === 'add') {
-      return 'plus';
-    }
-    if (!this.args.type) {
-      return 'chevron-right'; // this is the default if no type is passed in.
-    } else {
-      return this.args.type;
-    }
+    // not ideal logic. Without refactoring, this allows us to add in our own icon type outside of chevron-right or plus.
+    // For a later refactor we should remove the substitution for add to plus and just return type.
+    const { type } = this.args;
+    if (!type) return 'chevron-right';
+    return type === 'add' ? 'plus' : type;
   }
 }

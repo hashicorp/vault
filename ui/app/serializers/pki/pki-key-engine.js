@@ -1,7 +1,7 @@
 import ApplicationSerializer from '../application';
 
 export default class PkiKeyEngineSerializer extends ApplicationSerializer {
-  // rehydrate each issuer model so all model attributes are accessible from the LIST response
+  // rehydrate each keys model so all model attributes are accessible from the LIST response
   normalizeItems(payload) {
     if (payload.data) {
       if (payload.data?.keys && Array.isArray(payload.data.keys)) {
