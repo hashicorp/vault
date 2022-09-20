@@ -121,7 +121,7 @@ func (c *AuthListCommand) simpleMounts(auths map[string]*api.AuthMount) []string
 	out := []string{"Path | Type | Accessor | Description | Version"}
 	for _, path := range paths {
 		mount := auths[path]
-		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s", path, mount.Type, mount.Accessor, mount.Description, mount.Version))
+		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s", path, mount.Type, mount.Accessor, mount.Description, mount.PluginVersion))
 	}
 
 	return out
@@ -175,7 +175,7 @@ func (c *AuthListCommand) detailedMounts(auths map[string]*api.AuthMount) []stri
 			mount.Options,
 			mount.Description,
 			mount.UUID,
-			mount.Version,
+			mount.PluginVersion,
 			mount.DeprecationStatus,
 		))
 	}
