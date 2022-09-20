@@ -12,6 +12,7 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/command/agent/auth"
 	"github.com/hashicorp/vault/command/agent/sink"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 )
@@ -31,7 +32,7 @@ func TestSinkServer(t *testing.T) {
 	})
 
 	uuidStr, _ := uuid.GenerateUUID()
-	in := make(chan string)
+	in := make(chan auth.OutputInfo)
 	sinks := []*sink.SinkConfig{fs1, fs2}
 	errCh := make(chan error)
 	go func() {
@@ -39,7 +40,7 @@ func TestSinkServer(t *testing.T) {
 	}()
 
 	// Seed a token
-	in <- uuidStr
+	in <- auth.OutputInfo{IsReauth: false, Data: uuidStr}
 
 	// Tell it to shut down and give it time to do so
 	timer := time.AfterFunc(3*time.Second, func() {
@@ -98,7 +99,7 @@ func TestSinkServerRetry(t *testing.T) {
 		Logger: log.Named("sink.server"),
 	})
 
-	in := make(chan string)
+	in := make(chan auth.OutputInfo)
 	sinks := []*sink.SinkConfig{{Sink: b1}, {Sink: b2}}
 	errCh := make(chan error)
 	go func() {
@@ -106,7 +107,7 @@ func TestSinkServerRetry(t *testing.T) {
 	}()
 
 	// Seed a token
-	in <- "bad"
+	in <- auth.OutputInfo{IsReauth: false, Data: "bad"}
 
 	// During this time we should see it retry multiple times
 	time.Sleep(10 * time.Second)
@@ -117,7 +118,7 @@ func TestSinkServerRetry(t *testing.T) {
 		t.Fatal("bad try count")
 	}
 
-	in <- "good"
+	in <- auth.OutputInfo{IsReauth: false, Data: "good"}
 
 	time.Sleep(2 * time.Second)
 	if atomic.LoadUint32(&b1.tryCount) != 0 {

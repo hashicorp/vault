@@ -153,7 +153,11 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 	mux := http.NewServeMux()
 	mux.Handle("/agent/v1/cache-clear", leaseCache.HandleCacheClear(ctx))
 
-	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, nil, true))
+	var reauthCh = make(chan struct{})
+	m := sync.Mutex{}
+	cond := sync.NewCond(&m)
+
+	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, nil, true, reauthCh, cond))
 	server := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
@@ -248,7 +252,11 @@ func TestCache_AutoAuthTokenStripping(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
 
-	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, mock.NewSink("testid"), true))
+	var reauthCh = make(chan struct{})
+	m := sync.Mutex{}
+	cond := sync.NewCond(&m)
+
+	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, mock.NewSink("testid"), true, reauthCh, cond))
 	server := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
@@ -337,7 +345,11 @@ func TestCache_AutoAuthClientTokenProxyStripping(t *testing.T) {
 	mux := http.NewServeMux()
 	// mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
 
-	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, mock.NewSink(realToken), false))
+	var reauthCh = make(chan struct{})
+	m := sync.Mutex{}
+	cond := sync.NewCond(&m)
+
+	mux.Handle("/", Handler(ctx, cacheLogger, leaseCache, mock.NewSink(realToken), false, reauthCh, cond))
 	server := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,

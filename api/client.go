@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -8,11 +9,14 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -1176,7 +1180,7 @@ START:
 	}
 
 	if checkRetry == nil {
-		checkRetry = DefaultRetryPolicy
+		checkRetry = TokenMismatchedRetryPolicy
 	}
 
 	client := &retryablehttp.Client{
@@ -1523,6 +1527,35 @@ func ForwardAlways() RequestCallback {
 	return func(req *Request) {
 		req.Headers.Set(HeaderForward, "active-node")
 	}
+}
+
+var MismatchedTokenErrorRe = regexp.MustCompile(`token mac for token_version:1 hmac:.*is incorrect: err.*`)
+
+func TokenMismatchedRetryPolicy(ctx context.Context, resp *http.Response, err error) (bool, error) {
+	retry, err := DefaultRetryPolicy(ctx, resp, err)
+	if err != nil {
+		return retry, err
+	}
+	if retry && resp != nil && resp.StatusCode == 500 {
+		// We have an error. Let's look into the body to find out
+		// whether uptream server has changed
+		bodyBuf := &bytes.Buffer{}
+		if _, err := io.Copy(bodyBuf, resp.Body); err != nil {
+			// don't propagate other errors
+			return true, nil
+		}
+
+		resp.Body.Close()
+		resp.Body = ioutil.NopCloser(bodyBuf)
+
+		if MismatchedTokenErrorRe.MatchString(bodyBuf.String()) {
+			return false, nil
+		}
+	}
+	if retry {
+		return true, nil
+	}
+	return false, nil
 }
 
 // DefaultRetryPolicy is the default retry policy used by new Client objects.

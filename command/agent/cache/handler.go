@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -20,7 +21,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink, proxyVaultToken bool) http.Handler {
+func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink, proxyVaultToken bool, reauthCh chan struct{}, cond *sync.Cond) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.Info("received request", "method", r.Method, "path", r.URL.Path)
 
@@ -51,8 +52,24 @@ func Handler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSin
 			Request:     r,
 			RequestBody: reqBody,
 		}
-
 		resp, err := proxier.Send(ctx, req)
+		for resp !=nil && api.MismatchedTokenErrorRe.MatchString(string(resp.ResponseBody)) {
+			logger.Trace("token prior to reauth", "token", inmemSink.(sink.SinkReader).Token())
+			cond.L.Lock()
+			select {
+			case reauthCh <- struct{}{}:
+				logger.Trace("trigger reauthentication")
+			default:
+			}
+			logger.Trace("waiting for new valid token")
+			cond.Wait()
+			cond.L.Unlock()
+			logger.Trace("request woken up")
+			token = inmemSink.(sink.SinkReader).Token()
+			req.Token = token
+			resp, err = proxier.Send(ctx, req)
+			logger.Trace("token after reauth", "token", req.Token)
+		}
 		if err != nil {
 			// If this is a api.Response error, don't wrap the response.
 			if resp != nil && resp.Response.Error() != nil {

@@ -484,6 +484,9 @@ func (c *AgentCommand) Run(args []string) int {
 		c.UI.Output("==> Vault agent started! Log data will stream in below:\n")
 	}
 
+	var reauthCh = make(chan struct{})
+	m := sync.Mutex{}
+	cond := sync.NewCond(&m)
 	var leaseCache *cache.LeaseCache
 	var previousToken string
 	// Parse agent listener configurations
@@ -680,7 +683,7 @@ func (c *AgentCommand) Run(args []string) int {
 		proxyVaultToken := !config.Cache.ForceAutoAuthToken
 
 		// Create the request handler
-		cacheHandler := cache.Handler(ctx, cacheLogger, leaseCache, inmemSink, proxyVaultToken)
+		cacheHandler := cache.Handler(ctx, cacheLogger, leaseCache, inmemSink, proxyVaultToken, reauthCh, cond)
 
 		var listeners []net.Listener
 
@@ -791,6 +794,7 @@ func (c *AgentCommand) Run(args []string) int {
 	if method != nil {
 		enableTokenCh := len(config.Templates) > 0
 		ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
+			ReauthCh:                     reauthCh,
 			Logger:                       c.logger.Named("auth.handler"),
 			Client:                       c.client,
 			WrapTTL:                      config.AutoAuth.Method.WrapTTL,
@@ -804,6 +808,7 @@ func (c *AgentCommand) Run(args []string) int {
 			Logger:        c.logger.Named("sink.server"),
 			Client:        client,
 			ExitAfterAuth: exitAfterAuth,
+			Cond:          cond,
 		})
 
 		ts := template.NewServer(&template.ServerConfig{
@@ -833,11 +838,13 @@ func (c *AgentCommand) Run(args []string) int {
 			// Start goroutine to drain from ah.OutputCh from this point onward
 			// to prevent ah.Run from being blocked.
 			go func() {
+				c.logger.Info("start goroutine to drain from ah.OutputCh")
 				for {
 					select {
 					case <-ctx.Done():
 						return
 					case <-ah.OutputCh:
+						c.logger.Info("drain from ah.OutputCh")
 					}
 				}
 			}()

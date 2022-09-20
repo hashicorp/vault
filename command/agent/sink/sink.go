@@ -7,11 +7,13 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"sync"
 	"sync/atomic"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/agent/auth"
 	"github.com/hashicorp/vault/helper/dhutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
@@ -44,6 +46,7 @@ type SinkServerConfig struct {
 	Client        *api.Client
 	Context       context.Context
 	ExitAfterAuth bool
+	Cond          *sync.Cond
 }
 
 // SinkServer is responsible for pushing tokens to sinks
@@ -53,6 +56,7 @@ type SinkServer struct {
 	random        *rand.Rand
 	exitAfterAuth bool
 	remaining     *int32
+	cond          *sync.Cond
 }
 
 func NewSinkServer(conf *SinkServerConfig) *SinkServer {
@@ -62,6 +66,7 @@ func NewSinkServer(conf *SinkServerConfig) *SinkServer {
 		random:        rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
 		exitAfterAuth: conf.ExitAfterAuth,
 		remaining:     new(int32),
+		cond:          conf.Cond,
 	}
 
 	return ss
@@ -69,7 +74,7 @@ func NewSinkServer(conf *SinkServerConfig) *SinkServer {
 
 // Run executes the server's run loop, which is responsible for reading
 // in new tokens and pushing them out to the various sinks.
-func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*SinkConfig) error {
+func (ss *SinkServer) Run(ctx context.Context, incoming chan auth.OutputInfo, sinks []*SinkConfig) error {
 	latestToken := new(string)
 	writeSink := func(currSink *SinkConfig, currToken string) error {
 		if currToken != *latestToken {
@@ -103,7 +108,7 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 
 	type sinkToken struct {
 		sink  *SinkConfig
-		token string
+		token auth.OutputInfo
 	}
 	sinkCh := make(chan sinkToken, len(sinks))
 	for {
@@ -111,7 +116,8 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 		case <-ctx.Done():
 			return nil
 
-		case token := <-incoming:
+		case outputInfo := <-incoming:
+			token := outputInfo.Data
 			if len(sinks) > 0 {
 				if token != *latestToken {
 
@@ -130,7 +136,7 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 
 					for _, s := range sinks {
 						atomic.AddInt32(ss.remaining, 1)
-						sinkCh <- sinkToken{s, token}
+						sinkCh <- sinkToken{s, outputInfo}
 					}
 				}
 			} else {
@@ -148,7 +154,7 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 			default:
 			}
 
-			if err := writeSink(st.sink, st.token); err != nil {
+			if err := writeSink(st.sink, st.token.Data); err != nil {
 				backoff := 2*time.Second + time.Duration(ss.random.Int63()%int64(time.Second*2)-int64(time.Second))
 				ss.logger.Error("error returned by sink function, retrying", "error", err, "backoff", backoff.String())
 				select {
@@ -159,6 +165,13 @@ func (ss *SinkServer) Run(ctx context.Context, incoming chan string, sinks []*Si
 					sinkCh <- st
 				}
 			} else {
+				if atomic.LoadInt32(ss.remaining) == 0 {
+					ss.logger.Trace("no remaining sinks to fill up")
+					if st.token.IsReauth {
+						ss.logger.Trace("notify Handler that reauth token has been written to all sinks")
+						ss.cond.Broadcast()
+					}
+				}
 				if atomic.LoadInt32(ss.remaining) == 0 && ss.exitAfterAuth {
 					return nil
 				}

@@ -44,10 +44,17 @@ type AuthConfig struct {
 	Config    map[string]interface{}
 }
 
+type OutputInfo struct {
+	IsReauth bool
+	Data     string
+}
+
 // AuthHandler is responsible for keeping a token alive and renewed and passing
 // new tokens to the sink server
 type AuthHandler struct {
-	OutputCh                     chan string
+	reauthCh                     chan struct{}
+	isReauth                     bool
+	OutputCh                     chan OutputInfo
 	TemplateTokenCh              chan string
 	token                        string
 	logger                       hclog.Logger
@@ -60,6 +67,7 @@ type AuthHandler struct {
 }
 
 type AuthHandlerConfig struct {
+	ReauthCh                     chan struct{}
 	Logger                       hclog.Logger
 	Client                       *api.Client
 	WrapTTL                      time.Duration
@@ -73,7 +81,7 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 	ah := &AuthHandler{
 		// This is buffered so that if we try to output after the sink server
 		// has been shut down, during agent shutdown, we won't block
-		OutputCh:                     make(chan string, 1),
+		OutputCh:                     make(chan OutputInfo, 1),
 		TemplateTokenCh:              make(chan string, 1),
 		token:                        conf.Token,
 		logger:                       conf.Logger,
@@ -83,6 +91,7 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		maxBackoff:                   conf.MaxBackoff,
 		enableReauthOnNewCredentials: conf.EnableReauthOnNewCredentials,
 		enableTemplateTokenCh:        conf.EnableTemplateTokenCh,
+		reauthCh:                     conf.ReauthCh,
 	}
 
 	return ah
@@ -252,7 +261,8 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				continue
 			}
 			ah.logger.Info("authentication successful, sending wrapped token to sinks and pausing")
-			ah.OutputCh <- string(wrappedResp)
+			ah.OutputCh <- OutputInfo{IsReauth: ah.isReauth, Data: string(wrappedResp)}
+			ah.isReauth = false
 			if ah.enableTemplateTokenCh {
 				ah.TemplateTokenCh <- string(wrappedResp)
 			}
@@ -284,7 +294,8 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				continue
 			}
 			ah.logger.Info("authentication successful, sending token to sinks")
-			ah.OutputCh <- secret.Auth.ClientToken
+			ah.OutputCh <- OutputInfo{IsReauth: ah.isReauth, Data: secret.Auth.ClientToken}
+			ah.isReauth = false
 			if ah.enableTemplateTokenCh {
 				ah.TemplateTokenCh <- secret.Auth.ClientToken
 			}
@@ -334,6 +345,11 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 
 			case <-credCh:
 				ah.logger.Info("auth method found new credentials, re-authenticating")
+				break LifetimeWatcherLoop
+
+			case <-ah.reauthCh:
+				ah.logger.Info("upstream is switched, re-authenticating")
+				ah.isReauth = true
 				break LifetimeWatcherLoop
 			}
 		}
