@@ -9,6 +9,7 @@ import (
 )
 
 func TestIntegration_RotateRootUsesNext(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -75,6 +76,7 @@ func TestIntegration_RotateRootUsesNext(t *testing.T) {
 }
 
 func TestIntegration_ReplaceRootNormal(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	// generate roots
@@ -112,6 +114,7 @@ func TestIntegration_ReplaceRootNormal(t *testing.T) {
 }
 
 func TestIntegration_ReplaceRootDefaultsToNext(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	// generate roots
@@ -148,6 +151,7 @@ func TestIntegration_ReplaceRootDefaultsToNext(t *testing.T) {
 }
 
 func TestIntegration_ReplaceRootBadIssuer(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	// generate roots
@@ -197,6 +201,7 @@ func TestIntegration_ReplaceRootBadIssuer(t *testing.T) {
 }
 
 func TestIntegration_SetSignedWithBackwardsPemBundles(t *testing.T) {
+	t.Parallel()
 	rootBackend, rootStorage := createBackendWithStorage(t)
 	intBackend, intStorage := createBackendWithStorage(t)
 

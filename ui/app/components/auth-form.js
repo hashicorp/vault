@@ -18,13 +18,17 @@ const BACKENDS = supportedAuthBackends();
  *
  * @example ```js
  * // All properties are passed in via query params.
- * <AuthForm @wrappedToken={{wrappedToken}} @cluster={{model}} @namespace={{namespaceQueryParam}} @selectedAuth={{authMethod}} @onSuccess={{action this.onSuccess}} />```
+ * <AuthForm @wrappedToken={{wrappedToken}} @cluster={{model}} @namespace={{namespaceQueryParam}} @selectedAuth={{authMethod}} @onSuccess={{action this.onSuccess}}/>```
  *
  * @param {string} wrappedToken - The auth method that is currently selected in the dropdown.
  * @param {object} cluster - The auth method that is currently selected in the dropdown. This corresponds to an Ember Model.
  * @param {string} namespace- The currently active namespace.
  * @param {string} selectedAuth - The auth method that is currently selected in the dropdown.
- * @param {function} onSuccess - Fired on auth success
+ * @param {function} onSuccess - Fired on auth success.
+ * @param {function} [setOktaNumberChallenge] - Sets whether we are waiting for okta number challenge to be used to sign in.
+ * @param {boolean} [waitingForOktaNumberChallenge=false] - Determines if we are waiting for the Okta Number Challenge to sign in.
+ * @param {function} [setCancellingAuth] - Sets whether we are cancelling or not the login authentication for Okta Number Challenge.
+ * @param {boolean} [cancelAuthForOktaNumberChallenge=false] - Determines if we are cancelling the login authentication for the Okta Number Challenge.
  */
 
 const DEFAULTS = {
@@ -51,6 +55,9 @@ export default Component.extend(DEFAULTS, {
   oldNamespace: null,
   authMethods: BACKENDS,
 
+  // number answer for okta number challenge if applicable
+  oktaNumberChallengeAnswer: null,
+
   didReceiveAttrs() {
     this._super(...arguments);
     let {
@@ -60,8 +67,14 @@ export default Component.extend(DEFAULTS, {
       namespace: ns,
       selectedAuth: newMethod,
       oldSelectedAuth: oldMethod,
+      cancelAuthForOktaNumberChallenge: cancelAuth,
     } = this;
-
+    // if we are cancelling the login then we reset the number challenge answer and cancel the current authenticate and polling tasks
+    if (cancelAuth) {
+      this.set('oktaNumberChallengeAnswer', null);
+      this.authenticate.cancelAll();
+      this.pollForOktaNumberChallenge.cancelAll();
+    }
     next(() => {
       if (!token && (oldNS === null || oldNS !== ns)) {
         this.fetchMethods.perform();
@@ -219,7 +232,11 @@ export default Component.extend(DEFAULTS, {
         cluster: { id: clusterId },
       } = this;
       try {
-        this.delayAuthMessageReminder.perform();
+        if (backendType === 'okta') {
+          this.pollForOktaNumberChallenge.perform(data.nonce, data.path);
+        } else {
+          this.delayAuthMessageReminder.perform();
+        }
         const authResponse = yield this.auth.authenticate({
           clusterId,
           backend: backendType,
@@ -235,6 +252,28 @@ export default Component.extend(DEFAULTS, {
       }
     })
   ),
+
+  pollForOktaNumberChallenge: task(function* (nonce, mount) {
+    // yield for 1s to wait to see if there is a login error before polling
+    yield timeout(1000);
+    if (this.error) {
+      return;
+    }
+    let response = null;
+    this.setOktaNumberChallenge(true);
+    this.setCancellingAuth(false);
+    // keep polling /auth/okta/verify/:nonce API every 1s until a response is given with the correct number for the Okta Number Challenge
+    while (response === null) {
+      // when testing, the polling loop causes promises to be rejected making acceptance tests fail
+      // so disable the poll in tests
+      if (Ember.testing) {
+        return;
+      }
+      yield timeout(1000);
+      response = yield this.auth.getOktaNumberChallengeAnswer(nonce, mount);
+    }
+    this.set('oktaNumberChallengeAnswer', response);
+  }),
 
   delayAuthMessageReminder: task(function* () {
     if (Ember.testing) {
@@ -260,10 +299,9 @@ export default Component.extend(DEFAULTS, {
       this.setProperties({
         error: null,
       });
-      // if callback from oidc or jwt we have a token at this point
-      let backend = ['oidc', 'jwt'].includes(this.providerName)
-        ? this.getAuthBackend('token')
-        : this.selectedAuthBackend || {};
+      // if callback from oidc we have a token at this point
+      let backend =
+        this.providerName === 'oidc' ? this.getAuthBackend('token') : this.selectedAuthBackend || {};
       let backendMeta = BACKENDS.find(
         (b) => (b.type || '').toLowerCase() === (backend.type || '').toLowerCase()
       );
@@ -276,6 +314,14 @@ export default Component.extend(DEFAULTS, {
       if (this.customPath || backend.id) {
         data.path = this.customPath || backend.id;
       }
+      // add nonce field for okta backend
+      if (backend.type === 'okta') {
+        data.nonce = crypto.randomUUID();
+        // add a default path of okta if it doesn't exist to be used for Okta Number Challenge
+        if (!data.path) {
+          data.path = 'okta';
+        }
+      }
       return this.authenticate.unlinked().perform(backend.type, data);
     },
     handleError(e) {
@@ -283,6 +329,10 @@ export default Component.extend(DEFAULTS, {
         isLoading: false,
         error: e ? this.auth.handleError(e) : null,
       });
+    },
+    returnToLoginFromOktaNumberChallenge() {
+      this.setOktaNumberChallenge(false);
+      this.set('oktaNumberChallengeAnswer', null);
     },
   },
 });

@@ -49,6 +49,26 @@ var expectedNISTPCurveHashBits = map[int]int{
 	521: 512,
 }
 
+// Mapping of constant names<->constant values for SignatureAlgorithm
+var SignatureAlgorithmNames = map[string]x509.SignatureAlgorithm{
+	"sha256withrsa":    x509.SHA256WithRSA,
+	"sha384withrsa":    x509.SHA384WithRSA,
+	"sha512withrsa":    x509.SHA512WithRSA,
+	"ecdsawithsha256":  x509.ECDSAWithSHA256,
+	"ecdsawithsha384":  x509.ECDSAWithSHA384,
+	"ecdsawithsha512":  x509.ECDSAWithSHA512,
+	"sha256withrsapss": x509.SHA256WithRSAPSS,
+	"sha384withrsapss": x509.SHA384WithRSAPSS,
+	"sha512withrsapss": x509.SHA512WithRSAPSS,
+	"pureed25519":      x509.PureEd25519,
+	"ed25519":          x509.PureEd25519, // Duplicated for clarity; most won't expect the "Pure" prefix.
+}
+
+// OID for RFC 5280 Delta CRL Indicator CRL extension.
+//
+// > id-ce-deltaCRLIndicator OBJECT IDENTIFIER ::= { id-ce 27 }
+var DeltaCRLIndicatorOID = asn1.ObjectIdentifier([]int{2, 5, 29, 27})
+
 // GetHexFormatted returns the byte buffer formatted in hex with
 // the specified separator between bytes.
 func GetHexFormatted(buf []byte, sep string) string {
@@ -85,6 +105,16 @@ func GetSubjKeyID(privateKey crypto.Signer) ([]byte, error) {
 		return nil, errutil.InternalError{Err: "passed-in private key is nil"}
 	}
 	return getSubjectKeyID(privateKey.Public())
+}
+
+// Returns the explicit SKID when used for cross-signing, else computes a new
+// SKID from the key itself.
+func getSubjectKeyIDFromBundle(data *CreationBundle) ([]byte, error) {
+	if len(data.Params.SKID) > 0 {
+		return data.Params.SKID, nil
+	}
+
+	return getSubjectKeyID(data.CSR.PublicKey)
 }
 
 func getSubjectKeyID(pub interface{}) ([]byte, error) {
@@ -151,18 +181,21 @@ func ParsePKIJSON(input []byte) (*ParsedCertBundle, error) {
 }
 
 func ParseDERKey(privateKeyBytes []byte) (signer crypto.Signer, format BlockType, err error) {
-	if signer, err = x509.ParseECPrivateKey(privateKeyBytes); err == nil {
+	var firstError error
+	if signer, firstError = x509.ParseECPrivateKey(privateKeyBytes); firstError == nil {
 		format = ECBlock
 		return
 	}
 
-	if signer, err = x509.ParsePKCS1PrivateKey(privateKeyBytes); err == nil {
+	var secondError error
+	if signer, secondError = x509.ParsePKCS1PrivateKey(privateKeyBytes); secondError == nil {
 		format = PKCS1Block
 		return
 	}
 
+	var thirdError error
 	var rawKey interface{}
-	if rawKey, err = x509.ParsePKCS8PrivateKey(privateKeyBytes); err == nil {
+	if rawKey, thirdError = x509.ParsePKCS8PrivateKey(privateKeyBytes); thirdError == nil {
 		switch rawSigner := rawKey.(type) {
 		case *rsa.PrivateKey:
 			signer = rawSigner
@@ -178,7 +211,7 @@ func ParseDERKey(privateKeyBytes []byte) (signer crypto.Signer, format BlockType
 		return
 	}
 
-	return nil, UnknownBlock, err
+	return nil, UnknownBlock, fmt.Errorf("got errors attempting to parse DER private key:\n1. %v\n2. %v\n3. %v", firstError, secondError, thirdError)
 }
 
 func ParsePEMKey(keyPem string) (crypto.Signer, BlockType, error) {
@@ -756,6 +789,29 @@ func CreateCertificateWithKeyGenerator(data *CreationBundle, randReader io.Reade
 	return createCertificate(data, randReader, keyGenerator)
 }
 
+// Set correct correct RSA sig algo
+func certTemplateSetSigAlgo(certTemplate *x509.Certificate, data *CreationBundle) {
+	if data.Params.UsePSS {
+		switch data.Params.SignatureBits {
+		case 256:
+			certTemplate.SignatureAlgorithm = x509.SHA256WithRSAPSS
+		case 384:
+			certTemplate.SignatureAlgorithm = x509.SHA384WithRSAPSS
+		case 512:
+			certTemplate.SignatureAlgorithm = x509.SHA512WithRSAPSS
+		}
+	} else {
+		switch data.Params.SignatureBits {
+		case 256:
+			certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
+		case 384:
+			certTemplate.SignatureAlgorithm = x509.SHA384WithRSA
+		case 512:
+			certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
+		}
+	}
+}
+
 func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGenerator KeyGenerator) (*ParsedCertBundle, error) {
 	var err error
 	result := &ParsedCertBundle{}
@@ -824,14 +880,7 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 	if data.SigningBundle != nil {
 		switch data.SigningBundle.PrivateKeyType {
 		case RSAPrivateKey:
-			switch data.Params.SignatureBits {
-			case 256:
-				certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
-			case 384:
-				certTemplate.SignatureAlgorithm = x509.SHA384WithRSA
-			case 512:
-				certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
-			}
+			certTemplateSetSigAlgo(certTemplate, data)
 		case Ed25519PrivateKey:
 			certTemplate.SignatureAlgorithm = x509.PureEd25519
 		case ECPrivateKey:
@@ -853,14 +902,7 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 
 		switch data.Params.KeyType {
 		case "rsa":
-			switch data.Params.SignatureBits {
-			case 256:
-				certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
-			case 384:
-				certTemplate.SignatureAlgorithm = x509.SHA384WithRSA
-			case 512:
-				certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
-			}
+			certTemplateSetSigAlgo(certTemplate, data)
 		case "ed25519":
 			certTemplate.SignatureAlgorithm = x509.PureEd25519
 		case "ec":
@@ -1066,7 +1108,7 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		return nil, err
 	}
 
-	subjKeyID, err := getSubjectKeyID(data.CSR.PublicKey)
+	subjKeyID, err := getSubjectKeyIDFromBundle(data)
 	if err != nil {
 		return nil, err
 	}
@@ -1087,14 +1129,7 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 
 	switch data.SigningBundle.PrivateKeyType {
 	case RSAPrivateKey:
-		switch data.Params.SignatureBits {
-		case 256:
-			certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
-		case 384:
-			certTemplate.SignatureAlgorithm = x509.SHA384WithRSA
-		case 512:
-			certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
-		}
+		certTemplateSetSigAlgo(certTemplate, data)
 	case ECPrivateKey:
 		switch data.Params.SignatureBits {
 		case 256:
@@ -1265,4 +1300,27 @@ func CreateKeyBundleWithKeyGenerator(keyType string, keyBits int, randReader io.
 		return result, err
 	}
 	return result, nil
+}
+
+// CreateDeltaCRLIndicatorExt allows creating correctly formed delta CRLs
+// that point back to the last complete CRL that they're based on.
+func CreateDeltaCRLIndicatorExt(completeCRLNumber int64) (pkix.Extension, error) {
+	bigNum := big.NewInt(completeCRLNumber)
+	bigNumValue, err := asn1.Marshal(bigNum)
+	if err != nil {
+		return pkix.Extension{}, fmt.Errorf("unable to marshal complete CRL number (%v): %v", completeCRLNumber, err)
+	}
+	return pkix.Extension{
+		Id: DeltaCRLIndicatorOID,
+		// > When a conforming CRL issuer generates a delta CRL, the delta
+		// > CRL MUST include a critical delta CRL indicator extension.
+		Critical: true,
+		// This extension only includes the complete CRL number:
+		//
+		// > BaseCRLNumber ::= CRLNumber
+		//
+		// But, this needs to be encoded as a big number for encoding/asn1
+		// to work properly.
+		Value: bigNumValue,
+	}, nil
 }

@@ -118,10 +118,12 @@ The OpenLDAP Secret Engine supports three different schemas: `openldap` (default
 #### OpenLDAP
 
 By default the OpenLDAP Secret Engine assumes the entry password is stored in `userPassword`.
-The following object classes provide `userPassword`:
+There are many object classes that provide `userPassword` including for example:
 
 - `organization`
 - `organizationalUnit`
+- `organizationalRole`
+- `inetOrgPerson`
 - `person`
 - `posixAccount`
 

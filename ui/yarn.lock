@@ -9081,13 +9081,6 @@ ember-inflector@4.0.2, "ember-inflector@^2.0.0 || ^3.0.0 || ^4.0.2", ember-infle
   dependencies:
     ember-cli-babel "^7.26.5"
 
-ember-link-action@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/ember-link-action/-/ember-link-action-1.0.0.tgz#54894ec3debe3fdd9db96786f96c19b00ddbbd28"
-  integrity sha512-S6ZiD+P4sb+NqNqbx2iAbNMjmcibdaXL9Fu0Gp/RmMJUBgk/9ejYbCzPaJbUD7QrkQkwVLYaBdDulmdEwXhTSA==
-  dependencies:
-    ember-cli-babel "^7.7.3"
-
 ember-load-initializers@^2.1.2:
   version "2.1.2"
   resolved "https://registry.yarnpkg.com/ember-load-initializers/-/ember-load-initializers-2.1.2.tgz#8a47a656c1f64f9b10cecdb4e22a9d52ad9c7efa"

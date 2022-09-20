@@ -21,6 +21,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/hashicorp/vault/helper/versions"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/hashicorp/errwrap"
@@ -29,6 +30,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -38,6 +40,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
@@ -82,7 +85,8 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	}
 
 	b.Backend = &framework.Backend{
-		Help: strings.TrimSpace(sysHelpRoot),
+		RunningVersion: versions.DefaultBuiltinVersion,
+		Help:           strings.TrimSpace(sysHelpRoot),
 
 		PathsSpecial: &logical.Paths{
 			Root: []string{
@@ -399,11 +403,13 @@ func (b *SystemBackend) handlePluginCatalogTypedList(ctx context.Context, req *l
 	if err != nil {
 		return nil, err
 	}
+	sort.Strings(plugins)
 	return logical.ListResponse(plugins), nil
 }
 
-func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	pluginsByType := make(map[string]interface{})
+func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	data := make(map[string]interface{})
+	var versionedPlugins []pluginutil.VersionedPlugin
 	for _, pluginType := range consts.PluginTypes {
 		plugins, err := b.Core.pluginCatalog.List(ctx, pluginType)
 		if err != nil {
@@ -411,15 +417,47 @@ func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, req 
 		}
 		if len(plugins) > 0 {
 			sort.Strings(plugins)
-			pluginsByType[pluginType.String()] = plugins
+			data[pluginType.String()] = plugins
 		}
+
+		versioned, err := b.Core.pluginCatalog.ListVersionedPlugins(ctx, pluginType)
+		if err != nil {
+			return nil, err
+		}
+
+		// Sort for consistent ordering
+		sortVersionedPlugins(versionedPlugins)
+
+		versionedPlugins = append(versionedPlugins, versioned...)
 	}
+
+	if len(versionedPlugins) != 0 {
+		data["detailed"] = versionedPlugins
+	}
+
 	return &logical.Response{
-		Data: pluginsByType,
+		Data: data,
 	}, nil
 }
 
-func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func sortVersionedPlugins(versionedPlugins []pluginutil.VersionedPlugin) {
+	sort.SliceStable(versionedPlugins, func(i, j int) bool {
+		left, right := versionedPlugins[i], versionedPlugins[j]
+		if left.Type != right.Type {
+			return left.Type < right.Type
+		}
+		if left.Name != right.Name {
+			return left.Name < right.Name
+		}
+		if left.Version != right.Version {
+			return right.SemanticVersion.GreaterThan(left.SemanticVersion)
+		}
+
+		return false
+	})
+}
+
+func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginName := d.Get("name").(string)
 	if pluginName == "" {
 		return logical.ErrorResponse("missing plugin name"), nil
@@ -434,6 +472,11 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logi
 	pluginType, err := consts.ParsePluginType(pluginTypeStr)
 	if err != nil {
 		return nil, err
+	}
+
+	pluginVersion, err := getVersion(d)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	sha256 := d.Get("sha256").(string)
@@ -472,7 +515,7 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logi
 		return logical.ErrorResponse("Could not decode SHA-256 value from Hex"), err
 	}
 
-	err = b.Core.pluginCatalog.Set(ctx, pluginName, pluginType, parts[0], args, env, sha256Bytes)
+	err = b.Core.pluginCatalog.Set(ctx, pluginName, pluginType, pluginVersion, parts[0], args, env, sha256Bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -480,7 +523,7 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, req *logi
 	return nil, nil
 }
 
-func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginName := d.Get("name").(string)
 	if pluginName == "" {
 		return logical.ErrorResponse("missing plugin name"), nil
@@ -501,7 +544,12 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, req *logica
 		return nil, err
 	}
 
-	plugin, err := b.Core.pluginCatalog.Get(ctx, pluginName, pluginType)
+	pluginVersion, err := getVersion(d)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	plugin, err := b.Core.pluginCatalog.Get(ctx, pluginName, pluginType, pluginVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -523,6 +571,12 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, req *logica
 		"command": command,
 		"sha256":  hex.EncodeToString(plugin.Sha256),
 		"builtin": plugin.Builtin,
+		"version": plugin.Version,
+	}
+
+	if plugin.Builtin {
+		status, _ := b.Core.builtinRegistry.DeprecationStatus(plugin.Name, plugin.Type)
+		data["deprecation_status"] = status.String()
 	}
 
 	return &logical.Response{
@@ -530,10 +584,15 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, req *logica
 	}, nil
 }
 
-func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginName := d.Get("name").(string)
 	if pluginName == "" {
 		return logical.ErrorResponse("missing plugin name"), nil
+	}
+
+	pluginVersion, err := getVersion(d)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	var resp *logical.Response
@@ -552,11 +611,27 @@ func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, req *logi
 	if err != nil {
 		return nil, err
 	}
-	if err := b.Core.pluginCatalog.Delete(ctx, pluginName, pluginType); err != nil {
+	if err := b.Core.pluginCatalog.Delete(ctx, pluginName, pluginType, pluginVersion); err != nil {
 		return nil, err
 	}
 
 	return resp, nil
+}
+
+func getVersion(d *framework.FieldData) (string, error) {
+	version := d.Get("version").(string)
+	if version != "" {
+		semanticVersion, err := semver.NewSemver(version)
+		if err != nil {
+			return "", fmt.Errorf("version %q is not a valid semantic version: %w", version, err)
+		}
+
+		// Canonicalize the version string.
+		// Add the 'v' back in, since semantic version strips it out, and we want to be consistent with internal plugins.
+		version = "v" + semanticVersion.String()
+	}
+
+	return version, nil
 }
 
 func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -811,7 +886,7 @@ func (b *SystemBackend) handleRekeyDeleteRecovery(ctx context.Context, req *logi
 	return b.handleRekeyDelete(ctx, req, data, true)
 }
 
-func mountInfo(entry *MountEntry) map[string]interface{} {
+func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[string]interface{} {
 	info := map[string]interface{}{
 		"type":                    entry.Type,
 		"description":             entry.Description,
@@ -821,6 +896,9 @@ func mountInfo(entry *MountEntry) map[string]interface{} {
 		"external_entropy_access": entry.ExternalEntropyAccess,
 		"options":                 entry.Options,
 		"uuid":                    entry.UUID,
+		"plugin_version":          entry.Version,
+		"running_plugin_version":  entry.RunningVersion,
+		"running_sha256":          entry.RunningSha256,
 	}
 	entryConfig := map[string]interface{}{
 		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
@@ -851,6 +929,11 @@ func mountInfo(entry *MountEntry) map[string]interface{} {
 		entryConfig["token_type"] = entry.Config.TokenType.String()
 	}
 
+	// Add deprecation status only if it exists
+	builtinType := b.Core.builtinTypeFromMountEntry(ctx, entry)
+	if status, ok := b.Core.builtinRegistry.DeprecationStatus(entry.Type, builtinType); ok {
+		info["deprecation_status"] = status.String()
+	}
 	info["config"] = entryConfig
 
 	return info
@@ -885,7 +968,8 @@ func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Reque
 		}
 
 		// Populate mount info
-		info := mountInfo(entry)
+		info := b.mountInfo(ctx, entry)
+
 		resp.Data[entry.Path] = info
 	}
 
@@ -914,6 +998,14 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	sealWrap := data.Get("seal_wrap").(bool)
 	externalEntropyAccess := data.Get("external_entropy_access").(bool)
 	options := data.Get("options").(map[string]string)
+	version := data.Get("plugin_version").(string)
+	if version != "" {
+		v, err := semver.NewSemver(version)
+		if err != nil {
+			return nil, err
+		}
+		version = "v" + v.String()
+	}
 
 	var config MountConfig
 	var apiConfig APIMountConfig
@@ -1056,6 +1148,13 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		SealWrap:              sealWrap,
 		ExternalEntropyAccess: externalEntropyAccess,
 		Options:               options,
+		Version:               version,
+	}
+
+	// Detect and handle deprecated secrets engines
+	resp, err := b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeSecrets)
+	if err != nil {
+		return handleError(err)
 	}
 
 	// Attempt mount
@@ -1064,7 +1163,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		return handleError(err)
 	}
 
-	return nil, nil
+	return resp, nil
 }
 
 func (b *SystemBackend) handleReadMount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -1078,7 +1177,7 @@ func (b *SystemBackend) handleReadMount(ctx context.Context, req *logical.Reques
 	}
 
 	return &logical.Response{
-		Data: mountInfo(entry),
+		Data: b.mountInfo(ctx, entry),
 	}, nil
 }
 
@@ -2068,7 +2167,7 @@ func (b *SystemBackend) handleAuthTable(ctx context.Context, req *logical.Reques
 			continue
 		}
 
-		info := mountInfo(entry)
+		info := b.mountInfo(ctx, entry)
 		resp.Data[entry.Path] = info
 	}
 
@@ -2102,7 +2201,7 @@ func (b *SystemBackend) handleReadAuth(ctx context.Context, req *logical.Request
 		}
 
 		return &logical.Response{
-			Data: mountInfo(entry),
+			Data: b.mountInfo(ctx, entry),
 		}, nil
 	}
 
@@ -2156,6 +2255,14 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	sealWrap := data.Get("seal_wrap").(bool)
 	externalEntropyAccess := data.Get("external_entropy_access").(bool)
 	options := data.Get("options").(map[string]string)
+	version := data.Get("plugin_version").(string)
+	if version != "" {
+		v, err := semver.NewSemver(version)
+		if err != nil {
+			return nil, err
+		}
+		version = "v" + v.String()
+	}
 
 	var config MountConfig
 	var apiConfig APIMountConfig
@@ -2287,6 +2394,12 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		SealWrap:              sealWrap,
 		ExternalEntropyAccess: externalEntropyAccess,
 		Options:               options,
+		Version:               version,
+	}
+
+	resp, err := b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeCredential)
+	if err != nil {
+		return handleError(err)
 	}
 
 	// Attempt enabling
@@ -2294,7 +2407,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		b.Backend.Logger().Error("error occurred during enable credential", "path", me.Path, "error", err)
 		return handleError(err)
 	}
-	return nil, nil
+	return resp, nil
 }
 
 // handleDisableAuth is used to disable a credential backend
@@ -3759,7 +3872,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		if ns.ID == entry.NamespaceID && hasAccess(ctx, entry) {
 			if isAuthed {
 				// If this is an authed request return all the mount info
-				secretMounts[entry.Path] = mountInfo(entry)
+				secretMounts[entry.Path] = b.mountInfo(ctx, entry)
 			} else {
 				secretMounts[entry.Path] = map[string]interface{}{
 					"type":        entry.Type,
@@ -3786,7 +3899,7 @@ func (b *SystemBackend) pathInternalUIMountsRead(ctx context.Context, req *logic
 		if ns.ID == entry.NamespaceID && hasAccess(ctx, entry) {
 			if isAuthed {
 				// If this is an authed request return all the mount info
-				authMounts[entry.Path] = mountInfo(entry)
+				authMounts[entry.Path] = b.mountInfo(ctx, entry)
 			} else {
 				authMounts[entry.Path] = map[string]interface{}{
 					"type":        entry.Type,
@@ -3844,7 +3957,7 @@ func (b *SystemBackend) pathInternalUIMountRead(ctx context.Context, req *logica
 		return errResp, logical.ErrPermissionDenied
 	}
 	resp := &logical.Response{
-		Data: mountInfo(me),
+		Data: b.mountInfo(ctx, me),
 	}
 	resp.Data["path"] = me.Path
 
@@ -4145,20 +4258,22 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 }
 
 type SealStatusResponse struct {
-	Type         string `json:"type"`
-	Initialized  bool   `json:"initialized"`
-	Sealed       bool   `json:"sealed"`
-	T            int    `json:"t"`
-	N            int    `json:"n"`
-	Progress     int    `json:"progress"`
-	Nonce        string `json:"nonce"`
-	Version      string `json:"version"`
-	BuildDate    string `json:"build_date"`
-	Migration    bool   `json:"migration"`
-	ClusterName  string `json:"cluster_name,omitempty"`
-	ClusterID    string `json:"cluster_id,omitempty"`
-	RecoverySeal bool   `json:"recovery_seal"`
-	StorageType  string `json:"storage_type,omitempty"`
+	Type              string `json:"type"`
+	Initialized       bool   `json:"initialized"`
+	Sealed            bool   `json:"sealed"`
+	T                 int    `json:"t"`
+	N                 int    `json:"n"`
+	Progress          int    `json:"progress"`
+	Nonce             string `json:"nonce"`
+	Version           string `json:"version"`
+	BuildDate         string `json:"build_date"`
+	Migration         bool   `json:"migration"`
+	ClusterName       string `json:"cluster_name,omitempty"`
+	ClusterID         string `json:"cluster_id,omitempty"`
+	RecoverySeal      bool   `json:"recovery_seal"`
+	StorageType       string `json:"storage_type,omitempty"`
+	HCPLinkStatus     string `json:"hcp_link_status,omitempty"`
+	HCPLinkResourceID string `json:"hcp_link_resource_ID,omitempty"`
 }
 
 func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error) {
@@ -4179,16 +4294,25 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		return nil, err
 	}
 
+	hcpLinkStatus, resourceIDonHCP := core.GetHCPLinkStatus()
+
 	if sealConfig == nil {
-		return &SealStatusResponse{
-			Type:         core.SealAccess().BarrierType(),
+		s := &SealStatusResponse{
+			Type:         core.SealAccess().BarrierType().String(),
 			Initialized:  initialized,
 			Sealed:       true,
 			RecoverySeal: core.SealAccess().RecoveryKeySupported(),
 			StorageType:  core.StorageType(),
 			Version:      version.GetVersion().VersionNumber(),
 			BuildDate:    version.BuildDate,
-		}, nil
+		}
+
+		if resourceIDonHCP != "" {
+			s.HCPLinkStatus = hcpLinkStatus
+			s.HCPLinkResourceID = resourceIDonHCP
+		}
+
+		return s, nil
 	}
 
 	// Fetch the local cluster name and identifier
@@ -4207,7 +4331,7 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 
 	progress, nonce := core.SecretProgress()
 
-	return &SealStatusResponse{
+	s := &SealStatusResponse{
 		Type:         sealConfig.Type,
 		Initialized:  initialized,
 		Sealed:       sealed,
@@ -4222,7 +4346,14 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		ClusterID:    clusterID,
 		RecoverySeal: core.SealAccess().RecoveryKeySupported(),
 		StorageType:  core.StorageType(),
-	}, nil
+	}
+
+	if resourceIDonHCP != "" {
+		s.HCPLinkStatus = hcpLinkStatus
+		s.HCPLinkResourceID = resourceIDonHCP
+	}
+
+	return s, nil
 }
 
 type LeaderResponse struct {
@@ -5219,6 +5350,10 @@ plugin directory.`,
 	"plugin-catalog_env": {
 		`The environment variables passed to plugin command.
 Each entry is of the form "key=value".`,
+		"",
+	},
+	"plugin-catalog_version": {
+		"The semantic version of the plugin to use.",
 		"",
 	},
 	"leases": {

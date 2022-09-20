@@ -553,7 +553,7 @@ func expandPattern(pattern string) []string {
 	if start != -1 && end != -1 && end > start {
 		regexToRemove = base[start+1 : end]
 	}
-	pattern = strings.Replace(pattern, regexToRemove, "", -1)
+	pattern = strings.ReplaceAll(pattern, regexToRemove, "")
 
 	// Simplify named fields that have limited options, e.g. (?P<foo>a|b|c) -> (<P<foo>.+)
 	pattern = altFieldsGroupRe.ReplaceAllStringFunc(pattern, func(s string) string {
@@ -734,7 +734,8 @@ func cleanResponse(resp *logical.Response) *cleanedResponse {
 // /sys/tools/random/{urlbytes} -> postSysToolsRandomUrlbytes
 //
 // In the unlikely case of a duplicate ids, a numeric suffix is added:
-//   postSysToolsRandomUrlbytes_2
+//
+//	postSysToolsRandomUrlbytes_2
 //
 // An optional user-provided suffix ("context") may also be appended.
 func (d *OASDocument) CreateOperationIDs(context string) {
@@ -767,7 +768,7 @@ func (d *OASDocument) CreateOperationIDs(context string) {
 			// Space-split on non-words, title case everything, recombine
 			opID := nonWordRe.ReplaceAllString(strings.ToLower(path), " ")
 			opID = strings.Title(opID)
-			opID = method + strings.Replace(opID, " ", "", -1)
+			opID = method + strings.ReplaceAll(opID, " ", "")
 
 			// deduplicate operationIds. This is a safeguard, since generated IDs should
 			// already be unique given our current path naming conventions.

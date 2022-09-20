@@ -25,8 +25,11 @@ func TestCassandraBackend(t *testing.T) {
 	// Run vault tests
 	logger := logging.NewVaultLogger(log.Debug)
 	b, err := NewCassandraBackend(map[string]string{
-		"hosts":            host.ConnectionURL(),
-		"protocol_version": "3",
+		"hosts":                       host.ConnectionURL(),
+		"protocol_version":            "3",
+		"connection_timeout":          "5",
+		"initial_connection_timeout":  "5",
+		"simple_retry_policy_retries": "3",
 	}, logger)
 	if err != nil {
 		t.Fatalf("Failed to create new backend: %v", err)

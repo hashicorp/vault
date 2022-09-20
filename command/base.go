@@ -549,6 +549,7 @@ type FlagSets struct {
 	mainSet     *flag.FlagSet
 	hiddens     map[string]struct{}
 	completions complete.Flags
+	ui          cli.Ui
 }
 
 // NewFlagSets creates a new flag sets.
@@ -564,6 +565,7 @@ func NewFlagSets(ui cli.Ui) *FlagSets {
 		mainSet:     mainSet,
 		hiddens:     make(map[string]struct{}),
 		completions: complete.Flags{},
+		ui:          ui,
 	}
 }
 
@@ -582,8 +584,16 @@ func (f *FlagSets) Completions() complete.Flags {
 }
 
 // Parse parses the given flags, returning any errors.
+// Warnings, if any, regarding the arguments format are sent to stdout
 func (f *FlagSets) Parse(args []string) error {
-	return f.mainSet.Parse(args)
+	err := f.mainSet.Parse(args)
+
+	warnings := generateFlagWarnings(f.Args())
+	if warnings != "" && Format(f.ui) == "table" {
+		f.ui.Warn(warnings)
+	}
+
+	return err
 }
 
 // Parsed reports whether the command-line flags have been parsed.
@@ -603,10 +613,10 @@ func (f *FlagSets) Visit(fn func(*flag.Flag)) {
 }
 
 // Help builds custom help for this command, grouping by flag set.
-func (fs *FlagSets) Help() string {
+func (f *FlagSets) Help() string {
 	var out bytes.Buffer
 
-	for _, set := range fs.flagSets {
+	for _, set := range f.flagSets {
 		printFlagTitle(&out, set.name+":")
 		set.VisitAll(func(f *flag.Flag) {
 			// Skip any hidden flags

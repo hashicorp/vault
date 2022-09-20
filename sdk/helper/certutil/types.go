@@ -710,6 +710,7 @@ type CAInfoBundle struct {
 	ParsedCertBundle
 	URLs                 *URLEntries
 	LeafNotAfterBehavior NotAfterBehavior
+	RevocationSigAlg     x509.SignatureAlgorithm
 }
 
 func (b *CAInfoBundle) GetCAChain() []*CertBlock {
@@ -782,6 +783,7 @@ type CreationParameters struct {
 	PolicyIdentifiers             []string
 	BasicConstraintsValidForNonCA bool
 	SignatureBits                 int
+	UsePSS                        bool
 	ForceAppendCaChain            bool
 
 	// Only used when signing a CA cert
@@ -796,6 +798,9 @@ type CreationParameters struct {
 
 	// The duration the certificate will use NotBefore
 	NotBeforeDuration time.Duration
+
+	// The explicit SKID to use; especially useful for cross-signing.
+	SKID []byte
 }
 
 type CreationBundle struct {

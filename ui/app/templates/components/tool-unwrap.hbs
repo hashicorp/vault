@@ -86,7 +86,10 @@
     <NamespaceReminder @mode="perform" @noun={{@selectedAction}} />
     <MessageError @errors={{@errors}} />
     <div class="field">
-      <label for="token" class="is-label">Wrapping token</label>
+      <label for="token" class="is-label">Wrapped token</label>
+      <div class="has-text-grey is-size-8 has-bottom-margin-xs">
+        Enter your wrapped token here to unwrap it and return its original value.
+      </div>
       <div class="control">
         <Input
           @value={{@token}}

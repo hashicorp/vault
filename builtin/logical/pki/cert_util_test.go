@@ -12,6 +12,7 @@ import (
 )
 
 func TestPki_FetchCertBySerial(t *testing.T) {
+	t.Parallel()
 	b, storage := createBackendWithStorage(t)
 
 	cases := map[string]struct {
@@ -91,6 +92,7 @@ func TestPki_FetchCertBySerial(t *testing.T) {
 // Demonstrate that multiple OUs in the name are handled in an
 // order-preserving way.
 func TestPki_MultipleOUs(t *testing.T) {
+	t.Parallel()
 	var b backend
 	fields := addCACommonFields(map[string]*framework.FieldSchema{})
 
@@ -108,7 +110,7 @@ func TestPki_MultipleOUs(t *testing.T) {
 			OU:     []string{"Z", "E", "V"},
 		},
 	}
-	cb, err := generateCreationBundle(&b, input, nil, nil)
+	cb, _, err := generateCreationBundle(&b, input, nil, nil)
 	if err != nil {
 		t.Fatalf("Error: %v", err)
 	}
@@ -122,6 +124,7 @@ func TestPki_MultipleOUs(t *testing.T) {
 }
 
 func TestPki_PermitFQDNs(t *testing.T) {
+	t.Parallel()
 	var b backend
 	fields := addCACommonFields(map[string]*framework.FieldSchema{})
 
@@ -206,8 +209,10 @@ func TestPki_PermitFQDNs(t *testing.T) {
 	}
 
 	for name, testCase := range cases {
+		name := name
+		testCase := testCase
 		t.Run(name, func(t *testing.T) {
-			cb, err := generateCreationBundle(&b, testCase.input, nil, nil)
+			cb, _, err := generateCreationBundle(&b, testCase.input, nil, nil)
 			if err != nil {
 				t.Fatalf("Error: %v", err)
 			}

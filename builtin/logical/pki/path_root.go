@@ -146,7 +146,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		apiData: data,
 		role:    role,
 	}
-	parsedBundle, err := generateCert(sc, input, nil, true, b.Backend.GetRandomReader())
+	parsedBundle, warnings, err := generateCert(sc, input, nil, true, b.Backend.GetRandomReader())
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -185,7 +185,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		// If the operator hasn't configured any of the URLs prior to
 		// generating this issuer, we should add a warning to the response,
 		// informing them they might want to do so prior to issuing leaves.
-		resp.AddWarning("This mount hasn't configured any authority access information fields; this may make it harder for systems to find missing certificates in the chain or to validate revocation status of certificates. Consider updating /config/urls with this information.")
+		resp.AddWarning("This mount hasn't configured any authority information access (AIA) fields; this may make it harder for systems to find missing certificates in the chain or to validate revocation status of certificates. Consider updating /config/urls or the newly generated issuer with this information.")
 	}
 
 	switch format {
@@ -236,6 +236,25 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	resp.Data["key_id"] = myKey.ID
 	resp.Data["key_name"] = myKey.Name
 
+	// Update the issuer to reflect the PSS status here for revocation; this
+	// allows CRL building to succeed if the root is using a managed key with
+	// only PSS support.
+	if input.role.KeyType == "rsa" && input.role.UsePSS {
+		// The one time that it is safe (and good) to copy the
+		// SignatureAlgorithm field off the certificate (for the purposes of
+		// detecting PSS support) is when we've freshly generated it AND it
+		// is a root (exactly this endpoint).
+		//
+		// For intermediates, this doesn't hold (not this endpoint) as that
+		// reflects the parent key's preferences. For imports, this doesn't
+		// hold as the old system might've allowed other signature types that
+		// the new system (whether Vault or a managed key) doesn't.
+		myIssuer.RevocationSigAlg = parsedBundle.Certificate.SignatureAlgorithm
+		if err := sc.writeIssuer(myIssuer); err != nil {
+			return nil, fmt.Errorf("unable to store PSS-updated issuer: %v", err)
+		}
+	}
+
 	// Also store it as just the certificate identified by serial number, so it
 	// can be revoked
 	err = req.Storage.Put(ctx, &logical.StorageEntry{
@@ -255,6 +274,8 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	if parsedBundle.Certificate.MaxPathLen == 0 {
 		resp.AddWarning("Max path length of the generated certificate is zero. This certificate cannot be used to issue intermediate CA certificates.")
 	}
+
+	resp = addWarnings(resp, warnings)
 
 	return resp, nil
 }
@@ -290,6 +311,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		EnforceHostnames:          false,
 		KeyType:                   "any",
 		SignatureBits:             data.Get("signature_bits").(int),
+		UsePSS:                    data.Get("use_pss").(bool),
 		AllowedOtherSANs:          []string{"*"},
 		AllowedSerialNumbers:      []string{"*"},
 		AllowedURISANs:            []string{"*"},
@@ -335,7 +357,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		apiData: data,
 		role:    role,
 	}
-	parsedBundle, err := signCert(b, input, signingBundle, true, useCSRValues)
+	parsedBundle, warnings, err := signCert(b, input, signingBundle, true, useCSRValues)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -387,8 +409,8 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 	if len(parsedBundle.Certificate.OCSPServer) == 0 && len(parsedBundle.Certificate.IssuingCertificateURL) == 0 && len(parsedBundle.Certificate.CRLDistributionPoints) == 0 {
 		// If the operator hasn't configured any of the URLs prior to
 		// generating this issuer, we should add a warning to the response,
-		// informing them they might want to do so and re-generate the issuer.
-		resp.AddWarning("This mount hasn't configured any authority access information fields; this may make it harder for systems to find missing certificates in the chain or to validate revocation status of certificates. Consider updating /config/urls with this information.")
+		// informing them they might want to do so prior to issuing leaves.
+		resp.AddWarning("This mount hasn't configured any authority information access (AIA) fields; this may make it harder for systems to find missing certificates in the chain or to validate revocation status of certificates. Consider updating /config/urls or the newly generated issuer with this information.")
 	}
 
 	caChain := append([]string{cb.Certificate}, cb.CAChain...)
@@ -430,6 +452,8 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 	if parsedBundle.Certificate.MaxPathLen == 0 {
 		resp.AddWarning("Max path length of the signed certificate is zero. This certificate cannot be used to issue intermediate CA certificates.")
 	}
+
+	resp = addWarnings(resp, warnings)
 
 	return resp, nil
 }

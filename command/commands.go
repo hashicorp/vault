@@ -347,6 +347,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"namespace patch": func() (cli.Command, error) {
+			return &NamespacePatchCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"namespace delete": func() (cli.Command, error) {
 			return &NamespaceDeleteCommand{
 				BaseCommand: getBaseCommand(),
