@@ -5600,6 +5600,7 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 	}
 
 	return
+}
 
 // Verify that our default values are consistent when creating an issuer and when we do an
 // empty POST update to it. This will hopefully identify if we have different default values
