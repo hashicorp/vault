@@ -17,16 +17,27 @@ module('Integration | Component | link-status', function (hooks) {
     this.statuses = statuses;
   });
 
+  test('it does not render banner or error when status is not present', async function (assert) {
+    await render(hbs`<LinkStatus @status={{undefined}} />`);
+
+    assert.dom('.navbar-status').doesNotExist('Banner is hidden for disconnected state');
+  });
+
+  test('it does not render banner if not enterprise version', async function (assert) {
+    this.owner.lookup('service:version').set('isEnterprise', false);
+
+    await render(hbs`<LinkStatus @status={{get this.statuses 0}} />`);
+
+    assert.dom('.navbar-status').doesNotExist('Banner is hidden for disconnected state');
+  });
+
   test('it renders connected status', async function (assert) {
     await render(hbs`<LinkStatus @status={{get this.statuses 0}} />`);
 
     assert.dom('.navbar-status').hasClass('connected', 'Correct class renders for connected state');
     assert
       .dom('[data-test-link-status]')
-      .hasText(
-        'This self-managed Vault is linked to the HashiCorp Cloud Platform.',
-        'Copy renders for connected state'
-      );
+      .hasText('This self-managed Vault is linked to HCP.', 'Copy renders for connected state');
     assert
       .dom('[data-test-link-status] a')
       .hasAttribute('href', 'https://portal.cloud.hashicorp.com/sign-in', 'HCP sign in link renders');
@@ -45,7 +56,7 @@ module('Integration | Component | link-status', function (hooks) {
     assert
       .dom('[data-test-link-status]')
       .hasText(
-        `Vault has been disconnected from the Hashicorp Cloud Platform since ${timestamp}. Error: some other error other than unknown`,
+        `Vault has been disconnected from HCP since ${timestamp}. Error: some other error other than unknown`,
         'Copy renders for disconnected error state'
       );
   });
@@ -59,7 +70,7 @@ module('Integration | Component | link-status', function (hooks) {
     assert
       .dom('[data-test-link-status]')
       .hasText(
-        `Vault has been trying to connect to the Hashicorp Cloud Platform since ${timestamp}, but the Scada provider is down. Vault will try again soon.`,
+        `Vault has been trying to connect to HCP since ${timestamp}, but HCP is not reachable. Vault will try again soon.`,
         'Copy renders for connection refused error state'
       );
   });
@@ -71,7 +82,7 @@ module('Integration | Component | link-status', function (hooks) {
     assert
       .dom('[data-test-link-status]')
       .hasText(
-        `Vault tried connecting to the Hashicorp Cloud Platform, but the Resource ID is invalid. Check your resource ID. ${timestamp}`,
+        `Vault tried connecting to HCP, but the Resource ID is invalid. Check your resource ID. ${timestamp}`,
         'Copy renders for resource id error state'
       );
   });
@@ -83,7 +94,7 @@ module('Integration | Component | link-status', function (hooks) {
     assert
       .dom('[data-test-link-status]')
       .hasText(
-        `Vault tried connecting to the Hashicorp Cloud Platform, but the authorization information is wrong. Update it and try again. ${timestamp}`,
+        `Vault tried connecting to HCP, but the authorization information is wrong. Update it and try again. ${timestamp}`,
         'Copy renders for unauthorized error state'
       );
   });
@@ -95,7 +106,21 @@ module('Integration | Component | link-status', function (hooks) {
     assert
       .dom('[data-test-link-status]')
       .hasText(
-        `Vault has been trying to connect to the Hashicorp Cloud Platform since ${timestamp}. Vault will try again soon. Error: connection error we are unaware of`,
+        `Vault has been trying to connect to HCP since ${timestamp}. Vault will try again soon. Error: connection error we are unaware of`,
+        'Copy renders for unknown error state'
+      );
+  });
+
+  // connecting state should always be returned with timestamp and error
+  // this case came up in manual testing and should be fixed on the backend but additional checks were added just in case
+  test('it renders generic message for connecting state with no timestamp or error', async function (assert) {
+    await render(hbs`<LinkStatus @status="connecting" />`);
+
+    assert.dom('.navbar-status').hasClass('warning', 'Correct class renders for unknown error state');
+    assert
+      .dom('[data-test-link-status]')
+      .hasText(
+        `Vault has been trying to connect to HCP. Vault will try again soon.`,
         'Copy renders for unknown error state'
       );
   });
