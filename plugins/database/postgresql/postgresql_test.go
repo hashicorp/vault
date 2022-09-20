@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
