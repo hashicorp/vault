@@ -7,14 +7,14 @@
 </Toolbar>
 
 {{#if (gt this.model.length 0)}}
-  {{#each this.model as |model|}}
-    <LinkedBlock class="list-item-row" @params={{array "roles.role.details" model.id}} @linkPrefix={{this.mountPoint}}>
+  {{#each this.model as |pkiRole|}}
+    <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiRole.id}} @linkPrefix={{this.mountPoint}}>
       <div class="level is-mobile">
         <div class="level-left">
           <div>
             <Icon @name="user" class="has-text-grey-light" />
             <span class="has-text-weight-semibold is-underline">
-              {{model.id}}
+              {{pkiRole.id}}
             </span>
           </div>
         </div>
@@ -24,12 +24,12 @@
               <nav class="menu">
                 <ul class="menu-list">
                   <li>
-                    <LinkTo @route="roles.role.details" @model={{model.id}}>
+                    <LinkTo @route="roles.role.details" @model={{pkiRole.id}}>
                       Details
                     </LinkTo>
                   </li>
                   <li>
-                    <LinkTo @route="roles.role.edit" @model={{model.id}}>
+                    <LinkTo @route="roles.role.edit" @model={{pkiRole.id}}>
                       Edit
                     </LinkTo>
                   </li>

@@ -30,6 +30,7 @@ export default buildRoutes(function () {
     });
   });
   this.route('certificates', function () {
+    this.route('index', { path: '/' });
     this.route('create');
     this.route('certificate', { path: '/:id' }, function () {
       this.route('details');

@@ -28,21 +28,21 @@
   </ToolbarActions>
 </Toolbar>
 {{#if (gt this.model.length 0)}}
-  {{#each this.model as |model|}}
-    <LinkedBlock class="list-item-row" @params={{array "roles.role.details" model.id}} @linkPrefix={{this.mountPoint}}>
+  {{#each this.model as |pkiIssuer|}}
+    <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiIssuer.id}} @linkPrefix={{this.mountPoint}}>
       <div class="level is-mobile">
         <div class="level-left">
           <div>
             <Icon @name="certificate" class="has-text-grey-light" />
             <span class="has-text-weight-semibold is-underline">
-              {{or model.issuerName model.id}}
+              {{or pkiIssuer.issuerName pkiIssuer.id}}
             </span>
             <div class="is-flex-row has-left-margin-l has-top-margin-xs">
-              {{#if model.isDefault}}
+              {{#if pkiIssuer.isDefault}}
                 <span class="tag has-text-grey-dark">default issuer</span>
               {{/if}}
-              {{#if model.issuerName}}
-                <span class="tag has-text-grey-dark">{{model.id}}</span>
+              {{#if pkiIssuer.issuerName}}
+                <span class="tag has-text-grey-dark">{{pkiIssuer.id}}</span>
               {{/if}}
             </div>
           </div>
@@ -53,12 +53,12 @@
               <nav class="menu">
                 <ul class="menu-list">
                   <li>
-                    <LinkTo @route="roles.role.details" @model={{model.id}}>
+                    <LinkTo @route="roles.role.details" @model={{pkiIssuer.id}}>
                       Details
                     </LinkTo>
                   </li>
                   <li>
-                    <LinkTo @route="roles.role.edit" @model={{model.id}}>
+                    <LinkTo @route="roles.role.edit" @model={{pkiIssuer.id}}>
                       Edit
                     </LinkTo>
                   </li>
