@@ -1,11 +1,13 @@
 package docker
 
 import (
+	"archive/tar"
 	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -446,4 +448,159 @@ func (d *Runner) RunCmdInBackground(ctx context.Context, container string, cmd [
 	}
 
 	return ret.ID, nil
+}
+
+// Mapping of path->contents
+type PathContents interface {
+	UpdateHeader(header *tar.Header) error
+	Get() ([]byte, error)
+}
+
+type FileContents struct {
+	Data []byte
+	Mode int64
+}
+
+func (b FileContents) UpdateHeader(header *tar.Header) error {
+	header.Mode = b.Mode
+	return nil
+}
+
+func (b FileContents) Get() ([]byte, error) {
+	return b.Data, nil
+}
+
+func PathContentsFromBytes(data []byte) PathContents {
+	return FileContents{
+		Data: data,
+		Mode: 0o644,
+	}
+}
+
+type BuildContext map[string]PathContents
+
+func NewBuildContext() BuildContext {
+	return BuildContext{}
+}
+
+func (ctx *BuildContext) ToTarball() (io.Reader, error) {
+	var err error
+	buffer := new(bytes.Buffer)
+	tarBuilder := tar.NewWriter(buffer)
+	defer tarBuilder.Close()
+
+	for filepath, contents := range *ctx {
+		fileHeader := &tar.Header{Name: filepath}
+		if contents == nil && !strings.HasSuffix(filepath, "/") {
+			return nil, fmt.Errorf("expected file path (%v) to have trailing / due to nil contents, indicating directory", filepath)
+		}
+
+		if err := contents.UpdateHeader(fileHeader); err != nil {
+			return nil, fmt.Errorf("failed to update tar header entry for %v: %v", filepath, err)
+		}
+
+		var rawContents []byte
+		if contents != nil {
+			rawContents, err = contents.Get()
+			if err != nil {
+				return nil, fmt.Errorf("failed to get file contents for %v: %v", filepath, err)
+			}
+
+			fileHeader.Size = int64(len(rawContents))
+		}
+
+		if err := tarBuilder.WriteHeader(fileHeader); err != nil {
+			return nil, fmt.Errorf("failed to write tar header entry for %v: %v", filepath, err)
+		}
+
+		if contents != nil {
+			if _, err := tarBuilder.Write(rawContents); err != nil {
+				return nil, fmt.Errorf("failed to write tar file entry for %v: %v", filepath, err)
+			}
+		}
+	}
+
+	return bytes.NewReader(buffer.Bytes()), nil
+}
+
+type BuildOpt interface {
+	Apply(cfg *types.ImageBuildOptions) error
+}
+
+type BuildRemove bool
+
+var _ BuildOpt = (*BuildRemove)(nil)
+
+func (u BuildRemove) Apply(cfg *types.ImageBuildOptions) error {
+	cfg.Remove = bool(u)
+	return nil
+}
+
+type BuildForceRemove bool
+
+var _ BuildOpt = (*BuildForceRemove)(nil)
+
+func (u BuildForceRemove) Apply(cfg *types.ImageBuildOptions) error {
+	cfg.ForceRemove = bool(u)
+	return nil
+}
+
+type BuildPullParent bool
+
+var _ BuildOpt = (*BuildPullParent)(nil)
+
+func (u BuildPullParent) Apply(cfg *types.ImageBuildOptions) error {
+	cfg.PullParent = bool(u)
+	return nil
+}
+
+type BuildArgs map[string]*string
+
+var _ BuildOpt = (*BuildArgs)(nil)
+
+func (u BuildArgs) Apply(cfg *types.ImageBuildOptions) error {
+	cfg.BuildArgs = u
+	return nil
+}
+
+type BuildTags []string
+
+var _ BuildOpt = (*BuildTags)(nil)
+
+func (u BuildTags) Apply(cfg *types.ImageBuildOptions) error {
+	cfg.Tags = u
+	return nil
+}
+
+const containerfilePath = "_containerfile"
+
+func (d *Runner) BuildImage(ctx context.Context, containerfile string, containerContext BuildContext, opts ...BuildOpt) ([]byte, error) {
+	var cfg types.ImageBuildOptions
+
+	// Build container context tarball, provisioning containerfile in.
+	containerContext[containerfilePath] = PathContentsFromBytes([]byte(containerfile))
+	tar, err := containerContext.ToTarball()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create build image context tarball: %v", err)
+	}
+	cfg.Dockerfile = "/" + containerfilePath
+
+	// Apply all given options
+	for index, opt := range opts {
+		if err := opt.Apply(&cfg); err != nil {
+			return nil, fmt.Errorf("failed to apply option (%d / %v): %v", index, opt, err)
+		}
+	}
+
+	resp, err := d.DockerAPI.ImageBuild(ctx, tar, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build image: %v", err)
+	}
+
+	output, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read image build output: %v", err)
+	}
+
+	return output, nil
 }
