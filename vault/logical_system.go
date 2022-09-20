@@ -896,10 +896,9 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[st
 		"external_entropy_access": entry.ExternalEntropyAccess,
 		"options":                 entry.Options,
 		"uuid":                    entry.UUID,
-		"version":                 entry.Version,
-		"sha":                     entry.Sha,
-		"running_version":         entry.RunningVersion,
-		"running_sha":             entry.RunningSha,
+		"plugin_version":          entry.Version,
+		"running_plugin_version":  entry.RunningVersion,
+		"running_sha256":          entry.RunningSha256,
 	}
 	entryConfig := map[string]interface{}{
 		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
@@ -1000,7 +999,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	externalEntropyAccess := data.Get("external_entropy_access").(bool)
 	options := data.Get("options").(map[string]string)
 	var version string
-	if pluginVersionRaw, ok := data.GetOk("version"); ok {
+	if pluginVersionRaw, ok := data.GetOk("plugin_version"); ok {
 		version = pluginVersionRaw.(string)
 	}
 
@@ -2348,7 +2347,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	externalEntropyAccess := data.Get("external_entropy_access").(bool)
 	options := data.Get("options").(map[string]string)
 	var version string
-	if pluginVersionRaw, ok := data.GetOk("version"); ok {
+	if pluginVersionRaw, ok := data.GetOk("plugin_version"); ok {
 		version = pluginVersionRaw.(string)
 	}
 

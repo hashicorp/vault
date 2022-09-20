@@ -1508,30 +1508,12 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 		return err
 	}
 
-	// Partition our txns into read and write. The read ones will get updated via the FSM to
-	// support undo logs. The write ones we process like normal.
-	readTxns := make([]*physical.TxnEntry, 0)
-	writeTxns := make([]*physical.TxnEntry, 0)
-
-	for _, txn := range txns {
-		if txn.Operation == physical.GetOperation {
-			readTxns = append(readTxns, txn)
-		} else {
-			writeTxns = append(writeTxns, txn)
-		}
-	}
-
-	if len(readTxns) > 0 {
-		err := b.fsm.Transaction(ctx, readTxns)
-		if err != nil {
-			return fmt.Errorf("error passing read transactions to the fsm: %w", err)
-		}
-	}
+	txnMap := make(map[string]*physical.TxnEntry)
 
 	command := &LogData{
-		Operations: make([]*LogOperation, len(writeTxns)),
+		Operations: make([]*LogOperation, len(txns)),
 	}
-	for i, txn := range writeTxns {
+	for i, txn := range txns {
 		op := &LogOperation{}
 		switch txn.Operation {
 		case physical.PutOperation:
@@ -1544,6 +1526,10 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 		case physical.DeleteOperation:
 			op.OpType = deleteOp
 			op.Key = txn.Entry.Key
+		case physical.GetOperation:
+			op.OpType = getOp
+			op.Key = txn.Entry.Key
+			txnMap[op.Key] = txn
 		default:
 			return fmt.Errorf("%q is not a supported transaction operation", txn.Operation)
 		}
@@ -1557,6 +1543,15 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 	b.l.RLock()
 	err := b.applyLog(ctx, command)
 	b.l.RUnlock()
+
+	// loop over results and update pointers to get operations
+	for _, logOp := range command.Operations {
+		if logOp.OpType == getOp {
+			if txn, found := txnMap[logOp.Key]; found {
+				txn.Entry.Value = logOp.Value
+			}
+		}
+	}
 
 	return err
 }
@@ -1622,8 +1617,31 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 		resp = chunkedSuccess.Response
 	}
 
-	if resp, ok := resp.(*FSMApplyResponse); !ok || !resp.Success {
+	fsmar, ok := resp.(*FSMApplyResponse)
+	if !ok || !fsmar.Success {
 		return errors.New("could not apply data")
+	}
+
+	// populate command with our results
+	if fsmar.EntrySlice == nil {
+		return errors.New("entries on FSM response were empty")
+	}
+
+	for i, logOp := range command.Operations {
+		if logOp.OpType == getOp {
+			fsmEntry := fsmar.EntrySlice[i]
+
+			// this should always be true because the entries in the slice were created in the same order as
+			// the command operations.
+			if logOp.Key == fsmEntry.Key {
+				if len(fsmEntry.Value) > 0 {
+					logOp.Value = fsmEntry.Value
+				}
+			} else {
+				// this shouldn't happen
+				return errors.New("entries in FSM response were out of order")
+			}
+		}
 	}
 
 	return nil

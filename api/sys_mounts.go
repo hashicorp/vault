@@ -247,7 +247,7 @@ type MountInput struct {
 	SealWrap              bool              `json:"seal_wrap" mapstructure:"seal_wrap"`
 	ExternalEntropyAccess bool              `json:"external_entropy_access" mapstructure:"external_entropy_access"`
 	Options               map[string]string `json:"options"`
-	Version               string            `json:"version,omitempty"`
+	PluginVersion         string            `json:"plugin_version,omitempty"`
 
 	// Deprecated: Newer server responses should be returning this information in the
 	// Type field (json: "type") instead.
@@ -282,10 +282,9 @@ type MountOutput struct {
 	Local                 bool              `json:"local"`
 	SealWrap              bool              `json:"seal_wrap" mapstructure:"seal_wrap"`
 	ExternalEntropyAccess bool              `json:"external_entropy_access" mapstructure:"external_entropy_access"`
-	Version               string            `json:"version"`
-	RunningVersion        string            `json:"running_version"`
-	Sha                   string            `json:"sha"`
-	RunningSha            string            `json:"running_sha"`
+	PluginVersion         string            `json:"plugin_version" mapstructure:"plugin_version"`
+	RunningVersion        string            `json:"running_plugin_version" mapstructure:"running_plugin_version"`
+	RunningSha256         string            `json:"running_sha256" mapstructure:"running_sha256"`
 	DeprecationStatus     string            `json:"deprecation_status" mapstructure:"deprecation_status"`
 }
 

@@ -122,7 +122,7 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 			}
 			// Ship barrier encryption counts if a perf standby or the active node
 			// on a performance secondary cluster
-			if c.perfStandby || c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) { // already have lock here, do not re-acquire
+			if c.perfStandby || c.IsPerfSecondary() { // already have lock here, do not re-acquire
 				err := syncBarrierEncryptionCounter(c)
 				if err != nil {
 					c.logger.Error("writing syncing encryption counters", "err", err)
