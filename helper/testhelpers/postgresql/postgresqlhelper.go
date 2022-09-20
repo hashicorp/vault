@@ -17,7 +17,7 @@ func PrepareTestContainer(t *testing.T, version string) (func(), string) {
 		"POSTGRES_DB=database",
 	}
 
-	_, cleanup, url, _ := prepareTestContainer(t, "postgres", "postgres", version, "secret", "database", true, false, false, env)
+	_, cleanup, url, _ := prepareTestContainer(t, "postgres", "postgres", version, "secret", true, false, false, env)
 
 	return cleanup, url
 }
@@ -28,28 +28,18 @@ func PrepareTestContainerWithPassword(t *testing.T, version, password string) (f
 		"POSTGRES_DB=database",
 	}
 
-	_, cleanup, url, _ := prepareTestContainer(t, "postgres", "postgres", version, password, "database", true, false, false, env)
+	_, cleanup, url, _ := prepareTestContainer(t, "postgres", "postgres", version, password, true, false, false, env)
 
 	return cleanup, url
 }
 
 func PrepareTestContainerRepmgr(t *testing.T, name, version string, envVars []string) (*docker.Runner, func(), string, string) {
-	return prepareTestContainer(t, name, "bitnami/postgresql-repmgr", version, "secret", "", false, true, true, envVars)
+	return prepareTestContainer(t, name, "bitnami/postgresql-repmgr", version, "secret", false, true, true, envVars)
 }
 
-func StopContainer(t *testing.T, ctx context.Context, runner *docker.Runner, containerID string) {
-	if err := runner.Stop(ctx, containerID); err != nil {
-		t.Fatalf("Could not stop docker Postgres: %s", err)
-	}
-}
-
-func RestartContainer(t *testing.T, ctx context.Context, runner *docker.Runner, containerID string) {
-	if err := runner.Restart(ctx, containerID); err != nil {
-		t.Fatalf("Could not restart docker Postgres: %s", err)
-	}
-}
-
-func prepareTestContainer(t *testing.T, name, repo, version, password, db string, addSuffix, forceLocalAddr, doNotAutoRemove bool, envVars []string) (*docker.Runner, func(), string, string) {
+func prepareTestContainer(t *testing.T, name, repo, version, password string,
+	addSuffix, forceLocalAddr, doNotAutoRemove bool, envVars []string,
+) (*docker.Runner, func(), string, string) {
 	if os.Getenv("PG_URL") != "" {
 		return nil, func() {}, "", os.Getenv("PG_URL")
 	}
@@ -103,5 +93,17 @@ func connectPostgres(password, repo string) docker.ServiceAdapter {
 			return nil, err
 		}
 		return docker.NewServiceURL(u), nil
+	}
+}
+
+func StopContainer(t *testing.T, ctx context.Context, runner *docker.Runner, containerID string) {
+	if err := runner.Stop(ctx, containerID); err != nil {
+		t.Fatalf("Could not stop docker Postgres: %s", err)
+	}
+}
+
+func RestartContainer(t *testing.T, ctx context.Context, runner *docker.Runner, containerID string) {
+	if err := runner.Restart(ctx, containerID); err != nil {
+		t.Fatalf("Could not restart docker Postgres: %s", err)
 	}
 }
