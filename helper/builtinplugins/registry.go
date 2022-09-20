@@ -13,6 +13,8 @@ import (
 	dbCouchbase "github.com/hashicorp/vault-plugin-database-couchbase"
 	dbElastic "github.com/hashicorp/vault-plugin-database-elasticsearch"
 	dbMongoAtlas "github.com/hashicorp/vault-plugin-database-mongodbatlas"
+	dbRedis "github.com/hashicorp/vault-plugin-database-redis"
+	dbRedisElastiCache "github.com/hashicorp/vault-plugin-database-redis-elasticache"
 	dbSnowflake "github.com/hashicorp/vault-plugin-database-snowflake"
 	logicalAd "github.com/hashicorp/vault-plugin-secrets-ad/plugin"
 	logicalAlicloud "github.com/hashicorp/vault-plugin-secrets-alicloud"
@@ -22,7 +24,7 @@ import (
 	logicalKube "github.com/hashicorp/vault-plugin-secrets-kubernetes"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	logicalMongoAtlas "github.com/hashicorp/vault-plugin-secrets-mongodbatlas"
-	logicalOpenLDAP "github.com/hashicorp/vault-plugin-secrets-openldap"
+	logicalLDAP "github.com/hashicorp/vault-plugin-secrets-openldap"
 	logicalTerraform "github.com/hashicorp/vault-plugin-secrets-terraform"
 	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
@@ -122,17 +124,19 @@ func newRegistry() *registry {
 			"mysql-rds-database-plugin":    {Factory: dbMysql.New(dbMysql.DefaultLegacyUserNameTemplate)},
 			"mysql-legacy-database-plugin": {Factory: dbMysql.New(dbMysql.DefaultLegacyUserNameTemplate)},
 
-			"cassandra-database-plugin":     {Factory: dbCass.New},
-			"couchbase-database-plugin":     {Factory: dbCouchbase.New},
-			"elasticsearch-database-plugin": {Factory: dbElastic.New},
-			"hana-database-plugin":          {Factory: dbHana.New},
-			"influxdb-database-plugin":      {Factory: dbInflux.New},
-			"mongodb-database-plugin":       {Factory: dbMongo.New},
-			"mongodbatlas-database-plugin":  {Factory: dbMongoAtlas.New},
-			"mssql-database-plugin":         {Factory: dbMssql.New},
-			"postgresql-database-plugin":    {Factory: dbPostgres.New},
-			"redshift-database-plugin":      {Factory: dbRedshift.New},
-			"snowflake-database-plugin":     {Factory: dbSnowflake.New},
+			"cassandra-database-plugin":         {Factory: dbCass.New},
+			"couchbase-database-plugin":         {Factory: dbCouchbase.New},
+			"elasticsearch-database-plugin":     {Factory: dbElastic.New},
+			"hana-database-plugin":              {Factory: dbHana.New},
+			"influxdb-database-plugin":          {Factory: dbInflux.New},
+			"mongodb-database-plugin":           {Factory: dbMongo.New},
+			"mongodbatlas-database-plugin":      {Factory: dbMongoAtlas.New},
+			"mssql-database-plugin":             {Factory: dbMssql.New},
+			"postgresql-database-plugin":        {Factory: dbPostgres.New},
+			"redshift-database-plugin":          {Factory: dbRedshift.New},
+			"redis-database-plugin":             {Factory: dbRedis.New},
+			"redis-elasticache-database-plugin": {Factory: dbRedisElastiCache.New},
+			"snowflake-database-plugin":         {Factory: dbSnowflake.New},
 		},
 		logicalBackends: map[string]logicalBackend{
 			"ad":       {Factory: logicalAd.Factory},
@@ -141,7 +145,7 @@ func newRegistry() *registry {
 			"azure":    {Factory: logicalAzure.Factory},
 			"cassandra": {
 				Factory:           logicalCass.Factory,
-				DeprecationStatus: consts.Deprecated,
+				DeprecationStatus: consts.PendingRemoval,
 			},
 			"consul":     {Factory: logicalConsul.Factory},
 			"gcp":        {Factory: logicalGcp.Factory},
@@ -150,23 +154,24 @@ func newRegistry() *registry {
 			"kv":         {Factory: logicalKv.Factory},
 			"mongodb": {
 				Factory:           logicalMongo.Factory,
-				DeprecationStatus: consts.Deprecated,
+				DeprecationStatus: consts.PendingRemoval,
 			},
 			"mongodbatlas": {Factory: logicalMongoAtlas.Factory},
 			"mssql": {
 				Factory:           logicalMssql.Factory,
-				DeprecationStatus: consts.Deprecated,
+				DeprecationStatus: consts.PendingRemoval,
 			},
 			"mysql": {
 				Factory:           logicalMysql.Factory,
-				DeprecationStatus: consts.Deprecated,
+				DeprecationStatus: consts.PendingRemoval,
 			},
 			"nomad":    {Factory: logicalNomad.Factory},
-			"openldap": {Factory: logicalOpenLDAP.Factory},
+			"openldap": {Factory: logicalLDAP.Factory},
+			"ldap":     {Factory: logicalLDAP.Factory},
 			"pki":      {Factory: logicalPki.Factory},
 			"postgresql": {
 				Factory:           logicalPostgres.Factory,
-				DeprecationStatus: consts.Deprecated,
+				DeprecationStatus: consts.PendingRemoval,
 			},
 			"rabbitmq":  {Factory: logicalRabbit.Factory},
 			"ssh":       {Factory: logicalSsh.Factory},

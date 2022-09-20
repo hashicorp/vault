@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"net/http"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -50,6 +49,14 @@ enabled.`,
 Base64 encoded nonce value used during encryption. Must be provided if
 convergent encryption is enabled for this key and the key was generated with
 Vault 0.6.1. Not required for keys created in 0.6.2+.`,
+			},
+			"partial_failure_response_code": {
+				Type: framework.TypeInt,
+				Description: `
+Ordinarily, if a batch item fails to decrypt due to a bad input, but other batch items succeed, 
+the HTTP response code is 400 (Bad Request).  Some applications may want to treat partial failures differently.
+Providing the parameter returns the given response code integer instead of a 400 in this case.  If all values fail
+HTTP 400 is still returned.`,
 			},
 		},
 
@@ -142,6 +149,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 		p.Lock(false)
 	}
 
+	successesInBatch := false
 	for i, item := range batchInputItems {
 		if batchResponseItems[i].Error != "" {
 			continue
@@ -158,6 +166,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 			batchResponseItems[i].Error = err.Error()
 			continue
 		}
+		successesInBatch = true
 		batchResponseItems[i].Plaintext = plaintext
 	}
 
@@ -183,18 +192,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 
 	p.Unlock()
 
-	// Depending on the errors in the batch, different status codes should be returned. User errors
-	// will return a 400 and precede internal errors which return a 500. The reasoning behind this is
-	// that user errors are non-retryable without making changes to the request, and should be surfaced
-	// to the user first.
-	switch {
-	case userErrorInBatch:
-		return logical.RespondWithStatusCode(resp, req, http.StatusBadRequest)
-	case internalErrorInBatch:
-		return logical.RespondWithStatusCode(resp, req, http.StatusInternalServerError)
-	}
-
-	return resp, nil
+	return batchRequestResponse(d, resp, req, successesInBatch, userErrorInBatch, internalErrorInBatch)
 }
 
 const pathDecryptHelpSyn = `Decrypt a ciphertext value using a named key`

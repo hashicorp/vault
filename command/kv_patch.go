@@ -120,7 +120,7 @@ func (c *KVPatchCommand) Flags() *FlagSets {
 }
 
 func (c *KVPatchCommand) AutocompleteArgs() complete.Predictor {
-	return nil
+	return c.PredictVaultFiles()
 }
 
 func (c *KVPatchCommand) AutocompleteFlags() complete.Flags {

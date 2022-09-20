@@ -96,7 +96,7 @@ func (c *KVPutCommand) Flags() *FlagSets {
 }
 
 func (c *KVPutCommand) AutocompleteArgs() complete.Predictor {
-	return nil
+	return c.PredictVaultFolders()
 }
 
 func (c *KVPutCommand) AutocompleteFlags() complete.Flags {

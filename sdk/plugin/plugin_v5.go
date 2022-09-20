@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -41,13 +41,29 @@ func (b *BackendPluginClientV5) Cleanup(ctx context.Context) {
 	b.client.Reload()
 }
 
+func (b *BackendPluginClientV5) IsExternal() bool {
+	return true
+}
+
+func (b *BackendPluginClientV5) PluginVersion() logical.PluginVersion {
+	if versioner, ok := b.Backend.(logical.PluginVersioner); ok {
+		return versioner.PluginVersion()
+	}
+	return logical.EmptyPluginVersion
+}
+
+var (
+	_ logical.PluginVersioner = (*BackendPluginClientV5)(nil)
+	_ logical.Externaler      = (*BackendPluginClientV5)(nil)
+)
+
 // NewBackendV5 will return an instance of an RPC-based client implementation of
 // the backend for external plugins, or a concrete implementation of the
 // backend if it is a builtin backend. The backend is returned as a
 // logical.Backend interface.
-func NewBackendV5(ctx context.Context, pluginName string, pluginType consts.PluginType, sys pluginutil.LookRunnerUtil, conf *logical.BackendConfig) (logical.Backend, error) {
+func NewBackendV5(ctx context.Context, pluginName string, pluginType consts.PluginType, pluginVersion string, sys pluginutil.LookRunnerUtil, conf *logical.BackendConfig) (logical.Backend, error) {
 	// Look for plugin in the plugin catalog
-	pluginRunner, err := sys.LookupPlugin(ctx, pluginName, pluginType)
+	pluginRunner, err := sys.LookupPluginVersion(ctx, pluginName, pluginType, pluginVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -74,6 +90,7 @@ func NewBackendV5(ctx context.Context, pluginName string, pluginType consts.Plug
 			Name:            pluginName,
 			PluginSets:      PluginSet,
 			PluginType:      pluginType,
+			Version:         pluginVersion,
 			HandshakeConfig: HandshakeConfig,
 			Logger:          conf.Logger.Named(pluginName),
 			AutoMTLS:        true,
@@ -110,6 +127,7 @@ func Dispense(rpcClient plugin.ClientProtocol, pluginClient pluginutil.PluginCli
 		// This is an abstraction leak from go-plugin but it is necessary in
 		// order to enable multiplexing on multiplexed plugins
 		c.client = pb.NewBackendClient(pluginClient.Conn())
+		c.versionClient = logical.NewPluginVersionClient(pluginClient.Conn())
 
 		backend = c
 	default:
@@ -143,6 +161,7 @@ func NewPluginClientV5(ctx context.Context, sys pluginutil.RunnerUtil, config pl
 		// This is an abstraction leak from go-plugin but it is necessary in
 		// order to enable multiplexing on multiplexed plugins
 		c.client = pb.NewBackendClient(pluginClient.Conn())
+		c.versionClient = logical.NewPluginVersionClient(pluginClient.Conn())
 
 		backend = c
 		transport = "gRPC"

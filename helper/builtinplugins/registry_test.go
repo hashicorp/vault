@@ -86,12 +86,12 @@ func Test_RegistryKeyCounts(t *testing.T) {
 		{
 			name:       "number of database plugins",
 			pluginType: consts.PluginTypeDatabase,
-			want:       15,
+			want:       17,
 		},
 		{
 			name:       "number of secrets plugins",
 			pluginType: consts.PluginTypeSecrets,
-			want:       23,
+			want:       24,
 		},
 	}
 	for _, tt := range tests {
@@ -180,8 +180,8 @@ func Test_RegistryStatus(t *testing.T) {
 		},
 		{
 			name:       "deprecated builtin lookup",
-			builtin:    "mongodb",
-			pluginType: consts.PluginTypeSecrets,
+			builtin:    "pcf",
+			pluginType: consts.PluginTypeCredential,
 			want:       consts.Deprecated,
 			wantOk:     true,
 		},

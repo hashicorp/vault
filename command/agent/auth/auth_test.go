@@ -109,7 +109,7 @@ consumption:
 
 func TestAgentBackoff(t *testing.T) {
 	max := 1024 * time.Second
-	backoff := newAgentBackoff(defaultMinBackoff, max)
+	backoff := newAgentBackoff(defaultMinBackoff, max, false)
 
 	// Test initial value
 	if backoff.current != defaultMinBackoff {
@@ -159,7 +159,7 @@ func TestAgentMinBackoffCustom(t *testing.T) {
 
 	for _, test := range tests {
 		max := 1024 * time.Second
-		backoff := newAgentBackoff(test.minBackoff, max)
+		backoff := newAgentBackoff(test.minBackoff, max, false)
 
 		// Test initial value
 		if backoff.current != test.want {

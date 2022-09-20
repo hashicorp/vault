@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/grpc"
 )
 
@@ -54,13 +55,15 @@ func (d GRPCDatabasePlugin) GRPCServer(_ *plugin.GRPCBroker, s *grpc.Server) err
 	}
 
 	proto.RegisterDatabaseServer(s, &server)
+	logical.RegisterPluginVersionServer(s, &server)
 	return nil
 }
 
 func (GRPCDatabasePlugin) GRPCClient(doneCtx context.Context, _ *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
 	client := gRPCClient{
-		client:  proto.NewDatabaseClient(c),
-		doneCtx: doneCtx,
+		client:        proto.NewDatabaseClient(c),
+		versionClient: logical.NewPluginVersionClient(c),
+		doneCtx:       doneCtx,
 	}
 	return client, nil
 }

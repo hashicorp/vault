@@ -1,0 +1,5 @@
+<Oidc::ProviderForm
+  @model={{this.model}}
+  @onCancel={{transition-to "vault.cluster.access.oidc.providers"}}
+  @onSave={{transition-to "vault.cluster.access.oidc.providers.provider.details" this.model.name}}
+/>

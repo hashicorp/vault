@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -192,4 +193,8 @@ func (v testSystemView) LookupPluginVersion(context.Context, string, consts.Plug
 			return v.factory, nil
 		},
 	}, nil
+}
+
+func (v testSystemView) ListVersionedPlugins(_ context.Context, _ consts.PluginType) ([]pluginutil.VersionedPlugin, error) {
+	return nil, errors.New("ListVersionedPlugins not implemented for testSystemView")
 }

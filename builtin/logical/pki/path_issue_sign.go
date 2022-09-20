@@ -309,10 +309,11 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	}
 	var parsedBundle *certutil.ParsedCertBundle
 	var err error
+	var warnings []string
 	if useCSR {
-		parsedBundle, err = signCert(b, input, signingBundle, false, useCSRValues)
+		parsedBundle, warnings, err = signCert(b, input, signingBundle, false, useCSRValues)
 	} else {
-		parsedBundle, err = generateCert(sc, input, signingBundle, false, rand.Reader)
+		parsedBundle, warnings, err = generateCert(sc, input, signingBundle, false, rand.Reader)
 	}
 	if err != nil {
 		switch err.(type) {
@@ -428,6 +429,8 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 			resp.AddWarning("the alt_names field was provided but the role is set with \"use_csr_sans\" set to true")
 		}
 	}
+
+	resp = addWarnings(resp, warnings)
 
 	return resp, nil
 }

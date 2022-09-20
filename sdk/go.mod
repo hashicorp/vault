@@ -1,6 +1,6 @@
 module github.com/hashicorp/vault/sdk
 
-go 1.17
+go 1.19
 
 require (
 	github.com/armon/go-metrics v0.3.9
@@ -14,7 +14,7 @@ require (
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-hclog v0.16.2
 	github.com/hashicorp/go-immutable-radix v1.3.1
-	github.com/hashicorp/go-kms-wrapping/entropy v0.1.0
+	github.com/hashicorp/go-kms-wrapping/entropy/v2 v2.0.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-plugin v1.4.3
 	github.com/hashicorp/go-secure-stdlib/base62 v0.1.1
