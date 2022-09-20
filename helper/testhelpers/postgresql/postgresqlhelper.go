@@ -34,7 +34,13 @@ func PrepareTestContainerWithPassword(t *testing.T, version, password string) (f
 }
 
 func PrepareTestContainerRepmgr(t *testing.T, name, version string, envVars []string) (*docker.Runner, func(), string, string) {
-	return prepareTestContainer(t, name, "bitnami/postgresql-repmgr", version, "secret", false, true, true, envVars)
+	env := append(envVars,
+		"REPMGR_PARTNER_NODES=psql-repl-node-0,psql-repl-node-1",
+		"REPMGR_PRIMARY_HOST=psql-repl-node-0",
+		"REPMGR_PASSWORD=repmgrpass",
+		"POSTGRESQL_PASSWORD=secret")
+
+	return prepareTestContainer(t, name, "bitnami/postgresql-repmgr", version, "secret", false, true, true, env)
 }
 
 func prepareTestContainer(t *testing.T, name, repo, version, password string,

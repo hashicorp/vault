@@ -1085,10 +1085,6 @@ func TestPostgreSQL_Repmgr(t *testing.T) {
 
 func testPostgreSQL_Repmgr_Container(t *testing.T, name string) (*PostgreSQL, *docker.Runner, string, string) {
 	envVars := []string{
-		"REPMGR_PARTNER_NODES=psql-repl-node-0,psql-repl-node-1",
-		"REPMGR_PRIMARY_HOST=psql-repl-node-0",
-		"REPMGR_PASSWORD=repmgrpass",
-		"POSTGRESQL_PASSWORD=secret",
 		"REPMGR_NODE_NAME=" + name,
 		"REPMGR_NODE_NETWORK_NAME=" + name,
 	}
