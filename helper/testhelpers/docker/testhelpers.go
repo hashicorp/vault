@@ -370,3 +370,80 @@ func copyToContainer(ctx context.Context, dapi *client.Client, containerID, from
 
 	return nil
 }
+
+type RunCmdOpt interface {
+	Apply(cfg *types.ExecConfig) error
+}
+
+type RunCmdUser string
+
+var _ RunCmdOpt = (*RunCmdUser)(nil)
+
+func (u RunCmdUser) Apply(cfg *types.ExecConfig) error {
+	cfg.User = string(u)
+	return nil
+}
+
+func (d *Runner) RunCmdWithOutput(ctx context.Context, container string, cmd []string, opts ...RunCmdOpt) ([]byte, int, error) {
+	runCfg := types.ExecConfig{
+		AttachStdout: true,
+		AttachStderr: true,
+		Cmd:          cmd,
+	}
+
+	for index, opt := range opts {
+		if err := opt.Apply(&runCfg); err != nil {
+			return nil, -1, fmt.Errorf("error applying option (%d / %v): %v", index, opt, err)
+		}
+	}
+
+	ret, err := d.DockerAPI.ContainerExecCreate(ctx, container, runCfg)
+	if err != nil {
+		return nil, -1, fmt.Errorf("error creating execution environment: %v\ncfg: %v\n", err, runCfg)
+	}
+
+	resp, err := d.DockerAPI.ContainerExecAttach(ctx, ret.ID, types.ExecStartCheck{})
+	if err != nil {
+		return nil, -1, fmt.Errorf("error attaching to command execution: %v\ncfg: %v\nret: %v\n", err, runCfg, ret)
+	}
+
+	result, err := ioutil.ReadAll(resp.Reader)
+	resp.Close()
+	if err != nil {
+		return nil, -1, fmt.Errorf("error reading command response: %v", err)
+	}
+
+	// Fetch return code.
+	info, err := d.DockerAPI.ContainerExecInspect(ctx, ret.ID)
+	if err != nil {
+		return result, -1, fmt.Errorf("error reading command exit code: %v", err)
+	}
+
+	return result, info.ExitCode, nil
+}
+
+func (d *Runner) RunCmdInBackground(ctx context.Context, container string, cmd []string, opts ...RunCmdOpt) (string, error) {
+	runCfg := types.ExecConfig{
+		AttachStdout: true,
+		AttachStderr: true,
+		Cmd:          cmd,
+	}
+
+	for index, opt := range opts {
+		if err := opt.Apply(&runCfg); err != nil {
+			return "", fmt.Errorf("error applying option (%d / %v): %v", index, opt, err)
+		}
+	}
+
+	ret, err := d.DockerAPI.ContainerExecCreate(ctx, container, runCfg)
+	if err != nil {
+		return "", fmt.Errorf("error creating execution environment: %v\ncfg: %v\n", err, runCfg)
+	}
+
+	err = d.DockerAPI.ContainerExecStart(ctx, ret.ID, types.ExecStartCheck{})
+	if err != nil {
+		return "", fmt.Errorf("error starting command execution: %v\ncfg: %v\nret: %v\n", err, runCfg, ret)
+	}
+
+	return ret.ID, nil
+}

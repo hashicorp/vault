@@ -3,7 +3,6 @@ package radius
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"reflect"
 	"strconv"
@@ -14,8 +13,6 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/logical"
-
-	"github.com/docker/docker/api/types"
 )
 
 const (
@@ -85,36 +82,16 @@ client 128.0.0.0/1 {
  secret = testing123
  shortname = all-clients-second
 }`
-	ret, err := runner.DockerAPI.ContainerExecCreate(ctx, svc.Container.ID, types.ExecConfig{
-		User:         "0",
-		AttachStderr: true,
-		AttachStdout: true,
-		// Hack: write this via echo, since it exists in the container.
-		Cmd: []string{"sh", "-c", "echo '" + clientsConfig + "' > /etc/raddb/clients.conf"},
-	})
+	writeCmd := []string{"sh", "-c", "echo '" + clientsConfig + "' > /etc/raddb/clients.conf"}
+	output, ret, err := runner.RunCmdWithOutput(ctx, svc.Container.ID, writeCmd, docker.RunCmdUser("0"))
 	if err != nil {
-		t.Fatalf("Failed to update radiusd client config: error creating command: %v", err)
+		t.Fatalf("error provisioning radiusd clients.conf: %v", err)
 	}
-	resp, err := runner.DockerAPI.ContainerExecAttach(ctx, ret.ID, types.ExecStartCheck{})
-	if err != nil {
-		t.Fatalf("Failed to update radiusd client config: error attaching command: %v", err)
-	}
-	read, err := io.ReadAll(resp.Reader)
-	t.Logf("Command Output (%v):\n%v", err, string(read))
+	t.Logf("Command Output (ret: %v): \n%v", ret, string(output))
 
-	ret, err = runner.DockerAPI.ContainerExecCreate(ctx, svc.Container.ID, types.ExecConfig{
-		User:         "0",
-		AttachStderr: true,
-		AttachStdout: true,
-		// As noted above, we need to start radiusd manually now.
-		Cmd: radiusdOptions,
-	})
+	_, err = runner.RunCmdInBackground(ctx, svc.Container.ID, radiusdOptions, docker.RunCmdUser("0"))
 	if err != nil {
-		t.Fatalf("Failed to start radiusd service: error creating command: %v", err)
-	}
-	err = runner.DockerAPI.ContainerExecStart(ctx, ret.ID, types.ExecStartCheck{})
-	if err != nil {
-		t.Fatalf("Failed to start radiusd service: error starting command: %v", err)
+		t.Fatalf("error starting radiusd service: %v", err)
 	}
 
 	// Give radiusd time to start...
