@@ -1,17 +1,14 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 
-export default class RolesIndexRoute extends Route {
+export default class PkiCertificatesIndexRoute extends Route {
   @service store;
   @service secretMountPath;
   @service pathHelp;
 
   model() {
-    // the pathHelp service is needed for adding openAPI to the model
-    this.pathHelp.getNewModel('pki/pki-role-engine', 'pki');
-
-    let response = this.store
-      .query('pki/pki-role-engine', { backend: this.secretMountPath.currentPath })
+    return this.store
+      .query('pki/pki-certificate-engine', { backend: this.secretMountPath.currentPath })
       .catch((err) => {
         if (err.httpStatus === 404) {
           return [];
@@ -19,6 +16,5 @@ export default class RolesIndexRoute extends Route {
           throw err;
         }
       });
-    return response;
   }
 }
