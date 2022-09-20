@@ -213,6 +213,39 @@ $ curl \
 
 - `key_type` `(string: <required>)`: The type of key to use. At this time only supported value is `RSA`.
 
+#### GCP Cloud KMS Parameters
+
+- `credentials` `(string: <required>)`: The path of the credential file to use for authenticating to GCP.
+This can also be provided in the `GOOGLE_APPLICATION_CREDENTIALS` environment variable.
+
+- `crypto_key` `(string: <required>)`: The name of the GCP Cloud KMS key. If there is no existing key
+and `allow_generate_key` is `true`, Vault will generate a key with this name.
+
+- `crypto_key_version` `(string: "1")`: The version of the key to use.
+
+- `key_ring` `(string: <required>)`: The name of the key ring in GCP Cloud KMS.
+
+- `project` `(string: <required>)`: The ID of the GCP project.
+
+- `region` `(string: <required>)`: The region where the key ring was created. This can also be provided
+with the `GOOGLE_REGION` environment variable.
+
+- `signature_algorithm` `(string: <required)`: The signature algorithm to be used with the key. Supported
+values for signature algorithms are:
+  - `EC_SIGN_P256_SHA256`
+  - `EC_SIGN_P384_SHA384`
+  - `EC_SIGN_P256_SHA256`
+  - `RSA_SIGN_PSS_2048_SHA256`
+  - `RSA_SIGN_PSS_3072_SHA256`
+  - `RSA_SIGN_PSS_4096_SHA256`
+  - `RSA_SIGN_PSS_4096_SHA512`
+  - `RSA_SIGN_PKCS1_2048_SHA256`
+  - `RSA_SIGN_PKCS1_3072_SHA256`
+  - `RSA_SIGN_PKCS1_4096_SHA256`
+  - `RSA_SIGN_PKCS1_4096_SHA512`
+
+  For more information, see the GCP Cloud KMS [documentation for signing algorithms](https://cloud.google.com/kms/docs/algorithms).
+
 ## Read managed key
 
 This endpoint returns the managed key configuration at the given path.
