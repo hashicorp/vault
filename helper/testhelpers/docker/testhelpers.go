@@ -141,7 +141,7 @@ func (d *Runner) StartService(ctx context.Context, connect ServiceAdapter) (*Ser
 
 // 'addSuffix' will add a random UUID to the end of the container name.
 // 'forceLocalAddr' will force the container address returned to be in the
-// form of '127.0.0.1:1234' where 1234 is the mapped contrainer port.
+// form of '127.0.0.1:1234' where 1234 is the mapped container port.
 func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr bool, connect ServiceAdapter) (*Service, string, error) {
 	container, hostIPs, containerID, err := d.Start(context.Background(), addSuffix, forceLocalAddr)
 	if err != nil {
