@@ -27,6 +27,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -3456,7 +3457,7 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Issue certificate for foobar.com to verify allowed_domain_templae doesnt break plain domains.
+	// Issue certificate for foobar.com to verify allowed_domain_template doesn't break plain domains.
 	_, err = client.Logical().Write("pki/issue/test", map[string]interface{}{"common_name": "foobar.com"})
 	if err != nil {
 		t.Fatal(err)
@@ -3731,7 +3732,10 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	metricsConf.EnableServiceLabel = false
 	metricsConf.EnableTypePrefix = false
 
-	metrics.NewGlobal(metricsConf, inmemSink)
+	_, err := metrics.NewGlobal(metricsConf, inmemSink)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Enable PKI secret engine
 	coreConfig := &vault.CoreConfig{
@@ -3748,8 +3752,6 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	vault.TestWaitActive(t, cores[0].Core)
 	client := cores[0].Client
 
-	var err error
-
 	// Mount /pki as a root CA
 	err = client.Sys().Mount("pki", &api.MountInput{
 		Type: "pki",
@@ -3760,6 +3762,22 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// Check the metrics initialized in order to calculate backendUUID for /pki
+	// BackendUUID not consistent during tests with UUID from /sys/mounts/pki
+	metricsSuffix := "total_certificates_stored"
+	backendUUID := ""
+	mostRecentInterval := inmemSink.Data()[len(inmemSink.Data())-1]
+	for _, existingGauge := range mostRecentInterval.Gauges {
+		if strings.HasSuffix(existingGauge.Name, metricsSuffix) {
+			expandedGaugeName := existingGauge.Name
+			backendUUID = strings.Split(expandedGaugeName, ".")[2]
+			break
+		}
+	}
+	if backendUUID == "" {
+		t.Fatalf("No Gauge Found ending with %s", metricsSuffix)
 	}
 
 	// Set the cluster's certificate as the root CA in /pki
@@ -3817,6 +3835,21 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	// Check the cert-count metrics
+	expectedCertCountGaugeMetrics := map[string]float32{
+		"secrets.pki." + backendUUID + ".total_revoked_certificates_stored": 1,
+		"secrets.pki." + backendUUID + ".total_certificates_stored":         1,
+	}
+	mostRecentInterval = inmemSink.Data()[len(inmemSink.Data())-1]
+	for gauge, value := range expectedCertCountGaugeMetrics {
+		if _, ok := mostRecentInterval.Gauges[gauge]; !ok {
+			t.Fatalf("Expected metrics to include a value for gauge %s", gauge)
+		}
+		if value != mostRecentInterval.Gauges[gauge].Value {
+			t.Fatalf("Expected value metric %s to be %f but got %f", gauge, value, mostRecentInterval.Gauges[gauge].Value)
+		}
 	}
 
 	// Revoke adds a fixed 2s buffer, so we sleep for a bit longer to ensure
@@ -3886,6 +3919,8 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"cert_store_deleted_count":              json.Number("1"),
 			"revoked_cert_deleted_count":            json.Number("1"),
 			"missing_issuer_cert_count":             json.Number("0"),
+			"current_cert_store_count":              json.Number("0"),
+			"current_revoked_cert_count":            json.Number("0"),
 		}
 		// Let's copy the times from the response so that we can use deep.Equal()
 		timeStarted, ok := tidyStatus.Data["time_started"]
@@ -3907,13 +3942,15 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	{
 		// Map of gauges to expected value
 		expectedGauges := map[string]float32{
-			"secrets.pki.tidy.cert_store_current_entry":             0,
-			"secrets.pki.tidy.cert_store_total_entries":             1,
-			"secrets.pki.tidy.revoked_cert_current_entry":           0,
-			"secrets.pki.tidy.revoked_cert_total_entries":           1,
-			"secrets.pki.tidy.start_time_epoch":                     0,
-			"secrets.pki.tidy.cert_store_total_entries_remaining":   0,
-			"secrets.pki.tidy.revoked_cert_total_entries_remaining": 0,
+			"secrets.pki.tidy.cert_store_current_entry":                         0,
+			"secrets.pki.tidy.cert_store_total_entries":                         1,
+			"secrets.pki.tidy.revoked_cert_current_entry":                       0,
+			"secrets.pki.tidy.revoked_cert_total_entries":                       1,
+			"secrets.pki.tidy.start_time_epoch":                                 0,
+			"secrets.pki." + backendUUID + ".total_certificates_stored":         0,
+			"secrets.pki." + backendUUID + ".total_revoked_certificates_stored": 0,
+			"secrets.pki.tidy.cert_store_total_entries_remaining":               0,
+			"secrets.pki.tidy.revoked_cert_total_entries_remaining":             0,
 		}
 		// Map of counters to the sum of the metrics for that counter
 		expectedCounters := map[string]float64{
@@ -3923,7 +3960,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			// Note that "secrets.pki.tidy.failure" won't be in the captured metrics
 		}
 
-		// If the metrics span mnore than one interval, skip the checks
+		// If the metrics span more than one interval, skip the checks
 		intervals := inmemSink.Data()
 		if len(intervals) == 1 {
 			interval := inmemSink.Data()[0]
@@ -5460,6 +5497,109 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 		client.SetHeaders(lastHeaders)
 		lastHeaders = client.Headers()
 	}
+}
+
+func TestBackend_InitializeCertificateCounts(t *testing.T) {
+	t.Parallel()
+	b, s := createBackendWithStorage(t)
+	ctx := context.Background()
+
+	// Set up an Issuer and Role
+	// We need a root certificate to write/revoke certificates with
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected ca info")
+	}
+
+	// Create a role
+	_, err = CBWrite(b, s, "roles/example", map[string]interface{}{
+		"allowed_domains":    "myvault.com",
+		"allow_bare_domains": true,
+		"allow_subdomains":   true,
+		"max_ttl":            "2h",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Put certificates A, B, C, D, E in backend
+	var certificates []string = []string{"a", "b", "c", "d", "e"}
+	serials := make([]string, 5)
+	for i, cn := range certificates {
+		resp, err = CBWrite(b, s, "issue/example", map[string]interface{}{
+			"common_name": cn + ".myvault.com",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		serials[i] = resp.Data["serial_number"].(string)
+	}
+
+	// Revoke certificates A + B
+	revocations := serials[0:2]
+	for _, key := range revocations {
+		resp, err = CBWrite(b, s, "revoke", map[string]interface{}{
+			"serial_number": key,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Assert initialize from clean is correct:
+	b.initializeStoredCertificateCounts(ctx)
+	if *b.certCount != 6 {
+		t.Fatalf("Failed to count six certificates root,A,B,C,D,E, instead counted %d certs", *b.certCount)
+	}
+	if *b.revokedCertCount != 2 {
+		t.Fatalf("Failed to count two revoked certificates A+B, instead counted %d certs", *b.revokedCertCount)
+	}
+
+	// Simulates listing while initialize in progress, by "restarting it"
+	atomic.StoreUint32(b.certCount, 0)
+	atomic.StoreUint32(b.revokedCertCount, 0)
+	b.certsCounted.Store(false)
+
+	// Revoke certificates C, D
+	dirtyRevocations := serials[2:4]
+	for _, key := range dirtyRevocations {
+		resp, err = CBWrite(b, s, "revoke", map[string]interface{}{
+			"serial_number": key,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Put certificates F, G in the backend
+	dirtyCertificates := []string{"f", "g"}
+	for _, cn := range dirtyCertificates {
+		resp, err = CBWrite(b, s, "issue/example", map[string]interface{}{
+			"common_name": cn + ".myvault.com",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Run initialize
+	b.initializeStoredCertificateCounts(ctx)
+
+	// Test certificate count
+	if *(b.certCount) != 8 {
+		t.Fatalf("Failed to initialize count of certificates root, A,B,C,D,E,F,G counted %d certs", *(b.certCount))
+	}
+
+	if *(b.revokedCertCount) != 4 {
+		t.Fatalf("Failed to count revoked certificates A,B,C,D counted %d certs", *(b.revokedCertCount))
+	}
+
+	return
 }
 
 // Verify that our default values are consistent when creating an issuer and when we do an
