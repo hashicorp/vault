@@ -1012,6 +1012,10 @@
             "path": "secrets/databases/postgresql"
           },
           {
+            "title": "Redis ElastiCache",
+            "path": "secrets/databases/rediselasticache"
+          },
+          {
             "title": "Redshift",
             "path": "secrets/databases/redshift"
           },

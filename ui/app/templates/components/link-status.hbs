@@ -1,21 +1,14 @@
-{{#if this.showBanner}}
-  <div class="navbar-status {{this.bannerClass}}">
+{{#if this.showStatus}}
+  <div class="navbar-status {{if (eq this.state 'connected') 'connected' 'warning'}}">
     <Icon @name="info" />
     <p data-test-link-status>
-      {{#if (eq @status "connected")}}
+      {{#if (eq this.state "connected")}}
         This self-managed Vault is linked to the
         <a href="https://portal.cloud.hashicorp.com/sign-in" target="_blank" rel="noopener noreferrer">
           HashiCorp Cloud Platform.
         </a>
-      {{else if (eq @status "401")}}
-        {{! roughing in 401 and 500 connection statuses -- update strings once they are exposed by the API }}
-        Vault can’t connect to HashiCorp Cloud Portal. Check your config file to ensure that credentials are correct.
-      {{else if (eq @status "500")}}
-        Vault’s connection to HashiCorp Cloud Portal is down. Check
-        <a href="https://status.hashicorp.com" target="_blank" rel="noopener noreferrer">
-          the status page
-        </a>
-        for details.
+      {{else}}
+        {{this.message}}
       {{/if}}
     </p>
   </div>

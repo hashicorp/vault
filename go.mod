@@ -38,7 +38,7 @@ require (
 	github.com/client9/misspell v0.3.4
 	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
-	github.com/denisenkom/go-mssqldb v0.12.0
+	github.com/denisenkom/go-mssqldb v0.12.2
 	github.com/docker/docker v20.10.17+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
@@ -66,13 +66,12 @@ require (
 	github.com/hashicorp/go-discover v0.0.0-20210818145131-c573d69da192
 	github.com/hashicorp/go-gcp-common v0.8.0
 	github.com/hashicorp/go-hclog v1.3.0
-	github.com/hashicorp/go-kms-wrapping v0.7.1
-	github.com/hashicorp/go-kms-wrapping/v2 v2.0.6-0.20220722192355-a843f53fa48d
+	github.com/hashicorp/go-kms-wrapping/v2 v2.0.5
 	github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.4
 	github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2 v2.0.1
-	github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2 v2.0.0
+	github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2 v2.0.1
 	github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.1
-	github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2 v2.0.0
+	github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2 v2.0.1
 	github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2 v2.0.0
 	github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.1
 	github.com/hashicorp/go-memdb v1.3.3
@@ -105,29 +104,29 @@ require (
 	github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c
 	github.com/hashicorp/raft-snapshot v1.0.4
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.12.0
-	github.com/hashicorp/vault-plugin-auth-azure v0.11.0
-	github.com/hashicorp/vault-plugin-auth-centrify v0.12.0
-	github.com/hashicorp/vault-plugin-auth-cf v0.12.0
+	github.com/hashicorp/vault-plugin-auth-azure v0.12.0
+	github.com/hashicorp/vault-plugin-auth-centrify v0.13.0
+	github.com/hashicorp/vault-plugin-auth-cf v0.13.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.14.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.14.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.8.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.14.0
-	github.com/hashicorp/vault-plugin-auth-oci v0.11.0
-	github.com/hashicorp/vault-plugin-database-couchbase v0.7.0
-	github.com/hashicorp/vault-plugin-database-elasticsearch v0.11.0
-	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.7.0
+	github.com/hashicorp/vault-plugin-auth-oci v0.12.0
+	github.com/hashicorp/vault-plugin-database-couchbase v0.8.0
+	github.com/hashicorp/vault-plugin-database-elasticsearch v0.12.0
+	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.8.0
 	github.com/hashicorp/vault-plugin-database-redis v0.0.0-20220908195902-0ba5bda4e2ac
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.1.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.6.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
-	github.com/hashicorp/vault-plugin-secrets-ad v0.13.1
-	github.com/hashicorp/vault-plugin-secrets-alicloud v0.12.0
-	github.com/hashicorp/vault-plugin-secrets-azure v0.13.0
+	github.com/hashicorp/vault-plugin-secrets-ad v0.14.0
+	github.com/hashicorp/vault-plugin-secrets-alicloud v0.13.0
+	github.com/hashicorp/vault-plugin-secrets-azure v0.14.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.14.0
-	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.5.7-0.20220617175201-b16d1500db6e
+	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.13.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.2.0
-	github.com/hashicorp/vault-plugin-secrets-kv v0.12.1
-	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.7.0
+	github.com/hashicorp/vault-plugin-secrets-kv v0.13.0
+	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.8.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.6.0
 	github.com/hashicorp/vault-testing-stepwise v0.1.2
@@ -198,7 +197,7 @@ require (
 	google.golang.org/api v0.83.0
 	google.golang.org/grpc v1.47.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
-	google.golang.org/protobuf v1.28.0
+	google.golang.org/protobuf v1.28.1
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	gopkg.in/square/go-jose.v2 v2.6.0
@@ -210,7 +209,7 @@ require (
 require (
 	cloud.google.com/go v0.100.2 // indirect
 	cloud.google.com/go/compute v1.6.1 // indirect
-	cloud.google.com/go/iam v0.1.1 // indirect
+	cloud.google.com/go/iam v0.3.0 // indirect
 	cloud.google.com/go/kms v1.4.0 // indirect
 	code.cloudfoundry.org/gofileutils v0.0.0-20170111115228-4d0c80011a0f // indirect
 	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
@@ -297,7 +296,7 @@ require (
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-sql/civil v0.0.0-20190719163853-cb61b32ac6fe // indirect
-	github.com/golang-sql/sqlexp v0.0.0-20170517235910-f1bb20e5a188 // indirect
+	github.com/golang-sql/sqlexp v0.1.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
@@ -313,7 +312,7 @@ require (
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/hashicorp/cronexpr v1.1.1 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
-	github.com/hashicorp/go-kms-wrapping/entropy v0.1.0 // indirect
+	github.com/hashicorp/go-kms-wrapping/entropy/v2 v2.0.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/fileutil v0.1.0 // indirect
 	github.com/hashicorp/go-slug v0.7.0 // indirect
 	github.com/hashicorp/go-tfe v0.20.0 // indirect

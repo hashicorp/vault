@@ -329,14 +329,14 @@ func (c *Core) disableCredentialInternal(ctx context.Context, path string, updat
 			return err
 		}
 
-	case entry.Local, !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
+	case entry.Local, !c.IsPerfSecondary():
 		// Have writable storage, remove the whole thing
 		if err := logical.ClearViewWithLogging(ctx, view, c.logger.Named("auth.deletion").With("namespace", ns.ID, "path", path)); err != nil {
 			c.logger.Error("failed to clear view for path being unmounted", "error", err, "path", path)
 			return err
 		}
 
-	case !entry.Local && c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
+	case !entry.Local && c.IsPerfSecondary():
 		if err := clearIgnoredPaths(ctx, c, backend, viewPath); err != nil {
 			return err
 		}

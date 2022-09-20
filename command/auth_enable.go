@@ -204,7 +204,7 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 		Name:    "plugin-version",
 		Target:  &c.flagPluginVersion,
 		Default: "",
-		Usage:   "Select the version of the plugin to enable.",
+		Usage:   "Select the semantic version of the plugin to enable.",
 	})
 
 	return set
@@ -270,7 +270,7 @@ func (c *AuthEnableCommand) Run(args []string) int {
 
 	authOpts := &api.EnableAuthOptions{
 		Type:                  authType,
-		Version:               c.flagPluginVersion,
+		PluginVersion:         c.flagPluginVersion,
 		Description:           c.flagDescription,
 		Local:                 c.flagLocal,
 		SealWrap:              c.flagSealWrap,

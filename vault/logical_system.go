@@ -896,10 +896,9 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[st
 		"external_entropy_access": entry.ExternalEntropyAccess,
 		"options":                 entry.Options,
 		"uuid":                    entry.UUID,
-		"version":                 entry.Version,
-		"sha":                     entry.Sha,
-		"running_version":         entry.RunningVersion,
-		"running_sha":             entry.RunningSha,
+		"plugin_version":          entry.Version,
+		"running_plugin_version":  entry.RunningVersion,
+		"running_sha256":          entry.RunningSha256,
 	}
 	entryConfig := map[string]interface{}{
 		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
@@ -999,7 +998,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	sealWrap := data.Get("seal_wrap").(bool)
 	externalEntropyAccess := data.Get("external_entropy_access").(bool)
 	options := data.Get("options").(map[string]string)
-	version := data.Get("version").(string)
+	version := data.Get("plugin_version").(string)
 	if version != "" {
 		v, err := semver.NewSemver(version)
 		if err != nil {
@@ -2256,7 +2255,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	sealWrap := data.Get("seal_wrap").(bool)
 	externalEntropyAccess := data.Get("external_entropy_access").(bool)
 	options := data.Get("options").(map[string]string)
-	version := data.Get("version").(string)
+	version := data.Get("plugin_version").(string)
 	if version != "" {
 		v, err := semver.NewSemver(version)
 		if err != nil {
