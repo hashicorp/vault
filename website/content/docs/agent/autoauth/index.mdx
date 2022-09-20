@@ -200,14 +200,17 @@ These configuration values are common to all Sinks:
 
 ### Auto Auth Examples
 
-Auto-Auth configuration objects take two separate forms when specified in `HCL`
-and `JSON`. The following examples are meant to clarify the differences between
+Auto-Auth configuration objects take two separate forms when specified in HCL
+and JSON. The following examples are meant to clarify the differences between
 the two formats.
 
 #### Sinks (HCL Format)
 
 The HCL format may define any number of sink objects with an optional wrapping
 `sinks {...}` object.
+
+~> Note: The [corresponding JSON format](#sinks-json-format) _must_ specify a `"sinks"
+: [...]` array to encapsulate all `sink` JSON objects.
 
 ```hcl
 // Other Vault Agent configuration blocks
@@ -236,7 +239,7 @@ auto_auth {
 ```
 
 The following valid HCL omits the wrapping `sinks` object while specifying
-multiple sinks. This is valid in the HCL format, but not in JSON format.
+multiple sinks.
 
 ```hcl
 // Other Vault Agent configuration blocks
@@ -271,9 +274,6 @@ auto_auth {
 ```
 
 #### Sinks (JSON format)
-
-~> The [corresponding JSON format](#sinks-json-format) _must_ specify a `"sinks" :
-[...]` array to encapsulate all `sink` JSON objects.
 
 The following format illustrates the need for a `sinks: [...]` array wrapping
 any number of `sink` objects.
