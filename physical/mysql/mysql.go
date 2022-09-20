@@ -728,9 +728,9 @@ func (i *MySQLLock) Lock(leaderCh chan struct{}) error {
 		return ErrSettingGlobalID
 	}
 
-	go i.monitorLock(leaderCh)
-
 	GlobalLockID = connectionID.Int64
+
+	go i.monitorLock(leaderCh)
 
 	return nil
 }
