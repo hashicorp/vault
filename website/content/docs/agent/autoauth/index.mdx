@@ -200,7 +200,14 @@ These configuration values are common to all Sinks:
 
 ### Auto Auth Examples
 
-#### Single sink (HCL)
+Auto-Auth configuration objects take two separate forms when specified in `HCL`
+and `JSON`. The following examples are meant to clarify the differences between
+the two formats.
+
+#### HCL sinks
+
+The HCL format may define any number of sink objects with an optional wrapping
+`sinks {...}` object.
 
 ```hcl
 // Other Vault Agent configuration blocks
@@ -228,9 +235,8 @@ auto_auth {
 }
 ```
 
-In HCL, it is also viable to specify a single sink without a wrapping `sinks {...}` object.
-
-**Note:** The [corresponding JSON form](#single-sink-json) _must_ specify the equivalent `"sinks" : [...]` array.
+The following valid HCL omits the wrapping `sinks` object while specifying
+multiple sinks.
 
 ```hcl
 // Other Vault Agent configuration blocks
@@ -253,10 +259,24 @@ auto_auth {
       path = "/tmp/file-foo"
     }
   }
+
+  sink {
+    type = "file"
+
+    config = {
+      path = "/tmp/file-bar"
+    }
+  }
 }
 ```
 
-#### Single sink (JSON)
+~> The [corresponding JSON format](#json-sinks) _must_ specify a `"sinks" :
+[...]` array to encapsulate all `sink` JSON objects.
+
+#### JSON sinks
+
+The following format illustrates the need for a `sinks: [...]` array wrapping
+any number of `sink` objects.
 
 ```json
 {
@@ -285,79 +305,8 @@ auto_auth {
 }
 ```
 
-#### Multiple sinks (HCL)
-
-```hcl
-// Other Vault Agent configuration blocks
-// ...
-
-auto_auth {
-  method {
-    type = "approle"
-
-    config = {
-      role_id_file_path = "/etc/vault/roleid"
-      secret_id_file_path = "/etc/vault/secretid"
-    }
-  }
-
-  sinks {
-    sink {
-      type = "file"
-
-      config = {
-        path = "/tmp/file-foo"
-      }
-    }
-    
-    sink {
-      type = "file"
-
-      config = {
-        path = "/tmp/file-bar"
-      }
-    }
-  }
-}
-```
-
-In HCL, it is also viable to specify a single sink without a wrapping `sinks {...}`.
-
-**Note:** The [corresponding JSON form](#multiple-sinks-json) _must_ specify the equivalent `"sinks" : [...]`.
-
-```hcl
-// Other Vault Agent configuration blocks
-// ...
-
-auto_auth {
-  method {
-    type = "approle"
-
-    config = {
-      role_id_file_path = "/etc/vault/roleid"
-      secret_id_file_path = "/etc/vault/secretid"
-    }
-  }
-
-  sink {
-    type = "file"
-
-    config = {
-      path = "/tmp/file-foo"
-    }
-  }
-  
-  sink {
-    type = "file"
-
-    config = {
-      path = "/tmp/file-bar"
-    }
-  }
-}
-```
-
-#### Multiple sinks (JSON)
+Multiple sinks are defined by appending more `sink` objects within the `sinks`
+array:
 
 ```json
 {
@@ -387,6 +336,7 @@ auto_auth {
 
           config = {
             path = "/tmp/file-bar"
+          }
         }
       }
     }
