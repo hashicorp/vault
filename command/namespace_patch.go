@@ -124,7 +124,7 @@ func (c *NamespacePatchCommand) Run(args []string) int {
 	}
 
 	if secret == nil || secret.Data == nil {
-		c.UI.Error(fmt.Sprintf("No namespace found: %s", err))
+		c.UI.Error("Namespace not found")
 		return 2
 	}
 
