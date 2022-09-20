@@ -174,11 +174,12 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 	}
 
 	var backend logical.Backend
+	oldSha := entry.RunningSha
 	if !isAuth {
 		// Dispense a new backend
-		backend, _, err = c.newLogicalBackend(ctx, entry, sysView, view)
+		backend, entry.RunningSha, err = c.newLogicalBackend(ctx, entry, sysView, view)
 	} else {
-		backend, _, err = c.newCredentialBackend(ctx, entry, sysView, view)
+		backend, entry.RunningSha, err = c.newCredentialBackend(ctx, entry, sysView, view)
 	}
 	if err != nil {
 		return err
@@ -187,6 +188,20 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 		return fmt.Errorf("nil backend of type %q returned from creation function", entry.Type)
 	}
 
+	// update the mount table since we changed the runningSha
+	if oldSha != entry.RunningSha && MountTableUpdateStorage {
+		if isAuth {
+			err = c.persistAuth(ctx, c.auth, &entry.Local)
+			if err != nil {
+				return err
+			}
+		} else {
+			err = c.persistMounts(ctx, c.mounts, &entry.Local)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	addPathCheckers(c, entry, backend, viewPath)
 
 	if nilMount {
