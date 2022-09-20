@@ -18,6 +18,7 @@ import (
 )
 
 func TestBackend_CRL_EnableDisableRoot(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -33,6 +34,7 @@ func TestBackend_CRL_EnableDisableRoot(t *testing.T) {
 }
 
 func TestBackend_CRLConfigUpdate(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	// Write a legacy config to storage.
@@ -137,6 +139,8 @@ func TestBackend_CRLConfig(t *testing.T) {
 }
 
 func TestBackend_CRL_AllKeyTypeSigAlgos(t *testing.T) {
+	t.Parallel()
+
 	type testCase struct {
 		KeyType string
 		KeyBits int
@@ -192,10 +196,12 @@ func TestBackend_CRL_AllKeyTypeSigAlgos(t *testing.T) {
 }
 
 func TestBackend_CRL_EnableDisableIntermediateWithRoot(t *testing.T) {
+	t.Parallel()
 	crlEnableDisableIntermediateTestForBackend(t, true)
 }
 
 func TestBackend_CRL_EnableDisableIntermediateWithoutRoot(t *testing.T) {
+	t.Parallel()
 	crlEnableDisableIntermediateTestForBackend(t, false)
 }
 
@@ -354,6 +360,7 @@ func crlEnableDisableTestForBackend(t *testing.T, b *backend, s logical.Storage,
 }
 
 func TestBackend_Secondary_CRL_Rebuilding(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	b, s := createBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
@@ -378,6 +385,7 @@ func TestBackend_Secondary_CRL_Rebuilding(t *testing.T) {
 }
 
 func TestCrlRebuilder(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	b, s := createBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
