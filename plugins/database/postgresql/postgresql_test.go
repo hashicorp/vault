@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/stretchr/testify/require"
 )
@@ -1049,34 +1049,32 @@ func TestPostgreSQL_Repmgr(t *testing.T) {
 	defer db.Close()
 
 	// Add a user to the cluster, then stop the primary container
-	if err = testPostgreSQL_Repmgr_AddUser(t, ctx, db); err != nil {
+	if err = testPostgreSQL_Repmgr_AddUser(ctx, db); err != nil {
 		t.Fatalf("no error expected, got: %s", err)
 	}
-
-	if err = runner0.Stop(ctx, container0); err != nil {
-		t.Fatalf("failed to stop container '%s': %s", container0, err)
-	}
+	postgresql.StopContainer(t, ctx, runner0, container0)
 
 	// Try adding a new user immediately - expect failure as the database
 	// cluster is still switching primaries
-	err = testPostgreSQL_Repmgr_AddUser(t, ctx, db)
+	err = testPostgreSQL_Repmgr_AddUser(ctx, db)
 	if !strings.HasSuffix(err.Error(), "ValidateConnect failed (read only connection)") {
 		t.Fatalf("expected error was not received, got: %s", err)
 	}
 
 	time.Sleep(20 * time.Second)
 
-	if err = testPostgreSQL_Repmgr_AddUser(t, ctx, db); err != nil {
+	// Try adding a new user again which should succeed after the sleep
+	// as the primary failover should have finished. Then, restart
+	// the first container which should become a secondary DB.
+	if err = testPostgreSQL_Repmgr_AddUser(ctx, db); err != nil {
 		t.Fatalf("no error expected, got: %s", err)
 	}
-
-	if err = runner0.Restart(ctx, container0); err != nil {
-		t.Fatalf("failed to restart container '%s': %s", container0, err)
-	}
+	postgresql.RestartContainer(t, ctx, runner0, container0)
 
 	time.Sleep(10 * time.Second)
 
-	if err = testPostgreSQL_Repmgr_AddUser(t, ctx, db); err != nil {
+	// A final new user to add, which should succeed after the secondary joins.
+	if err = testPostgreSQL_Repmgr_AddUser(ctx, db); err != nil {
 		t.Fatalf("no error expected, got: %s", err)
 	}
 
@@ -1118,7 +1116,7 @@ func testPostgreSQL_Repmgr_Container(t *testing.T, name string) (*PostgreSQL, *d
 	return db, runner, connURL, containerID
 }
 
-func testPostgreSQL_Repmgr_AddUser(t *testing.T, ctx context.Context, db *PostgreSQL) error {
+func testPostgreSQL_Repmgr_AddUser(ctx context.Context, db *PostgreSQL) error {
 	_, err := db.NewUser(ctx, dbplugin.NewUserRequest{
 		Statements: dbplugin.Statements{
 			Commands: []string{
