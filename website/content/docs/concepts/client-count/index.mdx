@@ -264,6 +264,15 @@ When the end date is the current month, the `new_clients` counts will be an appr
 number of new clients for the month, not an exact value. Note that the `new_clients` counts for the rest 
 of the months will all be accurate. 
 
+### Why An Approximation?
+
+The `new_clients` counts for the current month is an approximation primarily to improve API 
+performance and make the UI usable. In order to give an exact value for the current month's
+new clients, client IDs need to be de-duplicated with the previous months' client IDs, 
+which is a time and i/o intensive process. 
+
+### Approximation Details And Accuracy Testing Results
+
 The `new_clients` approximation is calculated is by using a [hyperloglog algorithm](https://en.wikipedia.org/wiki/HyperLogLog)
 to approximate the cardinality of the total number of clients within the billing period, and the cardinality 
 of the total number of clients within the billing period not including the current month. The returned value 
