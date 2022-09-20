@@ -1,39 +1,15 @@
 <Toolbar>
   {{#if (gt this.model.length 0)}}
     <ToolbarFilters>
-      <NavigateInput
-        @filterFocusDidChange={{action "setFilterFocus"}}
-        @filterDidChange={{action "setFilter"}}
-        @filter={{this.filter}}
-        @filterMatchesKey={{this.filterMatchesKey}}
-        @firstPartialMatch={{this.firstPartialMatch}}
-        @placeholder="Filter certificates"
-      />
-      {{#if this.filterFocused}}
-        {{#if this.filterMatchesKey}}
-          <p class="input-hint">
-            <kbd>ENTER</kbd>
-            to go to
-            <code>{{this.filter}}</code>
-            roles
-          </p>
-        {{/if}}
-        {{#if this.firstPartialMatch}}
-          <p class="input-hint">
-            <kbd>TAB</kbd>
-            to complete
-            <code>{{this.firstPartialMatch.id}}</code>
-          </p>
-        {{/if}}
-      {{/if}}
+      {{! ARG TODO glimmerize the NavigateInput and refactor so you can use it in an engine }}
     </ToolbarFilters>
   {{/if}}
 </Toolbar>
 {{#if (gt this.model.length 0)}}
-  {{#each this.model as |model|}}
+  {{#each this.model as |pkiCertificate|}}
     <LinkedBlock
       class="list-item-row"
-      @params={{array "certificates.certificate.details" model.id}}
+      @params={{array "certificates.certificate.details" pkiCertificate.id}}
       @linkPrefix={{this.mountPoint}}
     >
       <div class="level is-mobile">
@@ -41,7 +17,7 @@
           <div>
             <Icon @name="certificate" class="has-text-grey-light" />
             <span class="has-text-weight-semibold is-underline">
-              {{model.id}}
+              {{pkiCertificate.id}}
             </span>
             <div class="is-flex-row has-left-margin-l has-top-margin-xs">
             </div>
@@ -53,7 +29,7 @@
               <nav class="menu">
                 <ul class="menu-list">
                   <li>
-                    <LinkTo @route="certificates.certificate.details" @model={{model.id}}>
+                    <LinkTo @route="certificates.certificate.details" @model={{pkiCertificate.id}}>
                       Details
                     </LinkTo>
                   </li>
