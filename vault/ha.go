@@ -661,6 +661,10 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 // lock was acquired (stopped=false) then it's up to the caller to unlock. If
 // the lock was not acquired (stopped=true), the caller does not hold the lock and
 // should not call unlock.
+// It's probably better to inline the body of grabLockOrStop into your function
+// instead of calling it. If multiple functions call grabLockOrStop, when a deadlock
+// occurs, we have no way of knowing who launched the grab goroutine, complicating
+// investigation.
 func grabLockOrStop(lockFunc, unlockFunc func(), stopCh chan struct{}) (stopped bool) {
 	l := newLockGrabber(lockFunc, unlockFunc, stopCh)
 	go l.grab()
@@ -690,6 +694,7 @@ func newLockGrabber(lockFunc, unlockFunc func(), stopCh chan struct{}) *lockGrab
 	}
 }
 
+// lockOrStop waits for grab to get a lock or give up, see grabLockOrStop for how to use it.
 func (l *lockGrabber) lockOrStop() (stopped bool) {
 	stop := false
 	select {
@@ -711,6 +716,7 @@ func (l *lockGrabber) lockOrStop() (stopped bool) {
 	return false
 }
 
+// grab tries to get a lock, see grabLockOrStop for how to use it.
 func (l *lockGrabber) grab() {
 	defer close(l.doneCh)
 	l.lockFunc()
