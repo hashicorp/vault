@@ -19,8 +19,9 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 	emitTimer := time.Tick(time.Second)
 
 	stopOrHAState := func() (bool, consts.HAState) {
-		stopped := grabLockOrStop(c.stateLock.RLock, c.stateLock.RUnlock, stopCh)
-		if stopped {
+		l := newLockGrabber(c.stateLock.RLock, c.stateLock.RUnlock, stopCh)
+		go l.grab()
+		if stopped := l.lockOrStop(); stopped {
 			return true, 0
 		}
 		defer c.stateLock.RUnlock()
@@ -117,7 +118,9 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 				rb.CollectMetrics(c.MetricSink())
 			}
 		case <-writeTimer:
-			if stopped := grabLockOrStop(c.stateLock.RLock, c.stateLock.RUnlock, stopCh); stopped {
+			l := newLockGrabber(c.stateLock.RLock, c.stateLock.RUnlock, stopCh)
+			go l.grab()
+			if stopped := l.lockOrStop(); stopped {
 				return
 			}
 			// Ship barrier encryption counts if a perf standby or the active node
