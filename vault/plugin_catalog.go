@@ -32,6 +32,7 @@ var (
 	pluginCatalogPath           = "core/plugin-catalog/"
 	ErrDirectoryNotConfigured   = errors.New("could not set plugin, plugin directory is not configured")
 	ErrPluginNotFound           = errors.New("plugin not found in the catalog")
+	ErrPluginMismatchedVersion  = errors.New("plugin reported version did not match requested version")
 	ErrPluginConnectionNotFound = errors.New("plugin connection not found for client")
 	ErrPluginBadType            = errors.New("unable to determine plugin type")
 )
@@ -825,7 +826,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 		c.logger.Warn("Error determining plugin version", "error", versionErr)
 	} else if version != "" && runningVersion.Version != "" && version != runningVersion.Version {
 		c.logger.Warn("Plugin self-reported version did not match requested version", "plugin", name, "requestedVersion", version, "reportedVersion", runningVersion.Version)
-		return nil, ErrPluginNotFound
+		return nil, ErrPluginMismatchedVersion
 	}
 
 	entry := &pluginutil.PluginRunner{
