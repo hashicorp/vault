@@ -209,8 +209,8 @@ the two formats.
 The HCL format may define any number of sink objects with an optional wrapping
 `sinks {...}` object.
 
-~> Note: The [corresponding JSON format](#sinks-json-format) _must_ specify a `"sinks"
-: [...]` array to encapsulate all `sink` JSON objects.
+~> Note: The [corresponding JSON format](#sinks-json-format) _must_ specify a
+`"sinks" : [...]` array to encapsulate all `sink` JSON objects.
 
 ```hcl
 // Other Vault Agent configuration blocks
@@ -275,8 +275,8 @@ auto_auth {
 
 #### Sinks (JSON format)
 
-The following format illustrates the need for a `sinks: [...]` array wrapping
-any number of `sink` objects.
+The following JSON configuration illustrates the need for a `sinks: [...]` array
+wrapping any number of `sink` objects.
 
 ```json
 {
@@ -298,10 +298,11 @@ any number of `sink` objects.
 
           config = {
             path = "/tmp/file-foo"
+          }
         }
       }
-    }
-  ]
+    ]
+  }
 }
 ```
 
@@ -328,6 +329,7 @@ array:
 
           config = {
             path = "/tmp/file-foo"
+          }
         }
       },
       {
@@ -339,7 +341,7 @@ array:
           }
         }
       }
-    }
-  ]
+    ]
+  }
 }
 ```
