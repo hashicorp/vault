@@ -1,4 +1,6 @@
 import Component from '@glimmer/component';
+import { action } from '@ember/object';
+import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
 
@@ -17,6 +19,9 @@ import { tracked } from '@glimmer/tracking';
  */
 
 export default class PkiRoleForm extends Component {
+  @service store;
+  @service flashMessages;
+  @tracked modelValidations;
   @tracked errorBanner;
 
   @task
@@ -35,5 +40,13 @@ export default class PkiRoleForm extends Component {
       const message = error.errors ? error.errors.join('. ') : error.message;
       this.errorBanner = message;
     }
+  }
+
+  @action
+  cancel() {
+    // ARG TODO confirm, just copied over from assignment-form
+    const method = this.args.model.isNew ? 'unloadRecord' : 'rollbackAttributes';
+    this.args.model[method]();
+    this.args.onCancel();
   }
 }
