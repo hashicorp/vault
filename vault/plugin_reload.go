@@ -194,6 +194,13 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 		backend = nil
 	}
 
+	if !nilMount {
+		err := backend.Initialize(c.activeContext, &logical.InitializationRequest{Storage: view})
+		if err != nil {
+			return err
+		}
+	}
+
 	// Set the backend back
 	re.backend = backend
 
