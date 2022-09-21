@@ -16,7 +16,7 @@ const validations = {
 };
 
 @withModelValidations(validations)
-export default class PkiRolesEngineModel extends Model {
+export default class PkiRoleEngineModel extends Model {
   @attr('string', { readOnly: true }) backend;
   @attr('string', {
     label: 'Role name',
