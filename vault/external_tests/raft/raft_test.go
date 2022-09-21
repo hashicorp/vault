@@ -544,6 +544,67 @@ func TestRaft_SnapshotAPI(t *testing.T) {
 	}
 }
 
+func TestRaft_SnapshotAPI_FollowerRedirect(t *testing.T) {
+	t.Parallel()
+	cluster := raftCluster(t, nil)
+	defer cluster.Cleanup()
+
+	followerClient := cluster.Cores[1].Client
+	followerClient.SetCheckRedirect(func(r1 *http.Request, r2 []*http.Request) error {
+		// prevent http client following redirects in the same manner as the default client config
+		return http.ErrUseLastResponse
+	})
+
+	// Write a few keys
+	for i := 0; i < 10; i++ {
+		_, err := followerClient.Logical().Write(fmt.Sprintf("secret/%d", i), map[string]interface{}{
+			"test": "data",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Take a snapshot
+	buf := new(bytes.Buffer)
+	err := followerClient.Sys().RaftSnapshot(buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snap, err := io.ReadAll(buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snap) == 0 {
+		t.Fatal("no snapshot returned")
+	}
+
+	// Write a few more keys
+	for i := 10; i < 20; i++ {
+		_, err := followerClient.Logical().Write(fmt.Sprintf("secret/%d", i), map[string]interface{}{
+			"test": "data",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Restore snapshot
+	err = followerClient.Sys().RaftSnapshotRestore(bytes.NewReader(snap), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// List kv to make sure we removed the extra keys
+	secret, err := followerClient.Logical().List("secret/")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(secret.Data["keys"].([]interface{})) != 10 {
+		t.Fatal("snapshot didn't apply correctly")
+	}
+}
+
 func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 	// defer goleak.VerifyNone(t)
 	t.Parallel()

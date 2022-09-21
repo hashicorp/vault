@@ -1521,6 +1521,8 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 		if err != nil {
 			return result, fmt.Errorf("redirect failed: %s", err)
 		}
+
+		result = &Response{Response: resp}
 	}
 
 	if err := result.Error(); err != nil {
