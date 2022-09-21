@@ -171,7 +171,7 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 	var backend logical.Backend
 	// Create the new backend
 	sysView := c.mountEntrySysView(entry)
-	backend, entry.RunningSha, err = c.newCredentialBackend(ctx, entry, sysView, view)
+	backend, entry.RunningSha256, err = c.newCredentialBackend(ctx, entry, sysView, view)
 	if err != nil {
 		return err
 	}
@@ -795,7 +795,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		// Initialize the backend
 		sysView := c.mountEntrySysView(entry)
 
-		backend, entry.RunningSha, err = c.newCredentialBackend(ctx, entry, sysView, view)
+		backend, entry.RunningSha256, err = c.newCredentialBackend(ctx, entry, sysView, view)
 		if err != nil {
 			c.logger.Error("failed to create credential entry", "path", entry.Path, "error", err)
 			plug, plugerr := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeCredential, "")

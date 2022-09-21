@@ -277,8 +277,8 @@ func TestCore_EnableExternalPlugin_MultipleVersions(t *testing.T) {
 				t.Errorf("Expected mount to have no running version but got %s", raw.(*routeEntry).mountEntry.RunningVersion)
 			}
 
-			if raw.(*routeEntry).mountEntry.RunningSha == "" {
-				t.Errorf("Expected RunningSha to be present: %+v", raw.(*routeEntry).mountEntry.RunningSha)
+			if raw.(*routeEntry).mountEntry.RunningSha256 == "" {
+				t.Errorf("Expected RunningSha256 to be present: %+v", raw.(*routeEntry).mountEntry.RunningSha256)
 			}
 		})
 	}
