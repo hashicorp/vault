@@ -1,3 +1,13 @@
 import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
 
-export default class RolesCreateRoute extends Route {}
+export default class PkiRolesCreateRoute extends Route {
+  @service store;
+  @service secretMountPath;
+
+  model() {
+    return this.store.createRecord('pki/pki-role-engine', {
+      backend: this.secretMountPath.currentPath,
+    });
+  }
+}

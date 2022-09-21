@@ -1,0 +1,5 @@
+<PkiRoleForm
+  @model={{this.model}}
+  @onCancel={{transition-to "roles.index"}}
+  @onSave={{transition-to "roles.role.details" this.model.id}}
+/>
