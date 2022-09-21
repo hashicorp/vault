@@ -510,6 +510,14 @@ func LoadConfigFile(path string) (*Config, error) {
 	q.Q(conf.Listeners)
 	q.Q("user lockout configs")
 	q.Q(conf.UserLockoutConfigs)
+
+	//update the mount entries with the configuration 
+    
+	// get the mount entry 
+	
+
+
+
 	return conf, nil
 }
 

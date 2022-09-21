@@ -30,6 +30,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	semver "github.com/hashicorp/go-version"
+	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -44,6 +45,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mitchellh/mapstructure"
+	"github.com/ryboe/q"
 )
 
 const (
@@ -1517,10 +1519,14 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"description":       mountEntry.Description,
-			"default_lease_ttl": int(sysView.DefaultLeaseTTL().Seconds()),
-			"max_lease_ttl":     int(sysView.MaxLeaseTTL().Seconds()),
-			"force_no_cache":    mountEntry.Config.ForceNoCache,
+			"description":                         mountEntry.Description,
+			"default_lease_ttl":                   int(sysView.DefaultLeaseTTL().Seconds()),
+			"max_lease_ttl":                       int(sysView.MaxLeaseTTL().Seconds()),
+			"force_no_cache":                      mountEntry.Config.ForceNoCache,
+			"user_lockout_counter_reset_duration": int64(mountEntry.Config.UserLockoutConfig.LockoutCounterReset.Seconds()),
+			"user_lockout_threshold":              mountEntry.Config.UserLockoutConfig.LockoutThreshold,
+			"user_lockout_duration":               int64(mountEntry.Config.UserLockoutConfig.LockoutDuration.Seconds()),
+			"user_lockout_disable":                mountEntry.Config.UserLockoutConfig.DisableLockout,
 		},
 	}
 
@@ -1576,6 +1582,7 @@ func (b *SystemBackend) handleAuthTuneWrite(ctx context.Context, req *logical.Re
 
 // handleMountTuneWrite is used to set config settings on a backend
 func (b *SystemBackend) handleMountTuneWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	q.Q(data)
 	path := data.Get("path").(string)
 	if path == "" {
 		return logical.ErrorResponse("missing path"), nil
@@ -1672,6 +1679,151 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
+	// user-lockout config
+	{
+		var apiuserLockoutConfig APIUserLockoutConfig
+
+		userLockoutConfigMap := data.Get("user_lockout_config").(map[string]interface{})
+		var err error
+		// Augmenting userLockoutConfigMap for some config options to treat them as comma separated entries
+		err = expandStringValsWithCommas(userLockoutConfigMap)
+		if err != nil {
+			return logical.ErrorResponse(
+					"unable to parse given auth config information"),
+				logical.ErrInvalidRequest
+		}
+		if userLockoutConfigMap != nil && len(userLockoutConfigMap) != 0 {
+			err := mapstructure.Decode(userLockoutConfigMap, &apiuserLockoutConfig)
+			if err != nil {
+				return logical.ErrorResponse(
+						"unable to convert given mount config information"),
+					logical.ErrInvalidRequest
+			}
+		}
+
+		if _, ok := userLockoutConfigMap["lockout_threshold"]; ok {
+			var newUserLockoutThreshold int64
+			userLockoutThreshold, err := parseutil.ParseInt(apiuserLockoutConfig.LockoutThreshold)
+			if err != nil {
+				return nil, fmt.Errorf("unable to parse user lockout threshold: %w", err)
+			}
+			oldUserLockoutThreshold := mountEntry.Config.UserLockoutConfig.LockoutThreshold
+
+			switch {
+			case userLockoutThreshold < 0:
+				newUserLockoutThreshold = oldUserLockoutThreshold
+			default:
+				newUserLockoutThreshold = userLockoutThreshold
+			}
+			mountEntry.Config.UserLockoutConfig.LockoutThreshold = newUserLockoutThreshold
+			// Update the mount table
+			switch {
+			case strings.HasPrefix(path, "auth/"):
+				err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+			default:
+				err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+			}
+			if err != nil {
+				mountEntry.Config.UserLockoutConfig.LockoutThreshold = oldUserLockoutThreshold
+				return handleError(err)
+			}
+			if b.Core.logger.IsInfo() {
+				b.Core.logger.Info("mount tuning of user-lockout-threshold successful", "path", path, "user-lockout-threshold", userLockoutThreshold)
+			}
+
+		}
+
+		{
+			var newUserLockoutDuration time.Duration
+			oldUserLockoutDuration := mountEntry.Config.UserLockoutConfig.LockoutDuration
+			switch apiuserLockoutConfig.LockoutDuration {
+
+			case "":
+				newUserLockoutDuration = oldUserLockoutDuration
+			case "system":
+				newUserLockoutDuration = time.Duration(0)
+			default:
+				tmpUserLockoutDuration, err := parseutil.ParseDurationSecond(apiuserLockoutConfig.LockoutDuration)
+				if err != nil {
+					return handleError(err)
+				}
+				newUserLockoutDuration = tmpUserLockoutDuration
+
+			}
+			mountEntry.Config.UserLockoutConfig.LockoutDuration = newUserLockoutDuration
+			// Update the mount table
+
+			switch {
+			case strings.HasPrefix(path, "auth/"):
+				err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+			default:
+				err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+			}
+			if err != nil {
+				mountEntry.Config.UserLockoutConfig.LockoutDuration = oldUserLockoutDuration
+				return handleError(err)
+			}
+			if b.Core.logger.IsInfo() {
+				b.Core.logger.Info("mount tuning of user-lockout-duration successful", "path", path, "user-lockout-duration", apiuserLockoutConfig.LockoutDuration)
+			}
+
+		}
+		{
+			var newUserLockoutCounterReset time.Duration
+			oldUserLockoutCounterReset := mountEntry.Config.UserLockoutConfig.LockoutCounterReset
+			switch apiuserLockoutConfig.LockoutCounterResetDuration {
+			case "":
+				newUserLockoutCounterReset = oldUserLockoutCounterReset
+			case "system":
+				newUserLockoutCounterReset = time.Duration(0)
+			default:
+				tmpUserLockoutCounterReset, err := parseutil.ParseDurationSecond(apiuserLockoutConfig.LockoutCounterResetDuration)
+				if err != nil {
+					return handleError(err)
+				}
+				newUserLockoutCounterReset = tmpUserLockoutCounterReset
+			}
+
+			mountEntry.Config.UserLockoutConfig.LockoutCounterReset = newUserLockoutCounterReset
+			// Update the mount table
+			switch {
+			case strings.HasPrefix(path, "auth/"):
+				err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+			default:
+				err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+			}
+			if err != nil {
+				mountEntry.Config.UserLockoutConfig.LockoutCounterReset = oldUserLockoutCounterReset
+				return handleError(err)
+			}
+			if b.Core.logger.IsInfo() {
+				b.Core.logger.Info("mount tuning of user-lockout-counter-reset successful", "path", path, "user-lockout-counter-reset", apiuserLockoutConfig.LockoutCounterResetDuration)
+			}
+		}
+		{
+			if rawVal, ok := userLockoutConfigMap["lockout_disable"]; ok {
+				userLockoutDisable := rawVal.(bool)
+				oldUserLockoutDisable := mountEntry.Config.UserLockoutConfig.DisableLockout
+				mountEntry.Config.UserLockoutConfig.DisableLockout = userLockoutDisable
+				var err error
+				switch {
+				case strings.HasPrefix(path, "auth/"):
+					err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+				default:
+					err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+				}
+				if err != nil {
+					mountEntry.Config.UserLockoutConfig.DisableLockout = oldUserLockoutDisable
+					return handleError(err)
+				}
+				if b.Core.logger.IsInfo() {
+					b.Core.logger.Info("mount tuning of user-lockout-disable successful", "path", path, "user-lockout-disable", userLockoutDisable)
+				}
+
+			}
+		}
+
+	}
 	if rawVal, ok := data.GetOk("description"); ok {
 		description := rawVal.(string)
 
@@ -2245,6 +2397,9 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		return nil, logical.ErrReadOnly
 	}
 
+	q.Q("handle enable auth")
+	q.Q(data)
+
 	// Get all the options
 	path := data.Get("path").(string)
 	path = sanitizePath(path)
@@ -2381,6 +2536,8 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	if len(apiConfig.AllowedManagedKeys) > 0 {
 		config.AllowedManagedKeys = apiConfig.AllowedManagedKeys
 	}
+	// update userLockoutConfig
+	config.UserLockoutConfig = b.getUserLockoutConfig(logicalType)
 
 	// Create the mount entry
 	me := &MountEntry{
@@ -2407,6 +2564,66 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		return handleError(err)
 	}
 	return resp, nil
+}
+
+func (b *SystemBackend) getUserLockoutConfig(logicalType string) UserLockoutConfig {
+	conf := b.Core.rawConfig.Load()
+	if conf == nil {
+		return UserLockoutConfig{}
+	}
+	userlockouts := conf.(*server.Config).UserLockoutConfigs
+
+	if userlockouts == nil {
+		return UserLockoutConfig{}
+	}
+
+	var commonUserLockoutConfig UserLockoutConfig
+	var authUserLockoutConfig UserLockoutConfig
+	for _, userLockoutConfig := range userlockouts {
+		if userLockoutConfig.Type == "all" {
+			commonUserLockoutConfig.LockoutThreshold = userLockoutConfig.LockoutThreshold
+			commonUserLockoutConfig.LockoutDuration = userLockoutConfig.LockoutDuration
+			commonUserLockoutConfig.LockoutCounterReset = userLockoutConfig.LockoutCounterReset
+			commonUserLockoutConfig.DisableLockout = userLockoutConfig.DisableLockout
+		}
+		if userLockoutConfig.Type == logicalType {
+			authUserLockoutConfig.LockoutThreshold = userLockoutConfig.LockoutThreshold
+			authUserLockoutConfig.LockoutDuration = userLockoutConfig.LockoutDuration
+			authUserLockoutConfig.LockoutCounterReset = userLockoutConfig.LockoutCounterReset
+			authUserLockoutConfig.DisableLockout = userLockoutConfig.DisableLockout
+		}
+	}
+
+	// switch {
+	// case authUserLockoutConfig != UserLockoutConfig{}:
+	// 	return authUserLockoutConfig
+	// case commonUserLockoutConfig != UserLockoutConfig{}:
+	// 	return commonUserLockoutConfig
+	// }
+	// return UserLockoutConfig{}
+
+	if (authUserLockoutConfig != UserLockoutConfig{}) {
+		return authUserLockoutConfig
+	}
+	return commonUserLockoutConfig
+	// var currentUserLockoutConfig UserLockoutConfig
+	// userLockoutConfigMap := make(map[string]*configutil.UserLockoutConfig)
+	// userLockoutConfigMap = configutil.SetMissingUserLockoutValuesInMap(userLockoutConfigMap)
+	// userLockoutAuthConfig, ok := userLockoutConfigMap[strings.ToLower(logicalType)]
+	// switch ok {
+	// case true:
+	// 	currentUserLockoutConfig.LockoutThreshold = userLockoutAuthConfig.LockoutThreshold
+	// 	currentUserLockoutConfig.LockoutDuration = userLockoutAuthConfig.LockoutDuration
+	// 	currentUserLockoutConfig.LockoutCounterReset = userLockoutAuthConfig.LockoutCounterReset
+	// 	currentUserLockoutConfig.DisableLockout = userLockoutAuthConfig.DisableLockout
+
+	// default:
+	// 	currentUserLockoutConfig.LockoutThreshold = userLockoutConfigMap["all"].LockoutThreshold
+	// 	currentUserLockoutConfig.LockoutDuration = userLockoutConfigMap["all"].LockoutDuration
+	// 	currentUserLockoutConfig.LockoutCounterReset = userLockoutConfigMap["all"].LockoutCounterReset
+	// 	currentUserLockoutConfig.DisableLockout = userLockoutConfigMap["all"].DisableLockout
+	// }
+	// return currentUserLockoutConfig
 }
 
 // handleDisableAuth is used to disable a credential backend

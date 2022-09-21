@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -31,6 +32,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/quotas"
 	"github.com/hashicorp/vault/vault/tokens"
+	"github.com/ryboe/q"
 	uberAtomic "go.uber.org/atomic"
 )
 
@@ -248,6 +250,10 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	}
 
 	return acl, te, entity, identityPolicies, nil
+}
+
+func (c *Core) isUserLockoutDisabled(authMethodName string) bool {
+	return false
 }
 
 func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool) (*logical.Auth, *logical.TokenEntry, error) {
@@ -1324,6 +1330,25 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		c.logger.Error("unexpected login request for token backend", "request_path", req.Path)
 		return nil, nil, ErrInternalError
 	}
+
+	// testing reading userlockout config
+
+	q.Q("read user lockout config in handleLoginRequest")
+	// q.Q(c.rawConfig)
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		q.Q("failed to load core raw config")
+	}
+	userlockouts := conf.(*server.Config).UserLockoutConfigs
+	if userlockouts == nil {
+		q.Q("user lockouts configured")
+	} else {
+		q.Q("user lockouts configs")
+		q.Q(userlockouts)
+	}
+	q.Q("hi")
+	q.Q("details of mount entry")
+	q.Q(entry)
 
 	// Route the request
 	resp, routeErr := c.doRouting(ctx, req)

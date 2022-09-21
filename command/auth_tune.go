@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
+	"github.com/ryboe/q"
 )
 
 var (
@@ -31,6 +32,10 @@ type AuthTuneCommand struct {
 	flagOptions                   map[string]string
 	flagTokenType                 string
 	flagVersion                   int
+	flagUserLockoutThreshold      int
+	flagUserLockoutDuration       time.Duration
+	flagUserLockoutCounterResetDuration   time.Duration
+	flagUserLockoutDisable        bool
 }
 
 func (c *AuthTuneCommand) Synopsis() string {
@@ -144,6 +149,40 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 		Usage:   "Select the version of the auth method to run. Not supported by all auth methods.",
 	})
 
+	f.IntVar(&IntVar{
+		Name:   "user-lockout-threshold",
+		Target: &c.flagUserLockoutThreshold,
+		Usage: "The threshold for user lockout for this auth method. If unspecified, this " +
+			"defaults to the Vault server's globally configured user lockout threshold, " +
+			"or a previously configured value for the auth method.",
+	})
+
+	f.DurationVar(&DurationVar{
+		Name:       "user-lockout-duration",
+		Target:     &c.flagUserLockoutDuration,
+		Completion: complete.PredictAnything,
+		Usage: "The user lockout duration for this auth method. If unspecified, this " +
+			"defaults to the Vault server's globally configured user lockout duration, " +
+			"or a previously configured value for the auth method.",
+	})
+
+	f.DurationVar(&DurationVar{
+		Name:       "user-lockout-counter-reset-duration",
+		Target:     &c.flagUserLockoutCounterResetDuration,
+		Completion: complete.PredictAnything,
+		Usage: "The user lockout counter reset duration for this auth method. If unspecified, this " +
+			"defaults to the Vault server's globally configured user lockout counter reset duration, " +
+			"or a previously configured value for the auth method.",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:   "user-lockout-disable",
+		Target: &c.flagUserLockoutDisable,
+		Usage: "Disable user lockout for this auth method. If unspecified, this " +
+			"defaults to the Vault server's globally configured user lockout disable, " +
+			"or a previously configured value for the auth method.",
+	})
+
 	return set
 }
 
@@ -221,8 +260,23 @@ func (c *AuthTuneCommand) Run(args []string) int {
 		if fl.Name == flagNameTokenType {
 			mountConfigInput.TokenType = c.flagTokenType
 		}
+		if fl.Name == "user-lockout-threshold" {
+			if c.flagUserLockoutThreshold > 0 {
+				mountConfigInput.UserLockoutConfig.LockoutThreshold = strconv.Itoa(c.flagUserLockoutThreshold)
+			}
+		}
+		if fl.Name == "user-lockout-duration" {
+			mountConfigInput.UserLockoutConfig.LockoutDuration = ttlToAPI(c.flagUserLockoutDuration)
+		}
+		if fl.Name == "user-lockout-counter-reset" {
+			mountConfigInput.UserLockoutConfig.LockoutCounterResetDuration = ttlToAPI(c.flagUserLockoutCounterResetDuration)
+		}
+		if fl.Name == "user-lockout-disable" {
+			mountConfigInput.UserLockoutConfig.DisableLockout = c.flagUserLockoutDisable
+		}
 	})
 
+	q.Q(mountConfigInput)
 	// Append /auth (since that's where auths live) and a trailing slash to
 	// indicate it's a path in output
 	mountPath := ensureTrailingSlash(sanitizePath(args[0]))
