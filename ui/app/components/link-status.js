@@ -36,23 +36,25 @@ export default class LinkStatus extends Component {
 
   get message() {
     if (this.args.status) {
-      const error = this.args.status.split('error:')[1];
-      const time = `[${this.timestamp}]`;
+      const error = this.args.status.split('error:')[1] || '';
+      const timestamp = this.timestamp ? ` [${this.timestamp}]` : '';
+      const sinceTimestamp = timestamp ? ` since${timestamp}` : '';
       if (this.state === 'disconnected') {
         // if generally disconnected hide the banner
         return !error || error.includes('UNKNOWN')
           ? null
-          : `Vault has been disconnected from the Hashicorp Cloud Platform since ${time}. Error: ${error}`;
+          : `Vault has been disconnected from HCP${sinceTimestamp}. Error: ${error}`;
       } else if (this.state === 'connecting') {
         if (error.includes('connection refused')) {
-          return `Vault has been trying to connect to the Hashicorp Cloud Platform since ${time}, but the Scada provider is down. Vault will try again soon.`;
+          return `Vault has been trying to connect to HCP${sinceTimestamp}, but HCP is not reachable. Vault will try again soon.`;
         } else if (error.includes('principal does not have permission to register as provider')) {
-          return `Vault tried connecting to the Hashicorp Cloud Platform, but the Resource ID is invalid. Check your resource ID. ${time}`;
+          return `Vault tried connecting to HCP, but the Resource ID is invalid. Check your resource ID.${timestamp}`;
         } else if (error.includes('cannot fetch token: 401 Unauthorized')) {
-          return `Vault tried connecting to the Hashicorp Cloud Platform, but the authorization information is wrong. Update it and try again. ${time}`;
+          return `Vault tried connecting to HCP, but the authorization information is wrong. Update it and try again.${timestamp}`;
         } else {
-          // catch all for any unknown errors
-          return `Vault has been trying to connect to the Hashicorp Cloud Platform since ${time}. Vault will try again soon. Error: ${error}`;
+          // catch all for any unknown errors or missing error
+          const errorMessage = error ? ` Error: ${error}` : '';
+          return `Vault has been trying to connect to HCP${sinceTimestamp}. Vault will try again soon.${errorMessage}`;
         }
       }
     }
@@ -64,7 +66,7 @@ export default class LinkStatus extends Component {
     if (!this.version.isEnterprise || !this.args.status) {
       return false;
     }
-    if (this.state === 'disconnected' && !this.message) {
+    if (this.state !== 'connected' && !this.message) {
       return false;
     }
     return true;

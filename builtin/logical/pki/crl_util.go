@@ -577,10 +577,12 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 			return nil, fmt.Errorf("error creating revocation entry")
 		}
 
+		certsCounted := b.certsCounted.Load()
 		err = req.Storage.Put(ctx, revEntry)
 		if err != nil {
 			return nil, fmt.Errorf("error saving revoked certificate to new location")
 		}
+		b.incrementTotalRevokedCertificatesCount(certsCounted, revEntry.Key)
 	}
 
 	// Fetch the config and see if we need to rebuild the CRL. If we have
