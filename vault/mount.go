@@ -609,7 +609,7 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	var backend logical.Backend
 	sysView := c.mountEntrySysView(entry)
 
-	backend, entry.RunningSha, err = c.newLogicalBackend(ctx, entry, sysView, view)
+	backend, entry.RunningSha256, err = c.newLogicalBackend(ctx, entry, sysView, view)
 	if err != nil {
 		return err
 	}
@@ -1420,7 +1420,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		var backend logical.Backend
 		// Create the new backend
 		sysView := c.mountEntrySysView(entry)
-		backend, entry.RunningSha, err = c.newLogicalBackend(ctx, entry, sysView, view)
+		backend, entry.RunningSha256, err = c.newLogicalBackend(ctx, entry, sysView, view)
 		if err != nil {
 			c.logger.Error("failed to create mount entry", "path", entry.Path, "error", err)
 			if !c.builtinRegistry.Contains(entry.Type, consts.PluginTypeSecrets) {
