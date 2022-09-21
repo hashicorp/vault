@@ -77,6 +77,9 @@ func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs)
 	var err error
 	id := singleImplementationID
 
+	b.instancesLock.Lock()
+	defer b.instancesLock.Unlock()
+
 	if b.multiplexingSupport {
 		id, err = pluginutil.GetMultiplexIDFromContext(ctx)
 		if err != nil {
