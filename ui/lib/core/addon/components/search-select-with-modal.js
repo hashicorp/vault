@@ -34,7 +34,7 @@ import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-ut
  * @param {string} [subText] - Text to be displayed below the label
  * @param {string} [placeholder] - placeholder text to override the default text of "Search"
  * @param {function} onChange - The onchange action for this form field. ** SEE UTIL ** search-select-has-many.js if selecting models from a hasMany relationship
- * @param {string | Array} inputValue -  A comma-separated string or an array of strings -- array of ids for models.
+ * @param {array} inputValue -  an array of strings -- array of ids for models.
  * @param {string} fallbackComponent - name of component to be rendered if the API returns a 403s
  * @param {boolean} [passObject=false] - When true, the onChange callback returns an array of objects with id (string) and isNew (boolean)
  * @param {number} [selectLimit] - A number that sets the limit to how many select options they can choose

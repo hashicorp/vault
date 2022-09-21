@@ -76,7 +76,13 @@ module('Integration | Component | search select', function (hooks) {
     const models = ['policy/acl'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    await render(hbs`{{search-select label="foo" models=models onChange=onChange}}`);
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+      />
+    `);
 
     assert.ok(component.hasLabel, 'it renders the label');
     assert.equal(component.labelText, 'foo', 'the label text is correct');
@@ -88,7 +94,13 @@ module('Integration | Component | search select', function (hooks) {
     const models = ['policy/acl'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    await render(hbs`{{search-select label="foo" models=models onChange=onChange}}`);
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+      />
+    `);
 
     await clickTrigger();
     await settled();
@@ -104,7 +116,13 @@ module('Integration | Component | search select', function (hooks) {
     const models = ['identity/entity'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    await render(hbs`{{search-select label="foo" models=models onChange=onChange}}`);
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+      />
+    `);
 
     await clickTrigger();
     await settled();
@@ -121,7 +139,14 @@ module('Integration | Component | search select', function (hooks) {
     const models = ['transform/transformation'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    await render(hbs`{{search-select label="foo" models=models onChange=onChange wildcardLabel="role" }}`);
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @wildcardLabel="role"
+      />
+    `);
 
     await clickTrigger();
     await settled();
@@ -136,7 +161,14 @@ module('Integration | Component | search select', function (hooks) {
     const models = ['identity/entity'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    await render(hbs`{{search-select label="foo" models=models onChange=onChange disallowNewItems=true}}`);
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @disallowNewItems={{true}}
+      />
+    `);
 
     await clickTrigger();
     assert.equal(component.options.length, 3, 'shows all options');
@@ -151,8 +183,13 @@ module('Integration | Component | search select', function (hooks) {
     const models = ['identity/entity'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    await render(hbs`{{search-select label="foo" models=models onChange=onChange}}`);
-
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+      />
+    `);
     await clickTrigger();
     await settled();
     assert.equal(component.options.length, 3, 'shows all options');
@@ -171,8 +208,14 @@ module('Integration | Component | search select', function (hooks) {
     this.set('models', models);
     this.set('onChange', sinon.spy());
     this.set('inputValue', ['8']);
-    await render(hbs`{{search-select label="foo" inputValue=inputValue models=models onChange=onChange}}`);
-
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
+      />
+    `);
     assert.equal(component.selectedOptions.length, 1, 'there is 1 selected option');
     await clickTrigger();
     await settled();
@@ -184,7 +227,14 @@ module('Integration | Component | search select', function (hooks) {
     this.set('models', models);
     this.set('onChange', sinon.spy());
     this.set('inputValue', ['8']);
-    await render(hbs`{{search-select label="foo" inputValue=inputValue models=models onChange=onChange}}`);
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
+      />
+    `);
 
     assert.equal(component.selectedOptions.length, 1, 'there is 1 selected option');
     await component.deleteButtons.objectAt(0).click();
@@ -201,8 +251,13 @@ module('Integration | Component | search select', function (hooks) {
     const models = ['identity/entity'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    await render(hbs`{{search-select label="foo" models=models onChange=onChange}}`);
-
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+      />
+    `);
     await clickTrigger();
     await settled();
     assert.equal(component.options.length, 3, 'shows all options');
@@ -227,10 +282,15 @@ module('Integration | Component | search select', function (hooks) {
     const models = ['policy/rgp'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    await render(
-      hbs`{{search-select label="foo" inputValue=inputValue models=models fallbackComponent="string-list" onChange=onChange}}`
-    );
-
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
+        @fallbackComponent="string-list"
+      />
+    `);
     assert.ok(component.hasStringList);
   });
 
@@ -238,9 +298,15 @@ module('Integration | Component | search select', function (hooks) {
     const models = ['test'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    await render(
-      hbs`{{search-select label="foo" inputValue=inputValue models=models fallbackComponent="string-list" onChange=onChange}}`
-    );
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
+        @fallbackComponent="string-list"
+      />
+    `);
 
     await clickTrigger();
     await settled();
@@ -252,10 +318,15 @@ module('Integration | Component | search select', function (hooks) {
     const models = [];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    await render(
-      hbs`{{search-select label="foo" inputValue=inputValue models=models fallbackComponent="string-list" onChange=onChange}}`
-    );
-
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
+        @fallbackComponent="string-list"
+      />
+    `);
     await clickTrigger();
     await settled();
 
@@ -267,9 +338,15 @@ module('Integration | Component | search select', function (hooks) {
     const models = ['test'];
     this.set('models', models);
     this.set('inputValue', ['test', 'two']);
-    await render(
-      hbs`{{search-select label="foo" inputValue=inputValue models=models fallbackComponent="string-list" onChange=onChange}}`
-    );
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
+        @fallbackComponent="string-list"
+      />
+    `);
 
     assert.equal(component.selectedOptions.length, 2, 'renders inputOptions as selectedOptions');
   });
@@ -278,8 +355,14 @@ module('Integration | Component | search select', function (hooks) {
     const models = ['identity/entity'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    await render(hbs`{{search-select label="foo" inputValue=inputValue models=models onChange=onChange}}`);
-
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
+      />
+    `);
     await clickTrigger();
     assert.equal(component.options.length, 3, 'shows all options');
     assert.equal(component.smallOptionIds.length, 3, 'shows the smaller id text and the name');
@@ -289,8 +372,15 @@ module('Integration | Component | search select', function (hooks) {
     const models = ['policy/acl'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    await render(hbs`{{search-select label="foo" inputValue=inputValue models=models onChange=onChange}}`);
-
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
+        @fallbackComponent="string-list"
+      />
+    `);
     await clickTrigger();
     assert.equal(component.options.length, 3, 'shows all options');
     assert.equal(component.smallOptionIds.length, 0, 'only shows the regular sized id');
@@ -301,7 +391,14 @@ module('Integration | Component | search select', function (hooks) {
     this.set('models', models);
     this.set('onChange', sinon.spy());
     let promise = waitForError();
-    render(hbs`{{search-select label="foo" inputValue=inputValue models=models onChange=onChange}}`);
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
+      />
+    `);
     let err = await promise;
     assert.ok(err.message.includes('internal server error'), 'it throws an internal server error');
   });
@@ -311,8 +408,14 @@ module('Integration | Component | search select', function (hooks) {
     this.set('models', models);
     this.set('onChange', sinon.spy());
     this.set('passObject', true);
-    await render(hbs`{{search-select label="foo" models=models onChange=onChange passObject=passObject}}`);
-
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @passObject={{this.passObject}}
+      />
+    `);
     await clickTrigger();
     await settled();
     // First select existing option
@@ -345,7 +448,6 @@ module('Integration | Component | search select', function (hooks) {
     this.set('onChange', spy);
     this.set('objectKeys', ['id', 'uuid']);
     await render(hbs`
-    <div class="box">
       <SearchSelect
         @label="foo"
         @models={{this.models}}
@@ -353,7 +455,6 @@ module('Integration | Component | search select', function (hooks) {
         @passObject={{true}}
         @objectKeys={{this.objectKeys}}
       />
-    </div>
     `);
 
     await clickTrigger();
@@ -401,7 +502,6 @@ module('Integration | Component | search select', function (hooks) {
     this.set('onChange', spy);
     this.set('objectKeys', objectKeys);
     await render(hbs`
-    <div class="box">
       <SearchSelect
         @label="foo"
         @models={{this.models}}
@@ -409,7 +509,6 @@ module('Integration | Component | search select', function (hooks) {
         @passObject={{true}}
         @objectKeys={{this.objectKeys}}
       />
-    </div>
     `);
 
     await clickTrigger();
@@ -444,14 +543,12 @@ module('Integration | Component | search select', function (hooks) {
     this.set('onChange', spy);
     this.set('objectKeys', objectKeys);
     await render(hbs`
-    <div class="box">
       <SearchSelect
         @label="foo"
         @models={{this.models}}
         @onChange={{this.onChange}}
         @objectKeys={{this.objectKeys}}
       />
-    </div>
     `);
 
     await clickTrigger();
@@ -474,7 +571,6 @@ module('Integration | Component | search select', function (hooks) {
     this.set('onChange', spy);
     this.set('objectKeys', objectKeys);
     await render(hbs`
-    <div class="box">
       <SearchSelect
         @label="foo"
         @models={{this.models}}
@@ -482,7 +578,6 @@ module('Integration | Component | search select', function (hooks) {
         @passObject={{true}}
         @objectKeys={{this.objectKeys}}
       />
-    </div>
     `);
 
     await clickTrigger();
@@ -512,7 +607,6 @@ module('Integration | Component | search select', function (hooks) {
     this.set('onChange', spy);
     this.set('objectKeys', objectKeys);
     await render(hbs`
-    <div class="box">
       <SearchSelect
         @label="foo"
         @models={{this.models}}
@@ -520,7 +614,6 @@ module('Integration | Component | search select', function (hooks) {
         @passObject={{true}}
         @objectKeys={{this.objectKeys}}
       />
-    </div>
     `);
 
     await clickTrigger();
@@ -565,14 +658,12 @@ module('Integration | Component | search select', function (hooks) {
     this.set('onChange', spy);
     this.set('objectKeys', objectKeys);
     await render(hbs`
-    <div class="box">
       <SearchSelect
         @label="foo"
         @models={{this.models}}
         @onChange={{this.onChange}}
         @objectKeys={{this.objectKeys}}
       />
-    </div>
     `);
 
     await clickTrigger();
