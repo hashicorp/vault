@@ -32,7 +32,7 @@ import { isWildcardString } from 'vault/helpers/is-wildcard-string';
  * @param {string} [wildcardLabel] - when you want the searchSelect component to return a count on the model for options returned when using a wildcard you must provide a label of the count e.g. role.  Should be singular.
  * @param {string} [placeholder] - text you wish to replace the default "search" with
  * @param {boolean} [displayInherit] - if you need the search select component to display inherit instead of box.
- * @param {boolean} [renderInfoTooltip] - if you want search select to render a tooltip beside a selected item if no corresponding model was returned from .query
+ * @param {boolean} [renderInfoTooltip=false] - if you want search select to render a tooltip beside a selected item if no corresponding model was returned from .query
  *
  * @param {Array} options - *Advanced usage* - `options` can be passed directly from the outside to the
  * power-select component. If doing this, `models` should not also be passed as that will overwrite the
