@@ -277,7 +277,6 @@ func (c *AuthEnableCommand) Run(args []string) int {
 		Config: api.AuthConfigInput{
 			DefaultLeaseTTL: c.flagDefaultLeaseTTL.String(),
 			MaxLeaseTTL:     c.flagMaxLeaseTTL.String(),
-			PluginVersion:   c.flagPluginVersion,
 		},
 		Options: c.flagOptions,
 	}
@@ -306,6 +305,10 @@ func (c *AuthEnableCommand) Run(args []string) int {
 
 		if fl.Name == flagNameTokenType {
 			authOpts.Config.TokenType = c.flagTokenType
+		}
+
+		if fl.Name == "plugin-version" {
+			authOpts.Config.PluginVersion = c.flagPluginVersion
 		}
 	})
 

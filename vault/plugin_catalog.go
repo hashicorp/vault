@@ -922,6 +922,7 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 		// Users don't expect to see the plugin type, so we need to strip that here.
 		var normalizedName, version string
 		var semanticVersion *semver.Version
+		storedType := consts.PluginTypeUnknown
 		parts := strings.Split(plugin, "/")
 
 		switch len(parts) {
@@ -933,7 +934,7 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 				return nil, err
 			}
 		case 2: // Unversioned
-			if isPluginType(parts[0]) {
+			if storedType, err = consts.ParsePluginType(parts[0]); err != nil {
 				normalizedName = parts[1]
 				// Use 0.0.0 to ensure unversioned is sorted as the oldest version.
 				semanticVersion, err = semver.NewVersion("0.0.0")
@@ -948,6 +949,10 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 				continue
 			}
 
+			storedType, err = consts.ParsePluginType(parts[0])
+			if err != nil {
+				return nil, fmt.Errorf("unexpected error parsing plugin type from plugin catalog entry %q: %w", plugin, err)
+			}
 			normalizedName, version = parts[1], parts[2]
 			semanticVersion, err = semver.NewVersion(version)
 			if err != nil {
@@ -958,18 +963,24 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 		}
 
 		// Only list user-added plugins if they're of the given type.
-		if entry, err := c.get(ctx, normalizedName, pluginType, version); err == nil && entry != nil {
-			result = append(result, pluginutil.VersionedPlugin{
-				Name:            normalizedName,
-				Type:            pluginType.String(),
-				Version:         version,
-				SHA256:          hex.EncodeToString(entry.Sha256),
-				SemanticVersion: semanticVersion,
-			})
+		if storedType != pluginType {
+			continue
+		}
+		entry, err := c.get(ctx, normalizedName, pluginType, version)
+		if err != nil || entry == nil {
+			continue
+		}
 
-			if version == "" {
-				unversionedPlugins[normalizedName] = struct{}{}
-			}
+		result = append(result, pluginutil.VersionedPlugin{
+			Name:            normalizedName,
+			Type:            pluginType.String(),
+			Version:         version,
+			SHA256:          hex.EncodeToString(entry.Sha256),
+			SemanticVersion: semanticVersion,
+		})
+
+		if version == "" {
+			unversionedPlugins[normalizedName] = struct{}{}
 		}
 	}
 
@@ -998,9 +1009,4 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 	}
 
 	return result, nil
-}
-
-func isPluginType(s string) bool {
-	_, err := consts.ParsePluginType(s)
-	return err == nil
 }
