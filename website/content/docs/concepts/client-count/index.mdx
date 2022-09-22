@@ -277,7 +277,7 @@ which is a time and i/o intensive process.
 
 ### Approximation Details And Accuracy Testing Results
 
-The `new_clients` approximation is calculated is by using a [hyperloglog algorithm](https://en.wikipedia.org/wiki/HyperLogLog)
+The `new_clients` approximation is calculated by using a [hyperloglog algorithm](https://en.wikipedia.org/wiki/HyperLogLog)
 to approximate the cardinality of the total number of clients within the billing period, and the cardinality 
 of the total number of clients within the billing period not including the current month. The returned value 
 is the difference between these two numbers.
