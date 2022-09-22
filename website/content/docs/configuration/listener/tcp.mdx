@@ -169,6 +169,11 @@ default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/co
   will be trusted. Comma-separated list or JSON array. This turns on
   X-Forwarded-For support.
 
+- `x_forwarded_for_client_cert_header` `(string: "")` –
+  Specifies the header that will be used for the client certificate.
+  This is required if you use the [TLS Certificates Auth Method](/docs/auth/cert) and your 
+  vault server is behind a reverse proxy.
+
 - `x_forwarded_for_hop_skips` `(string: "0")` – The number of addresses that will be
   skipped from the _rear_ of the set of hops. For instance, for a header value
   of `1.2.3.4, 2.3.4.5, 3.4.5.6, 4.5.6.7`, if this value is set to `"1"`, the address that

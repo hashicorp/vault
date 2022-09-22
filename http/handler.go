@@ -3,7 +3,9 @@ package http
 import (
 	"bytes"
 	"context"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -448,6 +450,7 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 	hopSkips := l.XForwardedForHopSkips
 	authorizedAddrs := l.XForwardedForAuthorizedAddrs
 	rejectNotAuthz := l.XForwardedForRejectNotAuthorized
+	clientCertHeader := l.XForwardedForClientCertHeader
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		headers, headersOK := r.Header[textproto.CanonicalMIMEHeaderKey("X-Forwarded-For")]
 		if !headersOK || len(headers) == 0 {
@@ -530,6 +533,35 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 		}
 
 		r.RemoteAddr = net.JoinHostPort(acc[indexToUse], port)
+
+		// Import the Client Certificate forwarded by the reverse proxy
+		// There should be only 1 instance of the header, but looping allows for more flexibility
+		clientCertHeaders, clientCertHeadersOK := r.Header[textproto.CanonicalMIMEHeaderKey(clientCertHeader)]
+		if clientCertHeadersOK || len(clientCertHeaders) > 0 {
+			var client_certs []*x509.Certificate
+			for _, header := range clientCertHeaders {
+				// Multiple certs should be comma delimetered
+				vals := strings.Split(header, ",")
+				for _, v := range vals {
+					decoded, err := url.QueryUnescape(v)
+					if err != nil {
+						respondError(w, http.StatusBadRequest, fmt.Errorf("failed to unescape the client certificate: %w", err))
+					}
+					block, err := base64.StdEncoding.DecodeString(decoded)
+					if block == nil {
+						respondError(w, http.StatusBadRequest, fmt.Errorf("failed to decode the client certificate: %w", err))
+						return
+					}
+					cert, err := x509.ParseCertificate(block)
+					if err != nil {
+						respondError(w, http.StatusBadRequest, fmt.Errorf("failed to parse the client certificate: %w", err))
+						return
+					}
+					client_certs = append(client_certs, cert)
+				}
+			}
+			r.TLS.PeerCertificates = client_certs
+		}
 		h.ServeHTTP(w, r)
 		return
 	})

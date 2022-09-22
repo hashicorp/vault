@@ -61,6 +61,10 @@ func tcpListenerFactory(l *configutil.Listener, _ io.Writer, ui cli.Ui) (net.Lis
 		if len(l.XForwardedForAuthorizedAddrs) > 0 {
 			props["x_forwarded_for_reject_not_authorized"] = strconv.FormatBool(l.XForwardedForRejectNotAuthorized)
 		}
+
+		if len(l.XForwardedForAuthorizedAddrs) > 0 {
+			props["x_forwarded_for_client_cert_header"] = fmt.Sprintf("%s", l.XForwardedForClientCertHeader)
+		}
 	}
 
 	tlsConfig, reloadFunc, err := listenerutil.TLSConfig(l, props, ui)
