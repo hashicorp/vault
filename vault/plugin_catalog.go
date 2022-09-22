@@ -829,6 +829,11 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 		return nil, fmt.Errorf("plugin version mismatch: %s reported version (%s) did not match requested version (%s)", name, runningVersion.Version, version)
 	} else if version == "" && runningVersion.Version != "" {
 		version = runningVersion.Version
+		_, err := semver.NewVersion(version)
+		if err != nil {
+			return nil, fmt.Errorf("plugin self-reported version %q is not a valid semantic version: %w", version, err)
+		}
+
 	}
 
 	entry := &pluginutil.PluginRunner{
