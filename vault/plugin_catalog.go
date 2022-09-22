@@ -963,7 +963,7 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 		}
 
 		// Only list user-added plugins if they're of the given type.
-		if storedType != pluginType {
+		if storedType != consts.PluginTypeUnknown && storedType != pluginType {
 			continue
 		}
 		entry, err := c.get(ctx, normalizedName, pluginType, version)
