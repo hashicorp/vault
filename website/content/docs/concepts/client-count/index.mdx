@@ -283,7 +283,7 @@ of the total number of clients within the billing period not including the curre
 is the difference between these two numbers.
 
 The hyperloglog library used for the cardinality estimate is [axiomhq](https://github.com/axiomhq/hyperloglog),
-with 14 registers and the use of sparse representations when applicable. Some accuracy estimates can be found 
+with fourteen registers and the use of sparse representations, when applicable. Some accurate estimates can be found 
 in this library's [README](https://github.com/axiomhq/hyperloglog#readme). These are accuracy results
 for the cardinality of the multiset, which is the total number of clients within a billing period. The accuracy 
 estimate for the number of new clients can be far lower, depending on the discrepancy between the number of 
