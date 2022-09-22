@@ -4,6 +4,8 @@ REPO_TO_CLONE=dev-portal
 PREVIEW_DIR=website-preview
 # The product for which we are building the deploy preview
 PRODUCT=vault
+# Preview mode, controls the UI rendered (either the product site or developer). Can be `io` or `developer`
+PREVIEW_MODE=io
 
 should_pull=true
 
@@ -22,4 +24,4 @@ if [ "$should_pull" = true ]; then
 fi
 
 # Run the dev-portal content-repo start script
-REPO=$PRODUCT PREVIEW_DIR="$PREVIEW_DIR" npm run start:local-preview
+REPO=$PRODUCT PREVIEW_MODE=$PREVIEW_MODE npm run start:local-preview
