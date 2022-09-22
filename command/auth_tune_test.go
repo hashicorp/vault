@@ -92,7 +92,7 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			auths, err := client.Sys().ListMounts()
+			auths, err := client.Sys().ListAuth()
 			if err != nil {
 				t.Fatal(err)
 			}
