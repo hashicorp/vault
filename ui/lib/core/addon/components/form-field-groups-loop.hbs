@@ -4,7 +4,7 @@
       {{#each fields as |attr|}}
         {{! template-lint-configure simple-unless "warn"  }}
         {{#unless (and (not-eq @mode "create") (eq attr.name "name"))}}
-          <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
+          <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}}>{{yield}}</FormField>
         {{/unless}}
       {{/each}}
     {{else}}

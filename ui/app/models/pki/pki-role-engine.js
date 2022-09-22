@@ -19,20 +19,14 @@ export default class PkiRoleEngineModel extends Model {
   })
   name;
 
-  // the notAFter and ttl are grouped together with the same title and subtext
+  // ARG TODO: will have to handle in serializer to send in the correct params
   @attr({
     label: 'Not valid after',
     subText:
       'The time after which this certificate will no longer be valid. This can be a TTL (a range of time from now) or a specific date.',
-    editType: 'ttl',
+    editType: 'yield',
   })
-  ttl;
-  @attr({
-    label: 'Not valid after',
-    subText: 'The value format should be given in UTC format YYY-MM-ddTHH:MM:SSZ.',
-    editType: 'string',
-  })
-  notAfter; // should be given in UTC format YYY-MM-ddTHH:MM:SSZ
+  customTtl;
 
   @attr({
     label: 'Backdate validity',
@@ -62,7 +56,7 @@ export default class PkiRoleEngineModel extends Model {
   @attr({
     label: 'Do not store certificates in storage backend',
     subText:
-      'This can improve performance when issuing large numbers of certificates. However, certificates issued in this way cannot be enumerated or revoked. Learn more here.', // ARG TODO figure out link here.
+      'This can improve performance when issuing large numbers of certificates. However, certificates issued in this way cannot be enumerated or revoked. Learn more here.', // ARG TODO figure out link here. docLink
     editType: 'boolean',
   })
   noStore;
@@ -119,7 +113,7 @@ export default class PkiRoleEngineModel extends Model {
           default: [
             'name',
             'issuerRef',
-            'notAfter',
+            'customTtl',
             'notBeforeDuration',
             'maxTtl',
             'generateLease',
@@ -171,7 +165,7 @@ export default class PkiRoleEngineModel extends Model {
         },
       ]);
       // to modify allowedDomains
-      console.log((this._fieldToAttrsGroups[1]['Domain handling'][0].type = 'string'), 'here!!!!');
+      // console.log((this._fieldToAttrsGroups[1]['Domain handling'][0].type = 'string'), 'here!!!!');
     }
     return this._fieldToAttrsGroups;
   }

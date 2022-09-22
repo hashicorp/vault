@@ -4,6 +4,7 @@ import { action } from '@ember/object';
 import { capitalize } from 'vault/helpers/capitalize';
 import { humanize } from 'vault/helpers/humanize';
 import { dasherize } from 'vault/helpers/dasherize';
+// ARG TODO add a lits of all editTypes on here for reference later.
 /**
  * @module FormField
  * `FormField` components are field elements associated with a particular model.

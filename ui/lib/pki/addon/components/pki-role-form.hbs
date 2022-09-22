@@ -31,7 +31,20 @@
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
     {{! ARG TODO write a test for this }}
     <NamespaceReminder @mode={{if @model.isNew "create" "update"}} @noun="PKI role" />
-    <FormFieldGroupsLoop @model={{@model}} @mode={{if @model.isNew "create" "update"}} />
+    <FormFieldGroupsLoop @model={{@model}} @mode={{if @model.isNew "create" "update"}}>
+      {{! ARG TODO ideally I wouldn't do this but pass attr through form-field component }}
+      {{#each @model.fieldGroups as |fieldGroup|}}
+        {{#each-in fieldGroup as |group fields|}}
+          {{#if (eq group "default")}}
+            {{#each fields as |attr|}}
+              {{#if (eq attr.options.editType "yield")}}
+                <RadioSelectTtlOrString @model={{@model}} @attr={{attr}} />
+              {{/if}}
+            {{/each}}
+          {{/if}}
+        {{/each-in}}
+      {{/each}}
+    </FormFieldGroupsLoop>
   </div>
   <div class="has-top-padding-s">
     <button type="submit" class="button is-primary {{if this.save.isRunning 'is-loading'}}" disabled={{this.save.isRunning}}>

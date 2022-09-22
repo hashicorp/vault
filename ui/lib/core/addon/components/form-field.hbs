@@ -339,5 +339,8 @@
       @valueUpdated={{fn this.codemirrorUpdated false}}
       @helpText={{@attr.options.helpText}}
     />
+  {{else if (eq @attr.options.editType "yield")}}
+    {{yield}}
+    {{!-- {{yield (hash attr=@attr)}} --}}
   {{/if}}
 </div>

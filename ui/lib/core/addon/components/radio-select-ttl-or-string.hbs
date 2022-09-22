@@ -1,0 +1,51 @@
+<div class="column is-narrow is-flex-center has-text-grey has-right-margin-s has-top-margin-negative-s">
+  <RadioButton
+    class="radio"
+    name={{@attr.name}}
+    id={{"ttl"}}
+    @value={{"ttl"}}
+    @onChange={{this.onChange}}
+    @groupValue={{this.groupValue}}
+  />
+  <label class="has-left-margin-xs">
+    <TtlPicker2
+      data-test-input={{@attr.name}}
+      @onChange={{this.ttlPickerChange}}
+      @label={{"TTL"}}
+      @helperTextEnabled={{@attr.options.helperTextEnabled}}
+      @description={{@attr.helpText}}
+      {{! initialValue did not work for blank days }}
+      @time=""
+      @unit="d"
+      @hideToggle={{true}}
+    />
+  </label>
+</div>
+<div class="column is-narrow is-flex-center has-text-grey has-right-margin-s">
+  <RadioButton
+    class="radio"
+    name={{@attr.name}}
+    id={{"specificDate"}}
+    @value={{"specificDate"}}
+    @onChange={{this.onChange}}
+    @groupValue={{this.groupValue}}
+  />
+  <label class="has-left-margin-xs">
+    <span class="ttl-picker-label is-large">Specific date</span><br />
+    <p class="sub-text">
+      Set the Not After field of the certificate with specified date value. The value format should be given in UTC format
+      YYYY-MM-ddTHH:MM:SSZ.
+    </p>
+
+    <input
+      data-test-input={{@attr.name}}
+      id={{@attr.name}}
+      autocomplete="off"
+      spellcheck="false"
+      value={{""}}
+      onchange={{this.onChangeWithEvent}}
+      class="input"
+      maxLength={{"21"}}
+    />
+  </label>
+</div>
