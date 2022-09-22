@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
-	"github.com/ryboe/q"
 )
 
 var (
@@ -21,21 +20,21 @@ var (
 type AuthTuneCommand struct {
 	*BaseCommand
 
-	flagAuditNonHMACRequestKeys   []string
-	flagAuditNonHMACResponseKeys  []string
-	flagDefaultLeaseTTL           time.Duration
-	flagDescription               string
-	flagListingVisibility         string
-	flagMaxLeaseTTL               time.Duration
-	flagPassthroughRequestHeaders []string
-	flagAllowedResponseHeaders    []string
-	flagOptions                   map[string]string
-	flagTokenType                 string
-	flagVersion                   int
-	flagUserLockoutThreshold      int
-	flagUserLockoutDuration       time.Duration
-	flagUserLockoutCounterResetDuration   time.Duration
-	flagUserLockoutDisable        bool
+	flagAuditNonHMACRequestKeys         []string
+	flagAuditNonHMACResponseKeys        []string
+	flagDefaultLeaseTTL                 time.Duration
+	flagDescription                     string
+	flagListingVisibility               string
+	flagMaxLeaseTTL                     time.Duration
+	flagPassthroughRequestHeaders       []string
+	flagAllowedResponseHeaders          []string
+	flagOptions                         map[string]string
+	flagTokenType                       string
+	flagVersion                         int
+	flagUserLockoutThreshold            int
+	flagUserLockoutDuration             time.Duration
+	flagUserLockoutCounterResetDuration time.Duration
+	flagUserLockoutDisable              bool
 }
 
 func (c *AuthTuneCommand) Synopsis() string {
@@ -176,8 +175,9 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 	})
 
 	f.BoolVar(&BoolVar{
-		Name:   "user-lockout-disable",
-		Target: &c.flagUserLockoutDisable,
+		Name:    "user-lockout-disable",
+		Target:  &c.flagUserLockoutDisable,
+		Default: false,
 		Usage: "Disable user lockout for this auth method. If unspecified, this " +
 			"defaults to the Vault server's globally configured user lockout disable, " +
 			"or a previously configured value for the auth method.",
@@ -268,20 +268,19 @@ func (c *AuthTuneCommand) Run(args []string) int {
 		if fl.Name == "user-lockout-duration" {
 			mountConfigInput.UserLockoutConfig.LockoutDuration = ttlToAPI(c.flagUserLockoutDuration)
 		}
-		if fl.Name == "user-lockout-counter-reset" {
+		if fl.Name == "user-lockout-counter-reset-duration" {
 			mountConfigInput.UserLockoutConfig.LockoutCounterResetDuration = ttlToAPI(c.flagUserLockoutCounterResetDuration)
 		}
 		if fl.Name == "user-lockout-disable" {
-			mountConfigInput.UserLockoutConfig.DisableLockout = c.flagUserLockoutDisable
+			mountConfigInput.UserLockoutConfig.DisableLockout = &c.flagUserLockoutDisable
 		}
 	})
 
-	q.Q(mountConfigInput)
 	// Append /auth (since that's where auths live) and a trailing slash to
 	// indicate it's a path in output
 	mountPath := ensureTrailingSlash(sanitizePath(args[0]))
 
-	if err := client.Sys().TuneMount("/auth/"+mountPath, mountConfigInput); err != nil {
+	if err := client.Sys().TuneAuthMount("/auth/"+mountPath, mountConfigInput); err != nil {
 		c.UI.Error(fmt.Sprintf("Error tuning auth method %s: %s", mountPath, err))
 		return 2
 	}

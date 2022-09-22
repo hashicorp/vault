@@ -187,6 +187,28 @@ func (c *Sys) RemountStatusWithContext(ctx context.Context, migrationID string) 
 	return &result, err
 }
 
+func (c *Sys) TuneAuthMount(path string, config MountConfigInput) error {
+	return c.TuneAuthMountWithContext(context.Background(), path, config)
+}
+
+func (c *Sys) TuneAuthMountWithContext(ctx context.Context, path string, config MountConfigInput) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	r := c.c.NewRequest(http.MethodPost, fmt.Sprintf("/v1/sys/%s/tune", path))
+	if err := r.SetJSONBody(config); err != nil {
+		return err
+	}
+
+	q.Q("request")
+	q.Q(r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
+	if err == nil {
+		defer resp.Body.Close()
+	}
+	return err
+}
+
 func (c *Sys) TuneMount(path string, config MountConfigInput) error {
 	return c.TuneMountWithContext(context.Background(), path, config)
 }
@@ -199,7 +221,6 @@ func (c *Sys) TuneMountWithContext(ctx context.Context, path string, config Moun
 	if err := r.SetJSONBody(config); err != nil {
 		return err
 	}
-
 
 	q.Q("request")
 	q.Q(r)
@@ -271,7 +292,7 @@ type MountConfigInput struct {
 	AllowedResponseHeaders    []string               `json:"allowed_response_headers,omitempty" mapstructure:"allowed_response_headers"`
 	TokenType                 string                 `json:"token_type,omitempty" mapstructure:"token_type"`
 	AllowedManagedKeys        []string               `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
-	UserLockoutConfig         UserLockoutInputConfig `json:"user_lockout_config"`
+	UserLockoutConfig         UserLockoutConfigInput `json:"user_lockout_config"`
 
 	// Deprecated: This field will always be blank for newer server responses.
 	PluginName string `json:"plugin_name,omitempty" mapstructure:"plugin_name"`
@@ -305,20 +326,20 @@ type MountConfigOutput struct {
 	AllowedResponseHeaders    []string                `json:"allowed_response_headers,omitempty" mapstructure:"allowed_response_headers"`
 	TokenType                 string                  `json:"token_type,omitempty" mapstructure:"token_type"`
 	AllowedManagedKeys        []string                `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
-	UserLockoutConfig         UserLockoutOutputConfig `json:"user_lockout_config"`
+	UserLockoutConfig         UserLockoutConfigOutput `json:"user_lockout_config"`
 	// Deprecated: This field will always be blank for newer server responses.
 	PluginName string `json:"plugin_name,omitempty" mapstructure:"plugin_name"`
 }
 
-type UserLockoutInputConfig struct {
+type UserLockoutConfigInput struct {
 	LockoutThreshold            string `json:"lockout_threshold,omitempty" structs:"lockout_threshold" mapstructure:"lockout_threshold"`                                        // Override for global default
 	LockoutDuration             string `json:"lockout_duration,omitempty" structs:"lockout_duration" mapstructure:"lockout_duration"`                                           // Override for global default
 	LockoutCounterResetDuration string `json:"lockout_counter_reset_duration,omitempty" structs:"lockout_counter_reset_duration" mapstructure:"lockout_counter_reset_duration"` // Override for global default
-	DisableLockout              bool   `json:"lockout_disable,omitempty" structs:"lockout_disable" mapstructure:"lockout_disable"`                                              // Override for global default
+	DisableLockout              *bool  `json:"lockout_disable,omitempty" structs:"lockout_disable" mapstructure:"lockout_disable"`                                              // Override for global default
 
 }
 
-type UserLockoutOutputConfig struct {
+type UserLockoutConfigOutput struct {
 	LockoutThreshold    int  `json:"lockout_threshold,omitempty" structs:"lockout_threshold" mapstructure:"lockout_threshold"`             // Override for global default
 	LockoutDuration     int  `json:"lockout_duration,omitempty" structs:"lockout_duration" mapstructure:"lockout_duration"`                // Override for global default
 	LockoutCounterReset int  `json:"lockout_counter_reset,omitempty" structs:"lockout_counter_reset" mapstructure:"lockout_counter_reset"` // Override for global default

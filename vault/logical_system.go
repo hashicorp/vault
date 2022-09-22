@@ -45,7 +45,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mitchellh/mapstructure"
-	"github.com/ryboe/q"
 )
 
 const (
@@ -929,6 +928,15 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[st
 	if entry.Table == credentialTableType {
 		entryConfig["token_type"] = entry.Config.TokenType.String()
 	}
+	if (entry.Config.UserLockoutConfig != UserLockoutConfig{}) {
+		userLockoutConfig := map[string]interface{}{
+			"user_lockout_counter_reset_duration": int64(entry.Config.UserLockoutConfig.LockoutCounterReset.Seconds()),
+			"user_lockout_threshold":              entry.Config.UserLockoutConfig.LockoutThreshold,
+			"user_lockout_duration":               int64(entry.Config.UserLockoutConfig.LockoutDuration.Seconds()),
+			"user_lockout_disable":                entry.Config.UserLockoutConfig.DisableLockout,
+		}
+		entryConfig["user_lockout_config"] = userLockoutConfig
+	}
 
 	// Add deprecation status only if it exists
 	builtinType := b.Core.builtinTypeFromMountEntry(ctx, entry)
@@ -1519,14 +1527,10 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"description":                         mountEntry.Description,
-			"default_lease_ttl":                   int(sysView.DefaultLeaseTTL().Seconds()),
-			"max_lease_ttl":                       int(sysView.MaxLeaseTTL().Seconds()),
-			"force_no_cache":                      mountEntry.Config.ForceNoCache,
-			"user_lockout_counter_reset_duration": int64(mountEntry.Config.UserLockoutConfig.LockoutCounterReset.Seconds()),
-			"user_lockout_threshold":              mountEntry.Config.UserLockoutConfig.LockoutThreshold,
-			"user_lockout_duration":               int64(mountEntry.Config.UserLockoutConfig.LockoutDuration.Seconds()),
-			"user_lockout_disable":                mountEntry.Config.UserLockoutConfig.DisableLockout,
+			"description":       mountEntry.Description,
+			"default_lease_ttl": int(sysView.DefaultLeaseTTL().Seconds()),
+			"max_lease_ttl":     int(sysView.MaxLeaseTTL().Seconds()),
+			"force_no_cache":    mountEntry.Config.ForceNoCache,
 		},
 	}
 
@@ -1563,6 +1567,13 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 		resp.Data["allowed_managed_keys"] = rawVal.([]string)
 	}
 
+	if (mountEntry.Config.UserLockoutConfig != UserLockoutConfig{}) {
+		resp.Data["user_lockout_counter_reset_duration"] = int64(mountEntry.Config.UserLockoutConfig.LockoutCounterReset.Seconds())
+		resp.Data["user_lockout_threshold"] = mountEntry.Config.UserLockoutConfig.LockoutThreshold
+		resp.Data["user_lockout_duration"] = int64(mountEntry.Config.UserLockoutConfig.LockoutDuration.Seconds())
+		resp.Data["user_lockout_disable"] = mountEntry.Config.UserLockoutConfig.DisableLockout
+	}
+
 	if len(mountEntry.Options) > 0 {
 		resp.Data["options"] = mountEntry.Options
 	}
@@ -1582,7 +1593,6 @@ func (b *SystemBackend) handleAuthTuneWrite(ctx context.Context, req *logical.Re
 
 // handleMountTuneWrite is used to set config settings on a backend
 func (b *SystemBackend) handleMountTuneWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	q.Q(data)
 	path := data.Get("path").(string)
 	if path == "" {
 		return logical.ErrorResponse("missing path"), nil
@@ -2396,9 +2406,6 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	if !local && repState.HasState(consts.ReplicationPerformanceSecondary) {
 		return nil, logical.ErrReadOnly
 	}
-
-	q.Q("handle enable auth")
-	q.Q(data)
 
 	// Get all the options
 	path := data.Get("path").(string)
