@@ -1001,10 +1001,6 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	sealWrap := data.Get("seal_wrap").(bool)
 	externalEntropyAccess := data.Get("external_entropy_access").(bool)
 	options := data.Get("options").(map[string]string)
-	var version string
-	if pluginVersionRaw, ok := data.GetOk("plugin_version"); ok {
-		version = pluginVersionRaw.(string)
-	}
 
 	var config MountConfig
 	var apiConfig APIMountConfig
@@ -1110,6 +1106,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		}
 	}
 
+	version := apiConfig.PluginVersion
 	switch version {
 	case "":
 		var err error
@@ -2349,10 +2346,6 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	sealWrap := data.Get("seal_wrap").(bool)
 	externalEntropyAccess := data.Get("external_entropy_access").(bool)
 	options := data.Get("options").(map[string]string)
-	var version string
-	if pluginVersionRaw, ok := data.GetOk("plugin_version"); ok {
-		version = pluginVersionRaw.(string)
-	}
 
 	var config MountConfig
 	var apiConfig APIMountConfig
@@ -2446,6 +2439,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		}
 	}
 
+	version := apiConfig.PluginVersion
 	switch version {
 	case "":
 		var err error
