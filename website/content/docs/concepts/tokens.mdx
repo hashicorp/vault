@@ -59,9 +59,9 @@ there are only three ways to create root tokens:
 
 1. The initial root token generated at `vault operator init` time -- this token has no
    expiration
-2. By using another root token; a root token with an expiration cannot create a
+1. By using another root token; a root token with an expiration cannot create a
    root token that never expires
-3. By using `vault operator generate-root` ([example](/guides/operations/generate-root))
+1. By using `vault operator generate-root` ([example](https://learn.hashicorp.com/tutorials/vault/generate-root))
    with the permission of a quorum of unseal key holders
 
 Root tokens are useful in development but should be extremely carefully guarded
@@ -90,10 +90,10 @@ Often this behavior is not desired, so users with appropriate access can create
 token tree. These orphan tokens can be created:
 
 1. Via `write` access to the `auth/token/create-orphan` endpoint
-2. By having `sudo` or `root` access to the `auth/token/create`
+1. By having `sudo` or `root` access to the `auth/token/create`
    and setting the `no_parent` parameter to `true`
-3. Via token store roles
-4. By logging in with any other (non-`token`) auth method
+1. Via token store roles
+1. By logging in with any other (non-`token`) auth method
 
 Users with appropriate permissions can also use the `auth/token/revoke-orphan`
 endpoint, which revokes the given token but rather than revoke the rest of the
@@ -107,9 +107,9 @@ accessor is a value that acts as a reference to a token and can only be used to
 perform limited actions:
 
 1. Look up a token's properties (not including the actual token ID)
-2. Look up a token's capabilities on a path
-3. Renew the token
-4. Revoke the token
+1. Look up a token's capabilities on a path
+1. Renew the token
+1. Revoke the token
 
 The token _making the call_, _not_ the token associated with the accessor, must
 have appropriate permissions for these functions.
@@ -158,11 +158,11 @@ token's information is looked up. It is based on a combination of factors:
 
 1. The system max TTL, which is 32 days but can be changed in Vault's
    configuration file.
-2. The max TTL set on a mount using [mount
+1. The max TTL set on a mount using [mount
    tuning](/api-docs/system/mounts). This value
    is allowed to override the system max TTL -- it can be longer or shorter,
    and if set this value will be respected.
-3. A value suggested by the auth method that issued the token. This
+1. A value suggested by the auth method that issued the token. This
    might be configured on a per-role, per-group, or per-user basis. This value
    is allowed to be less than the mount max TTL (or, if not set, the system max
    TTL), but it is not allowed to be longer.
@@ -193,8 +193,8 @@ can be created in a few ways:
 
 1. By having `sudo` capability or a `root` token with the `auth/token/create`
    endpoint
-2. By using token store roles
-3. By using an auth method that supports issuing these, such as
+1. By using token store roles
+1. By using an auth method that supports issuing these, such as
    AppRole
 
 At issue time, the TTL of a periodic token will be equal to the configured
