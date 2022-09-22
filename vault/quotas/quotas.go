@@ -764,10 +764,12 @@ func (m *Manager) resetCache() error {
 		if err != nil {
 			return err
 		}
-		rlq := quota.(*RateLimitQuota)
-		err = rlq.store.Close(context.Background())
-		if err != nil {
-			return err
+		if quota != nil {
+			rlq := quota.(*RateLimitQuota)
+			err = rlq.store.Close(context.Background())
+			if err != nil {
+				return err
+			}
 		}
 	}
 	db, err := memdb.NewMemDB(dbSchema())
