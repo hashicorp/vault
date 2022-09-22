@@ -18,10 +18,6 @@
   </div>
 {{/if}}
 
-{{#if this.isTesting}}
-  <div id="modal-wormhole"></div>
-{{/if}}
-
 <Modal
   @title="HCP Link error"
   @onClose={{fn (mut this.showModal) false}}
