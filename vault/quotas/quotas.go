@@ -342,6 +342,11 @@ func (m *Manager) QuotaNames(qType Type) ([]string, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
+	return m.quotaNamesLocked(qType)
+}
+
+// quotaNamesLocked returns the names of all the quota rules for a given type, and must be called with the lock
+func (m *Manager) quotaNamesLocked(qType Type) ([]string, error) {
 	txn := m.db.Txn(false)
 	iter, err := txn.Get(qType.String(), indexID)
 	if err != nil {
@@ -377,6 +382,11 @@ func (m *Manager) QuotaByName(qType string, name string) (Quota, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
+	return m.quotaByNameLocked(qType, name)
+}
+
+// quotaByNameLocked queries for a quota rule in the db for a given quota name, and must be called with the lock
+func (m *Manager) quotaByNameLocked(qType string, name string) (Quota, error) {
 	txn := m.db.Txn(false)
 
 	quotaRaw, err := txn.First(qType, indexName, name)
@@ -686,6 +696,23 @@ func (m *Manager) Reset() error {
 
 // Must be called with the lock held
 func (m *Manager) resetCache() error {
+	names, err := m.quotaNamesLocked(TypeRateLimit)
+	if err != nil {
+		return err
+	}
+	for _, name := range names {
+		quota, err := m.quotaByNameLocked(TypeRateLimit.String(), name)
+		if err != nil {
+			return err
+		}
+		if quota != nil {
+			rlq := quota.(*RateLimitQuota)
+			err = rlq.store.Close(context.Background())
+			if err != nil {
+				return err
+			}
+		}
+	}
 	db, err := memdb.NewMemDB(dbSchema())
 	if err != nil {
 		return err
