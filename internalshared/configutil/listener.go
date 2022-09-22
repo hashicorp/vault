@@ -90,7 +90,7 @@ type Listener struct {
 	XForwardedForRejectNotPresentRaw    interface{}                   `hcl:"x_forwarded_for_reject_not_present,alias:XForwardedForRejectNotPresent"`
 	XForwardedForRejectNotAuthorized    bool                          `hcl:"-"`
 	XForwardedForRejectNotAuthorizedRaw interface{}                   `hcl:"x_forwarded_for_reject_not_authorized,alias:XForwardedForRejectNotAuthorized"`
-	XForwardedForClientCertHeader       string                        `hcl:"x_forwarded_for_client_cert_header,alias:XForwardedForClientCertHeader"`                   
+	XForwardedForClientCertHeader       string                        `hcl:"x_forwarded_for_client_cert_header,alias:XForwardedForClientCertHeader"`
 
 	SocketMode  string `hcl:"socket_mode"`
 	SocketUser  string `hcl:"socket_user"`
