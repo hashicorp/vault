@@ -23,7 +23,7 @@ This FAQ section contains frequently asked questions about the Server Side Consi
 
 ~> **Note**: This features requires Vault Enterprise.
 
-Vault has an [eventual consistency](docs/enterprise/consistency) model where only the leader can write to Vault's storage. When using performance standbys with Integrated Storage, there are sequences of operations that don't always yield read-after-write consistency, which may pose a challenge for some use cases.
+Vault has an [eventual consistency](/docs/enterprise/consistency) model where only the leader can write to Vault's storage. When using performance standbys with Integrated Storage, there are sequences of operations that don't always yield read-after-write consistency, which may pose a challenge for some use cases.
 
 Several client-based mitigations were added in Vault version 1.7, which depended on some modifications to clients (provide the appropriate response header per request) so they can specify state. This may not be possible to do in some environments.
 
