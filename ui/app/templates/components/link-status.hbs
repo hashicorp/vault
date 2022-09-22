@@ -1,0 +1,15 @@
+{{#if this.showStatus}}
+  <div class="navbar-status {{if (eq this.state 'connected') 'connected' 'warning'}}">
+    <Icon @name="info" />
+    <p data-test-link-status>
+      {{#if (eq this.state "connected")}}
+        This self-managed Vault is linked to
+        <a href="https://portal.cloud.hashicorp.com/sign-in" target="_blank" rel="noopener noreferrer">
+          HCP.
+        </a>
+      {{else}}
+        {{this.message}}
+      {{/if}}
+    </p>
+  </div>
+{{/if}}

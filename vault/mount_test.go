@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -147,6 +147,78 @@ func TestCore_Mount(t *testing.T) {
 		Table: mountTableType,
 		Path:  "foo",
 		Type:  "kv",
+	}
+	err := c.mount(namespace.RootContext(nil), me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	match := c.router.MatchingMount(namespace.RootContext(nil), "foo/bar")
+	if match != "foo/" {
+		t.Fatalf("missing mount")
+	}
+
+	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
+	conf := &CoreConfig{
+		Physical:        c.physical,
+		DisableMlock:    true,
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
+		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
+	}
+	c2, err := NewCore(conf)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	defer c2.Shutdown()
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c2, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("should be unsealed")
+		}
+	}
+
+	// Verify matching mount tables
+	if diff := deep.Equal(c.mounts.sortEntriesByPath(), c2.mounts.sortEntriesByPath()); len(diff) > 0 {
+		t.Fatalf("mismatch: %v", diff)
+	}
+}
+
+func TestCore_Mount_secrets_builtin_RunningVersion(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	me := &MountEntry{
+		Table: mountTableType,
+		Path:  "foo",
+		Type:  "generic",
+	}
+	err := c.mount(namespace.RootContext(nil), me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	match := c.router.MatchingMount(namespace.RootContext(nil), "foo/bar")
+	if match != "foo/" {
+		t.Fatalf("missing mount")
+	}
+
+	raw, _ := c.router.root.Get(match)
+	// we override the running version of builtins
+	if !strings.Contains(raw.(*routeEntry).mountEntry.RunningVersion, "builtin") {
+		t.Errorf("Expected mount to have builtin version but got %s", raw.(*routeEntry).mountEntry.RunningVersion)
+	}
+}
+
+// TestCore_Mount_kv_generic tests that we can successfully mount kv using the
+// kv alias "generic"
+func TestCore_Mount_kv_generic(t *testing.T) {
+	c, keys, _ := TestCoreUnsealed(t)
+	me := &MountEntry{
+		Table: mountTableType,
+		Path:  "foo",
+		Type:  "generic",
 	}
 	err := c.mount(namespace.RootContext(nil), me)
 	if err != nil {

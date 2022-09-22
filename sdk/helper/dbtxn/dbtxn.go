@@ -77,7 +77,7 @@ func parseQuery(m map[string]string, tpl string) string {
 	}
 
 	for k, v := range m {
-		tpl = strings.Replace(tpl, fmt.Sprintf("{{%s}}", k), v, -1)
+		tpl = strings.ReplaceAll(tpl, fmt.Sprintf("{{%s}}", k), v)
 	}
 	return tpl
 }

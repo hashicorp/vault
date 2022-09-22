@@ -16,10 +16,22 @@ List all namespaces:
 $ vault namespace list
 ```
 
-Create a namespace at the path `ns1/`:
+Create a namespace at the path `ns1/` with no custom metadata:
 
 ```shell-session
 $ vault namespace create ns1/
+```
+
+Create a namespace at the path `ns1/` with multiple custom metadata keys:
+
+```shell-session
+$ vault namespace create -custom-metadata=foo=abc -custom-metadata=bar=123 ns1/
+```
+
+Patch an existing namespace at the path `ns1/` to add custom metadata key `bar` and remove key `foo`
+
+```shell-session
+$ vault namespace patch -custom-metadata=bar=123 -remove-custom-metadata=foo ns1/
 ```
 
 Delete the namespace at path `ns1/`:

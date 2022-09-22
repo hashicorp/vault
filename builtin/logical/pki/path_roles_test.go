@@ -17,6 +17,7 @@ import (
 )
 
 func TestPki_RoleGenerateLease(t *testing.T) {
+	t.Parallel()
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
@@ -121,6 +122,7 @@ func TestPki_RoleGenerateLease(t *testing.T) {
 }
 
 func TestPki_RoleKeyUsage(t *testing.T) {
+	t.Parallel()
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
@@ -211,6 +213,7 @@ func TestPki_RoleKeyUsage(t *testing.T) {
 }
 
 func TestPki_RoleOUOrganizationUpgrade(t *testing.T) {
+	t.Parallel()
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
@@ -316,6 +319,7 @@ func TestPki_RoleOUOrganizationUpgrade(t *testing.T) {
 }
 
 func TestPki_RoleAllowedDomains(t *testing.T) {
+	t.Parallel()
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
@@ -403,6 +407,7 @@ func TestPki_RoleAllowedDomains(t *testing.T) {
 }
 
 func TestPki_RoleAllowedURISANs(t *testing.T) {
+	t.Parallel()
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
@@ -437,6 +442,7 @@ func TestPki_RoleAllowedURISANs(t *testing.T) {
 }
 
 func TestPki_RolePkixFields(t *testing.T) {
+	t.Parallel()
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
@@ -528,6 +534,7 @@ func TestPki_RolePkixFields(t *testing.T) {
 }
 
 func TestPki_RoleNoStore(t *testing.T) {
+	t.Parallel()
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
@@ -648,6 +655,7 @@ func TestPki_RoleNoStore(t *testing.T) {
 }
 
 func TestPki_CertsLease(t *testing.T) {
+	t.Parallel()
 	var resp *logical.Response
 	var err error
 	b, storage := createBackendWithStorage(t)
@@ -729,6 +737,7 @@ func TestPki_CertsLease(t *testing.T) {
 }
 
 func TestPki_RolePatch(t *testing.T) {
+	t.Parallel()
 	type TestCase struct {
 		Field   string
 		Before  interface{}
@@ -1008,6 +1017,7 @@ func TestPki_RolePatch(t *testing.T) {
 }
 
 func TestPKI_RolePolicyInformation_Flat(t *testing.T) {
+	t.Parallel()
 	type TestCase struct {
 		Input   interface{}
 		ASN     interface{}

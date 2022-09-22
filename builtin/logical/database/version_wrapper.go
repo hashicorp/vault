@@ -9,6 +9,7 @@ import (
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -18,10 +19,12 @@ type databaseVersionWrapper struct {
 	v5 v5.Database
 }
 
+var _ logical.PluginVersioner = databaseVersionWrapper{}
+
 // newDatabaseWrapper figures out which version of the database the pluginName is referring to and returns a wrapper object
 // that can be used to make operations on the underlying database plugin.
-func newDatabaseWrapper(ctx context.Context, pluginName string, sys pluginutil.LookRunnerUtil, logger log.Logger) (dbw databaseVersionWrapper, err error) {
-	newDB, err := v5.PluginFactory(ctx, pluginName, sys, logger)
+func newDatabaseWrapper(ctx context.Context, pluginName string, pluginVersion string, sys pluginutil.LookRunnerUtil, logger log.Logger) (dbw databaseVersionWrapper, err error) {
+	newDB, err := v5.PluginFactoryVersion(ctx, pluginName, pluginVersion, sys, logger)
 	if err == nil {
 		dbw = databaseVersionWrapper{
 			v5: newDB,
@@ -32,7 +35,7 @@ func newDatabaseWrapper(ctx context.Context, pluginName string, sys pluginutil.L
 	merr := &multierror.Error{}
 	merr = multierror.Append(merr, err)
 
-	legacyDB, err := v4.PluginFactory(ctx, pluginName, sys, logger)
+	legacyDB, err := v4.PluginFactoryVersion(ctx, pluginName, pluginVersion, sys, logger)
 	if err == nil {
 		dbw = databaseVersionWrapper{
 			v4: legacyDB,
@@ -225,6 +228,21 @@ func (d databaseVersionWrapper) Close() error {
 
 	// v4 Database
 	return d.v4.Close()
+}
+
+func (d databaseVersionWrapper) PluginVersion() logical.PluginVersion {
+	// v5 Database
+	if d.isV5() {
+		if versioner, ok := d.v5.(logical.PluginVersioner); ok {
+			return versioner.PluginVersion()
+		}
+	}
+
+	// v4 Database
+	if versioner, ok := d.v4.(logical.PluginVersioner); ok {
+		return versioner.PluginVersion()
+	}
+	return logical.EmptyPluginVersion
 }
 
 func (d databaseVersionWrapper) isV5() bool {

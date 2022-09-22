@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -169,7 +171,7 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 	var backend logical.Backend
 	// Create the new backend
 	sysView := c.mountEntrySysView(entry)
-	backend, err = c.newCredentialBackend(ctx, entry, sysView, view)
+	backend, entry.RunningSha256, err = c.newCredentialBackend(ctx, entry, sysView, view)
 	if err != nil {
 		return err
 	}
@@ -182,7 +184,16 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 	if backendType != logical.TypeCredential {
 		return fmt.Errorf("cannot mount %q of type %q as an auth backend", entry.Type, backendType)
 	}
-
+	// update the entry running version with the backend's reported version
+	if versioner, ok := backend.(logical.PluginVersioner); ok {
+		entry.RunningVersion = versioner.PluginVersion().Version
+	}
+	if entry.RunningVersion == "" {
+		// don't set the running version to a builtin if it is running as an external plugin
+		if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
+			entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
+		}
+	}
 	addPathCheckers(c, entry, backend, viewPath)
 
 	// If the mount is filtered or we are on a DR secondary we don't want to
@@ -319,14 +330,14 @@ func (c *Core) disableCredentialInternal(ctx context.Context, path string, updat
 			return err
 		}
 
-	case entry.Local, !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
+	case entry.Local, !c.IsPerfSecondary():
 		// Have writable storage, remove the whole thing
 		if err := logical.ClearViewWithLogging(ctx, view, c.logger.Named("auth.deletion").With("namespace", ns.ID, "path", path)); err != nil {
 			c.logger.Error("failed to clear view for path being unmounted", "error", err, "path", path)
 			return err
 		}
 
-	case !entry.Local && c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary):
+	case !entry.Local && c.IsPerfSecondary():
 		if err := clearIgnoredPaths(ctx, c, backend, viewPath); err != nil {
 			return err
 		}
@@ -784,10 +795,11 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		// Initialize the backend
 		sysView := c.mountEntrySysView(entry)
 
-		backend, err = c.newCredentialBackend(ctx, entry, sysView, view)
+		backend, entry.RunningSha256, err = c.newCredentialBackend(ctx, entry, sysView, view)
 		if err != nil {
 			c.logger.Error("failed to create credential entry", "path", entry.Path, "error", err)
-			if plug, plugerr := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeCredential); plugerr == nil && !plug.Builtin {
+			plug, plugerr := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeCredential, "")
+			if plugerr == nil && plug != nil && !plug.Builtin {
 				// If we encounter an error instantiating the backend due to an error,
 				// skip backend initialization but register the entry to the mount table
 				// to preserve storage and path.
@@ -902,21 +914,30 @@ func (c *Core) teardownCredentials(ctx context.Context) error {
 	return nil
 }
 
-// newCredentialBackend is used to create and configure a new credential backend by name
-func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysView logical.SystemView, view logical.Storage) (logical.Backend, error) {
+// newCredentialBackend is used to create and configure a new credential backend by name.
+// It also returns the SHA256 of the plugin, if available.
+func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysView logical.SystemView, view logical.Storage) (logical.Backend, string, error) {
 	t := entry.Type
 	if alias, ok := credentialAliases[t]; ok {
 		t = alias
 	}
 
+	var runningSha string
 	f, ok := c.credentialBackends[t]
 	if !ok {
-		plug, err := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeCredential)
+		plug, err := c.pluginCatalog.Get(ctx, t, consts.PluginTypeCredential, entry.Version)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		if plug == nil {
-			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, entry.Type)
+			errContext := t
+			if entry.Version != "" {
+				errContext += fmt.Sprintf(", version=%s", entry.Version)
+			}
+			return nil, "", fmt.Errorf("%w: %s", ErrPluginNotFound, errContext)
+		}
+		if len(plug.Sha256) > 0 {
+			runningSha = hex.EncodeToString(plug.Sha256)
 		}
 
 		f = plugin.Factory
@@ -924,7 +945,6 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 			f = wrapFactoryCheckPerms(c, plugin.Factory)
 		}
 	}
-
 	// Set up conf to pass in plugin_name
 	conf := make(map[string]string)
 	for k, v := range entry.Options {
@@ -939,6 +959,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 	}
 
 	conf["plugin_type"] = consts.PluginTypeCredential.String()
+	conf["plugin_version"] = entry.Version
 
 	authLogger := c.baseLogger.Named(fmt.Sprintf("auth.%s.%s", t, entry.Accessor))
 	c.AddLogger(authLogger)
@@ -952,10 +973,10 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 
 	b, err := f(ctx, config)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return b, nil
+	return b, runningSha, nil
 }
 
 // defaultAuthTable creates a default auth table

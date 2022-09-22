@@ -16,13 +16,17 @@ import Component from '@glimmer/component';
  * ```
  *
  * @param {array} params - Array to pass to LinkTo
- * @param {string} type - Use "add" to change icon
+ * @param {string} type - Use "add" to change icon to plus sign, or pass in your own kind of icon.
  * @param {boolean} disabled - pass true to disable link
  * @param {string} disabledTooltip - tooltip to display on hover when disabled
  */
 
 export default class ToolbarLinkComponent extends Component {
   get glyph() {
-    return this.args.type == 'add' ? 'plus' : 'chevron-right';
+    // not ideal logic. Without refactoring, this allows us to add in our own icon type outside of chevron-right or plus.
+    // For a later refactor we should remove the substitution for add to plus and just return type.
+    const { type } = this.args;
+    if (!type) return 'chevron-right';
+    return type === 'add' ? 'plus' : type;
   }
 }

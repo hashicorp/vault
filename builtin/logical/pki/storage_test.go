@@ -14,6 +14,7 @@ import (
 var ctx = context.Background()
 
 func Test_ConfigsRoundTrip(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
@@ -49,6 +50,7 @@ func Test_ConfigsRoundTrip(t *testing.T) {
 }
 
 func Test_IssuerRoundTrip(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 	issuer1, key1 := genIssuerAndKey(t, b, s)
@@ -94,6 +96,7 @@ func Test_IssuerRoundTrip(t *testing.T) {
 }
 
 func Test_KeysIssuerImport(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
@@ -161,6 +164,41 @@ func Test_KeysIssuerImport(t *testing.T) {
 	require.Equal(t, "", key2Ref.Name)
 }
 
+func Test_IssuerUpgrade(t *testing.T) {
+	t.Parallel()
+	b, s := createBackendWithStorage(t)
+	sc := b.makeStorageContext(ctx, s)
+
+	// Make sure that we add OCSP signing to v0 issuers if CRLSigning is enabled
+	issuer, _ := genIssuerAndKey(t, b, s)
+	issuer.Version = 0
+	issuer.Usage.ToggleUsage(OCSPSigningUsage)
+
+	err := sc.writeIssuer(&issuer)
+	require.NoError(t, err, "failed writing out issuer")
+
+	newIssuer, err := sc.fetchIssuerById(issuer.ID)
+	require.NoError(t, err, "failed fetching issuer")
+
+	require.Equal(t, uint(1), newIssuer.Version)
+	require.True(t, newIssuer.Usage.HasUsage(OCSPSigningUsage))
+
+	// If CRLSigning is not present on a v0, we should not have OCSP signing after upgrade.
+	issuer, _ = genIssuerAndKey(t, b, s)
+	issuer.Version = 0
+	issuer.Usage.ToggleUsage(OCSPSigningUsage)
+	issuer.Usage.ToggleUsage(CRLSigningUsage)
+
+	err = sc.writeIssuer(&issuer)
+	require.NoError(t, err, "failed writing out issuer")
+
+	newIssuer, err = sc.fetchIssuerById(issuer.ID)
+	require.NoError(t, err, "failed fetching issuer")
+
+	require.Equal(t, uint(1), newIssuer.Version)
+	require.False(t, newIssuer.Usage.HasUsage(OCSPSigningUsage))
+}
+
 func genIssuerAndKey(t *testing.T, b *backend, s logical.Storage) (issuerEntry, keyEntry) {
 	certBundle := genCertBundle(t, b, s)
 
@@ -180,6 +218,8 @@ func genIssuerAndKey(t *testing.T, b *backend, s logical.Storage) (issuerEntry, 
 		Certificate:  strings.TrimSpace(certBundle.Certificate) + "\n",
 		CAChain:      certBundle.CAChain,
 		SerialNumber: certBundle.SerialNumber,
+		Usage:        AllIssuerUsages,
+		Version:      latestIssuerVersion,
 	}
 
 	return pkiIssuer, pkiKey
@@ -211,7 +251,7 @@ func genCertBundle(t *testing.T, b *backend, s logical.Storage) *certutil.CertBu
 		apiData: apiData,
 		role:    role,
 	}
-	parsedCertBundle, err := generateCert(sc, input, nil, true, b.GetRandomReader())
+	parsedCertBundle, _, err := generateCert(sc, input, nil, true, b.GetRandomReader())
 
 	require.NoError(t, err)
 	certBundle, err := parsedCertBundle.ToCertBundle()

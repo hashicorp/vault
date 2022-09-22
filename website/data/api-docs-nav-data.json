@@ -102,6 +102,10 @@
             "path": "secret/databases/postgresql"
           },
           {
+            "title": "Redis ElastiCache",
+            "path": "secret/databases/rediselasticache"
+          },
+          {
             "title": "Redshift",
             "path": "secret/databases/redshift"
           },
@@ -415,8 +419,7 @@
       },
       {
         "title": "<code>/sys/generate-recovery-token</code>",
-        "path": "system/generate-recovery-token",
-        "hidden": true
+        "path": "system/generate-recovery-token"
       },
       {
         "title": "<code>/sys/generate-root</code>",

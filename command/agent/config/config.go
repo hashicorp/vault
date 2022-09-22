@@ -24,19 +24,26 @@ import (
 type Config struct {
 	*configutil.SharedConfig `hcl:"-"`
 
-	AutoAuth                   *AutoAuth                  `hcl:"auto_auth"`
-	ExitAfterAuth              bool                       `hcl:"exit_after_auth"`
-	Cache                      *Cache                     `hcl:"cache"`
-	Vault                      *Vault                     `hcl:"vault"`
-	TemplateConfig             *TemplateConfig            `hcl:"template_config"`
-	Templates                  []*ctconfig.TemplateConfig `hcl:"templates"`
-	DisableIdleConns           []string                   `hcl:"disable_idle_connections"`
-	DisableIdleConnsCaching    bool                       `hcl:"-"`
-	DisableIdleConnsTemplating bool                       `hcl:"-"`
-	DisableIdleConnsAutoAuth   bool                       `hcl:"-"`
+	AutoAuth                    *AutoAuth                  `hcl:"auto_auth"`
+	ExitAfterAuth               bool                       `hcl:"exit_after_auth"`
+	Cache                       *Cache                     `hcl:"cache"`
+	Vault                       *Vault                     `hcl:"vault"`
+	TemplateConfig              *TemplateConfig            `hcl:"template_config"`
+	Templates                   []*ctconfig.TemplateConfig `hcl:"templates"`
+	DisableIdleConns            []string                   `hcl:"disable_idle_connections"`
+	DisableIdleConnsCaching     bool                       `hcl:"-"`
+	DisableIdleConnsTemplating  bool                       `hcl:"-"`
+	DisableIdleConnsAutoAuth    bool                       `hcl:"-"`
+	DisableKeepAlives           []string                   `hcl:"disable_keep_alives"`
+	DisableKeepAlivesCaching    bool                       `hcl:"-"`
+	DisableKeepAlivesTemplating bool                       `hcl:"-"`
+	DisableKeepAlivesAutoAuth   bool                       `hcl:"-"`
 }
 
-const DisableIdleConnsEnv = "VAULT_AGENT_DISABLE_IDLE_CONNECTIONS"
+const (
+	DisableIdleConnsEnv  = "VAULT_AGENT_DISABLE_IDLE_CONNECTIONS"
+	DisableKeepAlivesEnv = "VAULT_AGENT_DISABLE_KEEP_ALIVES"
+)
 
 func (c *Config) Prune() {
 	for _, l := range c.Listeners {
@@ -123,6 +130,7 @@ type Method struct {
 	MaxBackoffRaw interface{}   `hcl:"max_backoff"`
 	MaxBackoff    time.Duration `hcl:"-"`
 	Namespace     string        `hcl:"namespace"`
+	ExitOnError   bool          `hcl:"exit_on_err"`
 	Config        map[string]interface{}
 }
 
@@ -285,6 +293,28 @@ func LoadConfig(path string) (*Config, error) {
 			continue
 		default:
 			return nil, fmt.Errorf("unknown disable_idle_connections value: %s", subsystem)
+		}
+	}
+
+	if disableKeepAlivesEnv := os.Getenv(DisableKeepAlivesEnv); disableKeepAlivesEnv != "" {
+		result.DisableKeepAlives, err = parseutil.ParseCommaStringSlice(strings.ToLower(disableKeepAlivesEnv))
+		if err != nil {
+			return nil, fmt.Errorf("error parsing environment variable %s: %v", DisableKeepAlivesEnv, err)
+		}
+	}
+
+	for _, subsystem := range result.DisableKeepAlives {
+		switch subsystem {
+		case "auto-auth":
+			result.DisableKeepAlivesAutoAuth = true
+		case "caching":
+			result.DisableKeepAlivesCaching = true
+		case "templating":
+			result.DisableKeepAlivesTemplating = true
+		case "":
+			continue
+		default:
+			return nil, fmt.Errorf("unknown disable_keep_alives value: %s", subsystem)
 		}
 	}
 

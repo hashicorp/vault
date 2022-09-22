@@ -292,3 +292,33 @@ func parseFlagFile(raw string) (string, error) {
 
 	return raw, nil
 }
+
+func generateFlagWarnings(args []string) string {
+	var trailingFlags []string
+	for _, arg := range args {
+		// "-" can be used where a file is expected to denote stdin.
+		if !strings.HasPrefix(arg, "-") || arg == "-" {
+			continue
+		}
+
+		isGlobalFlag := false
+		trimmedArg, _, _ := strings.Cut(strings.TrimLeft(arg, "-"), "=")
+		for _, flag := range globalFlags {
+			if trimmedArg == flag {
+				isGlobalFlag = true
+			}
+		}
+		if isGlobalFlag {
+			continue
+		}
+
+		trailingFlags = append(trailingFlags, arg)
+	}
+
+	if len(trailingFlags) > 0 {
+		return fmt.Sprintf("Command flags must be provided before positional arguments. "+
+			"The following arguments will not be parsed as flags: [%s]", strings.Join(trailingFlags, ","))
+	} else {
+		return ""
+	}
+}

@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/helper/template"
+	"github.com/hashicorp/vault/sdk/logical"
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
@@ -32,7 +33,8 @@ ALTER ROLE "{{username}}" WITH PASSWORD '{{password}}';
 )
 
 var (
-	_ dbplugin.Database = &PostgreSQL{}
+	_ dbplugin.Database       = (*PostgreSQL)(nil)
+	_ logical.PluginVersioner = (*PostgreSQL)(nil)
 
 	// postgresEndStatement is basically the word "END" but
 	// surrounded by a word boundary to differentiate it from
@@ -46,6 +48,9 @@ var (
 	// singleQuotedPhrases finds substrings like 'hello'
 	// and pulls them out with the quotes included.
 	singleQuotedPhrases = regexp.MustCompile(`('.*?')`)
+
+	// ReportedVersion is used to report a specific version to Vault.
+	ReportedVersion = ""
 )
 
 func New() (interface{}, error) {
@@ -469,6 +474,10 @@ func (p *PostgreSQL) secretValues() map[string]string {
 	}
 }
 
+func (p *PostgreSQL) PluginVersion() logical.PluginVersion {
+	return logical.PluginVersion{Version: ReportedVersion}
+}
+
 // containsMultilineStatement is a best effort to determine whether
 // a particular statement is multiline, and therefore should not be
 // split upon semicolons. If it's unsure, it defaults to false.
@@ -482,7 +491,7 @@ func containsMultilineStatement(stmt string) bool {
 	}
 	stmtWithoutLiterals := stmt
 	for _, literal := range literals {
-		stmtWithoutLiterals = strings.Replace(stmt, literal, "", -1)
+		stmtWithoutLiterals = strings.ReplaceAll(stmt, literal, "")
 	}
 	// Now look for the word "END" specifically. This will miss any
 	// representations of END that aren't surrounded by spaces, but
