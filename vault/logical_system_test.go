@@ -2009,7 +2009,7 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 
 	req = logical.TestRequest(t, logical.UpdateOperation, "auth/token/tune")
 	req.Data["description"] = ""
-	req.Data["version"] = "v1.0.0"
+	req.Data["plugin_version"] = "v1.0.0"
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err == nil || resp == nil || !resp.IsError() || !strings.Contains(resp.Error().Error(), ErrPluginNotFound.Error()) {
 		t.Fatalf("expected tune request to fail, but got resp: %#v, err: %s", resp, err)
@@ -2052,7 +2052,7 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 	if resp.Data["description"] != "" {
 		t.Fatalf("got: %#v expect: %#v", resp.Data["description"], "")
 	}
-	if resp.Data["version"] != "v1.0.0" {
+	if resp.Data["plugin_version"] != "v1.0.0" {
 		t.Fatalf("got: %#v, expected: %v", resp.Data["version"], "v1.0.0")
 	}
 }

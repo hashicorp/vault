@@ -1616,7 +1616,7 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 	}
 
 	if mountEntry.Version != "" {
-		resp.Data["version"] = mountEntry.Version
+		resp.Data["plugin_version"] = mountEntry.Version
 	}
 
 	return resp, nil
@@ -1753,7 +1753,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
-	if rawVal, ok := data.GetOk("version"); ok {
+	if rawVal, ok := data.GetOk("plugin_version"); ok {
 		version := rawVal.(string)
 		semanticVersion, err := semver.NewVersion(version)
 		if err != nil {

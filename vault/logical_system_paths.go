@@ -1542,7 +1542,7 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["token_type"][0]),
 				},
-				"version": {
+				"plugin_version": {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
 				},
@@ -1925,7 +1925,7 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeCommaStringSlice,
 					Description: strings.TrimSpace(sysHelp["tune_allowed_managed_keys"][0]),
 				},
-				"version": {
+				"plugin_version": {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
 				},
