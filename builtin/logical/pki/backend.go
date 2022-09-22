@@ -663,8 +663,10 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 	b.possibleDoubleCountedRevokedSerials = nil
 	b.possibleDoubleCountedSerials = nil
 
-	metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_certificates_stored"}, float32(*b.certCount))
-	metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_revoked_certificates_stored"}, float32(*b.revokedCertCount))
+	certCount := atomic.LoadUint32(b.certCount)
+	metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_certificates_stored"}, float32(certCount))
+	revokedCertCount := atomic.LoadUint32(b.revokedCertCount)
+	metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_revoked_certificates_stored"}, float32(revokedCertCount))
 
 	return nil
 }
@@ -672,7 +674,7 @@ func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
 // The "certsCounted" boolean here should be loaded from the backend certsCounted before the corresponding storage call:
 // eg. certsCounted := b.certsCounted.Load()
 func (b *backend) incrementTotalCertificatesCount(certsCounted bool, newSerial string) {
-	atomic.AddUint32(b.certCount, 1)
+	certCount := atomic.AddUint32(b.certCount, 1)
 	switch {
 	case !certsCounted:
 		// This is unsafe, but a good best-attempt
@@ -681,24 +683,25 @@ func (b *backend) incrementTotalCertificatesCount(certsCounted bool, newSerial s
 		}
 		b.possibleDoubleCountedSerials = append(b.possibleDoubleCountedSerials, newSerial)
 	default:
-		metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_certificates_stored"}, float32(*b.certCount))
+		metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_certificates_stored"}, float32(certCount))
 	}
 }
 
 func (b *backend) decrementTotalCertificatesCountReport() {
-	b.decrementTotalCertificatesCountNoReport()
-	metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_certificates_stored"}, float32(*b.certCount))
+	certCount := b.decrementTotalCertificatesCountNoReport()
+	metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_certificates_stored"}, float32(certCount))
 }
 
 // Called directly only by the initialize function to deduplicate the count, when we don't have a full count yet
-func (b *backend) decrementTotalCertificatesCountNoReport() {
-	atomic.AddUint32(b.certCount, ^uint32(0))
+func (b *backend) decrementTotalCertificatesCountNoReport() uint32 {
+	newCount := atomic.AddUint32(b.certCount, ^uint32(0))
+	return newCount
 }
 
 // The "certsCounted" boolean here should be loaded from the backend certsCounted before the corresponding storage call:
 // eg. certsCounted := b.certsCounted.Load()
 func (b *backend) incrementTotalRevokedCertificatesCount(certsCounted bool, newSerial string) {
-	atomic.AddUint32(b.revokedCertCount, 1)
+	newRevokedCertCount := atomic.AddUint32(b.revokedCertCount, 1)
 	switch {
 	case !certsCounted:
 		// This is unsafe, but a good best-attempt
@@ -707,16 +710,17 @@ func (b *backend) incrementTotalRevokedCertificatesCount(certsCounted bool, newS
 		}
 		b.possibleDoubleCountedRevokedSerials = append(b.possibleDoubleCountedRevokedSerials, newSerial)
 	default:
-		metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_revoked_certificates_stored"}, float32(*b.revokedCertCount))
+		metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_revoked_certificates_stored"}, float32(newRevokedCertCount))
 	}
 }
 
 func (b *backend) decrementTotalRevokedCertificatesCountReport() {
-	b.decrementTotalRevokedCertificatesCountNoReport()
-	metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_revoked_certificates_stored"}, float32(*b.revokedCertCount))
+	revokedCertCount := b.decrementTotalRevokedCertificatesCountNoReport()
+	metrics.SetGauge([]string{"secrets", "pki", b.backendUUID, "total_revoked_certificates_stored"}, float32(revokedCertCount))
 }
 
 // Called directly only by the initialize function to deduplicate the count, when we don't have a full count yet
-func (b *backend) decrementTotalRevokedCertificatesCountNoReport() {
-	atomic.AddUint32(b.revokedCertCount, ^uint32(0))
+func (b *backend) decrementTotalRevokedCertificatesCountNoReport() uint32 {
+	newRevokedCertCount := atomic.AddUint32(b.revokedCertCount, ^uint32(0))
+	return newRevokedCertCount
 }

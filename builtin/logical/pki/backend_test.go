@@ -5553,11 +5553,11 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 
 	// Assert initialize from clean is correct:
 	b.initializeStoredCertificateCounts(ctx)
-	if *b.certCount != 6 {
-		t.Fatalf("Failed to count six certificates root,A,B,C,D,E, instead counted %d certs", *b.certCount)
+	if atomic.LoadUint32(b.certCount) != 6 {
+		t.Fatalf("Failed to count six certificates root,A,B,C,D,E, instead counted %d certs", atomic.LoadUint32(b.certCount))
 	}
-	if *b.revokedCertCount != 2 {
-		t.Fatalf("Failed to count two revoked certificates A+B, instead counted %d certs", *b.revokedCertCount)
+	if atomic.LoadUint32(b.revokedCertCount) != 2 {
+		t.Fatalf("Failed to count two revoked certificates A+B, instead counted %d certs", atomic.LoadUint32(b.revokedCertCount))
 	}
 
 	// Simulates listing while initialize in progress, by "restarting it"
