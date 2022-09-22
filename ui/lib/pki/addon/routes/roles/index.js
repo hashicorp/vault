@@ -6,11 +6,11 @@ export default class RolesIndexRoute extends Route {
   @service secretMountPath;
   @service pathHelp;
 
-  async model() {
+  model() {
     // the pathHelp service is needed for adding openAPI to the model
-    await this.pathHelp.getNewModel('pki/pki-role-engine', 'pki');
+    this.pathHelp.getNewModel('pki/pki-role-engine', 'pki');
 
-    let response = await this.store
+    return this.store
       .query('pki/pki-role-engine', { backend: this.secretMountPath.currentPath })
       .catch((err) => {
         if (err.httpStatus === 404) {
@@ -19,6 +19,5 @@ export default class RolesIndexRoute extends Route {
           throw err;
         }
       });
-    return response;
   }
 }

@@ -432,7 +432,7 @@ func TestLoadConfigFile_Bad_AgentCache_NoListeners(t *testing.T) {
 }
 
 func TestLoadConfigFile_Bad_AutoAuth_Wrapped_Multiple_Sinks(t *testing.T) {
-	_, err := LoadConfig("./test-fixtures/bad-config-auto_auth-wrapped-multiple-sinks")
+	_, err := LoadConfig("./test-fixtures/bad-config-auto_auth-wrapped-multiple-sinks.hcl")
 	if err == nil {
 		t.Fatal("LoadConfig should return an error when auth_auth.method.wrap_ttl nonzero and multiple sinks defined")
 	}
