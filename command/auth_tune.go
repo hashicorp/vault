@@ -146,7 +146,7 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 	})
 
 	f.StringVar(&StringVar{
-		Name:    "plugin-version",
+		Name:    flagNamePluginVersion,
 		Target:  &c.flagPluginVersion,
 		Default: "",
 		Usage: "Select the semantic version of the plugin to run. The new version must be registered in " +
@@ -231,7 +231,7 @@ func (c *AuthTuneCommand) Run(args []string) int {
 			mountConfigInput.TokenType = c.flagTokenType
 		}
 
-		if fl.Name == "plugin-version" {
+		if fl.Name == flagNamePluginVersion {
 			mountConfigInput.PluginVersion = c.flagPluginVersion
 		}
 	})

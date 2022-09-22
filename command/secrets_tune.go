@@ -148,7 +148,7 @@ func (c *SecretsTuneCommand) Flags() *FlagSets {
 	})
 
 	f.StringVar(&StringVar{
-		Name:    "plugin-version",
+		Name:    flagNamePluginVersion,
 		Target:  &c.flagPluginVersion,
 		Default: "",
 		Usage: "Select the semantic version of the plugin to run. The new version must be registered in " +
@@ -236,7 +236,7 @@ func (c *SecretsTuneCommand) Run(args []string) int {
 			mountConfigInput.AllowedManagedKeys = c.flagAllowedManagedKeys
 		}
 
-		if fl.Name == "plugin-version" {
+		if fl.Name == flagNamePluginVersion {
 			mountConfigInput.PluginVersion = c.flagPluginVersion
 		}
 	})

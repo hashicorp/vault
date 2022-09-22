@@ -201,7 +201,7 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 	})
 
 	f.StringVar(&StringVar{
-		Name:    "plugin-version",
+		Name:    flagNamePluginVersion,
 		Target:  &c.flagPluginVersion,
 		Default: "",
 		Usage:   "Select the semantic version of the plugin to enable.",
@@ -307,7 +307,7 @@ func (c *AuthEnableCommand) Run(args []string) int {
 			authOpts.Config.TokenType = c.flagTokenType
 		}
 
-		if fl.Name == "plugin-version" {
+		if fl.Name == flagNamePluginVersion {
 			authOpts.Config.PluginVersion = c.flagPluginVersion
 		}
 	})

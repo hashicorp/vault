@@ -175,7 +175,7 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 	})
 
 	f.StringVar(&StringVar{
-		Name:    "plugin-version",
+		Name:    flagNamePluginVersion,
 		Target:  &c.flagPluginVersion,
 		Default: "",
 		Usage:   "Select the semantic version of the plugin to enable.",
@@ -329,7 +329,7 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 			mountInput.Config.AllowedManagedKeys = c.flagAllowedManagedKeys
 		}
 
-		if fl.Name == "plugin-version" {
+		if fl.Name == flagNamePluginVersion {
 			mountInput.Config.PluginVersion = c.flagPluginVersion
 		}
 	})
