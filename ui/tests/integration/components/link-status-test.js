@@ -16,10 +16,7 @@ module('Integration | Component | link-status', function (hooks) {
   });
 
   test('it does not render banner when status is not present', async function (assert) {
-    await render(hbs`
-      <div id="modal-wormhole"></div>
-      <LinkStatus @status={{undefined}} />
-    `);
+    await render(hbs`<LinkStatus @status={{undefined}} />`);
 
     assert.dom('.navbar-status').doesNotExist('Banner is hidden for missing status message');
   });
@@ -27,19 +24,13 @@ module('Integration | Component | link-status', function (hooks) {
   test('it does not render banner in oss version', async function (assert) {
     this.owner.lookup('service:version').set('isEnterprise', false);
 
-    await render(hbs`
-      <div id="modal-wormhole"></div>
-      <LinkStatus @status={{get this.statuses 0}} />
-    `);
+    await render(hbs`<LinkStatus @status={{get this.statuses 0}} />`);
 
     assert.dom('.navbar-status').doesNotExist('Banner is hidden in oss');
   });
 
   test('it renders connected status', async function (assert) {
-    await render(hbs`
-      <div id="modal-wormhole"></div>
-      <LinkStatus @status={{get this.statuses 0}} />
-    `);
+    await render(hbs`<LinkStatus @status={{get this.statuses 0}} />`);
 
     assert.dom('.navbar-status').hasClass('connected', 'Correct banner class renders for connected state');
     assert
@@ -52,10 +43,7 @@ module('Integration | Component | link-status', function (hooks) {
 
   test('it should render error states', async function (assert) {
     // disconnected error
-    await render(hbs`
-      <div id="modal-wormhole"></div>
-      <LinkStatus @status={{get this.statuses 1}} />
-    `);
+    await render(hbs`<LinkStatus @status={{get this.statuses 1}} />`);
 
     assert.dom('.navbar-status').hasClass('warning', 'Correct banner class renders for error state');
     assert
@@ -74,19 +62,13 @@ module('Integration | Component | link-status', function (hooks) {
       .hasText('unable to establish a connection with HCP', 'Error renders');
 
     // connecting error
-    await render(hbs`
-      <div id="modal-wormhole"></div>
-      <LinkStatus @status={{get this.statuses 3}} />
-    `);
+    await render(hbs`<LinkStatus @status={{get this.statuses 3}} />`);
     assert
       .dom('[data-test-link-status-error]')
       .hasText('principal does not have the permission to register as a provider', 'Error renders');
 
     // this shouldn't happen but placeholders should render if disconnected/connecting status is returned without timestamp and/or error
-    await render(hbs`
-      <div id="modal-wormhole"></div>
-      <LinkStatus @status="connecting" />
-    `);
+    await render(hbs`<LinkStatus @status="connecting" />`);
     assert.dom('[data-test-link-status-timestamp]').hasText('Not available', 'Timestamp placeholder renders');
     assert.dom('[data-test-link-status-error]').hasText('Not available', 'Error placeholder renders');
   });

@@ -1,5 +1,6 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
+import Ember from 'ember';
 
 /**
  * @module LinkStatus
@@ -36,5 +37,9 @@ export default class LinkStatus extends Component {
   get error() {
     const status = this.args.status;
     return status && status !== 'connected' ? status.split('error:')[1] : null;
+  }
+
+  get isTesting() {
+    return Ember.testing;
   }
 }
