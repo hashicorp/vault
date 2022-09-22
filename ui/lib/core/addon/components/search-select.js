@@ -55,7 +55,7 @@ import { assert } from '@ember/debug';
  * @param {boolean} [displayInherit=false] - if you need the search select component to display inherit instead of box.
  *
  // * advanced customization
- * @param {Array} manuallyPassedOptions - `options` can be passed directly from the outside to the
+ * @param {Array} options - `options` can be passed directly from the outside to the
  * power-select component. If doing this, `models` should not also be passed as that will overwrite the
  * passed value. ex: [{ name: 'namespace45', id: 'displayedName' }];
  * @param {function} search - Customizes how the power-select component searches for matches -
@@ -68,7 +68,6 @@ export default class SearchSelect extends Component {
   // onChange: () => {},
   @tracked selectedOptions; // list of selected options
   @tracked allOptions; // list of options including matched
-  @tracked options;
   @tracked searchSelectOptions = [];
   @tracked shouldUseFallback = false;
   @tracked shouldRenderName = false;
@@ -92,55 +91,63 @@ export default class SearchSelect extends Component {
   constructor() {
     super(...arguments);
     this.selectedOptions = this.args.inputValue || [];
-    // this.searchSelectOptions = this.args.manuallyPassedOptions || [];
-    let { manuallyPassedOptions, selectedOptions } = this;
-    let hasFormattedInput = typeof selectedOptions.firstObject !== 'string';
-    if (manuallyPassedOptions && !hasFormattedInput) {
-      // this is the first time they've been set, so we need to format them
-      this.searchSelectOptions = [this.searchSelectOptions, ...this.formatOptions(manuallyPassedOptions)];
-    }
+    // const { options, selectedOptions } = this;
+    // // if selected options are not a string then it has formatted input
+    // let hasFormattedInput = typeof selectedOptions.firstObject !== 'string';
+    // if (options && !hasFormattedInput) {
+    //   console.log('set in constructor');
+    //   // this is the first time they've been set, so we need to format them
+    //   this.passedInOptions = this.formatOptionsAndRemoveSelectedItems(options);
+    //   this.searchSelectOptions = [...this.searchSelectOptions, ...this.passedInOptions];
+    // }
   }
 
-  formatOptions(optionsToFormat) {
-    optionsToFormat = optionsToFormat.toArray().map((option) => {
-      option.searchText = `${option.name} ${option[this.idKey]}`;
-      return option;
-    });
-    // -- used by filter-wildcard helper
-    let allOptions = optionsToFormat.toArray().map((option) => {
-      return option.id;
-    });
-    this.allOptions = allOptions;
-    // --
-    this.selectedOptions = this.selectedOptions.map((option) => {
-      let matchingOption = optionsToFormat.findBy(this.idKey, option);
-      // an undefined matchingOption means a selectedOption, on edit, didn't match a model returned from the query
-      // this means it is a wildcard string or no longer exists
-      let addTooltip = matchingOption || isWildcardString([option]) ? false : true; // add tooltip to let user know the selection can be discarded
-      optionsToFormat.removeObject(matchingOption);
+  formatOptionsAndRemoveSelectedItems(optionsToFormat) {
+    // 'format' means add searchText
+    let formattedDropdownOptions = optionsToFormat.toArray().map((option) => {
+      // option is a model record or passed in object, return attrs required to search and select
+      let searchText = `${option.name} ${option[this.idKey]}`;
       return {
-        id: option,
-        name: matchingOption ? matchingOption.name : option,
-        searchText: matchingOption ? matchingOption.searchText : option,
-        addTooltip,
-        // conditionally spread configured object if we're using the dynamic idKey
-        ...(this.idKey !== 'id' && this.customizeObject(matchingOption)),
+        [this.idKey]: option[this.idKey],
+        id: option.id,
+        name: option.name,
+        searchText,
       };
     });
-    if (this.args.manuallyPassedOptions) {
-      optionsToFormat = this.args.manuallyPassedOptions.concat(optionsToFormat).uniq();
+    // -- used by filter-wildcard helper //use mapBy('id')
+    this.allOptions = formattedDropdownOptions.mapBy('id');
+    // --
+
+    // if no selected items, skip this block
+    if (this.selectedOptions.length > 0) {
+      // iterate through selected options (initially set by inputValue) and return as object with {id, name, searchText...etc}
+      // remove any already selected items from array of ALL options (formattedDropdownOptions)
+      this.selectedOptions = this.selectedOptions.map((option) => {
+        let matchingOption = formattedDropdownOptions.findBy(this.idKey, option);
+        // an undefined matchingOption means a selectedOption, on edit, didn't match an object in the dropdown options
+        // this means it is a wildcard string or for some reason doesn't exist
+        let addTooltip = matchingOption || isWildcardString([option]) ? false : true; // add tooltip to let user know the selection can be discarded
+        formattedDropdownOptions.removeObject(matchingOption);
+        return {
+          id: option,
+          name: matchingOption ? matchingOption.name : option,
+          searchText: matchingOption ? matchingOption.searchText : option,
+          addTooltip,
+          // conditionally spread configured object if we're using the dynamic idKey
+          ...(this.idKey !== 'id' && this.customizeObject(matchingOption)),
+        };
+      });
     }
-    return optionsToFormat;
+    // returns updated list of dropdown options with selected items removed
+    return formattedDropdownOptions;
   }
 
   @task
   *fetchOptions() {
     if (!this.args.models) {
-      if (this.args.manuallyPassedOptions) {
-        this.searchSelectOptions = [
-          this.searchSelectOptions,
-          ...this.formatOptions(this.args.manuallyPassedOptions),
-        ];
+      if (this.args.options) {
+        // format and add passed in options to dropdown
+        this.searchSelectOptions = [...this.formatOptionsAndRemoveSelectedItems(this.args.options)];
       }
       return;
     }
@@ -161,10 +168,13 @@ export default class SearchSelect extends Component {
           queryOptions = this.args.queryObject;
         }
         let options = yield this.store.query(modelType, queryOptions);
-        this.searchSelectOptions = [...this.searchSelectOptions, ...this.formatOptions(options)];
+        this.searchSelectOptions = [
+          ...this.searchSelectOptions,
+          ...this.formatOptionsAndRemoveSelectedItems(options),
+        ];
       } catch (err) {
         if (err.httpStatus === 404) {
-          if (!this.args.manuallyPassedOptions) {
+          if (!this.args.options) {
             // If the call failed but the resource has items
             // from a different namespace, this allows the
             // selected items to display
