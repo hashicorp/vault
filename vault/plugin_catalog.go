@@ -934,7 +934,7 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 				return nil, err
 			}
 		case 2: // Unversioned
-			if storedType, err = consts.ParsePluginType(parts[0]); err != nil {
+			if storedType, err = consts.ParsePluginType(parts[0]); err == nil {
 				normalizedName = parts[1]
 				// Use 0.0.0 to ensure unversioned is sorted as the oldest version.
 				semanticVersion, err = semver.NewVersion("0.0.0")
@@ -942,7 +942,7 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 					return nil, err
 				}
 			} else {
-				return nil, fmt.Errorf("unknown plugin type in plugin catalog: %s", plugin)
+				return nil, fmt.Errorf("unknown plugin type in plugin catalog: %s: %w", plugin, err)
 			}
 		case 3: // Versioned, with type
 			if !includeVersioned {
