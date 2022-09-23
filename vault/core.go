@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2"
+	"github.com/sasha-s/go-deadlock"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
@@ -850,6 +851,14 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		stateLock = &DeadlockRWMutex{}
 	} else {
 		stateLock = &SyncRWMutex{}
+
+		// This lock surroudning the OnPotentialDeadlock update isn't needed for
+		// isn't needed for any normal Vault operation but ensures the global package
+		// variable update doesn't get flagged as a potential race condition error during
+		// tests.
+		stateLock.Lock()
+		deadlock.Opts.OnPotentialDeadlock = func() {}
+		stateLock.Unlock()
 	}
 
 	// Setup the core
