@@ -87,7 +87,8 @@
     {{#if (eq this.radioCardGroupValue "limited")}}
       <SearchSelect
         @id="allowedClientIds"
-        @subLabel="Application name"
+        @label="Application name"
+        @labelClass="is-label"
         @models={{array "oidc/client"}}
         @inputValue={{@model.allowedClientIds}}
         @onChange={{this.handleClientSelection}}

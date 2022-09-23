@@ -10,7 +10,7 @@
     {{component
       @fallbackComponent
       id=@id
-      label=(or @label @subLabel)
+      label=@label
       subText=@subText
       onChange=@onChange
       inputValue=@inputValue
@@ -25,9 +25,6 @@
           <InfoTooltip>{{@helpText}}</InfoTooltip>
         {{/if}}
       </label>
-    {{/if}}
-    {{#if @subLabel}}
-      <p class="is-label">{{@subLabel}}</p>
     {{/if}}
     {{#if @subText}}
       <p class="sub-text">{{@subText}}</p>

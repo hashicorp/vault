@@ -26,7 +26,6 @@ const ModelExport = Model.extend({
     label: 'Transformations',
     models: ['transform'],
     onlyAllowExisting: true,
-    subLabel: 'Transformations',
     subText: 'Select which transformations this role will have access to. It must already exist.',
   }),
 

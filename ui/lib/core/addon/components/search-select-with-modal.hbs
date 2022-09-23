@@ -2,7 +2,7 @@
   {{#if this.shouldUseFallback}}
     {{component
       @fallbackComponent
-      label=(or @label @subLabel)
+      label=@label
       subText=@subText
       onChange=@onChange
       inputValue=@inputValue
