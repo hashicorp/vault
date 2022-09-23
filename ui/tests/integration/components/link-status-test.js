@@ -1,11 +1,9 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { statuses } from '../../../mirage/handlers/hcp-link';
-
-const timestamp = '[2022-09-13 14:45:40.666697 -0700 PDT]';
 
 module('Integration | Component | link-status', function (hooks) {
   setupRenderingTest(hooks);
@@ -17,86 +15,79 @@ module('Integration | Component | link-status', function (hooks) {
     this.statuses = statuses;
   });
 
-  test('it renders connected status', async function (assert) {
-    await render(hbs`<LinkStatus @status={{get this.statuses 0}} />`);
+  test('it does not render banner when status is not present', async function (assert) {
+    await render(hbs`
+      <div id="modal-wormhole"></div>
+      <LinkStatus @status={{undefined}} />
+    `);
 
-    assert.dom('.navbar-status').hasClass('connected', 'Correct class renders for connected state');
+    assert.dom('.navbar-status').doesNotExist('Banner is hidden for missing status message');
+  });
+
+  test('it does not render banner in oss version', async function (assert) {
+    this.owner.lookup('service:version').set('isEnterprise', false);
+
+    await render(hbs`
+      <div id="modal-wormhole"></div>
+      <LinkStatus @status={{get this.statuses 0}} />
+    `);
+
+    assert.dom('.navbar-status').doesNotExist('Banner is hidden in oss');
+  });
+
+  test('it renders connected status', async function (assert) {
+    await render(hbs`
+      <div id="modal-wormhole"></div>
+      <LinkStatus @status={{get this.statuses 0}} />
+    `);
+
+    assert.dom('.navbar-status').hasClass('connected', 'Correct banner class renders for connected state');
     assert
       .dom('[data-test-link-status]')
-      .hasText(
-        'This self-managed Vault is linked to the HashiCorp Cloud Platform.',
-        'Copy renders for connected state'
-      );
+      .hasText('This self-managed Vault is linked to HCP.', 'Banner copy renders for connected state');
     assert
       .dom('[data-test-link-status] a')
       .hasAttribute('href', 'https://portal.cloud.hashicorp.com/sign-in', 'HCP sign in link renders');
   });
 
-  test('it does not render banner for disconnected state with unknown error', async function (assert) {
-    await render(hbs`<LinkStatus @status={{get this.statuses 1}} />`);
+  test('it should render error states', async function (assert) {
+    // disconnected error
+    await render(hbs`
+      <div id="modal-wormhole"></div>
+      <LinkStatus @status={{get this.statuses 1}} />
+    `);
 
-    assert.dom('.navbar-status').doesNotExist('Banner is hidden for disconnected state');
-  });
-
-  test('it should render for disconnected error state', async function (assert) {
-    await render(hbs`<LinkStatus @status={{get this.statuses 2}} />`);
-
-    assert.dom('.navbar-status').hasClass('warning', 'Correct class renders for disconnected error state');
+    assert.dom('.navbar-status').hasClass('warning', 'Correct banner class renders for error state');
     assert
       .dom('[data-test-link-status]')
       .hasText(
-        `Vault has been disconnected from the Hashicorp Cloud Platform since ${timestamp}. Error: some other error other than unknown`,
-        'Copy renders for disconnected error state'
+        'There was an error connecting to HCP. Click here for more information.',
+        'Banner copy renders for error state'
       );
-  });
 
-  test('it should render for connection refused error state', async function (assert) {
-    await render(hbs`<LinkStatus @status={{get this.statuses 3}} />`);
-
+    await click('[data-test-link-status] button');
     assert
-      .dom('.navbar-status')
-      .hasClass('warning', 'Correct class renders for connection refused error state');
+      .dom('[data-test-link-status-timestamp]')
+      .hasText('2022-09-21T11:25:02.196835-07:00', 'Timestamp renders');
     assert
-      .dom('[data-test-link-status]')
-      .hasText(
-        `Vault has been trying to connect to the Hashicorp Cloud Platform since ${timestamp}, but the Scada provider is down. Vault will try again soon.`,
-        'Copy renders for connection refused error state'
-      );
-  });
+      .dom('[data-test-link-status-error]')
+      .hasText('unable to establish a connection with HCP', 'Error renders');
 
-  test('it should render for resource id error state', async function (assert) {
-    await render(hbs`<LinkStatus @status={{get this.statuses 4}} />`);
-
-    assert.dom('.navbar-status').hasClass('warning', 'Correct class renders for resource id error state');
+    // connecting error
+    await render(hbs`
+      <div id="modal-wormhole"></div>
+      <LinkStatus @status={{get this.statuses 3}} />
+    `);
     assert
-      .dom('[data-test-link-status]')
-      .hasText(
-        `Vault tried connecting to the Hashicorp Cloud Platform, but the Resource ID is invalid. Check your resource ID. ${timestamp}`,
-        'Copy renders for resource id error state'
-      );
-  });
+      .dom('[data-test-link-status-error]')
+      .hasText('principal does not have the permission to register as a provider', 'Error renders');
 
-  test('it should render for unauthorized error state', async function (assert) {
-    await render(hbs`<LinkStatus @status={{get this.statuses 5}} />`);
-
-    assert.dom('.navbar-status').hasClass('warning', 'Correct class renders for unauthorized error state');
-    assert
-      .dom('[data-test-link-status]')
-      .hasText(
-        `Vault tried connecting to the Hashicorp Cloud Platform, but the authorization information is wrong. Update it and try again. ${timestamp}`,
-        'Copy renders for unauthorized error state'
-      );
-  });
-
-  test('it should render generic message for unknown error state', async function (assert) {
-    await render(hbs`<LinkStatus @status={{get this.statuses 6}} />`);
-
-    assert.dom('.navbar-status').hasClass('warning', 'Correct class renders for unknown error state');
-    assert
-      .dom('[data-test-link-status]')
-      .hasText(
-        `Vault has been trying to connect to the Hashicorp Cloud Platform since ${timestamp}. Vault will try again soon. Error: connection error we are unaware of`,
-        'Copy renders for unknown error state'
-      );
+    // this shouldn't happen but placeholders should render if disconnected/connecting status is returned without timestamp and/or error
+    await render(hbs`
+      <div id="modal-wormhole"></div>
+      <LinkStatus @status="connecting" />
+    `);
+    assert.dom('[data-test-link-status-timestamp]').hasText('Not available', 'Timestamp placeholder renders');
+    assert.dom('[data-test-link-status-error]').hasText('Not available', 'Error placeholder renders');
   });
 });
