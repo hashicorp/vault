@@ -12,18 +12,24 @@ const validations = {
 @withModelValidations(validations)
 export default class PkiRoleEngineModel extends Model {
   @attr('string', { readOnly: true }) backend;
+
   @attr('string', {
     label: 'Role name',
     fieldValue: 'name',
-    readOnly: true,
   })
   name;
 
-  // ARG TODO: will have to handle in serializer to send in the correct params
+  @attr('string', {
+    label: 'Issuer Reference',
+    subText:
+      'Specifies the default issuer of this request. May be the value default, a name, or an issuer ID. To find this, you can view the issuer or run: read -field=default <mount-name>/config/issuers in the CLI.',
+  })
+  issuerRef;
+
   @attr({
     label: 'Not valid after',
     subText:
-      'The time after which this certificate will no longer be valid. This can be a TTL (a range of time from now) or a specific date.',
+      'The time after which this certificate will no longer be valid. This can be a TTL (a range of time from now) or a specific date. If not set, the system uses "default" or the value of max_ttl, whichever is shorter. Alternatively, you can set the not_after date below.',
     editType: 'yield',
   })
   customTtl;
@@ -46,22 +52,30 @@ export default class PkiRoleEngineModel extends Model {
   })
   maxTtl;
 
-  @attr({
+  @attr('boolean', {
     label: 'Generate lease with certificate',
     subText:
-      'Specifies if certificates issued/signed against this role will have Vault leases attached to them. Learn more here.', // ARG TODO figure out link here.
+      'Specifies if certificates issued/signed against this role will have Vault leases attached to them.',
     editType: 'boolean',
+    docLink: '/api-docs/secret/pki#create-update-role',
   })
   generateLease; // ARG TODO confirm false by default
 
-  @attr({
+  @attr('boolean', {
     label: 'Do not store certificates in storage backend',
     subText:
-      'This can improve performance when issuing large numbers of certificates. However, certificates issued in this way cannot be enumerated or revoked. Learn more here.', // ARG TODO figure out link here. docLink
+      'This can improve performance when issuing large numbers of certificates. However, certificates issued in this way cannot be enumerated or revoked.',
+    editType: 'boolean',
+    docLink: '/api-docs/secret/pki#create-update-role',
+  })
+  noStore;
+
+  @attr('boolean', {
+    label: 'Basic constraints valid for non CA.',
+    subText: 'Mark Basic Constraints valid when issuing non-CA certificates.',
     editType: 'boolean',
   })
   noStore;
-  // ARG TODO missing Add basic constraints, waiting for word back from design because this is not a property on roles but intermediates.
 
   // must be a getter so it can be added to the prototype needed in the pathHelp service on the line here: if (newModel.merged || modelProto.useOpenAPI !== true) {
   get useOpenAPI() {

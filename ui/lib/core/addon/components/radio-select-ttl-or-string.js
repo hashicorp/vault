@@ -4,13 +4,18 @@ import { tracked } from '@glimmer/tracking';
 
 /**
  * @module RadioSelectTtlOrString
- * `RadioSelectTtlOrString` components are ARG TODO
+ * `RadioSelectTtlOrString` components are form field type that is yielded out by the model editType: yield.
+ * The component is two radio buttons, the first a ttl and the second something similar to editType optionalText: an input field without a title.
+ * This component is used in the PKI engine in various forms.
  *
  * @example
  * ```js
- *  <RadioSelectTtlOrString/>
+ * {{#each @model.fields as |attr|}}
+ *  <RadioSelectTtlOrString @attr={{attr}} @model={{this.model}} />
+ * {{/each}}
  * ```
-//  ARG TODO
+ * @param {Model} model - Ember Data model that `attr` is defined on.
+ * @param {Object} attr - usually derived from ember model `attributes` lookup, and all members of `attr.options` are optional.
  */
 
 export default class RadioSelectTtlOrString extends Component {

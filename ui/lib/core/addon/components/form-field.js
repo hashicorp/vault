@@ -4,7 +4,6 @@ import { action } from '@ember/object';
 import { capitalize } from 'vault/helpers/capitalize';
 import { humanize } from 'vault/helpers/humanize';
 import { dasherize } from 'vault/helpers/dasherize';
-// ARG TODO add a lits of all editTypes on here for reference later.
 /**
  * @module FormField
  * `FormField` components are field elements associated with a particular model.
@@ -22,7 +21,7 @@ import { dasherize } from 'vault/helpers/dasherize';
  *     label: "Foo", // custom label to be shown, otherwise attr.name will be displayed
  *     defaultValue: "", // default value to display if model value is not present
  *     fieldValue: "bar", // used for value lookup on model over attr.name
- *     editType: "ttl", type of field to use -- example boolean, searchSelect, etc.
+ *     editType: "ttl", type of field to use. List of editTypes:boolean, file, json, kv, optionalText, mountAccessor, password, radio, regex, searchSelect, stringArray,textarea, ttl, yield.
  *     helpText: "This will be in a tooltip",
  *     readOnly: true
  *   },
@@ -59,7 +58,10 @@ export default class FormFieldComponent extends Component {
     return this.args.disabled || false;
   }
   get showHelpText() {
-    return this.args.showHelpText || true;
+    if (this.args.showHelpText === false) {
+      return false;
+    }
+    return true;
   }
   get subText() {
     return this.args.subText || '';
