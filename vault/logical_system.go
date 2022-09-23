@@ -2521,7 +2521,7 @@ func (b *SystemBackend) validateVersion(ctx context.Context, apiConfig APIMountC
 			}
 			if _, ok = b.Core.logicalBackends[pluginName]; ok {
 				if version != versions.GetBuiltinVersion(pluginType, pluginName) {
-					return "", nil, fmt.Errorf("cannot select non-builtin version of secrets plugin %s", pluginName)
+					return "", logical.ErrorResponse("cannot select non-builtin version of secrets plugin %s", pluginName), nil
 				}
 			}
 		case consts.PluginTypeCredential:
