@@ -16,7 +16,6 @@ import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-ut
  *         @id="assignments"
  *         @model="oidc/assignment"
  *         @label="assignment name"
- *         @labelClass="is-label"
  *         @subText="Search for an existing assignment, or type a new name to create it."
  *         @inputValue={{map-by "id" @model.assignments}}
  *         @onChange={{this.handleSearchSelect}}
