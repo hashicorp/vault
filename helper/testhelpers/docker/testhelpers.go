@@ -22,6 +22,7 @@ import (
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
+	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/go-uuid"
 )
@@ -386,7 +387,7 @@ func (u RunCmdUser) Apply(cfg *types.ExecConfig) error {
 	return nil
 }
 
-func (d *Runner) RunCmdWithOutput(ctx context.Context, container string, cmd []string, opts ...RunCmdOpt) ([]byte, int, error) {
+func (d *Runner) RunCmdWithOutput(ctx context.Context, container string, cmd []string, opts ...RunCmdOpt) ([]byte, []byte, int, error) {
 	runCfg := types.ExecConfig{
 		AttachStdout: true,
 		AttachStderr: true,
@@ -395,33 +396,37 @@ func (d *Runner) RunCmdWithOutput(ctx context.Context, container string, cmd []s
 
 	for index, opt := range opts {
 		if err := opt.Apply(&runCfg); err != nil {
-			return nil, -1, fmt.Errorf("error applying option (%d / %v): %v", index, opt, err)
+			return nil, nil, -1, fmt.Errorf("error applying option (%d / %v): %v", index, opt, err)
 		}
 	}
 
 	ret, err := d.DockerAPI.ContainerExecCreate(ctx, container, runCfg)
 	if err != nil {
-		return nil, -1, fmt.Errorf("error creating execution environment: %v\ncfg: %v\n", err, runCfg)
+		return nil, nil, -1, fmt.Errorf("error creating execution environment: %v\ncfg: %v\n", err, runCfg)
 	}
 
 	resp, err := d.DockerAPI.ContainerExecAttach(ctx, ret.ID, types.ExecStartCheck{})
 	if err != nil {
-		return nil, -1, fmt.Errorf("error attaching to command execution: %v\ncfg: %v\nret: %v\n", err, runCfg, ret)
+		return nil, nil, -1, fmt.Errorf("error attaching to command execution: %v\ncfg: %v\nret: %v\n", err, runCfg, ret)
+	}
+	defer resp.Close()
+
+	var stdoutB bytes.Buffer
+	var stderrB bytes.Buffer
+	if _, err := stdcopy.StdCopy(&stdoutB, &stderrB, resp.Reader); err != nil {
+		return nil, nil, -1, fmt.Errorf("error reading command output: %v", err)
 	}
 
-	result, err := ioutil.ReadAll(resp.Reader)
-	resp.Close()
-	if err != nil {
-		return nil, -1, fmt.Errorf("error reading command response: %v", err)
-	}
+	stdout := stdoutB.Bytes()
+	stderr := stderrB.Bytes()
 
 	// Fetch return code.
 	info, err := d.DockerAPI.ContainerExecInspect(ctx, ret.ID)
 	if err != nil {
-		return result, -1, fmt.Errorf("error reading command exit code: %v", err)
+		return stdout, stderr, -1, fmt.Errorf("error reading command exit code: %v", err)
 	}
 
-	return result, info.ExitCode, nil
+	return stdout, stderr, info.ExitCode, nil
 }
 
 func (d *Runner) RunCmdInBackground(ctx context.Context, container string, cmd []string, opts ...RunCmdOpt) (string, error) {
