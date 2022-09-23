@@ -1113,7 +1113,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	pluginVersion, resp, err := b.validateVersion(ctx, apiConfig, logicalType, consts.PluginTypeSecrets)
+	pluginVersion, resp, err := b.validateVersion(ctx, apiConfig.PluginVersion, logicalType, consts.PluginTypeSecrets)
 	if resp != nil || err != nil {
 		return resp, err
 	}
