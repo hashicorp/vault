@@ -242,15 +242,114 @@ func TestCore_EnableExternalPlugin_MultipleVersions(t *testing.T) {
 				t.Errorf("Expected mount to be version %s but got %s", tc.expectedVersion, raw.(*routeEntry).mountEntry.Version)
 			}
 
-			// we don't override the running version of non-builtins, and they don't have the version set explicitly (yet)
-			if raw.(*routeEntry).mountEntry.RunningVersion != "" {
-				t.Errorf("Expected mount to have no running version but got %s", raw.(*routeEntry).mountEntry.RunningVersion)
+			if raw.(*routeEntry).mountEntry.RunningVersion != tc.expectedVersion {
+				t.Errorf("Expected mount running version to be %s but got %s", tc.expectedVersion, raw.(*routeEntry).mountEntry.RunningVersion)
 			}
 
 			if raw.(*routeEntry).mountEntry.RunningSha256 == "" {
 				t.Errorf("Expected RunningSha256 to be present: %+v", raw.(*routeEntry).mountEntry.RunningSha256)
 			}
 		})
+	}
+}
+
+func TestCore_EnableExternalKv_MultipleVersions(t *testing.T) {
+	// new kv plugin can be registered but not mounted
+	pluginName, pluginSHA256, pluginDir := compilePlugin(t, consts.PluginTypeSecrets, "v1.2.3")
+	err := os.Link(path.Join(pluginDir, pluginName), path.Join(pluginDir, "kv"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pluginName = "kv"
+	conf := &CoreConfig{
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+		PluginDirectory: pluginDir,
+	}
+	c := TestCoreWithSealAndUI(t, conf)
+	c, _, _ = testCoreUnsealed(t, c)
+
+	registerPlugin(t, c.systemBackend, pluginName, consts.PluginTypeSecrets.String(), "v1.2.3", pluginSHA256)
+	req := logical.TestRequest(t, logical.ReadOperation, "plugins/catalog")
+	resp, err := c.systemBackend.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Error() != nil {
+		t.Fatalf("%#v", resp)
+	}
+	found := false
+	for _, plugin := range resp.Data["detailed"].([]pluginutil.VersionedPlugin) {
+		if plugin.Name == "kv" && plugin.Version == "v1.2.3" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("Expected to find v1.2.3 kv plugin but did not")
+	}
+	req = logical.TestRequest(t, logical.UpdateOperation, mountTable(consts.PluginTypeSecrets))
+	req.Data = map[string]interface{}{
+		"type": pluginName,
+	}
+	req.Data["config"] = map[string]interface{}{
+		"plugin_version": "v1.2.3",
+	}
+	resp, err = c.systemBackend.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Error() == nil {
+		t.Fatal("Expected resp error but got successful response")
+	}
+}
+
+func TestCore_EnableExternalNoop_MultipleVersions(t *testing.T) {
+	// new noop plugin can be registered but not mounted
+	pluginName, pluginSHA256, pluginDir := compilePlugin(t, consts.PluginTypeCredential, "v1.2.3")
+	err := os.Link(path.Join(pluginDir, pluginName), path.Join(pluginDir, "noop"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pluginName = "noop"
+	conf := &CoreConfig{
+		BuiltinRegistry: NewMockBuiltinRegistry(),
+		PluginDirectory: pluginDir,
+	}
+	c := TestCoreWithSealAndUI(t, conf)
+	c, _, _ = testCoreUnsealed(t, c)
+
+	registerPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential.String(), "v1.2.3", pluginSHA256)
+	req := logical.TestRequest(t, logical.ReadOperation, "plugins/catalog")
+	resp, err := c.systemBackend.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Error() != nil {
+		t.Fatalf("%#v", resp)
+	}
+	found := false
+	for _, plugin := range resp.Data["detailed"].([]pluginutil.VersionedPlugin) {
+		if plugin.Name == "noop" && plugin.Version == "v1.2.3" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("Expected to find v1.2.3 noop plugin but did not")
+	}
+	req = logical.TestRequest(t, logical.UpdateOperation, mountTable(consts.PluginTypeCredential))
+	req.Data = map[string]interface{}{
+		"type": pluginName,
+	}
+	req.Data["config"] = map[string]interface{}{
+		"plugin_version": "v1.2.3",
+	}
+	resp, err = c.systemBackend.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Error() == nil {
+		t.Fatal("Expected resp error but got successful response")
 	}
 }
 

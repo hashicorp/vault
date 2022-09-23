@@ -1850,7 +1850,7 @@ func TestSystemBackend_authTable(t *testing.T) {
 			"seal_wrap":              false,
 			"options":                map[string]string(nil),
 			"plugin_version":         "",
-			"running_plugin_version": "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 			"running_sha256":         "",
 		},
 	}
@@ -1936,7 +1936,7 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 			"seal_wrap":              false,
 			"options":                map[string]string(nil),
 			"plugin_version":         "",
-			"running_plugin_version": "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 			"running_sha256":         "",
 		},
 	}
@@ -3129,6 +3129,29 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_PluginCatalog_CannotRegisterBuiltinPlugins(t *testing.T) {
+	c, b, _ := testCoreSystemBackend(t)
+	// Bootstrap the pluginCatalog
+	sym, err := filepath.EvalSymlinks(os.TempDir())
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	c.pluginCatalog.directory = sym
+
+	// Set a plugin
+	req := logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
+	req.Data["sha256"] = hex.EncodeToString([]byte{'1'})
+	req.Data["command"] = "foo"
+	req.Data["version"] = "v1.2.3+special.builtin"
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Error().Error(), "reserved metadata") {
+		t.Fatalf("err: %v", resp.Error())
+	}
+}
+
 func TestSystemBackend_ToolsHash(t *testing.T) {
 	b := testSystemBackend(t)
 	req := logical.TestRequest(t, logical.UpdateOperation, "tools/hash")
@@ -3422,7 +3445,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"local":                   false,
 				"seal_wrap":               false,
 				"plugin_version":          "",
-				"running_plugin_version":  "",
+				"running_plugin_version":  versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 				"running_sha256":          "",
 			},
 		},

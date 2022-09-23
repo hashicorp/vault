@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -134,21 +135,22 @@ func TestPluginCatalog_VersionedCRUD(t *testing.T) {
 	}
 	defer file.Close()
 
+	const name = "mysql-database-plugin"
 	const version = "1.0.0"
 	command := fmt.Sprintf("%s", filepath.Base(file.Name()))
-	err = core.pluginCatalog.Set(context.Background(), "mysql-database-plugin", consts.PluginTypeDatabase, version, command, []string{"--test"}, []string{"FOO=BAR"}, []byte{'1'})
+	err = core.pluginCatalog.Set(context.Background(), name, consts.PluginTypeDatabase, version, command, []string{"--test"}, []string{"FOO=BAR"}, []byte{'1'})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Get the plugin
-	plugin, err := core.pluginCatalog.Get(context.Background(), "mysql-database-plugin", consts.PluginTypeDatabase, version)
+	plugin, err := core.pluginCatalog.Get(context.Background(), name, consts.PluginTypeDatabase, version)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
 
 	expected := &pluginutil.PluginRunner{
-		Name:    "mysql-database-plugin",
+		Name:    name,
 		Type:    consts.PluginTypeDatabase,
 		Version: version,
 		Command: filepath.Join(tempDir, filepath.Base(file.Name())),
@@ -162,14 +164,44 @@ func TestPluginCatalog_VersionedCRUD(t *testing.T) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", plugin, expected)
 	}
 
+	// Also get the builtin version to check we can still access that.
+	builtinVersion := versions.GetBuiltinVersion(consts.PluginTypeDatabase, name)
+	plugin, err = core.pluginCatalog.Get(context.Background(), name, consts.PluginTypeDatabase, builtinVersion)
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
+	expected = &pluginutil.PluginRunner{
+		Name:    name,
+		Type:    consts.PluginTypeDatabase,
+		Version: builtinVersion,
+		Builtin: true,
+	}
+
+	// Check by marshalling to JSON to avoid messing with BuiltinFactory function field.
+	expectedBytes, err := json.Marshal(expected)
+	if err != nil {
+		t.Fatal(err)
+	}
+	actualBytes, err := json.Marshal(plugin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(expectedBytes) != string(actualBytes) {
+		t.Fatalf("expected %s, got %s", string(expectedBytes), string(actualBytes))
+	}
+	if !plugin.Builtin {
+		t.Fatal("expected builtin true but got false")
+	}
+
 	// Delete the plugin
-	err = core.pluginCatalog.Delete(context.Background(), "mysql-database-plugin", consts.PluginTypeDatabase, version)
+	err = core.pluginCatalog.Delete(context.Background(), name, consts.PluginTypeDatabase, version)
 	if err != nil {
 		t.Fatalf("unexpected err: %v", err)
 	}
 
 	// Get plugin - should fail
-	plugin, err = core.pluginCatalog.Get(context.Background(), "mysql-database-plugin", consts.PluginTypeDatabase, version)
+	plugin, err = core.pluginCatalog.Get(context.Background(), name, consts.PluginTypeDatabase, version)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -357,6 +389,72 @@ func TestPluginCatalog_ListVersionedPlugins(t *testing.T) {
 
 		if plugin.SemanticVersion == nil {
 			t.Fatalf("expected non-nil semantic version for %v", plugin)
+		}
+	}
+}
+
+func TestPluginCatalog_ListHandlesPluginNamesWithSlashes(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	tempDir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	core.pluginCatalog.directory = tempDir
+
+	file, err := ioutil.TempFile(tempDir, "temp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	command := filepath.Base(file.Name())
+	ctx := context.Background()
+
+	pluginsToRegister := []pluginutil.PluginRunner{
+		{
+			Name: "unversioned-plugin",
+		},
+		{
+			Name: "unversioned-plugin/with-slash",
+		},
+		{
+			Name: "unversioned-plugin/with-two/slashes",
+		},
+		{
+			Name:    "versioned-plugin",
+			Version: "v1.0.0",
+		},
+		{
+			Name:    "versioned-plugin/with-slash",
+			Version: "v1.0.0",
+		},
+		{
+			Name:    "versioned-plugin/with-two/slashes",
+			Version: "v1.0.0",
+		},
+	}
+	for _, entry := range pluginsToRegister {
+		err = core.pluginCatalog.Set(ctx, entry.Name, consts.PluginTypeCredential, entry.Version, command, nil, nil, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	plugins, err := core.pluginCatalog.ListVersionedPlugins(ctx, consts.PluginTypeCredential)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, expected := range pluginsToRegister {
+		found := false
+		for _, plugin := range plugins {
+			if expected.Name == plugin.Name && expected.Version == plugin.Version {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			t.Errorf("Did not find %#v in %#v", expected, plugins)
 		}
 	}
 }

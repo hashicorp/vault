@@ -52,6 +52,14 @@ import { assert } from '@ember/debug';
  * @param {string} [wildcardLabel] - string (singular) for rendering label tag beside a wildcard selection (i.e. 'role*'), for the number of items it includes, e.g. @wildcardLabel="role" -> "includes 4 roles"
  * @param {string} [placeholder] - text you wish to replace the default "search" with
  * @param {boolean} [displayInherit=false] - if you need the search select component to display inherit instead of box.
+ * @param {boolean} [renderInfoTooltip=false] - if you want search select to render a tooltip beside a selected item if no corresponding model was returned from .query
+ *
+<<<<<<< HEAD
+ * @param {boolean} [displayInherit=false] - if you need the search select component to display inherit instead of box.
+=======
+ * @param {boolean} [displayInherit] - if you need the search select component to display inherit instead of box.
+ * @param {boolean} [renderInfoTooltip=false] - if you want search select to render a tooltip beside a selected item if no corresponding model was returned from .query
+>>>>>>> main
  *
  // * advanced customization
  * @param {Array} options - array of objects passed directly to the power-select component. If doing this, `models` should not also be passed as that will overwrite the
@@ -118,9 +126,11 @@ export default class SearchSelect extends Component {
       // remove any already selected items from array of ALL options (formattedDropdownOptions)
       this.selectedOptions = this.selectedOptions.map((option) => {
         let matchingOption = formattedDropdownOptions.findBy(this.idKey, option);
-        // an undefined matchingOption means a selectedOption, on edit, didn't match an object in the dropdown options
-        // this means it is a wildcard string or for some reason doesn't exist
-        let addTooltip = matchingOption || isWildcardString([option]) ? false : true; // add tooltip to let user know the selection can be discarded
+        // an undefined matchingOption means a selectedOption, on edit, didn't match a model returned from the query
+        // this means it is a wildcard string or no longer exists
+        // permissions shouldn't inhibit viewing a record here, because the fallback component would render instead of search-select
+        let addTooltip = matchingOption || isWildcardString([option]) ? false : true; // add tooltip to let user know the selection may not exist
+
         formattedDropdownOptions.removeObject(matchingOption);
         return {
           id: option,
@@ -132,9 +142,6 @@ export default class SearchSelect extends Component {
         };
       });
     }
-
-    // returns updated list of dropdown options with selected items removed
-    return formattedDropdownOptions;
   }
 
   @task

@@ -629,6 +629,13 @@ func getVersion(d *framework.FieldData) (string, error) {
 			return "", fmt.Errorf("version %q is not a valid semantic version: %w", version, err)
 		}
 
+		metadataIdentifiers := strings.Split(semanticVersion.Metadata(), ".")
+		for _, identifier := range metadataIdentifiers {
+			if identifier == "builtin" {
+				return "", fmt.Errorf("version %q is not allowed because 'builtin' is a reserved metadata identifier", version)
+			}
+		}
+
 		// Canonicalize the version string.
 		// Add the 'v' back in, since semantic version strips it out, and we want to be consistent with internal plugins.
 		version = "v" + semanticVersion.String()
@@ -1106,26 +1113,9 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	version := apiConfig.PluginVersion
-	switch version {
-	case "":
-		var err error
-		version, err = selectPluginVersion(ctx, b.System(), logicalType, consts.PluginTypeSecrets)
-		if err != nil {
-			return nil, err
-		}
-
-		if version != "" {
-			b.logger.Debug("pinning secrets plugin version", "plugin name", logicalType, "plugin version", version)
-		}
-	default:
-		semanticVersion, err := semver.NewVersion(version)
-		if err != nil {
-			return logical.ErrorResponse("version %q is not a valid semantic version: %s", version, err), nil
-		}
-
-		// Canonicalize the version.
-		version = "v" + semanticVersion.String()
+	pluginVersion, resp, err := b.validateVersion(ctx, apiConfig.PluginVersion, logicalType, consts.PluginTypeSecrets)
+	if resp != nil || err != nil {
+		return resp, err
 	}
 
 	// Copy over the force no cache if set
@@ -1165,11 +1155,11 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		SealWrap:              sealWrap,
 		ExternalEntropyAccess: externalEntropyAccess,
 		Options:               options,
-		Version:               version,
+		Version:               pluginVersion,
 	}
 
 	// Detect and handle deprecated secrets engines
-	resp, err := b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeSecrets)
+	resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeSecrets)
 	if err != nil {
 		return handleError(err)
 	}
@@ -2439,26 +2429,9 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		}
 	}
 
-	version := apiConfig.PluginVersion
-	switch version {
-	case "":
-		var err error
-		version, err = selectPluginVersion(ctx, b.System(), logicalType, consts.PluginTypeCredential)
-		if err != nil {
-			return nil, err
-		}
-
-		if version != "" {
-			b.logger.Debug("pinning auth plugin version", "plugin name", logicalType, "plugin version", version)
-		}
-	default:
-		semanticVersion, err := semver.NewVersion(version)
-		if err != nil {
-			return logical.ErrorResponse("version %q is not a valid semantic version: %s", version, err), nil
-		}
-
-		// Canonicalize the version.
-		version = "v" + semanticVersion.String()
+	pluginVersion, response, err := b.validateVersion(ctx, apiConfig.PluginVersion, logicalType, consts.PluginTypeCredential)
+	if response != nil || err != nil {
+		return response, err
 	}
 
 	if options != nil && options["version"] != "" {
@@ -2499,7 +2472,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		SealWrap:              sealWrap,
 		ExternalEntropyAccess: externalEntropyAccess,
 		Options:               options,
-		Version:               version,
+		Version:               pluginVersion,
 	}
 
 	resp, err := b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeCredential)
@@ -2513,6 +2486,57 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		return handleError(err)
 	}
 	return resp, nil
+}
+
+func (b *SystemBackend) validateVersion(ctx context.Context, version string, pluginName string, pluginType consts.PluginType) (string, *logical.Response, error) {
+	switch version {
+	case "":
+		var err error
+		version, err = selectPluginVersion(ctx, b.System(), pluginName, pluginType)
+		if err != nil {
+			return "", nil, err
+		}
+
+		if version != "" {
+			b.logger.Debug("pinning plugin version", "plugin type", pluginType.String(), "plugin name", pluginName, "plugin version", version)
+		}
+	default:
+		semanticVersion, err := semver.NewVersion(version)
+		if err != nil {
+			return "", logical.ErrorResponse("version %q is not a valid semantic version: %s", version, err), nil
+		}
+
+		// Canonicalize the version.
+		version = "v" + semanticVersion.String()
+	}
+
+	// if a non-builtin version is requested for a builtin plugin, return an error
+	if version != "" {
+		switch pluginType {
+		case consts.PluginTypeSecrets:
+			aliased, ok := mountAliases[pluginName]
+			if ok {
+				pluginName = aliased
+			}
+			if _, ok = b.Core.logicalBackends[pluginName]; ok {
+				if version != versions.GetBuiltinVersion(pluginType, pluginName) {
+					return "", logical.ErrorResponse("cannot select non-builtin version of secrets plugin %s", pluginName), nil
+				}
+			}
+		case consts.PluginTypeCredential:
+			aliased, ok := credentialAliases[pluginName]
+			if ok {
+				pluginName = aliased
+			}
+			if _, ok = b.Core.credentialBackends[pluginName]; ok {
+				if version != versions.GetBuiltinVersion(pluginType, pluginName) {
+					return "", logical.ErrorResponse("cannot select non-builtin version of auth plugin %s", pluginName), nil
+				}
+			}
+		}
+	}
+
+	return version, nil, nil
 }
 
 // handleDisableAuth is used to disable a credential backend
