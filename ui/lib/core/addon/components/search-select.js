@@ -29,14 +29,13 @@ import { assert } from '@ember/debug';
  * @param {function} onChange - The onchange action for this form field. ** SEE UTIL ** search-select-has-many.js if selecting models from a hasMany relationship
  * @param {array} [inputValue] - Array of strings corresponding to the input's initial value, e.g. an array of model ids that on edit will appear as selected items below the input
  * @param {boolean} [disallowNewItems=false] - Controls whether or not the user can add a new item if none found
- * @param {boolean} [shouldRenderName=false] - By default an item's id renders in the dropdown, passing in true displays the name with its id in smaller text beside it
- *                                             (NOTE: the boolean flips automatically with 'identity' models or if this.idKey !== 'id') 
+ * @param {boolean} [shouldRenderName=false] - By default an item's id renders in the dropdown, `true` displays the name with its id in smaller text beside it *NOTE: the boolean flips automatically with 'identity' models or if this.idKey !== 'id'
  * @param {boolean} [resetSelection=false] - When true, the component will clear its input after "Add" is clicked.
- * @param {boolean} [passObject=false] - When true, the onChange callback returns an array of objects with id (string) and isNew (boolean) (instead of an array of id strings)
- * @param {array} [objectKeys=null] - Array of values that correlate to model attrs. When passObject=true, objectKeys are added to the passed object. NOTE: make 'id' as the first element in objectKeys if you do not want to override the default of 'id'
- * @param {number} [selectLimit] - A number that sets the limit to how many select options they can choose
+ * @param {boolean} [passObject=false] - When true, the onChange callback returns an array of objects with id (string) and isNew (boolean) (and any params from objectKeys). By default - onChange returns an array of id strings. 
+ * @param {array} [objectKeys=null] - Array of values that correlate to model attrs. When passObject=true, objectKeys are added to the passed, selected object. *NOTE: make 'id' as the first element in objectKeys if you do not want to override the default of 'id'
+ * @param {number} [selectLimit] - Sets select limit
  
-// * query params for dropdown options
+// * query params for dropdown items
  * @param {Array} models - An array of model types to fetch from the API.
  * @param {string} [backend] - name of the backend if the query for options needs additional information (eg. secret backend)
  * @param {object} [queryObject] - object passed as query options to this.store.query(). NOTE: will override @backend
@@ -44,16 +43,13 @@ import { assert } from '@ember/debug';
  // * template only/display args
  * @param {string} id - The name of the form field
  * @param {string} [label] - Label for this form field, also used to generate `Add new ${singularize(label}` copy when adding a nonexisting option
- * @param {string} [labelClass] - Class to pass directly to the label, e.g. "is-label" - useful to overwrite last-child styling that happens when component renders in FormField
+ * @param {string} [labelClass] - overwrite default label size (14px) - NOTE within <FormField> @labelClass is "title is-4"
+ * @param {string} [subText] - Text to be displayed below the label
  * @param {string} fallbackComponent - name of component to be rendered if the API call 403s
  * @param {string} [helpText] - Text to be displayed in the info tooltip for this form field
- * @param {string} [subText] - Text to be displayed below the label
- * @param {string} [subLabel] - a smaller label below the main Label
  * @param {string} [wildcardLabel] - string (singular) for rendering label tag beside a wildcard selection (i.e. 'role*'), for the number of items it includes, e.g. @wildcardLabel="role" -> "includes 4 roles"
  * @param {string} [placeholder] - text you wish to replace the default "search" with
  * @param {boolean} [displayInherit=false] - if you need the search select component to display inherit instead of box.
- * @param {boolean} [renderInfoTooltip=false] - if you want search select to render a tooltip beside a selected item if no corresponding model was returned from .query
- * @param {boolean} [displayInherit] - if you need the search select component to display inherit instead of box.
  * @param {boolean} [renderInfoTooltip=false] - if you want search select to render a tooltip beside a selected item if no corresponding model was returned from .query
  *
  // * advanced customization
@@ -107,37 +103,35 @@ export default class SearchSelect extends Component {
     this.selectedOptions = this.args.inputValue || [];
   }
 
-  formatOptionsAndRemoveSelectedItems(optionsToFormat) {
+  // 'format' means add searchText
+  formatOptions(optionsToFormat) {
     //* `optionsToFormat` - array of objects or response from query (model Class)
     let formattedDropdownOptions = optionsToFormat.toArray().map((option) => {
       option.searchText = `${option.name} ${option[this.idKey]}`;
       return option;
     });
     this.allOptions = formattedDropdownOptions.mapBy('id'); // used by filter-wildcard helper
-
-    if (this.selectedOptions.length > 0) {
-      // iterate selectedOptions, initially set by inputValue, and format
-      // remove any already selected items from array of ALL options (formattedDropdownOptions)
-      this.selectedOptions = this.selectedOptions.map((option) => {
-        let matchingOption = formattedDropdownOptions.findBy(this.idKey, option);
-        // an undefined matchingOption means a selectedOption, on edit, didn't match a model returned from the query
-        // this means it is a wildcard string or no longer exists
-        // permissions shouldn't inhibit viewing a record here, because the fallback component would render instead of search-select
-        let addTooltip = matchingOption || isWildcardString([option]) ? false : true; // add tooltip to let user know the selection may not exist
-
-        formattedDropdownOptions.removeObject(matchingOption);
-        return {
-          id: option,
-          name: matchingOption ? matchingOption.name : option,
-          searchText: matchingOption ? matchingOption.searchText : option,
-          addTooltip,
-          // conditionally spread configured object if we're using the dynamic idKey
-          ...(this.idKey !== 'id' && this.customizeObject(matchingOption)),
-        };
-      });
-    }
-    // returns updated list of dropdown options with selected items removed
     return formattedDropdownOptions;
+  }
+
+  // remove any selected items from dropdown and configure selected object returned to parent
+  updateDropdownOptions(selectedOptions) {
+    // iterate selectedOptions, initially set by inputValue, and format
+    // remove any already selected items from array of ALL options (formattedDropdownOptions)
+    this.selectedOptions = selectedOptions.map((option) => {
+      let matchingOption = this.searchSelectOptions.findBy(this.idKey, option);
+      // an undefined matchingOption means a selectedOption, on edit, didn't match a model returned from the query
+      let addTooltip = matchingOption || isWildcardString([option]) ? false : true; // add tooltip to let user know the selection may not exist
+      this.searchSelectOptions.removeObject(matchingOption);
+      return {
+        id: option,
+        name: matchingOption ? matchingOption.name : option,
+        searchText: matchingOption ? matchingOption.searchText : option,
+        addTooltip,
+        // conditionally spread configured object if we're using the dynamic idKey
+        ...(this.idKey !== 'id' && this.customizeObject(matchingOption)),
+      };
+    });
   }
 
   @task
@@ -147,20 +141,13 @@ export default class SearchSelect extends Component {
     }
     this.searchSelectOptions = [];
 
-    // TODO - fixxxxxx
-    // let formatSelection = typeof this.selectedOptions.firstObject !== 'string';
-    // if (formatSelection) {
-    // this.searchSelectOptions = [...this.formatOptionsAndRemoveSelectedItems(this.args.searchSelectOptions)];
-    // this.selectedOptions = this.selectedOptions.mapBy('id');
-    // }
-
     if (!this.args.models) {
-      const { options } = this.args;
-      if (options) {
+      if (this.args.options) {
         if (this.args.search) {
           this.searchSelectOptions = this.args.options;
         } else {
-          this.searchSelectOptions = [...this.formatOptionsAndRemoveSelectedItems(options)];
+          this.searchSelectOptions = [...this.formatOptions(this.args.options)];
+          this.updateDropdownOptions(this.selectedOptions);
         }
       }
       return;
@@ -175,10 +162,8 @@ export default class SearchSelect extends Component {
           queryOptions = this.args.queryObject;
         }
         let options = yield this.store.query(modelType, queryOptions);
-        this.searchSelectOptions = [
-          ...this.searchSelectOptions,
-          ...this.formatOptionsAndRemoveSelectedItems(options),
-        ];
+        this.searchSelectOptions = [...this.searchSelectOptions, ...this.formatOptions(options)];
+        this.updateDropdownOptions(this.selectedOptions); // remove options from inputValue, format selected options
       } catch (err) {
         if (err.httpStatus === 404) {
           if (!this.args.options) {

@@ -112,6 +112,31 @@ module('Integration | Component | search select', function (hooks) {
     );
   });
 
+  test('it shows passed in options when trigger is clicked', async function (assert) {
+    const options = [
+      { name: 'namespace45', id: 'displayedName' },
+      { name: 'name24', id: '1241' },
+    ];
+    this.set('options', options);
+    this.set('onChange', sinon.spy());
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @options={{this.options}}
+        @onChange={{this.onChange}}
+      />
+    `);
+
+    await clickTrigger();
+    await settled();
+    assert.equal(component.options.length, 2, 'shows all options');
+    assert.equal(
+      component.options.objectAt(0).text,
+      component.selectedOptionText,
+      'first object in list is focused'
+    );
+  });
+
   test('it filters options and adds option to create new item when text is entered', async function (assert) {
     const models = ['identity/entity'];
     this.set('models', models);
@@ -347,7 +372,6 @@ module('Integration | Component | search select', function (hooks) {
         @fallbackComponent="string-list"
       />
     `);
-
     assert.equal(component.selectedOptions.length, 2, 'renders inputOptions as selectedOptions');
   });
 
