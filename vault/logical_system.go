@@ -629,6 +629,13 @@ func getVersion(d *framework.FieldData) (string, error) {
 			return "", fmt.Errorf("version %q is not a valid semantic version: %w", version, err)
 		}
 
+		metadataIdentifiers := strings.Split(semanticVersion.Metadata(), ".")
+		for _, identifier := range metadataIdentifiers {
+			if identifier == "builtin" {
+				return "", fmt.Errorf("version %q is not allowed because 'builtin' is a reserved metadata identifier", version)
+			}
+		}
+
 		// Canonicalize the version string.
 		// Add the 'v' back in, since semantic version strips it out, and we want to be consistent with internal plugins.
 		version = "v" + semanticVersion.String()
@@ -1001,10 +1008,6 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	sealWrap := data.Get("seal_wrap").(bool)
 	externalEntropyAccess := data.Get("external_entropy_access").(bool)
 	options := data.Get("options").(map[string]string)
-	var version string
-	if pluginVersionRaw, ok := data.GetOk("plugin_version"); ok {
-		version = pluginVersionRaw.(string)
-	}
 
 	var config MountConfig
 	var apiConfig APIMountConfig
@@ -1110,6 +1113,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		}
 	}
 
+	version := apiConfig.PluginVersion
 	switch version {
 	case "":
 		var err error
@@ -2349,10 +2353,6 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	sealWrap := data.Get("seal_wrap").(bool)
 	externalEntropyAccess := data.Get("external_entropy_access").(bool)
 	options := data.Get("options").(map[string]string)
-	var version string
-	if pluginVersionRaw, ok := data.GetOk("plugin_version"); ok {
-		version = pluginVersionRaw.(string)
-	}
 
 	var config MountConfig
 	var apiConfig APIMountConfig
@@ -2446,6 +2446,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		}
 	}
 
+	version := apiConfig.PluginVersion
 	switch version {
 	case "":
 		var err error

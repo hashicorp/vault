@@ -242,9 +242,8 @@ func TestCore_EnableExternalPlugin_MultipleVersions(t *testing.T) {
 				t.Errorf("Expected mount to be version %s but got %s", tc.expectedVersion, raw.(*routeEntry).mountEntry.Version)
 			}
 
-			// we don't override the running version of non-builtins, and they don't have the version set explicitly (yet)
-			if raw.(*routeEntry).mountEntry.RunningVersion != "" {
-				t.Errorf("Expected mount to have no running version but got %s", raw.(*routeEntry).mountEntry.RunningVersion)
+			if raw.(*routeEntry).mountEntry.RunningVersion != tc.expectedVersion {
+				t.Errorf("Expected mount running version to be %s but got %s", tc.expectedVersion, raw.(*routeEntry).mountEntry.RunningVersion)
 			}
 
 			if raw.(*routeEntry).mountEntry.RunningSha256 == "" {
@@ -318,8 +317,10 @@ func TestCore_EnableExternalCredentialPlugin_NoVersionOnRegister(t *testing.T) {
 
 			req := logical.TestRequest(t, logical.UpdateOperation, mountTable(tc.pluginType))
 			req.Data = map[string]interface{}{
-				"type":           pluginName,
-				"plugin_version": "v1.0.0",
+				"type": pluginName,
+				"config": map[string]interface{}{
+					"plugin_version": "v1.0.0",
+				},
 			}
 			resp, _ := c.systemBackend.HandleRequest(namespace.RootContext(nil), req)
 			if resp == nil || !resp.IsError() || !strings.Contains(resp.Error().Error(), ErrPluginNotFound.Error()) {
@@ -379,22 +380,7 @@ func TestExternalPlugin_getBackendTypeVersion(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			c, pluginName, pluginSHA256 := testCoreWithPlugin(t, tc.pluginType, tc.setRunningVersion)
-			d := &framework.FieldData{
-				Raw: map[string]interface{}{
-					"name":    pluginName,
-					"sha256":  pluginSHA256,
-					"version": tc.setRunningVersion,
-					"command": pluginName,
-				},
-				Schema: c.systemBackend.pluginsCatalogCRUDPath().Fields,
-			}
-			resp, err := c.systemBackend.handlePluginCatalogUpdate(context.Background(), nil, d)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if resp.Error() != nil {
-				t.Fatalf("%#v", resp)
-			}
+			registerPlugin(t, c.systemBackend, pluginName, tc.pluginType.String(), tc.setRunningVersion, pluginSHA256)
 
 			shaBytes, _ := hex.DecodeString(pluginSHA256)
 			commandFull := filepath.Join(c.pluginCatalog.directory, pluginName)
@@ -407,6 +393,7 @@ func TestExternalPlugin_getBackendTypeVersion(t *testing.T) {
 			}
 
 			var version logical.PluginVersion
+			var err error
 			if tc.pluginType == consts.PluginTypeDatabase {
 				version, err = c.pluginCatalog.getDatabaseRunningVersion(context.Background(), entry)
 			} else {
@@ -447,7 +434,9 @@ func mountPlugin(t *testing.T, sys *SystemBackend, pluginName string, pluginType
 		"type": pluginName,
 	}
 	if version != "" {
-		req.Data["plugin_version"] = version
+		req.Data["config"] = map[string]interface{}{
+			"plugin_version": version,
+		}
 	}
 	resp, err := sys.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {

@@ -30,6 +30,7 @@ type SecretsTuneCommand struct {
 	flagAllowedResponseHeaders    []string
 	flagOptions                   map[string]string
 	flagVersion                   int
+	flagPluginVersion             string
 	flagAllowedManagedKeys        []string
 }
 
@@ -146,6 +147,14 @@ func (c *SecretsTuneCommand) Flags() *FlagSets {
 			"each time with 1 key.",
 	})
 
+	f.StringVar(&StringVar{
+		Name:    flagNamePluginVersion,
+		Target:  &c.flagPluginVersion,
+		Default: "",
+		Usage: "Select the semantic version of the plugin to run. The new version must be registered in " +
+			"the plugin catalog, and will not start running until the plugin is reloaded.",
+	})
+
 	return set
 }
 
@@ -225,6 +234,10 @@ func (c *SecretsTuneCommand) Run(args []string) int {
 
 		if fl.Name == flagNameAllowedManagedKeys {
 			mountConfigInput.AllowedManagedKeys = c.flagAllowedManagedKeys
+		}
+
+		if fl.Name == flagNamePluginVersion {
+			mountConfigInput.PluginVersion = c.flagPluginVersion
 		}
 	})
 
