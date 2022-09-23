@@ -3,9 +3,11 @@ package vault
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -21,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/sdk/version"
+	"github.com/sasha-s/go-deadlock"
 )
 
 // invalidKey is used to test Unseal
@@ -2833,5 +2836,61 @@ func TestCore_ServiceRegistration(t *testing.T) {
 		notifyInitCount:   1,
 	}); diff != nil {
 		t.Fatal(diff)
+	}
+}
+
+func TestDetectedDeadlock(t *testing.T) {
+	// This test relies on setting a global package option and isn't guaranteed to be thread-safe
+	// Accordingly, skip its execution wheh specifically testing for race conditions
+	if os.Getenv("VAULT_CI_GO_TEST_RACE") != "" {
+		testCore, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{DetectDeadlocks: "statelock"})
+		InduceDeadlock(t, testCore, 1)
+	}
+}
+
+func TestDefaultDeadlock(t *testing.T) {
+	// This test relies on setting a global package option and isn't guaranteed to be thread-safe
+	// Accordingly, skip its execution wheh specifically testing for race conditions
+	if os.Getenv("VAULT_CI_GO_TEST_RACE") != "" {
+		testCore, _, _ := TestCoreUnsealed(t)
+		InduceDeadlock(t, testCore, 0)
+	}
+}
+
+func InduceDeadlock(t *testing.T, vaultcore *Core, expected uint32) {
+	defer RestoreDeadlockOpts()()
+	var deadlocks uint32
+	deadlock.Opts.OnPotentialDeadlock = func() {
+		atomic.AddUint32(&deadlocks, 1)
+	}
+	var mtx deadlock.Mutex
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		vaultcore.stateLock.Lock()
+		mtx.Lock()
+		mtx.Unlock()
+		vaultcore.stateLock.Unlock()
+	}()
+	wg.Wait()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		mtx.Lock()
+		vaultcore.stateLock.RLock()
+		vaultcore.stateLock.RUnlock()
+		mtx.Unlock()
+	}()
+	wg.Wait()
+	if atomic.LoadUint32(&deadlocks) != expected {
+		t.Fatalf("expected 1 deadlock, detected %d", deadlocks)
+	}
+}
+
+func RestoreDeadlockOpts() func() {
+	opts := deadlock.Opts
+	return func() {
+		deadlock.Opts = opts
 	}
 }
