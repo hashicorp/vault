@@ -1850,7 +1850,7 @@ func TestSystemBackend_authTable(t *testing.T) {
 			"seal_wrap":              false,
 			"options":                map[string]string(nil),
 			"plugin_version":         "",
-			"running_plugin_version": "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 			"running_sha256":         "",
 		},
 	}
@@ -1936,7 +1936,7 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 			"seal_wrap":              false,
 			"options":                map[string]string(nil),
 			"plugin_version":         "",
-			"running_plugin_version": "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 			"running_sha256":         "",
 		},
 	}
@@ -3445,7 +3445,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"local":                   false,
 				"seal_wrap":               false,
 				"plugin_version":          "",
-				"running_plugin_version":  "",
+				"running_plugin_version":  versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 				"running_sha256":          "",
 			},
 		},
