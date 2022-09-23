@@ -2531,7 +2531,7 @@ func (b *SystemBackend) validateVersion(ctx context.Context, apiConfig APIMountC
 			}
 			if _, ok = b.Core.credentialBackends[pluginName]; ok {
 				if version != versions.GetBuiltinVersion(pluginType, pluginName) {
-					return "", nil, fmt.Errorf("cannot select non-builtin version of auth plugin %s", pluginName)
+					return "", logical.ErrorResponse("cannot select non-builtin version of auth plugin %s", pluginName), nil
 				}
 			}
 		}
