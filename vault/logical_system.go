@@ -629,6 +629,13 @@ func getVersion(d *framework.FieldData) (string, error) {
 			return "", fmt.Errorf("version %q is not a valid semantic version: %w", version, err)
 		}
 
+		metadataIdentifiers := strings.Split(semanticVersion.Metadata(), ".")
+		for _, identifier := range metadataIdentifiers {
+			if identifier == "builtin" {
+				return "", fmt.Errorf("version %q is not allowed because 'builtin' is a reserved metadata identifier", version)
+			}
+		}
+
 		// Canonicalize the version string.
 		// Add the 'v' back in, since semantic version strips it out, and we want to be consistent with internal plugins.
 		version = "v" + semanticVersion.String()
