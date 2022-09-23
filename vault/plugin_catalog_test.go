@@ -393,6 +393,72 @@ func TestPluginCatalog_ListVersionedPlugins(t *testing.T) {
 	}
 }
 
+func TestPluginCatalog_ListHandlesPluginNamesWithSlashes(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	tempDir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	core.pluginCatalog.directory = tempDir
+
+	file, err := ioutil.TempFile(tempDir, "temp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	command := filepath.Base(file.Name())
+	ctx := context.Background()
+
+	pluginsToRegister := []pluginutil.PluginRunner{
+		{
+			Name: "unversioned-plugin",
+		},
+		{
+			Name: "unversioned-plugin/with-slash",
+		},
+		{
+			Name: "unversioned-plugin/with-two/slashes",
+		},
+		{
+			Name:    "versioned-plugin",
+			Version: "v1.0.0",
+		},
+		{
+			Name:    "versioned-plugin/with-slash",
+			Version: "v1.0.0",
+		},
+		{
+			Name:    "versioned-plugin/with-two/slashes",
+			Version: "v1.0.0",
+		},
+	}
+	for _, entry := range pluginsToRegister {
+		err = core.pluginCatalog.Set(ctx, entry.Name, consts.PluginTypeCredential, entry.Version, command, nil, nil, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	plugins, err := core.pluginCatalog.ListVersionedPlugins(ctx, consts.PluginTypeCredential)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, expected := range pluginsToRegister {
+		found := false
+		for _, plugin := range plugins {
+			if expected.Name == plugin.Name && expected.Version == plugin.Version {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			t.Errorf("Did not find %#v in %#v", expected, plugins)
+		}
+	}
+}
+
 func TestPluginCatalog_NewPluginClient(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
 	tempDir, err := filepath.EvalSymlinks(t.TempDir())

@@ -919,76 +919,56 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 	var result []pluginutil.VersionedPlugin
 
 	// Collect keys for external plugins in the barrier.
-	plugins, err := logical.CollectKeys(ctx, c.catalogView)
+	keys, err := logical.CollectKeys(ctx, c.catalogView)
 	if err != nil {
 		return nil, err
 	}
 
 	unversionedPlugins := make(map[string]struct{})
-	for _, plugin := range plugins {
-		// Some keys will be prepended with the plugin type, but other ones won't.
-		// Users don't expect to see the plugin type, so we need to strip that here.
-		var normalizedName, version string
+	for _, key := range keys {
 		var semanticVersion *semver.Version
-		storedType := consts.PluginTypeUnknown
-		parts := strings.Split(plugin, "/")
 
-		switch len(parts) {
-		case 1: // Unversioned, no type (legacy)
-			normalizedName = parts[0]
-			// Use 0.0.0 to ensure unversioned is sorted as the oldest version.
-			semanticVersion, err = semver.NewVersion("0.0.0")
-			if err != nil {
-				return nil, err
-			}
-		case 2: // Unversioned
-			if storedType, err = consts.ParsePluginType(parts[0]); err == nil {
-				normalizedName = parts[1]
-				// Use 0.0.0 to ensure unversioned is sorted as the oldest version.
-				semanticVersion, err = semver.NewVersion("0.0.0")
-				if err != nil {
-					return nil, err
-				}
-			} else {
-				return nil, fmt.Errorf("unknown plugin type in plugin catalog: %s: %w", plugin, err)
-			}
-		case 3: // Versioned, with type
-			if !includeVersioned {
-				continue
-			}
-
-			storedType, err = consts.ParsePluginType(parts[0])
-			if err != nil {
-				return nil, fmt.Errorf("unexpected error parsing plugin type from plugin catalog entry %q: %w", plugin, err)
-			}
-			normalizedName, version = parts[1], parts[2]
-			semanticVersion, err = semver.NewVersion(version)
-			if err != nil {
-				return nil, fmt.Errorf("unexpected error parsing version from plugin catalog entry %q: %w", plugin, err)
-			}
-		default:
-			return nil, fmt.Errorf("unexpected entry in plugin catalog: %s", plugin)
-		}
-
-		// Only list user-added plugins if they're of the given type.
-		if storedType != consts.PluginTypeUnknown && storedType != pluginType {
-			continue
-		}
-		entry, err := c.get(ctx, normalizedName, pluginType, version)
+		entry, err := c.catalogView.Get(ctx, key)
 		if err != nil || entry == nil {
 			continue
 		}
 
+		plugin := new(pluginutil.PluginRunner)
+		if err := jsonutil.DecodeJSON(entry.Value, plugin); err != nil {
+			return nil, fmt.Errorf("failed to decode plugin entry: %w", err)
+		}
+
+		if plugin.Version == "" {
+			semanticVersion, err = semver.NewVersion("0.0.0")
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			if !includeVersioned {
+				continue
+			}
+
+			semanticVersion, err = semver.NewVersion(plugin.Version)
+			if err != nil {
+				return nil, fmt.Errorf("unexpected error parsing version from plugin catalog entry %q: %w", key, err)
+			}
+		}
+
+		// Only list user-added plugins if they're of the given type.
+		if plugin.Type != consts.PluginTypeUnknown && plugin.Type != pluginType {
+			continue
+		}
+
 		result = append(result, pluginutil.VersionedPlugin{
-			Name:            normalizedName,
-			Type:            pluginType.String(),
-			Version:         version,
-			SHA256:          hex.EncodeToString(entry.Sha256),
+			Name:            plugin.Name,
+			Type:            plugin.Type.String(),
+			Version:         plugin.Version,
+			SHA256:          hex.EncodeToString(plugin.Sha256),
 			SemanticVersion: semanticVersion,
 		})
 
-		if version == "" {
-			unversionedPlugins[normalizedName] = struct{}{}
+		if plugin.Version == "" {
+			unversionedPlugins[plugin.Name] = struct{}{}
 		}
 	}
 
