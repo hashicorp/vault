@@ -34,6 +34,9 @@ import { assert } from '@ember/debug';
  * @param {function} onChange - The onchange action for this form field. ** SEE UTIL ** search-select-has-many.js if selecting models from a hasMany relationship
  * @param {array} [inputValue] - Array of strings corresponding to the input's initial value, e.g. an array of model ids that on edit will appear as selected items below the input
  * @param {boolean} [disallowNewItems=false] - Controls whether or not the user can add a new item if none found
+ * @param {boolean} [shouldRenderName=false] - By default an item's id renders in the dropdown, passing in true displays the name with its id in smaller text beside it
+ *                                             (NOTE: the boolean flips automatically with 'identity' models or if this.idKey !== 'id') 
+ * @param {boolean} [resetSelection=false] - When true, the component will clear its input after "Add" is clicked.
  * @param {boolean} [passObject=false] - When true, the onChange callback returns an array of objects with id (string) and isNew (boolean) (instead of an array of id strings)
  * @param {array} [objectKeys=null] - Array of values that correlate to model attrs. When passObject=true, objectKeys are added to the passed object. NOTE: make 'id' as the first element in objectKeys if you do not want to override the default of 'id'
  * @param {number} [selectLimit] - A number that sets the limit to how many select options they can choose
@@ -55,57 +58,60 @@ import { assert } from '@ember/debug';
  * @param {boolean} [displayInherit=false] - if you need the search select component to display inherit instead of box.
  *
  // * advanced customization
- * @param {Array} options - `options` can be passed directly from the outside to the
- * power-select component. If doing this, `models` should not also be passed as that will overwrite the
- * passed value. ex: [{ name: 'namespace45', id: 'displayedName' }];
- * @param {function} search - Customizes how the power-select component searches for matches -
- * see the power-select docs for more information.
+ * @param {Array} options - array of objects passed directly to the power-select component. If doing this, `models` should not also be passed as that will overwrite the
+ * passed options. ex: [{ name: 'namespace45', id: 'displayedName' }];
+ * @param {function} search - Customizes how the power-select component searches for matches - see the power-select docs for more information.
  *
  */
 
 export default class SearchSelect extends Component {
   @service store;
-  // onChange: () => {},
-  @tracked selectedOptions; // list of selected options
-  @tracked allOptions; // list of options including matched
-  @tracked searchSelectOptions = [];
+  @tracked selectedOptions; // array of selected options, initially array of strings, then array of objects **WHYY/WHEN?!**
+  @tracked allOptions; // array id strings for ALL existing options, including matched
+  @tracked searchSelectOptions = []; // list of options rendered in dropdown
   @tracked shouldUseFallback = false;
-  @tracked shouldRenderName = false;
 
   get disallowNewItems() {
     return this.args.disallowNewItems || false;
   }
+
   get hidePowerSelect() {
     return this.selectedOptions.length >= this.args.selectLimit;
   }
+
   get idKey() {
-    if (this.args.objectKeys)
+    if (this.args.objectKeys) {
       assert('@objectKeys passed to <SearchSelect> must be an array', Array.isArray(this.args.objectKeys));
+    }
     // if objectKeys exists, use the first element of the array as the identifier
     return this.args.objectKeys ? this.args.objectKeys[0] : 'id';
   }
+
   get passObject() {
     return this.args.passObject || false;
+  }
+
+  get resetSelection() {
+    return this.args.resetSelection || false;
+  }
+
+  get shouldRenderName() {
+    return this.args.models?.some((model) => model.includes('identity')) ||
+      this.idKey !== 'id' ||
+      this.args.shouldRenderName
+      ? true
+      : false;
   }
 
   constructor() {
     super(...arguments);
     this.selectedOptions = this.args.inputValue || [];
-    // const { options, selectedOptions } = this;
-    // // if selected options are not a string then it has formatted input
-    // let hasFormattedInput = typeof selectedOptions.firstObject !== 'string';
-    // if (options && !hasFormattedInput) {
-    //   console.log('set in constructor');
-    //   // this is the first time they've been set, so we need to format them
-    //   this.passedInOptions = this.formatOptionsAndRemoveSelectedItems(options);
-    //   this.searchSelectOptions = [...this.searchSelectOptions, ...this.passedInOptions];
-    // }
   }
 
+  // 'format' means map over options and return each as an object with attrs needed to search & select
   formatOptionsAndRemoveSelectedItems(optionsToFormat) {
-    // 'format' means add searchText
+    //* `optionsToFormat` - array of objects or response from query (model Class)
     let formattedDropdownOptions = optionsToFormat.toArray().map((option) => {
-      // option is a model record or passed in object, return attrs required to search and select
       let searchText = `${option.name} ${option[this.idKey]}`;
       return {
         [this.idKey]: option[this.idKey],
@@ -114,13 +120,11 @@ export default class SearchSelect extends Component {
         searchText,
       };
     });
-    // -- used by filter-wildcard helper //use mapBy('id')
-    this.allOptions = formattedDropdownOptions.mapBy('id');
-    // --
 
-    // if no selected items, skip this block
+    this.allOptions = formattedDropdownOptions.mapBy('id'); // used by filter-wildcard helper
+
     if (this.selectedOptions.length > 0) {
-      // iterate through selected options (initially set by inputValue) and return as object with {id, name, searchText...etc}
+      // iterate and format selectedOptions, initially set by inputValue and format
       // remove any already selected items from array of ALL options (formattedDropdownOptions)
       this.selectedOptions = this.selectedOptions.map((option) => {
         let matchingOption = formattedDropdownOptions.findBy(this.idKey, option);
@@ -144,6 +148,17 @@ export default class SearchSelect extends Component {
 
   @task
   *fetchOptions() {
+    if (this.args.resetSelection) {
+      this.selectedOptions = [];
+    }
+    this.searchSelectOptions = [];
+
+    // TODO - fixxxxxx
+    // let formatSelection = typeof this.selectedOptions.firstObject !== 'string';
+    // if (formatSelection) {
+    //   this.selectedOptions = this.selectedOptions.mapBy('id');
+    // }
+
     if (!this.args.models) {
       if (this.args.options) {
         // format and add passed in options to dropdown
@@ -151,14 +166,7 @@ export default class SearchSelect extends Component {
       }
       return;
     }
-    if (this.idKey !== 'id') {
-      // if passing a dynamic idKey, then display it in the dropdown beside the name
-      this.shouldRenderName = true;
-    }
     for (let modelType of this.args.models) {
-      if (modelType.includes('identity')) {
-        this.shouldRenderName = true;
-      }
       try {
         let queryOptions = {};
         if (this.args.backend) {
