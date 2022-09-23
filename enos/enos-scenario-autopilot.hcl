@@ -62,7 +62,7 @@ scenario "autopilot" {
     module = module.create_vpc
 
     variables {
-      ami_architectures = [matrix.arch]
+      ami_architectures  = [matrix.arch]
       availability_zones = step.find_azs.availability_zones
       common_tags        = local.tags
     }
