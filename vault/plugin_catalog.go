@@ -735,7 +735,8 @@ func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.
 		}
 	}
 
-	if version == "" {
+	builtinVersion := versions.GetBuiltinVersion(pluginType, name)
+	if version == "" || version == builtinVersion {
 		// Look for builtin plugins
 		if factory, ok := c.builtinRegistry.Get(name, pluginType); ok {
 			return &pluginutil.PluginRunner{
@@ -743,7 +744,7 @@ func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.
 				Type:           pluginType,
 				Builtin:        true,
 				BuiltinFactory: factory,
-				Version:        versions.GetBuiltinVersion(pluginType, name),
+				Version:        builtinVersion,
 			}, nil
 		}
 	}
