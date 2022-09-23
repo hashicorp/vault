@@ -157,7 +157,7 @@ func TestGRPCBackendPlugin_Version(t *testing.T) {
 	}
 
 	version := versioner.PluginVersion().Version
-	if version != "mock" {
+	if version != "v0.0.0+mock" {
 		t.Fatalf("Got version %s, expected 'mock'", version)
 	}
 }

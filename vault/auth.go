@@ -184,10 +184,8 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 	if backendType != logical.TypeCredential {
 		return fmt.Errorf("cannot mount %q of type %q as an auth backend", entry.Type, backendType)
 	}
-	// update the entry running version with the backend's reported version
-	if versioner, ok := backend.(logical.PluginVersioner); ok {
-		entry.RunningVersion = versioner.PluginVersion().Version
-	}
+	// update the entry running version with the configured version, which was verified during registration.
+	entry.RunningVersion = entry.Version
 	if entry.RunningVersion == "" {
 		// don't set the running version to a builtin if it is running as an external plugin
 		if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
@@ -810,6 +808,15 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		}
 		if backend == nil {
 			return fmt.Errorf("nil backend returned from %q factory", entry.Type)
+		}
+
+		// update the entry running version with the configured version, which was verified during registration.
+		entry.RunningVersion = entry.Version
+		if entry.RunningVersion == "" {
+			// don't set the running version to a builtin if it is running as an external plugin
+			if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
+				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
+			}
 		}
 
 		{
