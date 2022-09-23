@@ -6,9 +6,11 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/versions"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin"
 )
@@ -186,6 +188,19 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 	}
 	if backend == nil {
 		return fmt.Errorf("nil backend of type %q returned from creation function", entry.Type)
+	}
+
+	// update the entry running version with the configured version, which was verified during registration.
+	entry.RunningVersion = entry.Version
+	if entry.RunningVersion == "" {
+		// don't set the running version to a builtin if it is running as an external plugin
+		if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
+			if isAuth {
+				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
+			} else {
+				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
+			}
+		}
 	}
 
 	// update the mount table since we changed the runningSha
