@@ -6,9 +6,11 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/versions"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin"
 )
@@ -188,6 +190,19 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 		return fmt.Errorf("nil backend of type %q returned from creation function", entry.Type)
 	}
 
+	// update the entry running version with the configured version, which was verified during registration.
+	entry.RunningVersion = entry.Version
+	if entry.RunningVersion == "" {
+		// don't set the running version to a builtin if it is running as an external plugin
+		if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
+			if isAuth {
+				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
+			} else {
+				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
+			}
+		}
+	}
+
 	// update the mount table since we changed the runningSha
 	if oldSha != entry.RunningSha256 && MountTableUpdateStorage {
 		if isAuth {
@@ -213,6 +228,15 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 	re.backend = backend
 
 	if backend != nil {
+		// Initialize the backend after reload. This is a no-op for backends < v5 which
+		// rely on lazy loading for initialization. v5 backends do not rely on lazy loading
+		// for initialization unless the plugin process is killed. Reload of a v5 backend
+		// results in a new plugin process, so we must initialize the backend here.
+		err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
+		if err != nil {
+			return err
+		}
+
 		// Set paths as well
 		paths := backend.SpecialPaths()
 		if paths != nil {

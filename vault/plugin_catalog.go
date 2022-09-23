@@ -735,7 +735,8 @@ func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.
 		}
 	}
 
-	if version == "" {
+	builtinVersion := versions.GetBuiltinVersion(pluginType, name)
+	if version == "" || version == builtinVersion {
 		// Look for builtin plugins
 		if factory, ok := c.builtinRegistry.Get(name, pluginType); ok {
 			return &pluginutil.PluginRunner{
@@ -743,7 +744,7 @@ func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.
 				Type:           pluginType,
 				Builtin:        true,
 				BuiltinFactory: factory,
-				Version:        versions.GetBuiltinVersion(pluginType, name),
+				Version:        builtinVersion,
 			}, nil
 		}
 	}
@@ -826,6 +827,13 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 	} else if version != "" && runningVersion.Version != "" && version != runningVersion.Version {
 		c.logger.Warn("Plugin self-reported version did not match requested version", "plugin", name, "requestedVersion", version, "reportedVersion", runningVersion.Version)
 		return nil, fmt.Errorf("plugin version mismatch: %s reported version (%s) did not match requested version (%s)", name, runningVersion.Version, version)
+	} else if version == "" && runningVersion.Version != "" {
+		version = runningVersion.Version
+		_, err := semver.NewVersion(version)
+		if err != nil {
+			return nil, fmt.Errorf("plugin self-reported version %q is not a valid semantic version: %w", version, err)
+		}
+
 	}
 
 	entry := &pluginutil.PluginRunner{

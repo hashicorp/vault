@@ -45,7 +45,7 @@ func TestSysAuth(t *testing.T) {
 				"options":                interface{}(nil),
 				"plugin_version":         "",
 				"running_sha256":         "",
-				"running_plugin_version": "",
+				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 			},
 		},
 		"token/": map[string]interface{}{
@@ -63,7 +63,7 @@ func TestSysAuth(t *testing.T) {
 			"options":                interface{}(nil),
 			"plugin_version":         "",
 			"running_sha256":         "",
-			"running_plugin_version": "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -145,7 +145,7 @@ func TestSysEnableAuth(t *testing.T) {
 				"options":                interface{}(nil),
 				"plugin_version":         "",
 				"running_sha256":         "",
-				"running_plugin_version": "",
+				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 			},
 		},
 		"foo/": map[string]interface{}{
@@ -181,7 +181,7 @@ func TestSysEnableAuth(t *testing.T) {
 			"options":                interface{}(nil),
 			"plugin_version":         "",
 			"running_sha256":         "",
-			"running_plugin_version": "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -248,7 +248,7 @@ func TestSysDisableAuth(t *testing.T) {
 				"options":                 interface{}(nil),
 				"plugin_version":          "",
 				"running_sha256":          "",
-				"running_plugin_version":  "",
+				"running_plugin_version":  versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 			},
 		},
 		"token/": map[string]interface{}{
@@ -266,7 +266,7 @@ func TestSysDisableAuth(t *testing.T) {
 			"options":                 interface{}(nil),
 			"plugin_version":          "",
 			"running_sha256":          "",
-			"running_plugin_version":  "",
+			"running_plugin_version":  versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -542,7 +542,7 @@ func TestSysRemountAuth(t *testing.T) {
 				"options":                interface{}(nil),
 				"plugin_version":         "",
 				"running_sha256":         "",
-				"running_plugin_version": "",
+				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 			},
 		},
 		"bar/": map[string]interface{}{
@@ -577,7 +577,7 @@ func TestSysRemountAuth(t *testing.T) {
 			"options":                interface{}(nil),
 			"plugin_version":         "",
 			"running_sha256":         "",
-			"running_plugin_version": "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 		},
 	}
 	testResponseStatus(t, resp, 200)
