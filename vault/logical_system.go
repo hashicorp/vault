@@ -2499,7 +2499,7 @@ func (b *SystemBackend) validateVersion(ctx context.Context, apiConfig APIMountC
 		}
 
 		if version != "" {
-			b.logger.Debug("pinning auth plugin version", "plugin name", pluginName, "plugin version", version)
+			b.logger.Debug("pinning plugin version", "plugin type", pluginType.String(), "plugin name", pluginName, "plugin version", version)
 		}
 	default:
 		semanticVersion, err := semver.NewVersion(version)
