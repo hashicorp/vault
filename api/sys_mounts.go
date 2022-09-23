@@ -200,8 +200,6 @@ func (c *Sys) TuneAuthMountWithContext(ctx context.Context, path string, config 
 		return err
 	}
 
-	q.Q("request")
-	q.Q(r)
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()

@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -1281,26 +1280,7 @@ func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
 			needPersist = true
 		}
 
-		if (entry.Config.UserLockoutConfig == UserLockoutConfig{}) {
-			userLockoutConfigMap := make(map[string]*configutil.UserLockoutConfig)
-			userLockoutConfigMap = configutil.SetMissingUserLockoutValuesInMap(userLockoutConfigMap)
-			userLockoutAuthConfig, ok := userLockoutConfigMap[strings.ToLower(entry.Type)]
-			switch ok {
-			case true:
-				entry.Config.UserLockoutConfig.LockoutThreshold = userLockoutAuthConfig.LockoutThreshold
-				entry.Config.UserLockoutConfig.LockoutDuration = userLockoutAuthConfig.LockoutDuration
-				entry.Config.UserLockoutConfig.LockoutCounterReset = userLockoutAuthConfig.LockoutCounterReset
-				entry.Config.UserLockoutConfig.DisableLockout = userLockoutAuthConfig.DisableLockout
-
-			default:
-				entry.Config.UserLockoutConfig.LockoutThreshold = userLockoutConfigMap["all"].LockoutThreshold
-				entry.Config.UserLockoutConfig.LockoutDuration = userLockoutConfigMap["all"].LockoutDuration
-				entry.Config.UserLockoutConfig.LockoutCounterReset = userLockoutConfigMap["all"].LockoutCounterReset
-				entry.Config.UserLockoutConfig.DisableLockout = userLockoutConfigMap["all"].DisableLockout
-			}
-		}
 	}
-
 	// Done if we have restored the mount table and we don't need
 	// to persist
 	if !needPersist {

@@ -1348,7 +1348,20 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	}
 	q.Q("hi")
 	q.Q("details of mount entry")
-	q.Q(entry)
+	userLockoutConfigurations := UserLockoutConfig{}
+	switch {
+	case entry.Config.UserLockoutConfig == UserLockoutConfig{}:
+
+		userLockoutConfigurations = c.GetUserLockoutFromConfig(entry.Type)
+
+	default:
+		userLockoutConfigurations = entry.Config.UserLockoutConfig
+
+	}
+
+	q.Q(userLockoutConfigurations)
+
+	// get userlockout configuration
 
 	// Route the request
 	resp, routeErr := c.doRouting(ctx, req)
@@ -2016,4 +2029,37 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 	// In this case, the server side consistent token cannot be used on this node. We return the appropriate
 	// status code.
 	return "", logical.ErrMissingRequiredState
+}
+
+func (c *Core) GetUserLockoutFromConfig(logicalType string) UserLockoutConfig {
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return UserLockoutConfig{}
+	}
+	userlockouts := conf.(*server.Config).UserLockoutConfigs
+
+	if userlockouts == nil {
+		return UserLockoutConfig{}
+	}
+
+	var commonUserLockoutConfig UserLockoutConfig
+	var authUserLockoutConfig UserLockoutConfig
+	for _, userLockoutConfig := range userlockouts {
+		if userLockoutConfig.Type == "all" {
+			commonUserLockoutConfig.LockoutThreshold = userLockoutConfig.LockoutThreshold
+			commonUserLockoutConfig.LockoutDuration = userLockoutConfig.LockoutDuration
+			commonUserLockoutConfig.LockoutCounterReset = userLockoutConfig.LockoutCounterReset
+			commonUserLockoutConfig.DisableLockout = userLockoutConfig.DisableLockout
+		}
+		if userLockoutConfig.Type == logicalType {
+			authUserLockoutConfig.LockoutThreshold = userLockoutConfig.LockoutThreshold
+			authUserLockoutConfig.LockoutDuration = userLockoutConfig.LockoutDuration
+			authUserLockoutConfig.LockoutCounterReset = userLockoutConfig.LockoutCounterReset
+			authUserLockoutConfig.DisableLockout = userLockoutConfig.DisableLockout
+		}
+	}
+	if (authUserLockoutConfig != UserLockoutConfig{}) {
+		return authUserLockoutConfig
+	}
+	return commonUserLockoutConfig
 }

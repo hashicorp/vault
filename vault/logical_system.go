@@ -30,7 +30,6 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	semver "github.com/hashicorp/go-version"
-	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -1709,6 +1708,14 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 						"unable to convert given mount config information"),
 					logical.ErrInvalidRequest
 			}
+
+			switch strings.ToLower(mountEntry.Type) {
+			case "all", "ldap", "approle", "userpass":
+			default:
+				return logical.ErrorResponse("mount tuning of user lockout configuration for auth type %q not allowed", mountEntry.Type),
+					logical.ErrInvalidRequest
+
+			}
 		}
 
 		if _, ok := userLockoutConfigMap["lockout_threshold"]; ok {
@@ -2543,8 +2550,6 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	if len(apiConfig.AllowedManagedKeys) > 0 {
 		config.AllowedManagedKeys = apiConfig.AllowedManagedKeys
 	}
-	// update userLockoutConfig
-	config.UserLockoutConfig = b.getUserLockoutConfig(logicalType)
 
 	// Create the mount entry
 	me := &MountEntry{
@@ -2571,66 +2576,6 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		return handleError(err)
 	}
 	return resp, nil
-}
-
-func (b *SystemBackend) getUserLockoutConfig(logicalType string) UserLockoutConfig {
-	conf := b.Core.rawConfig.Load()
-	if conf == nil {
-		return UserLockoutConfig{}
-	}
-	userlockouts := conf.(*server.Config).UserLockoutConfigs
-
-	if userlockouts == nil {
-		return UserLockoutConfig{}
-	}
-
-	var commonUserLockoutConfig UserLockoutConfig
-	var authUserLockoutConfig UserLockoutConfig
-	for _, userLockoutConfig := range userlockouts {
-		if userLockoutConfig.Type == "all" {
-			commonUserLockoutConfig.LockoutThreshold = userLockoutConfig.LockoutThreshold
-			commonUserLockoutConfig.LockoutDuration = userLockoutConfig.LockoutDuration
-			commonUserLockoutConfig.LockoutCounterReset = userLockoutConfig.LockoutCounterReset
-			commonUserLockoutConfig.DisableLockout = userLockoutConfig.DisableLockout
-		}
-		if userLockoutConfig.Type == logicalType {
-			authUserLockoutConfig.LockoutThreshold = userLockoutConfig.LockoutThreshold
-			authUserLockoutConfig.LockoutDuration = userLockoutConfig.LockoutDuration
-			authUserLockoutConfig.LockoutCounterReset = userLockoutConfig.LockoutCounterReset
-			authUserLockoutConfig.DisableLockout = userLockoutConfig.DisableLockout
-		}
-	}
-
-	// switch {
-	// case authUserLockoutConfig != UserLockoutConfig{}:
-	// 	return authUserLockoutConfig
-	// case commonUserLockoutConfig != UserLockoutConfig{}:
-	// 	return commonUserLockoutConfig
-	// }
-	// return UserLockoutConfig{}
-
-	if (authUserLockoutConfig != UserLockoutConfig{}) {
-		return authUserLockoutConfig
-	}
-	return commonUserLockoutConfig
-	// var currentUserLockoutConfig UserLockoutConfig
-	// userLockoutConfigMap := make(map[string]*configutil.UserLockoutConfig)
-	// userLockoutConfigMap = configutil.SetMissingUserLockoutValuesInMap(userLockoutConfigMap)
-	// userLockoutAuthConfig, ok := userLockoutConfigMap[strings.ToLower(logicalType)]
-	// switch ok {
-	// case true:
-	// 	currentUserLockoutConfig.LockoutThreshold = userLockoutAuthConfig.LockoutThreshold
-	// 	currentUserLockoutConfig.LockoutDuration = userLockoutAuthConfig.LockoutDuration
-	// 	currentUserLockoutConfig.LockoutCounterReset = userLockoutAuthConfig.LockoutCounterReset
-	// 	currentUserLockoutConfig.DisableLockout = userLockoutAuthConfig.DisableLockout
-
-	// default:
-	// 	currentUserLockoutConfig.LockoutThreshold = userLockoutConfigMap["all"].LockoutThreshold
-	// 	currentUserLockoutConfig.LockoutDuration = userLockoutConfigMap["all"].LockoutDuration
-	// 	currentUserLockoutConfig.LockoutCounterReset = userLockoutConfigMap["all"].LockoutCounterReset
-	// 	currentUserLockoutConfig.DisableLockout = userLockoutConfigMap["all"].DisableLockout
-	// }
-	// return currentUserLockoutConfig
 }
 
 // handleDisableAuth is used to disable a credential backend
