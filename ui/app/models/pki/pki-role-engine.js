@@ -14,7 +14,7 @@ export default class PkiRoleEngineModel extends Model {
   @attr('string', { readOnly: true }) backend;
   @attr('string', {
     label: 'Role name',
-    fieldValue: 'id',
+    fieldValue: 'name',
     readOnly: true,
   })
   name;
@@ -34,6 +34,7 @@ export default class PkiRoleEngineModel extends Model {
       'Also called the notBeforeDuration property. Allows certificates to be valid for a certain time period before now. This is useful to correct clock misalignment on various systems when setting up your CA.',
     editType: 'ttl',
     defaultValue: '30s',
+    hideToggle: true,
   })
   notBeforeDuration;
 

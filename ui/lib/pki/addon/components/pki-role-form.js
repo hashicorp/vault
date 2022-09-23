@@ -21,24 +21,28 @@ import { tracked } from '@glimmer/tracking';
 export default class PkiRoleForm extends Component {
   @service store;
   @service flashMessages;
-  @tracked modelValidations;
   @tracked errorBanner;
+  @tracked invalidFormAlert;
+  @tracked modelValidations;
 
   @task
   *save(event) {
     event.preventDefault();
     // ARG TODO see client assignment-form
     try {
-      const { isValid, state } = this.args.model.validate();
+      const { isValid, state, invalidFormMessage } = this.args.model.validate();
       this.modelValidations = isValid ? null : state;
+      this.invalidFormAlert = invalidFormMessage;
       if (isValid) {
         const { isNew, name } = this.args.model;
         yield this.args.model.save();
         this.flashMessages.success(`Successfully ${isNew ? 'created' : 'updated'} the role ${name}.`);
+        this.args.onSave();
       }
     } catch (error) {
       const message = error.errors ? error.errors.join('. ') : error.message;
       this.errorBanner = message;
+      this.invalidFormAlert = 'There was an error submitting this form.';
     }
   }
 

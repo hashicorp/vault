@@ -31,7 +31,11 @@
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
     {{! ARG TODO write a test for this }}
     <NamespaceReminder @mode={{if @model.isNew "create" "update"}} @noun="PKI role" />
-    <FormFieldGroupsLoop @model={{@model}} @mode={{if @model.isNew "create" "update"}}>
+    <FormFieldGroupsLoop
+      @model={{@model}}
+      @mode={{if @model.isNew "create" "update"}}
+      @modelValidations={{this.modelValidations}}
+    >
       {{! ARG TODO ideally I wouldn't do this but pass attr through form-field component }}
       {{#each @model.fieldGroups as |fieldGroup|}}
         {{#each-in fieldGroup as |group fields|}}
@@ -57,5 +61,11 @@
       {{! ARG TODO write test and check how it looks }}
       <AlertInline @type="danger" @message={{join ", " this.modelValidations.targets.errors}} @paddingTop={{true}} />
     {{/if}}
+    {{#if this.invalidFormAlert}}
+      <div class="control">
+        <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />
+      </div>
+    {{/if}}
   </div>
+
 </form>

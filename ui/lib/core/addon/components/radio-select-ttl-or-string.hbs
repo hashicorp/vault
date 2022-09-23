@@ -36,16 +36,17 @@
       Set the Not After field of the certificate with specified date value. The value format should be given in UTC format
       YYYY-MM-ddTHH:MM:SSZ.
     </p>
-
-    <input
-      data-test-input={{@attr.name}}
-      id={{@attr.name}}
-      autocomplete="off"
-      spellcheck="false"
-      value={{""}}
-      onchange={{this.onChangeWithEvent}}
-      class="input"
-      maxLength={{"21"}}
-    />
+    {{#if (eq this.groupValue "specificDate")}}
+      <input
+        data-test-input={{@attr.name}}
+        id={{@attr.name}}
+        autocomplete="off"
+        spellcheck="false"
+        value={{""}}
+        onchange={{this.onChangeWithEvent}}
+        class="input"
+        maxLength={{"21"}}
+      />
+    {{/if}}
   </label>
 </div>

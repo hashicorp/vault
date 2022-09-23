@@ -4,7 +4,12 @@
       {{#each fields as |attr|}}
         {{! template-lint-configure simple-unless "warn"  }}
         {{#unless (and (not-eq @mode "create") (eq attr.name "name"))}}
-          <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}}>{{yield}}</FormField>
+          <FormField
+            data-test-field={{true}}
+            @attr={{attr}}
+            @model={{@model}}
+            @modelValidations={{@modelValidations}}
+          >{{yield}}</FormField>
         {{/unless}}
       {{/each}}
     {{else}}
@@ -20,7 +25,7 @@
         {{#if (get @model prop)}}
           <div class="box is-marginless">
             {{#each fields as |attr|}}
-              <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
+              <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} @modelValidations={{@modelValidations}} />
             {{/each}}
           </div>
         {{/if}}
