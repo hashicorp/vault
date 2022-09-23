@@ -295,8 +295,11 @@ func TestCore_EnableExternalKv_MultipleVersions(t *testing.T) {
 		"plugin_version": "v1.2.3",
 	}
 	resp, err = c.systemBackend.HandleRequest(namespace.RootContext(nil), req)
-	if err == nil {
-		t.Fatal("Expected error mounting but got none")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Error() == nil {
+		t.Fatal("Expected resp error but got successful response")
 	}
 }
 
@@ -342,8 +345,11 @@ func TestCore_EnableExternalNoop_MultipleVersions(t *testing.T) {
 		"plugin_version": "v1.2.3",
 	}
 	resp, err = c.systemBackend.HandleRequest(namespace.RootContext(nil), req)
-	if err == nil {
-		t.Fatal("Expected error mounting but got none")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Error() == nil {
+		t.Fatal("Expected resp error but got successful response")
 	}
 }
 

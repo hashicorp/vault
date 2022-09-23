@@ -2429,7 +2429,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		}
 	}
 
-	pluginVersion, response, err := b.validateVersion(ctx, apiConfig, logicalType, consts.PluginTypeCredential)
+	pluginVersion, response, err := b.validateVersion(ctx, apiConfig.PluginVersion, logicalType, consts.PluginTypeCredential)
 	if response != nil || err != nil {
 		return response, err
 	}
@@ -2488,8 +2488,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	return resp, nil
 }
 
-func (b *SystemBackend) validateVersion(ctx context.Context, apiConfig APIMountConfig, pluginName string, pluginType consts.PluginType) (string, *logical.Response, error) {
-	version := apiConfig.PluginVersion
+func (b *SystemBackend) validateVersion(ctx context.Context, version string, pluginName string, pluginType consts.PluginType) (string, *logical.Response, error) {
 	switch version {
 	case "":
 		var err error
