@@ -81,7 +81,7 @@ components of that plan.
 Backups and restores are ideally performed while Vault is offline. If offline
 backups are not feasible, we recommend using a storage backend that supports
 atomic snapshots (such as
-[Consul](https://www.consul.io/docs/commands/snapshot.html) or [Integrated
+[Consul](https://www.consul.io/commands/snapshot) or [Integrated
 Storage](/docs/commands/operator/raft#snapshot)).
 
 ~> If your storage backend does not support atomic snapshots, we recommend only
@@ -93,7 +93,7 @@ other storage backends, follow the documentation of that backend for taking and
 restoring backups.
 
 - Integrated Storage [snapshots](/docs/commands/operator/raft#snapshot)
-- Consul [snapshots](https://www.consul.io/docs/commands/snapshot.html)
+- Consul [snapshots](https://www.consul.io/commands/snapshot)
 
 #### Backing up Multiple Clusters
 

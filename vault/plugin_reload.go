@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/namespace"
 
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin"
@@ -174,11 +174,12 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 	}
 
 	var backend logical.Backend
+	oldSha := entry.RunningSha256
 	if !isAuth {
 		// Dispense a new backend
-		backend, err = c.newLogicalBackend(ctx, entry, sysView, view)
+		backend, entry.RunningSha256, err = c.newLogicalBackend(ctx, entry, sysView, view)
 	} else {
-		backend, err = c.newCredentialBackend(ctx, entry, sysView, view)
+		backend, entry.RunningSha256, err = c.newCredentialBackend(ctx, entry, sysView, view)
 	}
 	if err != nil {
 		return err
@@ -187,6 +188,20 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 		return fmt.Errorf("nil backend of type %q returned from creation function", entry.Type)
 	}
 
+	// update the mount table since we changed the runningSha
+	if oldSha != entry.RunningSha256 && MountTableUpdateStorage {
+		if isAuth {
+			err = c.persistAuth(ctx, c.auth, &entry.Local)
+			if err != nil {
+				return err
+			}
+		} else {
+			err = c.persistMounts(ctx, c.mounts, &entry.Local)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	addPathCheckers(c, entry, backend, viewPath)
 
 	if nilMount {
@@ -198,6 +213,15 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 	re.backend = backend
 
 	if backend != nil {
+		// Initialize the backend after reload. This is a no-op for backends < v5 which
+		// rely on lazy loading for initialization. v5 backends do not rely on lazy loading
+		// for initialization unless the plugin process is killed. Reload of a v5 backend
+		// results in a new plugin process, so we must initialize the backend here.
+		err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
+		if err != nil {
+			return err
+		}
+
 		// Set paths as well
 		paths := backend.SpecialPaths()
 		if paths != nil {
