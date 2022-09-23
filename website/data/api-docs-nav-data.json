@@ -98,6 +98,10 @@
             "path": "secret/databases/postgresql"
           },
           {
+            "title": "Redis",
+            "path": "secret/databases/redis"
+          },
+          {
             "title": "Redis ElastiCache",
             "path": "secret/databases/rediselasticache"
           },
