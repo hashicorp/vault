@@ -2842,7 +2842,7 @@ func TestCore_ServiceRegistration(t *testing.T) {
 func TestDetectedDeadlock(t *testing.T) {
 	// This test relies on setting a global package option and isn't guaranteed to be thread-safe
 	// Accordingly, skip its execution wheh specifically testing for race conditions
-	if os.Getenv("VAULT_CI_GO_TEST_RACE") != "" {
+	if os.Getenv("VAULT_CI_GO_TEST_RACE") == "" {
 		testCore, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{DetectDeadlocks: "statelock"})
 		InduceDeadlock(t, testCore, 1)
 	}
@@ -2851,7 +2851,7 @@ func TestDetectedDeadlock(t *testing.T) {
 func TestDefaultDeadlock(t *testing.T) {
 	// This test relies on setting a global package option and isn't guaranteed to be thread-safe
 	// Accordingly, skip its execution wheh specifically testing for race conditions
-	if os.Getenv("VAULT_CI_GO_TEST_RACE") != "" {
+	if os.Getenv("VAULT_CI_GO_TEST_RACE") == "" {
 		testCore, _, _ := TestCoreUnsealed(t)
 		InduceDeadlock(t, testCore, 0)
 	}
