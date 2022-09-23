@@ -1543,7 +1543,6 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	var runningSha string
 	f, ok := c.logicalBackends[t]
 	if !ok {
-		// external plugins cannot override builtin names
 		plug, err := c.pluginCatalog.Get(ctx, t, consts.PluginTypeSecrets, entry.Version)
 		if err != nil {
 			return nil, "", err
@@ -1564,7 +1563,6 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 			f = wrapFactoryCheckPerms(c, plugin.Factory)
 		}
 	}
-
 	// Set up conf to pass in plugin_name
 	conf := make(map[string]string)
 	for k, v := range entry.Options {
