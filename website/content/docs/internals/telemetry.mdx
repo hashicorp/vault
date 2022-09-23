@@ -258,6 +258,7 @@ These metrics relate to [Vault Enterprise Replication](/docs/enterprise/replicat
 | `vault.replication.rpc.server.bootstrap_request`              | Duration of time taken by bootstrap request                                                                                                | ms              | summary |
 | `vault.replication.rpc.server.conflicting_pages_request`      | Duration of time taken by conflicting pages request                                                                                        | ms              | summary |
 | `vault.replication.rpc.server.echo`                           | Duration of time taken by echo                                                                                                             | ms              | summary |
+| `vault.replication.rpc.server.save_mfa_response_auth`         | Duration of time taken by saving MFA auth response                                                                                         | ms              | summary |
 | `vault.replication.rpc.server.forwarding_request`             | Duration of time taken by forwarding request                                                                                               | ms              | summary |
 | `vault.replication.rpc.server.guard_hash_request`             | Duration of time taken by guard hash request                                                                                               | ms              | summary |
 | `vault.replication.rpc.server.persist_alias_request`          | Duration of time taken by persist alias request                                                                                            | ms              | summary |
@@ -278,6 +279,7 @@ These metrics relate to [Vault Enterprise Replication](/docs/enterprise/replicat
 | `vault.replication.rpc.client.sync_counter`                   | Duration of time taken by client sync counter request                                                                                      | ms              | summary |
 | `vault.replication.rpc.client.upsert_group`                   | Duration of time taken by client upstert group request                                                                                     | ms              | summary |
 | `vault.replication.rpc.client.wrap_in_cubbyhole`              | Duration of time taken by client wrap in cubbyhole request                                                                                 | ms              | summary |
+| `vault.replication.rpc.client.save_mfa_response_auth`         | Duration of time taken by client saving MFA auth response                                                                                  | ms              | summary |
 | `vault.replication.rpc.dr.server.echo`                        | Duration of time taken by DR echo request                                                                                                  | ms              | summary |
 | `vault.replication.rpc.dr.server.fetch_keys_request`          | Duration of time taken by DR fetch keys request                                                                                            | ms              | summary |
 | `vault.replication.rpc.standby.server.echo`                   | Duration of time taken by standby echo request                                                                                             | ms              | summary |
@@ -495,7 +497,7 @@ indicate flapping leadership.
 
 ## Integrated Storage (Raft) Automated Snapshots
 
-These metrics related to the Enterprise feature [Raft Automated Snapshots](/docs/enterprise/automated-raft-snapshots).
+These metrics related to the Enterprise feature [Raft Automated Snapshots](/docs/enterprise/automated-integrated-storage-snapshots).
 
 | Metric                                      | Description                                                                                   | Unit       | Type    |
 | :------------------------------------------ | :-------------------------------------------------------------------------------------------- | :--------- | :------ |
@@ -525,25 +527,47 @@ These metrics related to the Enterprise feature [Raft Automated Snapshots](/docs
 | `snapshot_config_name` | For automated snapshots, the name of the configuration                                                                                                                                                                                                | `config1`               |
 
 [secrets-engines]: /docs/secrets
+
 [storage-backends]: /docs/configuration/storage
+
 [telemetry-stanza]: /docs/configuration/telemetry
+
 [cubbyhole-secrets-engine]: /docs/secrets/cubbyhole
+
 [kv-secrets-engine]: /docs/secrets/kv
+
 [ldap-auth-backend]: /docs/auth/ldap
+
 [token-auth-backend]: /docs/auth/token
+
 [azure-storage-backend]: /docs/configuration/storage/azure
+
 [cassandra-storage-backend]: /docs/configuration/storage/cassandra
+
 [cockroachdb-storage-backend]: /docs/configuration/storage/cockroachdb
+
 [consul-storage-backend]: /docs/configuration/storage/consul
+
 [couchdb-storage-backend]: /docs/configuration/storage/couchdb
+
 [dynamodb-storage-backend]: /docs/configuration/storage/dynamodb
+
 [etcd-storage-backend]: /docs/configuration/storage/etcd
+
 [gcs-storage-backend]: /docs/configuration/storage/google-cloud-storage
+
 [spanner-storage-backend]: /docs/configuration/storage/google-cloud-spanner
+
 [mssql-storage-backend]: /docs/configuration/storage/mssql
+
 [mysql-storage-backend]: /docs/configuration/storage/mysql
+
 [postgresql-storage-backend]: /docs/configuration/storage/postgresql
+
 [s3-storage-backend]: /docs/configuration/storage/s3
+
 [swift-storage-backend]: /docs/configuration/storage/swift
+
 [zookeeper-storage-backend]: /docs/configuration/storage/zookeeper
+
 [integrated-storage]: /docs/configuration/storage/raft

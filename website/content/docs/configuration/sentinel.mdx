@@ -27,7 +27,7 @@ The sentinel stanza currently supports only one parameter, `additional_enabled_m
 - `additional_enabled_modules` `(string array: [])`` - This parameter specifies a list of imports (modules)
   to allow in Sentinel policies.
 
-  Vault currently enables all of Sentinel's [standard imports](https://docs.hashicorp.com/sentinel/imports/)
+  Vault currently enables all of Sentinel's [standard imports](https://docs.hashicorp.com/sentinel/imports)
   except the "http" import, which has performance and security implications. In the future, if any new Sentinel
   imports are not automatically enabled by Vault, users could enable them in this stanza.
   Note that this setting cannot be used to load custom import plugins.
