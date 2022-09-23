@@ -368,6 +368,7 @@ type APIMountConfig struct {
 	AllowedResponseHeaders    []string              `json:"allowed_response_headers,omitempty" structs:"allowed_response_headers" mapstructure:"allowed_response_headers"`
 	TokenType                 string                `json:"token_type" structs:"token_type" mapstructure:"token_type"`
 	AllowedManagedKeys        []string              `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
+	PluginVersion             string                `json:"plugin_version,omitempty" mapstructure:"plugin_version"`
 
 	// PluginName is the name of the plugin registered in the catalog.
 	//
@@ -625,10 +626,8 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 		}
 	}
 
-	// update the entry running version with the backend's reported version
-	if versioner, ok := backend.(logical.PluginVersioner); ok {
-		entry.RunningVersion = versioner.PluginVersion().Version
-	}
+	// update the entry running version with the configured version, which was verified during registration.
+	entry.RunningVersion = entry.Version
 	if entry.RunningVersion == "" {
 		// don't set the running version to a builtin if it is running as an external plugin
 		if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
@@ -1434,6 +1433,15 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		}
 		if backend == nil {
 			return fmt.Errorf("created mount entry of type %q is nil", entry.Type)
+		}
+
+		// update the entry running version with the configured version, which was verified during registration.
+		entry.RunningVersion = entry.Version
+		if entry.RunningVersion == "" {
+			// don't set the running version to a builtin if it is running as an external plugin
+			if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
+				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
+			}
 		}
 
 		{
