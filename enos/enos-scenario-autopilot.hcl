@@ -59,7 +59,8 @@ scenario "autopilot" {
   }
 
   step "create_vpc" {
-    module = module.create_vpc
+    module     = module.create_vpc
+    depends_on = [step.find_azs]
 
     variables {
       ami_architectures  = [matrix.arch]
