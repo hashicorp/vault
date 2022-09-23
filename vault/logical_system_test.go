@@ -1850,7 +1850,7 @@ func TestSystemBackend_authTable(t *testing.T) {
 			"seal_wrap":              false,
 			"options":                map[string]string(nil),
 			"plugin_version":         "",
-			"running_plugin_version": "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 			"running_sha256":         "",
 		},
 	}
@@ -1936,7 +1936,7 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 			"seal_wrap":              false,
 			"options":                map[string]string(nil),
 			"plugin_version":         "",
-			"running_plugin_version": "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 			"running_sha256":         "",
 		},
 	}
@@ -2009,9 +2009,35 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 
 	req = logical.TestRequest(t, logical.UpdateOperation, "auth/token/tune")
 	req.Data["description"] = ""
+	req.Data["plugin_version"] = "v1.0.0"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil || resp == nil || !resp.IsError() || !strings.Contains(resp.Error().Error(), ErrPluginNotFound.Error()) {
+		t.Fatalf("expected tune request to fail, but got resp: %#v, err: %s", resp, err)
+	}
+
+	// Register the plugin in the catalog, and then try the same request again.
+	{
+		tempDir, err := filepath.EvalSymlinks(t.TempDir())
+		if err != nil {
+			t.Fatal(err)
+		}
+		c.pluginCatalog.directory = tempDir
+		file, err := os.Create(filepath.Join(tempDir, "foo"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := file.Close(); err != nil {
+			t.Fatal(err)
+		}
+		err = c.pluginCatalog.Set(context.Background(), "token", consts.PluginTypeCredential, "v1.0.0", "foo", []string{}, []string{}, []byte{})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatal(resp, err)
 	}
 
 	req = logical.TestRequest(t, logical.ReadOperation, "auth/token/tune")
@@ -2025,6 +2051,9 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 
 	if resp.Data["description"] != "" {
 		t.Fatalf("got: %#v expect: %#v", resp.Data["description"], "")
+	}
+	if resp.Data["plugin_version"] != "v1.0.0" {
+		t.Fatalf("got: %#v, expected: %v", resp.Data["version"], "v1.0.0")
 	}
 }
 
@@ -3100,6 +3129,29 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_PluginCatalog_CannotRegisterBuiltinPlugins(t *testing.T) {
+	c, b, _ := testCoreSystemBackend(t)
+	// Bootstrap the pluginCatalog
+	sym, err := filepath.EvalSymlinks(os.TempDir())
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	c.pluginCatalog.directory = sym
+
+	// Set a plugin
+	req := logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
+	req.Data["sha256"] = hex.EncodeToString([]byte{'1'})
+	req.Data["command"] = "foo"
+	req.Data["version"] = "v1.2.3+special.builtin"
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Error().Error(), "reserved metadata") {
+		t.Fatalf("err: %v", resp.Error())
+	}
+}
+
 func TestSystemBackend_ToolsHash(t *testing.T) {
 	b := testSystemBackend(t)
 	req := logical.TestRequest(t, logical.UpdateOperation, "tools/hash")
@@ -3393,7 +3445,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"local":                   false,
 				"seal_wrap":               false,
 				"plugin_version":          "",
-				"running_plugin_version":  "",
+				"running_plugin_version":  versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 				"running_sha256":          "",
 			},
 		},

@@ -6,6 +6,8 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
 )
 
@@ -74,7 +76,10 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 	t.Run("integration", func(t *testing.T) {
 		t.Run("flags_all", func(t *testing.T) {
 			t.Parallel()
-			client, closer := testVaultServer(t)
+			pluginDir, cleanup := vault.MakeTestPluginDir(t)
+			defer cleanup(t)
+
+			client, _, closer := testVaultServerPluginDir(t, pluginDir)
 			defer closer()
 
 			ui, cmd := testAuthTuneCommand(t)
@@ -87,6 +92,21 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			auths, err := client.Sys().ListAuth()
+			if err != nil {
+				t.Fatal(err)
+			}
+			mountInfo, ok := auths["my-auth/"]
+			if !ok {
+				t.Fatalf("expected mount to exist: %#v", auths)
+			}
+
+			if exp := ""; mountInfo.PluginVersion != exp {
+				t.Errorf("expected %q to be %q", mountInfo.PluginVersion, exp)
+			}
+
+			_, _, version := testPluginCreateAndRegisterVersioned(t, client, pluginDir, "userpass", consts.PluginTypeCredential)
+
 			code := cmd.Run([]string{
 				"-description", "new description",
 				"-default-lease-ttl", "30m",
@@ -97,6 +117,7 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 				"-passthrough-request-headers", "www-authentication",
 				"-allowed-response-headers", "authorization,www-authentication",
 				"-listing-visibility", "unauth",
+				"-plugin-version", version,
 				"my-auth/",
 			})
 			if exp := 0; code != exp {
@@ -109,12 +130,12 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 				t.Errorf("expected %q to contain %q", combined, expected)
 			}
 
-			auths, err := client.Sys().ListAuth()
+			auths, err = client.Sys().ListAuth()
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			mountInfo, ok := auths["my-auth/"]
+			mountInfo, ok = auths["my-auth/"]
 			if !ok {
 				t.Fatalf("expected auth to exist")
 			}
@@ -123,6 +144,9 @@ func TestAuthTuneCommand_Run(t *testing.T) {
 			}
 			if exp := "userpass"; mountInfo.Type != exp {
 				t.Errorf("expected %q to be %q", mountInfo.Type, exp)
+			}
+			if exp := version; mountInfo.PluginVersion != exp {
+				t.Errorf("expected %q to be %q", mountInfo.PluginVersion, exp)
 			}
 			if exp := 1800; mountInfo.Config.DefaultLeaseTTL != exp {
 				t.Errorf("expected %d to be %d", mountInfo.Config.DefaultLeaseTTL, exp)

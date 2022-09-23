@@ -365,7 +365,7 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 // getPluginTypeFromUnknown will attempt to run the plugin to determine the
 // type. It will first attempt to run as a database plugin then a backend
 // plugin.
-func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, logger log.Logger, plugin *pluginutil.PluginRunner) (consts.PluginType, error) {
+func (c *PluginCatalog) getPluginTypeFromUnknown(ctx context.Context, plugin *pluginutil.PluginRunner) (consts.PluginType, error) {
 	merr := &multierror.Error{}
 	err := c.isDatabasePlugin(ctx, plugin)
 	if err == nil {
@@ -461,6 +461,124 @@ func (c *PluginCatalog) getBackendPluginType(ctx context.Context, pluginRunner *
 	return consts.PluginTypeUnknown, merr.ErrorOrNil()
 }
 
+// getBackendRunningVersion attempts to get the plugin version
+func (c *PluginCatalog) getBackendRunningVersion(ctx context.Context, pluginRunner *pluginutil.PluginRunner) (logical.PluginVersion, error) {
+	merr := &multierror.Error{}
+	// Attempt to run as backend plugin
+	config := pluginutil.PluginClientConfig{
+		Name:            pluginRunner.Name,
+		PluginSets:      backendplugin.PluginSet,
+		HandshakeConfig: backendplugin.HandshakeConfig,
+		Logger:          log.NewNullLogger(),
+		IsMetadataMode:  false,
+		AutoMTLS:        true,
+	}
+
+	var client logical.Backend
+	// First, attempt to run as backend V5 plugin
+	c.logger.Debug("attempting to load backend plugin", "name", pluginRunner.Name)
+	pc, err := c.newPluginClient(ctx, pluginRunner, config)
+	if err == nil {
+		// we spawned a subprocess, so make sure to clean it up
+		defer c.cleanupExternalPlugin(pluginRunner.Name, pc.id)
+
+		// dispense the plugin so we can get its version
+		client, err = backendplugin.Dispense(pc.ClientProtocol, pc)
+		if err == nil {
+			c.logger.Debug("successfully dispensed v5 backend plugin", "name", pluginRunner.Name)
+
+			err = client.Setup(ctx, &logical.BackendConfig{})
+			if err != nil {
+				return logical.EmptyPluginVersion, nil
+			}
+			if versioner, ok := client.(logical.PluginVersioner); ok {
+				return versioner.PluginVersion(), nil
+			}
+			return logical.EmptyPluginVersion, nil
+		}
+		merr = multierror.Append(merr, fmt.Errorf("failed to dispense plugin as backend v5: %w", err))
+	}
+	c.logger.Debug("failed to dispense v5 backend plugin", "name", pluginRunner.Name, "error", err)
+	config.AutoMTLS = false
+	config.IsMetadataMode = true
+	// attempt to run as a v4 backend plugin
+	client, err = backendplugin.NewPluginClient(ctx, nil, pluginRunner, log.NewNullLogger(), true)
+	if err != nil {
+		merr = multierror.Append(merr, fmt.Errorf("failed to dispense v4 backend plugin: %w", err))
+		c.logger.Debug("failed to dispense v4 backend plugin", "name", pluginRunner.Name, "error", merr)
+		return logical.EmptyPluginVersion, merr.ErrorOrNil()
+	}
+	c.logger.Debug("successfully dispensed v4 backend plugin", "name", pluginRunner.Name)
+	defer client.Cleanup(ctx)
+
+	err = client.Setup(ctx, &logical.BackendConfig{})
+	if err != nil {
+		return logical.EmptyPluginVersion, err
+	}
+	if versioner, ok := client.(logical.PluginVersioner); ok {
+		return versioner.PluginVersion(), nil
+	}
+	return logical.EmptyPluginVersion, nil
+}
+
+// getDatabaseRunningVersion returns the version reported by a database plugin
+func (c *PluginCatalog) getDatabaseRunningVersion(ctx context.Context, pluginRunner *pluginutil.PluginRunner) (logical.PluginVersion, error) {
+	merr := &multierror.Error{}
+	config := pluginutil.PluginClientConfig{
+		Name:            pluginRunner.Name,
+		PluginSets:      v5.PluginSets,
+		PluginType:      consts.PluginTypeDatabase,
+		Version:         pluginRunner.Version,
+		HandshakeConfig: v5.HandshakeConfig,
+		Logger:          log.Default(),
+		IsMetadataMode:  true,
+		AutoMTLS:        true,
+	}
+
+	// Attempt to run as database V5+ multiplexed plugin
+	c.logger.Debug("attempting to load database plugin as v5", "name", pluginRunner.Name)
+	v5Client, err := c.newPluginClient(ctx, pluginRunner, config)
+	if err == nil {
+		defer func() {
+			// Close the client and cleanup the plugin process
+			err = c.cleanupExternalPlugin(pluginRunner.Name, v5Client.id)
+			if err != nil {
+				c.logger.Error("error closing plugin client", "error", err)
+			}
+		}()
+
+		raw, err := v5Client.Dispense("database")
+		if err != nil {
+			return logical.EmptyPluginVersion, err
+		}
+		if versioner, ok := raw.(logical.PluginVersioner); ok {
+			return versioner.PluginVersion(), nil
+		}
+		return logical.EmptyPluginVersion, nil
+	}
+	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v5: %w", err))
+
+	c.logger.Debug("attempting to load database plugin as v4", "name", pluginRunner.Name)
+	v4Client, err := v4.NewPluginClient(ctx, nil, pluginRunner, log.NewNullLogger(), true)
+	if err == nil {
+		// Close the client and cleanup the plugin process
+		defer func() {
+			err = v4Client.Close()
+			if err != nil {
+				c.logger.Error("error closing plugin client", "error", err)
+			}
+		}()
+
+		if versioner, ok := v4Client.(logical.PluginVersioner); ok {
+			return versioner.PluginVersion(), nil
+		}
+
+		return logical.EmptyPluginVersion, nil
+	}
+	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v4: %w", err))
+	return logical.EmptyPluginVersion, merr
+}
+
 // isDatabasePlugin returns an error if the plugin is not a database plugin.
 func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *pluginutil.PluginRunner) error {
 	merr := &multierror.Error{}
@@ -475,7 +593,7 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 		AutoMTLS:        true,
 	}
 
-	// Attempt to run as database V5 or V6 multiplexed plugin
+	// Attempt to run as database V5+ multiplexed plugin
 	c.logger.Debug("attempting to load database plugin as v5", "name", pluginRunner.Name)
 	v5Client, err := c.newPluginClient(ctx, pluginRunner, config)
 	if err == nil {
@@ -617,7 +735,8 @@ func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.
 		}
 	}
 
-	if version == "" {
+	builtinVersion := versions.GetBuiltinVersion(pluginType, name)
+	if version == "" || version == builtinVersion {
 		// Look for builtin plugins
 		if factory, ok := c.builtinRegistry.Get(name, pluginType); ok {
 			return &pluginutil.PluginRunner{
@@ -625,7 +744,7 @@ func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.
 				Type:           pluginType,
 				Builtin:        true,
 				BuiltinFactory: factory,
-				Version:        versions.GetBuiltinVersion(pluginType, name),
+				Version:        builtinVersion,
 			}, nil
 		}
 	}
@@ -671,26 +790,50 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 		return nil, errors.New("cannot execute files outside of configured plugin directory")
 	}
 
+	// entryTmp should only be used for the below type and version checks, it uses the
+	// full command instead of the relative command.
+	entryTmp := &pluginutil.PluginRunner{
+		Name:    name,
+		Command: commandFull,
+		Args:    args,
+		Env:     env,
+		Sha256:  sha256,
+		Builtin: false,
+	}
 	// If the plugin type is unknown, we want to attempt to determine the type
 	if pluginType == consts.PluginTypeUnknown {
-		// entryTmp should only be used for the below type check, it uses the
-		// full command instead of the relative command.
-		entryTmp := &pluginutil.PluginRunner{
-			Name:    name,
-			Command: commandFull,
-			Args:    args,
-			Env:     env,
-			Sha256:  sha256,
-			Builtin: false,
-		}
-
-		pluginType, err = c.getPluginTypeFromUnknown(ctx, log.Default(), entryTmp)
+		pluginType, err = c.getPluginTypeFromUnknown(ctx, entryTmp)
 		if err != nil {
 			return nil, err
 		}
 		if pluginType == consts.PluginTypeUnknown {
 			return nil, ErrPluginBadType
 		}
+	}
+
+	// getting the plugin version is best-effort, so errors are not fatal
+	runningVersion := logical.EmptyPluginVersion
+	var versionErr error
+	switch pluginType {
+	case consts.PluginTypeSecrets, consts.PluginTypeCredential:
+		runningVersion, versionErr = c.getBackendRunningVersion(ctx, entryTmp)
+	case consts.PluginTypeDatabase:
+		runningVersion, versionErr = c.getDatabaseRunningVersion(ctx, entryTmp)
+	default:
+		return nil, fmt.Errorf("unknown plugin type: %v", pluginType)
+	}
+	if versionErr != nil {
+		c.logger.Warn("Error determining plugin version", "error", versionErr)
+	} else if version != "" && runningVersion.Version != "" && version != runningVersion.Version {
+		c.logger.Warn("Plugin self-reported version did not match requested version", "plugin", name, "requestedVersion", version, "reportedVersion", runningVersion.Version)
+		return nil, fmt.Errorf("plugin version mismatch: %s reported version (%s) did not match requested version (%s)", name, runningVersion.Version, version)
+	} else if version == "" && runningVersion.Version != "" {
+		version = runningVersion.Version
+		_, err := semver.NewVersion(version)
+		if err != nil {
+			return nil, fmt.Errorf("plugin self-reported version %q is not a valid semantic version: %w", version, err)
+		}
+
 	}
 
 	entry := &pluginutil.PluginRunner{
@@ -787,6 +930,7 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 		// Users don't expect to see the plugin type, so we need to strip that here.
 		var normalizedName, version string
 		var semanticVersion *semver.Version
+		storedType := consts.PluginTypeUnknown
 		parts := strings.Split(plugin, "/")
 
 		switch len(parts) {
@@ -798,7 +942,7 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 				return nil, err
 			}
 		case 2: // Unversioned
-			if isPluginType(parts[0]) {
+			if storedType, err = consts.ParsePluginType(parts[0]); err == nil {
 				normalizedName = parts[1]
 				// Use 0.0.0 to ensure unversioned is sorted as the oldest version.
 				semanticVersion, err = semver.NewVersion("0.0.0")
@@ -806,13 +950,17 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 					return nil, err
 				}
 			} else {
-				return nil, fmt.Errorf("unknown plugin type in plugin catalog: %s", plugin)
+				return nil, fmt.Errorf("unknown plugin type in plugin catalog: %s: %w", plugin, err)
 			}
 		case 3: // Versioned, with type
 			if !includeVersioned {
 				continue
 			}
 
+			storedType, err = consts.ParsePluginType(parts[0])
+			if err != nil {
+				return nil, fmt.Errorf("unexpected error parsing plugin type from plugin catalog entry %q: %w", plugin, err)
+			}
 			normalizedName, version = parts[1], parts[2]
 			semanticVersion, err = semver.NewVersion(version)
 			if err != nil {
@@ -823,18 +971,24 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 		}
 
 		// Only list user-added plugins if they're of the given type.
-		if entry, err := c.get(ctx, normalizedName, pluginType, version); err == nil && entry != nil {
-			result = append(result, pluginutil.VersionedPlugin{
-				Name:            normalizedName,
-				Type:            pluginType.String(),
-				Version:         version,
-				SHA256:          hex.EncodeToString(entry.Sha256),
-				SemanticVersion: semanticVersion,
-			})
+		if storedType != consts.PluginTypeUnknown && storedType != pluginType {
+			continue
+		}
+		entry, err := c.get(ctx, normalizedName, pluginType, version)
+		if err != nil || entry == nil {
+			continue
+		}
 
-			if version == "" {
-				unversionedPlugins[normalizedName] = struct{}{}
-			}
+		result = append(result, pluginutil.VersionedPlugin{
+			Name:            normalizedName,
+			Type:            pluginType.String(),
+			Version:         version,
+			SHA256:          hex.EncodeToString(entry.Sha256),
+			SemanticVersion: semanticVersion,
+		})
+
+		if version == "" {
+			unversionedPlugins[normalizedName] = struct{}{}
 		}
 	}
 
@@ -863,9 +1017,4 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 	}
 
 	return result, nil
-}
-
-func isPluginType(s string) bool {
-	_, err := consts.ParsePluginType(s)
-	return err == nil
 }
