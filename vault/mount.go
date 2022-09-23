@@ -627,14 +627,11 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	}
 
 	// update the entry running version with the configured version, which was verified during registration.
+	entry.RunningVersion = entry.Version
 	if entry.RunningVersion == "" {
-		if entry.Version != "" {
-			entry.RunningVersion = entry.Version
-		} else {
-			// don't set the running version to a builtin if it is running as an external plugin
-			if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
-				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
-			}
+		// don't set the running version to a builtin if it is running as an external plugin
+		if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
+			entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
 		}
 	}
 
@@ -1545,12 +1542,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 
 	var runningSha string
 	f, ok := c.logicalBackends[t]
-	if ok {
-		entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, t)
-		if entry.Version != "" && entry.Version != entry.RunningVersion {
-			return nil, "", fmt.Errorf("cannot mount non-builtin version of secrets plugin %s", t)
-		}
-	} else {
+	if !ok {
 		// external plugins cannot override builtin names
 		plug, err := c.pluginCatalog.Get(ctx, t, consts.PluginTypeSecrets, entry.Version)
 		if err != nil {

@@ -185,14 +185,11 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 		return fmt.Errorf("cannot mount %q of type %q as an auth backend", entry.Type, backendType)
 	}
 	// update the entry running version with the configured version, which was verified during registration.
+	entry.RunningVersion = entry.Version
 	if entry.RunningVersion == "" {
-		if entry.Version != "" {
-			entry.RunningVersion = entry.Version
-		} else {
-			// don't set the running version to a builtin if it is running as an external plugin
-			if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
-				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
-			}
+		// don't set the running version to a builtin if it is running as an external plugin
+		if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
+			entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
 		}
 	}
 	addPathCheckers(c, entry, backend, viewPath)
@@ -934,13 +931,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 
 	var runningSha string
 	f, ok := c.credentialBackends[t]
-	if ok {
-		entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, t)
-		if entry.Version != "" && entry.Version != entry.RunningVersion {
-			return nil, "", fmt.Errorf("cannot mount non-builtin version of auth plugin %s", t)
-		}
-
-	} else {
+	if !ok {
 		plug, err := c.pluginCatalog.Get(ctx, t, consts.PluginTypeCredential, entry.Version)
 		if err != nil {
 			return nil, "", err
