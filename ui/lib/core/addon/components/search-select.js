@@ -53,13 +53,8 @@ import { assert } from '@ember/debug';
  * @param {string} [placeholder] - text you wish to replace the default "search" with
  * @param {boolean} [displayInherit=false] - if you need the search select component to display inherit instead of box.
  * @param {boolean} [renderInfoTooltip=false] - if you want search select to render a tooltip beside a selected item if no corresponding model was returned from .query
- *
-<<<<<<< HEAD
- * @param {boolean} [displayInherit=false] - if you need the search select component to display inherit instead of box.
-=======
  * @param {boolean} [displayInherit] - if you need the search select component to display inherit instead of box.
  * @param {boolean} [renderInfoTooltip=false] - if you want search select to render a tooltip beside a selected item if no corresponding model was returned from .query
->>>>>>> main
  *
  // * advanced customization
  * @param {Array} options - array of objects passed directly to the power-select component. If doing this, `models` should not also be passed as that will overwrite the
@@ -112,7 +107,6 @@ export default class SearchSelect extends Component {
     this.selectedOptions = this.args.inputValue || [];
   }
 
-  // 'format' means add searchText
   formatOptionsAndRemoveSelectedItems(optionsToFormat) {
     //* `optionsToFormat` - array of objects or response from query (model Class)
     let formattedDropdownOptions = optionsToFormat.toArray().map((option) => {
@@ -142,6 +136,8 @@ export default class SearchSelect extends Component {
         };
       });
     }
+    // returns updated list of dropdown options with selected items removed
+    return formattedDropdownOptions;
   }
 
   @task
