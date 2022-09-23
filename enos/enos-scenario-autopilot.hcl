@@ -63,6 +63,8 @@ scenario "autopilot" {
 
     variables {
       ami_architectures = [matrix.arch]
+      availability_zones = step.find_azs.availability_zones
+      common_tags        = local.tags
     }
   }
 
