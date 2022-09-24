@@ -107,7 +107,8 @@ export default class SearchSelect extends Component {
   formatOptions(optionsToFormat) {
     //* `optionsToFormat` - array of objects or response from query (model Class)
     let formattedDropdownOptions = optionsToFormat.toArray().map((option) => {
-      option.searchText = `${option.name} ${option[this.idKey]}`;
+      const id = option[this.idKey] ? option[this.idKey] : option.id;
+      option.searchText = `${option.name} ${id}`;
       return option;
     });
     this.allOptions = formattedDropdownOptions.mapBy('id'); // used by filter-wildcard helper
@@ -186,7 +187,11 @@ export default class SearchSelect extends Component {
   @action
   handleChange() {
     if (this.selectedOptions.length && typeof this.selectedOptions.firstObject === 'object') {
-      this.onChange(Array.from(this.selectedOptions, (option) => this.customizeObject(option)));
+      this.onChange(
+        Array.from(this.selectedOptions, (option) =>
+          this.passObject ? this.customizeObject(option) : option.id
+        )
+      );
     } else {
       this.onChange(this.selectedOptions);
     }
@@ -225,27 +230,26 @@ export default class SearchSelect extends Component {
   // -----
   customizeObject(option) {
     if (!option) return;
-    // if passObject=true return object, otherwise return string of option id
-    if (this.passObject) {
-      let additionalKeys;
-      if (this.args.objectKeys) {
-        // pull attrs corresponding to objectKeys from model record, add to the selected option (object) and send to the parent
-        additionalKeys = Object.fromEntries(this.args.objectKeys.map((key) => [key, option[key]]));
-        // filter any undefined attrs, which means the model did not have a value for that attr
-        // no value could mean the model was not hydrated, the record is new or the model doesn't have that attribute
-        Object.keys(additionalKeys).forEach((key) => {
-          if (additionalKeys[key] === undefined) {
-            delete additionalKeys[key];
-          }
-        });
-      }
-      return {
-        id: option.id,
-        isNew: !!option.new,
-        ...additionalKeys,
-      };
+    // only customize object if passObject === true
+    if (!this.passObject) return option;
+
+    let additionalKeys;
+    if (this.args.objectKeys) {
+      // pull attrs corresponding to objectKeys from model record, add to the selected option (object) and send to the parent
+      additionalKeys = Object.fromEntries(this.args.objectKeys.map((key) => [key, option[key]]));
+      // filter any undefined attrs, which means the model did not have a value for that attr
+      // no value could mean the model was not hydrated, the record is new or the model doesn't have that attribute
+      Object.keys(additionalKeys).forEach((key) => {
+        if (additionalKeys[key] === undefined) {
+          delete additionalKeys[key];
+        }
+      });
     }
-    return option.id;
+    return {
+      id: option.id,
+      isNew: !!option.new,
+      ...additionalKeys,
+    };
   }
 
   @action

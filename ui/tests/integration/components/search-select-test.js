@@ -209,11 +209,13 @@ module('Integration | Component | search select', function (hooks) {
     this.set('models', models);
     this.set('onChange', sinon.spy());
     await render(hbs`
+    <div class='box'>
       <SearchSelect
         @label="foo"
         @models={{this.models}}
         @onChange={{this.onChange}}
       />
+    </div>
     `);
     await clickTrigger();
     await settled();
@@ -606,7 +608,6 @@ module('Integration | Component | search select', function (hooks) {
 
     await clickTrigger();
     await settled();
-
     // First select existing option
     await component.selectOption();
     assert.equal(component.selectedOptions.length, 1, 'there is 1 selected option');
@@ -639,7 +640,6 @@ module('Integration | Component | search select', function (hooks) {
         @objectKeys={{this.objectKeys}}
       />
     `);
-
     await clickTrigger();
     await settled();
     assert.equal(component.options.objectAt(0).text, '1', 'first option renders just id as name');
@@ -726,9 +726,8 @@ module('Integration | Component | search select', function (hooks) {
         @renderInfoTooltip={{true}}
       />
       `);
-
     assert.equal(component.selectedOptions.length, 2, 'there are two selected options');
-    assert.dom('[data-test-selected-option="0"]').hasText('model-a');
+    assert.dom('[data-test-selected-option="0"]').hasText('model-a a123');
     assert.dom('[data-test-selected-option="1"]').hasText('non-existent-model');
     assert
       .dom('[data-test-selected-option="0"] [data-test-component="info-tooltip"]')
