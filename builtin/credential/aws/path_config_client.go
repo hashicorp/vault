@@ -390,7 +390,7 @@ func (c *clientConfig) validateAllowedSTSHeaderValues(headers http.Header) error
 	for k := range headers {
 		h := textproto.CanonicalMIMEHeaderKey(k)
 		if h == "X-Amz-Signedheaders" {
-			h = "X-Amz-SignedHeaders"
+			h = amzSignedHeaders
 		}
 		if strings.HasPrefix(h, amzHeaderPrefix) &&
 			!strutil.StrListContains(defaultAllowedSTSRequestHeaders, h) &&
@@ -405,7 +405,7 @@ func (c *clientConfig) validateAllowedSTSQueryValues(params url.Values) error {
 	for k := range params {
 		h := textproto.CanonicalMIMEHeaderKey(k)
 		if h == "X-Amz-Signedheaders" {
-			h = "X-Amz-SignedHeaders"
+			h = amzSignedHeaders
 		}
 		if strings.HasPrefix(h, amzHeaderPrefix) &&
 			!strutil.StrListContains(defaultAllowedSTSRequestHeaders, k) &&

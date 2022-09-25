@@ -1688,7 +1688,7 @@ func validateVaultHeaderValue(method string, headers http.Header, parsedUrl *url
 		}
 		return fmt.Errorf("missing Authorization header")
 	case http.MethodGet:
-		return ensureHeaderIsSigned(parsedUrl.Query().Get("X-Amz-SignedHeaders"), iamServerIdHeader)
+		return ensureHeaderIsSigned(parsedUrl.Query().Get(amzSignedHeaders), iamServerIdHeader)
 	default:
 		return fmt.Errorf("unsupported method, %s", method)
 	}
