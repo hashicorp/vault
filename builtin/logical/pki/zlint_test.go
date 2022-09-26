@@ -3,6 +3,7 @@ package pki
 import (
 	"context"
 	"encoding/json"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -10,28 +11,29 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 )
 
-func RunZLintContainer(t *testing.T, certificate string) []byte {
+var runner *docker.Runner
+var buildZLintOnce sync.Once
+
+func buildZLintContainer(t *testing.T) {
 	containerfile := `
 FROM golang:latest
 
 RUN go install github.com/zmap/zlint/v3/cmd/zlint@latest
-
-COPY cert.pem /go/cert.pem
 `
 
 	bCtx := docker.NewBuildContext()
-	bCtx["cert.pem"] = docker.PathContentsFromBytes([]byte(certificate))
 
 	imageName := "vault_pki_zlint_validator"
 	imageTag := "latest"
 
-	runner, err := docker.NewServiceRunner(docker.RunOptions{
+	var err error
+	runner, err = docker.NewServiceRunner(docker.RunOptions{
 		ImageRepo:     imageName,
 		ImageTag:      imageTag,
 		ContainerName: "pki_zlint",
 		// We want to run sleep in the background so we're not stuck waiting
 		// for the default golang container's shell to prompt for input.
-		Entrypoint: []string{"sleep", "1200"},
+		Entrypoint: []string{"sleep", "45"},
 		LogConsumer: func(s string) {
 			if t.Failed() {
 				t.Logf("container logs: %s", s)
@@ -52,14 +54,27 @@ COPY cert.pem /go/cert.pem
 	}
 
 	t.Logf("Image build output: %v", string(output))
+}
+
+func RunZLintContainer(t *testing.T, certificate string) []byte {
+	buildZLintOnce.Do(func() {
+		buildZLintContainer(t)
+	})
 
 	// We don't actually care about the address, we just want to start the
 	// container so we can run commands in it. We'd ideally like to skip this
 	// step and only build a new image, but the zlint output would be
 	// intermingled with container build stages, so its not that useful.
-	ctr, _, _, err := runner.Start(ctx)
+	ctr, _, _, err := runner.Start(ctx, true, false)
 	if err != nil {
 		t.Fatalf("Could not start golang container for zlint: %s", err)
+	}
+
+	// Copy the cert into the newly running container.
+	certCtx := docker.NewBuildContext()
+	certCtx["cert.pem"] = docker.PathContentsFromBytes([]byte(certificate))
+	if err := runner.CopyTo(ctr.ID, "/go/", certCtx); err != nil {
+		t.Fatalf("Could not copy certificate into container: %v", err)
 	}
 
 	// Run the zlint command and save the output.
@@ -76,6 +91,11 @@ COPY cert.pem /go/cert.pem
 	if retcode != 0 {
 		t.Logf("Got stdout from command:\n%v\n", string(stdout))
 		t.Fatalf("Got unexpected non-zero retcode from zlint: %v\n", retcode)
+	}
+
+	// Clean up after ourselves.
+	if err := runner.Stop(context.Background(), ctr.ID); err != nil {
+		t.Fatalf("failed to stop container: %v", err)
 	}
 
 	return stdout
@@ -126,14 +146,38 @@ func RunZLintRootTest(t *testing.T, keyType string, keyBits int, usePSS bool, ig
 	}
 }
 
-func Test_ZLint(t *testing.T) {
+func Test_ZLintRSA2048(t *testing.T) {
+	t.Parallel()
 	RunZLintRootTest(t, "rsa", 2048, false, nil)
-	RunZLintRootTest(t, "rsa", 2048, true, nil)
-	RunZLintRootTest(t, "rsa", 3072, false, nil)
-	RunZLintRootTest(t, "rsa", 3072, true, nil)
-	RunZLintRootTest(t, "ec", 256, false, nil)
-	RunZLintRootTest(t, "ec", 384, false, nil)
+}
 
+func Test_ZLintRSA2048PSS(t *testing.T) {
+	t.Parallel()
+	RunZLintRootTest(t, "rsa", 2048, true, nil)
+}
+
+func Test_ZLintRSA3072(t *testing.T) {
+	t.Parallel()
+	RunZLintRootTest(t, "rsa", 3072, false, nil)
+}
+
+func Test_ZLintRSA3072PSS(t *testing.T) {
+	t.Parallel()
+	RunZLintRootTest(t, "rsa", 3072, true, nil)
+}
+
+func Test_ZLintECDSA256(t *testing.T) {
+	t.Parallel()
+	RunZLintRootTest(t, "ec", 256, false, nil)
+}
+
+func Test_ZLintECDSA384(t *testing.T) {
+	t.Parallel()
+	RunZLintRootTest(t, "ec", 384, false, nil)
+}
+
+func Test_ZLintECDSA521(t *testing.T) {
+	t.Parallel()
 	// Mozilla doesn't allow P-521 ECDSA keys.
 	RunZLintRootTest(t, "ec", 521, false, []string{
 		"e_mp_ecdsa_pub_key_encoding_correct",
