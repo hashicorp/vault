@@ -194,7 +194,6 @@ func (b *backendGRPCPluginClient) Cleanup(ctx context.Context) {
 	if server != nil {
 		server.(*grpc.Server).GracefulStop()
 	}
-	b.clientConn.Close()
 }
 
 func (b *backendGRPCPluginClient) InvalidateKey(ctx context.Context, key string) {

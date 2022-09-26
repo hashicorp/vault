@@ -214,6 +214,13 @@ func (c *PluginCatalog) cleanupExternalPlugin(name, id string) error {
 		}
 		c.logger.Debug("killed external plugin process", "name", name, "pid", pc.pid)
 	} else if len(extPlugin.connections) == 0 || pc.client.Exited() {
+		clientConn, err := pc.client.Client()
+		if err != nil {
+			return err
+		}
+
+		// close client connection
+		clientConn.Close()
 		pc.client.Kill()
 		delete(c.externalPlugins, name)
 		c.logger.Debug("killed external multiplexed plugin process", "name", name, "pid", pc.pid)
