@@ -1,5 +1,6 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
+import RSVP from 'rsvp';
 
 export default class RolesIndexRoute extends Route {
   @service store;
@@ -12,7 +13,8 @@ export default class RolesIndexRoute extends Route {
   }
 
   model() {
-    return this.store
+    let parentModel = this.modelFor('roles');
+    let model = this.store
       .query('pki/pki-role-engine', { backend: this.secretMountPath.currentPath })
       .catch((err) => {
         if (err.httpStatus === 404) {
@@ -21,5 +23,9 @@ export default class RolesIndexRoute extends Route {
           throw err;
         }
       });
+    return RSVP.hash({
+      parentModel,
+      model,
+    });
   }
 }

@@ -1,3 +1,13 @@
+<SecretListHeader
+  @model={{this.model.parentModel}}
+  @backendCrumb={{hash
+    label=this.model.parentModel.id
+    text=this.model.parentModel.id
+    path="vault.cluster.secrets.backend.list-root"
+    model=this.model.parentModel.id
+  }}
+  @isEngine={{true}}
+/>
 <Toolbar>
   <ToolbarActions>
     <ToolbarLink @type="add" @params={{array "roles.create"}}>
@@ -6,8 +16,8 @@
   </ToolbarActions>
 </Toolbar>
 
-{{#if (gt this.model.length 0)}}
-  {{#each this.model as |pkiRole|}}
+{{#if (gt this.model.model.length 0)}}
+  {{#each this.model.model as |pkiRole|}}
     <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiRole.id}} @linkPrefix={{this.mountPoint}}>
       <div class="level is-mobile">
         <div class="level-left">
