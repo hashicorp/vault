@@ -6,7 +6,6 @@ import { tracked } from '@glimmer/tracking';
 
 /**
  * @module PkiRoleForm
-//  * ARG TODO
  * PkiRoleForm components are used to create and update PKI roles.
  *
  * @example
@@ -15,10 +14,10 @@ import { tracked } from '@glimmer/tracking';
  * ```
  * @callback onCancel
  * @callback onSave
- * @param {Object} model - pki-role-engine model
- * @param {function} onChange - handle the input coming from the custom yield field.
- * @param {onCancel} onCancel - callback triggered when cancel button is clicked
- * @param {onSave} onSave - callback triggered on save success
+ * @param {Object} model - Pki-role-engine model.
+ * @param {function} onChange - Handle the input coming from the custom yield field.
+ * @param {onCancel} onCancel - Callback triggered when cancel button is clicked.
+ * @param {onSave} onSave - Callback triggered on save success.
  */
 
 export default class PkiRoleForm extends Component {

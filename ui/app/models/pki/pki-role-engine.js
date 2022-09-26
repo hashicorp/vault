@@ -58,7 +58,7 @@ export default class PkiRoleEngineModel extends Model {
     editType: 'boolean',
     docLink: '/api-docs/secret/pki#create-update-role',
   })
-  generateLease; // ARG TODO confirm false by default
+  generateLease;
 
   @attr('boolean', {
     label: 'Do not store certificates in storage backend',
