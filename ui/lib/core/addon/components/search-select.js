@@ -30,7 +30,7 @@ import { assert } from '@ember/debug';
  * @param {array} [inputValue] - Array of strings corresponding to the input's initial value, e.g. an array of model ids that on edit will appear as selected items below the input
  * @param {boolean} [disallowNewItems=false] - Controls whether or not the user can add a new item if none found
  * @param {boolean} [shouldRenderName=false] - By default an item's id renders in the dropdown, `true` displays the name with its id in smaller text beside it *NOTE: the boolean flips automatically with 'identity' models or if this.idKey !== 'id'
- * @param {boolean} [resetSelection=false] - When true, the component will clear its input after "Add" is clicked.
+ * @param {array} [parentHandleSelection] - Array of selected items if the parent is keeping track of selections, see mfa-login-enforcement-form.js
  * @param {boolean} [passObject=false] - When true, the onChange callback returns an array of objects with id (string) and isNew (boolean) (and any params from objectKeys). By default - onChange returns an array of id strings. 
  * @param {array} [objectKeys=null] - Array of values that correlate to model attrs. When passObject=true, objectKeys are added to the passed, selected object. *NOTE: make 'id' as the first element in objectKeys if you do not want to override the default of 'id'
  * @param {number} [selectLimit] - Sets select limit
@@ -182,74 +182,14 @@ export default class SearchSelect extends Component {
   @action
   handleChange() {
     if (this.selectedOptions.length && typeof this.selectedOptions.firstObject === 'object') {
-      this.onChange(
+      this.args.onChange(
         Array.from(this.selectedOptions, (option) =>
           this.passObject ? this.customizeObject(option) : option.id
         )
       );
     } else {
-      this.onChange(this.selectedOptions);
+      this.args.onChange(this.selectedOptions);
     }
-  }
-
-  shouldShowCreate(id, searchResults) {
-    if (searchResults && searchResults.length && searchResults.firstObject.groupName) {
-      return !searchResults.some((group) => group.options.findBy('id', id));
-    }
-    let existingOption =
-      this.dropdownOptions &&
-      (this.dropdownOptions.findBy('id', id) || this.dropdownOptions.findBy('name', id));
-    if (this.disallowNewItems && !existingOption) {
-      return false;
-    }
-    return !existingOption;
-  }
-
-  //----- adapted from ember-power-select-with-create
-  addCreateOption(term, results) {
-    if (this.shouldShowCreate(term, results)) {
-      const name = `Add new ${singularize(this.args.label.toLowerCase() || 'item')}: ${term}`;
-      const suggestion = {
-        __isSuggestion__: true,
-        __value__: term,
-        name,
-        id: name,
-      };
-      results.unshift(suggestion);
-    }
-  }
-  filter(options, searchText) {
-    const matcher = (option, text) => defaultMatcher(option.searchText, text);
-    return filterOptions(options || [], searchText, matcher);
-  }
-  // -----
-  customizeObject(option) {
-    if (!option) return;
-    // only customize object if passObject === true
-    if (!this.passObject) return option;
-
-    let additionalKeys;
-    if (this.args.objectKeys) {
-      // pull attrs corresponding to objectKeys from model record, add to the selected option (object) and send to the parent
-      additionalKeys = Object.fromEntries(this.args.objectKeys.map((key) => [key, option[key]]));
-      // filter any undefined attrs, which means the model did not have a value for that attr
-      // no value could mean the model was not hydrated, the record is new or the model doesn't have that attribute
-      Object.keys(additionalKeys).forEach((key) => {
-        if (additionalKeys[key] === undefined) {
-          delete additionalKeys[key];
-        }
-      });
-    }
-    return {
-      id: option.id,
-      isNew: !!option.new,
-      ...additionalKeys,
-    };
-  }
-
-  @action
-  onChange(val) {
-    this.args.onChange(val);
   }
 
   @action
@@ -282,6 +222,19 @@ export default class SearchSelect extends Component {
     return newOptions;
   }
 
+  addCreateOption(term, results) {
+    if (this.shouldShowCreate(term, results)) {
+      const name = `Add new ${singularize(this.args.label.toLowerCase() || 'item')}: ${term}`;
+      const suggestion = {
+        __isSuggestion__: true,
+        __value__: term,
+        name,
+        id: name,
+      };
+      results.unshift(suggestion);
+    }
+  }
+
   @action
   selectOrCreate(selection) {
     if (selection && selection.__isSuggestion__) {
@@ -293,5 +246,47 @@ export default class SearchSelect extends Component {
     }
     this.handleChange();
   }
+
+  filter(options, searchText) {
+    const matcher = (option, text) => defaultMatcher(option.searchText, text);
+    return filterOptions(options || [], searchText, matcher);
+  }
   // -----
+
+  shouldShowCreate(id, searchResults) {
+    if (searchResults && searchResults.length && searchResults.firstObject.groupName) {
+      return !searchResults.some((group) => group.options.findBy('id', id));
+    }
+    let existingOption =
+      this.dropdownOptions &&
+      (this.dropdownOptions.findBy('id', id) || this.dropdownOptions.findBy('name', id));
+    if (this.disallowNewItems && !existingOption) {
+      return false;
+    }
+    return !existingOption;
+  }
+
+  customizeObject(option) {
+    if (!option) return;
+    // only customize object if passObject=true
+    if (!this.passObject) return option;
+
+    let additionalKeys;
+    if (this.args.objectKeys) {
+      // pull attrs corresponding to objectKeys from model record, add to the selected option (object) and send to the parent
+      additionalKeys = Object.fromEntries(this.args.objectKeys.map((key) => [key, option[key]]));
+      // filter any undefined attrs, which means the model did not have a value for that attr
+      // no value could mean the model was not hydrated, the record is new or the model doesn't have that attribute
+      Object.keys(additionalKeys).forEach((key) => {
+        if (additionalKeys[key] === undefined) {
+          delete additionalKeys[key];
+        }
+      });
+    }
+    return {
+      id: option.id,
+      isNew: !!option.new,
+      ...additionalKeys,
+    };
+  }
 }
