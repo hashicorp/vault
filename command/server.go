@@ -40,6 +40,7 @@ import (
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -1263,6 +1264,16 @@ func (c *ServerCommand) Run(args []string) int {
 			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
 				"VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS env var: " +
 				"setting to default value false"))
+		}
+	}
+
+	if allowPendingRemoval := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv); allowPendingRemoval != "" {
+		var err error
+		vault.PendingRemovalMountsAllowed, err = strconv.ParseBool(allowPendingRemoval)
+		if err != nil {
+			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
+				"VAULT_ENABLE_PENDING_REMOVAL_MOUNTS env var: " +
+				"defaulting to false."))
 		}
 	}
 
