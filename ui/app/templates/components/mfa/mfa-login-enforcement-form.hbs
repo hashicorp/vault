@@ -105,8 +105,6 @@
           <SearchSelect
             @placeholder="Search for an existing target"
             @options={{this.searchSelect.options}}
-            {{! workaround since there is no way provided by component to externally clear selected options }}
-            {{!-- @selectedOptions={{this.searchSelect.selected}} --}}
             @resetSelection={{true}}
             @shouldRenderName={{true}}
             @selectLimit={{1}}
