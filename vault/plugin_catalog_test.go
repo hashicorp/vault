@@ -459,6 +459,65 @@ func TestPluginCatalog_ListHandlesPluginNamesWithSlashes(t *testing.T) {
 	}
 }
 
+func TestPluginCatalog_NoCollisionForUnversionedPlugins(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	tempDir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	core.pluginCatalog.directory = tempDir
+	file, err := ioutil.TempFile(tempDir, "temp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	command := filepath.Base(file.Name())
+
+	ctx := context.Background()
+	storeEntry := func(entry *pluginutil.PluginRunner) {
+		t.Helper()
+		err := core.pluginCatalog.Set(ctx, entry.Name, entry.Type, entry.Version, command, nil, nil, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	findEntry := func(entry *pluginutil.PluginRunner) bool {
+		t.Helper()
+		plugin, err := core.pluginCatalog.Get(ctx, entry.Name, entry.Type, entry.Version)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return plugin != nil && plugin.Name == entry.Name && plugin.Type == entry.Type && plugin.Version == entry.Version
+	}
+
+	unversionedEntry := &pluginutil.PluginRunner{
+		Name:    "my-plugin/v1.0.0",
+		Type:    consts.PluginTypeCredential,
+		Version: "",
+		Command: command,
+	}
+
+	storeEntry(unversionedEntry)
+	if !findEntry(unversionedEntry) {
+		t.Errorf("Did not find %#v in plugins", unversionedEntry)
+	}
+
+	versionedEntry := &pluginutil.PluginRunner{
+		Name:    "my-plugin",
+		Type:    consts.PluginTypeCredential,
+		Version: "v1.0.0",
+		Command: command,
+	}
+
+	storeEntry(versionedEntry)
+	if !findEntry(versionedEntry) {
+		t.Fatal("Should exist")
+	}
+	if !findEntry(unversionedEntry) {
+		t.Fatal("Should still exist")
+	}
+}
+
 func TestPluginCatalog_NewPluginClient(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
 	tempDir, err := filepath.EvalSymlinks(t.TempDir())

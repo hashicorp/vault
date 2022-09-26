@@ -703,11 +703,7 @@ func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.
 	// If the directory isn't set only look for builtin plugins.
 	if c.directory != "" {
 		// Look for external plugins in the barrier
-		storageKey := path.Join(pluginType.String(), name)
-		if version != "" {
-			storageKey = path.Join(storageKey, version)
-		}
-		out, err := c.catalogView.Get(ctx, storageKey)
+		out, err := c.catalogView.Get(ctx, catalogStorageKey(pluginType, name, version))
 		if err != nil {
 			return nil, fmt.Errorf("failed to retrieve plugin %q: %w", name, err)
 		}
@@ -852,12 +848,8 @@ func (c *PluginCatalog) setInternal(ctx context.Context, name string, pluginType
 		return nil, fmt.Errorf("failed to encode plugin entry: %w", err)
 	}
 
-	storageKey := path.Join(pluginType.String(), name)
-	if version != "" {
-		storageKey = path.Join(storageKey, version)
-	}
 	logicalEntry := logical.StorageEntry{
-		Key:   storageKey,
+		Key:   catalogStorageKey(pluginType, name, version),
 		Value: buf,
 	}
 	if err := c.catalogView.Put(ctx, &logicalEntry); err != nil {
@@ -873,10 +865,7 @@ func (c *PluginCatalog) Delete(ctx context.Context, name string, pluginType cons
 	defer c.lock.Unlock()
 
 	// Check the name under which the plugin exists, but if it's unfound, don't return any error.
-	pluginKey := path.Join(pluginType.String(), name)
-	if pluginVersion != "" {
-		pluginKey = path.Join(pluginKey, pluginVersion)
-	}
+	pluginKey := catalogStorageKey(pluginType, name, pluginVersion)
 	out, err := c.catalogView.Get(ctx, pluginKey)
 	if err != nil || out == nil {
 		pluginKey = name
@@ -997,4 +986,12 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 	}
 
 	return result, nil
+}
+
+func catalogStorageKey(pluginType consts.PluginType, name, version string) string {
+	storageKey := path.Join(pluginType.String(), name)
+	if version != "" {
+		storageKey = path.Join(storageKey, version)
+	}
+	return storageKey
 }
