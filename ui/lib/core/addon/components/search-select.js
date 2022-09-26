@@ -162,11 +162,11 @@ export default class SearchSelect extends Component {
         this.selectedOptions = this.formatSelectedAndUpdateDropdown(this.selectedOptions);
       } catch (err) {
         if (err.httpStatus === 404) {
-          if (!this.args.options) {
+          if (!this.dropdownOptions) {
             // If the call failed but the resource has items
             // from a different namespace, this allows the
             // selected items to display
-            return;
+            this.dropdownOptions = [];
           }
           return;
         }
