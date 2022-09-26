@@ -116,7 +116,7 @@ template_config {
 ```
 
 In another example `template_config` with [`error_on_missing_key` parameter in the template stanza](/docs/agent/template#error_on_missing_key)
-as well as `exit_on_retry_failure` result in the agent exiting in case of no key 
+as well as `exit_on_retry_failure` result in the agent exiting in case of no key
 / value issues instead of the default retry behavior.
 
 ```hcl
@@ -187,8 +187,12 @@ can be used here:
   to "true". Also see [`exit_on_retry_failure` in global Vault Agent Template Config](/docs/agent/template#interaction-between-exit_on_retry_failure-and-error_on_missing_key).
 - `exec` `(object: optional)` - The exec block executes a command when the
   template is rendered and the output has changed. The block parameters are
-  `command` `(string slice: required)` and `timeout` `(string: optional, defaults
-  to 30s)`.
+  `command` `(string or array: required)` and `timeout` `(string: optional, defaults
+  to 30s)`. `command` can be given as a string or array of strings to execute, such as
+  `"touch myfile"` or `["touch", "myfile"]`. To protect against command injection, we
+  strongly recommend using an array of strings, and we attempt to parse that way first.
+  Note also that using a comma with the string approach will cause it to be interpreted as an
+  array, which may not be desirable.
 - `perms` `(string: "")` - This is the permission to render the file. If
   this option is left unspecified, Vault Agent will attempt to match the permissions
   of the file that already exists at the destination path. If no file exists at that
