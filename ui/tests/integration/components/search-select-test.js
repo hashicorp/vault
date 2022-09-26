@@ -429,6 +429,22 @@ module('Integration | Component | search select', function (hooks) {
     assert.ok(err.message.includes('internal server error'), 'it throws an internal server error');
   });
 
+  test('it queries multiple models', async function (assert) {
+    const models = ['identity/entity', 'policy/acl'];
+    this.set('models', models);
+    this.set('onChange', sinon.spy());
+
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+      />
+    `);
+    await clickTrigger();
+    assert.equal(component.options.length, 6, 'shows options from both models');
+  });
+
   test('it returns array with objects instead of strings if passObject=true', async function (assert) {
     const models = ['identity/entity'];
     this.set('models', models);

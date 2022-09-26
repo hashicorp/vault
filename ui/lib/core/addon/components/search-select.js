@@ -131,8 +131,8 @@ export default class SearchSelect extends Component {
 
   @task
   *fetchOptions() {
-    if (this.args.resetSelection) {
-      this.selectedOptions = [];
+    if (this.args.parentManageSelected) {
+      this.selectedOptions = this.args.parentManageSelected;
     }
     this.dropdownOptions = [];
 
