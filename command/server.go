@@ -1272,7 +1272,7 @@ func (c *ServerCommand) Run(args []string) int {
 		vault.PendingRemovalMountsAllowed, err = strconv.ParseBool(allowPendingRemoval)
 		if err != nil {
 			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
-				"VAULT_ENABLE_PENDING_REMOVAL_MOUNTS env var: " +
+				consts.VaultAllowPendingRemovalMountsEnv + " env var: " +
 				"defaulting to false."))
 		}
 	}
