@@ -1,4 +1,4 @@
-package pki
+package pkiext
 
 import (
 	"context"
@@ -20,9 +20,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var cwRunner *docker.Runner
-var builtNetwork string
-var buildClientContainerOnce sync.Once
+var (
+	cwRunner                 *docker.Runner
+	builtNetwork             string
+	buildClientContainerOnce sync.Once
+)
 
 const (
 	protectedFile   = `dadgarcorp-internal-protected`
