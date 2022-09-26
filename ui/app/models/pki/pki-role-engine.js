@@ -39,7 +39,6 @@ export default class PkiRoleEngineModel extends Model {
     subText:
       'Also called the notBeforeDuration property. Allows certificates to be valid for a certain time period before now. This is useful to correct clock misalignment on various systems when setting up your CA.',
     editType: 'ttl',
-    defaultValue: '30s',
     hideToggle: true,
   })
   notBeforeDuration;
@@ -75,7 +74,7 @@ export default class PkiRoleEngineModel extends Model {
     subText: 'Mark Basic Constraints valid when issuing non-CA certificates.',
     editType: 'boolean',
   })
-  noStore;
+  addBasicConstraints;
 
   // must be a getter so it can be added to the prototype needed in the pathHelp service on the line here: if (newModel.merged || modelProto.useOpenAPI !== true) {
   get useOpenAPI() {
@@ -133,6 +132,7 @@ export default class PkiRoleEngineModel extends Model {
             'maxTtl',
             'generateLease',
             'noStore',
+            'addBasicConstraints',
           ],
         },
         {

@@ -4,17 +4,17 @@
     name={{@attr.name}}
     id={{"ttl"}}
     @value={{"ttl"}}
-    @onChange={{this.onChange}}
+    @onChange={{this.selectionChange}}
     @groupValue={{this.groupValue}}
   />
   <label class="has-left-margin-xs">
     <TtlPicker2
       data-test-input={{@attr.name}}
-      @onChange={{this.ttlPickerChange}}
+      @onChange={{this.setAndBroadcastTtl}}
       @label={{"TTL"}}
       @helperTextEnabled={{@attr.options.helperTextEnabled}}
       @description={{@attr.helpText}}
-      @time=""
+      @time={{this.ttlTime}}
       @unit="d"
       @hideToggle={{true}}
     />
@@ -26,7 +26,7 @@
     name={{@attr.name}}
     id={{"specificDate"}}
     @value={{"specificDate"}}
-    @onChange={{this.onChange}}
+    @onChange={{this.selectionChange}}
     @groupValue={{this.groupValue}}
   />
   <label class="has-left-margin-xs">
@@ -41,7 +41,7 @@
         autocomplete="off"
         spellcheck="false"
         value={{""}}
-        onchange={{this.onChangeWithEvent}}
+        {{on "input" this.setAndBroadcastInput}}
         class="input"
         maxLength={{"21"}}
       />

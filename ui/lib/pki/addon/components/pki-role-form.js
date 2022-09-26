@@ -16,6 +16,7 @@ import { tracked } from '@glimmer/tracking';
  * @callback onCancel
  * @callback onSave
  * @param {Object} model - pki-role-engine model
+ * @param {function} onChange - handle the input coming from the custom yield field.
  * @param {onCancel} onCancel - callback triggered when cancel button is clicked
  * @param {onSave} onSave - callback triggered on save success
  */
@@ -23,9 +24,12 @@ import { tracked } from '@glimmer/tracking';
 export default class PkiRoleForm extends Component {
   @service store;
   @service flashMessages;
+
   @tracked errorBanner;
   @tracked invalidFormAlert;
   @tracked modelValidations;
+  @tracked notAfter;
+  @tracked ttl;
 
   @task
   *save(event) {
@@ -36,6 +40,8 @@ export default class PkiRoleForm extends Component {
       this.invalidFormAlert = invalidFormMessage;
       if (isValid) {
         const { isNew, name } = this.args.model;
+        this.args.model.notAfter = this.notAfter;
+        this.args.model.ttl = this.ttl;
         yield this.args.model.save();
         this.flashMessages.success(`Successfully ${isNew ? 'created' : 'updated'} the role ${name}.`);
         this.args.onSave();
@@ -44,6 +50,17 @@ export default class PkiRoleForm extends Component {
       const message = error.errors ? error.errors.join('. ') : error.message;
       this.errorBanner = message;
       this.invalidFormAlert = 'There was an error submitting this form.';
+    }
+  }
+
+  @action onChange(modelParam, value) {
+    if (modelParam === 'ttl') {
+      this.notAfter = '';
+      this.ttl = value;
+    }
+    if (modelParam === 'not_after') {
+      this.ttl = '';
+      this.notAfter = value;
     }
   }
 

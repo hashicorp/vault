@@ -44,7 +44,7 @@
               @showHelpText={{false}}
             >
               {{! Yielding custom component in form-fields for property on the model with editType: 'yield' }}
-              <RadioSelectTtlOrString @model={{@model}} @attr={{attr}} />
+              <RadioSelectTtlOrString @model={{@model}} @attr={{attr}} @onChange={{this.onChange}} />
             </FormField>
           {{/each}}
         {{else}}
