@@ -1,0 +1,3 @@
+```release-note:improvement
+core: License location is no longer cache exempt, meaning sys/health will not contribute as greatly to storage load when using consul as a storage backend.
+```
