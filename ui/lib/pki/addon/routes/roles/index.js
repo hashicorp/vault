@@ -7,13 +7,11 @@ export default class RolesIndexRoute extends Route {
   @service pathHelp;
 
   beforeModel() {
+    // Must call this promise before the model hook otherwise it doesn't add OpenApi to record.
     return this.pathHelp.getNewModel('pki/pki-role-engine', 'pki');
   }
 
   model() {
-    // the pathHelp service is needed for adding openAPI to the model.
-    // Must await this promise otherwise it doesn't add OpenApi to record.
-
     return this.store
       .query('pki/pki-role-engine', { backend: this.secretMountPath.currentPath })
       .catch((err) => {

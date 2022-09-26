@@ -4,9 +4,9 @@ import { tracked } from '@glimmer/tracking';
 
 /**
  * @module RadioSelectTtlOrString
- * `RadioSelectTtlOrString` components are form field type that is yielded out by the model editType: yield.
- * The component is two radio buttons, the first a ttl and the second something similar to editType optionalText: an input field without a title.
- * This component is used in the PKI engine in various forms.
+ * `RadioSelectTtlOrString` components are formField that is yielded out by the model editType: yield.
+ * The component is two radio buttons, where the first option is a TTL, and the second option is an input field without a title.
+ * This component is used in the PKI engine inside various forms.
  *
  * @example
  * ```js

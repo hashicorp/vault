@@ -7,15 +7,17 @@ import { tracked } from '@glimmer/tracking';
 /**
  * @module PkiRoleForm
 //  * ARG TODO
- * PkiRoleForm components are used to...
+ * PkiRoleForm components are used to create and update PKI roles.
  *
  * @example
  * ```js
- * <PkiRoleForm @requiredParam={requiredParam} @optionalParam={optionalParam} @param1={{param1}}/>
+ * <PkiRoleForm @model={{this.model}}/>
  * ```
- * @param {object} requiredParam - requiredParam is...
- * @param {string} [optionalParam] - optionalParam is...
- * @param {string} [param1=defaultValue] - param1 is...
+ * @callback onCancel
+ * @callback onSave
+ * @param {Object} model - pki-role-engine model
+ * @param {onCancel} onCancel - callback triggered when cancel button is clicked
+ * @param {onSave} onSave - callback triggered on save success
  */
 
 export default class PkiRoleForm extends Component {
@@ -28,7 +30,6 @@ export default class PkiRoleForm extends Component {
   @task
   *save(event) {
     event.preventDefault();
-    // ARG TODO see client assignment-form
     try {
       const { isValid, state, invalidFormMessage } = this.args.model.validate();
       this.modelValidations = isValid ? null : state;
@@ -48,7 +49,6 @@ export default class PkiRoleForm extends Component {
 
   @action
   cancel() {
-    // ARG TODO confirm, just copied over from assignment-form
     const method = this.args.model.isNew ? 'unloadRecord' : 'rollbackAttributes';
     this.args.model[method]();
     this.args.onCancel();

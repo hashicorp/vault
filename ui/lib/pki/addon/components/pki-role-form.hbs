@@ -82,7 +82,6 @@
       Cancel
     </button>
     {{#if this.modelValidations.targets.errors}}
-      {{! ARG TODO write test and check how it looks }}
       <AlertInline @type="danger" @message={{join ", " this.modelValidations.targets.errors}} @paddingTop={{true}} />
     {{/if}}
     {{#if this.invalidFormAlert}}

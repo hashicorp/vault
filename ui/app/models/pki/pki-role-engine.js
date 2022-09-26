@@ -179,8 +179,6 @@ export default class PkiRoleEngineModel extends Model {
           ],
         },
       ]);
-      // to modify allowedDomains
-      // console.log((this._fieldToAttrsGroups[1]['Domain handling'][0].type = 'string'), 'here!!!!');
     }
     return this._fieldToAttrsGroups;
   }
