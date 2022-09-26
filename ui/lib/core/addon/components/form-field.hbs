@@ -85,7 +85,7 @@
         @inputValue={{get @model this.valuePath}}
         @wildcardLabel={{@attr.options.wildcardLabel}}
         @label={{this.labelString}}
-        @labelClass={{or @attr.options.labelClass "title is-4"}}
+        @labelClass={{if @attr.options.isNotSectionHeader "is-label" "title is-4"}}
         @subText={{@attr.options.subText}}
         @helpText={{@attr.options.helpText}}
         @fallbackComponent={{@attr.options.fallbackComponent}}

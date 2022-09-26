@@ -41,7 +41,7 @@ export default class OidcClientModel extends Model {
 
   @attr('string', {
     label: 'Signing key',
-    labelClass: 'is-label',
+    isNotSectionHeader: true,
     subText: 'Add a key to sign and verify the JSON web tokens (JWT). This cannot be edited later.',
     editType: 'searchSelect',
     editDisabled: true,

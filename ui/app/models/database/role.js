@@ -13,7 +13,7 @@ export default Model.extend({
   }),
   database: attr('array', {
     label: 'Database name',
-    labelClass: 'is-label',
+    isNotSectionHeader: true,
     editType: 'searchSelect',
     fallbackComponent: 'string-list',
     models: ['database/connection'],

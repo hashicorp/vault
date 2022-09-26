@@ -43,7 +43,7 @@ import { assert } from '@ember/debug';
  // * template only/display args
  * @param {string} id - The name of the form field
  * @param {string} [label] - Label for this form field, also used to generate `Add new ${singularize(label}` copy when adding a nonexisting option
- * @param {string} [labelClass] - overwrite default label size (14px) - NOTE within <FormField> @labelClass is "title is-4"
+ * @param {string} [labelClass] - overwrite default label size (14px) from class="is-label"
  * @param {string} [subText] - Text to be displayed below the label
  * @param {string} fallbackComponent - name of component to be rendered if the API call 403s
  * @param {string} [helpText] - Text to be displayed in the info tooltip for this form field
