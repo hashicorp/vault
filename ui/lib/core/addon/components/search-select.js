@@ -60,10 +60,10 @@ import { assert } from '@ember/debug';
  */
 
 export default class SearchSelect extends Component {
+  allOptions; // ALL options initially returned from query
   @service store;
-  @tracked selectedOptions; // array of selected options, initially array of strings, then array of objects **WHYY/WHEN?!**
-  @tracked allOptions; // array id strings for ALL existing options, including matched
-  @tracked searchSelectOptions; // list of options rendered in dropdown
+  @tracked selectedOptions; // array of selected options
+  @tracked dropdownOptions; // options that will render in dropdown
   @tracked shouldUseFallback = false;
 
   get disallowNewItems() {
@@ -103,27 +103,21 @@ export default class SearchSelect extends Component {
     this.selectedOptions = this.args.inputValue || [];
   }
 
-  // 'format' means add searchText
-  formatOptions(optionsToFormat) {
-    //* `optionsToFormat` - array of objects or response from query (model Class)
-    let formattedDropdownOptions = optionsToFormat.toArray().map((option) => {
+  addSearchText(optionsToFormat) {
+    // `optionsToFormat` - array of objects or response from query
+    return optionsToFormat.toArray().map((option) => {
       const id = option[this.idKey] ? option[this.idKey] : option.id;
       option.searchText = `${option.name} ${id}`;
       return option;
     });
-    this.allOptions = formattedDropdownOptions.mapBy('id'); // used by filter-wildcard helper
-    return formattedDropdownOptions;
   }
 
-  // remove any selected items from dropdown and configure selected object returned to parent
-  updateDropdownOptions(selectedOptions) {
-    // iterate selectedOptions, initially set by inputValue, and format
-    // remove any already selected items from array of ALL options (formattedDropdownOptions)
-    this.selectedOptions = selectedOptions.map((option) => {
-      let matchingOption = this.searchSelectOptions.findBy(this.idKey, option);
-      // an undefined matchingOption means a selectedOption, on edit, didn't match a model returned from the query
+  // remove selected items from dropdown and format from string (initially set by inputValue) to object
+  formatSelectedAndUpdateDropdown(selectedOptions) {
+    return selectedOptions.map((option) => {
+      let matchingOption = this.dropdownOptions.findBy(this.idKey, option); // if undefined, an inputValue didn't match a model returned from the query
       let addTooltip = matchingOption || isWildcardString([option]) ? false : true; // add tooltip to let user know the selection may not exist
-      this.searchSelectOptions.removeObject(matchingOption);
+      this.dropdownOptions.removeObject(matchingOption);
       return {
         id: option,
         name: matchingOption ? matchingOption.name : option,
@@ -140,15 +134,16 @@ export default class SearchSelect extends Component {
     if (this.args.resetSelection) {
       this.selectedOptions = [];
     }
-    this.searchSelectOptions = [];
+    this.dropdownOptions = [];
 
     if (!this.args.models) {
       if (this.args.options) {
-        if (this.args.search) {
-          this.searchSelectOptions = this.args.options;
+        const options = this.args.options;
+        if (options.some((e) => Object.keys(e).includes('groupName'))) {
+          this.dropdownOptions = options;
         } else {
-          this.searchSelectOptions = [...this.formatOptions(this.args.options)];
-          this.updateDropdownOptions(this.selectedOptions);
+          this.dropdownOptions = [...this.addSearchText(options)];
+          this.selectedOptions = this.formatSelectedAndUpdateDropdown(this.selectedOptions);
         }
       }
       return;
@@ -162,9 +157,9 @@ export default class SearchSelect extends Component {
         if (this.args.queryObject) {
           queryOptions = this.args.queryObject;
         }
-        let options = yield this.store.query(modelType, queryOptions);
-        this.searchSelectOptions = [...this.searchSelectOptions, ...this.formatOptions(options)];
-        this.updateDropdownOptions(this.selectedOptions); // remove options from inputValue, format selected options
+        this.allOptions = yield this.store.query(modelType, queryOptions);
+        this.dropdownOptions = [...this.dropdownOptions, ...this.addSearchText(this.allOptions)];
+        this.selectedOptions = this.formatSelectedAndUpdateDropdown(this.selectedOptions);
       } catch (err) {
         if (err.httpStatus === 404) {
           if (!this.args.options) {
@@ -197,13 +192,13 @@ export default class SearchSelect extends Component {
     }
   }
 
-  shouldShowCreate(id, dropdownOptions) {
-    if (dropdownOptions && dropdownOptions.length && dropdownOptions.firstObject.groupName) {
-      return !dropdownOptions.some((group) => group.options.findBy('id', id));
+  shouldShowCreate(id, searchResults) {
+    if (searchResults && searchResults.length && searchResults.firstObject.groupName) {
+      return !searchResults.some((group) => group.options.findBy('id', id));
     }
     let existingOption =
-      this.searchSelectOptions &&
-      (this.searchSelectOptions.findBy('id', id) || this.searchSelectOptions.findBy('name', id));
+      this.dropdownOptions &&
+      (this.dropdownOptions.findBy('id', id) || this.dropdownOptions.findBy('name', id));
     if (this.disallowNewItems && !existingOption) {
       return false;
     }
@@ -262,7 +257,7 @@ export default class SearchSelect extends Component {
     this.selectedOptions.removeObject(selected);
     // fire off getSelectedValue action higher up in get-credentials-card component
     if (!selected.new) {
-      this.searchSelectOptions.pushObject(selected);
+      this.dropdownOptions.pushObject(selected);
     }
     this.handleChange();
   }
@@ -271,7 +266,7 @@ export default class SearchSelect extends Component {
   @action
   searchAndSuggest(term, select) {
     if (term.length === 0) {
-      return this.searchSelectOptions;
+      return this.dropdownOptions;
     }
     if (this.args.search) {
       return resolve(this.args.search(term, select)).then((results) => {
@@ -282,7 +277,7 @@ export default class SearchSelect extends Component {
         return results;
       });
     }
-    const newOptions = this.filter(this.searchSelectOptions, term);
+    const newOptions = this.filter(this.dropdownOptions, term);
     this.addCreateOption(term, newOptions);
     return newOptions;
   }
@@ -294,7 +289,7 @@ export default class SearchSelect extends Component {
       this.selectedOptions.pushObject({ name, id: name, new: true });
     } else {
       this.selectedOptions.pushObject(selection);
-      this.searchSelectOptions.removeObject(selection);
+      this.dropdownOptions.removeObject(selection);
     }
     this.handleChange();
   }
