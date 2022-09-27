@@ -505,7 +505,6 @@ func LoadConfigFile(path string) (*Config, error) {
 			}
 		}
 	}
-
 	return conf, nil
 }
 
