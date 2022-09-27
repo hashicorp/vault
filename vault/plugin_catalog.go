@@ -28,6 +28,15 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+// v0: name
+// v1: type/name
+// v2: v2/type/name/version
+// Names may have slashes in them.
+const (
+	pluginCatalogSchemaVersion  = "v2"
+	pluginCatalogUnversionedKey = "unversioned"
+)
+
 var (
 	pluginCatalogPath           = "core/plugin-catalog/"
 	ErrDirectoryNotConfigured   = errors.New("could not set plugin, plugin directory is not configured")
@@ -989,9 +998,11 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 }
 
 func catalogStorageKey(pluginType consts.PluginType, name, version string) string {
-	storageKey := path.Join(pluginType.String(), name)
+	storageKey := path.Join(pluginCatalogSchemaVersion, pluginType.String(), name)
 	if version != "" {
 		storageKey = path.Join(storageKey, version)
+	} else {
+		storageKey = path.Join(storageKey, pluginCatalogUnversionedKey)
 	}
 	return storageKey
 }
