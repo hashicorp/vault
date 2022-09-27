@@ -60,12 +60,7 @@
             {{#if (get @model prop)}}
               <div class="box is-marginless">
                 {{#each fields as |attr|}}
-                  <FormField
-                    data-test-field={{true}}
-                    @attr={{attr}}
-                    @model={{@model}}
-                    @modelValidations={{@modelValidations}}
-                  />
+                  <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} @showHelpText={{false}} />
                 {{/each}}
               </div>
             {{/if}}
