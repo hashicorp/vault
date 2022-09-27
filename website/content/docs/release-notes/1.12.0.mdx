@@ -34,7 +34,7 @@ This section describes the new features introduced in Vault 1.12.0.
 
 These features need the Vault Enterprise ADP License.
 
-### Bring Your Own Key(BYOK) for Transform
+### Bring Your Own Key (BYOK) for Transform
 
 In release 1.11, we introduced BYOK support to Vault, enabling  customers to import existing keys into the Vault Transit Secrets Engine and  enabling secure and flexible Vault deployments.
 We  are extending that support to the Vault Transform Secrets Engine in this release.
@@ -46,17 +46,7 @@ An MSSQL store is now available to be used as an external storage engine with to
 ### Key Auto Rotation
 
 Periodic rotation of encryption keys is a recommended key management practice for a good security posture. In Vault release 1.10, we added support for Auto key rotation for Transit Secrets Engine. In Vault 1.12, the Transform secrets engine is now  enhanced, allowing users to set the rotation policy during key creation in a time interval, which will cause Vault to rotate the Transform keys when the time interval elapses automatically.
-Refer to the following documents, [Transit Secrets Engine](/docs/secrets/transit) and [Transit Secrets Engine(API)](/api-docs/secret/transit#rotate-key) for more information.
-
-## PKI Engine Improvements
-
-### PKI Engine Revocation Enhancements
-
-We are improving Vault PKI Engine’s revocation capabilities by adding support for the Online Certificate Status Protocol (OCSP) and a delta Certificate Revocation List (CRL) to track changes to the main CRL. These enhancements significantly streamline customer experience with the PKI engine making the certification revocation semantics easier to understand and manage.
-
-### PKI Telemetry Improvements
-
-In this release, we are adding additional telemetry to Vault’s PKI Secrets Engine, enabling customers to gather better  insights into  certificate usage via the count of stored and revoked certificates. Additionally, the Vault `tidy` function is enhanced with additional metrics that reflect the remaining stored and revoked certificates.
+Refer to the following documentation [Tokenization Transform](/docs/secrets/transform/tokenization) and [Transform Secrets Engine(API)](/api-docs/secret/transform#rotate-tokenization-key) for more information.
 
 ### Auto-fetch CRL in the Certificate Auth Method
 
@@ -117,6 +107,16 @@ In Vault 1.11, we added support for Okta’s Number Challenge feature in the CLI
 
 ### OIDC Provider support in the UI
 Vault can now act as an OIDC provider for applications that wish to delegate authentication to Vault and leverage its identity system. As an OIDC provider, Vault supports PKCE for authorization code flow, preventing attacks such as SSRF. After OIDC provider functionality went GA, our design and user research team gathered feedback from community members, and we simplified the setup experience. With a few CLI commands or UI clicks, users can now have a default OIDC provider with its defaults configured and ready to go for applications to utilize the functionality.
+
+## PKI Engine Improvements
+
+### PKI Engine Revocation Enhancements
+
+We are improving Vault PKI Engine’s revocation capabilities by adding support for the Online Certificate Status Protocol (OCSP) and a delta Certificate Revocation List (CRL) to track changes to the main CRL. These enhancements significantly streamline customer experience with the PKI engine making the certification revocation semantics easier to understand and manage. Additionally, support for automatic CRL rotation and periodic tidy operations help reduce operator burden, alleviate the demand on cluster resources during periods of high revocation, and ensure clients are always served valid CRLs.
+
+### PKI Telemetry Improvements
+
+In this release, we are adding additional telemetry to Vault’s PKI Secrets Engine, enabling customers to gather better  insights into  certificate usage via the count of stored and revoked certificates. Additionally, the Vault `tidy` function is enhanced with additional metrics that reflect the remaining stored and revoked certificates.
 
 ## Other Features and Enhancements
 
