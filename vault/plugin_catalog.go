@@ -207,6 +207,12 @@ func (c *PluginCatalog) cleanupExternalPlugin(name, id string) error {
 	c.logger.Debug("removed plugin client connection", "id", id)
 
 	if !extPlugin.multiplexingSupport {
+		clientConn, err := pc.client.Client()
+		if err != nil {
+			return err
+		}
+		// close+kill client connection
+		clientConn.Close()
 		pc.client.Kill()
 
 		if len(extPlugin.connections) == 0 {
@@ -219,7 +225,7 @@ func (c *PluginCatalog) cleanupExternalPlugin(name, id string) error {
 			return err
 		}
 
-		// close client connection
+		// close+kill client connection
 		clientConn.Close()
 		pc.client.Kill()
 		delete(c.externalPlugins, name)
