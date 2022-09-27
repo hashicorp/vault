@@ -3,11 +3,12 @@ package command
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 
-	"github.com/posener/complete"
-
+	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
+	"github.com/posener/complete"
 )
 
 var (
@@ -119,12 +120,12 @@ func (c *NamespacePatchCommand) Run(args []string) int {
 
 	secret, err := client.Logical().JSONMergePatch(context.Background(), "sys/namespaces/"+namespacePath, data)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error patching namespace: %s", err))
-		return 2
-	}
+		if re, ok := err.(*api.ResponseError); ok && re.StatusCode == http.StatusNotFound {
+			c.UI.Error("Namespace not found")
+			return 2
+		}
 
-	if secret == nil || secret.Data == nil {
-		c.UI.Error(fmt.Sprintf("No namespace found: %s", err))
+		c.UI.Error(fmt.Sprintf("Error patching namespace: %s", err))
 		return 2
 	}
 

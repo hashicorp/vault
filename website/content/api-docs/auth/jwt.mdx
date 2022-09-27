@@ -303,7 +303,7 @@ Obtain an authorization URL from Vault to start an OIDC login flow.
 - `role` `(string: <optional>)` - Name of the role against which the login is being
   attempted. Defaults to configured `default_role` if not provided.
 - `redirect_uri` `(string: <required>)` - Path to the callback to complete the login. This will be
-  of the form, "https://.../oidc/callback" where the leading portion is dependent on your Vault
+  of the form, "https&#x3A;//.../oidc/callback" where the leading portion is dependent on your Vault
   server location, port, and the mount of the JWT plugin. This must be configured with Vault and the
   provider. See [Redirect URIs](/docs/auth/jwt#redirect-uris) for more information.
 - `client_nonce` `(string: <optional>)` - Optional client-provided nonce that
