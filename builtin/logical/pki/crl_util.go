@@ -1269,9 +1269,13 @@ WRITE:
 	now := time.Now()
 	nextUpdate := now.Add(crlLifetime)
 
-	ext, err := certutil.CreateDeltaCRLIndicatorExt(lastCompleteNumber)
-	if err != nil {
-		return nil, fmt.Errorf("could not create crl delta indicator extension: %v", err)
+	var extensions []pkix.Extension
+	if isDelta {
+		ext, err := certutil.CreateDeltaCRLIndicatorExt(lastCompleteNumber)
+		if err != nil {
+			return nil, fmt.Errorf("could not create crl delta indicator extension: %v", err)
+		}
+		extensions = []pkix.Extension{ext}
 	}
 
 	revocationListTemplate := &x509.RevocationList{
@@ -1280,7 +1284,7 @@ WRITE:
 		ThisUpdate:          now,
 		NextUpdate:          nextUpdate,
 		SignatureAlgorithm:  signingBundle.RevocationSigAlg,
-		ExtraExtensions:     []pkix.Extension{ext},
+		ExtraExtensions:     extensions,
 	}
 
 	crlBytes, err := x509.CreateRevocationList(rand.Reader, revocationListTemplate, signingBundle.Certificate, signingBundle.PrivateKey)
