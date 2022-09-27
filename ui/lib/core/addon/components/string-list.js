@@ -19,6 +19,7 @@ import { set } from '@ember/object';
  * @param {string} type=array - Optional type for inputValue.
  * @param {string} attrName - We use this to check the type so we can modify the tooltip content.
  * @param {boolean} showHelpText - A boolean of whether to show the tooltip from OpenAPI or not.
+ * @param {string} subText - Text below the label.
  */
 
 export default class StringList extends Component {

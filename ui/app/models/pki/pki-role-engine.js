@@ -76,6 +76,19 @@ export default class PkiRoleEngineModel extends Model {
   })
   addBasicConstraints;
 
+  // Overriding Domain Handling options
+  @attr({
+    label: 'Allowed Domains',
+    subText: 'Specifies the domains this role is allowed to issue certificates for. Add one item per row.',
+    editType: 'stringArray',
+  })
+  allowedDomains;
+  addBasicConstraints;
+  @attr('boolean', {
+    label: 'Allow templates in allowed domains',
+  })
+  allowedDomainsTemplate;
+
   // must be a getter so it can be added to the prototype needed in the pathHelp service on the line here: if (newModel.merged || modelProto.useOpenAPI !== true) {
   get useOpenAPI() {
     return true;
@@ -138,7 +151,7 @@ export default class PkiRoleEngineModel extends Model {
         {
           'Domain handling': [
             'allowedDomains',
-            'allowedDomainTemplate',
+            'allowedDomainsTemplate',
             'allowBareDomains',
             'allowSubdomains',
             'allowGlobDomains',

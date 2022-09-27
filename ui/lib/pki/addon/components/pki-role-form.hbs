@@ -62,6 +62,12 @@
                 {{#each fields as |attr|}}
                   <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} @showHelpText={{false}} />
                 {{/each}}
+                {{#if (eq group "Domain handling")}}
+                  <p><Icon @name="info" aria-label="description" />
+                    These options can interact intricately with one another. For more information,
+                    <DocLink @path="/api-docs/secret/pki#create-update-role">
+                      see our documentation here.</DocLink></p>
+                {{/if}}
               </div>
             {{/if}}
           {{/let}}
