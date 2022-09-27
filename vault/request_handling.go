@@ -2012,21 +2012,19 @@ func (c *Core) GetUserLockoutFromConfig(logicalType string) UserLockoutConfig {
 	var commonUserLockoutConfig UserLockoutConfig
 	var authUserLockoutConfig UserLockoutConfig
 	for _, userLockoutConfig := range userlockouts {
+		if userLockoutConfig.Type == logicalType{
+			authUserLockoutConfig.LockoutThreshold = userLockoutConfig.LockoutThreshold
+			authUserLockoutConfig.LockoutDuration = userLockoutConfig.LockoutDuration
+			authUserLockoutConfig.LockoutCounterReset = userLockoutConfig.LockoutCounterReset
+			authUserLockoutConfig.DisableLockout = userLockoutConfig.DisableLockout
+			return authUserLockoutConfig
+		}
 		if userLockoutConfig.Type == "all" {
 			commonUserLockoutConfig.LockoutThreshold = userLockoutConfig.LockoutThreshold
 			commonUserLockoutConfig.LockoutDuration = userLockoutConfig.LockoutDuration
 			commonUserLockoutConfig.LockoutCounterReset = userLockoutConfig.LockoutCounterReset
 			commonUserLockoutConfig.DisableLockout = userLockoutConfig.DisableLockout
 		}
-		if userLockoutConfig.Type == logicalType {
-			authUserLockoutConfig.LockoutThreshold = userLockoutConfig.LockoutThreshold
-			authUserLockoutConfig.LockoutDuration = userLockoutConfig.LockoutDuration
-			authUserLockoutConfig.LockoutCounterReset = userLockoutConfig.LockoutCounterReset
-			authUserLockoutConfig.DisableLockout = userLockoutConfig.DisableLockout
-		}
-	}
-	if (authUserLockoutConfig != UserLockoutConfig{}) {
-		return authUserLockoutConfig
 	}
 	return commonUserLockoutConfig
 }

@@ -95,8 +95,8 @@ func ParseUserLockouts(result *SharedConfig, list *ast.ObjectList) error {
 		}
 		userLockoutConfigsMap[userLockoutConfig.Type] = &userLockoutConfig
 	}
-	// userLockoutConfigsMap = SetDefaultUserLockoutValuesInMap(userLockoutConfigsMap)
-	userLockoutConfigsMap = SetMissingUserLockoutValuesInMap(userLockoutConfigsMap)
+
+	userLockoutConfigsMap = setMissingUserLockoutValuesInMap(userLockoutConfigsMap)
 	for _, userLockoutValues := range userLockoutConfigsMap {
 		result.UserLockoutConfigs = append(result.UserLockoutConfigs, userLockoutValues)
 	}
@@ -132,7 +132,7 @@ func setDefaultUserLockoutValuesInMap(userLockoutConfigsMap map[string]*UserLock
 }
 
 // setDefaultUserLockoutValuesInMap sets missing user lockout fields for other auth types with default values (from key "all")
-func SetMissingUserLockoutValuesInMap(userLockoutConfigsMap map[string]*UserLockoutConfig) map[string]*UserLockoutConfig {
+func setMissingUserLockoutValuesInMap(userLockoutConfigsMap map[string]*UserLockoutConfig) map[string]*UserLockoutConfig {
 	userLockoutConfigsMap = setDefaultUserLockoutValuesInMap(userLockoutConfigsMap)
 	for _, userLockoutAuth := range userLockoutConfigsMap {
 		// set missing values
