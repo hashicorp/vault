@@ -162,6 +162,23 @@ scenario "autopilot" {
       vpc_id                      = step.create_vpc.vpc_id
     }
   }
+  
+  step "vault_logs" {
+    module = module.vault_logs
+    depends_on = [
+      step.create_vault_cluster,
+      step.upgrade_vault_cluster_with_autopilot,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+    
+    variables {
+      vault_instances  = step.create_vault_cluster.vault_instances
+    }
+  }
+  
 
   step "verify_autopilot_upgraded_vault_cluster" {
     module     = module.vault_verify_autopilot
@@ -210,6 +227,12 @@ scenario "autopilot" {
       vault_instances  = step.create_vault_cluster.vault_instances
       vault_root_token = step.create_vault_cluster.vault_root_token
     }
+  }
+  
+  output "vault_logs" {
+    description = "The Vault logs"
+    value       = step.vault_logs.logs
+    sensitive   = true
   }
 
   output "vault_cluster_instance_ids" {
@@ -266,4 +289,5 @@ scenario "autopilot" {
     description = "The Vault cluster private IPs"
     value       = step.upgrade_vault_cluster_with_autopilot.instance_private_ips
   }
+
 }

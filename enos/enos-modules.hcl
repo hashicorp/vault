@@ -98,3 +98,9 @@ module "vault_verify_version" {
   vault_install_dir    = var.vault_install_dir
   vault_instance_count = var.vault_instance_count
 }
+
+module "vault_logs" {
+  source = "./modules/vault_logs"
+
+  vault_instance_count = var.vault_instance_count
+}
