@@ -9,8 +9,11 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 
+	"github.com/hashicorp/go-hclog"
+	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/versions"
@@ -18,6 +21,7 @@ import (
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	backendplugin "github.com/hashicorp/vault/sdk/plugin"
 
 	"github.com/hashicorp/vault/helper/builtinplugins"
@@ -515,6 +519,102 @@ func TestPluginCatalog_NoCollisionForUnversionedPlugins(t *testing.T) {
 	}
 	if !findEntry(unversionedEntry) {
 		t.Fatal("Should still exist")
+	}
+}
+
+func TestPluginCatalog_UpgradePlugins(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	tempDir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	core.pluginCatalog.directory = tempDir
+
+	file, err := ioutil.TempFile(tempDir, "temp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	command := filepath.Base(file.Name())
+
+	ctx := context.Background()
+	entries := map[string]*pluginutil.PluginRunner{
+		// v0 schema entries wouldn't have had type stored in their entry,
+		// but we include it here for convenience of testing, so we don't have to
+		// answer a Type() gRPC method.
+		"v0schema":                                     {Name: "v0schema", Type: consts.PluginTypeCredential},
+		"v0schema/with/slashes":                        {Name: "v0schema/with/slashes", Type: consts.PluginTypeCredential},
+		"auth/v1schema":                                {Name: "v1schema", Type: consts.PluginTypeCredential},
+		"database/v1schema/with/slashes":               {Name: "v1schema/with/slashes", Type: consts.PluginTypeDatabase},
+		"v2/secret/my-plugin/unversioned":              {Name: "my-plugin", Type: consts.PluginTypeSecrets, Version: ""},
+		"v2/secret/my-plugin/v1.0.0":                   {Name: "my-plugin", Type: consts.PluginTypeSecrets, Version: "v1.0.0"},
+		"v2/secret/my-plugin/with/slashes/unversioned": {Name: "my-plugin/with/slashes", Type: consts.PluginTypeSecrets, Version: ""},
+		"v2/secret/my-plugin/with/slashes/v2.0.0":      {Name: "my-plugin/with/slashes", Type: consts.PluginTypeSecrets, Version: "v2.0.0"},
+	}
+	for storageKey, entry := range entries {
+		entry.Command = command
+
+		// Store directly using catalogView to emulate storage key schema from
+		// an older version of Vault that's been upgraded.
+		buf, err := json.Marshal(entry)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		logicalEntry := logical.StorageEntry{
+			Key:   storageKey,
+			Value: buf,
+		}
+		if err := core.pluginCatalog.catalogView.Put(ctx, &logicalEntry); err != nil {
+			t.Fatal(err)
+		}
+	}
+	findEntry := func(entry *pluginutil.PluginRunner) bool {
+		t.Helper()
+		plugin, err := core.pluginCatalog.Get(ctx, entry.Name, entry.Type, entry.Version)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return plugin != nil && plugin.Name == entry.Name && plugin.Type == entry.Type && plugin.Version == entry.Version
+	}
+
+	// Run a few upgrades to ensure they are idempotent.
+	for i := 0; i < 3; i++ {
+		if err := core.pluginCatalog.UpgradePlugins(ctx, hclog.Default()); err != nil {
+			t.Fatal(err)
+		}
+		for _, entry := range entries {
+			if !findEntry(entry) {
+				t.Errorf("Did not find %#v", entry)
+			}
+		}
+
+		keys, err := logical.CollectKeys(ctx, core.pluginCatalog.catalogView)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(keys) != len(entries) {
+			t.Fatalf("Expected %d entries but got %d entries", len(entries), len(keys))
+		}
+
+		// Also check the storage is all in the form we expect.
+		for _, key := range keys {
+			parts := strings.Split(key, "/")
+			if len(parts) < 4 {
+				t.Fatalf("Key with less than 3 slashes: %s", key)
+			}
+			if parts[0] != pluginCatalogSchemaVersion {
+				t.Errorf("Expected schema version %q at start of key but got %q", pluginCatalogSchemaVersion, parts[0])
+			}
+			if _, err := consts.ParsePluginType(parts[1]); err != nil {
+				t.Errorf("Expected valid plugin type in second segment of key but got %q: %s", parts[1], err)
+			}
+			version := parts[len(parts)-1]
+			if _, err := semver.NewVersion(version); err != nil && version != pluginCatalogUnversionedKey {
+				t.Errorf("Expected unversioned key or valid semantic version in last segment of key but got %q: %s", version, err)
+			}
+		}
 	}
 }
 

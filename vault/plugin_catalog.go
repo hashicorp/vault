@@ -632,8 +632,8 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 	return merr.ErrorOrNil()
 }
 
-// UpdatePlugins will loop over all the plugins of unknown type and attempt to
-// upgrade them to typed plugins
+// UpgradePlugins will loop over all the plugins and attempt to upgrade any from
+// an older schema to the current schema.
 func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -643,23 +643,24 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 		return nil
 	}
 
-	// List plugins from old location
-	pluginsRaw, err := c.catalogView.List(ctx, "")
+	// List all plugins.
+	keys, err := logical.CollectKeys(ctx, c.catalogView)
 	if err != nil {
 		return err
 	}
-	plugins := make([]string, 0, len(pluginsRaw))
-	for _, p := range pluginsRaw {
-		if !strings.HasSuffix(p, "/") {
-			plugins = append(plugins, p)
+
+	var pluginKeys []string
+	for _, key := range keys {
+		if !strings.HasPrefix(key, pluginCatalogSchemaVersion+"/") {
+			pluginKeys = append(pluginKeys, key)
 		}
 	}
 
-	logger.Info("upgrading plugin information", "plugins", plugins)
+	logger.Info("upgrading plugin information", "plugins", pluginKeys)
 
 	var retErr error
-	for _, pluginName := range plugins {
-		pluginRaw, err := c.catalogView.Get(ctx, pluginName)
+	for _, pluginKey := range pluginKeys {
+		pluginRaw, err := c.catalogView.Get(ctx, pluginKey)
 		if err != nil {
 			retErr = multierror.Append(fmt.Errorf("failed to load plugin entry: %w", err))
 			continue
@@ -671,28 +672,32 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 			continue
 		}
 
-		// prepend the plugin directory to the command
-		cmdOld := plugin.Command
-		plugin.Command = filepath.Join(c.directory, plugin.Command)
+		pluginName := plugin.Name
+		// Shouldn't be possible, name field has been populated since plugin
+		// catalog was first created in #2200.
+		if pluginName == "" {
+			pluginName = pluginKey
+		}
 
-		// Upgrade the storage. At this point we don't know what type of plugin this is so pass in the unknown type.
-		runner, err := c.setInternal(ctx, pluginName, consts.PluginTypeUnknown, plugin.Version, cmdOld, plugin.Args, plugin.Env, plugin.Sha256)
+		// Upgrade the storage. We may or may not have the type available, but
+		// if it's unknown it will be worked out before writing.
+		runner, err := c.setInternal(ctx, pluginName, plugin.Type, plugin.Version, plugin.Command, plugin.Args, plugin.Env, plugin.Sha256)
 		if err != nil {
 			if errors.Is(err, ErrPluginBadType) {
-				retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: plugin of unknown type", pluginName))
+				retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: plugin of unknown type", pluginKey))
 				continue
 			}
 
-			retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginName, err))
+			retErr = multierror.Append(retErr, fmt.Errorf("could not upgrade plugin %s: %s", pluginKey, err))
 			continue
 		}
 
-		err = c.catalogView.Delete(ctx, pluginName)
+		err = c.catalogView.Delete(ctx, pluginKey)
 		if err != nil {
-			logger.Error("could not remove plugin", "plugin", pluginName, "error", err)
+			logger.Error("could not remove plugin", "plugin", pluginKey, "error", err)
 		}
 
-		logger.Info("upgraded plugin type", "plugin", pluginName, "type", runner.Type.String())
+		logger.Info("upgraded plugin type", "plugin", pluginName, "type", runner.Type.String(), "version", runner.Version)
 	}
 
 	return retErr
