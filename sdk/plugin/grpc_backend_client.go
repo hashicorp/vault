@@ -42,7 +42,7 @@ type backendGRPCPluginClient struct {
 	// server is the grpc server used for serving storage and sysview requests.
 	server *atomic.Value
 
-	doneCtx    context.Context
+	doneCtx context.Context
 }
 
 func (b *backendGRPCPluginClient) Initialize(ctx context.Context, _ *logical.InitializationRequest) error {
