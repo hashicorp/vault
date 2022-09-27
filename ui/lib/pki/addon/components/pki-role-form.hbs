@@ -60,7 +60,25 @@
             {{#if (get @model prop)}}
               <div class="box is-marginless">
                 {{#each fields as |attr|}}
-                  <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} @showHelpText={{false}} />
+                  {{! Custom conditional field where keyBits values are tied to the selected keyType }}
+                  {{#if (eq attr.name "keyBits")}}
+                    <div class="field">
+                      <label class="is-label">Key bits</label>
+                      <div class="control is-expanded">
+                        <div class="select is-fullwidth">
+                          <select name="Key bits" id="Key bits" {{on "change" this.onChange}}>
+                            {{#each @model.keyBitsConditional as |val|}}
+                              <option selected={{eq val.value val}} value={{or val.value val}}>
+                                {{or val}}
+                              </option>
+                            {{/each}}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  {{else}}
+                    <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} @showHelpText={{false}} />
+                  {{/if}}
                 {{/each}}
                 {{#if (eq group "Domain handling")}}
                   <p><Icon @name="info" aria-label="description" />

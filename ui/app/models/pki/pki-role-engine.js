@@ -83,12 +83,35 @@ export default class PkiRoleEngineModel extends Model {
     editType: 'stringArray',
   })
   allowedDomains;
-  addBasicConstraints;
   @attr('boolean', {
     label: 'Allow templates in allowed domains',
   })
   allowedDomainsTemplate;
 
+  // Overriding Key parameters options
+  @attr('string', {
+    label: 'Key type',
+    possibleValues: ['rsa', 'ec', 'ed25519', 'any'],
+    defaultValue: 'rsa',
+  })
+  keyType;
+
+  @attr('number', {
+    label: 'Key bits',
+  })
+  keyBits;
+  // To set conditional "possibleValues" for the field "keyBits" that depend on the value of the selected "keyType"
+  get keyBitsConditional() {
+    // ARG TODO confirm this is the correct matrix (probably with core)
+    const keyBitOptions = {
+      rsa: [2048, 3072, 4096],
+      ec: [256, 224, 384, 521],
+      ed25519: [0],
+      any: [0],
+    };
+    const attrs = expandAttributeMeta(this, ['keyBits']);
+    return (attrs[0].options['possibleValues'] = keyBitOptions[this.keyType]);
+  }
   // must be a getter so it can be added to the prototype needed in the pathHelp service on the line here: if (newModel.merged || modelProto.useOpenAPI !== true) {
   get useOpenAPI() {
     return true;
@@ -121,16 +144,6 @@ export default class PkiRoleEngineModel extends Model {
     return this.signVerbatimPath.get('canUpdate');
   }
 
-  // Form Fields not hidden in toggle options
-  _attributeMeta = null;
-  get formFields() {
-    if (!this._attributeMeta) {
-      this._attributeMeta = expandAttributeMeta(this, ['name', 'clientType', 'redirectUris']);
-    }
-    return this._attributeMeta;
-  }
-
-  // Form fields hidden behind toggle options
   _fieldToAttrsGroups = null;
   // ARG TODO: I removed 'allowedDomains' but I'm fairly certain it needs to be somewhere. Confirm with design.
   get fieldGroups() {
