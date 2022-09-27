@@ -294,12 +294,20 @@ func crlEnableDisableTestForBackend(t *testing.T, b *backend, s logical.Storage,
 			requireSerialNumberInCRL(t, certList, serialNum)
 		}
 
+		if len(certList.Extensions) > 2 {
+			t.Fatalf("expected up to 2 extensions on main CRL but got %v", len(certList.Extensions))
+		}
+
 		// Since this test assumes a complete CRL was rebuilt, we can grab
 		// the delta CRL and ensure it is empty.
 		deltaList := getParsedCrlFromBackend(t, b, s, "crl/delta").TBSCertList
 		lenDeltaList := len(deltaList.RevokedCertificates)
 		if lenDeltaList != 0 {
 			t.Fatalf("expected zero revoked certificates on the delta CRL due to complete CRL rebuild, found %d", lenDeltaList)
+		}
+
+		if len(deltaList.Extensions) != len(certList.Extensions)+1 {
+			t.Fatalf("expected one more extensions on delta CRL than main but got %v on main vs %v on delta", len(certList.Extensions), len(deltaList.Extensions))
 		}
 	}
 
