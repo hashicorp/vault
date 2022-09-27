@@ -20,7 +20,6 @@ import (
 	"github.com/hashicorp/vault/helper/osutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/ryboe/q"
 )
 
 const (
@@ -506,14 +505,6 @@ func LoadConfigFile(path string) (*Config, error) {
 			}
 		}
 	}
-	q.Q("Reading from config file")
-	q.Q(conf.Listeners)
-	q.Q("user lockout configs")
-	q.Q(conf.UserLockoutConfigs)
-
-	// update the mount entries with the configuration
-
-	// get the mount entry
 
 	return conf, nil
 }

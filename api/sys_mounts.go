@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/mitchellh/mapstructure"
-	"github.com/ryboe/q"
 )
 
 func (c *Sys) ListMounts() (map[string]*MountOutput, error) {
@@ -220,8 +219,6 @@ func (c *Sys) TuneMountWithContext(ctx context.Context, path string, config Moun
 		return err
 	}
 
-	q.Q("request")
-	q.Q(r)
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()

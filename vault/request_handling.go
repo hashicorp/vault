@@ -32,7 +32,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/quotas"
 	"github.com/hashicorp/vault/vault/tokens"
-	"github.com/ryboe/q"
 	uberAtomic "go.uber.org/atomic"
 )
 
@@ -1330,38 +1329,6 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		c.logger.Error("unexpected login request for token backend", "request_path", req.Path)
 		return nil, nil, ErrInternalError
 	}
-
-	// testing reading userlockout config
-
-	q.Q("read user lockout config in handleLoginRequest")
-	// q.Q(c.rawConfig)
-	conf := c.rawConfig.Load()
-	if conf == nil {
-		q.Q("failed to load core raw config")
-	}
-	userlockouts := conf.(*server.Config).UserLockoutConfigs
-	if userlockouts == nil {
-		q.Q("user lockouts configured")
-	} else {
-		q.Q("user lockouts configs")
-		q.Q(userlockouts)
-	}
-	q.Q("hi")
-	q.Q("details of mount entry")
-	userLockoutConfigurations := UserLockoutConfig{}
-	switch {
-	case entry.Config.UserLockoutConfig == UserLockoutConfig{}:
-
-		userLockoutConfigurations = c.GetUserLockoutFromConfig(entry.Type)
-
-	default:
-		userLockoutConfigurations = entry.Config.UserLockoutConfig
-
-	}
-
-	q.Q(userLockoutConfigurations)
-
-	// get userlockout configuration
 
 	// Route the request
 	resp, routeErr := c.doRouting(ctx, req)
