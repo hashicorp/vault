@@ -42,9 +42,6 @@ type backendGRPCPluginClient struct {
 	// server is the grpc server used for serving storage and sysview requests.
 	server *atomic.Value
 
-	// clientConn is the underlying grpc connection to the server, we store it
-	// so it can be cleaned up.
-	clientConn *grpc.ClientConn
 	doneCtx    context.Context
 }
 
