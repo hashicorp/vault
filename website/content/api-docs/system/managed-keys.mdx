@@ -150,7 +150,7 @@ $ curl \
   `"true"`). This key is mainly to work around a limitation within AWS's CloudHSM v5
   pkcs11 implementation.
 
-- `max_parallel` `(int: 1)` - The number of concurrent requests that may be in 
+- `max_parallel` `(int: 1)` - The number of concurrent requests that may be in
   flight to the HSM at any given time.
 
 #### AWS KMS Parameters
@@ -217,6 +217,7 @@ $ curl \
 - `key_type` `(string: <required>)`: The type of key to use. At this time only supported value is `RSA`.
 
 #### GCP Cloud KMS Parameters
+- `type` `(string: "gcpckms")` - To select an GCP Cloud KMS backend, the type parameter must be set to `gcpckms`.
 
 - `credentials` `(string: <required>)`: The path of the credential file to use for authenticating to GCP.
 This can also be provided in the `GOOGLE_APPLICATION_CREDENTIALS` environment variable.
@@ -296,8 +297,7 @@ $ curl \
 ## Test Sign with a managed key
 
 This endpoint allows an operator to validate that a managed key configuration works
-by signing and verifying some randomly generated data. No values can be provided to sign,
-nor are signed or verified data returned to the caller. If the call returns a successful HTTP
+by signing and verifying some randomly generated data. If the call returns a successful HTTP
 status code, the configuration can be considered valid.
 
 ~> **Note**: if key generation is allowed and no existing key can be found, this call will generate the key
@@ -309,7 +309,21 @@ status code, the configuration can be considered valid.
 ### Parameters
 - `name` `(string: <required>)` - The lowercase name identifying the key.
 
-- `type` `(string: <required>)` – The backend type for the managed key. Supported options are `pkcs11`, `awskms` and `azurekeyvault`.
+- `type` `(string: <required>)` – The backend type for the managed key. Supported options are `pkcs11`, `awskms`, `azurekeyvault`, or `gcpckms`.
+
+- `use_pss` `(bool: false)` - Use RSA PSS signatures within the signing/verification api calls.
+
+- `hash_algorithm` `(string: sha2-256)` - Use the following hashing algorithm within the signing/verification api calls.
+  The supported values are
+   - sha1
+   - sha2-224
+   - sha2-256
+   - sha2-384
+   - sha2-512
+   - sha3-224
+   - sha3-256
+   - sha3-384
+   - sha3-512
 
 ### Sample Request
 
