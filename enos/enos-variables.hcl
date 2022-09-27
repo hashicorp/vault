@@ -1,3 +1,35 @@
+variable "artifact_path" {
+  type        = string
+  description = "The local path for dev artifact to test"
+  default     = null
+}
+
+variable "artifactory_username" {
+  type        = string
+  description = "The username to use when connecting to artifactory"
+  default     = null
+  sensitive   = true
+}
+
+variable "artifactory_token" {
+  type        = string
+  description = "The token to use when connecting to artifactory"
+  default     = null
+  sensitive   = true
+}
+
+variable "artifactory_host" {
+  type        = string
+  description = "The artifactory host to search for vault artifacts"
+  default     = "https://artifactory.hashicorp.engineering/artifactory"
+}
+
+variable "artifactory_repo" {
+  type        = string
+  description = "The artifactory repo to search for vault artifacts"
+  default     = "hashicorp-crt-stable-local*"
+}
+
 variable "aws_region" {
   description = "The AWS region where we'll create infrastructure"
   type        = string
@@ -55,6 +87,7 @@ variable "terraform_plugin_cache_dir" {
 variable "tfc_api_token" {
   description = "The Terraform Cloud QTI Organization API token."
   type        = string
+  sensitive   = true
 }
 
 variable "vault_autopilot_initial_release" {

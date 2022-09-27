@@ -2,7 +2,7 @@ scenario "upgrade" {
   matrix {
     arch           = ["amd64", "arm64"]
     backend        = ["consul", "raft"]
-    builder        = ["local", "crt"]
+    build          = ["local", "crt", "artifactory"]
     consul_version = ["1.12.3", "1.11.7", "1.10.12"]
     distro         = ["ubuntu", "rhel"]
     edition        = ["oss", "ent"]
@@ -22,12 +22,14 @@ scenario "upgrade" {
       "oss" = ["ui"]
       "ent" = ["enterprise", "ent"]
     }
-    bundle_path             = abspath(var.vault_bundle_path)
+    bundle_path             = matrix.build != "artifactory" ? abspath(var.vault_bundle_path) : null
+    revision                = matrix.build == "artifactory" ? matrix.edition == "oss" ? var.vault_oss_product_revision : var.vault_enterprise_product_revision : null
     dependencies_to_install = ["jq"]
     enos_provider = {
       rhel   = provider.enos.rhel
       ubuntu = provider.enos.ubuntu
     }
+    install_artifactory_artifact = local.revision != null && local.bundle_path == null
     tags = merge({
       "Project Name" : var.project_name
       "Project" : "Enos",
@@ -41,13 +43,24 @@ scenario "upgrade" {
   }
 
   step "build_vault" {
-    module = matrix.builder == "crt" ? module.build_crt : module.build_local
+    module = "build_${matrix.build}"
 
     variables {
-      build_tags  = var.vault_local_build_tags != null ? var.vault_local_build_tags : local.build_tags[matrix.edition]
-      bundle_path = local.bundle_path
-      goarch      = matrix.arch
-      goos        = "linux"
+      build_tags            = var.vault_local_build_tags != null ? var.vault_local_build_tags : local.build_tags[matrix.edition]
+      bundle_path           = local.bundle_path
+      goarch                = matrix.arch
+      goos                  = "linux"
+      artifactory_host      = matrix.build == "artifactory" ? var.artifactory_host : null
+      artifactory_repo      = matrix.build == "artifactory" ? var.artifactory_repo : null
+      artifactory_username  = matrix.build == "artifactory" ? var.artifactory_username : null
+      artifactory_token     = matrix.build == "artifactory" ? var.artifactory_token : null
+      arch                  = matrix.build == "artifactory" ? matrix.arch : null
+      vault_product_version = matrix.build == "artifactory" ? var.vault_product_version : null
+      artifact_type         = matrix.build == "artifactory" ? "bundle" : null
+      distro                = matrix.build == "artifactory" ? matrix.distro : null
+      edition               = matrix.build == "artifactory" ? matrix.edition : null
+      instance_type         = matrix.build == "artifactory" ? local.vault_instance_type : null
+      revision              = local.revision
     }
   }
 
@@ -87,11 +100,8 @@ scenario "upgrade" {
   }
 
   step "create_backend_cluster" {
-    module = "backend_${matrix.backend}"
-    depends_on = [
-      step.create_vpc,
-      step.build_vault,
-    ]
+    module     = "backend_${matrix.backend}"
+    depends_on = [step.create_vpc]
 
     providers = {
       enos = provider.enos.ubuntu
@@ -113,8 +123,8 @@ scenario "upgrade" {
   step "create_vault_cluster" {
     module = module.vault_cluster
     depends_on = [
-      step.create_vpc,
       step.create_backend_cluster,
+      step.build_vault,
     ]
 
     providers = {
@@ -147,11 +157,12 @@ scenario "upgrade" {
     }
 
     variables {
-      vault_api_addr          = "http://localhost:8200"
-      vault_instances         = step.create_vault_cluster.vault_instances
-      vault_local_bundle_path = local.bundle_path
-      vault_unseal_keys       = matrix.seal == "shamir" ? step.create_vault_cluster.vault_unseal_keys_hex : null
-      vault_seal_type         = matrix.seal
+      vault_api_addr            = "http://localhost:8200"
+      vault_instances           = step.create_vault_cluster.vault_instances
+      vault_local_bundle_path   = local.bundle_path
+      vault_artifactory_release = local.install_artifactory_artifact ? step.build_vault.vault_artifactory_release : null
+      vault_unseal_keys         = matrix.seal == "shamir" ? step.create_vault_cluster.vault_unseal_keys_hex : null
+      vault_seal_type           = matrix.seal
     }
   }
 
