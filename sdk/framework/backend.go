@@ -14,10 +14,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
+
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-kms-wrapping/entropy"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -90,6 +91,9 @@ type Backend struct {
 
 	// BackendType is the logical.BackendType for the backend implementation
 	BackendType logical.BackendType
+
+	// RunningVersion is the optional version that will be self-reported
+	RunningVersion string
 
 	logger  log.Logger
 	system  logical.SystemView
@@ -426,6 +430,13 @@ func (b *Backend) System() logical.SystemView {
 // Type returns the backend type
 func (b *Backend) Type() logical.BackendType {
 	return b.BackendType
+}
+
+// Version returns the plugin version information
+func (b *Backend) PluginVersion() logical.PluginVersion {
+	return logical.PluginVersion{
+		Version: b.RunningVersion,
+	}
 }
 
 // Route looks up the path that would be used for a given path string.

@@ -1,0 +1,6 @@
+```release-note:improvement
+ui: Prevents requests to /sys/internal/ui/resultant-acl endpoint when unauthenticated
+```
+```release-note:improvement
+website/docs: Removes mentions of unauthenticated from internal ui resultant-acl doc
+```

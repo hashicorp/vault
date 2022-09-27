@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/random"
+	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -172,10 +173,9 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"options": map[string]string{
 				"version": "1",
 			},
-			"sha":             "",
-			"running_sha":     "",
-			"version":         "",
-			"running_version": "",
+			"plugin_version":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+			"running_sha256":         "",
 		},
 		"sys/": map[string]interface{}{
 			"type":                    "system",
@@ -189,13 +189,12 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"force_no_cache":              false,
 				"passthrough_request_headers": []string{"Accept"},
 			},
-			"local":           false,
-			"seal_wrap":       true,
-			"options":         map[string]string(nil),
-			"sha":             "",
-			"running_sha":     "",
-			"version":         "",
-			"running_version": "",
+			"local":                  false,
+			"seal_wrap":              true,
+			"options":                map[string]string(nil),
+			"plugin_version":         "",
+			"running_plugin_version": versions.DefaultBuiltinVersion,
+			"running_sha256":         "",
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description":             "per-token private secret storage",
@@ -208,13 +207,12 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"max_lease_ttl":     resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 				"force_no_cache":    false,
 			},
-			"local":           true,
-			"seal_wrap":       false,
-			"options":         map[string]string(nil),
-			"sha":             "",
-			"running_sha":     "",
-			"version":         "",
-			"running_version": "",
+			"local":                  true,
+			"seal_wrap":              false,
+			"options":                map[string]string(nil),
+			"plugin_version":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
+			"running_sha256":         "",
 		},
 		"identity/": map[string]interface{}{
 			"description":             "identity store",
@@ -228,13 +226,12 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"force_no_cache":              false,
 				"passthrough_request_headers": []string{"Authorization"},
 			},
-			"local":           false,
-			"seal_wrap":       false,
-			"options":         map[string]string(nil),
-			"sha":             "",
-			"running_sha":     "",
-			"version":         "",
-			"running_version": "",
+			"local":                  false,
+			"seal_wrap":              false,
+			"options":                map[string]string(nil),
+			"plugin_version":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
+			"running_sha256":         "",
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); len(diff) > 0 {
@@ -301,10 +298,9 @@ func TestSystemBackend_mount(t *testing.T) {
 			"options": map[string]string{
 				"version": "1",
 			},
-			"sha":             "",
-			"running_sha":     "",
-			"version":         "",
-			"running_version": "",
+			"plugin_version":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+			"running_sha256":         "",
 		},
 		"sys/": map[string]interface{}{
 			"type":                    "system",
@@ -318,13 +314,12 @@ func TestSystemBackend_mount(t *testing.T) {
 				"force_no_cache":              false,
 				"passthrough_request_headers": []string{"Accept"},
 			},
-			"local":           false,
-			"seal_wrap":       true,
-			"options":         map[string]string(nil),
-			"sha":             "",
-			"running_sha":     "",
-			"version":         "",
-			"running_version": "",
+			"local":                  false,
+			"seal_wrap":              true,
+			"options":                map[string]string(nil),
+			"plugin_version":         "",
+			"running_plugin_version": versions.DefaultBuiltinVersion,
+			"running_sha256":         "",
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description":             "per-token private secret storage",
@@ -337,13 +332,12 @@ func TestSystemBackend_mount(t *testing.T) {
 				"max_lease_ttl":     resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 				"force_no_cache":    false,
 			},
-			"local":           true,
-			"seal_wrap":       false,
-			"options":         map[string]string(nil),
-			"sha":             "",
-			"running_sha":     "",
-			"version":         "",
-			"running_version": "",
+			"local":                  true,
+			"seal_wrap":              false,
+			"options":                map[string]string(nil),
+			"plugin_version":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
+			"running_sha256":         "",
 		},
 		"identity/": map[string]interface{}{
 			"description":             "identity store",
@@ -357,13 +351,12 @@ func TestSystemBackend_mount(t *testing.T) {
 				"force_no_cache":              false,
 				"passthrough_request_headers": []string{"Authorization"},
 			},
-			"local":           false,
-			"seal_wrap":       false,
-			"options":         map[string]string(nil),
-			"sha":             "",
-			"running_sha":     "",
-			"version":         "",
-			"running_version": "",
+			"local":                  false,
+			"seal_wrap":              false,
+			"options":                map[string]string(nil),
+			"plugin_version":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
+			"running_sha256":         "",
 		},
 		"prod/secret/": map[string]interface{}{
 			"description":             "",
@@ -381,10 +374,9 @@ func TestSystemBackend_mount(t *testing.T) {
 			"options": map[string]string{
 				"version": "1",
 			},
-			"sha":             "",
-			"running_sha":     "",
-			"version":         "",
-			"running_version": "",
+			"plugin_version":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+			"running_sha256":         "",
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); len(diff) > 0 {
@@ -1854,13 +1846,12 @@ func TestSystemBackend_authTable(t *testing.T) {
 				"force_no_cache":    false,
 				"token_type":        "default-service",
 			},
-			"local":           false,
-			"seal_wrap":       false,
-			"options":         map[string]string(nil),
-			"sha":             "",
-			"running_sha":     "",
-			"version":         "",
-			"running_version": "",
+			"local":                  false,
+			"seal_wrap":              false,
+			"options":                map[string]string(nil),
+			"plugin_version":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
+			"running_sha256":         "",
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); diff != nil {
@@ -1922,13 +1913,12 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 				"force_no_cache":    false,
 				"token_type":        "default-service",
 			},
-			"local":           true,
-			"seal_wrap":       true,
-			"options":         map[string]string{},
-			"sha":             "",
-			"running_sha":     "",
-			"version":         "",
-			"running_version": "",
+			"local":                  true,
+			"seal_wrap":              true,
+			"options":                map[string]string{},
+			"plugin_version":         "",
+			"running_plugin_version": versions.DefaultBuiltinVersion,
+			"running_sha256":         "",
 		},
 		"token/": map[string]interface{}{
 			"type":                    "token",
@@ -1942,13 +1932,12 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 				"force_no_cache":    false,
 				"token_type":        "default-service",
 			},
-			"local":           false,
-			"seal_wrap":       false,
-			"options":         map[string]string(nil),
-			"sha":             "",
-			"running_sha":     "",
-			"version":         "",
-			"running_version": "",
+			"local":                  false,
+			"seal_wrap":              false,
+			"options":                map[string]string(nil),
+			"plugin_version":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
+			"running_sha256":         "",
 		},
 	}
 	if diff := deep.Equal(resp.Data, exp); diff != nil {
@@ -2020,9 +2009,35 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 
 	req = logical.TestRequest(t, logical.UpdateOperation, "auth/token/tune")
 	req.Data["description"] = ""
+	req.Data["plugin_version"] = "v1.0.0"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil || resp == nil || !resp.IsError() || !strings.Contains(resp.Error().Error(), ErrPluginNotFound.Error()) {
+		t.Fatalf("expected tune request to fail, but got resp: %#v, err: %s", resp, err)
+	}
+
+	// Register the plugin in the catalog, and then try the same request again.
+	{
+		tempDir, err := filepath.EvalSymlinks(t.TempDir())
+		if err != nil {
+			t.Fatal(err)
+		}
+		c.pluginCatalog.directory = tempDir
+		file, err := os.Create(filepath.Join(tempDir, "foo"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := file.Close(); err != nil {
+			t.Fatal(err)
+		}
+		err = c.pluginCatalog.Set(context.Background(), "token", consts.PluginTypeCredential, "v1.0.0", "foo", []string{}, []string{}, []byte{})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
-		t.Fatalf("err: %v", err)
+		t.Fatal(resp, err)
 	}
 
 	req = logical.TestRequest(t, logical.ReadOperation, "auth/token/tune")
@@ -2036,6 +2051,9 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 
 	if resp.Data["description"] != "" {
 		t.Fatalf("got: %#v expect: %#v", resp.Data["description"], "")
+	}
+	if resp.Data["plugin_version"] != "v1.0.0" {
+		t.Fatalf("got: %#v, expected: %v", resp.Data["version"], "v1.0.0")
 	}
 }
 
@@ -2999,7 +3017,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 		"args":               []string(nil),
 		"sha256":             "",
 		"builtin":            true,
-		"version":            c.pluginCatalog.getBuiltinVersion(consts.PluginTypeDatabase, "mysql-database-plugin"),
+		"version":            versions.GetBuiltinVersion(consts.PluginTypeDatabase, "mysql-database-plugin"),
 		"deprecation_status": deprecationStatus.String(),
 	}
 	if !reflect.DeepEqual(actualRespData, expectedRespData) {
@@ -3108,6 +3126,29 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if resp != nil || err != nil {
 		t.Fatalf("expected nil response, plugin not deleted correctly got resp: %v, err: %v", resp, err)
+	}
+}
+
+func TestSystemBackend_PluginCatalog_CannotRegisterBuiltinPlugins(t *testing.T) {
+	c, b, _ := testCoreSystemBackend(t)
+	// Bootstrap the pluginCatalog
+	sym, err := filepath.EvalSymlinks(os.TempDir())
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	c.pluginCatalog.directory = sym
+
+	// Set a plugin
+	req := logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
+	req.Data["sha256"] = hex.EncodeToString([]byte{'1'})
+	req.Data["command"] = "foo"
+	req.Data["version"] = "v1.2.3+special.builtin"
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(resp.Error().Error(), "reserved metadata") {
+		t.Fatalf("err: %v", resp.Error())
 	}
 }
 
@@ -3326,10 +3367,9 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"options": map[string]string{
 					"version": "1",
 				},
-				"sha":             "",
-				"running_sha":     "",
-				"version":         "",
-				"running_version": "",
+				"plugin_version":         "",
+				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+				"running_sha256":         "",
 			},
 			"sys/": map[string]interface{}{
 				"type":                    "system",
@@ -3343,13 +3383,12 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 					"force_no_cache":              false,
 					"passthrough_request_headers": []string{"Accept"},
 				},
-				"local":           false,
-				"seal_wrap":       true,
-				"options":         map[string]string(nil),
-				"sha":             "",
-				"running_sha":     "",
-				"version":         "",
-				"running_version": "",
+				"local":                  false,
+				"seal_wrap":              true,
+				"options":                map[string]string(nil),
+				"plugin_version":         "",
+				"running_plugin_version": versions.DefaultBuiltinVersion,
+				"running_sha256":         "",
 			},
 			"cubbyhole/": map[string]interface{}{
 				"description":             "per-token private secret storage",
@@ -3362,13 +3401,12 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 					"max_lease_ttl":     resp.Data["secret"].(map[string]interface{})["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 					"force_no_cache":    false,
 				},
-				"local":           true,
-				"seal_wrap":       false,
-				"options":         map[string]string(nil),
-				"sha":             "",
-				"running_sha":     "",
-				"version":         "",
-				"running_version": "",
+				"local":                  true,
+				"seal_wrap":              false,
+				"options":                map[string]string(nil),
+				"plugin_version":         "",
+				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
+				"running_sha256":         "",
 			},
 			"identity/": map[string]interface{}{
 				"description":             "identity store",
@@ -3382,13 +3420,12 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 					"force_no_cache":              false,
 					"passthrough_request_headers": []string{"Authorization"},
 				},
-				"local":           false,
-				"seal_wrap":       false,
-				"options":         map[string]string(nil),
-				"sha":             "",
-				"running_sha":     "",
-				"version":         "",
-				"running_version": "",
+				"local":                  false,
+				"seal_wrap":              false,
+				"options":                map[string]string(nil),
+				"plugin_version":         "",
+				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
+				"running_sha256":         "",
 			},
 		},
 		"auth": map[string]interface{}{
@@ -3407,10 +3444,9 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 				"uuid":                    resp.Data["auth"].(map[string]interface{})["token/"].(map[string]interface{})["uuid"],
 				"local":                   false,
 				"seal_wrap":               false,
-				"sha":                     "",
-				"running_sha":             "",
-				"version":                 "",
-				"running_version":         "",
+				"plugin_version":          "",
+				"running_plugin_version":  versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
+				"running_sha256":          "",
 			},
 		},
 	}

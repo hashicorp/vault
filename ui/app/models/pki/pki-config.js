@@ -47,12 +47,10 @@ export default Model.extend({
   }),
 
   crlAttrs: computed(function () {
-    let keys = ['expiry'];
+    let keys = ['expiry', 'disable'];
     return this.attrList(keys);
   }),
   //crl
-  expiry: attr({
-    defaultValue: '72h',
-    editType: 'ttl',
-  }),
+  expiry: attr('string', { defaultValue: '72h' }),
+  disable: attr('boolean', { defaultValue: false }),
 });

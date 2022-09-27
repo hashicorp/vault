@@ -38,7 +38,7 @@ func TestListMounts(t *testing.T) {
 			t.Errorf("Unexpected mount: %s: %+v", path, mount)
 			continue
 		}
-		if expected.Type != mount.Type || expected.Version != mount.Version {
+		if expected.Type != mount.Type || expected.Version != mount.PluginVersion {
 			t.Errorf("Mount did not match: %s -> expected %+v but got %+v", path, expected, mount)
 		}
 	}
@@ -49,7 +49,7 @@ func TestListMounts(t *testing.T) {
 			t.Errorf("Expected mount not found mount: %s: %+v", path, expected)
 			continue
 		}
-		if expected.Type != mount.Type || expected.Version != mount.Version {
+		if expected.Type != mount.Type || expected.Version != mount.PluginVersion {
 			t.Errorf("Mount did not match: %s -> expected %+v but got %+v", path, expected, mount)
 		}
 	}
@@ -76,13 +76,12 @@ const listMountsResponse = `{
       "external_entropy_access": false,
       "local": true,
       "options": null,
-      "running_sha": "",
-      "running_version": "",
+      "plugin_version": "v1.0.0",
+      "running_sha256": "",
+      "running_plugin_version": "",
       "seal_wrap": false,
-      "sha": "",
       "type": "cubbyhole",
-      "uuid": "575063dc-5ef8-4487-c842-22c494c19a6f",
-      "version": "v1.0.0"
+      "uuid": "575063dc-5ef8-4487-c842-22c494c19a6f"
     },
     "identity/": {
       "accessor": "identity_6e01c327",
@@ -98,13 +97,12 @@ const listMountsResponse = `{
       "external_entropy_access": false,
       "local": false,
       "options": null,
-      "running_sha": "",
-      "running_version": "",
+      "plugin_version": "",
+      "running_sha256": "",
+      "running_plugin_version": "",
       "seal_wrap": false,
-      "sha": "",
       "type": "identity",
-      "uuid": "187d7eba-3471-554b-c2d9-1479612c8046",
-      "version": ""
+      "uuid": "187d7eba-3471-554b-c2d9-1479612c8046"
     },
     "secret/": {
       "accessor": "kv_3e2f282f",
@@ -119,13 +117,12 @@ const listMountsResponse = `{
       "options": {
         "version": "2"
       },
-      "running_sha": "",
-      "running_version": "",
+      "plugin_version": "",
+      "running_sha256": "",
+      "running_plugin_version": "",
       "seal_wrap": false,
-      "sha": "",
       "type": "kv",
-      "uuid": "13375e0f-876e-7e96-0a3e-076f37b6b69d",
-      "version": ""
+      "uuid": "13375e0f-876e-7e96-0a3e-076f37b6b69d"
     },
     "sys/": {
       "accessor": "system_93503264",
@@ -141,13 +138,12 @@ const listMountsResponse = `{
       "external_entropy_access": false,
       "local": false,
       "options": null,
-      "running_sha": "",
-      "running_version": "",
+      "plugin_version": "",
+      "running_sha256": "",
+      "running_plugin_version": "",
       "seal_wrap": true,
-      "sha": "",
       "type": "system",
-      "uuid": "1373242d-cc4d-c023-410b-7f336e7ba0a8",
-      "version": ""
+      "uuid": "1373242d-cc4d-c023-410b-7f336e7ba0a8"
     }
   }
 }`

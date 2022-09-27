@@ -1546,6 +1546,10 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Type:        framework.TypeMap,
 					Description: strings.TrimSpace(sysHelp["user_lockout_config"][0]),
 				},
+				"plugin_version": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
+				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
@@ -1604,7 +1608,7 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Type:        framework.TypeKVPairs,
 					Description: strings.TrimSpace(sysHelp["auth_options"][0]),
 				},
-				"version": {
+				"plugin_version": {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
 				},
@@ -1925,6 +1929,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeCommaStringSlice,
 					Description: strings.TrimSpace(sysHelp["tune_allowed_managed_keys"][0]),
 				},
+				"plugin_version": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
+				},
 			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -1979,7 +1987,7 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeKVPairs,
 					Description: strings.TrimSpace(sysHelp["mount_options"][0]),
 				},
-				"version": {
+				"plugin_version": {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
 				},

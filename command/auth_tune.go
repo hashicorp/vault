@@ -20,17 +20,18 @@ var (
 type AuthTuneCommand struct {
 	*BaseCommand
 
-	flagAuditNonHMACRequestKeys         []string
-	flagAuditNonHMACResponseKeys        []string
-	flagDefaultLeaseTTL                 time.Duration
-	flagDescription                     string
-	flagListingVisibility               string
-	flagMaxLeaseTTL                     time.Duration
-	flagPassthroughRequestHeaders       []string
-	flagAllowedResponseHeaders          []string
-	flagOptions                         map[string]string
-	flagTokenType                       string
-	flagVersion                         int
+	flagAuditNonHMACRequestKeys   []string
+	flagAuditNonHMACResponseKeys  []string
+	flagDefaultLeaseTTL           time.Duration
+	flagDescription               string
+	flagListingVisibility         string
+	flagMaxLeaseTTL               time.Duration
+	flagPassthroughRequestHeaders []string
+	flagAllowedResponseHeaders    []string
+	flagOptions                   map[string]string
+	flagTokenType                 string
+	flagVersion                   int
+	flagPluginVersion             string
 	flagUserLockoutThreshold            int
 	flagUserLockoutDuration             time.Duration
 	flagUserLockoutCounterResetDuration time.Duration
@@ -183,6 +184,14 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 			"or a previously configured value for the auth method.",
 	})
 
+	f.StringVar(&StringVar{
+		Name:    flagNamePluginVersion,
+		Target:  &c.flagPluginVersion,
+		Default: "",
+		Usage: "Select the semantic version of the plugin to run. The new version must be registered in " +
+			"the plugin catalog, and will not start running until the plugin is reloaded.",
+	})
+
 	return set
 }
 
@@ -273,6 +282,10 @@ func (c *AuthTuneCommand) Run(args []string) int {
 		}
 		if fl.Name == "user-lockout-disable" {
 			mountConfigInput.UserLockoutConfig.DisableLockout = &c.flagUserLockoutDisable
+		}
+
+		if fl.Name == flagNamePluginVersion {
+			mountConfigInput.PluginVersion = c.flagPluginVersion
 		}
 	})
 
