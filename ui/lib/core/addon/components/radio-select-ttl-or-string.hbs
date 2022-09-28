@@ -1,5 +1,11 @@
 <div class="column is-narrow is-flex-center has-text-grey has-right-margin-s has-top-margin-negative-s">
-  <RadioButton class="radio" name="ttl" @value="ttl" @onChange={{this.selectionChange}} @groupValue={{this.groupValue}} />
+  <RadioButton
+    class="radio"
+    name="ttl"
+    @value="ttl"
+    @onChange={{this.onRadioButtonChange}}
+    @groupValue={{this.groupValue}}
+  />
   <label class="has-left-margin-xs">
     <TtlPicker2
       data-test-input="ttl"
@@ -18,7 +24,7 @@
     class="radio"
     name="not_after"
     @value="specificDate"
-    @onChange={{this.selectionChange}}
+    @onChange={{this.onRadioButtonChange}}
     @groupValue={{this.groupValue}}
   />
   <label class="has-left-margin-xs">

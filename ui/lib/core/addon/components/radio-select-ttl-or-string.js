@@ -23,9 +23,9 @@ export default class RadioSelectTtlOrString extends Component {
   @tracked ttlTime = '';
   @tracked notAfter = '';
 
-  @action selectionChange(selection) {
+  @action onRadioButtonChange(selection) {
     this.groupValue = selection;
-    // Clear the other selection if they have clicked the other radio button.
+    // Clear the previous selection if they have clicked the other radio button.
     if (selection === 'specificDate') {
       this.args.model.set('ttl', '');
       this.ttlTime = ''; //clear out the form field
@@ -37,13 +37,11 @@ export default class RadioSelectTtlOrString extends Component {
   }
 
   @action setAndBroadcastTtl(value) {
-    this.args.model.set('notAfter', ''); // clear the notAfter time
     let valueToSet = value.enabled === true ? `${value.seconds}s` : 0;
     this.args.model.set('ttl', `${valueToSet}`);
   }
 
   @action setAndBroadcastInput(event) {
-    this.args.model.set('ttl', ''); // clear the ttl time
     this.args.model.set('notAfter', event.target.value);
   }
 }
