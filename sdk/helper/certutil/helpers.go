@@ -1127,7 +1127,12 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		certTemplate.NotBefore = time.Now().Add(-1 * data.Params.NotBeforeDuration)
 	}
 
-	switch data.SigningBundle.PrivateKeyType {
+	privateKeyType := data.SigningBundle.PrivateKeyType
+	if privateKeyType == ManagedPrivateKey {
+		privateKeyType = GetPrivateKeyTypeFromSigner(data.SigningBundle.PrivateKey)
+	}
+
+	switch privateKeyType {
 	case RSAPrivateKey:
 		certTemplateSetSigAlgo(certTemplate, data)
 	case ECPrivateKey:
