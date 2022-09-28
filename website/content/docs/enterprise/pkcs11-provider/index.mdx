@@ -2,7 +2,9 @@
 layout: docs
 page_title: PKCS#11 Provider - Vault Enterprise
 description: |-
-  Vault Enterprise ...
+  The Vault PKCS#11 Provider allows Vault KMIP Secrets Engine to be used via PKCS#11 calls.
+  The provider supports a subset of key generation, encryption, decryption and key storage operations.
+  This requires the Enterprise ADP-KM license.
 ---
 
 # PKCS#11 Provider
@@ -13,7 +15,7 @@ For example, it is often used to access a Hardware Security Module (HSM) (like a
 
 Vault provides a PKCS#11 library (or provider) so that Vault can be used as an SSM (Software Security Module).
 This allows a user to treat Vault like any other PKCS#11 device to manage keys, objects, and perform encryption and decryption in Vault using PKCS#11 calls.
-It uses Vault's [KMIP Secrets Engine](/docs/secrets/kmip) to provide cryptographic operations and object storage.
+The PKCS#11 library connects to Vault's [KMIP Secrets Engine](/docs/secrets/kmip) to provide cryptographic operations and object storage.
 
 ## Platform Support
 
@@ -32,7 +34,7 @@ It can be downloaded from [releases.hashicorp.com](https://releases.hashicorp.co
 
 ## Quick Start
 
-1. To use the provider, you will need access to a Vault Enterprise instance with the KMIP secrets engine.
+1. To use the provider, you will need access to a Vault Enterprise instance with the KMIP Secrets Engine.
 
     For example, you can start one locally (if you have a license in the `VAULT_LICENSE` environment variable) with:
 
@@ -50,7 +52,7 @@ It can be downloaded from [releases.hashicorp.com](https://releases.hashicorp.co
       server -dev -dev-root-token-id root -dev-listen-address 0.0.0.0:8200
     ```
 
-1. Configure the [KMIP secrets engine](/docs/secrets/kmip) and a KMIP *scope*. The scope is used to hold keys and objects.
+1. Configure the [KMIP Secrets Engine](/docs/secrets/kmip) and a KMIP *scope*. The scope is used to hold keys and objects.
 
     ```sh
     vault secrets enable kmip
@@ -67,7 +69,7 @@ It can be downloaded from [releases.hashicorp.com](https://releases.hashicorp.co
     jq -r '.data.ca_chain[]' kmip.json > ca.pem
     jq -r '.data.certificate' kmip.json > cert.pem
     ```
-    The certificate file from the KMIP secrets engine also contains the key.
+    The certificate file from the KMIP Secrets Engine also contains the key.
 
 1. Create a configuration file called `vault-pkcs11.hcl`:
 
@@ -84,7 +86,7 @@ It can be downloaded from [releases.hashicorp.com](https://releases.hashicorp.co
 
 1. Copy the certificates from the KMIP credentials into the files specified in the configuration file (e.g., `cert.pem`, and `ca.pem`).
 
-1. You should now be able to use the `libvault-pkcs11.so` (or `.dylib`) library to access the KMIP secrets engine in Vault using any PKCS#11-compatible tool, like OpenSC's `pkcs11-tool`, e.g.:
+1. You should now be able to use the `libvault-pkcs11.so` (or `.dylib`) library to access the KMIP Secrets Engine in Vault using any PKCS#11-compatible tool, like OpenSC's `pkcs11-tool`, e.g.:
 
     ```sh
     $ VAULT_LOG_FILE=/dev/null pkcs11-tool --module ./libvault-pkcs11.so -L
@@ -139,7 +141,7 @@ Most programs will use only one slot.
 - `tls_cert_path` (required): the location of the client TLS certificate used to authenticate to the KMIP engine.
 - `tls_key_path` (optional, defaults to the value of `tls_cert_path`): the location of the encrypted or unencrypted TLS key used to authenticate to the KMIP engine.
 - `ca_path` (required): the location of the CA bundle that will be used to verify the server's certificate.
-- `scope` (required): the KMIP scope to authenticate against and where the TDE master keys and associated metadata will be stored.
+- `scope` (required): the [KMIP scope](https://www.vaultproject.io/docs/secrets/kmip#scopes-and-roles) to authenticate against and where the TDE master keys and associated metadata will be stored.
 - `cache` (optional, default `true`): if the provider uses a cache to improve the performance of `C_GetAttributeValue` (KMIP: `GetAttributes`) calls.
 - `emulate_hardware` (optional, default `false`): specifies if the provider should report that it is connected to a hardware device.
 

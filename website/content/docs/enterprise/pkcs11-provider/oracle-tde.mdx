@@ -2,7 +2,7 @@
 layout: docs
 page_title: Oracle TDE - PKCS#11 Provider - Vault Enterprise
 description: |-
-  Vault Enterprise ...
+  The Vault PKCS#11 Provider can be used to enable Oracle TDE.
 ---
 
 # Oracle TDE
@@ -23,9 +23,9 @@ To setup Oracle TDE backed by Vault, the following are required:
 
 ## Vault Setup
 
-On the Vault server, we need to [setup the KMIP secrets engine](https://www.vaultproject.io/docs/secrets/kmip), e.g.:
+On the Vault server, we need to [setup the KMIP Secrets Engine](https://www.vaultproject.io/docs/secrets/kmip), e.g.:
 
-1. Start the KMIP secrets engine and listener:
+1. Start the KMIP Secrets Engine and listener:
 
     ```sh
     vault secrets enable kmip
