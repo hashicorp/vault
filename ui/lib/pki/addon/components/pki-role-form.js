@@ -15,7 +15,6 @@ import { tracked } from '@glimmer/tracking';
  * @callback onCancel
  * @callback onSave
  * @param {Object} model - Pki-role-engine model.
- * @param {function} onChange - Handle the input coming from the custom yield field.
  * @param {onCancel} onCancel - Callback triggered when cancel button is clicked.
  * @param {onSave} onSave - Callback triggered on save success.
  */
