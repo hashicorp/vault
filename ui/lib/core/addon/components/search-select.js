@@ -30,7 +30,7 @@ import { assert } from '@ember/debug';
  * @param {array} [inputValue] - Array of strings corresponding to the input's initial value, e.g. an array of model ids that on edit will appear as selected items below the input
  * @param {boolean} [disallowNewItems=false] - Controls whether or not the user can add a new item if none found
  * @param {boolean} [shouldRenderName=false] - By default an item's id renders in the dropdown, `true` displays the name with its id in smaller text beside it *NOTE: the boolean flips automatically with 'identity' models or if this.idKey !== 'id'
- * @param {array} [parentHandleSelection] - Array of selected items if the parent is keeping track of selections, see mfa-login-enforcement-form.js
+ * @param {array} [parentManageSelected] - Array of selected items if the parent is keeping track of selections, see mfa-login-enforcement-form.js
  * @param {boolean} [passObject=false] - When true, the onChange callback returns an array of objects with id (string) and isNew (boolean) (and any params from objectKeys). By default - onChange returns an array of id strings. 
  * @param {array} [objectKeys=null] - Array of values that correlate to model attrs. When passObject=true, objectKeys are added to the passed, selected object. *NOTE: make 'id' as the first element in objectKeys if you do not want to override the default of 'id'
  * @param {number} [selectLimit] - Sets select limit
@@ -60,15 +60,10 @@ import { assert } from '@ember/debug';
  */
 
 export default class SearchSelect extends Component {
-  allOptions; // ALL options initially returned from query
   @service store;
   @tracked selectedOptions; // array of selected options
   @tracked dropdownOptions; // options that will render in dropdown
   @tracked shouldUseFallback = false;
-
-  get disallowNewItems() {
-    return this.args.disallowNewItems || false;
-  }
 
   get hidePowerSelect() {
     return this.selectedOptions.length >= this.args.selectLimit;
@@ -80,14 +75,6 @@ export default class SearchSelect extends Component {
     }
     // if objectKeys exists, use the first element of the array as the identifier
     return this.args.objectKeys ? this.args.objectKeys[0] : 'id';
-  }
-
-  get passObject() {
-    return this.args.passObject || false;
-  }
-
-  get resetSelection() {
-    return this.args.resetSelection || false;
   }
 
   get shouldRenderName() {
@@ -136,18 +123,18 @@ export default class SearchSelect extends Component {
     }
     this.dropdownOptions = [];
 
-    if (!this.args.models) {
-      if (this.args.options) {
-        const options = this.args.options;
-        if (options.some((e) => Object.keys(e).includes('groupName'))) {
-          this.dropdownOptions = options;
-        } else {
-          this.dropdownOptions = [...this.addSearchText(options)];
-          this.selectedOptions = this.formatSelectedAndUpdateDropdown(this.selectedOptions);
-        }
+    if (!this.args.models && this.args.options) {
+      const { options } = this.args;
+      if (options.some((e) => Object.keys(e).includes('groupName'))) {
+        this.dropdownOptions = options;
+      } else {
+        this.dropdownOptions = [...this.addSearchText(options)];
+        this.selectedOptions = this.formatSelectedAndUpdateDropdown(this.selectedOptions);
       }
-      return;
     }
+
+    if (!this.args.models) return;
+
     for (let modelType of this.args.models) {
       try {
         let queryOptions = {};
@@ -184,7 +171,7 @@ export default class SearchSelect extends Component {
     if (this.selectedOptions.length && typeof this.selectedOptions.firstObject === 'object') {
       this.args.onChange(
         Array.from(this.selectedOptions, (option) =>
-          this.passObject ? this.customizeObject(option) : option.id
+          this.args.passObject ? this.customizeObject(option) : option.id
         )
       );
     } else {
@@ -260,7 +247,7 @@ export default class SearchSelect extends Component {
     let existingOption =
       this.dropdownOptions &&
       (this.dropdownOptions.findBy('id', id) || this.dropdownOptions.findBy('name', id));
-    if (this.disallowNewItems && !existingOption) {
+    if (this.args.disallowNewItems && !existingOption) {
       return false;
     }
     return !existingOption;
@@ -268,8 +255,8 @@ export default class SearchSelect extends Component {
 
   customizeObject(option) {
     if (!option) return;
-    // only customize object if passObject=true
-    if (!this.passObject) return option;
+    // only customize object if @passObject=true
+    if (!this.args.passObject) return option;
 
     let additionalKeys;
     if (this.args.objectKeys) {
