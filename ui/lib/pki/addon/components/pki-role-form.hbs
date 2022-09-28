@@ -44,7 +44,7 @@
               @showHelpText={{false}}
             >
               {{! Yielding custom component in form-fields for property on the model with editType: 'yield' }}
-              <RadioSelectTtlOrString @model={{@model}} @attr={{attr}} @onChange={{this.onChange}} />
+              <RadioSelectTtlOrString @model={{@model}} @attr={{attr}} @onChange={{this.onNotValidAfterChange}} />
             </FormField>
           {{/each}}
         {{else}}
@@ -61,24 +61,12 @@
               <div class="box is-marginless">
                 {{#each fields as |attr|}}
                   {{! Custom conditional field where keyBits values are tied to the selected keyType }}
-                  {{#if (eq attr.name "keyBits")}}
-                    <div class="field">
-                      <label class="is-label">Key bits</label>
-                      <div class="control is-expanded">
-                        <div class="select is-fullwidth">
-                          <select name="Key bits" id="Key bits" {{on "change" this.onChange}}>
-                            {{#each @model.keyBitsConditional as |val|}}
-                              <option selected={{eq val.value val}} value={{or val.value val}}>
-                                {{or val}}
-                              </option>
-                            {{/each}}
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-                  {{else}}
-                    <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} @showHelpText={{false}} />
-                  {{/if}}
+                  <FormField
+                    data-test-field={{true}}
+                    @attr={{if (eq attr.name "keyBits") @model.keyBitsConditional attr}}
+                    @model={{@model}}
+                    @showHelpText={{false}}
+                  />
                 {{/each}}
                 {{#if (eq group "Domain handling")}}
                   <p><Icon @name="info" aria-label="description" />

@@ -110,8 +110,33 @@ export default class PkiRoleEngineModel extends Model {
       any: [0],
     };
     const attrs = expandAttributeMeta(this, ['keyBits']);
-    return (attrs[0].options['possibleValues'] = keyBitOptions[this.keyType]);
+    attrs[0].options['possibleValues'] = keyBitOptions[this.keyType];
+    return attrs[0];
   }
+
+  @attr('number', {
+    label: 'Signature bits',
+    possibleValues: [
+      {
+        value: 0,
+        displayName: '0 to automatically detect based on key length',
+      },
+      {
+        value: 256,
+        displayName: '256 for SHA-2-256',
+      },
+      {
+        value: 384,
+        displayName: '384 for SHA-2-384',
+      },
+      {
+        value: 512,
+        displayName: '512 for SHA-2-5124',
+      },
+    ],
+  })
+  signatureBits;
+
   // must be a getter so it can be added to the prototype needed in the pathHelp service on the line here: if (newModel.merged || modelProto.useOpenAPI !== true) {
   get useOpenAPI() {
     return true;
