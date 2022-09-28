@@ -1,17 +1,10 @@
 <div class="column is-narrow is-flex-center has-text-grey has-right-margin-s has-top-margin-negative-s">
-  <RadioButton
-    class="radio"
-    name={{@attr.name}}
-    id={{"ttl"}}
-    @value={{"ttl"}}
-    @onChange={{this.selectionChange}}
-    @groupValue={{this.groupValue}}
-  />
+  <RadioButton class="radio" name="ttl" @value="ttl" @onChange={{this.selectionChange}} @groupValue={{this.groupValue}} />
   <label class="has-left-margin-xs">
     <TtlPicker2
-      data-test-input={{@attr.name}}
+      data-test-input="ttl"
       @onChange={{this.setAndBroadcastTtl}}
-      @label={{"TTL"}}
+      @label="TTL"
       @helperTextEnabled={{@attr.options.helperTextEnabled}}
       @description={{@attr.helpText}}
       @time={{this.ttlTime}}
@@ -23,9 +16,8 @@
 <div class="column is-narrow is-flex-center has-text-grey has-right-margin-s">
   <RadioButton
     class="radio"
-    name={{@attr.name}}
-    id={{"specificDate"}}
-    @value={{"specificDate"}}
+    name="not_after"
+    @value="specificDate"
     @onChange={{this.selectionChange}}
     @groupValue={{this.groupValue}}
   />
@@ -36,14 +28,14 @@
     </p>
     {{#if (eq this.groupValue "specificDate")}}
       <input
-        data-test-input={{@attr.name}}
-        id={{@attr.name}}
+        data-test-input="not_after"
+        id="not_after"
         autocomplete="off"
         spellcheck="false"
-        value={{""}}
+        value={{this.notAfter}}
         {{on "input" this.setAndBroadcastInput}}
         class="input"
-        maxLength={{"21"}}
+        maxLength="21"
       />
     {{/if}}
   </label>
