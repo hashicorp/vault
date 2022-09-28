@@ -113,4 +113,20 @@ module('Integration | Component | path filter config list', function (hooks) {
     await searchSelect.options.objectAt(1).click();
     assert.ok(this.config.paths.includes('ns1/namespace-kv/'), 'adds namespace mount to paths');
   });
+
+  test('it selects multiple mounts from different groupNames', async function (assert) {
+    this.set('config', { mode: 'allow', paths: [] });
+    this.set('paths', []);
+    await render(hbs`<PathFilterConfigList @config={{config}} @paths={{paths}} />`);
+    await clickTrigger();
+    await searchSelect.options.objectAt(1).click();
+    await clickTrigger();
+    await typeInSearch('ns1');
+    await searchSelect.options.objectAt(1).click();
+    assert.dom('[data-test-selected-option="0"]').hasText('auth/userpass/', 'renders first mount selected');
+    assert
+      .dom('[data-test-selected-option="1"]')
+      .hasText('ns1/namespace-kv/', 'renders second mount selected');
+    assert.propEqual(this.config.paths, ['auth/userpass/', 'ns1/namespace-kv/'], 'adds both mounts to paths');
+  });
 });
