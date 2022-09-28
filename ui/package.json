@@ -123,7 +123,7 @@
     "ember-qrcode-shim": "^0.4.0",
     "ember-qunit": "^5.1.5",
     "ember-resolver": "^8.0.3",
-    "ember-responsive": "^3.0.0-beta.3",
+    "ember-responsive": "5.0.0",
     "ember-router-helpers": "^0.4.0",
     "ember-service-worker": "meirish/ember-service-worker#configurable-scope",
     "ember-sinon": "^4.0.0",
