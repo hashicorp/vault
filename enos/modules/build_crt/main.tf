@@ -19,10 +19,10 @@ variable "goos" {
   default     = "linux"
 }
 
-variable "artifactory_host" {default = null}
-variable "artifactory_repo" {default = null}
-variable    "artifactory_username" {default = null}
-variable    "artifactory_token" {default = null}
+variable "artifactory_host" { default = null }
+variable "artifactory_repo" { default = null }
+variable "artifactory_username" { default = null }
+variable "artifactory_token" { default = null }
 variable "arch" {
   default = null
 }
