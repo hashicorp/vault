@@ -419,6 +419,15 @@ All requests will resolve the specified proxy; there is no way to exclude
 ~> Note: If both `VAULT_HTTP_PROXY` and `VAULT_PROXY_ADDR` environment
 variables are supplied, `VAULT_PROXY_ADDR` will be prioritized and preferred.
 
+### `VAULT_DISABLE_REDIRECTS`
+
+Disables the default client behavior, which honors a single redirect response from a request.
+
+Disables the default behavior of the Vault client, Prevent the Vault client from 
+Do not verify Vault's presented certificate before communicating with it.
+Setting this variable is not recommended and voids Vault's [security
+model](/docs/internals/security).
+
 ## Flags
 
 There are different CLI flags that are available depending on subcommands. Some

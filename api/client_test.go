@@ -209,6 +209,44 @@ func TestClientBadToken(t *testing.T) {
 	}
 }
 
+func TestClientRedirectWhenDisabled(t *testing.T) {
+	tests := map[string]struct {
+		statusCode int
+	}{
+		"Moved permanently":  {statusCode: 301},
+		"Found":              {statusCode: 302},
+		"Temporary Redirect": {statusCode: 307},
+	}
+
+	for name, tc := range tests {
+		func() {
+			respFunc := func(w http.ResponseWriter, req *http.Request) {
+				w.Header().Set("Location", DefaultConfig().Address)
+				w.WriteHeader(tc.statusCode)
+			}
+
+			config, ln := testHTTPServer(t, http.HandlerFunc(respFunc))
+			config.DisableRedirects = true
+			defer ln.Close()
+
+			client, err := NewClient(config)
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			req := client.NewRequest("GET", "/")
+			resp, err := client.rawRequestWithContext(context.Background(), req)
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			if resp.StatusCode != tc.statusCode {
+				t.Errorf("Expected %s and status code %v got %v", name, tc.statusCode, resp.StatusCode)
+			}
+		}()
+	}
+}
+
 func TestClientRedirect(t *testing.T) {
 	primary := func(w http.ResponseWriter, req *http.Request) {
 		w.Write([]byte("test"))
@@ -320,6 +358,7 @@ func TestClientEnvSettings(t *testing.T) {
 	oldClientKey := os.Getenv(EnvVaultClientKey)
 	oldSkipVerify := os.Getenv(EnvVaultSkipVerify)
 	oldMaxRetries := os.Getenv(EnvVaultMaxRetries)
+	oldDisableRedirects := os.Getenv(EnvVaultDisableRedirects)
 
 	os.Setenv(EnvVaultCACert, cwd+"/test-fixtures/keys/cert.pem")
 	os.Setenv(EnvVaultCACertBytes, string(caCertBytes))
@@ -328,6 +367,7 @@ func TestClientEnvSettings(t *testing.T) {
 	os.Setenv(EnvVaultClientKey, cwd+"/test-fixtures/keys/key.pem")
 	os.Setenv(EnvVaultSkipVerify, "true")
 	os.Setenv(EnvVaultMaxRetries, "5")
+	os.Setenv(EnvVaultDisableRedirects, "true")
 
 	defer func() {
 		os.Setenv(EnvVaultCACert, oldCACert)
@@ -337,6 +377,7 @@ func TestClientEnvSettings(t *testing.T) {
 		os.Setenv(EnvVaultClientKey, oldClientKey)
 		os.Setenv(EnvVaultSkipVerify, oldSkipVerify)
 		os.Setenv(EnvVaultMaxRetries, oldMaxRetries)
+		os.Setenv(EnvVaultDisableRedirects, oldDisableRedirects)
 	}()
 
 	config := DefaultConfig()
@@ -353,6 +394,9 @@ func TestClientEnvSettings(t *testing.T) {
 	}
 	if tlsConfig.InsecureSkipVerify != true {
 		t.Fatalf("bad: %v", tlsConfig.InsecureSkipVerify)
+	}
+	if config.DisableRedirects != true {
+		t.Fatalf("bad: expected disable redirects to be true: %v", config.DisableRedirects)
 	}
 }
 
