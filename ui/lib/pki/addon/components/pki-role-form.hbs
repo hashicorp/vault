@@ -31,7 +31,6 @@
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
     {{! ARG TODO write a test for namespace reminder }}
     <NamespaceReminder @mode={{if @model.isNew "create" "update"}} @noun="PKI role" />
-    {{! This is the code from FormFieldGroupsLoop. However, because we need to pass the attr into the yielded component, I'm unable to use that component.}}
     <FormFieldGroupsLoop
       @model={{@model}}
       @mode={{if @model.isNew "create" "update"}}
