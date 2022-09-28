@@ -509,21 +509,85 @@ func TestExternalPlugin_getBackendTypeVersion(t *testing.T) {
 	}
 }
 
+func TestExternalPlugin_CheckFilePermissions(t *testing.T) {
+	// Turn on the check.
+	if err := os.Setenv(consts.VaultEnableFilePermissionsCheckEnv, "true"); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := os.Unsetenv(consts.VaultEnableFilePermissionsCheckEnv); err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	for name, tc := range map[string]struct {
+		pluginNameFmt string
+		pluginType    consts.PluginType
+		pluginVersion string
+	}{
+		"plugin name and file name match": {
+			pluginNameFmt: "%s",
+			pluginType:    consts.PluginTypeCredential,
+		},
+		"plugin name and file name mismatch": {
+			pluginNameFmt: "%s-foo",
+			pluginType:    consts.PluginTypeSecrets,
+		},
+		"plugin name has slash": {
+			pluginNameFmt: "%s/foo",
+			pluginType:    consts.PluginTypeCredential,
+		},
+		"plugin with version": {
+			pluginNameFmt: "%s/foo",
+			pluginType:    consts.PluginTypeCredential,
+			pluginVersion: "v1.2.3",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			c, pluginName, pluginSHA256 := testCoreWithPlugin(t, tc.pluginType, tc.pluginVersion)
+			registeredPluginName := fmt.Sprintf(tc.pluginNameFmt, pluginName)
+
+			// Permissions will be checked once during registration.
+			req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("plugins/catalog/%s/%s", tc.pluginType.String(), registeredPluginName))
+			req.Data = map[string]interface{}{
+				"command": pluginName,
+				"sha256":  pluginSHA256,
+				"version": tc.pluginVersion,
+			}
+			resp, err := c.systemBackend.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || resp.Error() != nil {
+				t.Fatalf("resp: %s, err: %s", resp.Error(), err)
+			}
+
+			// Now attempt to mount the plugin, which should trigger checking the permissions again.
+			req = logical.TestRequest(t, logical.UpdateOperation, mountTable(tc.pluginType))
+			req.Data = map[string]interface{}{
+				"type": registeredPluginName,
+			}
+			if tc.pluginVersion != "" {
+				req.Data["config"] = map[string]interface{}{
+					"plugin_version": tc.pluginVersion,
+				}
+			}
+			resp, err = c.systemBackend.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || resp.Error() != nil {
+				t.Fatalf("resp: %s, err: %s", resp.Error(), err)
+			}
+		})
+	}
+}
+
 func registerPlugin(t *testing.T, sys *SystemBackend, pluginName, pluginType, version, sha string) {
 	t.Helper()
 	req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("plugins/catalog/%s/%s", pluginType, pluginName))
 	req.Data = map[string]interface{}{
-		"name":    pluginName,
 		"command": pluginName,
 		"sha256":  sha,
 		"version": version,
 	}
 	resp, err := sys.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp.Error() != nil {
-		t.Fatalf("%#v", resp)
+	if err != nil || resp.Error() != nil {
+		t.Fatalf("resp: %s, err: %s", resp.Error(), err)
 	}
 }
 
@@ -539,11 +603,8 @@ func mountPlugin(t *testing.T, sys *SystemBackend, pluginName string, pluginType
 		}
 	}
 	resp, err := sys.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp.Error() != nil {
-		t.Fatalf("%#v", resp)
+	if err != nil || resp.Error() != nil {
+		t.Fatalf("resp: %s, err: %s", resp.Error(), err)
 	}
 }
 
@@ -554,6 +615,6 @@ func mountTable(pluginType consts.PluginType) string {
 	case consts.PluginTypeSecrets:
 		return "mounts/foo"
 	default:
-		panic("test does not support plugin type yet")
+		panic("test does not support mounting plugin type yet: " + pluginType.String())
 	}
 }
