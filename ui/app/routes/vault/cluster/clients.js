@@ -2,9 +2,11 @@ import Route from '@ember/routing/route';
 import RSVP from 'rsvp';
 import { action } from '@ember/object';
 import getStorage from 'vault/lib/token-storage';
-
+import { inject as service } from '@ember/service';
 const INPUTTED_START_DATE = 'vault:ui-inputted-start-date';
+
 export default class ClientsRoute extends Route {
+  @service store;
   async getVersionHistory() {
     try {
       let arrayOfModels = [];

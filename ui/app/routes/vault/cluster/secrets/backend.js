@@ -1,9 +1,11 @@
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
 export default Route.extend({
+  store: service(),
   flashMessages: service(),
   secretMountPath: service(),
   oldModel: null,
+
   model(params) {
     let { backend } = params;
     this.secretMountPath.update(backend);
