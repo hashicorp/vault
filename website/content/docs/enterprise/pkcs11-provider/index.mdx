@@ -177,7 +177,7 @@ The password can be supplied to the provider in two ways:
 - The `VAULT_KMIP_KEY_PASSWORD` environment variable, or
 - the "PIN" parameter to the `C_Login` PKCS#11 function will be used to try to decrypt an encrypted TLS key.
 
-Note that only a single password can be supplied via the `VAULT_KMIP_KEY_PASSWORD`, so if multiple slots in the HCL file use encrypted TLS keys, they will either need to be encrypted with the same password, or use the `C_Login` method to specify the password.
+Note that only a single password can be supplied via the `VAULT_KMIP_KEY_PASSWORD`, so if multiple slots in the HCL file use encrypted TLS keys, they will need to be encrypted with the same password, or use the `C_Login` method to specify the password.
 
 ## Error Handling
 
