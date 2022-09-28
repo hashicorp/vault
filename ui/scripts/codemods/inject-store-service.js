@@ -19,6 +19,12 @@ export default function transformer({ source }, api) {
       },
     }).length;
   };
+  const recastOptions = {
+    reuseWhitespace: false,
+    wrapColumn: 110,
+    quote: 'single',
+    trailingComma: true,
+  };
   let didInjectStore = false;
 
   // find class bodies and filter down to ones that access this.store
@@ -56,8 +62,25 @@ export default function transformer({ source }, api) {
     }
   }
 
-  // find object expressions and filter down to ones that access this.store (Ember classic)
-  const objectsAccessingStore = j(source).find(j.ObjectExpression).filter(filterForStore);
+  // find .extend object expressions and filter down to ones that access this.store
+  const objectsAccessingStore = j(source)
+    .find(j.CallExpression, {
+      callee: {
+        type: 'MemberExpression',
+        property: {
+          name: 'extend',
+        },
+      },
+      arguments: [{ type: 'ObjectExpression' }],
+    })
+    .filter(filterForStore)
+    .find(j.ObjectExpression)
+    .filter((path) => {
+      // filter object expressions that belong to .extend
+      // otherwise store will also be injected in actions: { } block of component for example
+      const callee = path.parent.value.callee;
+      return callee && callee.property?.name === 'extend';
+    });
 
   if (objectsAccessingStore.length) {
     // filter down to objects where service is not injected
@@ -85,7 +108,7 @@ export default function transformer({ source }, api) {
         .forEach((path) => {
           path.value.properties.unshift(storeService);
         })
-        .toSource();
+        .toSource(recastOptions);
 
       didInjectStore = true;
     }
@@ -109,7 +132,7 @@ export default function transformer({ source }, api) {
       source = imports
         .at(imports.length - 1)
         .insertAfter(injectionImport)
-        .toSource({ reuseWhitespace: false });
+        .toSource(recastOptions);
     }
   }
 
