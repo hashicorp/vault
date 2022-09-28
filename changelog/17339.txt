@@ -1,0 +1,3 @@
+```release-note:bug
+plugins/kv: Ensure KV v2 operations are only matched when the URL path doesn't contain a trailing slash. Previously caused 500 Internal Server Errors.
+```
