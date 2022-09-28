@@ -58,10 +58,7 @@ export default class FormFieldComponent extends Component {
     return this.args.disabled || false;
   }
   get showHelpText() {
-    if (this.args.showHelpText === false) {
-      return false;
-    }
-    return true;
+    return this.args.showHelpText === false ? false : true;
   }
   get subText() {
     return this.args.subText || '';

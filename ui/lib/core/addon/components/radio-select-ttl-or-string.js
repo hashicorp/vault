@@ -20,8 +20,8 @@ import { tracked } from '@glimmer/tracking';
 
 export default class RadioSelectTtlOrString extends Component {
   @tracked groupValue = 'ttl';
-  @tracked ttlTime = '';
-  @tracked notAfter = '';
+  @tracked ttlTime;
+  @tracked notAfter;
 
   @action onRadioButtonChange(selection) {
     this.groupValue = selection;
