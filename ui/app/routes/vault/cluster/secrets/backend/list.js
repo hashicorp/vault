@@ -8,10 +8,13 @@ import { normalizePath } from 'vault/utils/path-encoding-helpers';
 const SUPPORTED_BACKENDS = supportedSecretBackends();
 
 export default Route.extend({
+  store: service(),
   templateName: 'vault/cluster/secrets/backend/list',
   pathHelp: service('path-help'),
+
   // By default assume user doesn't have permissions
   noMetadataPermissions: true,
+
   queryParams: {
     page: {
       refreshModel: true,

@@ -3,9 +3,12 @@ import { isSameMonth } from 'date-fns';
 import RSVP from 'rsvp';
 import getStorage from 'vault/lib/token-storage';
 import { parseRFC3339 } from 'core/utils/date-formatters';
-
+import { inject as service } from '@ember/service';
 const INPUTTED_START_DATE = 'vault:ui-inputted-start-date';
+
 export default class HistoryRoute extends Route {
+  @service store;
+
   async getActivity(start_time) {
     if (isSameMonth(new Date(start_time), new Date())) {
       // triggers empty state to manually enter date if license begins in current month

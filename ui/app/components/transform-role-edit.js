@@ -1,6 +1,8 @@
 import TransformBase, { addToList, removeFromList } from './transform-edit-base';
+import { inject as service } from '@ember/service';
 
 export default TransformBase.extend({
+  store: service(),
   initialTransformations: null,
 
   init() {

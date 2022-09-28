@@ -6,6 +6,7 @@ import { capitalize } from '@ember/string';
 import { task } from 'ember-concurrency';
 
 export default class MfaMethodCreateController extends Controller {
+  @service store;
   @service flashMessages;
   @service router;
 
