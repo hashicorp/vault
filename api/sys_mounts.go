@@ -186,26 +186,6 @@ func (c *Sys) RemountStatusWithContext(ctx context.Context, migrationID string) 
 	return &result, err
 }
 
-func (c *Sys) TuneAuthMount(path string, config MountConfigInput) error {
-	return c.TuneAuthMountWithContext(context.Background(), path, config)
-}
-
-func (c *Sys) TuneAuthMountWithContext(ctx context.Context, path string, config MountConfigInput) error {
-	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
-	defer cancelFunc()
-
-	r := c.c.NewRequest(http.MethodPost, fmt.Sprintf("/v1/sys/%s/tune", path))
-	if err := r.SetJSONBody(config); err != nil {
-		return err
-	}
-
-	resp, err := c.c.rawRequestWithContext(ctx, r)
-	if err == nil {
-		defer resp.Body.Close()
-	}
-	return err
-}
-
 func (c *Sys) TuneMount(path string, config MountConfigInput) error {
 	return c.TuneMountWithContext(context.Background(), path, config)
 }
