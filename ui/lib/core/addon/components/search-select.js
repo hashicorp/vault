@@ -178,6 +178,63 @@ export default class SearchSelect extends Component {
     }
   }
 
+  shouldShowCreate(id, searchResults) {
+    if (searchResults && searchResults.length && searchResults.firstObject.groupName) {
+      return !searchResults.some((group) => group.options.findBy('id', id));
+    }
+    let existingOption =
+      this.dropdownOptions &&
+      (this.dropdownOptions.findBy('id', id) || this.dropdownOptions.findBy('name', id));
+    if (this.args.disallowNewItems && !existingOption) {
+      return false;
+    }
+    return !existingOption;
+  }
+
+  // ----- adapted from ember-power-select-with-create
+  addCreateOption(term, results) {
+    if (this.shouldShowCreate(term, results)) {
+      const name = `Add new ${singularize(this.args.label.toLowerCase() || 'item')}: ${term}`;
+      const suggestion = {
+        __isSuggestion__: true,
+        __value__: term,
+        name,
+        id: name,
+      };
+      results.unshift(suggestion);
+    }
+  }
+
+  filter(options, searchText) {
+    const matcher = (option, text) => defaultMatcher(option.searchText, text);
+    return filterOptions(options || [], searchText, matcher);
+  }
+  // -----
+
+  customizeObject(option) {
+    if (!option) return;
+    // only customize object if @passObject=true
+    if (!this.args.passObject) return option;
+
+    let additionalKeys;
+    if (this.args.objectKeys) {
+      // pull attrs corresponding to objectKeys from model record, add to the selected option (object) and send to the parent
+      additionalKeys = Object.fromEntries(this.args.objectKeys.map((key) => [key, option[key]]));
+      // filter any undefined attrs, which means the model did not have a value for that attr
+      // no value could mean the model was not hydrated, the record is new or the model doesn't have that attribute
+      Object.keys(additionalKeys).forEach((key) => {
+        if (additionalKeys[key] === undefined) {
+          delete additionalKeys[key];
+        }
+      });
+    }
+    return {
+      id: option.id,
+      isNew: !!option.new,
+      ...additionalKeys,
+    };
+  }
+
   @action
   discardSelection(selected) {
     this.selectedOptions.removeObject(selected);
@@ -208,19 +265,6 @@ export default class SearchSelect extends Component {
     return newOptions;
   }
 
-  addCreateOption(term, results) {
-    if (this.shouldShowCreate(term, results)) {
-      const name = `Add new ${singularize(this.args.label.toLowerCase() || 'item')}: ${term}`;
-      const suggestion = {
-        __isSuggestion__: true,
-        __value__: term,
-        name,
-        id: name,
-      };
-      results.unshift(suggestion);
-    }
-  }
-
   @action
   selectOrCreate(selection) {
     if (selection && selection.__isSuggestion__) {
@@ -233,46 +277,5 @@ export default class SearchSelect extends Component {
     this.handleChange();
   }
 
-  filter(options, searchText) {
-    const matcher = (option, text) => defaultMatcher(option.searchText, text);
-    return filterOptions(options || [], searchText, matcher);
-  }
   // -----
-
-  shouldShowCreate(id, searchResults) {
-    if (searchResults && searchResults.length && searchResults.firstObject.groupName) {
-      return !searchResults.some((group) => group.options.findBy('id', id));
-    }
-    let existingOption =
-      this.dropdownOptions &&
-      (this.dropdownOptions.findBy('id', id) || this.dropdownOptions.findBy('name', id));
-    if (this.args.disallowNewItems && !existingOption) {
-      return false;
-    }
-    return !existingOption;
-  }
-
-  customizeObject(option) {
-    if (!option) return;
-    // only customize object if @passObject=true
-    if (!this.args.passObject) return option;
-
-    let additionalKeys;
-    if (this.args.objectKeys) {
-      // pull attrs corresponding to objectKeys from model record, add to the selected option (object) and send to the parent
-      additionalKeys = Object.fromEntries(this.args.objectKeys.map((key) => [key, option[key]]));
-      // filter any undefined attrs, which means the model did not have a value for that attr
-      // no value could mean the model was not hydrated, the record is new or the model doesn't have that attribute
-      Object.keys(additionalKeys).forEach((key) => {
-        if (additionalKeys[key] === undefined) {
-          delete additionalKeys[key];
-        }
-      });
-    }
-    return {
-      id: option.id,
-      isNew: !!option.new,
-      ...additionalKeys,
-    };
-  }
 }
