@@ -107,6 +107,7 @@ func ParseUserLockouts(result *SharedConfig, list *ast.ObjectList) error {
 func setDefaultUserLockoutValuesInMap(userLockoutsMap map[string]*UserLockout) map[string]*UserLockout {
 	if userLockoutAll, ok := userLockoutsMap["all"]; !ok {
 		var tmpUserLockoutConfig UserLockout
+		tmpUserLockoutConfig.Type = "all"
 		tmpUserLockoutConfig.LockoutThreshold = UserLockoutThresholdDefault
 		tmpUserLockoutConfig.LockoutDuration = UserLockoutDurationDefault
 		tmpUserLockoutConfig.LockoutCounterReset = UserLockoutCounterResetDefault
