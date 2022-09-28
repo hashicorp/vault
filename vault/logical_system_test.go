@@ -5086,7 +5086,7 @@ func TestSortVersionedPlugins(t *testing.T) {
 		// Include differing versions twice so we can test out equality too.
 		"differing types, names and versions": append(differingTypes,
 			append(differingNames,
-				append(differingVersions, differingVersions...)...)...),
+				append(differingVersions, differingTypes...)...)...),
 		"mix of unversioned, versioned, and builtin": versionedUnversionedAndBuiltin,
 	} {
 		t.Run(name, func(t *testing.T) {
