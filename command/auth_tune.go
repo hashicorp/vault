@@ -20,18 +20,18 @@ var (
 type AuthTuneCommand struct {
 	*BaseCommand
 
-	flagAuditNonHMACRequestKeys   []string
-	flagAuditNonHMACResponseKeys  []string
-	flagDefaultLeaseTTL           time.Duration
-	flagDescription               string
-	flagListingVisibility         string
-	flagMaxLeaseTTL               time.Duration
-	flagPassthroughRequestHeaders []string
-	flagAllowedResponseHeaders    []string
-	flagOptions                   map[string]string
-	flagTokenType                 string
-	flagVersion                   int
-	flagPluginVersion             string
+	flagAuditNonHMACRequestKeys         []string
+	flagAuditNonHMACResponseKeys        []string
+	flagDefaultLeaseTTL                 time.Duration
+	flagDescription                     string
+	flagListingVisibility               string
+	flagMaxLeaseTTL                     time.Duration
+	flagPassthroughRequestHeaders       []string
+	flagAllowedResponseHeaders          []string
+	flagOptions                         map[string]string
+	flagTokenType                       string
+	flagVersion                         int
+	flagPluginVersion                   string
 	flagUserLockoutThreshold            int
 	flagUserLockoutDuration             time.Duration
 	flagUserLockoutCounterResetDuration time.Duration

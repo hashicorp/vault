@@ -19,8 +19,8 @@ type SharedConfig struct {
 
 	EntSharedConfig
 
-	Listeners          []*Listener          `hcl:"-"`
-	UserLockoutConfigs []*UserLockoutConfig `hcl:"-"`
+	Listeners    []*Listener    `hcl:"-"`
+	UserLockouts []*UserLockout `hcl:"-"`
 
 	Seals   []*KMS   `hcl:"-"`
 	Entropy *Entropy `hcl:"-"`
@@ -203,9 +203,9 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 	}
 
 	// Sanitize user lockout stanza
-	if len(c.UserLockoutConfigs) != 0 {
+	if len(c.UserLockouts) != 0 {
 		var sanitizedUserLockouts []interface{}
-		for _, userlockout := range c.UserLockoutConfigs {
+		for _, userlockout := range c.UserLockouts {
 			cleanUserLockout := map[string]interface{}{
 				"type":                  userlockout.Type,
 				"lockout_threshold":     userlockout.LockoutThreshold,

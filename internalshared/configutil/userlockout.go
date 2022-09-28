@@ -19,7 +19,7 @@ const (
 	DisableUserLockoutDefault      = false
 )
 
-type UserLockoutConfig struct {
+type UserLockout struct {
 	Type                   string
 	LockoutThreshold       int64         `hcl:"-"`
 	LockoutThresholdRaw    interface{}   `hcl:"lockout_threshold"`
@@ -33,10 +33,10 @@ type UserLockoutConfig struct {
 
 func ParseUserLockouts(result *SharedConfig, list *ast.ObjectList) error {
 	var err error
-	result.UserLockoutConfigs = make([]*UserLockoutConfig, 0, len(list.Items))
-	userLockoutConfigsMap := make(map[string]*UserLockoutConfig)
+	result.UserLockouts = make([]*UserLockout, 0, len(list.Items))
+	userLockoutsMap := make(map[string]*UserLockout)
 	for i, item := range list.Items {
-		var userLockoutConfig UserLockoutConfig
+		var userLockoutConfig UserLockout
 		if err := hcl.DecodeObject(&userLockoutConfig, item.Val); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("userLockouts.%d:", i))
 		}
@@ -93,25 +93,25 @@ func ParseUserLockouts(result *SharedConfig, list *ast.ObjectList) error {
 				}
 			}
 		}
-		userLockoutConfigsMap[userLockoutConfig.Type] = &userLockoutConfig
+		userLockoutsMap[userLockoutConfig.Type] = &userLockoutConfig
 	}
 
-	userLockoutConfigsMap = setMissingUserLockoutValuesInMap(userLockoutConfigsMap)
-	for _, userLockoutValues := range userLockoutConfigsMap {
-		result.UserLockoutConfigs = append(result.UserLockoutConfigs, userLockoutValues)
+	userLockoutsMap = setMissingUserLockoutValuesInMap(userLockoutsMap)
+	for _, userLockoutValues := range userLockoutsMap {
+		result.UserLockouts = append(result.UserLockouts, userLockoutValues)
 	}
 	return nil
 }
 
 // setDefaultUserLockoutValuesInMap sets user lockout default values for key "all" for user lockout fields thats are not configured
-func setDefaultUserLockoutValuesInMap(userLockoutConfigsMap map[string]*UserLockoutConfig) map[string]*UserLockoutConfig {
-	if userLockoutAll, ok := userLockoutConfigsMap["all"]; !ok {
-		var tmpUserLockoutConfig UserLockoutConfig
+func setDefaultUserLockoutValuesInMap(userLockoutsMap map[string]*UserLockout) map[string]*UserLockout {
+	if userLockoutAll, ok := userLockoutsMap["all"]; !ok {
+		var tmpUserLockoutConfig UserLockout
 		tmpUserLockoutConfig.LockoutThreshold = UserLockoutThresholdDefault
 		tmpUserLockoutConfig.LockoutDuration = UserLockoutDurationDefault
 		tmpUserLockoutConfig.LockoutCounterReset = UserLockoutCounterResetDefault
 		tmpUserLockoutConfig.DisableLockout = DisableUserLockoutDefault
-		userLockoutConfigsMap["all"] = &tmpUserLockoutConfig
+		userLockoutsMap["all"] = &tmpUserLockoutConfig
 
 	} else {
 		if userLockoutAll.LockoutThresholdRaw == nil {
@@ -126,27 +126,27 @@ func setDefaultUserLockoutValuesInMap(userLockoutConfigsMap map[string]*UserLock
 		if userLockoutAll.DisableLockoutRaw == nil {
 			userLockoutAll.DisableLockout = DisableUserLockoutDefault
 		}
-		userLockoutConfigsMap[userLockoutAll.Type] = userLockoutAll
+		userLockoutsMap[userLockoutAll.Type] = userLockoutAll
 	}
-	return userLockoutConfigsMap
+	return userLockoutsMap
 }
 
 // setDefaultUserLockoutValuesInMap sets missing user lockout fields for other auth types with default values (from key "all")
-func setMissingUserLockoutValuesInMap(userLockoutConfigsMap map[string]*UserLockoutConfig) map[string]*UserLockoutConfig {
-	userLockoutConfigsMap = setDefaultUserLockoutValuesInMap(userLockoutConfigsMap)
-	for _, userLockoutAuth := range userLockoutConfigsMap {
+func setMissingUserLockoutValuesInMap(userLockoutsMap map[string]*UserLockout) map[string]*UserLockout {
+	userLockoutsMap = setDefaultUserLockoutValuesInMap(userLockoutsMap)
+	for _, userLockoutAuth := range userLockoutsMap {
 		// set missing values
 		if userLockoutAuth.LockoutThresholdRaw == nil {
-			userLockoutAuth.LockoutThreshold = userLockoutConfigsMap["all"].LockoutThreshold
+			userLockoutAuth.LockoutThreshold = userLockoutsMap["all"].LockoutThreshold
 		}
 		if userLockoutAuth.LockoutDurationRaw == nil {
-			userLockoutAuth.LockoutDuration = userLockoutConfigsMap["all"].LockoutDuration
+			userLockoutAuth.LockoutDuration = userLockoutsMap["all"].LockoutDuration
 		}
 		if userLockoutAuth.LockoutCounterResetRaw == nil {
-			userLockoutAuth.LockoutCounterReset = userLockoutConfigsMap["all"].LockoutCounterReset
+			userLockoutAuth.LockoutCounterReset = userLockoutsMap["all"].LockoutCounterReset
 		}
 		if userLockoutAuth.DisableLockoutRaw == nil {
-			userLockoutAuth.DisableLockout = userLockoutConfigsMap["all"].DisableLockout
+			userLockoutAuth.DisableLockout = userLockoutsMap["all"].DisableLockout
 		}
 
 		// set nil values to Raw fields
@@ -163,8 +163,8 @@ func setMissingUserLockoutValuesInMap(userLockoutConfigsMap map[string]*UserLock
 			userLockoutAuth.DisableLockoutRaw = nil
 		}
 
-		userLockoutConfigsMap[userLockoutAuth.Type] = userLockoutAuth
+		userLockoutsMap[userLockoutAuth.Type] = userLockoutAuth
 	}
 
-	return userLockoutConfigsMap
+	return userLockoutsMap
 }

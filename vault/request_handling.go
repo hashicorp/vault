@@ -2003,7 +2003,7 @@ func (c *Core) GetUserLockoutFromConfig(logicalType string) UserLockoutConfig {
 	if conf == nil {
 		return UserLockoutConfig{}
 	}
-	userlockouts := conf.(*server.Config).UserLockoutConfigs
+	userlockouts := conf.(*server.Config).UserLockouts
 
 	if userlockouts == nil {
 		return UserLockoutConfig{}
@@ -2012,7 +2012,7 @@ func (c *Core) GetUserLockoutFromConfig(logicalType string) UserLockoutConfig {
 	var commonUserLockoutConfig UserLockoutConfig
 	var authUserLockoutConfig UserLockoutConfig
 	for _, userLockoutConfig := range userlockouts {
-		if userLockoutConfig.Type == logicalType{
+		if userLockoutConfig.Type == logicalType {
 			authUserLockoutConfig.LockoutThreshold = userLockoutConfig.LockoutThreshold
 			authUserLockoutConfig.LockoutDuration = userLockoutConfig.LockoutDuration
 			authUserLockoutConfig.LockoutCounterReset = userLockoutConfig.LockoutCounterReset

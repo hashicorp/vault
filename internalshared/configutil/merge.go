@@ -14,11 +14,11 @@ func (c *SharedConfig) Merge(c2 *SharedConfig) *SharedConfig {
 		result.Listeners = append(result.Listeners, l)
 	}
 
-	for _, userlockout := range c.UserLockoutConfigs {
-		result.UserLockoutConfigs = append(result.UserLockoutConfigs, userlockout)
+	for _, userlockout := range c.UserLockouts {
+		result.UserLockouts = append(result.UserLockouts, userlockout)
 	}
-	for _, userlockout := range c2.UserLockoutConfigs {
-		result.UserLockoutConfigs = append(result.UserLockoutConfigs, userlockout)
+	for _, userlockout := range c2.UserLockouts {
+		result.UserLockouts = append(result.UserLockouts, userlockout)
 	}
 
 	result.HCPLinkConf = c.HCPLinkConf
