@@ -122,18 +122,17 @@ export default class SearchSelect extends Component {
       this.selectedOptions = this.args.parentManageSelected;
     }
     this.dropdownOptions = [];
-
-    if (!this.args.models && this.args.options) {
-      const { options } = this.args;
-      if (options.some((e) => Object.keys(e).includes('groupName'))) {
-        this.dropdownOptions = options;
-      } else {
-        this.dropdownOptions = [...this.addSearchText(options)];
-        this.selectedOptions = this.formatSelectedAndUpdateDropdown(this.selectedOptions);
+    if (!this.args.models) {
+      if (this.args.options) {
+        const { options } = this.args;
+        if (options.some((e) => Object.keys(e).includes('groupName'))) {
+          this.dropdownOptions = options;
+        } else {
+          this.dropdownOptions = [...this.addSearchText(options)];
+        }
       }
+      return;
     }
-
-    if (!this.args.models) return;
 
     for (let modelType of this.args.models) {
       try {

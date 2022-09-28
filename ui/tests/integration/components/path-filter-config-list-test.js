@@ -114,7 +114,7 @@ module('Integration | Component | path filter config list', function (hooks) {
     assert.ok(this.config.paths.includes('ns1/namespace-kv/'), 'adds namespace mount to paths');
   });
 
-  test('it selects multiple mounts from different groupNames', async function (assert) {
+  test('it selects mounts from different groups, and puts discarded option back within group', async function (assert) {
     this.set('config', { mode: 'allow', paths: [] });
     this.set('paths', []);
     await render(hbs`<PathFilterConfigList @config={{config}} @paths={{paths}} />`);
@@ -123,10 +123,27 @@ module('Integration | Component | path filter config list', function (hooks) {
     await clickTrigger();
     await typeInSearch('ns1');
     await searchSelect.options.objectAt(1).click();
+    await clickTrigger();
+    await searchSelect.options.objectAt(0).click();
     assert.dom('[data-test-selected-option="0"]').hasText('auth/userpass/', 'renders first mount selected');
     assert
       .dom('[data-test-selected-option="1"]')
       .hasText('ns1/namespace-kv/', 'renders second mount selected');
-    assert.propEqual(this.config.paths, ['auth/userpass/', 'ns1/namespace-kv/'], 'adds both mounts to paths');
+    assert.dom('[data-test-selected-option="2"]').hasText('ns1', 'renders third mount selected');
+    assert.propEqual(
+      this.config.paths,
+      ['auth/userpass/', 'ns1/namespace-kv/', 'ns1'],
+      'adds all selections to paths'
+    );
+    await searchSelect.deleteButtons.objectAt(0).click();
+    await clickTrigger();
+    assert
+      .dom('.ember-power-select-group')
+      .hasText('Auth Methods auth/userpass/', 'puts auth method back within group');
+    await clickTrigger();
+    await searchSelect.deleteButtons.objectAt(1).click();
+    await clickTrigger();
+    assert.dom('.ember-power-select-group').hasText('Namespaces ns1', 'puts ns back within group');
+    await clickTrigger();
   });
 });
