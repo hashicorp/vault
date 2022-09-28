@@ -1743,21 +1743,21 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		err = expandStringValsWithCommas(userLockoutConfigMap)
 		if err != nil {
 			return logical.ErrorResponse(
-					"unable to parse given auth config information"),
+					"unable to parse given auth user lockout config information"),
 				logical.ErrInvalidRequest
 		}
 		if userLockoutConfigMap != nil && len(userLockoutConfigMap) != 0 {
 			err := mapstructure.Decode(userLockoutConfigMap, &apiuserLockoutConfig)
 			if err != nil {
 				return logical.ErrorResponse(
-						"unable to convert given mount config information"),
+						"unable to convert given user lockout config information"),
 					logical.ErrInvalidRequest
 			}
 
 			switch strings.ToLower(mountEntry.Type) {
 			case "all", "ldap", "approle", "userpass":
 			default:
-				return logical.ErrorResponse("mount tuning of user lockout configuration for auth type %q not allowed", mountEntry.Type),
+				return logical.ErrorResponse("tuning of user lockout configuration for auth type %q not allowed", mountEntry.Type),
 					logical.ErrInvalidRequest
 
 			}
@@ -1790,7 +1790,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 				return handleError(err)
 			}
 			if b.Core.logger.IsInfo() {
-				b.Core.logger.Info("mount tuning of user-lockout-threshold successful", "path", path, "user-lockout-threshold", userLockoutThreshold)
+				b.Core.logger.Info("tuning of user-lockout-threshold successful", "path", path, "user-lockout-threshold", userLockoutThreshold)
 			}
 
 		}
@@ -1826,7 +1826,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 				return handleError(err)
 			}
 			if b.Core.logger.IsInfo() {
-				b.Core.logger.Info("mount tuning of user-lockout-duration successful", "path", path, "user-lockout-duration", apiuserLockoutConfig.LockoutDuration)
+				b.Core.logger.Info("tuning of user-lockout-duration successful", "path", path, "user-lockout-duration", apiuserLockoutConfig.LockoutDuration)
 			}
 
 		}
@@ -1859,7 +1859,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 				return handleError(err)
 			}
 			if b.Core.logger.IsInfo() {
-				b.Core.logger.Info("mount tuning of user-lockout-counter-reset successful", "path", path, "user-lockout-counter-reset", apiuserLockoutConfig.LockoutCounterResetDuration)
+				b.Core.logger.Info("tuning of user-lockout-counter-reset successful", "path", path, "user-lockout-counter-reset", apiuserLockoutConfig.LockoutCounterResetDuration)
 			}
 		}
 		{
@@ -1879,7 +1879,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 					return handleError(err)
 				}
 				if b.Core.logger.IsInfo() {
-					b.Core.logger.Info("mount tuning of user-lockout-disable successful", "path", path, "user-lockout-disable", userLockoutDisable)
+					b.Core.logger.Info("tuning of user-lockout-disable successful", "path", path, "user-lockout-disable", userLockoutDisable)
 				}
 
 			}
