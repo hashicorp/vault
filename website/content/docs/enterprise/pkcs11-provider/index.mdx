@@ -12,7 +12,7 @@ is an open standard C API that provides a means to access cryptographic capabili
 For example, it is often used to access a Hardware Security Module (HSM) (like a [Yubikey](https://www.yubico.com/)) from a local program (such as [GPG](https://gnupg.org/)).
 
 Vault provides a PKCS#11 library (or provider) so that Vault can be used as an SSM (Software Security Module).
-This allows a user to treat Vault like any other PKCS#11 device, so you can manage keys, objects, and perform encryption and decryption in Vault using PKCS#11 calls.
+This allows a user to treat Vault like any other PKCS#11 device to manage keys, objects, and perform encryption and decryption in Vault using PKCS#11 calls.
 It uses Vault's [KMIP Secrets Engine](/docs/secrets/kmip) to provide cryptographic operations and object storage.
 
 ## Platform Support
