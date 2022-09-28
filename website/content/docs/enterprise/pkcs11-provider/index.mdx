@@ -294,7 +294,7 @@ Here is the list of supported and unsupported PKCS#11 functions:
 Due to the nature of Vault, the KMIP Secrets Engine, and PKCS#11, there are some other limitations to be aware of:
 
 - The key and object IDs returned by `C_FindObjects`, etc., are randomized for each session, and cannot be shared between sessions and have no meaning after a session is closed.
-  This is because KMIP objects, which are used to store the PKCS#11 objects, have long random strings as IDs, but the PKCS#11 object ID is limited to a 32-bit integer, in addition to the fact that the PKCS#11 provider does not have any local storage.
+  This is because KMIP objects, which are used to store the PKCS#11 objects, have long random strings as IDs, but the PKCS#11 object ID is limited to a 32-bit integer. Also, the PKCS#11 provider does not have any local storage.
 - The PKCS#11 provider's performance will be heavily dependent on the latency to the Vault server and its performance.
   This is because nearly all PKCS#11 API calls are translated 1-1 to KMIP calls, aside from some object attribute calls (which can be locally cached).
   Multiple sessions can be safely used simultaneously though, and a single Vault server node has been tested as supporting thousands of ongoing sessions.
