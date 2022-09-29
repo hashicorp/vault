@@ -250,6 +250,7 @@ module('Acceptance | mfa-method', function (hooks) {
   });
 
   test('it should edit methods', async function (assert) {
+    assert.expect(11);
     await visit('/vault/access/mfa/methods');
     const id = this.element.querySelector('[data-test-mfa-method-list-item] .tag').textContent.trim();
     const model = this.store.peekRecord('mfa-method', id);
@@ -261,7 +262,7 @@ module('Acceptance | mfa-method', function (hooks) {
       if (key === 'period') {
         assert
           .dom('[data-test-ttl-value="Period"]')
-          .hasValue(model.period.toString(), 'Period form field is populated with model value');
+          .hasValue('30', 'Period form field is populated with model value');
         assert.dom('[data-test-select="ttl-unit"]').hasValue('s', 'Correct time unit is shown for period');
       } else if (key === 'algorithm' || key === 'digits' || key === 'skew') {
         let radioElem = this.element.querySelector(`input[name=${key}]:checked`);
