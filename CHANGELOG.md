@@ -4,7 +4,7 @@
 CHANGES:
 
 * core/entities: Fixed stranding of aliases upon entity merge, and require explicit selection of which aliases should be kept when some must be deleted [[GH-16539](https://github.com/hashicorp/vault/pull/16539)]
-* core: Bump Go version to 1.18.5.
+* core: Bump Go version to 1.19.1.
 * core: Validate input parameters for vault operator init command. Vault 1.12 CLI version is needed to run operator init now. [[GH-16379](https://github.com/hashicorp/vault/pull/16379)]
 * identity: a request to `/identity/group` that includes `member_group_ids` that contains a cycle will now be responded to with a 400 rather than 500 [[GH-15912](https://github.com/hashicorp/vault/pull/15912)]
 * licensing (enterprise): Terminated licenses will no longer result in shutdown. Instead, upgrades
