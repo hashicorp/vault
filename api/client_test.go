@@ -215,14 +215,14 @@ func TestClientDisableRedirects(t *testing.T) {
 		expectedNumReqs  int
 		disableRedirects bool
 	}{
-		"Disabled redirects: Moved permanently":               {statusCode: 301, expectedNumReqs: 1, disableRedirects: true},
-		"Disabled redirects: Redirect On: Found":              {statusCode: 302, expectedNumReqs: 1, disableRedirects: true},
-		"Disabled redirects: Redirect On: Temporary Redirect": {statusCode: 307, expectedNumReqs: 1, disableRedirects: true},
-		"Enable redirects: Moved permanently":                 {statusCode: 301, expectedNumReqs: 2, disableRedirects: false},
+		"Disabled redirects: Moved permanently":  {statusCode: 301, expectedNumReqs: 1, disableRedirects: true},
+		"Disabled redirects: Found":              {statusCode: 302, expectedNumReqs: 1, disableRedirects: true},
+		"Disabled redirects: Temporary Redirect": {statusCode: 307, expectedNumReqs: 1, disableRedirects: true},
+		"Enable redirects: Moved permanently":    {statusCode: 301, expectedNumReqs: 2, disableRedirects: false},
 	}
 
 	for name, tc := range tests {
-		func() {
+		t.Run(name, func(t *testing.T) {
 			numReqs := 0
 			var config *Config
 
@@ -241,23 +241,23 @@ func TestClientDisableRedirects(t *testing.T) {
 
 			client, err := NewClient(config)
 			if err != nil {
-				t.Fatalf("err: %s", err)
+				t.Fatalf("%s: error %v", name, err)
 			}
 
 			req := client.NewRequest("GET", "/")
 			resp, err := client.rawRequestWithContext(context.Background(), req)
 			if err != nil {
-				t.Fatalf("err: %s", err)
+				t.Fatalf("%s: error %v", name, err)
 			}
 
 			if numReqs != tc.expectedNumReqs {
-				t.Fatalf("expected a single request but got %v", numReqs)
+				t.Fatalf("%s: expected %v request(s) but got %v", name, tc.expectedNumReqs, numReqs)
 			}
 
 			if resp.StatusCode != tc.statusCode {
-				t.Fatalf("Expected %s and status code %v got %v", name, tc.statusCode, resp.StatusCode)
+				t.Fatalf("%s: expected status code %v got %v", name, tc.statusCode, resp.StatusCode)
 			}
-		}()
+		})
 	}
 }
 
