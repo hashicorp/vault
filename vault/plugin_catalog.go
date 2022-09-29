@@ -110,7 +110,12 @@ func wrapFactoryCheckPerms(core *Core, f logical.Factory) logical.Factory {
 			return nil, fmt.Errorf("failed to find %s in plugin catalog", pluginDescription)
 		}
 
-		if err := core.CheckPluginPerms(path.Base(plugin.Command)); err != nil {
+		command, err := filepath.Rel(core.pluginCatalog.directory, plugin.Command)
+		if err != nil {
+			return nil, fmt.Errorf("failed to compute plugin command: %w", err)
+		}
+
+		if err := core.CheckPluginPerms(command); err != nil {
 			return nil, err
 		}
 		return f(ctx, conf)
