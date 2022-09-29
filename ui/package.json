@@ -104,7 +104,7 @@
     "ember-cli-sri": "meirish/ember-cli-sri#rooturl",
     "ember-cli-string-helpers": "6.1.0",
     "ember-cli-terser": "^4.0.2",
-    "ember-composable-helpers": "^4.3.0",
+    "ember-composable-helpers": "5.0.0",
     "ember-concurrency": "^2.1.2",
     "ember-copy": "2.0.1",
     "ember-d3": "^0.5.1",

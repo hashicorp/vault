@@ -3,7 +3,7 @@
   {{#unless
     (or
       (eq @attr.type "boolean")
-      (contains
+      (includes
         @attr.options.editType
         (array "boolean" "optionalText" "searchSelect" "mountAccessor" "kv" "file" "ttl" "stringArray" "json" "regex")
       )

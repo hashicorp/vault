@@ -107,7 +107,7 @@
                 <div class="columns is-desktop is-multiline">
                   {{#each fields as |attr|}}
                     {{#if
-                      (contains attr.name (array "max_open_connections" "max_idle_connections" "max_connection_lifetime"))
+                      (includes attr.name (array "max_open_connections" "max_idle_connections" "max_connection_lifetime"))
                     }}
                       <div class="column is-one-third">
                         <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
@@ -196,7 +196,7 @@
               <div class="columns is-desktop is-multiline">
                 {{#each fields as |attr|}}
                   {{#if
-                    (contains attr.name (array "max_open_connections" "max_idle_connections" "max_connection_lifetime"))
+                    (includes attr.name (array "max_open_connections" "max_idle_connections" "max_connection_lifetime"))
                   }}
                     <div class="column is-one-third">
                       <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
