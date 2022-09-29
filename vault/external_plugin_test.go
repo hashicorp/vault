@@ -555,8 +555,11 @@ func TestExternalPlugin_CheckFilePermissions(t *testing.T) {
 				"version": tc.pluginVersion,
 			}
 			resp, err := c.systemBackend.HandleRequest(namespace.RootContext(nil), req)
-			if err != nil || resp.Error() != nil {
-				t.Fatalf("resp: %s, err: %s", resp.Error(), err)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if resp.Error() != nil {
+				t.Fatal(resp.Error())
 			}
 
 			// Now attempt to mount the plugin, which should trigger checking the permissions again.
@@ -570,8 +573,11 @@ func TestExternalPlugin_CheckFilePermissions(t *testing.T) {
 				}
 			}
 			resp, err = c.systemBackend.HandleRequest(namespace.RootContext(nil), req)
-			if err != nil || resp.Error() != nil {
-				t.Fatalf("resp: %s, err: %s", resp.Error(), err)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if resp.Error() != nil {
+				t.Fatal(resp.Error())
 			}
 		})
 	}
@@ -586,8 +592,11 @@ func registerPlugin(t *testing.T, sys *SystemBackend, pluginName, pluginType, ve
 		"version": version,
 	}
 	resp, err := sys.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || resp.Error() != nil {
-		t.Fatalf("resp: %s, err: %s", resp.Error(), err)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Error() != nil {
+		t.Fatal(resp.Error())
 	}
 }
 
@@ -603,8 +612,11 @@ func mountPlugin(t *testing.T, sys *SystemBackend, pluginName string, pluginType
 		}
 	}
 	resp, err := sys.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || resp.Error() != nil {
-		t.Fatalf("resp: %s, err: %s", resp.Error(), err)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Error() != nil {
+		t.Fatal(resp.Error())
 	}
 }
 
