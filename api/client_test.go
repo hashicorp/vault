@@ -231,7 +231,7 @@ func TestClientDisableRedirects(t *testing.T) {
 				numReqs++
 				// Send back the relevant status code
 				// we will get the address after the server is created
-				w.Header().Set("Location", config.Address)
+				w.Header().Set("Location", fmt.Sprintf(config.Address+"/reqs/%v", numReqs))
 				w.WriteHeader(tc.statusCode)
 			}
 
@@ -256,6 +256,14 @@ func TestClientDisableRedirects(t *testing.T) {
 
 			if resp.StatusCode != tc.statusCode {
 				t.Fatalf("%s: expected status code %v got %v", name, tc.statusCode, resp.StatusCode)
+			}
+
+			location, err := resp.Location()
+			if err != nil {
+				t.Fatalf("%s error %v", name, err)
+			}
+			if req.URL.String() == location.String() {
+				t.Fatalf("%s: expected request URL %v to be different from redirect URL %v", name, req.URL, resp.Request.URL)
 			}
 		})
 	}
