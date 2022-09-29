@@ -56,7 +56,7 @@ scenario "upgrade" {
       artifactory_token     = matrix.build == "artifactory" ? var.artifactory_token : null
       arch                  = matrix.build == "artifactory" ? matrix.arch : null
       vault_product_version = matrix.build == "artifactory" ? var.vault_product_version : null
-      artifact_type         = matrix.build == "artifactory" ? "bundle" : null
+      artifact_type         = "bundle"
       distro                = matrix.build == "artifactory" ? matrix.distro : null
       edition               = matrix.build == "artifactory" ? matrix.edition : null
       instance_type         = matrix.build == "artifactory" ? local.vault_instance_type : null
@@ -160,6 +160,7 @@ scenario "upgrade" {
       vault_api_addr            = "http://localhost:8200"
       vault_instances           = step.create_vault_cluster.vault_instances
       vault_local_bundle_path   = local.bundle_path
+      vault_local_artifact_path = local.bundle_path
       vault_artifactory_release = local.install_artifactory_artifact ? step.build_vault.vault_artifactory_release : null
       vault_unseal_keys         = matrix.seal == "shamir" ? step.create_vault_cluster.vault_unseal_keys_hex : null
       vault_seal_type           = matrix.seal

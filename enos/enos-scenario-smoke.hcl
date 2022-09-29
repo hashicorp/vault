@@ -56,7 +56,7 @@ scenario "smoke" {
       artifactory_token     = matrix.build == "artifactory" ? var.artifactory_token : null
       arch                  = matrix.build == "artifactory" ? matrix.arch : null
       vault_product_version = matrix.build == "artifactory" ? var.vault_product_version : null
-      artifact_type         = matrix.build == "artifactory" ? "bundle" : null
+      artifact_type         = "bundle"
       distro                = matrix.build == "artifactory" ? matrix.distro : null
       edition               = matrix.build == "artifactory" ? matrix.edition : null
       instance_type         = matrix.build == "artifactory" ? local.vault_instance_type : null

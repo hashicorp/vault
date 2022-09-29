@@ -9,6 +9,7 @@ variable "artifactory_token" {
   type        = string
   description = "The token to use when connecting to artifactory"
   default     = null
+  sensitive   = true
 }
 
 variable "artifactory_host" {
