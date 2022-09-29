@@ -22,6 +22,7 @@ const ModelExport = Model.extend({
   }),
   transformations: attr('array', {
     editType: 'searchSelect',
+    isSectionHeader: true,
     fallbackComponent: 'string-list',
     label: 'Transformations',
     models: ['transform'],

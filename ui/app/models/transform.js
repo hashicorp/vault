@@ -63,6 +63,7 @@ const ModelExport = Model.extend({
   }),
   template: attr('array', {
     editType: 'searchSelect',
+    isSectionHeader: true,
     fallbackComponent: 'string-list',
     label: 'Template', // CBS TODO: make this required for making a transformation
     models: ['transform/template'],
@@ -73,6 +74,7 @@ const ModelExport = Model.extend({
   }),
   allowed_roles: attr('array', {
     editType: 'searchSelect',
+    isSectionHeader: true,
     label: 'Allowed roles',
     fallbackComponent: 'string-list',
     models: ['transform/role'],

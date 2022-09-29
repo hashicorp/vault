@@ -27,7 +27,6 @@ export default class OidcProviderModel extends Model {
 
   @attr('array', {
     label: 'Supported scopes',
-    isNotSectionHeader: true,
     subText: 'Scopes define information about a user and the OIDC service. Optional.',
     editType: 'searchSelect',
     models: ['oidc/scope'],
