@@ -222,21 +222,22 @@ func TestClientDisableRedirects(t *testing.T) {
 	}
 
 	for name, tc := range tests {
+		test := tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			numReqs := 0
 			var config *Config
 
 			respFunc := func(w http.ResponseWriter, req *http.Request) {
 				// Track how many requests the server has handled
 				numReqs++
-				// Send back the relevant status code
-				// we will get the address after the server is created
+				// Send back the relevant status code and generate a location
 				w.Header().Set("Location", fmt.Sprintf(config.Address+"/reqs/%v", numReqs))
-				w.WriteHeader(tc.statusCode)
+				w.WriteHeader(test.statusCode)
 			}
 
 			config, ln := testHTTPServer(t, http.HandlerFunc(respFunc))
-			config.DisableRedirects = tc.disableRedirects
+			config.DisableRedirects = test.disableRedirects
 			defer ln.Close()
 
 			client, err := NewClient(config)
@@ -250,12 +251,12 @@ func TestClientDisableRedirects(t *testing.T) {
 				t.Fatalf("%s: error %v", name, err)
 			}
 
-			if numReqs != tc.expectedNumReqs {
-				t.Fatalf("%s: expected %v request(s) but got %v", name, tc.expectedNumReqs, numReqs)
+			if numReqs != test.expectedNumReqs {
+				t.Fatalf("%s: expected %v request(s) but got %v", name, test.expectedNumReqs, numReqs)
 			}
 
-			if resp.StatusCode != tc.statusCode {
-				t.Fatalf("%s: expected status code %v got %v", name, tc.statusCode, resp.StatusCode)
+			if resp.StatusCode != test.statusCode {
+				t.Fatalf("%s: expected status code %v got %v", name, test.statusCode, resp.StatusCode)
 			}
 
 			location, err := resp.Location()
