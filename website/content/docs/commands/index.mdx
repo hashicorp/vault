@@ -421,12 +421,10 @@ variables are supplied, `VAULT_PROXY_ADDR` will be prioritized and preferred.
 
 ### `VAULT_DISABLE_REDIRECTS`
 
-Disables the default client behavior, which honors a single redirect response from a request.
+Disables the default client behavior, and prevents the client from automatically following a single redirect receieved in response to a client issued request.
+This behavior may be desirable if using Vault CLI on the server side.
 
-Disables the default behavior of the Vault client, Prevent the Vault client from 
-Do not verify Vault's presented certificate before communicating with it.
-Setting this variable is not recommended and voids Vault's [security
-model](/docs/internals/security).
+~> Note: Disabling redirect following behavior could cause issues with commands such as 'vault operator raft snapshot' as this redirects to the primary node.
 
 ## Flags
 

@@ -220,7 +220,9 @@ func TestClientRedirectWhenDisabled(t *testing.T) {
 
 	for name, tc := range tests {
 		func() {
+			numReqs := 0
 			respFunc := func(w http.ResponseWriter, req *http.Request) {
+				numReqs++
 				w.Header().Set("Location", DefaultConfig().Address)
 				w.WriteHeader(tc.statusCode)
 			}
@@ -240,8 +242,12 @@ func TestClientRedirectWhenDisabled(t *testing.T) {
 				t.Fatalf("err: %s", err)
 			}
 
+			if numReqs != 1 {
+				t.Fatalf("expected a single request but got %v", numReqs)
+			}
+
 			if resp.StatusCode != tc.statusCode {
-				t.Errorf("Expected %s and status code %v got %v", name, tc.statusCode, resp.StatusCode)
+				t.Fatalf("Expected %s and status code %v got %v", name, tc.statusCode, resp.StatusCode)
 			}
 		}()
 	}
