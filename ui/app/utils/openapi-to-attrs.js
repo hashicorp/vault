@@ -51,12 +51,6 @@ export const expandOpenApiProps = function (props) {
       attrDefn.label = name;
     }
 
-    // if the defaultValue is 30 for ttl it needs to have a unit
-    // otherwise untouched it will send 30 to the backend and not define a unit (e.g. "30s")
-    if (editType === 'ttl' && attrDefn.defaultValue === 30) {
-      attrDefn.defaultValue = '30s';
-    }
-
     // ttls write as a string and read as a number
     // so setting type on them runs the wrong transform
     if (editType !== 'ttl' && type !== 'array') {

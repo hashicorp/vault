@@ -27,6 +27,7 @@ import { typeOf } from '@ember/utils';
 import Duration from '@icholy/duration';
 import TtlForm from './ttl-form';
 import layout from '../templates/components/ttl-picker2';
+import { next } from '@ember/runloop';
 
 const secondsMap = {
   s: 1,
@@ -63,6 +64,10 @@ export default TtlForm.extend({
     const changeOnInit = this.changeOnInit;
     // if initial value is unset use params passed in as defaults
     if (!value && value !== 0) {
+      // make sure what is displayed is set on the model.
+      // for example if NOT using OpenAPI, you hide the Toggle and don't set a defaultValue
+      // TTL is displaying 30s but at this point you're sending nothing on the model.
+      next(() => this.handleChange());
       return;
     }
 
@@ -85,6 +90,11 @@ export default TtlForm.extend({
         unit = 'm';
       }
       time = convertFromSeconds(value, unit);
+
+      // make sure what is displayed is also set on the model.
+      // for example, if using OpenAPI and you don't set a defaultValue, OpenAPI sends 30.
+      // Yet TTL is displaying 30s. Update the state to match here.
+      next(() => this.handleChange());
     } else {
       try {
         const seconds = Duration.parse(value).seconds();
