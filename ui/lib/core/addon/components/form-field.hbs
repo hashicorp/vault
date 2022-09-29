@@ -13,7 +13,7 @@
       <FormFieldLabel
         for={{@attr.name}}
         @label={{this.labelString}}
-        @helpText={{@attr.options.helpText}}
+        @helpText={{(if this.showHelpText @attr.options.helpText)}}
         @subText={{@attr.options.subText}}
         @docLink={{@attr.options.docLink}}
       />
@@ -320,7 +320,6 @@
         onchange={{this.onChangeWithEvent}}
         data-test-input={{@attr.name}}
       />
-
       <label for={{@attr.name}} class="is-label">
         {{this.labelString}}
         {{#if (and this.showHelpText @attr.options.helpText)}}
@@ -328,7 +327,14 @@
         {{/if}}
       </label>
       {{#if @attr.options.subText}}
-        <p class="sub-text">{{@attr.options.subText}}</p>
+        <p class="sub-text">
+          {{@attr.options.subText}}
+          {{#if @attr.options.docLink}}
+            <DocLink @path={{@attr.options.docLink}}>
+              Learn more here.
+            </DocLink>
+          {{/if}}
+        </p>
       {{/if}}
     </div>
   {{else if (eq @attr.type "object")}}
@@ -338,5 +344,7 @@
       @valueUpdated={{fn this.codemirrorUpdated false}}
       @helpText={{@attr.options.helpText}}
     />
+  {{else if (eq @attr.options.editType "yield")}}
+    {{yield}}
   {{/if}}
 </div>

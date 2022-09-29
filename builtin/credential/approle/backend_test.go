@@ -174,7 +174,7 @@ func TestAppRole_RoleNameCaseSensitivity(t *testing.T) {
 			},
 			Storage: s,
 		})
-		if err != nil {
+		if err != nil && err != logical.ErrInvalidCredentials {
 			t.Fatal(err)
 		}
 		if resp == nil || !resp.IsError() {
@@ -233,7 +233,7 @@ func TestAppRole_RoleNameCaseSensitivity(t *testing.T) {
 			},
 			Storage: s,
 		})
-		if err != nil {
+		if err != nil && err != logical.ErrInvalidCredentials {
 			t.Fatal(err)
 		}
 		if resp == nil || !resp.IsError() {
@@ -292,7 +292,7 @@ func TestAppRole_RoleNameCaseSensitivity(t *testing.T) {
 			},
 			Storage: s,
 		})
-		if err != nil {
+		if err != nil && err != logical.ErrInvalidCredentials {
 			t.Fatal(err)
 		}
 		if resp == nil || !resp.IsError() {
@@ -351,7 +351,7 @@ func TestAppRole_RoleNameCaseSensitivity(t *testing.T) {
 			},
 			Storage: s,
 		})
-		if err != nil {
+		if err != nil && err != logical.ErrInvalidCredentials {
 			t.Fatal(err)
 		}
 		if resp == nil || !resp.IsError() {
@@ -410,7 +410,7 @@ func TestAppRole_RoleNameCaseSensitivity(t *testing.T) {
 			},
 			Storage: s,
 		})
-		if err != nil {
+		if err != nil && err != logical.ErrInvalidCredentials {
 			t.Fatal(err)
 		}
 		if resp == nil || !resp.IsError() {
