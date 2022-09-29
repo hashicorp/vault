@@ -44,7 +44,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
       />
     `);
     await click('[data-test-toggle-input="clicktest"]');
-    assert.ok(this.onChange.calledOnce, 'it calls the passed onChange');
+    assert.ok(this.onChange.calledTwice, 'it calls the passed onChange');
     assert.ok(
       this.onChange.calledWith({
         enabled: true,
@@ -67,7 +67,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
       />
     `);
     await click('[data-test-toggle-input="clicktest"]');
-    assert.ok(this.onChange.calledOnce, 'it calls the passed onChange');
+    assert.ok(this.onChange.calledTwice, 'it calls the passed onChange');
     assert.ok(
       this.onChange.calledWith({
         enabled: true,
@@ -186,7 +186,7 @@ module('Integration | Component | ttl-picker2', function (hooks) {
       />
     `);
     await click('[data-test-toggle-input="clicktest"]');
-    assert.ok(this.onChange.calledOnce, 'it calls the passed onChange');
+    assert.ok(this.onChange.calledTwice, 'it calls the passed onChange');
     assert.ok(
       this.onChange.calledWith({
         enabled: true,
