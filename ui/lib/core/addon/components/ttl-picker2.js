@@ -143,7 +143,6 @@ export default TtlForm.extend({
       timeString: time + unit,
       goSafeTimeString: goSafeConvertFromSeconds(seconds, unit),
     };
-    console.log(ttl, 'TTLLLL');
     this.onChange(ttl);
   },
 
