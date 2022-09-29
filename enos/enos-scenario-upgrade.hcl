@@ -81,6 +81,16 @@ scenario "upgrade" {
     }
   }
 
+  step "get_local_version" {
+    skip_step = matrix.builder != "local"
+    module    = module.get_local_version
+  }
+
+  step "get_local_revision" {
+    skip_step = matrix.builder != "local"
+    module    = module.get_local_revision
+  }
+
   step "create_backend_cluster" {
     module = "backend_${matrix.backend}"
     depends_on = [
@@ -162,7 +172,11 @@ scenario "upgrade" {
     }
 
     variables {
-      vault_instances = step.create_vault_cluster.vault_instances
+      vault_instances       = step.create_vault_cluster.vault_instances
+      vault_edition         = matrix.edition
+      vault_product_version = matrix.builder == "local" ? step.get_local_version.version : var.vault_product_version
+      vault_revision        = matrix.builder == "local" ? step.get_local_revision.revision : var.vault_revision
+      vault_root_token      = step.create_vault_cluster.vault_root_token
     }
   }
 

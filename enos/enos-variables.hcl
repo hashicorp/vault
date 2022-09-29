@@ -101,6 +101,18 @@ variable "vault_local_build_tags" {
   default     = null
 }
 
+variable "vault_product_version" {
+  description = "The version of vault we are testing"
+  type        = string
+  default     = null
+}
+
+variable "vault_revision" {
+  description = "The git sha of vault artifact we are testing"
+  type        = string
+  default     = null
+}
+
 variable "vault_upgrade_initial_release" {
   description = "The Vault release to deploy before upgrading"
   default = {

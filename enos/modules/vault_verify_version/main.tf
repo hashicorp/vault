@@ -24,6 +24,30 @@ variable "vault_instances" {
   description = "The vault cluster instances that were created"
 }
 
+variable "vault_product_version" {
+  type        = string
+  description = "The vault product version"
+  default     = null
+}
+
+variable "vault_edition" {
+  type        = string
+  description = "The vault product edition"
+  default     = null
+}
+
+variable "vault_revision" {
+  type        = string
+  description = "The vault product revision"
+  default     = null
+}
+
+variable "vault_root_token" {
+  type        = string
+  description = "The vault root token"
+  default     = null
+}
+
 locals {
   instances = {
     for idx in range(var.vault_instance_count) : idx => {
@@ -38,6 +62,10 @@ resource "enos_remote_exec" "verify_all_nodes_have_updated_version" {
 
   content = templatefile("${path.module}/templates/verify-cluster-version.sh", {
     vault_install_dir = var.vault_install_dir,
+    vault_version     = var.vault_product_version,
+    vault_edition     = var.vault_edition,
+    vault_revision    = var.vault_revision,
+    vault_token       = var.vault_root_token,
   })
 
   transport = {

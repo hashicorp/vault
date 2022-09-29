@@ -39,8 +39,12 @@ module "create_vpc" {
   ami_architectures = ["amd64", "arm64"]
 }
 
-module "get_local_version_from_make" {
-  source = "./modules/get_local_version_from_make"
+module "get_local_version" {
+  source = "./modules/get_local_version"
+}
+
+module "get_local_revision" {
+  source = "./modules/get_local_revision"
 }
 
 module "read_license" {
