@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix issue where TtlPicker2 was displaying 30s and passing an empty string or 30 as an integer instead on init.
+```
