@@ -421,10 +421,9 @@ variables are supplied, `VAULT_PROXY_ADDR` will be prioritized and preferred.
 
 ### `VAULT_DISABLE_REDIRECTS`
 
-Disables the default client behavior, and prevents the client from automatically following a single redirect receieved in response to a client issued request.
-This behavior may be desirable if using Vault CLI on the server side.
+Prevents the Vault client from following redirects. By default, Vault client will automatically follow a single redirect.
 
-~> Note: Disabling redirect following behavior could cause issues with commands such as 'vault operator raft snapshot' as this redirects to the primary node.
+~> Note: Disabling redirect following behavior could cause issues with commands such as 'vault operator raft snapshot' as this command redirects the request to the cluster's primary node.
 
 ## Flags
 

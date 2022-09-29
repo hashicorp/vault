@@ -209,26 +209,34 @@ func TestClientBadToken(t *testing.T) {
 	}
 }
 
-func TestClientRedirectWhenDisabled(t *testing.T) {
+func TestClientDisableRedirects(t *testing.T) {
 	tests := map[string]struct {
-		statusCode int
+		statusCode       int
+		expectedNumReqs  int
+		disableRedirects bool
 	}{
-		"Moved permanently":  {statusCode: 301},
-		"Found":              {statusCode: 302},
-		"Temporary Redirect": {statusCode: 307},
+		"Disabled redirects: Moved permanently":               {statusCode: 301, expectedNumReqs: 1, disableRedirects: true},
+		"Disabled redirects: Redirect On: Found":              {statusCode: 302, expectedNumReqs: 1, disableRedirects: true},
+		"Disabled redirects: Redirect On: Temporary Redirect": {statusCode: 307, expectedNumReqs: 1, disableRedirects: true},
+		"Enable redirects: Moved permanently":                 {statusCode: 301, expectedNumReqs: 2, disableRedirects: false},
 	}
 
 	for name, tc := range tests {
 		func() {
 			numReqs := 0
+			var config *Config
+
 			respFunc := func(w http.ResponseWriter, req *http.Request) {
+				// Track how many requests the server has handled
 				numReqs++
-				w.Header().Set("Location", DefaultConfig().Address)
+				// Send back the relevant status code
+				// we will get the address after the server is created
+				w.Header().Set("Location", config.Address)
 				w.WriteHeader(tc.statusCode)
 			}
 
 			config, ln := testHTTPServer(t, http.HandlerFunc(respFunc))
-			config.DisableRedirects = true
+			config.DisableRedirects = tc.disableRedirects
 			defer ln.Close()
 
 			client, err := NewClient(config)
@@ -242,7 +250,7 @@ func TestClientRedirectWhenDisabled(t *testing.T) {
 				t.Fatalf("err: %s", err)
 			}
 
-			if numReqs != 1 {
+			if numReqs != tc.expectedNumReqs {
 				t.Fatalf("expected a single request but got %v", numReqs)
 			}
 
