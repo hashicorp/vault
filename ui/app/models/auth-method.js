@@ -1,8 +1,8 @@
 import Model, { belongsTo, hasMany, attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed'; // eslint-disable-line
 import { computed } from '@ember/object'; // eslint-disable-line
+import { inject as service } from '@ember/service';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-import { memberAction } from 'ember-api-actions';
 import apiPath from 'vault/utils/api-path';
 import attachCapabilities from 'vault/lib/attach-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
@@ -16,6 +16,8 @@ const validations = {
 @withModelValidations(validations)
 class AuthMethodModel extends Model {}
 const ModelExport = AuthMethodModel.extend({
+  store: service(),
+
   config: belongsTo('mount-config', { async: false, inverse: null }), // one-to-none that replaces former fragment
   authConfigs: hasMany('auth-config', { polymorphic: true, inverse: 'backend', async: false }),
   path: attr('string'),
@@ -67,11 +69,11 @@ const ModelExport = AuthMethodModel.extend({
   }),
 
   // sys/mounts/auth/[auth-path]/tune.
-  tune: memberAction({
-    path: 'tune',
-    type: 'post',
-    urlType: 'updateRecord',
-  }),
+  // tune: memberAction({
+  //   path: 'tune',
+  //   type: 'post',
+  //   urlType: 'updateRecord',
+  // }),
 
   formFields: computed(function () {
     return [
@@ -109,6 +111,10 @@ const ModelExport = AuthMethodModel.extend({
   }),
   canDisable: alias('deletePath.canDelete'),
   canEdit: alias('configPath.canUpdate'),
+
+  tune(data) {
+    return this.store.adapterFor('auth-method').tune(this.path, data);
+  },
 });
 
 export default attachCapabilities(ModelExport, {

@@ -8456,14 +8456,6 @@ elliptic@^6.5.3:
     minimalistic-assert "^1.0.1"
     minimalistic-crypto-utils "^1.0.1"
 
-ember-api-actions@^0.2.8:
-  version "0.2.9"
-  resolved "https://registry.yarnpkg.com/ember-api-actions/-/ember-api-actions-0.2.9.tgz#5352ea23bbd84f1a402d70a6bfe28d63b7dcb17a"
-  integrity sha512-RDyGOL+CkpzpovOB3W2acawCfoDB/P3cevR+QDA+VqOeFDz9sd9bOkDvx0Vn1qeapGC/1yGx6cTpQkQhmuNLmg==
-  dependencies:
-    ember-cli-babel "^7.1.3"
-    ember-cli-typescript "^3.0.0"
-
 ember-asset-loader@^0.6.1:
   version "0.6.1"
   resolved "https://registry.yarnpkg.com/ember-asset-loader/-/ember-asset-loader-0.6.1.tgz#2eb81221406164d19127eba5b3d10f908df89a17"
@@ -9052,7 +9044,7 @@ ember-cli-typescript@^2.0.2:
     stagehand "^1.0.0"
     walk-sync "^1.0.0"
 
-ember-cli-typescript@^3.0.0, ember-cli-typescript@^3.1.4:
+ember-cli-typescript@^3.1.4:
   version "3.1.4"
   resolved "https://registry.yarnpkg.com/ember-cli-typescript/-/ember-cli-typescript-3.1.4.tgz#21d6ccd670d1f2e34c9cce68c6e32c442f46806b"
   integrity sha512-HJ73kL45OGRmIkPhBNFt31I1SGUvdZND+LCH21+qpq3pPlFpJG8GORyXpP+2ze8PbnITNLzwe5AwUrpyuRswdQ==

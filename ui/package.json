@@ -85,7 +85,6 @@
     "date-fns-tz": "^1.2.2",
     "deepmerge": "^4.0.0",
     "doctoc": "^2.2.0",
-    "ember-api-actions": "^0.2.8",
     "ember-auto-import": "2.4.2",
     "ember-basic-dropdown": "4.0.3",
     "ember-cli": "~4.4.0",
