@@ -50,7 +50,7 @@ export default TtlForm.extend({
   helperTextDisabled: 'Allow tokens to be used indefinitely',
   helperTextEnabled: 'Disable the use of the token after',
   description: '',
-  time: '', // if defaultValue is NOT set, then do not display a defaultValue. This causes the param on the model to be different then what the component shows on init.
+  time: '', // if defaultValue is NOT set, then do not display a defaultValue.
   unit: 's',
   initialValue: null,
   changeOnInit: false,
