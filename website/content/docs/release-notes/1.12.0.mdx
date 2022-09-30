@@ -17,14 +17,15 @@ Some of these enhancements and changes in this release include the following:
 
 
 - Vault Enterprise now supports **PKCS#11** provider plugin (client library) functionality.
-- Vault Enterprise can now manage keys for **Oracle TDE**. This requires the Advanced Data Protection license.
+- Vault Enterprise can manage keys for **Oracle TDE**. This requires the Advanced Data Protection license.
 - **PKI Key revocation** improvements are made to Vault’s PKI engine, introducing a new OCSP responder and automatic CRL rebuilding (with up-to-date Delta CRL), that offers significant performance and data transfer improvements to revocation workflows.
 - **BYOK in Transform engines** now allow users to import their keys generated elsewhere.
 - **KMIP Server Profile** adds support for additional operations, allowing  Vault to claim support for the baseline server profile.
 - **Transform secrets engine** supports time-based auto-key rotation for tokenization.
 - **Path and Role-based Quotas** extend the existing Vault Quota support by allowing quotas to be extended to the API path suffixes and auth mount roles.
 - **Licensing** termination behavior has changed where non-evaluation licenses (production licenses) will no longer have a termination date.
-- **Terraform Vault Provider** improvements include Version Detection. It allows Terraform Vault Provider to detect the target Vault version to determine if the selected Vault feature is available.
+- **Redis Database Secrets Engine** is now available to manage static roles or generation of dynamic credentials, as well as root credential rotation on a stand-alone Redis server.
+- **AWS Elasticache Database Secrets Engine** is introduced to manage static credentials for AWS Elasticache instances. 
 
 ## New Features
 
