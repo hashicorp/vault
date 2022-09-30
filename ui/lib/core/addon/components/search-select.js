@@ -30,7 +30,7 @@ import { isWildcardString } from 'vault/helpers/is-wildcard-string';
  * @param {boolean} [shouldRenderName=false] - By default an item's id renders in the dropdown, `true` displays the name with its id in smaller text beside it *NOTE: the boolean flips automatically with 'identity' models or if this.idKey !== 'id'
  * @param {array} [parentManageSelected] - Array of selected items if the parent is keeping track of selections, see mfa-login-enforcement-form.js
  * @param {boolean} [passObject=false] - When true, the onChange callback returns an array of objects with id (string) and isNew (boolean) (and any params from objectKeys). By default - onChange returns an array of id strings. 
- * @param {array} [objectKeys=null] - Array of values that correlate to model attrs. When passObject=true, objectKeys are added to the passed, selected object. *NOTE: make 'id' as the first element in objectKeys if you do not want to override the default of 'id'
+ * @param {array} [objectKeys] - Array of values that correlate to model attrs. Used to render attr other than 'id' beside the name if shouldRenderName=true. If passObject=true, objectKeys are added to the passed, selected object.
  * @param {number} [selectLimit] - Sets select limit
  
 // * query params for dropdown items
@@ -70,6 +70,7 @@ export default class SearchSelect extends Component {
 
   get idKey() {
     // if objectKeys exists, use the first element of the array as the identifier
+    // make 'id' as the first element in objectKeys if you do not want to override the default of 'id'
     return this.args.objectKeys ? this.args.objectKeys[0] : 'id';
   }
 
