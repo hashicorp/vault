@@ -1,7 +1,6 @@
-import Model, { hasMany, attr } from '@ember-data/model';
+import Model, { belongsTo, hasMany, attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed'; // eslint-disable-line
 import { computed } from '@ember/object'; // eslint-disable-line
-import { fragment } from 'ember-data-model-fragments/attributes';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { memberAction } from 'ember-api-actions';
 import apiPath from 'vault/utils/api-path';
@@ -17,6 +16,7 @@ const validations = {
 @withModelValidations(validations)
 class AuthMethodModel extends Model {}
 const ModelExport = AuthMethodModel.extend({
+  config: belongsTo('mount-config', { async: false, inverse: null }), // one-to-none that replaces former fragment
   authConfigs: hasMany('auth-config', { polymorphic: true, inverse: 'backend', async: false }),
   path: attr('string'),
   accessor: attr('string'),
@@ -30,7 +30,6 @@ const ModelExport = AuthMethodModel.extend({
   description: attr('string', {
     editType: 'textarea',
   }),
-  config: fragment('mount-config', { defaultValue: {} }),
   local: attr('boolean', {
     helpText:
       'When Replication is enabled, a local mount will not be replicated across clusters. This can only be specified at mount time.',
