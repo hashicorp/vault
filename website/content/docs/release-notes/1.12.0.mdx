@@ -89,7 +89,7 @@ In this release, the existing resource quota functionality has been enhanced. In
 
 The billing period for client counting API can now be specified with the [current month](/docs/concepts/client-count) for the end date parameter. When this is done the "new_clients" field will have an hyperlog approximate value indicating the number of new clients that came in the current month. Note that for the previous months, the number will be an exact value.
 
-### Redis Secrets Engine
+### Redis Database Secrets Engine
 
 With the support of the Redis secrets engine, users can use Vault to manage static role or dynamic credentials for Redis OSS. The engine  works similarly to other database secrets engines. Refer to the [Redis](/docs/secrets/redis) documentation for more information. Huge thanks to [Francis Hitchens](https://github.com/fhitchen), who contributed their repository to HashiCorp
 
