@@ -3,6 +3,7 @@ import Component from '@glimmer/component';
 import autosize from 'autosize';
 import { action } from '@ember/object';
 import { set } from '@ember/object';
+import { next } from '@ember/runloop';
 
 /**
  * @module StringList
@@ -37,8 +38,10 @@ export default class StringList extends Component {
     });
     this.type = this.args.type || 'array';
     this.setType();
-    this.toList();
-    this.addInput();
+    next(() => {
+      this.toList();
+      this.addInput();
+    });
   }
 
   setType() {
