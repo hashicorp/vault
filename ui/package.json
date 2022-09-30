@@ -105,7 +105,7 @@
     "ember-cli-string-helpers": "6.1.0",
     "ember-cli-terser": "^4.0.2",
     "ember-composable-helpers": "5.0.0",
-    "ember-concurrency": "^2.1.2",
+    "ember-concurrency": "2.3.4",
     "ember-copy": "2.0.1",
     "ember-d3": "^0.5.1",
     "ember-data": "~4.4.0",
