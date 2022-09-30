@@ -8,8 +8,8 @@ import { run } from '@ember/runloop';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import waitForError from 'vault/tests/helpers/wait-for-error';
-
 import searchSelect from '../../pages/components/search-select';
+import { isWildcardString } from 'vault/helpers/is-wildcard-string';
 
 const component = create(searchSelect);
 
@@ -66,6 +66,14 @@ module('Integration | Component | search select', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
+    const mockFunctionFromParent = (selection, dropdownOptions) => {
+      let modelExists =
+        !!dropdownOptions.findBy('id', selection) ||
+        !!dropdownOptions.findBy('uuid', selection) ||
+        isWildcardString([selection]);
+      return !modelExists ? 'The model associated with this id no longer exists' : false;
+    };
+    this.set('renderInfoTooltip', mockFunctionFromParent);
     run(() => {
       this.owner.unregister('service:store');
       this.owner.register('service:store', storeService);
@@ -792,7 +800,7 @@ module('Integration | Component | search select', function (hooks) {
         @onChange={{this.onChange}}
         @objectKeys={{this.objectKeys}}
         @inputValue={{this.inputValue}}
-        @renderInfoTooltip={{true}}
+        @renderInfoTooltip={{this.renderInfoTooltip}}
       />
       `);
     assert.equal(component.selectedOptions.length, 2, 'there are two selected options');
@@ -824,7 +832,7 @@ module('Integration | Component | search select', function (hooks) {
         @objectKeys={{this.objectKeys}}
         @inputValue={{this.inputValue}}
         @passObject={{true}}
-        @renderInfoTooltip={{true}}
+        @renderInfoTooltip={{this.renderInfoTooltip}}
       />
     `);
 
@@ -854,7 +862,7 @@ module('Integration | Component | search select', function (hooks) {
         @onChange={{this.onChange}}
         @inputValue={{this.inputValue}}
         @passObject={{true}}
-        @renderInfoTooltip={{true}}
+        @renderInfoTooltip={{this.renderInfoTooltip}}
       />
     `);
 
@@ -884,7 +892,7 @@ module('Integration | Component | search select', function (hooks) {
         @onChange={{this.onChange}}
         @inputValue={{this.inputValue}}
         @passObject={{false}}
-        @renderInfoTooltip={{true}}
+        @renderInfoTooltip={{this.renderInfoTooltip}}
       />
     `);
     assert.equal(component.selectedOptions.length, 3, 'there are three selected options');
@@ -902,7 +910,7 @@ module('Integration | Component | search select', function (hooks) {
       .doesNotExist('does not render info tooltip for wildcard option');
   });
 
-  test('it does not render an info tooltip beside selection if does not match a record returned from query and not passed @renderInfoTooltip', async function (assert) {
+  test('it does not render an info tooltip beside selection if not passed @renderInfoTooltip', async function (assert) {
     const models = ['some/model'];
     const spy = sinon.spy();
     const inputValue = ['model-a-id', 'non-existent-model', 'wildcard*'];
