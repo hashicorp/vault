@@ -99,7 +99,7 @@ With the support of the AWS ElastiCache database secrets engine, users may use V
 
 ### LDAP Secrets Engine
 
-Vault 1.12 introduces a new LDAP secrets engine that unifies the user experience between the Active Directory (AD) secrets engine and OpenLDAP secrets engine. This new engine simplifies the user experience when Vault is used to manage credentials for directory services. This new engine supports all modes from both of the engines mentioned above (AD, LDAP and RACF modes) and brings dynamic credential capabilities for users relying on Active Directory.
+Vault 1.12 introduces a new LDAP secrets engine that unifies the user experience between the Active Directory (AD) secrets engine and OpenLDAP secrets engine. This new engine simplifies the user experience when Vault is used to manage credentials for directory services. This new engine supports all implementations from both of the engines mentioned above (AD, LDAP and RACF) and brings dynamic credential capabilities for users relying on Active Directory.
 
 ~> **Note:** This engine does _not_ replace the current Active Directory secrets engine. We will continue to maintain the engine and provide bug fixes, but encourage all new users to use the unified LDAP engine. We will communicate the schedule to deprecate the Active Directory secrets engine well in advance, providing time for users to migrate over.
 
