@@ -1,0 +1,3 @@
+```release-note:improvement
+website/docs: Added disambiguation for auth methods to clarify POST request can both create and update roles.
+```
