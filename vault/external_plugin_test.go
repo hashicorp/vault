@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	gops "github.com/mitchellh/go-ps"
 	testing2 "github.com/mitchellh/go-testing-interface"
 )
 
@@ -111,7 +112,7 @@ func compilePlugin(t *testing.T, typ consts.PluginType, pluginVersion string, re
 		t.Cleanup(func() { cleanup(t) })
 	}
 
-	pluginPath := path.Join(pluginDir, pluginName)
+	pluginPath := path.Join(pluginDir, pluginName+"v"+pluginVersion)
 
 	key := fmt.Sprintf("%s %s %s", pluginName, pluginType, pluginVersion)
 	// cache the compilation to only run once
@@ -528,6 +529,27 @@ func TestExternalPlugin_getBackendTypeVersion(t *testing.T) {
 	}
 }
 
+func getChildProcesses(pid int) ([]gops.Process, error) {
+	processes, err := gops.Processes()
+	if err != nil {
+		return nil, err
+	}
+	var ret []gops.Process
+	for _, p := range processes {
+		if p.PPid() == pid {
+			ret = append(ret, p)
+
+			// recurse
+			more, err := getChildProcesses(p.Pid())
+			if err != nil {
+				return nil, err
+			}
+			ret = append(ret, more...)
+		}
+	}
+	return ret, nil
+}
+
 func TestExternalPlugin_multipleRegisteredVersions(t *testing.T) {
 	for name, tc := range map[string]struct {
 		pluginType         consts.PluginType
@@ -543,15 +565,40 @@ func TestExternalPlugin_multipleRegisteredVersions(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			c, plugins := testCoreWithPlugins(t, tc.pluginType, tc.setRunningVersion0, tc.setRunningVersion1)
 			registerPlugin(t, c.systemBackend, plugins[0].name, tc.pluginType.String(), tc.setRunningVersion0, plugins[0].sha256)
-			entry := &MountEntry{
-				Table:   mountTableType,
-				Path:    "a/",
-				Type:    plugins[0].name,
-				Version: tc.setRunningVersion0,
-			}
-			err := c.mount(namespace.RootContext(nil), entry)
-			if err != nil {
-				t.Fatal(err)
+			registerPlugin(t, c.systemBackend, plugins[1].name, tc.pluginType.String(), tc.setRunningVersion1, plugins[1].sha256)
+
+			if tc.pluginType == consts.PluginTypeSecrets {
+				// mount both
+				entry := &MountEntry{
+					Table:   mountTableType,
+					Path:    "a/",
+					Type:    plugins[0].name,
+					Version: tc.setRunningVersion0,
+				}
+				err := c.mount(namespace.RootContext(nil), entry)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				entry2 := &MountEntry{
+					Table:   mountTableType,
+					Path:    "b/",
+					Type:    plugins[1].name,
+					Version: tc.setRunningVersion1,
+				}
+				err = c.mount(namespace.RootContext(nil), entry2)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				children, err := getChildProcesses(os.Getpid())
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if len(children) == 1 {
+					t.Error("Expected two consul plugin processes, running, but got one")
+				}
 			}
 		})
 	}
@@ -635,7 +682,7 @@ func registerPlugin(t *testing.T, sys *SystemBackend, pluginName, pluginType, ve
 	t.Helper()
 	req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("plugins/catalog/%s/%s", pluginType, pluginName))
 	req.Data = map[string]interface{}{
-		"command": pluginName,
+		"command": pluginName + "v" + version,
 		"sha256":  sha,
 		"version": version,
 	}
