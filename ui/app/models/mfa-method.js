@@ -123,6 +123,7 @@ export default class MfaMethod extends Model {
     editType: 'ttl',
     helperTextEnabled: 'How long each generated TOTP is valid.',
     hideToggle: true,
+    defaultValue: 30, // API accepts both an integer as seconds and sting with unit e.g 30 || '30s'
   })
   period;
   @attr('number', {
