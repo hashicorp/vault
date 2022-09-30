@@ -5,7 +5,6 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { resolve } from 'rsvp';
 import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-utils';
-import { isWildcardString } from 'vault/helpers/is-wildcard-string';
 /**
  * @module SearchSelect
  * The `SearchSelect` is an implementation of the [ember-power-select](https://github.com/cibernox/ember-power-select) used for form elements where options come dynamically from the API.
@@ -48,7 +47,7 @@ import { isWildcardString } from 'vault/helpers/is-wildcard-string';
  * @param {string} [wildcardLabel] - string (singular) for rendering label tag beside a wildcard selection (i.e. 'role*'), for the number of items it includes, e.g. @wildcardLabel="role" -> "includes 4 roles"
  * @param {string} [placeholder] - text you wish to replace the default "search" with
  * @param {boolean} [displayInherit=false] - if you need the search select component to display inherit instead of box.
- * @param {boolean} [renderInfoTooltip=false] - if you want search select to render a tooltip beside a selected item if no corresponding model was returned from .query
+ * @param {function} [renderInfoTooltip] - receives each inputValue string and list of dropdownOptions as args, so parent can determine when to render a tooltip beside a selectedOption and the tooltip text. see 'oidc/provider-form.js'
  *
  // * advanced customization
  * @param {Array} options - array of objects passed directly to the power-select component. If doing this, `models` should not also be passed as that will overwrite the
@@ -82,13 +81,8 @@ export default class SearchSelect extends Component {
       : false;
   }
 
-  constructor() {
-    super(...arguments);
-    // this.selectedOptions = this.args.inputValue || [];
-  }
-
   addSearchText(optionsToFormat) {
-    // `optionsToFormat` - array of objects or response from query
+    // maps over array of objects or response from query
     return optionsToFormat.toArray().map((option) => {
       const id = option[this.idKey] ? option[this.idKey] : option.id;
       option.searchText = `${option.name} ${id}`;
@@ -96,18 +90,24 @@ export default class SearchSelect extends Component {
     });
   }
 
-  // remove initially selected items (strings from inputValue) from dropdown and make objects
-  formatSelectedAndUpdateDropdown(selectedOptions) {
-    return selectedOptions.map((option) => {
-      let matchingOption = this.dropdownOptions.findBy(this.idKey, option); // if undefined, an inputValue didn't match a model returned from the query
-      let addTooltip = matchingOption || isWildcardString([option]) ? false : true; // add tooltip to let user know the selection may not exist
+  formatInputAndUpdateDropdown(inputValues) {
+    // inputValues are initially an array of strings from @inputValue
+    // map over so selectedOptions are objects
+    return inputValues.map((option) => {
+      let matchingOption = this.dropdownOptions.findBy(this.idKey, option);
+      // tooltip text comes from return of parent function
+      let addTooltip = this.args.renderInfoTooltip
+        ? this.args.renderInfoTooltip(option, this.dropdownOptions)
+        : false;
+
+      // remove any matches from dropdown list
       this.dropdownOptions.removeObject(matchingOption);
       return {
         id: option,
         name: matchingOption ? matchingOption.name : option,
         searchText: matchingOption ? matchingOption.searchText : option,
         addTooltip,
-        // conditionally spread configured object if we're using the dynamic idKey
+        // add additional attrs if we're using a dynamic idKey
         ...(this.idKey !== 'id' && this.customizeObject(matchingOption)),
       };
     });
@@ -115,25 +115,25 @@ export default class SearchSelect extends Component {
 
   @task
   *fetchOptions() {
+    this.dropdownOptions = []; // reset dropdown anytime we re-fetch
+
     if (this.args.parentManageSelected) {
       // works in tandem with parent passing in @options directly
       this.selectedOptions = this.args.parentManageSelected;
     }
-    this.dropdownOptions = []; // reset dropdown anytime we re-fetch
 
     if (!this.args.models) {
       if (this.args.options) {
         const { options } = this.args;
-        if (options.some((e) => Object.keys(e).includes('groupName'))) {
-          // path-filter-config-list.js nests options and already includes searchText
-          this.dropdownOptions = options;
-        } else {
-          this.dropdownOptions = [...this.addSearchText(options)];
-        }
+        // if options are nested, let parent handle formatting - see path-filter-config-list.js
+        this.dropdownOptions = options.some((e) => Object.keys(e).includes('groupName'))
+          ? options
+          : [...this.addSearchText(options)];
+
         if (!this.args.parentManageSelected) {
-          // format strings from inputValue and remove from dropdown list
+          //  set selectedOptions and remove matches from dropdown list
           this.selectedOptions = this.args.inputValue
-            ? this.formatSelectedAndUpdateDropdown(this.args.inputValue)
+            ? this.formatInputAndUpdateDropdown(this.args.inputValue)
             : [];
         }
       }
@@ -142,24 +142,25 @@ export default class SearchSelect extends Component {
 
     for (let modelType of this.args.models) {
       try {
-        let queryOptions = {};
+        let queryParams = {};
         if (this.args.backend) {
-          queryOptions = { backend: this.args.backend };
+          queryParams = { backend: this.args.backend };
         }
         if (this.args.queryObject) {
-          queryOptions = this.args.queryObject;
+          queryParams = this.args.queryObject;
         }
         // fetch options from the store
-        let options = yield this.store.query(modelType, queryOptions);
+        let options = yield this.store.query(modelType, queryParams);
 
         // store both select + unselected options in tracked property used by wildcard filter
         this.allOptions = [...this.allOptions, ...options.mapBy('id')];
 
-        // add search text and add to dropdown options
+        // add to dropdown options
         this.dropdownOptions = [...this.dropdownOptions, ...this.addSearchText(options)];
       } catch (err) {
         if (err.httpStatus === 404) {
-          // continue to query other models even if one returns 404
+          // continue to query other models even if one 404s
+          // and so selectedOptions will be set after for loop
           continue;
         }
         if (err.httpStatus === 403) {
@@ -169,9 +170,10 @@ export default class SearchSelect extends Component {
         throw err;
       }
     }
-    // format strings from inputValue and remove from dropdown list
+
+    // after all models are queried, set selectedOptions and remove matches from dropdown list
     this.selectedOptions = this.args.inputValue
-      ? this.formatSelectedAndUpdateDropdown(this.args.inputValue)
+      ? this.formatInputAndUpdateDropdown(this.args.inputValue)
       : [];
   }
 
@@ -223,15 +225,13 @@ export default class SearchSelect extends Component {
 
   customizeObject(option) {
     if (!option) return;
-    // only customize object if @passObject=true
-    if (!this.args.passObject) return option;
 
     let additionalKeys;
     if (this.args.objectKeys) {
-      // pull attrs corresponding to objectKeys from model record, add to the selected option (object) and send to the parent
+      // pull attrs corresponding to objectKeys from model record, add to the selection
       additionalKeys = Object.fromEntries(this.args.objectKeys.map((key) => [key, option[key]]));
-      // filter any undefined attrs, which means the model did not have a value for that attr
-      // no value could mean the model was not hydrated, the record is new or the model doesn't have that attribute
+      // filter any undefined attrs, which could mean the model was not hydrated,
+      // the record is new or the model doesn't have that attribute
       Object.keys(additionalKeys).forEach((key) => {
         if (additionalKeys[key] === undefined) {
           delete additionalKeys[key];
@@ -248,7 +248,6 @@ export default class SearchSelect extends Component {
   @action
   discardSelection(selected) {
     this.selectedOptions.removeObject(selected);
-    // fire off getSelectedValue action higher up in get-credentials-card component
     if (!selected.new) {
       this.dropdownOptions.pushObject(selected);
     }

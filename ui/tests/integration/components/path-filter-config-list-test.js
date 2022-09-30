@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click } from '@ember/test-helpers';
+import { render, click, findAll } from '@ember/test-helpers';
 import { typeInSearch, clickTrigger } from 'ember-power-select/test-support/helpers';
 import hbs from 'htmlbars-inline-precompile';
 import engineResolverFor from 'ember-engines/test-support/engine-resolver-for';
@@ -154,7 +154,12 @@ module('Integration | Component | path filter config list', function (hooks) {
     assert.equal(
       searchSelect.selectedOptions.objectAt(0).text,
       'auth/userpass/',
-      'renders config.path on init'
+      'renders config.path as selected on init'
     );
+    await clickTrigger();
+    assert.equal(findAll('.ember-power-select-group').length, 1, 'renders only remaining group');
+    await searchSelect.deleteButtons.objectAt(0).click();
+    await clickTrigger();
+    assert.equal(findAll('.ember-power-select-group').length, 2, 'renders two groups');
   });
 });

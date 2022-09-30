@@ -370,7 +370,7 @@ module('Integration | Component | search select', function (hooks) {
     assert.equal(component.options.objectAt(0).text, 'Type to search', 'text of option shows Type to search');
   });
 
-  test('it shows add suggestion if there are no options', async function (assert) {
+  test('it shows add suggestion if there are no models', async function (assert) {
     const models = [];
     this.set('models', models);
     this.set('onChange', sinon.spy());
@@ -385,7 +385,12 @@ module('Integration | Component | search select', function (hooks) {
     `);
     await clickTrigger();
     await settled();
-
+    assert.equal(component.options.length, 1);
+    assert.equal(
+      component.options.objectAt(0).text,
+      'Type to search',
+      'no options in dropdown, just Type to search prompt'
+    );
     await typeInSearch('new-model');
     assert.equal(
       component.options.objectAt(0).text,
@@ -394,10 +399,10 @@ module('Integration | Component | search select', function (hooks) {
     );
   });
 
-  test('it shows items not in the returned response', async function (assert) {
-    const models = ['test'];
+  test('it shows selected items not in the returned response and if one model 404s', async function (assert) {
+    const models = ['test', 'policy/acl'];
     this.set('models', models);
-    this.set('inputValue', ['test', 'two']);
+    this.set('inputValue', ['test-1', 'test-2']);
     this.set('onChange', sinon.spy());
     await render(hbs`
       <SearchSelect
@@ -408,13 +413,17 @@ module('Integration | Component | search select', function (hooks) {
         @fallbackComponent="string-list"
       />
     `);
-    assert.equal(component.selectedOptions.objectAt(0).text, 'test', 'renders first selected option');
-    assert.equal(component.selectedOptions.objectAt(1).text, 'two', 'renders second selected option');
+    assert.equal(component.selectedOptions.objectAt(0).text, 'test-1', 'renders first selected option');
+    assert.equal(component.selectedOptions.objectAt(1).text, 'test-2', 'renders second selected option');
     await clickTrigger();
+    assert.equal(component.options.objectAt(0).text, '1', 'renders options from successful query');
     await typeInSearch('new-item');
     await component.selectOption();
     assert.equal(component.selectedOptions.objectAt(2).text, 'new-item', 'renders newly added item');
-    assert.ok(this.onChange.calledWith(['test', 'two', 'new-item']), 'onChange called with all three items');
+    assert.ok(
+      this.onChange.calledWith(['test-1', 'test-2', 'new-item']),
+      'onChange called with all three items'
+    );
   });
 
   test('it shows both name and smaller id for identity endpoints', async function (assert) {
