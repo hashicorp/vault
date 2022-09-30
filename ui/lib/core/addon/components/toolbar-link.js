@@ -25,4 +25,13 @@ export default class ToolbarLinkComponent extends Component {
   get glyph() {
     return this.args.type == 'add' ? 'plus' : 'chevron-right';
   }
+  // TODO JR: temporary workaround for params no longer supported on LinkTo
+  // args should be added for individual LinkTo args
+  get route() {
+    return this.args.params[0];
+  }
+  get models() {
+    const [route, ...models] = this.args.params; // eslint-disable-line
+    return models;
+  }
 }
