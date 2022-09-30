@@ -146,4 +146,15 @@ module('Integration | Component | path filter config list', function (hooks) {
     assert.dom('.ember-power-select-group').hasText('Namespaces ns1', 'puts ns back within group');
     await clickTrigger();
   });
+
+  test('it renders previously set config.paths when editing the mount config', async function (assert) {
+    this.set('config', { mode: 'allow', paths: ['auth/userpass/'] });
+    this.set('paths', []);
+    await render(hbs`<PathFilterConfigList @config={{config}} @paths={{paths}} />`);
+    assert.equal(
+      searchSelect.selectedOptions.objectAt(0).text,
+      'auth/userpass/',
+      'renders config.path on init'
+    );
+  });
 });

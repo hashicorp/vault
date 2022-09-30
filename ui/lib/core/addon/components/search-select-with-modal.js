@@ -143,7 +143,7 @@ export default class SearchSelectWithModal extends Component {
   //----- adapted from ember-power-select-with-create
   addCreateOption(term, results) {
     if (this.shouldShowCreate(term, results)) {
-      const name = `Create new ${singularize(this.args.id)}: ${term}`;
+      const name = `Click to create new ${singularize(this.args.id)}: ${term}`;
       const suggestion = {
         __isSuggestion__: true,
         __value__: term,

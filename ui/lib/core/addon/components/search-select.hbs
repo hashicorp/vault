@@ -64,7 +64,7 @@
               {{selected.id}}
               {{#if @wildcardLabel}}
                 {{#if (is-wildcard-string selected.id)}}
-                  {{#let (filter-wildcard selected (map-by "id" this.allOptions)) as |wildcardCount|}}
+                  {{#let (filter-wildcard selected this.allOptions) as |wildcardCount|}}
                     <span class="tag is-light has-text-grey-dark" data-test-count={{wildcardCount}}>
                       includes
                       {{if wildcardCount wildcardCount 0}}

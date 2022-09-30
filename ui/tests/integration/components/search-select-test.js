@@ -119,14 +119,15 @@ module('Integration | Component | search select', function (hooks) {
     ];
     this.set('options', options);
     this.set('onChange', sinon.spy());
+    this.set('inputValue', ['third-option']);
     await render(hbs`
       <SearchSelect
         @label="foo"
         @options={{this.options}}
         @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
       />
     `);
-
     await clickTrigger();
     await settled();
     assert.equal(component.options.length, 2, 'shows all options');
@@ -152,12 +153,14 @@ module('Integration | Component | search select', function (hooks) {
     await clickTrigger();
     await settled();
     assert.equal(component.options.length, 3, 'shows all options');
+    assert.equal(component.options.objectAt(0).text, 'seven 7', 'first option renders');
     await typeInSearch('n');
     assert.equal(component.options.length, 3, 'list still shows three options, including the add option');
     await typeInSearch('ni');
     assert.equal(component.options.length, 2, 'list shows two options, including the add option');
     await typeInSearch('nine');
     assert.equal(component.options.length, 1, 'list shows one option');
+    assert.equal(component.options.objectAt(0).text, 'nine 9', 'renders only matching option');
   });
 
   test('it counts options when wildcard is used and displays the count', async function (assert) {
@@ -180,6 +183,11 @@ module('Integration | Component | search select', function (hooks) {
     await component.selectOption();
     await settled();
     assert.dom('[data-test-count="2"]').exists('correctly counts with wildcard filter and shows the count');
+    assert.equal(
+      component.selectedOptions.objectAt(0).text,
+      '*bar* includes 2 roles',
+      'renders correct selected text'
+    );
   });
 
   test('it behaves correctly if new items not allowed', async function (assert) {
@@ -244,6 +252,7 @@ module('Integration | Component | search select', function (hooks) {
       />
     `);
     assert.equal(component.selectedOptions.length, 1, 'there is 1 selected option');
+    assert.equal(component.selectedOptions.objectAt(0).text, 'eight 8', 'selected option renders');
     await clickTrigger();
     await settled();
     assert.equal(component.options.length, 2, 'shows two options');
@@ -272,6 +281,11 @@ module('Integration | Component | search select', function (hooks) {
     await clickTrigger();
     await settled();
     assert.equal(component.options.length, 3, 'shows all options');
+    assert.equal(
+      component.options.objectAt(2).text,
+      'eight 8',
+      'previously selected option returns to dropdown and renders properly'
+    );
   });
 
   test('it adds created item to list items on create and removes without adding back to options on delete', async function (assert) {
@@ -311,14 +325,29 @@ module('Integration | Component | search select', function (hooks) {
     this.set('onChange', sinon.spy());
     await render(hbs`
       <SearchSelect
-        @label="foo"
+        @label="Policy"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @fallbackComponent="string-list"
+      />
+    `);
+    assert.ok(component.hasStringList);
+  });
+
+  test('it uses pre-populates fallback component with inputValue if endpoint 403s', async function (assert) {
+    const models = ['policy/rgp'];
+    this.set('models', models);
+    this.set('inputValue', ['1']);
+    await render(hbs`
+      <SearchSelect
+        @label="Policy"
         @models={{this.models}}
         @onChange={{this.onChange}}
         @inputValue={{this.inputValue}}
         @fallbackComponent="string-list"
       />
     `);
-    assert.ok(component.hasStringList);
+    assert.dom('[data-test-string-list-input="0"]').hasValue('1');
   });
 
   test('it shows no results if endpoint 404s', async function (assert) {
@@ -357,14 +386,19 @@ module('Integration | Component | search select', function (hooks) {
     await clickTrigger();
     await settled();
 
-    await typeInSearch('new item');
-    assert.equal(component.options.objectAt(0).text, 'Add new foo: new item', 'shows the create suggestion');
+    await typeInSearch('new-model');
+    assert.equal(
+      component.options.objectAt(0).text,
+      'Click to add new item: new-model',
+      'shows the create suggestion'
+    );
   });
 
   test('it shows items not in the returned response', async function (assert) {
     const models = ['test'];
     this.set('models', models);
     this.set('inputValue', ['test', 'two']);
+    this.set('onChange', sinon.spy());
     await render(hbs`
       <SearchSelect
         @label="foo"
@@ -374,7 +408,13 @@ module('Integration | Component | search select', function (hooks) {
         @fallbackComponent="string-list"
       />
     `);
-    assert.equal(component.selectedOptions.length, 2, 'renders inputOptions as selectedOptions');
+    assert.equal(component.selectedOptions.objectAt(0).text, 'test', 'renders first selected option');
+    assert.equal(component.selectedOptions.objectAt(1).text, 'two', 'renders second selected option');
+    await clickTrigger();
+    await typeInSearch('new-item');
+    await component.selectOption();
+    assert.equal(component.selectedOptions.objectAt(2).text, 'new-item', 'renders newly added item');
+    assert.ok(this.onChange.calledWith(['test', 'two', 'new-item']), 'onChange called with all three items');
   });
 
   test('it shows both name and smaller id for identity endpoints', async function (assert) {
@@ -390,8 +430,9 @@ module('Integration | Component | search select', function (hooks) {
       />
     `);
     await clickTrigger();
-    assert.equal(component.options.length, 3, 'shows all options');
-    assert.equal(component.smallOptionIds.length, 3, 'shows the smaller id text and the name');
+    assert.equal(component.options.length, 3, 'shows three options');
+    assert.equal(component.options.objectAt(0).text, 'seven 7', 'renders correct dropdown text');
+    assert.equal(component.smallOptionIds.length, 3, 'shows 3 smaller id text and the name');
   });
 
   test('it does not show name and smaller id for non-identity endpoints', async function (assert) {
@@ -399,16 +440,17 @@ module('Integration | Component | search select', function (hooks) {
     this.set('models', models);
     this.set('onChange', sinon.spy());
     await render(hbs`
-      <SearchSelect
-        @label="foo"
-        @models={{this.models}}
-        @onChange={{this.onChange}}
-        @inputValue={{this.inputValue}}
-        @fallbackComponent="string-list"
-      />
+    <SearchSelect
+    @label="foo"
+    @models={{this.models}}
+    @onChange={{this.onChange}}
+    @inputValue={{this.inputValue}}
+    @fallbackComponent="string-list"
+    />
     `);
     await clickTrigger();
     assert.equal(component.options.length, 3, 'shows all options');
+    assert.equal(component.options.objectAt(0).text, '1', 'renders just id');
     assert.equal(component.smallOptionIds.length, 0, 'only shows the regular sized id');
   });
 
@@ -443,6 +485,8 @@ module('Integration | Component | search select', function (hooks) {
     `);
     await clickTrigger();
     assert.equal(component.options.length, 6, 'shows options from both models');
+    assert.equal(component.options.objectAt(0).text, 'seven 7', 'first dropdown item renders');
+    assert.equal(component.options.objectAt(5).text, '3 3', 'last dropdown item renders');
   });
 
   test('it returns array with objects instead of strings if passObject=true', async function (assert) {

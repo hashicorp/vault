@@ -3,25 +3,23 @@ import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { singularize } from 'ember-inflector';
 import { resolve } from 'rsvp';
 import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-utils';
 import { isWildcardString } from 'vault/helpers/is-wildcard-string';
-import { assert } from '@ember/debug';
 /**
  * @module SearchSelect
  * The `SearchSelect` is an implementation of the [ember-power-select](https://github.com/cibernox/ember-power-select) used for form elements where options come dynamically from the API.
  * @example
  *  <SearchSelect
- *    id="policy"
- *    models={{array "policies/acl"}}
- *    onChange={{this.onChange}}
- *    inputValue={{get @model this.valuePath}}
- *    wildcardLabel="role"
- *    fallbackComponent="string-list"
- *    selectLimit={{1}}
- *    backend={{@model.backend}}
- *    disallowNewItems={{true}}
+ *    @id="policy"
+ *    @models={{array "policies/acl"}}
+ *    @onChange={{this.onChange}}
+ *    @inputValue={{get @model this.valuePath}}
+ *    @wildcardLabel="role"
+ *    @fallbackComponent="string-list"
+ *    @selectLimit={{1}}
+ *    @backend={{@model.backend}}
+ *    @disallowNewItems={{true}}
  *    class={{if this.validationError "dropdown-has-error-border"}}
  * />
  * 
@@ -42,7 +40,7 @@ import { assert } from '@ember/debug';
  
  // * template only/display args
  * @param {string} id - The name of the form field
- * @param {string} [label] - Label for this form field, also used to generate `Add new ${singularize(label}` copy when adding a nonexisting option
+ * @param {string} [label] - Label for this form field
  * @param {string} [labelClass] - overwrite default label size (14px) from class="is-label"
  * @param {string} [subText] - Text to be displayed below the label
  * @param {string} fallbackComponent - name of component to be rendered if the API call 403s
@@ -54,25 +52,23 @@ import { assert } from '@ember/debug';
  *
  // * advanced customization
  * @param {Array} options - array of objects passed directly to the power-select component. If doing this, `models` should not also be passed as that will overwrite the
- * passed options. ex: [{ name: 'namespace45', id: 'displayedName' }];
+ * passed options. ex: [{ name: 'namespace45', id: 'displayedName' }]. It's recommended the parent should manage the array of selected items if manually passing in options.
  * @param {function} search - Customizes how the power-select component searches for matches - see the power-select docs for more information.
  *
  */
 
 export default class SearchSelect extends Component {
   @service store;
-  @tracked selectedOptions; // array of selected options
-  @tracked dropdownOptions; // options that will render in dropdown
   @tracked shouldUseFallback = false;
+  @tracked selectedOptions = []; // array of selected options (initially set by @inputValue)
+  @tracked dropdownOptions = []; // options that will render in dropdown, updates as selections are added/discarded
+  @tracked allOptions = []; // both selected and unselected options, used for wildcard filter
 
   get hidePowerSelect() {
     return this.selectedOptions.length >= this.args.selectLimit;
   }
 
   get idKey() {
-    if (this.args.objectKeys) {
-      assert('@objectKeys passed to <SearchSelect> must be an array', Array.isArray(this.args.objectKeys));
-    }
     // if objectKeys exists, use the first element of the array as the identifier
     return this.args.objectKeys ? this.args.objectKeys[0] : 'id';
   }
@@ -87,7 +83,7 @@ export default class SearchSelect extends Component {
 
   constructor() {
     super(...arguments);
-    this.selectedOptions = this.args.inputValue || [];
+    // this.selectedOptions = this.args.inputValue || [];
   }
 
   addSearchText(optionsToFormat) {
@@ -99,7 +95,7 @@ export default class SearchSelect extends Component {
     });
   }
 
-  // remove selected items from dropdown and format from string (initially set by inputValue) to object
+  // remove initially selected items (strings from inputValue) from dropdown and make objects
   formatSelectedAndUpdateDropdown(selectedOptions) {
     return selectedOptions.map((option) => {
       let matchingOption = this.dropdownOptions.findBy(this.idKey, option); // if undefined, an inputValue didn't match a model returned from the query
@@ -119,16 +115,25 @@ export default class SearchSelect extends Component {
   @task
   *fetchOptions() {
     if (this.args.parentManageSelected) {
+      // works in tandem with parent passing in @options directly
       this.selectedOptions = this.args.parentManageSelected;
     }
-    this.dropdownOptions = [];
+    this.dropdownOptions = []; // reset dropdown anytime we re-fetch
+
     if (!this.args.models) {
       if (this.args.options) {
         const { options } = this.args;
         if (options.some((e) => Object.keys(e).includes('groupName'))) {
+          // path-filter-config-list.js nests options and already includes searchText
           this.dropdownOptions = options;
         } else {
           this.dropdownOptions = [...this.addSearchText(options)];
+        }
+        if (!this.args.parentManageSelected) {
+          // format strings from inputValue and remove from dropdown list
+          this.selectedOptions = this.args.inputValue
+            ? this.formatSelectedAndUpdateDropdown(this.args.inputValue)
+            : [];
         }
       }
       return;
@@ -143,18 +148,18 @@ export default class SearchSelect extends Component {
         if (this.args.queryObject) {
           queryOptions = this.args.queryObject;
         }
-        this.allOptions = yield this.store.query(modelType, queryOptions);
-        this.dropdownOptions = [...this.dropdownOptions, ...this.addSearchText(this.allOptions)];
-        this.selectedOptions = this.formatSelectedAndUpdateDropdown(this.selectedOptions);
+        // fetch options from the store
+        let options = yield this.store.query(modelType, queryOptions);
+
+        // store both select + unselected options in tracked property used by wildcard filter
+        this.allOptions = [...this.allOptions, ...options.mapBy('id')];
+
+        // add search text and add to dropdown options
+        this.dropdownOptions = [...this.dropdownOptions, ...this.addSearchText(options)];
       } catch (err) {
         if (err.httpStatus === 404) {
-          if (!this.dropdownOptions) {
-            // If the call failed but the resource has items
-            // from a different namespace, this allows the
-            // selected items to display
-            this.dropdownOptions = [];
-          }
-          return;
+          // continue to query other models even if one returns 404
+          continue;
         }
         if (err.httpStatus === 403) {
           this.shouldUseFallback = true;
@@ -163,6 +168,10 @@ export default class SearchSelect extends Component {
         throw err;
       }
     }
+    // format strings from inputValue and remove from dropdown list
+    this.selectedOptions = this.args.inputValue
+      ? this.formatSelectedAndUpdateDropdown(this.args.inputValue)
+      : [];
   }
 
   @action
@@ -194,7 +203,7 @@ export default class SearchSelect extends Component {
   // ----- adapted from ember-power-select-with-create
   addCreateOption(term, results) {
     if (this.shouldShowCreate(term, results)) {
-      const name = `Add new ${singularize(this.args.label.toLowerCase() || 'item')}: ${term}`;
+      const name = `Click to add new item: ${term}`;
       const suggestion = {
         __isSuggestion__: true,
         __value__: term,
