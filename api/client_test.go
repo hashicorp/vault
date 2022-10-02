@@ -101,6 +101,7 @@ func TestClientSetAddress(t *testing.T) {
 		t.Fatalf("bad: expected: '172.168.2.1:8300' actual: %q", client.addr.Host)
 	}
 	// Test switching to Unix Socket address from TCP address
+	client.config.HttpClient.Transport.(*http.Transport).DialContext = nil
 	if err := client.SetAddress("unix:///var/run/vault.sock"); err != nil {
 		t.Fatal(err)
 	}
@@ -117,6 +118,7 @@ func TestClientSetAddress(t *testing.T) {
 		t.Fatal("bad: expected DialContext to not be nil")
 	}
 	// Test switching to TCP address from Unix Socket address
+	client.config.HttpClient.Transport.(*http.Transport).DialContext = nil
 	if err := client.SetAddress("http://172.168.2.1:8300"); err != nil {
 		t.Fatal(err)
 	}
@@ -125,6 +127,9 @@ func TestClientSetAddress(t *testing.T) {
 	}
 	if client.addr.Scheme != "http" {
 		t.Fatalf("bad: expected: 'http' actual: %q", client.addr.Scheme)
+	}
+	if client.config.HttpClient.Transport.(*http.Transport).DialContext == nil {
+		t.Fatal("bad: expected DialContext to not be nil")
 	}
 }
 
