@@ -480,6 +480,23 @@ func TestPluginCatalog_NewPluginClient(t *testing.T) {
 	TestAddTestPlugin(t, core, "single-userpass-1", consts.PluginTypeUnknown, "", "TestPluginCatalog_PluginMain_Userpass", []string{}, "")
 	TestAddTestPlugin(t, core, "single-userpass-2", consts.PluginTypeUnknown, "", "TestPluginCatalog_PluginMain_Userpass", []string{}, "")
 
+	getKey := func(pluginName string, pluginType consts.PluginType) externalPluginsKey {
+		t.Helper()
+		ctx := context.Background()
+		plugin, err := core.pluginCatalog.Get(ctx, pluginName, pluginType, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if plugin == nil {
+			t.Fatal("did not find " + pluginName)
+		}
+		key, err := makeExternalPluginsKey(plugin)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return key
+	}
+
 	var pluginClients []*pluginClient
 	// run plugins
 	// run "mux-postgres" twice which will start a single plugin for 2
@@ -510,20 +527,20 @@ func TestPluginCatalog_NewPluginClient(t *testing.T) {
 	}
 
 	// check connections map
-	expectConnectionLen(t, 2, externalPlugins["mux-postgres"].connections)
-	expectConnectionLen(t, 1, externalPlugins["single-postgres-1"].connections)
-	expectConnectionLen(t, 1, externalPlugins["single-postgres-2"].connections)
-	expectConnectionLen(t, 2, externalPlugins["mux-userpass"].connections)
-	expectConnectionLen(t, 1, externalPlugins["single-userpass-1"].connections)
-	expectConnectionLen(t, 1, externalPlugins["single-userpass-2"].connections)
+	expectConnectionLen(t, 2, externalPlugins[getKey("mux-postgres", consts.PluginTypeDatabase)].connections)
+	expectConnectionLen(t, 1, externalPlugins[getKey("single-postgres-1", consts.PluginTypeDatabase)].connections)
+	expectConnectionLen(t, 1, externalPlugins[getKey("single-postgres-2", consts.PluginTypeDatabase)].connections)
+	expectConnectionLen(t, 2, externalPlugins[getKey("mux-userpass", consts.PluginTypeCredential)].connections)
+	expectConnectionLen(t, 1, externalPlugins[getKey("single-userpass-1", consts.PluginTypeCredential)].connections)
+	expectConnectionLen(t, 1, externalPlugins[getKey("single-userpass-2", consts.PluginTypeCredential)].connections)
 
 	// check multiplexing support
-	expectMultiplexingSupport(t, true, externalPlugins["mux-postgres"].multiplexingSupport)
-	expectMultiplexingSupport(t, false, externalPlugins["single-postgres-1"].multiplexingSupport)
-	expectMultiplexingSupport(t, false, externalPlugins["single-postgres-2"].multiplexingSupport)
-	expectMultiplexingSupport(t, true, externalPlugins["mux-userpass"].multiplexingSupport)
-	expectMultiplexingSupport(t, false, externalPlugins["single-userpass-1"].multiplexingSupport)
-	expectMultiplexingSupport(t, false, externalPlugins["single-userpass-2"].multiplexingSupport)
+	expectMultiplexingSupport(t, true, externalPlugins[getKey("mux-postgres", consts.PluginTypeDatabase)].multiplexingSupport)
+	expectMultiplexingSupport(t, false, externalPlugins[getKey("single-postgres-1", consts.PluginTypeDatabase)].multiplexingSupport)
+	expectMultiplexingSupport(t, false, externalPlugins[getKey("single-postgres-2", consts.PluginTypeDatabase)].multiplexingSupport)
+	expectMultiplexingSupport(t, true, externalPlugins[getKey("mux-userpass", consts.PluginTypeCredential)].multiplexingSupport)
+	expectMultiplexingSupport(t, false, externalPlugins[getKey("single-userpass-1", consts.PluginTypeCredential)].multiplexingSupport)
+	expectMultiplexingSupport(t, false, externalPlugins[getKey("single-userpass-2", consts.PluginTypeCredential)].multiplexingSupport)
 
 	// cleanup all of the external plugin processes
 	for _, client := range pluginClients {
