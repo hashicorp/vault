@@ -68,13 +68,6 @@ const ModelExport = AuthMethodModel.extend({
     return expandAttributeMeta(this, tuneAttrs);
   }),
 
-  // sys/mounts/auth/[auth-path]/tune.
-  // tune: memberAction({
-  //   path: 'tune',
-  //   type: 'post',
-  //   urlType: 'updateRecord',
-  // }),
-
   formFields: computed(function () {
     return [
       'type',
