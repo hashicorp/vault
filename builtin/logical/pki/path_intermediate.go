@@ -3,7 +3,6 @@ package pki
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -87,6 +86,7 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		req:     req,
 		apiData: data,
 	}
+
 	parsedBundle, warnings, err := generateIntermediateCSR(sc, input, b.Backend.GetRandomReader())
 	if err != nil {
 		switch err.(type) {
@@ -95,10 +95,6 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		default:
 			return nil, err
 		}
-	}
-
-	if err = parsedBundle.CSR.CheckSignature(); err != nil {
-		return nil, errors.New("failed signature validation for CSR")
 	}
 
 	csrb, err := parsedBundle.ToCSRBundle()

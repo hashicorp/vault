@@ -1101,6 +1101,10 @@ func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Rea
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %v", err)}
 	}
 
+	if err = result.CSR.CheckSignature(); err != nil {
+		return nil, errors.New("failed signature validation for CSR")
+	}
+
 	return result, nil
 }
 
