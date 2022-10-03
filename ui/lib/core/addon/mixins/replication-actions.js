@@ -74,7 +74,7 @@ export default Mixin.create({
       // do something to show model is pending
       cluster.set(
         replicationMode,
-        store.createFragment('replication-attributes', {
+        store.createRecord('replication-attributes', {
           mode: 'bootstrapping',
         })
       );
