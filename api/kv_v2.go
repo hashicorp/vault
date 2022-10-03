@@ -500,19 +500,17 @@ func (kv *KVv2) Rollback(ctx context.Context, secretPath string, toVersion int) 
 func extractCustomMetadata(secret *Secret) (map[string]interface{}, error) {
 	// Logical Writes return the metadata directly, Reads return it nested inside the "metadata" key
 	customMetadataInterface, ok := secret.Data["custom_metadata"]
+
 	if !ok {
 		metadataInterface, ok := secret.Data["metadata"]
-		if !ok { // if that's not found, bail since it should have had one or the other
-			return nil, fmt.Errorf("secret is missing expected fields")
+		if !ok { // if that's not found, bail since it should exist
+			return nil, nil
 		}
 		metadataMap, ok := metadataInterface.(map[string]interface{})
 		if !ok {
 			return nil, fmt.Errorf("unexpected type for 'metadata' element: %T (%#v)", metadataInterface, metadataInterface)
 		}
-		customMetadataInterface, ok = metadataMap["custom_metadata"]
-		if !ok {
-			return nil, fmt.Errorf("metadata missing expected field \"custom_metadata\": %v", metadataMap)
-		}
+		customMetadataInterface, _ = metadataMap["custom_metadata"]
 	}
 
 	cm, ok := customMetadataInterface.(map[string]interface{})

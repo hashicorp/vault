@@ -319,6 +319,22 @@ func TestExtractCustomMetadata(t *testing.T) {
 			},
 			expected: map[string]interface{}{"org": "eng"},
 		},
+		{
+			name: "a read response with no custom metadata",
+			inputAPIResp: &Secret{
+				Data: map[string]interface{}{
+					"metadata": map[string]interface{}{},
+				},
+			},
+			expected: map[string]interface{}(nil),
+		},
+		{
+			name: "a write response with no custom metadata",
+			inputAPIResp: &Secret{
+				Data: map[string]interface{}{},
+			},
+			expected: map[string]interface{}(nil),
+		},
 	}
 
 	for _, tc := range testCases {
