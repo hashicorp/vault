@@ -828,13 +828,19 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 		}
 	}
 
-	// Next, we load and parse all revoked certificates. We need to assign
-	// these certificates to an issuer. Some certificates will not be
-	// assignable (if they were issued by a since-deleted issuer), so we need
-	// a separate pool for those.
-	unassignedCerts, revokedCertsMap, err := getRevokedCertEntries(sc, issuerIDCertMap, isDelta)
-	if err != nil {
-		return fmt.Errorf("error building CRLs: unable to get revoked certificate entries: %v", err)
+	var unassignedCerts []pkix.RevokedCertificate
+	var revokedCertsMap map[issuerID][]pkix.RevokedCertificate
+
+	// If the CRL is disabled do not bother reading in all the revoked certificates.
+	if !globalCRLConfig.Disable {
+		// Next, we load and parse all revoked certificates. We need to assign
+		// these certificates to an issuer. Some certificates will not be
+		// assignable (if they were issued by a since-deleted issuer), so we need
+		// a separate pool for those.
+		unassignedCerts, revokedCertsMap, err = getRevokedCertEntries(sc, issuerIDCertMap, isDelta)
+		if err != nil {
+			return fmt.Errorf("error building CRLs: unable to get revoked certificate entries: %v", err)
+		}
 	}
 
 	if err := augmentWithRevokedIssuers(issuerIDEntryMap, issuerIDCertMap, revokedCertsMap); err != nil {
@@ -1269,9 +1275,13 @@ WRITE:
 	now := time.Now()
 	nextUpdate := now.Add(crlLifetime)
 
-	ext, err := certutil.CreateDeltaCRLIndicatorExt(lastCompleteNumber)
-	if err != nil {
-		return nil, fmt.Errorf("could not create crl delta indicator extension: %v", err)
+	var extensions []pkix.Extension
+	if isDelta {
+		ext, err := certutil.CreateDeltaCRLIndicatorExt(lastCompleteNumber)
+		if err != nil {
+			return nil, fmt.Errorf("could not create crl delta indicator extension: %v", err)
+		}
+		extensions = []pkix.Extension{ext}
 	}
 
 	revocationListTemplate := &x509.RevocationList{
@@ -1280,7 +1290,7 @@ WRITE:
 		ThisUpdate:          now,
 		NextUpdate:          nextUpdate,
 		SignatureAlgorithm:  signingBundle.RevocationSigAlg,
-		ExtraExtensions:     []pkix.Extension{ext},
+		ExtraExtensions:     extensions,
 	}
 
 	crlBytes, err := x509.CreateRevocationList(rand.Reader, revocationListTemplate, signingBundle.Certificate, signingBundle.PrivateKey)

@@ -32,6 +32,7 @@ import { isWildcardString } from 'vault/helpers/is-wildcard-string';
  * @param {string} [wildcardLabel] - when you want the searchSelect component to return a count on the model for options returned when using a wildcard you must provide a label of the count e.g. role.  Should be singular.
  * @param {string} [placeholder] - text you wish to replace the default "search" with
  * @param {boolean} [displayInherit] - if you need the search select component to display inherit instead of box.
+ * @param {boolean} [renderInfoTooltip=false] - if you want search select to render a tooltip beside a selected item if no corresponding model was returned from .query
  *
  * @param {Array} options - *Advanced usage* - `options` can be passed directly from the outside to the
  * power-select component. If doing this, `models` should not also be passed as that will overwrite the
@@ -90,7 +91,8 @@ export default Component.extend({
       let matchingOption = options.findBy(this.idKey, option);
       // an undefined matchingOption means a selectedOption, on edit, didn't match a model returned from the query
       // this means it is a wildcard string or no longer exists
-      let addTooltip = matchingOption || isWildcardString([option]) ? false : true; // add tooltip to let user know the selection can be discarded
+      // permissions shouldn't inhibit viewing a record here, because the fallback component would render instead of search-select
+      let addTooltip = matchingOption || isWildcardString([option]) ? false : true; // add tooltip to let user know the selection may not exist
       options.removeObject(matchingOption);
       return {
         id: option,

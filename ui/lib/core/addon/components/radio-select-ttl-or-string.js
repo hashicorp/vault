@@ -14,36 +14,34 @@ import { tracked } from '@glimmer/tracking';
  *  <RadioSelectTtlOrString @attr={{attr}} @model={{this.model}} />
  * {{/each}}
  * ```
- * @callback onChange
  * @param {Model} model - Ember Data model that `attr` is defined on.
  * @param {Object} attr - Usually derived from ember model `attributes` lookup, and all members of `attr.options` are optional.
- * @param {onChange} [onChange] - Callback triggered on save success.
  */
 
 export default class RadioSelectTtlOrString extends Component {
   @tracked groupValue = 'ttl';
-  @tracked ttlTime = '';
+  @tracked ttlTime;
+  @tracked notAfter;
 
-  @action selectionChange(selection) {
+  @action onRadioButtonChange(selection) {
     this.groupValue = selection;
-    // Clear the TTL time selection if they have clicked the specificDate radio button.
+    // Clear the previous selection if they have clicked the other radio button.
     if (selection === 'specificDate') {
-      this.ttlTime = '';
+      this.args.model.set('ttl', '');
+      this.ttlTime = ''; //clear out the form field
+    }
+    if (selection === 'tll') {
+      this.args.model.set('notAfter', '');
+      this.notAfter = ''; //clear out the form field
     }
   }
 
   @action setAndBroadcastTtl(value) {
     let valueToSet = value.enabled === true ? `${value.seconds}s` : 0;
-    this.setAndBroadcast('ttl', `${valueToSet}`);
+    this.args.model.set('ttl', `${valueToSet}`);
   }
 
   @action setAndBroadcastInput(event) {
-    const prop = event.target.type === 'checkbox' ? 'checked' : 'value';
-    this.setAndBroadcast('not_after', event.target[prop]);
-  }
-
-  // Send off the new value and the param name to the parent.
-  @action setAndBroadcast(modelParam, value) {
-    this.args.onChange(modelParam, value);
+    this.args.model.set('notAfter', event.target.value);
   }
 }

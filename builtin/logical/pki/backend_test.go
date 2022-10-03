@@ -2539,7 +2539,7 @@ func TestBackend_ConsulSignLeafWithLegacyRole(t *testing.T) {
 
 	signedCert := parseCert(t, certAsPem)
 	rootCert := parseCert(t, rootCaPem)
-	requireSignedBy(t, signedCert, rootCert.PublicKey)
+	requireSignedBy(t, signedCert, rootCert)
 }
 
 func TestBackend_SignSelfIssued(t *testing.T) {
@@ -4097,7 +4097,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 
 	rootCaCert := parseCert(t, rootCert)
 	intermediaryCaCert := parseCert(t, intermediateCert)
-	requireSignedBy(t, intermediaryCaCert, rootCaCert.PublicKey)
+	requireSignedBy(t, intermediaryCaCert, rootCaCert)
 	intermediateCaChain := intermediateSignedData["ca_chain"].([]string)
 
 	require.Equal(t, parseCert(t, intermediateCaChain[0]), intermediaryCaCert, "intermediate signed cert should have been part of ca_chain")
@@ -4191,7 +4191,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	issuedCrt := parseCert(t, issueCrtAsPem)
 
 	// Verify that the certificates are signed by the intermediary CA key...
-	requireSignedBy(t, issuedCrt, intermediaryCaCert.PublicKey)
+	requireSignedBy(t, issuedCrt, intermediaryCaCert)
 
 	// Test that we can request that the root ca certificate not appear in the ca_chain field
 	resp, err = CBWrite(b_ext, s_ext, "issue/example", map[string]interface{}{
@@ -5553,11 +5553,11 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 
 	// Assert initialize from clean is correct:
 	b.initializeStoredCertificateCounts(ctx)
-	if *b.certCount != 6 {
-		t.Fatalf("Failed to count six certificates root,A,B,C,D,E, instead counted %d certs", *b.certCount)
+	if atomic.LoadUint32(b.certCount) != 6 {
+		t.Fatalf("Failed to count six certificates root,A,B,C,D,E, instead counted %d certs", atomic.LoadUint32(b.certCount))
 	}
-	if *b.revokedCertCount != 2 {
-		t.Fatalf("Failed to count two revoked certificates A+B, instead counted %d certs", *b.revokedCertCount)
+	if atomic.LoadUint32(b.revokedCertCount) != 2 {
+		t.Fatalf("Failed to count two revoked certificates A+B, instead counted %d certs", atomic.LoadUint32(b.revokedCertCount))
 	}
 
 	// Simulates listing while initialize in progress, by "restarting it"

@@ -31,55 +31,15 @@
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
     {{! ARG TODO write a test for namespace reminder }}
     <NamespaceReminder @mode={{if @model.isNew "create" "update"}} @noun="PKI role" />
-    {{! This is the code from FormFieldGroupsLoop. However, because we need to pass the attr into the yielded component, I'm unable to use that component.}}
-    {{#each @model.fieldGroups as |fieldGroup|}}
-      {{#each-in fieldGroup as |group fields|}}
-        {{#if (eq group "default")}}
-          {{#each fields as |attr|}}
-            <FormField
-              data-test-field={{true}}
-              @attr={{attr}}
-              @model={{@model}}
-              @modelValidations={{@modelValidations}}
-              @showHelpText={{false}}
-            >
-              {{! Yielding custom component in form-fields for property on the model with editType: 'yield' }}
-              <RadioSelectTtlOrString @model={{@model}} @attr={{attr}} @onChange={{this.onNotValidAfterChange}} />
-            </FormField>
-          {{/each}}
-        {{else}}
-          {{#let (camelize (concat "show" group)) as |prop|}}
-            <ToggleButton
-              @isOpen={{get @model prop}}
-              @openLabel={{concat "Hide " group}}
-              @closedLabel={{group}}
-              @onClick={{fn (mut (get @model prop))}}
-              class="is-block"
-              data-test-toggle-group={{group}}
-            />
-            {{#if (get @model prop)}}
-              <div class="box is-marginless">
-                {{#each fields as |attr|}}
-                  {{! Custom conditional field where keyBits values are tied to the selected keyType }}
-                  <FormField
-                    data-test-field={{true}}
-                    @attr={{if (eq attr.name "keyBits") @model.keyBitsConditional attr}}
-                    @model={{@model}}
-                    @showHelpText={{false}}
-                  />
-                {{/each}}
-                {{#if (eq group "Domain handling")}}
-                  <p><Icon @name="info" aria-label="description" />
-                    These options can interact intricately with one another. For more information,
-                    <DocLink @path="/api-docs/secret/pki#create-update-role">
-                      see our documentation here.</DocLink></p>
-                {{/if}}
-              </div>
-            {{/if}}
-          {{/let}}
-        {{/if}}
-      {{/each-in}}
-    {{/each}}
+    <FormFieldGroupsLoop
+      @model={{@model}}
+      @mode={{if @model.isNew "create" "update"}}
+      @modelValidations={{@modelValidations}}
+      @showHelpText={{false}}
+      as |attr|
+    >
+      <RadioSelectTtlOrString @model={{@model}} @attr={{attr}} />
+    </FormFieldGroupsLoop>
   </div>
   <div class="has-top-padding-s">
     <button type="submit" class="button is-primary {{if this.save.isRunning 'is-loading'}}" disabled={{this.save.isRunning}}>
