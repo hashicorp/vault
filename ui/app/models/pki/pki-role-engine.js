@@ -30,7 +30,7 @@ export default class PkiRoleEngineModel extends Model {
   @attr({
     label: 'Not valid after',
     subText:
-      'The time after which this certificate will no longer be valid. This can be a TTL (a range of time from now) or a specific date. If not set, the system uses "default" or the value of max_ttl, whichever is shorter. Alternatively, you can set the not_after date below.',
+      'The time after which this certificate will no longer be valid. This can be a TTL (a range of time from now) or a specific date. If no TTL is set, the system uses "default" or the value of max_ttl, whichever is shorter. Alternatively, you can set the not_after date below.',
     editType: 'yield',
   })
   customTtl;
@@ -197,9 +197,9 @@ export default class PkiRoleEngineModel extends Model {
             'allowSubdomains',
             'allowGlobDomains',
             'allowWildcardCertificates',
-            'allowLocalhost',
+            'allowLocalhost', // default: true
             'allowAnyName',
-            'enforceHostnames',
+            'enforceHostnames', // default: true
           ],
         },
         {
