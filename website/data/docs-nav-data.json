@@ -2073,6 +2073,19 @@
         ]
       },
       {
+        "title": "PKCS11 Provider",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "enterprise/pkcs11-provider"
+          },
+          {
+            "title": "Oracle TDE",
+            "path": "enterprise/pkcs11-provider/oracle-tde"
+          }
+        ]
+      },
+      {
         "title": "Automated Integrated Storage Snapshots",
         "path": "enterprise/automated-integrated-storage-snapshots"
       },
