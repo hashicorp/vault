@@ -145,7 +145,7 @@ Most programs will use only one slot.
 - `tls_cert_path` (required): the location of the client TLS certificate used to authenticate to the KMIP engine.
 - `tls_key_path` (optional, defaults to the value of `tls_cert_path`): the location of the encrypted or unencrypted TLS key used to authenticate to the KMIP engine.
 - `ca_path` (required): the location of the CA bundle that will be used to verify the server's certificate.
-- `scope` (required): the [KMIP scope](https://www.vaultproject.io/docs/secrets/kmip#scopes-and-roles) to authenticate against and where the TDE master keys and associated metadata will be stored.
+- `scope` (required): the [KMIP scope](/docs/secrets/kmip#scopes-and-roles) to authenticate against and where the TDE master keys and associated metadata will be stored.
 - `cache` (optional, default `true`): if the provider uses a cache to improve the performance of `C_GetAttributeValue` (KMIP: `GetAttributes`) calls.
 - `emulate_hardware` (optional, default `false`): specifies if the provider should report that it is connected to a hardware device.
 
