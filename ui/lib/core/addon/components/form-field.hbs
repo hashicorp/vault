@@ -299,27 +299,29 @@
         {{/if}}
       {{else}}
         {{! Regular Text Input }}
-        <input
-          data-test-input={{@attr.name}}
-          id={{@attr.name}}
-          readonly={{this.isReadOnly}}
-          disabled={{and @attr.options.editDisabled (not @model.isNew)}}
-          autocomplete="off"
-          spellcheck="false"
-          value={{or (get @model this.valuePath) @attr.options.defaultValue}}
-          onchange={{this.onChangeWithEvent}}
-          onkeyup={{this.handleKeyUp}}
-          class="input {{if this.validationError 'has-error-border'}}"
-          maxLength={{@attr.options.characterLimit}}
-        />
-        {{#if @attr.options.validationAttr}}
-          {{#if (and (get @model this.valuePath) (not (get @model @attr.options.validationAttr)))}}
-            <AlertInline @type="danger" @message={{@attr.options.invalidMessage}} />
+        {{#unless @attr.options.dontShowInput}}
+          <input
+            data-test-input={{@attr.name}}
+            id={{@attr.name}}
+            readonly={{this.isReadOnly}}
+            disabled={{and @attr.options.editDisabled (not @model.isNew)}}
+            autocomplete="off"
+            spellcheck="false"
+            value={{or (get @model this.valuePath) @attr.options.defaultValue}}
+            onchange={{this.onChangeWithEvent}}
+            onkeyup={{this.handleKeyUp}}
+            class="input {{if this.validationError 'has-error-border'}}"
+            maxLength={{@attr.options.characterLimit}}
+          />
+          {{#if @attr.options.validationAttr}}
+            {{#if (and (get @model this.valuePath) (not (get @model @attr.options.validationAttr)))}}
+              <AlertInline @type="danger" @message={{@attr.options.invalidMessage}} />
+            {{/if}}
           {{/if}}
-        {{/if}}
-        {{#if this.validationError}}
-          <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
-        {{/if}}
+          {{#if this.validationError}}
+            <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
+          {{/if}}
+        {{/unless}}
       {{/if}}
     </div>
   {{else if (eq @attr.type "boolean")}}

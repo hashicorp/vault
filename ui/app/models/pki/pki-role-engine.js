@@ -99,12 +99,17 @@ export default class PkiRoleEngineModel extends Model {
 
   // Overriding Key parameters options
   @attr('string', {
+    label: 'Key parameters',
+    subText: 'some text waiting on design.',
+    dontShowInput: true,
+  })
+  keyParametersLabel;
+  @attr('string', {
     label: 'Key type',
     possibleValues: ['rsa', 'ec', 'ed25519', 'any'],
     defaultValue: 'rsa',
   })
   keyType;
-
   @attr('number', {
     label: 'Key bits',
   })
@@ -211,7 +216,7 @@ export default class PkiRoleEngineModel extends Model {
           ],
         },
         {
-          'Key parameters': ['keyType', 'keyBits', 'signatureBits'],
+          'Key parameters': ['keyParametersLabel', 'keyType', 'keyBits', 'signatureBits'],
         },
         {
           'Key usage': [
