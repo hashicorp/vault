@@ -104,21 +104,16 @@ scenario "autopilot" {
     }
   }
 
-  step "get_local_version" {
+  step "get_local_metadata" {
     skip_step = matrix.builder != "local"
-    module    = module.get_local_version
-  }
-
-  step "get_local_revision" {
-    skip_step = matrix.builder != "local"
-    module    = module.get_local_revision
+    module    = module.get_local_metadata
   }
 
   step "create_autopilot_upgrade_storageconfig" {
     module = module.autopilot_upgrade_storageconfig
 
     variables {
-      vault_product_version = matrix.builder == "local" ? step.get_local_version.version : var.vault_product_version
+      vault_product_version = matrix.builder == "local" ? step.get_local_metadata.version : var.vault_product_version
     }
   }
 
@@ -163,7 +158,7 @@ scenario "autopilot" {
     }
 
     variables {
-      vault_autopilot_upgrade_version = matrix.builder == "local" ? step.get_local_version.version : var.vault_product_version
+      vault_autopilot_upgrade_version = matrix.builder == "local" ? step.get_local_metadata.version : var.vault_product_version
       vault_instances                 = step.create_vault_cluster.vault_instances
       vault_root_token                = step.create_vault_cluster.vault_root_token
     }

@@ -8,6 +8,7 @@ binpath=${vault_install_dir}/vault
 edition=${vault_edition}
 version=${vault_version}
 sha=${vault_revision}
+builddate=${vault_build_date}
 release="$version+$edition"
 
 fail() {
@@ -20,8 +21,13 @@ test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 export VAULT_ADDR='http://127.0.0.1:8200'
 export VAULT_TOKEN='${vault_token}'
 
-if [[ "$(echo $version |awk -F'.' '{print $2}')" -ge 11 ]]; then
+if [[ ! -z "$builddate" ]]; then
+  build_date=$builddate
+else
   build_date=$("$binpath" status -format=json | jq -Mr .build_date)
+fi
+
+if [[ "$(echo $version |awk -F'.' '{print $2}')" -ge 11 ]]; then
   version_expected="Vault v$release ($sha), built $build_date"
 else
   version_expected="Vault v$release ($sha)"

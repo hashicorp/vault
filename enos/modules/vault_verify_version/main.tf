@@ -6,6 +6,12 @@ terraform {
   }
 }
 
+variable "vault_build_date" {
+  type        = string
+  description = "The vault artifact build date"
+  default     = null
+}
+
 variable "vault_install_dir" {
   type        = string
   description = "The directory where the Vault binary will be installed"
@@ -62,6 +68,7 @@ resource "enos_remote_exec" "verify_all_nodes_have_updated_version" {
 
   content = templatefile("${path.module}/templates/verify-cluster-version.sh", {
     vault_install_dir = var.vault_install_dir,
+    vault_build_date  = var.vault_build_date,
     vault_version     = var.vault_product_version,
     vault_edition     = var.vault_edition,
     vault_revision    = var.vault_revision,

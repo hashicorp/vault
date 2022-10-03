@@ -105,14 +105,9 @@ scenario "smoke" {
     }
   }
 
-  step "get_local_version" {
+  step "get_local_metadata" {
     skip_step = matrix.builder != "local"
-    module    = module.get_local_version
-  }
-
-  step "get_local_revision" {
-    skip_step = matrix.builder != "local"
-    module    = module.get_local_revision
+    module    = module.get_local_metadata
   }
 
   step "create_vault_cluster" {
@@ -154,8 +149,9 @@ scenario "smoke" {
     variables {
       vault_instances       = step.create_vault_cluster.vault_instances
       vault_edition         = matrix.edition
-      vault_product_version = matrix.builder == "local" ? step.get_local_version.version : var.vault_product_version
-      vault_revision        = matrix.builder == "local" ? step.get_local_revision.revision : var.vault_revision
+      vault_product_version = matrix.builder == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_revision        = matrix.builder == "local" ? step.get_local_metadata.revision : var.vault_revision
+      vault_build_date      = matrix.builder == "local" ? step.get_local_metadata.build_date : var.vault_build_date
       vault_root_token      = step.create_vault_cluster.vault_root_token
     }
   }
