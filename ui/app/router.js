@@ -22,6 +22,7 @@ Router.map(function () {
       this.route('clients', function () {
         this.route('current');
         this.route('history');
+        this.route('dashboard');
         this.route('config');
         this.route('edit');
       });
