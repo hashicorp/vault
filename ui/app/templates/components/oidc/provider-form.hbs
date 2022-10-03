@@ -60,7 +60,6 @@
       @attr={{get @model.formFields "2"}}
       @model={{@model}}
       @modelValidations={{this.modelValidations}}
-      @labelClass="is-label"
     />
   </div>
   {{! RADIO CARD + SEARCH SELECT }}
@@ -87,7 +86,7 @@
     {{#if (eq this.radioCardGroupValue "limited")}}
       <SearchSelect
         @id="allowedClientIds"
-        @subLabel="Application name"
+        @label="Application name"
         @models={{array "oidc/client"}}
         @inputValue={{@model.allowedClientIds}}
         @onChange={{this.handleClientSelection}}
@@ -95,7 +94,7 @@
         @fallbackComponent="string-list"
         @passObject={{true}}
         @objectKeys={{array "clientId"}}
-        @renderInfoTooltip={{true}}
+        @renderInfoTooltip={{this.renderInfoTooltip}}
       />
     {{/if}}
   </div>
