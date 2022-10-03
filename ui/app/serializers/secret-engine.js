@@ -1,7 +1,23 @@
 import { assign } from '@ember/polyfills';
 import ApplicationSerializer from './application';
+import { EmbeddedRecordsMixin } from '@ember-data/serializer/rest';
 
-export default ApplicationSerializer.extend({
+export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
+  attrs: {
+    config: { embedded: 'always' },
+  },
+
+  normalize(modelClass, data) {
+    // embedded records need a unique value to be stored
+    // set id for config to uuid of secret engine
+    if (data.config && !data.config.id) {
+      data.config.id = data.uuid;
+    }
+    // move version out of options so it can be defined on secret-engine model
+    data.version = data.options ? data.options.version : null;
+    return this._super(modelClass, data);
+  },
+
   normalizeBackend(path, backend) {
     let struct = {};
     for (let attribute in backend) {
@@ -53,6 +69,10 @@ export default ApplicationSerializer.extend({
   serialize(snapshot) {
     let type = snapshot.record.get('engineType');
     let data = this._super(...arguments);
+    // move version back to options
+    data.options = data.version ? { version: data.version } : {};
+    delete data.version;
+
     if (type !== 'kv' || data.options.version === 1) {
       // These items are on the model, but used by the kv-v2 config endpoint only
       delete data.max_versions;

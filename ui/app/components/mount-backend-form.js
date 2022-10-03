@@ -50,9 +50,7 @@ export default class MountBackendForm extends Component {
     const type = this.args.mountType || 'auth';
     const modelType = type === 'secret' ? 'secret-engine' : 'auth-method';
     const model = this.store.createRecord(modelType);
-    if (modelType === 'auth-method') {
-      model.set('config', this.store.createRecord('mount-config'));
-    }
+    model.set('config', this.store.createRecord('mount-config'));
     this.mountModel = model;
   }
 
