@@ -537,7 +537,7 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 		// Import the Client Certificate forwarded by the reverse proxy
 		// There should be only 1 instance of the header, but looping allows for more flexibility
 		clientCertHeaders, clientCertHeadersOK := r.Header[textproto.CanonicalMIMEHeaderKey(clientCertHeader)]
-		if clientCertHeadersOK || len(clientCertHeaders) > 0 {
+		if clientCertHeadersOK && len(clientCertHeaders) > 0 {
 			var client_certs []*x509.Certificate
 			for _, header := range clientCertHeaders {
 				// Multiple certs should be comma delimetered
