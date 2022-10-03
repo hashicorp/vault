@@ -2446,7 +2446,7 @@ func CreateTestClusterWithRollbackPeriod(t testing.T, newPeriod time.Duration, b
 	oldPeriod := rollbackPeriod
 
 	// Create and start a new cluster.
-	rollbackPeriod = newPeriod
+	rollbackPeriod.Store(newPeriod)
 	cluster := NewTestCluster(t, base, opts)
 	cluster.Start()
 
