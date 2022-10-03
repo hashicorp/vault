@@ -18,9 +18,11 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	gops "github.com/mitchellh/go-ps"
-	testing2 "github.com/mitchellh/go-testing-interface"
+	"github.com/hashicorp/vault/sdk/plugin"
+	"github.com/hashicorp/vault/sdk/plugin/mock"
 )
+
+const vaultTestingMockPluginEnv = "VAULT_TESTING_MOCK_PLUGIN"
 
 var (
 	pluginCacheLock sync.Mutex
@@ -28,21 +30,22 @@ var (
 )
 
 type testPlugin struct {
-	name             string
-	sha256           string
-	requestedVersion string
+	name     string
+	typ      consts.PluginType
+	version  string
+	fileName string
+	sha256   string
 }
 
 // version is used to override the plugin's self-reported version
 func testCoreWithPlugins(t *testing.T, typ consts.PluginType, versions ...string) (*Core, []testPlugin) {
 	t.Helper()
-	var pluginDir string
+	pluginDir, cleanup := MakeTestPluginDir(t)
+	t.Cleanup(func() { cleanup(t) })
+
 	var plugins []testPlugin
 	for _, version := range versions {
-		var name string
-		var sha256 string
-		name, sha256, pluginDir = compilePlugin(t, typ, version, pluginDir)
-		plugins = append(plugins, testPlugin{name, sha256, version})
+		plugins = append(plugins, compilePlugin(t, typ, version, pluginDir))
 	}
 	conf := &CoreConfig{
 		BuiltinRegistry: NewMockBuiltinRegistry(),
@@ -84,7 +87,7 @@ func getPlugin(t *testing.T, typ consts.PluginType) (string, string, string, str
 
 // to mount a plugin, we need a working binary plugin, so we compile one here.
 // pluginVersion is used to override the plugin's self-reported version
-func compilePlugin(t *testing.T, typ consts.PluginType, pluginVersion string, reusePluginDir string) (pluginName string, shasum string, pluginDir string) {
+func compilePlugin(t *testing.T, typ consts.PluginType, pluginVersion string, pluginDir string) testPlugin {
 	t.Helper()
 
 	pluginName, pluginType, pluginMain, pluginVersionLocation := getPlugin(t, typ)
@@ -104,15 +107,10 @@ func compilePlugin(t *testing.T, typ consts.PluginType, pluginVersion string, re
 		dir = filepath.Dir(wd)
 	}
 
-	if reusePluginDir != "" {
-		pluginDir = reusePluginDir
-	} else {
-		var cleanup func(testing2.T)
-		pluginDir, cleanup = MakeTestPluginDir(t)
-		t.Cleanup(func() { cleanup(t) })
+	pluginPath := path.Join(pluginDir, pluginName)
+	if pluginVersion != "" {
+		pluginPath += "-" + pluginVersion
 	}
-
-	pluginPath := path.Join(pluginDir, pluginName+"v"+pluginVersion)
 
 	key := fmt.Sprintf("%s %s %s", pluginName, pluginType, pluginVersion)
 	// cache the compilation to only run once
@@ -152,7 +150,13 @@ func compilePlugin(t *testing.T, typ consts.PluginType, pluginVersion string, re
 	if err != nil {
 		t.Fatal(err)
 	}
-	return pluginName, fmt.Sprintf("%x", sha.Sum(nil)), pluginDir
+	return testPlugin{
+		name:     pluginName,
+		typ:      typ,
+		version:  pluginVersion,
+		fileName: path.Base(pluginPath),
+		sha256:   fmt.Sprintf("%x", sha.Sum(nil)),
+	}
 }
 
 func TestCore_EnableExternalPlugin(t *testing.T) {
@@ -174,9 +178,9 @@ func TestCore_EnableExternalPlugin(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			c, plugins := testCoreWithPlugins(t, tc.pluginType, "")
-			registerPlugin(t, c.systemBackend, plugins[0].name, tc.pluginType.String(), "1.0.0", plugins[0].sha256)
+			registerPlugin(t, c.systemBackend, plugins[0].name, tc.pluginType.String(), "1.0.0", plugins[0].sha256, plugins[0].fileName)
 
-			mountPlugin(t, c.systemBackend, plugins[0].name, tc.pluginType, "v1.0.0")
+			mountPlugin(t, c.systemBackend, plugins[0].name, tc.pluginType, "v1.0.0", "")
 
 			match := c.router.MatchingMount(namespace.RootContext(nil), tc.routerPath)
 			if match != tc.expectedMatch {
@@ -247,10 +251,10 @@ func TestCore_EnableExternalPlugin_MultipleVersions(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			c, plugins := testCoreWithPlugins(t, tc.pluginType, "")
 			for _, version := range tc.registerVersions {
-				registerPlugin(t, c.systemBackend, plugins[0].name, tc.pluginType.String(), version, plugins[0].sha256)
+				registerPlugin(t, c.systemBackend, plugins[0].name, tc.pluginType.String(), version, plugins[0].sha256, plugins[0].fileName)
 			}
 
-			mountPlugin(t, c.systemBackend, plugins[0].name, tc.pluginType, tc.mountVersion)
+			mountPlugin(t, c.systemBackend, plugins[0].name, tc.pluginType, tc.mountVersion, "")
 
 			match := c.router.MatchingMount(namespace.RootContext(nil), tc.routerPath)
 			if match != tc.expectedMatch {
@@ -274,13 +278,16 @@ func TestCore_EnableExternalPlugin_MultipleVersions(t *testing.T) {
 }
 
 func TestCore_EnableExternalKv_MultipleVersions(t *testing.T) {
+	pluginDir, cleanup := MakeTestPluginDir(t)
+	t.Cleanup(func() { cleanup(t) })
+
 	// new kv plugin can be registered but not mounted
-	pluginName, pluginSHA256, pluginDir := compilePlugin(t, consts.PluginTypeSecrets, "v1.2.3", "")
-	err := os.Link(path.Join(pluginDir, pluginName), path.Join(pluginDir, "kv"))
+	plugin := compilePlugin(t, consts.PluginTypeSecrets, "v1.2.3", pluginDir)
+	err := os.Link(path.Join(pluginDir, plugin.fileName), path.Join(pluginDir, "kv"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	pluginName = "kv"
+	pluginName := "kv"
 	conf := &CoreConfig{
 		BuiltinRegistry: NewMockBuiltinRegistry(),
 		PluginDirectory: pluginDir,
@@ -288,7 +295,7 @@ func TestCore_EnableExternalKv_MultipleVersions(t *testing.T) {
 	c := TestCoreWithSealAndUI(t, conf)
 	c, _, _ = testCoreUnsealed(t, c)
 
-	registerPlugin(t, c.systemBackend, pluginName, consts.PluginTypeSecrets.String(), "v1.2.3", pluginSHA256)
+	registerPlugin(t, c.systemBackend, pluginName, consts.PluginTypeSecrets.String(), "v1.2.3", plugin.sha256, plugin.fileName)
 	req := logical.TestRequest(t, logical.ReadOperation, "plugins/catalog")
 	resp, err := c.systemBackend.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
@@ -299,7 +306,7 @@ func TestCore_EnableExternalKv_MultipleVersions(t *testing.T) {
 	}
 	found := false
 	for _, plugin := range resp.Data["detailed"].([]pluginutil.VersionedPlugin) {
-		if plugin.Name == "kv" && plugin.Version == "v1.2.3" {
+		if plugin.Name == pluginName && plugin.Version == "v1.2.3" {
 			found = true
 			break
 		}
@@ -324,13 +331,16 @@ func TestCore_EnableExternalKv_MultipleVersions(t *testing.T) {
 }
 
 func TestCore_EnableExternalNoop_MultipleVersions(t *testing.T) {
+	pluginDir, cleanup := MakeTestPluginDir(t)
+	t.Cleanup(func() { cleanup(t) })
+
 	// new noop plugin can be registered but not mounted
-	pluginName, pluginSHA256, pluginDir := compilePlugin(t, consts.PluginTypeCredential, "v1.2.3", "")
-	err := os.Link(path.Join(pluginDir, pluginName), path.Join(pluginDir, "noop"))
+	plugin := compilePlugin(t, consts.PluginTypeCredential, "v1.2.3", pluginDir)
+	err := os.Link(path.Join(pluginDir, plugin.fileName), path.Join(pluginDir, "noop"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	pluginName = "noop"
+	pluginName := "noop"
 	conf := &CoreConfig{
 		BuiltinRegistry: NewMockBuiltinRegistry(),
 		PluginDirectory: pluginDir,
@@ -338,7 +348,7 @@ func TestCore_EnableExternalNoop_MultipleVersions(t *testing.T) {
 	c := TestCoreWithSealAndUI(t, conf)
 	c, _, _ = testCoreUnsealed(t, c)
 
-	registerPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential.String(), "v1.2.3", pluginSHA256)
+	registerPlugin(t, c.systemBackend, pluginName, consts.PluginTypeCredential.String(), "v1.2.3", plugin.sha256, plugin.fileName)
 	req := logical.TestRequest(t, logical.ReadOperation, "plugins/catalog")
 	resp, err := c.systemBackend.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
@@ -396,10 +406,10 @@ func TestCore_EnableExternalPlugin_NoVersionsOkay(t *testing.T) {
 			// version specified should mount the unversioned plugin even if there
 			// are versioned plugins available.
 			for _, version := range []string{"", "v1.0.0"} {
-				registerPlugin(t, c.systemBackend, plugins[0].name, tc.pluginType.String(), version, plugins[0].sha256)
+				registerPlugin(t, c.systemBackend, plugins[0].name, tc.pluginType.String(), version, plugins[0].sha256, plugins[0].fileName)
 			}
 
-			mountPlugin(t, c.systemBackend, plugins[0].name, tc.pluginType, "")
+			mountPlugin(t, c.systemBackend, plugins[0].name, tc.pluginType, "", "")
 
 			match := c.router.MatchingMount(namespace.RootContext(nil), tc.routerPath)
 			if match != tc.expectedMatch {
@@ -433,7 +443,7 @@ func TestCore_EnableExternalCredentialPlugin_NoVersionOnRegister(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			c, plugins := testCoreWithPlugins(t, tc.pluginType, "")
-			registerPlugin(t, c.systemBackend, plugins[0].name, tc.pluginType.String(), "", plugins[0].sha256)
+			registerPlugin(t, c.systemBackend, plugins[0].name, tc.pluginType.String(), "", plugins[0].sha256, plugins[0].fileName)
 
 			req := logical.TestRequest(t, logical.UpdateOperation, mountTable(tc.pluginType))
 			req.Data = map[string]interface{}{
@@ -500,10 +510,10 @@ func TestExternalPlugin_getBackendTypeVersion(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			c, plugins := testCoreWithPlugins(t, tc.pluginType, tc.setRunningVersion)
-			registerPlugin(t, c.systemBackend, plugins[0].name, tc.pluginType.String(), tc.setRunningVersion, plugins[0].sha256)
+			registerPlugin(t, c.systemBackend, plugins[0].name, tc.pluginType.String(), tc.setRunningVersion, plugins[0].sha256, plugins[0].fileName)
 
 			shaBytes, _ := hex.DecodeString(plugins[0].sha256)
-			commandFull := filepath.Join(c.pluginCatalog.directory, plugins[0].name)
+			commandFull := filepath.Join(c.pluginCatalog.directory, plugins[0].fileName)
 			entry := &pluginutil.PluginRunner{
 				Name:    plugins[0].name,
 				Command: commandFull,
@@ -524,81 +534,6 @@ func TestExternalPlugin_getBackendTypeVersion(t *testing.T) {
 			}
 			if version.Version != tc.setRunningVersion {
 				t.Errorf("Expected to get version %v but got %v", tc.setRunningVersion, version.Version)
-			}
-		})
-	}
-}
-
-func getChildProcesses(pid int) ([]gops.Process, error) {
-	processes, err := gops.Processes()
-	if err != nil {
-		return nil, err
-	}
-	var ret []gops.Process
-	for _, p := range processes {
-		if p.PPid() == pid {
-			ret = append(ret, p)
-
-			// recurse
-			more, err := getChildProcesses(p.Pid())
-			if err != nil {
-				return nil, err
-			}
-			ret = append(ret, more...)
-		}
-	}
-	return ret, nil
-}
-
-func TestExternalPlugin_multipleRegisteredVersions(t *testing.T) {
-	for name, tc := range map[string]struct {
-		pluginType         consts.PluginType
-		setRunningVersion0 string
-		setRunningVersion1 string
-	}{
-		"external secrets plugin": {
-			pluginType:         consts.PluginTypeSecrets,
-			setRunningVersion0: "v1.2.3",
-			setRunningVersion1: "v1.2.4",
-		},
-	} {
-		t.Run(name, func(t *testing.T) {
-			c, plugins := testCoreWithPlugins(t, tc.pluginType, tc.setRunningVersion0, tc.setRunningVersion1)
-			registerPlugin(t, c.systemBackend, plugins[0].name, tc.pluginType.String(), tc.setRunningVersion0, plugins[0].sha256)
-			registerPlugin(t, c.systemBackend, plugins[1].name, tc.pluginType.String(), tc.setRunningVersion1, plugins[1].sha256)
-
-			if tc.pluginType == consts.PluginTypeSecrets {
-				// mount both
-				entry := &MountEntry{
-					Table:   mountTableType,
-					Path:    "a/",
-					Type:    plugins[0].name,
-					Version: tc.setRunningVersion0,
-				}
-				err := c.mount(namespace.RootContext(nil), entry)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				entry2 := &MountEntry{
-					Table:   mountTableType,
-					Path:    "b/",
-					Type:    plugins[1].name,
-					Version: tc.setRunningVersion1,
-				}
-				err = c.mount(namespace.RootContext(nil), entry2)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				children, err := getChildProcesses(os.Getpid())
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				if len(children) == 1 {
-					t.Error("Expected two consul plugin processes, running, but got one")
-				}
 			}
 		})
 	}
@@ -645,7 +580,7 @@ func TestExternalPlugin_CheckFilePermissions(t *testing.T) {
 			// Permissions will be checked once during registration.
 			req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("plugins/catalog/%s/%s", tc.pluginType.String(), registeredPluginName))
 			req.Data = map[string]interface{}{
-				"command": plugins[0].name,
+				"command": plugins[0].fileName,
 				"sha256":  plugins[0].sha256,
 				"version": tc.pluginVersion,
 			}
@@ -678,26 +613,138 @@ func TestExternalPlugin_CheckFilePermissions(t *testing.T) {
 	}
 }
 
-func registerPlugin(t *testing.T, sys *SystemBackend, pluginName, pluginType, version, sha string) {
+func TestExternalPlugin_DifferentVersionsAndArgs_AreNotMultiplexed(t *testing.T) {
+	env := []string{fmt.Sprintf("%s=yes", vaultTestingMockPluginEnv)}
+	core, _, _ := TestCoreUnsealed(t)
+
+	for i, tc := range []struct {
+		version  string
+		testName string
+	}{
+		{"v1.2.3", "TestBackend_PluginMain_Multiplexed_Logical_v123"},
+		{"v1.2.4", "TestBackend_PluginMain_Multiplexed_Logical_v124"},
+	} {
+		// Register and mount plugins.
+		TestAddTestPlugin(t, core, "mux-secret", consts.PluginTypeSecrets, tc.version, tc.testName, env, "")
+		mountPlugin(t, core.systemBackend, "mux-secret", consts.PluginTypeSecrets, tc.version, fmt.Sprintf("foo%d", i))
+	}
+
+	if len(core.pluginCatalog.externalPlugins) != 2 {
+		t.Fatalf("expected 2 external plugins, but got %d", len(core.pluginCatalog.externalPlugins))
+	}
+}
+
+func TestExternalPlugin_DifferentTypes_AreNotMultiplexed(t *testing.T) {
+	const version = "v1.2.3"
+	env := []string{fmt.Sprintf("%s=yes", vaultTestingMockPluginEnv)}
+	core, _, _ := TestCoreUnsealed(t)
+
+	// Register and mount plugins.
+	TestAddTestPlugin(t, core, "mux-aws", consts.PluginTypeSecrets, version, "TestBackend_PluginMain_Multiplexed_Logical_v123", env, "")
+	TestAddTestPlugin(t, core, "mux-aws", consts.PluginTypeCredential, version, "TestBackend_PluginMain_Multiplexed_Credential_v123", env, "")
+
+	mountPlugin(t, core.systemBackend, "mux-aws", consts.PluginTypeSecrets, version, "")
+	mountPlugin(t, core.systemBackend, "mux-aws", consts.PluginTypeCredential, version, "")
+
+	if len(core.pluginCatalog.externalPlugins) != 2 {
+		t.Fatalf("expected 2 external plugins, but got %d", len(core.pluginCatalog.externalPlugins))
+	}
+}
+
+func TestExternalPlugin_DifferentEnv_AreNotMultiplexed(t *testing.T) {
+	const version = "v1.2.3"
+	baseEnv := []string{
+		fmt.Sprintf("%s=yes", vaultTestingMockPluginEnv),
+	}
+	alteredEnv := []string{
+		fmt.Sprintf("%s=yes", vaultTestingMockPluginEnv),
+		"FOO=BAR",
+	}
+
+	core, _, _ := TestCoreUnsealed(t)
+
+	// Register and mount plugins.
+	for i, env := range [][]string{baseEnv, alteredEnv} {
+		TestAddTestPlugin(t, core, "mux-secret", consts.PluginTypeSecrets, version, "TestBackend_PluginMain_Multiplexed_Logical_v123", env, "")
+		mountPlugin(t, core.systemBackend, "mux-secret", consts.PluginTypeSecrets, version, fmt.Sprintf("foo%d", i))
+	}
+
+	if len(core.pluginCatalog.externalPlugins) != 2 {
+		t.Fatalf("expected 2 external plugins, but got %d", len(core.pluginCatalog.externalPlugins))
+	}
+}
+
+// Used to run a mock multiplexed secrets plugin
+func TestBackend_PluginMain_Multiplexed_Logical_v123(t *testing.T) {
+	if os.Getenv(vaultTestingMockPluginEnv) == "" {
+		return
+	}
+
+	os.Setenv(mock.MockPluginVersionEnv, "v1.2.3")
+
+	err := plugin.ServeMultiplex(&plugin.ServeOpts{
+		BackendFactoryFunc: mock.FactoryType(logical.TypeLogical),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Used to run a mock multiplexed secrets plugin
+func TestBackend_PluginMain_Multiplexed_Logical_v124(t *testing.T) {
+	if os.Getenv(vaultTestingMockPluginEnv) == "" {
+		return
+	}
+
+	os.Setenv(mock.MockPluginVersionEnv, "v1.2.4")
+
+	err := plugin.ServeMultiplex(&plugin.ServeOpts{
+		BackendFactoryFunc: mock.FactoryType(logical.TypeLogical),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Used to run a mock multiplexed auth plugin
+func TestBackend_PluginMain_Multiplexed_Credential_v123(t *testing.T) {
+	if os.Getenv(vaultTestingMockPluginEnv) == "" {
+		return
+	}
+
+	os.Setenv(mock.MockPluginVersionEnv, "v1.2.3")
+
+	err := plugin.ServeMultiplex(&plugin.ServeOpts{
+		BackendFactoryFunc: mock.FactoryType(logical.TypeCredential),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func registerPlugin(t *testing.T, sys *SystemBackend, pluginName, pluginType, version, sha, command string) {
 	t.Helper()
 	req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("plugins/catalog/%s/%s", pluginType, pluginName))
 	req.Data = map[string]interface{}{
-		"command": pluginName + "v" + version,
+		"command": command,
 		"sha256":  sha,
 		"version": version,
 	}
 	resp, err := sys.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp.Error() != nil {
-		t.Fatal(resp.Error())
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 }
 
-func mountPlugin(t *testing.T, sys *SystemBackend, pluginName string, pluginType consts.PluginType, version string) {
+func mountPlugin(t *testing.T, sys *SystemBackend, pluginName string, pluginType consts.PluginType, version, path string) {
 	t.Helper()
-	req := logical.TestRequest(t, logical.UpdateOperation, mountTable(pluginType))
+	var mountPath string
+	if path == "" {
+		mountPath = mountTable(pluginType)
+	} else {
+		mountPath = mountTableWithPath(consts.PluginTypeSecrets, path)
+	}
+	req := logical.TestRequest(t, logical.UpdateOperation, mountPath)
 	req.Data = map[string]interface{}{
 		"type": pluginName,
 	}
@@ -707,20 +754,21 @@ func mountPlugin(t *testing.T, sys *SystemBackend, pluginName string, pluginType
 		}
 	}
 	resp, err := sys.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp.Error() != nil {
-		t.Fatal(resp.Error())
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 }
 
 func mountTable(pluginType consts.PluginType) string {
+	return mountTableWithPath(pluginType, "foo")
+}
+
+func mountTableWithPath(pluginType consts.PluginType, path string) string {
 	switch pluginType {
 	case consts.PluginTypeCredential:
-		return "auth/foo"
+		return "auth/" + path
 	case consts.PluginTypeSecrets:
-		return "mounts/foo"
+		return "mounts/" + path
 	default:
 		panic("test does not support mounting plugin type yet: " + pluginType.String())
 	}

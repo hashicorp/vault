@@ -2,10 +2,13 @@ package mock
 
 import (
 	"context"
+	"os"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+const MockPluginVersionEnv = "TESTING_MOCK_VAULT_PLUGIN_VERSION"
 
 // New returns a new backend as an interface. This func
 // is only necessary for builtin backend plugins.
@@ -60,6 +63,9 @@ func Backend() *backend {
 	}
 	b.internal = "bar"
 	b.RunningVersion = "v0.0.0+mock"
+	if version := os.Getenv(MockPluginVersionEnv); version != "" {
+		b.RunningVersion = version
+	}
 	return &b
 }
 
