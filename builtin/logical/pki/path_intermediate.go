@@ -3,6 +3,7 @@ package pki
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -63,16 +64,7 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		data.Raw["exported"] = "existing"
 	}
 
-	// Nasty hack part two. :-) For generation of CSRs, certutil presently doesn't
-	// support configuration of this. However, because we need generation parameters,
-	// which create a role and attempt to read this parameter, we need to provide
-	// a value (which will be ignored). Hence, we stub in the missing parameters here,
-	// including its schema, just enough for it to work..
-	data.Schema["signature_bits"] = &framework.FieldSchema{
-		Type:    framework.TypeInt,
-		Default: 0,
-	}
-	data.Raw["signature_bits"] = 0
+	// Remove this once https://github.com/golang/go/issues/45990 is fixed
 	data.Schema["use_pss"] = &framework.FieldSchema{
 		Type:    framework.TypeBool,
 		Default: false,
@@ -103,6 +95,10 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		default:
 			return nil, err
 		}
+	}
+
+	if err = parsedBundle.CSR.CheckSignature(); err != nil {
+		return nil, errors.New("failed signature validation for CSR")
 	}
 
 	csrb, err := parsedBundle.ToCSRBundle()
