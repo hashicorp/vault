@@ -265,6 +265,13 @@ batch tokens.
 | Creation Scales with Performance Standby Node Count |                                                      No |                                             Yes |
 | Cost                                                | Heavyweight; multiple storage writes per token creation | Lightweight; no storage cost for token creation |
 
+### User Management Considerations
+
+~> Vault tokens will be valid until they expire, unless the associated
+canonical entity is disabled or deleted, or the token is explicitly revoked.
+A token may persist and still be valid after the [auth method](/docs/concepts/auth#auth-methods)
+that created it has been deleted.
+
 ### Service vs. Batch Token Lease Handling
 
 #### Service Tokens
