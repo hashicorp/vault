@@ -89,6 +89,13 @@ export default class PkiRoleEngineModel extends Model {
     label: 'Allow templates in allowed domains',
   })
   allowedDomainsTemplate;
+  @attr('string', {
+    editType: 'moreInfo',
+    text: 'These options can interact intricately with one another. For more information,',
+    docText: 'learn more here.',
+    docLink: '/docs/concepts/password-policies',
+  })
+  moreInfo;
 
   // Overriding Key parameters options
   @attr('string', {
@@ -200,6 +207,7 @@ export default class PkiRoleEngineModel extends Model {
             'allowLocalhost', // default: true
             'allowAnyName',
             'enforceHostnames', // default: true
+            'moreInfo', // shows as helperText with icon at bottom of the options box.
           ],
         },
         {

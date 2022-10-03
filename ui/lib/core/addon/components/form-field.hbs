@@ -9,7 +9,7 @@
       )
     )
   }}
-    {{#unless (eq @attr.type "object")}}
+    {{#unless (or (eq @attr.type "object") (eq @attr.options.editType "moreInfo"))}}
       <FormFieldLabel
         for={{@attr.name}}
         @label={{this.labelString}}
@@ -212,6 +212,16 @@
       @showHelpText={{@showHelpText}}
       @subText={{@attr.options.subText}}
     />
+  {{else if (eq @attr.options.editType "moreInfo")}}
+    <p class="sub-text">
+      <Icon @name="info" />
+      {{@attr.options.text}}
+      {{#if @attr.options.docLink}}
+        <DocLink @path={{@attr.options.docLink}}>
+          {{@attr.options.docText}}
+        </DocLink>
+      {{/if}}
+    </p>
   {{else if (eq @attr.options.sensitive true)}}
     {{! Masked Input }}
     <MaskedInput
