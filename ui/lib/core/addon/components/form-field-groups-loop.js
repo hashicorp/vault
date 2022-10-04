@@ -20,11 +20,11 @@ export default class FormFieldGroupsLoop extends Component {
   @tracked flexGroups = [];
   constructor() {
     super(...arguments);
-    let displayFlexGroups = this.args.model.fieldGroups.map((group) => {
+    let displayFlexGroups = this.args.model.fieldGroups.filter((group) => {
       let key = Object.keys(group)[0]; // the key name e.g. default or Key usage
-      return MODEL_GROUPS_DISPLAY_FLEX.includes(key) ? key : '';
+      return MODEL_GROUPS_DISPLAY_FLEX.includes(key);
     });
-    console.log(displayFlexGroups, 'displayFlexGroups');
-    this.flexGroups = displayFlexGroups;
+    console.log(Object.keys(displayFlexGroups[0]), 'displayFlexGroups');
+    this.flexGroups = Object.keys(displayFlexGroups[0]);
   }
 }

@@ -159,6 +159,7 @@ export default class PkiRoleEngineModel extends Model {
     label: 'Key usage',
     subText: `Specifies the default key usage constraint on the issued certificate. To specify no default key usage constraints, set this to an empty list.`,
     dontShowInput: true,
+    isTitleOfFlexGroup: true,
   })
   keyUsageLabel;
   // all optional values to be added to the stringArray keyUsage https://pkg.go.dev/crypto/x509#KeyUsage

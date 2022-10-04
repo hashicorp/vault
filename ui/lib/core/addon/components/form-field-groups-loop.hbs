@@ -26,42 +26,45 @@
           data-test-toggle-group={{group}}
         />
         {{#if (get @model prop)}}
-          {{! ARG TODO work through  }}
-          {{#if (eq group "Key usage")}}
-            <div class="box is-marginless">
-              <div class="is-grid is-grid-3-columns is-grid-4-rows is-medium-height is-row-gap-medium">
-                {{#each fields as |attr index|}}
-                  {{! the first item should be a label with explanation text that spans the entire grid }}
-                  <div class={{if (eq index 0) "is-grid-column-span-3" ""}}>
-                    <FormField
-                      data-test-field={{true}}
-                      @attr={{attr}}
-                      @model={{@model}}
-                      @modelValidations={{@modelValidations}}
-                      @showHelpText={{@showHelpText}}
-                    >
-                      {{yield attr}}
-                    </FormField>
-                  </div>
+          {{! Check if group is listed as a flexGroup }}
+          {{#each this.flexGroups as |flexGroup|}}
+            {{#if (eq flexGroup group)}}
+              {{! if it is listed as a flexGroup then put within a flex container }}
+              <div class="box is-marginless">
+                <div class="is-grid is-grid-3-columns is-grid-4-rows is-medium-height is-row-gap-medium">
+                  {{#each fields as |attr|}}
+                    {{! the first item should be a label with explanation text that spans the entire grid }}
+                    <div class={{if attr.options.isTitleOfFlexGroup "is-grid-column-span-3" ""}}>
+                      <FormField
+                        data-test-field={{true}}
+                        @attr={{attr}}
+                        @model={{@model}}
+                        @modelValidations={{@modelValidations}}
+                        @showHelpText={{@showHelpText}}
+                      >
+                        {{yield attr}}
+                      </FormField>
+                    </div>
+                  {{/each}}
+                </div>
+              </div>
+            {{else}}
+              <div class="box is-marginless">
+                {{#each fields as |attr|}}
+                  {{! ARG TODO return to ask for help on how to move this up a level? }}
+                  <FormField
+                    data-test-field={{true}}
+                    @attr={{if (eq attr.name "keyBits") @model.keyBitsConditional attr}}
+                    @model={{@model}}
+                    @modelValidations={{@modelValidations}}
+                    @showHelpText={{@showHelpText}}
+                  >
+                    {{yield attr}}
+                  </FormField>
                 {{/each}}
               </div>
-            </div>
-          {{else}}
-            <div class="box is-marginless">
-              {{#each fields as |attr|}}
-                {{! ARG TODO return to ask for help on how to move this up a level? }}
-                <FormField
-                  data-test-field={{true}}
-                  @attr={{if (eq attr.name "keyBits") @model.keyBitsConditional attr}}
-                  @model={{@model}}
-                  @modelValidations={{@modelValidations}}
-                  @showHelpText={{@showHelpText}}
-                >
-                  {{yield attr}}
-                </FormField>
-              {{/each}}
-            </div>
-          {{/if}}
+            {{/if}}
+          {{/each}}
         {{/if}}
       {{/let}}
     {{/if}}
