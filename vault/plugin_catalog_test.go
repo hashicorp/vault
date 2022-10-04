@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -550,6 +551,38 @@ func TestPluginCatalog_NewPluginClient(t *testing.T) {
 	// check that externalPlugins map is cleaned up
 	if len(externalPlugins) != 0 {
 		t.Fatalf("expected external plugin map to be of len 0 but got %d", len(externalPlugins))
+	}
+}
+
+func TestPluginCatalog_MakeExternalPluginsKey_Comparable(t *testing.T) {
+	var plugins []pluginutil.PluginRunner
+	hasher := sha256.New()
+	hasher.Write([]byte("Some random input"))
+
+	for i := 0; i < 2; i++ {
+		plugins = append(plugins, pluginutil.PluginRunner{
+			Name:    "Name",
+			Type:    consts.PluginTypeDatabase,
+			Version: "Version",
+			Command: "Command",
+			Args:    []string{"Some", "Args"},
+			Env:     []string{"Env=foo", "bar=", "baz=foo"},
+			Sha256:  hasher.Sum(nil),
+			Builtin: true,
+		})
+	}
+
+	var keys []externalPluginsKey
+	for _, plugin := range plugins {
+		key, err := makeExternalPluginsKey(&plugin)
+		if err != nil {
+			t.Fatal(err)
+		}
+		keys = append(keys, key)
+	}
+
+	if keys[0] != keys[1] {
+		t.Fatal("expected equality")
 	}
 }
 
