@@ -28,9 +28,10 @@
         {{#if (get @model prop)}}
           <div class="box is-marginless">
             {{#each fields as |attr|}}
+              {{! ARG TODO return to ask for help on how to move this up a level? }}
               <FormField
                 data-test-field={{true}}
-                @attr={{attr}}
+                @attr={{if (eq attr.name "keyBits") @model.keyBitsConditional attr}}
                 @model={{@model}}
                 @modelValidations={{@modelValidations}}
                 @showHelpText={{@showHelpText}}

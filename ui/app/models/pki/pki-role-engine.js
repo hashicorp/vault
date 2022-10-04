@@ -99,9 +99,9 @@ export default class PkiRoleEngineModel extends Model {
 
   // Overriding Key parameters options
   @attr('string', {
-    label: 'Key parameters',
-    subText: 'some text waiting on design.',
+    subText: `These are the parameters for generating or validating the certificate's key material.`,
     dontShowInput: true,
+    dontShowLabel: true,
   })
   keyParametersLabel;
   @attr('string', {
@@ -110,8 +110,9 @@ export default class PkiRoleEngineModel extends Model {
     defaultValue: 'rsa',
   })
   keyType;
-  @attr('number', {
+  @attr('string', {
     label: 'Key bits',
+    fieldGroup: 'Key parameters',
   })
   keyBits;
   // To set conditional "possibleValues" for the field "keyBits" that depend on the value of the selected "keyType"
