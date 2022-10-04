@@ -269,6 +269,12 @@ func (c *AuthTuneCommand) Run(args []string) int {
 		if fl.Name == flagNameTokenType {
 			mountConfigInput.TokenType = c.flagTokenType
 		}
+		switch fl.Name {
+		case flagNameUserLockoutThreshold, flagNameUserLockoutDuration, flagNameUserLockoutCounterResetDuration, flagNameUserLockoutDisable:
+			if mountConfigInput.UserLockoutConfig == nil {
+				mountConfigInput.UserLockoutConfig = &api.UserLockoutConfigInput{}
+			}
+		}
 		if fl.Name == flagNameUserLockoutThreshold {
 			if c.flagUserLockoutThreshold > 0 {
 				mountConfigInput.UserLockoutConfig.LockoutThreshold = strconv.Itoa(c.flagUserLockoutThreshold)
@@ -281,7 +287,7 @@ func (c *AuthTuneCommand) Run(args []string) int {
 			mountConfigInput.UserLockoutConfig.LockoutCounterResetDuration = ttlToAPI(c.flagUserLockoutCounterResetDuration)
 		}
 		if fl.Name == flagNameUserLockoutDisable {
-			mountConfigInput.UserLockoutConfig.DisableLockout = &c.flagUserLockoutDisable
+			mountConfigInput.UserLockoutConfig.DisableLockout = c.flagUserLockoutDisable
 		}
 
 		if fl.Name == flagNamePluginVersion {
