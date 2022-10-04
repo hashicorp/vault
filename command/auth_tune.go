@@ -269,18 +269,18 @@ func (c *AuthTuneCommand) Run(args []string) int {
 		if fl.Name == flagNameTokenType {
 			mountConfigInput.TokenType = c.flagTokenType
 		}
-		if fl.Name == "user-lockout-threshold" {
+		if fl.Name == flagNameUserLockoutThreshold {
 			if c.flagUserLockoutThreshold > 0 {
 				mountConfigInput.UserLockoutConfig.LockoutThreshold = strconv.Itoa(c.flagUserLockoutThreshold)
 			}
 		}
-		if fl.Name == "user-lockout-duration" {
+		if fl.Name == flagNameUserLockoutDuration {
 			mountConfigInput.UserLockoutConfig.LockoutDuration = ttlToAPI(c.flagUserLockoutDuration)
 		}
-		if fl.Name == "user-lockout-counter-reset-duration" {
+		if fl.Name == flagNameUserLockoutCounterResetDuration {
 			mountConfigInput.UserLockoutConfig.LockoutCounterResetDuration = ttlToAPI(c.flagUserLockoutCounterResetDuration)
 		}
-		if fl.Name == "user-lockout-disable" {
+		if fl.Name == flagNameUserLockoutDisable {
 			mountConfigInput.UserLockoutConfig.DisableLockout = &c.flagUserLockoutDisable
 		}
 
