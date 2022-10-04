@@ -887,17 +887,6 @@ func testParseUserLockouts(t *testing.T) {
 		SharedConfig: &configutil.SharedConfig{
 			UserLockouts: []*configutil.UserLockout{
 				{
-					Type:                   "ldap",
-					LockoutThreshold:       5,
-					LockoutThresholdRaw:    nil,
-					LockoutDuration:        2400000000000,
-					LockoutDurationRaw:     nil,
-					LockoutCounterReset:    2700000000000,
-					LockoutCounterResetRaw: nil,
-					DisableLockout:         true,
-					DisableLockoutRaw:      nil,
-				},
-				{
 					Type:                   "all",
 					LockoutThreshold:       5,
 					LockoutThresholdRaw:    nil,
@@ -919,13 +908,22 @@ func testParseUserLockouts(t *testing.T) {
 					DisableLockout:         false,
 					DisableLockoutRaw:      nil,
 				},
+				{
+					Type:                   "ldap",
+					LockoutThreshold:       5,
+					LockoutThresholdRaw:    nil,
+					LockoutDuration:        2400000000000,
+					LockoutDurationRaw:     nil,
+					LockoutCounterReset:    2700000000000,
+					LockoutCounterResetRaw: nil,
+					DisableLockout:         true,
+					DisableLockoutRaw:      nil,
+				},
 			},
 		},
 	}
 	config.Prune()
-	if diff := deep.Equal(config, *expected); diff != nil {
-		t.Fatal(diff)
-	}
+	require.Equal(t, config, *expected)
 }
 
 func testParseSockaddrTemplate(t *testing.T) {
