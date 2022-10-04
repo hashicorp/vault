@@ -21,7 +21,7 @@ test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 export VAULT_ADDR='http://127.0.0.1:8200'
 export VAULT_TOKEN='${vault_token}'
 
-if [[ ! -z "$builddate" ]]; then
+if [[ "$builddate" != "" ]]; then
   build_date=$builddate
 else
   build_date=$("$binpath" status -format=json | jq -Mr .build_date)
@@ -35,12 +35,12 @@ fi
 
 case "$release" in
   *+oss) [[ "$(echo $version |awk -F'.' '{print $2}')" -ge 11 ]] && \
-  version_expected="Vault v$version ($sha), built $build_date" || \
-  version_expected="Vault v$version ($sha)" ;;
-	*+ent) ;;
-	*+ent.hsm) version_expected="$version_expected (cgo)";;
-	*+ent.fips1402) version_expected="$version_expected (cgo)" ;;
-	*+ent.hsm.fips1402) version_expected="$version_expected (cgo)" ;;
+    version_expected="Vault v$version ($sha), built $build_date" || \
+    version_expected="Vault v$version ($sha)" ;;
+  *+ent) ;;
+  *+ent.hsm) version_expected="$version_expected (cgo)";;
+  *+ent.fips1402) version_expected="$version_expected (cgo)" ;;
+  *+ent.hsm.fips1402) version_expected="$version_expected (cgo)" ;;
   *) fail "($release) file doesn't match any known license types"
 esac
 
@@ -48,7 +48,7 @@ version_expected_nosha=$(echo "$version_expected" | awk '!($3="")' | sed 's/  / 
 version_output=$("$binpath" version)
 
 if [[ "$version_output" == "$version_expected_nosha" ]] || [[ "$version_output" == "$version_expected" ]]; then
-	echo "Version verification succeeded!"
+  echo "Version verification succeeded!"
 else
-	fail "expected Version=$version_expected or $version_expected_nosha, got: $version_output"
+  fail "expected Version=$version_expected or $version_expected_nosha, got: $version_output"
 fi

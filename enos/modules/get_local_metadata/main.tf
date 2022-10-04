@@ -29,5 +29,3 @@ resource "enos_local_exec" "get_revision" {
 output "revision" {
   value = trimspace(enos_local_exec.get_revision.stdout)
 }
-
-

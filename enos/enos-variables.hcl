@@ -104,11 +104,11 @@ variable "vault_local_build_tags" {
 variable "vault_build_date" {
   description = "The build date for Vault artifact"
   type        = string
-  default     = null
+  default     = ""
 }
 
 variable "vault_product_version" {
-  description = "The version of vault we are testing"
+  description = "The version of Vault we are testing"
   type        = string
   default     = null
 }
