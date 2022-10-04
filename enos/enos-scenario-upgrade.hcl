@@ -23,13 +23,12 @@ scenario "upgrade" {
       "ent" = ["enterprise", "ent"]
     }
     bundle_path             = matrix.build != "artifactory" ? abspath(var.vault_bundle_path) : null
-    revision                = matrix.build == "artifactory" ? matrix.edition == "oss" ? var.vault_oss_product_revision : var.vault_enterprise_product_revision : null
     dependencies_to_install = ["jq"]
     enos_provider = {
       rhel   = provider.enos.rhel
       ubuntu = provider.enos.ubuntu
     }
-    install_artifactory_artifact = local.revision != null && local.bundle_path == null
+    install_artifactory_artifact = local.bundle_path == null
     tags = merge({
       "Project Name" : var.project_name
       "Project" : "Enos",
@@ -55,12 +54,12 @@ scenario "upgrade" {
       artifactory_username  = matrix.build == "artifactory" ? var.artifactory_username : null
       artifactory_token     = matrix.build == "artifactory" ? var.artifactory_token : null
       arch                  = matrix.build == "artifactory" ? matrix.arch : null
-      vault_product_version = matrix.build == "artifactory" ? var.vault_product_version : null
+      vault_product_version = matrix.build == "local" ? step.get_local_metadata.version : var.vault_product_version
       artifact_type         = "bundle"
       distro                = matrix.build == "artifactory" ? matrix.distro : null
       edition               = matrix.build == "artifactory" ? matrix.edition : null
       instance_type         = matrix.build == "artifactory" ? local.vault_instance_type : null
-      revision              = local.revision
+      revision              = var.vault_revision
     }
   }
 
@@ -95,7 +94,7 @@ scenario "upgrade" {
   }
 
   step "get_local_metadata" {
-    skip_step = matrix.builder != "local"
+    skip_step = matrix.build != "local"
     module    = module.get_local_metadata
   }
 
@@ -181,9 +180,9 @@ scenario "upgrade" {
     variables {
       vault_instances       = step.create_vault_cluster.vault_instances
       vault_edition         = matrix.edition
-      vault_product_version = matrix.builder == "local" ? step.get_local_metadata.version : var.vault_product_version
-      vault_revision        = matrix.builder == "local" ? step.get_local_metadata.revision : var.vault_revision
-      vault_build_date      = matrix.builder == "local" ? step.get_local_metadata.build_date : var.vault_build_date
+      vault_product_version = matrix.build == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_revision        = matrix.build == "local" ? step.get_local_metadata.revision : var.vault_revision
+      vault_build_date      = matrix.build == "local" ? step.get_local_metadata.build_date : var.vault_build_date
       vault_root_token      = step.create_vault_cluster.vault_root_token
     }
   }

@@ -20,13 +20,12 @@ scenario "autopilot" {
       "ent" = ["enterprise", "ent"]
     }
     bundle_path             = matrix.build != "artifactory" ? abspath(var.vault_bundle_path) : null
-    revision                = matrix.build == "artifactory" ? matrix.edition == "oss" ? var.vault_oss_product_revision : var.vault_enterprise_product_revision : null
     dependencies_to_install = ["jq"]
     enos_provider = {
       rhel   = provider.enos.rhel
       ubuntu = provider.enos.ubuntu
     }
-    install_artifactory_artifact = local.revision != null && local.bundle_path == null
+    install_artifactory_artifact = local.bundle_path == null
     tags = merge({
       "Project Name" : var.project_name
       "Project" : "Enos",
@@ -57,7 +56,7 @@ scenario "autopilot" {
       distro                = matrix.build == "artifactory" ? matrix.distro : null
       edition               = matrix.build == "artifactory" ? matrix.edition : null
       instance_type         = matrix.build == "artifactory" ? local.vault_instance_type : null
-      revision              = local.revision
+      revision              = var.vault_revision
     }
   }
 
@@ -115,7 +114,7 @@ scenario "autopilot" {
   }
 
   step "get_local_metadata" {
-    skip_step = matrix.builder != "local"
+    skip_step = matrix.build != "local"
     module    = module.get_local_metadata
   }
 
@@ -123,7 +122,7 @@ scenario "autopilot" {
     module = module.autopilot_upgrade_storageconfig
 
     variables {
-      vault_product_version = matrix.builder == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_product_version = matrix.build == "local" ? step.get_local_metadata.version : var.vault_product_version
     }
   }
 
@@ -170,7 +169,7 @@ scenario "autopilot" {
     }
 
     variables {
-      vault_autopilot_upgrade_version = matrix.builder == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_autopilot_upgrade_version = matrix.build == "local" ? step.get_local_metadata.version : var.vault_product_version
       vault_instances                 = step.create_vault_cluster.vault_instances
       vault_root_token                = step.create_vault_cluster.vault_root_token
     }
