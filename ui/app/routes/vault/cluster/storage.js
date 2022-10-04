@@ -1,7 +1,10 @@
 import Route from '@ember/routing/route';
 import ClusterRoute from 'vault/mixins/cluster-route';
+import { inject as service } from '@ember/service';
 
 export default Route.extend(ClusterRoute, {
+  store: service(),
+
   model() {
     // findAll method will return all records in store as well as response from server
     // when removing a peer via the cli, stale records would continue to appear until refresh

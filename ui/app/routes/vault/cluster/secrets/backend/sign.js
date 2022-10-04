@@ -1,7 +1,9 @@
 import Route from '@ember/routing/route';
 import UnloadModel from 'vault/mixins/unload-model-route';
+import { inject as service } from '@ember/service';
 
 export default Route.extend(UnloadModel, {
+  store: service(),
   templateName: 'vault/cluster/secrets/backend/sign',
 
   backendModel() {

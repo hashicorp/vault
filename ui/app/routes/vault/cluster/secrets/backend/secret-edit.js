@@ -8,6 +8,7 @@ import UnloadModelRoute from 'vault/mixins/unload-model-route';
 import { encodePath, normalizePath } from 'vault/utils/path-encoding-helpers';
 
 export default Route.extend(UnloadModelRoute, {
+  store: service(),
   pathHelp: service('path-help'),
   wizard: service(),
 
@@ -15,10 +16,12 @@ export default Route.extend(UnloadModelRoute, {
     let { secret } = this.paramsFor(this.routeName);
     return secret ? normalizePath(secret) : '';
   },
+
   enginePathParam() {
     let { backend } = this.paramsFor('vault.cluster.secrets.backend');
     return backend;
   },
+
   capabilities(secret, modelType) {
     const backend = this.enginePathParam();
     let backendModel = this.modelFor('vault.cluster.secrets.backend');
@@ -213,6 +216,7 @@ export default Route.extend(UnloadModelRoute, {
     let secretModel = this.store.peekRecord(modelType, secretId);
     return secretModel;
   },
+
   // wizard will pause unless we manually continue it
   updateWizard(params) {
     // verify that keymgmt tutorial is in progress

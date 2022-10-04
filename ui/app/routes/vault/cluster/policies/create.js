@@ -4,8 +4,10 @@ import UnloadModelRoute from 'vault/mixins/unload-model-route';
 import UnsavedModelRoute from 'vault/mixins/unsaved-model-route';
 
 export default Route.extend(UnloadModelRoute, UnsavedModelRoute, {
+  store: service(),
   version: service(),
   wizard: service(),
+
   model() {
     let policyType = this.policyType();
     if (

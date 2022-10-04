@@ -1,7 +1,10 @@
 import Route from '@ember/routing/route';
 import ListRoute from 'core/mixins/list-route';
+import { inject as service } from '@ember/service';
 
 export default Route.extend(ListRoute, {
+  store: service(),
+
   model(params) {
     let itemType = this.modelFor('vault.cluster.access.identity');
     let modelType = `identity/${itemType}`;

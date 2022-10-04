@@ -3,12 +3,16 @@ import Route from '@ember/routing/route';
 import UnloadModel from 'vault/mixins/unload-model-route';
 
 export default Route.extend(UnloadModel, {
+  store: service(),
+
   queryParams: {
     page: {
       refreshModel: true,
     },
   },
+
   version: service(),
+
   beforeModel() {
     this.store.unloadAll('namespace');
     return this.version.fetchFeatures().then(() => {
@@ -50,6 +54,7 @@ export default Route.extend(UnloadModel, {
       });
     }
   },
+
   actions: {
     error(error, transition) {
       /* eslint-disable-next-line ember/no-controller-access-in-routes */

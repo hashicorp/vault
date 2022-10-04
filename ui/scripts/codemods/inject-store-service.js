@@ -71,7 +71,6 @@ export default function transformer({ source }, api) {
           name: 'extend',
         },
       },
-      arguments: [{ type: 'ObjectExpression' }],
     })
     .filter(filterForStore)
     .find(j.ObjectExpression)
