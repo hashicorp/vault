@@ -941,8 +941,8 @@ github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed h1:5upAirOpQc
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed/go.mod h1:tMWxXQ9wFIaZeTI9F+hmhFiGpFmhOHzyShyFUhRm0H4=
 github.com/hashicorp/cap v0.2.1-0.20220727210936-60cd1534e220 h1:Vgv3jG0kicczshK+lOHWJ9OososZjnjSu1YslqofFYY=
 github.com/hashicorp/cap v0.2.1-0.20220727210936-60cd1534e220/go.mod h1:zb3VvIFA0lM2lbmO69NjowV9dJzJnZS89TaM9blXPJA=
-github.com/hashicorp/consul-template v0.29.4 h1:785H6ZBhgJG1M8HXRZLgIv0Mwdgx5tpEOtqgqJ8TvMg=
-github.com/hashicorp/consul-template v0.29.4/go.mod h1:SZGBPz/t0JaBwMOqM6q/mG66cBRA8IeDUjOwjO0Pa5M=
+github.com/hashicorp/consul-template v0.29.5 h1:tzEo93RqODAX2cgOe/ke8xcpdPdxg5rxl6d22wE3f6c=
+github.com/hashicorp/consul-template v0.29.5/go.mod h1:SZGBPz/t0JaBwMOqM6q/mG66cBRA8IeDUjOwjO0Pa5M=
 github.com/hashicorp/consul/api v1.15.2 h1:3Q/pDqvJ7udgt/60QOOW/p/PeKioQN+ncYzzCdN2av0=
 github.com/hashicorp/consul/api v1.15.2/go.mod h1:v6nvB10borjOuIwNRZYPZiHKrTM/AyrGtd0WVVodKM8=
 github.com/hashicorp/consul/sdk v0.1.1/go.mod h1:VKf9jXwCTEY1QZP2MOLRhb5i/I/ssyNV1vwHyQBF0x8=

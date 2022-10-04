@@ -60,7 +60,7 @@ require (
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/google/tink/go v1.6.1
 	github.com/hashicorp/cap v0.2.1-0.20220727210936-60cd1534e220
-	github.com/hashicorp/consul-template v0.29.4
+	github.com/hashicorp/consul-template v0.29.5
 	github.com/hashicorp/consul/api v1.15.2
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
