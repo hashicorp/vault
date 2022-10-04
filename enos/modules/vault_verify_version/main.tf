@@ -8,7 +8,7 @@ terraform {
 
 variable "vault_build_date" {
   type        = string
-  description = "The vault artifact build date"
+  description = "The Vault artifact build date"
   default     = null
 }
 
@@ -19,7 +19,7 @@ variable "vault_install_dir" {
 
 variable "vault_instance_count" {
   type        = number
-  description = "How many vault instances are in the cluster"
+  description = "How many Vault instances are in the cluster"
 }
 
 variable "vault_instances" {
@@ -27,30 +27,30 @@ variable "vault_instances" {
     private_ip = string
     public_ip  = string
   }))
-  description = "The vault cluster instances that were created"
+  description = "The Vault cluster instances that were created"
 }
 
 variable "vault_product_version" {
   type        = string
-  description = "The vault product version"
+  description = "The Vault product version"
   default     = null
 }
 
 variable "vault_edition" {
   type        = string
-  description = "The vault product edition"
+  description = "The Vault product edition"
   default     = null
 }
 
 variable "vault_revision" {
   type        = string
-  description = "The vault product revision"
+  description = "The Vault product revision"
   default     = null
 }
 
 variable "vault_root_token" {
   type        = string
-  description = "The vault root token"
+  description = "The Vault root token"
   default     = null
 }
 

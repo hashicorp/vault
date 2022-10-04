@@ -73,7 +73,7 @@ variable "vault_bundle_path" {
 
 variable "vault_install_dir" {
   type        = string
-  description = "The directory where the vault binary will be installed"
+  description = "The directory where the Vault binary will be installed"
   default     = "/opt/vault/bin"
 }
 
@@ -114,7 +114,7 @@ variable "vault_product_version" {
 }
 
 variable "vault_revision" {
-  description = "The git sha of vault artifact we are testing"
+  description = "The git sha of Vault artifact we are testing"
   type        = string
   default     = null
 }
@@ -123,7 +123,7 @@ variable "vault_upgrade_initial_release" {
   description = "The Vault release to deploy before upgrading"
   default = {
     edition = "oss"
-    // vault 1.10.5 has a known issue with retry_join.
+    // Vault 1.10.5 has a known issue with retry_join.
     version = "1.10.4"
   }
 }
