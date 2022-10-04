@@ -488,7 +488,6 @@ func (kv *KVv2) Rollback(ctx context.Context, secretPath string, toVersion int) 
 func extractCustomMetadata(secret *Secret) map[string]interface{} {
 	// Logical Writes return the metadata directly, Reads return it nested inside the "metadata" key
 	customMetadataInterface, ok := secret.Data["custom_metadata"]
-
 	if !ok {
 		metadataInterface := secret.Data["metadata"]
 		metadataMap, ok := metadataInterface.(map[string]interface{})
