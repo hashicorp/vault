@@ -4,17 +4,17 @@ import sinon from 'sinon';
 import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
-module('Integration | Component | box-radio', function(hooks) {
+module('Integration | Component | box-radio', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.set('type', 'aws');
     this.set('displayName', 'An Option');
     this.set('mountType', '');
     this.set('disabled', false);
   });
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     const spy = sinon.spy();
     this.set('onRadioChange', spy);
     await render(hbs`<BoxRadio
@@ -31,7 +31,7 @@ module('Integration | Component | box-radio', function(hooks) {
     assert.ok(spy.calledOnce, 'calls the radio change function when option clicked');
   });
 
-  test('it renders correctly when disabled', async function(assert) {
+  test('it renders correctly when disabled', async function (assert) {
     const spy = sinon.spy();
     this.set('onRadioChange', spy);
     await render(hbs`<BoxRadio

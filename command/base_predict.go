@@ -250,9 +250,19 @@ func (p *Predict) vaultPaths(includeFiles bool) complete.PredictFunc {
 
 		// Trim path with potential mount
 		var relativePath string
-		for _, mount := range p.mounts() {
+		mountInfos, err := p.mountInfos()
+		if err != nil {
+			return nil
+		}
+
+		var mountType, mountVersion string
+		for mount, mountInfo := range mountInfos {
 			if strings.HasPrefix(path, mount) {
 				relativePath = strings.TrimPrefix(path, mount+"/")
+				mountType = mountInfo.Type
+				if mountInfo.Options != nil {
+					mountVersion = mountInfo.Options["version"]
+				}
 				break
 			}
 		}
@@ -260,7 +270,7 @@ func (p *Predict) vaultPaths(includeFiles bool) complete.PredictFunc {
 		// Predict path or mount depending on path separator
 		var predictions []string
 		if strings.Contains(relativePath, "/") {
-			predictions = p.paths(path, includeFiles)
+			predictions = p.paths(mountType, mountVersion, path, includeFiles)
 		} else {
 			predictions = p.filter(p.mounts(), path)
 		}
@@ -288,7 +298,7 @@ func (p *Predict) vaultPaths(includeFiles bool) complete.PredictFunc {
 }
 
 // paths predicts all paths which start with the given path.
-func (p *Predict) paths(path string, includeFiles bool) []string {
+func (p *Predict) paths(mountType, mountVersion, path string, includeFiles bool) []string {
 	client := p.Client()
 	if client == nil {
 		return nil
@@ -303,7 +313,7 @@ func (p *Predict) paths(path string, includeFiles bool) []string {
 		root = root[:idx+1]
 	}
 
-	paths := p.listPaths(root)
+	paths := p.listPaths(buildAPIListPath(root, mountType, mountVersion))
 
 	var predictions []string
 	for _, p := range paths {
@@ -324,6 +334,22 @@ func (p *Predict) paths(path string, includeFiles bool) []string {
 	}
 
 	return predictions
+}
+
+func buildAPIListPath(path, mountType, mountVersion string) string {
+	if mountType == "kv" && mountVersion == "2" {
+		return toKVv2ListPath(path)
+	}
+	return path
+}
+
+func toKVv2ListPath(path string) string {
+	firstSlashIdx := strings.Index(path, "/")
+	if firstSlashIdx < 0 {
+		return path
+	}
+
+	return path[:firstSlashIdx] + "/metadata" + path[firstSlashIdx:]
 }
 
 // audits returns a sorted list of the audit backends for Vault server for
@@ -421,16 +447,28 @@ func (p *Predict) policies() []string {
 	return policies
 }
 
+// mountInfos returns a map with mount paths as keys and MountOutputs as values
+// for the Vault server which the client is configured to communicate with.
+// Returns error if server communication fails.
+func (p *Predict) mountInfos() (map[string]*api.MountOutput, error) {
+	client := p.Client()
+	if client == nil {
+		return nil, nil
+	}
+
+	mounts, err := client.Sys().ListMounts()
+	if err != nil {
+		return nil, err
+	}
+
+	return mounts, nil
+}
+
 // mounts returns a sorted list of the mount paths for Vault server for
 // which the client is configured to communicate with. This function returns the
 // default list of mounts if an error occurs.
 func (p *Predict) mounts() []string {
-	client := p.Client()
-	if client == nil {
-		return nil
-	}
-
-	mounts, err := client.Sys().ListMounts()
+	mounts, err := p.mountInfos()
 	if err != nil {
 		return defaultPredictVaultMounts
 	}

@@ -65,7 +65,7 @@ func (e extendedSystemViewImpl) SudoPrivilege(ctx context.Context, path string, 
 	// Resolve the token policy
 	te, err := e.core.tokenStore.Lookup(ctx, token)
 	if err != nil {
-		e.core.logger.Error("failed to lookup token", "error", err)
+		e.core.logger.Error("failed to lookup sudo token", "error", err)
 		return false
 	}
 
@@ -75,9 +75,9 @@ func (e extendedSystemViewImpl) SudoPrivilege(ctx context.Context, path string, 
 		return false
 	}
 
-	policies := make(map[string][]string)
+	policyNames := make(map[string][]string)
 	// Add token policies
-	policies[te.NamespaceID] = append(policies[te.NamespaceID], te.Policies...)
+	policyNames[te.NamespaceID] = append(policyNames[te.NamespaceID], te.Policies...)
 
 	tokenNS, err := NamespaceByID(ctx, te.NamespaceID, e.core)
 	if err != nil {
@@ -90,20 +90,31 @@ func (e extendedSystemViewImpl) SudoPrivilege(ctx context.Context, path string, 
 	}
 
 	// Add identity policies from all the namespaces
-	entity, identityPolicies, err := e.core.fetchEntityAndDerivedPolicies(ctx, tokenNS, te.EntityID)
+	entity, identityPolicies, err := e.core.fetchEntityAndDerivedPolicies(ctx, tokenNS, te.EntityID, te.NoIdentityPolicies)
 	if err != nil {
 		e.core.logger.Error("failed to fetch identity policies", "error", err)
 		return false
 	}
 	for nsID, nsPolicies := range identityPolicies {
-		policies[nsID] = append(policies[nsID], nsPolicies...)
+		policyNames[nsID] = append(policyNames[nsID], nsPolicies...)
 	}
 
 	tokenCtx := namespace.ContextWithNamespace(ctx, tokenNS)
 
+	// Add the inline policy if it's set
+	policies := make([]*Policy, 0)
+	if te.InlinePolicy != "" {
+		inlinePolicy, err := ParseACLPolicy(tokenNS, te.InlinePolicy)
+		if err != nil {
+			e.core.logger.Error("failed to parse the token's inline policy", "error", err)
+			return false
+		}
+		policies = append(policies, inlinePolicy)
+	}
+
 	// Construct the corresponding ACL object. Derive and use a new context that
 	// uses the req.ClientToken's namespace
-	acl, err := e.core.policyStore.ACL(tokenCtx, entity, policies)
+	acl, err := e.core.policyStore.ACL(tokenCtx, entity, policyNames, policies...)
 	if err != nil {
 		e.core.logger.Error("failed to retrieve ACL for token's policies", "token_policies", te.Policies, "error", err)
 		return false
@@ -204,24 +215,62 @@ func (d dynamicSystemView) ResponseWrapData(ctx context.Context, data map[string
 	return resp.WrapInfo, nil
 }
 
-// LookupPlugin looks for a plugin with the given name in the plugin catalog. It
-// returns a PluginRunner or an error if no plugin was found.
-func (d dynamicSystemView) LookupPlugin(ctx context.Context, name string, pluginType consts.PluginType) (*pluginutil.PluginRunner, error) {
+func (d dynamicSystemView) NewPluginClient(ctx context.Context, config pluginutil.PluginClientConfig) (pluginutil.PluginClient, error) {
 	if d.core == nil {
 		return nil, fmt.Errorf("system view core is nil")
 	}
 	if d.core.pluginCatalog == nil {
 		return nil, fmt.Errorf("system view core plugin catalog is nil")
 	}
-	r, err := d.core.pluginCatalog.Get(ctx, name, pluginType)
+
+	c, err := d.core.pluginCatalog.NewPluginClient(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
+// LookupPlugin looks for a plugin with the given name in the plugin catalog. It
+// returns a PluginRunner or an error if no plugin was found.
+func (d dynamicSystemView) LookupPlugin(ctx context.Context, name string, pluginType consts.PluginType) (*pluginutil.PluginRunner, error) {
+	return d.LookupPluginVersion(ctx, name, pluginType, "")
+}
+
+// LookupPluginVersion looks for a plugin with the given name and version in the plugin catalog. It
+// returns a PluginRunner or an error if no plugin was found.
+func (d dynamicSystemView) LookupPluginVersion(ctx context.Context, name string, pluginType consts.PluginType, version string) (*pluginutil.PluginRunner, error) {
+	if d.core == nil {
+		return nil, fmt.Errorf("system view core is nil")
+	}
+	if d.core.pluginCatalog == nil {
+		return nil, fmt.Errorf("system view core plugin catalog is nil")
+	}
+	r, err := d.core.pluginCatalog.Get(ctx, name, pluginType, version)
 	if err != nil {
 		return nil, err
 	}
 	if r == nil {
-		return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, name)
+		errContext := name
+		if version != "" {
+			errContext += fmt.Sprintf(", version=%s", version)
+		}
+		return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, errContext)
 	}
 
 	return r, nil
+}
+
+// ListVersionedPlugins returns information about all plugins of a certain
+// typein the catalog, including any versioning information stored for them.
+func (d dynamicSystemView) ListVersionedPlugins(ctx context.Context, pluginType consts.PluginType) ([]pluginutil.VersionedPlugin, error) {
+	if d.core == nil {
+		return nil, fmt.Errorf("system view core is nil")
+	}
+	if d.core.pluginCatalog == nil {
+		return nil, fmt.Errorf("system view core plugin catalog is nil")
+	}
+	return d.core.pluginCatalog.ListVersionedPlugins(ctx, pluginType)
 }
 
 // MlockEnabled returns the configuration setting for enabling mlock on plugins.
@@ -323,8 +372,11 @@ func (d dynamicSystemView) GroupsForEntity(entityID string) ([]*logical.Group, e
 }
 
 func (d dynamicSystemView) PluginEnv(_ context.Context) (*logical.PluginEnvironment, error) {
+	v := version.GetVersion()
 	return &logical.PluginEnvironment{
-		VaultVersion: version.GetVersion().Version,
+		VaultVersion:           v.Version,
+		VaultVersionPrerelease: v.VersionPrerelease,
+		VaultVersionMetadata:   v.VersionMetadata,
 	}, nil
 }
 
@@ -339,6 +391,8 @@ func (d dynamicSystemView) GeneratePasswordFromPolicy(ctx context.Context, polic
 		ctx, cancel = context.WithTimeout(ctx, 1*time.Second)
 		defer cancel()
 	}
+
+	ctx = namespace.ContextWithNamespace(ctx, d.mountEntry.Namespace())
 
 	policyCfg, err := d.retrievePasswordPolicy(ctx, policyName)
 	if err != nil {

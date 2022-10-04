@@ -218,7 +218,7 @@ func (b *Backend) write(ctx context.Context, buf []byte) error {
 		return err
 	}
 
-	return err
+	return nil
 }
 
 func (b *Backend) reconnect(ctx context.Context) error {

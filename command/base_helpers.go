@@ -51,7 +51,7 @@ func ensureTrailingSlash(s string) string {
 	return s
 }
 
-// ensureNoTrailingSlash ensures the given string has a trailing slash.
+// ensureNoTrailingSlash ensures the given string does not have a trailing slash.
 func ensureNoTrailingSlash(s string) string {
 	s = strings.TrimSpace(s)
 	if s == "" {
@@ -64,7 +64,7 @@ func ensureNoTrailingSlash(s string) string {
 	return s
 }
 
-// ensureNoLeadingSlash ensures the given string has a trailing slash.
+// ensureNoLeadingSlash ensures the given string does not have a leading slash.
 func ensureNoLeadingSlash(s string) string {
 	s = strings.TrimSpace(s)
 	if s == "" {
@@ -261,13 +261,13 @@ func humanDuration(d time.Duration) string {
 // humanDurationInt prints the given int as if it were a time.Duration  number
 // of seconds.
 func humanDurationInt(i interface{}) interface{} {
-	switch i.(type) {
+	switch i := i.(type) {
 	case int:
-		return humanDuration(time.Duration(i.(int)) * time.Second)
+		return humanDuration(time.Duration(i) * time.Second)
 	case int64:
-		return humanDuration(time.Duration(i.(int64)) * time.Second)
+		return humanDuration(time.Duration(i) * time.Second)
 	case json.Number:
-		if i, err := i.(json.Number).Int64(); err == nil {
+		if i, err := i.Int64(); err == nil {
 			return humanDuration(time.Duration(i) * time.Second)
 		}
 	}
@@ -291,4 +291,34 @@ func parseFlagFile(raw string) (string, error) {
 	}
 
 	return raw, nil
+}
+
+func generateFlagWarnings(args []string) string {
+	var trailingFlags []string
+	for _, arg := range args {
+		// "-" can be used where a file is expected to denote stdin.
+		if !strings.HasPrefix(arg, "-") || arg == "-" {
+			continue
+		}
+
+		isGlobalFlag := false
+		trimmedArg, _, _ := strings.Cut(strings.TrimLeft(arg, "-"), "=")
+		for _, flag := range globalFlags {
+			if trimmedArg == flag {
+				isGlobalFlag = true
+			}
+		}
+		if isGlobalFlag {
+			continue
+		}
+
+		trailingFlags = append(trailingFlags, arg)
+	}
+
+	if len(trailingFlags) > 0 {
+		return fmt.Sprintf("Command flags must be provided before positional arguments. "+
+			"The following arguments will not be parsed as flags: [%s]", strings.Join(trailingFlags, ","))
+	} else {
+		return ""
+	}
 }

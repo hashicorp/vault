@@ -1,4 +1,4 @@
-// +build !openbsd
+//go:build !openbsd
 
 package hostutil
 
@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-multierror"
-	"github.com/shirou/gopsutil/cpu"
-	"github.com/shirou/gopsutil/disk"
-	"github.com/shirou/gopsutil/host"
-	"github.com/shirou/gopsutil/mem"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/disk"
+	"github.com/shirou/gopsutil/v3/host"
+	"github.com/shirou/gopsutil/v3/mem"
 )
 
 // HostInfo holds all the information that gets captured on the host. The
@@ -28,10 +28,10 @@ type HostInfo struct {
 	Disk []*disk.UsageStat `json:"disk"`
 	// Host returns general host information such as hostname, platform, uptime,
 	// kernel version, etc.
-	Host *host.InfoStat `json:"host"`
+	Host *HostInfoStat `json:"host"`
 	// Memory contains statistics about the memory such as total, available, and
 	// used memory in number of bytes.
-	Memory *mem.VirtualMemoryStat `json:"memory"`
+	Memory *VirtualMemoryStat `json:"memory"`
 }
 
 // CollectHostInfo returns information on the host, which includes general
@@ -44,13 +44,13 @@ func CollectHostInfo(ctx context.Context) (*HostInfo, error) {
 	var retErr *multierror.Error
 	info := &HostInfo{Timestamp: time.Now().UTC()}
 
-	if h, err := host.InfoWithContext(ctx); err != nil {
+	if h, err := CollectHostInfoStat(ctx); err != nil {
 		retErr = multierror.Append(retErr, &HostInfoError{"host", err})
 	} else {
 		info.Host = h
 	}
 
-	if v, err := mem.VirtualMemoryWithContext(ctx); err != nil {
+	if v, err := CollectHostMemory(ctx); err != nil {
 		retErr = multierror.Append(retErr, &HostInfoError{"memory", err})
 	} else {
 		info.Memory = v
@@ -96,9 +96,63 @@ func CollectHostMemory(ctx context.Context) (*VirtualMemoryStat, error) {
 	}
 
 	return &VirtualMemoryStat{
-		Total:       m.Total,
-		Available:   m.Available,
-		Used:        m.Used,
-		UsedPercent: m.UsedPercent,
+		Total:          m.Total,
+		Available:      m.Available,
+		Used:           m.Used,
+		UsedPercent:    m.UsedPercent,
+		Free:           m.Free,
+		Active:         m.Active,
+		Inactive:       m.Inactive,
+		Wired:          m.Wired,
+		Laundry:        m.Laundry,
+		Buffers:        m.Buffers,
+		Cached:         m.Cached,
+		Writeback:      m.WriteBack,
+		Dirty:          m.Dirty,
+		WritebackTmp:   m.WriteBackTmp,
+		Shared:         m.Shared,
+		Slab:           m.Slab,
+		SReclaimable:   m.Sreclaimable,
+		SUnreclaim:     m.Sunreclaim,
+		PageTables:     m.PageTables,
+		SwapCached:     m.SwapCached,
+		CommitLimit:    m.CommitLimit,
+		CommittedAS:    m.CommittedAS,
+		HighTotal:      m.HighTotal,
+		HighFree:       m.HighFree,
+		LowTotal:       m.LowTotal,
+		LowFree:        m.LowFree,
+		SwapTotal:      m.SwapTotal,
+		SwapFree:       m.SwapFree,
+		Mapped:         m.Mapped,
+		VMallocTotal:   m.VmallocTotal,
+		VMallocUsed:    m.VmallocUsed,
+		VMallocChunk:   m.VmallocChunk,
+		HugePagesTotal: m.HugePagesTotal,
+		HugePagesFree:  m.HugePagesFree,
+		HugePageSize:   m.HugePageSize,
+	}, nil
+}
+
+func CollectHostInfoStat(ctx context.Context) (*HostInfoStat, error) {
+	h, err := host.InfoWithContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &HostInfoStat{
+		Hostname:             h.Hostname,
+		Uptime:               h.Uptime,
+		BootTime:             h.BootTime,
+		Procs:                h.Procs,
+		OS:                   h.OS,
+		Platform:             h.Platform,
+		PlatformFamily:       h.PlatformFamily,
+		PlatformVersion:      h.PlatformVersion,
+		KernelVersion:        h.KernelVersion,
+		KernelArch:           h.KernelArch,
+		VirtualizationSystem: h.VirtualizationSystem,
+		VirtualizationRole:   h.VirtualizationRole,
+		HostID:               h.HostID,
 	}, nil
 }

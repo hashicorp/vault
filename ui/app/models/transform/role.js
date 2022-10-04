@@ -8,7 +8,7 @@ const ModelExport = Model.extend({
   // used for getting appropriate options for backend
   idPrefix: 'role/',
   // the id prefixed with `role/` so we can use it as the *secret param for the secret show route
-  idForNav: computed('id', 'idPrefix', function() {
+  idForNav: computed('id', 'idPrefix', function () {
     let modelId = this.id || '';
     return `${this.idPrefix}${modelId}`;
   }),
@@ -30,7 +30,7 @@ const ModelExport = Model.extend({
     subText: 'Select which transformations this role will have access to. It must already exist.',
   }),
 
-  attrs: computed('transformations', function() {
+  attrs: computed('transformations', function () {
     let keys = ['name', 'transformations'];
     return expandAttributeMeta(this, keys);
   }),

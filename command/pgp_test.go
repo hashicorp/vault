@@ -13,8 +13,8 @@ import (
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/vault"
 
-	"github.com/keybase/go-crypto/openpgp"
-	"github.com/keybase/go-crypto/openpgp/packet"
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/packet"
 )
 
 func getPubKeyFiles(t *testing.T) (string, []string, error) {
@@ -96,8 +96,8 @@ func parseDecryptAndTestUnsealKeys(t *testing.T,
 	fingerprints bool,
 	backupKeys map[string][]string,
 	backupKeysB64 map[string][]string,
-	core *vault.Core) {
-
+	core *vault.Core,
+) {
 	decoder := base64.StdEncoding
 	priv1Bytes, err := decoder.DecodeString(pgpkeys.TestPrivKey1)
 	if err != nil {
@@ -121,9 +121,9 @@ func parseDecryptAndTestUnsealKeys(t *testing.T,
 	testFunc := func(bkeys map[string][]string) {
 		var re *regexp.Regexp
 		if fingerprints {
-			re, err = regexp.Compile("\\s*Key\\s+\\d+\\s+fingerprint:\\s+([0-9a-fA-F]+);\\s+value:\\s+(.*)")
+			re, err = regexp.Compile(`\s*Key\s+\d+\s+fingerprint:\s+([0-9a-fA-F]+);\s+value:\s+(.*)`)
 		} else {
-			re, err = regexp.Compile("\\s*Key\\s+\\d+:\\s+(.*)")
+			re, err = regexp.Compile(`\s*Key\s+\d+:\s+(.*)`)
 		}
 		if err != nil {
 			t.Fatalf("Error compiling regex: %s", err)

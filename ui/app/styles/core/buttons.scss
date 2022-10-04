@@ -41,6 +41,11 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
     min-width: auto;
     padding: 0;
   }
+  &.is-flat {
+    min-width: auto;
+    border: none;
+    box-shadow: none;
+  }
 
   @each $name, $pair in $colors {
     $color: nth($pair, 1);
@@ -54,7 +59,7 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
       background-color: $color;
       color: $color-invert;
 
-      &:hover,
+      &:hover:not([disabled]),
       &.is-hovered {
         background-color: darken($color, 5%);
         border-color: darken($color, 5%);
@@ -100,6 +105,16 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
         }
       }
 
+      &.is-underlined {
+        &:active,
+        &.is-active {
+          background-color: transparent;
+          border-bottom: 2px solid darken($color, 10%);
+          border-radius: unset;
+          color: darken($color, 10%);
+        }
+      }
+
       &.is-inverted.is-outlined {
         border-color: rgba($color-invert, 0.5);
         color: rgba($color-invert, 0.9);
@@ -127,6 +142,14 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
   &.is-primary {
     font-weight: $font-weight-bold;
     text-shadow: 0 1px 1px rgba($black, 0.25);
+  }
+
+  &.is-link {
+    color: $link;
+    text-decoration: none;
+    font-weight: $font-weight-semibold;
+    box-shadow: none;
+    min-width: 4rem;
   }
 
   &.is-ghost {
@@ -158,6 +181,10 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
 
   .has-text-info & {
     font-weight: $font-weight-semibold;
+  }
+
+  &.has-text-danger {
+    border: 1px solid $red-500;
   }
 
   &.tool-tip-trigger {
@@ -228,4 +255,29 @@ $button-box-shadow-standard: 0 3px 1px 0 rgba($black, 0.12);
   white-space: normal;
   padding: $size-8;
   width: 100%;
+}
+
+a.button.disabled {
+  color: $white;
+  background-color: $grey-dark;
+  opacity: 0.5;
+  border-color: transparent;
+  box-shadow: none;
+  cursor: default;
+}
+.icon-button {
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  border: none;
+  cursor: pointer;
+}
+.text-button {
+  padding: unset;
+  border: none;
+  background-color: inherit;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  cursor: pointer;
 }

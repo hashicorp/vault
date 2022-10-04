@@ -25,35 +25,55 @@ export default ApplicationAdapter.extend({
     return 'mounts';
   },
 
-  query(store, type, query) {
-    return this.ajax(this.internalURL(query.path), 'GET');
+  async query(store, type, query) {
+    let mountModel, configModel;
+    try {
+      mountModel = await this.ajax(this.internalURL(query.path), 'GET');
+      // if kv2 then add the config data to the mountModel
+      // version comes in as a string
+      if (mountModel?.data?.type === 'kv' && mountModel?.data?.options?.version === '2') {
+        configModel = await this.ajax(this.urlForConfig(query.path), 'GET');
+        mountModel.data = { ...mountModel.data, ...configModel.data };
+      }
+    } catch (error) {
+      // no path means this was an error on listing
+      if (!query.path) {
+        throw error;
+      }
+      // control groups will throw a 403 permission denied error. If this happens return the mountModel
+      // error is handled on routing
+    }
+    return mountModel;
   },
 
-  createRecord(store, type, snapshot) {
+  async createRecord(store, type, snapshot) {
     const serializer = store.serializerFor(type.modelName);
     let data = serializer.serialize(snapshot);
     const path = snapshot.attr('path');
     // for kv2 we make two network requests
-    if (data.type === 'kv' && data.options.version !== 1) {
+    if (data.type === 'kv' && data.options.version === 2) {
       // data has both data for sys mount and the config, we need to separate them
       let splitObjects = splitObject(data, ['max_versions', 'delete_version_after', 'cas_required']);
       let configData;
       [configData, data] = splitObjects;
+
+      if (!data.id) {
+        data.id = path;
+      }
       // first create the engine
-      return this.ajax(this.url(path), 'POST', { data })
-        .then(() => {
-          // second modify config on engine
-          return this.ajax(this.urlForConfig(path), 'POST', { data: configData });
-        })
-        .then(() => {
-          // ember data doesn't like 204s if it's not a DELETE
-          return {
-            data: assign({}, data, { path: path + '/', id: path }),
-          };
-        })
-        .catch(e => {
-          console.log(e, 'error');
-        });
+      await this.ajax(this.url(path), 'POST', { data });
+
+      // second post to config
+      try {
+        await this.ajax(this.urlForConfig(path), 'POST', { data: configData });
+      } catch (e) {
+        // error here means you do not have update capabilities to config endpoint. If that's the case we show a flash message in the component and continue with the transition.
+        // the error is handled by mount-backend-form component which checks capabilities before hitting the save to the adapter.
+        // we do not handle the error here because we want the secret-engine to mount successfully and to continue the flow.
+      }
+      return {
+        data: assign({}, data, { path: path + '/', id: path }),
+      };
     } else {
       return this.ajax(this.url(path), 'POST', { data }).then(() => {
         // ember data doesn't like 204s if it's not a DELETE
@@ -73,7 +93,7 @@ export default ApplicationAdapter.extend({
 
   queryRecord(store, type, query) {
     if (query.type === 'aws') {
-      return this.ajax(`/v1/${encodePath(query.backend)}/config/lease`, 'GET').then(resp => {
+      return this.ajax(`/v1/${encodePath(query.backend)}/config/lease`, 'GET').then((resp) => {
         resp.path = query.backend + '/';
         return resp;
       });
@@ -108,11 +128,7 @@ export default ApplicationAdapter.extend({
 
   saveZeroAddressConfig(store, type, snapshot) {
     const path = encodePath(snapshot.id);
-    const roles = store
-      .peekAll('role-ssh')
-      .filterBy('zeroAddress')
-      .mapBy('id')
-      .join(',');
+    const roles = store.peekAll('role-ssh').filterBy('zeroAddress').mapBy('id').join(',');
     const url = `/v1/${path}/config/zeroaddress`;
     const data = { roles };
     if (roles === '') {

@@ -10,8 +10,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
-
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
 func TestPostgreSQLBackend(t *testing.T) {
@@ -107,7 +106,7 @@ func TestPostgreSQLBackendMaxIdleConnectionsParameter(t *testing.T) {
 	}
 	expectedErrStr := "failed parsing max_idle_connections parameter: strconv.Atoi: parsing \"bad param\": invalid syntax"
 	if err.Error() != expectedErrStr {
-		t.Errorf("Expected: \"%s\" but found \"%s\"", expectedErrStr, err.Error())
+		t.Errorf("Expected: %q but found %q", expectedErrStr, err.Error())
 	}
 }
 
@@ -166,7 +165,7 @@ func TestConnectionURL(t *testing.T) {
 			got := connectionURL(tt.input.conf)
 
 			if got != tt.want {
-				t.Errorf("connectionURL(%s): want '%s', got '%s'", tt.input, tt.want, got)
+				t.Errorf("connectionURL(%s): want %q, got %q", tt.input, tt.want, got)
 			}
 		})
 	}
@@ -409,14 +408,13 @@ func setupDatabaseObjects(t *testing.T, logger log.Logger, pg *PostgreSQLBackend
 		t.Fatalf("Failed to create index: %v", err)
 	}
 
-	createHaTableSQL :=
-		" CREATE TABLE IF NOT EXISTS vault_ha_locks ( " +
-			" ha_key                                      TEXT COLLATE \"C\" NOT NULL, " +
-			" ha_identity                                 TEXT COLLATE \"C\" NOT NULL, " +
-			" ha_value                                    TEXT COLLATE \"C\", " +
-			" valid_until                                 TIMESTAMP WITH TIME ZONE NOT NULL, " +
-			" CONSTRAINT ha_key PRIMARY KEY (ha_key) " +
-			" ); "
+	createHaTableSQL := " CREATE TABLE IF NOT EXISTS vault_ha_locks ( " +
+		" ha_key                                      TEXT COLLATE \"C\" NOT NULL, " +
+		" ha_identity                                 TEXT COLLATE \"C\" NOT NULL, " +
+		" ha_value                                    TEXT COLLATE \"C\", " +
+		" valid_until                                 TIMESTAMP WITH TIME ZONE NOT NULL, " +
+		" CONSTRAINT ha_key PRIMARY KEY (ha_key) " +
+		" ); "
 
 	_, err = pg.client.Exec(createHaTableSQL)
 	if err != nil {

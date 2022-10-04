@@ -116,6 +116,12 @@ type Path struct {
 	// DisplayAttrs provides hints for UI and documentation generators. They
 	// will be included in OpenAPI output if set.
 	DisplayAttrs *DisplayAttributes
+
+	// TakesArbitraryInput is used for endpoints that take arbitrary input, instead
+	// of or as well as their Fields. This is taken into account when printing
+	// warnings about ignored fields. If this is set, we will not warn when data is
+	// provided that is not part of the Fields declaration.
+	TakesArbitraryInput bool
 }
 
 // OperationHandler defines and describes a specific operation handler.
@@ -301,9 +307,17 @@ func (p *Path) helpCallback(b *Backend) OperationFunc {
 			return nil, errwrap.Wrapf("error executing template: {{err}}", err)
 		}
 
+		// The plugin type (e.g. "kv", "cubbyhole") is only assigned at the time
+		// the plugin is enabled (mounted). If specified in the request, the type
+		// will be used as part of the request/response names in the OAS document
+		var requestResponsePrefix string
+		if v, ok := req.Data["requestResponsePrefix"]; ok {
+			requestResponsePrefix = v.(string)
+		}
+
 		// Build OpenAPI response for this path
 		doc := NewOASDocument()
-		if err := documentPath(p, b.SpecialPaths(), b.BackendType, doc); err != nil {
+		if err := documentPath(p, b.SpecialPaths(), requestResponsePrefix, false, b.BackendType, doc); err != nil {
 			b.Logger().Warn("error generating OpenAPI", "error", err)
 		}
 

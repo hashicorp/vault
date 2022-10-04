@@ -10,11 +10,11 @@ const TABS_FOR_SETTINGS = {
     },
     {
       label: 'Identity Allow List Tidy',
-      routeParams: ['vault.cluster.settings.auth.configure.section', 'identity-whitelist'], // TODO: Update endpoint from PR#10997
+      routeParams: ['vault.cluster.settings.auth.configure.section', 'identity-accesslist'],
     },
     {
       label: 'Role Tag Deny List Tidy',
-      routeParams: ['vault.cluster.settings.auth.configure.section', 'roletag-blacklist'], // TODO: Update endpoints from PR#10997
+      routeParams: ['vault.cluster.settings.auth.configure.section', 'roletag-denylist'],
     },
   ],
   azure: [
@@ -87,12 +87,12 @@ export function tabsForAuthSection([model, sectionType = 'authSettings', paths])
   }
   if (paths || model.paths) {
     if (model.paths) {
-      paths = model.paths.paths.filter(path => path.navigation);
+      paths = model.paths.paths.filter((path) => path.navigation);
     }
 
     // TODO: we're unsure if we actually need compact here
     // but are leaving it just in case OpenAPI ever returns an empty thing
-    tabs = paths.compact().map(path => {
+    tabs = paths.compact().map((path) => {
       return {
         label: capitalize(pluralize(path.itemName)),
         routeParams: ['vault.cluster.access.method.item.list', path.itemType],

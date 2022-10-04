@@ -24,9 +24,8 @@ import (
 	systemd "github.com/coreos/go-systemd/daemon"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
-	log "github.com/hashicorp/go-hclog"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
-	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
+	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/go-secure-stdlib/mlock"
@@ -35,22 +34,27 @@ import (
 	config2 "github.com/hashicorp/vault/command/config"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/builtinplugins"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/version"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/vault/hcp_link"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/cli"
 	"github.com/mitchellh/go-testing-interface"
+	"github.com/pkg/errors"
 	"github.com/posener/complete"
 	"go.uber.org/atomic"
 	"golang.org/x/net/http/httpproxy"
@@ -74,8 +78,9 @@ const (
 
 	// Even though there are more types than the ones below, the following consts
 	// are declared internally for value comparison and reusability.
-	storageTypeRaft   = "raft"
-	storageTypeConsul = "consul"
+	storageTypeRaft            = "raft"
+	storageTypeConsul          = "consul"
+	disableStorageTypeCheckEnv = "VAULT_DISABLE_SUPPORTED_STORAGE_CHECK"
 )
 
 type ServerCommand struct {
@@ -96,7 +101,7 @@ type ServerCommand struct {
 
 	logOutput   io.Writer
 	gatedWriter *gatedwriter.Writer
-	logger      log.InterceptLogger
+	logger      hclog.InterceptLogger
 
 	cleanupGuard sync.Once
 
@@ -106,7 +111,7 @@ type ServerCommand struct {
 	reloadedCh        chan (struct{}) // for tests
 	licenseReloadedCh chan (error)    // for tests
 
-	allLoggers []log.Logger
+	allLoggers []hclog.Logger
 
 	// new stuff
 	flagConfigs            []string
@@ -114,6 +119,8 @@ type ServerCommand struct {
 	flagLogFormat          string
 	flagRecovery           bool
 	flagDev                bool
+	flagDevTLS             bool
+	flagDevTLSCertDir      string
 	flagDevRootTokenID     string
 	flagDevListenAddr      string
 	flagDevNoStoreToken    bool
@@ -189,9 +196,9 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Target:     &c.flagLogLevel,
 		Default:    notSetValue,
 		EnvVar:     "VAULT_LOG_LEVEL",
-		Completion: complete.PredictSet("trace", "debug", "info", "warn", "err"),
+		Completion: complete.PredictSet("trace", "debug", "info", "warn", "error"),
 		Usage: "Log verbosity level. Supported values (in order of detail) are " +
-			"\"trace\", \"debug\", \"info\", \"warn\", and \"err\".",
+			"\"trace\", \"debug\", \"info\", \"warn\", and \"error\".",
 	})
 
 	f.StringVar(&StringVar{
@@ -240,6 +247,23 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Usage: "Enable development mode. In this mode, Vault runs in-memory and " +
 			"starts unsealed. As the name implies, do not run \"dev\" mode in " +
 			"production.",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:   "dev-tls",
+		Target: &c.flagDevTLS,
+		Usage: "Enable TLS development mode. In this mode, Vault runs in-memory and " +
+			"starts unsealed, with a generated TLS CA, certificate and key. " +
+			"As the name implies, do not run \"dev-tls\" mode in " +
+			"production.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "dev-tls-cert-dir",
+		Target:  &c.flagDevTLSCertDir,
+		Default: "",
+		Usage: "Directory where generated TLS files are created if `-dev-tls` is " +
+			"specified. If left unset, files are generated in a temporary directory.",
 	})
 
 	f.StringVar(&StringVar{
@@ -424,11 +448,17 @@ func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError,
 			config = config.Merge(current)
 		}
 	}
+
+	if config != nil && config.Entropy != nil && config.Entropy.Mode == configutil.EntropyAugmentation && constants.IsFIPS() {
+		c.UI.Warn("WARNING: Entropy Augmentation is not supported in FIPS 140-2 Inside mode; disabling from server configuration!\n")
+		config.Entropy = nil
+	}
+
 	return config, configErrors, nil
 }
 
 func (c *ServerCommand) runRecoveryMode() int {
-	config, _, err := c.parseConfig()
+	config, configErrors, err := c.parseConfig()
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
@@ -450,13 +480,19 @@ func (c *ServerCommand) runRecoveryMode() int {
 		return 1
 	}
 
-	c.logger = log.NewInterceptLogger(&log.LoggerOptions{
-		Output: c.gatedWriter,
-		Level:  level,
+	c.logger = hclog.NewInterceptLogger(&hclog.LoggerOptions{
+		Output:            c.gatedWriter,
+		Level:             level,
+		IndependentLevels: true,
 		// Note that if logFormat is either unspecified or standard, then
 		// the resulting logger's format will be standard.
 		JSONFormat: logFormat == logging.JSONFormat,
 	})
+
+	// reporting Errors found in the config
+	for _, cErr := range configErrors {
+		c.logger.Warn(cErr.String())
+	}
 
 	// Ensure logging is flushed if initialization fails
 	defer c.flushLog()
@@ -522,7 +558,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	var wrapper wrapping.Wrapper
 
 	if len(config.Seals) == 0 {
-		config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.Shamir})
+		config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.WrapperTypeShamir.String()})
 	}
 
 	if len(config.Seals) > 1 {
@@ -531,7 +567,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	configSeal := config.Seals[0]
-	sealType := wrapping.Shamir
+	sealType := wrapping.WrapperTypeShamir.String()
 	if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
 		sealType = os.Getenv("VAULT_SEAL_TYPE")
 		configSeal.Type = sealType
@@ -544,9 +580,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 
 	var seal vault.Seal
 	defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
-		Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
-			Logger: c.logger.Named("shamir"),
-		}),
+		Wrapper: aeadwrapper.NewShamirWrapper(),
 	})
 	sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
 	wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &infoKeys, &info, sealLogger)
@@ -560,9 +594,12 @@ func (c *ServerCommand) runRecoveryMode() int {
 	if wrapper == nil {
 		seal = defaultSeal
 	} else {
-		seal = vault.NewAutoSeal(&vaultseal.Access{
+		seal, err = vault.NewAutoSeal(&vaultseal.Access{
 			Wrapper: wrapper,
 		})
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("error creating auto seal: %v", err))
+		}
 	}
 	barrierSeal = seal
 
@@ -578,6 +615,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		Physical:     backend,
 		StorageType:  config.Storage.Type,
 		Seal:         barrierSeal,
+		LogLevel:     logLevelString,
 		Logger:       c.logger,
 		DisableMlock: config.DisableMlock,
 		RecoveryMode: c.flagRecovery,
@@ -643,6 +681,12 @@ func (c *ServerCommand) runRecoveryMode() int {
 
 	infoKeys = append(infoKeys, "go version")
 	info["go version"] = runtime.Version()
+
+	fipsStatus := getFIPSInfoKey()
+	if fipsStatus != "" {
+		infoKeys = append(infoKeys, "fips")
+		info["fips"] = fipsStatus
+	}
 
 	// Server configuration output
 	padding := 24
@@ -724,8 +768,6 @@ func (c *ServerCommand) runRecoveryMode() int {
 			c.logger.Info("goroutine trace", "stack", string(buf[:n]))
 		}
 	}
-
-	return 0
 }
 
 func logProxyEnvironmentVariables(logger hclog.Logger) {
@@ -760,15 +802,15 @@ func (c *ServerCommand) adjustLogLevel(config *server.Config, logLevelWasNotSet 
 		logLevelString = configLogLevel
 		switch configLogLevel {
 		case "trace":
-			c.logger.SetLevel(log.Trace)
+			c.logger.SetLevel(hclog.Trace)
 		case "debug":
-			c.logger.SetLevel(log.Debug)
+			c.logger.SetLevel(hclog.Debug)
 		case "notice", "info", "":
-			c.logger.SetLevel(log.Info)
+			c.logger.SetLevel(hclog.Info)
 		case "warn", "warning":
-			c.logger.SetLevel(log.Warn)
+			c.logger.SetLevel(hclog.Warn)
 		case "err", "error":
-			c.logger.SetLevel(log.Error)
+			c.logger.SetLevel(hclog.Error)
 		default:
 			return "", fmt.Errorf("unknown log level: %s", config.LogLevel)
 		}
@@ -776,7 +818,7 @@ func (c *ServerCommand) adjustLogLevel(config *server.Config, logLevelWasNotSet 
 	return logLevelString, nil
 }
 
-func (c *ServerCommand) processLogLevelAndFormat(config *server.Config) (log.Level, string, bool, logging.LogFormat, error) {
+func (c *ServerCommand) processLogLevelAndFormat(config *server.Config) (hclog.Level, string, bool, logging.LogFormat, error) {
 	// Create a logger. We wrap it in a gated writer so that it doesn't
 	// start logging too early.
 	c.logOutput = os.Stderr
@@ -784,7 +826,7 @@ func (c *ServerCommand) processLogLevelAndFormat(config *server.Config) (log.Lev
 		c.logOutput = os.Stdout
 	}
 	c.gatedWriter = gatedwriter.NewWriter(c.logOutput)
-	var level log.Level
+	var level hclog.Level
 	var logLevelWasNotSet bool
 	logFormat := logging.UnspecifiedFormat
 	logLevelString := c.flagLogLevel
@@ -793,17 +835,17 @@ func (c *ServerCommand) processLogLevelAndFormat(config *server.Config) (log.Lev
 	case notSetValue, "":
 		logLevelWasNotSet = true
 		logLevelString = "info"
-		level = log.Info
+		level = hclog.Info
 	case "trace":
-		level = log.Trace
+		level = hclog.Trace
 	case "debug":
-		level = log.Debug
+		level = hclog.Debug
 	case "notice", "info":
-		level = log.Info
+		level = hclog.Info
 	case "warn", "warning":
-		level = log.Warn
+		level = hclog.Warn
 	case "err", "error":
-		level = log.Error
+		level = hclog.Error
 	default:
 		return level, logLevelString, logLevelWasNotSet, logFormat, fmt.Errorf("unknown log level: %s", c.flagLogLevel)
 	}
@@ -833,14 +875,14 @@ type quiescenceSink struct {
 	t *time.Timer
 }
 
-func (q quiescenceSink) Accept(name string, level log.Level, msg string, args ...interface{}) {
+func (q quiescenceSink) Accept(name string, level hclog.Level, msg string, args ...interface{}) {
 	q.t.Reset(100 * time.Millisecond)
 }
 
 func (c *ServerCommand) setupStorage(config *server.Config) (physical.Backend, error) {
 	// Ensure that a backend is provided
 	if config.Storage == nil {
-		return nil, fmt.Errorf("A storage backend must be specified")
+		return nil, errors.New("A storage backend must be specified")
 	}
 
 	// Initialize the backend
@@ -866,7 +908,7 @@ func (c *ServerCommand) setupStorage(config *server.Config) (physical.Backend, e
 			config.ClusterAddr = envCA
 		}
 		if len(config.ClusterAddr) == 0 {
-			return nil, fmt.Errorf("Cluster address must be set when using raft storage")
+			return nil, errors.New("Cluster address must be set when using raft storage")
 		}
 	}
 
@@ -1006,7 +1048,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Automatically enable dev mode if other dev flags are provided.
-	if c.flagDevConsul || c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal || c.flagDevKVV1 {
+	if c.flagDevConsul || c.flagDevHA || c.flagDevTransactional || c.flagDevLeasedKV || c.flagDevThreeNode || c.flagDevFourCluster || c.flagDevAutoSeal || c.flagDevKVV1 || c.flagDevTLS {
 		c.flagDev = true
 	}
 
@@ -1042,6 +1084,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// Load the configuration
 	var config *server.Config
 	var err error
+	var certDir string
 	if c.flagDev {
 		var devStorageType string
 		switch {
@@ -1056,18 +1099,66 @@ func (c *ServerCommand) Run(args []string) int {
 		default:
 			devStorageType = "inmem"
 		}
-		config, err = server.DevConfig(devStorageType)
+
+		if c.flagDevTLS {
+			if c.flagDevTLSCertDir != "" {
+				_, err := os.Stat(c.flagDevTLSCertDir)
+				if err != nil {
+					c.UI.Error(err.Error())
+					return 1
+				}
+
+				certDir = c.flagDevTLSCertDir
+			} else {
+				certDir, err = os.MkdirTemp("", "vault-tls")
+				if err != nil {
+					c.UI.Error(err.Error())
+					return 1
+				}
+			}
+			config, err = server.DevTLSConfig(devStorageType, certDir)
+
+			defer func() {
+				err := os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevCAFilename))
+				if err != nil {
+					c.UI.Error(err.Error())
+				}
+
+				err = os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevCertFilename))
+				if err != nil {
+					c.UI.Error(err.Error())
+				}
+
+				err = os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevKeyFilename))
+				if err != nil {
+					c.UI.Error(err.Error())
+				}
+
+				// Only delete temp directories we made.
+				if c.flagDevTLSCertDir == "" {
+					err = os.Remove(certDir)
+					if err != nil {
+						c.UI.Error(err.Error())
+					}
+				}
+			}()
+
+		} else {
+			config, err = server.DevConfig(devStorageType)
+		}
+
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 1
 		}
+
 		if c.flagDevListenAddr != "" {
 			config.Listeners[0].Address = c.flagDevListenAddr
 		}
 		config.Listeners[0].Telemetry.UnauthenticatedMetricsAccess = true
 	}
 
-	parsedConfig, _, err := c.parseConfig()
+	parsedConfig, configErrors, err := c.parseConfig()
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
@@ -1097,25 +1188,32 @@ func (c *ServerCommand) Run(args []string) int {
 	config.LogFormat = logFormat.String()
 
 	if c.flagDevThreeNode || c.flagDevFourCluster {
-		c.logger = log.NewInterceptLogger(&log.LoggerOptions{
-			Mutex:  &sync.Mutex{},
-			Output: c.gatedWriter,
-			Level:  log.Trace,
+		c.logger = hclog.NewInterceptLogger(&hclog.LoggerOptions{
+			Mutex:             &sync.Mutex{},
+			Output:            c.gatedWriter,
+			Level:             hclog.Trace,
+			IndependentLevels: true,
 		})
 	} else {
-		c.logger = log.NewInterceptLogger(&log.LoggerOptions{
-			Output: c.gatedWriter,
-			Level:  level,
+		c.logger = hclog.NewInterceptLogger(&hclog.LoggerOptions{
+			Output:            c.gatedWriter,
+			Level:             level,
+			IndependentLevels: true,
 			// Note that if logFormat is either unspecified or standard, then
 			// the resulting logger's format will be standard.
 			JSONFormat: logFormat == logging.JSONFormat,
 		})
 	}
 
+	// reporting Errors found in the config
+	for _, cErr := range configErrors {
+		c.logger.Warn(cErr.String())
+	}
+
 	// Ensure logging is flushed if initialization fails
 	defer c.flushLog()
 
-	c.allLoggers = []log.Logger{c.logger}
+	c.allLoggers = []hclog.Logger{c.logger}
 
 	logLevelStr, err := c.adjustLogLevel(config, logLevelWasNotSet)
 	if err != nil {
@@ -1158,6 +1256,25 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 	if envLicense := os.Getenv(EnvVaultLicense); envLicense != "" {
 		config.License = envLicense
+	}
+	if disableSSC := os.Getenv(DisableSSCTokens); disableSSC != "" {
+		var err error
+		config.DisableSSCTokens, err = strconv.ParseBool(disableSSC)
+		if err != nil {
+			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
+				"VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS env var: " +
+				"setting to default value false"))
+		}
+	}
+
+	if allowPendingRemoval := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv); allowPendingRemoval != "" {
+		var err error
+		vault.PendingRemovalMountsAllowed, err = strconv.ParseBool(allowPendingRemoval)
+		if err != nil {
+			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
+				consts.VaultAllowPendingRemovalMountsEnv + " env var: " +
+				"defaulting to false."))
+		}
 	}
 
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
@@ -1233,7 +1350,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	if barrierSeal == nil {
-		c.UI.Error(fmt.Sprintf("Could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated."))
+		c.UI.Error("Could not create barrier seal! Most likely proper Seal configuration information was not set, but no error was generated.")
 		return 1
 	}
 
@@ -1293,6 +1410,24 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Apply any enterprise configuration onto the coreConfig.
 	adjustCoreConfigForEnt(config, &coreConfig)
+
+	if !c.flagDev && os.Getenv(disableStorageTypeCheckEnv) == "" {
+		inMemStorageTypes := []string{
+			"inmem", "inmem_ha", "inmem_transactional", "inmem_transactional_ha",
+		}
+
+		if strutil.StrListContains(inMemStorageTypes, coreConfig.StorageType) {
+			c.UI.Warn("")
+			c.UI.Warn(wrapAtLength(fmt.Sprintf("WARNING: storage configured to use %q which should NOT be used in production", coreConfig.StorageType)))
+			c.UI.Warn("")
+		} else {
+			err = checkStorageTypeForEnt(&coreConfig)
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Invalid storage type: %s", err))
+				return 1
+			}
+		}
+	}
 
 	// Initialize the core
 	core, newCoreError := vault.NewCore(&coreConfig)
@@ -1379,6 +1514,12 @@ func (c *ServerCommand) Run(args []string) int {
 	infoKeys = append(infoKeys, "go version")
 	info["go version"] = runtime.Version()
 
+	fipsStatus := getFIPSInfoKey()
+	if fipsStatus != "" {
+		infoKeys = append(infoKeys, "fips")
+		info["fips"] = fipsStatus
+	}
+
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
 
@@ -1435,7 +1576,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// If we're in Dev mode, then initialize the core
-	err = initDevCore(c, &coreConfig, config, core)
+	err = initDevCore(c, &coreConfig, config, core, certDir)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
@@ -1446,6 +1587,14 @@ func (c *ServerCommand) Run(args []string) int {
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
+	}
+
+	hcpLogger := c.logger.Named("hcpLink")
+	hcpLink, err := hcp_link.NewHCPLink(config.HCPLinkConf, core, hcpLogger)
+	if err != nil {
+		c.logger.Error("failed to start HCP Link", "error", err)
+	} else if hcpLink != nil {
+		c.logger.Trace("started HCP link")
 	}
 
 	if c.flagTestServerConfig {
@@ -1519,13 +1668,16 @@ func (c *ServerCommand) Run(args []string) int {
 
 			// Check for new log level
 			var config *server.Config
-			var level log.Level
+			var level hclog.Level
+			var configErrors []configutil.ConfigError
 			for _, path := range c.flagConfigs {
 				current, err := server.LoadConfig(path)
 				if err != nil {
 					c.logger.Error("could not reload config", "path", path, "error", err)
 					goto RUNRELOADFUNCS
 				}
+
+				configErrors = append(configErrors, current.Validate(path)...)
 
 				if config == nil {
 					config = current
@@ -1540,21 +1692,41 @@ func (c *ServerCommand) Run(args []string) int {
 				goto RUNRELOADFUNCS
 			}
 
+			// reporting Errors found in the config
+			for _, cErr := range configErrors {
+				c.logger.Warn(cErr.String())
+			}
+
 			core.SetConfig(config)
+
+			// reloading custom response headers to make sure we have
+			// the most up to date headers after reloading the config file
+			if err = core.ReloadCustomResponseHeaders(); err != nil {
+				c.logger.Error(err.Error())
+			}
+
+			// Setting log request with the new value in the config after reload
+			core.ReloadLogRequestsLevel()
+
+			// reloading HCP link
+			hcpLink, err = c.reloadHCPLink(hcpLink, config, core, hcpLogger)
+			if err != nil {
+				c.logger.Error(err.Error())
+			}
 
 			if config.LogLevel != "" {
 				configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
 				switch configLogLevel {
 				case "trace":
-					level = log.Trace
+					level = hclog.Trace
 				case "debug":
-					level = log.Debug
+					level = hclog.Debug
 				case "notice", "info", "":
-					level = log.Info
+					level = hclog.Info
 				case "warn", "warning":
-					level = log.Warn
+					level = hclog.Warn
 				case "err", "error":
-					level = log.Error
+					level = hclog.Error
 				default:
 					c.logger.Error("unknown log level found on reload", "level", config.LogLevel)
 					goto RUNRELOADFUNCS
@@ -1577,6 +1749,13 @@ func (c *ServerCommand) Run(args []string) int {
 			default:
 			}
 
+			// Let the managedKeyRegistry react to configuration changes (i.e.
+			// changes in kms_libraries)
+			core.ReloadManagedKeyRegistryConfig()
+
+			// Notify systemd that the server has completed reloading config
+			c.notifySystemd(systemd.SdNotifyReady)
+
 		case <-c.SigUSR2Ch:
 			logWriter := c.logger.StandardWriter(&hclog.StandardLoggerOptions{})
 			pprof.Lookup("goroutine").WriteTo(logWriter, 2)
@@ -1588,6 +1767,12 @@ func (c *ServerCommand) Run(args []string) int {
 	// Stop the listeners so that we don't process further client requests.
 	c.cleanupGuard.Do(listenerCloseFunc)
 
+	if hcpLink != nil {
+		if err := hcpLink.Shutdown(); err != nil {
+			c.UI.Error(fmt.Sprintf("Error with HCP Link shutdown: %v", err.Error()))
+		}
+	}
+
 	// Finalize will wait until after Vault is sealed, which means the
 	// request forwarding listeners will also be closed (and also
 	// waited for).
@@ -1598,6 +1783,31 @@ func (c *ServerCommand) Run(args []string) int {
 	// Wait for dependent goroutines to complete
 	c.WaitGroup.Wait()
 	return retCode
+}
+
+func (c *ServerCommand) reloadHCPLink(hcpLinkVault *hcp_link.WrappedHCPLinkVault, conf *server.Config, core *vault.Core, hcpLogger hclog.Logger) (*hcp_link.WrappedHCPLinkVault, error) {
+	// trigger a shutdown
+	if hcpLinkVault != nil {
+		err := hcpLinkVault.Shutdown()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if conf.HCPLinkConf == nil {
+		// if cloud stanza is not configured, we should not show anything
+		// in the seal-status related to HCP link
+		core.SetHCPLinkStatus("", "")
+		return nil, nil
+	}
+
+	// starting HCP link
+	hcpLink, err := hcp_link.NewHCPLink(conf.HCPLinkConf, core, hcpLogger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to restart HCP Link and it is no longer running, %w", err)
+	}
+
+	return hcpLink, nil
 }
 
 func (c *ServerCommand) notifySystemd(status string) {
@@ -1673,7 +1883,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 			if leaderCount == 0 {
 				buf := make([]byte, 1<<16)
 				runtime.Stack(buf, true)
-				return nil, fmt.Errorf("failed to get active status after five seconds; call stack is\n%s\n", buf)
+				return nil, fmt.Errorf("failed to get active status after five seconds; call stack is\n%s", buf)
 			}
 			time.Sleep(1 * time.Second)
 			isLeader, _, _, err = core.Leader()
@@ -1714,7 +1924,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 		req.ID = "dev-revoke-init-root"
 		req.Path = "auth/token/revoke-self"
 		req.Data = nil
-		resp, err = core.HandleRequest(ctx, req)
+		_, err = core.HandleRequest(ctx, req)
 		if err != nil {
 			return nil, fmt.Errorf("failed to revoke initial root token: %w", err)
 		}
@@ -1793,6 +2003,12 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	infoKeys = append(infoKeys, "go version")
 	info["go version"] = runtime.Version()
 
+	fipsStatus := getFIPSInfoKey()
+	if fipsStatus != "" {
+		infoKeys = append(infoKeys, "fips")
+		info["fips"] = fipsStatus
+	}
+
 	// Server configuration output
 	padding := 24
 
@@ -1852,7 +2068,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		req.ID = "dev-revoke-init-root"
 		req.Path = "auth/token/revoke-self"
 		req.Data = nil
-		resp, err = testCluster.Cores[0].HandleRequest(ctx, req)
+		_, err = testCluster.Cores[0].HandleRequest(ctx, req)
 		if err != nil {
 			c.UI.Output(fmt.Sprintf("failed to revoke initial root token: %s", err))
 			return 1
@@ -1870,7 +2086,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		return 1
 	}
 
-	if err := ioutil.WriteFile(filepath.Join(testCluster.TempDir, "root_token"), []byte(testCluster.RootToken), 0o755); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(testCluster.TempDir, "root_token"), []byte(testCluster.RootToken), 0o600); err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing token to tempfile: %s", err))
 		return 1
 	}
@@ -1995,7 +2211,8 @@ func (c *ServerCommand) addPlugin(path, token string, core *vault.Core) error {
 
 // detectRedirect is used to attempt redirect address detection
 func (c *ServerCommand) detectRedirect(detect physical.RedirectDetect,
-	config *server.Config) (string, error) {
+	config *server.Config,
+) (string, error) {
 	// Get the hostname
 	host, err := detect.DetectHostAddr()
 	if err != nil {
@@ -2102,7 +2319,7 @@ func (c *ServerCommand) storePidFile(pidPath string) error {
 	}
 
 	// Open the PID file
-	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
 	if err != nil {
 		return fmt.Errorf("could not open pid file: %w", err)
 	}
@@ -2191,24 +2408,28 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	var wrapper wrapping.Wrapper
 	var barrierWrapper wrapping.Wrapper
 	if c.flagDevAutoSeal {
-		barrierSeal = vault.NewAutoSeal(vaultseal.NewTestSeal(nil))
+		var err error
+		barrierSeal, err = vault.NewAutoSeal(vaultseal.NewTestSeal(nil))
+		if err != nil {
+			return nil, nil, nil, nil, nil, err
+		}
 		return barrierSeal, nil, nil, nil, nil, nil
 	}
 
 	// Handle the case where no seal is provided
 	switch len(config.Seals) {
 	case 0:
-		config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.Shamir})
+		config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.WrapperTypeShamir.String()})
 	case 1:
 		// If there's only one seal and it's disabled assume they want to
 		// migrate to a shamir seal and simply didn't provide it
 		if config.Seals[0].Disabled {
-			config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.Shamir})
+			config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.WrapperTypeShamir.String()})
 		}
 	}
 	var createdSeals []vault.Seal = make([]vault.Seal, len(config.Seals))
 	for _, configSeal := range config.Seals {
-		sealType := wrapping.Shamir
+		sealType := wrapping.WrapperTypeShamir.String()
 		if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
 			sealType = os.Getenv("VAULT_SEAL_TYPE")
 			configSeal.Type = sealType
@@ -2220,9 +2441,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
 		c.allLoggers = append(c.allLoggers, sealLogger)
 		defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
-			Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
-				Logger: c.logger.Named("shamir"),
-			}),
+			Wrapper: aeadwrapper.NewShamirWrapper(),
 		})
 		var sealInfoKeys []string
 		sealInfoMap := map[string]string{}
@@ -2236,9 +2455,13 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		if wrapper == nil {
 			seal = defaultSeal
 		} else {
-			seal = vault.NewAutoSeal(&vaultseal.Access{
+			var err error
+			seal, err = vault.NewAutoSeal(&vaultseal.Access{
 				Wrapper: wrapper,
 			})
+			if err != nil {
+				return nil, nil, nil, nil, nil, err
+			}
 		}
 		infoPrefix := ""
 		if configSeal.Disabled {
@@ -2351,7 +2574,11 @@ func determineRedirectAddr(c *ServerCommand, coreConfig *vault.CoreConfig, confi
 		}
 	}
 	if coreConfig.RedirectAddr == "" && c.flagDev {
-		coreConfig.RedirectAddr = fmt.Sprintf("http://%s", config.Listeners[0].Address)
+		protocol := "http"
+		if c.flagDevTLS {
+			protocol = "https"
+		}
+		coreConfig.RedirectAddr = fmt.Sprintf("%s://%s", protocol, config.Listeners[0].Address)
 	}
 	return retErr
 }
@@ -2402,6 +2629,11 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	}
 
 	if coreConfig.ClusterAddr != "" {
+		rendered, err := configutil.ParseSingleIPTemplate(coreConfig.ClusterAddr)
+		if err != nil {
+			return fmt.Errorf("Error parsing cluster address %s: %v", coreConfig.ClusterAddr, err)
+		}
+		coreConfig.ClusterAddr = rendered
 		// Force https as we'll always be TLS-secured
 		u, err := url.ParseRequestURI(coreConfig.ClusterAddr)
 		if err != nil {
@@ -2435,7 +2667,8 @@ func runUnseal(c *ServerCommand, core *vault.Core, ctx context.Context) {
 }
 
 func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.Backend, configSR sr.ServiceRegistration, barrierSeal, unwrapSeal vault.Seal,
-	metricsHelper *metricsutil.MetricsHelper, metricSink *metricsutil.ClusterMetricSink, secureRandomReader io.Reader) vault.CoreConfig {
+	metricsHelper *metricsutil.MetricsHelper, metricSink *metricsutil.ClusterMetricSink, secureRandomReader io.Reader,
+) vault.CoreConfig {
 	coreConfig := &vault.CoreConfig{
 		RawConfig:                      config,
 		Physical:                       backend,
@@ -2457,6 +2690,8 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		ClusterName:                    config.ClusterName,
 		CacheSize:                      config.CacheSize,
 		PluginDirectory:                config.PluginDirectory,
+		PluginFileUid:                  config.PluginFileUid,
+		PluginFilePermissions:          config.PluginFilePermissions,
 		EnableUI:                       config.EnableUI,
 		EnableRaw:                      config.EnableRawEndpoint,
 		DisableSealWrap:                config.DisableSealWrap,
@@ -2472,7 +2707,9 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		EnableResponseHeaderRaftNodeID: config.EnableResponseHeaderRaftNodeID,
 		License:                        config.License,
 		LicensePath:                    config.LicensePath,
+		DisableSSCTokens:               config.DisableSSCTokens,
 	}
+
 	if c.flagDev {
 		coreConfig.EnableRaw = true
 		coreConfig.DevToken = c.flagDevRootTokenID
@@ -2503,7 +2740,7 @@ func runListeners(c *ServerCommand, coreConfig *vault.CoreConfig, config *server
 	return nil
 }
 
-func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.Config, core *vault.Core) error {
+func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.Config, core *vault.Core, certDir string) error {
 	if c.flagDev && !c.flagDevSkipInit {
 
 		init, err := c.enableDev(core, coreConfig)
@@ -2554,10 +2791,15 @@ func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.
 							"token is already authenticated to the CLI, so you can immediately " +
 							"begin using Vault."))
 					c.UI.Warn("")
-					c.UI.Warn("You may need to set the following environment variable:")
+					c.UI.Warn("You may need to set the following environment variables:")
 					c.UI.Warn("")
 
-					endpointURL := "http://" + config.Listeners[0].Address
+					protocol := "http://"
+					if c.flagDevTLS {
+						protocol = "https://"
+					}
+
+					endpointURL := protocol + config.Listeners[0].Address
 					if runtime.GOOS == "windows" {
 						c.UI.Warn("PowerShell:")
 						c.UI.Warn(fmt.Sprintf("    $env:VAULT_ADDR=\"%s\"", endpointURL))
@@ -2565,6 +2807,18 @@ func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.
 						c.UI.Warn(fmt.Sprintf("    set VAULT_ADDR=%s", endpointURL))
 					} else {
 						c.UI.Warn(fmt.Sprintf("    $ export VAULT_ADDR='%s'", endpointURL))
+					}
+
+					if c.flagDevTLS {
+						if runtime.GOOS == "windows" {
+							c.UI.Warn("PowerShell:")
+							c.UI.Warn(fmt.Sprintf("    $env:VAULT_CACERT=\"%s/vault-ca.pem\"", certDir))
+							c.UI.Warn("cmd.exe:")
+							c.UI.Warn(fmt.Sprintf("    set VAULT_CACERT=%s/vault-ca.pem", certDir))
+						} else {
+							c.UI.Warn(fmt.Sprintf("    $ export VAULT_CACERT='%s/vault-ca.pem'", certDir))
+						}
+						c.UI.Warn("")
 					}
 
 					// Unseal key is not returned if stored shares is supported
@@ -2696,7 +2950,7 @@ func SetStorageMigration(b physical.Backend, active bool) error {
 }
 
 type grpclogFaker struct {
-	logger log.Logger
+	logger hclog.Logger
 	log    bool
 }
 

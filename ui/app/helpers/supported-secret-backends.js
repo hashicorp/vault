@@ -11,6 +11,7 @@ const SUPPORTED_SECRET_BACKENDS = [
   'transit',
   'kmip',
   'transform',
+  'keymgmt',
 ];
 
 export function supportedSecretBackends() {

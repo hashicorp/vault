@@ -5,7 +5,7 @@ export default function waitForError(opts) {
   const orig = Ember.onerror;
 
   let error = null;
-  Ember.onerror = err => {
+  Ember.onerror = (err) => {
     error = err;
   };
 

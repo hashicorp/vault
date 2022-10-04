@@ -1,17 +1,20 @@
 {{! template-lint-disable no-inline-styles}}
 
-  <div class="confirm-wrapper" style={{style}}>
-    <div class="confirm {{if openTrigger "show-confirm"}}" ...attributes>
-      {{yield (hash
-        Message=(component "confirm/message"
+<div class="confirm-wrapper" style={{this.style}}>
+  <div class="confirm {{if this.openTrigger 'show-confirm'}}" ...attributes>
+    {{yield
+      (hash
+        Message=(component
+          "confirm/message"
           renderedTrigger=(readonly this.openTrigger)
           wormholeReference=this.wormholeReference
-          onCancel=(action 'onCancel')
-          onTrigger=(action 'onTrigger')
+          onCancel=(action "onCancel")
+          onTrigger=(action "onTrigger")
           resetTrigger=(action (mut this.openTrigger) "")
-        ))
-      }}
-    </div>
-    <div id={{this.wormholeId}} class="confirm-overlay {{if openTrigger "show-confirm"}}">
-    </div>
+        )
+      )
+    }}
   </div>
+  <div id={{this.wormholeId}} class="confirm-overlay {{if this.openTrigger 'show-confirm'}}">
+  </div>
+</div>

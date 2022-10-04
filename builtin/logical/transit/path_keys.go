@@ -94,6 +94,20 @@ When reading a key with key derivation enabled,
 if the key type supports public keys, this will
 return the public key for the given context.`,
 			},
+
+			"auto_rotate_period": {
+				Type:    framework.TypeDurationSecond,
+				Default: 0,
+				Description: `Amount of time the key should live before
+being automatically rotated. A value of 0
+(default) disables automatic rotation for the
+key.`,
+			},
+			"key_size": {
+				Type:        framework.TypeInt,
+				Default:     0,
+				Description: fmt.Sprintf("The key size in bytes for the algorithm.  Only applies to HMAC and must be no fewer than %d bytes and no more than %d", keysutil.HmacMinKeySize, keysutil.HmacMaxKeySize),
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -121,8 +135,14 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 	derived := d.Get("derived").(bool)
 	convergent := d.Get("convergent_encryption").(bool)
 	keyType := d.Get("type").(string)
+	keySize := d.Get("key_size").(int)
 	exportable := d.Get("exportable").(bool)
 	allowPlaintextBackup := d.Get("allow_plaintext_backup").(bool)
+	autoRotatePeriod := time.Second * time.Duration(d.Get("auto_rotate_period").(int))
+
+	if autoRotatePeriod != 0 && autoRotatePeriod < time.Hour {
+		return logical.ErrorResponse("auto rotate period must be 0 to disable or at least an hour"), nil
+	}
 
 	if !derived && convergent {
 		return logical.ErrorResponse("convergent encryption requires derivation to be enabled"), nil
@@ -136,7 +156,9 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		Convergent:           convergent,
 		Exportable:           exportable,
 		AllowPlaintextBackup: allowPlaintextBackup,
+		AutoRotatePeriod:     autoRotatePeriod,
 	}
+
 	switch keyType {
 	case "aes128-gcm96":
 		polReq.KeyType = keysutil.KeyType_AES128_GCM96
@@ -158,8 +180,19 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		polReq.KeyType = keysutil.KeyType_RSA3072
 	case "rsa-4096":
 		polReq.KeyType = keysutil.KeyType_RSA4096
+	case "hmac":
+		polReq.KeyType = keysutil.KeyType_HMAC
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
+	}
+	if keySize != 0 {
+		if polReq.KeyType != keysutil.KeyType_HMAC {
+			return logical.ErrorResponse(fmt.Sprintf("key_size is not valid for algorithm %v", polReq.KeyType)), logical.ErrInvalidRequest
+		}
+		if keySize < keysutil.HmacMinKeySize || keySize > keysutil.HmacMaxKeySize {
+			return logical.ErrorResponse(fmt.Sprintf("invalid key_size %d", keySize)), logical.ErrInvalidRequest
+		}
+		polReq.KeySize = keySize
 	}
 
 	p, upserted, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
@@ -223,7 +256,16 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 			"supports_decryption":    p.Type.DecryptionSupported(),
 			"supports_signing":       p.Type.SigningSupported(),
 			"supports_derivation":    p.Type.DerivationSupported(),
+			"auto_rotate_period":     int64(p.AutoRotatePeriod.Seconds()),
+			"imported_key":           p.Imported,
 		},
+	}
+	if p.KeySize != 0 {
+		resp.Data["key_size"] = p.KeySize
+	}
+
+	if p.Imported {
+		resp.Data["imported_key_allow_rotation"] = p.AllowImportedKeyRotation
 	}
 
 	if p.BackupInfo != nil {

@@ -24,25 +24,66 @@ jobs:
           fetch-depth: 0 # by default the checkout action doesn't checkout all branches
       - name: Check for changelog entry in diff
         run: |
-          # check if there is a diff in the changelog directory
-          changelog_files=$(git --no-pager diff --name-only HEAD "$(git merge-base HEAD "origin/${{ github.event.pull_request.base.ref }}")" -- changelog/${{ github.event.pull_request.number }}.txt)
+          # Check if there is a diff in the changelog directory.
+          #
+          # Try to identify the expected changelog file name based on PR
+          # number. This won't work for Go version updates though.
+          if [ ${{ github.event.repository.name }} == "vault-enterprise" ]; then
+            expected_changelog_file=changelog/_${{ github.event.pull_request.number }}.txt
+          else
+            expected_changelog_file=changelog/${{ github.event.pull_request.number }}.txt
+          fi
 
-          # If we do not find a file matching the PR # in changelog/, we fail the check
+          echo "looking for changelog file ${expected_changelog_file}"
+          changelog_files=$(git --no-pager diff --name-only HEAD "$(git merge-base HEAD "origin/${{ github.event.pull_request.base.ref }}")" -- ${expected_changelog_file})
+
           if [ -z "$changelog_files" ]; then
-            echo "Did not find a changelog entry named ${{ github.event.pull_request.number }}.txt"
-            echo "If your changelog file is correct, skip this check with the 'pr/no-changelog' label"
-            echo "Reference - https://github.com/hashicorp/vault/pull/10363 and https://github.com/hashicorp/vault/pull/11894"
-            exit 1
-          elif grep -q ':enhancement$' $changelog_files; then
+            echo "Not found."
+            echo "looking for changelog file matching changelog/_go-ver-*.txt"
+            # If we do not find a file matching the PR # in changelog/, we fail the check
+            # unless we did a Go toolchain version update, in which case we check the
+            # alternative name.
+            toolchain_files=$(git --no-pager diff --name-only HEAD "$(git merge-base HEAD "origin/${{ github.event.pull_request.base.ref }}")" -- 'changelog/_go-ver-*.txt')
+            if [ -z "$toolchain_files" ]; then
+              echo "Not found."
+              echo ""
+              echo "Did not find a changelog entry named ${expected_changelog_file}"
+              echo "If your changelog file is correct, skip this check with the 'pr/no-changelog' label"
+              echo "Reference - https://github.com/hashicorp/vault/pull/10363 and https://github.com/hashicorp/vault/pull/11894"
+              exit 1
+            fi
+
+            # Else, we found some toolchain files. Let's make sure the contents are correct.
+            if ! grep -q 'release-note:change' "$toolchain_files" || ! grep -q '^core: Bump Go version to' "$toolchain_files"; then
+              echo "Invalid format for changelog. Expected format:"
+              echo "```release-note:change"
+              echo "core: Bump Go version to x.y.z."
+              echo "```"
+              exit 1
+            else
+              echo "Found Go toolchain changelog entry in PR!"
+            fi
+          elif grep -q ':enhancement$' "$changelog_files"; then
             # "Enhancement is not a valid type of changelog entry, but it's a common mistake.
             echo "Found invalid type (enhancement) in changelog - did you mean improvement?"
             exit 1
-          elif grep -q ':bugs$' $changelog_files; then
+          elif grep -q ':changes$' "$changelog_files"; then
+            echo "Found invalid type (changes) in changelog - did you mean change?"
+            exit 1
+          elif grep -q ':bugs$' "$changelog_files"; then
             echo "Found invalid type (bugs) in changelog - did you mean bug?"
             exit 1
-          elif ! grep -q '```release-note:' $changelog_files; then
+          elif grep -q ':fix$' "$changelog_files"; then
+            echo "Found invalid type (fix) in changelog - did you mean bug?"
+            exit 1
+          elif ! grep -q '```release-note:' "$changelog_files"; then
             # People often make changelog files like ```changelog:, which is incorrect.
             echo "Changelog file did not contain 'release-note' heading - check formatting."
+            exit 1
+          elif grep -q '^core: Bump Go version' "$changelog_files"; then
+            echo "Don't use PR numbered changelog entries for Go version bumps!"
+            echo "Please use the format changelog/_go-ver-<VAULT_VERSION_WITHOUT_DOTS>.txt instead."
+            echo "Example: _go-ver-1110.txt for Vault 1.11.0"
             exit 1
           else
             echo "Found changelog entry in PR!"

@@ -371,5 +371,5 @@ func sanitizeTable(s string) string {
 	if end > -1 {
 		s = s[:end]
 	}
-	return strings.Replace(s, `"`, `""`, -1)
+	return strings.ReplaceAll(s, `"`, `""`)
 }

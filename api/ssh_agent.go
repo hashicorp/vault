@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 
 	"github.com/hashicorp/errwrap"
@@ -84,11 +85,10 @@ func (c *SSHHelperConfig) SetTLSParameters(clientConfig *Config, certPool *x509.
 }
 
 // Returns true if any of the following conditions are true:
-//   * CA cert is configured
-//   * CA path is configured
-//   * configured to skip certificate verification
-//   * TLS server name is configured
-//
+//   - CA cert is configured
+//   - CA path is configured
+//   - configured to skip certificate verification
+//   - TLS server name is configured
 func (c *SSHHelperConfig) shouldSetTLSParameters() bool {
 	return c.CACert != "" || c.CAPath != "" || c.TLSServerName != "" || c.TLSSkipVerify
 }
@@ -206,18 +206,24 @@ func (c *Client) SSHHelperWithMountPoint(mountPoint string) *SSHHelper {
 // an echo response message is returned. This feature is used by ssh-helper to verify if
 // its configured correctly.
 func (c *SSHHelper) Verify(otp string) (*SSHVerifyResponse, error) {
+	return c.VerifyWithContext(context.Background(), otp)
+}
+
+// VerifyWithContext the same as Verify but with a custom context.
+func (c *SSHHelper) VerifyWithContext(ctx context.Context, otp string) (*SSHVerifyResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
 	data := map[string]interface{}{
 		"otp": otp,
 	}
 	verifyPath := fmt.Sprintf("/v1/%s/verify", c.MountPoint)
-	r := c.c.NewRequest("PUT", verifyPath)
+	r := c.c.NewRequest(http.MethodPut, verifyPath)
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}

@@ -10,13 +10,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/physical"
-
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
-
-	"github.com/armon/go-metrics"
-	"github.com/lib/pq"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/physical"
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
 const (
@@ -37,11 +36,9 @@ const (
 // Verify PostgreSQLBackend satisfies the correct interfaces
 var _ physical.Backend = (*PostgreSQLBackend)(nil)
 
-//
 // HA backend was implemented based on the DynamoDB backend pattern
 // With distinction using central postgres clock, hereby avoiding
 // possible issues with multiple clocks
-//
 var (
 	_ physical.HABackend = (*PostgreSQLBackend)(nil)
 	_ physical.Lock      = (*PostgreSQLLock)(nil)
@@ -99,7 +96,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	if !ok {
 		unquoted_table = "vault_kv_store"
 	}
-	quoted_table := pq.QuoteIdentifier(unquoted_table)
+	quoted_table := dbutil.QuoteIdentifier(unquoted_table)
 
 	maxParStr, ok := conf["max_parallel"]
 	var maxParInt int
@@ -129,7 +126,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	}
 
 	// Create PostgreSQL handle for the database.
-	db, err := sql.Open("postgres", connURL)
+	db, err := sql.Open("pgx", connURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to postgres: %w", err)
 	}
@@ -165,7 +162,7 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	if !ok {
 		unquoted_ha_table = "vault_ha_locks"
 	}
-	quoted_ha_table := pq.QuoteIdentifier(unquoted_ha_table)
+	quoted_ha_table := dbutil.QuoteIdentifier(unquoted_ha_table)
 
 	// Setup the backend.
 	m := &PostgreSQLBackend{
@@ -245,7 +242,7 @@ func (m *PostgreSQLBackend) Put(ctx context.Context, entry *physical.Entry) erro
 
 	parentPath, path, key := m.splitKey(entry.Key)
 
-	_, err := m.client.Exec(m.put_query, parentPath, path, key, entry.Value)
+	_, err := m.client.ExecContext(ctx, m.put_query, parentPath, path, key, entry.Value)
 	if err != nil {
 		return err
 	}
@@ -262,7 +259,7 @@ func (m *PostgreSQLBackend) Get(ctx context.Context, fullPath string) (*physical
 	_, path, key := m.splitKey(fullPath)
 
 	var result []byte
-	err := m.client.QueryRow(m.get_query, path, key).Scan(&result)
+	err := m.client.QueryRowContext(ctx, m.get_query, path, key).Scan(&result)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -286,7 +283,7 @@ func (m *PostgreSQLBackend) Delete(ctx context.Context, fullPath string) error {
 
 	_, path, key := m.splitKey(fullPath)
 
-	_, err := m.client.Exec(m.delete_query, path, key)
+	_, err := m.client.ExecContext(ctx, m.delete_query, path, key)
 	if err != nil {
 		return err
 	}
@@ -301,7 +298,7 @@ func (m *PostgreSQLBackend) List(ctx context.Context, prefix string) ([]string, 
 	m.permitPool.Acquire()
 	defer m.permitPool.Release()
 
-	rows, err := m.client.Query(m.list_query, "/"+prefix)
+	rows, err := m.client.QueryContext(ctx, m.list_query, "/"+prefix)
 	if err != nil {
 		return nil, err
 	}

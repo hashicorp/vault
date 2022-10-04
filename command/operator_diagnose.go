@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -12,8 +13,7 @@ import (
 
 	"golang.org/x/term"
 
-	wrapping "github.com/hashicorp/go-kms-wrapping"
-	"github.com/hashicorp/vault/helper/constants"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/hashicorp/consul/api"
@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	uuid "github.com/hashicorp/go-uuid"
 	cserver "github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
@@ -32,6 +33,7 @@ import (
 	srconsul "github.com/hashicorp/vault/serviceregistration/consul"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/diagnose"
+	"github.com/hashicorp/vault/vault/hcp_link"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -249,6 +251,42 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		return fmt.Errorf("No vault server configuration found.")
 	}
 
+	diagnose.Test(ctx, "Check Telemetry", func(ctx context.Context) (err error) {
+		if config.Telemetry == nil {
+			diagnose.Warn(ctx, "Telemetry is using default configuration")
+			diagnose.Advise(ctx, "By default only Prometheus and JSON metrics are available.  Ignore this warning if you are using telemetry or are using these metrics and are satisfied with the default retention time and gauge period.")
+		} else {
+			t := config.Telemetry
+			// If any Circonus setting is present but we're missing the basic fields...
+			if coalesce(t.CirconusAPIURL, t.CirconusAPIToken, t.CirconusCheckID, t.CirconusCheckTags, t.CirconusCheckSearchTag,
+				t.CirconusBrokerID, t.CirconusBrokerSelectTag, t.CirconusCheckForceMetricActivation, t.CirconusCheckInstanceID,
+				t.CirconusCheckSubmissionURL, t.CirconusCheckDisplayName) != nil {
+				if t.CirconusAPIURL == "" {
+					return errors.New("incomplete Circonus telemetry configuration, missing circonus_api_url")
+				} else if t.CirconusAPIToken != "" {
+					return errors.New("incomplete Circonus telemetry configuration, missing circonus_api_token")
+				}
+			}
+			if len(t.DogStatsDTags) > 0 && t.DogStatsDAddr == "" {
+				return errors.New("incomplete DogStatsD telemetry configuration, missing dogstatsd_addr, while dogstatsd_tags specified")
+			}
+
+			// If any Stackdriver setting is present but we're missing the basic fields...
+			if coalesce(t.StackdriverNamespace, t.StackdriverLocation, t.StackdriverDebugLogs, t.StackdriverNamespace) != nil {
+				if t.StackdriverProjectID == "" {
+					return errors.New("incomplete Stackdriver telemetry configuration, missing stackdriver_project_id")
+				}
+				if t.StackdriverLocation == "" {
+					return errors.New("incomplete Stackdriver telemetry configuration, missing stackdriver_location")
+				}
+				if t.StackdriverNamespace == "" {
+					return errors.New("incomplete Stackdriver telemetry configuration, missing stackdriver_namespace")
+				}
+			}
+		}
+		return nil
+	})
+
 	var metricSink *metricsutil.ClusterMetricSink
 	var metricsHelper *metricsutil.MetricsHelper
 
@@ -418,7 +456,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			}
 			// Ensure that the seal finalizer is called, even if using verify-only
 			defer func(seal *vault.Seal) {
-				sealType := diagnose.CapitalizeFirstLetter((*seal).BarrierType())
+				sealType := diagnose.CapitalizeFirstLetter((*seal).BarrierType().String())
 				finalizeSealContext, finalizeSealSpan := diagnose.StartSpan(ctx, "Finalize "+sealType+" Seal")
 				err = (*seal).Finalize(finalizeSealContext)
 				if err != nil {
@@ -638,7 +676,7 @@ SEALFAIL:
 		if barrierSeal == nil {
 			return fmt.Errorf("Diagnose could not create a barrier seal object.")
 		}
-		if barrierSeal.BarrierType() == wrapping.Shamir {
+		if barrierSeal.BarrierType() == wrapping.WrapperTypeShamir {
 			diagnose.Skipped(ctx, "Skipping barrier encryption test. Only supported for auto-unseal.")
 			return nil
 		}
@@ -674,5 +712,57 @@ SEALFAIL:
 		}
 		return nil
 	})
+
+	// Checking HCP link to make sure Vault could connect to SCADA.
+	// If it could not connect to SCADA in 5 seconds, diagnose reports an issue
+	if !constants.IsEnterprise {
+		diagnose.Skipped(ctx, "HCP link check will not run on OSS Vault.")
+	} else {
+		if config.HCPLinkConf != nil {
+			// we need to override API and Passthrough capabilities
+			// as they could not be initialized when Vault http handler
+			// is not fully initialized
+			config.HCPLinkConf.EnablePassThroughCapability = false
+			config.HCPLinkConf.EnableAPICapability = false
+
+			diagnose.Test(ctx, "Check HCP Connection", func(ctx context.Context) error {
+				hcpLink, err := hcp_link.NewHCPLink(config.HCPLinkConf, vaultCore, server.logger)
+				if err != nil || hcpLink == nil {
+					return fmt.Errorf("failed to start HCP link, %w", err)
+				}
+
+				// check if a SCADA session is established successfully
+				deadline := time.Now().Add(5 * time.Second)
+				linkSessionStatus := "disconnected"
+				for time.Now().Before(deadline) {
+					linkSessionStatus = hcpLink.GetConnectionStatusMessage(hcpLink.GetScadaSessionStatus())
+					if linkSessionStatus == "connected" {
+						break
+					}
+					time.Sleep(500 * time.Millisecond)
+				}
+				if linkSessionStatus != "connected" {
+					return fmt.Errorf("failed to connect to HCP in 5 seconds. HCP session status is: %s", linkSessionStatus)
+				}
+
+				err = hcpLink.Shutdown()
+				if err != nil {
+					return fmt.Errorf("failed to shutdown HCP link: %w", err)
+				}
+
+				return nil
+			})
+		}
+	}
+
+	return nil
+}
+
+func coalesce(values ...interface{}) interface{} {
+	for _, val := range values {
+		if val != nil && val != "" {
+			return val
+		}
+	}
 	return nil
 }

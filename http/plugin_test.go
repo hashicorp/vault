@@ -11,6 +11,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	bplugin "github.com/hashicorp/vault/builtin/plugin"
+	"github.com/hashicorp/vault/helper/benchhelpers"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -39,7 +40,7 @@ func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluste
 		},
 	}
 
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+	cluster := vault.NewTestCluster(benchhelpers.TBtoT(t), coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 		Logger:      logger.Named("testclusteroptions"),
 	})
@@ -50,8 +51,8 @@ func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluste
 
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
-	vault.TestWaitActive(t, core.Core)
-	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "TestPlugin_PluginMain", []string{}, "")
+	vault.TestWaitActive(benchhelpers.TBtoT(t), core.Core)
+	vault.TestAddTestPlugin(benchhelpers.TBtoT(t), core.Core, "mock-plugin", consts.PluginTypeSecrets, "", "TestPlugin_PluginMain", []string{}, "")
 
 	// Mount the mock plugin
 	err = core.Client.Sys().Mount("mock", &api.MountInput{
@@ -80,14 +81,10 @@ func TestPlugin_PluginMain(t *testing.T) {
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 
-	tlsConfig := apiClientMeta.GetTLSConfig()
-	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
-
 	factoryFunc := mock.FactoryType(logical.TypeLogical)
 
 	err := plugin.Serve(&plugin.ServeOpts{
 		BackendFactoryFunc: factoryFunc,
-		TLSProviderFunc:    tlsProviderFunc,
 	})
 	if err != nil {
 		t.Fatal(err)

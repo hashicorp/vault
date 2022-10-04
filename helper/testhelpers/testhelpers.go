@@ -17,8 +17,8 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/xor"
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/helper/xor"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/go-testing-interface"
 )
@@ -212,7 +212,7 @@ func deriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.Test
 	activeCore := DeriveActiveCore(t, cluster)
 	minDuration := time.NewTimer(3 * time.Second)
 
-	for i := 0; i < 30; i++ {
+	for i := 0; i < 60; i++ {
 		leaderResp, err := activeCore.Client.Sys().Leader()
 		if err != nil {
 			t.Fatal(err)
@@ -238,7 +238,7 @@ func deriveStableActiveCore(t testing.T, cluster *vault.TestCluster) *vault.Test
 
 func DeriveActiveCore(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
 	t.Helper()
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 60; i++ {
 		for _, core := range cluster.Cores {
 			leaderResp, err := core.Client.Sys().Leader()
 			if err != nil {
@@ -329,7 +329,7 @@ func WaitForNCoresSealed(t testing.T, cluster *vault.TestCluster, n int) {
 
 func WaitForActiveNode(t testing.T, cluster *vault.TestCluster) *vault.TestClusterCore {
 	t.Helper()
-	for i := 0; i < 30; i++ {
+	for i := 0; i < 60; i++ {
 		for _, core := range cluster.Cores {
 			if standby, _ := core.Core.Standby(); !standby {
 				return core
@@ -347,6 +347,9 @@ func WaitForStandbyNode(t testing.T, core *vault.TestClusterCore) {
 	t.Helper()
 	for i := 0; i < 30; i++ {
 		if isLeader, _, clusterAddr, _ := core.Core.Leader(); isLeader != true && clusterAddr != "" {
+			return
+		}
+		if core.Core.ActiveNodeReplicationState() == 0 {
 			return
 		}
 
@@ -564,7 +567,7 @@ func WaitForRaftApply(t testing.T, core *vault.TestClusterCore, index uint64) {
 
 // AwaitLeader waits for one of the cluster's nodes to become leader.
 func AwaitLeader(t testing.T, cluster *vault.TestCluster) (int, error) {
-	timeout := time.Now().Add(30 * time.Second)
+	timeout := time.Now().Add(60 * time.Second)
 	for {
 		if time.Now().After(timeout) {
 			break
@@ -623,7 +626,12 @@ func GenerateDebugLogs(t testing.T, client *api.Client) chan struct{} {
 	return stopCh
 }
 
-func VerifyRaftPeers(t testing.T, client *api.Client, expected map[string]bool) {
+// VerifyRaftPeers verifies that the raft configuration contains a given set of peers.
+// The `expected` contains a map of expected peers. Existing entries are deleted
+// from the map by removing entries whose keys are in the raft configuration.
+// Remaining entries result in an error return so that the caller can poll for
+// an expected configuration.
+func VerifyRaftPeers(t testing.T, client *api.Client, expected map[string]bool) error {
 	t.Helper()
 
 	resp, err := client.Logical().Read("sys/storage/raft/configuration")
@@ -655,8 +663,10 @@ func VerifyRaftPeers(t testing.T, client *api.Client, expected map[string]bool) 
 	// If the collection is non-empty, it means that the peer was not found in
 	// the response.
 	if len(expected) != 0 {
-		t.Fatalf("failed to read configuration successfully, expected peers no found in configuration list: %v", expected)
+		return fmt.Errorf("failed to read configuration successfully, expected peers not found in configuration list: %v", expected)
 	}
+
+	return nil
 }
 
 func TestMetricSinkProvider(gaugeInterval time.Duration) func(string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper) {
@@ -690,11 +700,82 @@ func SysMetricsReq(client *api.Client, cluster *vault.TestCluster, unauth bool) 
 }
 
 type SysMetricsJSON struct {
-	Gauges []GaugeJSON `json:"Gauges"`
+	Gauges   []gaugeJSON   `json:"Gauges"`
+	Counters []counterJSON `json:"Counters"`
+
+	// note: this is referred to as a "Summary" type in our telemetry docs, but
+	// the field name in the JSON is "Samples"
+	Summaries []summaryJSON `json:"Samples"`
 }
 
-type GaugeJSON struct {
+type baseInfoJSON struct {
 	Name   string                 `json:"Name"`
-	Value  int                    `json:"Value"`
 	Labels map[string]interface{} `json:"Labels"`
+}
+
+type gaugeJSON struct {
+	baseInfoJSON
+	Value int `json:"Value"`
+}
+
+type counterJSON struct {
+	baseInfoJSON
+	Count  int     `json:"Count"`
+	Rate   float64 `json:"Rate"`
+	Sum    int     `json:"Sum"`
+	Min    int     `json:"Min"`
+	Max    int     `json:"Max"`
+	Mean   float64 `json:"Mean"`
+	Stddev float64 `json:"Stddev"`
+}
+
+type summaryJSON struct {
+	baseInfoJSON
+	Count  int     `json:"Count"`
+	Rate   float64 `json:"Rate"`
+	Sum    float64 `json:"Sum"`
+	Min    float64 `json:"Min"`
+	Max    float64 `json:"Max"`
+	Mean   float64 `json:"Mean"`
+	Stddev float64 `json:"Stddev"`
+}
+
+// SetNonRootToken sets a token on :client: with a fairly generic policy.
+// This is useful if a test needs to examine differing behavior based on if a
+// root token is passed with the request.
+func SetNonRootToken(client *api.Client) error {
+	policy := `path "*" { capabilities = ["create", "update", "read"] }`
+	if err := client.Sys().PutPolicy("policy", policy); err != nil {
+		return fmt.Errorf("error putting policy: %v", err)
+	}
+
+	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"policy"},
+		TTL:      "30m",
+	})
+	if err != nil {
+		return fmt.Errorf("error creating token secret: %v", err)
+	}
+
+	if secret == nil || secret.Auth == nil || secret.Auth.ClientToken == "" {
+		return fmt.Errorf("missing token auth data")
+	}
+
+	client.SetToken(secret.Auth.ClientToken)
+	return nil
+}
+
+// RetryUntil runs f until it returns a nil result or the timeout is reached.
+// If a nil result hasn't been obtained by timeout, calls t.Fatal.
+func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	var err error
+	for time.Now().Before(deadline) {
+		if err = f(); err == nil {
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	t.Fatalf("did not complete before deadline, err: %v", err)
 }

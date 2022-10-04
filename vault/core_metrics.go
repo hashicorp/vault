@@ -18,9 +18,21 @@ import (
 func (c *Core) metricsLoop(stopCh chan struct{}) {
 	emitTimer := time.Tick(time.Second)
 
+	stopOrHAState := func() (bool, consts.HAState) {
+		l := newLockGrabber(c.stateLock.RLock, c.stateLock.RUnlock, stopCh)
+		go l.grab()
+		if stopped := l.lockOrStop(); stopped {
+			return true, 0
+		}
+		defer c.stateLock.RUnlock()
+		return false, c.HAState()
+	}
+
 	identityCountTimer := time.Tick(time.Minute * 10)
 	// Only emit on active node of cluster that is not a DR secondary.
-	if standby, _ := c.Standby(); standby || c.IsDRSecondary() {
+	if stopped, haState := stopOrHAState(); stopped {
+		return
+	} else if haState == consts.Standby || c.IsDRSecondary() {
 		identityCountTimer = nil
 	}
 
@@ -38,12 +50,11 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 	for {
 		select {
 		case <-emitTimer:
-			if stopped := grabLockOrStop(c.stateLock.RLock, c.stateLock.RUnlock, stopCh); stopped {
-				// Go through the loop again, this time the stop channel case
-				// should trigger
-				continue
+			stopped, haState := stopOrHAState()
+			if stopped {
+				return
 			}
-			if !c.perfStandby {
+			if haState == consts.Active {
 				c.metricsMutex.Lock()
 				// Emit on active node only
 				if c.expiration != nil {
@@ -60,13 +71,13 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 			}
 
 			// Refresh the standby gauge, on all nodes
-			if c.standby {
+			if haState != consts.Active {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 0, nil)
 			} else {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 1, nil)
 			}
 
-			if c.perfStandby {
+			if haState == consts.PerfStandby {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "performance_standby"}, 1, nil)
 			} else {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "performance_standby"}, 0, nil)
@@ -101,18 +112,21 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 				rb.CollectMetrics(c.MetricSink())
 			}
 
+			// Capture the total number of in-flight requests
+			c.inFlightReqGaugeMetric()
+
 			// Refresh gauge metrics that are looped
 			c.cachedGaugeMetricsEmitter()
 			c.stateLock.RUnlock()
 		case <-writeTimer:
-			if stopped := grabLockOrStop(c.stateLock.RLock, c.stateLock.RUnlock, stopCh); stopped {
-				// Go through the loop again, this time the stop channel case
-				// should trigger
-				continue
+			l := newLockGrabber(c.stateLock.RLock, c.stateLock.RUnlock, stopCh)
+			go l.grab()
+			if stopped := l.lockOrStop(); stopped {
+				return
 			}
 			// Ship barrier encryption counts if a perf standby or the active node
 			// on a performance secondary cluster
-			if c.perfStandby || c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) { // already have lock here, do not re-acquire
+			if c.perfStandby || c.IsPerfSecondary() { // already have lock here, do not re-acquire
 				err := syncBarrierEncryptionCounter(c)
 				if err != nil {
 					c.logger.Error("writing syncing encryption counters", "err", err)
@@ -142,6 +156,11 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 // TokenStore; there is one per method because an additional level of abstraction
 // seems confusing.
 func (c *Core) tokenGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	if c.IsDRSecondary() {
+		// there is no expiration manager on DR Secondaries
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
+
 	// stateLock or authLock protects the tokenStore pointer
 	c.stateLock.RLock()
 	ts := c.tokenStore
@@ -153,6 +172,11 @@ func (c *Core) tokenGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabe
 }
 
 func (c *Core) tokenGaugePolicyCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	if c.IsDRSecondary() {
+		// there is no expiration manager on DR Secondaries
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
+
 	c.stateLock.RLock()
 	ts := c.tokenStore
 	c.stateLock.RUnlock()
@@ -174,6 +198,11 @@ func (c *Core) leaseExpiryGaugeCollector(ctx context.Context) ([]metricsutil.Gau
 }
 
 func (c *Core) tokenGaugeMethodCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	if c.IsDRSecondary() {
+		// there is no expiration manager on DR Secondaries
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
+
 	c.stateLock.RLock()
 	ts := c.tokenStore
 	c.stateLock.RUnlock()
@@ -184,6 +213,11 @@ func (c *Core) tokenGaugeMethodCollector(ctx context.Context) ([]metricsutil.Gau
 }
 
 func (c *Core) tokenGaugeTtlCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	if c.IsDRSecondary() {
+		// there is no expiration manager on DR Secondaries
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
+
 	c.stateLock.RLock()
 	ts := c.tokenStore
 	c.stateLock.RUnlock()
@@ -516,4 +550,10 @@ func (c *Core) cachedGaugeMetricsEmitter() {
 	}
 
 	loopMetrics.Range(emit)
+}
+
+func (c *Core) inFlightReqGaugeMetric() {
+	totalInFlightReq := c.inFlightReqData.InFlightReqCount.Load()
+	// Adding a gauge metric to capture total number of inflight requests
+	c.metricSink.SetGaugeWithLabels([]string{"core", "in_flight_requests"}, float32(totalInFlightReq), nil)
 }

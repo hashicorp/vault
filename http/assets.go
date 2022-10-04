@@ -1,4 +1,4 @@
-// +build ui
+//go:build ui
 
 package http
 
@@ -9,6 +9,7 @@ import (
 )
 
 // content is our static web server content.
+//
 //go:embed web_ui/*
 var content embed.FS
 

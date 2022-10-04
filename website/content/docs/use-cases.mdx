@@ -8,48 +8,56 @@ description: >-
 
 # Use Cases
 
-Before understanding use cases, it's useful to know [what Vault is](/intro).
-This page lists some concrete use cases for Vault, but the possible use cases are
-much broader than what we cover.
+[HashiCorp Vault](/docs/what-is-vault) is an identity-based secrets and encryption management system. Vault validates and authorizes clients (users, machines, apps) before providing them access to secrets or stored sensitive data.
 
-#### General Secret Storage
+This page describes common Vault use cases and provides related resources that can be used to create Vault configurations and workflows. Please note that not all use cases may be listed.
 
-At a bare minimum, Vault can be used for the storage of any secrets. For
-example, Vault would be a fantastic way to store sensitive environment variables,
-database credentials, API keys, etc.
+## General Secret Storage
 
-Compare this with the current way to store these which might be
-plaintext in files, configuration management, a database, etc. It would be
-much safer to query these using `vault read` or the API. This protects
-the plaintext version of these secrets as well as records access in the Vault
-audit log.
+As workloads become more and more ephemeral and short-lived, having long-lived static credentials pose a big security threat vector. What if credentials are accidentally leaked, or an employee leaves with their post it notes that contain the AWS access key, or someone checks their S3 access token to a public GH repo?
+With Vault, you can generate short-lived, just-in-time credentials that are automatically revoked when their time expires. This means users and security teams do not have to worry about manually revoking or changing these credentials.
 
-#### Employee Credential Storage
+### Static Secrets
 
-While this overlaps with "General Secret Storage", Vault is a good mechanism
-for storing credentials that employees share to access web services. The
-audit log mechanism lets you know what secrets an employee accessed and
-when an employee leaves, it is easier to roll keys and understand which keys
-have and haven't been rolled.
+Credentials can be long-lived and static, where they don't change or are changed infrequently. Vault can store these secrets bedhind its cryptographic barrier, and clients can request them to use in their applications.
 
-#### API Key Generation for Scripts
+- Refer to the [Versioned Key/Vault Secrets Engine](https://learn.hashicorp.com/tutorials/vault/versioned-kv?in=vault/secrets-management) tutorial and learn how a versioned key-value secrets engine protects your static secrets.
 
-The "dynamic secrets" feature of Vault is ideal for scripts: an AWS
-access key can be generated for the duration of a script, then revoked.
-The keypair will not exist before or after the script runs, and the
-creation of the keys are completely logged.
+### Dynamic Secrets
 
-This is an improvement over using something like Amazon IAM but still
-effectively hardcoding limited-access access tokens in various places.
+The key value with secrets storage is the ability to dynamically generate credentials. These credentials are created when clients need them. Vault can also manage the lifecycle of these credentials, including but not limited to, deleting them after a defined period of time.
 
-#### Data Encryption
+- Refer to the [Dynamic Secrets: Database Secrets Engine](https://learn.hashicorp.com/tutorials/vault/database-secrets) tutorial and learn how Vault can dynamically manage your database credentials.
 
-In addition to being able to store secrets, Vault can be used to
-encrypt/decrypt data that is stored elsewhere. The primary use of this is
-to allow applications to encrypt their data while still storing it in the
-primary data store.
+In addition to database credential management, Vault can manage your Active Directory accounts, SSH keys, PKI certificates and more. Visit the [Secrets Management](https://learn.hashicorp.com/collections/vault/secrets-management) tutorial series to learn more about secrets management using Vault.
 
-The benefit of this is that developers do not need to worry about how to
-properly encrypt data. The responsibility of encryption is on Vault
-and the security team managing it, and developers just encrypt/decrypt
-data as needed.
+## Data Encryption
+
+Many organizations seek solutions to encrypt/decrypt application data within a cloud or multi-datacenter environment; deploying cryptography and maintaining a complex key management infrastructure can be expensive and challenging to develop. Vault provides [encryption as a service](/docs/secrets/transit) with centralized key management to simplify encrypting data in transit and stored across clouds and datacenters. Vault can encrypt/decrypt data stored elsewhere, essentially allowing applications to encrypt their data while storing it in the primary data store. Vault's security team manages and maintains the responsibility of the data encryption within the Vault environment, allowing developers to focus solely on encrypting/decrypting data as needed.
+
+### Resources
+
+- Try our [Encryption as a Service: Transit Secrets Engine](https://learn.hashicorp.com/collections/vault/encryption-as-a-service) to learn the essential workings of the Transit secrets engine handles cryptographic functions on data in-transit.
+
+- For more advanced data protection, refer to the [Advanced Data Protection](https://learn.hashicorp.com/collections/vault/adp) tutorial series. Vault's Transform secrets engine handles secure data transformation and tokenization against provided input value.
+
+
+## Identity-Based Access
+
+Organizations need a way to manage identity sprawl with the proliferation of different clouds, services, and systems- all with their identity providers. The risk of compromising an organization's security infrastructure increases as organizations are forced to manage multiple identity management systems as they try to implement solutions to unify a single logical identity across numerous cloud platforms. Different platforms support different methods and constructs for identity, making it difficult to recognize a user or identity across multiple forms of credentials. Vault solves this challenge by using a unified ACL system to broker access to systems and secrets and merges identities across providers. With [identity-based access](/docs/secrets/identity), organizations can leverage any trusted resource identity to regulate and manage system and application access, and authentication across various clouds, systems, and endpoints.
+
+### Resources
+
+- Try our [Identity: Entities and Groups](https://learn.hashicorp.com/tutorials/vault/identity) tutorial to learn how Vault's unified identity system works.
+
+- Follow the [Policies](https://learn.hashicorp.com/collections/vault/policies) tutorial series to learn how Vault enforces role-based access control (RBAC) across multiple cloud environments.
+
+## Key Management
+
+Working with cloud providers requires that you use their security features, which involve encryption keys issued and stored by the provider in its own key management system (KMS). You may also have a requirement to maintain root of trust and control of the encryption key lifecycle, both within and outside of the cloud. The [Vault Key Management Secrets Engine](/docs/secrets/key-management) provides a consistent workflow for distribution and lifecycle management of cloud provider keys, allowing organizations to maintain centralized control of their keys in Vault while leveraging the cryptographic capabilities native to the KMS providers.
+
+### Resources
+
+- Try our [Key Management Secrets Engine with Azure Key Vault](https://learn.hashicorp.com/tutorials/vault/key-management-secrets-engine-azure-key-vault?in=vault/adp) to enable management of the Key Vault key with the Key Management secrets engine.
+
+- Try our [Key Management Secrets Engine with GCP Cloud KMS](https://learn.hashicorp.com/tutorials/vault/key-management-secrets-engine-azure-key-vault?in=vault/adp) to enable management of the Key Value key with the Key Management secrets engine.

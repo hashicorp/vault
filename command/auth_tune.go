@@ -31,6 +31,7 @@ type AuthTuneCommand struct {
 	flagOptions                   map[string]string
 	flagTokenType                 string
 	flagVersion                   int
+	flagPluginVersion             string
 }
 
 func (c *AuthTuneCommand) Synopsis() string {
@@ -62,15 +63,15 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACRequestKeys,
 		Target: &c.flagAuditNonHMACRequestKeys,
-		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
-			"devices in the request data object.",
+		Usage: "Key that will not be HMAC'd by audit devices in the request data " +
+			"object. To specify multiple values, specify this flag multiple times.",
 	})
 
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACResponseKeys,
 		Target: &c.flagAuditNonHMACResponseKeys,
-		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
-			"devices in the response data object.",
+		Usage: "Key that will not be HMAC'd by audit devices in the response data " +
+			"object. To specify multiple values, specify this flag multiple times.",
 	})
 
 	f.DurationVar(&DurationVar{
@@ -112,15 +113,15 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNamePassthroughRequestHeaders,
 		Target: &c.flagPassthroughRequestHeaders,
-		Usage: "Comma-separated string or list of request header values that " +
-			"will be sent to the plugin",
+		Usage: "Request header value that will be sent to the plugin. To specify " +
+			"multiple values, specify this flag multiple times.",
 	})
 
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAllowedResponseHeaders,
 		Target: &c.flagAllowedResponseHeaders,
-		Usage: "Comma-separated string or list of response header values that " +
-			"plugins will be allowed to set",
+		Usage: "Response header value that plugins will be allowed to set. To specify " +
+			"multiple values, specify this flag multiple times.",
 	})
 
 	f.StringMapVar(&StringMapVar{
@@ -142,6 +143,14 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 		Target:  &c.flagVersion,
 		Default: 0,
 		Usage:   "Select the version of the auth method to run. Not supported by all auth methods.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    flagNamePluginVersion,
+		Target:  &c.flagPluginVersion,
+		Default: "",
+		Usage: "Select the semantic version of the plugin to run. The new version must be registered in " +
+			"the plugin catalog, and will not start running until the plugin is reloaded.",
 	})
 
 	return set
@@ -220,6 +229,10 @@ func (c *AuthTuneCommand) Run(args []string) int {
 
 		if fl.Name == flagNameTokenType {
 			mountConfigInput.TokenType = c.flagTokenType
+		}
+
+		if fl.Name == flagNamePluginVersion {
+			mountConfigInput.PluginVersion = c.flagPluginVersion
 		}
 	})
 

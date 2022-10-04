@@ -78,7 +78,7 @@ func TestTLSTrailingData(t *testing.T) {
 	if errs == nil || len(errs) != 1 {
 		t.Fatalf("TLS Config check on fake certificate should fail")
 	}
-	if !strings.Contains(errs[0].Error(), "asn1: syntax error: trailing data") {
+	if !strings.Contains(errs[0].Error(), "x509: trailing data") {
 		t.Fatalf("Bad error message: %s", errs[0])
 	}
 }

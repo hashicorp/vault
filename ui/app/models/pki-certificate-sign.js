@@ -1,7 +1,7 @@
 import { attr } from '@ember-data/model';
 import { copy } from 'ember-copy';
 import { computed } from '@ember/object';
-import Certificate from './pki-certificate';
+import Certificate from './pki/cert';
 import { combineFieldGroups } from 'vault/utils/openapi-to-attrs';
 
 export default Certificate.extend({
@@ -15,7 +15,7 @@ export default Certificate.extend({
     editType: 'textarea',
   }),
 
-  fieldGroups: computed('newFields', 'signVerbatim', function() {
+  fieldGroups: computed('newFields', 'signVerbatim', function () {
     const options = { Options: ['altNames', 'ipSans', 'ttl', 'excludeCnFromSans', 'otherSans'] };
     let groups = [
       {

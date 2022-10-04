@@ -2,6 +2,7 @@ package command
 
 import (
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
@@ -11,9 +12,10 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-// logicalBackendAdjustmentFactor is set to 1 for the database backend
-// which is a plugin but not found in go.mod files
-var logicalBackendAdjustmentFactor = 1
+// logicalBackendAdjustmentFactor is set to plus 1 for the database backend
+// which is a plugin but not found in go.mod files, and minus 1 for the ldap
+// and openldap secret backends which have the same underlying plugin.
+var logicalBackendAdjustmentFactor = 1 - 1
 
 func testSecretsEnableCommand(tb testing.TB) (*cli.MockUi, *SecretsEnableCommand) {
 	tb.Helper()
@@ -113,6 +115,7 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 			"-passthrough-request-headers", "authorization,authentication",
 			"-passthrough-request-headers", "www-authentication",
 			"-allowed-response-headers", "authorization",
+			"-allowed-managed-keys", "key1,key2",
 			"-force-no-cache",
 			"pki",
 		})
@@ -162,7 +165,9 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 		if diff := deep.Equal([]string{"foo,bar"}, mountInfo.Config.AuditNonHMACResponseKeys); len(diff) > 0 {
 			t.Errorf("Failed to find expected values in AuditNonHMACResponseKeys. Difference is: %v", diff)
 		}
-
+		if diff := deep.Equal([]string{"key1,key2"}, mountInfo.Config.AllowedManagedKeys); len(diff) > 0 {
+			t.Errorf("Failed to find expected values in AllowedManagedKeys. Difference is: %v", diff)
+		}
 	})
 
 	t.Run("communication_failure", func(t *testing.T) {
@@ -239,14 +244,23 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 		}
 
 		for _, b := range backends {
+			expectedResult := 0
+			status, _ := builtinplugins.Registry.DeprecationStatus(b, consts.PluginTypeSecrets)
+			allowDeprecated := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv)
+
+			// Need to handle deprecated builtins specially
+			if (status == consts.PendingRemoval && allowDeprecated == "") || status == consts.Removed {
+				expectedResult = 2
+			}
+
 			ui, cmd := testSecretsEnableCommand(t)
 			cmd.client = client
 
-			code := cmd.Run([]string{
+			actualResult := cmd.Run([]string{
 				b,
 			})
-			if exp := 0; code != exp {
-				t.Errorf("type %s, expected %d to be %d - %s", b, code, exp, ui.OutputWriter.String()+ui.ErrorWriter.String())
+			if actualResult != expectedResult {
+				t.Errorf("type: %s - got: %d, expected: %d - %s", b, actualResult, expectedResult, ui.OutputWriter.String()+ui.ErrorWriter.String())
 			}
 		}
 	})

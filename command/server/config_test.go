@@ -36,6 +36,10 @@ func TestParseListeners(t *testing.T) {
 	testParseListeners(t)
 }
 
+func TestParseSockaddrTemplate(t *testing.T) {
+	testParseSockaddrTemplate(t)
+}
+
 func TestConfigRaftRetryJoin(t *testing.T) {
 	testConfigRaftRetryJoin(t)
 }
@@ -44,6 +48,14 @@ func TestParseSeals(t *testing.T) {
 	testParseSeals(t)
 }
 
+func TestParseStorage(t *testing.T) {
+	testParseStorageTemplate(t)
+}
+
 func TestUnknownFieldValidation(t *testing.T) {
 	testUnknownFieldValidation(t)
+}
+
+func TestUnknownFieldValidationListenerAndStorage(t *testing.T) {
+	testUnknownFieldValidationStorageAndListener(t)
 }

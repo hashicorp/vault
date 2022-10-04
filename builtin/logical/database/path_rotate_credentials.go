@@ -30,8 +30,8 @@ func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 				},
 			},
 
-			HelpSynopsis:    pathCredsCreateReadHelpSyn,
-			HelpDescription: pathCredsCreateReadHelpDesc,
+			HelpSynopsis:    pathRotateCredentialsUpdateHelpSyn,
+			HelpDescription: pathRotateCredentialsUpdateHelpDesc,
 		},
 		{
 			Pattern: "rotate-role/" + framework.GenericNameRegex("name"),
@@ -50,8 +50,8 @@ func pathRotateRootCredentials(b *databaseBackend) []*framework.Path {
 				},
 			},
 
-			HelpSynopsis:    pathCredsCreateReadHelpSyn,
-			HelpDescription: pathCredsCreateReadHelpDesc,
+			HelpSynopsis:    pathRotateRoleCredentialsUpdateHelpSyn,
+			HelpDescription: pathRotateRoleCredentialsUpdateHelpDesc,
 		},
 	}
 }
@@ -78,29 +78,33 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 			return nil, err
 		}
 
-		// Take out the backend lock since we are swapping out the connection
-		b.Lock()
-		defer b.Unlock()
-
 		// Take the write lock on the instance
 		dbi.Lock()
-		defer dbi.Unlock()
-
+		defer func() {
+			dbi.Unlock()
+			// Even on error, still remove the connection
+			b.ClearConnectionId(name, dbi.id)
+		}()
 		defer func() {
 			// Close the plugin
 			dbi.closed = true
 			if err := dbi.database.Close(); err != nil {
 				b.Logger().Error("error closing the database plugin connection", "err", err)
 			}
-			// Even on error, still remove the connection
-			delete(b.connections, name)
 		}()
+
+		generator, err := newPasswordGenerator(nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to construct credential generator: %s", err)
+		}
+		generator.PasswordPolicy = config.PasswordPolicy
 
 		// Generate new credentials
 		oldPassword := config.ConnectionDetails["password"].(string)
-		newPassword, err := dbi.database.GeneratePassword(ctx, b.System(), config.PasswordPolicy)
+		newPassword, err := generator.generate(ctx, b, dbi.database)
 		if err != nil {
-			return nil, err
+			b.CloseIfShutdown(dbi, err)
+			return nil, fmt.Errorf("failed to generate password: %s", err)
 		}
 		config.ConnectionDetails["password"] = newPassword
 
@@ -116,7 +120,8 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 		}
 
 		updateReq := v5.UpdateUserRequest{
-			Username: rootUsername,
+			Username:       rootUsername,
+			CredentialType: v5.CredentialTypePassword,
 			Password: &v5.ChangePassword{
 				NewPassword: newPassword,
 				Statements: v5.Statements{
@@ -169,10 +174,14 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			}
 		}
 
-		resp, err := b.setStaticAccount(ctx, req.Storage, &setStaticAccountInput{
+		input := &setStaticAccountInput{
 			RoleName: name,
 			Role:     role,
-		})
+		}
+		if walID, ok := item.Value.(string); ok {
+			input.WALID = walID
+		}
+		resp, err := b.setStaticAccount(ctx, req.Storage, input)
 		// if err is not nil, we need to attempt to update the priority and place
 		// this item back on the queue. The err should still be returned at the end
 		// of this method.
@@ -188,6 +197,8 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			}
 		} else {
 			item.Priority = resp.RotationTime.Add(role.StaticAccount.RotationPeriod).Unix()
+			// Clear any stored WAL ID as we must have successfully deleted our WAL to get here.
+			item.Value = ""
 		}
 
 		// Add their rotation to the queue
@@ -195,8 +206,13 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 			return nil, err
 		}
 
+		if err != nil {
+			return nil, fmt.Errorf("unable to finish rotating credentials; retries will "+
+				"continue in the background but it is also safe to retry manually: %w", err)
+		}
+
 		// return any err from the setStaticAccount call
-		return nil, err
+		return nil, nil
 	}
 }
 

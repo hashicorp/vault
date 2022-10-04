@@ -3,6 +3,7 @@ package transit
 import (
 	"context"
 	"errors"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -86,14 +87,17 @@ func (b *backend) pathCacheConfigRead(ctx context.Context, req *logical.Request,
 		return nil, err
 	}
 
+	if currentCacheSize != storedCacheSize {
+		err = b.lm.InitCache(storedCacheSize)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"size": storedCacheSize,
 		},
-	}
-
-	if currentCacheSize != storedCacheSize {
-		resp.Warnings = []string{"This cache size will not be applied until the transit mount is reloaded"}
 	}
 
 	return resp, nil

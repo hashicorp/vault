@@ -11,7 +11,7 @@ Currently, it only supports reloading license information from files on disk.
 
 | Method | Path                          |
 | :----- | :---------------------------- |
-| `PUT`  | `/sys/config/reload/:subsystem` |
+| `POST` | `/sys/config/reload/:subsystem` |
 
 ### Parameters
 
@@ -31,7 +31,7 @@ of the given license are different from those of the license Vault is currently 
 
 ```shell-session
 $ curl \
-  -X PUT \
+  -X POST \
   --header "X-Vault-Token: ..." \
     'http://127.0.0.1:8200/v1/sys/config/reload/license'
 ```

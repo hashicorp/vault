@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fixes issue saving KMIP role correctly
+```

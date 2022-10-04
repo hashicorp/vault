@@ -31,12 +31,17 @@ The "t" parameter is the threshold, and "n" is the number of shares.
 ```json
 {
   "type": "shamir",
+  "initialized": true,
   "sealed": true,
   "t": 3,
   "n": 5,
   "progress": 2,
   "nonce": "",
-  "version": "0.9.0"
+  "version": "1.11.0",
+  "build_date": "2022-05-03T08:34:11Z",
+  "migration": false,
+  "recovery_seal": false,
+  "storage_type": "file"
 }
 ```
 
@@ -45,13 +50,18 @@ Sample response when Vault is unsealed.
 ```json
 {
   "type": "shamir",
+  "initialized": true,
   "sealed": false,
   "t": 3,
   "n": 5,
   "progress": 0,
-  "version": "0.9.0",
-  "cluster_name": "vault-cluster-d6ec3c7f",
-  "cluster_id": "3e8b3fec-3749-e056-ba41-b62a63b997e8",
-  "nonce": "ef05d55d-4d2c-c594-a5e8-55bc88604c24"
+  "nonce": "",
+  "version": "1.11.0",
+  "build_date": "2022-05-03T08:34:11Z",
+  "migration": false,
+  "cluster_name": "vault-cluster-336172e1",
+  "cluster_id": "f94053ad-d80e-4270-2006-2efd67d0910a",
+  "recovery_seal": false,
+  "storage_type": "file"
 }
 ```

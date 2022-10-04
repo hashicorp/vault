@@ -39,8 +39,26 @@ func pathLogin(b *backend) *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation:         b.pathLogin,
 			logical.AliasLookaheadOperation: b.pathLoginAliasLookahead,
+			logical.ResolveRoleOperation:    b.pathLoginResolveRole,
 		},
 	}
+}
+
+func (b *backend) pathLoginResolveRole(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	var matched *ParsedCert
+	if verifyResp, resp, err := b.verifyCredentials(ctx, req, data); err != nil {
+		return nil, err
+	} else if resp != nil {
+		return resp, nil
+	} else {
+		matched = verifyResp
+	}
+
+	if matched == nil {
+		return logical.ErrorResponse("no certificate was matched by this request"), nil
+	}
+
+	return logical.ResolveRoleResponse(matched.Entry.Name)
 }
 
 func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -59,6 +77,18 @@ func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Requ
 }
 
 func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	config, err := b.Config(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	if b.crls == nil {
+		// Probably invalidated due to replication, but we need these to proceed
+		if err := b.populateCRLs(ctx, req.Storage); err != nil {
+			return nil, err
+		}
+	}
+
 	var matched *ParsedCert
 	if verifyResp, resp, err := b.verifyCredentials(ctx, req, data); err != nil {
 		return nil, err
@@ -89,23 +119,36 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 	skid := base64.StdEncoding.EncodeToString(clientCerts[0].SubjectKeyId)
 	akid := base64.StdEncoding.EncodeToString(clientCerts[0].AuthorityKeyId)
 
+	metadata := map[string]string{
+		"cert_name":        matched.Entry.Name,
+		"common_name":      clientCerts[0].Subject.CommonName,
+		"serial_number":    clientCerts[0].SerialNumber.String(),
+		"subject_key_id":   certutil.GetHexFormatted(clientCerts[0].SubjectKeyId, ":"),
+		"authority_key_id": certutil.GetHexFormatted(clientCerts[0].AuthorityKeyId, ":"),
+	}
+
+	// Add metadata from allowed_metadata_extensions when present,
+	// with sanitized oids (dash-separated instead of dot-separated) as keys.
+	for k, v := range b.certificateExtensionsMetadata(clientCerts[0], matched) {
+		metadata[k] = v
+	}
+
 	auth := &logical.Auth{
 		InternalData: map[string]interface{}{
 			"subject_key_id":   skid,
 			"authority_key_id": akid,
 		},
 		DisplayName: matched.Entry.DisplayName,
-		Metadata: map[string]string{
-			"cert_name":        matched.Entry.Name,
-			"common_name":      clientCerts[0].Subject.CommonName,
-			"serial_number":    clientCerts[0].SerialNumber.String(),
-			"subject_key_id":   certutil.GetHexFormatted(clientCerts[0].SubjectKeyId, ":"),
-			"authority_key_id": certutil.GetHexFormatted(clientCerts[0].AuthorityKeyId, ":"),
-		},
+		Metadata:    metadata,
 		Alias: &logical.Alias{
 			Name: clientCerts[0].Subject.CommonName,
 		},
 	}
+
+	if config.EnableIdentityAliasMetadata {
+		auth.Alias.Metadata = metadata
+	}
+
 	matched.Entry.PopulateTokenAuth(auth)
 
 	return &logical.Response{
@@ -117,6 +160,12 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	config, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, err
+	}
+
+	if b.crls == nil {
+		if err := b.populateCRLs(ctx, req.Storage); err != nil {
+			return nil, err
+		}
 	}
 
 	if !config.DisableBinding {
@@ -409,6 +458,38 @@ func (b *backend) matchesCertificateExtensions(clientCert *x509.Certificate, con
 	return true
 }
 
+// certificateExtensionsMetadata returns the metadata from configured
+// metadata extensions
+func (b *backend) certificateExtensionsMetadata(clientCert *x509.Certificate, config *ParsedCert) map[string]string {
+	// If no metadata extensions are configured, return an empty map
+	if len(config.Entry.AllowedMetadataExtensions) == 0 {
+		return map[string]string{}
+	}
+
+	// Build a map with the accepted oid strings as keys, and the metadata keys as values.
+	allowedOidMap := make(map[string]string, len(config.Entry.AllowedMetadataExtensions))
+	for _, oidString := range config.Entry.AllowedMetadataExtensions {
+		// Avoid dots in metadata keys and put dashes instead,
+		// to allow use policy templates.
+		allowedOidMap[oidString] = strings.ReplaceAll(oidString, ".", "-")
+	}
+
+	// Collect the metadata from accepted certificate extensions.
+	metadata := make(map[string]string, len(config.Entry.AllowedMetadataExtensions))
+	for _, ext := range clientCert.Extensions {
+		if metadataKey, ok := allowedOidMap[ext.Id.String()]; ok {
+			// x509 Writes Extensions in ASN1 with a bitstring tag, which results in the field
+			// including its ASN.1 type tag bytes. For the sake of simplicity, assume string type
+			// and drop the tag bytes. And get the number of bytes from the tag.
+			var parsedValue string
+			asn1.Unmarshal(ext.Value, &parsedValue)
+			metadata[metadataKey] = parsedValue
+		}
+	}
+
+	return metadata
+}
+
 // loadTrustedCerts is used to load all the trusted certificates from the backend
 func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage, certName string) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert) {
 	pool = x509.NewCertPool()
@@ -472,6 +553,7 @@ func (b *backend) checkForChainInCRLs(chain []*x509.Certificate) bool {
 			badChain = true
 			break
 		}
+
 	}
 	return badChain
 }

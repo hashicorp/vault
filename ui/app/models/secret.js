@@ -12,20 +12,20 @@ export default Model.extend(KeyMixin, {
   renewable: attr('boolean'),
 
   secretData: attr('object'),
-  secretKeyAndValue: computed('secretData', function() {
+  secretKeyAndValue: computed('secretData', function () {
     const data = this.secretData;
-    return Object.keys(data).map(key => {
+    return Object.keys(data).map((key) => {
       return { key, value: data[key] };
     });
   }),
 
-  dataAsJSONString: computed('secretData', function() {
+  dataAsJSONString: computed('secretData', function () {
     return JSON.stringify(this.secretData, null, 2);
   }),
 
-  isAdvancedFormat: computed('secretData', function() {
+  isAdvancedFormat: computed('secretData', function () {
     const data = this.secretData;
-    return data && Object.keys(data).some(key => typeof data[key] !== 'string');
+    return data && Object.keys(data).some((key) => typeof data[key] !== 'string');
   }),
 
   helpText: attr('string'),

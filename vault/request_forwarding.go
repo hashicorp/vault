@@ -8,7 +8,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	math "math"
+	"math"
 	"net/http"
 	"net/url"
 	"sync"
@@ -234,8 +234,8 @@ func (c *Core) stopForwarding() {
 // alive and that the current active address value matches the most
 // recently-known address.
 func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAddr string) error {
-	c.logger.Debug("refreshing forwarding connection")
-	defer c.logger.Debug("done refreshing forwarding connection")
+	c.logger.Debug("refreshing forwarding connection", "clusterAddr", clusterAddr)
+	defer c.logger.Debug("done refreshing forwarding connection", "clusterAddr", clusterAddr)
 
 	c.requestForwardingConnectionLock.Lock()
 	defer c.requestForwardingConnectionLock.Unlock()
@@ -329,6 +329,9 @@ func (c *Core) clearForwardingClients() {
 // ForwardRequest forwards a given request to the active node and returns the
 // response.
 func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, error) {
+	// checking if the node is perfStandby here to avoid a deadlock between
+	// Core.stateLock and Core.requestForwardingConnectionLock
+	isPerfStandby := c.PerfStandby()
 	c.requestForwardingConnectionLock.RLock()
 	defer c.requestForwardingConnectionLock.RUnlock()
 
@@ -372,7 +375,7 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 	// If we are a perf standby and the request was forwarded to the active node
 	// we should attempt to wait for the WAL to ship to offer best effort read after
 	// write guarantees
-	if c.PerfStandby() && resp.LastRemoteWal > 0 {
+	if isPerfStandby && resp.LastRemoteWal > 0 {
 		WaitUntilWALShipped(req.Context(), c, resp.LastRemoteWal)
 	}
 

@@ -27,7 +27,7 @@ export default Component.extend({
   host: 'https://www.vaultproject.io',
 
   path: '/',
-  href: computed('host', 'path', function() {
+  href: computed('host', 'path', function () {
     return `${this.host}${this.path}`;
   }),
 });

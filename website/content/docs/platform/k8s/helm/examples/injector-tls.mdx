@@ -8,7 +8,7 @@ description: |-
 
 # Vault Agent Injector TLS Configuration
 
-~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3 with this chart.
+@include 'helm/version.mdx'
 
 The following instructions demonstrate how to manually configure the Vault Agent Injector
 with self-signed certificates.
@@ -39,8 +39,8 @@ $ openssl req \
 
 ## Create Vault Agent Injector Certificate
 
-Next we can create a certificate and key signed by the certificiate authority generated above. This
-certificiate and key will be used by the Vault Agent Injector for TLS communications with the Kuberenetes
+Next we can create a certificate and key signed by the certificate authority generated above. This
+certificate and key will be used by the Vault Agent Injector for TLS communications with the Kubernetes
 API.
 
 First, create a private key for the certificate:
@@ -83,7 +83,7 @@ DNS.4 = vault-agent-injector-svc.vault.svc.cluster.local
 EOF
 ```
 
-Finally, sign the certificiate:
+Finally, sign the certificate:
 
 ~> **Important Note:** Values such as days (how long the certificate is valid for) should be configured for your environment.
 

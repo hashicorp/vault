@@ -2,9 +2,7 @@ import Application from '@ember/application';
 import Resolver from 'ember-resolver';
 import loadInitializers from 'ember-load-initializers';
 import config from 'vault/config/environment';
-import defineModifier from 'ember-concurrency-test-waiter/define-modifier';
 
-defineModifier();
 export default class App extends Application {
   modulePrefix = config.modulePrefix;
   podModulePrefix = config.podModulePrefix;
@@ -33,6 +31,24 @@ export default class App extends Application {
       },
     },
     kmip: {
+      dependencies: {
+        services: [
+          'auth',
+          'flash-messages',
+          'namespace',
+          'path-help',
+          'router',
+          'store',
+          'version',
+          'wizard',
+          'secret-mount-path',
+        ],
+        externalRoutes: {
+          secrets: 'vault.cluster.secrets.backends',
+        },
+      },
+    },
+    pki: {
       dependencies: {
         services: [
           'auth',
