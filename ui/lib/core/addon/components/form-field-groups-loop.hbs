@@ -31,7 +31,7 @@
             {{#if (eq flexGroup group)}}
               {{! if it is listed as a flexGroup then put within a flex container }}
               <div class="box is-marginless">
-                <div class="is-grid is-grid-3-columns is-grid-4-rows is-medium-height is-row-gap-medium">
+                <div class="is-grid is-grid-3-columns is-grid-4-rows is-large-height is-row-gap-medium">
                   {{#each fields as |attr|}}
                     {{! the first item should be a label with explanation text that spans the entire grid }}
                     <div class={{if attr.options.isTitleOfFlexGroup "is-grid-column-span-3" ""}}>

@@ -173,6 +173,33 @@ export default class PkiRoleEngineModel extends Model {
   @attr('boolean') EncipherOnly;
   @attr('boolean') DecipherOnly;
 
+  @attr('string', {
+    label: 'Extended key usage',
+    subText:
+      'Specifies the default key usage constraint on the issued certificate. To specify no default key usage constraints, set this to an empty list.',
+    dontShowInput: true,
+    isTitleOfFlexGroup: true,
+  })
+  extKeyUsageLabel;
+  // all optional values to be added to the stringArray extKeyUsage https://pkg.go.dev/crypto/x509#ExtKeyUsage
+  @attr('boolean') Any;
+  @attr('boolean') ServerAuth;
+  @attr('boolean') ClientAuth;
+  @attr('boolean') CodesSigning;
+  @attr('boolean') EmailProtection;
+  @attr('boolean') IpsecEndSystem;
+  @attr('boolean') IpsecTunnel;
+  @attr('boolean') TimeStamping;
+  @attr('boolean') OcspSigning;
+  @attr('boolean') IpsecUser;
+  @attr({
+    label: 'Extended key usage OIDs',
+    subText: 'A comma-separated string or list of extended key usage oids. Add one item per row.',
+    editType: 'stringArray',
+    isTitleOfFlexGroup: true,
+  })
+  extKeyUsageOids;
+
   // must be a getter so it can be added to the prototype needed in the pathHelp service on the line here: if (newModel.merged || modelProto.useOpenAPI !== true) {
   get useOpenAPI() {
     return true;
@@ -252,6 +279,18 @@ export default class PkiRoleEngineModel extends Model {
             'CrlSign',
             'EncipherOnly',
             'DecipherOnly',
+            'extKeyUsageLabel',
+            'Any',
+            'ServerAuth',
+            'ClientAuth',
+            'CodesSigning',
+            'EmailProtection',
+            'IpsecEndSystem',
+            'IpsecTunnel',
+            'TimeStamping',
+            'OcspSigning',
+            'IpsecUser',
+            'extKeyUsageOids',
           ],
         },
         { 'Policy identifiers': ['policyIdentifiers'] },

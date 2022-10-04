@@ -116,8 +116,8 @@
 .is-grid-4-rows {
   grid-template-rows: repeat(3, 1fr);
 }
-.is-medium-height {
-  height: $medium-height;
+.is-large-height {
+  height: $large-height;
 }
 // grid items
 .is-grid-column-span-3 {
