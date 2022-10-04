@@ -65,7 +65,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-discover v0.0.0-20210818145131-c573d69da192
 	github.com/hashicorp/go-gcp-common v0.8.0
-	github.com/hashicorp/go-hclog v1.3.0
+	github.com/hashicorp/go-hclog v1.3.1
 	github.com/hashicorp/go-kms-wrapping/v2 v2.0.5
 	github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.4
 	github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2 v2.0.1
@@ -86,7 +86,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/gatedwriter v0.1.1
 	github.com/hashicorp/go-secure-stdlib/kv-builder v0.1.2
 	github.com/hashicorp/go-secure-stdlib/mlock v0.1.2
-	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.6
+	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.7
 	github.com/hashicorp/go-secure-stdlib/password v0.1.1
 	github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2
@@ -125,7 +125,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.14.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.13.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.2.0
-	github.com/hashicorp/vault-plugin-secrets-kv v0.13.0
+	github.com/hashicorp/vault-plugin-secrets-kv v0.13.3
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.8.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.9.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.6.0
