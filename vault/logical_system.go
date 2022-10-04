@@ -1759,49 +1759,32 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			}
 		}
 
-		if mountEntry.Config.UserLockoutConfig == nil {
+		if len(userLockoutConfigMap) > 0 && mountEntry.Config.UserLockoutConfig == nil {
 			mountEntry.Config.UserLockoutConfig = &UserLockoutConfig{}
 		}
+
+		var oldUserLockoutThreshold int64
+		var newUserLockoutDuration, oldUserLockoutDuration time.Duration
+		var newUserLockoutCounterReset, oldUserLockoutCounterReset time.Duration
+		var oldUserLockoutDisable bool
 
 		if _, ok := userLockoutConfigMap["lockout_threshold"]; ok {
 			userLockoutThreshold, err := parseutil.ParseInt(apiuserLockoutConfig.LockoutThreshold)
 			if err != nil {
 				return nil, fmt.Errorf("unable to parse user lockout threshold: %w", err)
 			}
-
-			oldUserLockoutThreshold := mountEntry.Config.UserLockoutConfig.LockoutThreshold
-
+			oldUserLockoutThreshold = mountEntry.Config.UserLockoutConfig.LockoutThreshold
 			switch {
 			case userLockoutThreshold < 0:
 				mountEntry.Config.UserLockoutConfig.LockoutThreshold = oldUserLockoutThreshold
 			default:
 				mountEntry.Config.UserLockoutConfig.LockoutThreshold = userLockoutThreshold
 			}
-
-			// Update the mount table
-			switch {
-			case strings.HasPrefix(path, "auth/"):
-				err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
-			default:
-				err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
-			}
-			if err != nil {
-				mountEntry.Config.UserLockoutConfig.LockoutThreshold = oldUserLockoutThreshold
-				return handleError(err)
-			}
-			if b.Core.logger.IsInfo() {
-				b.Core.logger.Info("tuning of user-lockout-threshold successful", "path", path, "user-lockout-threshold", userLockoutThreshold)
-			}
-
 		}
 
 		if _, ok := userLockoutConfigMap["lockout_duration"]; ok {
-			var newUserLockoutDuration, oldUserLockoutDuration time.Duration
-
 			oldUserLockoutDuration = mountEntry.Config.UserLockoutConfig.LockoutDuration
-
 			switch apiuserLockoutConfig.LockoutDuration {
-
 			case "":
 				newUserLockoutDuration = oldUserLockoutDuration
 			case "system":
@@ -1815,29 +1798,10 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 			}
 			mountEntry.Config.UserLockoutConfig.LockoutDuration = newUserLockoutDuration
-			// Update the mount table
-
-			switch {
-			case strings.HasPrefix(path, "auth/"):
-				err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
-			default:
-				err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
-			}
-			if err != nil {
-				mountEntry.Config.UserLockoutConfig.LockoutDuration = oldUserLockoutDuration
-				return handleError(err)
-			}
-			if b.Core.logger.IsInfo() {
-				b.Core.logger.Info("tuning of user-lockout-duration successful", "path", path, "user-lockout-duration", apiuserLockoutConfig.LockoutDuration)
-			}
-
 		}
 
 		if _, ok := userLockoutConfigMap["lockout_counter_reset_duration"]; ok {
-			var newUserLockoutCounterReset, oldUserLockoutCounterReset time.Duration
-
 			oldUserLockoutCounterReset = mountEntry.Config.UserLockoutConfig.LockoutCounterReset
-
 			switch apiuserLockoutConfig.LockoutCounterResetDuration {
 			case "":
 				newUserLockoutCounterReset = oldUserLockoutCounterReset
@@ -1852,7 +1816,16 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			}
 
 			mountEntry.Config.UserLockoutConfig.LockoutCounterReset = newUserLockoutCounterReset
-			// Update the mount table
+		}
+
+		if rawVal, ok := userLockoutConfigMap["lockout_disable"]; ok {
+			userLockoutDisable := rawVal.(bool)
+			oldUserLockoutDisable = mountEntry.Config.UserLockoutConfig.DisableLockout
+			mountEntry.Config.UserLockoutConfig.DisableLockout = userLockoutDisable
+		}
+
+		// Update the mount table
+		if len(userLockoutConfigMap) > 0 {
 			switch {
 			case strings.HasPrefix(path, "auth/"):
 				err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
@@ -1861,34 +1834,14 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			}
 			if err != nil {
 				mountEntry.Config.UserLockoutConfig.LockoutCounterReset = oldUserLockoutCounterReset
-				return handleError(err)
-			}
-			if b.Core.logger.IsInfo() {
-				b.Core.logger.Info("tuning of user-lockout-counter-reset successful", "path", path, "user-lockout-counter-reset", apiuserLockoutConfig.LockoutCounterResetDuration)
-			}
-		}
-
-		if rawVal, ok := userLockoutConfigMap["lockout_disable"]; ok {
-			userLockoutDisable := rawVal.(bool)
-			var oldUserLockoutDisable bool
-
-			oldUserLockoutDisable = mountEntry.Config.UserLockoutConfig.DisableLockout
-			mountEntry.Config.UserLockoutConfig.DisableLockout = userLockoutDisable
-			var err error
-			switch {
-			case strings.HasPrefix(path, "auth/"):
-				err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
-			default:
-				err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
-			}
-			if err != nil {
+				mountEntry.Config.UserLockoutConfig.LockoutThreshold = oldUserLockoutThreshold
+				mountEntry.Config.UserLockoutConfig.LockoutDuration = oldUserLockoutDuration
 				mountEntry.Config.UserLockoutConfig.DisableLockout = oldUserLockoutDisable
 				return handleError(err)
 			}
 			if b.Core.logger.IsInfo() {
-				b.Core.logger.Info("tuning of user-lockout-disable successful", "path", path, "user-lockout-disable", userLockoutDisable)
+				b.Core.logger.Info("tuning of user_lockout_config successful", "path", path)
 			}
-
 		}
 
 	}
