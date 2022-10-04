@@ -33,7 +33,7 @@
         </Item.content>
         <Item.menu as |m|>
           {{#let (concat this.currentNamespace (if this.currentNamespace "/") list.item.id) as |targetNamespace|}}
-            {{#if (contains targetNamespace this.accessibleNamespaces)}}
+            {{#if (includes targetNamespace this.accessibleNamespaces)}}
               <li class="action">
                 <NamespaceLink @targetNamespace={{targetNamespace}} @class="is-block">
                   Switch to Namespace

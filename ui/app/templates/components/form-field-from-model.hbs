@@ -2,7 +2,7 @@
 <div class="field" data-test-form-field-from-model>
   {{#unless
     (or
-      (contains
+      (includes
         @attr.options.editType (array "boolean" "searchSelect" "mountAccessor" "kv" "file" "ttl" "stringArray" "json")
       )
       (eq @attr.type "boolean")

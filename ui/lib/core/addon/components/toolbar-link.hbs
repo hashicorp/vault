@@ -1,4 +1,7 @@
-{{#let (component "link-to" class="toolbar-link" disabled=@disabled params=@params) as |LinkToComponent|}}
+{{#let
+  (component "link-to" class="toolbar-link" disabled=@disabled route=this.route models=this.models)
+  as |LinkToComponent|
+}}
   {{#if (and @disabled @disabledTooltip)}}
     <ToolTip @verticalPosition="above" as |T|>
       <T.Trigger tabindex="-1">

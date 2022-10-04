@@ -10,7 +10,7 @@ export default ApplicationAdapter.extend({
     return path ? url + '/' + encodePath(path) : url;
   },
 
-  // used in updateRecord on the model#tune action
+  // used in updateRecord
   pathForType() {
     return 'mounts/auth';
   },
@@ -60,5 +60,9 @@ export default ApplicationAdapter.extend({
 
   exchangeOIDC(path, state, code) {
     return this.ajax(`/v1/auth/${encodePath(path)}/oidc/callback`, 'GET', { data: { state, code } });
+  },
+
+  tune(path, data) {
+    return this.ajax(`${this.url(path)}tune`, 'POST', { data });
   },
 });
