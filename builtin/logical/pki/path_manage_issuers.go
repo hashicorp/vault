@@ -80,11 +80,8 @@ workaround in some compatibility scenarios
 with Active Directory Certificate Services.`,
 	}
 
-	// Signature bits isn't respected on intermediate generation, as this
-	// only impacts the CSR's internal signature and doesn't impact the
-	// signed certificate's bits (that's on the /sign-intermediate
-	// endpoints). Remove it from the list of fields to avoid confusion.
-	delete(ret.Fields, "signature_bits")
+	// At this time Go does not support signing CSRs using PSS signatures, see
+	// https://github.com/golang/go/issues/45990
 	delete(ret.Fields, "use_pss")
 
 	return ret

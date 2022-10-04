@@ -40,6 +40,7 @@ import (
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -1266,6 +1267,16 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	if allowPendingRemoval := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv); allowPendingRemoval != "" {
+		var err error
+		vault.PendingRemovalMountsAllowed, err = strconv.ParseBool(allowPendingRemoval)
+		if err != nil {
+			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
+				consts.VaultAllowPendingRemovalMountsEnv + " env var: " +
+				"defaulting to false."))
+		}
+	}
+
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
 	// because it is quite scary to see when first using Vault. We also disable
 	// this if the user has explicitly disabled mlock in configuration.
@@ -1326,16 +1337,20 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	if seals != nil {
-		for _, seal := range seals {
-			// Ensure that the seal finalizer is called, even if using verify-only
-			defer func(seal *vault.Seal) {
-				err = (*seal).Finalize(context.Background())
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
-				}
-			}(&seal)
+	for _, seal := range seals {
+		// There is always one nil seal. We need to skip it so we don't start an empty Finalize-Seal-Shamir
+		// section.
+		if seal == nil {
+			continue
 		}
+		seal := seal // capture range variable
+		// Ensure that the seal finalizer is called, even if using verify-only
+		defer func(seal *vault.Seal) {
+			err = (*seal).Finalize(context.Background())
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+			}
+		}(&seal)
 	}
 
 	if barrierSeal == nil {

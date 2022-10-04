@@ -107,7 +107,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("ldap bind failed", "error", err)
 		}
-		return "", nil, logical.ErrorResponse(errUserBindFailed), nil, nil
+		return "", nil, logical.ErrorResponse(errUserBindFailed), nil, logical.ErrInvalidCredentials
 	}
 
 	// We re-bind to the BindDN if it's defined because we assume
@@ -117,7 +117,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 			if b.Logger().IsDebug() {
 				b.Logger().Debug("error while attempting to re-bind with the BindDN User", "error", err)
 			}
-			return "", nil, logical.ErrorResponse("ldap operation failed: failed to re-bind with the BindDN user"), nil, nil
+			return "", nil, logical.ErrorResponse("ldap operation failed: failed to re-bind with the BindDN user"), nil, logical.ErrInvalidCredentials
 		}
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("re-bound to original binddn")

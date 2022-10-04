@@ -134,6 +134,8 @@ const (
 	flagNameUserLockoutCounterResetDuration = "user-lockout-counter-reset-duration"
 	// flagNameUserLockoutDisable is the flag name used for tuning the auth mount disable lockout parameter
 	flagNameUserLockoutDisable = "user-lockout-disable"
+	// flagNameDisableRedirects is used to prevent the client from honoring a single redirect as a response to a request
+	flagNameDisableRedirects = "disable-redirects"
 )
 
 var (

@@ -426,7 +426,7 @@ func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, _ *l
 		}
 
 		// Sort for consistent ordering
-		sortVersionedPlugins(versionedPlugins)
+		sortVersionedPlugins(versioned)
 
 		versionedPlugins = append(versionedPlugins, versioned...)
 	}

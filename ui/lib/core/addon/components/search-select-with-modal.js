@@ -16,7 +16,6 @@ import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-ut
  *         @id="assignments"
  *         @model="oidc/assignment"
  *         @label="assignment name"
- *         @labelClass="is-label"
  *         @subText="Search for an existing assignment, or type a new name to create it."
  *         @inputValue={{map-by "id" @model.assignments}}
  *         @onChange={{this.handleSearchSelect}}
@@ -34,7 +33,7 @@ import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-ut
  * @param {string} [subText] - Text to be displayed below the label
  * @param {string} [placeholder] - placeholder text to override the default text of "Search"
  * @param {function} onChange - The onchange action for this form field. ** SEE UTIL ** search-select-has-many.js if selecting models from a hasMany relationship
- * @param {string | Array} inputValue -  A comma-separated string or an array of strings -- array of ids for models.
+ * @param {array} inputValue -  an array of strings -- array of ids for models.
  * @param {string} fallbackComponent - name of component to be rendered if the API returns a 403s
  * @param {boolean} [passObject=false] - When true, the onChange callback returns an array of objects with id (string) and isNew (boolean)
  * @param {number} [selectLimit] - A number that sets the limit to how many select options they can choose
@@ -144,7 +143,7 @@ export default class SearchSelectWithModal extends Component {
   //----- adapted from ember-power-select-with-create
   addCreateOption(term, results) {
     if (this.shouldShowCreate(term, results)) {
-      const name = `Create new ${singularize(this.args.id)}: ${term}`;
+      const name = `Click to create new ${singularize(this.args.id)}: ${term}`;
       const suggestion = {
         __isSuggestion__: true,
         __value__: term,

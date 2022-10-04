@@ -89,7 +89,33 @@ type pluginClient struct {
 
 func wrapFactoryCheckPerms(core *Core, f logical.Factory) logical.Factory {
 	return func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
-		if err := core.CheckPluginPerms(conf.Config["plugin_name"]); err != nil {
+		pluginName := conf.Config["plugin_name"]
+		pluginVersion := conf.Config["plugin_version"]
+		pluginTypeRaw := conf.Config["plugin_type"]
+		pluginType, err := consts.ParsePluginType(pluginTypeRaw)
+		if err != nil {
+			return nil, err
+		}
+
+		pluginDescription := fmt.Sprintf("%s plugin %s", pluginTypeRaw, pluginName)
+		if pluginVersion != "" {
+			pluginDescription += " version " + pluginVersion
+		}
+
+		plugin, err := core.pluginCatalog.Get(ctx, pluginName, pluginType, pluginVersion)
+		if err != nil {
+			return nil, fmt.Errorf("failed to find %s in plugin catalog: %w", pluginDescription, err)
+		}
+		if plugin == nil {
+			return nil, fmt.Errorf("failed to find %s in plugin catalog", pluginDescription)
+		}
+
+		command, err := filepath.Rel(core.pluginCatalog.directory, plugin.Command)
+		if err != nil {
+			return nil, fmt.Errorf("failed to compute plugin command: %w", err)
+		}
+
+		if err := core.CheckPluginPerms(command); err != nil {
 			return nil, err
 		}
 		return f(ctx, conf)
