@@ -629,6 +629,8 @@ type Core struct {
 	// only the active node will actually write the new version timestamp, a perf
 	// standby shouldn't rely on the stored version timestamps being present.
 	versionHistory map[string]VaultVersion
+
+	rollbackPeriod time.Duration
 }
 
 func (c *Core) HAState() consts.HAState {
@@ -759,6 +761,7 @@ type CoreConfig struct {
 
 	// DisableSSCTokens is used to disable the use of server side consistent tokens
 	DisableSSCTokens bool
+	RollbackPeriod   time.Duration
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does

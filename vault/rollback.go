@@ -11,18 +11,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
-	"go.uber.org/atomic"
 )
-
-// rollbackPeriod is how often we attempt rollbacks for all the backends.
-//
-// This is turned into a variable to allow test to check behavior without
-// waiting the full minute. See CreateTestClusterWithRollbackPeriod(...).
-// Although rollbackPeriodLock is used to prevent tests that want to
-// override rollbackPeriod from interfering with one another, we still need
-// to prevent data races on rollbackPeriod for tests not using
-// CreateTestClusterWithRollbackPeriod.
-var rollbackPeriod = atomic.NewDuration(time.Minute)
 
 // RollbackManager is responsible for performing rollbacks of partial
 // secrets within logical backends.
@@ -74,7 +63,7 @@ func NewRollbackManager(ctx context.Context, logger log.Logger, backendsFunc fun
 		logger:      logger,
 		backends:    backendsFunc,
 		router:      router,
-		period:      rollbackPeriod.Load(),
+		period:      core.rollbackPeriod,
 		inflight:    make(map[string]*rollbackState),
 		doneCh:      make(chan struct{}),
 		shutdownCh:  make(chan struct{}),

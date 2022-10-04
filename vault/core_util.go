@@ -5,6 +5,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -52,6 +53,11 @@ func coreInit(c *Core, conf *CoreConfig) error {
 	// Wrap in encoding checks
 	if !conf.DisableKeyEncodingChecks {
 		c.physical = physical.NewStorageEncoding(c.physical)
+	}
+
+	c.rollbackPeriod = conf.RollbackPeriod
+	if conf.RollbackPeriod == 0 {
+		c.rollbackPeriod = time.Minute
 	}
 	return nil
 }
