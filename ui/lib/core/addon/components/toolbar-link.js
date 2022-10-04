@@ -8,14 +8,18 @@ import Component from '@glimmer/component';
  * ```js
  * <Toolbar>
  *   <ToolbarActions>
- *     <ToolbarLink @params={{array 'vault.cluster.policies.create'}} @type="add" @disabled={{true}} @disabledTooltip="This link is disabled">
+ *     <ToolbarLink @route="vault.cluster.policies.create" @type="add" @disabled={{true}} @disabledTooltip="This link is disabled">
  *       Create policy
  *     </ToolbarLink>
  *   </ToolbarActions>
  * </Toolbar>
  * ```
  *
- * @param {array} params - Array to pass to LinkTo
+ * @param {string} route - route to pass to LinkTo
+ * @param {Model} model - model to pass to LinkTo
+ * @param {Array} models - array of models to pass to LinkTo
+ * @param {Object} query - query params to pass to LinkTo
+ * @param {boolean} replace - replace arg to pass to LinkTo
  * @param {string} type - Use "add" to change icon
  * @param {boolean} disabled - pass true to disable link
  * @param {string} disabledTooltip - tooltip to display on hover when disabled
@@ -25,13 +29,14 @@ export default class ToolbarLinkComponent extends Component {
   get glyph() {
     return this.args.type == 'add' ? 'plus' : 'chevron-right';
   }
-  // TODO JR: temporary workaround for params no longer supported on LinkTo
-  // args should be added for individual LinkTo args
-  get route() {
-    return this.args.params[0];
-  }
   get models() {
-    const [route, ...models] = this.args.params; // eslint-disable-line
-    return models;
+    const { model, models } = this.args;
+    if (model) {
+      return [model];
+    }
+    return models || [];
+  }
+  get query() {
+    return this.args.query || {};
   }
 }

@@ -1,7 +1,7 @@
 <div class="selectable-card is-rounded secondaries">
   <div class="level">
     <h3 class="card-title title is-5">{{this.replicationAttrs.secondaries.length}} Known Secondaries</h3>
-    <ToolbarLink @params={{array "mode.secondaries" this.cluster.replicationMode}} data-test-manage-link={{true}}>
+    <ToolbarLink @route="mode.secondaries" @model={{this.cluster.replicationMode}} data-test-manage-link>
       View all
     </ToolbarLink>
   </div>

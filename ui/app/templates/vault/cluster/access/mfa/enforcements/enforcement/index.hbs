@@ -50,8 +50,9 @@
     </button>
     <div class="toolbar-separator"></div>
     <ToolbarLink
-      @params={{array "vault.cluster.access.mfa.enforcements.enforcement.edit" this.model.id}}
-      data-test-enforcement-edit={{true}}
+      @route="vault.cluster.access.mfa.enforcements.enforcement.edit"
+      @model={{this.model.id}}
+      data-test-enforcement-edit
     >
       Edit enforcement
     </ToolbarLink>

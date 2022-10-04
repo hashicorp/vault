@@ -15,8 +15,9 @@
     {{/if}}
     {{#if this.model.canEdit}}
       <ToolbarLink
+        @route="vault.cluster.access.oidc.clients.client.edit"
+        @model={{this.model.name}}
         data-test-oidc-client-edit
-        @params={{array "vault.cluster.access.oidc.clients.client.edit" this.model.name}}
       >
         Edit application
       </ToolbarLink>
