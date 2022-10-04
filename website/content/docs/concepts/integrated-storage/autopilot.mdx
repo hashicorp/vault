@@ -17,7 +17,7 @@ These two features were introduced in Vault 1.11.
 Server stabilization helps to retain the stability of the Raft cluster by safely
 joining new voting nodes to the cluster. When a new voter node is joined to an
 existing cluster, autopilot adds it as a non-voter instead, and waits for a
-pre-configured amount of time to monitor it's health. If the node remains to be
+pre-configured amount of time to monitor its health. If the node remains to be
 healthy for the entire duration of stabilization, then that node will be
 promoted as a voter. The server stabilization period can be tuned using
 `server_stabilization_time` (see below).
