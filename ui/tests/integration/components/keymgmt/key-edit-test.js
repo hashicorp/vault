@@ -77,7 +77,6 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
   });
 
   test('it defaults to keyType rsa-2048', async function (assert) {
-    // Catches bug: https://hashicorp.atlassian.net/browse/VAULT-8517
     assert.expect(1);
     const store = this.owner.lookup('service:store');
     this.model = store.createRecord('keymgmt/key');
