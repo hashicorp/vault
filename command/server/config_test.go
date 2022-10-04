@@ -36,6 +36,10 @@ func TestParseListeners(t *testing.T) {
 	testParseListeners(t)
 }
 
+func TestParseUserLockouts(t *testing.T) {
+	testParseUserLockouts(t)
+}
+
 func TestParseSockaddrTemplate(t *testing.T) {
 	testParseSockaddrTemplate(t)
 }

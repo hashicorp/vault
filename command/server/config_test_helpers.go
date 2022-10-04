@@ -861,6 +861,73 @@ listener "tcp" {
 	}
 }
 
+func testParseUserLockouts(t *testing.T) {
+	obj, _ := hcl.Parse(strings.TrimSpace(`
+	user_lockout "all" {
+		lockout_duration = "40m"
+		lockout_counter_reset = "45m"
+		disable_lockout = "false"
+	}
+	  user_lockout "userpass" {
+	     lockout_threshold = "100"
+	     lockout_duration = "20m"
+	  }
+	  user_lockout "ldap" {
+		disable_lockout = "true"
+	 }`))
+
+	config := Config{
+		SharedConfig: &configutil.SharedConfig{},
+	}
+	list, _ := obj.Node.(*ast.ObjectList)
+	objList := list.Filter("user_lockout")
+	configutil.ParseUserLockouts(config.SharedConfig, objList)
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			UserLockouts: []*configutil.UserLockout{
+				{
+					Type:                   "ldap",
+					LockoutThreshold:       5,
+					LockoutThresholdRaw:    nil,
+					LockoutDuration:        2400000000000,
+					LockoutDurationRaw:     nil,
+					LockoutCounterReset:    2700000000000,
+					LockoutCounterResetRaw: nil,
+					DisableLockout:         true,
+					DisableLockoutRaw:      nil,
+				},
+				{
+					Type:                   "all",
+					LockoutThreshold:       5,
+					LockoutThresholdRaw:    nil,
+					LockoutDuration:        2400000000000,
+					LockoutDurationRaw:     nil,
+					LockoutCounterReset:    2700000000000,
+					LockoutCounterResetRaw: nil,
+					DisableLockout:         false,
+					DisableLockoutRaw:      nil,
+				},
+				{
+					Type:                   "userpass",
+					LockoutThreshold:       100,
+					LockoutThresholdRaw:    nil,
+					LockoutDuration:        1200000000000,
+					LockoutDurationRaw:     nil,
+					LockoutCounterReset:    2700000000000,
+					LockoutCounterResetRaw: nil,
+					DisableLockout:         false,
+					DisableLockoutRaw:      nil,
+				},
+			},
+		},
+	}
+	config.Prune()
+	if diff := deep.Equal(config, *expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
 func testParseSockaddrTemplate(t *testing.T) {
 	config, err := ParseConfig(`
 api_addr = <<EOF
