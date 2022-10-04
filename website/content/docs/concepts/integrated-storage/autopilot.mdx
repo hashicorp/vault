@@ -64,11 +64,10 @@ behavior. Autopilot gets initialized with the following default values.
     a server can go without leader contact before being considered failed. This
     takes effect only when `cleanup_dead_servers` is set.
 
-- `min_quorum` - This doesn't default to anything and will need to be set to at
-  least 3 when `cleanup_dead_servers` is set as `true`.
-  - Minimum number of servers allowed in a cluster before
-    autopilot can prune dead servers. This should at least be 3. Applicable only for
-    voting nodes.
+- `min_quorum` - This doesn't default to anything and should be set to the expected
+  number of voters in your cluster when `cleanup_dead_servers` is set as `true`.
+  - Minimum number of servers that should always be present in a cluster.
+  Autopilot will not prune servers below this number.
 
 - `max_trailing_logs` - `1000`
   - Amount of entries in the Raft Log that a server
@@ -78,7 +77,8 @@ behavior. Autopilot gets initialized with the following default values.
   - Limit on the amount of time a server can go without leader contact before being considered unhealthy.
 
 - `server_stabilization_time` - `10s`
-  - Minimum amount of time a server must be in a stable, healthy state before it can become a voter. Until that happens, it will be visible as a peer in the cluster, but as a non-voter, meaning it won't contribute to quorum.
+  - Minimum amount of time a server must be in a healthy state before it can become a voter. Until that happens,
+    it will be visible as a peer in the cluster, but as a non-voter, meaning it won't contribute to quorum.
 
 - `disable-upgrade-migration` - `false`
   - Controls whether to disable automated upgrade migrations, an Enterprise-only feature.

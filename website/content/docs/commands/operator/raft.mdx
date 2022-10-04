@@ -331,11 +331,11 @@ Flags applicable to this command are the following:
 - `max-trailing-logs` `(int)` - Amount of entries in the Raft Log that a server
   can be behind before being considered unhealthy. Defaults to `1000`.
 
-- `min-quorum` `(int)` - Minimum number of servers allowed in a cluster before
-  autopilot can prune dead servers. This should at least be 3. Applicable only for
-  voting nodes. There is no default.
+- `min-quorum` `(int)` - Minimum number of servers that should always be present in a cluster.
+  Autopilot will not prune servers below this number. This should be set to the expected number
+  of voters in your cluster. There is no default.
 
-- `server-stabilization-time` `(string)` - Minimum amount of time a server must be in a stable, healthy state before it
+- `server-stabilization-time` `(string)` - Minimum amount of time a server must be in a healthy state before it
   can become a voter. Until that happens, it will be visible as a peer in the cluster, but as a non-voter, meaning it
   won't contribute to quorum. Defaults to `10s`.
 
