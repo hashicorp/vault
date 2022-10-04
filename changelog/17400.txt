@@ -1,3 +1,0 @@
-```release-note:bug
-core: Fix panic caused in Vault Agent when rendering certificate templates
-```
