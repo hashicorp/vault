@@ -117,7 +117,6 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 
 			// Refresh gauge metrics that are looped
 			c.cachedGaugeMetricsEmitter()
-			c.stateLock.RUnlock()
 		case <-writeTimer:
 			l := newLockGrabber(c.stateLock.RLock, c.stateLock.RUnlock, stopCh)
 			go l.grab()

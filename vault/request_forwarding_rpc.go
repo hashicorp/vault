@@ -137,7 +137,7 @@ func (c *forwardingClient) startHeartbeat() {
 			Mode:     "standby",
 		}
 		tick := func() {
-			labels := []metrics.Label{}
+			labels := make([]metrics.Label, 0, 1)
 			defer metrics.MeasureSinceWithLabels([]string{"ha", "rpc", "client", "echo"}, time.Now(), labels)
 
 			req := &EchoRequest{

@@ -537,7 +537,7 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 		myAppliedIndex := b.raft.AppliedIndex()
 		for peerID, state := range b.followerStates.followers {
 			timeSinceLastHeartbeat := time.Now().Sub(state.LastHeartbeat) / time.Millisecond
-			b.logger.Trace("follower metrics", "peerID", peerID, "myAppliedIndex", myAppliedIndex, "appliedIndex", state.AppliedIndex, "lastHeartbeat", state.LastHeartbeat)
+			// b.logger.Trace("follower metrics", "peerID", peerID, "myAppliedIndex", myAppliedIndex, "appliedIndex", state.AppliedIndex, "lastHeartbeat", state.LastHeartbeat)
 			followerGauge(peerID, "last_heartbeat_ms", float32(timeSinceLastHeartbeat))
 			followerGauge(peerID, "applied_index_delta", float32(myAppliedIndex-state.AppliedIndex))
 
