@@ -35,7 +35,7 @@
         <ToolbarSecretLink
           @secret={{this.model.id}}
           @mode="credentials"
-          @queryParams={{query-params action="issue"}}
+          @queryParams={{hash action="issue"}}
           data-test-credentials-link={{true}}
         >
           Generate Certificate
@@ -45,7 +45,7 @@
         <ToolbarSecretLink
           @secret={{this.model.id}}
           @mode="credentials"
-          @queryParams={{query-params action="sign"}}
+          @queryParams={{hash action="sign"}}
           data-test-sign-link={{true}}
         >
           Sign Certificate
