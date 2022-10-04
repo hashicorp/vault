@@ -126,6 +126,14 @@ const (
 	flagNameAllowedManagedKeys = "allowed-managed-keys"
 	// flagNamePluginVersion selects what version of a plugin should be used.
 	flagNamePluginVersion = "plugin-version"
+	// flagNameUserLockoutThreshold is the flag name used for tuning the auth mount lockout threshold parameter
+	flagNameUserLockoutThreshold = "user-lockout-threshold"
+	// flagNameUserLockoutDuration is the flag name used for tuning the auth mount lockout duration parameter
+	flagNameUserLockoutDuration = "user-lockout-duration"
+	// flagNameUserLockoutCounterResetDuration is the flag name used for tuning the auth mount lockout counter reset parameter
+	flagNameUserLockoutCounterResetDuration = "user-lockout-counter-reset-duration"
+	// flagNameUserLockoutDisable is the flag name used for tuning the auth mount disable lockout parameter
+	flagNameUserLockoutDisable = "user-lockout-disable"
 )
 
 var (

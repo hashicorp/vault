@@ -150,7 +150,7 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 	})
 
 	f.IntVar(&IntVar{
-		Name:   "user-lockout-threshold",
+		Name:   flagNameUserLockoutThreshold,
 		Target: &c.flagUserLockoutThreshold,
 		Usage: "The threshold for user lockout for this auth method. If unspecified, this " +
 			"defaults to the Vault server's globally configured user lockout threshold, " +
@@ -158,7 +158,7 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 	})
 
 	f.DurationVar(&DurationVar{
-		Name:       "user-lockout-duration",
+		Name:       flagNameUserLockoutDuration,
 		Target:     &c.flagUserLockoutDuration,
 		Completion: complete.PredictAnything,
 		Usage: "The user lockout duration for this auth method. If unspecified, this " +
@@ -167,7 +167,7 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 	})
 
 	f.DurationVar(&DurationVar{
-		Name:       "user-lockout-counter-reset-duration",
+		Name:       flagNameUserLockoutCounterResetDuration,
 		Target:     &c.flagUserLockoutCounterResetDuration,
 		Completion: complete.PredictAnything,
 		Usage: "The user lockout counter reset duration for this auth method. If unspecified, this " +
@@ -176,7 +176,7 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 	})
 
 	f.BoolVar(&BoolVar{
-		Name:    "user-lockout-disable",
+		Name:    flagNameUserLockoutDisable,
 		Target:  &c.flagUserLockoutDisable,
 		Default: false,
 		Usage: "Disable user lockout for this auth method. If unspecified, this " +

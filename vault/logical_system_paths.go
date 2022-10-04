@@ -1544,7 +1544,7 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 				},
 				"user_lockout_config": {
 					Type:        framework.TypeMap,
-					Description: strings.TrimSpace(sysHelp["user_lockout_config"][0]),
+					Description: strings.TrimSpace(sysHelp["tune_user_lockout_config"][0]),
 				},
 				"plugin_version": {
 					Type:        framework.TypeString,
@@ -1935,7 +1935,7 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 				},
 				"user_lockout_config": {
 					Type:        framework.TypeMap,
-					Description: strings.TrimSpace(sysHelp["user_lockout_config"][0]),
+					Description: strings.TrimSpace(sysHelp["tune_user_lockout_config"][0]),
 				},
 			},
 

@@ -52,6 +52,8 @@ func ParseUserLockouts(result *SharedConfig, list *ast.ObjectList) error {
 			}
 
 			userLockoutConfig.Type = strings.ToLower(userLockoutConfig.Type)
+			// Supported auth methods for user lockout configuration: ldap, approle, userpass
+			// "all" is used to apply the configuration to all supported auth methods
 			switch userLockoutConfig.Type {
 			case "all", "ldap", "approle", "userpass":
 				result.found(userLockoutConfig.Type, userLockoutConfig.Type)
@@ -103,7 +105,8 @@ func ParseUserLockouts(result *SharedConfig, list *ast.ObjectList) error {
 	return nil
 }
 
-// setDefaultUserLockoutValuesInMap sets default user lockout values for key "all" (all auth methods) for user lockout fields that are not configured using config file
+// setDefaultUserLockoutValuesInMap sets default user lockout values for key "all" (all auth methods)
+// for user lockout fields that are not configured using config file
 func setDefaultUserLockoutValuesInMap(userLockoutsMap map[string]*UserLockout) map[string]*UserLockout {
 	if userLockoutAll, ok := userLockoutsMap["all"]; !ok {
 		var tmpUserLockoutConfig UserLockout
@@ -132,7 +135,8 @@ func setDefaultUserLockoutValuesInMap(userLockoutsMap map[string]*UserLockout) m
 	return userLockoutsMap
 }
 
-// setDefaultUserLockoutValuesInMap sets missing user lockout fields for auth methods with default values (from key "all") that are not configured using config file
+// setDefaultUserLockoutValuesInMap sets missing user lockout fields for auth methods
+// with default values (from key "all") that are not configured using config file
 func setMissingUserLockoutValuesInMap(userLockoutsMap map[string]*UserLockout) map[string]*UserLockout {
 	userLockoutsMap = setDefaultUserLockoutValuesInMap(userLockoutsMap)
 	for _, userLockoutAuth := range userLockoutsMap {
