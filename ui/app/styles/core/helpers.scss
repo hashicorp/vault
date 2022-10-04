@@ -101,6 +101,29 @@
   display: flex;
   justify-content: space-between !important;
 }
+
+// CSS GRID
+// grid container
+.is-grid {
+  display: grid;
+}
+.is-row-gap-medium {
+  row-gap: $spacing-m;
+}
+.is-grid-3-columns {
+  grid-template-columns: repeat(3, 1fr);
+}
+.is-grid-4-rows {
+  grid-template-rows: repeat(3, 1fr);
+}
+.is-medium-height {
+  height: $medium-height;
+}
+// grid items
+.is-grid-column-span-3 {
+  grid-column-end: span 3;
+}
+// end of grid
 .has-default-border {
   border: 1px solid $grey !important;
 }

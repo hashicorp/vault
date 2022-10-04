@@ -151,6 +151,26 @@ export default class PkiRoleEngineModel extends Model {
     ],
   })
   signatureBits;
+  // End of key params options
+
+  // Overriding Key usage options
+  // Turning an arrayList into checkboxes: https://www.vaultproject.io/api-docs/secret/pki#key_usage-1
+  @attr('string', {
+    label: 'Key usage',
+    subText: `Specifies the default key usage constraint on the issued certificate. To specify no default key usage constraints, set this to an empty list.`,
+    dontShowInput: true,
+  })
+  keyUsageLabel;
+  // all optional values to be added to the stringArray keyUsage https://pkg.go.dev/crypto/x509#KeyUsage
+  @attr('boolean') DigitalSignature;
+  @attr('boolean') KeyAgreement;
+  @attr('boolean') KeyEncipherment;
+  @attr('boolean') ContentCommitment;
+  @attr('boolean') DataEncipherment;
+  @attr('boolean') CertSign;
+  @attr('boolean') CrlSign;
+  @attr('boolean') EncipherOnly;
+  @attr('boolean') DecipherOnly;
 
   // must be a getter so it can be added to the prototype needed in the pathHelp service on the line here: if (newModel.merged || modelProto.useOpenAPI !== true) {
   get useOpenAPI() {
@@ -221,10 +241,16 @@ export default class PkiRoleEngineModel extends Model {
         },
         {
           'Key usage': [
-            'DigitalSignature', // ARG TODO: capitalized in the docs, but should confirm
+            'keyUsageLabel',
+            'DigitalSignature', // not case sensitive and being sent to POST request as an ArrayList for param keyUsage
             'KeyAgreement',
             'KeyEncipherment',
-            'extKeyUsage', // ARG TODO: takes a list, but we have these as checkboxes from the options on the golang site: https://pkg.go.dev/crypto/x509#ExtKeyUsage
+            'ContentCommitment',
+            'DataEncipherment',
+            'CertSign',
+            'CrlSign',
+            'EncipherOnly',
+            'DecipherOnly',
           ],
         },
         { 'Policy identifiers': ['policyIdentifiers'] },
