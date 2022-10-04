@@ -501,6 +501,7 @@ func extractCustomMetadata(secret *Secret) map[string]interface{} {
 	if !ok {
 		return nil
 	}
+
 	return cm
 }
 
