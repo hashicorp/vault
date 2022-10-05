@@ -249,6 +249,14 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 		}
 	}
 
+	if c.logger.IsInfo() {
+		pluginType := "secrets"
+		if isAuth {
+			pluginType = "auth"
+		}
+		c.logger.Info(fmt.Sprintf("successfully reloaded %s backend", pluginType), "type", entry.Type, "version", entry.Version, "path", entry.Path)
+	}
+
 	return nil
 }
 
