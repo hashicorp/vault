@@ -513,6 +513,11 @@ func TestDynamicSystemView(c *Core, ns *namespace.Namespace) *dynamicSystemView 
 
 // TestAddTestPlugin registers the testFunc as part of the plugin command to the
 // plugin catalog. If provided, uses tmpDir as the plugin directory.
+// NB: The test func you pass in MUST be in the same package as the parent test,
+// or the test func won't be compiled into the test binary being run and the output
+// will be something like:
+// stderr (ignored by go-plugin): "testing: warning: no tests to run"
+// stdout: "PASS"
 func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.PluginType, version string, testFunc string, env []string, tempDir string) {
 	file, err := os.Open(os.Args[0])
 	if err != nil {
