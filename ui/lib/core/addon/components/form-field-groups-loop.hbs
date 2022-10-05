@@ -16,7 +16,6 @@
         {{/unless}}
       {{/each}}
     {{else}}
-      {{! Groups hidden behind Toggles }}
       {{#let (camelize (concat "show" group)) as |prop|}}
         <ToggleButton
           @isOpen={{get @model prop}}

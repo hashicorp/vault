@@ -124,7 +124,6 @@ export default class PkiRoleEngineModel extends Model {
 
   // "possibleValues" for the field "keyBits" depends on the value of the selected "keyType"
   get keyBitsConditional() {
-    // ARG TODO confirm this is the correct matrix (probably with core)
     const keyBitOptions = {
       rsa: [2048, 3072, 4096],
       ec: [256, 224, 384, 521],
@@ -138,10 +137,12 @@ export default class PkiRoleEngineModel extends Model {
 
   @attr('number', {
     label: 'Signature bits',
+    subText: `Only applicable for key_type 'RSA'. Ignore for other key types.`,
+    defaultValue: 0,
     possibleValues: [
       {
         value: 0,
-        displayName: '0 to automatically detect based on key length',
+        displayName: 'Defaults to 0',
       },
       {
         value: 256,
@@ -164,16 +165,25 @@ export default class PkiRoleEngineModel extends Model {
   // The following turns options that go into an arrayList for param "key_usage" and "ext_key_usage" into checkboxes
   @attr('string', {
     label: 'Key usage',
-    subText: `Specifies the default key usage constraint on the issued certificate.`,
+    subText: `Specifies the default key usage constraint on the issued certificate. To specify no default key_usage constraints, uncheck every item in this list.`,
     dontShowInput: true,
     isTitleOfGridGroup: true,
   })
   keyUsageLabel;
 
   // https://pkg.go.dev/crypto/x509#KeyUsage
-  @attr('boolean') DigitalSignature;
-  @attr('boolean') KeyAgreement;
-  @attr('boolean') KeyEncipherment;
+  @attr('boolean', {
+    defaultValue: true,
+  })
+  DigitalSignature;
+  @attr('boolean', {
+    defaultValue: true,
+  })
+  KeyAgreement;
+  @attr('boolean', {
+    defaultValue: true,
+  })
+  KeyEncipherment;
   @attr('boolean') ContentCommitment;
   @attr('boolean') DataEncipherment;
   @attr('boolean') CertSign;
@@ -183,7 +193,8 @@ export default class PkiRoleEngineModel extends Model {
 
   @attr('string', {
     label: 'Extended key usage',
-    subText: 'Specifies the default key usage constraint on the issued certificate.',
+    subText:
+      'Specifies the default key usage constraint on the issued certificate. To specify no default ext_key_usage constraints, uncheck every item in this list.',
     dontShowInput: true,
     isTitleOfGridGroup: true,
   })
@@ -280,25 +291,25 @@ export default class PkiRoleEngineModel extends Model {
           'Key usage': [
             'keyUsageLabel',
             'DigitalSignature', // keeping these values capitalized to distinguish them from actual API params. The serializer changes them to an arrayList.
-            'KeyAgreement',
-            'KeyEncipherment',
             'ContentCommitment',
-            'DataEncipherment',
-            'CertSign',
             'CrlSign',
+            'KeyAgreement',
+            'DataEncipherment',
             'EncipherOnly',
+            'KeyEncipherment',
+            'CertSign',
             'DecipherOnly',
             'extKeyUsageLabel',
             'Any',
-            'ServerAuth',
-            'ClientAuth',
-            'CodesSigning',
             'EmailProtection',
-            'IpsecEndSystem',
-            'IpsecTunnel',
             'TimeStamping',
+            'ServerAuth',
+            'IpsecEndSystem',
             'OcspSigning',
+            'ClientAuth',
+            'IpsecTunnel',
             'IpsecUser',
+            'CodesSigning',
             'extKeyUsageOids',
           ],
         },
