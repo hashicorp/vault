@@ -31,15 +31,75 @@
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
     {{! ARG TODO write a test for namespace reminder }}
     <NamespaceReminder @mode={{if @model.isNew "create" "update"}} @noun="PKI role" />
-    <FormFieldGroupsLoop
-      @model={{@model}}
-      @mode={{if @model.isNew "create" "update"}}
-      @modelValidations={{@modelValidations}}
-      @showHelpText={{false}}
-      as |attr|
-    >
-      <RadioSelectTtlOrString @model={{@model}} @attr={{attr}} />
-    </FormFieldGroupsLoop>
+    {{#each @model.fieldGroups as |fieldGroup|}}
+      {{#each-in fieldGroup as |group fields|}}
+        {{#if (eq group "default")}}
+          {{#each fields as |attr|}}
+            {{! template-lint-configure simple-unless "warn"  }}
+            {{#unless (and (not-eq @mode "create") (eq attr.name "name"))}}
+              <FormField
+                data-test-field={{true}}
+                @attr={{attr}}
+                @model={{@model}}
+                @modelValidations={{@modelValidations}}
+                @showHelpText={{@showHelpText}}
+              >
+                {{yield attr}}
+              </FormField>
+            {{/unless}}
+          {{/each}}
+        {{else}}
+          {{! Groups hidden behind Toggles }}
+          {{#let (camelize (concat "show" group)) as |prop|}}
+            <ToggleButton
+              @isOpen={{get @model prop}}
+              @openLabel={{concat "Hide " group}}
+              @closedLabel={{group}}
+              @onClick={{fn (mut (get @model prop))}}
+              class="is-block"
+              data-test-toggle-group={{group}}
+            />
+            {{#if (get @model prop)}}
+              {{! Key usage group is displayed as a CSS Grid }}
+              {{#if (eq group "Key usage")}}
+                <div class="box is-marginless">
+                  <div class="is-grid is-grid-3-columns is-grid-4-rows is-large-height is-row-gap-medium">
+                    {{#each fields as |attr|}}
+                      {{! The first item should be a label with explanation text that spans 100% of the grid's columns }}
+                      <div class={{if attr.options.isTitleOfGridGroup "is-grid-column-span-3" ""}}>
+                        <FormField
+                          data-test-field={{true}}
+                          @attr={{attr}}
+                          @model={{@model}}
+                          @modelValidations={{@modelValidations}}
+                          @showHelpText={{@showHelpText}}
+                        >
+                          {{yield attr}}
+                        </FormField>
+                      </div>
+                    {{/each}}
+                  </div>
+                </div>
+              {{else}}
+                <div class="box is-marginless">
+                  {{#each fields as |attr|}}
+                    <FormField
+                      data-test-field={{true}}
+                      @attr={{if (eq attr.name "keyBits") @model.keyBitsConditional attr}}
+                      @model={{@model}}
+                      @modelValidations={{@modelValidations}}
+                      @showHelpText={{@showHelpText}}
+                    >
+                      {{yield attr}}
+                    </FormField>
+                  {{/each}}
+                </div>
+              {{/if}}
+            {{/if}}
+          {{/let}}
+        {{/if}}
+      {{/each-in}}
+    {{/each}}
   </div>
   <div class="has-top-padding-s">
     <button type="submit" class="button is-primary {{if this.save.isRunning 'is-loading'}}" disabled={{this.save.isRunning}}>

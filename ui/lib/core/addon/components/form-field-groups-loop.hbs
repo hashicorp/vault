@@ -27,60 +27,19 @@
           data-test-toggle-group={{group}}
         />
         {{#if (get @model prop)}}
-          {{! Models that have a Group displayed as a CSS Grid }}
-          {{#if (gt this.gridGroups.length 0)}}
-            {{#each this.gridGroups as |gridGroup|}}
-              {{#if (eq gridGroup group)}}
-                <div class="box is-marginless">
-                  <div class="is-grid is-grid-3-columns is-grid-4-rows is-large-height is-row-gap-medium">
-                    {{#each fields as |attr|}}
-                      {{! The first item should be a label with explanation text that spans 100% of the grid's columns }}
-                      <div class={{if attr.options.isTitleOfGridGroup "is-grid-column-span-3" ""}}>
-                        <FormField
-                          data-test-field={{true}}
-                          @attr={{attr}}
-                          @model={{@model}}
-                          @modelValidations={{@modelValidations}}
-                          @showHelpText={{@showHelpText}}
-                        >
-                          {{yield attr}}
-                        </FormField>
-                      </div>
-                    {{/each}}
-                  </div>
-                </div>
-              {{else}}
-                <div class="box is-marginless">
-                  {{#each fields as |attr|}}
-                    <FormField
-                      data-test-field={{true}}
-                      @attr={{if (eq attr.name "keyBits") @model.keyBitsConditional attr}}
-                      @model={{@model}}
-                      @modelValidations={{@modelValidations}}
-                      @showHelpText={{@showHelpText}}
-                    >
-                      {{yield attr}}
-                    </FormField>
-                  {{/each}}
-                </div>
-              {{/if}}
+          <div class="box is-marginless">
+            {{#each fields as |attr|}}
+              <FormField
+                data-test-field={{true}}
+                @attr={{attr}}
+                @model={{@model}}
+                @modelValidations={{@modelValidations}}
+                @showHelpText={{@showHelpText}}
+              >
+                {{yield attr}}
+              </FormField>
             {{/each}}
-          {{else}}
-            {{! Models without a Group displayed as a CSS Grid }}
-            <div class="box is-marginless">
-              {{#each fields as |attr|}}
-                <FormField
-                  data-test-field={{true}}
-                  @attr={{attr}}
-                  @model={{@model}}
-                  @modelValidations={{@modelValidations}}
-                  @showHelpText={{@showHelpText}}
-                >
-                  {{yield attr}}
-                </FormField>
-              {{/each}}
-            </div>
-          {{/if}}
+          </div>
         {{/if}}
       {{/let}}
     {{/if}}
