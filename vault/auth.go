@@ -672,13 +672,6 @@ func (c *Core) persistAuth(ctx context.Context, table *MountTable, local *bool) 
 		return fmt.Errorf("invalid table type given, not persisting")
 	}
 
-	for _, entry := range table.Entries {
-		if entry.Table != table.Type {
-			c.logger.Error("given entry to persist in auth table has wrong table value", "path", entry.Path, "entry_table_type", entry.Table, "actual_type", table.Type)
-			return fmt.Errorf("invalid auth entry found, not persisting")
-		}
-	}
-
 	nonLocalAuth := &MountTable{
 		Type: credentialTableType,
 	}
@@ -688,6 +681,11 @@ func (c *Core) persistAuth(ctx context.Context, table *MountTable, local *bool) 
 	}
 
 	for _, entry := range table.Entries {
+		if entry.Table != table.Type {
+			c.logger.Error("given entry to persist in auth table has wrong table value", "path", entry.Path, "entry_table_type", entry.Table, "actual_type", table.Type)
+			return fmt.Errorf("invalid auth entry found, not persisting")
+		}
+
 		if entry.Local {
 			localAuth.Entries = append(localAuth.Entries, entry)
 		} else {
