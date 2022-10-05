@@ -24,6 +24,7 @@ const MODEL_GROUPS_DISPLAY_GRID = ['Key usage'];
 
 export default class FormFieldGroupsLoop extends Component {
   @tracked gridGroups = [];
+
   constructor() {
     super(...arguments);
     let displayGridGroups = this.args.model.fieldGroups?.filter((group) => {

@@ -22,8 +22,9 @@ export default class PkiRoleEngineAdapter extends ApplicationAdapter {
   }
 
   createRecord(store, type, snapshot) {
-    let name = snapshot.attr('name');
-    let url = this._urlForRole(snapshot.record.backend, name);
+    const name = snapshot.attr('name');
+    const url = this._urlForRole(snapshot.record.backend, name);
+
     return this.ajax(url, 'POST', { data: this.serialize(snapshot) }).then(() => {
       return {
         id: name,
@@ -35,6 +36,7 @@ export default class PkiRoleEngineAdapter extends ApplicationAdapter {
 
   fetchByQuery(store, query) {
     const { id, backend } = query;
+
     return this.ajax(this._urlForRole(backend, id), 'GET', this._optionsForQuery(id)).then((resp) => {
       const data = {
         id,

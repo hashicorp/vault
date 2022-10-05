@@ -42,7 +42,7 @@ export default class PkiRoleEngineModel extends Model {
       'Also called the not_before_duration property. Allows certificates to be valid for a certain time period before now. This is useful to correct clock misalignment on various systems when setting up your CA.',
     editType: 'ttl',
     hideToggle: true,
-    defaultValue: '30s', // The type in they API is "duration" which accepts both an integer and string e.g. 30 || '30s'
+    defaultValue: '30s', // The API type is "duration" which accepts both an integer and string e.g. 30 || '30s'
   })
   notBeforeDuration;
 
@@ -162,7 +162,7 @@ export default class PkiRoleEngineModel extends Model {
   /* End of overriding Key parameters options */
 
   /* Overriding Key usage options */
-  // The following turns options that go into an arrayList for param "key_usage" into checkboxes: https://www.vaultproject.io/api-docs/secret/pki#key_usage-1
+  // The following turns options that go into an arrayList for param "key_usage" and "ext_key_usage" into checkboxes
   @attr('string', {
     label: 'Key usage',
     subText: `Specifies the default key usage constraint on the issued certificate. To specify no default key usage constraints, set this to an empty list.`,
@@ -269,9 +269,9 @@ export default class PkiRoleEngineModel extends Model {
             'allowSubdomains',
             'allowGlobDomains',
             'allowWildcardCertificates',
-            'allowLocalhost', // default: true
+            'allowLocalhost', // default: true (returned true by OpenApi)
             'allowAnyName',
-            'enforceHostnames', // default: true
+            'enforceHostnames', // default: true (returned true by OpenApi)
             'moreInfo', // shows as helperText with icon at bottom of the options box.
           ],
         },
@@ -281,7 +281,7 @@ export default class PkiRoleEngineModel extends Model {
         {
           'Key usage': [
             'keyUsageLabel',
-            'DigitalSignature', // These values are not not case sensitive and being sent to POST request as an ArrayList for param keyUsage
+            'DigitalSignature', // keeping these values capitalized to distinguish them from actual API params. The serializer changes them to an arrayList.
             'KeyAgreement',
             'KeyEncipherment',
             'ContentCommitment',

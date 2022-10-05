@@ -44,8 +44,9 @@ export default class PkiRoleEngineSerializer extends ApplicationSerializer {
       1. Turn the object Json into a key/value array of arrays so we can filter over it.
       2. This returns as the const filtered = [['content_commitment',true],['crl_sign',true]]
       3. Flatten this array of nested arrays to return const filteredFlatted = ['content_commitment',true,'crl_sign',true]
-      4. Turn snake_case into one word (e.g. crl_sign to crlsign), which is required by backend. https://github.com/hashicorp/vault-enterprise/blob/9cbd80b51e0579d19dad97e7ff0495210b7920c0/builtin/logical/pki/path_roles.go#L974-L999
-      5. Filter on the filteredFlattened to return only strings so that we add the the key_usage param = ['contentcommitment','crlsign']
+      4. Filter on the filteredFlattened to return only strings const stringsOnlyKeyUsage = ['content_commitment','crl_sign']
+      5. Turn snake_case into one word (e.g. crl_sign to crlsign), which is required by backend. https://github.com/hashicorp/vault-enterprise/blob/9cbd80b51e0579d19dad97e7ff0495210b7920c0/builtin/logical/pki/path_roles.go#L974-L999
+      6. Assign the key_usage param json.key_usage = ['contentcommitment','crlsign']
       6. cleanup: remove from model the unused params via the delete operation. 
     */
     const filteredKeyUsage = jsonAsArray.filter(([key]) => {
