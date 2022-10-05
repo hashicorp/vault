@@ -28,15 +28,13 @@ else
 fi
 
 if [[ "$(echo $version |awk -F'.' '{print $2}')" -ge 11 ]]; then
-  version_expected="Vault v$release ($sha), built $build_date"
+  version_expected="Vault v$version ($sha), built $build_date"
 else
-  version_expected="Vault v$release ($sha)"
+  version_expected="Vault v$version ($sha)"
 fi
 
 case "$release" in
-  *+oss) [[ "$(echo $version |awk -F'.' '{print $2}')" -ge 11 ]] && \
-    version_expected="Vault v$version ($sha), built $build_date" || \
-    version_expected="Vault v$version ($sha)" ;;
+  *+oss) ;;
   *+ent) ;;
   *+ent.hsm) version_expected="$version_expected (cgo)";;
   *+ent.fips1402) version_expected="$version_expected (cgo)" ;;
