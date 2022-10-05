@@ -23,8 +23,9 @@ func (c ctxKeyForwardedRequestMountAccessor) String() string {
 }
 
 type dynamicSystemView struct {
-	core       *Core
-	mountEntry *MountEntry
+	core        *Core
+	mountEntry  *MountEntry
+	perfStandby bool
 }
 
 type extendedSystemView interface {
@@ -178,7 +179,7 @@ func (d dynamicSystemView) LocalMount() bool {
 // in read mode.
 func (d dynamicSystemView) ReplicationState() consts.ReplicationState {
 	state := d.core.ReplicationState()
-	if d.core.perfStandby {
+	if d.perfStandby {
 		state |= consts.ReplicationPerformanceStandby
 	}
 	return state

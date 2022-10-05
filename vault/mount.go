@@ -1298,13 +1298,6 @@ func (c *Core) persistMounts(ctx context.Context, table *MountTable, local *bool
 		return fmt.Errorf("invalid table type given, not persisting")
 	}
 
-	for _, entry := range table.Entries {
-		if entry.Table != table.Type {
-			c.logger.Error("given entry to persist in mount table has wrong table value", "path", entry.Path, "entry_table_type", entry.Table, "actual_type", table.Type)
-			return fmt.Errorf("invalid mount entry found, not persisting")
-		}
-	}
-
 	nonLocalMounts := &MountTable{
 		Type: mountTableType,
 	}
@@ -1314,6 +1307,11 @@ func (c *Core) persistMounts(ctx context.Context, table *MountTable, local *bool
 	}
 
 	for _, entry := range table.Entries {
+		if entry.Table != table.Type {
+			c.logger.Error("given entry to persist in mount table has wrong table value", "path", entry.Path, "entry_table_type", entry.Table, "actual_type", table.Type)
+			return fmt.Errorf("invalid mount entry found, not persisting")
+		}
+
 		if entry.Local {
 			localMounts.Entries = append(localMounts.Entries, entry)
 		} else {

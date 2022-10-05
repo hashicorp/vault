@@ -1,4 +1,4 @@
-<div class="field is-grouped">
+<div class="field is-grouped" ...attributes>
   <div class="control is-expanded">
     {{#if @label}}
       <label for={{@id}} class="is-label">{{@label}}</label>
@@ -12,7 +12,7 @@
       @type="text"
       @value={{this.searchInput}}
       {{on "keyup" this.inputChanged}}
-      placeholder={{@placeHolder}}
+      placeholder={{@placeholder}}
     />
   </div>
 </div>

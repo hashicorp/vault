@@ -1,0 +1,3 @@
+```release-note:bug
+core: fix race when using SystemView.ReplicationState outside of a request context
+```
