@@ -93,8 +93,8 @@ module('Unit | Service | control group', function (hooks) {
         return result.then(
           () => {},
           (err) => {
-            assert.equal(err.token, 'secret');
-            assert.equal(err.accessor, 'lookup');
+            assert.strictEqual(err.token, 'secret');
+            assert.strictEqual(err.accessor, 'lookup');
           }
         );
       },
@@ -191,7 +191,7 @@ module('Unit | Service | control group', function (hooks) {
     let accessor = '12345';
     let path = 'kv/foo/bar';
     let expectedKey = `${CONTROL_GROUP_PREFIX}${accessor}${TOKEN_SEPARATOR}${path}`;
-    assert.equal(storageKey(accessor, path), expectedKey, 'uses expected key');
+    assert.strictEqual(storageKey(accessor, path), expectedKey, 'uses expected key');
   });
 
   test('keyFromAccessor', function (assert) {
@@ -209,8 +209,8 @@ module('Unit | Service | control group', function (hooks) {
     store.setItem(expectedKey, data);
     store.setItem(`${CONTROL_GROUP_PREFIX}2345${TOKEN_SEPARATOR}${path}`, 'ok');
 
-    assert.equal(subject.keyFromAccessor(accessor), expectedKey, 'finds key given the accessor');
-    assert.equal(subject.keyFromAccessor('foo'), null, 'returns null if no key was found');
+    assert.strictEqual(subject.keyFromAccessor(accessor), expectedKey, 'finds key given the accessor');
+    assert.strictEqual(subject.keyFromAccessor('foo'), null, 'returns null if no key was found');
   });
 
   test('storeControlGroupToken', function (assert) {
@@ -245,7 +245,7 @@ module('Unit | Service | control group', function (hooks) {
     let expectedKey = `${CONTROL_GROUP_PREFIX}${accessor}${TOKEN_SEPARATOR}${path}`;
     store.setItem(expectedKey, { one: '2' });
     subject.deleteControlGroupToken(accessor);
-    assert.equal(Object.keys(store.items).length, 0, 'there are no keys stored in storage');
+    assert.strictEqual(Object.keys(store.items).length, 0, 'there are no keys stored in storage');
   });
 
   test('deleteTokens', function (assert) {
@@ -261,10 +261,10 @@ module('Unit | Service | control group', function (hooks) {
     store.setItem(keyOne, { one: '2' });
     store.setItem(keyTwo, { two: '2' });
     store.setItem('value', 'one');
-    assert.equal(Object.keys(store.items).length, 3, 'stores 3 values');
+    assert.strictEqual(Object.keys(store.items).length, 3, 'stores 3 values');
     subject.deleteTokens();
-    assert.equal(Object.keys(store.items).length, 1, 'removes tokens with control group prefix');
-    assert.equal(store.getItem('value'), 'one', 'keeps the non-prefixed value');
+    assert.strictEqual(Object.keys(store.items).length, 1, 'removes tokens with control group prefix');
+    assert.strictEqual(store.getItem('value'), 'one', 'keeps the non-prefixed value');
   });
 
   test('wrapInfoForAccessor', function (assert) {

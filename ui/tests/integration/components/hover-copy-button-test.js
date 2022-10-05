@@ -21,7 +21,7 @@ module('Integration | Component | hover copy button', function (hooks) {
     assert.ok(component.buttonIsVisible);
     await component.mouseEnter();
     await settled();
-    assert.equal(component.tooltipText, 'Copy', 'shows copy');
+    assert.strictEqual(component.tooltipText, 'Copy', 'shows copy');
   });
 
   test('it has the correct class when alwaysShow is true', async function (assert) {

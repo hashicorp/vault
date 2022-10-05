@@ -248,7 +248,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     let backend = `database-${Date.now()}`;
     await mountSecrets.enable('database', backend);
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/list`,
       'Mounts and redirects to connection list page'
@@ -258,7 +258,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       .dom('.active[data-test-secret-list-tab="Connections"]')
       .exists('Has Connections tab which is active');
     await click('[data-test-tab="overview"]');
-    assert.equal(currentURL(), `/vault/secrets/${backend}/overview`, 'Tab links to overview page');
+    assert.strictEqual(currentURL(), `/vault/secrets/${backend}/overview`, 'Tab links to overview page');
     assert.dom('[data-test-component="empty-state"]').exists('Empty state also exists on overview page');
     assert.dom('[data-test-secret-list-tab="Roles"]').exists('Has Roles tab');
   });
@@ -268,7 +268,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     const backend = await mount();
     for (let testCase of connectionTests) {
       await connectionPage.visitCreate({ backend });
-      assert.equal(currentURL(), `/vault/secrets/${backend}/create`, 'Correct creation URL');
+      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/create`, 'Correct creation URL');
       assert
         .dom('[data-test-empty-state-title]')
         .hasText('No plugin selected', 'No plugin is selected by default and empty state shows');
@@ -316,7 +316,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       // click "Add Role"
       await connectionPage.addRole();
       await settled();
-      assert.equal(
+      assert.strictEqual(
         searchSelectComponent.selectedOptions[0].text,
         testCase.name,
         'Database connection is pre-selected on the form'
@@ -338,13 +338,13 @@ module('Acceptance | secrets/database/*', function (hooks) {
         { label: 'Write concern', name: 'write_concern' },
       ],
     };
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/list`,
       'Mounts and redirects to connection list page'
     );
     await connectionPage.createLink();
-    assert.equal(currentURL(), `/vault/secrets/${backend}/create`, 'Create link goes to create page');
+    assert.strictEqual(currentURL(), `/vault/secrets/${backend}/create`, 'Create link goes to create page');
     assert
       .dom('[data-test-empty-state-title]')
       .hasText('No plugin selected', 'No plugin is selected by default and empty state shows');
@@ -366,7 +366,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       .dom('.modal.is-active .title')
       .hasText('Rotate your root credentials?', 'Modal appears asking to ');
     await connectionPage.enable();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/show/${connectionDetails.id}`,
       'Saves connection and takes you to show page'
@@ -389,7 +389,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     await fillIn('[data-test-confirmation-modal-input="Delete connection?"]', connectionDetails.id);
     await click('[data-test-confirm-button]');
 
-    assert.equal(currentURL(), `/vault/secrets/${backend}/list`, 'Redirects to connection list page');
+    assert.strictEqual(currentURL(), `/vault/secrets/${backend}/list`, 'Redirects to connection list page');
     assert
       .dom('[data-test-empty-state-title]')
       .hasText('No connections in this backend', 'No connections listed because it was deleted');
@@ -427,7 +427,11 @@ module('Acceptance | secrets/database/*', function (hooks) {
     await logout.visit();
     await authPage.login(token);
     await connectionPage.visitShow({ backend, id: connection });
-    assert.equal(currentURL(), `/vault/secrets/${backend}/show/${connection}`, 'Allows reading connection');
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${backend}/show/${connection}`,
+      'Allows reading connection'
+    );
     assert
       .dom('[data-test-database-connection-delete]')
       .doesNotExist('Delete button does not show due to permissions');
@@ -457,7 +461,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       .dom('[data-test-component="empty-state"]')
       .exists({ count: 2 }, 'Two empty states exist before selections made');
     await clickTrigger('#database');
-    assert.equal(searchSelectComponent.options.length, 1, 'list shows existing connections so far');
+    assert.strictEqual(searchSelectComponent.options.length, 1, 'list shows existing connections so far');
     await selectChoose('#database', '.ember-power-select-option', 0);
     assert
       .dom('[data-test-component="empty-state"]')
@@ -514,7 +518,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert.dom('[data-test-secret-list-tab="Roles"]').exists('renders connections tab');
 
     await click('[data-test-secret-create="connections"]');
-    assert.equal(currentURL(), '/vault/secrets/database/create');
+    assert.strictEqual(currentURL(), '/vault/secrets/database/create');
 
     // Login with restricted policy
     await logout.visit();
@@ -532,6 +536,6 @@ module('Acceptance | secrets/database/*', function (hooks) {
       .exists({ count: 1 }, 'renders only the connection card');
 
     await click('[data-test-action-text="Configure new"]');
-    assert.equal(currentURL(), '/vault/secrets/database/create?itemType=connection');
+    assert.strictEqual(currentURL(), '/vault/secrets/database/create?itemType=connection');
   });
 });

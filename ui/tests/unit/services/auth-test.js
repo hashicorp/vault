@@ -18,8 +18,8 @@ module('Unit | Service | auth', function (hooks) {
 
       let resp = service.calculateExpiration(response);
 
-      assert.equal(resp.ttl, ttlValue, 'returns the ttl');
-      assert.equal(
+      assert.strictEqual(resp.ttl, ttlValue, 'returns the ttl');
+      assert.strictEqual(
         resp.tokenExpirationEpoch,
         now + ttlValue * 1e3,
         'calculates expiration from ttl as epoch timestamp'

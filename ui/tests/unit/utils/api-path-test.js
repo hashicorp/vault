@@ -11,7 +11,7 @@ module('Unit | Util | api path', function () {
     let ret = apiPath`foo/${'one'}/${'two'}`;
     let result = ret({ one: 1, two: 2 });
 
-    assert.equal(result, 'foo/1/2', 'returns the expected string');
+    assert.strictEqual(result, 'foo/1/2', 'returns the expected string');
   });
 
   test('it throws when the key is not found in the context', function (assert) {

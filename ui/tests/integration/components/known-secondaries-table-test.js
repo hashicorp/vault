@@ -30,7 +30,7 @@ module('Integration | Component | replication known-secondaries-table', function
     await render(hbs`<KnownSecondariesTable @secondaries={{secondaries}} />`);
 
     SECONDARIES.forEach((secondary) => {
-      assert.equal(
+      assert.strictEqual(
         this.element.querySelector(`[data-test-secondaries=row-for-${secondary.node_id}]`).innerHTML.trim(),
         secondary.node_id,
         'shows a table row and ID for each known secondary'
@@ -39,7 +39,7 @@ module('Integration | Component | replication known-secondaries-table', function
       if (secondary.api_address) {
         const expectedUrl = `${secondary.api_address}/ui/`;
 
-        assert.equal(
+        assert.strictEqual(
           this.element.querySelector(`[data-test-secondaries=api-address-for-${secondary.node_id}]`).href,
           expectedUrl,
           'renders a URL to the secondary UI'
@@ -50,7 +50,7 @@ module('Integration | Component | replication known-secondaries-table', function
         );
       }
 
-      assert.equal(
+      assert.strictEqual(
         this.element
           .querySelector(`[data-test-secondaries=connection-status-for-${secondary.node_id}]`)
           .innerHTML.trim(),

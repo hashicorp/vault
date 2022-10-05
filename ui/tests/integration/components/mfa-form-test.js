@@ -116,7 +116,7 @@ module('Integration | Component | mfa-form', function (hooks) {
     });
 
     this.onSuccess = (resp) =>
-      assert.equal(resp, 'test response', 'Response is returned in onSuccess callback');
+      assert.strictEqual(resp, 'test response', 'Response is returned in onSuccess callback');
 
     await render(hbs`
       <Mfa::MfaForm
@@ -157,7 +157,7 @@ module('Integration | Component | mfa-form', function (hooks) {
     });
 
     this.onSuccess = (resp) =>
-      assert.equal(resp, 'test response', 'Response is returned in onSuccess callback');
+      assert.strictEqual(resp, 'test response', 'Response is returned in onSuccess callback');
 
     await render(hbs`
       <Mfa::MfaForm

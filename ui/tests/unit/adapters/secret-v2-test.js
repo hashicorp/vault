@@ -59,8 +59,8 @@ module('Unit | Adapter | secret-v2', function (hooks) {
       let adapter = this.owner.lookup('adapter:secret-v2');
       adapter[adapterMethod](store, type, queryOrSnapshot);
       let { url, method } = this.server.handledRequests[0];
-      assert.equal(url, expectedURL, `${adapterMethod} calls the correct url: ${expectedURL}`);
-      assert.equal(
+      assert.strictEqual(url, expectedURL, `${adapterMethod} calls the correct url: ${expectedURL}`);
+      assert.strictEqual(
         method,
         expectedHttpVerb,
         `${adapterMethod} uses the correct http verb: ${expectedHttpVerb}`

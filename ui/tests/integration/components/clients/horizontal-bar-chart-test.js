@@ -32,8 +32,8 @@ module('Integration | Component | clients/horizontal-bar-chart', function (hooks
     const dataBars = findAll('[data-test-horizontal-bar-chart] rect.data-bar');
     const actionBars = findAll('[data-test-horizontal-bar-chart] rect.action-bar');
 
-    assert.equal(actionBars.length, dataArray.length, 'renders correct number of hover bars');
-    assert.equal(dataBars.length, dataArray.length * 2, 'renders correct number of data bars');
+    assert.strictEqual(actionBars.length, dataArray.length, 'renders correct number of hover bars');
+    assert.strictEqual(dataBars.length, dataArray.length * 2, 'renders correct number of data bars');
 
     const textLabels = this.element.querySelectorAll('[data-test-horizontal-bar-chart] .tick text');
     const textTotals = this.element.querySelectorAll('[data-test-horizontal-bar-chart] text.total-value');
@@ -71,8 +71,8 @@ module('Integration | Component | clients/horizontal-bar-chart', function (hooks
     const dataBars = findAll('[data-test-horizontal-bar-chart] rect.data-bar');
     const actionBars = findAll('[data-test-horizontal-bar-chart] rect.action-bar');
 
-    assert.equal(actionBars.length, dataArray.length, 'renders correct number of hover bars');
-    assert.equal(dataBars.length, dataArray.length * 2, 'renders correct number of data bars');
+    assert.strictEqual(actionBars.length, dataArray.length, 'renders correct number of hover bars');
+    assert.strictEqual(dataBars.length, dataArray.length * 2, 'renders correct number of data bars');
 
     for (let [i, bar] of actionBars.entries()) {
       let percent = Math.round((dataArray[i].clients / totalObject.clients) * 100);

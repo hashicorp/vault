@@ -32,14 +32,14 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
       .exists({ count: 3 }, 'Validation error messages are displayed');
 
     await click('[data-test-mlef-cancel]');
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.enforcements.index',
       'Cancel transitions to enforcements list'
     );
     await click('[data-test-enforcement-create]');
     await click('.breadcrumb a');
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.enforcements.index',
       'Breadcrumb transitions to enforcements list'
@@ -52,7 +52,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
     await fillIn('[data-test-mount-accessor-select]', 'auth_userpass_bb95c2b1');
     await click('[data-test-mlef-add-target]');
     await click('[data-test-mlef-save]');
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.enforcements.enforcement.index',
       'Route transitions to enforcement on save success'
@@ -68,7 +68,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
       .includesText('New enforcement', 'New enforcement link renders');
 
     await click('[data-test-enforcement-create]');
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.enforcements.create',
       'New enforcement link transitions to create route'
@@ -85,7 +85,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
 
     await click('[data-test-popup-menu-trigger]');
     await click('[data-test-list-item-link="details"]');
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.enforcements.enforcement.index',
       'Details more menu action transitions to enforcement route'
@@ -93,7 +93,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
     await click('.breadcrumb a');
     await click('[data-test-popup-menu-trigger]');
     await click('[data-test-list-item-link="edit"]');
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.enforcements.enforcement.edit',
       'Edit more menu action transitions to enforcement edit route'
@@ -166,7 +166,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
     assert.dom('[data-test-confirm-button]').isDisabled('Delete button disabled with no confirmation');
     await fillIn('[data-test-confirmation-modal-input]', enforcement.name);
     await click('[data-test-confirm-button]');
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.enforcements.index',
       'Route transitions to enforcements list on delete success'
@@ -205,7 +205,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
     await click('[data-test-mlef-remove-target="Authentication method"]');
     await click('[data-test-mlef-save]');
 
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.enforcements.enforcement.index',
       'Route transitions to enforcement on save success'

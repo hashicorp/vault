@@ -21,7 +21,7 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
   test('it navigates to namespaces page', async function (assert) {
     assert.expect(1);
     await page.visit();
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.namespaces.index',
       'navigates to the correct route'
@@ -33,7 +33,7 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     await page.visit();
     const store = this.owner.lookup('service:store');
     // Default page size is 15
-    assert.equal(store.peekAll('namespace').length, 15, 'Store has 15 namespaces records');
+    assert.strictEqual(store.peekAll('namespace').length, 15, 'Store has 15 namespaces records');
     assert.dom('.list-item-row').exists({ count: 15 });
     assert.dom('[data-test-list-view-pagination]').exists();
   });

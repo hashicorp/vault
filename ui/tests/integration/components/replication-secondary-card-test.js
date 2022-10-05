@@ -46,7 +46,7 @@ module('Integration | Component | replication-secondary-card', function (hooks) 
     const url = this.element.querySelector('[data-test-primary-link]').href;
     const expectedUrl = `${REPLICATION_DETAILS.primaries[0].api_address}/ui/`;
 
-    assert.equal(url, expectedUrl, 'it renders a link to the primary cluster UI');
+    assert.strictEqual(url, expectedUrl, 'it renders a link to the primary cluster UI');
   });
 
   test('it does not render a link to the primary cluster UI when the primary api address or known primaries are unknown', async function (assert) {

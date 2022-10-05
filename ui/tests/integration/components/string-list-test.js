@@ -110,7 +110,7 @@ module('Integration | Component | string list', function (hooks) {
     assert.expect(2);
     this.set('inputValue', 'foo');
     this.set('onChange', function (val) {
-      assert.equal(val, 'foo,bar', 'calls onChange with expected value');
+      assert.strictEqual(val, 'foo,bar', 'calls onChange with expected value');
     });
     await render(hbs`<StringList @inputValue={{inputValue}} @onChange={{onChange}}/>`);
     await fillIn('[data-test-string-list-input="1"]', 'bar');
@@ -121,7 +121,7 @@ module('Integration | Component | string list', function (hooks) {
     assert.expect(4);
     this.set('inputValue', ['foo', 'bar']);
     this.set('onChange', function (val) {
-      assert.equal(val, 'bar', 'calls onChange with expected value');
+      assert.strictEqual(val, 'bar', 'calls onChange with expected value');
     });
     await render(hbs`<StringList @inputValue={{inputValue}} @onChange={{onChange}} />`);
 

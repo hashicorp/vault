@@ -14,7 +14,7 @@ module('Acceptance | /access/identity/entities/create', function (hooks) {
 
   test('it visits the correct page', async function (assert) {
     await page.visit({ item_type: 'entities' });
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.identity.create',
       'navigates to the correct route'

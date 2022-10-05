@@ -28,10 +28,10 @@ module('Integration | Component | InfoTable', function (hooks) {
     assert.dom('[data-test-info-table] th').includesText(HEADER, `shows the table header`);
 
     const rows = document.querySelectorAll('.info-table-row');
-    assert.equal(rows.length, ITEMS.length, 'renders an InfoTableRow for each item');
+    assert.strictEqual(rows.length, ITEMS.length, 'renders an InfoTableRow for each item');
 
     rows.forEach((row, i) => {
-      assert.equal(row.innerText, ITEMS[i], 'handles strings and numbers as row values');
+      assert.strictEqual(row.innerText, ITEMS[i], 'handles strings and numbers as row values');
     });
   });
 });

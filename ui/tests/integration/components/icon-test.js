@@ -27,7 +27,7 @@ module('Integration | Component | icon', function (hooks) {
     let promise = waitForError();
     render(hbs`<Icon @name="vault-logo" @size="12"/>`);
     let err = await promise;
-    assert.equal(
+    assert.strictEqual(
       err.message,
       'Assertion Failed: Icon component size argument must be either "16" or "24"',
       'Error is thrown when supported size is not provided'
@@ -47,7 +47,7 @@ module('Integration | Component | icon', function (hooks) {
     const promise = waitForError();
     render(hbs`<Icon @name="x" @size="12"/>`);
     const err = await promise;
-    assert.equal(
+    assert.strictEqual(
       err.message,
       'Assertion Failed: Icon component size argument must be either "16" or "24"',
       'Error is thrown when supported size is not provided'

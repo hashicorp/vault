@@ -141,7 +141,7 @@ module('Integration | Component | transit key actions', function (hooks) {
       'passes expected args to the adapter'
     );
 
-    assert.equal(find('[data-test-encrypted-value="ciphertext"]').innerText, 'secret');
+    assert.strictEqual(find('[data-test-encrypted-value="ciphertext"]').innerText, 'secret');
 
     // exit modal
     await click('[data-test-modal-background]');
@@ -221,7 +221,7 @@ module('Integration | Component | transit key actions', function (hooks) {
 
     this.set('storeService.keyActionReturnVal', { plaintext });
     this.set('selectedAction', 'decrypt');
-    assert.equal(
+    assert.strictEqual(
       find('#ciphertext-control .CodeMirror').CodeMirror.getValue(),
       '',
       'does not prefill ciphertext value'
@@ -259,8 +259,12 @@ module('Integration | Component | transit key actions', function (hooks) {
       },
       'passes expected args to the adapter'
     );
-    assert.equal(this.storeService.callArgsOptions.wrapTTL, '30m', 'passes value for wrapTTL');
-    assert.equal(find('[data-test-encrypted-value="export"]').innerText, 'wrapped-token', 'wraps by default');
+    assert.strictEqual(this.storeService.callArgsOptions.wrapTTL, '30m', 'passes value for wrapTTL');
+    assert.strictEqual(
+      find('[data-test-encrypted-value="export"]').innerText,
+      'wrapped-token',
+      'wraps by default'
+    );
   });
 
   test('it can export a key:unwrapped behavior', async function (assert) {

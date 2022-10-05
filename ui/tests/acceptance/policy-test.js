@@ -17,7 +17,7 @@ module('Acceptance | policies', function (hooks) {
 
   test('it redirects to acls with unknown policy type', async function (assert) {
     await visit('/vault/policies/foo');
-    assert.equal(currentRouteName(), 'vault.cluster.policies.index');
-    assert.equal(currentURL(), '/vault/policies/acl');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.policies.index');
+    assert.strictEqual(currentURL(), '/vault/policies/acl');
   });
 });

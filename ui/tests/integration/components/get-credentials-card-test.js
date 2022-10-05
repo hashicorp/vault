@@ -59,7 +59,7 @@ module('Integration | Component | get-credentials-card', function (hooks) {
     );
     let card = document.querySelector('[data-test-search-roles]').childNodes[1];
     let placeholder = card.querySelector('input').placeholder;
-    assert.equal(placeholder, 'secret/');
+    assert.strictEqual(placeholder, 'secret/');
 
     await typeIn(card.querySelector('input'), 'test');
     assert.dom('[data-test-get-credentials]').isEnabled();

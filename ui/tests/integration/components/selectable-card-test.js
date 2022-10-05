@@ -18,12 +18,12 @@ module('Integration | Component selectable-card', function (hooks) {
     await render(hbs`<SelectableCard @total={{total}} @cardTitle={{cardTitle}}/>`);
     let titleNumber = this.element.querySelector('.title-number').innerText;
 
-    assert.equal(titleNumber, 15);
+    assert.strictEqual(titleNumber, 15);
   });
 
   test('it returns card title, ', async function (assert) {
     await render(hbs`<SelectableCard @total={{1}} @cardTitle={{cardTitle}}/>`);
     let titleText = this.element.querySelector('.title').innerText;
-    assert.equal(titleText, 'Connections');
+    assert.strictEqual(titleText, 'Connections');
   });
 });

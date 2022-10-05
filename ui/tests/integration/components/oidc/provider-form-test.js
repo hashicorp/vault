@@ -69,7 +69,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
     assert
       .dom('[data-test-input="issuer"]')
       .hasAttribute('placeholder', 'e.g. https://example.com:8200', 'issuer placeholder text is correct');
-    assert.equal(findAll('[data-test-field]').length, 3, 'renders all input fields');
+    assert.strictEqual(findAll('[data-test-field]').length, 3, 'renders all input fields');
     await click('[data-test-component="search-select"]#scopesSupported .ember-basic-dropdown-trigger');
     assert.dom('li.ember-power-select-option').hasText('test-scope', 'dropdown renders scopes');
 
@@ -178,7 +178,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
 
     await click('label[for=limited]');
     await click(SELECTORS.providerCancelButton);
-    assert.equal(this.model.allowed_client_ids, undefined, 'Model attributes rolled back on cancel');
+    assert.strictEqual(this.model.allowed_client_ids, undefined, 'Model attributes rolled back on cancel');
   });
 
   test('it should render fallback for search select', async function (assert) {
