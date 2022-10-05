@@ -18,6 +18,7 @@ import (
 )
 
 func TestBackend_CRL_EnableDisableRoot(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -33,6 +34,7 @@ func TestBackend_CRL_EnableDisableRoot(t *testing.T) {
 }
 
 func TestBackend_CRLConfigUpdate(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	// Write a legacy config to storage.
@@ -137,6 +139,8 @@ func TestBackend_CRLConfig(t *testing.T) {
 }
 
 func TestBackend_CRL_AllKeyTypeSigAlgos(t *testing.T) {
+	t.Parallel()
+
 	type testCase struct {
 		KeyType string
 		KeyBits int
@@ -192,10 +196,12 @@ func TestBackend_CRL_AllKeyTypeSigAlgos(t *testing.T) {
 }
 
 func TestBackend_CRL_EnableDisableIntermediateWithRoot(t *testing.T) {
+	t.Parallel()
 	crlEnableDisableIntermediateTestForBackend(t, true)
 }
 
 func TestBackend_CRL_EnableDisableIntermediateWithoutRoot(t *testing.T) {
+	t.Parallel()
 	crlEnableDisableIntermediateTestForBackend(t, false)
 }
 
@@ -288,12 +294,20 @@ func crlEnableDisableTestForBackend(t *testing.T, b *backend, s logical.Storage,
 			requireSerialNumberInCRL(t, certList, serialNum)
 		}
 
+		if len(certList.Extensions) > 2 {
+			t.Fatalf("expected up to 2 extensions on main CRL but got %v", len(certList.Extensions))
+		}
+
 		// Since this test assumes a complete CRL was rebuilt, we can grab
 		// the delta CRL and ensure it is empty.
 		deltaList := getParsedCrlFromBackend(t, b, s, "crl/delta").TBSCertList
 		lenDeltaList := len(deltaList.RevokedCertificates)
 		if lenDeltaList != 0 {
 			t.Fatalf("expected zero revoked certificates on the delta CRL due to complete CRL rebuild, found %d", lenDeltaList)
+		}
+
+		if len(deltaList.Extensions) != len(certList.Extensions)+1 {
+			t.Fatalf("expected one more extensions on delta CRL than main but got %v on main vs %v on delta", len(certList.Extensions), len(deltaList.Extensions))
 		}
 	}
 
@@ -354,6 +368,7 @@ func crlEnableDisableTestForBackend(t *testing.T, b *backend, s logical.Storage,
 }
 
 func TestBackend_Secondary_CRL_Rebuilding(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	b, s := createBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
@@ -378,6 +393,7 @@ func TestBackend_Secondary_CRL_Rebuilding(t *testing.T) {
 }
 
 func TestCrlRebuilder(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	b, s := createBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
@@ -388,7 +404,7 @@ func TestCrlRebuilder(t *testing.T) {
 	require.NoError(t, err)
 
 	req := &logical.Request{Storage: s}
-	cb := newCRLBuilder()
+	cb := newCRLBuilder(true /* can rebuild and write CRLs */)
 
 	// Force an initial build
 	err = cb.rebuild(ctx, b, req, true)

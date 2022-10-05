@@ -12,6 +12,7 @@ module('Integration | Component | nav header', function (hooks) {
 
   test('it renders', async function (assert) {
     await render(hbs`
+        <div id="modal-wormhole"></div>
         {{#nav-header as |h|}}
           {{#h.home}}
             Home!

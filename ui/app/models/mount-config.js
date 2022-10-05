@@ -37,7 +37,7 @@ export default class MountConfigModel extends Model {
 
   @attr({
     label: 'Allowed passthrough request headers',
-    helpText: 'Headers to whitelist and pass from the request to the backend',
+    helpText: 'Headers to allow and pass from the request to the backend',
     editType: 'stringArray',
   })
   passthroughRequestHeaders;

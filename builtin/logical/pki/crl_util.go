@@ -14,8 +14,6 @@ import (
 
 	atomic2 "go.uber.org/atomic"
 
-	"github.com/hashicorp/vault/sdk/helper/consts"
-
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -70,6 +68,7 @@ type (
 type crlBuilder struct {
 	_builder              sync.Mutex
 	forceRebuild          *atomic2.Bool
+	canRebuild            bool
 	lastDeltaRebuildCheck time.Time
 
 	_config sync.RWMutex
@@ -86,9 +85,10 @@ const (
 	_enforceForceFlag = false
 )
 
-func newCRLBuilder() *crlBuilder {
+func newCRLBuilder(canRebuild bool) *crlBuilder {
 	return &crlBuilder{
 		forceRebuild: atomic2.NewBool(false),
+		canRebuild:   canRebuild,
 		// Set the last delta rebuild window to now, delaying the first delta
 		// rebuild by the first rebuild period to give us some time on startup
 		// to stabilize.
@@ -260,8 +260,7 @@ func (cb *crlBuilder) requestRebuildIfActiveNode(b *backend) {
 	// Only schedule us on active nodes, as the active node is the only node that can rebuild/write the CRL.
 	// Note 1: The CRL is cluster specific, so this does need to run on the active node of a performance secondary cluster.
 	// Note 2: This is called by the storage invalidation function, so it should not block.
-	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby) ||
-		b.System().ReplicationState().HasState(consts.ReplicationDRSecondary) {
+	if !cb.canRebuild {
 		b.Logger().Debug("Ignoring request to schedule a CRL rebuild, not on active node.")
 		return
 	}
@@ -578,10 +577,12 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 			return nil, fmt.Errorf("error creating revocation entry")
 		}
 
+		certsCounted := b.certsCounted.Load()
 		err = req.Storage.Put(ctx, revEntry)
 		if err != nil {
 			return nil, fmt.Errorf("error saving revoked certificate to new location")
 		}
+		b.incrementTotalRevokedCertificatesCount(certsCounted, revEntry.Key)
 	}
 
 	// Fetch the config and see if we need to rebuild the CRL. If we have
@@ -1268,9 +1269,13 @@ WRITE:
 	now := time.Now()
 	nextUpdate := now.Add(crlLifetime)
 
-	ext, err := certutil.CreateDeltaCRLIndicatorExt(lastCompleteNumber)
-	if err != nil {
-		return nil, fmt.Errorf("could not create crl delta indicator extension: %v", err)
+	var extensions []pkix.Extension
+	if isDelta {
+		ext, err := certutil.CreateDeltaCRLIndicatorExt(lastCompleteNumber)
+		if err != nil {
+			return nil, fmt.Errorf("could not create crl delta indicator extension: %v", err)
+		}
+		extensions = []pkix.Extension{ext}
 	}
 
 	revocationListTemplate := &x509.RevocationList{
@@ -1279,7 +1284,7 @@ WRITE:
 		ThisUpdate:          now,
 		NextUpdate:          nextUpdate,
 		SignatureAlgorithm:  signingBundle.RevocationSigAlg,
-		ExtraExtensions:     []pkix.Extension{ext},
+		ExtraExtensions:     extensions,
 	}
 
 	crlBytes, err := x509.CreateRevocationList(rand.Reader, revocationListTemplate, signingBundle.Certificate, signingBundle.PrivateKey)

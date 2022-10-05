@@ -11,11 +11,10 @@ export default Route.extend(UnloadModelRoute, {
   store: service(),
 
   modelType(backendType, section) {
-    // TODO: Update endpoints from PR#10997
     const MODELS = {
       'aws-client': 'auth-config/aws/client',
-      'aws-identity-whitelist': 'auth-config/aws/identity-whitelist',
-      'aws-roletag-blacklist': 'auth-config/aws/roletag-blacklist',
+      'aws-identity-accesslist': 'auth-config/aws/identity-accesslist',
+      'aws-roletag-denylist': 'auth-config/aws/roletag-denylist',
       'azure-configuration': 'auth-config/azure',
       'github-configuration': 'auth-config/github',
       'gcp-configuration': 'auth-config/gcp',

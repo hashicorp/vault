@@ -8,9 +8,8 @@ import (
 	"sync"
 
 	log "github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/go-multierror"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	v5 "github.com/hashicorp/vault/builtin/plugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -79,21 +78,51 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*PluginBackend, 
 	// Get SpecialPaths and BackendType
 	paths := raw.SpecialPaths()
 	btype := raw.Type()
+	runningVersion := ""
+	if versioner, ok := raw.(logical.PluginVersioner); ok {
+		runningVersion = versioner.PluginVersion().Version
+	}
+
+	external := false
+	if externaler, ok := raw.(logical.Externaler); ok {
+		external = externaler.IsExternal()
+	}
 
 	// Cleanup meta plugin backend
 	raw.Cleanup(ctx)
 
-	// Initialize b.Backend with dummy backend since plugin
+	// Initialize b.Backend with placeholder backend since plugin
 	// backends will need to be lazy loaded.
-	b.Backend = &framework.Backend{
-		PathsSpecial: paths,
-		BackendType:  btype,
+	b.Backend = &placeholderBackend{
+		Backend: framework.Backend{
+			PathsSpecial:   paths,
+			BackendType:    btype,
+			RunningVersion: runningVersion,
+		},
+		external: external,
 	}
 
 	b.config = conf
 
 	return &b, nil
 }
+
+// placeholderBackend is used a placeholder before a backend is lazy-loaded.
+// It is mostly used to mark that the backend is an external backend.
+type placeholderBackend struct {
+	framework.Backend
+
+	external bool
+}
+
+func (p *placeholderBackend) IsExternal() bool {
+	return p.external
+}
+
+var (
+	_ logical.Externaler      = (*placeholderBackend)(nil)
+	_ logical.PluginVersioner = (*placeholderBackend)(nil)
+)
 
 // PluginBackend is a thin wrapper around plugin.BackendPluginClient
 type PluginBackend struct {
@@ -135,12 +164,12 @@ func (b *PluginBackend) startBackend(ctx context.Context, storage logical.Storag
 	if !b.loaded {
 		if b.Backend.Type() != nb.Type() {
 			nb.Cleanup(ctx)
-			b.Backend.Logger().Warn("failed to start plugin process", "plugin", b.config.Config["plugin_name"], "error", ErrMismatchType)
+			b.Backend.Logger().Warn("failed to start plugin process", "plugin", pluginName, "error", ErrMismatchType)
 			return ErrMismatchType
 		}
 		if !reflect.DeepEqual(b.Backend.SpecialPaths(), nb.SpecialPaths()) {
 			nb.Cleanup(ctx)
-			b.Backend.Logger().Warn("failed to start plugin process", "plugin", b.config.Config["plugin_name"], "error", ErrMismatchPaths)
+			b.Backend.Logger().Warn("failed to start plugin process", "plugin", pluginName, "error", ErrMismatchPaths)
 			return ErrMismatchPaths
 		}
 	}
@@ -286,3 +315,22 @@ func (b *PluginBackend) Type() logical.BackendType {
 	defer b.RUnlock()
 	return b.Backend.Type()
 }
+
+func (b *PluginBackend) PluginVersion() logical.PluginVersion {
+	if versioner, ok := b.Backend.(logical.PluginVersioner); ok {
+		return versioner.PluginVersion()
+	}
+	return logical.EmptyPluginVersion
+}
+
+func (b *PluginBackend) IsExternal() bool {
+	if externaler, ok := b.Backend.(logical.Externaler); ok {
+		return externaler.IsExternal()
+	}
+	return false
+}
+
+var (
+	_ logical.PluginVersioner = (*PluginBackend)(nil)
+	_ logical.Externaler      = (*PluginBackend)(nil)
+)

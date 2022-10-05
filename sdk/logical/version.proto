@@ -1,0 +1,17 @@
+syntax = "proto3";
+package logical;
+
+option go_package = "github.com/hashicorp/vault/sdk/logical";
+
+message Empty {}
+
+// VersionReply is the reply for the Version method.
+message VersionReply {
+  string plugin_version = 1;
+}
+
+// PluginVersion is an optional RPC service implemented by plugins.
+service PluginVersion {
+  // Version returns version information for the plugin.
+  rpc Version(Empty) returns (VersionReply);
+}

@@ -21,7 +21,7 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
  *
  * @param {Array} params=null - These are values sent to the router's transitionTo method.  First item is route, second is the optional path.
  * @param {Object} [queryParams=null] - queryParams can be passed via this property. It needs to be an object.
- * @param {String} [linkPrefix=null] - Overwrite the params with custom route.  See KMIP.
+ * @param {String} [linkPrefix=null] - Overwrite the params with custom route.  Needed for use in engines (KMIP and PKI). ex: vault.cluster.secrets.backend.kmip
  * @param {Boolean} [encode=false] - Encode the path.
  * @param {boolean} [disabled] - disable the link -- prevents on click and removes linked-block hover styling
  */

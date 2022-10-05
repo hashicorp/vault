@@ -72,11 +72,11 @@
           </div>
         {{/if}}
         <div class="control">
-          {{#if selected.addTooltip}}
+          {{#if (and selected.addTooltip @renderInfoTooltip)}}
             <InfoTooltip>
-              The item with this
+              The item associated with this
               {{to-label this.idKey}}
-              no longer exists and can safely be removed.
+              may no longer exist.
             </InfoTooltip>
           {{/if}}
           <button

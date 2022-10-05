@@ -237,7 +237,7 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
 
     // assert default values in assignment details view are correct
     assert.dom('[data-test-value-div="Name"]').hasText('test-assignment');
-    assert.dom('[data-test-value-div="Entities"]').hasText('1234-12345', 'shows the entity id.');
+    assert.dom('[data-test-value-div="Entities"]').hasText('test-entity', 'shows the entity name.');
 
     // edit assignment
     await click(SELECTORS.assignmentEditButton);
@@ -256,8 +256,8 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
       'renders success flash upon updating the assignment'
     );
 
-    assert.dom('[data-test-value-div="Entities"]').hasText('1234-12345', 'it still shows the entity id.');
-    assert.dom('[data-test-value-div="Groups"]').hasText('abcdef-123', 'shows updated group name id.');
+    assert.dom('[data-test-value-div="Entities"]').hasText('test-entity', 'it still shows the entity name.');
+    assert.dom('[data-test-value-div="Groups"]').hasText('test-group', 'shows updated group name id.');
 
     // delete the assignment
     await click(SELECTORS.assignmentDeleteButton);

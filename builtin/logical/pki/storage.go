@@ -6,6 +6,7 @@ import (
 	"crypto"
 	"crypto/x509"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -115,7 +116,16 @@ func (i issuerUsage) Names() string {
 	var names []string
 	var builtUsage issuerUsage
 
-	for name, usage := range namedIssuerUsages {
+	// Return the known set of usages in a sorted order to not have Terraform state files flipping
+	// saying values are different when it's the same list in a different order.
+	keys := make([]string, 0, len(namedIssuerUsages))
+	for k := range namedIssuerUsages {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, name := range keys {
+		usage := namedIssuerUsages[name]
 		if i.HasUsage(usage) {
 			names = append(names, name)
 			builtUsage.ToggleUsage(usage)
@@ -690,6 +700,12 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 	// Ensure this certificate is a usable as a CA certificate.
 	if !issuerCert.BasicConstraintsValid || !issuerCert.IsCA {
 		return nil, false, errutil.UserError{Err: "Refusing to import non-CA certificate"}
+	}
+
+	// Ensure this certificate has a parsed public key. Otherwise, we've
+	// likely been given a bad certificate.
+	if issuerCert.PublicKeyAlgorithm == x509.UnknownPublicKeyAlgorithm || issuerCert.PublicKey == nil {
+		return nil, false, errutil.UserError{Err: "Refusing to import CA certificate with empty PublicKey. This usually means the SubjectPublicKeyInfo field has an OID not recognized by Go, such as 1.2.840.113549.1.1.10 for rsaPSS."}
 	}
 
 	// Before we can import a known issuer, we first need to know if the issuer

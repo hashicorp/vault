@@ -1,0 +1,58 @@
+rules:
+  - id: replication-state-should-use-IsPerfSecondary
+    patterns:
+      - pattern: |
+            $CORE.ReplicationState().HasState(consts.ReplicationPerformanceSecondary)
+      # Not the defining function
+      - pattern-not-inside: |
+            func ($CORE *Core) IsPerfSecondary() bool {
+               ...
+            }
+      # Not a call to System()
+      - pattern-not: |
+            $BACKEND.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)
+      - pattern-not: |
+            $IDENTITYSTORE.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary)
+    message: "Consider replacing ReplicationState().HasState(...) with IsPerfSecondary()"
+    languages: [go]
+    severity: WARNING
+    fix: $CORE.IsPerfSecondary()
+
+  - id: replication-state-should-use-IsDrSecondar
+    patterns:
+      - pattern: |
+            $CORE.ReplicationState().HasState(consts.ReplicationDRSecondary)
+      # Not the defining function
+      - pattern-not-inside: |
+            func ($CORE *Core) IsDRSecondary() bool {
+               ...
+            }
+      # Not a call to System()
+      - pattern-not: |
+            $BACKEND.System().ReplicationState().HasState(consts.ReplicationDRSecondary)
+      - pattern-not: |
+            $IDENTITYSTORE.localNode.ReplicationState().HasState(consts.ReplicationDRSecondary)
+    message: "Consider replacing ReplicationState().HasState(...) with IsDRSecondary()"
+    languages: [go]
+    severity: WARNING
+    fix: $CORE.IsDRSecondary()
+
+  - id: replication-state-in-handler-op
+    patterns:
+      - pattern: |
+            $B.System().ReplicationState().HasState($STATE)
+      - pattern-inside: |
+            func ($T $TYPE) $FUNC($CTX context.Context, $REQ *logical.Request, $D *framework.FieldData) (*logical.Response, error) {
+               ...
+            }
+    message: "Consider using frameworks ForwardPerformance* setting"
+    languages: [go]
+    severity: WARNING
+
+  - id: replication-state-bad-logic
+    patterns:
+      - pattern: |
+            b.System().LocalMount() || !b.System().ReplicationState().HasState(<... consts.ReplicationPerformanceStandby ...>)
+    message: "Invalid replication state handling of local mounts"
+    languages: [go]
+    severity: ERROR

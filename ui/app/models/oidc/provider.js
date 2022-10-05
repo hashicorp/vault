@@ -45,11 +45,8 @@ export default class OidcProviderModel extends Model {
     }
     return this._attributeMeta;
   }
+
   @lazyCapabilities(apiPath`identity/oidc/provider/${'name'}`, 'name') providerPath;
-  @lazyCapabilities(apiPath`identity/oidc/provider`) providersPath;
-  get canCreate() {
-    return this.providerPath.get('canCreate');
-  }
   get canRead() {
     return this.providerPath.get('canRead');
   }
@@ -58,17 +55,5 @@ export default class OidcProviderModel extends Model {
   }
   get canDelete() {
     return this.providerPath.get('canDelete');
-  }
-  get canList() {
-    return this.providersPath.get('canList');
-  }
-
-  @lazyCapabilities(apiPath`identity/oidc/client`) clientsPath;
-  get canListClients() {
-    return this.clientsPath.get('canList');
-  }
-  @lazyCapabilities(apiPath`identity/oidc/scope`) scopesPath;
-  get canListScopes() {
-    return this.scopesPath.get('canList');
   }
 }

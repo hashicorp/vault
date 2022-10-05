@@ -32,10 +32,11 @@ type ListPluginsResponse struct {
 }
 
 type PluginDetails struct {
-	Type    string `json:"string"`
-	Name    string `json:"name"`
-	Version string `json:"version,omitempty"`
-	Builtin bool   `json:"builtin"`
+	Type              string `json:"type"`
+	Name              string `json:"name"`
+	Version           string `json:"version,omitempty"`
+	Builtin           bool   `json:"builtin"`
+	DeprecationStatus string `json:"deprecation_status,omitempty" mapstructure:"deprecation_status"`
 }
 
 // ListPlugins wraps ListPluginsWithContext using context.Background.
@@ -49,25 +50,7 @@ func (c *Sys) ListPluginsWithContext(ctx context.Context, i *ListPluginsInput) (
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	path := ""
-	method := ""
-	if i.Type == consts.PluginTypeUnknown {
-		path = "/v1/sys/plugins/catalog"
-		method = http.MethodGet
-	} else {
-		path = fmt.Sprintf("/v1/sys/plugins/catalog/%s", i.Type)
-		method = "LIST"
-	}
-
-	req := c.c.NewRequest(method, path)
-	if method == "LIST" {
-		// Set this for broader compatibility, but we use LIST above to be able
-		// to handle the wrapping lookup function
-		req.Method = http.MethodGet
-		req.Params.Set("list", "true")
-	}
-
-	resp, err := c.c.rawRequestWithContext(ctx, req)
+	resp, err := c.c.rawRequestWithContext(ctx, c.c.NewRequest(http.MethodGet, "/v1/sys/plugins/catalog"))
 	if err != nil && resp == nil {
 		return nil, err
 	}
@@ -75,27 +58,6 @@ func (c *Sys) ListPluginsWithContext(ctx context.Context, i *ListPluginsInput) (
 		return nil, nil
 	}
 	defer resp.Body.Close()
-
-	// We received an Unsupported Operation response from Vault, indicating
-	// Vault of an older version that doesn't support the GET method yet;
-	// switch it to a LIST.
-	if resp.StatusCode == 405 {
-		req.Params.Set("list", "true")
-		resp, err := c.c.rawRequestWithContext(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-		defer resp.Body.Close()
-		var result struct {
-			Data struct {
-				Keys []string `json:"keys"`
-			} `json:"data"`
-		}
-		if err := resp.DecodeJSON(&result); err != nil {
-			return nil, err
-		}
-		return &ListPluginsResponse{Names: result.Data.Keys}, nil
-	}
 
 	secret, err := ParseSecret(resp.Body)
 	if err != nil {
@@ -107,9 +69,9 @@ func (c *Sys) ListPluginsWithContext(ctx context.Context, i *ListPluginsInput) (
 
 	result := &ListPluginsResponse{
 		PluginsByType: make(map[consts.PluginType][]string),
-		Details:       []PluginDetails{},
 	}
-	if i.Type == consts.PluginTypeUnknown {
+	switch i.Type {
+	case consts.PluginTypeUnknown:
 		for _, pluginType := range consts.PluginTypes {
 			pluginsRaw, ok := secret.Data[pluginType.String()]
 			if !ok {
@@ -131,17 +93,35 @@ func (c *Sys) ListPluginsWithContext(ctx context.Context, i *ListPluginsInput) (
 			}
 			result.PluginsByType[pluginType] = plugins
 		}
-	} else {
+	default:
+		pluginsRaw, ok := secret.Data[i.Type.String()]
+		if !ok {
+			return nil, fmt.Errorf("no %s entry in returned data", i.Type.String())
+		}
+
 		var respKeys []string
-		if err := mapstructure.Decode(secret.Data["keys"], &respKeys); err != nil {
+		if err := mapstructure.Decode(pluginsRaw, &respKeys); err != nil {
 			return nil, err
 		}
 		result.PluginsByType[i.Type] = respKeys
 	}
 
 	if detailed, ok := secret.Data["detailed"]; ok {
-		if err := mapstructure.Decode(detailed, &result.Details); err != nil {
+		var details []PluginDetails
+		if err := mapstructure.Decode(detailed, &details); err != nil {
 			return nil, err
+		}
+
+		switch i.Type {
+		case consts.PluginTypeUnknown:
+			result.Details = details
+		default:
+			// Filter for just the queried type.
+			for _, entry := range details {
+				if entry.Type == i.Type.String() {
+					result.Details = append(result.Details, entry)
+				}
+			}
 		}
 	}
 
@@ -158,11 +138,12 @@ type GetPluginInput struct {
 
 // GetPluginResponse is the response from the GetPlugin call.
 type GetPluginResponse struct {
-	Args    []string `json:"args"`
-	Builtin bool     `json:"builtin"`
-	Command string   `json:"command"`
-	Name    string   `json:"name"`
-	SHA256  string   `json:"sha256"`
+	Args              []string `json:"args"`
+	Builtin           bool     `json:"builtin"`
+	Command           string   `json:"command"`
+	Name              string   `json:"name"`
+	SHA256            string   `json:"sha256"`
+	DeprecationStatus string   `json:"deprecation_status,omitempty"`
 }
 
 // GetPlugin wraps GetPluginWithContext using context.Background.

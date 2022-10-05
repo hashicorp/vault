@@ -258,7 +258,7 @@ const testConvergentEncryption = async function (assert, keyName) {
     }
     // store ciphertext for decryption step
     const copiedCiphertext = find('[data-test-encrypted-value="ciphertext"]').innerText;
-    await click('[data-test-modal-background]');
+    await click('.modal.is-active [data-test-modal-background]');
 
     assert.dom('.modal.is-active').doesNotExist(`${name}: Modal closes after background clicked`);
     await click('[data-test-transit-action-link="decrypt"]');
@@ -275,7 +275,7 @@ const testConvergentEncryption = async function (assert, keyName) {
       testCase.assertAfterDecrypt(keyName);
     }
 
-    await click('[data-test-modal-background]');
+    await click('.modal.is-active [data-test-modal-background]');
 
     assert.dom('.modal.is-active').doesNotExist(`${name}: Modal closes after background clicked`);
   }
