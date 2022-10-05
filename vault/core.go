@@ -55,6 +55,7 @@ import (
 	"github.com/hashicorp/vault/vault/quotas"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/patrickmn/go-cache"
+	"github.com/sasha-s/go-deadlock"
 	uberAtomic "go.uber.org/atomic"
 	"google.golang.org/grpc"
 )
@@ -294,7 +295,7 @@ type Core struct {
 	auditBackends map[string]audit.Factory
 
 	// stateLock protects mutable state
-	stateLock DeadlockRWMutex
+	stateLock deadlock.RWMutex
 	sealed    *uint32
 
 	standby              bool
@@ -679,6 +680,9 @@ type CoreConfig struct {
 
 	Logger log.Logger
 
+	// Use the deadlocks library to detect deadlocks
+	DetectDeadlocks string
+
 	// Disables the trace display for Sentinel checks
 	DisableSentinelTrace bool
 
@@ -838,6 +842,13 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 	if conf.NumExpirationWorkers == 0 {
 		conf.NumExpirationWorkers = numExpirationWorkersDefault
+	}
+
+	// Enable deadlock tracking if requested
+	if conf.DetectDeadlocks != "" && strings.Contains(conf.DetectDeadlocks, "statelock") {
+		deadlock.Opts.Disable = false
+	} else {
+		deadlock.Opts.Disable = true
 	}
 
 	// Setup the core
