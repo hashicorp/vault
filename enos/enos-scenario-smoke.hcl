@@ -41,6 +41,11 @@ scenario "smoke" {
     vault_instance_type = coalesce(var.vault_instance_type, local.vault_instance_types[matrix.arch])
   }
 
+  step "get_local_metadata" {
+    skip_step = matrix.build != "local"
+    module    = module.get_local_metadata
+  }
+
   step "build_vault" {
     module = "build_${matrix.build}"
 
@@ -54,8 +59,8 @@ scenario "smoke" {
       artifactory_username  = matrix.build == "artifactory" ? var.artifactory_username : null
       artifactory_token     = matrix.build == "artifactory" ? var.artifactory_token : null
       arch                  = matrix.build == "artifactory" ? matrix.arch : null
-      vault_product_version = matrix.build == "local" ? step.get_local_metadata.version : var.vault_product_version
-      artifact_type         = "bundle"
+      vault_product_version = var.vault_product_version
+      artifact_type         = matrix.build == "artifactory" ? var.vault_artifact_type : null
       distro                = matrix.build == "artifactory" ? matrix.distro : null
       edition               = matrix.build == "artifactory" ? matrix.edition : null
       instance_type         = matrix.build == "artifactory" ? local.vault_instance_type : null
@@ -112,11 +117,6 @@ scenario "smoke" {
       kms_key_arn   = step.create_vpc.kms_key_arn
       vpc_id        = step.create_vpc.vpc_id
     }
-  }
-
-  step "get_local_metadata" {
-    skip_step = matrix.build != "local"
-    module    = module.get_local_metadata
   }
 
   step "create_vault_cluster" {

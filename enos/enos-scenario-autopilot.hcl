@@ -51,8 +51,8 @@ scenario "autopilot" {
       artifactory_username  = matrix.build == "artifactory" ? var.artifactory_username : null
       artifactory_token     = matrix.build == "artifactory" ? var.artifactory_token : null
       arch                  = matrix.build == "artifactory" ? matrix.arch : null
-      vault_product_version = matrix.build == "artifactory" ? var.vault_product_version : null
-      artifact_type         = matrix.build == "artifactory" ? "bundle" : null
+      vault_product_version = var.vault_product_version
+      artifact_type         = matrix.build == "artifactory" ? var.vault_artifact_type : null
       distro                = matrix.build == "artifactory" ? matrix.distro : null
       edition               = matrix.build == "artifactory" ? matrix.edition : null
       instance_type         = matrix.build == "artifactory" ? local.vault_instance_type : null

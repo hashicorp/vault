@@ -90,6 +90,11 @@ variable "tfc_api_token" {
   sensitive   = true
 }
 
+variable "vault_artifact_type" {
+  description = "The Vault artifact type package or bundle"
+  default     = "bundle"
+}
+
 variable "vault_autopilot_initial_release" {
   description = "The Vault release to deploy before upgrading with autopilot"
   default = {
