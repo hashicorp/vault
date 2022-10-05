@@ -23,13 +23,16 @@ import { tracked } from '@glimmer/tracking';
 const MODEL_GROUPS_DISPLAY_GRID = ['Key usage'];
 
 export default class FormFieldGroupsLoop extends Component {
-  @tracked GridGroups = [];
+  @tracked gridGroups = [];
   constructor() {
     super(...arguments);
-    let displayGridGroups = this.args.model.fieldGroups.filter((group) => {
-      let key = Object.keys(group)[0]; // ex: 'Key usage'
+    let displayGridGroups = this.args.model.fieldGroups?.filter((group) => {
+      let key = Object.keys(group)[0]; // ex: 'Key usage' or 'default'
       return MODEL_GROUPS_DISPLAY_GRID.includes(key);
     });
-    this.GridGroups = Object.keys(displayGridGroups[0]);
+    if (displayGridGroups.length === 0) {
+      return;
+    }
+    this.gridGroups = Object.keys(displayGridGroups[0]);
   }
 }

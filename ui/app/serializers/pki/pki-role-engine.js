@@ -25,10 +25,14 @@ const EXT_KEY_USAGE = [
   'ipsec_user',
 ];
 export default class PkiRoleEngineSerializer extends ApplicationSerializer {
-  stringsOnly(value) {
+  _stringsOnly(value) {
     if (typeof value === 'string') {
       return value;
     }
+  }
+
+  _removeSnakeCase(value) {
+    return value.replaceAll('_', '');
   }
 
   serialize() {
@@ -40,8 +44,9 @@ export default class PkiRoleEngineSerializer extends ApplicationSerializer {
       1. Turn the object Json into a key/value array of arrays so we can filter over it.
       2. This returns as the const filtered = [['content_commitment',true],['crl_sign',true]]
       3. Flatten this array of nested arrays to return const filteredFlatted = ['content_commitment',true,'crl_sign',true]
-      4. Lastly filter on the filteredFlattened to return only strings so that we add the the key_usage param = ['content_commitment','crl_sign']
-      5. cleanup: remove from model the unused params via the delete operation. 
+      4. Turn snake_case into one word (e.g. crl_sign to crlsign), which is required by backend. https://github.com/hashicorp/vault-enterprise/blob/9cbd80b51e0579d19dad97e7ff0495210b7920c0/builtin/logical/pki/path_roles.go#L974-L999
+      5. Filter on the filteredFlattened to return only strings so that we add the the key_usage param = ['contentcommitment','crlsign']
+      6. cleanup: remove from model the unused params via the delete operation. 
     */
     const filteredKeyUsage = jsonAsArray.filter(([key]) => {
       return KEY_USAGE.includes(key);
@@ -53,13 +58,16 @@ export default class PkiRoleEngineSerializer extends ApplicationSerializer {
     const filteredFlattenedKeyUsage = filteredKeyUsage.flat();
     const filteredFlattenedExtKeyUsage = filteredExtKeyUsage.flat();
 
-    json.key_usage = filteredFlattenedKeyUsage.filter(this.stringsOnly);
-    json.ext_key_usage = filteredFlattenedExtKeyUsage.filter(this.stringsOnly);
+    const stringsOnlyKeyUsage = filteredFlattenedKeyUsage.filter(this._stringsOnly);
+    const stringsOnlyExtKeyUsage = filteredFlattenedExtKeyUsage.filter(this._stringsOnly);
 
-    filteredFlattenedKeyUsage.filter(this.stringsOnly).forEach((param) => {
+    json.key_usage = stringsOnlyKeyUsage.map((item) => this._removeSnakeCase(item));
+    json.ext_key_usage = stringsOnlyExtKeyUsage.map((item) => this._removeSnakeCase(item));
+
+    filteredFlattenedKeyUsage.filter(this._stringsOnly).forEach((param) => {
       delete json[param];
     });
-    filteredFlattenedExtKeyUsage.filter(this.stringsOnly).forEach((param) => {
+    filteredFlattenedExtKeyUsage.filter(this._stringsOnly).forEach((param) => {
       delete json[param];
     });
 

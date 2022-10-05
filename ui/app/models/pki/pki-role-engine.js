@@ -181,6 +181,7 @@ export default class PkiRoleEngineModel extends Model {
   @attr('boolean') CrlSign;
   @attr('boolean') EncipherOnly;
   @attr('boolean') DecipherOnly;
+
   @attr('string', {
     label: 'Extended key usage',
     subText:
