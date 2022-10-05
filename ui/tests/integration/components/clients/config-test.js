@@ -50,7 +50,7 @@ module('Integration | Component | client count config', function (hooks) {
 
     assert.dom('[data-test-pricing-metrics-config-table]').exists('Pricing metrics config table exists');
     const rows = document.querySelectorAll('.info-table-row');
-    assert.equal(rows.length, 2, 'renders 2 infotable rows');
+    assert.strictEqual(rows.length, 2, 'renders 2 infotable rows');
     assert.ok(
       find('[data-test-row-value="Usage data collection"]').textContent.includes('On'),
       'Enabled value matches model'
@@ -69,7 +69,7 @@ module('Integration | Component | client count config', function (hooks) {
 
     assert.dom('[data-test-pricing-metrics-config-form]').exists('Pricing metrics config form exists');
     const fields = document.querySelectorAll('[data-test-field]');
-    assert.equal(fields.length, 2, 'renders 2 fields');
+    assert.strictEqual(fields.length, 2, 'renders 2 fields');
   });
 
   test('it shows a modal with correct messaging when disabling', async function (assert) {

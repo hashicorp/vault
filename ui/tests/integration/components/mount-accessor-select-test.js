@@ -29,14 +29,14 @@ module('Integration | Component | mount-accessor-select', function (hooks) {
     await render(hbs`<MountAccessorSelect @onChange={{onChange}} @filterToken={{true}}/>`);
     await click('[data-test-mount-accessor-select]');
     let options = document.querySelector('[data-test-mount-accessor-select]').options;
-    assert.equal(options.length, 1, 'only the auth option, no token');
+    assert.strictEqual(options.length, 1, 'only the auth option, no token');
   });
 
   test('it shows token', async function (assert) {
     await render(hbs`<MountAccessorSelect @onChange={{onChange}}/>`);
     await click('[data-test-mount-accessor-select]');
     let options = document.querySelector('[data-test-mount-accessor-select]').options;
-    assert.equal(options.length, 2, 'both auth and token show');
+    assert.strictEqual(options.length, 2, 'both auth and token show');
   });
 
   test('it sends value to parent onChange', async function (assert) {
@@ -52,13 +52,13 @@ module('Integration | Component | mount-accessor-select', function (hooks) {
     await render(hbs`<MountAccessorSelect @onChange={{onChange}} />`);
     let defaultSelection = document.querySelector('[data-test-mount-accessor-select]').options[0].innerHTML;
     // remove all non letters
-    assert.equal(defaultSelection.replace(/\W/g, ''), 'userpassuserpass');
+    assert.strictEqual(defaultSelection.replace(/\W/g, ''), 'userpassuserpass');
   });
 
   test('it shows Select one if yes default', async function (assert) {
     await render(hbs`<MountAccessorSelect @onChange={{onChange}} @noDefault={{true}} />`);
     let defaultSelection = document.querySelector('[data-test-mount-accessor-select]').options[0].innerHTML;
     // remove all non letters
-    assert.equal(defaultSelection.replace(/\W/g, ''), 'Selectone');
+    assert.strictEqual(defaultSelection.replace(/\W/g, ''), 'Selectone');
   });
 });

@@ -79,7 +79,7 @@ module('Unit | Lib | kv object', function () {
       let expected = JSON.stringify(output, null, 2);
       let data = KVObject.create({ content: [] }).fromJSON(input);
       let result = data.toJSONString(includeBlanks);
-      assert.equal(result, expected, 'has expected output string');
+      assert.strictEqual(result, expected, 'has expected output string');
     });
   });
 
@@ -96,7 +96,7 @@ module('Unit | Lib | kv object', function () {
     test(`isAdvanced: ${name}`, function (assert) {
       let data = KVObject.create({ content: [] }).fromJSON(input);
 
-      assert.equal(data.isAdvanced(), expected, 'calculates isAdvanced correctly');
+      assert.strictEqual(data.isAdvanced(), expected, 'calculates isAdvanced correctly');
     });
   });
 });

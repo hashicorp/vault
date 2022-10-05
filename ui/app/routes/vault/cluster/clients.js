@@ -20,14 +20,14 @@ export default class ClientsRoute extends Route {
       });
       return arrayOfModels;
     } catch (e) {
-      console.debug(e);
+      console.debug(e); // eslint-disable-line
       return [];
     }
   }
 
   async model() {
     let config = await this.store.queryRecord('clients/config', {}).catch((e) => {
-      console.debug(e);
+      console.debug(e); // eslint-disable-line
       // swallowing error so activity can show if no config permissions
       return {};
     });

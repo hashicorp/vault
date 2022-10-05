@@ -55,7 +55,7 @@ module('Unit | Component | auth-jwt', function (hooks) {
     this.component.window.trigger('message', message);
 
     assert.ok(this.errorSpy.notCalled, 'Error handler not triggered while waiting for oidc callback message');
-    assert.equal(
+    assert.strictEqual(
       this.component.exchangeOIDC.performCount,
       1,
       'exchangeOIDC method fires when oidc callback message is received'

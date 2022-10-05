@@ -55,7 +55,7 @@ module('Acceptance | mfa-setup', function (hooks) {
     // the network requests required in this test
     this.server.post('/identity/mfa/method/totp/admin-generate', (scheme, req) => {
       const json = JSON.parse(req.requestBody);
-      assert.equal(json.method_id, '123', 'sends the UUID value');
+      assert.strictEqual(json.method_id, '123', 'sends the UUID value');
       return {
         data: {
           barcode:
@@ -67,7 +67,7 @@ module('Acceptance | mfa-setup', function (hooks) {
     });
     this.server.post('/identity/mfa/method/totp/admin-destroy', (scheme, req) => {
       const json = JSON.parse(req.requestBody);
-      assert.equal(json.method_id, '123', 'sends the UUID value');
+      assert.strictEqual(json.method_id, '123', 'sends the UUID value');
       // returns nothing
       return {};
     });

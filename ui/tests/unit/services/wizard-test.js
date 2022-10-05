@@ -362,7 +362,7 @@ module('Unit | Service | wizard', function (hooks) {
         });
       }
       if (testCase.expectedResults.value !== null && testCase.expectedResults.value !== undefined) {
-        assert.equal(result, testCase.expectedResults.value, `${testCase.method} gives correct value`);
+        assert.strictEqual(result, testCase.expectedResults.value, `${testCase.method} gives correct value`);
       }
     });
   });

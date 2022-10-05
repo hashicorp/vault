@@ -68,7 +68,7 @@ module('Integration | Component | auth form', function (hooks) {
     // we have to manually force settling the run queue
     later(() => cancelTimers(), 50);
     return settled().then(() => {
-      assert.equal(component.errorText, CSP_ERR_TEXT);
+      assert.strictEqual(component.errorText, CSP_ERR_TEXT);
     });
   });
 
@@ -90,7 +90,7 @@ module('Integration | Component | auth form', function (hooks) {
     this.set('selectedAuth', 'token');
     await render(hbs`{{auth-form cluster=cluster selectedAuth=selectedAuth}}`);
     return component.login().then(() => {
-      assert.equal(component.errorText, 'Error Authentication failed: Not allowed');
+      assert.strictEqual(component.errorText, 'Error Authentication failed: Not allowed');
       server.shutdown();
     });
   });
@@ -108,7 +108,7 @@ module('Integration | Component | auth form', function (hooks) {
     await render(hbs`{{auth-form cluster=cluster selectedAuth=selectedAuth}}`);
     // ARG TODO research and see if adapter errors changed, but null used to be Bad Request
     return component.login().then(() => {
-      assert.equal(component.errorText, 'Error Authentication failed: null');
+      assert.strictEqual(component.errorText, 'Error Authentication failed: null');
       server.shutdown();
     });
   });
@@ -126,7 +126,7 @@ module('Integration | Component | auth form', function (hooks) {
     });
     await render(hbs`<AuthForm @cluster={{cluster}} />`);
 
-    assert.equal(component.tabs.length, 0, 'renders a tab for every backend');
+    assert.strictEqual(component.tabs.length, 0, 'renders a tab for every backend');
     server.shutdown();
   });
 
@@ -148,9 +148,9 @@ module('Integration | Component | auth form', function (hooks) {
     this.set('cluster', EmberObject.create({}));
     await render(hbs`{{auth-form cluster=cluster }}`);
 
-    assert.equal(component.tabs.length, 2, 'renders a tab for userpass and Other');
-    assert.equal(component.tabs.objectAt(0).name, 'foo', 'uses the path in the label');
-    assert.equal(component.tabs.objectAt(1).name, 'Other', 'second tab is the Other tab');
+    assert.strictEqual(component.tabs.length, 2, 'renders a tab for userpass and Other');
+    assert.strictEqual(component.tabs.objectAt(0).name, 'foo', 'uses the path in the label');
+    assert.strictEqual(component.tabs.objectAt(1).name, 'Other', 'second tab is the Other tab');
     server.shutdown();
   });
 
@@ -169,7 +169,11 @@ module('Integration | Component | auth form', function (hooks) {
     this.set('cluster', EmberObject.create({}));
     await render(hbs`{{auth-form cluster=cluster }}`);
 
-    assert.equal(component.descriptionText, 'app description', 'renders a description for auth methods');
+    assert.strictEqual(
+      component.descriptionText,
+      'app description',
+      'renders a description for auth methods'
+    );
     server.shutdown();
   });
 
@@ -197,7 +201,7 @@ module('Integration | Component | auth form', function (hooks) {
     await settled();
     assert.ok(authSpy.calledOnce, 'a call to authenticate was made');
     let { data } = authSpy.getCall(0).args[0];
-    assert.equal(data.path, 'foo', 'uses the id for the path');
+    assert.strictEqual(data.path, 'foo', 'uses the id for the path');
     authSpy.restore();
     server.shutdown();
   });
@@ -217,7 +221,7 @@ module('Integration | Component | auth form', function (hooks) {
     await render(hbs`<AuthForm @cluster={{cluster}} />`);
 
     server.shutdown();
-    assert.equal(component.tabs.length, 0, 'renders a tab for every backend');
+    assert.strictEqual(component.tabs.length, 0, 'renders a tab for every backend');
   });
 
   test('it makes a request to unwrap if passed a wrappedToken and logs in', async function (assert) {
@@ -244,8 +248,12 @@ module('Integration | Component | auth form', function (hooks) {
     await render(hbs`<AuthForm @cluster={{cluster}} @wrappedToken={{wrappedToken}} />`);
     later(() => cancelTimers(), 50);
     await settled();
-    assert.equal(server.handledRequests[0].url, '/v1/sys/wrapping/unwrap', 'makes call to unwrap the token');
-    assert.equal(
+    assert.strictEqual(
+      server.handledRequests[0].url,
+      '/v1/sys/wrapping/unwrap',
+      'makes call to unwrap the token'
+    );
+    assert.strictEqual(
       server.handledRequests[0].requestHeaders['X-Vault-Token'],
       wrappedToken,
       'uses passed wrapped token for the unwrap'
@@ -273,7 +281,7 @@ module('Integration | Component | auth form', function (hooks) {
     later(() => cancelTimers(), 50);
 
     await settled();
-    assert.equal(
+    assert.strictEqual(
       component.errorText,
       'Error Token unwrap failed: There was an error unwrapping!',
       'shows the error'

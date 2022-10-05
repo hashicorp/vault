@@ -31,8 +31,8 @@ module('Acceptance | jwt auth method', function (hooks) {
     this.server.post('/auth/jwt/login', (schema, req) => {
       const { jwt, role } = JSON.parse(req.requestBody);
       assert.ok(true, 'request made to auth/jwt/login after submit');
-      assert.equal(jwt, 'my-test-jwt-token', 'JWT token is sent in body');
-      assert.equal(role, undefined, 'role is not sent in body when not filled in');
+      assert.strictEqual(jwt, 'my-test-jwt-token', 'JWT token is sent in body');
+      assert.strictEqual(role, undefined, 'role is not sent in body when not filled in');
       req.passthrough();
     });
     await visit('/vault/auth');
@@ -49,8 +49,8 @@ module('Acceptance | jwt auth method', function (hooks) {
     this.server.post('/auth/jwt/login', (schema, req) => {
       const { jwt, role } = JSON.parse(req.requestBody);
       assert.ok(true, 'request made to auth/jwt/login after login');
-      assert.equal(jwt, 'my-test-jwt-token', 'JWT token is sent in body');
-      assert.equal(role, 'some-role', 'role is sent in the body when filled in');
+      assert.strictEqual(jwt, 'my-test-jwt-token', 'JWT token is sent in body');
+      assert.strictEqual(role, 'some-role', 'role is sent in the body when filled in');
       req.passthrough();
     });
     await visit('/vault/auth');
@@ -76,8 +76,8 @@ module('Acceptance | jwt auth method', function (hooks) {
     this.server.post('/auth/test-jwt/login', (schema, req) => {
       const { jwt, role } = JSON.parse(req.requestBody);
       assert.ok(true, 'request made to auth/custom-jwt-login after login');
-      assert.equal(jwt, 'my-test-jwt-token', 'JWT token is sent in body');
-      assert.equal(role, 'some-role', 'role is sent in body when filled in');
+      assert.strictEqual(jwt, 'my-test-jwt-token', 'JWT token is sent in body');
+      assert.strictEqual(role, 'some-role', 'role is sent in body when filled in');
       req.passthrough();
     });
     await visit('/vault/auth');

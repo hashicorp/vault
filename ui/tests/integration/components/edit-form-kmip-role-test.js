@@ -162,7 +162,11 @@ module('Integration | Component | edit form kmip role', function (hooks) {
         await click(`label[for=${clickTarget}]`);
       }
       for (let beforeStateKey of Object.keys(stateBeforeSave)) {
-        assert.equal(model.get(beforeStateKey), stateBeforeSave[beforeStateKey], `sets ${beforeStateKey}`);
+        assert.strictEqual(
+          model.get(beforeStateKey),
+          stateBeforeSave[beforeStateKey],
+          `sets ${beforeStateKey}`
+        );
       }
 
       click('[data-test-edit-form-submit]');
@@ -170,7 +174,7 @@ module('Integration | Component | edit form kmip role', function (hooks) {
       later(() => cancelTimers(), 50);
       return settled().then(() => {
         for (let afterStateKey of Object.keys(stateAfterSave)) {
-          assert.equal(
+          assert.strictEqual(
             model.get(afterStateKey),
             stateAfterSave[afterStateKey],
             `sets ${afterStateKey} on save`

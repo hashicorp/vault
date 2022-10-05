@@ -60,9 +60,13 @@ module('Integration | Component | pgp file', function (hooks) {
     });
     assert.dom('[data-test-pgp-file-input-label]').hasText(file.name, 'the file input shows the file name');
     assert.notDeepEqual(this.lastOnChangeCall[1].value, key.value, 'onChange was called with the new key');
-    assert.equal(this.lastOnChangeCall[0], 0, 'onChange is called with the index value');
+    assert.strictEqual(this.lastOnChangeCall[0], 0, 'onChange is called with the index value');
     await click('[data-test-pgp-clear]');
-    assert.equal(this.lastOnChangeCall[1].value, key.value, 'the key gets reset when the input is cleared');
+    assert.strictEqual(
+      this.lastOnChangeCall[1].value,
+      key.value,
+      'the key gets reset when the input is cleared'
+    );
   });
 
   test('it allows for text entry', async function (assert) {
@@ -85,7 +89,7 @@ module('Integration | Component | pgp file', function (hooks) {
     await waitUntil(() => {
       return !!this.lastOnChangeCall;
     });
-    assert.equal(this.lastOnChangeCall[1].value, text, 'the key value is passed to onChange');
+    assert.strictEqual(this.lastOnChangeCall[1].value, text, 'the key value is passed to onChange');
   });
 
   test('toggling back and forth', async function (assert) {

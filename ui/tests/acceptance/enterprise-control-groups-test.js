@@ -166,7 +166,7 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
     assert.dom('[data-test-authorize-button]').exists();
     await controlGroupComponent.authorize();
     await settled();
-    assert.equal(controlGroupComponent.bannerPrefix, 'Thanks!', 'text display changes');
+    assert.strictEqual(controlGroupComponent.bannerPrefix, 'Thanks!', 'text display changes');
     await settled();
     await authPage.logout();
     await settled();
@@ -189,7 +189,7 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
       assert.ok(controlGroupSuccessComponent.showsNavigateMessage, 'shows user the navigate message');
       await controlGroupSuccessComponent.navigate();
       await settled();
-      assert.equal(currentURL(), url, 'successfully loads the target url');
+      assert.strictEqual(currentURL(), url, 'successfully loads the target url');
     } else {
       await visit(`/vault/access/control-groups/${accessor}`);
 

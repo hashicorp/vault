@@ -104,7 +104,7 @@ module('Integration | Component | keymgmt/distribute', function (hooks) {
     assert.dom(SELECTORS.operationsSection).hasAttribute('disabled');
     // Select
     await clickTrigger();
-    assert.equal(ssComponent.options.length, 3, 'shows all provider options');
+    assert.strictEqual(ssComponent.options.length, 3, 'shows all provider options');
     await typeInSearch('aws');
     await ssComponent.selectOption();
     await settled();

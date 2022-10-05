@@ -50,7 +50,7 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
 
     assert.dom('[data-test-info-table-item-array]').exists();
     let noLinkString = document.querySelector('code').textContent.trim();
-    assert.equal(
+    assert.strictEqual(
       noLinkString.length,
       DISPLAY_ARRAY.toString().length,
       'renders a string of the array if isLink is not provided'
@@ -67,7 +67,7 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
         @backend={{this.backend}}
       />
     `);
-    assert.equal(
+    assert.strictEqual(
       document.querySelectorAll('a > span').length,
       DISPLAY_ARRAY.length,
       'renders each item in array with link'
@@ -86,7 +86,7 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
       @queryParam={{this.queryParam}}
       @backend={{this.backend}}
     />`);
-    assert.equal(
+    assert.strictEqual(
       document.querySelectorAll('a > span').length,
       DISPLAY_ARRAY.length - 1,
       'renders each item in array with link'
@@ -122,7 +122,7 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
       @backend={{this.backend}}
     />`);
     const numberCutOffTruncatedArray = displayArrayWithWildcard.length - 5;
-    assert.equal(document.querySelectorAll('a > span').length, 5, 'renders truncated array of five');
+    assert.strictEqual(document.querySelectorAll('a > span').length, 5, 'renders truncated array of five');
     assert
       .dom(`[data-test-and="${numberCutOffTruncatedArray}"]`)
       .exists('correctly counts with wildcard filter and shows the count');

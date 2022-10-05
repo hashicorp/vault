@@ -17,7 +17,7 @@ module('Integration | Component | ttl picker', function (hooks) {
 
     let callCount = this.changeSpy.callCount;
     await fillIn('[data-test-ttl-value]', 'foo');
-    assert.equal(this.changeSpy.callCount, callCount, "it didn't call onChange again");
+    assert.strictEqual(this.changeSpy.callCount, callCount, "it didn't call onChange again");
     assert.dom('[data-test-ttl-error]').includesText('Error', 'renders the error box');
     await fillIn('[data-test-ttl-value]', '33');
     assert.dom('[data-test-ttl-error]').doesNotExist('removes the error box');

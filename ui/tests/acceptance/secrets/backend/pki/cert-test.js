@@ -57,7 +57,7 @@ elRplAzrMF4=
     await settled();
     await generatePage.issueCert('foo');
     await settled();
-    assert.equal(currentURL(), `/vault/secrets/${mount}/credentials/role?action=issue`);
+    assert.strictEqual(currentURL(), `/vault/secrets/${mount}/credentials/role?action=issue`);
     assert.dom(SELECTORS.certificate).exists('displays masked certificate');
     assert.dom(SELECTORS.commonName).exists('displays common name');
     assert.dom(SELECTORS.issueDate).exists('displays issue date');
@@ -91,11 +91,15 @@ elRplAzrMF4=
     await settled();
     await listPage.visitRoot({ backend: path, tab: 'cert' });
     await settled();
-    assert.equal(currentURL(), `/vault/secrets/${path}/list?tab=cert`);
-    assert.equal(listPage.secrets.length, 2, 'lists certs');
+    assert.strictEqual(currentURL(), `/vault/secrets/${path}/list?tab=cert`);
+    assert.strictEqual(listPage.secrets.length, 2, 'lists certs');
     await listPage.secrets.objectAt(0).click();
     await settled();
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'navigates to the show page');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.show',
+      'navigates to the show page'
+    );
     assert.dom(SELECTORS.certificate).exists('displays masked certificate');
     assert.dom(SELECTORS.commonName).exists('displays common name');
     assert.dom(SELECTORS.issueDate).exists('displays issue date');

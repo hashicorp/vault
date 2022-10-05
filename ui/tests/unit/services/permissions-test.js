@@ -139,7 +139,7 @@ module('Unit | Service | permissions', function (hooks) {
       },
     };
     service.set('exactPaths', policyPaths);
-    assert.equal(service.navPathParams('policies').models[0], 'rgp');
+    assert.strictEqual(service.navPathParams('policies').models[0], 'rgp');
   });
 
   test('returns the first allowed nav route for access', function (assert) {
@@ -191,6 +191,6 @@ module('Unit | Service | permissions', function (hooks) {
     });
     this.owner.register('service:namespace', namespaceService);
     let service = this.owner.lookup('service:permissions');
-    assert.equal(service.pathNameWithNamespace('sys/auth'), 'marketing/sys/auth');
+    assert.strictEqual(service.pathNameWithNamespace('sys/auth'), 'marketing/sys/auth');
   });
 });

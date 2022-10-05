@@ -20,6 +20,6 @@ module('Integration | Component | console/log json', function (hooks) {
 
     await render(hbs`{{console/log-json content=content}}`);
     const instance = find('[data-test-component=code-mirror-modifier]').innerText;
-    assert.equal(instance, expectedText);
+    assert.strictEqual(instance, expectedText);
   });
 });

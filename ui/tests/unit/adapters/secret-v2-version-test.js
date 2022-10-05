@@ -83,8 +83,8 @@ module('Unit | Adapter | secret-v2-version', function (hooks) {
         let adapter = this.owner.lookup('adapter:secret-v2-version');
         adapter[adapterMethod](...args);
         let { url, method, requestBody } = this.server.handledRequests[0];
-        assert.equal(url, expectedURL, `${adapterMethod} calls the correct url: ${expectedURL}`);
-        assert.equal(
+        assert.strictEqual(url, expectedURL, `${adapterMethod} calls the correct url: ${expectedURL}`);
+        assert.strictEqual(
           method,
           expectedHttpVerb,
           `${adapterMethod} uses the correct http verb: ${expectedHttpVerb}`

@@ -41,7 +41,7 @@ module('Acceptance | raft storage', function (hooks) {
     await visit('/vault/secrets');
     await visit('/vault/storage/raft');
     const store = this.owner.lookup('service:store');
-    assert.equal(
+    assert.strictEqual(
       store.peekAll('server').length,
       2,
       'Store contains 2 server records since remove peer was triggered externally'
@@ -55,7 +55,7 @@ module('Acceptance | raft storage', function (hooks) {
     this.server.get('/sys/storage/raft/configuration', () => this.config);
     this.server.post('/sys/storage/raft/remove-peer', (schema, req) => {
       const body = JSON.parse(req.requestBody);
-      assert.equal(
+      assert.strictEqual(
         body.server_id,
         this.config.data.config.servers[1].node_id,
         'Remove peer request made with node id'

@@ -41,7 +41,7 @@ module('Acceptance | clients current tab', function (hooks) {
     });
     this.server.get('sys/internal/counters/activity/monthly', () => overrideResponse(204));
     await visit('/vault/clients/current');
-    assert.equal(currentURL(), '/vault/clients/current');
+    assert.strictEqual(currentURL(), '/vault/clients/current');
     assert.dom(SELECTORS.currentMonthActiveTab).hasText('Current month', 'current month tab is active');
     assert.dom(SELECTORS.emptyStateTitle).hasText('Tracking is disabled');
   });
@@ -63,7 +63,7 @@ module('Acceptance | clients current tab', function (hooks) {
       };
     });
     await visit('/vault/clients/current');
-    assert.equal(currentURL(), '/vault/clients/current');
+    assert.strictEqual(currentURL(), '/vault/clients/current');
     assert.dom(SELECTORS.currentMonthActiveTab).hasText('Current month', 'current month tab is active');
     assert.dom(SELECTORS.emptyStateTitle).hasText('No data received');
   });
@@ -71,7 +71,7 @@ module('Acceptance | clients current tab', function (hooks) {
   test('filters correctly on current with full data', async function (assert) {
     assert.expect(27);
     await visit('/vault/clients/current');
-    assert.equal(currentURL(), '/vault/clients/current');
+    assert.strictEqual(currentURL(), '/vault/clients/current');
     assert.dom(SELECTORS.currentMonthActiveTab).hasText('Current month', 'current month tab is active');
     assert.dom(SELECTORS.usageStats).exists('usage stats block exists');
     assert.dom('[data-test-stat-text-container]').exists({ count: 3 }, '3 stat texts exist');
@@ -130,7 +130,7 @@ module('Acceptance | clients current tab', function (hooks) {
   test('filters correctly on current with no auth mounts', async function (assert) {
     assert.expect(16);
     await visit('/vault/clients/current');
-    assert.equal(currentURL(), '/vault/clients/current');
+    assert.strictEqual(currentURL(), '/vault/clients/current');
     assert.dom(SELECTORS.currentMonthActiveTab).hasText('Current month', 'current month tab is active');
     assert.dom(SELECTORS.usageStats).exists('usage stats block exists');
     assert.dom('[data-test-stat-text-container]').exists({ count: 3 }, '3 stat texts exist');

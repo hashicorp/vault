@@ -54,7 +54,7 @@ module('Integration | Component | config pki', function (hooks) {
     await setupAndRender(this);
     assert.ok(component.text.startsWith('You can tidy up the backend'));
     assert.notOk(component.hasTitle, 'No title for tidy section');
-    assert.equal(component.fields.length, 2);
+    assert.strictEqual(component.fields.length, 2);
     assert.ok(component.fields.objectAt(0).labelText, 'Tidy cert store');
     assert.ok(component.fields.objectAt(1).labelText, 'Another attr');
   });
@@ -62,16 +62,16 @@ module('Integration | Component | config pki', function (hooks) {
   test('it renders crl section', async function (assert) {
     await setupAndRender(this, 'crl');
     assert.ok(component.hasTitle, 'renders the title');
-    assert.equal(component.title, 'Certificate Revocation List (CRL) config');
+    assert.strictEqual(component.title, 'Certificate Revocation List (CRL) config');
     assert.ok(component.text.startsWith('Set the duration for which the generated CRL'));
-    assert.equal(component.fields.length, 1);
+    assert.strictEqual(component.fields.length, 1);
     assert.ok(component.fields.objectAt(0).labelText, 'Crl');
   });
 
   test('it renders urls section', async function (assert) {
     await setupAndRender(this, 'urls');
     assert.notOk(component.hasTitle, 'No title for urls section');
-    assert.equal(component.fields.length, 1);
+    assert.strictEqual(component.fields.length, 1);
     assert.ok(component.fields.objectAt(0).labelText, 'urls');
   });
 
@@ -84,7 +84,7 @@ module('Integration | Component | config pki', function (hooks) {
     this.set(
       'config',
       config((options) => {
-        assert.equal(options.adapterOptions.method, section, 'method passed to save');
+        assert.strictEqual(options.adapterOptions.method, section, 'method passed to save');
         assert.deepEqual(
           options.adapterOptions.fields,
           ['tidyCertStore', 'anotherAttr'],

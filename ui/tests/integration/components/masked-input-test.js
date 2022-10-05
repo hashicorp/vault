@@ -74,11 +74,11 @@ module('Integration | Component | masked input', function (hooks) {
     this.set('value', '123456789-123456789-123456789');
     await render(hbs`{{masked-input value=value displayOnly=true}}`);
     let maskedValue = document.querySelector('.masked-value').innerText;
-    assert.equal(maskedValue.length, 11);
+    assert.strictEqual(maskedValue.length, 11);
 
     await component.toggleMasked();
     let unMaskedValue = document.querySelector('.masked-value').innerText;
-    assert.equal(unMaskedValue.length, this.value.length);
+    assert.strictEqual(unMaskedValue.length, this.value.length);
   });
 
   test('it does not unmask text on focus', async function (assert) {
@@ -95,6 +95,6 @@ module('Integration | Component | masked input', function (hooks) {
     await triggerKeyEvent('[data-test-textarea]', 'keydown', 9);
     await component.toggleMasked();
     let unMaskedValue = document.querySelector('.masked-value').value;
-    assert.equal(unMaskedValue, this.value);
+    assert.strictEqual(unMaskedValue, this.value);
   });
 });

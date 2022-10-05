@@ -26,7 +26,7 @@ module('Integration | Component | Select', function (hooks) {
     await render(hbs`<Select @options={{options}} @label={{label}} @name={{name}}/>`);
 
     assert.dom('[data-test-select="foo"]').hasValue('foo');
-    assert.equal(this.element.querySelector('[data-test-select="foo"]').options.length, 3);
+    assert.strictEqual(this.element.querySelector('[data-test-select="foo"]').options.length, 3);
   });
 
   test('it renders when options is an array of objects', async function (assert) {
@@ -38,7 +38,7 @@ module('Integration | Component | Select', function (hooks) {
     await render(hbs`<Select @options={{options}} @label={{label}} @name={{name}}/>`);
 
     assert.dom('[data-test-select="foo"]').hasValue('berry');
-    assert.equal(this.element.querySelector('[data-test-select="foo"]').options.length, 2);
+    assert.strictEqual(this.element.querySelector('[data-test-select="foo"]').options.length, 2);
   });
 
   test('it renders when options is an array of custom objects', async function (assert) {

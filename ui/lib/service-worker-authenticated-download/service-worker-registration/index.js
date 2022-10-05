@@ -16,11 +16,11 @@ addSuccessHandler(function (registration) {
     if (action === 'getToken') {
       let token = getToken();
       if (!token) {
-        console.error('Unable to retrieve Vault tokent');
+        console.error('Unable to retrieve Vault tokent'); // eslint-disable-line
       }
       port.postMessage({ token: token });
     } else {
-      console.error('Unknown event', event);
+      console.error('Unknown event', event); // eslint-disable-line
       port.postMessage({
         error: 'Unknown request',
       });

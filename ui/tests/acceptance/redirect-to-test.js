@@ -59,7 +59,7 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
     // the login method on this page does another visit call that we don't want here
     await auth.tokenInput('root').submit();
     await settled();
-    assert.equal(currentURL(), url, 'navigates to the redirect_to url after auth');
+    assert.strictEqual(currentURL(), url, 'navigates to the redirect_to url after auth');
   });
 
   test('redirect from root does not include redirect_to', async function (assert) {
@@ -77,7 +77,7 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
     );
     await auth.tokenInput('root').submit();
     await settled();
-    assert.equal(currentURL(), url, 'navigates to the redirect_to with the query param after auth');
+    assert.strictEqual(currentURL(), url, 'navigates to the redirect_to with the query param after auth');
   });
 
   test('redirect to logout with wrapped token authenticates you', async function (assert) {
@@ -90,6 +90,6 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
     });
     await settled();
 
-    assert.equal(currentURL(), url, 'authenticates then navigates to the redirect_to url after auth');
+    assert.strictEqual(currentURL(), url, 'authenticates then navigates to the redirect_to url after auth');
   });
 });

@@ -10,7 +10,7 @@ module('Unit | Model | secret-engine', function (hooks) {
     let model;
     run(() => {
       model = run(() => this.owner.lookup('service:store').createRecord('secret-engine'));
-      assert.equal(model.get('modelTypeForKV'), 'secret');
+      assert.strictEqual(model.get('modelTypeForKV'), 'secret');
     });
   });
 
@@ -24,7 +24,7 @@ module('Unit | Model | secret-engine', function (hooks) {
           type: 'kv',
         })
       );
-      assert.equal(model.get('modelTypeForKV'), 'secret-v2');
+      assert.strictEqual(model.get('modelTypeForKV'), 'secret-v2');
     });
   });
 
@@ -38,7 +38,7 @@ module('Unit | Model | secret-engine', function (hooks) {
           type: 'kv',
         })
       );
-      assert.equal(model.get('modelTypeForKV'), 'secret-v2');
+      assert.strictEqual(model.get('modelTypeForKV'), 'secret-v2');
     });
   });
 });
