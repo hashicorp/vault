@@ -194,7 +194,7 @@ export default class PkiRoleEngineModel extends Model {
   @attr('boolean') IpsecUser;
   @attr({
     label: 'Extended key usage OIDs',
-    subText: 'A comma-separated string or list of extended key usage oids. Add one item per row.',
+    subText: 'A list of extended key usage oids. Add one item per row.',
     editType: 'stringArray',
     isTitleOfFlexGroup: true,
   })

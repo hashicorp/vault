@@ -24,7 +24,6 @@ export default class FormFieldGroupsLoop extends Component {
       let key = Object.keys(group)[0]; // the key name e.g. default or Key usage
       return MODEL_GROUPS_DISPLAY_FLEX.includes(key);
     });
-    console.log(Object.keys(displayFlexGroups[0]), 'displayFlexGroups');
     this.flexGroups = Object.keys(displayFlexGroups[0]);
   }
 }
