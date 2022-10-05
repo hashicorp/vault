@@ -1,10 +1,6 @@
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink
-      @type="add"
-      @params={{array "vault.cluster.access.oidc.assignments.create"}}
-      data-test-oidc-assignment-create
-    >
+    <ToolbarLink @route="vault.cluster.access.oidc.assignments.create" @type="add" data-test-oidc-assignment-create>
       Create assignment
     </ToolbarLink>
   </ToolbarActions>

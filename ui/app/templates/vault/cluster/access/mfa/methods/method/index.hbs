@@ -50,7 +50,8 @@
         Delete
       </ConfirmAction>
       <ToolbarLink
-        @params={{array "vault.cluster.access.mfa.methods.method.edit" this.model.method.id}}
+        @route="vault.cluster.access.mfa.methods.method.edit"
+        @model={{this.model.method.id}}
         data-test-mfa-method-edit
       >
         Edit

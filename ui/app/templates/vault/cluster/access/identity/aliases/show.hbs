@@ -30,10 +30,7 @@
 </div>
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink
-      @params={{array "vault.cluster.access.identity.aliases.edit" this.model.id}}
-      data-test-alias-edit-link={{true}}
-    >
+    <ToolbarLink @route="vault.cluster.access.identity.aliases.edit" @model={{this.model.id}} data-test-alias-edit-link>
       Edit
       {{lowercase (humanize this.model.identityType)}}
     </ToolbarLink>

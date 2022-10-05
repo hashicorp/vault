@@ -37,15 +37,17 @@
     {{! template-lint-configure simple-unless "warn" }}
     {{#unless (or (and (eq this.model.identityType "group") (eq this.model.type "internal")) this.model.alias)}}
       <ToolbarLink
+        @route="vault.cluster.access.identity.aliases.add"
+        @models={{array (pluralize this.model.identityType) this.model.id}}
         @type="add"
-        @params={{array "vault.cluster.access.identity.aliases.add" (pluralize this.model.identityType) this.model.id}}
         data-test-entity-create-link={{true}}
       >
         Add alias
       </ToolbarLink>
     {{/unless}}
     <ToolbarLink
-      @params={{array "vault.cluster.access.identity.edit" (pluralize this.model.identityType) this.model.id}}
+      @route="vault.cluster.access.identity.edit"
+      @models={{array (pluralize this.model.identityType) this.model.id}}
       data-test-entity-edit-link={{true}}
     >
       Edit

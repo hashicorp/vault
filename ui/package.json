@@ -98,7 +98,7 @@
     "ember-cli-htmlbars": "^6.0.1",
     "ember-cli-inject-live-reload": "^2.1.0",
     "ember-cli-mirage": "2.4.0",
-    "ember-cli-page-object": "1.17.9",
+    "ember-cli-page-object": "1.17.10",
     "ember-cli-sass": "^10.0.1",
     "ember-cli-sri": "meirish/ember-cli-sri#rooturl",
     "ember-cli-string-helpers": "6.1.0",
