@@ -9,7 +9,7 @@
   {{#if @label}}
     <label class="is-label" data-test-string-list-label="true">
       {{@label}}
-      {{#if (and @showHelpText @attr.options.helpText)}}
+      {{#if this.helpText}}
         <InfoTooltip>{{this.helpText}}</InfoTooltip>
       {{/if}}
     </label>
