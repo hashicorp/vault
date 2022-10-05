@@ -102,7 +102,7 @@
   justify-content: space-between !important;
 }
 
-// CSS GRID
+/* CSS GRID */
 // grid container
 .is-grid {
   display: grid;
@@ -123,7 +123,8 @@
 .is-grid-column-span-3 {
   grid-column-end: span 3;
 }
-// end of grid
+/* END OF CSS GRID */
+
 .has-default-border {
   border: 1px solid $grey !important;
 }

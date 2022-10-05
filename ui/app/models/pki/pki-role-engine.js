@@ -13,6 +13,7 @@ const validations = {
 export default class PkiRoleEngineModel extends Model {
   @attr('string', { readOnly: true }) backend;
 
+  /* Overriding default options */
   @attr('string', {
     label: 'Role name',
     fieldValue: 'name',
@@ -41,7 +42,7 @@ export default class PkiRoleEngineModel extends Model {
       'Also called the not_before_duration property. Allows certificates to be valid for a certain time period before now. This is useful to correct clock misalignment on various systems when setting up your CA.',
     editType: 'ttl',
     hideToggle: true,
-    defaultValue: '30s', // type in API is duration which accepts both an integer and string e.g. 30 || '30s'
+    defaultValue: '30s', // The type in they API is "duration" which accepts both an integer and string e.g. 30 || '30s'
   })
   notBeforeDuration;
 
@@ -77,18 +78,21 @@ export default class PkiRoleEngineModel extends Model {
     editType: 'boolean',
   })
   addBasicConstraints;
+  /* End of overriding default options */
 
-  // Overriding Domain Handling options
+  /* Overriding Domain handling options */
   @attr({
     label: 'Allowed Domains',
     subText: 'Specifies the domains this role is allowed to issue certificates for. Add one item per row.',
     editType: 'stringArray',
   })
   allowedDomains;
+
   @attr('boolean', {
     label: 'Allow templates in allowed domains',
   })
   allowedDomainsTemplate;
+
   @attr('string', {
     editType: 'moreInfo',
     text: 'These options can interact intricately with one another. For more information,',
@@ -96,26 +100,30 @@ export default class PkiRoleEngineModel extends Model {
     docLink: '/docs/concepts/password-policies',
   })
   moreInfo;
+  /* End of overriding Domain handling options */
 
-  // Overriding Key parameters options
+  /* Overriding Key parameters options */
   @attr('string', {
     subText: `These are the parameters for generating or validating the certificate's key material.`,
     dontShowInput: true,
     dontShowLabel: true,
   })
   keyParametersLabel;
+
   @attr('string', {
     label: 'Key type',
     possibleValues: ['rsa', 'ec', 'ed25519', 'any'],
     defaultValue: 'rsa',
   })
   keyType;
+
   @attr('string', {
     label: 'Key bits',
     fieldGroup: 'Key parameters',
   })
   keyBits;
-  // To set conditional "possibleValues" for the field "keyBits" that depend on the value of the selected "keyType"
+
+  // "possibleValues" for the field "keyBits" depends on the value of the selected "keyType"
   get keyBitsConditional() {
     // ARG TODO confirm this is the correct matrix (probably with core)
     const keyBitOptions = {
@@ -151,18 +159,19 @@ export default class PkiRoleEngineModel extends Model {
     ],
   })
   signatureBits;
-  // End of key params options
+  /* End of overriding Key parameters options */
 
-  // Overriding Key usage options
-  // Turning an arrayList into checkboxes: https://www.vaultproject.io/api-docs/secret/pki#key_usage-1
+  /* Overriding Key usage options */
+  // The following turns options that go into an arrayList for param "key_usage" into checkboxes: https://www.vaultproject.io/api-docs/secret/pki#key_usage-1
   @attr('string', {
     label: 'Key usage',
     subText: `Specifies the default key usage constraint on the issued certificate. To specify no default key usage constraints, set this to an empty list.`,
     dontShowInput: true,
-    isTitleOfFlexGroup: true,
+    isTitleOfGridGroup: true,
   })
   keyUsageLabel;
-  // all optional values to be added to the stringArray keyUsage https://pkg.go.dev/crypto/x509#KeyUsage
+
+  // https://pkg.go.dev/crypto/x509#KeyUsage
   @attr('boolean') DigitalSignature;
   @attr('boolean') KeyAgreement;
   @attr('boolean') KeyEncipherment;
@@ -172,16 +181,16 @@ export default class PkiRoleEngineModel extends Model {
   @attr('boolean') CrlSign;
   @attr('boolean') EncipherOnly;
   @attr('boolean') DecipherOnly;
-
   @attr('string', {
     label: 'Extended key usage',
     subText:
       'Specifies the default key usage constraint on the issued certificate. To specify no default key usage constraints, set this to an empty list.',
     dontShowInput: true,
-    isTitleOfFlexGroup: true,
+    isTitleOfGridGroup: true,
   })
   extKeyUsageLabel;
-  // all optional values to be added to the stringArray extKeyUsage https://pkg.go.dev/crypto/x509#ExtKeyUsage
+
+  // https://pkg.go.dev/crypto/x509#ExtKeyUsage
   @attr('boolean') Any;
   @attr('boolean') ServerAuth;
   @attr('boolean') ClientAuth;
@@ -196,9 +205,10 @@ export default class PkiRoleEngineModel extends Model {
     label: 'Extended key usage OIDs',
     subText: 'A list of extended key usage oids. Add one item per row.',
     editType: 'stringArray',
-    isTitleOfFlexGroup: true,
+    isTitleOfGridGroup: true,
   })
   extKeyUsageOids;
+  /* End of overriding Key usage options */
 
   // must be a getter so it can be added to the prototype needed in the pathHelp service on the line here: if (newModel.merged || modelProto.useOpenAPI !== true) {
   get useOpenAPI() {
@@ -234,7 +244,7 @@ export default class PkiRoleEngineModel extends Model {
   }
 
   _fieldToAttrsGroups = null;
-  // ARG TODO: I removed 'allowedDomains' but I'm fairly certain it needs to be somewhere. Confirm with design.
+
   get fieldGroups() {
     if (!this._fieldToAttrsGroups) {
       this._fieldToAttrsGroups = fieldToAttrs(this, [
@@ -270,7 +280,7 @@ export default class PkiRoleEngineModel extends Model {
         {
           'Key usage': [
             'keyUsageLabel',
-            'DigitalSignature', // not case sensitive and being sent to POST request as an ArrayList for param keyUsage
+            'DigitalSignature', // These values are not not case sensitive and being sent to POST request as an ArrayList for param keyUsage
             'KeyAgreement',
             'KeyEncipherment',
             'ContentCommitment',

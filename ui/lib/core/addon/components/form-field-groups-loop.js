@@ -3,27 +3,33 @@ import { tracked } from '@glimmer/tracking';
 
 /**
  * @module FormFieldGroupsLoop
- * FormFieldGroupsLoop components ARG TODO.
+ * FormFieldGroupsLoop components loop through the "groups" set on a model and display them either as default or behind toggle components. 
+ * Option to have toggle components display the fields within a css grid. 
+ * See the "Key usage" section on the PKI engine for an example.
+ * To use css grid, you must add the group name to the array MODEL_GROUPS_DISPLAY_GRID.
  *
  * @example
  * ```js
- <FormFieldGroupsLoop  ARG TODO/>
+ <FormFieldGroupsLoop @model={{this.model}} @mode={{if @model.isNew "create" "update"}}/>
  * ```
- * @param {string} [mode=null] - ARG TODO
+ * @param {class} model - The routes model class.
+ * @param {string} mode - "create" or "update" used to hide the name form field. TODO: not ideal, would prefer to disable it to follow new design patterns.
+ * @param {function} [modelValidations] - Passed through to formField.
+ * @param {boolean} [showHelpText] - Passed through to formField.
  */
 
-// add group name to list here if you want to display within a flex box.
-// check first no other group name in another model exists.
-const MODEL_GROUPS_DISPLAY_FLEX = ['Key usage'];
+// Add group name to list here if you want to display within a css grid.
+// Check first that no other group name exists in another model.
+const MODEL_GROUPS_DISPLAY_GRID = ['Key usage'];
 
 export default class FormFieldGroupsLoop extends Component {
-  @tracked flexGroups = [];
+  @tracked GridGroups = [];
   constructor() {
     super(...arguments);
-    let displayFlexGroups = this.args.model.fieldGroups.filter((group) => {
-      let key = Object.keys(group)[0]; // the key name e.g. default or Key usage
-      return MODEL_GROUPS_DISPLAY_FLEX.includes(key);
+    let displayGridGroups = this.args.model.fieldGroups.filter((group) => {
+      let key = Object.keys(group)[0]; // ex: 'Key usage'
+      return MODEL_GROUPS_DISPLAY_GRID.includes(key);
     });
-    this.flexGroups = Object.keys(displayFlexGroups[0]);
+    this.GridGroups = Object.keys(displayGridGroups[0]);
   }
 }

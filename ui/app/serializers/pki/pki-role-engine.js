@@ -35,7 +35,7 @@ export default class PkiRoleEngineSerializer extends ApplicationSerializer {
     const json = super.serialize(...arguments);
     const jsonAsArray = Object.entries(json);
     /*
-      Handle adding the KEY_USAGE checkboxes and EXT_KEY_USAGE checkboxes to their respect key_usage and ext_key_usage ['list: []'] https://www.vaultproject.io/api-docs/secret/pki#key_usage
+      Handle adding the KEY_USAGE checkboxes and EXT_KEY_USAGE checkboxes to their respective key_usage and ext_key_usage ['list: []'] https://www.vaultproject.io/api-docs/secret/pki#key_usage
       Process:
       1. Turn the object Json into a key/value array of arrays so we can filter over it.
       2. This returns as the const filtered = [['content_commitment',true],['crl_sign',true]]
