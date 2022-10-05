@@ -508,7 +508,7 @@ func TestDynamicSystemView(c *Core, ns *namespace.Namespace) *dynamicSystemView 
 		me.namespace = ns
 	}
 
-	return &dynamicSystemView{c, me}
+	return &dynamicSystemView{c, me, c.perfStandby}
 }
 
 // TestAddTestPlugin registers the testFunc as part of the plugin command to the
