@@ -35,18 +35,15 @@
       {{#each-in fieldGroup as |group fields|}}
         {{#if (eq group "default")}}
           {{#each fields as |attr|}}
-            {{! template-lint-configure simple-unless "warn"  }}
-            {{#unless (and (not-eq @mode "create") (eq attr.name "name"))}}
-              <FormField
-                data-test-field={{true}}
-                @attr={{attr}}
-                @model={{@model}}
-                @modelValidations={{@modelValidations}}
-                @showHelpText={{@showHelpText}}
-              >
-                {{yield attr}}
-              </FormField>
-            {{/unless}}
+            <FormField
+              data-test-field={{true}}
+              @attr={{attr}}
+              @model={{@model}}
+              @modelValidations={{@modelValidations}}
+              @showHelpText={{false}}
+            >
+              {{yield attr}}
+            </FormField>
           {{/each}}
         {{else}}
           {{! Groups hidden behind Toggles }}
@@ -72,7 +69,7 @@
                           @attr={{attr}}
                           @model={{@model}}
                           @modelValidations={{@modelValidations}}
-                          @showHelpText={{@showHelpText}}
+                          @showHelpText={{false}}
                         >
                           {{yield attr}}
                         </FormField>
@@ -88,7 +85,7 @@
                       @attr={{if (eq attr.name "keyBits") @model.keyBitsConditional attr}}
                       @model={{@model}}
                       @modelValidations={{@modelValidations}}
-                      @showHelpText={{@showHelpText}}
+                      @showHelpText={{false}}
                     >
                       {{yield attr}}
                     </FormField>

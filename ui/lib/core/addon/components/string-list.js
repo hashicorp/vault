@@ -18,7 +18,7 @@ import { set } from '@ember/object';
  * @param {string} helpText - Text displayed as a tooltip.
  * @param {string} type=array - Optional type for inputValue.
  * @param {string} attrName - We use this to check the type so we can modify the tooltip content.
- * @param {boolean} showHelpText - A boolean of whether to show the tooltip from OpenAPI or not.
+ * @param {boolean} showHelpText - A boolean to show or not show the tooltip from OpenAPI.
  * @param {string} subText - Text below the label.
  */
 

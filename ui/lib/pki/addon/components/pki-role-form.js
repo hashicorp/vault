@@ -20,7 +20,6 @@ import { tracked } from '@glimmer/tracking';
  */
 
 // Add group name to list here if you want to display within a css grid.
-// Check first that no other group name exists in another model.
 const MODEL_GROUPS_DISPLAY_GRID = ['Key usage'];
 export default class PkiRoleForm extends Component {
   @service store;

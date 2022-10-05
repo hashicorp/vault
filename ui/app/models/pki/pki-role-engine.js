@@ -97,7 +97,7 @@ export default class PkiRoleEngineModel extends Model {
     editType: 'moreInfo',
     text: 'These options can interact intricately with one another. For more information,',
     docText: 'learn more here.',
-    docLink: '/docs/concepts/password-policies',
+    docLink: '/api-docs/secret/pki#allowed_domains',
   })
   moreInfo;
   /* End of overriding Domain handling options */
@@ -119,7 +119,6 @@ export default class PkiRoleEngineModel extends Model {
 
   @attr('string', {
     label: 'Key bits',
-    fieldGroup: 'Key parameters',
   })
   keyBits;
 
@@ -165,7 +164,7 @@ export default class PkiRoleEngineModel extends Model {
   // The following turns options that go into an arrayList for param "key_usage" and "ext_key_usage" into checkboxes
   @attr('string', {
     label: 'Key usage',
-    subText: `Specifies the default key usage constraint on the issued certificate. To specify no default key usage constraints, set this to an empty list.`,
+    subText: `Specifies the default key usage constraint on the issued certificate.`,
     dontShowInput: true,
     isTitleOfGridGroup: true,
   })
@@ -184,8 +183,7 @@ export default class PkiRoleEngineModel extends Model {
 
   @attr('string', {
     label: 'Extended key usage',
-    subText:
-      'Specifies the default key usage constraint on the issued certificate. To specify no default key usage constraints, set this to an empty list.',
+    subText: 'Specifies the default key usage constraint on the issued certificate.',
     dontShowInput: true,
     isTitleOfGridGroup: true,
   })
