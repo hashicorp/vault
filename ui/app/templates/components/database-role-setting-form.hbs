@@ -19,17 +19,17 @@
 {{#unless (and @roleType (not this.statementFields))}}
   <div class="box is-sideless is-fullwidth is-marginless" data-test-statements-section>
     <h3 class="title is-5">Statements</h3>
-    {{#unless this.statementFields}}
-      <EmptyState
-        @title="No role type selected"
-        @message="Select a type of role to be able to add statements for creation, revocation, and/or rotation."
-      />
-    {{else}}
+    {{#if this.statementFields}}
       <div class="form-section">
         {{#each this.statementFields as |attr|}}
           <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
         {{/each}}
       </div>
-    {{/unless}}
+    {{else}}
+      <EmptyState
+        @title="No role type selected"
+        @message="Select a type of role to be able to add statements for creation, revocation, and/or rotation."
+      />
+    {{/if}}
   </div>
 {{/unless}}

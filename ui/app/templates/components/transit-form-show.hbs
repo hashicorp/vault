@@ -1,5 +1,5 @@
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
-  <nav class="tabs">
+  <nav class="tabs" aria-label="tabs">
     <ul>
       <li class={{if (eq @tab "actions") "is-active"}}>
         <SecretLink
@@ -147,7 +147,7 @@
           </div>
           <div class="column is-1 is-flex-end">
             <PopupMenu name="secret-menu">
-              <nav class="menu">
+              <nav class="menu" aria-label="copy public key">
                 <ul class="menu-list">
                   <li class="action">
                     <CopyButton
