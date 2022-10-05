@@ -12,6 +12,18 @@ const KEY_USAGE = [
   'decipher_only',
 ];
 
+const EXT_KEY_USAGE = [
+  'any',
+  'server_auth',
+  'client_auth',
+  'codes_signing',
+  'email_protection',
+  'ipsec_end_system',
+  'ipsec_tunnel',
+  'time_stamping',
+  'ocsp_signing',
+  'ipsec_user',
+];
 export default class PkiRoleEngineSerializer extends ApplicationSerializer {
   stringsOnly(value) {
     if (typeof value === 'string') {
@@ -31,21 +43,26 @@ export default class PkiRoleEngineSerializer extends ApplicationSerializer {
       4. Lastly filter on the filteredFlattened to return only strings so that we add the the key_usage param = ['content_commitment','crl_sign']
       5. cleanup: remove from model the unused params via the delete operation. 
     */
-    const filtered = jsonAsArray.filter(([key]) => {
+    const filteredKeyUsage = jsonAsArray.filter(([key]) => {
       return KEY_USAGE.includes(key);
     });
-    const filteredFlattened = filtered.flat();
+    const filteredExtKeyUsage = jsonAsArray.filter(([key]) => {
+      return EXT_KEY_USAGE.includes(key);
+    });
 
-    json.key_usage = filteredFlattened.filter(this.stringsOnly);
+    const filteredFlattenedKeyUsage = filteredKeyUsage.flat();
+    const filteredFlattenedExtKeyUsage = filteredExtKeyUsage.flat();
 
-    filteredFlattened.filter(this.stringsOnly).forEach((param) => {
+    json.key_usage = filteredFlattenedKeyUsage.filter(this.stringsOnly);
+    json.ext_key_usage = filteredFlattenedExtKeyUsage.filter(this.stringsOnly);
+
+    filteredFlattenedKeyUsage.filter(this.stringsOnly).forEach((param) => {
+      delete json[param];
+    });
+    filteredFlattenedExtKeyUsage.filter(this.stringsOnly).forEach((param) => {
       delete json[param];
     });
 
-    // empty arrays are being removed from serialized json
-    // ensure that they are sent to the server, otherwise removing items will not be persisted
-    json.auth_method_accessors = json.auth_method_accessors || [];
-    json.auth_method_types = json.auth_method_types || [];
-    return this.transformHasManyKeys(json, 'server');
+    return json;
   }
 }
