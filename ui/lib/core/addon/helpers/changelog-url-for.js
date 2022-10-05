@@ -25,8 +25,8 @@ export function changelogUrlFor([version]) {
       return url.concat(versionNumber);
     }
   } catch (e) {
-    console.log(e);
-    console.log('Cannot generate URL for version: ', version);
+    console.log(e); // eslint-disable-line
+    console.log('Cannot generate URL for version: ', version); // eslint-disable-line
   }
   return url;
 }

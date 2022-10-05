@@ -16,7 +16,7 @@ export function parsePkiCert([model]) {
     let cert_asn1 = asn1js.fromBER(stringToArrayBuffer(cert_der));
     cert = new Certificate({ schema: cert_asn1.result });
   } catch (error) {
-    console.debug('DEBUG: Parsing Certificate', error);
+    console.debug('DEBUG: Parsing Certificate', error); // eslint-disable-line
     return {
       can_parse: false,
     };

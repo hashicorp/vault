@@ -81,7 +81,7 @@ export default class VaultClusterOidcProviderRoute extends Route {
       });
       return url;
     } catch (e) {
-      console.debug('DEBUG: parsing url failed for', urlString);
+      console.debug('DEBUG: parsing url failed for', urlString); // eslint-disable-line
       throw new Error('Invalid URL');
     }
   }

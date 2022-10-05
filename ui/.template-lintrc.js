@@ -29,7 +29,7 @@ try {
     prettier: false,
   };
 } catch (error) {
-  console.log(error);
+  console.log(error); // eslint-disable-line
 }
 
 module.exports = {

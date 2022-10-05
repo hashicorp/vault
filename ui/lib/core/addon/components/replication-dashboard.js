@@ -82,7 +82,7 @@ export default Component.extend({
       // when DR and Performance is enabled on the same cluster,
       // the states should always be the same
       // we are leaving this console log statement to be sure
-      console.log('DR State: ', drState, 'Performance State: ', performanceState);
+      console.log('DR State: ', drState, 'Performance State: ', performanceState); // eslint-disable-line
     }
 
     return drState;
