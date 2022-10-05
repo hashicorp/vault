@@ -17,7 +17,7 @@
         <Chevron @direction="down" @isButton={{true}} />
       </D.Trigger>
       <D.Content @defaultClass="popup-menu-content">
-        <nav class="box menu">
+        <nav class="box menu" aria-label="snapshots actions">
           <ul class="menu-list">
             <li class="action">
               {{#if this.useServiceWorker}}
@@ -78,7 +78,7 @@
         <td class="middle no-padding has-text-right">
           <PopupMenu>
             <Confirm as |c|>
-              <nav>
+              <nav aria-label="remove peer">
                 <ul>
                   <li class="action">
                     <c.Message
