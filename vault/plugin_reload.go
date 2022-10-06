@@ -62,7 +62,7 @@ func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) 
 			errors = multierror.Append(errors, fmt.Errorf("cannot reload plugin on %q: %w", mount, err))
 			continue
 		}
-		c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path)
+		c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path, "version", entry.Version)
 	}
 	return errors
 }
@@ -92,7 +92,7 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string) erro
 			if err != nil {
 				return err
 			}
-			c.logger.Info("successfully reloaded plugin", "plugin", pluginName, "path", entry.Path)
+			c.logger.Info("successfully reloaded plugin", "plugin", pluginName, "path", entry.Path, "version", entry.Version)
 		}
 	}
 
@@ -108,7 +108,7 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string) erro
 			if err != nil {
 				return err
 			}
-			c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path)
+			c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path, "version", entry.Version)
 		}
 	}
 
@@ -247,14 +247,6 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 			}
 			re.loginPaths.Store(loginPathsEntry)
 		}
-	}
-
-	if c.logger.IsInfo() {
-		pluginType := "secrets"
-		if isAuth {
-			pluginType = "auth"
-		}
-		c.logger.Info(fmt.Sprintf("successfully reloaded %s backend", pluginType), "type", entry.Type, "version", entry.Version, "path", entry.Path)
 	}
 
 	return nil
