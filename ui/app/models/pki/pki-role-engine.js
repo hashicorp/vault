@@ -105,8 +105,8 @@ export default class PkiRoleEngineModel extends Model {
   /* Overriding Key parameters options */
   @attr('string', {
     subText: `These are the parameters for generating or validating the certificate's key material.`,
-    dontShowInput: true,
-    dontShowLabel: true,
+    hideInput: true,
+    hideLabel: true,
   })
   keyParametersLabel;
 
@@ -166,7 +166,7 @@ export default class PkiRoleEngineModel extends Model {
   @attr('string', {
     label: 'Key usage',
     subText: `Specifies the default key usage constraint on the issued certificate. To specify no default key_usage constraints, uncheck every item in this list.`,
-    dontShowInput: true,
+    hideInput: true,
     isTitleOfGridGroup: true,
   })
   keyUsageLabel;
@@ -195,7 +195,7 @@ export default class PkiRoleEngineModel extends Model {
     label: 'Extended key usage',
     subText:
       'Specifies the default key usage constraint on the issued certificate. To specify no default ext_key_usage constraints, uncheck every item in this list.',
-    dontShowInput: true,
+    hideInput: true,
     isTitleOfGridGroup: true,
   })
   extKeyUsageLabel;

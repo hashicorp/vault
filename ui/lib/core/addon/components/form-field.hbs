@@ -9,7 +9,7 @@
       )
     )
   }}
-    {{#unless (or (eq @attr.type "object") (eq @attr.options.editType "moreInfo"))}}
+    {{#if (not (or (eq @attr.type "object") (eq @attr.options.editType "moreInfo")))}}
       <FormFieldLabel
         for={{@attr.name}}
         @label={{this.labelString}}
@@ -17,7 +17,7 @@
         @subText={{@attr.options.subText}}
         @docLink={{@attr.options.docLink}}
       />
-    {{/unless}}
+    {{/if}}
   {{/unless}}
   {{#if @attr.options.possibleValues}}
     {{#if (eq @attr.options.editType "radio")}}
@@ -299,7 +299,7 @@
         {{/if}}
       {{else}}
         {{! Regular Text Input }}
-        {{#unless @attr.options.dontShowInput}}
+        {{#unless @attr.options.hideInput}}
           <input
             data-test-input={{@attr.name}}
             id={{@attr.name}}
