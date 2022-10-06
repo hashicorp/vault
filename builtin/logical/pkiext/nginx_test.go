@@ -35,13 +35,14 @@ const (
 	containerName   = `vault_pki_nginx_integration`
 )
 
-func buildNginxContainer(t *testing.T, chain string, private string) (func(), string, int, string, string, int) {
+func buildNginxContainer(t *testing.T, root string, chain string, private string) (func(), string, int, string, string, int) {
 	containerfile := `
 FROM nginx:latest
 
 RUN mkdir /www /etc/nginx/ssl && rm /etc/nginx/conf.d/*.conf
 
 COPY testing.conf /etc/nginx/conf.d/
+COPY root.pem /etc/nginx/ssl/root.pem
 COPY fullchain.pem /etc/nginx/ssl/fullchain.pem
 COPY privkey.pem /etc/nginx/ssl/privkey.pem
 COPY /data /www/data
@@ -64,7 +65,25 @@ server {
 	ssl_certificate /etc/nginx/ssl/fullchain.pem;
 	ssl_certificate_key /etc/nginx/ssl/privkey.pem;
 
-    location / {
+	ssl_client_certificate /etc/nginx/ssl/root.pem;
+	ssl_verify_client optional;
+
+	# Magic per: https://serverfault.com/questions/891603/nginx-reverse-proxy-with-optional-ssl-client-authentication
+	# Only necessary since we're too lazy to setup two different subdomains.
+	set $ssl_status 'open';
+	if ($request_uri ~ protected) {
+		set $ssl_status 'closed';
+	}
+
+	if ($ssl_client_verify != SUCCESS) {
+		set $ssl_status "$ssl_status-fail";
+	}
+
+	if ($ssl_status = "closed-fail") {
+		return 403;
+	}
+
+	location / {
 		root /www/data;
     }
 }
@@ -72,6 +91,7 @@ server {
 
 	bCtx := docker.NewBuildContext()
 	bCtx["testing.conf"] = docker.PathContentsFromString(siteConfig)
+	bCtx["root.pem"] = docker.PathContentsFromString(root)
 	bCtx["fullchain.pem"] = docker.PathContentsFromString(chain)
 	bCtx["privkey.pem"] = docker.PathContentsFromString(private)
 	bCtx["/data/index.html"] = docker.PathContentsFromString(unprotectedFile)
@@ -227,6 +247,9 @@ func CheckWithClients(t *testing.T, network string, address string, url string, 
 		// Copy the cert into the newly running container.
 		certCtx["client-cert.pem"] = docker.PathContentsFromString(certificate)
 		certCtx["client-privkey.pem"] = docker.PathContentsFromString(privatekey)
+
+		wgetCmd = []string{"wget", "--verbose", "--ca-certificate=/root.pem", "--certificate=/client-cert.pem", "--private-key=/client-privkey.pem", url}
+		curlCmd = []string{"curl", "--verbose", "--cacert", "/root.pem", "--cert", "/client-cert.pem", "--key", "/client-privkey.pem", url}
 	}
 	if err := cwRunner.CopyTo(ctr.ID, "/", certCtx); err != nil {
 		t.Fatalf("Could not copy certificate and key into container: %v", err)
@@ -309,7 +332,7 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 		"ip_sans":     "127.0.0.1,::1",
 		"sans":        uniqueHostname + ",localhost,localhost4,localhost6,localhost.localdomain",
 	})
-	requireSuccessNonNilResponse(t, resp, err, "failed to create leaf cert")
+	requireSuccessNonNilResponse(t, resp, err, "failed to create server leaf cert")
 	leafCert := resp.Data["certificate"].(string)
 	leafPrivateKey := resp.Data["private_key"].(string) + "\n"
 	fullChain := leafCert + "\n"
@@ -317,7 +340,24 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 		fullChain += cert + "\n"
 	}
 
-	cleanup, host, port, networkName, networkAddr, networkPort := buildNginxContainer(t, fullChain, leafPrivateKey)
+	// Issue a client leaf certificate.
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "testing.client.dadgarcorp.com",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed to create client leaf cert")
+	clientCert := resp.Data["certificate"].(string)
+	clientKey := resp.Data["private_key"].(string) + "\n"
+	clientFullChain := clientCert + "\n" + resp.Data["issuing_ca"].(string) + "\n"
+	clientTrustChain := resp.Data["issuing_ca"].(string) + "\n" + rootCert + "\n"
+
+	var clientTLSCert tls.Certificate
+	clientTLSCert.Certificate = append(clientTLSCert.Certificate, parseCert(t, clientCert).Raw)
+	clientTLSCert.PrivateKey = parseKey(t, clientKey)
+	for _, cert := range resp.Data["ca_chain"].([]string) {
+		clientTLSCert.Certificate = append(clientTLSCert.Certificate, parseCert(t, cert).Raw)
+	}
+
+	cleanup, host, port, networkName, networkAddr, networkPort := buildNginxContainer(t, rootCert, fullChain, leafPrivateKey)
 	defer cleanup()
 
 	if host != "127.0.0.1" && host != "::1" && strings.HasPrefix(host, containerName) {
@@ -326,10 +366,14 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 		port = networkPort
 	}
 
-	localURL := "https://" + host + ":" + strconv.Itoa(port) + "/index.html"
-	containerURL := "https://" + uniqueHostname + ":" + strconv.Itoa(networkPort) + "/index.html"
+	localBase := "https://" + host + ":" + strconv.Itoa(port)
+	localURL := localBase + "/index.html"
+	localProtectedURL := localBase + "/protected.html"
+	containerBase := "https://" + uniqueHostname + ":" + strconv.Itoa(networkPort)
+	containerURL := containerBase + "/index.html"
+	containerProtectedURL := containerBase + "/protected.html"
 
-	t.Logf("Spawned nginx container:\nhost: %v\nport: %v\nnetworkName: %v\nnetworkAddr: %v\nnetworkPort: %v\nlocalURL: %v\ncontainerURL: %v\n", host, port, networkName, networkAddr, networkPort, localURL, containerURL)
+	t.Logf("Spawned nginx container:\nhost: %v\nport: %v\nnetworkName: %v\nnetworkAddr: %v\nnetworkPort: %v\nlocalURL: %v\ncontainerURL: %v\n", host, port, networkName, networkAddr, networkPort, localBase, containerBase)
 
 	// Ensure we can connect with Go.
 	pool := x509.NewCertPool()
@@ -370,8 +414,34 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 		t.Fatalf("expected body to contain (%v) but was:\n%v", unprotectedFile, string(body))
 	}
 
+	// Should fail to fetch without client auth info.
+	clientResp, err = client.Get(localProtectedURL)
+	if err == nil {
+		if clientResp.StatusCode != 403 {
+			t.Fatalf("expected failure to fetch but got valid response: %v", clientResp)
+		}
+
+		defer clientResp.Body.Close()
+	}
+
+	// Setting up a client cert should fix this.
+	tlsConfig.Certificates = append(tlsConfig.Certificates, clientTLSCert)
+	clientResp, err = client.Get(localProtectedURL)
+	if err != nil {
+		t.Fatalf("failed to fetch url (%v): %v", localURL, err)
+	}
+	defer clientResp.Body.Close()
+	body, err = io.ReadAll(clientResp.Body)
+	if err != nil {
+		t.Fatalf("failed to get read response body: %v", err)
+	}
+	if !strings.Contains(string(body), protectedFile) {
+		t.Fatalf("expected body to contain (%v) but was:\n%v", protectedFile, string(body))
+	}
+
 	// Ensure we can connect with wget/curl.
 	CheckWithClients(t, networkName, networkAddr, containerURL, rootCert, "", "")
+	CheckWithClients(t, networkName, networkAddr, containerProtectedURL, clientTrustChain, clientFullChain, clientKey)
 }
 
 func Test_NginxRSAPure(t *testing.T) {

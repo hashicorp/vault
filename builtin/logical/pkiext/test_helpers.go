@@ -40,3 +40,12 @@ func requireSuccessNilResponse(t *testing.T, resp *logical.Response, err error, 
 		require.Nilf(t, resp, msg, msgAndArgs...)
 	}
 }
+
+func parseKey(t *testing.T, pemKey string) crypto.Signer {
+	block, _ := pem.Decode([]byte(pemKey))
+	require.NotNil(t, block, "failed to decode PEM block")
+
+	key, _, err := certutil.ParseDERKey(block.Bytes)
+	require.NoError(t, err)
+	return key
+}
