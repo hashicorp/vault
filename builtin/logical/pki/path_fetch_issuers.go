@@ -207,9 +207,12 @@ func respondReadIssuer(issuer *issuerEntry) (*logical.Response, error) {
 		respManualChain = append(respManualChain, string(entity))
 	}
 
-	revSigAlgStr := issuer.RevocationSigAlg.String()
-	if issuer.RevocationSigAlg == x509.UnknownSignatureAlgorithm {
-		revSigAlgStr = ""
+	revSigAlgStr, present := certutil.InvSignatureAlgorithmNames[issuer.RevocationSigAlg]
+	if !present {
+		revSigAlgStr = issuer.RevocationSigAlg.String()
+		if issuer.RevocationSigAlg == x509.UnknownSignatureAlgorithm {
+			revSigAlgStr = ""
+		}
 	}
 
 	data := map[string]interface{}{

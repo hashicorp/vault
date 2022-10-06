@@ -5618,6 +5618,10 @@ func TestBackend_VerifyIssuerUpdateDefaultsMatchCreation(t *testing.T) {
 	requireSuccessNonNilResponse(t, resp, err, "failed reading default issuer")
 	preUpdateValues := resp.Data
 
+	// This field gets reset during issuer update to the empty string
+	// (meaning Go will auto-detect the rev-sig-algo).
+	preUpdateValues["revocation_signature_algorithm"] = ""
+
 	resp, err = CBWrite(b, s, "issuer/default", map[string]interface{}{})
 	requireSuccessNonNilResponse(t, resp, err, "failed updating default issuer with no values")
 
