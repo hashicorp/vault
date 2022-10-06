@@ -69,6 +69,12 @@ func (c *Core) metricsLoop(stopCh chan struct{}) {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "unsealed"}, 1, nil)
 			}
 
+			if c.UndoLogsEnabled() {
+				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "write_undo_logs"}, 1, nil)
+			} else {
+				c.metricSink.SetGaugeWithLabels([]string{"core", "replication", "write_undo_logs"}, 0, nil)
+			}
+
 			// Refresh the standby gauge, on all nodes
 			if haState != consts.Active {
 				c.metricSink.SetGaugeWithLabels([]string{"core", "active"}, 0, nil)
