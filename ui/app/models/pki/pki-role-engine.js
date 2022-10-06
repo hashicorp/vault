@@ -171,7 +171,6 @@ export default class PkiRoleEngineModel extends Model {
   })
   keyUsageLabel;
 
-  // https://pkg.go.dev/crypto/x509#KeyUsage
   @attr('boolean', {
     defaultValue: true,
   })
@@ -200,7 +199,6 @@ export default class PkiRoleEngineModel extends Model {
   })
   extKeyUsageLabel;
 
-  // https://pkg.go.dev/crypto/x509#ExtKeyUsage
   @attr('boolean') Any;
   @attr('boolean') ServerAuth;
   @attr('boolean') ClientAuth;
@@ -290,27 +288,28 @@ export default class PkiRoleEngineModel extends Model {
         {
           'Key usage': [
             'keyUsageLabel',
-            'DigitalSignature', // keeping these values capitalized to distinguish them from actual API params. The serializer changes them to an arrayList.
-            'ContentCommitment',
-            'CrlSign',
-            'KeyAgreement',
-            'DataEncipherment',
-            'EncipherOnly',
-            'KeyEncipherment',
-            'CertSign',
-            'DecipherOnly',
-            'extKeyUsageLabel',
-            'Any',
-            'EmailProtection',
-            'TimeStamping',
-            'ServerAuth',
-            'IpsecEndSystem',
-            'OcspSigning',
-            'ClientAuth',
-            'IpsecTunnel',
-            'IpsecUser',
-            'CodesSigning',
-            'extKeyUsageOids',
+            'keyUsage',
+            // 'DigitalSignature', // keeping these values capitalized to distinguish them from actual API params. The serializer changes them to an arrayList.
+            // 'ContentCommitment',
+            // 'CrlSign',
+            // 'KeyAgreement',
+            // 'DataEncipherment',
+            // 'EncipherOnly',
+            // 'KeyEncipherment',
+            // 'CertSign',
+            // 'DecipherOnly',
+            // 'extKeyUsageLabel',
+            // 'Any',
+            // 'EmailProtection',
+            // 'TimeStamping',
+            // 'ServerAuth',
+            // 'IpsecEndSystem',
+            // 'OcspSigning',
+            // 'ClientAuth',
+            // 'IpsecTunnel',
+            // 'IpsecUser',
+            // 'CodesSigning',
+            // 'extKeyUsageOids',
           ],
         },
         { 'Policy identifiers': ['policyIdentifiers'] },

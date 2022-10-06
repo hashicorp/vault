@@ -1,0 +1,75 @@
+{{#let (camelize (concat "show" @group)) as |prop|}}
+  <ToggleButton
+    @isOpen={{get @model prop}}
+    @openLabel={{concat "Hide " @group}}
+    @closedLabel={{@group}}
+    @onClick={{fn (mut (get @model prop))}}
+    class="is-block"
+    data-test-toggle-group={{@group}}
+  />
+  {{#if (get @model prop)}}
+    <div class="box is-marginless">
+      <div class="is-grid is-grid-3-columns is-grid-4-rows is-large-height is-row-gap-medium">
+        {{! KEY USAGE SECTION }}
+        {{#each-in this.keyUsageFields as |name attr|}}
+          <div class={{if attr.spanAllColumns "is-grid-column-span-3" ""}}>
+            {{#if attr.isTitleOfGridGroup}}
+              <FormFieldLabel for={{name}} @label={{attr.label}} @subText={{attr.subText}} />
+            {{else}}
+              <div class="field">
+                <div class="b-checkbox">
+                  <input
+                    type="checkbox"
+                    id={{name}}
+                    class="styled"
+                    checked={{attr.value}}
+                    onchange={{(fn this.checkboxChange "keyUsage")}}
+                    data-test-input={{name}}
+                  />
+                  <label for={{name}} class="is-label">
+                    {{attr.label}}
+                  </label>
+                </div>
+              </div>
+            {{/if}}
+          </div>
+        {{/each-in}}
+        {{! EXT KEY USAGE SECTION }}
+        {{#each-in this.extKeyUsageFields as |name attr|}}
+          <div class={{if attr.spanAllColumns "is-grid-column-span-3" ""}}>
+            {{#if attr.isTitleOfGridGroup}}
+              <FormFieldLabel for={{name}} @label={{attr.label}} @subText={{attr.subText}} />
+            {{else if (eq attr.editType "stringArray")}}
+              <StringList
+                data-test-input={{name}}
+                @label={{attr.label}}
+                @inputValue={{get @model "extKeyUsageOids"}}
+                @onChange={{this.onStringListChange}}
+                @attrName={{name}}
+                @subText={{attr.subText}}
+                @showHelpText={{false}}
+                @hideFormSection={{true}}
+              />
+            {{else}}
+              <div class="field">
+                <div class="b-checkbox">
+                  <input
+                    type="checkbox"
+                    id={{name}}
+                    class="styled"
+                    checked={{attr.value}}
+                    onchange={{(fn this.checkboxChange "extKeyUsage")}}
+                    data-test-input={{name}}
+                  />
+                  <label for={{name}} class="is-label">
+                    {{attr.label}}
+                  </label>
+                </div>
+              </div>
+            {{/if}}
+          </div>
+        {{/each-in}}
+      </div>
+    </div>
+  {{/if}}
+{{/let}}

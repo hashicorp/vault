@@ -33,6 +33,7 @@
     <NamespaceReminder @mode={{if @model.isNew "create" "update"}} @noun="PKI role" />
     {{#each @model.fieldGroups as |fieldGroup|}}
       {{#each-in fieldGroup as |group fields|}}
+        {{! DEFAULT VIEW }}
         {{#if (eq group "default")}}
           {{#each fields as |attr|}}
             <FormField
@@ -45,6 +46,8 @@
               {{yield attr}}
             </FormField>
           {{/each}}
+        {{else if (eq group "Key usage")}}
+          <PkiKeyUsage @model={{@model}} @group={{group}} />
         {{else}}
           {{! Groups hidden behind Toggles }}
           {{#let (camelize (concat "show" group)) as |prop|}}
