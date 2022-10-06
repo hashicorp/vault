@@ -1739,7 +1739,6 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 
 		userLockoutConfigMap := data.Get("user_lockout_config").(map[string]interface{})
 		var err error
-		// Augmenting userLockoutConfigMap for some config options to treat them as comma separated entries
 		if userLockoutConfigMap != nil && len(userLockoutConfigMap) != 0 {
 			err := mapstructure.Decode(userLockoutConfigMap, &apiuserLockoutConfig)
 			if err != nil {
@@ -1749,9 +1748,8 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			}
 
 			// Supported auth methods for user lockout configuration: ldap, approle, userpass
-			// "all" is used to apply the configuration to all supported auth methods
 			switch strings.ToLower(mountEntry.Type) {
-			case "all", "ldap", "approle", "userpass":
+			case "ldap", "approle", "userpass":
 			default:
 				return logical.ErrorResponse("tuning of user lockout configuration for auth type %q not allowed", mountEntry.Type),
 					logical.ErrInvalidRequest
@@ -1763,26 +1761,21 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			mountEntry.Config.UserLockoutConfig = &UserLockoutConfig{}
 		}
 
-		var oldUserLockoutThreshold int64
+		var oldUserLockoutThreshold uint64
 		var newUserLockoutDuration, oldUserLockoutDuration time.Duration
 		var newUserLockoutCounterReset, oldUserLockoutCounterReset time.Duration
 		var oldUserLockoutDisable bool
 
-		if _, ok := userLockoutConfigMap["lockout_threshold"]; ok {
-			userLockoutThreshold, err := parseutil.ParseInt(apiuserLockoutConfig.LockoutThreshold)
+		if apiuserLockoutConfig.LockoutThreshold != "" {
+			userLockoutThreshold, err := strconv.ParseUint(apiuserLockoutConfig.LockoutThreshold, 10, 64)
 			if err != nil {
 				return nil, fmt.Errorf("unable to parse user lockout threshold: %w", err)
 			}
 			oldUserLockoutThreshold = mountEntry.Config.UserLockoutConfig.LockoutThreshold
-			switch {
-			case userLockoutThreshold < 0:
-				mountEntry.Config.UserLockoutConfig.LockoutThreshold = oldUserLockoutThreshold
-			default:
-				mountEntry.Config.UserLockoutConfig.LockoutThreshold = userLockoutThreshold
-			}
+			mountEntry.Config.UserLockoutConfig.LockoutThreshold = userLockoutThreshold
 		}
 
-		if _, ok := userLockoutConfigMap["lockout_duration"]; ok {
+		if apiuserLockoutConfig.LockoutDuration != "" {
 			oldUserLockoutDuration = mountEntry.Config.UserLockoutConfig.LockoutDuration
 			switch apiuserLockoutConfig.LockoutDuration {
 			case "":
@@ -1800,7 +1793,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			mountEntry.Config.UserLockoutConfig.LockoutDuration = newUserLockoutDuration
 		}
 
-		if _, ok := userLockoutConfigMap["lockout_counter_reset_duration"]; ok {
+		if apiuserLockoutConfig.LockoutCounterResetDuration != "" {
 			oldUserLockoutCounterReset = mountEntry.Config.UserLockoutConfig.LockoutCounterReset
 			switch apiuserLockoutConfig.LockoutCounterResetDuration {
 			case "":
@@ -1818,10 +1811,10 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			mountEntry.Config.UserLockoutConfig.LockoutCounterReset = newUserLockoutCounterReset
 		}
 
-		if rawVal, ok := userLockoutConfigMap["lockout_disable"]; ok {
-			userLockoutDisable := rawVal.(bool)
+		if apiuserLockoutConfig.DisableLockout != nil {
 			oldUserLockoutDisable = mountEntry.Config.UserLockoutConfig.DisableLockout
-			mountEntry.Config.UserLockoutConfig.DisableLockout = userLockoutDisable
+			userLockoutDisable := apiuserLockoutConfig.DisableLockout
+			mountEntry.Config.UserLockoutConfig.DisableLockout = *userLockoutDisable
 		}
 
 		// Update the mount table

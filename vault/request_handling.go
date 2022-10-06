@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -1992,35 +1991,4 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 	// In this case, the server side consistent token cannot be used on this node. We return the appropriate
 	// status code.
 	return "", logical.ErrMissingRequiredState
-}
-
-func (c *Core) GetUserLockoutFromConfig(logicalType string) UserLockoutConfig {
-	conf := c.rawConfig.Load()
-	if conf == nil {
-		return UserLockoutConfig{}
-	}
-	userlockouts := conf.(*server.Config).UserLockouts
-
-	if userlockouts == nil {
-		return UserLockoutConfig{}
-	}
-
-	var commonUserLockoutConfig UserLockoutConfig
-	var authUserLockoutConfig UserLockoutConfig
-	for _, userLockoutConfig := range userlockouts {
-		if userLockoutConfig.Type == logicalType {
-			authUserLockoutConfig.LockoutThreshold = userLockoutConfig.LockoutThreshold
-			authUserLockoutConfig.LockoutDuration = userLockoutConfig.LockoutDuration
-			authUserLockoutConfig.LockoutCounterReset = userLockoutConfig.LockoutCounterReset
-			authUserLockoutConfig.DisableLockout = userLockoutConfig.DisableLockout
-			return authUserLockoutConfig
-		}
-		if userLockoutConfig.Type == "all" {
-			commonUserLockoutConfig.LockoutThreshold = userLockoutConfig.LockoutThreshold
-			commonUserLockoutConfig.LockoutDuration = userLockoutConfig.LockoutDuration
-			commonUserLockoutConfig.LockoutCounterReset = userLockoutConfig.LockoutCounterReset
-			commonUserLockoutConfig.DisableLockout = userLockoutConfig.DisableLockout
-		}
-	}
-	return commonUserLockoutConfig
 }

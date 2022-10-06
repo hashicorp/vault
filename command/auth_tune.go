@@ -32,7 +32,7 @@ type AuthTuneCommand struct {
 	flagTokenType                       string
 	flagVersion                         int
 	flagPluginVersion                   string
-	flagUserLockoutThreshold            int
+	flagUserLockoutThreshold            uint
 	flagUserLockoutDuration             time.Duration
 	flagUserLockoutCounterResetDuration time.Duration
 	flagUserLockoutDisable              bool
@@ -149,7 +149,7 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 		Usage:   "Select the version of the auth method to run. Not supported by all auth methods.",
 	})
 
-	f.IntVar(&IntVar{
+	f.UintVar(&UintVar{
 		Name:   flagNameUserLockoutThreshold,
 		Target: &c.flagUserLockoutThreshold,
 		Usage: "The threshold for user lockout for this auth method. If unspecified, this " +
@@ -277,7 +277,7 @@ func (c *AuthTuneCommand) Run(args []string) int {
 		}
 		if fl.Name == flagNameUserLockoutThreshold {
 			if c.flagUserLockoutThreshold > 0 {
-				mountConfigInput.UserLockoutConfig.LockoutThreshold = strconv.Itoa(c.flagUserLockoutThreshold)
+				mountConfigInput.UserLockoutConfig.LockoutThreshold = strconv.FormatUint(uint64(c.flagUserLockoutThreshold), 10)
 			}
 		}
 		if fl.Name == flagNameUserLockoutDuration {
