@@ -4,14 +4,15 @@ import { tracked } from '@glimmer/tracking';
 
 /**
  * @module DateDropdown
- * DateDropdown components are used to display a dropdown of months and years to handle date selection
+ * DateDropdown components are used to display a dropdown of months and years to handle date selection. Future dates are disabled (current month and year are selectable).
  *
  * @example
  * ```js
- * <DateDropdown @handleDateSelection={this.actionFromParent} @name={{"startTime"}} @submitText="Save"/>
+ * <DateDropdown @handleSubmit={{this.actionFromParent}} @name="startTime" @submitText="Save" @handleCancel={{this.onCancel}}/>
  * ```
- * @param {function} handleDateSelection - is the action from the parent that the date picker triggers
- * @param {string} [name] - optional argument passed from date dropdown to parent function
+ * @param {function} handleSubmit - callback function from parent that the date picker triggers on submit
+ * @param {function} [handleCancel] - optional callback for cancel action, if passed in buttons appear modal style with a light gray background
+ * @param {string} [name] - optional argument passed from date dropdown to parent function, could be used to identify dropdown if there are multiple
  * @param {string} [submitText] - optional argument to change submit button text
  */
 export default class DateDropdown extends Component {
@@ -19,10 +20,10 @@ export default class DateDropdown extends Component {
   currentYear = this.currentDate.getFullYear(); // integer of year
   currentMonth = this.currentDate.getMonth(); // index of month
 
-  @tracked allowedMonthMax = 12;
-  @tracked disabledYear = null;
-  @tracked startMonth = null;
-  @tracked startYear = null;
+  @tracked maxMonthIdx = 11; // disables months with index greater than this number, initially all months are selectable
+  @tracked disabledYear = null; // year as integer if current year should be disabled
+  @tracked selectedMonth = null;
+  @tracked selectedYear = null;
 
   months = Array.from({ length: 12 }, (item, i) => {
     return new Date(0, i).toLocaleString('en-US', { month: 'long' });
@@ -32,22 +33,30 @@ export default class DateDropdown extends Component {
   });
 
   @action
-  selectStartMonth(month, event) {
-    this.startMonth = month;
-    // disables months if in the future
-    this.disabledYear = this.months.indexOf(month) >= this.currentMonth ? this.currentYear : null;
-    event.close();
+  selectMonth(month, dropdown) {
+    this.selectedMonth = month;
+    // disable current year if selected month is later than current month
+    this.disabledYear = this.months.indexOf(month) > this.currentMonth ? this.currentYear : null;
+    dropdown.close();
   }
 
   @action
-  selectStartYear(year, event) {
-    this.startYear = year;
-    this.allowedMonthMax = year === this.currentYear ? this.currentMonth : 12;
-    event.close();
+  selectYear(year, dropdown) {
+    this.selectedYear = year;
+    // disable months after current month if selected year is current year
+    this.maxMonthIdx = year === this.currentYear ? this.currentMonth : 11;
+    dropdown.close();
   }
 
   @action
-  saveDateSelection() {
-    this.args.handleDateSelection(this.startMonth, this.startYear, this.args.name);
+  handleSubmit() {
+    this.args.handleSubmit(this.selectedMonth, this.selectedYear, this.args.name);
+  }
+
+  @action
+  handleCancel() {
+    this.selectedMonth = null;
+    this.selectedYear = null;
+    this.args.handleCancel();
   }
 }
