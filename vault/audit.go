@@ -312,13 +312,6 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 		return fmt.Errorf("invalid table type given, not persisting")
 	}
 
-	for _, entry := range table.Entries {
-		if entry.Table != table.Type {
-			c.logger.Error("given entry to persist in audit table has wrong table value", "path", entry.Path, "entry_table_type", entry.Table, "actual_type", table.Type)
-			return fmt.Errorf("invalid audit entry found, not persisting")
-		}
-	}
-
 	nonLocalAudit := &MountTable{
 		Type: auditTableType,
 	}
@@ -328,6 +321,11 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 	}
 
 	for _, entry := range table.Entries {
+		if entry.Table != table.Type {
+			c.logger.Error("given entry to persist in audit table has wrong table value", "path", entry.Path, "entry_table_type", entry.Table, "actual_type", table.Type)
+			return fmt.Errorf("invalid audit entry found, not persisting")
+		}
+
 		if entry.Local {
 			localAudit.Entries = append(localAudit.Entries, entry)
 		} else {

@@ -1,0 +1,3 @@
+```release-note:bug:
+api: Fix to account for older versions of Vault with no `custom_metadata` support
+```
