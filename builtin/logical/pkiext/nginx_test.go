@@ -29,13 +29,14 @@ var (
 )
 
 const (
-	protectedFile   = `dadgarcorp-internal-protected`
-	unprotectedFile = `hello-world`
-	uniqueHostname  = `dadgarcorpvaultpkitestingnginxwgetcurlcontainersexample.com`
-	containerName   = `vault_pki_nginx_integration`
+	protectedFile    = `dadgarcorp-internal-protected`
+	unprotectedFile  = `hello-world`
+	failureIndicator = `THIS-TEST-SHOULD-FAIL`
+	uniqueHostname   = `dadgarcorpvaultpkitestingnginxwgetcurlcontainersexample.com`
+	containerName    = `vault_pki_nginx_integration`
 )
 
-func buildNginxContainer(t *testing.T, root string, chain string, private string) (func(), string, int, string, string, int) {
+func buildNginxContainer(t *testing.T, root string, crl string, chain string, private string) (func(), string, int, string, string, int) {
 	containerfile := `
 FROM nginx:latest
 
@@ -45,6 +46,7 @@ COPY testing.conf /etc/nginx/conf.d/
 COPY root.pem /etc/nginx/ssl/root.pem
 COPY fullchain.pem /etc/nginx/ssl/fullchain.pem
 COPY privkey.pem /etc/nginx/ssl/privkey.pem
+COPY crl.pem /etc/nginx/ssl/crl.pem
 COPY /data /www/data
 `
 
@@ -66,6 +68,7 @@ server {
 	ssl_certificate_key /etc/nginx/ssl/privkey.pem;
 
 	ssl_client_certificate /etc/nginx/ssl/root.pem;
+	ssl_crl /etc/nginx/ssl/crl.pem;
 	ssl_verify_client optional;
 
 	# Magic per: https://serverfault.com/questions/891603/nginx-reverse-proxy-with-optional-ssl-client-authentication
@@ -94,6 +97,7 @@ server {
 	bCtx["root.pem"] = docker.PathContentsFromString(root)
 	bCtx["fullchain.pem"] = docker.PathContentsFromString(chain)
 	bCtx["privkey.pem"] = docker.PathContentsFromString(private)
+	bCtx["crl.pem"] = docker.PathContentsFromString(crl)
 	bCtx["/data/index.html"] = docker.PathContentsFromString(unprotectedFile)
 	bCtx["/data/protected.html"] = docker.PathContentsFromString(protectedFile)
 
@@ -345,6 +349,13 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 
 	testSuffix := fmt.Sprintf(" - %v %v %v - %v %v %v", caKeyType, caKeyType, caUsePSS, roleKeyType, roleKeyBits, roleUsePSS)
 
+	// Configure our mount to use auto-rotate, even though we don't have
+	// a periodic func.
+	_, err := CBWrite(b, s, "config/crl", map[string]interface{}{
+		"auto_rebuild": true,
+		"enable_delta": true,
+	})
+
 	// Create a root and intermediate, setting the intermediate as default.
 	resp, err := pki.CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"common_name":  "Root X1" + testSuffix,
@@ -354,6 +365,7 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 		"key_type":     caKeyType,
 		"key_bits":     caKeyBits,
 		"use_pss":      caUsePSS,
+		"issuer_name":  "root",
 	})
 	requireSuccessNonNilResponse(t, resp, err, "failed to create root cert")
 	rootCert := resp.Data["certificate"].(string)
@@ -417,7 +429,59 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 	clientTrustChain := resp.Data["issuing_ca"].(string) + "\n" + rootCert + "\n"
 	clientCAChain := resp.Data["ca_chain"].([]string)
 
-	cleanup, host, port, networkName, networkAddr, networkPort := buildNginxContainer(t, rootCert, fullChain, leafPrivateKey)
+	// Issue a client leaf cert and revoke it, placing it on the main CRL
+	// via rotation.
+	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+		"common_name": "revoked-crl.client.dadgarcorp.com",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed to create revoked client leaf cert")
+	revokedCert := resp.Data["certificate"].(string)
+	revokedKey := resp.Data["private_key"].(string) + "\n"
+	// revokedFullChain := revokedCert + "\n" + resp.Data["issuing_ca"].(string) + "\n"
+	// revokedTrustChain := resp.Data["issuing_ca"].(string) + "\n" + rootCert + "\n"
+	revokedCAChain := resp.Data["ca_chain"].([]string)
+	_, err = CBWrite(b, s, "revoke", map[string]interface{}{
+		"certificate": revokedCert,
+	})
+	require.NoError(t, err)
+	_, err = CBRead(b, s, "crl/rotate")
+	require.NoError(t, err)
+
+	// Issue a client leaf cert and revoke it, placing it on the delta CRL
+	// via rotation.
+	/*resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+	      "common_name": "revoked-delta-crl.client.dadgarcorp.com",
+	  })
+	  requireSuccessNonNilResponse(t, resp, err, "failed to create delta CRL revoked client leaf cert")
+	  deltaCert := resp.Data["certificate"].(string)
+	  deltaKey := resp.Data["private_key"].(string) + "\n"
+	  //deltaFullChain := deltaCert + "\n" + resp.Data["issuing_ca"].(string) + "\n"
+	  //deltaTrustChain := resp.Data["issuing_ca"].(string) + "\n" + rootCert + "\n"
+	  deltaCAChain := resp.Data["ca_chain"].([]string)
+	  _, err = CBWrite(b, s, "revoke", map[string]interface{}{
+	      "certificate": deltaCert,
+	  })
+	  require.NoError(t, err)
+	  _, err = CBRead(b, s, "crl/rotate-delta")
+	  require.NoError(t, err)*/
+
+	// Get the CRL and Delta CRLs.
+	resp, err = CBRead(b, s, "issuer/root/crl")
+	require.NoError(t, err)
+	rootCRL := resp.Data["crl"].(string) + "\n"
+	resp, err = CBRead(b, s, "issuer/default/crl")
+	require.NoError(t, err)
+	intCRL := resp.Data["crl"].(string) + "\n"
+
+	// No need to fetch root Delta CRL as we've not revoked anything on it.
+	resp, err = CBRead(b, s, "issuer/default/crl/delta")
+	require.NoError(t, err)
+	deltaCRL := resp.Data["crl"].(string) + "\n"
+
+	crls := rootCRL + intCRL + deltaCRL
+	t.Logf("Got CRLs:\n\n%v\n\n", crls)
+
+	cleanup, host, port, networkName, networkAddr, networkPort := buildNginxContainer(t, rootCert, crls, fullChain, leafPrivateKey)
 	defer cleanup()
 
 	if host != "127.0.0.1" && host != "::1" && strings.HasPrefix(host, containerName) {
@@ -435,10 +499,14 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 
 	t.Logf("Spawned nginx container:\nhost: %v\nport: %v\nnetworkName: %v\nnetworkAddr: %v\nnetworkPort: %v\nlocalURL: %v\ncontainerURL: %v\n", host, port, networkName, networkAddr, networkPort, localBase, containerBase)
 
-	// Ensure we can connect with Go.
+	// Ensure we can connect with Go. We do our checks for revocation here,
+	// as this behavior is server-controlled and shouldn't matter based on
+	// client type.
 	CheckWithGo(t, rootCert, "", nil, "", host, port, networkAddr, networkPort, localURL, unprotectedFile, false)
-	CheckWithGo(t, rootCert, "", nil, "", host, port, networkAddr, networkPort, localURL, localProtectedURL, "THIS-TEST-SHOULD-FAIL", true)
-	CheckWithGo(t, rootCert, clientCert, clientCAChain, clientKey, host, port, networkAddr, networkPort, localURL, localProtectedURL, protectedFile, false)
+	CheckWithGo(t, rootCert, "", nil, "", host, port, networkAddr, networkPort, localProtectedURL, failureIndicator, true)
+	CheckWithGo(t, rootCert, clientCert, clientCAChain, clientKey, host, port, networkAddr, networkPort, localProtectedURL, protectedFile, false)
+	CheckWithGo(t, rootCert, revokedCert, revokedCAChain, revokedKey, host, port, networkAddr, networkPort, localProtectedURL, protectedFile, true)
+	// CheckWithGo(t, rootCert, deltaCert, deltaCAChain, deltaKey, host, port, networkAddr, networkPort, localProtectedURL, protectedFile, true)
 
 	// Ensure we can connect with wget/curl.
 	CheckWithClients(t, networkName, networkAddr, containerURL, rootCert, "", "")
