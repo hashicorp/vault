@@ -1,10 +1,10 @@
 scenario "autopilot" {
   matrix {
-    arch    = ["amd64", "arm64"]
-    build   = ["local", "crt", "artifactory"]
-    distro  = ["ubuntu", "rhel"]
-    edition = ["ent"]
-    seal    = ["awskms", "shamir"]
+    arch            = ["amd64", "arm64"]
+    artifact_source = ["local", "crt", "artifactory"]
+    distro          = ["ubuntu", "rhel"]
+    edition         = ["ent"]
+    seal            = ["awskms", "shamir"]
   }
 
   terraform_cli = terraform_cli.default
@@ -19,7 +19,7 @@ scenario "autopilot" {
     build_tags = {
       "ent" = ["enterprise", "ent"]
     }
-    bundle_path             = matrix.build != "artifactory" ? abspath(var.vault_bundle_path) : null
+    bundle_path             = matrix.artifact_source != "artifactory" ? abspath(var.vault_bundle_path) : null
     dependencies_to_install = ["jq"]
     enos_provider = {
       rhel   = provider.enos.rhel
@@ -39,23 +39,23 @@ scenario "autopilot" {
   }
 
   step "build_vault" {
-    module = "build_${matrix.build}"
+    module = "build_${matrix.artifact_source}"
 
     variables {
-      build_tags            = var.vault_local_build_tags != null ? var.vault_local_build_tags : local.build_tags[matrix.edition]
+      build_tags            = try(var.vault_local_build_tags, local.build_tags[matrix.edition])
       bundle_path           = local.bundle_path
       goarch                = matrix.arch
       goos                  = "linux"
-      artifactory_host      = matrix.build == "artifactory" ? var.artifactory_host : null
-      artifactory_repo      = matrix.build == "artifactory" ? var.artifactory_repo : null
-      artifactory_username  = matrix.build == "artifactory" ? var.artifactory_username : null
-      artifactory_token     = matrix.build == "artifactory" ? var.artifactory_token : null
-      arch                  = matrix.build == "artifactory" ? matrix.arch : null
+      artifactory_host      = matrix.artifact_source == "artifactory" ? var.artifactory_host : null
+      artifactory_repo      = matrix.artifact_source == "artifactory" ? var.artifactory_repo : null
+      artifactory_username  = matrix.artifact_source == "artifactory" ? var.artifactory_username : null
+      artifactory_token     = matrix.artifact_source == "artifactory" ? var.artifactory_token : null
+      arch                  = matrix.artifact_source == "artifactory" ? matrix.arch : null
       vault_product_version = var.vault_product_version
-      artifact_type         = matrix.build == "artifactory" ? var.vault_artifact_type : null
-      distro                = matrix.build == "artifactory" ? matrix.distro : null
-      edition               = matrix.build == "artifactory" ? matrix.edition : null
-      instance_type         = matrix.build == "artifactory" ? local.vault_instance_type : null
+      artifact_type         = matrix.artifact_source == "artifactory" ? var.vault_artifact_type : null
+      distro                = matrix.artifact_source == "artifactory" ? matrix.distro : null
+      edition               = matrix.artifact_source == "artifactory" ? matrix.edition : null
+      instance_type         = matrix.artifact_source == "artifactory" ? local.vault_instance_type : null
       revision              = var.vault_revision
     }
   }
@@ -90,8 +90,11 @@ scenario "autopilot" {
   }
 
   step "create_vault_cluster" {
-    module     = module.vault_cluster
-    depends_on = [step.create_vpc]
+    module = module.vault_cluster
+    depends_on = [
+      step.create_vpc,
+      step.build_vault,
+    ]
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
@@ -114,7 +117,7 @@ scenario "autopilot" {
   }
 
   step "get_local_metadata" {
-    skip_step = matrix.build != "local"
+    skip_step = matrix.artifact_source != "local"
     module    = module.get_local_metadata
   }
 
@@ -122,7 +125,7 @@ scenario "autopilot" {
     module = module.autopilot_upgrade_storageconfig
 
     variables {
-      vault_product_version = matrix.build == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
     }
   }
 
@@ -169,7 +172,7 @@ scenario "autopilot" {
     }
 
     variables {
-      vault_autopilot_upgrade_version = matrix.build == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_autopilot_upgrade_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
       vault_instances                 = step.create_vault_cluster.vault_instances
       vault_root_token                = step.create_vault_cluster.vault_root_token
     }
