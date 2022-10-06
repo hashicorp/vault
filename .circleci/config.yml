@@ -144,7 +144,7 @@ jobs:
     - checkout
     - setup_remote_docker:
         docker_layer_caching: true
-        version: 18.09.3
+        version: 20.10.17
     - add_ssh_keys:
         fingerprints:
         - b8:e2:38:f8:5b:1b:82:f3:1f:23:fa:46:6e:95:e7:e9
@@ -876,7 +876,7 @@ jobs:
     - checkout
     - setup_remote_docker:
         docker_layer_caching: true
-        version: 18.09.3
+        version: 20.10.17
     - add_ssh_keys:
         fingerprints:
         - b8:e2:38:f8:5b:1b:82:f3:1f:23:fa:46:6e:95:e7:e9
