@@ -26,7 +26,6 @@ export default class PkiRoleForm extends Component {
   @tracked errorBanner;
   @tracked invalidFormAlert;
   @tracked modelValidations;
-  @tracked gridGroups = [];
 
   @task
   *save(event) {

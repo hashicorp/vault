@@ -12,7 +12,7 @@ import { action } from '@ember/object';
  * <PkiKeyUsage @model={@model} @group={group}/>
  * ```
  * @param {class} model - The pki/pki-role-engine model.
- * @param {string} group - The name of the group created in the model. In this case, it's the "keyUsage" group.
+ * @param {string} group - The name of the group created in the model. In this case, it's the "Key usage" group.
  */
 
 const KEY_USAGE_FIELDS = {
@@ -60,7 +60,7 @@ const EXT_KEY_USAGE_FIELDS = {
   IpsecTunnel: { label: 'IPSEC Tunnel' },
   IpsecUser: { label: 'IPSEC User' },
   CodeSigning: { label: 'Code Signing' },
-  // This is a model attributes. The others are not. camelCased and not PascalCased to distinguish.
+  // This is a model attribute. The others are not. camelCased and not PascalCased to distinguish.
   extKeyUsageOids: {
     label: 'Extended key usage OIDs',
     subText: 'A list of extended key usage oids. Add one item per row.',
