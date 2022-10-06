@@ -479,9 +479,8 @@ Similar to the standby nodes, the former primary also needs to be unsealed:
 $ kubectl exec -ti <name of pod> -- vault operator unseal
 ```
 
-After a few moments the Vault cluster should elect a new active primary if it did
-not already with the Raft Autopilot Automated Upgrade. The Vault cluster is now
-upgraded!
+After a few moments the Vault cluster should elect a new active primary. The Vault
+cluster is now upgraded!
 
 #### Interaction with Raft Autopilot Automated Upgrades
 
