@@ -679,7 +679,7 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	}
 
 	if c.logger.IsInfo() {
-		c.logger.Info("successful mount", "namespace", entry.Namespace().Path, "path", entry.Path, "type", entry.Type)
+		c.logger.Info("successful mount", "namespace", entry.Namespace().Path, "path", entry.Path, "type", entry.Type, "version", entry.Version)
 	}
 	return nil
 }
@@ -1493,7 +1493,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		}
 
 		if c.logger.IsInfo() {
-			c.logger.Info("successfully mounted backend", "type", entry.Type, "path", entry.Path)
+			c.logger.Info("successfully mounted backend", "type", entry.Type, "version", entry.Version, "path", entry.Path)
 		}
 
 		// Ensure the path is tainted if set in the mount table
