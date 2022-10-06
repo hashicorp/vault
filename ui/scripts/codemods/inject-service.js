@@ -3,19 +3,24 @@ import babylonParser from './jscodeshift-babylon-parser';
 // use babylon parser with decorators-legacy plugin
 export const parser = babylonParser;
 
-// example usage
-// npx jscodeshift -t ./scripts/codemods/inject-store-service.js ./app/**/*.js
+// checks for access of specified service on this
+// injects service if not present and imports inject as service if needed
+// example usage - npx jscodeshift -t ./scripts/codemods/inject-service.js ./app/**/*.js --service=store
+// --service arg is required with name of service
 // pass -d for dry run (no files transformed)
 
-export default function transformer({ source }, api) {
+export default function transformer({ source }, api, { service }) {
+  if (!service) {
+    throw new Error('Missing service arg. Pass --service=store for example to script');
+  }
   const j = api.jscodeshift;
-  const filterForStore = (path) => {
+  const filterForService = (path) => {
     return j(path.value).find(j.MemberExpression, {
       object: {
         type: 'ThisExpression',
       },
       property: {
-        name: 'store',
+        name: service,
       },
     }).length;
   };
@@ -25,45 +30,45 @@ export default function transformer({ source }, api) {
     quote: 'single',
     trailingComma: true,
   };
-  let didInjectStore = false;
+  let didInjectService = false;
 
-  // find class bodies and filter down to ones that access this.store
-  const classesAccessingStore = j(source).find(j.ClassBody).filter(filterForStore);
+  // find class bodies and filter down to ones that access service
+  const classesAccessingService = j(source).find(j.ClassBody).filter(filterForService);
 
-  if (classesAccessingStore.length) {
+  if (classesAccessingService.length) {
     // filter down to class bodies where service is not injected
-    const missingService = classesAccessingStore.filter((path) => {
+    const missingService = classesAccessingService.filter((path) => {
       return !j(path.value)
         .find(j.ClassProperty, {
           key: {
-            name: 'store',
+            name: service,
           },
         })
         .filter((path) => {
-          // ensure store property belongs to service decorator
+          // ensure service property belongs to service decorator
           return path.value.decorators.find((path) => path.expression.name === 'service');
         }).length;
     });
 
     if (missingService.length) {
-      // inject store service
-      const storeService = j.classProperty(j.identifier('@service store'), null);
-      // adding a decorator this way will force store down to a new line and then add a new line
+      // inject service
+      const serviceInjection = j.classProperty(j.identifier(`@service ${service}`), null);
+      // adding a decorator this way will force injection down to a new line and then add a new line
       // leaving in just in case it's needed
-      // storeService.decorators = [j.decorator(j.identifier('service'))];
+      // serviceInjection.decorators = [j.decorator(j.identifier('service'))];
 
       source = missingService
         .forEach((path) => {
-          path.value.body.unshift(storeService);
+          path.value.body.unshift(serviceInjection);
         })
         .toSource();
 
-      didInjectStore = true;
+      didInjectService = true;
     }
   }
 
-  // find .extend object expressions and filter down to ones that access this.store
-  const objectsAccessingStore = j(source)
+  // find .extend object expressions and filter down to ones that access this[service]
+  const objectsAccessingService = j(source)
     .find(j.CallExpression, {
       callee: {
         type: 'MemberExpression',
@@ -72,21 +77,21 @@ export default function transformer({ source }, api) {
         },
       },
     })
-    .filter(filterForStore)
+    .filter(filterForService)
     .find(j.ObjectExpression)
     .filter((path) => {
       // filter object expressions that belong to .extend
-      // otherwise store will also be injected in actions: { } block of component for example
+      // otherwise service will also be injected in actions: { } block of component for example
       const callee = path.parent.value.callee;
       return callee && callee.property?.name === 'extend';
     });
 
-  if (objectsAccessingStore.length) {
+  if (objectsAccessingService.length) {
     // filter down to objects where service is not injected
-    const missingService = objectsAccessingStore.filter((path) => {
+    const missingService = objectsAccessingService.filter((path) => {
       return !j(path.value).find(j.ObjectProperty, {
         key: {
-          name: 'store',
+          name: service,
         },
         value: {
           callee: {
@@ -97,24 +102,24 @@ export default function transformer({ source }, api) {
     });
 
     if (missingService.length) {
-      // inject store service
-      const storeService = j.objectProperty(
-        j.identifier('store'),
+      // inject service
+      const serviceInjection = j.objectProperty(
+        j.identifier(service),
         j.callExpression(j.identifier('service'), [])
       );
 
       source = missingService
         .forEach((path) => {
-          path.value.properties.unshift(storeService);
+          path.value.properties.unshift(serviceInjection);
         })
         .toSource(recastOptions);
 
-      didInjectStore = true;
+      didInjectService = true;
     }
   }
 
-  // if store was injected here check if inject has been imported
-  if (didInjectStore) {
+  // if service was injected here check if inject has been imported
+  if (didInjectService) {
     const needsImport = !j(source).find(j.ImportSpecifier, {
       imported: {
         name: 'inject',

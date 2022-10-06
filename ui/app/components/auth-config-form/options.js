@@ -18,8 +18,10 @@ import { waitFor } from '@ember/test-waiters';
  */
 
 export default AuthConfigComponent.extend({
+  flashMessages: service(),
   router: service(),
   wizard: service(),
+
   saveModel: task(
     waitFor(function* () {
       let data = this.model.config.serialize();
