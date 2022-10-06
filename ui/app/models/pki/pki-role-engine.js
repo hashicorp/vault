@@ -161,63 +161,6 @@ export default class PkiRoleEngineModel extends Model {
   signatureBits;
   /* End of overriding Key parameters options */
 
-  /* Overriding Key usage options */
-  // The following turns options that go into an arrayList for param "key_usage" and "ext_key_usage" into checkboxes
-  @attr('string', {
-    label: 'Key usage',
-    subText: `Specifies the default key usage constraint on the issued certificate. To specify no default key_usage constraints, uncheck every item in this list.`,
-    hideInput: true,
-    isTitleOfGridGroup: true,
-  })
-  keyUsageLabel;
-
-  @attr('boolean', {
-    defaultValue: true,
-  })
-  DigitalSignature;
-  @attr('boolean', {
-    defaultValue: true,
-  })
-  KeyAgreement;
-  @attr('boolean', {
-    defaultValue: true,
-  })
-  KeyEncipherment;
-  @attr('boolean') ContentCommitment;
-  @attr('boolean') DataEncipherment;
-  @attr('boolean') CertSign;
-  @attr('boolean') CrlSign;
-  @attr('boolean') EncipherOnly;
-  @attr('boolean') DecipherOnly;
-
-  @attr('string', {
-    label: 'Extended key usage',
-    subText:
-      'Specifies the default key usage constraint on the issued certificate. To specify no default ext_key_usage constraints, uncheck every item in this list.',
-    hideInput: true,
-    isTitleOfGridGroup: true,
-  })
-  extKeyUsageLabel;
-
-  @attr('boolean') Any;
-  @attr('boolean') ServerAuth;
-  @attr('boolean') ClientAuth;
-  @attr('boolean') CodesSigning;
-  @attr('boolean') EmailProtection;
-  @attr('boolean') IpsecEndSystem;
-  @attr('boolean') IpsecTunnel;
-  @attr('boolean') TimeStamping;
-  @attr('boolean') OcspSigning;
-  @attr('boolean') IpsecUser;
-  @attr({
-    label: 'Extended key usage OIDs',
-    subText: 'A list of extended key usage oids. Add one item per row.',
-    editType: 'stringArray',
-    isTitleOfGridGroup: true,
-  })
-  extKeyUsageOids;
-  /* End of overriding Key usage options */
-
   // must be a getter so it can be added to the prototype needed in the pathHelp service on the line here: if (newModel.merged || modelProto.useOpenAPI !== true) {
   get useOpenAPI() {
     return true;
@@ -286,31 +229,7 @@ export default class PkiRoleEngineModel extends Model {
           'Key parameters': ['keyParametersLabel', 'keyType', 'keyBits', 'signatureBits'],
         },
         {
-          'Key usage': [
-            'keyUsageLabel',
-            'keyUsage',
-            // 'DigitalSignature', // keeping these values capitalized to distinguish them from actual API params. The serializer changes them to an arrayList.
-            // 'ContentCommitment',
-            // 'CrlSign',
-            // 'KeyAgreement',
-            // 'DataEncipherment',
-            // 'EncipherOnly',
-            // 'KeyEncipherment',
-            // 'CertSign',
-            // 'DecipherOnly',
-            // 'extKeyUsageLabel',
-            // 'Any',
-            // 'EmailProtection',
-            // 'TimeStamping',
-            // 'ServerAuth',
-            // 'IpsecEndSystem',
-            // 'OcspSigning',
-            // 'ClientAuth',
-            // 'IpsecTunnel',
-            // 'IpsecUser',
-            // 'CodesSigning',
-            // 'extKeyUsageOids',
-          ],
+          'Key usage': ['keyUsage', 'extKeyUsage'],
         },
         { 'Policy identifiers': ['policyIdentifiers'] },
         {

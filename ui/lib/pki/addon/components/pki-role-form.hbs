@@ -60,8 +60,8 @@
               data-test-toggle-group={{group}}
             />
             {{#if (get @model prop)}}
-              {{! Key usage group is displayed as a CSS Grid }}
               {{#if (eq group "Key usage")}}
+                {{! Key usage group is displayed as a CSS Grid }}
                 <div class="box is-marginless">
                   <div class="is-grid is-grid-3-columns is-grid-4-rows is-large-height is-row-gap-medium">
                     {{#each fields as |attr|}}
@@ -73,9 +73,7 @@
                           @model={{@model}}
                           @modelValidations={{@modelValidations}}
                           @showHelpText={{false}}
-                        >
-                          {{yield attr}}
-                        </FormField>
+                        />
                       </div>
                     {{/each}}
                   </div>

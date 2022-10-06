@@ -19,8 +19,6 @@ import { tracked } from '@glimmer/tracking';
  * @param {onSave} onSave - Callback triggered on save success.
  */
 
-// Add group name to list here if you want to display within a css grid.
-const MODEL_GROUPS_DISPLAY_GRID = ['Key usage'];
 export default class PkiRoleForm extends Component {
   @service store;
   @service flashMessages;
@@ -29,18 +27,6 @@ export default class PkiRoleForm extends Component {
   @tracked invalidFormAlert;
   @tracked modelValidations;
   @tracked gridGroups = [];
-
-  constructor() {
-    super(...arguments);
-    let displayGridGroups = this.args.model.fieldGroups?.filter((group) => {
-      let key = Object.keys(group)[0]; // ex: 'Key usage' or 'default'
-      return MODEL_GROUPS_DISPLAY_GRID.includes(key);
-    });
-    if (displayGridGroups.length === 0) {
-      return;
-    }
-    this.gridGroups = Object.keys(displayGridGroups[0]);
-  }
 
   @task
   *save(event) {
