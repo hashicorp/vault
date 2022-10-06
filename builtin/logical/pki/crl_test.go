@@ -144,20 +144,22 @@ func TestBackend_CRL_AllKeyTypeSigAlgos(t *testing.T) {
 	type testCase struct {
 		KeyType string
 		KeyBits int
+		SigBits int
+		UsePSS  bool
 		SigAlgo string
 	}
 
 	testCases := []testCase{
-		{"rsa", 2048, "SHA256WithRSA"},
-		{"rsa", 2048, "SHA384WithRSA"},
-		{"rsa", 2048, "SHA512WithRSA"},
-		{"rsa", 2048, "SHA256WithRSAPSS"},
-		{"rsa", 2048, "SHA384WithRSAPSS"},
-		{"rsa", 2048, "SHA512WithRSAPSS"},
-		{"ec", 256, "ECDSAWithSHA256"},
-		{"ec", 384, "ECDSAWithSHA384"},
-		{"ec", 521, "ECDSAWithSHA512"},
-		{"ed25519", 0, "PureEd25519"},
+		{"rsa", 2048, 256, false, "SHA256WithRSA"},
+		{"rsa", 2048, 384, false, "SHA384WithRSA"},
+		{"rsa", 2048, 512, false, "SHA512WithRSA"},
+		{"rsa", 2048, 256, true, "SHA256WithRSAPSS"},
+		{"rsa", 2048, 384, true, "SHA384WithRSAPSS"},
+		{"rsa", 2048, 512, true, "SHA512WithRSAPSS"},
+		{"ec", 256, 256, false, "ECDSAWithSHA256"},
+		{"ec", 384, 384, false, "ECDSAWithSHA384"},
+		{"ec", 521, 521, false, "ECDSAWithSHA512"},
+		{"ed25519", 0, 0, false, "Ed25519"},
 	}
 
 	for index, tc := range testCases {
@@ -165,22 +167,21 @@ func TestBackend_CRL_AllKeyTypeSigAlgos(t *testing.T) {
 		b, s := createBackendWithStorage(t)
 
 		resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
-			"ttl":         "40h",
-			"common_name": "myvault.com",
-			"key_type":    tc.KeyType,
-			"key_bits":    tc.KeyBits,
+			"ttl":            "40h",
+			"common_name":    "myvault.com",
+			"key_type":       tc.KeyType,
+			"key_bits":       tc.KeyBits,
+			"signature_bits": tc.SigBits,
+			"use_pss":        tc.UsePSS,
 		})
 		if err != nil {
 			t.Fatalf("tc %v: %v", index, err)
 		}
 		caSerial := resp.Data["serial_number"].(string)
 
-		_, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
-			"revocation_signature_algorithm": tc.SigAlgo,
-		})
-		if err != nil {
-			t.Fatalf("tc %v: %v", index, err)
-		}
+		resp, err = CBRead(b, s, "issuer/default")
+		requireSuccessNonNilResponse(t, resp, err, "fetching issuer should return data")
+		require.Equal(t, tc.SigAlgo, resp.Data["revocation_signature_algorithm"])
 
 		crlEnableDisableTestForBackend(t, b, s, []string{caSerial})
 
