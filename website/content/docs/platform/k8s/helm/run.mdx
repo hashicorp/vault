@@ -376,7 +376,7 @@ the Helm chart to update the Vault server StatefulSet. It is important to unders
 how to [generally upgrade Vault](/docs/upgrading) before reading this
 section.
 
-The Vault StatefulSet uses `OnDelete` update strategy. It is critical to use `OnDelete` instead
+The Vault StatefulSet uses `OnDelete` update strategy. It is **critical** to use `OnDelete` instead
 of `RollingUpdate` because standbys must be updated before the active primary. A
 failover to an older version of Vault must always be avoided.
 
@@ -441,15 +441,6 @@ Vault has K8s service discovery built in (when enabled in the server configurati
 will automatically change the labels of the pod with its current leader status. These labels
 can be used to filter the pods.
 
-!> **IMPORTANT NOTE:** If `ha.raft` enabled with Vault 1.11+, Autopilot has the ability to do
-[Automated Upgrades](/docs/concepts/integrated-storage/autopilot#automated-upgrades).
-If using the default `server.updateStrategyType` of `OnDelete` for the Vault StatefulSet, then
-the same upgrade procedure below will continue to work as expected.
-As such, the Vault team highly recommends using `OnDelete` with Raft Autopilot automated upgrades.
-If overriding the strategy type to `RollingUpdate`, then ensure that there are sufficient cluster
-resources available for the rolling update or that the pod anti-affinity rules in
-`server.affinity` are adjusted.
-
 For example, select all pods that are Vault standbys:
 
 ```shell-session
@@ -475,10 +466,6 @@ to be unsealed:
 $ kubectl exec -ti <name of pod> -- vault operator unseal
 ```
 
-(If using Autopilot Automated Upgrades and the cluster size is at least 3,
-then the primary will now be demoted and one of the standby pods will be elected
-as the leader.)
-
 Finally, once the standby nodes have been updated and unsealed, delete the active
 primary:
 
@@ -495,6 +482,28 @@ $ kubectl exec -ti <name of pod> -- vault operator unseal
 After a few moments the Vault cluster should elect a new active primary if it did
 not already with the Raft Autopilot Automated Upgrade. The Vault cluster is now
 upgraded!
+
+#### Interaction with Raft Autopilot Automated Upgrades
+
+If `server.ha.raft` is enabled with Vault 1.11+, Autopilot has the ability to do
+[Automated Upgrades](/docs/concepts/integrated-storage/autopilot#automated-upgrades).
+If using the default `server.updateStrategyType` of `OnDelete` for the Vault StatefulSet, then
+the same upgrade procedure above will continue to work as expected,
+except that the leader will automatically switch over once the majority of pods
+are running the newer version of Vault.
+
+!> **IMPORTANT NOTE**: Use `OnDelete` instead of `RollingUpdate` for these automated upgrades,
+as `RollingUpdate` will kill the pods in an unpredictable order and could cause the cluster to
+upgrade and then downgrade the leader's version, which must be avoided.
+
+If you increase the number of replicas during the upgrade, be sure that **all** pods
+are upgraded to the new version before reducing the number of replicas again.
+Kubernetes tends to kill newer pods first, potentially leaving only non-voter Vault nodes
+running the older version.
+This will cause the cluster to be leaderless, and the cluster will be down.
+
+After the upgrade, clean up extra `PersistentVolumeClaims` that resulted from increasing
+the number of replicas.
 
 ### Protecting Sensitive Vault Configurations
 
