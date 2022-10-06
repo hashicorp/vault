@@ -274,6 +274,72 @@ func CheckWithClients(t *testing.T, network string, address string, url string, 
 	}
 }
 
+func CheckWithGo(t *testing.T, rootCert string, clientCert string, clientChain []string, clientKey string, host string, port int, networkAddr string, networkPort int, url string, expected string, shouldFail bool) {
+	// Ensure we can connect with Go.
+	pool := x509.NewCertPool()
+	pool.AppendCertsFromPEM([]byte(rootCert))
+	tlsConfig := &tls.Config{
+		RootCAs: pool,
+	}
+
+	if clientCert != "" {
+		var clientTLSCert tls.Certificate
+		clientTLSCert.Certificate = append(clientTLSCert.Certificate, parseCert(t, clientCert).Raw)
+		clientTLSCert.PrivateKey = parseKey(t, clientKey)
+		for _, cert := range clientChain {
+			clientTLSCert.Certificate = append(clientTLSCert.Certificate, parseCert(t, cert).Raw)
+		}
+
+		tlsConfig.Certificates = append(tlsConfig.Certificates, clientTLSCert)
+	}
+
+	dialer := &net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}
+
+	transport := &http.Transport{
+		TLSClientConfig: tlsConfig,
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			if addr == host+":"+strconv.Itoa(port) {
+				// If we can't resolve our hostname, try
+				// accessing it via the docker protocol
+				// instead of via the returned service
+				// address.
+				if _, err := net.LookupHost(host); err != nil && strings.Contains(err.Error(), "no such host") {
+					addr = networkAddr + ":" + strconv.Itoa(networkPort)
+				}
+			}
+			return dialer.DialContext(ctx, network, addr)
+		},
+	}
+
+	client := &http.Client{Transport: transport}
+	clientResp, err := client.Get(url)
+	if err != nil {
+		if shouldFail {
+			return
+		}
+
+		t.Fatalf("failed to fetch url (%v): %v", url, err)
+	} else if shouldFail {
+		if clientResp.StatusCode == 200 {
+			t.Fatalf("expected failure to fetch url (%v): got response: %v", url, clientResp)
+		}
+
+		return
+	}
+
+	defer clientResp.Body.Close()
+	body, err := io.ReadAll(clientResp.Body)
+	if err != nil {
+		t.Fatalf("failed to get read response body: %v", err)
+	}
+	if !strings.Contains(string(body), expected) {
+		t.Fatalf("expected body to contain (%v) but was:\n%v", expected, string(body))
+	}
+}
+
 func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bool, roleKeyType string, roleKeyBits int, roleUsePSS bool) {
 	b, s := pki.CreateBackendWithStorage(t)
 
@@ -349,13 +415,7 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 	clientKey := resp.Data["private_key"].(string) + "\n"
 	clientFullChain := clientCert + "\n" + resp.Data["issuing_ca"].(string) + "\n"
 	clientTrustChain := resp.Data["issuing_ca"].(string) + "\n" + rootCert + "\n"
-
-	var clientTLSCert tls.Certificate
-	clientTLSCert.Certificate = append(clientTLSCert.Certificate, parseCert(t, clientCert).Raw)
-	clientTLSCert.PrivateKey = parseKey(t, clientKey)
-	for _, cert := range resp.Data["ca_chain"].([]string) {
-		clientTLSCert.Certificate = append(clientTLSCert.Certificate, parseCert(t, cert).Raw)
-	}
+	clientCAChain := resp.Data["ca_chain"].([]string)
 
 	cleanup, host, port, networkName, networkAddr, networkPort := buildNginxContainer(t, rootCert, fullChain, leafPrivateKey)
 	defer cleanup()
@@ -376,68 +436,9 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 	t.Logf("Spawned nginx container:\nhost: %v\nport: %v\nnetworkName: %v\nnetworkAddr: %v\nnetworkPort: %v\nlocalURL: %v\ncontainerURL: %v\n", host, port, networkName, networkAddr, networkPort, localBase, containerBase)
 
 	// Ensure we can connect with Go.
-	pool := x509.NewCertPool()
-	pool.AppendCertsFromPEM([]byte(rootCert))
-	tlsConfig := &tls.Config{
-		RootCAs: pool,
-	}
-	dialer := &net.Dialer{
-		Timeout:   30 * time.Second,
-		KeepAlive: 30 * time.Second,
-	}
-	transport := &http.Transport{
-		TLSClientConfig: tlsConfig,
-		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			if addr == host+":"+strconv.Itoa(port) {
-				// If we can't resolve our hostname, try
-				// accessing it via the docker protocol
-				// instead of via the returned service
-				// address.
-				if _, err := net.LookupHost(host); err != nil && strings.Contains(err.Error(), "no such host") {
-					addr = networkAddr + ":" + strconv.Itoa(networkPort)
-				}
-			}
-			return dialer.DialContext(ctx, network, addr)
-		},
-	}
-	client := &http.Client{Transport: transport}
-	clientResp, err := client.Get(localURL)
-	if err != nil {
-		t.Fatalf("failed to fetch url (%v): %v", localURL, err)
-	}
-	defer clientResp.Body.Close()
-	body, err := io.ReadAll(clientResp.Body)
-	if err != nil {
-		t.Fatalf("failed to get read response body: %v", err)
-	}
-	if !strings.Contains(string(body), unprotectedFile) {
-		t.Fatalf("expected body to contain (%v) but was:\n%v", unprotectedFile, string(body))
-	}
-
-	// Should fail to fetch without client auth info.
-	clientResp, err = client.Get(localProtectedURL)
-	if err == nil {
-		if clientResp.StatusCode != 403 {
-			t.Fatalf("expected failure to fetch but got valid response: %v", clientResp)
-		}
-
-		defer clientResp.Body.Close()
-	}
-
-	// Setting up a client cert should fix this.
-	tlsConfig.Certificates = append(tlsConfig.Certificates, clientTLSCert)
-	clientResp, err = client.Get(localProtectedURL)
-	if err != nil {
-		t.Fatalf("failed to fetch url (%v): %v", localURL, err)
-	}
-	defer clientResp.Body.Close()
-	body, err = io.ReadAll(clientResp.Body)
-	if err != nil {
-		t.Fatalf("failed to get read response body: %v", err)
-	}
-	if !strings.Contains(string(body), protectedFile) {
-		t.Fatalf("expected body to contain (%v) but was:\n%v", protectedFile, string(body))
-	}
+	CheckWithGo(t, rootCert, "", nil, "", host, port, networkAddr, networkPort, localURL, unprotectedFile, false)
+	CheckWithGo(t, rootCert, "", nil, "", host, port, networkAddr, networkPort, localURL, localProtectedURL, "THIS-TEST-SHOULD-FAIL", true)
+	CheckWithGo(t, rootCert, clientCert, clientCAChain, clientKey, host, port, networkAddr, networkPort, localURL, localProtectedURL, protectedFile, false)
 
 	// Ensure we can connect with wget/curl.
 	CheckWithClients(t, networkName, networkAddr, containerURL, rootCert, "", "")
