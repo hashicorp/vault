@@ -343,6 +343,9 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 	if engineType == "plugin" {
 		thing = c.flagPluginName + " plugin"
 	}
+	if c.flagPluginVersion != "" {
+		thing += " version " + c.flagPluginVersion
+	}
 	c.UI.Output(fmt.Sprintf("Success! Enabled the %s at: %s", thing, mountPath))
 	return 0
 }
