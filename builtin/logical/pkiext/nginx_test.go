@@ -176,7 +176,7 @@ func buildWgetCurlContainer(t *testing.T, network string) {
 	containerfile := `
 FROM ubuntu:latest
 
-RUN apt update && DEBIAN_FRONTEND="noninteractive" apt install -y curl wget
+RUN apt update && DEBIAN_FRONTEND="noninteractive" apt install -y curl wget wget2
 `
 
 	bCtx := docker.NewBuildContext()
@@ -231,7 +231,7 @@ func CheckWithClients(t *testing.T, network string, address string, url string, 
 	ctx := context.Background()
 	ctr, _, _, err := cwRunner.Start(ctx, true, false)
 	if err != nil {
-		t.Fatalf("Could not start golang container for zlint: %s", err)
+		t.Fatalf("Could not start golang container for wget/curl checks: %s", err)
 	}
 
 	// Commands to run after potentially writing the certificate. We
@@ -274,6 +274,66 @@ func CheckWithClients(t *testing.T, network string, address string, url string, 
 		if retcode != 0 {
 			t.Logf("Got stdout from command (%v):\n%v\n", cmd, string(stdout))
 			t.Fatalf("Got unexpected non-zero retcode from command (%v): %v\n", cmd, retcode)
+		}
+	}
+}
+
+func CheckDeltaCRL(t *testing.T, network string, address string, url string, rootCert string, crls string) {
+	// We assume the network doesn't change once assigned.
+	buildClientContainerOnce.Do(func() {
+		buildWgetCurlContainer(t, network)
+		builtNetwork = network
+	})
+
+	if builtNetwork != network {
+		t.Fatalf("failed assumption check: different built network (%v) vs run network (%v); must've changed while running tests", builtNetwork, network)
+	}
+
+	// Start our service with a random name to not conflict with other
+	// threads.
+	ctx := context.Background()
+	ctr, _, _, err := cwRunner.Start(ctx, true, false)
+	if err != nil {
+		t.Fatalf("Could not start golang container for wget2 delta CRL checks: %s", err)
+	}
+
+	// Commands to run after potentially writing the certificate. We
+	// might augment these if the certificate exists.
+	//
+	// We manually add the expected hostname to the local hosts file
+	// to avoid resolving it over the network and instead resolving it
+	// to this other container we just started (potentially in parallel
+	// with other containers).
+	hostPrimeCmd := []string{"sh", "-c", "echo '" + address + "	" + uniqueHostname + "' >> /etc/hosts"}
+	wgetCmd := []string{"wget2", "--verbose", "--ca-certificate=/root.pem", "--crl-file=/crls.pem", url}
+
+	certCtx := docker.NewBuildContext()
+	certCtx["root.pem"] = docker.PathContentsFromString(rootCert)
+	certCtx["crls.pem"] = docker.PathContentsFromString(crls)
+	if err := cwRunner.CopyTo(ctr.ID, "/", certCtx); err != nil {
+		t.Fatalf("Could not copy certificate and key into container: %v", err)
+	}
+
+	for index, cmd := range [][]string{hostPrimeCmd, wgetCmd} {
+		t.Logf("Running client connection command: %v", cmd)
+
+		stdout, stderr, retcode, err := cwRunner.RunCmdWithOutput(ctx, ctr.ID, cmd)
+		if err != nil {
+			t.Fatalf("Could not run command (%v) in container: %v", cmd, err)
+		}
+
+		if len(stderr) != 0 {
+			t.Logf("Got stderr from command (%v):\n%v\n", cmd, string(stderr))
+		}
+
+		if retcode != 0 && index == 0 {
+			t.Logf("Got stdout from command (%v):\n%v\n", cmd, string(stdout))
+			t.Fatalf("Got unexpected non-zero retcode from command (%v): %v\n", cmd, retcode)
+		}
+
+		if retcode == 0 && index == 1 {
+			t.Logf("Got stdout from command (%v):\n%v\n", cmd, string(stdout))
+			t.Fatalf("Got unexpected zero retcode from command; wanted this to fail (%v): %v\n", cmd, retcode)
 		}
 	}
 }
@@ -351,7 +411,7 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 
 	// Configure our mount to use auto-rotate, even though we don't have
 	// a periodic func.
-	_, err := CBWrite(b, s, "config/crl", map[string]interface{}{
+	_, err := pki.CBWrite(b, s, "config/crl", map[string]interface{}{
 		"auto_rebuild": true,
 		"enable_delta": true,
 	})
@@ -388,8 +448,9 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 		"csr":          resp.Data["csr"],
 	})
 	requireSuccessNonNilResponse(t, resp, err, "failed to sign intermediate csr")
+	intCert := resp.Data["certificate"].(string)
 	resp, err = pki.CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
-		"pem_bundle": resp.Data["certificate"],
+		"pem_bundle": intCert,
 	})
 	requireSuccessNonNilResponse(t, resp, err, "failed to sign intermediate csr")
 	_, err = pki.CBWrite(b, s, "config/issuers", map[string]interface{}{
@@ -419,7 +480,7 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 	}
 
 	// Issue a client leaf certificate.
-	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+	resp, err = pki.CBWrite(b, s, "issue/testing", map[string]interface{}{
 		"common_name": "testing.client.dadgarcorp.com",
 	})
 	requireSuccessNonNilResponse(t, resp, err, "failed to create client leaf cert")
@@ -431,7 +492,7 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 
 	// Issue a client leaf cert and revoke it, placing it on the main CRL
 	// via rotation.
-	resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+	resp, err = pki.CBWrite(b, s, "issue/testing", map[string]interface{}{
 		"common_name": "revoked-crl.client.dadgarcorp.com",
 	})
 	requireSuccessNonNilResponse(t, resp, err, "failed to create revoked client leaf cert")
@@ -440,16 +501,16 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 	// revokedFullChain := revokedCert + "\n" + resp.Data["issuing_ca"].(string) + "\n"
 	// revokedTrustChain := resp.Data["issuing_ca"].(string) + "\n" + rootCert + "\n"
 	revokedCAChain := resp.Data["ca_chain"].([]string)
-	_, err = CBWrite(b, s, "revoke", map[string]interface{}{
+	_, err = pki.CBWrite(b, s, "revoke", map[string]interface{}{
 		"certificate": revokedCert,
 	})
 	require.NoError(t, err)
-	_, err = CBRead(b, s, "crl/rotate")
+	_, err = pki.CBRead(b, s, "crl/rotate")
 	require.NoError(t, err)
 
 	// Issue a client leaf cert and revoke it, placing it on the delta CRL
 	// via rotation.
-	/*resp, err = CBWrite(b, s, "issue/testing", map[string]interface{}{
+	/*resp, err = pki.CBWrite(b, s, "issue/testing", map[string]interface{}{
 	      "common_name": "revoked-delta-crl.client.dadgarcorp.com",
 	  })
 	  requireSuccessNonNilResponse(t, resp, err, "failed to create delta CRL revoked client leaf cert")
@@ -458,28 +519,27 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 	  //deltaFullChain := deltaCert + "\n" + resp.Data["issuing_ca"].(string) + "\n"
 	  //deltaTrustChain := resp.Data["issuing_ca"].(string) + "\n" + rootCert + "\n"
 	  deltaCAChain := resp.Data["ca_chain"].([]string)
-	  _, err = CBWrite(b, s, "revoke", map[string]interface{}{
+	  _, err = pki.CBWrite(b, s, "revoke", map[string]interface{}{
 	      "certificate": deltaCert,
 	  })
 	  require.NoError(t, err)
-	  _, err = CBRead(b, s, "crl/rotate-delta")
+	  _, err = pki.CBRead(b, s, "crl/rotate-delta")
 	  require.NoError(t, err)*/
 
 	// Get the CRL and Delta CRLs.
-	resp, err = CBRead(b, s, "issuer/root/crl")
+	resp, err = pki.CBRead(b, s, "issuer/root/crl")
 	require.NoError(t, err)
 	rootCRL := resp.Data["crl"].(string) + "\n"
-	resp, err = CBRead(b, s, "issuer/default/crl")
+	resp, err = pki.CBRead(b, s, "issuer/default/crl")
 	require.NoError(t, err)
 	intCRL := resp.Data["crl"].(string) + "\n"
 
 	// No need to fetch root Delta CRL as we've not revoked anything on it.
-	resp, err = CBRead(b, s, "issuer/default/crl/delta")
+	resp, err = pki.CBRead(b, s, "issuer/default/crl/delta")
 	require.NoError(t, err)
 	deltaCRL := resp.Data["crl"].(string) + "\n"
 
 	crls := rootCRL + intCRL + deltaCRL
-	t.Logf("Got CRLs:\n\n%v\n\n", crls)
 
 	cleanup, host, port, networkName, networkAddr, networkPort := buildNginxContainer(t, rootCert, crls, fullChain, leafPrivateKey)
 	defer cleanup()
@@ -511,6 +571,22 @@ func RunNginxRootTest(t *testing.T, caKeyType string, caKeyBits int, caUsePSS bo
 	// Ensure we can connect with wget/curl.
 	CheckWithClients(t, networkName, networkAddr, containerURL, rootCert, "", "")
 	CheckWithClients(t, networkName, networkAddr, containerProtectedURL, clientTrustChain, clientFullChain, clientKey)
+
+	// Ensure OpenSSL will validate the delta CRL by revoking our server leaf
+	// and then using it with wget2. This will land on the intermediate's
+	// Delta CRL.
+	_, err = pki.CBWrite(b, s, "revoke", map[string]interface{}{
+		"certificate": leafCert,
+	})
+	require.NoError(t, err)
+	_, err = pki.CBRead(b, s, "crl/rotate-delta")
+	require.NoError(t, err)
+	resp, err = pki.CBRead(b, s, "issuer/default/crl/delta")
+	require.NoError(t, err)
+	deltaCRL = resp.Data["crl"].(string) + "\n"
+	crls = rootCRL + intCRL + deltaCRL
+
+	CheckDeltaCRL(t, networkName, networkAddr, containerURL, rootCert, crls)
 }
 
 func Test_NginxRSAPure(t *testing.T) {
