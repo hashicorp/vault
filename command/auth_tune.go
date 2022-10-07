@@ -276,9 +276,7 @@ func (c *AuthTuneCommand) Run(args []string) int {
 			}
 		}
 		if fl.Name == flagNameUserLockoutThreshold {
-			if c.flagUserLockoutThreshold > 0 {
-				mountConfigInput.UserLockoutConfig.LockoutThreshold = strconv.FormatUint(uint64(c.flagUserLockoutThreshold), 10)
-			}
+			mountConfigInput.UserLockoutConfig.LockoutThreshold = strconv.FormatUint(uint64(c.flagUserLockoutThreshold), 10)
 		}
 		if fl.Name == flagNameUserLockoutDuration {
 			mountConfigInput.UserLockoutConfig.LockoutDuration = ttlToAPI(c.flagUserLockoutDuration)
