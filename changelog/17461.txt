@@ -1,0 +1,3 @@
+```release-note:improvement
+website/docs: Added documentation for Kubernetes Auth method supporting PATCH on role configuration.
+```
