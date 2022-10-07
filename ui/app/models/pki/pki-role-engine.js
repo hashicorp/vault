@@ -13,7 +13,7 @@ const validations = {
 export default class PkiRoleEngineModel extends Model {
   @attr('string', { readOnly: true }) backend;
 
-  /* Overriding default options */
+  /* Overriding OpenApi default options */
   @attr('string', {
     label: 'Role name',
     fieldValue: 'name',
@@ -80,9 +80,9 @@ export default class PkiRoleEngineModel extends Model {
   addBasicConstraints;
   /* End of overriding default options */
 
-  /* Overriding Domain handling options */
+  /* Overriding OpenApi Domain handling options */
   @attr({
-    label: 'Allowed Domains',
+    label: 'Allowed domains',
     subText: 'Specifies the domains this role is allowed to issue certificates for. Add one item per row.',
     editType: 'stringArray',
   })
@@ -102,7 +102,7 @@ export default class PkiRoleEngineModel extends Model {
   moreInfo;
   /* End of overriding Domain handling options */
 
-  /* Overriding Key parameters options */
+  /* Overriding OpenApi Key parameters options */
   @attr('string', {
     subText: `These are the parameters for generating or validating the certificate's key material.`,
     hideInput: true,

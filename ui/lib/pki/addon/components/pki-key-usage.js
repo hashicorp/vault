@@ -16,12 +16,6 @@ import { action } from '@ember/object';
  */
 
 const KEY_USAGE_FIELDS = {
-  KeyUsageLabel: {
-    label: 'Key usage',
-    subText: `Specifies the default key usage constraint on the issued certificate. To specify no default key_usage constraints, uncheck every item in this list.`,
-    spanAllColumns: true,
-    isTitleOfGridGroup: true,
-  },
   DigitalSignature: {
     label: 'Digital Signature',
     value: true,
@@ -43,13 +37,6 @@ const KEY_USAGE_FIELDS = {
 };
 
 const EXT_KEY_USAGE_FIELDS = {
-  ExtKeyUsageLabel: {
-    label: 'Extended key usage',
-    subText:
-      'Specifies the default key usage constraint on the issued certificate. To specify no default ext_key_usage constraints, uncheck every item in this list.',
-    spanAllColumns: true,
-    isTitleOfGridGroup: true,
-  },
   Any: { label: 'Any' },
   EmailProtection: { label: 'Email Protection' },
   TimeStamping: { label: 'Time Stamping' },
@@ -60,13 +47,6 @@ const EXT_KEY_USAGE_FIELDS = {
   IpsecTunnel: { label: 'IPSEC Tunnel' },
   IpsecUser: { label: 'IPSEC User' },
   CodeSigning: { label: 'Code Signing' },
-  // This is a model attribute. The others are not. camelCased and not PascalCased to distinguish.
-  extKeyUsageOids: {
-    label: 'Extended key usage OIDs',
-    subText: 'A list of extended key usage oids. Add one item per row.',
-    editType: 'stringArray',
-    spanAllColumns: true,
-  },
 };
 
 export default class PkiKeyUsage extends Component {

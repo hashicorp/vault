@@ -107,17 +107,17 @@
 .is-grid {
   display: grid;
 }
-.is-row-gap-medium {
-  row-gap: $spacing-m;
-}
 .is-grid-3-columns {
   grid-template-columns: repeat(3, 1fr);
 }
 .is-grid-4-rows {
-  grid-template-rows: repeat(3, 1fr);
+  grid-template-rows: 1fr 1fr 1fr 2fr;
 }
 .is-large-height {
   height: $large-height;
+}
+.is-medium-height {
+  height: $medium-height;
 }
 // grid items
 .is-grid-column-span-3 {
