@@ -74,7 +74,7 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 		if len(monthlyComputation) > 1 {
 			a.logger.Warn("monthly in-memory activitylog computation returned multiple months of data", "months returned", len(byMonth))
 		}
-		if len(monthlyComputation) >= 0 {
+		if len(monthlyComputation) > 0 {
 			return monthlyComputation[0], nil
 		}
 	}
