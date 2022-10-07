@@ -791,6 +791,8 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 	// can be understood by the UI
 	aliasesInvolvedInClashes := make([]aliasClashInformation, 0)
 
+	i.UpdateEntityWithMountInformation(toEntity)
+
 	// An error detailing if any alias clashes happen (shared mount accessor)
 	var aliasClashError error
 
@@ -811,6 +813,8 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		if fromEntity.NamespaceID != toEntity.NamespaceID {
 			return errors.New("entity id to merge from does not belong to this namespace"), nil, nil
 		}
+
+		i.UpdateEntityWithMountInformation(fromEntity)
 
 		// If we're not resolving a conflict, we check to see if
 		// any aliases conflict between the toEntity and this fromEntity:
