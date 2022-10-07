@@ -110,34 +110,29 @@ func ParseUserLockouts(result *SharedConfig, list *ast.ObjectList) error {
 // setUserLockoutValueAllInMap sets default user lockout values for key "all" (all auth methods)
 // for user lockout fields that are not configured using config file
 func setUserLockoutValueAllInMap(userLockoutAll *UserLockout) *UserLockout {
-	var tmpUserLockoutConfig UserLockout
-	if userLockoutAll == nil {
-		tmpUserLockoutConfig.Type = "all"
-		tmpUserLockoutConfig.LockoutThreshold = UserLockoutThresholdDefault
-		tmpUserLockoutConfig.LockoutDuration = UserLockoutDurationDefault
-		tmpUserLockoutConfig.LockoutCounterReset = UserLockoutCounterResetDefault
-		tmpUserLockoutConfig.DisableLockout = DisableUserLockoutDefault
-		return &tmpUserLockoutConfig
+	if userLockoutAll.Type == "" {
+		userLockoutAll.Type = "all"
 	}
-	tmpUserLockoutConfig = *userLockoutAll
-	if tmpUserLockoutConfig.LockoutThresholdRaw == nil {
-		tmpUserLockoutConfig.LockoutThreshold = UserLockoutThresholdDefault
+	if userLockoutAll.LockoutThresholdRaw == nil {
+		userLockoutAll.LockoutThreshold = UserLockoutThresholdDefault
 	}
-	if tmpUserLockoutConfig.LockoutDurationRaw == nil {
-		tmpUserLockoutConfig.LockoutDuration = UserLockoutDurationDefault
+	if userLockoutAll.LockoutDurationRaw == nil {
+		userLockoutAll.LockoutDuration = UserLockoutDurationDefault
 	}
-	if tmpUserLockoutConfig.LockoutCounterResetRaw == nil {
-		tmpUserLockoutConfig.LockoutCounterReset = UserLockoutCounterResetDefault
+	if userLockoutAll.LockoutCounterResetRaw == nil {
+		userLockoutAll.LockoutCounterReset = UserLockoutCounterResetDefault
 	}
-	if tmpUserLockoutConfig.DisableLockoutRaw == nil {
-		tmpUserLockoutConfig.DisableLockout = DisableUserLockoutDefault
+	if userLockoutAll.DisableLockoutRaw == nil {
+		userLockoutAll.DisableLockout = DisableUserLockoutDefault
 	}
-	return setNilValuesForRawUserLockoutFields(&tmpUserLockoutConfig)
+	return setNilValuesForRawUserLockoutFields(userLockoutAll)
 }
 
 // setDefaultUserLockoutValuesInMap sets missing user lockout fields for auth methods
 // with default values (from key "all") that are not configured using config file
 func setMissingUserLockoutValuesInMap(userLockoutsMap map[string]*UserLockout) map[string]*UserLockout {
+	// set values for "all" key with default values for "all" user lockout fields that are not configured
+	// the "all" key values will be used as default values for other auth methods
 	userLockoutAll, ok := userLockoutsMap["all"]
 	switch ok {
 	case true:
