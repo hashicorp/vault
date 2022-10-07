@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"hash"
 	"net/http"
-	"os"
 	"path"
 	"path/filepath"
 	"sort"
@@ -4615,42 +4614,10 @@ func (b *SystemBackend) rotateBarrierKey(ctx context.Context) error {
 
 func (b *SystemBackend) handleHAStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// We're always the leader if we're handling this request.
-	hostname, err := os.Hostname()
+	nodes, err := b.Core.getHAMembers()
 	if err != nil {
 		return nil, err
 	}
-
-	leader := HAStatusNode{
-		Hostname:       hostname,
-		APIAddress:     b.Core.redirectAddr,
-		ClusterAddress: b.Core.ClusterAddr(),
-		ActiveNode:     true,
-		Version:        version.GetVersion().Version,
-	}
-
-	if rb := b.Core.getRaftBackend(); rb != nil {
-		leader.UpgradeVersion = rb.EffectiveVersion()
-		leader.RedundancyZone = rb.RedundancyZone()
-	}
-
-	nodes := []HAStatusNode{leader}
-
-	for _, peerNode := range b.Core.GetHAPeerNodesCached() {
-		lastEcho := peerNode.LastEcho
-		nodes = append(nodes, HAStatusNode{
-			Hostname:       peerNode.Hostname,
-			APIAddress:     peerNode.APIAddress,
-			ClusterAddress: peerNode.ClusterAddress,
-			LastEcho:       &lastEcho,
-			Version:        peerNode.Version,
-			UpgradeVersion: peerNode.UpgradeVersion,
-			RedundancyZone: peerNode.RedundancyZone,
-		})
-	}
-
-	sort.Slice(nodes, func(i, j int) bool {
-		return nodes[i].APIAddress < nodes[j].APIAddress
-	})
 
 	return &logical.Response{
 		Data: map[string]interface{}{

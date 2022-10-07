@@ -64,6 +64,20 @@ var SignatureAlgorithmNames = map[string]x509.SignatureAlgorithm{
 	"ed25519":          x509.PureEd25519, // Duplicated for clarity; most won't expect the "Pure" prefix.
 }
 
+// Mapping of constant values<->constant names for SignatureAlgorithm
+var InvSignatureAlgorithmNames = map[x509.SignatureAlgorithm]string{
+	x509.SHA256WithRSA:    "SHA256WithRSA",
+	x509.SHA384WithRSA:    "SHA384WithRSA",
+	x509.SHA512WithRSA:    "SHA512WithRSA",
+	x509.ECDSAWithSHA256:  "ECDSAWithSHA256",
+	x509.ECDSAWithSHA384:  "ECDSAWithSHA384",
+	x509.ECDSAWithSHA512:  "ECDSAWithSHA512",
+	x509.SHA256WithRSAPSS: "SHA256WithRSAPSS",
+	x509.SHA384WithRSAPSS: "SHA384WithRSAPSS",
+	x509.SHA512WithRSAPSS: "SHA512WithRSAPSS",
+	x509.PureEd25519:      "Ed25519",
+}
+
 // OID for RFC 5280 Delta CRL Indicator CRL extension.
 //
 // > id-ce-deltaCRLIndicator OBJECT IDENTIFIER ::= { id-ce 27 }

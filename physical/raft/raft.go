@@ -37,11 +37,13 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-// EnvVaultRaftNodeID is used to fetch the Raft node ID from the environment.
-const EnvVaultRaftNodeID = "VAULT_RAFT_NODE_ID"
+const (
+	// EnvVaultRaftNodeID is used to fetch the Raft node ID from the environment.
+	EnvVaultRaftNodeID = "VAULT_RAFT_NODE_ID"
 
-// EnvVaultRaftPath is used to fetch the path where Raft data is stored from the environment.
-const EnvVaultRaftPath = "VAULT_RAFT_PATH"
+	// EnvVaultRaftPath is used to fetch the path where Raft data is stored from the environment.
+	EnvVaultRaftPath = "VAULT_RAFT_PATH"
+)
 
 var getMmapFlags = func(string) int { return 0 }
 
@@ -169,6 +171,8 @@ type RaftBackend struct {
 
 	// redundancyZone specifies a redundancy zone for autopilot.
 	redundancyZone string
+
+	effectiveSDKVersion string
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -535,6 +539,12 @@ func (b *RaftBackend) Close() error {
 	}
 
 	return nil
+}
+
+func (b *RaftBackend) SetEffectiveSDKVersion(sdkVersion string) {
+	b.l.Lock()
+	b.effectiveSDKVersion = sdkVersion
+	b.l.Unlock()
 }
 
 func (b *RaftBackend) RedundancyZone() string {

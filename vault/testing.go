@@ -1217,9 +1217,10 @@ type TestClusterOptions struct {
 	LicensePrivateKey     ed25519.PrivateKey
 
 	// this stores the vault version that should be used for each core config
-	VersionMap        map[int]string
-	RedundancyZoneMap map[int]string
-	KVVersion         string
+	VersionMap             map[int]string
+	RedundancyZoneMap      map[int]string
+	KVVersion              string
+	EffectiveSDKVersionMap map[int]string
 }
 
 var DefaultNumCores = 3
@@ -1907,6 +1908,11 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 	if coreConfig.Logger == nil || (opts != nil && opts.Logger != nil) {
 		localConfig.Logger = testCluster.Logger.Named(fmt.Sprintf("core%d", idx))
 	}
+
+	if opts != nil && opts.EffectiveSDKVersionMap != nil {
+		localConfig.EffectiveSDKVersion = opts.EffectiveSDKVersionMap[idx]
+	}
+
 	if opts != nil && opts.PhysicalFactory != nil {
 		pfc := opts.PhysicalFactoryConfig
 		if pfc == nil {
