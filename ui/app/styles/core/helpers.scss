@@ -110,12 +110,6 @@
 .is-grid-3-columns {
   grid-template-columns: repeat(3, 1fr);
 }
-.is-grid-4-rows {
-  grid-template-rows: 1fr 1fr 1fr 2fr;
-}
-.is-large-height {
-  height: $large-height;
-}
 .is-medium-height {
   height: $medium-height;
 }
