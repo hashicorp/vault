@@ -40,17 +40,27 @@ module('Integration | Component | date-dropdown', function (hooks) {
   });
 
   test('it renders dropdown and selects month and year', async function (assert) {
-    assert.expect(27);
-    const parentAction = (month, year) => {
-      assert.equal(month, 'January', 'sends correct month to parent callback');
-      assert.equal(year, CURRENT_YEAR, 'sends correct year to parent callback');
+    assert.expect(26);
+    const parentAction = (args) => {
+      assert.propEqual(
+        args,
+        {
+          dateType: 'start',
+          monthIdx: 0,
+          monthName: 'January',
+          year: 2022,
+        },
+        'sends correct args to parent'
+      );
     };
     this.set('parentAction', parentAction);
 
     await render(hbs`
     <div class="is-flex-align-baseline">
     <DateDropdown 
-    @handleSubmit={{parentAction}} />
+      @handleSubmit={{parentAction}} 
+      @dateType="start"
+    />
     </div>
     `);
 

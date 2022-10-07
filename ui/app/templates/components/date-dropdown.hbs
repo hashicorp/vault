@@ -5,20 +5,20 @@
       class={{concat "toolbar-link" (if D.isOpen " is-active")}}
       @htmlTag="button"
     >
-      {{or this.selectedMonth "Month"}}
+      {{or this.selectedMonth.name "Month"}}
       <Chevron @direction="down" @isButton={{true}} />
     </D.Trigger>
     <D.Content @defaultClass="popup-menu-content is-wide">
       <nav aria-label="month dropdown" class="box menu scroll">
         <ul data-test-month-list class="menu-list">
-          {{#each this.months as |month index|}}
+          {{#each this.dropdownMonths as |month|}}
             <button
               type="button"
               class="button link"
-              disabled={{if (gt index this.maxMonthIdx) true false}}
+              disabled={{if (gt month.index this.maxMonthIdx) true false}}
               {{on "click" (fn this.selectMonth month D.actions)}}
             >
-              {{month}}
+              {{month.name}}
             </button>
           {{/each}}
         </ul>
@@ -37,7 +37,7 @@
     <D.Content @defaultClass="popup-menu-content is-wide">
       <nav aria-label="year dropdown" class="box menu">
         <ul data-test-year-list class="menu-list">
-          {{#each this.years as |year|}}
+          {{#each this.dropdownYears as |year|}}
             <button
               type="button"
               class="button link"
