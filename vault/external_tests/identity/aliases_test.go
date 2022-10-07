@@ -2,7 +2,9 @@ package identity
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 	"testing"
 
@@ -524,6 +526,9 @@ func TestIdentityStore_MergeEntities_FailsDueToDoubleClash(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected error upon merge. Resp:%#v", mergeResp)
 	}
+	if mergeResp != nil {
+		t.Fatalf("Response was non-nil. Resp:%#v", mergeResp)
+	}
 	if !strings.Contains(err.Error(), "toEntity and at least one fromEntity have aliases with the same mount accessor") {
 		t.Fatalf("Error was not due to conflicting alias mount accessors. Error: %v", err)
 	}
@@ -550,6 +555,170 @@ func TestIdentityStore_MergeEntities_FailsDueToDoubleClash(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), mountAccessorGitHub) {
 		t.Fatalf("Did not identify mount accessor %s as being reason for conflict. Error: %v", mountAccessorGitHub, err)
+	}
+}
+
+func TestIdentityStore_MergeEntities_FailsDueToClashInFromEntities_CheckRawRequest(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+
+	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("auth/userpass/users/bob", map[string]interface{}{
+		"password": "training",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mounts, err := client.Sys().ListAuth()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var mountAccessor string
+	for k, v := range mounts {
+		if k == "userpass/" {
+			mountAccessor = v.Accessor
+			break
+		}
+	}
+	if mountAccessor == "" {
+		t.Fatal("did not find userpass accessor")
+	}
+
+	_, entityIdBob, _ := createEntityAndAlias(client, mountAccessor, "bob-smith", "bob", t)
+
+	// Create userpass login for alice
+	_, err = client.Logical().Write("auth/userpass/users/alice", map[string]interface{}{
+		"password": "training",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, entityIdAlice, _ := createEntityAndAlias(client, mountAccessor, "alice-smith", "alice", t)
+
+	// Perform entity merge as a Raw Request so we can investigate the response body
+	req := client.NewRequest("POST", "/v1/identity/entity/merge")
+	req.SetJSONBody(map[string]interface{}{
+		"to_entity_id":    entityIdBob,
+		"from_entity_ids": []string{entityIdAlice},
+	})
+
+	resp, err := client.RawRequest(req)
+	if err == nil {
+		t.Fatalf("Expected error but did not get one. Response: %v", resp)
+	}
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bodyString := string(bodyBytes)
+
+	if resp.StatusCode != 400 {
+		t.Fatal("Incorrect status code for response")
+	}
+
+	var mapOutput map[string]interface{}
+	if err = json.Unmarshal([]byte(bodyString), &mapOutput); err != nil {
+		t.Fatal(err)
+	}
+
+	errorStrings, ok := mapOutput["errors"].([]interface{})
+	if !ok {
+		t.Fatalf("error not present in response - full response: %s", bodyString)
+	}
+
+	if len(errorStrings) != 1 {
+		t.Fatalf("Incorrect number of errors in response - full response: %s", bodyString)
+	}
+
+	errorString, ok := errorStrings[0].(string)
+	if !ok {
+		t.Fatalf("error not present in response - full response: %s", bodyString)
+	}
+
+	if !strings.Contains(errorString, "toEntity and at least one fromEntity have aliases with the same mount accessor") {
+		t.Fatalf("Error was not due to conflicting alias mount accessors. Error: %s", errorString)
+	}
+
+	dataArray, ok := mapOutput["data"].([]interface{})
+	if !ok {
+		t.Fatalf("data not present in response - full response: %s", bodyString)
+	}
+
+	if len(dataArray) != 2 {
+		t.Fatalf("Incorrect amount of clash data in response - full response: %s", bodyString)
+	}
+
+	for _, data := range dataArray {
+		dataMap, ok := data.(map[string]interface{})
+		if !ok {
+			t.Fatalf("data could not be understood - full response: %s", bodyString)
+		}
+
+		entityId, ok := dataMap["entity_id"].(string)
+		if !ok {
+			t.Fatalf("entity_id not present in data - full response: %s", bodyString)
+		}
+
+		if entityId != entityIdBob && entityId != entityIdAlice {
+			t.Fatalf("entityId not bob or alice - full response: %s", bodyString)
+		}
+
+		entity, ok := dataMap["entity"].(string)
+		if !ok {
+			t.Fatalf("entity not present in data - full response: %s", bodyString)
+		}
+
+		if entity != "bob-smith" && entity != "alice-smith" {
+			t.Fatalf("entity not bob or alice - full response: %s", bodyString)
+		}
+
+		alias, ok := dataMap["alias"].(string)
+		if !ok {
+			t.Fatalf("alias not present in data - full response: %s", bodyString)
+		}
+
+		if alias != "bob" && alias != "alice" {
+			t.Fatalf("alias not bob or alice - full response: %s", bodyString)
+		}
+
+		mountPath, ok := dataMap["mount_path"].(string)
+		if !ok {
+			t.Fatalf("mountPath not present in data - full response: %s", bodyString)
+		}
+
+		if mountPath != "auth/userpass/" {
+			t.Fatalf("mountPath not auth/userpass/ - full response: %s", bodyString)
+		}
+
+		mount, ok := dataMap["mount"].(string)
+		if !ok {
+			t.Fatalf("mount not present in data - full response: %s", bodyString)
+		}
+
+		if mount != "userpass" {
+			t.Fatalf("mount not userpass - full response: %s", bodyString)
+		}
 	}
 }
 

@@ -1099,7 +1099,20 @@ func (i *IdentityStore) MemDBEntityByID(entityID string, clone bool) (*identity.
 
 	txn := i.db.Txn(false)
 
-	return i.MemDBEntityByIDInTxn(txn, entityID, clone)
+	entity, err := i.MemDBEntityByIDInTxn(txn, entityID, clone)
+	if err != nil {
+		return entity, err
+	}
+	if entity != nil {
+		for _, alias := range entity.Aliases {
+			mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor)
+			if mountValidationResp != nil {
+				alias.MountType = mountValidationResp.MountType
+				alias.MountPath = mountValidationResp.MountPath
+			}
+		}
+	}
+	return entity, nil
 }
 
 func (i *IdentityStore) MemDBEntityByName(ctx context.Context, entityName string, clone bool) (*identity.Entity, error) {

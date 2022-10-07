@@ -45,6 +45,19 @@ func TestIdentityStore_Lookup_Entity(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if len(entity.Aliases) != 1 {
+		t.Fatalf("unexpected number of aliases in entity: %x", entity)
+	}
+
+	alias := entity.Aliases[0]
+	if alias.MountPath != "auth/github/" {
+		t.Fatalf("alias mountpath was not as expected - expected auth/github/ but got %q", alias.MountPath)
+	}
+
+	if alias.MountType != "github" {
+		t.Fatalf("alias mountpath was not as expected - expected github but got %q", alias.MountPath)
+	}
+
 	lookupReq := &logical.Request{
 		Path:      "lookup/entity",
 		Operation: logical.UpdateOperation,
