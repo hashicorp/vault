@@ -4,10 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/ed25519"
-	"crypto/rsa"
-	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
@@ -362,40 +358,56 @@ func TestOcsp_MultipleMatchingIssuersOneWithoutSigningUsage(t *testing.T) {
 	require.Equal(t, testEnv.leafCertIssuer1.SerialNumber, ocspResp.SerialNumber)
 	require.Equal(t, rotatedCert, ocspResp.Certificate)
 
-	requireOcspSignatureAlgoForKey(t, rotatedCert.PublicKey, ocspResp.SignatureAlgorithm)
-	requireOcspResponseSignedBy(t, ocspResp, rotatedCert.PublicKey)
+	requireOcspSignatureAlgoForKey(t, rotatedCert.SignatureAlgorithm, ocspResp.SignatureAlgorithm)
+	requireOcspResponseSignedBy(t, ocspResp, rotatedCert)
 }
 
 func TestOcsp_ValidRequests(t *testing.T) {
+	type caKeyConf struct {
+		keyType string
+		keyBits int
+		sigBits int
+	}
 	t.Parallel()
 	type testArgs struct {
-		reqType   string
-		caKeyType string
-		reqHash   crypto.Hash
+		reqType string
+		keyConf caKeyConf
+		reqHash crypto.Hash
 	}
 	var tests []testArgs
 	for _, reqType := range []string{"get", "post"} {
-		for _, caKeyType := range []string{"rsa", "ec"} { // "ed25519" is not supported at the moment in x/crypto/ocsp
-			for _, requestHash := range []crypto.Hash{crypto.SHA1, crypto.SHA256} {
+		for _, keyConf := range []caKeyConf{
+			{"rsa", 0, 0},
+			{"rsa", 0, 384},
+			{"rsa", 0, 512},
+			{"ec", 0, 0},
+			{"ec", 521, 0},
+		} {
+			// "ed25519" is not supported at the moment in x/crypto/ocsp
+			for _, requestHash := range []crypto.Hash{crypto.SHA1, crypto.SHA256, crypto.SHA384, crypto.SHA512} {
 				tests = append(tests, testArgs{
-					reqType:   reqType,
-					caKeyType: caKeyType,
-					reqHash:   requestHash,
+					reqType: reqType,
+					keyConf: keyConf,
+					reqHash: requestHash,
 				})
 			}
 		}
 	}
 	for _, tt := range tests {
 		localTT := tt
-		testName := fmt.Sprintf("%s-%s-%s", localTT.reqType, localTT.caKeyType, localTT.reqHash)
+		testName := fmt.Sprintf("%s-%s-keybits-%d-sigbits-%d-reqHash-%s", localTT.reqType, localTT.keyConf.keyType,
+			localTT.keyConf.keyBits,
+			localTT.keyConf.sigBits,
+			localTT.reqHash)
 		t.Run(testName, func(t *testing.T) {
-			runOcspRequestTest(t, localTT.reqType, localTT.caKeyType, localTT.reqHash)
+			runOcspRequestTest(t, localTT.reqType, localTT.keyConf.keyType, localTT.keyConf.keyBits,
+				localTT.keyConf.sigBits, localTT.reqHash)
 		})
 	}
 }
 
-func runOcspRequestTest(t *testing.T, requestType string, caKeyType string, requestHash crypto.Hash) {
-	b, s, testEnv := setupOcspEnv(t, caKeyType)
+func runOcspRequestTest(t *testing.T, requestType string, caKeyType string, caKeyBits int, caKeySigBits int, requestHash crypto.Hash) {
+	b, s, testEnv := setupOcspEnvWithCaKeyConfig(t, caKeyType, caKeyBits, caKeySigBits)
 
 	// Non-revoked cert
 	resp, err := sendOcspRequest(t, b, s, requestType, testEnv.leafCertIssuer1, testEnv.issuer1, requestHash)
@@ -414,8 +426,8 @@ func runOcspRequestTest(t *testing.T, requestType string, caKeyType string, requ
 	require.Equal(t, 0, ocspResp.RevocationReason)
 	require.Equal(t, testEnv.leafCertIssuer1.SerialNumber, ocspResp.SerialNumber)
 
-	requireOcspSignatureAlgoForKey(t, testEnv.issuer1.PublicKey, ocspResp.SignatureAlgorithm)
-	requireOcspResponseSignedBy(t, ocspResp, testEnv.issuer1.PublicKey)
+	requireOcspSignatureAlgoForKey(t, testEnv.issuer1.SignatureAlgorithm, ocspResp.SignatureAlgorithm)
+	requireOcspResponseSignedBy(t, ocspResp, testEnv.issuer1)
 
 	// Now revoke it
 	resp, err = CBWrite(b, s, "revoke", map[string]interface{}{
@@ -439,8 +451,8 @@ func runOcspRequestTest(t *testing.T, requestType string, caKeyType string, requ
 	require.Equal(t, 0, ocspResp.RevocationReason)
 	require.Equal(t, testEnv.leafCertIssuer1.SerialNumber, ocspResp.SerialNumber)
 
-	requireOcspSignatureAlgoForKey(t, testEnv.issuer1.PublicKey, ocspResp.SignatureAlgorithm)
-	requireOcspResponseSignedBy(t, ocspResp, testEnv.issuer1.PublicKey)
+	requireOcspSignatureAlgoForKey(t, testEnv.issuer1.SignatureAlgorithm, ocspResp.SignatureAlgorithm)
+	requireOcspResponseSignedBy(t, ocspResp, testEnv.issuer1)
 
 	// Request status for our second issuer
 	resp, err = sendOcspRequest(t, b, s, requestType, testEnv.leafCertIssuer2, testEnv.issuer2, requestHash)
@@ -471,21 +483,12 @@ func runOcspRequestTest(t *testing.T, requestType string, caKeyType string, requ
 		fmt.Sprintf("the delta between thisUpdate %s and nextUpdate: %s should have been around: %s but was %s",
 			thisUpdate, nextUpdate, defaultCrlConfig.OcspExpiry, nextUpdateDiff))
 
-	requireOcspSignatureAlgoForKey(t, testEnv.issuer2.PublicKey, ocspResp.SignatureAlgorithm)
-	requireOcspResponseSignedBy(t, ocspResp, testEnv.issuer2.PublicKey)
+	requireOcspSignatureAlgoForKey(t, testEnv.issuer2.SignatureAlgorithm, ocspResp.SignatureAlgorithm)
+	requireOcspResponseSignedBy(t, ocspResp, testEnv.issuer2)
 }
 
-func requireOcspSignatureAlgoForKey(t *testing.T, key crypto.PublicKey, algorithm x509.SignatureAlgorithm) {
-	switch key.(type) {
-	case *rsa.PublicKey:
-		require.Equal(t, x509.SHA256WithRSA, algorithm)
-	case *ecdsa.PublicKey:
-		require.Equal(t, x509.ECDSAWithSHA256, algorithm)
-	case ed25519.PublicKey:
-		require.Equal(t, x509.PureEd25519, algorithm)
-	default:
-		t.Fatalf("unsupported public key type %T", key)
-	}
+func requireOcspSignatureAlgoForKey(t *testing.T, expected x509.SignatureAlgorithm, actual x509.SignatureAlgorithm) {
+	require.Equal(t, expected.String(), actual.String())
 }
 
 type ocspTestEnv struct {
@@ -503,6 +506,10 @@ type ocspTestEnv struct {
 }
 
 func setupOcspEnv(t *testing.T, keyType string) (*backend, logical.Storage, *ocspTestEnv) {
+	return setupOcspEnvWithCaKeyConfig(t, keyType, 0, 0)
+}
+
+func setupOcspEnvWithCaKeyConfig(t *testing.T, keyType string, caKeyBits int, caKeySigBits int) (*backend, logical.Storage, *ocspTestEnv) {
 	b, s := createBackendWithStorage(t)
 	var issuerCerts []*x509.Certificate
 	var leafCerts []*x509.Certificate
@@ -511,9 +518,11 @@ func setupOcspEnv(t *testing.T, keyType string) (*backend, logical.Storage, *ocs
 
 	for i := 0; i < 2; i++ {
 		resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
-			"key_type":    keyType,
-			"ttl":         "40h",
-			"common_name": "example-ocsp.com",
+			"key_type":       keyType,
+			"key_bits":       caKeyBits,
+			"signature_bits": caKeySigBits,
+			"ttl":            "40h",
+			"common_name":    "example-ocsp.com",
 		})
 		requireSuccessNonNilResponse(t, resp, err, "root/generate/internal")
 		requireFieldsSetInResp(t, resp, "issuer_id", "key_id")
@@ -601,20 +610,7 @@ func generateRequest(t *testing.T, requestHash crypto.Hash, cert *x509.Certifica
 	return ocspRequestDer
 }
 
-func requireOcspResponseSignedBy(t *testing.T, ocspResp *ocsp.Response, key crypto.PublicKey) {
-	require.Contains(t, []x509.SignatureAlgorithm{x509.SHA256WithRSA, x509.ECDSAWithSHA256}, ocspResp.SignatureAlgorithm)
-
-	hasher := sha256.New()
-	hashAlgo := crypto.SHA256
-	hasher.Write(ocspResp.TBSResponseData)
-	hashData := hasher.Sum(nil)
-
-	switch typedKey := key.(type) {
-	case *rsa.PublicKey:
-		err := rsa.VerifyPKCS1v15(typedKey, hashAlgo, hashData, ocspResp.Signature)
-		require.NoError(t, err, "the ocsp response was not signed by the expected public rsa key.")
-	case *ecdsa.PublicKey:
-		verify := ecdsa.VerifyASN1(typedKey, hashData, ocspResp.Signature)
-		require.True(t, verify, "the certificate was not signed by the expected public ecdsa key.")
-	}
+func requireOcspResponseSignedBy(t *testing.T, ocspResp *ocsp.Response, issuer *x509.Certificate) {
+	err := ocspResp.CheckSignatureFrom(issuer)
+	require.NoError(t, err, "Failed signature verification of ocsp response: %w", err)
 }
