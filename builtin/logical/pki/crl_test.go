@@ -724,6 +724,14 @@ func TestIssuerRevocation(t *testing.T) {
 
 	b, s := createBackendWithStorage(t)
 
+	// Write a config with auto-rebuilding so that we can verify stuff doesn't
+	// appear on the delta CRL.
+	_, err := CBWrite(b, s, "config/crl", map[string]interface{}{
+		"auto_rebuild": true,
+		"enable_delta": true,
+	})
+	require.NoError(t, err)
+
 	// Create a root CA.
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"common_name": "root example.com",
@@ -847,6 +855,10 @@ func TestIssuerRevocation(t *testing.T) {
 	require.NoError(t, err)
 	crl = getParsedCrlFromBackend(t, b, s, "issuer/root/crl/der")
 	requireSerialNumberInCRL(t, crl.TBSCertList, intCertSerial)
+	crl = getParsedCrlFromBackend(t, b, s, "issuer/root/crl/delta/der")
+	if requireSerialNumberInCRL(nil, crl.TBSCertList, intCertSerial) {
+		t.Fatalf("expected intermediate serial NOT to appear on root's delta CRL, but did")
+	}
 
 	// Ensure we can still revoke the issued leaf.
 	resp, err = CBWrite(b, s, "revoke", map[string]interface{}{
