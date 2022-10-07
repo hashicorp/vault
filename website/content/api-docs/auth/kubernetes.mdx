@@ -112,16 +112,27 @@ $ curl \
 }
 ```
 
-## Create Role
+## Create Role/Update Role
 
 Registers a role in the auth method. Role types have specific entities
 that can perform login operations against this endpoint. Constraints specific
 to the role type must be set on the role. These are applied to the authenticated
 entities attempting to login.
 
-| Method | Path                          |
-| :----- | :---------------------------- |
-| `POST` | `/auth/kubernetes/role/:name` |
+| Method  | Path                          |
+| :------ | :---------------------------- |
+| `POST`  | `/auth/kubernetes/role/:name` |
+| `PATCH` | `/auth/kubernetes/role/:name` |
+
+
+~> **Note** `POST`ing to this endpoint when the role already exists causes
+   Vault to overwrite the contents of the role, using the provided request
+   data (and any defaults for elided parameters). It does not update only
+   the provided fields.<br /><br />
+   Since Vault 1.11.0, Vault supports the PATCH operation to this endpoint,
+   using the [JSON patch format](https://datatracker.ietf.org/doc/html/rfc6902)
+   supported by KVv2, allowing update of specific fields. Note that
+   `vault write` uses `POST`.
 
 ### Parameters
 
