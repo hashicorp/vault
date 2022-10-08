@@ -540,11 +540,25 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 	tickerCh := b.followerHeartbeatTicker.C
 	b.l.RUnlock()
 
+	followerGauge := func(peerID string, suffix string, value float32) {
+		labels := []metrics.Label{
+			{
+				Name:  "peer_id",
+				Value: peerID,
+			},
+		}
+		metrics.SetGaugeWithLabels([]string{"raft_storage", "follower", suffix}, value, labels)
+	}
 	for range tickerCh {
 		b.l.RLock()
-		if b.autopilotConfig.CleanupDeadServers && b.autopilotConfig.DeadServerLastContactThreshold != 0 {
-			b.followerStates.l.RLock()
-			for _, state := range b.followerStates.followers {
+		b.followerStates.l.RLock()
+		myAppliedIndex := b.raft.AppliedIndex()
+		for peerID, state := range b.followerStates.followers {
+			timeSinceLastHeartbeat := time.Now().Sub(state.LastHeartbeat) / time.Millisecond
+			followerGauge(peerID, "last_heartbeat_ms", float32(timeSinceLastHeartbeat))
+			followerGauge(peerID, "applied_index_delta", float32(myAppliedIndex-state.AppliedIndex))
+
+			if b.autopilotConfig.CleanupDeadServers && b.autopilotConfig.DeadServerLastContactThreshold != 0 {
 				if state.LastHeartbeat.IsZero() || state.IsDead.Load() {
 					continue
 				}
@@ -553,8 +567,8 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 					state.IsDead.Store(true)
 				}
 			}
-			b.followerStates.l.RUnlock()
 		}
+		b.followerStates.l.RUnlock()
 		b.l.RUnlock()
 	}
 }

@@ -315,8 +315,10 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 		return err
 	}
 
-	if err := c.monitorUndoLogs(); err != nil {
-		return err
+	if c.UndoLogsEnabled() {
+		if err := c.monitorUndoLogs(); err != nil {
+			return err
+		}
 	}
 	return c.startPeriodicRaftTLSRotate(ctx)
 }

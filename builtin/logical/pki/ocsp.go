@@ -364,6 +364,7 @@ func lookupIssuerIds(sc *storageContext, optRevokedIssuer issuerID) ([]issuerID,
 }
 
 func doesRequestMatchIssuer(parsedBundle *certutil.ParsedCertBundle, req *ocsp.Request) (bool, error) {
+	// issuer name hashing taken from golang.org/x/crypto/ocsp.
 	var pkInfo struct {
 		Algorithm pkix.AlgorithmIdentifier
 		PublicKey asn1.BitString
@@ -390,7 +391,7 @@ func genResponse(cfg *crlConfig, caBundle *certutil.ParsedCertBundle, info *ocsp
 		return nil, err
 	}
 
-	// x/ocsp lives outside of the standard library's crypto/x509 and includes
+	// x/crypto/ocsp lives outside of the standard library's crypto/x509 and includes
 	// ripped-off variants of many internal structures and functions. These
 	// lack support for PSS signatures altogether, so if we have revSigAlg
 	// that uses PSS, downgrade it to PKCS#1v1.5. This fixes the lack of

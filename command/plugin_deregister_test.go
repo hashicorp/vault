@@ -84,7 +84,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		defer closer()
 
 		pluginName := "my-plugin"
-		_, sha256Sum := testPluginCreateAndRegister(t, client, pluginDir, pluginName, consts.PluginTypeCredential)
+		_, sha256Sum := testPluginCreateAndRegister(t, client, pluginDir, pluginName, consts.PluginTypeCredential, "")
 
 		ui, cmd := testPluginDeregisterCommand(t)
 		cmd.client = client

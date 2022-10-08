@@ -120,12 +120,12 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.19.1
+    - GO_VERSION: 1.19.2
     - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.19.1
+    - image: docker.mirror.hashicorp.services/cimg/go:1.19.2
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -144,7 +144,7 @@ jobs:
     - checkout
     - setup_remote_docker:
         docker_layer_caching: true
-        version: 18.09.3
+        version: 20.10.17
     - add_ssh_keys:
         fingerprints:
         - b8:e2:38:f8:5b:1b:82:f3:1f:23:fa:46:6e:95:e7:e9
@@ -260,7 +260,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network ${TEST_DOCKER_NETWORK_NAME} \
-              docker.mirror.hashicorp.services/cimg/go:1.19.1 \
+              docker.mirror.hashicorp.services/cimg/go:1.19.2 \
               tail -f /dev/null)"
             mkdir workspace
             echo ${CONTAINER_ID} > workspace/container_id
@@ -364,12 +364,12 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.19.1
+    - GO_VERSION: 1.19.2
     - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.19.1
+    - image: docker.mirror.hashicorp.services/cimg/go:1.19.2
     resource_class: xlarge
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -500,7 +500,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network ${TEST_DOCKER_NETWORK_NAME} \
-              docker.mirror.hashicorp.services/cimg/go:1.19.1 \
+              docker.mirror.hashicorp.services/cimg/go:1.19.2 \
               tail -f /dev/null)"
             mkdir workspace
             echo ${CONTAINER_ID} > workspace/container_id
@@ -560,7 +560,7 @@ jobs:
     - GO_TAGS: ''
   test-go:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.19.1
+    - image: docker.mirror.hashicorp.services/cimg/go:1.19.2
     resource_class: large
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -691,7 +691,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network ${TEST_DOCKER_NETWORK_NAME} \
-              docker.mirror.hashicorp.services/cimg/go:1.19.1 \
+              docker.mirror.hashicorp.services/cimg/go:1.19.2 \
               tail -f /dev/null)"
             mkdir workspace
             echo ${CONTAINER_ID} > workspace/container_id
@@ -852,12 +852,12 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.19.1
+    - GO_VERSION: 1.19.2
     - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.19.1
+    - image: docker.mirror.hashicorp.services/cimg/go:1.19.2
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -876,7 +876,7 @@ jobs:
     - checkout
     - setup_remote_docker:
         docker_layer_caching: true
-        version: 18.09.3
+        version: 20.10.17
     - add_ssh_keys:
         fingerprints:
         - b8:e2:38:f8:5b:1b:82:f3:1f:23:fa:46:6e:95:e7:e9
@@ -992,7 +992,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network ${TEST_DOCKER_NETWORK_NAME} \
-              docker.mirror.hashicorp.services/cimg/go:1.19.1 \
+              docker.mirror.hashicorp.services/cimg/go:1.19.2 \
               tail -f /dev/null)"
             mkdir workspace
             echo ${CONTAINER_ID} > workspace/container_id

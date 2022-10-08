@@ -133,7 +133,8 @@ type GetPluginInput struct {
 	Name string `json:"-"`
 
 	// Type of the plugin. Required.
-	Type consts.PluginType `json:"type"`
+	Type    consts.PluginType `json:"type"`
+	Version string            `json:"version"`
 }
 
 // GetPluginResponse is the response from the GetPlugin call.
@@ -144,6 +145,7 @@ type GetPluginResponse struct {
 	Name              string   `json:"name"`
 	SHA256            string   `json:"sha256"`
 	DeprecationStatus string   `json:"deprecation_status,omitempty"`
+	Version           string   `json:"version,omitempty"`
 }
 
 // GetPlugin wraps GetPluginWithContext using context.Background.
@@ -158,6 +160,9 @@ func (c *Sys) GetPluginWithContext(ctx context.Context, i *GetPluginInput) (*Get
 
 	path := catalogPathByType(i.Type, i.Name)
 	req := c.c.NewRequest(http.MethodGet, path)
+	if i.Version != "" {
+		req.Params.Set("version", i.Version)
+	}
 
 	resp, err := c.c.rawRequestWithContext(ctx, req)
 	if err != nil {
