@@ -32,6 +32,7 @@ type SecretsEnableCommand struct {
 	flagAllowedResponseHeaders    []string
 	flagForceNoCache              bool
 	flagPluginName                string
+	flagPluginVersion             string
 	flagOptions                   map[string]string
 	flagLocal                     bool
 	flagSealWrap                  bool
@@ -171,6 +172,13 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 		Completion: c.PredictVaultPlugins(consts.PluginTypeSecrets, consts.PluginTypeDatabase),
 		Usage: "Name of the secrets engine plugin. This plugin name must already " +
 			"exist in Vault's plugin catalog.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    flagNamePluginVersion,
+		Target:  &c.flagPluginVersion,
+		Default: "",
+		Usage:   "Select the semantic version of the plugin to enable.",
 	})
 
 	f.StringMapVar(&StringMapVar{
@@ -320,6 +328,10 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 		if fl.Name == flagNameAllowedManagedKeys {
 			mountInput.Config.AllowedManagedKeys = c.flagAllowedManagedKeys
 		}
+
+		if fl.Name == flagNamePluginVersion {
+			mountInput.Config.PluginVersion = c.flagPluginVersion
+		}
 	})
 
 	if err := client.Sys().Mount(mountPath, mountInput); err != nil {
@@ -330,6 +342,9 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 	thing := engineType + " secrets engine"
 	if engineType == "plugin" {
 		thing = c.flagPluginName + " plugin"
+	}
+	if c.flagPluginVersion != "" {
+		thing += " version " + c.flagPluginVersion
 	}
 	c.UI.Output(fmt.Sprintf("Success! Enabled the %s at: %s", thing, mountPath))
 	return 0

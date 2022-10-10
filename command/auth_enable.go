@@ -201,10 +201,10 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 	})
 
 	f.StringVar(&StringVar{
-		Name:    "plugin-version",
+		Name:    flagNamePluginVersion,
 		Target:  &c.flagPluginVersion,
 		Default: "",
-		Usage:   "Select the version of the plugin to enable.",
+		Usage:   "Select the semantic version of the plugin to enable.",
 	})
 
 	return set
@@ -270,7 +270,6 @@ func (c *AuthEnableCommand) Run(args []string) int {
 
 	authOpts := &api.EnableAuthOptions{
 		Type:                  authType,
-		Version:               c.flagPluginVersion,
 		Description:           c.flagDescription,
 		Local:                 c.flagLocal,
 		SealWrap:              c.flagSealWrap,
@@ -307,6 +306,10 @@ func (c *AuthEnableCommand) Run(args []string) int {
 		if fl.Name == flagNameTokenType {
 			authOpts.Config.TokenType = c.flagTokenType
 		}
+
+		if fl.Name == flagNamePluginVersion {
+			authOpts.Config.PluginVersion = c.flagPluginVersion
+		}
 	})
 
 	if err := client.Sys().EnableAuthWithOptions(authPath, authOpts); err != nil {
@@ -317,6 +320,9 @@ func (c *AuthEnableCommand) Run(args []string) int {
 	authThing := authType + " auth method"
 	if authType == "plugin" {
 		authThing = c.flagPluginName + " plugin"
+	}
+	if c.flagPluginVersion != "" {
+		authThing += " version " + c.flagPluginVersion
 	}
 	c.UI.Output(fmt.Sprintf("Success! Enabled %s at: %s", authThing, authPath))
 	return 0

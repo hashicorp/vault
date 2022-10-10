@@ -262,6 +262,10 @@ func TestArgWarnings(t *testing.T) {
 			[]string{"--x=" + globalFlagDetailed},
 			"--x=" + globalFlagDetailed,
 		},
+		{
+			[]string{"policy", "write", "my-policy", "-"},
+			"",
+		},
 	}
 
 	for _, tc := range cases {

@@ -226,10 +226,18 @@ func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, pr
 
 	// Update old-style paths to new-style paths
 	certEntry.Key = path
+	certsCounted := b.certsCounted.Load()
 	if err = req.Storage.Put(ctx, certEntry); err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error saving certificate with serial %s to new location", serial)}
 	}
 	if err = req.Storage.Delete(ctx, legacyPath); err != nil {
+		// If we fail here, we have an extra (copy) of a cert in storage, add to metrics:
+		switch {
+		case strings.HasPrefix(prefix, "revoked/"):
+			b.incrementTotalRevokedCertificatesCount(certsCounted, path)
+		default:
+			b.incrementTotalCertificatesCount(certsCounted, path)
+		}
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error deleting certificate with serial %s from old location", serial)}
 	}
 
@@ -755,6 +763,10 @@ func signCert(b *backend,
 	csr, err := x509.ParseCertificateRequest(pemBlock.Bytes)
 	if err != nil {
 		return nil, nil, errutil.UserError{Err: fmt.Sprintf("certificate request could not be parsed: %v", err)}
+	}
+
+	if csr.PublicKeyAlgorithm == x509.UnknownPublicKeyAlgorithm || csr.PublicKey == nil {
+		return nil, nil, errutil.UserError{Err: "Refusing to sign CSR with empty PublicKey. This usually means the SubjectPublicKeyInfo field has an OID not recognized by Go, such as 1.2.840.113549.1.1.10 for rsaPSS."}
 	}
 
 	// This switch validates that the CSR key type matches the role and sets

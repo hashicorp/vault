@@ -213,6 +213,9 @@
 .has-top-margin-xxl {
   margin-top: $spacing-xxl;
 }
+.has-top-margin-negative-s {
+  margin-top: (-1 * $spacing-s);
+}
 .has-left-margin-xxs {
   margin-left: $spacing-xxs;
 }

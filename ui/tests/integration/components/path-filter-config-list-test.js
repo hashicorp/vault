@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click } from '@ember/test-helpers';
+import { render, click, findAll } from '@ember/test-helpers';
 import { typeInSearch, clickTrigger } from 'ember-power-select/test-support/helpers';
 import hbs from 'htmlbars-inline-precompile';
 import engineResolverFor from 'ember-engines/test-support/engine-resolver-for';
@@ -112,5 +112,54 @@ module('Integration | Component | path filter config list', function (hooks) {
     assert.equal(searchSelect.options.length, 2, 'has ns and ns mount in the list');
     await searchSelect.options.objectAt(1).click();
     assert.ok(this.config.paths.includes('ns1/namespace-kv/'), 'adds namespace mount to paths');
+  });
+
+  test('it selects mounts from different groups, and puts discarded option back within group', async function (assert) {
+    this.set('config', { mode: 'allow', paths: [] });
+    this.set('paths', []);
+    await render(hbs`<PathFilterConfigList @config={{config}} @paths={{paths}} />`);
+    await clickTrigger();
+    await searchSelect.options.objectAt(1).click();
+    await clickTrigger();
+    await typeInSearch('ns1');
+    await searchSelect.options.objectAt(1).click();
+    await clickTrigger();
+    await searchSelect.options.objectAt(0).click();
+    assert.dom('[data-test-selected-option="0"]').hasText('auth/userpass/', 'renders first mount selected');
+    assert
+      .dom('[data-test-selected-option="1"]')
+      .hasText('ns1/namespace-kv/', 'renders second mount selected');
+    assert.dom('[data-test-selected-option="2"]').hasText('ns1', 'renders third mount selected');
+    assert.propEqual(
+      this.config.paths,
+      ['auth/userpass/', 'ns1/namespace-kv/', 'ns1'],
+      'adds all selections to paths'
+    );
+    await searchSelect.deleteButtons.objectAt(0).click();
+    await clickTrigger();
+    assert
+      .dom('.ember-power-select-group')
+      .hasText('Auth Methods auth/userpass/', 'puts auth method back within group');
+    await clickTrigger();
+    await searchSelect.deleteButtons.objectAt(1).click();
+    await clickTrigger();
+    assert.dom('.ember-power-select-group').hasText('Namespaces ns1', 'puts ns back within group');
+    await clickTrigger();
+  });
+
+  test('it renders previously set config.paths when editing the mount config', async function (assert) {
+    this.set('config', { mode: 'allow', paths: ['auth/userpass/'] });
+    this.set('paths', []);
+    await render(hbs`<PathFilterConfigList @config={{config}} @paths={{paths}} />`);
+    assert.equal(
+      searchSelect.selectedOptions.objectAt(0).text,
+      'auth/userpass/',
+      'renders config.path as selected on init'
+    );
+    await clickTrigger();
+    assert.equal(findAll('.ember-power-select-group').length, 1, 'renders only remaining group');
+    await searchSelect.deleteButtons.objectAt(0).click();
+    await clickTrigger();
+    assert.equal(findAll('.ember-power-select-group').length, 2, 'renders two groups');
   });
 });
