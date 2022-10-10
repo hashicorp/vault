@@ -2,6 +2,14 @@ provider "aws" "default" {
   region = var.aws_region
 }
 
+provider "aws" "west1" {
+  region = "us-west-1"
+}
+
+provider "aws" "west2" {
+  region = "us-west-2"
+}
+
 provider "enos" "rhel" {
   transport = {
     ssh = {
