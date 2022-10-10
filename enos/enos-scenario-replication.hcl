@@ -1,11 +1,13 @@
 scenario "replication" {
   matrix {
-    arch           = ["amd64", "arm64"]
-    distro         = ["ubuntu", "rhel"]
-    backend        = ["raft", "consul"]
-    consul_version = ["1.12.3", "1.11.7", "1.10.12"]
-    edition        = ["ent"]
-    seal           = ["awskms", "shamir"]
+    arch              = ["amd64", "arm64"]
+    distro            = ["ubuntu", "rhel"]
+    primary_backend   = ["raft", "consul"]
+    secondary_backend = ["raft", "consul"]
+    consul_version    = ["1.12.3", "1.11.7", "1.10.12"]
+    edition           = ["ent"]
+    primary_seal      = ["awskms", "shamir"]
+    secondary_seal    = ["awskms", "shamir"]
   }
 
   terraform_cli = terraform_cli.default
@@ -119,7 +121,7 @@ scenario "replication" {
   }
 
   step "create_primary_backend_cluster" {
-    module     = "backend_${matrix.backend}"
+    module     = "backend_${matrix.primary_backend}"
     depends_on = [step.create_vpc]
 
     providers = {
@@ -158,8 +160,8 @@ scenario "replication" {
       dependencies_to_install   = local.dependencies_to_install
       instance_type             = local.vault_instance_type
       kms_key_arn               = step.create_vpc.kms_key_arn
-      storage_backend           = matrix.backend
-      unseal_method             = matrix.seal
+      storage_backend           = matrix.primary_backend
+      unseal_method             = matrix.primary_seal
       vault_artifactory_release = local.install_artifactory_artifact ? step.fetch_vault_artifact.vault_artifactory_release : null
       vault_license             = step.read_license.license
       vpc_id                    = step.create_vpc.vpc_id
@@ -167,7 +169,7 @@ scenario "replication" {
   }
 
   step "create_secondary_backend_cluster" {
-    module     = "backend_${matrix.backend}"
+    module     = "backend_${matrix.secondary_backend}"
     depends_on = [step.create_vpc_2]
 
     providers = {
@@ -206,8 +208,8 @@ scenario "replication" {
       dependencies_to_install   = local.dependencies_to_install
       instance_type             = local.vault_instance_type
       kms_key_arn               = step.create_vpc_2.kms_key_arn
-      storage_backend           = matrix.backend
-      unseal_method             = matrix.seal
+      storage_backend           = matrix.secondary_backend
+      unseal_method             = matrix.secondary_seal
       vault_artifactory_release = local.install_artifactory_artifact ? step.fetch_vault_artifact.vault_artifactory_release : null
       vault_license             = step.read_license.license
       vpc_id                    = step.create_vpc_2.vpc_id
