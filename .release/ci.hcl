@@ -270,7 +270,7 @@ event "post-publish-website" {
 }
 
 event "update-ironbank" {
-  depends = ["promote-production-packaging"]
+  depends = ["post-publish-website"]
   action "update-ironbank" {
     organization = "hashicorp"
     repository = "crt-workflows-common"
