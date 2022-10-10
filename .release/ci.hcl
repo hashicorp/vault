@@ -268,3 +268,16 @@ event "post-publish-website" {
     on = "always"
   }
 }
+
+event "update-ironbank" {
+  depends = ["promote-production-packaging"]
+  action "update-ironbank" {
+    organization = "hashicorp"
+    repository = "crt-workflows-common"
+    workflow = "update-ironbank"
+  }
+
+  notification {
+    on = "fail"
+  }
+}
