@@ -61,7 +61,7 @@ module('Integration | Component | auth form', function (hooks) {
     this.auth = this.owner.lookup('service:auth');
     this.set('cluster', EmberObject.create({ standby: true }));
     this.set('selectedAuth', 'token');
-    await render(hbs`{{auth-form cluster=cluster selectedAuth=selectedAuth}}`);
+    await render(hbs`{{auth-form cluster=this.cluster selectedAuth=this.selectedAuth}}`);
     assert.false(component.errorMessagePresent, false);
     component.login();
     // because this is an ember-concurrency backed service,
@@ -84,11 +84,12 @@ module('Integration | Component | auth form', function (hooks) {
           }),
         ];
       });
+      this.get('/v1/sys/internal/ui/mounts', this.passthrough);
     });
 
     this.set('cluster', EmberObject.create({}));
     this.set('selectedAuth', 'token');
-    await render(hbs`{{auth-form cluster=cluster selectedAuth=selectedAuth}}`);
+    await render(hbs`{{auth-form cluster=this.cluster selectedAuth=this.selectedAuth}}`);
     return component.login().then(() => {
       assert.strictEqual(component.errorText, 'Error Authentication failed: Not allowed');
       server.shutdown();
@@ -101,11 +102,12 @@ module('Integration | Component | auth form', function (hooks) {
       this.get('/v1/auth/**', () => {
         return [400, { 'Content-Type': 'application/json' }];
       });
+      this.get('/v1/sys/internal/ui/mounts', this.passthrough);
     });
 
     this.set('cluster', EmberObject.create({}));
     this.set('selectedAuth', 'token');
-    await render(hbs`{{auth-form cluster=cluster selectedAuth=selectedAuth}}`);
+    await render(hbs`{{auth-form cluster=this.cluster selectedAuth=this.selectedAuth}}`);
     // ARG TODO research and see if adapter errors changed, but null used to be Bad Request
     return component.login().then(() => {
       assert.strictEqual(component.errorText, 'Error Authentication failed: null');
@@ -124,7 +126,7 @@ module('Integration | Component | auth form', function (hooks) {
         return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
       });
     });
-    await render(hbs`<AuthForm @cluster={{cluster}} />`);
+    await render(hbs`<AuthForm @cluster={{this.cluster}} />`);
 
     assert.strictEqual(component.tabs.length, 0, 'renders a tab for every backend');
     server.shutdown();
@@ -146,7 +148,7 @@ module('Integration | Component | auth form', function (hooks) {
     });
 
     this.set('cluster', EmberObject.create({}));
-    await render(hbs`{{auth-form cluster=cluster }}`);
+    await render(hbs`{{auth-form cluster=this.cluster }}`);
 
     assert.strictEqual(component.tabs.length, 2, 'renders a tab for userpass and Other');
     assert.strictEqual(component.tabs.objectAt(0).name, 'foo', 'uses the path in the label');
@@ -167,7 +169,7 @@ module('Integration | Component | auth form', function (hooks) {
       });
     });
     this.set('cluster', EmberObject.create({}));
-    await render(hbs`{{auth-form cluster=cluster }}`);
+    await render(hbs`{{auth-form cluster=this.cluster }}`);
 
     assert.strictEqual(
       component.descriptionText,
@@ -195,7 +197,7 @@ module('Integration | Component | auth form', function (hooks) {
 
     this.set('cluster', EmberObject.create({}));
     this.set('selectedAuth', 'foo/');
-    await render(hbs`{{auth-form cluster=cluster selectedAuth=selectedAuth}}`);
+    await render(hbs`{{auth-form cluster=this.cluster selectedAuth=this.selectedAuth}}`);
     await component.login();
 
     await settled();
@@ -218,7 +220,7 @@ module('Integration | Component | auth form', function (hooks) {
       });
     });
     this.set('cluster', EmberObject.create({}));
-    await render(hbs`<AuthForm @cluster={{cluster}} />`);
+    await render(hbs`<AuthForm @cluster={{this.cluster}} />`);
 
     server.shutdown();
     assert.strictEqual(component.tabs.length, 0, 'renders a tab for every backend');
@@ -245,7 +247,7 @@ module('Integration | Component | auth form', function (hooks) {
     let wrappedToken = '54321';
     this.set('wrappedToken', wrappedToken);
     this.set('cluster', EmberObject.create({}));
-    await render(hbs`<AuthForm @cluster={{cluster}} @wrappedToken={{wrappedToken}} />`);
+    await render(hbs`<AuthForm @cluster={{this.cluster}} @wrappedToken={{this.wrappedToken}} />`);
     later(() => cancelTimers(), 50);
     await settled();
     assert.strictEqual(
@@ -277,7 +279,7 @@ module('Integration | Component | auth form', function (hooks) {
     });
 
     this.set('wrappedToken', '54321');
-    await render(hbs`{{auth-form cluster=cluster wrappedToken=wrappedToken}}`);
+    await render(hbs`{{auth-form cluster=this.cluster wrappedToken=this.wrappedToken}}`);
     later(() => cancelTimers(), 50);
 
     await settled();

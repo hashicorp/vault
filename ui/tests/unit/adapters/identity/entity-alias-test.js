@@ -14,7 +14,7 @@ module('Unit | Adapter | identity/entity-alias', function (hooks) {
     this.server.shutdown();
   });
 
-  const cases = testCases('identit/entity-alias');
+  const cases = testCases('identity/entity-alias');
 
   cases.forEach((testCase) => {
     test(`entity-alias#${testCase.adapterMethod}`, function (assert) {

@@ -20,9 +20,9 @@ module('Integration | Component | radial progress', function (hooks) {
     assert.strictEqual(component.height, '20');
     assert.strictEqual(component.width, '20');
     assert.strictEqual(component.strokeWidth, '1');
-    assert.strictEqual(component.r, 19 / 2);
-    assert.strictEqual(component.cx, 10);
-    assert.strictEqual(component.cy, 10);
+    assert.strictEqual(component.r, (19 / 2).toString());
+    assert.strictEqual(component.cx, '10');
+    assert.strictEqual(component.cy, '10');
     assert.strictEqual(Number(component.strokeDash).toFixed(2), circumference);
     assert.strictEqual(Number(component.strokeDashOffset).toFixed(3), (circumference * 0.5).toFixed(3));
   });

@@ -45,16 +45,16 @@ const renderIt = async (context, path = 'jwt') => {
   context.set('selectedAuthPath', path);
   await render(hbs`
     <AuthJwt
-      @window={{window}}
-      @roleName={{roleName}}
-      @selectedAuthPath={{selectedAuthPath}}
-      @onError={{action (mut error)}}
-      @onLoading={{action (mut isLoading)}}
-      @onToken={{action (mut token)}}
-      @onNamespace={{action (mut namespace)}}
-      @onSelectedAuth={{action (mut selectedAuth)}}
-      @onSubmit={{action handler}}
-      @onRoleName={{action (mut roleName)}}
+      @window={{this.window}}
+      @roleName={{this.roleName}}
+      @selectedAuthPath={{this.selectedAuthPath}}
+      @onError={{action (mut this.error)}}
+      @onLoading={{action (mut this.isLoading)}}
+      @onToken={{action (mut this.token)}}
+      @onNamespace={{action (mut this.namespace)}}
+      @onSelectedAuth={{action (mut this.selectedAuth)}}
+      @onSubmit={{action this.handler}}
+      @onRoleName={{action (mut this.roleName)}}
     />
     `);
 };
@@ -107,7 +107,7 @@ module('Integration | Component | auth jwt', function (hooks) {
   });
 
   test('it renders the yield', async function (assert) {
-    await render(hbs`<AuthJwt @onSubmit={{action (mut submit)}}>Hello!</AuthJwt>`);
+    await render(hbs`<AuthJwt @onSubmit={{action (mut this.submit)}}>Hello!</AuthJwt>`);
     assert.strictEqual(component.yieldContent, 'Hello!', 'yields properly');
   });
 

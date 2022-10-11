@@ -3,7 +3,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click, findAll } from '@ember/test-helpers';
 import { typeInSearch, clickTrigger } from 'ember-power-select/test-support/helpers';
 import hbs from 'htmlbars-inline-precompile';
-import engineResolverFor from 'ember-engines/test-support/engine-resolver-for';
+import { setupEngine } from 'ember-engines/test-support';
 import Service from '@ember/service';
 import sinon from 'sinon';
 import { Promise } from 'rsvp';
@@ -11,8 +11,6 @@ import { create } from 'ember-cli-page-object';
 import ss from 'vault/tests/pages/components/search-select';
 
 const searchSelect = create(ss);
-
-const resolver = engineResolverFor('replication');
 
 const MOUNTS_RESPONSE = {
   data: {
@@ -32,8 +30,11 @@ const NAMESPACE_MOUNTS_RESPONSE = {
 };
 
 module('Integration | Component | path filter config list', function (hooks) {
-  setupRenderingTest(hooks, { resolver });
+  setupRenderingTest(hooks);
+  setupEngine(hooks, 'replication');
+
   hooks.beforeEach(function () {
+    this.context = { owner: this.engine }; // this.engine set by setupEngine
     let ajaxStub = sinon.stub().usingPromise(Promise);
     ajaxStub.withArgs('/v1/sys/internal/ui/mounts', 'GET').resolves(MOUNTS_RESPONSE);
     ajaxStub
@@ -54,13 +55,13 @@ module('Integration | Component | path filter config list', function (hooks) {
         };
       },
     });
-    this.owner.register('service:namespace', namespaceServiceStub);
-    this.owner.register('service:store', storeServiceStub);
+    this.engine.register('service:namespace', namespaceServiceStub);
+    this.engine.register('service:store', storeServiceStub);
   });
 
   test('it renders', async function (assert) {
     this.set('config', { mode: null, paths: [] });
-    await render(hbs`<PathFilterConfigList @config={{config}} @paths={{paths}} />`);
+    await render(hbs`<PathFilterConfigList @config={{this.config}} @paths={{this.paths}} />`, this.context);
 
     assert.dom('[data-test-component=path-filter-config]').exists();
   });
@@ -68,7 +69,7 @@ module('Integration | Component | path filter config list', function (hooks) {
   test('it sets config.paths', async function (assert) {
     this.set('config', { mode: 'allow', paths: [] });
     this.set('paths', []);
-    await render(hbs`<PathFilterConfigList @config={{config}} @paths={{paths}} />`);
+    await render(hbs`<PathFilterConfigList @config={{this.config}} @paths={{this.paths}} />`, this.context);
 
     await clickTrigger();
     await typeInSearch('auth');
@@ -86,7 +87,7 @@ module('Integration | Component | path filter config list', function (hooks) {
 
   test('it sets config.mode', async function (assert) {
     this.set('config', { mode: 'allow', paths: [] });
-    await render(hbs`<PathFilterConfigList @config={{this.config}} />`);
+    await render(hbs`<PathFilterConfigList @config={{this.config}} />`, this.context);
     await click('#deny');
     assert.strictEqual(this.config.mode, 'deny');
     await click('#no-filtering');
@@ -95,7 +96,7 @@ module('Integration | Component | path filter config list', function (hooks) {
 
   test('it shows a warning when going from a mode to allow all', async function (assert) {
     this.set('config', { mode: 'allow', paths: [] });
-    await render(hbs`<PathFilterConfigList @config={{this.config}} />`);
+    await render(hbs`<PathFilterConfigList @config={{this.config}} />`, this.context);
     await click('#no-filtering');
     assert.dom('[data-test-remove-warning]').exists('shows removal warning');
   });
@@ -103,7 +104,7 @@ module('Integration | Component | path filter config list', function (hooks) {
   test('it fetches mounts from a namespace when namespace name is entered', async function (assert) {
     this.set('config', { mode: 'allow', paths: [] });
     this.set('paths', []);
-    await render(hbs`<PathFilterConfigList @config={{config}} @paths={{paths}} />`);
+    await render(hbs`<PathFilterConfigList @config={{this.config}} @paths={{this.paths}} />`, this.context);
 
     await clickTrigger();
     assert.strictEqual(searchSelect.options.length, 2, 'shows userpass and namespace as an option');
@@ -117,7 +118,7 @@ module('Integration | Component | path filter config list', function (hooks) {
   test('it selects mounts from different groups, and puts discarded option back within group', async function (assert) {
     this.set('config', { mode: 'allow', paths: [] });
     this.set('paths', []);
-    await render(hbs`<PathFilterConfigList @config={{config}} @paths={{paths}} />`);
+    await render(hbs`<PathFilterConfigList @config={{this.config}} @paths={{this.paths}} />`, this.context);
     await clickTrigger();
     await searchSelect.options.objectAt(1).click();
     await clickTrigger();
@@ -150,7 +151,7 @@ module('Integration | Component | path filter config list', function (hooks) {
   test('it renders previously set config.paths when editing the mount config', async function (assert) {
     this.set('config', { mode: 'allow', paths: ['auth/userpass/'] });
     this.set('paths', []);
-    await render(hbs`<PathFilterConfigList @config={{config}} @paths={{paths}} />`);
+    await render(hbs`<PathFilterConfigList @config={{this.config}} @paths={{this.paths}} />`, this.context);
     assert.strictEqual(
       searchSelect.selectedOptions.objectAt(0).text,
       'auth/userpass/',

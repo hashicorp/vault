@@ -24,8 +24,8 @@ module('Integration | Component | clients/horizontal-bar-chart', function (hooks
     await render(hbs`
     <Clients::HorizontalBarChart
       @dataset={{this.totalClientAttribution}}
-      @chartLegend={{chartLegend}}
-      @totalCounts={{totalCounts}}
+      @chartLegend={{this.chartLegend}}
+      @totalCounts={{this.totalCounts}}
     />`);
 
     assert.dom('[data-test-horizontal-bar-chart]').exists();
@@ -63,8 +63,8 @@ module('Integration | Component | clients/horizontal-bar-chart', function (hooks
     await render(hbs`
     <Clients::HorizontalBarChart
       @dataset={{this.totalClientAttribution}}
-      @chartLegend={{chartLegend}}
-      @totalCounts={{totalCounts}}
+      @chartLegend={{this.chartLegend}}
+      @totalCounts={{this.totalCounts}}
     />`);
 
     assert.dom('[data-test-horizontal-bar-chart]').exists();

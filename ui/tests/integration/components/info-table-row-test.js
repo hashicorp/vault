@@ -85,7 +85,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
     `);
 
     await triggerEvent('[data-test-value-div="test label"] .ember-basic-dropdown-trigger', 'mouseenter');
-
+    // await this.pauseTest();
     assert.dom('[data-test-tooltip-copy]').hasAttribute('disabled', '', 'Tooltip copy button is disabled');
     assert
       .dom('[data-test-tooltip-copy]')

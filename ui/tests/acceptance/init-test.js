@@ -12,7 +12,7 @@ const HEALTH_RESPONSE = {
   replication_performance_mode: 'unknown',
   replication_dr_mode: 'unknown',
   server_time_utc: 1538066726,
-  version: '0.11.0+prem',
+  version: '1.13.0-dev1',
 };
 
 const CLOUD_SEAL_RESPONSE = {

@@ -51,7 +51,7 @@ module('Integration | Component | config pki ca', function (hooks) {
     const refreshFn = onRefresh || function () {};
     context.set('config', config());
     context.set('onRefresh', refreshFn);
-    await context.render(hbs`<Pki::ConfigPkiCa @onRefresh={{onRefresh}} @config={{config}} />`);
+    await context.render(hbs`<Pki::ConfigPkiCa @onRefresh={{this.onRefresh}} @config={{this.config}} />`);
   };
 
   test('it renders, no pem', async function (assert) {
@@ -72,7 +72,7 @@ module('Integration | Component | config pki ca', function (hooks) {
   test('it renders, with pem', async function (assert) {
     const c = config('pem');
     this.set('config', c);
-    await render(hbs`<Pki::ConfigPkiCa @config={{config}} />`);
+    await render(hbs`<Pki::ConfigPkiCa @config={{this.config}} />`);
     assert.notOk(component.hasTitle, 'no title in the default state');
     assert.strictEqual(component.replaceCAText, 'Add CA');
     assert.strictEqual(component.downloadLinks.length, 3, 'shows download links');

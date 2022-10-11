@@ -23,8 +23,8 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     const path = `kv-${new Date().getTime()}`;
     const defaultTTLHours = 100;
     const maxTTLHours = 300;
-    const defaultTTLSeconds = defaultTTLHours * 60 * 60;
-    const maxTTLSeconds = maxTTLHours * 60 * 60;
+    const defaultTTLSeconds = (defaultTTLHours * 60 * 60).toString();
+    const maxTTLSeconds = (maxTTLHours * 60 * 60).toString();
 
     await page.visit();
 
@@ -50,7 +50,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     // always force the new mount to the top of the list
     const path = `kv-${new Date().getTime()}`;
     const maxTTLHours = 300;
-    const maxTTLSeconds = maxTTLHours * 60 * 60;
+    const maxTTLSeconds = (maxTTLHours * 60 * 60).toString();
 
     await page.visit();
 
@@ -67,7 +67,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       .maxTTLVal(maxTTLHours)
       .submit();
     await configPage.visit({ backend: path });
-    assert.strictEqual(configPage.defaultTTL, 0, 'shows the proper TTL');
+    assert.strictEqual(configPage.defaultTTL, '0', 'shows the proper TTL');
     assert.strictEqual(configPage.maxTTL, maxTTLSeconds, 'shows the proper max TTL');
   });
 

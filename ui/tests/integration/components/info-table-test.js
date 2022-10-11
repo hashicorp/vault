@@ -5,7 +5,7 @@ import hbs from 'htmlbars-inline-precompile';
 
 const TITLE = 'My Table';
 const HEADER = 'Cool Header';
-const ITEMS = ['https://127.0.0.1:8201', 'hello', 3];
+const ITEMS = ['https://127.0.0.1:8201', 'hello', '3'];
 
 module('Integration | Component | InfoTable', function (hooks) {
   setupRenderingTest(hooks);
@@ -19,9 +19,9 @@ module('Integration | Component | InfoTable', function (hooks) {
   test('it renders', async function (assert) {
     assert.expect(6);
     await render(hbs`<InfoTable
-        @title={{title}}
-        @header={{header}}
-        @items={{items}}
+        @title={{this.title}}
+        @header={{this.header}}
+        @items={{this.items}}
       />`);
 
     assert.dom('[data-test-info-table]').exists();

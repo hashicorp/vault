@@ -57,7 +57,7 @@ module('Integration | Component | control group', function (hooks) {
     let { model, authData } = setup();
     this.set('model', model);
     this.set('auth.authData', authData);
-    await render(hbs`{{control-group model=model}}`);
+    await render(hbs`{{control-group model=this.model}}`);
     assert.ok(component.showsAccessorCallout, 'shows accessor callout');
     assert.strictEqual(component.bannerPrefix, 'Locked');
     assert.strictEqual(component.bannerText, 'The path you requested is locked by a Control Group');
@@ -72,7 +72,7 @@ module('Integration | Component | control group', function (hooks) {
     this.set('model', model);
     this.set('auth.authData', authData);
     this.set('controlGroup.wrapInfo', { token: 'token' });
-    await render(hbs`{{control-group model=model}}`);
+    await render(hbs`{{control-group model=this.model}}`);
     assert.true(component.showsTokenText, 'shows token message');
     assert.strictEqual(component.token, 'token', 'shows token value');
   });
@@ -81,7 +81,7 @@ module('Integration | Component | control group', function (hooks) {
     let { model, authData } = setup({ authorizations: [{ name: 'manager 1' }, { name: 'manager 2' }] });
     this.set('model', model);
     this.set('auth.authData', authData);
-    await render(hbs`{{control-group model=model}}`);
+    await render(hbs`{{control-group model=this.model}}`);
     assert.ok(component.authorizationText, 'Already approved by manager 1, manager 2');
   });
 
@@ -89,7 +89,7 @@ module('Integration | Component | control group', function (hooks) {
     let { model, authData } = setup({ approved: true });
     this.set('model', model);
     this.set('auth.authData', authData);
-    await render(hbs`{{control-group model=model}}`);
+    await render(hbs`{{control-group model=this.model}}`);
 
     assert.strictEqual(component.bannerPrefix, 'Success!');
     assert.strictEqual(component.bannerText, 'You have been given authorization');
@@ -103,7 +103,7 @@ module('Integration | Component | control group', function (hooks) {
     this.set('model', model);
     this.set('auth.authData', authData);
     this.set('controlGroup.wrapInfo', { token: 'token' });
-    await render(hbs`{{control-group model=model}}`);
+    await render(hbs`{{control-group model=this.model}}`);
     assert.true(component.showsTokenText, 'shows token');
     assert.notOk(component.showsRefresh, 'does not shows refresh button');
     assert.ok(component.showsSuccessComponent, 'renders control group success');
@@ -114,7 +114,7 @@ module('Integration | Component | control group', function (hooks) {
 
     this.set('model', model);
     this.set('auth.authData', authData);
-    await render(hbs`{{control-group model=model}}`);
+    await render(hbs`{{control-group model=this.model}}`);
 
     assert.strictEqual(component.bannerPrefix, 'Locked');
     assert.strictEqual(
@@ -138,7 +138,7 @@ module('Integration | Component | control group', function (hooks) {
 
     this.set('model', model);
     this.set('auth.authData', authData);
-    await render(hbs`{{control-group model=model}}`);
+    await render(hbs`{{control-group model=this.model}}`);
 
     assert.strictEqual(component.bannerPrefix, 'Thanks!');
     assert.strictEqual(component.bannerText, 'You have given authorization');
@@ -153,7 +153,7 @@ module('Integration | Component | control group', function (hooks) {
 
     this.set('model', model);
     this.set('auth.authData', authData);
-    await render(hbs`{{control-group model=model}}`);
+    await render(hbs`{{control-group model=this.model}}`);
 
     assert.strictEqual(component.bannerPrefix, 'Thanks!');
     assert.strictEqual(component.bannerText, 'You have given authorization');
@@ -173,7 +173,7 @@ module('Integration | Component | control group', function (hooks) {
 
     this.set('model', model);
     this.set('auth.authData', authData);
-    await render(hbs`{{control-group model=model}}`);
+    await render(hbs`{{control-group model=this.model}}`);
     assert.strictEqual(component.bannerPrefix, 'Success!');
     assert.strictEqual(component.bannerText, 'This Control Group has been authorized');
     assert.ok(component.showsBackLink, 'back link is visible');
