@@ -31,14 +31,14 @@ an auth plugin, just replace all usages of `secrets` or `secret` with `auth`.
         my-secret-plugin
     ```
 
-2. [Mount][plugin_management] the plugin. Skip this step if your initial plugin
+1. [Mount][plugin_management] the plugin. Skip this step if your initial plugin
    is already mounted.
 
     ```shell-session
     $ vault secrets enable my-secret-plugin
     ```
 
-3. Register a second version of your plugin. You **must** use the same plugin
+1. Register a second version of your plugin. You **must** use the same plugin
    type and name (the last two arguments) as the plugin being upgraded. This is
    true regardless of whether the plugin being upgraded is built-in or external.
 
@@ -51,20 +51,20 @@ an auth plugin, just replace all usages of `secrets` or `secret` with `auth`.
         my-secret-plugin
     ```
 
-4. Tune the existing mount to configure it to use the newly registered version.
+1. Tune the existing mount to configure it to use the newly registered version.
 
    ```shell-session
    $ vault secrets tune -plugin-version=v1.0.1 my-secret-plugin
    ```
 
-5. If you wish, you can check the updated configuration. Notice the "Version" is
+1. If you wish, you can check the updated configuration. Notice the "Version" is
    now different from the "Running Version".
 
    ```shell-session
    $ vault secrets list -detailed
    ```
 
-6. Finally, trigger a [plugin reload](/docs/commands/plugin/reload) to reload all
+1. Finally, trigger a [plugin reload](/docs/commands/plugin/reload) to reload all
    mounted backends using that plugin or a subset of the mounts using that plugin
    with either the `plugin` or `mounts` flag respectively.
 
@@ -72,7 +72,7 @@ an auth plugin, just replace all usages of `secrets` or `secret` with `auth`.
     $ vault plugin reload -plugin my-secret-plugin
     ```
 
-Until step 6, the mount will still run the first version of `my-secret-plugin`. When
+Until the last step, the mount will still run the first version of `my-secret-plugin`. When
 the reload is triggered, Vault will kill `my-secret-plugin`’s process and start the
 new plugin process for `my-secret-plugin` version 1.0.1. The "Running Version" should also
 now match the "Version" when you run `vault secrets list -detailed`.
@@ -95,7 +95,7 @@ by setting the 'scope' parameter of the reload to 'global'.
         my-db-plugin
     ```
 
-2. [Mount][plugin_management] the plugin. Skip this step if your initial plugin
+1. [Mount][plugin_management] the plugin. Skip this step if your initial plugin
    is already mounted.
 
     ```shell-session
@@ -105,7 +105,7 @@ by setting the 'scope' parameter of the reload to 'global'.
         # ...
     ```
 
-3. Register a second version of your plugin. You **must** use the same plugin
+1. Register a second version of your plugin. You **must** use the same plugin
    type and name (the last two arguments) as the plugin being upgraded. This is
    true regardless of whether the plugin being upgraded is built-in or external.
 
@@ -118,7 +118,7 @@ by setting the 'scope' parameter of the reload to 'global'.
         my-db-plugin
     ```
 
-4. Update the database config with the new version. The database secrets
+1. Update the database config with the new version. The database secrets
    engine will immediately reload the plugin, using the new version. Any omitted
    config parameters will not be updated.
     
@@ -127,15 +127,9 @@ by setting the 'scope' parameter of the reload to 'global'.
         plugin_version=v1.0.1
     ```
 
-Until step 4, the mount will still run the first version of `my-db-plugin`. When
+Until the last step, the mount will still run the first version of `my-db-plugin`. When
 the reload is triggered, Vault will kill `my-db-plugin`’s process and start the
 new plugin process for `my-db-plugin` version 1.0.1.
-
--> **Important:** Plugin reload of a new plugin binary must be
-performed on each Vault instance. Performing a plugin upgrade on a single
-instance or through a load balancer can result in mismatched
-plugin binaries within a cluster. On a replicated cluster this may be accomplished
-by setting the 'scope' parameter of the reload to 'global'.
 
 ### Downgrading Plugins
 
