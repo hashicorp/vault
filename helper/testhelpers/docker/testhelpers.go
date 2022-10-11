@@ -396,7 +396,7 @@ func (d *Runner) RunCmdWithOutput(ctx context.Context, container string, cmd []s
 
 	for index, opt := range opts {
 		if err := opt.Apply(&runCfg); err != nil {
-			return nil, nil, -1, fmt.Errorf("error applying option (%d / %v): %v", index, opt, err)
+			return nil, nil, -1, fmt.Errorf("error applying option (%d / %v): %w", index, opt, err)
 		}
 	}
 
@@ -438,18 +438,18 @@ func (d *Runner) RunCmdInBackground(ctx context.Context, container string, cmd [
 
 	for index, opt := range opts {
 		if err := opt.Apply(&runCfg); err != nil {
-			return "", fmt.Errorf("error applying option (%d / %v): %v", index, opt, err)
+			return "", fmt.Errorf("error applying option (%d / %v): %w", index, opt, err)
 		}
 	}
 
 	ret, err := d.DockerAPI.ContainerExecCreate(ctx, container, runCfg)
 	if err != nil {
-		return "", fmt.Errorf("error creating execution environment: %v\ncfg: %v\n", err, runCfg)
+		return "", fmt.Errorf("error creating execution environment: %w\ncfg: %v\n", err, runCfg)
 	}
 
 	err = d.DockerAPI.ContainerExecStart(ctx, ret.ID, types.ExecStartCheck{})
 	if err != nil {
-		return "", fmt.Errorf("error starting command execution: %v\ncfg: %v\nret: %v\n", err, runCfg, ret)
+		return "", fmt.Errorf("error starting command execution: %w\ncfg: %v\nret: %v\n", err, runCfg, ret)
 	}
 
 	return ret.ID, nil
@@ -501,26 +501,26 @@ func (bCtx *BuildContext) ToTarball() (io.Reader, error) {
 		}
 
 		if err := contents.UpdateHeader(fileHeader); err != nil {
-			return nil, fmt.Errorf("failed to update tar header entry for %v: %v", filepath, err)
+			return nil, fmt.Errorf("failed to update tar header entry for %v: %w", filepath, err)
 		}
 
 		var rawContents []byte
 		if contents != nil {
 			rawContents, err = contents.Get()
 			if err != nil {
-				return nil, fmt.Errorf("failed to get file contents for %v: %v", filepath, err)
+				return nil, fmt.Errorf("failed to get file contents for %v: %w", filepath, err)
 			}
 
 			fileHeader.Size = int64(len(rawContents))
 		}
 
 		if err := tarBuilder.WriteHeader(fileHeader); err != nil {
-			return nil, fmt.Errorf("failed to write tar header entry for %v: %v", filepath, err)
+			return nil, fmt.Errorf("failed to write tar header entry for %v: %w", filepath, err)
 		}
 
 		if contents != nil {
 			if _, err := tarBuilder.Write(rawContents); err != nil {
-				return nil, fmt.Errorf("failed to write tar file entry for %v: %v", filepath, err)
+				return nil, fmt.Errorf("failed to write tar file entry for %v: %w", filepath, err)
 			}
 		}
 	}
@@ -586,14 +586,14 @@ func (d *Runner) BuildImage(ctx context.Context, containerfile string, container
 	containerContext[containerfilePath] = PathContentsFromBytes([]byte(containerfile))
 	tar, err := containerContext.ToTarball()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create build image context tarball: %v", err)
+		return nil, fmt.Errorf("failed to create build image context tarball: %w", err)
 	}
 	cfg.Dockerfile = "/" + containerfilePath
 
 	// Apply all given options
 	for index, opt := range opts {
 		if err := opt.Apply(&cfg); err != nil {
-			return nil, fmt.Errorf("failed to apply option (%d / %v): %v", index, opt, err)
+			return nil, fmt.Errorf("failed to apply option (%d / %v): %w", index, opt, err)
 		}
 	}
 
@@ -604,7 +604,7 @@ func (d *Runner) BuildImage(ctx context.Context, containerfile string, container
 
 	output, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read image build output: %v", err)
+		return nil, fmt.Errorf("failed to read image build output: %w", err)
 	}
 
 	return output, nil
