@@ -73,7 +73,7 @@ export default class PkiRoleEngineModel extends Model {
   noStore;
 
   @attr('boolean', {
-    label: 'Basic constraints valid for non CA.',
+    label: 'Basic constraints valid for non CA',
     subText: 'Mark Basic Constraints valid when issuing non-CA certificates.',
     editType: 'boolean',
   })
@@ -85,6 +85,7 @@ export default class PkiRoleEngineModel extends Model {
     label: 'Allowed domains',
     subText: 'Specifies the domains this role is allowed to issue certificates for. Add one item per row.',
     editType: 'stringArray',
+    hideFormSection: true,
   })
   allowedDomains;
 
@@ -161,6 +162,115 @@ export default class PkiRoleEngineModel extends Model {
   signatureBits;
   /* End of overriding Key parameters options */
 
+  /* Overriding API Policy identifier option */
+  @attr({
+    label: 'Policy identifiers',
+    subText: 'A comma-separated string or list of policy object identifiers (OIDs). Add one per row. ',
+    editType: 'stringArray',
+    hideFormSection: true,
+  })
+  policyIdentifiers;
+  /* End of overriding Policy identifier options */
+
+  /* Overriding OpenApi SAN options */
+  @attr('string', {
+    subText: `Subject Alternative Names (SANs) are identities (domains, IP addresses, and URIs) Vault attaches to the requested certificates.`,
+    hideInput: true,
+    hideLabel: true,
+  })
+  sanLabel;
+
+  @attr('boolean', {
+    label: 'Allow IP SANs',
+    subText: 'Specifies if clients can request IP Subject Alternative Names.',
+    editType: 'boolean',
+    defaultValue: true,
+  })
+  allowIpSans;
+
+  @attr({
+    label: 'URI Subject Alternative Names (URI SANs)',
+    subText: 'Defines allowed URI Subject Alternative Names. Add one item per row',
+    editType: 'stringArray',
+    docLink: '/docs/concepts/policies',
+    hideFormSection: true,
+  })
+  allowedUriSans;
+
+  @attr('boolean', {
+    label: 'Allow URI SANs template',
+    subText: 'If true, the URI SANs above may contain templates, as with ACL Path Templating.',
+    editType: 'boolean',
+    docLink: '/docs/concepts/policies',
+  })
+  allowUriSansTemplate;
+
+  @attr({
+    label: 'Other SANs',
+    subText: 'Defines allowed custom OID/UTF8-string SANs. Add one item per row.',
+    editType: 'stringArray',
+    hideFormSection: true,
+  })
+  allowedOtherSans;
+  /* End of overriding SAN options */
+
+  /* Overriding OpenApi Additional subject field options */
+  @attr('string', {
+    subText: `Additional identity metadata Vault can attach to the requested certificates.`,
+    hideInput: true,
+    hideLabel: true,
+  })
+  additionalSubjectFieldLabel;
+
+  @attr({
+    label: 'Allowed serial numbers',
+    subText:
+      'A list of allowed serial numbers to be requested during certificate issuance. Shell-style globbing is supported. If empty, custom-specified serial numbers will be forbidden.',
+    editType: 'stringArray',
+    hideFormSection: true,
+  })
+  allowedSerialNumbers;
+
+  @attr('boolean', {
+    label: 'Require common name',
+    subText: 'If set to false, common name will be optional when generating a certificate.',
+    defaultValue: true,
+  })
+  requireCn;
+
+  @attr('boolean', {
+    label: 'Use CSR common name',
+    subText:
+      'When used with the CSR signing endpoint, the common name in the CSR will be used instead of taken from the JSON data.',
+    defaultValue: true,
+  })
+  useCsrCommonName;
+
+  @attr('boolean', {
+    label: 'Use CSR SANs',
+    subText:
+      'When used with the CSR signing endpoint, the subject alternate names in the CSR will be used instead of taken from the JSON data.',
+    defaultValue: true,
+  })
+  useCsrSans;
+
+  @attr({
+    label: 'Organization Units (OU)',
+    subText:
+      'A list of allowed serial numbers to be requested during certificate issuance. Shell-style globbing is supported. If empty, custom-specified serial numbers will be forbidden.',
+    hideFormSection: true,
+  })
+  ou;
+
+  @attr({ hideFormSection: true }) organization;
+  @attr({ hideFormSection: true }) country;
+  @attr({ hideFormSection: true }) locality;
+  @attr({ hideFormSection: true }) province;
+  @attr({ hideFormSection: true }) streetAddress;
+  @attr({ hideFormSection: true }) postalCode;
+
+  /* End of overriding Additional subject field options */
+
   // must be a getter so it can be added to the prototype needed in the pathHelp service on the line here: if (newModel.merged || modelProto.useOpenAPI !== true) {
   get useOpenAPI() {
     return true;
@@ -233,11 +343,18 @@ export default class PkiRoleEngineModel extends Model {
         },
         { 'Policy identifiers': ['policyIdentifiers'] },
         {
-          'Subject Alternative Name (SAN) Options': ['allowIpSans', 'allowedUriSans', 'allowedOtherSans'],
+          'Subject Alternative Name (SAN) Options': [
+            'sanLabel',
+            'allowIpSans',
+            'allowedUriSans',
+            'allowUriSansTemplate',
+            'allowedOtherSans',
+          ],
         },
         {
           'Additional subject fields': [
-            'allowed_serial_numbers',
+            'additionalSubjectFieldLabel',
+            'allowedSerialNumbers',
             'requireCn',
             'useCsrCommonName',
             'useCsrSans',

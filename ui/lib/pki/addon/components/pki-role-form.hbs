@@ -40,10 +40,10 @@
               data-test-field={{true}}
               @attr={{attr}}
               @model={{@model}}
-              @modelValidations={{@modelValidations}}
+              @modelValidations={{this.modelValidations}}
               @showHelpText={{false}}
             >
-              {{yield attr}}
+              <RadioSelectTtlOrString @attr={{attr}} @model={{@model}} />
             </FormField>
           {{/each}}
         {{else if (eq group "Key usage")}}
