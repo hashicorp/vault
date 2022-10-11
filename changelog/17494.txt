@@ -1,3 +1,3 @@
 ```release-note:bug
-auth/token: login command now stores token with token handler on MFA logins
+auth/mfa: login command now stores token with token handler on MFA logins
 ```
