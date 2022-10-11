@@ -250,14 +250,14 @@ func (c *BaseCommand) getMFAMethodInfo(mfaConstraintAny map[string]*logical.MFAC
 	return MFAMethodInfo{}
 }
 
-func (c *BaseCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) int {
+func (c *BaseCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) (int, *api.Secret) {
 	var passcode string
 	var err error
 	if methodInfo.usePasscode {
 		passcode, err = c.UI.AskSecret(fmt.Sprintf("Enter the passphrase for methodID %q of type %q:", methodInfo.methodID, methodInfo.methodType))
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("failed to read the passphrase with error %q. please validate the login by sending a request to sys/mfa/validate", err.Error()))
-			return 2
+			return 2, nil
 		}
 	} else {
 		c.UI.Warn("Asking Vault to perform MFA validation with upstream service. " +
@@ -272,7 +272,7 @@ func (c *BaseCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) int {
 	client, err := c.Client()
 	if err != nil {
 		c.UI.Error(err.Error())
-		return 2
+		return 2, nil
 	}
 
 	secret, err := client.Sys().MFAValidate(reqID, mfaPayload)
@@ -281,22 +281,22 @@ func (c *BaseCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) int {
 		if secret != nil {
 			OutputSecret(c.UI, secret)
 		}
-		return 2
+		return 2, nil
 	}
 	if secret == nil {
 		// Don't output anything unless using the "table" format
 		if Format(c.UI) == "table" {
 			c.UI.Info("Success! Data written to: sys/mfa/validate")
 		}
-		return 0
+		return 0, secret
 	}
 
 	// Handle single field output
 	if c.flagField != "" {
-		return PrintRawField(c.UI, secret, c.flagField)
+		return PrintRawField(c.UI, secret, c.flagField), secret
 	}
 
-	return OutputSecret(c.UI, secret)
+	return OutputSecret(c.UI, secret), secret
 }
 
 type FlagSetBit uint

@@ -234,7 +234,13 @@ func (c *LoginCommand) Run(args []string) int {
 			// request is validated interactively
 			methodInfo := c.getMFAMethodInfo(secret.Auth.MFARequirement.MFAConstraints)
 			if methodInfo.methodID != "" {
-				return c.validateMFA(secret.Auth.MFARequirement.MFARequestID, methodInfo)
+				result, mfaSecret := c.validateMFA(secret.Auth.MFARequirement.MFARequestID, methodInfo)
+				if result == 0 {
+					if err := c.storeTokenWithHelper(mfaSecret); err != 0{
+						return err
+					}
+				}
+				return result
 			}
 		}
 		c.UI.Warn(wrapAtLength("A login request was issued that is subject to "+
@@ -272,6 +278,33 @@ func (c *LoginCommand) Run(args []string) int {
 		}
 	}
 
+	if err := c.storeTokenWithHelper(secret); err != 0{
+		return err
+	}
+
+	if c.flagNoPrint {
+		return 0
+	}
+
+	// If the user requested a particular field, print that out now since we
+	// are likely piping to another process.
+	if c.flagField != "" {
+		return PrintRawField(c.UI, secret, c.flagField)
+	}
+
+	// Print some yay! text, but only in table mode.
+	if Format(c.UI) == "table" {
+		c.UI.Output(wrapAtLength(
+			"Success! You are now authenticated. The token information displayed "+
+				"below is already stored in the token helper. You do NOT need to run "+
+				"\"vault login\" again. Future Vault requests will automatically use "+
+				"this token.") + "\n")
+	}
+
+	return OutputSecret(c.UI, secret)
+}
+
+func (c *LoginCommand) storeTokenWithHelper(secret *api.Secret) int{
 	// If we got this far, verify we have authentication data before continuing
 	if secret.Auth == nil {
 		c.UI.Error(wrapAtLength(
@@ -314,27 +347,8 @@ func (c *LoginCommand) Run(args []string) int {
 				"environment variable or pass the token below with each request to "+
 				"Vault.") + "\n")
 	}
+	return 0
 
-	if c.flagNoPrint {
-		return 0
-	}
-
-	// If the user requested a particular field, print that out now since we
-	// are likely piping to another process.
-	if c.flagField != "" {
-		return PrintRawField(c.UI, secret, c.flagField)
-	}
-
-	// Print some yay! text, but only in table mode.
-	if Format(c.UI) == "table" {
-		c.UI.Output(wrapAtLength(
-			"Success! You are now authenticated. The token information displayed "+
-				"below is already stored in the token helper. You do NOT need to run "+
-				"\"vault login\" again. Future Vault requests will automatically use "+
-				"this token.") + "\n")
-	}
-
-	return OutputSecret(c.UI, secret)
 }
 
 // extractToken extracts the token from the given secret, automatically
