@@ -268,3 +268,16 @@ event "post-publish-website" {
     on = "always"
   }
 }
+
+event "update-ironbank" {
+  depends = ["post-publish-website"]
+  action "update-ironbank" {
+    organization = "hashicorp"
+    repository = "crt-workflows-common"
+    workflow = "update-ironbank"
+  }
+
+  notification {
+    on = "fail"
+  }
+}
