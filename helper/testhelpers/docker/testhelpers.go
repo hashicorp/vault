@@ -488,13 +488,13 @@ func NewBuildContext() BuildContext {
 	return BuildContext{}
 }
 
-func (ctx *BuildContext) ToTarball() (io.Reader, error) {
+func (bCtx *BuildContext) ToTarball() (io.Reader, error) {
 	var err error
 	buffer := new(bytes.Buffer)
 	tarBuilder := tar.NewWriter(buffer)
 	defer tarBuilder.Close()
 
-	for filepath, contents := range *ctx {
+	for filepath, contents := range *bCtx {
 		fileHeader := &tar.Header{Name: filepath}
 		if contents == nil && !strings.HasSuffix(filepath, "/") {
 			return nil, fmt.Errorf("expected file path (%v) to have trailing / due to nil contents, indicating directory", filepath)
