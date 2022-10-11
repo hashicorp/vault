@@ -33,12 +33,6 @@ import KVObject from 'vault/lib/kv-object';
 export default class KvObjectEditor extends Component {
   @tracked kvData;
 
-  constructor() {
-    super(...arguments);
-    this.kvData = KVObject.create({ content: [] }).fromJSON(this.args.value);
-    this.addRow();
-  }
-
   get placeholders() {
     return {
       key: this.args.keyPlaceholder || 'key',
@@ -49,6 +43,12 @@ export default class KvObjectEditor extends Component {
     return this.kvData.uniqBy('name').length !== this.kvData.get('length');
   }
 
+  // fired on did-insert from render modifier
+  @action
+  createKvData(elem, [value]) {
+    this.kvData = KVObject.create({ content: [] }).fromJSON(value);
+    this.addRow();
+  }
   @action
   addRow() {
     if (!isNone(this.kvData.findBy('name', ''))) {

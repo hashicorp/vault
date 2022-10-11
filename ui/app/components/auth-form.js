@@ -277,7 +277,6 @@ export default Component.extend(DEFAULTS, {
 
   delayAuthMessageReminder: task(function* () {
     if (Ember.testing) {
-      this.showLoading = true;
       yield timeout(0);
     } else {
       yield timeout(5000);

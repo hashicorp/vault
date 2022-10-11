@@ -48,6 +48,7 @@ export default ApplicationAdapter.extend({
 
     return this.ajax(this.url(path), 'POST', { data }).then(() => {
       // ember data doesn't like 204s if it's not a DELETE
+      data.config.id = path; // config relationship needs an id so use path for now
       return {
         data: assign({}, data, { path: path + '/', id: path }),
       };
@@ -63,6 +64,7 @@ export default ApplicationAdapter.extend({
   },
 
   tune(path, data) {
-    return this.ajax(`${this.url(path)}tune`, 'POST', { data });
+    const url = `${this.buildURL()}/${this.pathForType()}/${encodePath(path)}tune`;
+    return this.ajax(url, 'POST', { data });
   },
 });

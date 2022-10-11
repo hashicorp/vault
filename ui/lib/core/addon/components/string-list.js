@@ -63,7 +63,7 @@ export default class StringList extends Component {
 
   toVal() {
     const inputs = this.inputList.filter((x) => x.value).mapBy('value');
-    if (this.format === 'string') {
+    if (this.args.type === 'string') {
       return inputs.join(',');
     }
     return inputs;

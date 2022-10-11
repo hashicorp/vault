@@ -57,7 +57,6 @@ export default Controller.extend(CONFIG_ATTRS, {
           },
         })
         .then(() => {
-          this.model.send('pushedData');
           this.reset();
           this.flashMessages.success('The backend configuration saved successfully!');
         })

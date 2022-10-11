@@ -27,11 +27,9 @@ import Component from '@glimmer/component';
 import ControlGroupError from 'vault/lib/control-group-error';
 import Ember from 'ember';
 import keys from 'vault/lib/keycodes';
-
 import { action, set } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-
 import { isBlank, isNone } from '@ember/utils';
 import { task, waitForEvent } from 'ember-concurrency';
 
@@ -40,7 +38,7 @@ const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 export default class SecretCreateOrUpdate extends Component {
-  @tracked codemirrorString = null;
+  // @tracked codemirrorString = null;
   @tracked error = null;
   @tracked secretPaths = null;
   @tracked pathWhiteSpaceWarning = false;
@@ -52,9 +50,9 @@ export default class SecretCreateOrUpdate extends Component {
   @service store;
   @service wizard;
 
-  constructor() {
-    super(...arguments);
-    this.codemirrorString = this.args.secretData.toJSONString();
+  @action
+  setup(elem, [secretData, model, mode]) {
+    this.codemirrorString = secretData.toJSONString();
     this.validationMessages = {
       path: '',
     };
@@ -62,16 +60,16 @@ export default class SecretCreateOrUpdate extends Component {
     if (Ember.testing) {
       this.secretPaths = ['beep', 'bop', 'boop'];
     } else {
-      let adapter = this.store.adapterFor('secret-v2');
-      let type = { modelName: 'secret-v2' };
-      let query = { backend: this.args.model.backend };
+      const adapter = this.store.adapterFor('secret-v2');
+      const type = { modelName: 'secret-v2' };
+      const query = { backend: model.backend };
       adapter.query(this.store, type, query).then((result) => {
         this.secretPaths = result.data.keys;
       });
     }
     this.checkRows();
 
-    if (this.args.mode === 'edit') {
+    if (mode === 'edit') {
       this.addRow();
     }
   }
