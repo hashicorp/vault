@@ -61,17 +61,43 @@
             />
             {{#if (get @model prop)}}
               <div class="box is-marginless">
-                {{#each fields as |attr|}}
-                  <FormField
-                    data-test-field={{true}}
-                    @attr={{if (eq attr.name "keyBits") @model.keyBitsConditional attr}}
-                    @model={{@model}}
-                    @modelValidations={{@modelValidations}}
-                    @showHelpText={{false}}
-                  >
-                    {{yield attr}}
-                  </FormField>
-                {{/each}}
+                {{#let (get @model.fieldGroupsInfo group) as |groupInfo|}}
+                  {{! Header }}
+                  {{#if groupInfo.header}}
+                    <div class="has-bottom-margin-s">
+                      <FormFieldLabel
+                        for={{groupInfo.header.name}}
+                        @label={{groupInfo.header.label}}
+                        @subText={{groupInfo.header.text}}
+                        @docLink={{groupInfo.header.docLink}}
+                      />
+                    </div>
+                  {{/if}}
+                  {{! Fields }}
+                  {{#each fields as |attr|}}
+                    <FormField
+                      data-test-field={{true}}
+                      @attr={{if (eq attr.name "keyBits") @model.keyBitsConditional attr}}
+                      @model={{@model}}
+                      @modelValidations={{@modelValidations}}
+                      @showHelpText={{false}}
+                    >
+                      {{yield attr}}
+                    </FormField>
+                  {{/each}}
+                  {{! Footer }}
+                  {{#if groupInfo.footer}}
+                    <p class="sub-text">
+                      <Icon @name="info" />
+                      {{groupInfo.footer.text}}
+                      {{#if groupInfo.footer.docLink}}
+                        <DocLink @path={{groupInfo.footer.docLink}}>
+                          {{groupInfo.footer.docText}}
+                        </DocLink>
+                      {{/if}}
+                    </p>
+                  {{/if}}
+                {{/let}}
               </div>
             {{/if}}
           {{/let}}

@@ -93,24 +93,9 @@ export default class PkiRoleEngineModel extends Model {
     label: 'Allow templates in allowed domains',
   })
   allowedDomainsTemplate;
-
-  @attr('string', {
-    editType: 'moreInfo',
-    text: 'These options can interact intricately with one another. For more information,',
-    docText: 'learn more here.',
-    docLink: '/api-docs/secret/pki#allowed_domains',
-  })
-  moreInfo;
   /* End of overriding Domain handling options */
 
   /* Overriding OpenApi Key parameters options */
-  @attr('string', {
-    subText: `These are the parameters for generating or validating the certificate's key material.`,
-    hideInput: true,
-    hideLabel: true,
-  })
-  keyParametersLabel;
-
   @attr('string', {
     label: 'Key type',
     possibleValues: ['rsa', 'ec', 'ed25519', 'any'],
@@ -173,13 +158,6 @@ export default class PkiRoleEngineModel extends Model {
   /* End of overriding Policy identifier options */
 
   /* Overriding OpenApi SAN options */
-  @attr('string', {
-    subText: `Subject Alternative Names (SANs) are identities (domains, IP addresses, and URIs) Vault attaches to the requested certificates.`,
-    hideInput: true,
-    hideLabel: true,
-  })
-  sanLabel;
-
   @attr('boolean', {
     label: 'Allow IP SANs',
     subText: 'Specifies if clients can request IP Subject Alternative Names.',
@@ -215,13 +193,6 @@ export default class PkiRoleEngineModel extends Model {
   /* End of overriding SAN options */
 
   /* Overriding OpenApi Additional subject field options */
-  @attr('string', {
-    subText: `Additional identity metadata Vault can attach to the requested certificates.`,
-    hideInput: true,
-    hideLabel: true,
-  })
-  additionalSubjectFieldLabel;
-
   @attr({
     label: 'Allowed serial numbers',
     subText:
@@ -306,6 +277,33 @@ export default class PkiRoleEngineModel extends Model {
 
   _fieldToAttrsGroups = null;
 
+  get fieldGroupsInfo() {
+    return {
+      'Domain handling': {
+        footer: {
+          text: 'These options can interact intricately with one another. For more information,',
+          docText: 'learn more here.',
+          docLink: '/api-docs/secret/pki#allowed_domains',
+        },
+      },
+      'Key parameters': {
+        header: {
+          text: `These are the parameters for generating or validating the certificate's key material.`,
+        },
+      },
+      'Subject Alternative Name (SAN) Options': {
+        header: {
+          text: `Subject Alternative Names (SANs) are identities (domains, IP addresses, and URIs) Vault attaches to the requested certificates.`,
+        },
+      },
+      'Additional subject fields': {
+        header: {
+          text: `Additional identity metadata Vault can attach to the requested certificates.`,
+        },
+      },
+    };
+  }
+
   get fieldGroups() {
     if (!this._fieldToAttrsGroups) {
       this._fieldToAttrsGroups = fieldToAttrs(this, [
@@ -332,11 +330,10 @@ export default class PkiRoleEngineModel extends Model {
             'allowLocalhost', // default: true (returned true by OpenApi)
             'allowAnyName',
             'enforceHostnames', // default: true (returned true by OpenApi)
-            'moreInfo', // shows as helperText with icon at bottom of the options box.
           ],
         },
         {
-          'Key parameters': ['keyParametersLabel', 'keyType', 'keyBits', 'signatureBits'],
+          'Key parameters': ['keyType', 'keyBits', 'signatureBits'],
         },
         {
           'Key usage': ['keyUsage', 'extKeyUsage'],
@@ -344,7 +341,6 @@ export default class PkiRoleEngineModel extends Model {
         { 'Policy identifiers': ['policyIdentifiers'] },
         {
           'Subject Alternative Name (SAN) Options': [
-            'sanLabel',
             'allowIpSans',
             'allowedUriSans',
             'allowUriSansTemplate',
@@ -353,7 +349,6 @@ export default class PkiRoleEngineModel extends Model {
         },
         {
           'Additional subject fields': [
-            'additionalSubjectFieldLabel',
             'allowedSerialNumbers',
             'requireCn',
             'useCsrCommonName',
@@ -369,6 +364,15 @@ export default class PkiRoleEngineModel extends Model {
         },
       ]);
     }
+
+    // Modify the group Domain handling
+    // const domainHandlingFooter = {
+    //   label: 'groupInfoFooter',
+    //   text: 'These options can interact intricately with one another. For more information,',
+    //   docText: 'learn more here.',
+    //   docLink: '/api-docs/secret/pki#allowed_domains',
+    // };
+    // this._fieldToAttrsGroups[1]['Domain handling'].push(domainHandlingFooter);
     return this._fieldToAttrsGroups;
   }
 }

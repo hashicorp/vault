@@ -24,7 +24,7 @@
                 id={{name}}
                 class="styled"
                 checked={{attr.value}}
-                onchange={{(fn this.checkboxChange "keyUsage")}}
+                onchange={{fn this.checkboxChange "keyUsage"}}
                 data-test-input={{name}}
               />
               <label for={{name}} class="is-label">
@@ -51,7 +51,7 @@
                 id={{name}}
                 class="styled"
                 checked={{attr.value}}
-                onchange={{(fn this.checkboxChange "extKeyUsage")}}
+                onchange={{fn this.checkboxChange "extKeyUsage"}}
                 data-test-input={{name}}
               />
               <label for={{name}} class="is-label">

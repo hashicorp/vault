@@ -212,16 +212,6 @@
       @subText={{@attr.options.subText}}
       @hideFormSection={{@attr.options.hideFormSection}}
     />
-  {{else if (eq @attr.options.editType "moreInfo")}}
-    <p class="sub-text">
-      <Icon @name="info" />
-      {{@attr.options.text}}
-      {{#if @attr.options.docLink}}
-        <DocLink @path={{@attr.options.docLink}}>
-          {{@attr.options.docText}}
-        </DocLink>
-      {{/if}}
-    </p>
   {{else if (eq @attr.options.sensitive true)}}
     {{! Masked Input }}
     <MaskedInput
@@ -299,29 +289,27 @@
         {{/if}}
       {{else}}
         {{! Regular Text Input }}
-        {{#unless @attr.options.hideInput}}
-          <input
-            data-test-input={{@attr.name}}
-            id={{@attr.name}}
-            readonly={{this.isReadOnly}}
-            disabled={{and @attr.options.editDisabled (not @model.isNew)}}
-            autocomplete="off"
-            spellcheck="false"
-            value={{or (get @model this.valuePath) @attr.options.defaultValue}}
-            onchange={{this.onChangeWithEvent}}
-            onkeyup={{this.handleKeyUp}}
-            class="input {{if this.validationError 'has-error-border'}}"
-            maxLength={{@attr.options.characterLimit}}
-          />
-          {{#if @attr.options.validationAttr}}
-            {{#if (and (get @model this.valuePath) (not (get @model @attr.options.validationAttr)))}}
-              <AlertInline @type="danger" @message={{@attr.options.invalidMessage}} />
-            {{/if}}
+        <input
+          data-test-input={{@attr.name}}
+          id={{@attr.name}}
+          readonly={{this.isReadOnly}}
+          disabled={{and @attr.options.editDisabled (not @model.isNew)}}
+          autocomplete="off"
+          spellcheck="false"
+          value={{or (get @model this.valuePath) @attr.options.defaultValue}}
+          onchange={{this.onChangeWithEvent}}
+          onkeyup={{this.handleKeyUp}}
+          class="input {{if this.validationError 'has-error-border'}}"
+          maxLength={{@attr.options.characterLimit}}
+        />
+        {{#if @attr.options.validationAttr}}
+          {{#if (and (get @model this.valuePath) (not (get @model @attr.options.validationAttr)))}}
+            <AlertInline @type="danger" @message={{@attr.options.invalidMessage}} />
           {{/if}}
-          {{#if this.validationError}}
-            <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
-          {{/if}}
-        {{/unless}}
+        {{/if}}
+        {{#if this.validationError}}
+          <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
+        {{/if}}
       {{/if}}
     </div>
   {{else if (eq @attr.type "boolean")}}

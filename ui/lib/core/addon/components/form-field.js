@@ -65,9 +65,6 @@ export default class FormFieldComponent extends Component {
   }
   // used in the label element next to the form element
   get labelString() {
-    if (this.args.attr.options?.hideLabel) {
-      return '';
-    }
     const label = this.args.attr.options?.label || '';
     if (label) {
       return label;
