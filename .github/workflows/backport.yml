@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Backport changes to targeted release branch
         run: |
-          backport-assistant backport -merge-method=squash  -gh-automerge 
+          backport-assistant backport -merge-method=squash -gh-automerge 
         env:
           BACKPORT_LABEL_REGEXP: "backport/(?P<target>\\d+\\.\\d+\\.[+\\w]+)"
           BACKPORT_TARGET_TEMPLATE: "release/{{.target}}"
