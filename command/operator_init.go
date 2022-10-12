@@ -241,6 +241,8 @@ func (c *OperatorInitCommand) Run(args []string) int {
 	// setting this to false and then setting actual value after reading seal status
 	currentOutputCurlString := client.OutputCurlString()
 	client.SetOutputCurlString(false)
+	// -output-policy string returns minimum required policy HCL for seal status
+	// setting this to false and then setting actual value after reading seal status
 	outputPolicy := client.OutputPolicy()
 	client.SetOutputPolicy(false)
 
