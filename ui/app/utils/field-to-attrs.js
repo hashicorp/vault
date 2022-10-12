@@ -65,12 +65,13 @@ export const expandAttributeMeta = function (modelClass, attributeNames) {
     } else {
       meta = getAttributeMeta(modelClass, field);
     }
+    const { type, options } = meta || {};
     return {
       // using field name here because it is the full path,
       // name on the attribute meta will be relative to the relationship if applicable
       name: field,
-      type: meta.type,
-      options: meta.options,
+      type,
+      options,
     };
   });
 };

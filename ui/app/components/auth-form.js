@@ -284,18 +284,9 @@ export default Component.extend(DEFAULTS, {
   }),
 
   actions: {
-    doSubmit(event) {
+    doSubmit(passedData, event) {
       if (event) {
         event.preventDefault();
-      }
-      let passedData, e;
-      if (arguments.length > 1) {
-        [passedData, e] = arguments;
-      } else {
-        [e] = arguments;
-      }
-      if (e) {
-        e.preventDefault();
       }
       let data = {};
       this.setProperties({
