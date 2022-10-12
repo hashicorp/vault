@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -442,10 +441,6 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 }
 
 func (b *backend) pathTidyCancelWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && !b.System().LocalMount() {
-		return nil, logical.ErrReadOnly
-	}
-
 	if atomic.LoadUint32(b.tidyCASGuard) == 0 {
 		resp := &logical.Response{}
 		resp.AddWarning("Tidy operation cannot be cancelled as none is currently running.")
@@ -469,12 +464,6 @@ func (b *backend) pathTidyCancelWrite(ctx context.Context, req *logical.Request,
 }
 
 func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	// If this node is a performance secondary return an ErrReadOnly so that the request gets forwarded,
-	// but only if the PKI backend is not a local mount.
-	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && !b.System().LocalMount() {
-		return nil, logical.ErrReadOnly
-	}
-
 	b.tidyStatusLock.RLock()
 	defer b.tidyStatusLock.RUnlock()
 
