@@ -9,7 +9,7 @@
       )
     )
   }}
-    {{#if (not (or (eq @attr.type "object") (eq @attr.options.editType "moreInfo")))}}
+    {{#if (not (eq @attr.type "object"))}}
       <FormFieldLabel
         for={{@attr.name}}
         @label={{this.labelString}}

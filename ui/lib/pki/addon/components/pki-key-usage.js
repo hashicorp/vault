@@ -88,8 +88,6 @@ export default class PkiKeyUsage extends Component {
   @action checkboxChange(type) {
     const checkboxName = event.target.id;
     const value = event.target['checked'];
-    type === 'keyUsage'
-      ? this.args.model.set('keyUsage', this._amendList(checkboxName, value, type))
-      : this.args.model.set('extKeyUsage', this._amendList(checkboxName, value, type));
+    this.args.model.set(type, this._amendList(checkboxName, value, type));
   }
 }

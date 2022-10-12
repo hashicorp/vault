@@ -73,7 +73,7 @@ export default class PkiRoleEngineModel extends Model {
   noStore;
 
   @attr('boolean', {
-    label: 'Basic constraints valid for non CA',
+    label: 'Basic constraints valid for non-CA',
     subText: 'Mark Basic Constraints valid when issuing non-CA certificates.',
     editType: 'boolean',
   })
@@ -276,6 +276,7 @@ export default class PkiRoleEngineModel extends Model {
 
   _fieldToAttrsGroups = null;
 
+  // Gets header/footer copy for specific toggle groups.
   get fieldGroupsInfo() {
     return {
       'Domain handling': {
