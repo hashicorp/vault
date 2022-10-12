@@ -11,8 +11,10 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
 )
 
-var runner *docker.Runner
-var buildZLintOnce sync.Once
+var (
+	runner         *docker.Runner
+	buildZLintOnce sync.Once
+)
 
 func buildZLintContainer(t *testing.T) {
 	containerfile := `
@@ -181,5 +183,6 @@ func Test_ZLintECDSA521(t *testing.T) {
 	// Mozilla doesn't allow P-521 ECDSA keys.
 	RunZLintRootTest(t, "ec", 521, false, []string{
 		"e_mp_ecdsa_pub_key_encoding_correct",
-		"e_mp_ecdsa_signature_encoding_correct"})
+		"e_mp_ecdsa_signature_encoding_correct",
+	})
 }
