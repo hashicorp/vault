@@ -6,21 +6,12 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, settled } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import fetch from 'fetch';
 import sinon from 'sinon';
 import Pretender from 'pretender';
 import { create } from 'ember-cli-page-object';
 import authForm from '../../pages/components/auth-form';
 
 const component = create(authForm);
-
-const authService = Service.extend({
-  async authenticate() {
-    return fetch('http://localhost:2000');
-  },
-  handleError() {},
-  setLastFetch() {},
-});
 
 const workingAuthService = Service.extend({
   authenticate() {
@@ -44,32 +35,20 @@ module('Integration | Component | auth form', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    this.owner.lookup('service:csp-event').attach();
     this.owner.register('service:router', routerService);
     this.router = this.owner.lookup('service:router');
-  });
-
-  hooks.afterEach(function () {
-    this.owner.lookup('service:csp-event').remove();
   });
 
   const CSP_ERR_TEXT = `Error This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`;
   test('it renders error on CSP violation', async function (assert) {
     assert.expect(2);
-    this.owner.unregister('service:auth');
-    this.owner.register('service:auth', authService);
-    this.auth = this.owner.lookup('service:auth');
     this.set('cluster', EmberObject.create({ standby: true }));
     this.set('selectedAuth', 'token');
     await render(hbs`{{auth-form cluster=this.cluster selectedAuth=this.selectedAuth}}`);
     assert.false(component.errorMessagePresent, false);
-    component.login();
-    // because this is an ember-concurrency backed service,
-    // we have to manually force settling the run queue
-    later(() => cancelTimers(), 50);
-    return settled().then(() => {
-      assert.strictEqual(component.errorText, CSP_ERR_TEXT);
-    });
+    this.owner.lookup('service:csp-event').events.addObject({ violatedDirective: 'connect-src' });
+    await settled();
+    assert.strictEqual(component.errorText, CSP_ERR_TEXT);
   });
 
   test('it renders with vault style errors', async function (assert) {

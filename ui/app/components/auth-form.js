@@ -284,7 +284,10 @@ export default Component.extend(DEFAULTS, {
   }),
 
   actions: {
-    doSubmit() {
+    doSubmit(event) {
+      if (event) {
+        event.preventDefault();
+      }
       let passedData, e;
       if (arguments.length > 1) {
         [passedData, e] = arguments;
