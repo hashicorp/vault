@@ -9,7 +9,7 @@
       )
     )
   }}
-    {{#unless (eq @attr.type "object")}}
+    {{#if (not (eq @attr.type "object"))}}
       <FormFieldLabel
         for={{@attr.name}}
         @label={{this.labelString}}
@@ -17,7 +17,7 @@
         @subText={{@attr.options.subText}}
         @docLink={{@attr.options.docLink}}
       />
-    {{/unless}}
+    {{/if}}
   {{/unless}}
   {{#if @attr.options.possibleValues}}
     {{#if (eq @attr.options.editType "radio")}}
@@ -71,7 +71,7 @@
 
       <label for={{@attr.name}} class="is-label">
         {{this.labelString}}
-        {{#if @attr.options.helpText}}
+        {{#if (and this.showHelpText @attr.options.helpText)}}
           <InfoTooltip>{{@attr.options.helpText}}</InfoTooltip>
         {{/if}}
       </label>
@@ -204,10 +204,12 @@
       data-test-input={{@attr.name}}
       @label={{this.labelString}}
       @warning={{@attr.options.warning}}
-      @helpText={{@attr.options.helpText}}
+      @helpText={{if this.showHelpText @attr.options.helpText}}
       @inputValue={{get @model this.valuePath}}
       @onChange={{this.setAndBroadcast}}
       @attrName={{@attr.name}}
+      @subText={{@attr.options.subText}}
+      @hideFormSection={{@attr.options.hideFormSection}}
     />
   {{else if (eq @attr.options.sensitive true)}}
     {{! Masked Input }}

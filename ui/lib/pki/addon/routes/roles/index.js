@@ -19,7 +19,7 @@ export default class RolesIndexRoute extends Route {
       })
       .catch((err) => {
         if (err.httpStatus === 404) {
-          return [];
+          return { parentModel: this.modelFor('roles') };
         } else {
           throw err;
         }
