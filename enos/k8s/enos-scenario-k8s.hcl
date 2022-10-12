@@ -17,7 +17,7 @@ scenario "k8s" {
     image_repo = var.vault_image_repository != null ? var.vault_image_repository : matrix.edition == "oss" ? "hashicorp/vault" : "hashicorp/vault-enterprise"
     image_tag = matrix.edition == "oss" ? var.vault_product_version : "${var.vault_product_version}-ent"
 
-    version_includes_build_date = semverconstraint(var.vault_product_version, ">=1.11.0")
+    version_includes_build_date = semverconstraint(split("-", var.vault_product_version)[0], ">=1.11.0")
   }
 
   step "read_license" {
@@ -126,6 +126,7 @@ scenario "k8s" {
       kubeconfig_base64 = step.create_kind_cluster.kubeconfig_base64
       context_name      = step.create_kind_cluster.context_name
       check_build_date  = local.version_includes_build_date
+      vault_build_date  = var.vault_build_date
     }
 
     depends_on = [step.deploy_vault]

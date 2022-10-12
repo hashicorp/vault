@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 # The Vault smoke test to verify the Vault version installed
 
@@ -12,7 +12,10 @@ fail() {
 if [[ "${CHECK_BUILD_DATE}" == "false" ]]; then
   expected_build_date=""
 else
-  build_date=$(echo "${VAULT_STATUS}" | jq -Mr .build_date)
+  build_date="${BUILD_DATE}"
+  if [[ "${build_date}" == "" ]]; then
+    build_date=$(echo "${VAULT_STATUS}" | jq -Mr .build_date)
+  fi
   expected_build_date=", built $build_date"
 fi
 
@@ -33,5 +36,8 @@ version_expected_nosha=$(echo "$version_expected" | awk '!($3="")' | sed 's/  / 
 if [[ "${ACTUAL_VERSION}" == "$version_expected_nosha" ]] || [[ "${ACTUAL_VERSION}" == "$version_expected" ]]; then
 	echo "Version verification succeeded!"
 else
+  echo "CHECK_BUILD_DATE: ${CHECK_BUILD_DATE}"
+  echo "BUILD_DATE: ${BUILD_DATE}"
+  echo "build_date: ${build_date}"
 	fail "expected Version=$version_expected or $version_expected_nosha, got: ${ACTUAL_VERSION}"
 fi

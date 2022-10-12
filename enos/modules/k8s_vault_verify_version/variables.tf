@@ -51,3 +51,9 @@ variable "check_build_date" {
   type        = bool
   description = "Whether or not to verify that the version includes the build date"
 }
+
+variable "vault_build_date" {
+  type        = string
+  description = "The build date of the vault docker image to check"
+  default     = ""
+}

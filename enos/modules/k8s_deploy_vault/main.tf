@@ -22,10 +22,11 @@ locals {
     "server.image.repository"       = var.image_repository
     "server.image.tag"              = var.image_tag
     "server.image.pullPolicy"       = "Never" # Forces local image use
-    "server.resources.requests.cpu" = "500m"
-    "server.limits.memory"          = "2Gi"
-    "server.limits.cpu"             = "500m"
+    "server.resources.requests.cpu" = "50m"
+    "server.limits.memory"          = "200m"
+    "server.limits.cpu"             = "200m"
     "server.ha.raft.config"         = file("${abspath(path.module)}/raft-config.hcl")
+    "server.dataStorage.size"       = "100m"
   }
   all_helm_chart_settings = var.ent_license == null ? local.helm_chart_settings : merge(local.helm_chart_settings, {
     "server.extraEnvironmentVars.VAULT_LICENSE" = var.ent_license

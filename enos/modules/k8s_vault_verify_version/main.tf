@@ -41,6 +41,7 @@ resource "enos_local_exec" "smoke-verify-version" {
     VAULT_EDITION    = var.vault_edition,
     VAULT_REVISION   = var.vault_product_revision,
     CHECK_BUILD_DATE = var.check_build_date
+    BUILD_DATE       = var.vault_build_date
   }
 
   scripts = [abspath("${path.module}/scripts/smoke-verify-version.sh")]
