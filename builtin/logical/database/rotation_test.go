@@ -506,8 +506,6 @@ func TestBackend_Static_QueueWAL_discard_role_not_found(t *testing.T) {
 // Second scenario, WAL contains a role name that does exist, but the role's
 // LastVaultRotation is greater than the WAL has
 func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) {
-	t.Skip("temporarily disabled due to intermittent failures")
-
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
