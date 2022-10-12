@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/vault/helper/forwarding"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault/replication"
 )
 
@@ -140,7 +139,7 @@ func (c *forwardingClient) startHeartbeat() {
 				Message:     "ping",
 				ClusterAddr: clusterAddr,
 				NodeInfo:    &ni,
-				SdkVersion:  version.GetVersion().Version,
+				SdkVersion:  c.core.effectiveSDKVersion,
 			}
 
 			if raftBackend := c.core.getRaftBackend(); raftBackend != nil {

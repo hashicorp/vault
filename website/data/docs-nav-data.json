@@ -1094,8 +1094,8 @@
         "path": "secrets/nomad"
       },
       {
-        "title": "OpenLDAP",
-        "path": "secrets/openldap"
+        "title": "LDAP",
+        "path": "secrets/ldap"
       },
       {
         "title": "PKI (Certificates)",
@@ -2012,6 +2012,19 @@
           {
             "title": "Security",
             "path": "enterprise/hsm/security"
+          }
+        ]
+      },
+      {
+        "title": "PKCS11 Provider",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "enterprise/pkcs11-provider"
+          },
+          {
+            "title": "Oracle TDE",
+            "path": "enterprise/pkcs11-provider/oracle-tde"
           }
         ]
       },

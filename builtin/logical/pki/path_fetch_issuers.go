@@ -207,9 +207,12 @@ func respondReadIssuer(issuer *issuerEntry) (*logical.Response, error) {
 		respManualChain = append(respManualChain, string(entity))
 	}
 
-	revSigAlgStr := issuer.RevocationSigAlg.String()
-	if issuer.RevocationSigAlg == x509.UnknownSignatureAlgorithm {
-		revSigAlgStr = ""
+	revSigAlgStr, present := certutil.InvSignatureAlgorithmNames[issuer.RevocationSigAlg]
+	if !present {
+		revSigAlgStr = issuer.RevocationSigAlg.String()
+		if issuer.RevocationSigAlg == x509.UnknownSignatureAlgorithm {
+			revSigAlgStr = ""
+		}
 	}
 
 	data := map[string]interface{}{
@@ -239,9 +242,15 @@ func respondReadIssuer(issuer *issuerEntry) (*logical.Response, error) {
 		data["ocsp_servers"] = issuer.AIAURIs.OCSPServers
 	}
 
-	return &logical.Response{
+	response := &logical.Response{
 		Data: data,
-	}, nil
+	}
+
+	if issuer.RevocationSigAlg == x509.SHA256WithRSAPSS || issuer.RevocationSigAlg == x509.SHA384WithRSAPSS || issuer.RevocationSigAlg == x509.SHA512WithRSAPSS {
+		response.AddWarning("Issuer uses a PSS Revocation Signature Algorithm. This algorithm will be downgraded to PKCS#1v1.5 signature scheme on OCSP responses, due to limitations in the OCSP library.")
+	}
+
+	return response, nil
 }
 
 func (b *backend) pathUpdateIssuer(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {

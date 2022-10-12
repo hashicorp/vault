@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/raft"
 	autopilot "github.com/hashicorp/raft-autopilot"
-	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mitchellh/mapstructure"
 	"go.uber.org/atomic"
 )
@@ -287,12 +286,14 @@ type Delegate struct {
 	// dl is a lock dedicated for guarding delegate's fields
 	dl               sync.RWMutex
 	inflightRemovals map[raft.ServerID]bool
+	emptyVersionLogs map[raft.ServerID]struct{}
 }
 
 func newDelegate(b *RaftBackend) *Delegate {
 	return &Delegate{
 		RaftBackend:      b,
 		inflightRemovals: make(map[raft.ServerID]bool),
+		emptyVersionLogs: make(map[raft.ServerID]struct{}),
 	}
 }
 
@@ -398,12 +399,29 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 			continue
 		}
 
+		// If version isn't found in the state, fake it using the version from the leader so that autopilot
+		// doesn't demote the node to a non-voter, just because of a missed heartbeat.
+		currentServerID := raft.ServerID(id)
+		followerVersion := state.Version
+		leaderVersion := d.effectiveSDKVersion
+		d.dl.Lock()
+		if followerVersion == "" {
+			if _, ok := d.emptyVersionLogs[currentServerID]; !ok {
+				d.logger.Trace("received empty Vault version in heartbeat state. faking it with the leader version for now", "id", id, "leader version", leaderVersion)
+				d.emptyVersionLogs[currentServerID] = struct{}{}
+			}
+			followerVersion = leaderVersion
+		} else {
+			delete(d.emptyVersionLogs, currentServerID)
+		}
+		d.dl.Unlock()
+
 		server := &autopilot.Server{
-			ID:          raft.ServerID(id),
+			ID:          currentServerID,
 			Name:        id,
 			RaftVersion: raft.ProtocolVersionMax,
 			Meta:        d.meta(state),
-			Version:     state.Version,
+			Version:     followerVersion,
 			Ext:         d.autopilotServerExt(state),
 		}
 
@@ -428,7 +446,7 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 			UpgradeVersion: d.EffectiveVersion(),
 			RedundancyZone: d.RedundancyZone(),
 		}),
-		Version:  version.GetVersion().Version,
+		Version:  d.effectiveSDKVersion,
 		Ext:      d.autopilotServerExt(nil),
 		IsLeader: true,
 	}
