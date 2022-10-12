@@ -237,12 +237,19 @@ func (c *OperatorInitCommand) Run(args []string) int {
 		return 2
 	}
 
+	// -output-curl string returns curl command for seal status
+	// setting this to false and then setting actual value after reading seal status
+	currentOutputCurlString := client.OutputCurlString()
+	client.SetOutputCurlString(false)
+
 	// Set defaults based on use of auto unseal seal
 	sealInfo, err := client.Sys().SealStatus()
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
 	}
+
+	client.SetOutputCurlString(currentOutputCurlString)
 
 	switch sealInfo.RecoverySeal {
 	case true:
