@@ -239,7 +239,6 @@ export default class PkiRoleEngineModel extends Model {
   @attr({ hideFormSection: true }) province;
   @attr({ hideFormSection: true }) streetAddress;
   @attr({ hideFormSection: true }) postalCode;
-
   /* End of overriding Additional subject field options */
 
   // must be a getter so it can be added to the prototype needed in the pathHelp service on the line here: if (newModel.merged || modelProto.useOpenAPI !== true) {
@@ -364,15 +363,6 @@ export default class PkiRoleEngineModel extends Model {
         },
       ]);
     }
-
-    // Modify the group Domain handling
-    // const domainHandlingFooter = {
-    //   label: 'groupInfoFooter',
-    //   text: 'These options can interact intricately with one another. For more information,',
-    //   docText: 'learn more here.',
-    //   docLink: '/api-docs/secret/pki#allowed_domains',
-    // };
-    // this._fieldToAttrsGroups[1]['Domain handling'].push(domainHandlingFooter);
     return this._fieldToAttrsGroups;
   }
 }
