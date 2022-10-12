@@ -16,7 +16,7 @@ SED?=$(shell command -v gsed || command -v sed)
 
 
 GO_VERSION_MIN=1.19.2
-PROTOC_VERSION_MIN=3.21.5
+PROTOC_VERSION_MIN=3.21.7
 GO_CMD?=go
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
