@@ -1,3 +1,13 @@
+<SecretListHeader
+  @model={{this.model.parentModel}}
+  @backendCrumb={{hash
+    label=this.model.parentModel.id
+    text=this.model.parentModel.id
+    path="vault.cluster.secrets.backend.list-root"
+    model=this.model.parentModel.id
+  }}
+  @isEngine={{true}}
+/>
 <Toolbar>
   <ToolbarActions>
     <ToolbarLink @params={{array "configuration.create.import-ca"}}>
@@ -27,8 +37,8 @@
     </BasicDropdown>
   </ToolbarActions>
 </Toolbar>
-{{#if (gt this.model.length 0)}}
-  {{#each this.model as |pkiIssuer|}}
+{{#if this.model.issuersModel.length}}
+  {{#each this.model.issuersModel as |pkiIssuer|}}
     <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiIssuer.id}} @linkPrefix={{this.mountPoint}}>
       <div class="level is-mobile">
         <div class="level-left">
@@ -72,7 +82,7 @@
   {{/each}}
 {{else}}
   <EmptyState @title="PKI not configured" @message="This PKI mount hasn’t yet been configured with a certificate issuer.">
-    <LinkTo @route="configuration.create.index" @model={{this.model}}>
+    <LinkTo @route="configuration.create.index" @model={{this.model.issuersModel}}>
       Configure PKI
     </LinkTo>
   </EmptyState>
