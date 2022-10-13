@@ -172,6 +172,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     let transformation = await newTransformation(backend, 'b-transformation', true);
     await newRole(backend, roleName);
     await transformationsPage.visitShow({ backend, id: transformation });
+    await settled();
     assert.dom('[data-test-row-value="Allowed roles"]').hasText(roleName);
   });
 
@@ -182,6 +183,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     let transformation = await newTransformation(backend, 'c-transformation', true);
     // create role
     await newRole(backend, roleName);
+    await settled();
     await transformationsPage.visitShow({ backend, id: transformation });
     assert.dom('[data-test-row-value="Allowed roles"]').hasText(roleName);
     // Edit transformation

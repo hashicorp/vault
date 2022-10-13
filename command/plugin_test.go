@@ -38,7 +38,7 @@ func testPluginCreate(tb testing.TB, dir, name string) (string, string) {
 }
 
 // testPluginCreateAndRegister creates a plugin and registers it in the catalog.
-func testPluginCreateAndRegister(tb testing.TB, client *api.Client, dir, name string, pluginType consts.PluginType) (string, string) {
+func testPluginCreateAndRegister(tb testing.TB, client *api.Client, dir, name string, pluginType consts.PluginType, version string) (string, string) {
 	tb.Helper()
 
 	pth, sha256Sum := testPluginCreate(tb, dir, name)
@@ -48,6 +48,7 @@ func testPluginCreateAndRegister(tb testing.TB, client *api.Client, dir, name st
 		Type:    pluginType,
 		Command: name,
 		SHA256:  sha256Sum,
+		Version: version,
 	}); err != nil {
 		tb.Fatal(err)
 	}

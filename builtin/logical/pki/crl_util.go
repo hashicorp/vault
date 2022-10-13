@@ -841,10 +841,20 @@ func buildAnyCRLs(sc *storageContext, forceNew bool, isDelta bool) error {
 		if err != nil {
 			return fmt.Errorf("error building CRLs: unable to get revoked certificate entries: %v", err)
 		}
-	}
 
-	if err := augmentWithRevokedIssuers(issuerIDEntryMap, issuerIDCertMap, revokedCertsMap); err != nil {
-		return fmt.Errorf("error building CRLs: unable to parse revoked issuers: %v", err)
+		if !isDelta {
+			// Revoking an issuer forces us to rebuild our complete CRL,
+			// regardless of whether or not we've enabled auto rebuilding or
+			// delta CRLs. If we elide the above isDelta check, this results
+			// in a non-empty delta CRL, containing the serial of the
+			// now-revoked issuer, even though it was generated _after_ the
+			// complete CRL with the issuer on it. There's no reason to
+			// duplicate this serial number on the delta, hence the above
+			// guard for isDelta.
+			if err := augmentWithRevokedIssuers(issuerIDEntryMap, issuerIDCertMap, revokedCertsMap); err != nil {
+				return fmt.Errorf("error building CRLs: unable to parse revoked issuers: %v", err)
+			}
+		}
 	}
 
 	// Now we can call buildCRL once, on an arbitrary/representative issuer

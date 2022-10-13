@@ -321,6 +321,9 @@ func (c *AuthEnableCommand) Run(args []string) int {
 	if authType == "plugin" {
 		authThing = c.flagPluginName + " plugin"
 	}
+	if c.flagPluginVersion != "" {
+		authThing += " version " + c.flagPluginVersion
+	}
 	c.UI.Output(fmt.Sprintf("Success! Enabled %s at: %s", authThing, authPath))
 	return 0
 }
