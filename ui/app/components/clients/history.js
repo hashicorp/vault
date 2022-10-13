@@ -2,49 +2,29 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { isSameMonth, isAfter, isBefore } from 'date-fns';
+import { isSameMonth, isAfter, isBefore, isSameDay } from 'date-fns';
 import getStorage from 'vault/lib/token-storage';
-import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
-import { dateFormat } from 'core/helpers/date-format';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 
-const INPUTTED_START_DATE = 'vault:ui-inputted-start-date';
-
+// TODO CMB: change class and file name to Dashboard
 export default class History extends Component {
   @service store;
   @service version;
-
-  arrayOfMonths = ARRAY_OF_MONTHS;
 
   chartLegend = [
     { key: 'entity_clients', label: 'entity clients' },
     { key: 'non_entity_clients', label: 'non-entity clients' },
   ];
 
-  // FOR START DATE EDIT & MODAL //
-  months = Array.from({ length: 12 }, (item, i) => {
-    return new Date(0, i).toLocaleString('en-US', { month: 'long' });
-  });
-  years = Array.from({ length: 5 }, (item, i) => {
-    return new Date().getFullYear() - i;
-  });
-  currentDate = new Date();
-  currentYear = this.currentDate.getFullYear(); // integer of year
-  currentMonth = this.currentDate.getMonth(); // index of month
-
-  @tracked isEditStartMonthOpen = false;
-  @tracked startMonth = null;
-  @tracked startYear = null;
-  @tracked allowedMonthMax = 12;
-  @tracked disabledYear = null;
-
-  // FOR HISTORY COMPONENT //
-
   // RESPONSE
-  @tracked endTimeFromResponse = this.args.model.endTimeFromResponse;
-  @tracked startTimeFromResponse = this.args.model.startTimeFromLicense; // ex: ['2021', 3] is April 2021 (0 indexed)
-  @tracked startTimeRequested = null;
+  @tracked startMonthTimestamp = this.args.model.licenseStartTimestamp; // updates to first month object of response
+  @tracked endMonthTimestamp = this.args.model.initialEndDate; // updates to last month object of response
   @tracked queriedActivityResponse = null;
+  // track params sent to /activity request
+  @tracked activityQueryParams = {
+    start: { timestamp: this.args.model.licenseStartTimestamp }, // license start on init, updates when user edits billing start month
+    end: { timestamp: this.args.model.initialEndDate }, // current date on init, updates when user queries end dates via calendar widget
+  };
 
   // SEARCH SELECT
   @tracked selectedNamespace = null;
@@ -57,11 +37,10 @@ export default class History extends Component {
   @tracked selectedAuthMethod = null;
   @tracked authMethodOptions = [];
 
-  // TEMPLATE MESSAGING
+  // TEMPLATE VIEW
+  @tracked showBillingStartModal = false;
   @tracked noActivityDate = '';
-  @tracked responseRangeDiffMessage = null;
   @tracked isLoadingQuery = false;
-  @tracked licenseStartIsCurrentMonth = this.args.model.activity?.isLicenseDateError || false;
   @tracked errorObject = null;
 
   get versionText() {
@@ -89,6 +68,25 @@ export default class History extends Component {
       parseAPITimestamp(this.getActivityResponse.startTime),
       parseAPITimestamp(this.getActivityResponse.endTime)
     );
+  }
+
+  get startTimeDiscrepancy() {
+    // show banner if startTime returned from activity log (response) is after the user's queried startTime
+    const activityStartDate = parseAPITimestamp(this.getActivityResponse.startTime);
+    const queryStartDate = parseAPITimestamp(this.startMonthTimestamp);
+    let isLicenseStart = isSameDay(queryStartDate, parseAPITimestamp(this.args.model.licenseStartTimestamp)); // change copy if query matches license (billing) start date
+    if (isAfter(activityStartDate, queryStartDate)) {
+      let message = isLicenseStart
+        ? `Your license start date is ${parseAPITimestamp(queryStartDate, 'MMMM yyyy')}. `
+        : `You requested data from ${parseAPITimestamp(queryStartDate, 'MMMM yyyy')}. `;
+      return (
+        message +
+        `We only have data from ${parseAPITimestamp(activityStartDate, 'MMMM yyyy')}, 
+      and that is what is being shown here.`
+      );
+    } else {
+      return null;
+    }
   }
 
   get upgradeVersionHistory() {
@@ -131,14 +129,14 @@ export default class History extends Component {
     if (this.upgradeDuringActivity.length === 2) {
       let firstUpgrade = this.upgradeDuringActivity[0];
       let secondUpgrade = this.upgradeDuringActivity[1];
-      let firstDate = dateFormat([firstUpgrade.timestampInstalled, 'MMM d, yyyy'], { isFormatted: true });
-      let secondDate = dateFormat([secondUpgrade.timestampInstalled, 'MMM d, yyyy'], { isFormatted: true });
+      let firstDate = parseAPITimestamp(firstUpgrade.timestampInstalled, 'MMM d, yyyy');
+      let secondDate = parseAPITimestamp(secondUpgrade.timestampInstalled, 'MMM d, yyyy');
       return `Vault was upgraded to ${firstUpgrade.id} (${firstDate}) and ${secondUpgrade.id} (${secondDate}) during this time range.`;
     } else {
       let upgrade = this.upgradeDuringActivity[0];
-      return `Vault was upgraded to ${upgrade.id} on ${dateFormat(
-        [upgrade.timestampInstalled, 'MMM d, yyyy'],
-        { isFormatted: true }
+      return `Vault was upgraded to ${upgrade.id} on ${parseAPITimestamp(
+        upgrade.timestampInstalled,
+        'MMM d, yyyy'
       )}.`;
     }
   }
@@ -160,22 +158,9 @@ export default class History extends Component {
     return ' How we count clients changed in 1.9 and we added monthly breakdowns and mount level attribution starting in 1.10. Keep this in mind when looking at the data below.';
   }
 
-  get startTimeDisplay() {
-    if (!this.startTimeFromResponse) {
-      return null;
-    }
-    let month = this.startTimeFromResponse[1];
-    let year = this.startTimeFromResponse[0];
-    return `${this.arrayOfMonths[month]} ${year}`;
-  }
-
-  get endTimeDisplay() {
-    if (!this.endTimeFromResponse) {
-      return null;
-    }
-    let month = this.endTimeFromResponse[1];
-    let year = this.endTimeFromResponse[0];
-    return `${this.arrayOfMonths[month]} ${year}`;
+  get displayStartDate() {
+    if (!this.startMonthTimestamp) return null;
+    return parseAPITimestamp(this.startMonthTimestamp, 'MMMM yyyy');
   }
 
   // GETTERS FOR RESPONSE & DATA
@@ -277,60 +262,43 @@ export default class History extends Component {
   }
 
   @action
-  async handleClientActivityQuery(month, year, dateType) {
-    this.isEditStartMonthOpen = false;
-    if (dateType === 'cancel') {
-      return;
+  async handleClientActivityQuery({ dateType, monthIdx, year }) {
+    this.showBillingStartModal = false;
+    switch (dateType) {
+      case 'cancel':
+        return;
+      case 'reset': // reset to initial start/end dates (current billing period)
+        this.activityQueryParams.start.timestamp = this.args.model.licenseStartTimestamp;
+        this.activityQueryParams.end.timestamp = this.args.model.initialEndDate;
+        break;
+      case 'startDate': // from "Edit billing start" modal
+        this.activityQueryParams.start = { monthIdx, year };
+        break;
+      case 'endDate': // selected end date from calendar widget
+        this.activityQueryParams.end = { monthIdx, year };
+        break;
+      default:
+        break;
     }
-    // clicked "Current Billing period" in the calendar widget
-    if (dateType === 'reset') {
-      this.startTimeRequested = this.args.model.startTimeFromLicense;
-      this.endTimeRequested = null;
-    }
-    // clicked "Edit" Billing start month in History which opens a modal.
-    if (dateType === 'startTime') {
-      let monthIndex = this.arrayOfMonths.indexOf(month);
-      this.startTimeRequested = [year.toString(), monthIndex]; // ['2021', 0] (e.g. January 2021)
-      this.endTimeRequested = null;
-    }
-    // clicked "Custom End Month" from the calendar-widget
-    if (dateType === 'endTime') {
-      // use the currently selected startTime for your startTimeRequested.
-      this.startTimeRequested = this.startTimeFromResponse;
-      this.endTimeRequested = [year.toString(), month]; // endTime comes in as a number/index whereas startTime comes in as a month name. Hence the difference between monthIndex and month.
-    }
-
     try {
       this.isLoadingQuery = true;
       let response = await this.store.queryRecord('clients/activity', {
-        start_time: this.startTimeRequested,
-        end_time: this.endTimeRequested,
+        start_time: this.activityQueryParams.start,
+        end_time: this.activityQueryParams.end,
       });
       if (response.id === 'no-data') {
-        // empty response (204) is the only time we want to update the displayed date with the requested time
-        this.startTimeFromResponse = this.startTimeRequested;
-        this.noActivityDate = this.startTimeDisplay;
+        // if an empty response (204) the adapter returns the queried time params (instead of the backend's activity log start/end times)
+        this.noActivityDate = `${parseAPITimestamp(response.startTime, 'MMMM yyyy')} 
+        to ${parseAPITimestamp(response.endTime, 'MMMM yyyy')}`;
       } else {
-        // note: this.startTimeDisplay (getter) is updated by the @tracked startTimeFromResponse
-        this.startTimeFromResponse = response.formattedStartTime;
-        this.endTimeFromResponse = response.formattedEndTime;
-        this.storage().setItem(INPUTTED_START_DATE, this.startTimeFromResponse);
+        // TODO cmb - right now the byMonth objects are the most consistent way to get the response's date range
+        // backend may be working to update this and have the response's time params match the activity range instead
+        const { byMonth } = response;
+        this.startMonthTimestamp = byMonth[0].timestamp;
+        this.endMonthTimestamp = byMonth[byMonth.length - 1].timestamp;
+        this.storage().setItem('vault:ui-inputted-start-date', this.getActivityResponse.startTime);
       }
       this.queriedActivityResponse = response;
-      this.licenseStartIsCurrentMonth = response.isLicenseDateError;
-      // compare if the response startTime comes after the requested startTime. If true throw a warning.
-      // only display if they selected a startTime
-      if (
-        dateType === 'startTime' &&
-        isAfter(
-          new Date(this.getActivityResponse.startTime),
-          new Date(this.startTimeRequested[0], this.startTimeRequested[1])
-        )
-      ) {
-        this.responseRangeDiffMessage = `You requested data from ${month} ${year}. We only have data from ${this.startTimeDisplay}, and that is what is being shown here.`;
-      } else {
-        this.responseRangeDiffMessage = null;
-      }
     } catch (e) {
       this.errorObject = e;
       return e;
@@ -341,11 +309,6 @@ export default class History extends Component {
 
   get hasMultipleMonthsData() {
     return this.byMonthActivityData && this.byMonthActivityData.length > 1;
-  }
-
-  @action
-  handleCurrentBillingPeriod() {
-    this.handleClientActivityQuery(0, 0, 'reset');
   }
 
   @action
@@ -369,22 +332,6 @@ export default class History extends Component {
   @action
   setAuthMethod([authMount]) {
     this.selectedAuthMethod = authMount;
-  }
-
-  // FOR START DATE MODAL
-  @action
-  selectStartMonth(month, event) {
-    this.startMonth = month;
-    // disables months if in the future
-    this.disabledYear = this.months.indexOf(month) >= this.currentMonth ? this.currentYear : null;
-    event.close();
-  }
-
-  @action
-  selectStartYear(year, event) {
-    this.startYear = year;
-    this.allowedMonthMax = year === this.currentYear ? this.currentMonth : 12;
-    event.close();
   }
 
   storage() {

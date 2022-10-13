@@ -21,8 +21,7 @@ Router.map(function () {
       this.route('mfa-setup');
       this.route('clients', function () {
         this.route('current');
-        this.route('history');
-        this.route('dashboard');
+        this.route('history'); // TODO cmb: change route to 'dashboard'
         this.route('config');
         this.route('edit');
       });
