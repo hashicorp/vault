@@ -10,13 +10,13 @@
 />
 {{outlet}}
 <Toolbar>
-  {{#if (gt this.model.certificateModel.length 0)}}
+  {{#if this.model.certificateModel.length}}
     <ToolbarFilters>
       {{! ARG TODO glimmerize the NavigateInput and refactor so you can use it in an engine }}
     </ToolbarFilters>
   {{/if}}
 </Toolbar>
-{{#if (gt this.model.certificateModel.length 0)}}
+{{#if this.model.certificateModel.length}}
   {{#each this.model.certificateModel as |pkiCertificate|}}
     <LinkedBlock
       class="list-item-row"

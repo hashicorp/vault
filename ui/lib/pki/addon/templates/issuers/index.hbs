@@ -37,7 +37,7 @@
     </BasicDropdown>
   </ToolbarActions>
 </Toolbar>
-{{#if (gt this.model.issuersModel.length 0)}}
+{{#if this.model.issuersModel.length}}
   {{#each this.model.issuersModel as |pkiIssuer|}}
     <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiIssuer.id}} @linkPrefix={{this.mountPoint}}>
       <div class="level is-mobile">

@@ -21,7 +21,7 @@
 <p class="has-padding">Below is information about the private keys used by the issuers to sign certificates. While
   certificates represent a public assertion of an identity, private keys represent the private part of that identity, a
   secret used to prove who they are and who they trust.</p>
-{{#if (gt this.model.keyModel.length 0)}}
+{{#if this.model.keyModel.length}}
   {{#each this.model.keyModel as |pkiKey|}}
     <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiKey.id}} @linkPrefix={{this.mountPoint}}>
       <div class="level is-mobile">
