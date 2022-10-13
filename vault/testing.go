@@ -1645,6 +1645,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.EnableResponseHeaderHostname = base.EnableResponseHeaderHostname
 		coreConfig.EnableResponseHeaderRaftNodeID = base.EnableResponseHeaderRaftNodeID
 
+		coreConfig.RollbackPeriod = base.RollbackPeriod
+
 		testApplyEntBaseConfig(coreConfig, base)
 	}
 	if coreConfig.ClusterName == "" {
@@ -2439,33 +2441,6 @@ func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
 		time.Sleep(100 * time.Millisecond)
 	}
 	t.Fatalf("did not complete before deadline, err: %v", err)
-}
-
-// CreateTestClusterWithRollbackPeriod lets us modify the periodic func
-// invocation time period to some other value.
-//
-// Because multiple tests in the PKI mount use this helper, we've added
-// a lock around it and created the cluster immediately in this helper.
-// This ensures the tests don't race against each other.
-var rollbackPeriodLock sync.Mutex
-
-func CreateTestClusterWithRollbackPeriod(t testing.T, newPeriod time.Duration, base *CoreConfig, opts *TestClusterOptions) *TestCluster {
-	rollbackPeriodLock.Lock()
-	defer rollbackPeriodLock.Unlock()
-
-	// Set the period
-	oldPeriod := rollbackPeriod
-
-	// Create and start a new cluster.
-	rollbackPeriod = newPeriod
-	cluster := NewTestCluster(t, base, opts)
-	cluster.Start()
-
-	// Reset the period
-	rollbackPeriod = oldPeriod
-
-	// Return the cluster.
-	return cluster
 }
 
 // MakeTestPluginDir creates a temporary directory suitable for holding plugins.
