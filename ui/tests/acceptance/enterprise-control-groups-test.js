@@ -117,10 +117,8 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
     await listPage.create();
     await editPage.createSecret(path, key, val);
   };
-  // TODO JR: This might actually be broken but I've spent too much time trying to debug so skipping for now
-  // in the application route error handler the transition object is missing the backend param for some reason
-  // this causes urlFromTransition to error in the control group service
-  skip('for v2 secrets it redirects you if you try to navigate to a Control Group restricted path', async function (assert) {
+
+  test('for v2 secrets it redirects you if you try to navigate to a Control Group restricted path', async function (assert) {
     await consoleComponent.runCommands([
       'write sys/mounts/kv-v2-mount type=kv-v2',
       'delete kv-v2-mount/metadata/foo',

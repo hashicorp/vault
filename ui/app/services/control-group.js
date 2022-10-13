@@ -114,20 +114,10 @@ export default Service.extend({
     return [returnedParams, qps];
   },
 
-  urlFromTransition(transitionObj) {
-    let transition = transitionObj.to;
-    let [params, queryParams] = this.paramsFromTransition(transition, [], {});
-    let url = this.router.urlFor(transition.name, ...params, {
-      queryParams,
-    });
-    return url.replace('/ui', '');
-  },
-
   handleError(error, transition) {
-    let { accessor, token, creation_path, creation_time, ttl } = error;
-    let url = this.urlFromTransition(transition);
-    let data = { accessor, token, creation_path, creation_time, ttl };
-    data.uiParams = { url };
+    const { accessor, token, creation_path, creation_time, ttl } = error;
+    const data = { accessor, token, creation_path, creation_time, ttl };
+    data.uiParams = { url: transition.intent.url };
     this.storeControlGroupToken(data);
     return this.router.transitionTo('vault.cluster.access.control-group-accessor', accessor);
   },
