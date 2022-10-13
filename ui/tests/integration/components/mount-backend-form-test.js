@@ -63,7 +63,7 @@ module('Integration | Component | mount backend form', function (hooks) {
     });
     const spy = sinon.spy();
     this.set('onMountSuccess', spy);
-    await render(hbs`{{mount-backend-form onMountSuccess=onMountSuccess}}`);
+    await render(hbs`{{mount-backend-form onMountSuccess=this.onMountSuccess}}`);
 
     await component.mount('approle', 'foo');
 

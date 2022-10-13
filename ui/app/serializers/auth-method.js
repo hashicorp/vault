@@ -8,7 +8,7 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
   normalize(modelClass, data) {
     // embedded records need a unique value to be stored
     // use the uuid from the auth-method as the unique id for mount-config
-    if (data.config) {
+    if (data.config && !data.config.id) {
       data.config.id = data.uuid;
     }
     return this._super(modelClass, data);

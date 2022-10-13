@@ -11,6 +11,7 @@ module('Acceptance | jwt auth method', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    localStorage.clear(); // ensure that a token isn't stored otherwise visit('/vault/auth') will redirect to secrets
     this.stub = sinon.stub();
     this.server.post(
       '/auth/:path/oidc/auth_url',

@@ -7,9 +7,8 @@ import { setupRenderingTest } from 'ember-qunit';
 import { click, render, settled } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
-import engineResolverFor from 'ember-engines/test-support/engine-resolver-for';
+import { setupEngine } from 'ember-engines/test-support';
 import { COMPUTEDS } from 'vault/models/kmip/role';
-const resolver = engineResolverFor('kmip');
 
 const flash = Service.extend({
   success: sinon.stub(),
@@ -56,20 +55,22 @@ const createModel = (options) => {
 };
 
 module('Integration | Component | edit form kmip role', function (hooks) {
-  setupRenderingTest(hooks, { resolver });
+  setupRenderingTest(hooks);
+  setupEngine(hooks, 'kmip');
 
   hooks.beforeEach(function () {
+    this.context = { owner: this.engine }; // this.engine set by setupEngine
     run(() => {
-      this.owner.unregister('service:flash-messages');
-      this.owner.register('service:flash-messages', flash);
-      this.owner.register('service:namespace', namespace);
+      this.engine.unregister('service:flash-messages');
+      this.engine.register('service:flash-messages', flash);
+      this.engine.register('service:namespace', namespace);
     });
   });
 
   test('it renders: new model', async function (assert) {
     let model = createModel({ isNew: true });
     this.set('model', model);
-    await render(hbs`<EditFormKmipRole @model={{model}} />`);
+    await render(hbs`<EditFormKmipRole @model={{this.model}} />`, this.context);
 
     assert.dom('[data-test-input="operationAll"]').isChecked('sets operationAll');
   });
@@ -77,14 +78,14 @@ module('Integration | Component | edit form kmip role', function (hooks) {
   test('it renders: operationAll', async function (assert) {
     let model = createModel({ operationAll: true });
     this.set('model', model);
-    await render(hbs`<EditFormKmipRole @model={{model}} />`);
+    await render(hbs`<EditFormKmipRole @model={{this.model}} />`, this.context);
     assert.dom('[data-test-input="operationAll"]').isChecked('sets operationAll');
   });
 
   test('it renders: operationNone', async function (assert) {
     let model = createModel({ operationNone: true });
     this.set('model', model);
-    await render(hbs`<EditFormKmipRole @model={{model}} />`);
+    await render(hbs`<EditFormKmipRole @model={{this.model}} />`, this.context);
 
     assert.dom('[data-test-input="operationNone"]').isNotChecked('sets operationNone');
   });
@@ -92,7 +93,7 @@ module('Integration | Component | edit form kmip role', function (hooks) {
   test('it renders: choose operations', async function (assert) {
     let model = createModel({ operationGet: true });
     this.set('model', model);
-    await render(hbs`<EditFormKmipRole @model={{model}} />`);
+    await render(hbs`<EditFormKmipRole @model={{this.model}} />`, this.context);
 
     assert.dom('[data-test-input="operationNone"]').isChecked('sets operationNone');
     assert.dom('[data-test-input="operationAll"]').isNotChecked('sets operationAll');
@@ -156,7 +157,7 @@ module('Integration | Component | edit form kmip role', function (hooks) {
       let model = createModel(initialState);
       this.set('model', model);
       let clickTargets = displayClicks.split(',');
-      await render(hbs`<EditFormKmipRole @model={{model}} />`);
+      await render(hbs`<EditFormKmipRole @model={{this.model}} />`, this.context);
 
       for (let clickTarget of clickTargets) {
         await click(`label[for=${clickTarget}]`);

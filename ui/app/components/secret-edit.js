@@ -34,18 +34,17 @@ export default class SecretEdit extends Component {
   @tracked isV2 = false;
   @tracked codemirrorString = null;
 
-  constructor() {
-    super(...arguments);
-    let secrets = this.args.model.secretData;
-    if (!secrets && this.args.model.selectedVersion) {
+  // fired on did-insert from render modifier
+  @action
+  createKvData(elem, [model]) {
+    if (!model.secretData && model.selectedVersion) {
       this.isV2 = true;
-      secrets = this.args.model.belongsTo('selectedVersion').value().secretData;
+      model.secretData = model.belongsTo('selectedVersion').value().secretData;
     }
-    const data = KVObject.create({ content: [] }).fromJSON(secrets);
-    this.secretData = data;
-    this.codemirrorString = data.toJSONString();
+    this.secretData = KVObject.create({ content: [] }).fromJSON(model.secretData);
+    this.codemirrorString = this.secretData.toJSONString();
     if (this.wizard.featureState === 'details' && this.args.mode === 'create') {
-      let engine = this.args.model.backend.includes('kv') ? 'kv' : this.args.model.backend;
+      const engine = model.backend.includes('kv') ? 'kv' : model.backend;
       this.wizard.transitionFeatureMachine('details', 'CONTINUE', engine);
     }
   }

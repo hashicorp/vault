@@ -22,19 +22,19 @@ module('Integration | Component | wrap ttl', function (hooks) {
   });
 
   test('it renders', async function (assert) {
-    await render(hbs`{{wrap-ttl onChange=(action onChange)}}`);
+    await render(hbs`{{wrap-ttl onChange=(action this.onChange)}}`);
     assert.strictEqual(this.lastOnChangeCall, '30m', 'calls onChange with 30m default on first render');
     assert.dom('label[for="toggle-Wrapresponse"] .ttl-picker-label').hasText('Wrap response');
   });
 
   test('it nulls out value when you uncheck wrapResponse', async function (assert) {
-    await render(hbs`{{wrap-ttl onChange=(action onChange)}}`);
+    await render(hbs`{{wrap-ttl onChange=(action this.onChange)}}`);
     await click('[data-test-toggle-label="Wrap response"]');
     assert.strictEqual(this.lastOnChangeCall, null, 'calls onChange with null');
   });
 
   test('it sends value changes to onChange handler', async function (assert) {
-    await render(hbs`{{wrap-ttl onChange=(action onChange)}}`);
+    await render(hbs`{{wrap-ttl onChange=(action this.onChange)}}`);
     // for testing purposes we need to input unit first because it keeps seconds value
     await fillIn('[data-test-select="ttl-unit"]', 'h');
     assert.strictEqual(this.lastOnChangeCall, '1800s', 'calls onChange correctly on time input');

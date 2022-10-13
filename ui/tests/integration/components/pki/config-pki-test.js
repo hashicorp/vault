@@ -31,7 +31,7 @@ module('Integration | Component | config pki', function (hooks) {
   const setupAndRender = async function (context, config, section = 'tidy') {
     context.set('config', config);
     context.set('section', section);
-    await context.render(hbs`<Pki::ConfigPki @section={{section}} @config={{config}} />`);
+    await context.render(hbs`<Pki::ConfigPki @section={{this.section}} @config={{this.config}} />`);
   };
 
   test('it renders tidy section', async function (assert) {
@@ -101,7 +101,9 @@ module('Integration | Component | config pki', function (hooks) {
       })
     );
     this.set('section', section);
-    await render(hbs`<Pki::ConfigPki @section={{section}} @config={{config}} @onRefresh={{onRefresh}} />`);
+    await render(
+      hbs`<Pki::ConfigPki @section={{this.section}} @config={{this.config}} @onRefresh={{this.onRefresh}} />`
+    );
 
     component.submit();
   });
@@ -121,7 +123,9 @@ module('Integration | Component | config pki', function (hooks) {
       })
     );
     this.set('section', section);
-    await render(hbs`<Pki::ConfigPki @section={{section}} @config={{config}} @onRefresh={{onRefresh}} />`);
+    await render(
+      hbs`<Pki::ConfigPki @section={{this.section}} @config={{this.config}} @onRefresh={{this.onRefresh}} />`
+    );
     component.submit();
   });
 

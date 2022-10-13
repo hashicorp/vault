@@ -37,7 +37,7 @@ module('Integration | Component | date-dropdown', function (hooks) {
     assert.dom('[data-test-date-dropdown-submit]').hasText('Submit', 'button renders default text');
     await render(hbs`
       <div class="is-flex-align-baseline">
-        <DateDropdown @submitText={{text}}/>
+        <DateDropdown @submitText={{this.text}}/>
       </div>
     `);
     assert.dom('[data-test-date-dropdown-submit]').hasText('Save', 'button renders passed in text');
@@ -52,10 +52,10 @@ module('Integration | Component | date-dropdown', function (hooks) {
     this.set('parentAction', parentAction);
 
     await render(hbs`
-    <div class="is-flex-align-baseline">
-    <DateDropdown 
-    @handleDateSelection={{parentAction}} />
-    </div>
+      <div class="is-flex-align-baseline">
+      <DateDropdown 
+        @handleDateSelection={{this.parentAction}} />
+      </div>
     `);
 
     const monthDropdown = this.element.querySelector('[data-test-popup-menu-trigger="month"]');

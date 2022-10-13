@@ -173,7 +173,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
   test('it can mount a KV 2 secret engine with config metadata', async function (assert) {
     const enginePath = `kv-${new Date().getTime()}`;
-    let maxVersion = 101;
+    let maxVersion = '101';
     await mountSecrets.visit();
     await click('[data-test-mount-type="kv"]');
 

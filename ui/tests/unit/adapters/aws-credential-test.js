@@ -78,7 +78,7 @@ module('Unit | Adapter | aws credential', function (hooks) {
         expectedMethod,
         `${description} uses the correct http verb: ${expectedMethod}`
       );
-      assert.strictEqual(requestBody, JSON.stringify(expectedRequestBody));
+      assert.strictEqual(requestBody, expectedRequestBody ? JSON.stringify(expectedRequestBody) : null);
     });
   });
 });

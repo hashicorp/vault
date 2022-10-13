@@ -13,7 +13,7 @@ module('Integration | Component | ttl picker', function (hooks) {
   });
 
   test('it renders error on non-number input', async function (assert) {
-    await render(hbs`<TtlPicker @onChange={{onChange}} />`);
+    await render(hbs`<TtlPicker @onChange={{this.onChange}} />`);
 
     let callCount = this.changeSpy.callCount;
     await fillIn('[data-test-ttl-value]', 'foo');
@@ -24,7 +24,7 @@ module('Integration | Component | ttl picker', function (hooks) {
   });
 
   test('it shows 30s for invalid duration initialValue input', async function (assert) {
-    await render(hbs`<TtlPicker @onChange={{onChange}} @initialValue={{'invalid'}} />`);
+    await render(hbs`<TtlPicker @onChange={{this.onChange}} @initialValue="invalid" />`);
     assert.dom('[data-test-ttl-value]').hasValue('30', 'sets 30 as the default');
   });
 });

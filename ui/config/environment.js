@@ -68,16 +68,6 @@ module.exports = function (environment) {
   }
   if (environment !== 'production') {
     ENV.APP.DEFAULT_PAGE_SIZE = 15;
-    ENV.contentSecurityPolicyHeader = 'Content-Security-Policy';
-    ENV.contentSecurityPolicyMeta = true;
-    ENV.contentSecurityPolicy = {
-      'connect-src': ["'self'"],
-      'img-src': ["'self'", 'data:'],
-      'font-src': ["'self'"],
-      'form-action': ["'none'"],
-      'script-src': ["'self'"],
-      'style-src': ["'unsafe-inline'", "'self'"],
-    };
   }
 
   ENV.welcomeMessage = process.env.UI_AUTH_WELCOME;

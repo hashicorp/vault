@@ -20,7 +20,7 @@ module('Unit | Model | secret-engine', function (hooks) {
     run(() => {
       model = run(() =>
         this.owner.lookup('service:store').createRecord('secret-engine', {
-          options: { version: 2 },
+          version: 2,
           type: 'kv',
         })
       );
@@ -34,7 +34,7 @@ module('Unit | Model | secret-engine', function (hooks) {
     run(() => {
       model = run(() =>
         this.owner.lookup('service:store').createRecord('secret-engine', {
-          options: { version: 2 },
+          version: 2,
           type: 'kv',
         })
       );

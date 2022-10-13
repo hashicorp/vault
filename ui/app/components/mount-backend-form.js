@@ -95,7 +95,8 @@ export default class MountBackendForm extends Component {
 
   @task
   @waitFor
-  *mountBackend() {
+  *mountBackend(event) {
+    event.preventDefault();
     const mountModel = this.mountModel;
     const { type, path } = mountModel;
     // only submit form if validations pass
