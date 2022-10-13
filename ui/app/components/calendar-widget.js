@@ -22,13 +22,18 @@ import { addYears, isSameYear, subYears } from 'date-fns';
  */
 class CalendarWidget extends Component {
   currentDate = new Date();
-  startDate = parseAPITimestamp(this.args.startTimestamp);
-  endDate = parseAPITimestamp(this.args.endTimestamp);
   @tracked calendarDisplayDate = this.currentDate; // init to current date, updates when user clicks on calendar chevrons
   @tracked showCalendar = false;
   @tracked tooltipTarget = null;
   @tracked tooltipText = null;
 
+  // both date getters return a date object
+  get startDate() {
+    return parseAPITimestamp(this.args.startTimestamp);
+  }
+  get endDate() {
+    return parseAPITimestamp(this.args.endTimestamp);
+  }
   get getDisplayYear() {
     return this.calendarDisplayDate.getFullYear();
   }
@@ -37,7 +42,7 @@ class CalendarWidget extends Component {
   }
   get disablePastYear() {
     // calendar widget should only go as far back as the passed in start time
-    return isSameYear(this.calendarDisplayDate, parseAPITimestamp(this.args.startTimestamp));
+    return isSameYear(this.calendarDisplayDate, this.startDate);
   }
   get widgetMonths() {
     const startYear = this.startDate.getFullYear();
