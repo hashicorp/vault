@@ -905,11 +905,13 @@ func TestAutoRebuild(t *testing.T) {
 		},
 		// See notes below about usage of /sys/raw for reading cluster
 		// storage without barrier encryption.
-		EnableRaw: true,
+		EnableRaw:      true,
+		RollbackPeriod: newPeriod,
 	}
-	cluster := vault.CreateTestClusterWithRollbackPeriod(t, newPeriod, coreConfig, &vault.TestClusterOptions{
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
+	cluster.Start()
 	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 
