@@ -772,7 +772,7 @@ type CoreConfig struct {
 
 	EffectiveSDKVersion string
 
-	RollbackPeriod   time.Duration
+	RollbackPeriod time.Duration
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
