@@ -637,6 +637,8 @@ type Core struct {
 	// effectiveSDKVersion contains the SDK version that standby nodes should use when
 	// heartbeating with the active node. Default to the current SDK version.
 	effectiveSDKVersion string
+
+	rollbackPeriod time.Duration
 }
 
 func (c *Core) HAState() consts.HAState {
@@ -769,6 +771,8 @@ type CoreConfig struct {
 	DisableSSCTokens bool
 
 	EffectiveSDKVersion string
+
+	RollbackPeriod time.Duration
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
