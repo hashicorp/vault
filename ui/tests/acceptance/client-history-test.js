@@ -196,7 +196,7 @@ module('Acceptance | clients history tab', function (hooks) {
     await click(SELECTORS.rangeDropdown);
     await click('[data-test-show-calendar]');
     if (parseInt(find('[data-test-display-year]').innerText) < NEW_DATE.getFullYear()) {
-      await click('[data-test-future-year]');
+      await click('[data-test-next-year]');
     }
     await click(find(`[data-test-calendar-month=${ARRAY_OF_MONTHS[LAST_MONTH.getMonth() - 2]}]`));
 
@@ -219,7 +219,7 @@ module('Acceptance | clients history tab', function (hooks) {
     await click(SELECTORS.rangeDropdown);
     await click('[data-test-show-calendar]');
     if (parseInt(find('[data-test-display-year]').innerText) < NEW_DATE.getFullYear()) {
-      await click('[data-test-future-year]');
+      await click('[data-test-next-year]');
     }
     await click(find(`[data-test-calendar-month=${ARRAY_OF_MONTHS[UPGRADE_DATE.getMonth()]}]`));
 

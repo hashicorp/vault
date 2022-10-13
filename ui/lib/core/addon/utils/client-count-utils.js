@@ -2,7 +2,7 @@ import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { compareAsc } from 'date-fns';
 
 export const formatByMonths = (monthsArray) => {
-  // the months array will always include a timestamp of the month and either new/total client data or counts = null
+  // the monthsArray will always include a timestamp of the month and either new/total client data or counts = null
   if (!Array.isArray(monthsArray)) return monthsArray;
 
   const sortedPayload = sortMonthsByTimestamp(monthsArray);
@@ -15,11 +15,13 @@ export const formatByMonths = (monthsArray) => {
       let newCounts = m.new_clients ? flattenDataset(m.new_clients) : {};
       return {
         month,
+        timestamp: m.timestamp,
         ...totalCounts,
         namespaces: formatByNamespace(m.namespaces) || [],
         namespaces_by_key: namespaceArrayToObject(totalClientsByNamespace, newClientsByNamespace, month),
         new_clients: {
           month,
+          timestamp: m.timestamp,
           ...newCounts,
           namespaces: formatByNamespace(m.new_clients?.namespaces) || [],
         },

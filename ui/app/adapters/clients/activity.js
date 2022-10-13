@@ -1,44 +1,36 @@
-import Application from '../application';
+import ApplicationAdapter from '../application';
 import { formatRFC3339 } from 'date-fns';
 
-export default Application.extend({
-  // Since backend converts the timezone to UTC, sending the first (1) as start or end date can cause the month to change.
-  // To mitigate this impact of timezone conversion, hard coding the dates to avoid month change.
-  formatTimeParams(query) {
-    let { start_time, end_time } = query;
-    // check if it's an array, if it is, it's coming from an action like selecting a new startTime or new EndTime
-    if (Array.isArray(start_time)) {
-      let startYear = Number(start_time[0]);
-      let startMonth = Number(start_time[1]);
-      start_time = formatRFC3339(new Date(startYear, startMonth, 10));
-    }
-    if (end_time) {
-      if (Array.isArray(end_time)) {
-        let endYear = Number(end_time[0]);
-        let endMonth = Number(end_time[1]);
-        end_time = formatRFC3339(new Date(endYear, endMonth, 20));
-      }
+export default class ActivityAdapter extends ApplicationAdapter {
+  // format when params are objects { timestamp: null, monthIdx: 0, year: 2022 }
+  formatQueryParams({ start_time, end_time }) {
+    // javascript localizes new Date() objects, but we don't want a timezone attached to keep metrics data in UTC
+    // hard code 10th and 20th and backend will convert to first or end of month respectively
+    start_time = start_time.timestamp
+      ? start_time.timestamp
+      : formatRFC3339(new Date(start_time.year, start_time.monthIdx, 10));
 
-      return { start_time, end_time };
-    } else {
-      return { start_time };
-    }
-  },
+    end_time = end_time.timestamp
+      ? end_time.timestamp // override backend returning end of month prior, return current month
+      : formatRFC3339(new Date(end_time.year, end_time.monthIdx, 20));
+    return { start_time, end_time };
+  }
 
-  // query comes in as either: {start_time: '2021-03-17T00:00:00Z'} or
-  // {start_time: Array(2), end_time: Array(2)}
-  // end_time: (2) ['2022', 0]
-  // start_time: (2) ['2021', 2]
   queryRecord(store, type, query) {
     let url = `${this.buildURL()}/internal/counters/activity`;
-    // check if start and/or end times are in RFC3395 format, if not convert with timezone UTC/zulu.
-    let queryParams = this.formatTimeParams(query);
+    let queryParams =
+      typeof query.start_time === 'string' && typeof query.end_time === 'string'
+        ? query
+        : this.formatQueryParams(query);
     if (queryParams) {
       return this.ajax(url, 'GET', { data: queryParams }).then((resp) => {
         let response = resp || {};
         response.id = response.request_id || 'no-data';
+        if (response.id === 'no-data') {
+          response = { ...response, ...queryParams };
+        }
         return response;
       });
     }
-  },
-});
+  }
+}

@@ -23,6 +23,7 @@ export const parseAPITimestamp = (timestamp, style) => {
   return format(date, style);
 };
 
+// TODO CMB remove this
 // convert ISO timestamp '2021-03-21T00:00:00Z' to ['2021', 2]
 // (e.g. 2021 March, month is zero indexed) (used by calendar widget)
 export const parseRFC3339 = (timestamp) => {

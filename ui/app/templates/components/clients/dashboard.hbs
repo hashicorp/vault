@@ -8,28 +8,19 @@
     {{this.versionText.label}}
   </h2>
   <div data-test-start-date-editor class="is-flex-align-baseline">
-    {{#if this.startTimeDisplay}}
-      <p class="is-size-6" data-test-date-display>{{this.startTimeDisplay}}</p>
-      <button type="button" class="button is-link" {{on "click" (fn (mut this.isEditStartMonthOpen) true)}}>
+    {{#if this.displayStartDate}}
+      <p class="is-size-6" data-test-date-display>{{this.displayStartDate}}</p>
+      <button type="button" class="button is-link" {{on "click" (fn (mut this.showBillingStartModal) true)}}>
         Edit
       </button>
     {{else}}
-      <DateDropdown @handleDateSelection={{this.handleClientActivityQuery}} @name={{"startTime"}} @submitText="Save" />
+      <DateDropdown @handleSubmit={{this.handleClientActivityQuery}} @dateType="startDate" @submitText="Save" />
     {{/if}}
   </div>
   <p class="is-8 has-text-grey has-bottom-margin-xl">
     {{this.versionText.description}}
   </p>
-  {{#if this.licenseStartIsCurrentMonth}}
-    <EmptyState
-      @title="No data for this billing period"
-      @subTitle="Your billing period has just begun, so there is no data yet. Data will be available here on the first of next month."
-      @message="To view data from a previous billing period, you can enter your previous billing start date."
-      @bottomBorder={{true}}
-    >
-      <DateDropdown @handleDateSelection={{this.handleClientActivityQuery}} @name={{"startTime"}} @submitText="View" />
-    </EmptyState>
-  {{else if (eq @model.config.queriesAvailable false)}}
+  {{#if (eq @model.config.queriesAvailable true)}}
     {{#if (eq @model.config.enabled "On")}}
       <EmptyState
         @title={{concat "No monthly history " (if this.noActivityDate "from ") this.noActivityDate}}
@@ -67,12 +58,9 @@
         <Toolbar data-test-clients-filter-bar>
           <ToolbarFilters>
             <CalendarWidget
-              @arrayOfMonths={{this.arrayOfMonths}}
-              @endTimeDisplay={{this.endTimeDisplay}}
-              @endTimeFromResponse={{this.endTimeFromResponse}}
-              @handleClientActivityQuery={{this.handleClientActivityQuery}}
-              @handleCurrentBillingPeriod={{this.handleCurrentBillingPeriod}}
-              @startTimeDisplay={{this.startTimeDisplay}}
+              @startTimestamp={{this.startMonthTimestamp}}
+              @endTimestamp={{this.endMonthTimestamp}}
+              @selectMonth={{this.handleClientActivityQuery}}
             />
             {{#if this.namespaceArray}}
               <SearchSelect
@@ -103,11 +91,11 @@
         </Toolbar>
       </div>
 
-      {{#if (or this.upgradeDuringActivity this.responseRangeDiffMessage)}}
+      {{#if (or this.upgradeDuringActivity this.startTimeDiscrepancy)}}
         <AlertBanner @type="warning" @title="Warning">
-          <ul class={{if (and this.versionUpdateText this.responseRangeDiffMessage) "bullet"}}>
-            {{#if this.responseRangeDiffMessage}}
-              <li>{{this.responseRangeDiffMessage}}</li>
+          <ul class={{if (and this.versionUpdateText this.startTimeDiscrepancy) "bullet"}}>
+            {{#if this.startTimeDiscrepancy}}
+              <li>{{this.startTimeDiscrepancy}}</li>
             {{/if}}
             {{#if this.upgradeDuringActivity}}
               <li>
@@ -164,99 +152,38 @@
           {{/if}}
         {{/if}}
       {{/if}}
-    {{else if (and (not @model.startTimeFromLicense) (not this.startTimeFromResponse))}}
+    {{else if (and (not @model.licenseStartTimestamp) (not this.startMonthTimestamp))}}
       {{! Empty state for no billing/license start date }}
       <EmptyState @title={{this.versionText.title}} @message={{this.versionText.message}} />
     {{else}}
       <EmptyState
         @title={{concat "No data received " (if this.noActivityDate "from ") this.noActivityDate}}
-        @message="No data exists for that query period. Try searching again."
-      />
+        @message="No data exists for that query period. Select a different billing start date above, or choose a different end date here:"
+      >
+        <DateDropdown @handleSubmit={{this.handleClientActivityQuery}} @dateType="endDate" @submitText="View" />
+      </EmptyState>
     {{/if}}
   {{/if}}
 
   {{! BILLING START DATE MODAL }}
+
   <Modal
     @title="Edit start month"
-    @onClose={{action (mut this.isEditStartMonthOpen) false}}
-    @isActive={{this.isEditStartMonthOpen}}
+    @onClose={{action (mut this.showBillingStartModal) false}}
+    @isActive={{this.showBillingStartModal}}
     @showCloseButton={{true}}
   >
-    <section class="modal-card-body">
+    <section class="modal-card-custom has-padding-m">
       <p class="has-bottom-margin-s">
         {{this.versionText.description}}
       </p>
-      <p class="has-bottom-margin-s"><strong>{{this.versionText.label}}</strong></p>
-      <div class="modal-radio-button">
-        <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
-          <D.Trigger
-            data-test-popup-menu-trigger="month"
-            class={{concat "toolbar-link" (if D.isOpen " is-active")}}
-            @htmlTag="button"
-          >
-            {{or this.startMonth "Month"}}
-            <Chevron @direction="down" @isButton={{true}} />
-          </D.Trigger>
-          <D.Content @defaultClass="popup-menu-content is-wide">
-            <nav class="box menu scroll">
-              <ul class="menu-list">
-                {{#each this.months as |month index|}}
-                  <button
-                    type="button"
-                    class="button link"
-                    data-test-date-modal-month={{month}}
-                    disabled={{if (lt index this.allowedMonthMax) false true}}
-                    {{on "click" (fn this.selectStartMonth month D.actions)}}
-                  >
-                    {{month}}
-                  </button>
-                {{/each}}
-              </ul>
-            </nav>
-          </D.Content>
-        </BasicDropdown>
-        <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
-          <D.Trigger
-            data-test-popup-menu-trigger="year"
-            class={{concat "toolbar-link" (if D.isOpen " is-active")}}
-            @htmlTag="button"
-          >
-            {{or this.startYear "Year"}}
-            <Chevron @direction="down" @isButton={{true}} />
-          </D.Trigger>
-          <D.Content @defaultClass="popup-menu-content is-wide">
-            <nav class="box menu">
-              <ul class="menu-list">
-                {{#each this.years as |year|}}
-                  <button
-                    type="button"
-                    class="button link"
-                    data-test-date-modal-year={{year}}
-                    disabled={{if (eq year this.disabledYear) true false}}
-                    {{on "click" (fn this.selectStartYear year D.actions)}}
-                  >
-                    {{year}}
-                  </button>
-                {{/each}}
-              </ul>
-            </nav>
-          </D.Content>
-        </BasicDropdown>
-      </div>
+      <p><strong>{{this.versionText.label}}</strong></p>
     </section>
-    <footer class="modal-card-foot modal-card-foot-outlined">
-      <button
-        data-test-modal-save
-        type="button"
-        class="button is-primary"
-        disabled={{or (if (and this.startMonth this.startYear) false true)}}
-        {{on "click" (fn this.handleClientActivityQuery this.startMonth this.startYear "startTime")}}
-      >
-        Save
-      </button>
-      <button type="button" class="button is-secondary" {{on "click" (fn this.handleClientActivityQuery 0 0 "cancel")}}>
-        Cancel
-      </button>
-    </footer>
+    <DateDropdown
+      @handleSubmit={{this.handleClientActivityQuery}}
+      @dateType="startDate"
+      @submitText="Save"
+      @handleCancel={{fn this.handleClientActivityQuery (hash dateType="cancel")}}
+    />
   </Modal>
 </div>
