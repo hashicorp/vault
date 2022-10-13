@@ -1,5 +1,4 @@
 import Route from '@ember/routing/route';
-import RSVP from 'rsvp';
 import getStorage from 'vault/lib/token-storage';
 
 // TODO CMB: change class and file name to dashboard
@@ -28,12 +27,12 @@ export default class HistoryRoute extends Route {
     const { config, versionHistory } = this.modelFor('vault.cluster.clients');
     let licenseStart = await this.getLicenseStartTime();
     let activity = await this.getActivity(licenseStart);
-    return RSVP.hash({
+    return {
       config,
       versionHistory,
       activity,
       licenseStartTimestamp: licenseStart,
       initialEndDate: this.CURRENT_DATE,
-    });
+    };
   }
 }

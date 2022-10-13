@@ -72,17 +72,20 @@ export default class History extends Component {
 
   get startTimeDiscrepancy() {
     // show banner if startTime returned from activity log (response) is after the user's queried startTime
-    const activityStartDate = parseAPITimestamp(this.getActivityResponse.startTime);
-    const queryStartDate = parseAPITimestamp(this.startMonthTimestamp);
-    let isLicenseStart = isSameDay(queryStartDate, parseAPITimestamp(this.args.model.licenseStartTimestamp)); // change copy if query matches license (billing) start date
-    if (isAfter(activityStartDate, queryStartDate)) {
-      let message = isLicenseStart
-        ? `Your license start date is ${parseAPITimestamp(queryStartDate, 'MMMM yyyy')}. `
-        : `You requested data from ${parseAPITimestamp(queryStartDate, 'MMMM yyyy')}. `;
+    const activityStartDateObject = parseAPITimestamp(this.getActivityResponse.startTime);
+    const queryStartDateObject = parseAPITimestamp(this.startMonthTimestamp);
+
+    const isLicenseStart = isSameDay(
+      queryStartDateObject,
+      parseAPITimestamp(this.args.model.licenseStartTimestamp)
+    );
+    if (isAfter(activityStartDateObject, queryStartDateObject)) {
+      const message = isLicenseStart ? 'Your license start date is ' : 'You requested data from ';
       return (
         message +
-        `We only have data from ${parseAPITimestamp(activityStartDate, 'MMMM yyyy')}, 
-      and that is what is being shown here.`
+        `${parseAPITimestamp(this.startMonthTimestamp, 'MMMM yyyy')}. 
+        We only have data from ${parseAPITimestamp(this.getActivityResponse.startTime, 'MMMM yyyy')}, 
+        and that is what is being shown here.`
       );
     } else {
       return null;
