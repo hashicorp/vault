@@ -37,6 +37,13 @@ export default class OidcProviderForm extends Component {
     model.issuer = model.isNew ? '' : parseURL(model.issuer).origin;
   }
 
+  // function passed to search select
+  renderInfoTooltip(selection, dropdownOptions) {
+    // if a client has been deleted it will not exist in dropdownOptions (response from search select's query)
+    let clientExists = !!dropdownOptions.findBy('clientId', selection);
+    return !clientExists ? 'The application associated with this client_id no longer exists' : false;
+  }
+
   @action
   handleClientSelection(selection) {
     // if array then coming from search-select component, set selection as model clients

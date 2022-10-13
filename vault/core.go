@@ -96,6 +96,10 @@ const (
 	ForwardSSCTokenToActive = "new_token"
 
 	WrapperTypeHsmAutoDeprecated = wrapping.WrapperType("hsm-auto")
+
+	// undoLogsAreSafeStoragePath is a storage path that we write once we know undo logs are
+	// safe, so we don't have to keep checking all the time.
+	undoLogsAreSafeStoragePath = "core/raft/undo_logs_are_safe"
 )
 
 var (
@@ -630,6 +634,10 @@ type Core struct {
 	// standby shouldn't rely on the stored version timestamps being present.
 	versionHistory map[string]VaultVersion
 
+	// effectiveSDKVersion contains the SDK version that standby nodes should use when
+	// heartbeating with the active node. Default to the current SDK version.
+	effectiveSDKVersion string
+
 	rollbackPeriod time.Duration
 }
 
@@ -761,6 +769,9 @@ type CoreConfig struct {
 
 	// DisableSSCTokens is used to disable the use of server side consistent tokens
 	DisableSSCTokens bool
+
+	EffectiveSDKVersion string
+
 	RollbackPeriod   time.Duration
 }
 
@@ -843,6 +854,11 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		conf.NumExpirationWorkers = numExpirationWorkersDefault
 	}
 
+	effectiveSDKVersion := conf.EffectiveSDKVersion
+	if effectiveSDKVersion == "" {
+		effectiveSDKVersion = version.GetVersion().Version
+	}
+
 	// Setup the core
 	c := &Core{
 		entCore:              entCore{},
@@ -908,6 +924,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		enableResponseHeaderRaftNodeID: conf.EnableResponseHeaderRaftNodeID,
 		mountMigrationTracker:          &sync.Map{},
 		disableSSCTokens:               conf.DisableSSCTokens,
+		effectiveSDKVersion:            effectiveSDKVersion,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -2239,6 +2256,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		return err
 	}
 
+	c.metricsCh = make(chan struct{})
+	go c.emitMetricsActiveNode(c.metricsCh)
+
 	return nil
 }
 
@@ -2296,9 +2316,6 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		// surprised by this at the next need to unseal.
 		seal.StartHealthCheck()
 	}
-
-	c.metricsCh = make(chan struct{})
-	go c.emitMetrics(c.metricsCh)
 
 	// This is intentionally the last block in this function. We want to allow
 	// writes just before allowing client requests, to ensure everything has

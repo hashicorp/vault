@@ -6,13 +6,25 @@ on:
   # being inherited from the caller.
   workflow_call:
     inputs:
+      artifact-build-date:
+        required: false
+        type: string
       artifact-name:
+        required: true
+        type: string
+      artifact-revision:
+        required: true
+        type: string
+      artifact-version:
         required: true
         type: string
 
 env:
   PKG_NAME: vault
+  ARTIFACT_BUILD_DATE: ${{ inputs.artifact-build-date }}
   ARTIFACT_NAME: ${{ inputs.artifact-name }}
+  ARTIFACT_REVISION: ${{ inputs.artifact-revision }}
+  ARTIFACT_VERSION: ${{ inputs.artifact-version }}
 
 jobs:
   # Read Enos scenario matrix file based on artifact-name input to test
@@ -88,6 +100,9 @@ jobs:
           ENOS_VAR_aws_ssh_private_key_path: ./support/private_key.pem
           ENOS_VAR_tfc_api_token: ${{ secrets.TF_API_TOKEN }}
           ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache
+          ENOS_VAR_vault_build_date: ${{ env.ARTIFACT_BUILD_DATE }}
+          ENOS_VAR_vault_product_version: ${{ env.ARTIFACT_VERSION }}
+          ENOS_VAR_vault_revision: ${{ env.ARTIFACT_REVISION }}
           ENOS_VAR_vault_bundle_path: ./support/vault.zip
         run: |
           enos scenario run --timeout 60m0s --chdir ./enos ${{ matrix.scenario }}
@@ -100,6 +115,9 @@ jobs:
           ENOS_VAR_aws_ssh_private_key_path: ./support/private_key.pem
           ENOS_VAR_tfc_api_token: ${{ secrets.TF_API_TOKEN }}
           ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache
+          ENOS_VAR_vault_build_date: ${{ env.ARTIFACT_BUILD_DATE }}
+          ENOS_VAR_vault_product_version: ${{ env.ARTIFACT_VERSION }}
+          ENOS_VAR_vault_revision: ${{ env.ARTIFACT_REVISION }}
           ENOS_VAR_vault_bundle_path: ./support/vault.zip
         run: |
           enos scenario run --timeout 60m0s --chdir ./enos ${{ matrix.scenario }}
@@ -114,6 +132,9 @@ jobs:
           ENOS_VAR_aws_ssh_private_key_path: ./support/private_key.pem
           ENOS_VAR_tfc_api_token: ${{ secrets.TF_API_TOKEN }}
           ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache
+          ENOS_VAR_vault_build_date: ${{ env.ARTIFACT_BUILD_DATE }}
+          ENOS_VAR_vault_product_version: ${{ env.ARTIFACT_VERSION }}
+          ENOS_VAR_vault_revision: ${{ env.ARTIFACT_REVISION }}
           ENOS_VAR_vault_bundle_path: ./support/vault.zip
         run: |
           enos scenario destroy --timeout 60m0s --chdir ./enos ${{ matrix.scenario }}

@@ -508,11 +508,16 @@ func TestDynamicSystemView(c *Core, ns *namespace.Namespace) *dynamicSystemView 
 		me.namespace = ns
 	}
 
-	return &dynamicSystemView{c, me}
+	return &dynamicSystemView{c, me, c.perfStandby}
 }
 
 // TestAddTestPlugin registers the testFunc as part of the plugin command to the
 // plugin catalog. If provided, uses tmpDir as the plugin directory.
+// NB: The test func you pass in MUST be in the same package as the parent test,
+// or the test func won't be compiled into the test binary being run and the output
+// will be something like:
+// stderr (ignored by go-plugin): "testing: warning: no tests to run"
+// stdout: "PASS"
 func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.PluginType, version string, testFunc string, env []string, tempDir string) {
 	file, err := os.Open(os.Args[0])
 	if err != nil {
@@ -1212,9 +1217,10 @@ type TestClusterOptions struct {
 	LicensePrivateKey     ed25519.PrivateKey
 
 	// this stores the vault version that should be used for each core config
-	VersionMap        map[int]string
-	RedundancyZoneMap map[int]string
-	KVVersion         string
+	VersionMap             map[int]string
+	RedundancyZoneMap      map[int]string
+	KVVersion              string
+	EffectiveSDKVersionMap map[int]string
 }
 
 var DefaultNumCores = 3
@@ -1904,6 +1910,11 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 	if coreConfig.Logger == nil || (opts != nil && opts.Logger != nil) {
 		localConfig.Logger = testCluster.Logger.Named(fmt.Sprintf("core%d", idx))
 	}
+
+	if opts != nil && opts.EffectiveSDKVersionMap != nil {
+		localConfig.EffectiveSDKVersion = opts.EffectiveSDKVersionMap[idx]
+	}
+
 	if opts != nil && opts.PhysicalFactory != nil {
 		pfc := opts.PhysicalFactoryConfig
 		if pfc == nil {

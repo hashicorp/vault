@@ -2539,7 +2539,7 @@ func TestBackend_ConsulSignLeafWithLegacyRole(t *testing.T) {
 
 	signedCert := parseCert(t, certAsPem)
 	rootCert := parseCert(t, rootCaPem)
-	requireSignedBy(t, signedCert, rootCert.PublicKey)
+	requireSignedBy(t, signedCert, rootCert)
 }
 
 func TestBackend_SignSelfIssued(t *testing.T) {
@@ -4097,7 +4097,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 
 	rootCaCert := parseCert(t, rootCert)
 	intermediaryCaCert := parseCert(t, intermediateCert)
-	requireSignedBy(t, intermediaryCaCert, rootCaCert.PublicKey)
+	requireSignedBy(t, intermediaryCaCert, rootCaCert)
 	intermediateCaChain := intermediateSignedData["ca_chain"].([]string)
 
 	require.Equal(t, parseCert(t, intermediateCaChain[0]), intermediaryCaCert, "intermediate signed cert should have been part of ca_chain")
@@ -4191,7 +4191,7 @@ func runFullCAChainTest(t *testing.T, keyType string) {
 	issuedCrt := parseCert(t, issueCrtAsPem)
 
 	// Verify that the certificates are signed by the intermediary CA key...
-	requireSignedBy(t, issuedCrt, intermediaryCaCert.PublicKey)
+	requireSignedBy(t, issuedCrt, intermediaryCaCert)
 
 	// Test that we can request that the root ca certificate not appear in the ca_chain field
 	resp, err = CBWrite(b_ext, s_ext, "issue/example", map[string]interface{}{
@@ -5617,6 +5617,10 @@ func TestBackend_VerifyIssuerUpdateDefaultsMatchCreation(t *testing.T) {
 	resp, err = CBRead(b, s, "issuer/default")
 	requireSuccessNonNilResponse(t, resp, err, "failed reading default issuer")
 	preUpdateValues := resp.Data
+
+	// This field gets reset during issuer update to the empty string
+	// (meaning Go will auto-detect the rev-sig-algo).
+	preUpdateValues["revocation_signature_algorithm"] = ""
 
 	resp, err = CBWrite(b, s, "issuer/default", map[string]interface{}{})
 	requireSuccessNonNilResponse(t, resp, err, "failed updating default issuer with no values")

@@ -105,6 +105,11 @@ scenario "smoke" {
     }
   }
 
+  step "get_local_metadata" {
+    skip_step = matrix.builder != "local"
+    module    = module.get_local_metadata
+  }
+
   step "create_vault_cluster" {
     module = module.vault_cluster
     depends_on = [
@@ -128,6 +133,26 @@ scenario "smoke" {
       vault_local_artifact_path = local.bundle_path
       vault_license             = matrix.edition != "oss" ? step.read_license.license : null
       vpc_id                    = step.create_vpc.vpc_id
+    }
+  }
+
+  step "verify_vault_version" {
+    module = module.vault_verify_version
+    depends_on = [
+      step.create_vault_cluster,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_instances       = step.create_vault_cluster.vault_instances
+      vault_edition         = matrix.edition
+      vault_product_version = matrix.builder == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_revision        = matrix.builder == "local" ? step.get_local_metadata.revision : var.vault_revision
+      vault_build_date      = matrix.builder == "local" ? step.get_local_metadata.build_date : var.vault_build_date
+      vault_root_token      = step.create_vault_cluster.vault_root_token
     }
   }
 

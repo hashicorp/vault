@@ -122,6 +122,21 @@ $ make test TEST=./vault
 ...
 ```
 
+### Importing Vault
+
+This repository publishes two libraries that may be imported by other projects:
+`github.com/hashicorp/vault/api` and `github.com/hashicorp/vault/sdk`.
+
+Note that this repository also contains Vault (the product), and as with most Go
+projects, Vault uses Go modules to manage its dependencies. The mechanism to do
+that is the [go.mod](./go.mod) file. As it happens, the presence of that file
+also makes it theoretically possible to import Vault as a dependency into other
+projects. Some other projects have made a practice of doing so in order to take
+advantage of testing tooling that was developed for testing Vault itself. This
+is not, and has never been, a supported way to use the Vault project. We aren't 
+likely to fix bugs relating to failure to import `github.com/hashicorp/vault` 
+into your project.
+
 ### Acceptance Tests
 
 Vault has comprehensive [acceptance tests](https://en.wikipedia.org/wiki/Acceptance_testing)

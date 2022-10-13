@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"hash"
 	"net/http"
-	"os"
 	"path"
 	"path/filepath"
 	"sort"
@@ -474,9 +473,12 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		return nil, err
 	}
 
-	pluginVersion, err := getVersion(d)
+	pluginVersion, builtin, err := getVersion(d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
+	}
+	if builtin {
+		return logical.ErrorResponse("version %q is not allowed because 'builtin' is a reserved metadata identifier", pluginVersion), nil
 	}
 
 	sha256 := d.Get("sha256").(string)
@@ -547,7 +549,7 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 		return nil, err
 	}
 
-	pluginVersion, err := getVersion(d)
+	pluginVersion, _, err := getVersion(d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -593,9 +595,12 @@ func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, _ *logica
 		return logical.ErrorResponse("missing plugin name"), nil
 	}
 
-	pluginVersion, err := getVersion(d)
+	pluginVersion, builtin, err := getVersion(d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
+	}
+	if builtin {
+		return logical.ErrorResponse("version %q cannot be deleted", pluginVersion), nil
 	}
 
 	var resp *logical.Response
@@ -621,18 +626,19 @@ func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, _ *logica
 	return resp, nil
 }
 
-func getVersion(d *framework.FieldData) (string, error) {
-	version := d.Get("version").(string)
+func getVersion(d *framework.FieldData) (version string, builtin bool, err error) {
+	version = d.Get("version").(string)
 	if version != "" {
 		semanticVersion, err := semver.NewSemver(version)
 		if err != nil {
-			return "", fmt.Errorf("version %q is not a valid semantic version: %w", version, err)
+			return "", false, fmt.Errorf("version %q is not a valid semantic version: %w", version, err)
 		}
 
 		metadataIdentifiers := strings.Split(semanticVersion.Metadata(), ".")
 		for _, identifier := range metadataIdentifiers {
 			if identifier == "builtin" {
-				return "", fmt.Errorf("version %q is not allowed because 'builtin' is a reserved metadata identifier", version)
+				builtin = true
+				break
 			}
 		}
 
@@ -641,7 +647,7 @@ func getVersion(d *framework.FieldData) (string, error) {
 		version = "v" + semanticVersion.String()
 	}
 
-	return version, nil
+	return version, builtin, nil
 }
 
 func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -4615,42 +4621,10 @@ func (b *SystemBackend) rotateBarrierKey(ctx context.Context) error {
 
 func (b *SystemBackend) handleHAStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// We're always the leader if we're handling this request.
-	hostname, err := os.Hostname()
+	nodes, err := b.Core.getHAMembers()
 	if err != nil {
 		return nil, err
 	}
-
-	leader := HAStatusNode{
-		Hostname:       hostname,
-		APIAddress:     b.Core.redirectAddr,
-		ClusterAddress: b.Core.ClusterAddr(),
-		ActiveNode:     true,
-		Version:        version.GetVersion().Version,
-	}
-
-	if rb := b.Core.getRaftBackend(); rb != nil {
-		leader.UpgradeVersion = rb.EffectiveVersion()
-		leader.RedundancyZone = rb.RedundancyZone()
-	}
-
-	nodes := []HAStatusNode{leader}
-
-	for _, peerNode := range b.Core.GetHAPeerNodesCached() {
-		lastEcho := peerNode.LastEcho
-		nodes = append(nodes, HAStatusNode{
-			Hostname:       peerNode.Hostname,
-			APIAddress:     peerNode.APIAddress,
-			ClusterAddress: peerNode.ClusterAddress,
-			LastEcho:       &lastEcho,
-			Version:        peerNode.Version,
-			UpgradeVersion: peerNode.UpgradeVersion,
-			RedundancyZone: peerNode.RedundancyZone,
-		})
-	}
-
-	sort.Slice(nodes, func(i, j int) bool {
-		return nodes[i].APIAddress < nodes[j].APIAddress
-	})
 
 	return &logical.Response{
 		Data: map[string]interface{}{

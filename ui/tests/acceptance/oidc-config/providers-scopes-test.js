@@ -166,8 +166,8 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
   });
 
   // CRUD SCOPE + CRUD PROVIDER
-  test('it creates a scope, then adds it to a new a provider', async function (assert) {
-    assert.expect(27);
+  test('it creates a scope, and creates a provider with that scope', async function (assert) {
+    assert.expect(28);
 
     //* clear out test state
     await clearRecord(this.store, 'oidc/scope', 'test-scope');
@@ -283,6 +283,12 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       currentRouteName(),
       'vault.cluster.access.oidc.providers.provider.details',
       'navigates back to provider details after updating'
+    );
+    const providerModel = this.store.peekRecord('oidc/provider', 'test-provider');
+    assert.propEqual(
+      providerModel.allowedClientIds,
+      ['whaT7KB0C3iBH1l3rXhd5HPf0n6vXU0s'],
+      'provider saves client_id (not id or name) in allowed_client_ids param'
     );
     await click(SELECTORS.providerClientsTab);
     assert

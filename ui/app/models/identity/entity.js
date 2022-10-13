@@ -22,6 +22,7 @@ let Model = IdentityModel.extend({
   policies: attr({
     label: 'Policies',
     editType: 'searchSelect',
+    isSectionHeader: true,
     fallbackComponent: 'string-list',
     models: ['policy/acl', 'policy/rgp'],
   }),

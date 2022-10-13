@@ -122,7 +122,7 @@ module('Integration | Component | search select with modal', function (hooks) {
     await typeInSearch('entity-1-new');
     assert.equal(
       component.options[0].text,
-      'Create new entity: entity-1-new',
+      'Click to create new entity: entity-1-new',
       'dropdown gives option to create new option'
     );
 

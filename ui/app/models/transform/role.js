@@ -22,11 +22,11 @@ const ModelExport = Model.extend({
   }),
   transformations: attr('array', {
     editType: 'searchSelect',
+    isSectionHeader: true,
     fallbackComponent: 'string-list',
     label: 'Transformations',
     models: ['transform'],
     onlyAllowExisting: true,
-    subLabel: 'Transformations',
     subText: 'Select which transformations this role will have access to. It must already exist.',
   }),
 

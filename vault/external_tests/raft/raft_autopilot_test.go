@@ -422,7 +422,9 @@ func TestRaft_VotersStayVoters(t *testing.T) {
 		InmemCluster:         true,
 		EnableAutopilot:      true,
 		PhysicalFactoryConfig: map[string]interface{}{
-			"performance_multiplier": "5",
+			"performance_multiplier":       "5",
+			"autopilot_reconcile_interval": "300ms",
+			"autopilot_update_interval":    "100ms",
 		},
 		VersionMap: map[int]string{
 			0: version.Version,

@@ -8,8 +8,8 @@ import { run } from '@ember/runloop';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import waitForError from 'vault/tests/helpers/wait-for-error';
-
 import searchSelect from '../../pages/components/search-select';
+import { isWildcardString } from 'vault/helpers/is-wildcard-string';
 
 const component = create(searchSelect);
 
@@ -66,6 +66,14 @@ module('Integration | Component | search select', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
+    const mockFunctionFromParent = (selection, dropdownOptions) => {
+      let modelExists =
+        !!dropdownOptions.findBy('id', selection) ||
+        !!dropdownOptions.findBy('uuid', selection) ||
+        isWildcardString([selection]);
+      return !modelExists ? 'The model associated with this id no longer exists' : false;
+    };
+    this.set('renderInfoTooltip', mockFunctionFromParent);
     run(() => {
       this.owner.unregister('service:store');
       this.owner.register('service:store', storeService);
@@ -76,7 +84,13 @@ module('Integration | Component | search select', function (hooks) {
     const models = ['policy/acl'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    await render(hbs`{{search-select label="foo" models=models onChange=onChange}}`);
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+      />
+    `);
 
     assert.ok(component.hasLabel, 'it renders the label');
     assert.equal(component.labelText, 'foo', 'the label text is correct');
@@ -88,7 +102,13 @@ module('Integration | Component | search select', function (hooks) {
     const models = ['policy/acl'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    await render(hbs`{{search-select label="foo" models=models onChange=onChange}}`);
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+      />
+    `);
 
     await clickTrigger();
     await settled();
@@ -100,28 +120,69 @@ module('Integration | Component | search select', function (hooks) {
     );
   });
 
+  test('it shows passed in options when trigger is clicked', async function (assert) {
+    const options = [
+      { name: 'namespace45', id: 'displayedName' },
+      { name: 'name24', id: '1241' },
+    ];
+    this.set('options', options);
+    this.set('onChange', sinon.spy());
+    this.set('inputValue', ['third-option']);
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @options={{this.options}}
+        @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
+      />
+    `);
+    await clickTrigger();
+    await settled();
+    assert.equal(component.options.length, 2, 'shows all options');
+    assert.equal(
+      component.options.objectAt(0).text,
+      component.selectedOptionText,
+      'first object in list is focused'
+    );
+  });
+
   test('it filters options and adds option to create new item when text is entered', async function (assert) {
     const models = ['identity/entity'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    await render(hbs`{{search-select label="foo" models=models onChange=onChange}}`);
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+      />
+    `);
 
     await clickTrigger();
     await settled();
     assert.equal(component.options.length, 3, 'shows all options');
+    assert.equal(component.options.objectAt(0).text, 'seven 7', 'first option renders');
     await typeInSearch('n');
     assert.equal(component.options.length, 3, 'list still shows three options, including the add option');
     await typeInSearch('ni');
     assert.equal(component.options.length, 2, 'list shows two options, including the add option');
     await typeInSearch('nine');
     assert.equal(component.options.length, 1, 'list shows one option');
+    assert.equal(component.options.objectAt(0).text, 'nine 9', 'renders only matching option');
   });
 
   test('it counts options when wildcard is used and displays the count', async function (assert) {
     const models = ['transform/transformation'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    await render(hbs`{{search-select label="foo" models=models onChange=onChange wildcardLabel="role" }}`);
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @wildcardLabel="role"
+      />
+    `);
 
     await clickTrigger();
     await settled();
@@ -130,13 +191,25 @@ module('Integration | Component | search select', function (hooks) {
     await component.selectOption();
     await settled();
     assert.dom('[data-test-count="2"]').exists('correctly counts with wildcard filter and shows the count');
+    assert.equal(
+      component.selectedOptions.objectAt(0).text,
+      '*bar* includes 2 roles',
+      'renders correct selected text'
+    );
   });
 
   test('it behaves correctly if new items not allowed', async function (assert) {
     const models = ['identity/entity'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    await render(hbs`{{search-select label="foo" models=models onChange=onChange disallowNewItems=true}}`);
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @disallowNewItems={{true}}
+      />
+    `);
 
     await clickTrigger();
     assert.equal(component.options.length, 3, 'shows all options');
@@ -151,8 +224,15 @@ module('Integration | Component | search select', function (hooks) {
     const models = ['identity/entity'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    await render(hbs`{{search-select label="foo" models=models onChange=onChange}}`);
-
+    await render(hbs`
+    <div class='box'>
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+      />
+    </div>
+    `);
     await clickTrigger();
     await settled();
     assert.equal(component.options.length, 3, 'shows all options');
@@ -171,9 +251,16 @@ module('Integration | Component | search select', function (hooks) {
     this.set('models', models);
     this.set('onChange', sinon.spy());
     this.set('inputValue', ['8']);
-    await render(hbs`{{search-select label="foo" inputValue=inputValue models=models onChange=onChange}}`);
-
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
+      />
+    `);
     assert.equal(component.selectedOptions.length, 1, 'there is 1 selected option');
+    assert.equal(component.selectedOptions.objectAt(0).text, 'eight 8', 'selected option renders');
     await clickTrigger();
     await settled();
     assert.equal(component.options.length, 2, 'shows two options');
@@ -184,7 +271,14 @@ module('Integration | Component | search select', function (hooks) {
     this.set('models', models);
     this.set('onChange', sinon.spy());
     this.set('inputValue', ['8']);
-    await render(hbs`{{search-select label="foo" inputValue=inputValue models=models onChange=onChange}}`);
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
+      />
+    `);
 
     assert.equal(component.selectedOptions.length, 1, 'there is 1 selected option');
     await component.deleteButtons.objectAt(0).click();
@@ -195,14 +289,24 @@ module('Integration | Component | search select', function (hooks) {
     await clickTrigger();
     await settled();
     assert.equal(component.options.length, 3, 'shows all options');
+    assert.equal(
+      component.options.objectAt(2).text,
+      'eight 8',
+      'previously selected option returns to dropdown and renders properly'
+    );
   });
 
   test('it adds created item to list items on create and removes without adding back to options on delete', async function (assert) {
     const models = ['identity/entity'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    await render(hbs`{{search-select label="foo" models=models onChange=onChange}}`);
-
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+      />
+    `);
     await clickTrigger();
     await settled();
     assert.equal(component.options.length, 3, 'shows all options');
@@ -227,20 +331,46 @@ module('Integration | Component | search select', function (hooks) {
     const models = ['policy/rgp'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    await render(
-      hbs`{{search-select label="foo" inputValue=inputValue models=models fallbackComponent="string-list" onChange=onChange}}`
-    );
-
+    await render(hbs`
+      <SearchSelect
+        @label="Policy"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @fallbackComponent="string-list"
+      />
+    `);
     assert.ok(component.hasStringList);
+  });
+
+  test('it uses pre-populates fallback component with inputValue if endpoint 403s', async function (assert) {
+    const models = ['policy/rgp'];
+    this.set('models', models);
+    this.set('inputValue', ['1']);
+    await render(hbs`
+      <SearchSelect
+        @label="Policy"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
+        @fallbackComponent="string-list"
+      />
+    `);
+    assert.dom('[data-test-string-list-input="0"]').hasValue('1');
   });
 
   test('it shows no results if endpoint 404s', async function (assert) {
     const models = ['test'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    await render(
-      hbs`{{search-select label="foo" inputValue=inputValue models=models fallbackComponent="string-list" onChange=onChange}}`
-    );
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
+        @fallbackComponent="string-list"
+      />
+    `);
 
     await clickTrigger();
     await settled();
@@ -248,51 +378,96 @@ module('Integration | Component | search select', function (hooks) {
     assert.equal(component.options.objectAt(0).text, 'Type to search', 'text of option shows Type to search');
   });
 
-  test('it shows add suggestion if there are no options', async function (assert) {
+  test('it shows add suggestion if there are no models', async function (assert) {
     const models = [];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    await render(
-      hbs`{{search-select label="foo" inputValue=inputValue models=models fallbackComponent="string-list" onChange=onChange}}`
-    );
-
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
+        @fallbackComponent="string-list"
+      />
+    `);
     await clickTrigger();
     await settled();
-
-    await typeInSearch('new item');
-    assert.equal(component.options.objectAt(0).text, 'Add new foo: new item', 'shows the create suggestion');
+    assert.equal(component.options.length, 1);
+    assert.equal(
+      component.options.objectAt(0).text,
+      'Type to search',
+      'no options in dropdown, just Type to search prompt'
+    );
+    await typeInSearch('new-model');
+    assert.equal(
+      component.options.objectAt(0).text,
+      'Click to add new item: new-model',
+      'shows the create suggestion'
+    );
   });
 
-  test('it shows items not in the returned response', async function (assert) {
-    const models = ['test'];
+  test('it shows selected items not in the returned response and if one model 404s', async function (assert) {
+    const models = ['test', 'policy/acl'];
     this.set('models', models);
-    this.set('inputValue', ['test', 'two']);
-    await render(
-      hbs`{{search-select label="foo" inputValue=inputValue models=models fallbackComponent="string-list" onChange=onChange}}`
+    this.set('inputValue', ['test-1', 'test-2']);
+    this.set('onChange', sinon.spy());
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
+        @fallbackComponent="string-list"
+      />
+    `);
+    assert.equal(component.selectedOptions.objectAt(0).text, 'test-1', 'renders first selected option');
+    assert.equal(component.selectedOptions.objectAt(1).text, 'test-2', 'renders second selected option');
+    await clickTrigger();
+    assert.equal(component.options.objectAt(0).text, '1', 'renders options from successful query');
+    await typeInSearch('new-item');
+    await component.selectOption();
+    assert.equal(component.selectedOptions.objectAt(2).text, 'new-item', 'renders newly added item');
+    assert.ok(
+      this.onChange.calledWith(['test-1', 'test-2', 'new-item']),
+      'onChange called with all three items'
     );
-
-    assert.equal(component.selectedOptions.length, 2, 'renders inputOptions as selectedOptions');
   });
 
   test('it shows both name and smaller id for identity endpoints', async function (assert) {
     const models = ['identity/entity'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    await render(hbs`{{search-select label="foo" inputValue=inputValue models=models onChange=onChange}}`);
-
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
+      />
+    `);
     await clickTrigger();
-    assert.equal(component.options.length, 3, 'shows all options');
-    assert.equal(component.smallOptionIds.length, 3, 'shows the smaller id text and the name');
+    assert.equal(component.options.length, 3, 'shows three options');
+    assert.equal(component.options.objectAt(0).text, 'seven 7', 'renders correct dropdown text');
+    assert.equal(component.smallOptionIds.length, 3, 'shows 3 smaller id text and the name');
   });
 
   test('it does not show name and smaller id for non-identity endpoints', async function (assert) {
     const models = ['policy/acl'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
-    await render(hbs`{{search-select label="foo" inputValue=inputValue models=models onChange=onChange}}`);
-
+    await render(hbs`
+    <SearchSelect
+    @label="foo"
+    @models={{this.models}}
+    @onChange={{this.onChange}}
+    @inputValue={{this.inputValue}}
+    @fallbackComponent="string-list"
+    />
+    `);
     await clickTrigger();
     assert.equal(component.options.length, 3, 'shows all options');
+    assert.equal(component.options.objectAt(0).text, '1', 'renders just id');
     assert.equal(component.smallOptionIds.length, 0, 'only shows the regular sized id');
   });
 
@@ -301,9 +476,34 @@ module('Integration | Component | search select', function (hooks) {
     this.set('models', models);
     this.set('onChange', sinon.spy());
     let promise = waitForError();
-    render(hbs`{{search-select label="foo" inputValue=inputValue models=models onChange=onChange}}`);
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
+      />
+    `);
     let err = await promise;
     assert.ok(err.message.includes('internal server error'), 'it throws an internal server error');
+  });
+
+  test('it queries multiple models', async function (assert) {
+    const models = ['identity/entity', 'policy/acl'];
+    this.set('models', models);
+    this.set('onChange', sinon.spy());
+
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+      />
+    `);
+    await clickTrigger();
+    assert.equal(component.options.length, 6, 'shows options from both models');
+    assert.equal(component.options.objectAt(0).text, 'seven 7', 'first dropdown item renders');
+    assert.equal(component.options.objectAt(5).text, '3 3', 'last dropdown item renders');
   });
 
   test('it returns array with objects instead of strings if passObject=true', async function (assert) {
@@ -311,8 +511,14 @@ module('Integration | Component | search select', function (hooks) {
     this.set('models', models);
     this.set('onChange', sinon.spy());
     this.set('passObject', true);
-    await render(hbs`{{search-select label="foo" models=models onChange=onChange passObject=passObject}}`);
-
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @models={{this.models}}
+        @onChange={{this.onChange}}
+        @passObject={{this.passObject}}
+      />
+    `);
     await clickTrigger();
     await settled();
     // First select existing option
@@ -345,7 +551,6 @@ module('Integration | Component | search select', function (hooks) {
     this.set('onChange', spy);
     this.set('objectKeys', ['id', 'uuid']);
     await render(hbs`
-    <div class="box">
       <SearchSelect
         @label="foo"
         @models={{this.models}}
@@ -353,7 +558,6 @@ module('Integration | Component | search select', function (hooks) {
         @passObject={{true}}
         @objectKeys={{this.objectKeys}}
       />
-    </div>
     `);
 
     await clickTrigger();
@@ -401,7 +605,6 @@ module('Integration | Component | search select', function (hooks) {
     this.set('onChange', spy);
     this.set('objectKeys', objectKeys);
     await render(hbs`
-    <div class="box">
       <SearchSelect
         @label="foo"
         @models={{this.models}}
@@ -409,7 +612,6 @@ module('Integration | Component | search select', function (hooks) {
         @passObject={{true}}
         @objectKeys={{this.objectKeys}}
       />
-    </div>
     `);
 
     await clickTrigger();
@@ -444,14 +646,12 @@ module('Integration | Component | search select', function (hooks) {
     this.set('onChange', spy);
     this.set('objectKeys', objectKeys);
     await render(hbs`
-    <div class="box">
       <SearchSelect
         @label="foo"
         @models={{this.models}}
         @onChange={{this.onChange}}
         @objectKeys={{this.objectKeys}}
       />
-    </div>
     `);
 
     await clickTrigger();
@@ -474,7 +674,6 @@ module('Integration | Component | search select', function (hooks) {
     this.set('onChange', spy);
     this.set('objectKeys', objectKeys);
     await render(hbs`
-    <div class="box">
       <SearchSelect
         @label="foo"
         @models={{this.models}}
@@ -482,12 +681,10 @@ module('Integration | Component | search select', function (hooks) {
         @passObject={{true}}
         @objectKeys={{this.objectKeys}}
       />
-    </div>
     `);
 
     await clickTrigger();
     await settled();
-
     // First select existing option
     await component.selectOption();
     assert.equal(component.selectedOptions.length, 1, 'there is 1 selected option');
@@ -512,7 +709,6 @@ module('Integration | Component | search select', function (hooks) {
     this.set('onChange', spy);
     this.set('objectKeys', objectKeys);
     await render(hbs`
-    <div class="box">
       <SearchSelect
         @label="foo"
         @models={{this.models}}
@@ -520,9 +716,7 @@ module('Integration | Component | search select', function (hooks) {
         @passObject={{true}}
         @objectKeys={{this.objectKeys}}
       />
-    </div>
     `);
-
     await clickTrigger();
     await settled();
     assert.equal(component.options.objectAt(0).text, '1', 'first option renders just id as name');
@@ -565,14 +759,12 @@ module('Integration | Component | search select', function (hooks) {
     this.set('onChange', spy);
     this.set('objectKeys', objectKeys);
     await render(hbs`
-    <div class="box">
       <SearchSelect
         @label="foo"
         @models={{this.models}}
         @onChange={{this.onChange}}
         @objectKeys={{this.objectKeys}}
       />
-    </div>
     `);
 
     await clickTrigger();
@@ -608,12 +800,11 @@ module('Integration | Component | search select', function (hooks) {
         @onChange={{this.onChange}}
         @objectKeys={{this.objectKeys}}
         @inputValue={{this.inputValue}}
-        @renderInfoTooltip={{true}}
+        @renderInfoTooltip={{this.renderInfoTooltip}}
       />
       `);
-
     assert.equal(component.selectedOptions.length, 2, 'there are two selected options');
-    assert.dom('[data-test-selected-option="0"]').hasText('model-a');
+    assert.dom('[data-test-selected-option="0"]').hasText('model-a a123');
     assert.dom('[data-test-selected-option="1"]').hasText('non-existent-model');
     assert
       .dom('[data-test-selected-option="0"] [data-test-component="info-tooltip"]')
@@ -641,7 +832,7 @@ module('Integration | Component | search select', function (hooks) {
         @objectKeys={{this.objectKeys}}
         @inputValue={{this.inputValue}}
         @passObject={{true}}
-        @renderInfoTooltip={{true}}
+        @renderInfoTooltip={{this.renderInfoTooltip}}
       />
     `);
 
@@ -671,7 +862,7 @@ module('Integration | Component | search select', function (hooks) {
         @onChange={{this.onChange}}
         @inputValue={{this.inputValue}}
         @passObject={{true}}
-        @renderInfoTooltip={{true}}
+        @renderInfoTooltip={{this.renderInfoTooltip}}
       />
     `);
 
@@ -701,7 +892,7 @@ module('Integration | Component | search select', function (hooks) {
         @onChange={{this.onChange}}
         @inputValue={{this.inputValue}}
         @passObject={{false}}
-        @renderInfoTooltip={{true}}
+        @renderInfoTooltip={{this.renderInfoTooltip}}
       />
     `);
     assert.equal(component.selectedOptions.length, 3, 'there are three selected options');
@@ -719,7 +910,7 @@ module('Integration | Component | search select', function (hooks) {
       .doesNotExist('does not render info tooltip for wildcard option');
   });
 
-  test('it does not render an info tooltip beside selection if does not match a record returned from query and not passed @renderInfoTooltip', async function (assert) {
+  test('it does not render an info tooltip beside selection if not passed @renderInfoTooltip', async function (assert) {
     const models = ['some/model'];
     const spy = sinon.spy();
     const inputValue = ['model-a-id', 'non-existent-model', 'wildcard*'];

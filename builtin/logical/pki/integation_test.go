@@ -2,6 +2,13 @@ package pki
 
 import (
 	"context"
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
+	"fmt"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -295,6 +302,59 @@ func TestIntegration_SetSignedWithBackwardsPemBundles(t *testing.T) {
 	require.NoError(t, err, "failed issuing a leaf cert from int ca")
 	require.NotNil(t, resp, "got nil response issuing a leaf cert from int ca")
 	require.False(t, resp.IsError(), "got an error issuing a leaf cert from int ca: %#v", resp)
+}
+
+func TestIntegration_CSRGeneration(t *testing.T) {
+	t.Parallel()
+	b, s := createBackendWithStorage(t)
+	testCases := []struct {
+		keyType               string
+		usePss                bool
+		keyBits               int
+		sigBits               int
+		expectedPublicKeyType crypto.PublicKey
+		expectedSignature     x509.SignatureAlgorithm
+	}{
+		{"rsa", false, 2048, 0, &rsa.PublicKey{}, x509.SHA256WithRSA},
+		{"rsa", false, 2048, 384, &rsa.PublicKey{}, x509.SHA384WithRSA},
+		// Add back once https://github.com/golang/go/issues/45990 is fixed.
+		// {"rsa", true, 2048, 0, &rsa.PublicKey{}, x509.SHA256WithRSAPSS},
+		// {"rsa", true, 2048, 512, &rsa.PublicKey{}, x509.SHA512WithRSAPSS},
+		{"ec", false, 224, 0, &ecdsa.PublicKey{}, x509.ECDSAWithSHA256},
+		{"ec", false, 256, 0, &ecdsa.PublicKey{}, x509.ECDSAWithSHA256},
+		{"ec", false, 384, 0, &ecdsa.PublicKey{}, x509.ECDSAWithSHA384},
+		{"ec", false, 521, 0, &ecdsa.PublicKey{}, x509.ECDSAWithSHA512},
+		{"ec", false, 521, 224, &ecdsa.PublicKey{}, x509.ECDSAWithSHA512}, // We ignore signature_bits for ec
+		{"ed25519", false, 0, 0, ed25519.PublicKey{}, x509.PureEd25519},   // We ignore both fields for ed25519
+	}
+	for _, tc := range testCases {
+		keyTypeName := tc.keyType
+		if tc.usePss {
+			keyTypeName = tc.keyType + "-pss"
+		}
+		testName := fmt.Sprintf("%s-%d-%d", keyTypeName, tc.keyBits, tc.sigBits)
+		t.Run(testName, func(t *testing.T) {
+			resp, err := CBWrite(b, s, "intermediate/generate/internal", map[string]interface{}{
+				"common_name":    "myint.com",
+				"key_type":       tc.keyType,
+				"key_bits":       tc.keyBits,
+				"signature_bits": tc.sigBits,
+				"use_pss":        tc.usePss,
+			})
+			requireSuccessNonNilResponse(t, resp, err)
+			requireFieldsSetInResp(t, resp, "csr")
+
+			csrString := resp.Data["csr"].(string)
+			pemBlock, _ := pem.Decode([]byte(csrString))
+			require.NotNil(t, pemBlock, "failed to parse returned csr pem block")
+			csr, err := x509.ParseCertificateRequest(pemBlock.Bytes)
+			require.NoError(t, err, "failed parsing certificate request")
+
+			require.Equal(t, tc.expectedSignature, csr.SignatureAlgorithm,
+				"Expected %s, got %s", tc.expectedSignature.String(), csr.SignatureAlgorithm.String())
+			require.IsType(t, tc.expectedPublicKeyType, csr.PublicKey)
+		})
+	}
 }
 
 func genTestRootCa(t *testing.T, b *backend, s logical.Storage) (issuerID, keyID) {

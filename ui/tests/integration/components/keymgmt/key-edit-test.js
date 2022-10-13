@@ -75,4 +75,13 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
     assert.dom('[data-test-tab="Details"]').doesNotExist('Details tab does not exist');
     assert.dom('[data-test-tab="Versions"]').doesNotExist('Versions tab does not exist');
   });
+
+  test('it defaults to keyType rsa-2048', async function (assert) {
+    assert.expect(1);
+    const store = this.owner.lookup('service:store');
+    this.model = store.createRecord('keymgmt/key');
+    this.set('mode', 'create');
+    await render(hbs`<Keymgmt::KeyEdit @model={{model}} @mode={{mode}} /><div id="modal-wormhole" />`);
+    assert.dom('[data-test-input="type"]').hasValue('rsa-2048', 'Has type rsa-2048 by default');
+  });
 });
