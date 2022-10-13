@@ -6,7 +6,7 @@ export default create({
   customEndMonthBtn: clickable('[data-test-show-calendar]'),
   menuToggle: clickable('[data-test-popup-menu-trigger="true"]'),
   showsCalendar: isPresent('[data-test-calendar-widget-container]'),
-
+  dateRangeTrigger: '[data-test-popup-menu-trigger="true"]',
   async openCalendar() {
     await this.menuToggle();
     await this.customEndMonthBtn();
