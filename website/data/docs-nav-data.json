@@ -1398,6 +1398,10 @@
     "path": "partnerships"
   },
   {
+    "title": "Vault Interoperability Matrix",
+    "path": "interoperability-matrix"
+  },
+  {
     "title": "Troubleshoot",
     "href": "https://learn.hashicorp.com/tutorials/vault/troubleshooting-vault"
   },
