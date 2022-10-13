@@ -38,7 +38,7 @@ const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 export default class SecretCreateOrUpdate extends Component {
-  // @tracked codemirrorString = null;
+  @tracked codemirrorString = null;
   @tracked error = null;
   @tracked secretPaths = null;
   @tracked pathWhiteSpaceWarning = false;
