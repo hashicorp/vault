@@ -1048,6 +1048,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.reloadFuncsLock.Unlock()
 	conf.ReloadFuncs = &c.reloadFuncs
 
+	c.rollbackPeriod = conf.RollbackPeriod
+	if conf.RollbackPeriod == 0 {
+		c.rollbackPeriod = time.Minute
+	}
+
 	// All the things happening below this are not required in
 	// recovery mode
 	if c.recoveryMode {
