@@ -1,6 +1,6 @@
 import ApplicationSerializer from '../application';
 
-export default ApplicationSerializer.extend({
+export default class VersionHistorySerializer extends ApplicationSerializer {
   normalizeItems(payload) {
     if (payload.data.keys && Array.isArray(payload.data.keys)) {
       return payload.data.keys.map((key) => {
@@ -9,5 +9,5 @@ export default ApplicationSerializer.extend({
         return model;
       });
     }
-  },
-});
+  }
+}

@@ -23,6 +23,8 @@ const LICENSE_START = startOfMonth(subMonths(NEW_DATE, 6));
 // upgrade happened 1 month after license start
 const UPGRADE_DATE = addMonths(LICENSE_START, 1);
 
+// TODO cmb update test and file name
+
 module('Acceptance | clients history tab', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);

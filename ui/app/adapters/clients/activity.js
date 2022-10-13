@@ -11,7 +11,7 @@ export default class ActivityAdapter extends ApplicationAdapter {
       : formatRFC3339(new Date(start_time.year, start_time.monthIdx, 10));
 
     end_time = end_time.timestamp
-      ? end_time.timestamp // override backend returning end of month prior, return current month
+      ? end_time.timestamp // TODO: currently override backend returning end of month prior, return current month this behavior may change
       : formatRFC3339(new Date(end_time.year, end_time.monthIdx, 20));
     return { start_time, end_time };
   }

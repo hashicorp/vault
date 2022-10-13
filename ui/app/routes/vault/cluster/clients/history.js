@@ -26,7 +26,7 @@ export default class HistoryRoute extends Route {
 
   async model() {
     const { config, versionHistory } = this.modelFor('vault.cluster.clients');
-    let licenseStart = '2022-10-08T00:00:00Z'; // await this.getLicenseStartTime();
+    let licenseStart = await this.getLicenseStartTime();
     let activity = await this.getActivity(licenseStart);
     return RSVP.hash({
       config,
