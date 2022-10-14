@@ -251,7 +251,11 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 			if pc.Permissions.ControlGroup != nil {
 				if len(pc.Permissions.ControlGroup.Factors) > 0 {
 					if existingPerms.ControlGroup == nil {
-						existingPerms.ControlGroup = pc.Permissions.ControlGroup
+						cg, err := pc.Permissions.ControlGroup.Clone()
+						if err != nil {
+							return nil, err
+						}
+						existingPerms.ControlGroup = cg
 					} else {
 						for _, authz := range pc.Permissions.ControlGroup.Factors {
 							existingPerms.ControlGroup.Factors = append(existingPerms.ControlGroup.Factors, authz)
