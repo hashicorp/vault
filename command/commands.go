@@ -126,6 +126,8 @@ const (
 	flagNameAllowedManagedKeys = "allowed-managed-keys"
 	// flagNamePluginVersion selects what version of a plugin should be used.
 	flagNamePluginVersion = "plugin-version"
+	// flagNameDisableRedirects is used to prevent the client from honoring a single redirect as a response to a request
+	flagNameDisableRedirects = "disable-redirects"
 )
 
 var (

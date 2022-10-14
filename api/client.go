@@ -33,29 +33,30 @@ import (
 )
 
 const (
-	EnvVaultAddress       = "VAULT_ADDR"
-	EnvVaultAgentAddr     = "VAULT_AGENT_ADDR"
-	EnvVaultCACert        = "VAULT_CACERT"
-	EnvVaultCACertBytes   = "VAULT_CACERT_BYTES"
-	EnvVaultCAPath        = "VAULT_CAPATH"
-	EnvVaultClientCert    = "VAULT_CLIENT_CERT"
-	EnvVaultClientKey     = "VAULT_CLIENT_KEY"
-	EnvVaultClientTimeout = "VAULT_CLIENT_TIMEOUT"
-	EnvVaultSRVLookup     = "VAULT_SRV_LOOKUP"
-	EnvVaultSkipVerify    = "VAULT_SKIP_VERIFY"
-	EnvVaultNamespace     = "VAULT_NAMESPACE"
-	EnvVaultTLSServerName = "VAULT_TLS_SERVER_NAME"
-	EnvVaultWrapTTL       = "VAULT_WRAP_TTL"
-	EnvVaultMaxRetries    = "VAULT_MAX_RETRIES"
-	EnvVaultToken         = "VAULT_TOKEN"
-	EnvVaultMFA           = "VAULT_MFA"
-	EnvRateLimit          = "VAULT_RATE_LIMIT"
-	EnvHTTPProxy          = "VAULT_HTTP_PROXY"
-	EnvVaultProxyAddr     = "VAULT_PROXY_ADDR"
-	HeaderIndex           = "X-Vault-Index"
-	HeaderForward         = "X-Vault-Forward"
-	HeaderInconsistent    = "X-Vault-Inconsistent"
-	TLSErrorString        = "This error usually means that the server is running with TLS disabled\n" +
+	EnvVaultAddress          = "VAULT_ADDR"
+	EnvVaultAgentAddr        = "VAULT_AGENT_ADDR"
+	EnvVaultCACert           = "VAULT_CACERT"
+	EnvVaultCACertBytes      = "VAULT_CACERT_BYTES"
+	EnvVaultCAPath           = "VAULT_CAPATH"
+	EnvVaultClientCert       = "VAULT_CLIENT_CERT"
+	EnvVaultClientKey        = "VAULT_CLIENT_KEY"
+	EnvVaultClientTimeout    = "VAULT_CLIENT_TIMEOUT"
+	EnvVaultSRVLookup        = "VAULT_SRV_LOOKUP"
+	EnvVaultSkipVerify       = "VAULT_SKIP_VERIFY"
+	EnvVaultNamespace        = "VAULT_NAMESPACE"
+	EnvVaultTLSServerName    = "VAULT_TLS_SERVER_NAME"
+	EnvVaultWrapTTL          = "VAULT_WRAP_TTL"
+	EnvVaultMaxRetries       = "VAULT_MAX_RETRIES"
+	EnvVaultToken            = "VAULT_TOKEN"
+	EnvVaultMFA              = "VAULT_MFA"
+	EnvRateLimit             = "VAULT_RATE_LIMIT"
+	EnvHTTPProxy             = "VAULT_HTTP_PROXY"
+	EnvVaultProxyAddr        = "VAULT_PROXY_ADDR"
+	EnvVaultDisableRedirects = "VAULT_DISABLE_REDIRECTS"
+	HeaderIndex              = "X-Vault-Index"
+	HeaderForward            = "X-Vault-Forward"
+	HeaderInconsistent       = "X-Vault-Inconsistent"
+	TLSErrorString           = "This error usually means that the server is running with TLS disabled\n" +
 		"but the client is configured to use TLS. Please either enable TLS\n" +
 		"on the server or run the client with -address set to an address\n" +
 		"that uses the http protocol:\n\n" +
@@ -176,6 +177,16 @@ type Config struct {
 	// since there will be a performance penalty paid upon each request.
 	// This feature requires Enterprise server-side.
 	ReadYourWrites bool
+
+	// DisableRedirects when set to true, will prevent the client from
+	// automatically following a (single) redirect response to its initial
+	// request. This behavior may be desirable if using Vault CLI on the server
+	// side.
+	//
+	// Note: Disabling redirect following behavior could cause issues with
+	// commands such as 'vault operator raft snapshot' as this redirects to the
+	// primary node.
+	DisableRedirects bool
 }
 
 // TLSConfig contains the parameters needed to configure TLS on the HTTP client
@@ -340,6 +351,7 @@ func (c *Config) ReadEnvironment() error {
 	var envSRVLookup bool
 	var limit *rate.Limiter
 	var envVaultProxy string
+	var envVaultDisableRedirects bool
 
 	// Parse the environment variables
 	if v := os.Getenv(EnvVaultAddress); v != "" {
@@ -388,7 +400,7 @@ func (c *Config) ReadEnvironment() error {
 		var err error
 		envInsecure, err = strconv.ParseBool(v)
 		if err != nil {
-			return fmt.Errorf("could not parse VAULT_SKIP_VERIFY")
+			return fmt.Errorf("could not parse %s", EnvVaultSkipVerify)
 		}
 	}
 	if v := os.Getenv(EnvVaultSRVLookup); v != "" {
@@ -410,6 +422,16 @@ func (c *Config) ReadEnvironment() error {
 	// VAULT_PROXY_ADDR supersedes VAULT_HTTP_PROXY
 	if v := os.Getenv(EnvVaultProxyAddr); v != "" {
 		envVaultProxy = v
+	}
+
+	if v := os.Getenv(EnvVaultDisableRedirects); v != "" {
+		var err error
+		envVaultDisableRedirects, err = strconv.ParseBool(v)
+		if err != nil {
+			return fmt.Errorf("could not parse %s", EnvVaultDisableRedirects)
+		}
+
+		c.DisableRedirects = envVaultDisableRedirects
 	}
 
 	// Configure the HTTP clients TLS configuration.
@@ -1270,6 +1292,7 @@ func (c *Client) rawRequestWithContext(ctx context.Context, r *Request) (*Respon
 	outputCurlString := c.config.OutputCurlString
 	outputPolicy := c.config.OutputPolicy
 	logger := c.config.Logger
+	disableRedirects := c.config.DisableRedirects
 	c.config.modifyLock.RUnlock()
 
 	c.modifyLock.RUnlock()
@@ -1363,8 +1386,8 @@ START:
 		return result, err
 	}
 
-	// Check for a redirect, only allowing for a single redirect
-	if (resp.StatusCode == 301 || resp.StatusCode == 302 || resp.StatusCode == 307) && redirectCount == 0 {
+	// Check for a redirect, only allowing for a single redirect (if redirects aren't disabled)
+	if (resp.StatusCode == 301 || resp.StatusCode == 302 || resp.StatusCode == 307) && redirectCount == 0 && !disableRedirects {
 		// Parse the updated location
 		respLoc, err := resp.Location()
 		if err != nil {
@@ -1423,6 +1446,7 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 	httpClient := c.config.HttpClient
 	outputCurlString := c.config.OutputCurlString
 	outputPolicy := c.config.OutputPolicy
+	disableRedirects := c.config.DisableRedirects
 
 	// add headers
 	if c.headers != nil {
@@ -1495,8 +1519,8 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 		return result, err
 	}
 
-	// Check for a redirect, only allowing for a single redirect
-	if resp.StatusCode == 301 || resp.StatusCode == 302 || resp.StatusCode == 307 {
+	// Check for a redirect, only allowing for a single redirect, if redirects aren't disabled
+	if (resp.StatusCode == 301 || resp.StatusCode == 302 || resp.StatusCode == 307) && !disableRedirects {
 		// Parse the updated location
 		respLoc, err := resp.Location()
 		if err != nil {
