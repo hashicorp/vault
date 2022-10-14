@@ -117,7 +117,7 @@ export default Service.extend({
   handleError(error, transition) {
     const { accessor, token, creation_path, creation_time, ttl } = error;
     const data = { accessor, token, creation_path, creation_time, ttl };
-    data.uiParams = { url: transition.intent.url };
+    data.uiParams = { url: transition?.intent?.url };
     this.storeControlGroupToken(data);
     return this.router.transitionTo('vault.cluster.access.control-group-accessor', accessor);
   },

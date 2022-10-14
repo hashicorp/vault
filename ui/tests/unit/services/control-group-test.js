@@ -113,30 +113,49 @@ module('Unit | Service | control group', function (hooks) {
   });
 
   test(`handleError: transitions to accessor when there is no transition passed in`, function (assert) {
-    let error = {
+    const error = {
       accessor: '12345',
       token: 'token',
       creation_path: 'kv/',
       creation_time: new Date().toISOString(),
       ttl: 400,
     };
-    let url;
-    let expected = { ...error, uiParams: { url } };
-    let transition = {
-      to: {
-        name: 'vault.cluster.foo',
-      },
-    };
-    let service = this.owner.factoryFor('service:control-group').create({
-      urlFromTransition: sinon.spy(),
+    const expected = { ...error, uiParams: { url: undefined } };
+    const service = this.owner.factoryFor('service:control-group').create({
       storeControlGroupToken: sinon.spy(),
     });
-    service.handleError(error, transition);
-    assert.ok(service.urlFromTransition.calledWith(transition), 'calls urlFromTransition');
+    service.handleError(error);
     assert.ok(service.storeControlGroupToken.calledWith(expected), 'calls storeControlGroupToken');
     assert.ok(
       this.router.transitionTo.calledWith('vault.cluster.access.control-group-accessor', '12345'),
       'calls router transitionTo'
+    );
+  });
+
+  test('handleError calls storeControlGroupToken with url from transition', function (assert) {
+    const error = {
+      accessor: '12345',
+      token: 'token',
+      creation_path: 'kv/',
+      creation_time: new Date().toISOString(),
+      ttl: 400,
+    };
+    const transition = {
+      intent: {
+        url: '/vault/cluster/foo',
+      },
+    };
+    const service = this.owner.factoryFor('service:control-group').create({
+      storeControlGroupToken: sinon.spy(),
+    });
+    service.handleError(error, transition);
+    const expected = {
+      ...error,
+      uiParams: { url: transition.intent.url },
+    };
+    assert.ok(
+      service.storeControlGroupToken.calledWith(expected),
+      'calls storeControlGroupToken with url from transition'
     );
   });
 
@@ -160,31 +179,6 @@ module('Unit | Service | control group', function (hooks) {
     assert.ok(contentString.content.includes('12345'), 'contains accessor');
     assert.ok(contentString.content.includes('kv/'), 'contains creation path');
     assert.ok(contentString.content.includes('token'), 'contains token');
-  });
-
-  test('urlFromTransition', function (assert) {
-    let transition = {
-      to: {
-        name: 'vault.cluster.foo',
-        params: { bar: '1' },
-        paramNames: ['bar'],
-        queryParams: {},
-        parent: {
-          name: 'vault.cluster',
-          params: { cluster_name: 'vault' },
-          paramNames: ['cluster_name'],
-          parent: {
-            name: 'vault',
-            params: {},
-            paramNames: [],
-          },
-        },
-      },
-    };
-    let expected = [transition.to.name, 'vault', '1', { queryParams: {} }];
-    let service = this.owner.lookup('service:control-group');
-    service.urlFromTransition(transition);
-    assert.ok(this.router.urlFor.calledWith(...expected), 'calls urlFor with expected args');
   });
 
   test('storageKey', function (assert) {
