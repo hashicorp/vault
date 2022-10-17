@@ -45,7 +45,7 @@ locals {
   // edition --> artifact name edition
   artifact_name_edition = {
     "oss"              = ""
-    "ent"              = "+ent"
+    "ent"              = ""
     "ent.hsm"          = "+ent.hsm"
     "ent.fips1402"     = "+ent.fips1402"
     "ent.hsm.fips1402" = "+ent.hsm.fips1402"

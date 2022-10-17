@@ -14,13 +14,9 @@ data "enos_artifactory_item" "vault" {
   host     = var.artifactory_host
   repo     = var.artifactory_repo
   path     = var.edition == "oss" ? "vault/*" : "vault-enterprise/*"
-  properties = var.edition == "oss" ? tomap({
+  properties = tomap({
     "commit"          = var.revision
-    "product-name"    = "vault"
+    "product-name"    = var.edition == "oss" ? "vault" : "vault-enterprise"
     "product-version" = var.vault_product_version
-    }) : tomap({
-    "commit"          = var.revision
-    "product-name"    = "vault-enterprise"
-    "product-version" = "${var.vault_product_version}+ent"
   })
 }
