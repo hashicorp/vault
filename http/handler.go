@@ -1178,6 +1178,10 @@ func respondError(w http.ResponseWriter, status int, err error) {
 	logical.RespondError(w, status, err)
 }
 
+func respondErrorAndData(w http.ResponseWriter, status int, data interface{}, err error) {
+	logical.RespondErrorAndData(w, status, data, err)
+}
+
 func respondErrorCommon(w http.ResponseWriter, req *logical.Request, resp *logical.Response, err error) bool {
 	statusCode, newErr := logical.RespondErrorCommon(req, resp, err)
 	if newErr == nil && statusCode == 0 {
@@ -1193,6 +1197,12 @@ func respondErrorCommon(w http.ResponseWriter, req *logical.Request, resp *logic
 		return true
 	}
 
+	if resp != nil {
+		if data := resp.Data["data"]; data != nil {
+			respondErrorAndData(w, statusCode, data, newErr)
+			return true
+		}
+	}
 	respondError(w, statusCode, newErr)
 	return true
 }
