@@ -3,7 +3,7 @@ scenario "upgrade" {
     arch            = ["amd64", "arm64"]
     backend         = ["consul", "raft"]
     artifact_source = ["local", "crt", "artifactory"]
-    consul_version  = ["1.12.3", "1.11.7", "1.10.12"]
+    consul_version  = ["1.13.2", "1.12.5", "1.11.10"]
     distro          = ["ubuntu", "rhel"]
     edition         = ["oss", "ent"]
     seal            = ["awskms", "shamir"]

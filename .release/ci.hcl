@@ -176,16 +176,16 @@ event "verify" {
 }
 
 event "enos-verify-stable" {
-    depends = ["verify"]
-      action "enos-verify-stable" {
-        organization = "hashicorp"
-        repository = "vault"
-        workflow = "enos-verify-stable"
-      }
+  depends = ["verify"]
+  action "enos-verify-stable" {
+    organization = "hashicorp"
+    repository = "vault"
+    workflow = "enos-verify-stable"
+  }
 
-      notification {
-        on = "fail"
-      }
+  notification {
+    on = "fail"
+  }
 }
 ## These events are publish and post-publish events and should be added to the end of the file
 ## after the verify event stanza.
