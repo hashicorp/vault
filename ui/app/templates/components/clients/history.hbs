@@ -24,7 +24,7 @@
   {{#if (eq @model.config.queriesAvailable false)}}
     {{#if (eq @model.config.enabled "On")}}
       <EmptyState
-        @title={{concat "No monthly history " (if this.noActivityRange "from {{this.noActivityRange}}")}}
+        @title={{concat "No monthly history " (if this.noActivityRange this.noActivityRange)}}
         @message="There is no data in the monthly history yet. We collect it at the end of each month, so your data will be available on the first of next month."
       />
     {{else}}
@@ -158,7 +158,7 @@
       <EmptyState @title={{this.versionText.title}} @message={{this.versionText.message}} />
     {{else}}
       <EmptyState
-        @title={{concat "No data received " (if this.noActivityRange "from {{this.noActivityRange}}")}}
+        @title={{concat "No data received " (if this.noActivityRange this.noActivityRange)}}
         @message="No data exists for that query period. Select a different billing start date above, or choose a different end date here:"
       >
         <DateDropdown @handleSubmit={{this.handleClientActivityQuery}} @dateType="endDate" @submitText="View" />

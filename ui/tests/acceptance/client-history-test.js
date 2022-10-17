@@ -57,7 +57,7 @@ module('Acceptance | clients history tab', function (hooks) {
     });
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history');
-    assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
+    assert.dom(SELECTORS.historyActiveTab).hasText('Dashboard', 'dashboard tab is active');
     assert.dom('[data-test-tracking-disabled] .message-title').hasText('Tracking is disabled');
     assert.dom(SELECTORS.emptyStateTitle).hasText('No data received');
     assert.dom(SELECTORS.filterBar).doesNotExist('Shows filter bar to search previous dates');
@@ -80,7 +80,7 @@ module('Acceptance | clients history tab', function (hooks) {
     });
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history');
-    assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
+    assert.dom(SELECTORS.historyActiveTab).hasText('Dashboard', 'dashboard tab is active');
     assert.dom(SELECTORS.emptyStateTitle).hasText('Data tracking is disabled');
     assert.dom(SELECTORS.filterBar).doesNotExist('Filter bar is hidden when no data available');
   });
@@ -101,7 +101,7 @@ module('Acceptance | clients history tab', function (hooks) {
     });
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history');
-    assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
+    assert.dom(SELECTORS.historyActiveTab).hasText('Dashboard', 'dashboard tab is active');
 
     assert.dom(SELECTORS.emptyStateTitle).hasText('No monthly history');
     assert.dom(SELECTORS.filterBar).doesNotExist('Does not show filter bar');
@@ -118,7 +118,7 @@ module('Acceptance | clients history tab', function (hooks) {
     assert
       .dom(SELECTORS.rangeDropdown)
       .hasText(
-        `${format(LICENSE_START, 'MMMM yyyy')} - ${format(LAST_MONTH, 'MMMM yyyy')}`,
+        `${format(LICENSE_START, 'MMM yyyy')} - ${format(NEW_DATE, 'MMM yyyy')}`,
         'Date range shows dates correctly parsed activity response'
       );
     assert.dom(SELECTORS.attributionBlock).exists('Shows attribution area');
@@ -150,7 +150,6 @@ module('Acceptance | clients history tab', function (hooks) {
       await click('[data-test-previous-year]');
     }
     await click(find(`[data-test-calendar-month=${ARRAY_OF_MONTHS[LICENSE_START.getMonth()]}]`));
-
     assert.dom('[data-test-usage-stats]').exists('total usage stats show');
     assert
       .dom(SELECTORS.runningTotalMonthStats)
@@ -175,11 +174,10 @@ module('Acceptance | clients history tab', function (hooks) {
     // change billing start to month/year of first upgrade
     await click('[data-test-start-date-editor] button');
     await click(SELECTORS.monthDropdown);
-    await click(find(`[data-test-date-modal-month="${ARRAY_OF_MONTHS[UPGRADE_DATE.getMonth()]}"]`));
+    await click(`[data-test-dropdown-month="${ARRAY_OF_MONTHS[UPGRADE_DATE.getMonth()]}"]`);
     await click(SELECTORS.yearDropdown);
-    await click(find(`[data-test-date-modal-year="${UPGRADE_DATE.getFullYear()}`));
-    await click('[data-test-modal-save]');
-
+    await click(`[data-test-dropdown-year="${UPGRADE_DATE.getFullYear()}"]`);
+    await click('[data-test-date-dropdown-submit]');
     assert.dom(SELECTORS.attributionBlock).exists('Shows attribution area');
     assert.dom(SELECTORS.monthlyUsageBlock).exists('Shows monthly usage block');
     assert
@@ -241,8 +239,8 @@ module('Acceptance | clients history tab', function (hooks) {
     // query month older than count start date
     await click('[data-test-start-date-editor] button');
     await click(SELECTORS.yearDropdown);
-    await click(find(`[data-test-date-modal-year="${LICENSE_START.getFullYear() - 3}`));
-    await click('[data-test-modal-save]');
+    await click(`[data-test-dropdown-year="${LICENSE_START.getFullYear() - 3}"]`);
+    await click('[data-test-date-dropdown-submit]');
 
     assert
       .dom('[data-test-alert-banner="alert"]')
@@ -256,7 +254,7 @@ module('Acceptance | clients history tab', function (hooks) {
     assert.expect(19);
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
-    assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
+    assert.dom(SELECTORS.historyActiveTab).hasText('Dashboard', 'dashboard tab is active');
     assert
       .dom(SELECTORS.runningTotalMonthlyCharts)
       .exists('Shows running totals with monthly breakdown charts');
@@ -330,7 +328,7 @@ module('Acceptance | clients history tab', function (hooks) {
     });
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
-    assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
+    assert.dom(SELECTORS.historyActiveTab).hasText('Dashboard', 'dashboard tab is active');
     assert
       .dom('[data-test-alert-banner="alert"]')
       .hasTextContaining(
@@ -342,6 +340,7 @@ module('Acceptance | clients history tab', function (hooks) {
   });
 
   test('Shows empty if license start date is current month', async function (assert) {
+    // TODO cmb update to reflect new behavior
     const licenseStart = NEW_DATE;
     const licenseEnd = addMonths(NEW_DATE, 12);
     this.server.get('sys/license/status', function () {
@@ -358,7 +357,7 @@ module('Acceptance | clients history tab', function (hooks) {
     });
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
-    assert.dom(SELECTORS.emptyStateTitle).hasText('No data for this billing period');
+    assert.dom(SELECTORS.emptyStateTitle).doesNotExist('No data for this billing period'); // TODO update
     assert
       .dom(SELECTORS.dateDisplay)
       .hasText(format(licenseStart, 'MMMM yyyy'), 'Shows license date, gives ability to edit');
@@ -370,7 +369,7 @@ module('Acceptance | clients history tab', function (hooks) {
     this.server.get('/sys/license/status', () => overrideResponse(403));
     await visit('/vault/clients/history');
     assert.equal(currentURL(), '/vault/clients/history', 'clients/history URL is correct');
-    assert.dom(SELECTORS.historyActiveTab).hasText('History', 'history tab is active');
+    assert.dom(SELECTORS.historyActiveTab).hasText('Dashboard', 'dashboard tab is active');
     // Message changes depending on ent or OSS
     assert.dom(SELECTORS.emptyStateTitle).exists('Empty state exists');
     assert.dom(SELECTORS.monthDropdown).exists('Dropdown exists to select month');

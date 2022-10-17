@@ -2,7 +2,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { isSameMonth, isAfter, isBefore, isSameDay } from 'date-fns';
+import { isAfter, isBefore, isSameDay, isSameMonth } from 'date-fns';
 import getStorage from 'vault/lib/token-storage';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 
@@ -280,14 +280,18 @@ export default class History extends Component {
       });
       if (response.id === 'no-data') {
         // if an empty response (204) the adapter returns the queried time params (instead of the backend's activity log start/end times)
-        this.noActivityRange = `${parseAPITimestamp(response.startTime, 'MMMM yyyy')} 
-        to ${parseAPITimestamp(response.endTime, 'MMMM yyyy')}`;
+        const endMonth = isSameMonth(
+          parseAPITimestamp(response.startTime),
+          parseAPITimestamp(response.endTime)
+        )
+          ? ''
+          : ` to ${parseAPITimestamp(response.endTime, 'MMMM yyyy')}`;
+        this.noActivityRange = `from ${parseAPITimestamp(response.startTime, 'MMMM yyyy')}` + endMonth;
       } else {
-        // TODO cmb - right now the byMonth objects are the most consistent way to get the response's date range
-        // backend may be working to update this and have the response's time params match the activity range instead
+        // TODO cmb - would like to remove using the byMonth timestamps and just rely on response to return start/end times
         const { byMonth } = response;
-        this.startMonthTimestamp = byMonth[0].timestamp;
-        this.endMonthTimestamp = byMonth[byMonth.length - 1].timestamp;
+        this.startMonthTimestamp = byMonth[0]?.timestamp || response.startTime;
+        this.endMonthTimestamp = byMonth[byMonth.length - 1]?.timestamp || response.endTime;
         getStorage().setItem('vault:ui-inputted-start-date', this.startMonthTimestamp);
       }
       this.queriedActivityResponse = response;

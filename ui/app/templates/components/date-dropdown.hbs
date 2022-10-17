@@ -13,6 +13,7 @@
         <ul data-test-month-list class="menu-list">
           {{#each this.dropdownMonths as |month|}}
             <button
+              data-test-dropdown-month={{month.name}}
               type="button"
               class="button link"
               disabled={{if (gt month.index this.maxMonthIdx) true false}}
@@ -39,6 +40,7 @@
         <ul data-test-year-list class="menu-list">
           {{#each this.dropdownYears as |year|}}
             <button
+              data-test-dropdown-year={{year}}
               type="button"
               class="button link"
               disabled={{if (eq year this.disabledYear) true false}}
