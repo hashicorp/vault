@@ -294,5 +294,6 @@ jobs:
       artifact-build-date: "${{needs.product-metadata.outputs.build-date}}"
       artifact-name: "vault_${{ needs.product-metadata.outputs.product-version }}_linux_amd64.zip"
       artifact-revision: "${{needs.product-metadata.outputs.product-revision}}"
+      artifact-source: "crt"
       artifact-version: "${{needs.product-metadata.outputs.product-version}}"
     secrets: inherit

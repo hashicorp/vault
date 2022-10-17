@@ -44,7 +44,7 @@ locals {
   }
 }
 
-resource "enos_remote_exec" "verify_raft_auto_join_voter" {
+resource "enos_remote_exec" "verify_node_unsealed" {
   for_each = local.instances
 
   content = templatefile("${path.module}/templates/verify-vault-node-unsealed.sh", {

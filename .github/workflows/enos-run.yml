@@ -15,6 +15,9 @@ on:
       artifact-revision:
         required: true
         type: string
+      artifact-source:
+        required: false
+        type: string
       artifact-version:
         required: true
         type: string
@@ -24,6 +27,7 @@ env:
   ARTIFACT_BUILD_DATE: ${{ inputs.artifact-build-date }}
   ARTIFACT_NAME: ${{ inputs.artifact-name }}
   ARTIFACT_REVISION: ${{ inputs.artifact-revision }}
+  ARTIFACT_SOURCE: ${{ inputs.artifact-source }}
   ARTIFACT_VERSION: ${{ inputs.artifact-version }}
 
 jobs:
@@ -38,7 +42,7 @@ jobs:
       - name: Create Enos scenario matrix
         id: enos-matrix
         run: |
-          [[ ${{ env.ARTIFACT_NAME }} == *"ent"* ]] && scenarioFile=$(cat ./.github/enos-run-matrices/ent.json |jq -c .) || scenarioFile=$(cat ./.github/enos-run-matrices/oss.json |jq -c .)
+          [[ ${{ env.ARTIFACT_NAME }} == *"ent"* ]] && scenarioFile=$(cat ./.github/enos-run-matrices/${{ env.ARTIFACT_SOURCE }}-ent.json |jq -c .) || scenarioFile=$(cat ./.github/enos-run-matrices/${{ env.ARTIFACT_SOURCE }}-oss.json |jq -c .)
           echo "::set-output name=matrix::$scenarioFile"
   # Run Integration tests on Enos scenario matrix
   enos:

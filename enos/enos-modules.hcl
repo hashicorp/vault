@@ -30,6 +30,10 @@ module "build_local" {
   source = "./modules/build_local"
 }
 
+module "build_artifactory" {
+  source = "./modules/vault_artifactory_artifact"
+}
+
 module "create_vpc" {
   source = "app.terraform.io/hashicorp-qti/aws-infra/enos"
 
