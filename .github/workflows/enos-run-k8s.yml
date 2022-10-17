@@ -94,9 +94,6 @@ jobs:
           enos scenario run --timeout 10m0s --chdir ./enos/k8s edition:${{ env.edition }}
       - name: Destroy Enos scenario
         if: ${{ always() }}
-        # With Enos version 0.0.11 the destroy step returns an error if the infrastructure
-        # is already destroyed by enos run. So temporarily setting it to continue on error in GHA
-        continue-on-error: true
         env:
           ENOS_VAR_tfc_api_token: ${{ secrets.TF_API_TOKEN }}
           ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache

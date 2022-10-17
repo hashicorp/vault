@@ -9,7 +9,7 @@ terraform {
 
 locals {
   // build date was introduced in Vault 1.11.0
-  requires_build_date_check = length(regexall("^([2-9])|^(1\\.[1-9][1-9]+)", var.vault_product_version)) > 0
+  requires_build_date_check = length(regexall("^(?:1\\.1[^0]|[2-9]|\\d{2,})", var.vault_product_version)) > 0
 
   pods_to_check = toset([
     for idx in range(var.vault_instance_count) : tostring(idx)
