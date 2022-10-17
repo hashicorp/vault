@@ -238,6 +238,13 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		raw[k] = v
 	}
 
+	var deprecated []string
+	for k := range req.Data {
+		if path.Fields[k] != nil && path.Fields[k].Deprecated {
+			deprecated = append(deprecated, k)
+		}
+	}
+
 	// Look up the callback for this operation, preferring the
 	// path.Operations definition if present.
 	var callback OperationFunc
@@ -293,26 +300,35 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		return resp, err
 	}
 
-	switch resp {
-	case nil:
-	default:
-		// If fields supplied in the request are not present in the field schema
-		// of the path, add a warning to the response indicating that those
-		// parameters will be ignored.
-		sort.Strings(ignored)
+	// If fields supplied in the request are not present in the field schema
+	// of the path, add a warning to the response indicating that those
+	// parameters will be ignored.
+	handleRequestCheckWarnings(&resp, ignored, "Endpoint ignored these unrecognized parameters")
 
-		if len(ignored) != 0 {
-			resp.AddWarning(fmt.Sprintf("Endpoint ignored these unrecognized parameters: %v", ignored))
-		}
-		// If fields supplied in the request is being overwritten by the values
-		// supplied in the API request path, add a warning to the response
-		// indicating that those parameters will be replaced.
-		if len(replaced) != 0 {
-			resp.AddWarning(fmt.Sprintf("Endpoint replaced the value of these parameters with the values captured from the endpoint's path: %v", replaced))
-		}
-	}
+	// If fields supplied in the request is being overwritten by the values
+	// supplied in the API request path, add a warning to the response
+	// indicating that those parameters will be replaced.
+	handleRequestCheckWarnings(&resp, replaced, "Endpoint replaced the value of these parameters with the values captured from the endpoint's path")
+
+	// If fields supplied in the request are marked as deprecated in the
+	// field schema, add a warning to the response indicating that those
+	// parameters may be removed in the future.
+	handleRequestCheckWarnings(&resp, deprecated, "Endpoint received these deprecated parameters which may be removed in future Vault releases")
 
 	return resp, nil
+}
+
+func handleRequestCheckWarnings(resp **logical.Response, list []string, warning string) {
+	if len(list) > 0 {
+		if *resp == nil {
+			*resp = &logical.Response{
+				Data: map[string]interface{}{},
+			}
+		}
+
+		sort.Strings(list)
+		(*resp).AddWarning(fmt.Sprintf("%s: %v", warning, list))
+	}
 }
 
 // HandlePatchOperation acts as an abstraction for performing JSON merge patch
