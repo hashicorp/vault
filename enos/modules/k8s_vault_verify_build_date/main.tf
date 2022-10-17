@@ -8,13 +8,7 @@ terraform {
 }
 
 locals {
-  // build date was introduced in Vault 1.11.0
-  requires_build_date_check = length(regexall("^(?:1\\.1[^0]|[2-9]|\\d{2,})", var.vault_product_version)) > 0
-
-  pods_to_check = toset([
-    for idx in range(var.vault_instance_count) : tostring(idx)
-    if local.requires_build_date_check
-  ])
+  vault_instances = toset([for idx in range(var.vault_instance_count) : tostring(idx)])
 }
 
 # Get the date from the vault status command      - status_date
@@ -22,7 +16,7 @@ locals {
 # Format the original status output with awk      - awk_date
 # Compare the formatted outputs                   - date_comparison
 resource "enos_remote_exec" "status_date" {
-  for_each = local.pods_to_check
+  for_each = local.vault_instances
 
   transport = {
     kubernetes = {
@@ -37,7 +31,7 @@ resource "enos_remote_exec" "status_date" {
 }
 
 resource "enos_remote_exec" "formatted_date" {
-  for_each = local.pods_to_check
+  for_each = local.vault_instances
 
   transport = {
     kubernetes = {
@@ -52,13 +46,13 @@ resource "enos_remote_exec" "formatted_date" {
 }
 
 resource "enos_local_exec" "awk_date" {
-  for_each = local.pods_to_check
+  for_each = local.vault_instances
 
   inline = ["echo ${enos_remote_exec.status_date[each.key].stdout} | awk -F\"T\" '{printf $1}'"]
 }
 
 resource "enos_local_exec" "date_comparison" {
-  for_each = local.pods_to_check
+  for_each = local.vault_instances
 
   inline = ["[[ ${enos_local_exec.awk_date[each.key].stdout} == ${enos_remote_exec.formatted_date[each.key].stdout} ]] && echo \"Verification for build date format ${enos_remote_exec.status_date[each.key].stdout} succeeded\" || \"invalid build_date, must be formatted as RFC 3339: ${enos_remote_exec.status_date[each.key].stdout}\""]
 }

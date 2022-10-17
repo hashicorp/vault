@@ -78,6 +78,7 @@ scenario "k8s" {
   }
 
   step "verify_build_date" {
+    skip_step = semverconstraint(var.vault_product_version, "<1.11.0")
     module = module.k8s_verify_build_date
 
     variables {

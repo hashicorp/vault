@@ -22,11 +22,6 @@ variable "vault_root_token" {
   description = "The vault root token"
 }
 
-variable "vault_product_version" {
-  type        = string
-  description = "The vault product version"
-}
-
 variable "kubeconfig_base64" {
   type        = string
   description = "The base64 encoded version of the Kubernetes configuration file"

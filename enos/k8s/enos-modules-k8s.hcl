@@ -15,7 +15,6 @@ module "k8s_deploy_vault" {
 module "k8s_verify_build_date" {
   source = "../modules/k8s_vault_verify_build_date"
 
-  vault_product_version = var.vault_product_version
   vault_instance_count = var.vault_instance_count
 }
 
