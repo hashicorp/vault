@@ -60,7 +60,7 @@
   {{else}}
     <div class="control is-expanded">
       <div class="file has-name is-fullwidth">
-        <div class="file-label">
+        <div class="file-label" aria-label="Choose a file">
           <input class="file-input" type="file" {{on "change" this.pickedFile}} data-test-text-file-input={{true}} />
           <span class="file-cta button">
             <Icon @name="upload" class="has-light-grey-text" />
@@ -74,7 +74,13 @@
             {{/if}}
           </span>
           {{#if @file.fileName}}
-            <button type="button" class="file-delete-button" {{on "click" this.clearFile}} data-test-text-clear={{true}}>
+            <button
+              type="button"
+              class="file-delete-button"
+              aria-label="Clear file selection"
+              {{on "click" this.clearFile}}
+              data-test-text-clear={{true}}
+            >
               <Icon @name="x-circle" />
             </button>
           {{/if}}
