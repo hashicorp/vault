@@ -17,13 +17,13 @@ export default class History extends Component {
   ];
 
   // RESPONSE
-  @tracked startMonthTimestamp = this.args.model.licenseStartTimestamp; // updates to first month object of response
-  @tracked endMonthTimestamp = this.args.model.initialEndDate; // updates to last month object of response
+  @tracked startMonthTimestamp = this.args.model.licenseStartTimestamp; // when user queries, updates to first month object of response
+  @tracked endMonthTimestamp = this.args.model.currentDate; // when user queries, updates to last month object of response
   @tracked queriedActivityResponse = null;
   // track params sent to /activity request
   @tracked activityQueryParams = {
-    start: { timestamp: this.args.model.licenseStartTimestamp }, // license start on init, updates when user edits billing start month
-    end: { timestamp: this.args.model.initialEndDate }, // current date on init, updates when user queries end dates via calendar widget
+    start: { timestamp: this.args.model.licenseStartTimestamp }, // updates when user edits billing start month
+    end: { timestamp: this.args.model.currentDate }, // updates when user queries end dates via calendar widget
   };
 
   // SEARCH SELECT
@@ -39,7 +39,7 @@ export default class History extends Component {
 
   // TEMPLATE VIEW
   @tracked showBillingStartModal = false;
-  @tracked noActivityDate = '';
+  @tracked noActivityRange = '';
   @tracked isLoadingQuery = false;
   @tracked errorObject = null;
 
@@ -71,14 +71,14 @@ export default class History extends Component {
   }
 
   get startTimeDiscrepancy() {
-    // show banner if startTime returned from activity log (response) is after the user's queried startTime
+    // show banner if startTime returned from activity log (response) is after the queried startTime
     const activityStartDateObject = parseAPITimestamp(this.getActivityResponse.startTime);
     const queryStartDateObject = parseAPITimestamp(this.startMonthTimestamp);
-
     const isLicenseStart = isSameDay(
       queryStartDateObject,
       parseAPITimestamp(this.args.model.licenseStartTimestamp)
     );
+
     if (isAfter(activityStartDateObject, queryStartDateObject)) {
       const message = isLicenseStart ? 'Your license start date is ' : 'You requested data from ';
       return (
@@ -92,51 +92,40 @@ export default class History extends Component {
     }
   }
 
-  get upgradeVersionHistory() {
+  get upgradeDuringActivity() {
     const versionHistory = this.args.model.versionHistory;
     if (!versionHistory || versionHistory.length === 0) {
       return null;
     }
 
-    // get upgrade data for initial upgrade to 1.9 and/or 1.10
-    let relevantUpgrades = [];
-    const importantUpgrades = ['1.9', '1.10'];
-    importantUpgrades.forEach((version) => {
-      let findUpgrade = versionHistory.find((versionData) => versionData.id.match(version));
-      if (findUpgrade) relevantUpgrades.push(findUpgrade);
-    });
-
-    // array of upgrade data objects for noteworthy upgrades
-    return relevantUpgrades;
-  }
-
-  get upgradeDuringActivity() {
-    if (!this.upgradeVersionHistory) {
+    // filter for upgrade data of noteworthy upgrades (1.9 and/or 1.10)
+    const upgradeVersionHistory = versionHistory.filter(
+      (version) => version.id.match('1.9') || version.id.match('1.10')
+    );
+    if (!upgradeVersionHistory || upgradeVersionHistory.length === 0) {
       return null;
     }
-    const activityStart = new Date(this.getActivityResponse.startTime);
-    const activityEnd = new Date(this.getActivityResponse.endTime);
-    const upgradesWithinData = this.upgradeVersionHistory.filter((upgrade) => {
-      // TODO how do timezones affect this?
-      let upgradeDate = new Date(upgrade.timestampInstalled);
+
+    const activityStart = parseAPITimestamp(this.getActivityResponse.startTime);
+    const activityEnd = parseAPITimestamp(this.getActivityResponse.endTime);
+    // filter and return all upgrades that happened within date range of queried activity
+    return upgradeVersionHistory.filter(({ timestampInstalled }) => {
+      const upgradeDate = parseAPITimestamp(timestampInstalled);
       return isAfter(upgradeDate, activityStart) && isBefore(upgradeDate, activityEnd);
     });
-    // return all upgrades that happened within date range of queried activity
-    return upgradesWithinData.length === 0 ? null : upgradesWithinData;
   }
 
   get upgradeVersionAndDate() {
-    if (!this.upgradeDuringActivity) {
+    if (!this.upgradeDuringActivity || this.upgradeDuringActivity.length === 0) {
       return null;
     }
     if (this.upgradeDuringActivity.length === 2) {
-      let firstUpgrade = this.upgradeDuringActivity[0];
-      let secondUpgrade = this.upgradeDuringActivity[1];
+      let [firstUpgrade, secondUpgrade] = this.upgradeDuringActivity;
       let firstDate = parseAPITimestamp(firstUpgrade.timestampInstalled, 'MMM d, yyyy');
       let secondDate = parseAPITimestamp(secondUpgrade.timestampInstalled, 'MMM d, yyyy');
       return `Vault was upgraded to ${firstUpgrade.id} (${firstDate}) and ${secondUpgrade.id} (${secondDate}) during this time range.`;
     } else {
-      let upgrade = this.upgradeDuringActivity[0];
+      let [upgrade] = this.upgradeDuringActivity;
       return `Vault was upgraded to ${upgrade.id} on ${parseAPITimestamp(
         upgrade.timestampInstalled,
         'MMM d, yyyy'
@@ -145,7 +134,7 @@ export default class History extends Component {
   }
 
   get versionSpecificText() {
-    if (!this.upgradeDuringActivity) {
+    if (!this.upgradeDuringActivity || this.upgradeDuringActivity.length === 0) {
       return null;
     }
     if (this.upgradeDuringActivity.length === 1) {
@@ -272,7 +261,7 @@ export default class History extends Component {
         return;
       case 'reset': // reset to initial start/end dates (current billing period)
         this.activityQueryParams.start.timestamp = this.args.model.licenseStartTimestamp;
-        this.activityQueryParams.end.timestamp = this.args.model.initialEndDate;
+        this.activityQueryParams.end.timestamp = this.args.model.currentDate;
         break;
       case 'startDate': // from "Edit billing start" modal
         this.activityQueryParams.start = { monthIdx, year };
@@ -291,7 +280,7 @@ export default class History extends Component {
       });
       if (response.id === 'no-data') {
         // if an empty response (204) the adapter returns the queried time params (instead of the backend's activity log start/end times)
-        this.noActivityDate = `${parseAPITimestamp(response.startTime, 'MMMM yyyy')} 
+        this.noActivityRange = `${parseAPITimestamp(response.startTime, 'MMMM yyyy')} 
         to ${parseAPITimestamp(response.endTime, 'MMMM yyyy')}`;
       } else {
         // TODO cmb - right now the byMonth objects are the most consistent way to get the response's date range
@@ -299,7 +288,7 @@ export default class History extends Component {
         const { byMonth } = response;
         this.startMonthTimestamp = byMonth[0].timestamp;
         this.endMonthTimestamp = byMonth[byMonth.length - 1].timestamp;
-        this.storage().setItem('vault:ui-inputted-start-date', this.getActivityResponse.startTime);
+        getStorage().setItem('vault:ui-inputted-start-date', this.startMonthTimestamp);
       }
       this.queriedActivityResponse = response;
     } catch (e) {
@@ -316,7 +305,6 @@ export default class History extends Component {
 
   @action
   selectNamespace([value]) {
-    // value comes in as [namespace0]
     this.selectedNamespace = value;
     if (!value) {
       this.authMethodOptions = [];
@@ -335,9 +323,5 @@ export default class History extends Component {
   @action
   setAuthMethod([authMount]) {
     this.selectedAuthMethod = authMount;
-  }
-
-  storage() {
-    return getStorage();
   }
 }

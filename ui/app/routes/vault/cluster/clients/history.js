@@ -3,11 +3,12 @@ import getStorage from 'vault/lib/token-storage';
 
 // TODO CMB: change class and file name to dashboard
 export default class HistoryRoute extends Route {
-  CURRENT_DATE = new Date().toISOString(); // dashboard initializes with activity query from license start to current date
+  currentDate = new Date().toISOString();
+
   async getActivity(start_time) {
     // on init ONLY make network request if we have a start_time
     return start_time
-      ? await this.store.queryRecord('clients/activity', { start_time, end_time: this.CURRENT_DATE })
+      ? await this.store.queryRecord('clients/activity', { start_time, end_time: this.currentDate })
       : {};
   }
 
@@ -25,14 +26,14 @@ export default class HistoryRoute extends Route {
 
   async model() {
     const { config, versionHistory } = this.modelFor('vault.cluster.clients');
-    let licenseStart = await this.getLicenseStartTime();
-    let activity = await this.getActivity(licenseStart);
+    const licenseStart = await this.getLicenseStartTime();
+    const activity = await this.getActivity(licenseStart);
     return {
       config,
       versionHistory,
       activity,
       licenseStartTimestamp: licenseStart,
-      initialEndDate: this.CURRENT_DATE,
+      currentDate: this.currentDate,
     };
   }
 }

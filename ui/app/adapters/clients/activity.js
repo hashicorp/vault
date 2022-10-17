@@ -27,6 +27,7 @@ export default class ActivityAdapter extends ApplicationAdapter {
         let response = resp || {};
         response.id = response.request_id || 'no-data';
         if (response.id === 'no-data') {
+          // add queryParams to relay date range that no data exists
           response = { ...response, ...queryParams };
         }
         return response;
