@@ -23,9 +23,7 @@ variable "artifactory_repo" {
   description = "The artifactory repo to search for vault artifacts"
   default     = "hashicorp-crt-stable-local*"
 }
-# variable "ami_id" {}
 variable "arch" {}
-# variable "artifact_path" {}
 variable "artifact_type" {}
 variable "distro" {}
 variable "edition" {}
