@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/token"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mattn/go-isatty"
 	"github.com/mitchellh/cli"
 	"github.com/pkg/errors"
@@ -220,34 +219,31 @@ func (c *BaseCommand) DefaultWrappingLookupFunc(operation, path string) string {
 	return api.DefaultWrappingLookupFunc(operation, path)
 }
 
-func (c *BaseCommand) isInteractiveEnabled(mfaConstraintLen int) bool {
-	if mfaConstraintLen != 1 || !isatty.IsTerminal(os.Stdin.Fd()) {
-		return false
+// getInteractiveMFAMethodInfo returns MFA method information only if operating
+// in interactive mode and one MFA method is configured.
+func (c *BaseCommand) getInteractiveMFAMethodInfo(secret *api.Secret) *MFAMethodInfo {
+	if secret != nil && secret.Auth != nil && secret.Auth.MFARequirement != nil {
+		return nil
 	}
 
-	if !c.flagNonInteractive {
-		return true
+	mfaConstraints := secret.Auth.MFARequirement.MFAConstraints
+	if c.flagNonInteractive || len(mfaConstraints) != 1 || !isatty.IsTerminal(os.Stdin.Fd()) {
+		return nil
 	}
 
-	return false
-}
-
-// getMFAMethodInfo returns MFA method information only if one MFA method is
-// configured.
-func (c *BaseCommand) getMFAMethodInfo(mfaConstraintAny map[string]*logical.MFAConstraintAny) MFAMethodInfo {
-	for _, mfaConstraint := range mfaConstraintAny {
+	for _, mfaConstraint := range mfaConstraints {
 		if len(mfaConstraint.Any) != 1 {
-			return MFAMethodInfo{}
+			return nil
 		}
 
-		return MFAMethodInfo{
+		return &MFAMethodInfo{
 			methodType:  mfaConstraint.Any[0].Type,
 			methodID:    mfaConstraint.Any[0].ID,
 			usePasscode: mfaConstraint.Any[0].UsesPasscode,
 		}
 	}
 
-	return MFAMethodInfo{}
+	return nil
 }
 
 func (c *BaseCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) (*api.Secret, error) {

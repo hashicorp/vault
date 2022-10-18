@@ -228,25 +228,20 @@ func (c *LoginCommand) Run(args []string) int {
 		return 2
 	}
 
-	if secret != nil && secret.Auth != nil && secret.Auth.MFARequirement != nil {
-		if c.isInteractiveEnabled(len(secret.Auth.MFARequirement.MFAConstraints)) {
-			// Currently, if there is only one MFA method configured, the login
-			// request is validated interactively
-			methodInfo := c.getMFAMethodInfo(secret.Auth.MFARequirement.MFAConstraints)
-			if methodInfo.methodID != "" {
-				secret, err = c.validateMFA(secret.Auth.MFARequirement.MFARequestID, methodInfo)
-				if err != nil {
-					c.UI.Error(err.Error())
-					return 2
-				}
-			}
+	// If there is only one MFA method configured and c.NonInteractive flag is
+	// unset, the login request is validated interactively.
+	// interactiveMethodInfo here means that `validateMFA` will complete the MFA
+	// by prompting for a password or directing you to a push notification. In this scenario, no external validation is needed.
+	interactiveMethodInfo := c.getInteractiveMFAMethodInfo(secret)
+	if interactiveMethodInfo != nil {
+		secret, err = c.validateMFA(secret.Auth.MFARequirement.MFARequestID, *interactiveMethodInfo)
+		if err != nil {
+			c.UI.Error(err.Error())
 		}
+	} else {
 		c.UI.Warn(wrapAtLength("A login request was issued that is subject to "+
 			"MFA validation. Please make sure to validate the login by sending another "+
 			"request to sys/mfa/validate endpoint.") + "\n")
-
-		// We return early to prevent success message from being printed
-		c.checkForAndWarnAboutLoginToken()
 	}
 
 	// Unset any previous token wrapping functionality. If the original request
