@@ -19,15 +19,14 @@ else
   expected_build_date=", built $build_date"
 fi
 
-vault_oss_expected_version="Vault v${EXPECTED_VERSION} (${VAULT_REVISION})"
-vault_ent_expected_version="Vault v${EXPECTED_VERSION}+ent (${VAULT_REVISION})"
+vault_expected_version="Vault v${EXPECTED_VERSION} (${VAULT_REVISION})"
 
 case "${VAULT_EDITION}" in
-  oss) version_expected="${vault_oss_expected_version}${expected_build_date}";;
-	ent) version_expected="${vault_ent_expected_version}${expected_build_date}";;
-	ent.hsm) version_expected="${vault_ent_expected_version}${expected_build_date} (cgo)";;
-	ent.fips1402) version_expected="${vault_ent_expected_version}${expected_build_date} (cgo)" ;;
-	ent.hsm.fips1402) version_expected="${vault_ent_expected_version}${expected_build_date} (cgo)" ;;
+  oss) version_expected="${vault_expected_version}${expected_build_date}";;
+	ent) version_expected="${vault_expected_version}${expected_build_date}";;
+	ent.hsm) version_expected="${vault_expected_version}${expected_build_date} (cgo)";;
+	ent.fips1402) version_expected="${vault_expected_version}${expected_build_date} (cgo)" ;;
+	ent.hsm.fips1402) version_expected="${vault_expected_version}${expected_build_date} (cgo)" ;;
   *) fail "(${VAULT_EDITION}) does not match any known Vault editions"
 esac
 

@@ -269,7 +269,7 @@ jobs:
     uses: ./.github/workflows/enos-run-k8s.yml
     with:
       artifact-build-date: "${{needs.product-metadata.outputs.build-date}}"
-      artifact-name: "vault_default_linux_amd64_${{needs.product-metadata.outputs.product-version}}_${{needs.product-metadata.outputs.product-revision}}.docker.tar"
+      artifact-name: "${{ env.PKG_NAME }}_default_linux_amd64_${{needs.product-metadata.outputs.product-version}}_${{needs.product-metadata.outputs.product-revision}}.docker.tar"
       artifact-revision: "${{needs.product-metadata.outputs.product-revision}}"
       artifact-version: "${{needs.product-metadata.outputs.product-version}}"
     secrets: inherit
