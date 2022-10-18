@@ -297,20 +297,6 @@ jobs:
           zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.product-version }}_linux_${{ matrix.arch }}.zip
           redhat_tag: scan.connect.redhat.com/ospid-f0a92725-d8c6-4023-9a87-ba785b94c3fd/${{env.repo}}:${{env.version}}-ubi
 
-# temporarily disabled till we find out more about the UBI images
-#  enos-test-docker-ubi:
-#    name: Enos Docker UBI
-#    if: "! github.event.pull_request.head.repo.fork"
-#    needs:
-#      - product-metadata
-#      - build-ubi
-#    uses: ./.github/workflows/enos-run-k8s.yml
-#    with:
-#      artifact-name: "vault_ubi_linux_amd64_${{needs.product-metadata.outputs.product-version}}_${{needs.product-metadata.outputs.product-revision}}.docker.redhat.tar"
-#      artifact-revision: "${{needs.product-metadata.outputs.product-revision}}"
-#      artifact-version: "${{needs.product-metadata.outputs.product-version}}"
-#    secrets: inherit
-
   enos:
     name: Enos
     # Only run the Enos workflow against branches that are created from the

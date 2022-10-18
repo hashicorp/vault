@@ -2,9 +2,6 @@
 name: enos-k8s
 
 on:
-#  push:
-#    branches:
-#      - mbaum/qt-182
   workflow_call:
     inputs:
       artifact-build-date:

@@ -37,7 +37,7 @@ locals {
   instance_indexes = [for idx in range(var.vault_instance_count) : tostring(idx)]
 
   leader_idx    = local.instance_indexes[0]
-  followers_idx = toset(slice(local.instance_indexes, 1, 3))
+  followers_idx = toset(slice(local.instance_indexes, 1, var.vault_instance_count))
 }
 
 resource "helm_release" "vault" {
@@ -89,7 +89,7 @@ resource "enos_vault_unseal" "leader" {
   bin_path    = "/bin/vault"
   vault_addr  = local.vault_address
   seal_type   = "shamir"
-  unseal_keys = slice(enos_vault_init.leader.unseal_keys_b64, 0, 3)
+  unseal_keys = enos_vault_init.leader.unseal_keys_b64
 
   transport = {
     kubernetes = {
@@ -138,7 +138,7 @@ resource "enos_vault_unseal" "followers" {
   bin_path    = "/bin/vault"
   vault_addr  = local.vault_address
   seal_type   = "shamir"
-  unseal_keys = slice(enos_vault_init.leader.unseal_keys_b64, 0, 3)
+  unseal_keys = enos_vault_init.leader.unseal_keys_b64
 
   transport = {
     kubernetes = {
