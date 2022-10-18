@@ -4,10 +4,12 @@ on:
   repository_dispatch:
     types:
       - enos-verify-stable
+      - enos-verify-stable::*
 
 jobs:
   enos-verify-stable:
     name: Enos verify stable artifact
+    if: ${{ contains(github.event.client_payload.payload.branch, 'release') }}
     uses: ./.github/workflows/enos-run.yml
     with:
       artifact-source: "artifactory"
