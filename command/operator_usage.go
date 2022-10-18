@@ -138,7 +138,7 @@ func (c *OperatorUsageCommand) Run(args []string) int {
 	colConfig := columnize.DefaultConfig()
 	colConfig.Empty = " " // Do not show n/a on intentional blank lines
 	colConfig.Glue = "   "
-	c.UI.Output(tableOutput(out, colConfig))
+	printTable(c.UI, out, colConfig)
 	return 0
 }
 

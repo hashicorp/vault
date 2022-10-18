@@ -97,17 +97,17 @@ func (c *AuditListCommand) Run(args []string) int {
 	}
 
 	switch Format(c.UI) {
-	case "table":
+	case "table", "expanded":
 		if len(audits) == 0 {
 			c.UI.Output("No audit devices are enabled.")
 			return 2
 		}
 
 		if c.flagDetailed {
-			c.UI.Output(tableOutput(c.detailedAudits(audits), nil))
+			printTable(c.UI, c.detailedAudits(audits), nil)
 			return 0
 		}
-		c.UI.Output(tableOutput(c.simpleAudits(audits), nil))
+		printTable(c.UI, c.simpleAudits(audits), nil)
 		return 0
 	default:
 		return OutputData(c.UI, audits)

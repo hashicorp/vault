@@ -99,12 +99,12 @@ func (c *SecretsListCommand) Run(args []string) int {
 	}
 
 	switch Format(c.UI) {
-	case "table":
+	case "table", "expanded":
 		if c.flagDetailed {
-			c.UI.Output(tableOutput(c.detailedMounts(mounts), nil))
+			printTable(c.UI, c.detailedMounts(mounts), nil)
 			return 0
 		}
-		c.UI.Output(tableOutput(c.simpleMounts(mounts), nil))
+		printTable(c.UI, c.simpleMounts(mounts), nil)
 		return 0
 	default:
 		return OutputData(c.UI, mounts)
@@ -145,7 +145,7 @@ func (c *SecretsListCommand) detailedMounts(mounts map[string]*api.MountOutput) 
 		}
 	}
 
-	out := []string{"Path | Plugin | Accessor | Default TTL | Max TTL | Force No Cache | Replication | Seal Wrap | External Entropy Access | Options | Description | UUID | Version | Running Version | Running SHA256 | | Deprecation Status"}
+	out := []string{"Path | Plugin | Accessor | Default TTL | Max TTL | Force No Cache | Replication | Seal Wrap | External Entropy Access | Options | Description | UUID | Version | Running Version | Running SHA256 | Deprecation Status"}
 	for _, path := range paths {
 		mount := mounts[path]
 

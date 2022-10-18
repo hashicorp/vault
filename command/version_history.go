@@ -125,7 +125,7 @@ func (c *VersionHistoryCommand) Run(args []string) int {
 	c.UI.Warn("")
 	c.UI.Warn(versionTrackingWarning)
 	c.UI.Warn("")
-	c.UI.Output(tableOutput(table, columnConfig))
+	printTable(c.UI, table, columnConfig)
 
 	return 0
 }

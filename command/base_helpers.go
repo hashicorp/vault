@@ -11,6 +11,7 @@ import (
 	kvbuilder "github.com/hashicorp/go-secure-stdlib/kv-builder"
 	"github.com/hashicorp/vault/api"
 	"github.com/kr/text"
+	"github.com/mitchellh/cli"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
@@ -96,6 +97,15 @@ func columnOutput(list []string, c *columnize.Config) string {
 	return columnize.Format(list, c)
 }
 
+func printTable(ui cli.Ui, list []string, c *columnize.Config) {
+	switch Format(ui) {
+	case "expanded":
+		ui.Output(expandedTableOutput(list, c))
+	default:
+		ui.Output(tableOutput(list, c))
+	}
+}
+
 // tableOutput prints the list of items as columns, where the first row is
 // the list of headers.
 func tableOutput(list []string, c *columnize.Config) string {
@@ -125,6 +135,47 @@ func tableOutput(list []string, c *columnize.Config) string {
 	list[1] = underline
 
 	return columnOutput(list, c)
+}
+
+// expandedTableOutput prints the same content as tableOutput, but with one
+// table per row. Each table has two columns; headings and values - supports
+// printing tables with arbitrary numbers of headings on limited width screens.
+func expandedTableOutput(list []string, c *columnize.Config) string {
+	if len(list) <= 1 {
+		return ""
+	}
+
+	delim := "|"
+	if c != nil && c.Delim != "" {
+		delim = c.Delim
+	}
+
+	var out string
+	headers := strings.Split(list[0], delim)
+	for i := 1; i < len(list); i++ {
+		out += fmt.Sprintf("ROW %d\n\n", i)
+		values := strings.Split(list[i], delim)
+
+		page := []string{
+			fmt.Sprintf("Heading%sValue", delim),
+			fmt.Sprintf("-------%s-----", delim),
+		}
+
+		for i, header := range headers {
+			// Shouldn't ever happen, but just to guard against panics.
+			if i >= len(values) {
+				break
+			}
+			page = append(page, fmt.Sprintf("%s%s%s", header, delim, values[i]))
+		}
+
+		out += columnOutput(page, c)
+		if i < len(list)-1 {
+			out += "\n\n"
+		}
+	}
+
+	return out
 }
 
 // parseArgsData parses the given args in the format key=value into a map of

@@ -65,11 +65,12 @@ type Formatter interface {
 }
 
 var Formatters = map[string]Formatter{
-	"json":   JsonFormatter{},
-	"table":  TableFormatter{},
-	"yaml":   YamlFormatter{},
-	"yml":    YamlFormatter{},
-	"pretty": PrettyFormatter{},
+	"json":     JsonFormatter{},
+	"table":    TableFormatter{},
+	"yaml":     YamlFormatter{},
+	"yml":      YamlFormatter{},
+	"pretty":   PrettyFormatter{},
+	"expanded": expandedFormatter{},
 }
 
 func Format(ui cli.Ui) string {
@@ -282,6 +283,17 @@ func (t TableFormatter) Format(data interface{}) ([]byte, error) {
 }
 
 func (t TableFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
+	lines, config, err := t.output(ui, secret, data)
+	if err != nil {
+		return err
+	}
+	if lines != nil {
+		ui.Output(tableOutput(lines, config))
+	}
+	return nil
+}
+
+func (t TableFormatter) output(ui cli.Ui, secret *api.Secret, data interface{}) ([]string, *columnize.Config, error) {
 	switch data := data.(type) {
 	case *api.Secret:
 		return t.OutputSecret(ui, secret)
@@ -294,11 +306,11 @@ func (t TableFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) 
 	case SealStatusOutput:
 		return t.OutputSealStatusStruct(ui, nil, data)
 	default:
-		return errors.New("cannot use the table formatter for this type")
+		return nil, nil, fmt.Errorf("cannot use the %s formatter for this type", Format(ui))
 	}
 }
 
-func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, data interface{}) error {
+func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, data interface{}) ([]string, *columnize.Config, error) {
 	var status SealStatusOutput = data.(SealStatusOutput)
 	var sealPrefix string
 	if status.RecoverySeal {
@@ -381,13 +393,12 @@ func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, da
 		out = append(out, fmt.Sprintf("Last WAL | %d", status.LastWAL))
 	}
 
-	ui.Output(tableOutput(out, &columnize.Config{
+	return out, &columnize.Config{
 		Delim: "|",
-	}))
-	return nil
+	}, nil
 }
 
-func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface{}) error {
+func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface{}) ([]string, *columnize.Config, error) {
 	t.printWarnings(ui, secret)
 
 	// Determine if we have additional information from a ListResponseWithInfo endpoint.
@@ -402,10 +413,9 @@ func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface
 	switch data := data.(type) {
 	case []interface{}:
 	case []string:
-		ui.Output(tableOutput(data, nil))
-		return nil
+		return data, nil, nil
 	default:
-		return errors.New("error: table formatter cannot output list for this data type")
+		return nil, nil, errors.New("error: table formatter cannot output list for this data type")
 	}
 
 	list := data.([]interface{})
@@ -415,7 +425,7 @@ func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface
 		for i, v := range list {
 			typed, ok := v.(string)
 			if !ok {
-				return fmt.Errorf("%v is not a string", v)
+				return nil, nil, fmt.Errorf("%v is not a string", v)
 			}
 			keys[i] = typed
 		}
@@ -485,12 +495,12 @@ func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, data interface
 
 		// Prepend the header to the formatted rows.
 		output := append([]string{header}, rows...)
-		ui.Output(tableOutput(output, &columnize.Config{
+		return output, &columnize.Config{
 			Delim: hopeDelim,
-		}))
+		}, nil
 	}
 
-	return nil
+	return nil, nil, nil
 }
 
 // printWarnings prints any warnings in the secret.
@@ -504,9 +514,9 @@ func (t TableFormatter) printWarnings(ui cli.Ui, secret *api.Secret) {
 	}
 }
 
-func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
+func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) ([]string, *columnize.Config, error) {
 	if secret == nil {
-		return nil
+		return nil, nil, nil
 	}
 
 	t.printWarnings(ui, secret)
@@ -587,19 +597,18 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret *api.Secret) error {
 	// If we got this far and still don't have any data, there's nothing to print,
 	// sorry.
 	if len(out) == 0 {
-		return nil
+		return nil, nil, nil
 	}
 
 	// Prepend the header
 	out = append([]string{"Key" + hopeDelim + "Value"}, out...)
 
-	ui.Output(tableOutput(out, &columnize.Config{
+	return out, &columnize.Config{
 		Delim: hopeDelim,
-	}))
-	return nil
+	}, nil
 }
 
-func (t TableFormatter) OutputMap(ui cli.Ui, data map[string]interface{}) error {
+func (t TableFormatter) OutputMap(ui cli.Ui, data map[string]interface{}) ([]string, *columnize.Config, error) {
 	out := make([]string, 0, len(data)+1)
 	if len(data) > 0 {
 		keys := make([]string, 0, len(data))
@@ -623,16 +632,15 @@ func (t TableFormatter) OutputMap(ui cli.Ui, data map[string]interface{}) error 
 	// If we got this far and still don't have any data, there's nothing to print,
 	// sorry.
 	if len(out) == 0 {
-		return nil
+		return nil, nil, nil
 	}
 
 	// Prepend the header
 	out = append([]string{"Key" + hopeDelim + "Value"}, out...)
 
-	ui.Output(tableOutput(out, &columnize.Config{
+	return out, &columnize.Config{
 		Delim: hopeDelim,
-	}))
-	return nil
+	}, nil
 }
 
 // OutputSealStatus will print *api.SealStatusResponse in the CLI according to the format provided
@@ -664,6 +672,30 @@ func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusRespo
 	sealStatusOutput.RaftAppliedIndex = leaderStatus.RaftAppliedIndex
 	OutputData(ui, sealStatusOutput)
 	return 0
+}
+
+// expandedFormatter mostly piggy backs off table formatter, but splits each
+// row of values into its own table to accomodate large tables on small screens.
+// Each table has 2 columns: headings and values.
+type expandedFormatter struct{}
+
+func (expandedFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) error {
+	lines, config, err := TableFormatter{}.output(ui, secret, data)
+	if err != nil {
+		return err
+	}
+
+	if len(lines) != 0 && len(strings.Split(lines[0], config.Delim)) <= 2 {
+		// If there are only 2 colums anyway, don't transpose.
+		ui.Output(tableOutput(lines, config))
+	} else if lines != nil {
+		ui.Output(expandedTableOutput(lines, config))
+	}
+	return nil
+}
+
+func (expandedFormatter) Format(data interface{}) ([]byte, error) {
+	return TableFormatter{}.Format(data)
 }
 
 // looksLikeDuration checks if the given key "k" looks like a duration value.

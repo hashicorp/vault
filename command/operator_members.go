@@ -70,7 +70,7 @@ func (c *OperatorMembersCommand) Run(args []string) int {
 	}
 
 	switch Format(c.UI) {
-	case "table":
+	case "table", "expanded":
 		out := make([]string, 0)
 		cols := []string{"Host Name", "API Address", "Cluster Address", "Active Node", "Version", "Upgrade Version", "Redundancy Zone", "Last Echo"}
 		out = append(out, strings.Join(cols, " | "))
@@ -83,7 +83,7 @@ func (c *OperatorMembersCommand) Run(args []string) int {
 			}
 			out = append(out, strings.Join(cols, " | "))
 		}
-		c.UI.Output(tableOutput(out, nil))
+		printTable(c.UI, out, nil)
 		return 0
 	default:
 		return OutputData(c.UI, resp)

@@ -99,12 +99,12 @@ func (c *AuthListCommand) Run(args []string) int {
 	}
 
 	switch Format(c.UI) {
-	case "table":
+	case "table", "expanded":
 		if c.flagDetailed {
-			c.UI.Output(tableOutput(c.detailedMounts(auths), nil))
+			printTable(c.UI, c.detailedMounts(auths), nil)
 			return 0
 		}
-		c.UI.Output(tableOutput(c.simpleMounts(auths), nil))
+		printTable(c.UI, c.simpleMounts(auths), nil)
 		return 0
 	default:
 		return OutputData(c.UI, auths)

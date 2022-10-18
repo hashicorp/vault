@@ -211,7 +211,7 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 		"Key | Value",
 		fmt.Sprintf("Joined | %t", resp.Joined),
 	}
-	c.UI.Output(tableOutput(out, nil))
+	printTable(c.UI, out, nil)
 
 	return 0
 }

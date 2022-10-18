@@ -116,6 +116,6 @@ func (c *OperatorRaftListPeersCommand) Run(args []string) int {
 		out = append(out, fmt.Sprintf("%s | %s | %s | %t", server["node_id"].(string), server["address"].(string), state, server["voter"].(bool)))
 	}
 
-	c.UI.Output(tableOutput(out, nil))
+	printTable(c.UI, out, nil)
 	return 0
 }

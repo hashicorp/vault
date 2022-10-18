@@ -643,8 +643,8 @@ func (c *OperatorRekeyCommand) printStatus(in interface{}) int {
 	}
 
 	switch Format(c.UI) {
-	case "table":
-		c.UI.Output(tableOutput(out, nil))
+	case "table", "expanded":
+		printTable(c.UI, out, nil)
 		return 0
 	default:
 		return OutputData(c.UI, in)

@@ -88,6 +88,6 @@ func (c *PluginReloadStatusCommand) Run(args []string) int {
 			s.Error == "",
 			s.Error))
 	}
-	c.UI.Output(tableOutput(out, nil))
+	printTable(c.UI, out, nil)
 	return 0
 }

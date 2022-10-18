@@ -122,12 +122,12 @@ func (c *PluginListCommand) Run(args []string) int {
 	}
 
 	switch Format(c.UI) {
-	case "table":
+	case "table", "expanded":
 		if c.flagDetailed {
-			c.UI.Output(tableOutput(c.detailedResponse(resp), nil))
+			printTable(c.UI, c.detailedResponse(resp), nil)
 			return 0
 		}
-		c.UI.Output(tableOutput(c.simpleResponse(resp, pluginType), nil))
+		printTable(c.UI, c.simpleResponse(resp, pluginType), nil)
 		return 0
 	default:
 		res := make(map[string]interface{})
