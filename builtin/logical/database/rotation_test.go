@@ -81,7 +81,6 @@ func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 	}
 
 	data = map[string]interface{}{
-		"name":                "plugin-role-test",
 		"db_name":             "plugin-test",
 		"rotation_statements": testRoleStaticUpdate,
 		"username":            dbUser,
