@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -145,12 +146,17 @@ func (c *WriteCommand) Run(args []string) int {
 		}
 		return 2
 	}
-	if secret == nil {
+
+	hasWarnings := checkWarningResponse(secret)
+	if secret == nil || hasWarnings {
 		// Don't output anything unless using the "table" format
 		if Format(c.UI) == "table" {
 			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", path))
 		}
-		return 0
+
+		if !hasWarnings {
+			return 0
+		}
 	}
 
 	if secret != nil && secret.Auth != nil && secret.Auth.MFARequirement != nil {
@@ -173,4 +179,21 @@ func (c *WriteCommand) Run(args []string) int {
 	}
 
 	return OutputSecret(c.UI, secret)
+}
+
+// Checks for a response that only contains warnings and nothing else.
+func checkWarningResponse(secret *api.Secret) bool {
+	if secret != nil &&
+		len(secret.Warnings) > 0 &&
+		len(secret.Data) == 0 &&
+		secret.LeaseDuration == 0 &&
+		secret.Renewable == false &&
+		secret.LeaseID == "" &&
+		secret.Auth == nil &&
+		secret.WrapInfo == nil {
+
+		return true
+	}
+
+	return false
 }
