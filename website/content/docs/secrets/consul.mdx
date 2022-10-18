@@ -8,7 +8,7 @@ description: The Consul secrets engine for Vault generates tokens for Consul dyn
 
 @include 'x509-sha1-deprecation.mdx'
 
-The Consul secrets engine generates [Consul](https://www.consul.io) API tokens
+The Consul secrets engine generates [Consul](https://www.consul.io/) API tokens
 dynamically based on Consul ACL policies.
 
 ## Setup
@@ -93,7 +93,7 @@ management tool.
     you will either provide a policy document and a token type, a list of policies or roles, or a set of
     service or node identities. When users generate credentials, they are generated against this role.
 
-    1.  For Consul versions 1.8 and above, attach [a Consul node identity](https://www.consul.io/commands/acl/token/create#node-identity) to the role.
+    1.  For Consul versions 1.8 and above, attach [a Consul node identity](https://developer.hashicorp.com/consul/commands/acl/token/create#node-identity) to the role.
 
         ```shell-session
         $ vault write consul/roles/my-role \
@@ -102,7 +102,7 @@ management tool.
         Success! Data written to: consul/roles/my-role
         ```
 
-    1.  For Consul versions 1.5 and above, attach either [a role in Consul](https://www.consul.io/api/acl/roles) or [a Consul service identity](https://www.consul.io/commands/acl/token/create#service-identity) to the role:
+    1.  For Consul versions 1.5 and above, attach either [a role in Consul](https://developer.hashicorp.com/consul/api-docs/acl/roles) or [a Consul service identity](https://developer.hashicorp.com/consul/commands/acl/token/create#service-identity) to the role:
 
         ```shell-session
         $ vault write consul/roles/my-role consul_roles="api-server"
@@ -116,7 +116,7 @@ management tool.
         Success! Data written to: consul/roles/my-role
         ```
 
-    1.  For Consul versions 1.4 and above, generate [a policy in Consul](https://www.consul.io/docs/guides/acl.html),
+    1.  For Consul versions 1.4 and above, generate [a policy in Consul](https://learn.hashicorp.com/tutorials/consul/access-control-setup-production),
         and proceed to link it to the role:
 
         ```shell-session
@@ -125,7 +125,7 @@ management tool.
         ```
 
     1.  For Consul versions below 1.4, the policy must be base64-encoded. The policy language is
-        [documented by Consul](https://www.consul.io/docs/security/acl/acl-legacy). Support for this method is
+        [documented by Consul](https://developer.hashicorp.com/consul/docs/security/acl/acl-legacy). Support for this method is
         deprecated as of Vault 1.11.
 
         Write a policy and proceed to link it to the role:
@@ -140,8 +140,8 @@ management tool.
         the lease duration by passing `-ttl=<duration>` to the command above where duration is a [duration format strings](/docs/concepts/duration-format).
 
 1.  You may further limit a role's access by adding the optional parameters `consul_namespace` and
-    `partition`. Please refer to Consul's [namespace documentation](https://www.consul.io/docs/enterprise/namespaces) and
-    [admin partition documentation](https://www.consul.io/docs/enterprise/admin-partitions) for further information about
+    `partition`. Please refer to Consul's [namespace documentation](https://developer.hashicorp.com/consul/docs/enterprise/namespaces) and
+    [admin partition documentation](https://developer.hashicorp.com/consul/docs/enterprise/admin-partitions) for further information about
     these features.
 
     1.  For Consul version 1.11 and above, link an admin partition to a role:
@@ -197,4 +197,4 @@ The Consul secrets engine has a full HTTP API. Please see the
 [Consul secrets engine API](/api-docs/secret/consul) for more
 details.
 
-[consul-mgmt-token]: https://www.consul.io/api-docs/acl#acl_create
+[consul-mgmt-token]: https://developer.hashicorp.com/consul/api-docs/acl#acl_create
