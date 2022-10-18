@@ -185,7 +185,11 @@ func TestCRLFetch(t *testing.T) {
 	crlBytes, err = x509.CreateRevocationList(rand.Reader, revocationListTemplate, caBundle.Certificate, bundle.PrivateKey)
 	crlBytesLock.Unlock()
 	require.NoError(t, err)
-	time.Sleep(60 * time.Millisecond)
+
+	// Give ourselves a little extra room on slower CI systems to ensure we
+	// can fetch the new CRL.
+	time.Sleep(150 * time.Millisecond)
+
 	b.crlUpdateMutex.Lock()
 	if len(b.crls["testcrl"].Serials) != 2 {
 		t.Fatalf("wrong number of certs in CRL")

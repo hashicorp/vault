@@ -1092,6 +1092,18 @@ func (i *IdentityStore) MemDBEntityByIDInTxn(txn *memdb.Txn, entityID string, cl
 	return entity, nil
 }
 
+func (i *IdentityStore) UpdateEntityWithMountInformation(entity *identity.Entity) {
+	if entity != nil {
+		for _, alias := range entity.Aliases {
+			mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor)
+			if mountValidationResp != nil {
+				alias.MountType = mountValidationResp.MountType
+				alias.MountPath = mountValidationResp.MountPath
+			}
+		}
+	}
+}
+
 func (i *IdentityStore) MemDBEntityByID(entityID string, clone bool) (*identity.Entity, error) {
 	if entityID == "" {
 		return nil, fmt.Errorf("missing entity id")

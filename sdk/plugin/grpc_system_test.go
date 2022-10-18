@@ -106,10 +106,6 @@ func TestSystem_GRPC_replicationState(t *testing.T) {
 	}
 }
 
-func TestSystem_GRPC_responseWrapData(t *testing.T) {
-	t.SkipNow()
-}
-
 func TestSystem_GRPC_lookupPlugin(t *testing.T) {
 	sys := logical.TestSystemView()
 	client, _ := plugin.TestGRPCConn(t, func(s *grpc.Server) {

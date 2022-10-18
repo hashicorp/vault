@@ -23,7 +23,7 @@ module('Unit | Adapter | identity/entity-merge', function (hooks) {
     let adapter = this.owner.lookup('adapter:identity/entity-merge');
     adapter.createRecord(storeMVP, { modelName: 'identity/entity-merge' }, { attr: (x) => x });
     let { url, method } = this.server.handledRequests[0];
-    assert.equal(url, `/v1/identity/entity/merge`, ` calls the correct url`);
-    assert.equal(method, 'POST', `uses the correct http verb: POST`);
+    assert.strictEqual(url, `/v1/identity/entity/merge`, ` calls the correct url`);
+    assert.strictEqual(method, 'POST', `uses the correct http verb: POST`);
   });
 });

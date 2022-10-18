@@ -109,6 +109,9 @@ func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs)
 			Err: pb.ErrToString(err),
 		}, nil
 	}
+
+	b.instancesLock.Lock()
+	defer b.instancesLock.Unlock()
 	b.instances[id] = backendInstance{
 		brokeredClient: brokeredClient,
 		backend:        backend,

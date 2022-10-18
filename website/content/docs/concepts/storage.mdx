@@ -13,10 +13,9 @@ storage backend is untrusted storage used purely to keep encrypted information.
 
 ## Supported Storage Backends
 
-For enterprise customers, HashiCorp provides official support for Consul and
-Vault's Integrated Storage as storage backends.
+@include 'ent-supported-storage.mdx'
 
-Many other options for storage are available with community support - see our
+Many other options for storage are available with community support for open-source Vault - see our
 [Storage Configuration](/docs/configuration/storage) section for more
 information.
 
@@ -81,7 +80,7 @@ components of that plan.
 Backups and restores are ideally performed while Vault is offline. If offline
 backups are not feasible, we recommend using a storage backend that supports
 atomic snapshots (such as
-[Consul](https://www.consul.io/docs/commands/snapshot.html) or [Integrated
+[Consul](https://developer.hashicorp.com/consul/commands/snapshot) or [Integrated
 Storage](/docs/commands/operator/raft#snapshot)).
 
 ~> If your storage backend does not support atomic snapshots, we recommend only
@@ -93,7 +92,7 @@ other storage backends, follow the documentation of that backend for taking and
 restoring backups.
 
 - Integrated Storage [snapshots](/docs/commands/operator/raft#snapshot)
-- Consul [snapshots](https://www.consul.io/docs/commands/snapshot.html)
+- Consul [snapshots](https://developer.hashicorp.com/consul/commands/snapshot)
 
 #### Backing up Multiple Clusters
 

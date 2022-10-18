@@ -1,3 +1,13 @@
+<SecretListHeader
+  @model={{this.model.parentModel}}
+  @backendCrumb={{hash
+    label=this.model.parentModel.id
+    text=this.model.parentModel.id
+    path="vault.cluster.secrets.backend.list-root"
+    model=this.model.parentModel.id
+  }}
+  @isEngine={{true}}
+/>
 <Toolbar>
   <ToolbarActions>
     <ToolbarLink @type="add" @params={{array "roles.create"}}>
@@ -6,15 +16,15 @@
   </ToolbarActions>
 </Toolbar>
 
-{{#if (gt this.model.length 0)}}
-  {{#each this.model as |model|}}
-    <LinkedBlock class="list-item-row" @params={{array "roles.role.details" model.id}} @linkPrefix={{this.mountPoint}}>
+{{#if this.model.roleModel.length}}
+  {{#each this.model.roleModel as |pkiRole|}}
+    <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiRole.id}} @linkPrefix={{this.mountPoint}}>
       <div class="level is-mobile">
         <div class="level-left">
           <div>
-            <Icon @name="file" class="has-text-grey-light" />
+            <Icon @name="user" class="has-text-grey-light" />
             <span class="has-text-weight-semibold is-underline">
-              {{model.id}}
+              {{pkiRole.id}}
             </span>
           </div>
         </div>
@@ -24,22 +34,12 @@
               <nav class="menu">
                 <ul class="menu-list">
                   <li>
-                    <LinkTo
-                      @route="roles.role.details"
-                      @model={{model.id}}
-                      {{! ARG TODO return with permissions }}
-                      {{!-- @disabled={{eq model.canRead false}} --}}
-                    >
+                    <LinkTo @route="roles.role.details" @model={{pkiRole.id}}>
                       Details
                     </LinkTo>
                   </li>
                   <li>
-                    <LinkTo
-                      @route="roles.role.edit"
-                      @model={{model.id}}
-                      {{! ARG TODO return with permissions }}
-                      {{!-- @disabled={{eq model.canEdit false}} --}}
-                    >
+                    <LinkTo @route="roles.role.edit" @model={{pkiRole.id}}>
                       Edit
                     </LinkTo>
                   </li>

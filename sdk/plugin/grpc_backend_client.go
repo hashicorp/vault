@@ -42,10 +42,7 @@ type backendGRPCPluginClient struct {
 	// server is the grpc server used for serving storage and sysview requests.
 	server *atomic.Value
 
-	// clientConn is the underlying grpc connection to the server, we store it
-	// so it can be cleaned up.
-	clientConn *grpc.ClientConn
-	doneCtx    context.Context
+	doneCtx context.Context
 }
 
 func (b *backendGRPCPluginClient) Initialize(ctx context.Context, _ *logical.InitializationRequest) error {
@@ -194,7 +191,6 @@ func (b *backendGRPCPluginClient) Cleanup(ctx context.Context) {
 	if server != nil {
 		server.(*grpc.Server).GracefulStop()
 	}
-	b.clientConn.Close()
 }
 
 func (b *backendGRPCPluginClient) InvalidateKey(ctx context.Context, key string) {

@@ -233,7 +233,10 @@ func (mw databaseMetricsMiddleware) Close() (err error) {
 // Error Sanitizer Middleware Domain
 // ///////////////////////////////////////////////////
 
-var _ Database = DatabaseErrorSanitizerMiddleware{}
+var (
+	_ Database                = (*DatabaseErrorSanitizerMiddleware)(nil)
+	_ logical.PluginVersioner = (*DatabaseErrorSanitizerMiddleware)(nil)
+)
 
 // DatabaseErrorSanitizerMiddleware wraps an implementation of Databases and
 // sanitizes returned error messages
@@ -278,6 +281,13 @@ func (mw DatabaseErrorSanitizerMiddleware) Type() (string, error) {
 
 func (mw DatabaseErrorSanitizerMiddleware) Close() (err error) {
 	return mw.sanitize(mw.next.Close())
+}
+
+func (mw DatabaseErrorSanitizerMiddleware) PluginVersion() logical.PluginVersion {
+	if versioner, ok := mw.next.(logical.PluginVersioner); ok {
+		return versioner.PluginVersion()
+	}
+	return logical.EmptyPluginVersion
 }
 
 // sanitize errors by removing any sensitive strings within their messages. This uses

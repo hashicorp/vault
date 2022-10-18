@@ -28,9 +28,13 @@ module('Acceptance | engine/disable', function (hooks) {
     await settled();
     await backendsPage.confirmDisable();
     await settled();
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backends', 'redirects to the backends page');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backends',
+      'redirects to the backends page'
+    );
 
-    assert.equal(
+    assert.strictEqual(
       backendsPage.rows.filterBy('path', `${enginePath}/`).length,
       0,
       'does not show the disabled engine'

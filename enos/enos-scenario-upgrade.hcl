@@ -1,12 +1,12 @@
 scenario "upgrade" {
   matrix {
-    arch           = ["amd64", "arm64"]
-    backend        = ["consul", "raft"]
-    builder        = ["local", "crt"]
-    consul_version = ["1.12.3", "1.11.7", "1.10.12"]
-    distro         = ["ubuntu", "rhel"]
-    edition        = ["oss", "ent"]
-    seal           = ["awskms", "shamir"]
+    arch            = ["amd64", "arm64"]
+    backend         = ["consul", "raft"]
+    artifact_source = ["local", "crt", "artifactory"]
+    consul_version  = ["1.13.2", "1.12.5", "1.11.10"]
+    distro          = ["ubuntu", "rhel"]
+    edition         = ["oss", "ent"]
+    seal            = ["awskms", "shamir"]
   }
 
   terraform_cli = terraform_cli.default
@@ -22,12 +22,13 @@ scenario "upgrade" {
       "oss" = ["ui"]
       "ent" = ["enterprise", "ent"]
     }
-    bundle_path             = abspath(var.vault_bundle_path)
+    bundle_path             = matrix.artifact_source != "artifactory" ? abspath(var.vault_bundle_path) : null
     dependencies_to_install = ["jq"]
     enos_provider = {
       rhel   = provider.enos.rhel
       ubuntu = provider.enos.ubuntu
     }
+    install_artifactory_artifact = local.bundle_path == null
     tags = merge({
       "Project Name" : var.project_name
       "Project" : "Enos",
@@ -41,13 +42,24 @@ scenario "upgrade" {
   }
 
   step "build_vault" {
-    module = matrix.builder == "crt" ? module.build_crt : module.build_local
+    module = "build_${matrix.artifact_source}"
 
     variables {
-      build_tags  = var.vault_local_build_tags != null ? var.vault_local_build_tags : local.build_tags[matrix.edition]
-      bundle_path = local.bundle_path
-      goarch      = matrix.arch
-      goos        = "linux"
+      build_tags            = try(var.vault_local_build_tags, local.build_tags[matrix.edition])
+      bundle_path           = local.bundle_path
+      goarch                = matrix.arch
+      goos                  = "linux"
+      artifactory_host      = matrix.artifact_source == "artifactory" ? var.artifactory_host : null
+      artifactory_repo      = matrix.artifact_source == "artifactory" ? var.artifactory_repo : null
+      artifactory_username  = matrix.artifact_source == "artifactory" ? var.artifactory_username : null
+      artifactory_token     = matrix.artifact_source == "artifactory" ? var.artifactory_token : null
+      arch                  = matrix.artifact_source == "artifactory" ? matrix.arch : null
+      vault_product_version = var.vault_product_version
+      artifact_type         = matrix.artifact_source == "artifactory" ? var.vault_artifact_type : null
+      distro                = matrix.artifact_source == "artifactory" ? matrix.distro : null
+      edition               = matrix.artifact_source == "artifactory" ? matrix.edition : null
+      instance_type         = matrix.artifact_source == "artifactory" ? local.vault_instance_type : null
+      revision              = var.vault_revision
     }
   }
 
@@ -81,12 +93,14 @@ scenario "upgrade" {
     }
   }
 
+  step "get_local_metadata" {
+    skip_step = matrix.artifact_source != "local"
+    module    = module.get_local_metadata
+  }
+
   step "create_backend_cluster" {
-    module = "backend_${matrix.backend}"
-    depends_on = [
-      step.create_vpc,
-      step.build_vault,
-    ]
+    module     = "backend_${matrix.backend}"
+    depends_on = [step.create_vpc]
 
     providers = {
       enos = provider.enos.ubuntu
@@ -108,8 +122,8 @@ scenario "upgrade" {
   step "create_vault_cluster" {
     module = module.vault_cluster
     depends_on = [
-      step.create_vpc,
       step.create_backend_cluster,
+      step.build_vault,
     ]
 
     providers = {
@@ -142,11 +156,13 @@ scenario "upgrade" {
     }
 
     variables {
-      vault_api_addr          = "http://localhost:8200"
-      vault_instances         = step.create_vault_cluster.vault_instances
-      vault_local_bundle_path = local.bundle_path
-      vault_unseal_keys       = matrix.seal == "shamir" ? step.create_vault_cluster.vault_unseal_keys_hex : null
-      vault_seal_type         = matrix.seal
+      vault_api_addr            = "http://localhost:8200"
+      vault_instances           = step.create_vault_cluster.vault_instances
+      vault_local_bundle_path   = local.bundle_path
+      vault_local_artifact_path = local.bundle_path
+      vault_artifactory_release = local.install_artifactory_artifact ? step.build_vault.vault_artifactory_release : null
+      vault_unseal_keys         = matrix.seal == "shamir" ? step.create_vault_cluster.vault_unseal_keys_hex : null
+      vault_seal_type           = matrix.seal
     }
   }
 
@@ -162,7 +178,12 @@ scenario "upgrade" {
     }
 
     variables {
-      vault_instances = step.create_vault_cluster.vault_instances
+      vault_instances       = step.create_vault_cluster.vault_instances
+      vault_edition         = matrix.edition
+      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
+      vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
+      vault_root_token      = step.create_vault_cluster.vault_root_token
     }
   }
 

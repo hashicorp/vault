@@ -85,7 +85,7 @@ func (c *PluginRegisterCommand) Flags() *FlagSets {
 		Name:       "version",
 		Target:     &c.flagVersion,
 		Completion: complete.PredictAnything,
-		Usage:      "Version of the plugin. Optional.",
+		Usage:      "Semantic version of the plugin. Optional.",
 	})
 
 	return set

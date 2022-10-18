@@ -45,6 +45,7 @@ type RaftClusterOpts struct {
 	Seal                           vault.Seal
 	VersionMap                     map[int]string
 	RedundancyZoneMap              map[int]string
+	EffectiveSDKVersionMap         map[int]string
 }
 
 func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
@@ -70,6 +71,7 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 	opts.NumCores = ropts.NumCores
 	opts.VersionMap = ropts.VersionMap
 	opts.RedundancyZoneMap = ropts.RedundancyZoneMap
+	opts.EffectiveSDKVersionMap = ropts.EffectiveSDKVersionMap
 
 	teststorage.RaftBackendSetup(conf, &opts)
 

@@ -4,20 +4,18 @@ import Controller, { inject as controller } from '@ember/controller';
 import { task, timeout } from 'ember-concurrency';
 
 export default Controller.extend({
+  flashMessages: service(),
   vaultController: controller('vault'),
   clusterController: controller('vault.cluster'),
   namespaceService: service('namespace'),
   featureFlagService: service('featureFlag'),
   auth: service(),
   router: service(),
-
   queryParams: [{ authMethod: 'with', oidcProvider: 'o' }],
-
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
   wrappedToken: alias('vaultController.wrappedToken'),
   redirectTo: alias('vaultController.redirectTo'),
   managedNamespaceRoot: alias('featureFlagService.managedNamespaceRoot'),
-
   authMethod: '',
   oidcProvider: '',
 

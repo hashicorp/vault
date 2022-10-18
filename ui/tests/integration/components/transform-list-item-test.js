@@ -20,9 +20,9 @@ module('Integration | Component | transform-list-item', function (hooks) {
     this.set('itemType', 'role');
     this.set('item', item);
     await render(hbs`<SecretList::TransformListItem
-      @item={{item}}
-      @itemPath={{itemPath}}
-      @itemType={{itemType}}
+      @item={{this.item}}
+      @itemPath={{this.itemPath}}
+      @itemType={{this.itemType}}
     />`);
 
     assert.dom('[data-test-view-only-list-item]').exists('shows view only list item');
@@ -42,9 +42,9 @@ module('Integration | Component | transform-list-item', function (hooks) {
     this.set('itemType', 'template');
     this.set('item', item);
     await render(hbs`<SecretList::TransformListItem
-      @item={{item}}
-      @itemPath={{itemPath}}
-      @itemType={{itemType}}
+      @item={{this.item}}
+      @itemPath={{this.itemPath}}
+      @itemType={{this.itemType}}
     />`);
 
     assert.dom('[data-test-secret-link="template/foo"]').exists('shows clickable list item');
@@ -65,9 +65,9 @@ module('Integration | Component | transform-list-item', function (hooks) {
     this.set('itemType', 'alphabet');
     this.set('item', item);
     await render(hbs`<SecretList::TransformListItem
-      @item={{item}}
-      @itemPath={{itemPath}}
-      @itemType={{itemType}}
+      @item={{this.item}}
+      @itemPath={{this.itemPath}}
+      @itemType={{this.itemType}}
     />`);
 
     assert.dom('[data-test-secret-link="alphabet/foo"]').exists('shows clickable list item');
@@ -88,9 +88,9 @@ module('Integration | Component | transform-list-item', function (hooks) {
     this.set('itemType', 'template');
     this.set('item', item);
     await render(hbs`<SecretList::TransformListItem
-      @item={{item}}
-      @itemPath={{itemPath}}
-      @itemType={{itemType}}
+      @item={{this.item}}
+      @itemPath={{this.itemPath}}
+      @itemType={{this.itemType}}
     />`);
 
     assert.dom('[data-test-view-only-list-item]').exists('shows view only list item');
@@ -110,9 +110,9 @@ module('Integration | Component | transform-list-item', function (hooks) {
     this.set('itemType', 'alphabet');
     this.set('item', item);
     await render(hbs`<SecretList::TransformListItem
-      @item={{item}}
-      @itemPath={{itemPath}}
-      @itemType={{itemType}}
+      @item={{this.item}}
+      @itemPath={{this.itemPath}}
+      @itemType={{this.itemType}}
     />`);
 
     assert.dom('[data-test-view-only-list-item]').exists('shows view only list item');
