@@ -40,6 +40,7 @@ module('Unit | Service | control group', function (hooks) {
     this.router.reopen({
       transitionTo: sinon.stub(),
       urlFor: sinon.stub().returns('/ui/vault/foo'),
+      currentURL: '/vault/secrets/kv/show/foo',
     });
   });
 
@@ -112,7 +113,7 @@ module('Unit | Service | control group', function (hooks) {
     });
   });
 
-  test(`handleError: transitions to accessor when there is no transition passed in`, function (assert) {
+  test(`handleError: transitions to accessor and stores control group token`, function (assert) {
     const error = {
       accessor: '12345',
       token: 'token',
@@ -120,7 +121,7 @@ module('Unit | Service | control group', function (hooks) {
       creation_time: new Date().toISOString(),
       ttl: 400,
     };
-    const expected = { ...error, uiParams: { url: undefined } };
+    const expected = { ...error, uiParams: { url: '/vault/secrets/kv/show/foo' } };
     const service = this.owner.factoryFor('service:control-group').create({
       storeControlGroupToken: sinon.spy(),
     });
@@ -129,33 +130,6 @@ module('Unit | Service | control group', function (hooks) {
     assert.ok(
       this.router.transitionTo.calledWith('vault.cluster.access.control-group-accessor', '12345'),
       'calls router transitionTo'
-    );
-  });
-
-  test('handleError calls storeControlGroupToken with url from transition', function (assert) {
-    const error = {
-      accessor: '12345',
-      token: 'token',
-      creation_path: 'kv/',
-      creation_time: new Date().toISOString(),
-      ttl: 400,
-    };
-    const transition = {
-      intent: {
-        url: '/vault/cluster/foo',
-      },
-    };
-    const service = this.owner.factoryFor('service:control-group').create({
-      storeControlGroupToken: sinon.spy(),
-    });
-    service.handleError(error, transition);
-    const expected = {
-      ...error,
-      uiParams: { url: transition.intent.url },
-    };
-    assert.ok(
-      service.storeControlGroupToken.calledWith(expected),
-      'calls storeControlGroupToken with url from transition'
     );
   });
 
