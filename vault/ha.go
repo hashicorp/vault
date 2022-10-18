@@ -6,6 +6,8 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"os"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -86,6 +88,49 @@ func (c *Core) StandbyStates() (standby, perfStandby bool) {
 	perfStandby = c.perfStandby
 	c.stateLock.RUnlock()
 	return
+}
+
+// getHAMembers retrieves cluster membership that doesn't depend on raft. This should only ever be called by the
+// active node.
+func (c *Core) getHAMembers() ([]HAStatusNode, error) {
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, err
+	}
+
+	leader := HAStatusNode{
+		Hostname:       hostname,
+		APIAddress:     c.redirectAddr,
+		ClusterAddress: c.ClusterAddr(),
+		ActiveNode:     true,
+		Version:        c.effectiveSDKVersion,
+	}
+
+	if rb := c.getRaftBackend(); rb != nil {
+		leader.UpgradeVersion = rb.EffectiveVersion()
+		leader.RedundancyZone = rb.RedundancyZone()
+	}
+
+	nodes := []HAStatusNode{leader}
+
+	for _, peerNode := range c.GetHAPeerNodesCached() {
+		lastEcho := peerNode.LastEcho
+		nodes = append(nodes, HAStatusNode{
+			Hostname:       peerNode.Hostname,
+			APIAddress:     peerNode.APIAddress,
+			ClusterAddress: peerNode.ClusterAddress,
+			LastEcho:       &lastEcho,
+			Version:        peerNode.Version,
+			UpgradeVersion: peerNode.UpgradeVersion,
+			RedundancyZone: peerNode.RedundancyZone,
+		})
+	}
+
+	sort.Slice(nodes, func(i, j int) bool {
+		return nodes[i].APIAddress < nodes[j].APIAddress
+	})
+
+	return nodes, nil
 }
 
 // Leader is used to get the current active leader
@@ -387,6 +432,17 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 		}, func(error) {
 			close(checkLeaderStop)
 			c.logger.Debug("shutting down periodic leader refresh")
+		})
+	}
+	{
+		metricsStop := make(chan struct{})
+
+		g.Add(func() error {
+			c.metricsLoop(metricsStop)
+			return nil
+		}, func(error) {
+			close(metricsStop)
+			c.logger.Debug("shutting down periodic metrics")
 		})
 	}
 	{

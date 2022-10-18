@@ -74,7 +74,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     assert.expect(10);
     await mountAndNav(assert);
     await settled();
-    assert.equal(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.settings.configure-secret-backend.section');
 
     await page.form.generateCA();
     await settled();
@@ -97,7 +97,7 @@ BXUV2Uwtxf+QCphnlht9muX2fsLIzDJea0JipWj1uf2H8OZsjE8=
     assert.expect(2);
     await mountAndNav(assert);
     await settled();
-    assert.equal(page.form.downloadLinks.length, 0, 'there are no download links');
+    assert.strictEqual(page.form.downloadLinks.length, 0, 'there are no download links');
 
     await page.form.uploadCA(PEM_BUNDLE);
     await settled();

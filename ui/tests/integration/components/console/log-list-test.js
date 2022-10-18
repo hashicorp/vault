@@ -14,7 +14,7 @@ module('Integration | Component | console/log list', function (hooks) {
 
     this.set('content', listContent);
 
-    await render(hbs`{{console/log-list content=content}}`);
+    await render(hbs`{{console/log-list content=this.content}}`);
 
     assert.dom('pre').includesText(`${expectedText}`);
   });

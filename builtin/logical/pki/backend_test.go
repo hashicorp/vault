@@ -2131,9 +2131,20 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	oidExtensionSubjectAltName = []int{2, 5, 29, 17}
 	csrReq := &x509.CertificateRequest{
 		Subject: pkix.Name{
 			CommonName: "foo.bar.com",
+		},
+		// Check that otherName extensions are not duplicated (see hashicorp/vault#16700).
+		// If these extensions are duplicated, sign-verbatim will fail when parsing the signed certificate on Go 1.19+ (see golang/go#50988).
+		// On older versions of Go this test will fail due to an explicit check for duplicate otherNames later in this test.
+		ExtraExtensions: []pkix.Extension{
+			{
+				Id:       oidExtensionSubjectAltName,
+				Critical: false,
+				Value:    []byte{0x30, 0x26, 0xA0, 0x24, 0x06, 0x0A, 0x2B, 0x06, 0x01, 0x04, 0x01, 0x82, 0x37, 0x14, 0x02, 0x03, 0xA0, 0x16, 0x0C, 0x14, 0x75, 0x73, 0x65, 0x72, 0x6E, 0x61, 0x6D, 0x65, 0x40, 0x65, 0x78, 0x61, 0x6D, 0x70, 0x6C, 0x65, 0x2E, 0x63, 0x6F, 0x6D},
+			},
 		},
 	}
 	csr, err := x509.CreateCertificateRequest(rand.Reader, csrReq, key)
@@ -2285,6 +2296,19 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 		t.Fatalf("expected a single cert, got %d", len(certs))
 	}
 	cert = certs[0]
+
+	// Fallback check for duplicate otherName, necessary on Go versions before 1.19.
+	// We assume that there is only one SAN in the original CSR and that it is an otherName.
+	san_count := 0
+	for _, ext := range cert.Extensions {
+		if ext.Id.Equal(oidExtensionSubjectAltName) {
+			san_count += 1
+		}
+	}
+	if san_count != 1 {
+		t.Fatalf("expected one SAN extension, got %d", san_count)
+	}
+
 	notAfter := cert.NotAfter.Format(time.RFC3339)
 	if notAfter != "9999-12-31T23:59:59Z" {
 		t.Fatal(fmt.Errorf("not after from certificate is not matching with input parameter"))
@@ -5617,6 +5641,10 @@ func TestBackend_VerifyIssuerUpdateDefaultsMatchCreation(t *testing.T) {
 	resp, err = CBRead(b, s, "issuer/default")
 	requireSuccessNonNilResponse(t, resp, err, "failed reading default issuer")
 	preUpdateValues := resp.Data
+
+	// This field gets reset during issuer update to the empty string
+	// (meaning Go will auto-detect the rev-sig-algo).
+	preUpdateValues["revocation_signature_algorithm"] = ""
 
 	resp, err = CBWrite(b, s, "issuer/default", map[string]interface{}{})
 	requireSuccessNonNilResponse(t, resp, err, "failed updating default issuer with no values")

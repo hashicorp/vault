@@ -142,7 +142,7 @@ const testConvergentEncryption = async function (assert, keyName) {
 
       assertAfterDecrypt: (key) => {
         assert.dom('.modal.is-active').exists(`${key}: Modal opens after decrypt`);
-        assert.equal(
+        assert.strictEqual(
           find('[data-test-encrypted-value="plaintext"]').innerText,
           'NaXud2QW7KjyK6Me9ggh+zmnCeBGdG93LQED49PtoOI=',
           `${key}: the ui shows the base64-encoded plaintext`
@@ -170,7 +170,7 @@ const testConvergentEncryption = async function (assert, keyName) {
       },
       assertAfterDecrypt: (key) => {
         assert.dom('.modal.is-active').exists(`${key}: Modal opens after decrypt`);
-        assert.equal(
+        assert.strictEqual(
           find('[data-test-encrypted-value="plaintext"]').innerText,
           'NaXud2QW7KjyK6Me9ggh+zmnCeBGdG93LQED49PtoOI=',
           `${key}: the ui shows the base64-encoded plaintext`
@@ -198,7 +198,7 @@ const testConvergentEncryption = async function (assert, keyName) {
       },
       assertAfterDecrypt: (key) => {
         assert.dom('.modal.is-active').exists(`${key}: Modal opens after decrypt`);
-        assert.equal(
+        assert.strictEqual(
           find('[data-test-encrypted-value="plaintext"]').innerText,
           encodeString('This is the secret'),
           `${key}: the ui decodes plaintext`
@@ -227,7 +227,7 @@ const testConvergentEncryption = async function (assert, keyName) {
       },
       assertAfterDecrypt: (key) => {
         assert.dom('.modal.is-active').exists(`${key}: Modal opens after decrypt`);
-        assert.equal(
+        assert.strictEqual(
           find('[data-test-encrypted-value="plaintext"]').innerText,
           encodeString('There are many secrets 🤐'),
           `${key}: the ui decodes plaintext`
@@ -299,7 +299,7 @@ module('Acceptance | transit', function (hooks) {
     await generateTransitKey(keyTypes[0], now);
     await secretListPage.secrets.objectAt(0).menuToggle();
     await settled();
-    assert.equal(secretListPage.menuItems.length, 2, 'shows 2 items in the menu');
+    assert.strictEqual(secretListPage.menuItems.length, 2, 'shows 2 items in the menu');
   });
   for (let key of keyTypes) {
     test(`transit backend: ${key.type}`, async function (assert) {

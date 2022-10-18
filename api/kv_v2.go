@@ -125,11 +125,7 @@ func (kv *KVv2) Get(ctx context.Context, secretPath string) (*KVSecret, error) {
 		return nil, fmt.Errorf("error parsing secret at %s: %w", pathToRead, err)
 	}
 
-	cm, err := extractCustomMetadata(secret)
-	if err != nil {
-		return nil, fmt.Errorf("error reading custom metadata for secret at %s: %w", pathToRead, err)
-	}
-	kvSecret.CustomMetadata = cm
+	kvSecret.CustomMetadata = extractCustomMetadata(secret)
 
 	return kvSecret, nil
 }
@@ -159,11 +155,7 @@ func (kv *KVv2) GetVersion(ctx context.Context, secretPath string, version int) 
 		return nil, fmt.Errorf("error parsing secret at %s: %w", pathToRead, err)
 	}
 
-	cm, err := extractCustomMetadata(secret)
-	if err != nil {
-		return nil, fmt.Errorf("error reading custom metadata for secret at %s: %w", pathToRead, err)
-	}
-	kvSecret.CustomMetadata = cm
+	kvSecret.CustomMetadata = extractCustomMetadata(secret)
 
 	return kvSecret, nil
 }
@@ -260,11 +252,7 @@ func (kv *KVv2) Put(ctx context.Context, secretPath string, data map[string]inte
 		Raw:             secret,
 	}
 
-	cm, err := extractCustomMetadata(secret)
-	if err != nil {
-		return nil, fmt.Errorf("error reading custom metadata for secret at %s: %w", pathToWriteTo, err)
-	}
-	kvSecret.CustomMetadata = cm
+	kvSecret.CustomMetadata = extractCustomMetadata(secret)
 
 	return kvSecret, nil
 }
@@ -497,30 +485,24 @@ func (kv *KVv2) Rollback(ctx context.Context, secretPath string, toVersion int) 
 	return kvs, nil
 }
 
-func extractCustomMetadata(secret *Secret) (map[string]interface{}, error) {
+func extractCustomMetadata(secret *Secret) map[string]interface{} {
 	// Logical Writes return the metadata directly, Reads return it nested inside the "metadata" key
 	customMetadataInterface, ok := secret.Data["custom_metadata"]
 	if !ok {
-		metadataInterface, ok := secret.Data["metadata"]
-		if !ok { // if that's not found, bail since it should have had one or the other
-			return nil, fmt.Errorf("secret is missing expected fields")
-		}
+		metadataInterface := secret.Data["metadata"]
 		metadataMap, ok := metadataInterface.(map[string]interface{})
 		if !ok {
-			return nil, fmt.Errorf("unexpected type for 'metadata' element: %T (%#v)", metadataInterface, metadataInterface)
+			return nil
 		}
-		customMetadataInterface, ok = metadataMap["custom_metadata"]
-		if !ok {
-			return nil, fmt.Errorf("metadata missing expected field \"custom_metadata\": %v", metadataMap)
-		}
+		customMetadataInterface = metadataMap["custom_metadata"]
 	}
 
 	cm, ok := customMetadataInterface.(map[string]interface{})
-	if !ok && customMetadataInterface != nil {
-		return nil, fmt.Errorf("unexpected type for 'metadata' element: %T (%#v)", customMetadataInterface, customMetadataInterface)
+	if !ok {
+		return nil
 	}
 
-	return cm, nil
+	return cm
 }
 
 func extractDataAndVersionMetadata(secret *Secret) (*KVSecret, error) {
@@ -724,11 +706,7 @@ func mergePatch(ctx context.Context, client *Client, mountPath string, secretPat
 		Raw:             secret,
 	}
 
-	cm, err := extractCustomMetadata(secret)
-	if err != nil {
-		return nil, fmt.Errorf("error reading custom metadata for secret %s: %w", secretPath, err)
-	}
-	kvSecret.CustomMetadata = cm
+	kvSecret.CustomMetadata = extractCustomMetadata(secret)
 
 	return kvSecret, nil
 }

@@ -58,7 +58,7 @@ module('Integration | Component | date-dropdown', function (hooks) {
     await render(hbs`
     <div class="is-flex-align-baseline">
     <DateDropdown 
-      @handleSubmit={{parentAction}} 
+      @handleSubmit={{this.parentAction}} 
       @dateType="start"
     />
     </div>
@@ -73,7 +73,7 @@ module('Integration | Component | date-dropdown', function (hooks) {
     await click(monthDropdown);
     let dropdownListMonths = findAll('[data-test-month-list] button');
 
-    assert.equal(dropdownListMonths.length, 12, 'dropdown has 12 months');
+    assert.strictEqual(dropdownListMonths.length, 12, 'dropdown has 12 months');
     for (let [index, month] of ARRAY_OF_MONTHS.entries()) {
       assert.dom(dropdownListMonths[index]).hasText(`${month}`, `dropdown includes ${month}`);
     }
@@ -84,7 +84,7 @@ module('Integration | Component | date-dropdown', function (hooks) {
 
     await click(yearDropdown);
     let dropdownListYears = findAll('[data-test-year-list] button');
-    assert.equal(dropdownListYears.length, 5, 'dropdown has 5 years');
+    assert.strictEqual(dropdownListYears.length, 5, 'dropdown has 5 years');
 
     for (let [index, year] of dropdownListYears.entries()) {
       let comparisonYear = CURRENT_YEAR - index;

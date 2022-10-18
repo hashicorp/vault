@@ -1128,8 +1128,8 @@
         "path": "secrets/nomad"
       },
       {
-        "title": "OpenLDAP",
-        "path": "secrets/openldap"
+        "title": "LDAP",
+        "path": "secrets/ldap"
       },
       {
         "title": "PKI (Certificates)",
@@ -1698,6 +1698,10 @@
         "path": "upgrading/plugins"
       },
       {
+        "title": "Upgrade to 1.12.x",
+        "path": "upgrading/upgrade-to-1.12.x"
+      },
+      {
         "title": "Upgrade to 1.11.x",
         "path": "upgrading/upgrade-to-1.11.x"
       },
@@ -2069,6 +2073,19 @@
           {
             "title": "Security",
             "path": "enterprise/hsm/security"
+          }
+        ]
+      },
+      {
+        "title": "PKCS11 Provider",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "enterprise/pkcs11-provider"
+          },
+          {
+            "title": "Oracle TDE",
+            "path": "enterprise/pkcs11-provider/oracle-tde"
           }
         ]
       },

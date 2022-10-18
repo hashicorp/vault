@@ -1,6 +1,6 @@
 <PageHeader as |p|>
   <p.top>
-    <nav class="breadcrumb">
+    <nav class="breadcrumb" aria-label="breadcrumbs">
       <ul>
         <li>
           <span class="sep">&#x0002f;</span>
@@ -18,7 +18,7 @@
   </p.levelLeft>
 </PageHeader>
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
-  <nav class="tabs sub-nav">
+  <nav class="tabs sub-nav" aria-label="tabs">
     <ul>
       {{#each (tabs-for-identity-show this.model.identityType) as |tab|}}
         <LinkTo @route="vault.cluster.access.identity.aliases.show" @models={{array this.model.id tab}}>
@@ -30,10 +30,7 @@
 </div>
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink
-      @params={{array "vault.cluster.access.identity.aliases.edit" this.model.id}}
-      data-test-alias-edit-link={{true}}
-    >
+    <ToolbarLink @route="vault.cluster.access.identity.aliases.edit" @model={{this.model.id}} data-test-alias-edit-link>
       Edit
       {{lowercase (humanize this.model.identityType)}}
     </ToolbarLink>

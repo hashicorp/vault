@@ -21,7 +21,11 @@ module('Acceptance | alicloud/enable', function (hooks) {
     await mountSecrets.next().path(enginePath).submit();
     await settled();
 
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backends', 'redirects to the backends page');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backends',
+      'redirects to the backends page'
+    );
     await settled();
     assert.ok(backendsPage.rows.filterBy('path', `${enginePath}/`)[0], 'shows the alicloud engine');
   });

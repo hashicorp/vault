@@ -27,8 +27,8 @@ module('Integration | Component | nav header', function (hooks) {
       `);
 
     assert.ok(component.ele, 'renders the outer element');
-    assert.equal(component.homeText.trim(), 'Home!', 'renders home content');
-    assert.equal(component.itemsText.trim(), 'Some Items', 'renders items content');
-    assert.equal(component.mainText.trim(), 'Main stuff here', 'renders items content');
+    assert.strictEqual(component.homeText.trim(), 'Home!', 'renders home content');
+    assert.strictEqual(component.itemsText.trim(), 'Some Items', 'renders items content');
+    assert.strictEqual(component.mainText.trim(), 'Main stuff here', 'renders items content');
   });
 });

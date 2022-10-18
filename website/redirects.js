@@ -346,6 +346,16 @@ module.exports = [
     permanent: true,
   },
   {
+    source: '/docs/secrets/openldap',
+    destination: '/docs/secrets/ldap',
+    permanent: true,
+  },
+  {
+    source: '/api-docs/secret/openldap',
+    destination: '/api-docs/secret/ldap',
+    permanent: true,
+  },
+  {
     source: '/guides/authentication',
     destination: '/guides/identity/authentication',
     permanent: true,

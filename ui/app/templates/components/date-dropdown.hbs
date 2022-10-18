@@ -9,7 +9,7 @@
       <Chevron @direction="down" @isButton={{true}} />
     </D.Trigger>
     <D.Content @defaultClass="popup-menu-content is-wide">
-      <nav aria-label="month dropdown" class="box menu scroll">
+      <nav class="box menu scroll" aria-label="months">
         <ul data-test-month-list class="menu-list">
           {{#each this.dropdownMonths as |month|}}
             <button
@@ -36,7 +36,7 @@
       <Chevron @direction="down" @isButton={{true}} />
     </D.Trigger>
     <D.Content @defaultClass="popup-menu-content is-wide">
-      <nav aria-label="year dropdown" class="box menu">
+      <nav class="box menu" aria-label="years">
         <ul data-test-year-list class="menu-list">
           {{#each this.dropdownYears as |year|}}
             <button

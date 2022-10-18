@@ -15,7 +15,7 @@ GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 SED?=$(shell command -v gsed || command -v sed)
 
 
-GO_VERSION_MIN=1.19.1
+GO_VERSION_MIN=1.19.2
 PROTOC_VERSION_MIN=3.21.5
 GO_CMD?=go
 CGO_ENABLED?=0
