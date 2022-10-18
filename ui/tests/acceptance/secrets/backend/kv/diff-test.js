@@ -57,7 +57,7 @@ module('Acceptance | kv2 diff view', function (hooks) {
     await click('[data-test-view-diff]');
 
     let diffBetweenVersion2and1 = document.querySelector('.jsondiffpatch-added').innerText;
-    assert.equal(diffBetweenVersion2and1, 'version2"world!"', 'shows the correct added part');
+    assert.strictEqual(diffBetweenVersion2and1, 'version2"world!"', 'shows the correct added part');
 
     await click('[data-test-popup-menu-trigger="right-version"]');
 

@@ -1,6 +1,7 @@
 import ApplicationAdapter from '../application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import ControlGroupError from '../../lib/control-group-error';
+import { inject as service } from '@ember/service';
 
 function pickKeys(obj, picklist) {
   const data = {};
@@ -11,7 +12,9 @@ function pickKeys(obj, picklist) {
   });
   return data;
 }
+
 export default class KeymgmtKeyAdapter extends ApplicationAdapter {
+  @service store;
   namespace = 'v1';
 
   pathForType() {

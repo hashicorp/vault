@@ -277,7 +277,6 @@ export default Component.extend(DEFAULTS, {
 
   delayAuthMessageReminder: task(function* () {
     if (Ember.testing) {
-      this.showLoading = true;
       yield timeout(0);
     } else {
       yield timeout(5000);
@@ -285,15 +284,9 @@ export default Component.extend(DEFAULTS, {
   }),
 
   actions: {
-    doSubmit() {
-      let passedData, e;
-      if (arguments.length > 1) {
-        [passedData, e] = arguments;
-      } else {
-        [e] = arguments;
-      }
-      if (e) {
-        e.preventDefault();
+    doSubmit(passedData, event) {
+      if (event) {
+        event.preventDefault();
       }
       let data = {};
       this.setProperties({

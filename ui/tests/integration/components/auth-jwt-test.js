@@ -45,16 +45,16 @@ const renderIt = async (context, path = 'jwt') => {
   context.set('selectedAuthPath', path);
   await render(hbs`
     <AuthJwt
-      @window={{window}}
-      @roleName={{roleName}}
-      @selectedAuthPath={{selectedAuthPath}}
-      @onError={{action (mut error)}}
-      @onLoading={{action (mut isLoading)}}
-      @onToken={{action (mut token)}}
-      @onNamespace={{action (mut namespace)}}
-      @onSelectedAuth={{action (mut selectedAuth)}}
-      @onSubmit={{action handler}}
-      @onRoleName={{action (mut roleName)}}
+      @window={{this.window}}
+      @roleName={{this.roleName}}
+      @selectedAuthPath={{this.selectedAuthPath}}
+      @onError={{action (mut this.error)}}
+      @onLoading={{action (mut this.isLoading)}}
+      @onToken={{action (mut this.token)}}
+      @onNamespace={{action (mut this.namespace)}}
+      @onSelectedAuth={{action (mut this.selectedAuth)}}
+      @onSubmit={{action this.handler}}
+      @onRoleName={{action (mut this.roleName)}}
     />
     `);
 };
@@ -107,8 +107,8 @@ module('Integration | Component | auth jwt', function (hooks) {
   });
 
   test('it renders the yield', async function (assert) {
-    await render(hbs`<AuthJwt @onSubmit={{action (mut submit)}}>Hello!</AuthJwt>`);
-    assert.equal(component.yieldContent, 'Hello!', 'yields properly');
+    await render(hbs`<AuthJwt @onSubmit={{action (mut this.submit)}}>Hello!</AuthJwt>`);
+    assert.strictEqual(component.yieldContent, 'Hello!', 'yields properly');
   });
 
   test('jwt: it renders and makes auth_url requests', async function (assert) {
@@ -116,12 +116,12 @@ module('Integration | Component | auth jwt', function (hooks) {
     await settled();
     assert.ok(component.jwtPresent, 'renders jwt field');
     assert.ok(component.rolePresent, 'renders jwt field');
-    assert.equal(this.server.handledRequests.length, 1, 'request to the default path is made');
-    assert.equal(this.server.handledRequests[0].url, '/v1/auth/jwt/oidc/auth_url');
+    assert.strictEqual(this.server.handledRequests.length, 1, 'request to the default path is made');
+    assert.strictEqual(this.server.handledRequests[0].url, '/v1/auth/jwt/oidc/auth_url');
     this.set('selectedAuthPath', 'foo');
     await settled();
-    assert.equal(this.server.handledRequests.length, 2, 'a second request was made');
-    assert.equal(
+    assert.strictEqual(this.server.handledRequests.length, 2, 'a second request was made');
+    assert.strictEqual(
       this.server.handledRequests[1].url,
       '/v1/auth/foo/oidc/auth_url',
       'requests when path is set'
@@ -141,12 +141,16 @@ module('Integration | Component | auth jwt', function (hooks) {
     await component.role('test');
     await settled();
     assert.notOk(component.jwtPresent, 'does not show jwt input for OIDC type login');
-    assert.equal(component.loginButtonText, 'Sign in with OIDC Provider');
+    assert.strictEqual(component.loginButtonText, 'Sign in with OIDC Provider');
 
     await component.role('okta');
     // 1 for initial render, 1 for each time role changed = 3
-    assert.equal(this.server.handledRequests.length, 4, 'fetches the auth_url when the path changes');
-    assert.equal(component.loginButtonText, 'Sign in with Okta', 'recognizes auth methods with certain urls');
+    assert.strictEqual(this.server.handledRequests.length, 4, 'fetches the auth_url when the path changes');
+    assert.strictEqual(
+      component.loginButtonText,
+      'Sign in with Okta',
+      'recognizes auth methods with certain urls'
+    );
   });
 
   test('oidc: it calls window.open popup window on login', async function (assert) {
@@ -176,7 +180,7 @@ module('Integration | Component | auth jwt', function (hooks) {
     });
     this.window.close();
     await settled();
-    assert.equal(this.error, ERROR_WINDOW_CLOSED, 'calls onError with error string');
+    assert.strictEqual(this.error, ERROR_WINDOW_CLOSED, 'calls onError with error string');
   });
 
   test('oidc: shows error when message posted with state key, wrong params', async function (assert) {
@@ -192,7 +196,7 @@ module('Integration | Component | auth jwt', function (hooks) {
       buildMessage({ data: { source: 'oidc-callback', state: 'state', foo: 'bar' } })
     );
     cancelTimers();
-    assert.equal(this.error, ERROR_MISSING_PARAMS, 'calls onError with params missing error');
+    assert.strictEqual(this.error, ERROR_MISSING_PARAMS, 'calls onError with params missing error');
   });
 
   test('oidc: storage event fires with state key, correct params', async function (assert) {
@@ -205,7 +209,7 @@ module('Integration | Component | auth jwt', function (hooks) {
     });
     this.window.trigger('message', buildMessage());
     await settled();
-    assert.equal(this.token, 'token', 'calls onToken with token');
+    assert.strictEqual(this.token, 'token', 'calls onToken with token');
     assert.ok(this.handler.calledOnce, 'calls the onSubmit handler');
   });
 

@@ -22,8 +22,8 @@ module('Integration | Component | clients/vertical-bar-chart', function (hooks) 
     await render(hbs`   
     <div class="chart-container-wide">
       <Clients::VerticalBarChart 
-        @dataset={{barChartData}} 
-        @chartLegend={{chartLegend}} 
+        @dataset={{this.barChartData}} 
+        @chartLegend={{this.chartLegend}} 
       />
     </div>
     `);
@@ -60,8 +60,8 @@ module('Integration | Component | clients/vertical-bar-chart', function (hooks) 
     await render(hbs`   
     <div class="chart-container-wide">
       <Clients::VerticalBarChart 
-        @dataset={{barChartData}} 
-        @chartLegend={{chartLegend}} 
+        @dataset={{this.barChartData}} 
+        @chartLegend={{this.chartLegend}} 
       />
     </div>
     `);

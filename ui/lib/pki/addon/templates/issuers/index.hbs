@@ -19,7 +19,7 @@
         <Chevron @direction="down" @isButton={{true}} />
       </D.Trigger>
       <D.Content @defaultClass="popup-menu-content">
-        <nav class="box menu">
+        <nav class="box menu" aria-label="generate options">
           <ul class="menu-list">
             <li class="action">
               <LinkTo @route="configuration.create.generate-root" {{on "click" (fn this.onLinkClick D)}}>
@@ -60,7 +60,7 @@
         <div class="level-right is-flex is-paddingless is-marginless">
           <div class="level-item">
             <PopupMenu>
-              <nav class="menu">
+              <nav class="menu" aria-label="issuer config options">
                 <ul class="menu-list">
                   <li>
                     <LinkTo @route="roles.role.details" @model={{pkiIssuer.id}}>

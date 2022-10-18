@@ -37,7 +37,7 @@ module('Integration | Component | date-dropdown', function (hooks) {
     assert.dom('[data-test-date-dropdown-submit]').hasText('Submit', 'button renders default text');
     await render(hbs`
       <div class="is-flex-align-baseline">
-        <DateDropdown @submitText={{text}}/>
+        <DateDropdown @submitText={{this.text}}/>
       </div>
     `);
     assert.dom('[data-test-date-dropdown-submit]').hasText('Save', 'button renders passed in text');
@@ -46,16 +46,16 @@ module('Integration | Component | date-dropdown', function (hooks) {
   test('it renders dropdown and selects month and year', async function (assert) {
     assert.expect(27);
     let parentAction = (month, year) => {
-      assert.equal(month, 'January', 'sends correct month to parent callback');
-      assert.equal(year, CURRENT_YEAR, 'sends correct year to parent callback');
+      assert.strictEqual(month, 'January', 'sends correct month to parent callback');
+      assert.strictEqual(year, CURRENT_YEAR, 'sends correct year to parent callback');
     };
     this.set('parentAction', parentAction);
 
     await render(hbs`
-    <div class="is-flex-align-baseline">
-    <DateDropdown 
-    @handleDateSelection={{parentAction}} />
-    </div>
+      <div class="is-flex-align-baseline">
+      <DateDropdown 
+        @handleDateSelection={{this.parentAction}} />
+      </div>
     `);
 
     const monthDropdown = this.element.querySelector('[data-test-popup-menu-trigger="month"]');
@@ -66,7 +66,7 @@ module('Integration | Component | date-dropdown', function (hooks) {
 
     await click(monthDropdown);
     let dropdownListMonths = this.element.querySelectorAll('[data-test-month-list] button');
-    assert.equal(dropdownListMonths.length, 12, 'dropdown has 12 months');
+    assert.strictEqual(dropdownListMonths.length, 12, 'dropdown has 12 months');
     for (let [index, month] of ARRAY_OF_MONTHS.entries()) {
       assert.dom(dropdownListMonths[index]).hasText(`${month}`, `dropdown includes ${month}`);
     }
@@ -77,7 +77,7 @@ module('Integration | Component | date-dropdown', function (hooks) {
 
     await click(yearDropdown);
     let dropdownListYears = this.element.querySelectorAll('[data-test-year-list] button');
-    assert.equal(dropdownListYears.length, 5, 'dropdown has 5 years');
+    assert.strictEqual(dropdownListYears.length, 5, 'dropdown has 5 years');
 
     for (let [index, year] of dropdownListYears.entries()) {
       let comparisonYear = CURRENT_YEAR - index;

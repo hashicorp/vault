@@ -27,7 +27,7 @@ module('Integration | Component | clients/usage-stats', function (hooks) {
       entity_clients: 7,
       non_entity_clients: 10,
     });
-    await render(hbs`<Clients::UsageStats @totalUsageCounts={{counts}} />`);
+    await render(hbs`<Clients::UsageStats @totalUsageCounts={{this.counts}} />`);
 
     assert.dom('[data-test-stat-text]').exists({ count: 3 }, 'Renders 3 Stat texts even with no data passed');
     assert.dom('[data-test-stat-text="total-clients"]').exists('Total clients exists');

@@ -25,7 +25,7 @@
   </p.levelLeft>
 </PageHeader>
 
-<form {{on "submit" (perform this.save)}}>
+<form {{on "submit" (perform this.save)}} {{did-insert this.setIssuer @model}}>
   <div class="box is-sideless is-fullwidth is-bottomless">
     <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
     {{! name field }}
