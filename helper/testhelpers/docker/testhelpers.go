@@ -509,13 +509,13 @@ func BuildContextFromTarball(reader io.Reader) (BuildContext, error) {
 				break
 			}
 
-			return nil, fmt.Errorf("failed to parse provided tarball: %v")
+			return nil, fmt.Errorf("failed to parse provided tarball: %v", err)
 		}
 
 		data := make([]byte, int(header.Size))
 		read, err := archive.Read(data)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse read from provided tarball: %v")
+			return nil, fmt.Errorf("failed to parse read from provided tarball: %v", err)
 		}
 
 		if read != int(header.Size) {
