@@ -222,7 +222,7 @@ func (c *BaseCommand) DefaultWrappingLookupFunc(operation, path string) string {
 // getInteractiveMFAMethodInfo returns MFA method information only if operating
 // in interactive mode and one MFA method is configured.
 func (c *BaseCommand) getInteractiveMFAMethodInfo(secret *api.Secret) *MFAMethodInfo {
-	if secret != nil && secret.Auth != nil && secret.Auth.MFARequirement != nil {
+	if secret == nil || secret.Auth == nil || secret.Auth.MFARequirement == nil {
 		return nil
 	}
 
