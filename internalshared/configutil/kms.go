@@ -165,11 +165,6 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 	var kmsInfo map[string]string
 	var err error
 
-	// KeyID is handled separately in wrapper v2
-	if keyId, ok := configKMS.Config["key_id"]; ok {
-		opts = append(opts, wrapping.WithKeyId(keyId))
-	}
-
 	switch wrapping.WrapperType(configKMS.Type) {
 	case wrapping.WrapperTypeShamir:
 		return nil, nil
@@ -190,8 +185,10 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 		wrapper, kmsInfo, err = GetGCPCKMSKMSFunc(configKMS, opts...)
 
 	case wrapping.WrapperTypeOciKms:
+		if keyId, ok := configKMS.Config["key_id"]; ok {
+			opts = append(opts, wrapping.WithKeyId(keyId))
+		}
 		wrapper, kmsInfo, err = GetOCIKMSKMSFunc(configKMS, opts...)
-
 	case wrapping.WrapperTypeTransit:
 		wrapper, kmsInfo, err = GetTransitKMSFunc(configKMS, opts...)
 
@@ -218,7 +215,7 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 
 func GetAEADKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := aeadwrapper.NewWrapper()
-	wrapperInfo, err := wrapper.SetConfig(context.Background(), opts...)
+	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, wrapping.WithConfigMap(kms.Config))...)
 	if err != nil {
 		return nil, nil, err
 	}
