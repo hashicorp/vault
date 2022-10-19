@@ -1,4 +1,4 @@
-provider "enos" "k8s" {}
+provider "enos" "default" {}
 
 provider "helm" "default" {
   kubernetes {

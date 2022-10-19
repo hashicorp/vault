@@ -7,7 +7,7 @@ scenario "k8s" {
   terraform     = terraform.k8s
 
   providers = [
-    provider.enos.k8s,
+    provider.enos.default,
     provider.helm.default,
   ]
 
@@ -15,7 +15,7 @@ scenario "k8s" {
     image_path = abspath(var.vault_docker_image_archive)
 
     image_repo = var.vault_image_repository != null ? var.vault_image_repository : matrix.edition == "oss" ? "hashicorp/vault" : "hashicorp/vault-enterprise"
-    image_tag = matrix.edition == "oss" ? var.vault_product_version : "${var.vault_product_version}-ent"
+    image_tag = replace(var.vault_product_version, "+ent", "-ent")
 
     // The additional '-0' is required in the constraint since without it, the semver function will
     // incorrectly resolve the wrong result for pre-release product versions, i.e. 1.11.1-dev1 or 1.11.4-rc1.
@@ -34,10 +34,6 @@ scenario "k8s" {
   step "create_kind_cluster" {
     module = module.create_kind_cluster
 
-    providers = {
-      enos = provider.enos.k8s
-    }
-
     variables {
       kubeconfig_path = abspath(joinpath(path.root, "kubeconfig"))
     }
@@ -45,10 +41,6 @@ scenario "k8s" {
 
   step "load_docker_image" {
     module = module.load_docker_image
-
-    providers = {
-      enos = provider.enos.k8s
-    }
 
     variables {
       cluster_name = step.create_kind_cluster.cluster_name
@@ -62,10 +54,6 @@ scenario "k8s" {
 
   step "deploy_vault" {
     module = module.k8s_deploy_vault
-
-    providers = {
-      enos = provider.enos.k8s
-    }
 
     variables {
       image_tag         = step.load_docker_image.tag
