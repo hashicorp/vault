@@ -4,7 +4,7 @@ scenario "replication" {
     distro            = ["ubuntu", "rhel"]
     primary_backend   = ["raft", "consul"]
     secondary_backend = ["raft", "consul"]
-    consul_version    = ["1.12.3", "1.11.7", "1.10.12"]
+    consul_version    = ["1.13.2", "1.12.5", "1.11.10"]
     edition           = ["ent"]
     primary_seal      = ["awskms", "shamir"]
     secondary_seal    = ["awskms", "shamir"]
