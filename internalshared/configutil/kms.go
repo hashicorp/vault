@@ -312,7 +312,7 @@ func GetGCPCKMSKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map
 
 func GetOCIKMSKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := ocikms.NewWrapper()
-	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, append(opts, wrapping.WithConfigMap(kms.Config))...)...)
+	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, wrapping.WithConfigMap(kms.Config))...)
 	if err != nil {
 		return nil, nil, err
 	}
