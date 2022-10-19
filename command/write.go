@@ -147,6 +147,7 @@ func (c *WriteCommand) Run(args []string) int {
 		return 2
 	}
 
+	// If the response has only warnings, we still want to print output
 	hasWarnings := checkWarningResponse(secret)
 	if secret == nil || hasWarnings {
 		// Don't output anything unless using the "table" format

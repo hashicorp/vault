@@ -318,6 +318,8 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 	return resp, nil
 }
 
+// Builds the list of warnings in the response from the give list of string
+// values with its corresponding warning text.
 func handleRequestCheckWarnings(resp **logical.Response, list []string, warning string) {
 	if len(list) > 0 {
 		if *resp == nil {
