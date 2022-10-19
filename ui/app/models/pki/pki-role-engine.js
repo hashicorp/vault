@@ -1,6 +1,5 @@
 import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { withModelValidations } from 'vault/decorators/model-validations';
 
 import fieldToAttrs from 'vault/utils/field-to-attrs';
@@ -106,20 +105,7 @@ export default class PkiRoleEngineModel extends Model {
   @attr('string', {
     label: 'Key bits',
   })
-  keyBits;
-
-  // "possibleValues" for the field "keyBits" depends on the value of the selected "keyType"
-  get keyBitsConditional() {
-    const keyBitOptions = {
-      rsa: [2048, 3072, 4096],
-      ec: [256, 224, 384, 521],
-      ed25519: [0],
-      any: [0],
-    };
-    const attrs = expandAttributeMeta(this, ['keyBits']);
-    attrs[0].options['possibleValues'] = keyBitOptions[this.keyType];
-    return attrs[0];
-  }
+  keyBits; // keyBits is a conditional value based on keyType. The model param is handled in the pkiKeyParameters component.
 
   @attr('number', {
     label: 'Signature bits',
@@ -284,11 +270,6 @@ export default class PkiRoleEngineModel extends Model {
           text: 'These options can interact intricately with one another. For more information,',
           docText: 'learn more here.',
           docLink: '/api-docs/secret/pki#allowed_domains',
-        },
-      },
-      'Key parameters': {
-        header: {
-          text: `These are the parameters for generating or validating the certificate's key material.`,
         },
       },
       'Subject Alternative Name (SAN) Options': {
