@@ -275,7 +275,7 @@ jobs:
           target: ubi
           arch: ${{matrix.arch}}
           zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.product-version }}_linux_${{ matrix.arch }}.zip
-          redhat_tag: scan.connect.redhat.com/ospid-f0a92725-d8c6-4023-9a87-ba785b94c3fd/${{env.repo}}:${{env.version}}-ubi
+          redhat_tag: quay.io/redhat-isv-containers/5f89bb5e0b94cf64cfeb500a/${{env.repo}}:${{env.version}}-ubi
 
   enos:
     name: Enos
