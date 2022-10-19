@@ -262,7 +262,7 @@ func TestKVPutCommand(t *testing.T) {
 		}
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, "Success!") {
-			t.Errorf("expected %q to contain %q", combined, "created_time")
+			t.Errorf("expected %q to contain %q", combined, "Success!")
 		}
 
 		ui, rcmd := testReadCommand(t)
