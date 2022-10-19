@@ -88,7 +88,7 @@ class CalendarWidget extends Component {
         const year = this.args.endTimeDisplay.split(' ')[1];
         setYear = parseInt(year);
       } catch (e) {
-        console.debug('Error resetting display year', e);
+        console.debug('Error resetting display year', e); // eslint-disable-line
       }
     }
     this.displayYear = setYear;

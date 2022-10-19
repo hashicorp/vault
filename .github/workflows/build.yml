@@ -16,12 +16,16 @@ jobs:
   product-metadata:
     runs-on: ubuntu-latest
     outputs:
+      product-revision: ${{ steps.get-product-revision.outputs.product-revision }}
       product-version: ${{ steps.get-product-version.outputs.product-version }}
       product-base-version: ${{ steps.get-product-version.outputs.product-base-version }}
       build-date: ${{ steps.get-build-date.outputs.build-date }}
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
+      - name: Get product revision
+        id: get-product-revision
+        run: echo "::set-output name=product-revision::$(git rev-parse HEAD)"
       - name: Get product version
         id: get-product-version
         run: |
@@ -98,7 +102,7 @@ jobs:
           CGO_ENABLED: 0
         run: |
           mkdir dist out
-          GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.product-metadata.outputs.product-base-version }} VAULT_REVISION="$(git rev-parse HEAD)" VAULT_BUILD_DATE="${{ needs.get-build-date.outputs.build-date }}" make build
+          GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.product-metadata.outputs.product-base-version }} VAULT_REVISION="$(git rev-parse HEAD)" VAULT_BUILD_DATE="${{ needs.product-metadata.outputs.build-date }}" make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
@@ -143,7 +147,7 @@ jobs:
           CGO_ENABLED: 0
         run: |
           mkdir dist out
-          GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.product-metadata.outputs.product-base-version }} VAULT_REVISION="$(git rev-parse HEAD)" VAULT_BUILD_DATE="${{ needs.get-build-date.outputs.build-date }}" make build
+          GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.product-metadata.outputs.product-base-version }} VAULT_REVISION="$(git rev-parse HEAD)" VAULT_BUILD_DATE="${{ needs.product-metadata.outputs.build-date }}" make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
@@ -218,7 +222,7 @@ jobs:
           CGO_ENABLED: 0
         run: |
           mkdir dist out
-          GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.product-metadata.outputs.product-base-version }} VAULT_REVISION="$(git rev-parse HEAD)" VAULT_BUILD_DATE="${{ needs.get-build-date.outputs.build-date }}" make build
+          GO_TAGS="${{ env.GO_TAGS }}" VAULT_VERSION=${{ needs.product-metadata.outputs.product-base-version }} VAULT_REVISION="$(git rev-parse HEAD)" VAULT_BUILD_DATE="${{ needs.product-metadata.outputs.build-date }}" make build
           zip -r -j out/${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.product-version }}_${{ matrix.goos }}_${{ matrix.goarch }}.zip dist/
       - uses: actions/upload-artifact@v2
         with:
@@ -287,5 +291,9 @@ jobs:
       - build-linux
     uses: ./.github/workflows/enos-run.yml
     with:
+      artifact-build-date: "${{needs.product-metadata.outputs.build-date}}"
       artifact-name: "vault_${{ needs.product-metadata.outputs.product-version }}_linux_amd64.zip"
+      artifact-revision: "${{needs.product-metadata.outputs.product-revision}}"
+      artifact-source: "crt"
+      artifact-version: "${{needs.product-metadata.outputs.product-version}}"
     secrets: inherit

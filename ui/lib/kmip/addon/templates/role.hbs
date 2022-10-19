@@ -13,7 +13,7 @@
       <div class="toolbar-separator"></div>
     {{/if}}
     {{#if this.model.updatePath.canUpdate}}
-      <ToolbarLink @params={{array "role.edit" this.scope this.role}} data-test-kmip-link-edit-role>
+      <ToolbarLink @route="role.edit" @models={{array this.scope this.role}} data-test-kmip-link-edit-role>
         Edit role
       </ToolbarLink>
     {{/if}}

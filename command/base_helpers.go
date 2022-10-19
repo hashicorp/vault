@@ -296,7 +296,8 @@ func parseFlagFile(raw string) (string, error) {
 func generateFlagWarnings(args []string) string {
 	var trailingFlags []string
 	for _, arg := range args {
-		if !strings.HasPrefix(arg, "-") {
+		// "-" can be used where a file is expected to denote stdin.
+		if !strings.HasPrefix(arg, "-") || arg == "-" {
 			continue
 		}
 

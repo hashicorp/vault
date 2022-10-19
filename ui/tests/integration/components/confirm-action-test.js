@@ -12,7 +12,7 @@ module('Integration | Component | confirm-action', function (hooks) {
     this.set('onConfirm', confirmAction);
     await render(hbs`
       <ConfirmAction
-        @onConfirmAction={{onConfirm}}
+        @onConfirmAction={{this.onConfirm}}
         @buttonClasses="toolbar-link"
       >
         DELETE
@@ -29,7 +29,7 @@ module('Integration | Component | confirm-action', function (hooks) {
     this.set('onConfirm', confirmAction);
     await render(hbs`
       <ConfirmAction
-        @onConfirmAction={{onConfirm}}
+        @onConfirmAction={{this.onConfirm}}
         @buttonClasses="toolbar-link"
       >
         DELETE

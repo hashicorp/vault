@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
+	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -112,6 +113,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 
 			return nil
 		},
+		RunningVersion: versions.DefaultBuiltinVersion,
 	}
 
 	iStore.oidcCache = newOIDCCache(cache.NoExpiration, cache.NoExpiration)

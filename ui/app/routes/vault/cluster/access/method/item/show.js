@@ -3,7 +3,9 @@ import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
 
 export default Route.extend({
+  store: service(),
   pathHelp: service('path-help'),
+
   model(params) {
     const id = params.item_id;
     const { item_type: itemType } = this.paramsFor('vault.cluster.access.method.item');

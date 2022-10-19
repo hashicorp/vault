@@ -1,6 +1,9 @@
 import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
 
 export default class OidcClientProvidersRoute extends Route {
+  @service store;
+
   model() {
     const model = this.modelFor('vault.cluster.access.oidc.clients.client');
     return this.store

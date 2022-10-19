@@ -110,7 +110,7 @@ func TestPki_MultipleOUs(t *testing.T) {
 			OU:     []string{"Z", "E", "V"},
 		},
 	}
-	cb, err := generateCreationBundle(&b, input, nil, nil)
+	cb, _, err := generateCreationBundle(&b, input, nil, nil)
 	if err != nil {
 		t.Fatalf("Error: %v", err)
 	}
@@ -212,7 +212,7 @@ func TestPki_PermitFQDNs(t *testing.T) {
 		name := name
 		testCase := testCase
 		t.Run(name, func(t *testing.T) {
-			cb, err := generateCreationBundle(&b, testCase.input, nil, nil)
+			cb, _, err := generateCreationBundle(&b, testCase.input, nil, nil)
 			if err != nil {
 				t.Fatalf("Error: %v", err)
 			}

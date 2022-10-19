@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -442,10 +441,6 @@ func (b *backend) doTidyRevocationStore(ctx context.Context, req *logical.Reques
 }
 
 func (b *backend) pathTidyCancelWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && !b.System().LocalMount() {
-		return nil, logical.ErrReadOnly
-	}
-
 	if atomic.LoadUint32(b.tidyCASGuard) == 0 {
 		resp := &logical.Response{}
 		resp.AddWarning("Tidy operation cannot be cancelled as none is currently running.")
@@ -469,12 +464,6 @@ func (b *backend) pathTidyCancelWrite(ctx context.Context, req *logical.Request,
 }
 
 func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	// If this node is a performance secondary return an ErrReadOnly so that the request gets forwarded,
-	// but only if the PKI backend is not a local mount.
-	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && !b.System().LocalMount() {
-		return nil, logical.ErrReadOnly
-	}
-
 	b.tidyStatusLock.RLock()
 	defer b.tidyStatusLock.RUnlock()
 
@@ -493,6 +482,8 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 			"cert_store_deleted_count":              nil,
 			"revoked_cert_deleted_count":            nil,
 			"missing_issuer_cert_count":             nil,
+			"current_cert_store_count":              nil,
+			"current_revoked_cert_count":            nil,
 		},
 	}
 
@@ -529,6 +520,14 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 	case tidyStatusCancelled:
 		resp.Data["state"] = "Cancelled"
 		resp.Data["time_finished"] = b.tidyStatus.timeFinished
+	}
+
+	resp.Data["current_cert_store_count"] = b.certCount
+	resp.Data["current_revoked_cert_count"] = b.revokedCertCount
+
+	if !b.certsCounted.Load() {
+		resp.AddWarning("Certificates in storage are still being counted, current counts provided may be " +
+			"inaccurate")
 	}
 
 	return resp, nil
@@ -665,6 +664,8 @@ func (b *backend) tidyStatusIncCertStoreCount() {
 	defer b.tidyStatusLock.Unlock()
 
 	b.tidyStatus.certStoreDeletedCount++
+
+	b.decrementTotalCertificatesCountReport()
 }
 
 func (b *backend) tidyStatusIncRevokedCertCount() {
@@ -672,6 +673,8 @@ func (b *backend) tidyStatusIncRevokedCertCount() {
 	defer b.tidyStatusLock.Unlock()
 
 	b.tidyStatus.revokedCertDeletedCount++
+
+	b.decrementTotalRevokedCertificatesCountReport()
 }
 
 func (b *backend) tidyStatusIncMissingIssuerCertCount() {

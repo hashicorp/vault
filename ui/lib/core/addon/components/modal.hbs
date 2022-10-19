@@ -1,6 +1,6 @@
 <EmberWormhole @to="modal-wormhole">
   <div class="{{this.modalClass}} {{if this.isActive 'is-active'}}" aria-modal="true" data-test-modal-div>
-    <div class="modal-background" role="button" {{on "click" @onClose}} data-test-modal-background></div>
+    <div class="modal-background" role="button" {{on "click" @onClose}} data-test-modal-background={{@title}}></div>
     <div class="modal-card">
       <header class="modal-card-head">
         <h2 class="modal-card-title title is-5" data-test-modal-title>

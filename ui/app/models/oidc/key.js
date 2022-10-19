@@ -42,10 +42,6 @@ export default class OidcKeyModel extends Model {
 
   @lazyCapabilities(apiPath`identity/oidc/key/${'name'}`, 'name') keyPath;
   @lazyCapabilities(apiPath`identity/oidc/key/${'name'}/rotate`, 'name') rotatePath;
-  @lazyCapabilities(apiPath`identity/oidc/key`) keysPath;
-  get canCreate() {
-    return this.keyPath.get('canCreate');
-  }
   get canRead() {
     return this.keyPath.get('canRead');
   }
@@ -57,8 +53,5 @@ export default class OidcKeyModel extends Model {
   }
   get canDelete() {
     return this.keyPath.get('canDelete');
-  }
-  get canList() {
-    return this.keysPath.get('canList');
   }
 }

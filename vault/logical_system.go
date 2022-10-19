@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"hash"
 	"net/http"
-	"os"
 	"path"
 	"path/filepath"
 	"sort"
@@ -21,6 +20,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/hashicorp/vault/helper/versions"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/hashicorp/errwrap"
@@ -84,7 +84,8 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	}
 
 	b.Backend = &framework.Backend{
-		Help: strings.TrimSpace(sysHelpRoot),
+		RunningVersion: versions.DefaultBuiltinVersion,
+		Help:           strings.TrimSpace(sysHelpRoot),
 
 		PathsSpecial: &logical.Paths{
 			Root: []string{
@@ -424,7 +425,7 @@ func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, _ *l
 		}
 
 		// Sort for consistent ordering
-		sortVersionedPlugins(versionedPlugins)
+		sortVersionedPlugins(versioned)
 
 		versionedPlugins = append(versionedPlugins, versioned...)
 	}
@@ -472,9 +473,12 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		return nil, err
 	}
 
-	pluginVersion, err := getVersion(d)
+	pluginVersion, builtin, err := getVersion(d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
+	}
+	if builtin {
+		return logical.ErrorResponse("version %q is not allowed because 'builtin' is a reserved metadata identifier", pluginVersion), nil
 	}
 
 	sha256 := d.Get("sha256").(string)
@@ -515,6 +519,9 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 
 	err = b.Core.pluginCatalog.Set(ctx, pluginName, pluginType, pluginVersion, parts[0], args, env, sha256Bytes)
 	if err != nil {
+		if errors.Is(err, ErrPluginNotFound) || strings.HasPrefix(err.Error(), "plugin version mismatch") {
+			return logical.ErrorResponse(err.Error()), nil
+		}
 		return nil, err
 	}
 
@@ -542,7 +549,7 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 		return nil, err
 	}
 
-	pluginVersion, err := getVersion(d)
+	pluginVersion, _, err := getVersion(d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -588,9 +595,12 @@ func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, _ *logica
 		return logical.ErrorResponse("missing plugin name"), nil
 	}
 
-	pluginVersion, err := getVersion(d)
+	pluginVersion, builtin, err := getVersion(d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
+	}
+	if builtin {
+		return logical.ErrorResponse("version %q cannot be deleted", pluginVersion), nil
 	}
 
 	var resp *logical.Response
@@ -616,12 +626,20 @@ func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, _ *logica
 	return resp, nil
 }
 
-func getVersion(d *framework.FieldData) (string, error) {
-	version := d.Get("version").(string)
+func getVersion(d *framework.FieldData) (version string, builtin bool, err error) {
+	version = d.Get("version").(string)
 	if version != "" {
 		semanticVersion, err := semver.NewSemver(version)
 		if err != nil {
-			return "", fmt.Errorf("version %q is not a valid semantic version: %w", version, err)
+			return "", false, fmt.Errorf("version %q is not a valid semantic version: %w", version, err)
+		}
+
+		metadataIdentifiers := strings.Split(semanticVersion.Metadata(), ".")
+		for _, identifier := range metadataIdentifiers {
+			if identifier == "builtin" {
+				builtin = true
+				break
+			}
 		}
 
 		// Canonicalize the version string.
@@ -629,7 +647,7 @@ func getVersion(d *framework.FieldData) (string, error) {
 		version = "v" + semanticVersion.String()
 	}
 
-	return version, nil
+	return version, builtin, nil
 }
 
 func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -894,10 +912,9 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[st
 		"external_entropy_access": entry.ExternalEntropyAccess,
 		"options":                 entry.Options,
 		"uuid":                    entry.UUID,
-		"version":                 entry.Version,
-		"sha":                     entry.Sha,
-		"running_version":         entry.RunningVersion,
-		"running_sha":             entry.RunningSha,
+		"plugin_version":          entry.Version,
+		"running_plugin_version":  entry.RunningVersion,
+		"running_sha256":          entry.RunningSha256,
 	}
 	entryConfig := map[string]interface{}{
 		"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
@@ -997,14 +1014,6 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	sealWrap := data.Get("seal_wrap").(bool)
 	externalEntropyAccess := data.Get("external_entropy_access").(bool)
 	options := data.Get("options").(map[string]string)
-	version := data.Get("version").(string)
-	if version != "" {
-		v, err := semver.NewSemver(version)
-		if err != nil {
-			return nil, err
-		}
-		version = "v" + v.String()
-	}
 
 	var config MountConfig
 	var apiConfig APIMountConfig
@@ -1110,6 +1119,11 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		}
 	}
 
+	pluginVersion, resp, err := b.validateVersion(ctx, apiConfig.PluginVersion, logicalType, consts.PluginTypeSecrets)
+	if resp != nil || err != nil {
+		return resp, err
+	}
+
 	// Copy over the force no cache if set
 	if apiConfig.ForceNoCache {
 		config.ForceNoCache = true
@@ -1147,11 +1161,11 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		SealWrap:              sealWrap,
 		ExternalEntropyAccess: externalEntropyAccess,
 		Options:               options,
-		Version:               version,
+		Version:               pluginVersion,
 	}
 
 	// Detect and handle deprecated secrets engines
-	resp, err := b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeSecrets)
+	resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeSecrets)
 	if err != nil {
 		return handleError(err)
 	}
@@ -1163,6 +1177,39 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	}
 
 	return resp, nil
+}
+
+func selectPluginVersion(ctx context.Context, sys logical.SystemView, pluginName string, pluginType consts.PluginType) (string, error) {
+	unversionedPlugin, err := sys.LookupPlugin(ctx, pluginName, pluginType)
+	if err == nil && !unversionedPlugin.Builtin {
+		// We'll select the unversioned plugin that's been registered.
+		return "", nil
+	}
+
+	// No version provided and no unversioned plugin of that name available.
+	// Pin to the current latest version if any versioned plugins are registered.
+	plugins, err := sys.ListVersionedPlugins(ctx, pluginType)
+	if err != nil {
+		return "", err
+	}
+
+	var versionedCandidates []pluginutil.VersionedPlugin
+	for _, plugin := range plugins {
+		if !plugin.Builtin && plugin.Name == pluginName && plugin.Version != "" {
+			versionedCandidates = append(versionedCandidates, plugin)
+		}
+	}
+
+	if len(versionedCandidates) != 0 {
+		// Sort in reverse order.
+		sort.SliceStable(versionedCandidates, func(i, j int) bool {
+			return versionedCandidates[i].SemanticVersion.GreaterThan(versionedCandidates[j].SemanticVersion)
+		})
+
+		return "v" + versionedCandidates[0].SemanticVersion.String(), nil
+	}
+
+	return "", nil
 }
 
 func (b *SystemBackend) handleReadMount(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -1561,6 +1608,10 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 		resp.Data["options"] = mountEntry.Options
 	}
 
+	if mountEntry.Version != "" {
+		resp.Data["plugin_version"] = mountEntry.Version
+	}
+
 	return resp, nil
 }
 
@@ -1692,6 +1743,43 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 		if b.Core.logger.IsInfo() {
 			b.Core.logger.Info("mount tuning of description successful", "path", path, "description", description)
+		}
+	}
+
+	if rawVal, ok := data.GetOk("plugin_version"); ok {
+		version := rawVal.(string)
+		semanticVersion, err := semver.NewVersion(version)
+		if err != nil {
+			return logical.ErrorResponse("version %q is not a valid semantic version: %s", version, err), nil
+		}
+		version = "v" + semanticVersion.String()
+
+		// Lookup the version to ensure it exists in the catalog before committing.
+		pluginType := consts.PluginTypeSecrets
+		if strings.HasPrefix(path, "auth/") {
+			pluginType = consts.PluginTypeCredential
+		}
+		_, err = b.System().LookupPluginVersion(ctx, mountEntry.Type, pluginType, version)
+		if err != nil {
+			return handleError(err)
+		}
+
+		oldVersion := mountEntry.Version
+		mountEntry.Version = version
+
+		// Update the mount table
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Version = oldVersion
+			return handleError(err)
+		}
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("mount tuning of version successful", "path", path, "version", version)
 		}
 	}
 
@@ -2254,14 +2342,6 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	sealWrap := data.Get("seal_wrap").(bool)
 	externalEntropyAccess := data.Get("external_entropy_access").(bool)
 	options := data.Get("options").(map[string]string)
-	version := data.Get("version").(string)
-	if version != "" {
-		v, err := semver.NewSemver(version)
-		if err != nil {
-			return nil, err
-		}
-		version = "v" + v.String()
-	}
 
 	var config MountConfig
 	var apiConfig APIMountConfig
@@ -2355,6 +2435,11 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		}
 	}
 
+	pluginVersion, response, err := b.validateVersion(ctx, apiConfig.PluginVersion, logicalType, consts.PluginTypeCredential)
+	if response != nil || err != nil {
+		return response, err
+	}
+
 	if options != nil && options["version"] != "" {
 		return logical.ErrorResponse(fmt.Sprintf(
 				"auth method %q does not allow setting a version", logicalType)),
@@ -2393,7 +2478,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		SealWrap:              sealWrap,
 		ExternalEntropyAccess: externalEntropyAccess,
 		Options:               options,
-		Version:               version,
+		Version:               pluginVersion,
 	}
 
 	resp, err := b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeCredential)
@@ -2407,6 +2492,57 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		return handleError(err)
 	}
 	return resp, nil
+}
+
+func (b *SystemBackend) validateVersion(ctx context.Context, version string, pluginName string, pluginType consts.PluginType) (string, *logical.Response, error) {
+	switch version {
+	case "":
+		var err error
+		version, err = selectPluginVersion(ctx, b.System(), pluginName, pluginType)
+		if err != nil {
+			return "", nil, err
+		}
+
+		if version != "" {
+			b.logger.Debug("pinning plugin version", "plugin type", pluginType.String(), "plugin name", pluginName, "plugin version", version)
+		}
+	default:
+		semanticVersion, err := semver.NewVersion(version)
+		if err != nil {
+			return "", logical.ErrorResponse("version %q is not a valid semantic version: %s", version, err), nil
+		}
+
+		// Canonicalize the version.
+		version = "v" + semanticVersion.String()
+	}
+
+	// if a non-builtin version is requested for a builtin plugin, return an error
+	if version != "" {
+		switch pluginType {
+		case consts.PluginTypeSecrets:
+			aliased, ok := mountAliases[pluginName]
+			if ok {
+				pluginName = aliased
+			}
+			if _, ok = b.Core.logicalBackends[pluginName]; ok {
+				if version != versions.GetBuiltinVersion(pluginType, pluginName) {
+					return "", logical.ErrorResponse("cannot select non-builtin version of secrets plugin %s", pluginName), nil
+				}
+			}
+		case consts.PluginTypeCredential:
+			aliased, ok := credentialAliases[pluginName]
+			if ok {
+				pluginName = aliased
+			}
+			if _, ok = b.Core.credentialBackends[pluginName]; ok {
+				if version != versions.GetBuiltinVersion(pluginType, pluginName) {
+					return "", logical.ErrorResponse("cannot select non-builtin version of auth plugin %s", pluginName), nil
+				}
+			}
+		}
+	}
+
+	return version, nil, nil
 }
 
 // handleDisableAuth is used to disable a credential backend
@@ -4485,42 +4621,10 @@ func (b *SystemBackend) rotateBarrierKey(ctx context.Context) error {
 
 func (b *SystemBackend) handleHAStatus(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// We're always the leader if we're handling this request.
-	hostname, err := os.Hostname()
+	nodes, err := b.Core.getHAMembers()
 	if err != nil {
 		return nil, err
 	}
-
-	leader := HAStatusNode{
-		Hostname:       hostname,
-		APIAddress:     b.Core.redirectAddr,
-		ClusterAddress: b.Core.ClusterAddr(),
-		ActiveNode:     true,
-		Version:        version.GetVersion().Version,
-	}
-
-	if rb := b.Core.getRaftBackend(); rb != nil {
-		leader.UpgradeVersion = rb.EffectiveVersion()
-		leader.RedundancyZone = rb.RedundancyZone()
-	}
-
-	nodes := []HAStatusNode{leader}
-
-	for _, peerNode := range b.Core.GetHAPeerNodesCached() {
-		lastEcho := peerNode.LastEcho
-		nodes = append(nodes, HAStatusNode{
-			Hostname:       peerNode.Hostname,
-			APIAddress:     peerNode.APIAddress,
-			ClusterAddress: peerNode.ClusterAddress,
-			LastEcho:       &lastEcho,
-			Version:        peerNode.Version,
-			UpgradeVersion: peerNode.UpgradeVersion,
-			RedundancyZone: peerNode.RedundancyZone,
-		})
-	}
-
-	sort.Slice(nodes, func(i, j int) bool {
-		return nodes[i].APIAddress < nodes[j].APIAddress
-	})
 
 	return &logical.Response{
 		Data: map[string]interface{}{

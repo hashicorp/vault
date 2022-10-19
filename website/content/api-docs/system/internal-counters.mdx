@@ -106,6 +106,8 @@ previous month to the start of 12 months prior to that date.
 - As of 1.11, this behavior has been modified to return all available data within 
 the specified billing period.
 
+- As of 1.12, the `end_time` can be the current month. 
+
 - The response contains the total activity for the billing period and the
 attributions of the total activity against specific components in Vault. This
 helps in understanding the total activity better by knowing which components in
@@ -257,9 +259,69 @@ information, it will not be added to the API response.
 match the query parameters due to the month granularity of data or missing
 months in the requested time range.
 
+- Note that if the `end_date` specified is the current month, 
+the last element in the `months` response stanza, signifying the current month, will
+not have namespace attribution for the `new_clients` stanza. Furthermore, the 
+`new_clients` counts returned for the current month will be an approximation. 
+That is to say, the response will appear as follows.
+
+```json
+{
+   "months":[
+      {
+         "timestamp":"current_month_timestamp",
+         "counts":{ 
+            "distinct_entities":"exact int value",
+            "entity_clients":"exact int value",
+            "non_entity_tokens":"exact int value",
+            "non_entity_clients":"exact int value",
+            "clients":"exact int value"
+         },
+         "namespaces": [
+               {
+                  "namespace_id":"root",
+                  "namespace_path":"path",
+                  "counts":{ 
+                     "distinct_entities":"exact int value",
+                     "entity_clients":"exact int value",
+                     "non_entity_tokens":"exact int value",
+                     "non_entity_clients":"exact int value",
+                     "clients":"exact int value"
+                  },
+                  "mounts":[
+                     {
+                        "path":"auth/up2/",
+                        "counts":{ 
+                           "distinct_entities":"exact int value",
+                           "entity_clients":"exact int value",
+                           "non_entity_tokens":"exact int value",
+                           "non_entity_clients":"exact int value",
+                           "clients":"exact int value"
+                        },
+                     },
+                  ]
+               },
+         ],
+         "new_clients":{
+            "counts":{
+               "distinct_entities":"approx int value",
+               "entity_clients":"approx int value",
+               "non_entity_tokens":"approx int value",
+               "non_entity_clients":"approx int value",
+               "clients":"approx int value"
+            },
+            "namespaces":[]
+         }
+      }
+   ],
+}
+```
+
+
 Please visit the [client count](/docs/concepts/client-count) concepts page for
 more information on how clients map to these client IDs and how they are
-counted.
+counted, or for more information about how the new clients for the current month 
+are estimated in a billing period.
 
 The response will include all child namespaces of the namespace in which the
 request was made. If some namespace has subsequently been deleted, its path will

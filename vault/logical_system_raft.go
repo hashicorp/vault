@@ -589,7 +589,9 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 			defer cleanup()
 
 			// Grab statelock
-			if stopped := grabLockOrStop(b.Core.stateLock.Lock, b.Core.stateLock.Unlock, b.Core.standbyStopCh.Load().(chan struct{})); stopped {
+			l := newLockGrabber(b.Core.stateLock.Lock, b.Core.stateLock.Unlock, b.Core.standbyStopCh.Load().(chan struct{}))
+			go l.grab()
+			if stopped := l.lockOrStop(); stopped {
 				b.Core.logger.Error("not applying snapshot; shutting down")
 				return
 			}

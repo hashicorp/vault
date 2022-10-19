@@ -48,7 +48,7 @@ module('Acceptance | leases', function (hooks) {
   skip('it renders the show page', function (assert) {
     createSecret(this);
     navToDetail(this);
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.leases.show',
       'a lease for the secret is in the list'
@@ -62,7 +62,7 @@ module('Acceptance | leases', function (hooks) {
   skip('it renders the show page with a picker', function (assert) {
     createSecret(this, true);
     navToDetail(this);
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.leases.show',
       'a lease for the secret is in the list'
@@ -77,7 +77,7 @@ module('Acceptance | leases', function (hooks) {
     navToDetail(this);
     await click('[data-test-lease-revoke] button');
     await click('[data-test-confirm-button]');
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.leases.list-root',
       'it navigates back to the leases root on revocation'
@@ -94,7 +94,7 @@ module('Acceptance | leases', function (hooks) {
     await visit(`/vault/access/leases/list/${this.enginePath}`);
     await click('[data-test-lease-revoke-prefix] button');
     await click('[data-test-confirm-button]');
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.leases.list-root',
       'it navigates back to the leases root on revocation'

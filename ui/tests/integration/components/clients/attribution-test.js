@@ -31,7 +31,7 @@ module('Integration | Component | clients/attribution', function (hooks) {
   test('it renders empty state with no data', async function (assert) {
     await render(hbs`
       <div id="modal-wormhole"></div>
-      <Clients::Attribution @chartLegend={{chartLegend}} />
+      <Clients::Attribution @chartLegend={{this.chartLegend}} />
     `);
 
     assert.dom('[data-test-component="empty-state"]').exists();
@@ -45,12 +45,12 @@ module('Integration | Component | clients/attribution', function (hooks) {
     await render(hbs`
       <div id="modal-wormhole"></div>
       <Clients::Attribution 
-        @chartLegend={{chartLegend}}
-        @totalClientAttribution={{totalClientAttribution}} 
-        @totalUsageCounts={{totalUsageCounts}} 
-        @timestamp={{timestamp}} 
-        @selectedNamespace={{selectedNamespace}}
-        @isDateRange={{isDateRange}}
+        @chartLegend={{this.chartLegend}}
+        @totalClientAttribution={{this.totalClientAttribution}} 
+        @totalUsageCounts={{this.totalUsageCounts}} 
+        @timestamp={{this.timestamp}} 
+        @selectedNamespace={{this.selectedNamespace}}
+        @isDateRange={{this.isDateRange}}
         />
     `);
 
@@ -76,12 +76,12 @@ module('Integration | Component | clients/attribution', function (hooks) {
     await render(hbs`
       <div id="modal-wormhole"></div>
       <Clients::Attribution 
-        @chartLegend={{chartLegend}}
-        @totalClientAttribution={{totalClientAttribution}} 
-        @totalUsageCounts={{totalUsageCounts}} 
-        @timestamp={{timestamp}} 
-        @selectedNamespace={{selectedNamespace}}
-        @isDateRange={{isDateRange}}
+        @chartLegend={{this.chartLegend}}
+        @totalClientAttribution={{this.totalClientAttribution}} 
+        @totalUsageCounts={{this.totalUsageCounts}} 
+        @timestamp={{this.timestamp}} 
+        @selectedNamespace={{this.selectedNamespace}}
+        @isDateRange={{this.isDateRange}}
         />
     `);
     assert
@@ -129,12 +129,12 @@ module('Integration | Component | clients/attribution', function (hooks) {
     await render(hbs`
       <div id="modal-wormhole"></div>
       <Clients::Attribution 
-        @chartLegend={{chartLegend}}
-        @totalClientAttribution={{namespaceMountsData}} 
-        @totalUsageCounts={{totalUsageCounts}} 
-        @timestamp={{timestamp}} 
-        @selectedNamespace={{selectedNamespace}}
-        @isDateRange={{isDateRange}}
+        @chartLegend={{this.chartLegend}}
+        @totalClientAttribution={{this.namespaceMountsData}} 
+        @totalUsageCounts={{this.totalUsageCounts}} 
+        @timestamp={{this.timestamp}} 
+        @selectedNamespace={{this.selectedNamespace}}
+        @isDateRange={{this.isDateRange}}
         />
     `);
 
@@ -159,9 +159,9 @@ module('Integration | Component | clients/attribution', function (hooks) {
     await render(hbs`
       <div id="modal-wormhole"></div>
       <Clients::Attribution 
-        @chartLegend={{chartLegend}}
-        @totalClientAttribution={{namespaceMountsData}} 
-        @timestamp={{timestamp}} 
+        @chartLegend={{this.chartLegend}}
+        @totalClientAttribution={{this.namespaceMountsData}} 
+        @timestamp={{this.timestamp}} 
         @startTimeDisplay={{"January 2022"}}
         @endTimeDisplay={{"February 2022"}}
         />

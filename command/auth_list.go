@@ -121,7 +121,7 @@ func (c *AuthListCommand) simpleMounts(auths map[string]*api.AuthMount) []string
 	out := []string{"Path | Type | Accessor | Description | Version"}
 	for _, path := range paths {
 		mount := auths[path]
-		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s", path, mount.Type, mount.Accessor, mount.Description, mount.Version))
+		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s", path, mount.Type, mount.Accessor, mount.Description, mount.PluginVersion))
 	}
 
 	return out
@@ -145,7 +145,7 @@ func (c *AuthListCommand) detailedMounts(auths map[string]*api.AuthMount) []stri
 		}
 	}
 
-	out := []string{"Path | Plugin | Accessor | Default TTL | Max TTL | Token Type | Replication | Seal Wrap | External Entropy Access | Options | Description | UUID | Version | Deprecation Status"}
+	out := []string{"Path | Plugin | Accessor | Default TTL | Max TTL | Token Type | Replication | Seal Wrap | External Entropy Access | Options | Description | UUID | Version | Running Version | Running SHA256 | Deprecation Status"}
 	for _, path := range paths {
 		mount := auths[path]
 
@@ -162,7 +162,7 @@ func (c *AuthListCommand) detailedMounts(auths map[string]*api.AuthMount) []stri
 			pluginName = mount.Config.PluginName
 		}
 
-		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %s | %s | %t | %v | %s | %s | %s | %s | %s",
+		out = append(out, fmt.Sprintf("%s | %s | %s | %s | %s | %s | %s | %t | %v | %s | %s | %s | %s | %s | %s | %s",
 			path,
 			pluginName,
 			mount.Accessor,
@@ -175,7 +175,9 @@ func (c *AuthListCommand) detailedMounts(auths map[string]*api.AuthMount) []stri
 			mount.Options,
 			mount.Description,
 			mount.UUID,
-			mount.Version,
+			mount.PluginVersion,
+			mount.RunningVersion,
+			mount.RunningSha256,
 			mount.DeprecationStatus,
 		))
 	}

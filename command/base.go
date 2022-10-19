@@ -40,19 +40,20 @@ type BaseCommand struct {
 	flags     *FlagSets
 	flagsOnce sync.Once
 
-	flagAddress        string
-	flagAgentAddress   string
-	flagCACert         string
-	flagCAPath         string
-	flagClientCert     string
-	flagClientKey      string
-	flagNamespace      string
-	flagNS             string
-	flagPolicyOverride bool
-	flagTLSServerName  string
-	flagTLSSkipVerify  bool
-	flagWrapTTL        time.Duration
-	flagUnlockKey      string
+	flagAddress          string
+	flagAgentAddress     string
+	flagCACert           string
+	flagCAPath           string
+	flagClientCert       string
+	flagClientKey        string
+	flagNamespace        string
+	flagNS               string
+	flagPolicyOverride   bool
+	flagTLSServerName    string
+	flagTLSSkipVerify    bool
+	flagDisableRedirects bool
+	flagWrapTTL          time.Duration
+	flagUnlockKey        string
 
 	flagFormat           string
 	flagField            string
@@ -425,6 +426,15 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Usage: "Disable verification of TLS certificates. Using this option " +
 					"is highly discouraged as it decreases the security of data " +
 					"transmissions to and from the Vault server.",
+			})
+
+			f.BoolVar(&BoolVar{
+				Name:    flagNameDisableRedirects,
+				Target:  &c.flagDisableRedirects,
+				Default: false,
+				EnvVar:  api.EnvVaultDisableRedirects,
+				Usage: "Disable the default client behavior, which honors a single " +
+					"redirect response from a request",
 			})
 
 			f.BoolVar(&BoolVar{

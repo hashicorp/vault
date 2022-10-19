@@ -26,7 +26,7 @@
                   <LinkTo
                     @route="vault.cluster.access.oidc.providers.provider.details"
                     @model={{provider.name}}
-                    @disabled={{not provider.canRead}}
+                    @disabled={{eq provider.canRead false}}
                     data-test-oidc-provider-menu-link="details"
                   >
                     Details

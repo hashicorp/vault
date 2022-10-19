@@ -3,6 +3,7 @@ package raft
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -31,6 +32,7 @@ const (
 	deleteOp uint32 = 1 << iota
 	putOp
 	restoreCallbackOp
+	getOp
 
 	chunkingPrefix   = "raftchunking/"
 	databaseFilename = "vault.db"
@@ -55,10 +57,20 @@ var (
 
 type restoreCallback func(context.Context) error
 
+type FSMEntry struct {
+	Key   string
+	Value []byte
+}
+
+func (f *FSMEntry) String() string {
+	return fmt.Sprintf("Key: %s. Value: %s", f.Key, hex.EncodeToString(f.Value))
+}
+
 // FSMApplyResponse is returned from an FSM apply. It indicates if the apply was
-// successful or not.
+// successful or not. EntryMap contains the keys/values from the Get operations.
 type FSMApplyResponse struct {
-	Success bool
+	Success    bool
+	EntrySlice []*FSMEntry
 }
 
 // FSM is Vault's primary state storage. It writes updates to a bolt db file
@@ -124,6 +136,8 @@ func NewFSM(path string, localID string, logger log.Logger) (*FSM, error) {
 	})
 
 	dbPath := filepath.Join(path, databaseFilename)
+	f.l.Lock()
+	defer f.l.Unlock()
 	if err := f.openDBFile(dbPath); err != nil {
 		return nil, fmt.Errorf("failed to open bolt file: %w", err)
 	}
@@ -560,19 +574,25 @@ func (f *FSM) Transaction(ctx context.Context, txns []*physical.TxnEntry) error 
 
 		return nil
 	})
+
 	return err
 }
 
 // ApplyBatch will apply a set of logs to the FSM. This is called from the raft
 // library.
 func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
-	if len(logs) == 0 {
+	numLogs := len(logs)
+
+	if numLogs == 0 {
 		return []interface{}{}
 	}
 
+	// We will construct one slice per log, each slice containing another slice of results from our get ops
+	entrySlices := make([][]*FSMEntry, 0, numLogs)
+
 	// Do the unmarshalling first so we don't hold locks
 	var latestConfiguration *ConfigurationValue
-	commands := make([]interface{}, 0, len(logs))
+	commands := make([]interface{}, 0, numLogs)
 	for _, log := range logs {
 		switch log.Type {
 		case raft.LogCommand:
@@ -603,7 +623,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 	var logIndex []byte
 	var err error
 	latestIndex, _ := f.LatestState()
-	lastLog := logs[len(logs)-1]
+	lastLog := logs[numLogs-1]
 	if latestIndex.Index < lastLog.Index {
 		logIndex, err = proto.Marshal(&IndexValue{
 			Term:  lastLog.Term,
@@ -625,6 +645,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 	err = f.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(dataBucketName)
 		for _, commandRaw := range commands {
+			entrySlice := make([]*FSMEntry, 0)
 			switch command := commandRaw.(type) {
 			case *LogData:
 				for _, op := range command.Operations {
@@ -634,6 +655,17 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 						err = b.Put([]byte(op.Key), op.Value)
 					case deleteOp:
 						err = b.Delete([]byte(op.Key))
+					case getOp:
+						fsmEntry := &FSMEntry{
+							Key: op.Key,
+						}
+						val := b.Get([]byte(op.Key))
+						if len(val) > 0 {
+							newVal := make([]byte, len(val))
+							copy(newVal, val)
+							fsmEntry.Value = newVal
+						}
+						entrySlice = append(entrySlice, fsmEntry)
 					case restoreCallbackOp:
 						if f.restoreCb != nil {
 							// Kick off the restore callback function in a go routine
@@ -657,6 +689,8 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 					return err
 				}
 			}
+
+			entrySlices = append(entrySlices, entrySlice)
 		}
 
 		if len(logIndex) > 0 {
@@ -687,11 +721,12 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 
 	// Build the responses. The logs array is used here to ensure we reply to
 	// all command values; even if they are not of the types we expect. This
-	// should future proof this function from more log types being provided.
-	resp := make([]interface{}, len(logs))
+	// should futureproof this function from more log types being provided.
+	resp := make([]interface{}, numLogs)
 	for i := range logs {
 		resp[i] = &FSMApplyResponse{
-			Success: true,
+			Success:    true,
+			EntrySlice: entrySlices[i],
 		}
 	}
 

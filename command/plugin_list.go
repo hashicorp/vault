@@ -2,7 +2,6 @@ package command
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/hashicorp/vault/api"
@@ -128,31 +127,34 @@ func (c *PluginListCommand) Run(args []string) int {
 			c.UI.Output(tableOutput(c.detailedResponse(resp), nil))
 			return 0
 		}
-		c.UI.Output(tableOutput(c.simpleResponse(resp), nil))
+		c.UI.Output(tableOutput(c.simpleResponse(resp, pluginType), nil))
 		return 0
 	default:
 		res := make(map[string]interface{})
 		for k, v := range resp.PluginsByType {
 			res[k.String()] = v
 		}
+		res["details"] = resp.Details
 		return OutputData(c.UI, res)
 	}
 }
 
-func (c *PluginListCommand) simpleResponse(plugins *api.ListPluginsResponse) []string {
-	var flattenedNames []string
-	namesAdded := make(map[string]bool)
-	for _, names := range plugins.PluginsByType {
-		for _, name := range names {
-			if ok := namesAdded[name]; !ok {
-				flattenedNames = append(flattenedNames, name)
-				namesAdded[name] = true
-			}
+func (c *PluginListCommand) simpleResponse(plugins *api.ListPluginsResponse, pluginType consts.PluginType) []string {
+	var out []string
+	switch pluginType {
+	case consts.PluginTypeUnknown:
+		out = []string{"Name | Type | Version"}
+		for _, plugin := range plugins.Details {
+			out = append(out, fmt.Sprintf("%s | %s | %s", plugin.Name, plugin.Type, plugin.Version))
 		}
-		sort.Strings(flattenedNames)
+	default:
+		out = []string{"Name | Version"}
+		for _, plugin := range plugins.Details {
+			out = append(out, fmt.Sprintf("%s | %s", plugin.Name, plugin.Version))
+		}
 	}
-	list := append([]string{"Plugins"}, flattenedNames...)
-	return list
+
+	return out
 }
 
 func (c *PluginListCommand) detailedResponse(plugins *api.ListPluginsResponse) []string {

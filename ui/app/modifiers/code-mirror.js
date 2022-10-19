@@ -29,7 +29,10 @@ export default class CodeMirrorModifier extends Modifier {
 
   @action
   _onChange(editor) {
-    this.args.named.onUpdate(editor.getValue(), this._editor);
+    // avoid sending change event after initial setup when editor value is set to content
+    if (this.args.named.content !== editor.getValue()) {
+      this.args.named.onUpdate(editor.getValue(), this._editor);
+    }
   }
 
   @action

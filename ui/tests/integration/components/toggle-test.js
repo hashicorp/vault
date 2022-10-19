@@ -16,7 +16,7 @@ module('Integration | Component | toggle', function (hooks) {
     this.set('handler', sinon.spy(handler));
 
     await render(hbs`<Toggle
-      @onChange={{handler}}
+      @onChange={{this.handler}}
       @name="thing"
     />`);
 
@@ -24,7 +24,7 @@ module('Integration | Component | toggle', function (hooks) {
 
     await render(hbs`
       <Toggle
-        @onChange={{handler}}
+        @onChange={{this.handler}}
         @name="thing"
       >
         <span id="test-value" class="has-text-grey">template block text</span>
@@ -38,7 +38,7 @@ module('Integration | Component | toggle', function (hooks) {
     this.set('handler', sinon.spy(handler));
     await render(hbs`
       <Toggle
-        @onChange={{handler}}
+        @onChange={{this.handler}}
         @name="thing"
         @size="small"
       >
@@ -52,7 +52,7 @@ module('Integration | Component | toggle', function (hooks) {
     this.set('handler', sinon.spy(handler));
     await render(hbs`
     <Toggle
-      @onChange={{handler}}
+      @onChange={{this.handler}}
       @name="my toggle #_has we!rd chars"
     >
       Label

@@ -82,6 +82,13 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 		return nil, err
 	}
 
+	if b.crls == nil {
+		// Probably invalidated due to replication, but we need these to proceed
+		if err := b.populateCRLs(ctx, req.Storage); err != nil {
+			return nil, err
+		}
+	}
+
 	var matched *ParsedCert
 	if verifyResp, resp, err := b.verifyCredentials(ctx, req, data); err != nil {
 		return nil, err
@@ -153,6 +160,12 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	config, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, err
+	}
+
+	if b.crls == nil {
+		if err := b.populateCRLs(ctx, req.Storage); err != nil {
+			return nil, err
+		}
 	}
 
 	if !config.DisableBinding {
@@ -540,6 +553,7 @@ func (b *backend) checkForChainInCRLs(chain []*x509.Certificate) bool {
 			badChain = true
 			break
 		}
+
 	}
 	return badChain
 }

@@ -2,7 +2,7 @@ package raft
 
 import (
 	"context"
-	fmt "fmt"
+	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
-	proto "github.com/golang/protobuf/proto"
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/golang/protobuf/proto"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/physical"
 )
@@ -38,7 +38,7 @@ func getFSM(t testing.TB) (*FSM, string) {
 
 func TestFSM_Batching(t *testing.T) {
 	fsm, dir := getFSM(t)
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	var index uint64
 	var term uint64 = 1
@@ -53,8 +53,8 @@ func TestFSM_Batching(t *testing.T) {
 				Data: raft.EncodeConfiguration(raft.Configuration{
 					Servers: []raft.Server{
 						{
-							Address: raft.ServerAddress("test"),
-							ID:      raft.ServerID("test"),
+							Address: "test",
+							ID:      "test",
 						},
 					},
 				}),
@@ -131,7 +131,7 @@ func TestFSM_Batching(t *testing.T) {
 
 func TestFSM_List(t *testing.T) {
 	fsm, dir := getFSM(t)
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	ctx := context.Background()
 	count := 100

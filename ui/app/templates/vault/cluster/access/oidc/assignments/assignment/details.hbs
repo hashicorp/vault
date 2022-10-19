@@ -49,7 +49,8 @@
     {{/if}}
     {{#if @model.canEdit}}
       <ToolbarLink
-        @params={{array "vault.cluster.access.oidc.assignments.assignment.edit" @model.name}}
+        @route="vault.cluster.access.oidc.assignments.assignment.edit"
+        @model={{@model.name}}
         data-test-oidc-assignment-edit
       >
         Edit assignment
@@ -66,7 +67,8 @@
     @value={{@model.entityIds}}
     @model={{@model}}
     @isLink={{true}}
-    @modelType="oidc/assignment"
+    @renderItemName={{true}}
+    @modelType="identity/entity"
     @itemRoute={{(array "vault.cluster.access.identity.show" "entities" "details")}}
     @alwaysRender={{true}}
     @toggleViewAll={{true}}
@@ -77,7 +79,8 @@
     @value={{@model.groupIds}}
     @model={{@model}}
     @isLink={{true}}
-    @modelType="oidc/assignment"
+    @renderItemName={{true}}
+    @modelType="identity/group"
     @itemRoute={{(array "vault.cluster.access.identity.show" "groups" "details")}}
     @alwaysRender={{true}}
     @doNotTruncate={{true}}

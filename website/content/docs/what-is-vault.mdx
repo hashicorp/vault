@@ -23,7 +23,7 @@ Vault validates and authorizes clients (users, machines, apps) before providing 
 
 ### How does Vault work?
 
-Vault works primarily with tokens and a token is associated to the client's policy. Each policy is path-based and policy rules contrains the actions and accessibility to the paths for each client. With Vault, you can create tokens manually and assign them to your clients, or the clients can log in and obtain a token. The illustration below displays Vault's core workflow.
+Vault works primarily with tokens and a token is associated to the client's policy. Each policy is path-based and policy rules constrains the actions and accessibility to the paths for each client. With Vault, you can create tokens manually and assign them to your clients, or the clients can log in and obtain a token. The illustration below displays Vault's core workflow.
 
 ![Vault Workflow](/img/vault-workflow-diagram1.png)
 
@@ -45,7 +45,7 @@ The key features of Vault are:
 - **Secure Secret Storage**: Arbitrary key/value secrets can be stored
   in Vault. Vault encrypts these secrets prior to writing them to persistent
   storage, so gaining access to the raw storage isn't enough to access
-  your secrets. Vault can write to disk, [Consul](https://www.consul.io),
+  your secrets. Vault can write to disk, [Consul](https://www.consul.io/),
   and more.
 
 - **Dynamic Secrets**: Vault can generate secrets on-demand for some

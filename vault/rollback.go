@@ -9,16 +9,9 @@ import (
 
 	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
-
-// rollbackPeriod is how often we attempt rollbacks for all the backends.
-//
-// This is turned into a variable to allow test to check behavior without
-// waiting the full minute. See CreateTestClusterWithRollbackPeriod(...).
-var rollbackPeriod = time.Minute
 
 // RollbackManager is responsible for performing rollbacks of partial
 // secrets within logical backends.
@@ -70,7 +63,7 @@ func NewRollbackManager(ctx context.Context, logger log.Logger, backendsFunc fun
 		logger:      logger,
 		backends:    backendsFunc,
 		router:      router,
-		period:      rollbackPeriod,
+		period:      core.rollbackPeriod,
 		inflight:    make(map[string]*rollbackState),
 		doneCh:      make(chan struct{}),
 		shutdownCh:  make(chan struct{}),
@@ -209,7 +202,9 @@ func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, 
 		}()
 
 		// Grab the statelock or stop
-		if stopped := grabLockOrStop(m.core.stateLock.RLock, m.core.stateLock.RUnlock, stopCh); stopped {
+		l := newLockGrabber(m.core.stateLock.RLock, m.core.stateLock.RUnlock, stopCh)
+		go l.grab()
+		if stopped := l.lockOrStop(); stopped {
 			// If we stopped due to shutdown, return. Otherwise another thread
 			// is holding the lock for us, continue on.
 			select {

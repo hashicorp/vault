@@ -54,6 +54,7 @@ func TestAppRoleEndToEnd(t *testing.T) {
 		if tc.removeSecretIDFile {
 			secretFileAction = "remove"
 		}
+		tc := tc // capture range variable
 		t.Run(fmt.Sprintf("%s_secret_id_file bindSecretID=%v secretIDLess=%v expectToken=%v", secretFileAction, tc.bindSecretID, tc.secretIDLess, tc.expectToken), func(t *testing.T) {
 			t.Parallel()
 			testAppRoleEndToEnd(t, tc.removeSecretIDFile, tc.bindSecretID, tc.secretIDLess, tc.expectToken)
