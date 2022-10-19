@@ -274,11 +274,6 @@ func (c *BaseCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) (*api.
 		return secret, err
 	}
 
-	// Don't output anything unless using the "table" format
-	if Format(c.UI) == "table" {
-		c.UI.Info("Success! Data written to: sys/mfa/validate")
-	}
-
 	return secret, nil
 }
 
