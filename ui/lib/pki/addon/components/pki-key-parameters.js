@@ -21,12 +21,6 @@ const KEY_BITS_OPTIONS = {
 };
 
 export default class PkiKeyParameters extends Component {
-  constructor() {
-    super(...arguments);
-    // set the default value for keyBits which depends on the keyType shown.
-    this.args.model.set('keyBits', this.keyBitsDefault);
-  }
-
   get keyBitOptions() {
     return KEY_BITS_OPTIONS[this.args.model.keyType];
   }

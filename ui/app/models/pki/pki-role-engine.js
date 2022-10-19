@@ -104,6 +104,7 @@ export default class PkiRoleEngineModel extends Model {
 
   @attr('string', {
     label: 'Key bits',
+    defaultValue: 2048,
   })
   keyBits; // keyBits is a conditional value based on keyType. The model param is handled in the pkiKeyParameters component.
 
