@@ -254,6 +254,26 @@ jobs:
             docker.io/hashicorp/${{env.repo}}:${{env.version}}
             public.ecr.aws/hashicorp/${{env.repo}}:${{env.version}}
 
+  enos-test-docker:
+    name: Enos Docker
+    # Only run the Enos workflow against branches that are created from the
+    # hashicorp/vault repository. This has the effect of limiting execution of
+    # Enos scenarios to branches that originate from authors that have write
+    # access to hashicorp/vault repository. This is required as Github Actions
+    # will not populate the required secrets for branches created by outside
+    # contributors in order to protect the secrets integrity.
+    if: "! github.event.pull_request.head.repo.fork"
+    needs:
+      - product-metadata
+      - build-docker
+    uses: ./.github/workflows/enos-run-k8s.yml
+    with:
+      artifact-build-date: "${{needs.product-metadata.outputs.build-date}}"
+      artifact-name: "${{github.event.repository.name}}_default_linux_amd64_${{needs.product-metadata.outputs.product-version}}_${{needs.product-metadata.outputs.product-revision}}.docker.tar"
+      artifact-revision: "${{needs.product-metadata.outputs.product-revision}}"
+      artifact-version: "${{needs.product-metadata.outputs.product-version}}"
+    secrets: inherit
+
   build-ubi:
     name: Red Hat UBI ${{ matrix.arch }} build
     needs:
