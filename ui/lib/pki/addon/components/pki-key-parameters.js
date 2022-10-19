@@ -4,7 +4,7 @@ import { action } from '@ember/object';
 /**
  * @module PkiKeyParameters
  * PkiKeyParameters components are used to set the default and update the key_bits pki role api param whenever the key_type changes.
- * key_bits is conditional on key_type and should be set as a default value on init and also update to the new default whenever key_type changes.
+ * key_bits is conditional on key_type and should be set as a default value whenever key_type changes.
  * @example
  * ```js
  * <PkiKeyParameters @model={@model} @group={group}/>
