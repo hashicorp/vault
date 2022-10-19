@@ -17,7 +17,7 @@ module('Integration | Util | date formatters utils', function (hooks) {
 
   test('parseAPITimestamp: parses API timestamp string irrespective of timezone', async function (assert) {
     assert.expect(6);
-    assert.equal(parseAPITimestamp(UNIX_TIME), undefined, 'it returns if timestamp is not a string');
+    assert.strictEqual(parseAPITimestamp(UNIX_TIME), undefined, 'it returns if timestamp is not a string');
 
     let parsedTimestamp = parseAPITimestamp(API_TIMESTAMP);
 
@@ -27,18 +27,22 @@ module('Integration | Util | date formatters utils', function (hooks) {
     assert.true(isSameDay(parsedTimestamp, DATE), 'parsed timestamp is correct day');
 
     let formattedTimestamp = parseAPITimestamp(API_TIMESTAMP, 'MM yyyy');
-    assert.equal(formattedTimestamp, format(DATE, 'MM yyyy'), 'it formats the date');
+    assert.strictEqual(formattedTimestamp, format(DATE, 'MM yyyy'), 'it formats the date');
   });
 
   test('parseRFC3339: convert timestamp to array for widget', async function (assert) {
     assert.expect(4);
     let arrayArg = ['2021', 2];
-    assert.equal(parseRFC3339(arrayArg), arrayArg, 'it returns arg if already an array');
-    assert.equal(parseRFC3339(UNIX_TIME), null, 'it returns null parsing a timestamp of the wrong format');
+    assert.strictEqual(parseRFC3339(arrayArg), arrayArg, 'it returns arg if already an array');
+    assert.strictEqual(
+      parseRFC3339(UNIX_TIME),
+      null,
+      'it returns null parsing a timestamp of the wrong format'
+    );
 
     let parsedTimestamp = parseRFC3339(API_TIMESTAMP);
-    assert.equal(parsedTimestamp[0], format(DATE, 'yyyy'), 'first element is a string of the year');
-    assert.equal(
+    assert.strictEqual(parsedTimestamp[0], format(DATE, 'yyyy'), 'first element is a string of the year');
+    assert.strictEqual(
       ARRAY_OF_MONTHS[parsedTimestamp[1]],
       format(DATE, 'MMMM'),
       'second element is an integer of the month'
@@ -48,6 +52,6 @@ module('Integration | Util | date formatters utils', function (hooks) {
   test('formatChartDate: expand chart date to full month and year', async function (assert) {
     assert.expect(1);
     let chartDate = '03/21';
-    assert.equal(formatChartDate(chartDate), 'March 2021', 'it re-formats the date');
+    assert.strictEqual(formatChartDate(chartDate), 'March 2021', 'it re-formats the date');
   });
 });

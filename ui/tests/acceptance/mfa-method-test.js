@@ -32,18 +32,18 @@ module('Acceptance | mfa-method', function (hooks) {
   test('it should display landing page when no methods exist', async function (assert) {
     this.server.get('/identity/mfa/method/', () => new Response(404, {}, { errors: [] }));
     await visit('/vault/access/mfa/methods');
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.index',
       'Route redirects to mfa index when no methods exist'
     );
     await click('[data-test-mfa-configure]');
-    assert.equal(currentRouteName(), 'vault.cluster.access.mfa.methods.create');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.access.mfa.methods.create');
   });
 
   test('it should list methods', async function (assert) {
     await visit('/vault/access/mfa');
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.methods.index',
       'Parent route redirects to methods when some exist'
@@ -53,7 +53,7 @@ module('Acceptance | mfa-method', function (hooks) {
     assert.dom('[data-test-mfa-method-create]').includesText('New MFA method', 'New mfa link renders');
 
     await click('[data-test-mfa-method-create]');
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.methods.create',
       'New method link transitions to create route'
@@ -73,7 +73,7 @@ module('Acceptance | mfa-method', function (hooks) {
 
     await click('[data-test-popup-menu-trigger]');
     await click('[data-test-mfa-method-menu-link="details"]');
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.methods.method.index',
       'Details more menu action transitions to method route'
@@ -81,7 +81,7 @@ module('Acceptance | mfa-method', function (hooks) {
     await click('.breadcrumb a');
     await click('[data-test-popup-menu-trigger]');
     await click('[data-test-mfa-method-menu-link="edit"]');
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.methods.method.edit',
       'Edit more menu action transitions to method edit route'
@@ -138,7 +138,7 @@ module('Acceptance | mfa-method', function (hooks) {
 
     await click('[data-test-mfa-method-list-item]');
     await click('[data-test-mfa-method-edit]');
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.methods.method.edit',
       'Toolbar action transitions to edit route'
@@ -191,7 +191,7 @@ module('Acceptance | mfa-method', function (hooks) {
         await fillIn(`[data-test-${inputType}="${field}"]`, 'foo');
       }
       await click('[data-test-mfa-create-save]');
-      assert.equal(
+      assert.strictEqual(
         currentRouteName(),
         'vault.cluster.access.mfa.methods.method.index',
         `${type} method is displayed on save`
@@ -212,7 +212,7 @@ module('Acceptance | mfa-method', function (hooks) {
     await fillIn('[data-test-mount-accessor-select]', 'auth_userpass_bb95c2b1');
     await click('[data-test-mlef-add-target]');
     await click('[data-test-mfa-create-save]');
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.methods.method.index',
       'Route transitions to method on save'
@@ -240,7 +240,7 @@ module('Acceptance | mfa-method', function (hooks) {
     const name = enforcement.children[0].textContent.trim();
     await click(enforcement);
     await click('[data-test-mfa-create-save]');
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.methods.method.index',
       'Route transitions to method on save'

@@ -124,6 +124,10 @@ const (
 	flagNameTokenType = "token-type"
 	// flagNameAllowedManagedKeys is the flag name used for auth/secrets enable
 	flagNameAllowedManagedKeys = "allowed-managed-keys"
+	// flagNamePluginVersion selects what version of a plugin should be used.
+	flagNamePluginVersion = "plugin-version"
+	// flagNameDisableRedirects is used to prevent the client from honoring a single redirect as a response to a request
+	flagNameDisableRedirects = "disable-redirects"
 )
 
 var (
@@ -344,6 +348,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"namespace create": func() (cli.Command, error) {
 			return &NamespaceCreateCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"namespace patch": func() (cli.Command, error) {
+			return &NamespacePatchCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},

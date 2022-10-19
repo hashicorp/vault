@@ -61,7 +61,7 @@ func (b *backend) pathEncrypt() *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
-				Description: "Name of the policy",
+				Description: "Name of the key",
 			},
 
 			"plaintext": {
@@ -112,6 +112,14 @@ will severely impact the ciphertext's security.`,
 				Description: `The version of the key to use for encryption.
 Must be 0 (for latest) or a value greater than or equal
 to the min_encryption_version configured on the key.`,
+			},
+			"partial_failure_response_code": {
+				Type: framework.TypeInt,
+				Description: `
+Ordinarily, if a batch item fails to encrypt due to a bad input, but other batch items succeed, 
+the HTTP response code is 400 (Bad Request).  Some applications may want to treat partial failures differently.
+Providing the parameter returns the given response code integer instead of a 400 in this case. If all values fail
+HTTP 400 is still returned.`,
 			},
 		},
 
@@ -375,6 +383,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	// item fails, respectively mark the error in the response
 	// collection and continue to process other items.
 	warnAboutNonceUsage := false
+	successesInBatch := false
 	for i, item := range batchInputItems {
 		if batchResponseItems[i].Error != "" {
 			continue
@@ -402,6 +411,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			continue
 		}
 
+		successesInBatch = true
 		keyVersion := item.KeyVersion
 		if keyVersion == 0 {
 			keyVersion = p.LatestVersion
@@ -443,13 +453,27 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 
 	p.Unlock()
 
-	// Depending on the errors in the batch, different status codes should be returned. User errors
-	// will return a 400 and precede internal errors which return a 500. The reasoning behind this is
-	// that user errors are non-retryable without making changes to the request, and should be surfaced
-	// to the user first.
+	return batchRequestResponse(d, resp, req, successesInBatch, userErrorInBatch, internalErrorInBatch)
+}
+
+// Depending on the errors in the batch, different status codes should be returned. User errors
+// will return a 400 and precede internal errors which return a 500. The reasoning behind this is
+// that user errors are non-retryable without making changes to the request, and should be surfaced
+// to the user first.
+func batchRequestResponse(d *framework.FieldData, resp *logical.Response, req *logical.Request, successesInBatch, userErrorInBatch, internalErrorInBatch bool) (*logical.Response, error) {
 	switch {
 	case userErrorInBatch:
-		return logical.RespondWithStatusCode(resp, req, http.StatusBadRequest)
+		code := http.StatusBadRequest
+		if successesInBatch {
+			if codeRaw, ok := d.GetOk("partial_failure_response_code"); ok {
+				code = codeRaw.(int)
+				if code < 1 || code > 599 {
+					resp.AddWarning("invalid HTTP response code override from partial_failure_response_code, reverting to HTTP 400")
+					code = http.StatusBadRequest
+				}
+			}
+		}
+		return logical.RespondWithStatusCode(resp, req, code)
 	case internalErrorInBatch:
 		return logical.RespondWithStatusCode(resp, req, http.StatusInternalServerError)
 	}

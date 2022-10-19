@@ -312,12 +312,12 @@ type setStaticAccountOutput struct {
 // - verifies role exists and is in the allowed roles list
 // - loads an existing WAL entry if WALID input is given, otherwise creates a
 // new WAL entry
-// - gets a database connection
-// - accepts an input credential, otherwise generates a new one for
-//   the role's credential type
-// - sets new credential for the static account
-// - uses WAL for ensuring new credentials are not lost if storage to Vault fails,
-//   resulting in a partial failure.
+//   - gets a database connection
+//   - accepts an input credential, otherwise generates a new one for
+//     the role's credential type
+//   - sets new credential for the static account
+//   - uses WAL for ensuring new credentials are not lost if storage to Vault fails,
+//     resulting in a partial failure.
 //
 // This method does not perform any operations on the priority queue. Those
 // tasks must be handled outside of this method.
@@ -537,7 +537,7 @@ func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendCo
 			}
 
 			walID, err := framework.PutWAL(ctx, conf.StorageView, staticWALKey, &setCredentialsWAL{RoleName: "vault-readonlytest"})
-			if walID != "" {
+			if walID != "" && err == nil {
 				defer framework.DeleteWAL(ctx, conf.StorageView, walID)
 			}
 			switch {

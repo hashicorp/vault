@@ -2,6 +2,7 @@ package command
 
 import (
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
@@ -46,6 +47,18 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 		{
 			"not_a_valid_auth",
 			[]string{"nope_definitely_not_a_valid_mount_like_ever"},
+			"",
+			2,
+		},
+		{
+			"deprecated builtin with standard mount",
+			[]string{"app-id"},
+			"",
+			2,
+		},
+		{
+			"deprecated builtin with different mount",
+			[]string{"-path=/tmp", "app-id"},
 			"",
 			2,
 		},
@@ -211,6 +224,16 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 		}
 
 		for _, b := range backends {
+			var expectedResult int = 0
+			status, _ := builtinplugins.Registry.DeprecationStatus(b, consts.PluginTypeCredential)
+			allowDeprecated := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv)
+
+			// Need to handle deprecated builtins specially
+			if (status == consts.PendingRemoval && allowDeprecated == "") || status == consts.Removed {
+				expectedResult = 2
+			}
+
+			// Not a builtin
 			if b == "token" {
 				continue
 			}
@@ -218,11 +241,11 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 			ui, cmd := testAuthEnableCommand(t)
 			cmd.client = client
 
-			code := cmd.Run([]string{
+			actualResult := cmd.Run([]string{
 				b,
 			})
-			if exp := 0; code != exp {
-				t.Errorf("type %s, expected %d to be %d - %s", b, code, exp, ui.OutputWriter.String()+ui.ErrorWriter.String())
+			if actualResult != expectedResult {
+				t.Errorf("type: %s - got: %d, expected: %d - %s", b, actualResult, expectedResult, ui.OutputWriter.String()+ui.ErrorWriter.String())
 			}
 		}
 	})

@@ -24,8 +24,8 @@ import (
 	systemd "github.com/coreos/go-systemd/daemon"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
-	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
+	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/go-secure-stdlib/mlock"
@@ -40,6 +40,7 @@ import (
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -49,6 +50,7 @@ import (
 	"github.com/hashicorp/vault/sdk/version"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/vault/hcp_link"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/cli"
 	"github.com/mitchellh/go-testing-interface"
@@ -556,7 +558,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	var wrapper wrapping.Wrapper
 
 	if len(config.Seals) == 0 {
-		config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.Shamir})
+		config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.WrapperTypeShamir.String()})
 	}
 
 	if len(config.Seals) > 1 {
@@ -565,7 +567,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	configSeal := config.Seals[0]
-	sealType := wrapping.Shamir
+	sealType := wrapping.WrapperTypeShamir.String()
 	if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
 		sealType = os.Getenv("VAULT_SEAL_TYPE")
 		configSeal.Type = sealType
@@ -578,9 +580,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 
 	var seal vault.Seal
 	defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
-		Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
-			Logger: c.logger.Named("shamir"),
-		}),
+		Wrapper: aeadwrapper.NewShamirWrapper(),
 	})
 	sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
 	wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &infoKeys, &info, sealLogger)
@@ -594,9 +594,12 @@ func (c *ServerCommand) runRecoveryMode() int {
 	if wrapper == nil {
 		seal = defaultSeal
 	} else {
-		seal = vault.NewAutoSeal(&vaultseal.Access{
+		seal, err = vault.NewAutoSeal(&vaultseal.Access{
 			Wrapper: wrapper,
 		})
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("error creating auto seal: %v", err))
+		}
 	}
 	barrierSeal = seal
 
@@ -1264,6 +1267,16 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	if allowPendingRemoval := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv); allowPendingRemoval != "" {
+		var err error
+		vault.PendingRemovalMountsAllowed, err = strconv.ParseBool(allowPendingRemoval)
+		if err != nil {
+			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
+				consts.VaultAllowPendingRemovalMountsEnv + " env var: " +
+				"defaulting to false."))
+		}
+	}
+
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
 	// because it is quite scary to see when first using Vault. We also disable
 	// this if the user has explicitly disabled mlock in configuration.
@@ -1324,16 +1337,20 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	if seals != nil {
-		for _, seal := range seals {
-			// Ensure that the seal finalizer is called, even if using verify-only
-			defer func(seal *vault.Seal) {
-				err = (*seal).Finalize(context.Background())
-				if err != nil {
-					c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
-				}
-			}(&seal)
+	for _, seal := range seals {
+		// There is always one nil seal. We need to skip it so we don't start an empty Finalize-Seal-Shamir
+		// section.
+		if seal == nil {
+			continue
 		}
+		seal := seal // capture range variable
+		// Ensure that the seal finalizer is called, even if using verify-only
+		defer func(seal *vault.Seal) {
+			err = (*seal).Finalize(context.Background())
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+			}
+		}(&seal)
 	}
 
 	if barrierSeal == nil {
@@ -1576,6 +1593,14 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	hcpLogger := c.logger.Named("hcpLink")
+	hcpLink, err := hcp_link.NewHCPLink(config.HCPLinkConf, core, hcpLogger)
+	if err != nil {
+		c.logger.Error("failed to start HCP Link", "error", err)
+	} else if hcpLink != nil {
+		c.logger.Trace("started HCP link")
+	}
+
 	if c.flagTestServerConfig {
 		return 0
 	}
@@ -1687,6 +1712,12 @@ func (c *ServerCommand) Run(args []string) int {
 			// Setting log request with the new value in the config after reload
 			core.ReloadLogRequestsLevel()
 
+			// reloading HCP link
+			hcpLink, err = c.reloadHCPLink(hcpLink, config, core, hcpLogger)
+			if err != nil {
+				c.logger.Error(err.Error())
+			}
+
 			if config.LogLevel != "" {
 				configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
 				switch configLogLevel {
@@ -1740,6 +1771,12 @@ func (c *ServerCommand) Run(args []string) int {
 	// Stop the listeners so that we don't process further client requests.
 	c.cleanupGuard.Do(listenerCloseFunc)
 
+	if hcpLink != nil {
+		if err := hcpLink.Shutdown(); err != nil {
+			c.UI.Error(fmt.Sprintf("Error with HCP Link shutdown: %v", err.Error()))
+		}
+	}
+
 	// Finalize will wait until after Vault is sealed, which means the
 	// request forwarding listeners will also be closed (and also
 	// waited for).
@@ -1750,6 +1787,31 @@ func (c *ServerCommand) Run(args []string) int {
 	// Wait for dependent goroutines to complete
 	c.WaitGroup.Wait()
 	return retCode
+}
+
+func (c *ServerCommand) reloadHCPLink(hcpLinkVault *hcp_link.WrappedHCPLinkVault, conf *server.Config, core *vault.Core, hcpLogger hclog.Logger) (*hcp_link.WrappedHCPLinkVault, error) {
+	// trigger a shutdown
+	if hcpLinkVault != nil {
+		err := hcpLinkVault.Shutdown()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if conf.HCPLinkConf == nil {
+		// if cloud stanza is not configured, we should not show anything
+		// in the seal-status related to HCP link
+		core.SetHCPLinkStatus("", "")
+		return nil, nil
+	}
+
+	// starting HCP link
+	hcpLink, err := hcp_link.NewHCPLink(conf.HCPLinkConf, core, hcpLogger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to restart HCP Link and it is no longer running, %w", err)
+	}
+
+	return hcpLink, nil
 }
 
 func (c *ServerCommand) notifySystemd(status string) {
@@ -2350,24 +2412,28 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	var wrapper wrapping.Wrapper
 	var barrierWrapper wrapping.Wrapper
 	if c.flagDevAutoSeal {
-		barrierSeal = vault.NewAutoSeal(vaultseal.NewTestSeal(nil))
+		var err error
+		barrierSeal, err = vault.NewAutoSeal(vaultseal.NewTestSeal(nil))
+		if err != nil {
+			return nil, nil, nil, nil, nil, err
+		}
 		return barrierSeal, nil, nil, nil, nil, nil
 	}
 
 	// Handle the case where no seal is provided
 	switch len(config.Seals) {
 	case 0:
-		config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.Shamir})
+		config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.WrapperTypeShamir.String()})
 	case 1:
 		// If there's only one seal and it's disabled assume they want to
 		// migrate to a shamir seal and simply didn't provide it
 		if config.Seals[0].Disabled {
-			config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.Shamir})
+			config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.WrapperTypeShamir.String()})
 		}
 	}
 	var createdSeals []vault.Seal = make([]vault.Seal, len(config.Seals))
 	for _, configSeal := range config.Seals {
-		sealType := wrapping.Shamir
+		sealType := wrapping.WrapperTypeShamir.String()
 		if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
 			sealType = os.Getenv("VAULT_SEAL_TYPE")
 			configSeal.Type = sealType
@@ -2379,9 +2445,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
 		c.allLoggers = append(c.allLoggers, sealLogger)
 		defaultSeal := vault.NewDefaultSeal(&vaultseal.Access{
-			Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
-				Logger: c.logger.Named("shamir"),
-			}),
+			Wrapper: aeadwrapper.NewShamirWrapper(),
 		})
 		var sealInfoKeys []string
 		sealInfoMap := map[string]string{}
@@ -2395,9 +2459,13 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		if wrapper == nil {
 			seal = defaultSeal
 		} else {
-			seal = vault.NewAutoSeal(&vaultseal.Access{
+			var err error
+			seal, err = vault.NewAutoSeal(&vaultseal.Access{
 				Wrapper: wrapper,
 			})
+			if err != nil {
+				return nil, nil, nil, nil, nil, err
+			}
 		}
 		infoPrefix := ""
 		if configSeal.Disabled {

@@ -14,7 +14,7 @@ parameters:
     default: false
   go_image:
     type: string
-    default: "docker.mirror.hashicorp.services/cimg/go:1.18.4"
+    default: "docker.mirror.hashicorp.services/cimg/go:1.19.2"
   use_docker:
     type: boolean
     default: false
@@ -107,7 +107,7 @@ steps:
         export VAULT_LICENSE_CI="$VAULT_LICENSE"
         VAULT_LICENSE=
 
-        # Create a docker network for our testcontainer
+        # Create a docker network for our test container
         if [ $USE_DOCKER == 1 ]; then
           # Despite the fact that we're using a circleci image (thus getting the
           # version they chose for the docker cli) and that we're specifying a
@@ -116,15 +116,17 @@ steps:
           # reasons unclear.
           export DOCKER_API_VERSION=1.39
 
-          export TEST_DOCKER_NETWORK_ID=$(docker network list -q -f 'name=vaulttest')
+          TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
+          export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
           if [ -z $TEST_DOCKER_NETWORK_ID ]; then
-            TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
+            docker network prune -f
+            TEST_DOCKER_NETWORK_ID=$(docker network create "${TEST_DOCKER_NETWORK_NAME}")
           fi
 
 
 
-          # Start a docker testcontainer to run the tests in
-          docker run -d \
+          # Start a docker test container to run the tests in
+          CONTAINER_ID="$(docker run -d \
             -e TEST_DOCKER_NETWORK_ID \
             -e GOPRIVATE \
             -e DOCKER_CERT_PATH \
@@ -133,19 +135,21 @@ steps:
             -e DOCKER_TLS_VERIFY \
             -e NO_PROXY \
             -e VAULT_TEST_LOG_DIR=<< parameters.log_dir >> \
-            --network vaulttest --name \
-            testcontainer << parameters.go_image >> \
-            tail -f /dev/null
+            --network ${TEST_DOCKER_NETWORK_NAME} \
+            << parameters.go_image >> \
+            tail -f /dev/null)"
+          mkdir workspace
+          echo ${CONTAINER_ID} > workspace/container_id
 
           # Run tests
-          test -d << parameters.cache_dir >> && docker cp << parameters.cache_dir >> testcontainer:/tmp/gocache
-          docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
-          docker cp . testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/
-          docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
+          test -d << parameters.cache_dir >> && docker cp << parameters.cache_dir >> ${CONTAINER_ID}:/tmp/gocache
+          docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+          docker cp . ${CONTAINER_ID}:/home/circleci/go/src/github.com/hashicorp/vault/
+          docker cp $DOCKER_CERT_PATH/ ${CONTAINER_ID}:$DOCKER_CERT_PATH
 
           # Copy the downloaded modules inside the container.
-          docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/pkg'
-          docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/home/circleci/go/pkg/mod
+          docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/pkg'
+          docker cp "$(go env GOPATH)/pkg/mod" ${CONTAINER_ID}:/home/circleci/go/pkg/mod
 
           docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
             -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
@@ -154,7 +158,7 @@ steps:
             -e GOPROXY="off" \
             -e VAULT_LICENSE_CI \
             -e GOARCH=<< parameters.arch >> \
-            testcontainer \
+            ${CONTAINER_ID} \
               gotestsum --format=short-verbose \
                 --junitfile test-results/go-test/results.xml \
                 --jsonfile test-results/go-test/results.json \
@@ -185,8 +189,8 @@ steps:
             name: Copy test results
             when: always
             command: |
-              docker cp testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/test-results .
-              docker cp testcontainer:/tmp/gocache << parameters.cache_dir >>
+              docker cp $(cat workspace/container_id):/home/circleci/go/src/github.com/hashicorp/vault/test-results .
+              docker cp $(cat workspace/container_id):/tmp/gocache << parameters.cache_dir >>
   - when:
       condition: << parameters.save_cache >>
       steps:

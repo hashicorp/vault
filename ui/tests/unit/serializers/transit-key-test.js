@@ -68,10 +68,10 @@ module('Unit | Serializer | transit-key', function (hooks) {
     let aesExpected = AES.data.keys[1] * 1000;
     let chachaExpected = CHACHA.data.keys[1] * 1000;
     let aesData = serializer.normalizeSecrets({ ...AES });
-    assert.equal(aesData.firstObject.keys[1], aesExpected, 'converts seconds to millis for aes keys');
+    assert.strictEqual(aesData.firstObject.keys[1], aesExpected, 'converts seconds to millis for aes keys');
 
     let chachaData = serializer.normalizeSecrets({ ...CHACHA });
-    assert.equal(
+    assert.strictEqual(
       chachaData.firstObject.keys[1],
       chachaExpected,
       'converts seconds to millis for chacha keys'
@@ -81,6 +81,10 @@ module('Unit | Serializer | transit-key', function (hooks) {
   test('it includes backend from the payload on the normalized data', function (assert) {
     let serializer = this.owner.lookup('serializer:transit-key');
     let data = serializer.normalizeSecrets({ ...AES });
-    assert.equal(data.firstObject.backend, 'its-a-transit', 'pulls backend from the payload onto the data');
+    assert.strictEqual(
+      data.firstObject.backend,
+      'its-a-transit',
+      'pulls backend from the payload onto the data'
+    );
   });
 });

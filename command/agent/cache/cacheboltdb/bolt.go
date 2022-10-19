@@ -10,7 +10,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-hclog"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-multierror"
 	bolt "go.etcd.io/bbolt"
 )
@@ -228,7 +228,7 @@ func autoIncrementedLeaseKey(tx *bolt.Tx, id string) ([]byte, error) {
 
 // Set an index (token or lease) in bolt storage
 func (b *BoltStorage) Set(ctx context.Context, id string, plaintext []byte, indexType string) error {
-	blob, err := b.wrapper.Encrypt(ctx, plaintext, []byte(b.aad))
+	blob, err := b.wrapper.Encrypt(ctx, plaintext, wrapping.WithAad([]byte(b.aad)))
 	if err != nil {
 		return fmt.Errorf("error encrypting %s index: %w", indexType, err)
 	}
@@ -296,12 +296,12 @@ func (b *BoltStorage) Delete(id string, indexType string) error {
 }
 
 func (b *BoltStorage) decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
-	var blob wrapping.EncryptedBlobInfo
+	var blob wrapping.BlobInfo
 	if err := proto.Unmarshal(ciphertext, &blob); err != nil {
 		return nil, err
 	}
 
-	return b.wrapper.Decrypt(ctx, &blob, []byte(b.aad))
+	return b.wrapper.Decrypt(ctx, &blob, wrapping.WithAad([]byte(b.aad)))
 }
 
 // GetByType returns a list of stored items of the specified type

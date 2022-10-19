@@ -57,7 +57,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 
 - `kms_key_id` `(string: <required>)`: The AWS KMS key ID or ARN to use for encryption
   and decryption. May also be specified by the `VAULT_AWSKMS_SEAL_KEY_ID`
-  environment variable.
+  environment variable.  An alias in the format `alias/key-alias-name` may also be used here.
 
 - `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
 

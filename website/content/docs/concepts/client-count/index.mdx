@@ -31,7 +31,7 @@ There can be many different types of clients that authenticate and communicate w
 
 ## How do Clients work in Vault?
 
-When anything authenticates to Vault, be it a user, application, machine, etc., it is associated with a unique **entity** within the [Vault identity system](https://www.vaultproject.io/docs/secrets/identity). The name reported to the identity systems by the different types of authentication methods varies ([list below](#authentication-methods-and-how-they-re-counted-in-vault)), each entity is created or verified during authorization. There are scenarios where tokens can be created outside of the identity system, without an associated entity. In this scenario, these tokens are considered **clients** (for production usage, it should be rare to have any tokens created outside any identity systems).
+When anything authenticates to Vault, be it a user, application, machine, etc., it is associated with a unique **entity** within the [Vault identity system](/docs/secrets/identity). The name reported to the identity systems by the different types of authentication methods varies ([list below](#authentication-methods-and-how-they-re-counted-in-vault)), each entity is created or verified during authorization. There are scenarios where tokens can be created outside of the identity system, without an associated entity. In this scenario, these tokens are considered **clients** (for production usage, it should be rare to have any tokens created outside any identity systems).
 
 ## But wait, there’s more...
 
@@ -53,9 +53,9 @@ For more on managing access with identity, entities, and more, check out [Identi
 
 Using the identity system allows for Vault to make sure that entities aren’t counted more than once. Once you determine the identity and authentication method to be used for each, human, application, platform, and CI/CD pipeline, upon authentication for the first time in a billing period, Vault instantiates a unique entity. For example, say you have an application “AppX” that needs to get a secret from Vault using the AppRole method. Since AppX has an associated entity within Vault with associated policies, Vault knows every time that AppX is authenticating and authorizing, so AppX is only counted once.
 
-### Non-entity Tokens
+## Non-entity Tokens
 
-If you chose to use the [Token Auth Method](/docs/auth/token) without an identity, always assign each token to a role and entity alias. HashiCorp recommends creating a [Token Role](/api-docs/auth/token#create-update-token-role) first, with allowable entity aliases and issuing your token with the appropriate [role and entity alias name](/api-docs/auth/token#create-token). This is the name that will uniquely identify the client, no matter how many tokens are issued. See more on entity alias below.
+If you choose to use the [Token Auth Method](/docs/auth/token) without an identity, this will create a non-entity token. Starting with Vault 1.9, any number of non-entity tokens having the same namespace and set of policies assigned, count as one client. In earlier versions, every non-entity token counted as a separate client, which could rapidly drive up client count to unrealistic values. If you are using Vault 1.8 or earlier, and need to address this without upgrading, one option is to create a [Token Role](/api-docs/auth/token#create-update-token-role) first, with allowable entity aliases and create your token with the appropriate [role and entity alias name](/api-docs/auth/token#create-token). All tokens issued with the same entity alias name count as one client.
 
 ### Differences between a direct entity and a non-entity token
 
@@ -123,6 +123,10 @@ From a threat model and security assessment perspective, **_option 3_** above, w
 If someone goes wrong in **_option 1_** and you revoke access, all pipelines are affected. If something goes wrong in **_option 2_** and you revoke access to a pipeline, only that pipeline is affected, and you limit your security risk blast radius. If something goes wrong in **_option 3_** you can just revoke an app or service without affecting everything else. Please carefully consider your security options as you manage security in a dynamic world.
 
 From a Vault client perspective, **_option 1_** is one client, the Master CI/CD identity; **_option 2_** is one client for the Master CI/CD identity, and one client for each pipeline; **_option 3_** is one client for the Master CI/CD identity, one client for each pipeline, and one for each app, service deployed.
+
+### Onboarding Clients - Putting it all together
+
+The guide: [“Onboarding Applications to Vault Using Terraform: A Practical Guide“](https://www.hashicorp.com/blog/onboarding-applications-to-vault-using-terraform-a-practical-guide) is an example on how to build an automated HashiCorp Vault onboarding system with Terraform to accommodate Vault client using naming standards, ACL policy templates, namespaces, pre-created application entities, and workflows driven by VCS and CI/CD.
 
 ## Client Count
 
@@ -253,3 +257,67 @@ For the UI to be able to use the client count feature, it needs `read` permissio
 
 For the UI to be able to modify the configuration settings, it additionally needs `update` permission to
 `sys/internal/counters/config`.
+
+## New Clients For Current Month
+
+The billing period for the activity log API can be specified to include the current month 
+for the end date. For more information, please refer to the 
+[the internal counters API docs](/api-docs/system/internal-counters.mdx) documentation.
+
+When the end date is the current month, the `new_clients` counts will be an approximation of the  
+number of new clients for the month, and not an exact value. Note that the `new_clients` counts for the rest 
+of the months will be accurate. 
+
+### Why An Approximation?
+
+The `new_clients` counts for the current month is an approximation to improve API 
+performance and make the UI usable. To give an exact value for the current month's
+new clients, client IDs need to be de-duplicated with the previous months' client IDs, 
+which is a time and i/o intensive process. 
+
+### Approximation Details And Accuracy Testing Results
+
+The `new_clients` approximation is calculated by using a [hyperloglog algorithm](https://en.wikipedia.org/wiki/HyperLogLog)
+to approximate the cardinality of the total number of clients within the billing period, and the cardinality 
+of the total number of clients within the billing period not including the current month. The returned value 
+is the difference between these two numbers.
+
+The hyperloglog library used for the cardinality estimate is [axiomhq](https://github.com/axiomhq/hyperloglog),
+with fourteen registers and the use of sparse representations, when applicable. Some accurate estimates can be found 
+in this library's [README](https://github.com/axiomhq/hyperloglog#readme). These are accuracy results
+for the cardinality of the multiset, which is the total number of clients within a billing period. The accuracy 
+estimate for the number of new clients can be far lower, depending on the discrepancy between the number of 
+clients in the current month and the number of clients in the billing period. 
+
+If we call the number of clients for the current month C and the number of clients in the billing period B, we 
+have found that in general, if C << B, the approximation can be imprecise, and the further the difference between
+C and B grows, the more imprecise the approximation will be. Furthermore, the closer C is to 0, the more imprecise
+the approximation can be. Also, the more months in the billing period, the less accurate the approximation can be. 
+
+The maximum observed error rate ((found new clients)/(expected new clients)) with testing for 10,000 clients and under
+was 30%, with most cases yielding an error rate of 5-10%. 
+
+A table with a few randomly selected values for C and B are listed below for the purposes of predictive analysis.
+
+| Current Month Clients      | Total Months' Clients | Accuracy     |
+| :---                       |    :----:             |        ---:  |
+|           7                |         10            |      100%    |
+|           20               |         600           |      100%    |
+|           20               |         1000          |      100%    |
+|           20               |         6000          |      90%     |
+|           20               |         10000         |      90%     |
+|           200              |         600           |      100%    |
+|           200              |         10000         |      93%     |
+|           400              |         6000          |      95%     |
+|           2000             |         10000         |      96%     |
+
+Some multi-month (over 2 months) and multi-segment tests are below: 
+
+| Current Month Clients      | Total Months' Clients | Accuracy     |
+| :---                       |    :----:             |        ---:  |
+|           20               |         15            |      100%    |
+|           20               |         100           |      100%    |
+|           20               |         1000          |      100%    |
+|           20               |         10000         |      70%     |
+|           200              |         10000         |      94%     |
+|           2000             |         10000         |      98%     |

@@ -74,7 +74,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
   test('it shows the regular namespace toolbar when not managed', async function (assert) {
     // This test is the opposite of the test in managed-namespace-test
     await logout.visit();
-    assert.equal(currentURL(), '/vault/auth?with=token', 'Does not redirect');
+    assert.strictEqual(currentURL(), '/vault/auth?with=token', 'Does not redirect');
     assert.dom('[data-test-namespace-toolbar]').exists('Normal namespace toolbar exists');
     assert
       .dom('[data-test-managed-namespace-toolbar]')
@@ -82,7 +82,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     assert.dom('input#namespace').hasAttribute('placeholder', '/ (Root)');
     await fillIn('input#namespace', '/foo');
     let encodedNamespace = encodeURIComponent('/foo');
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/auth?namespace=${encodedNamespace}&with=token`,
       'Does not prepend root to namespace'

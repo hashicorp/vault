@@ -274,7 +274,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return cachedResp, nil
 	}
 
-	c.logger.Debug("forwarding request", "method", req.Request.Method, "path", req.Request.URL.Path)
+	c.logger.Debug("forwarding request from cache", "method", req.Request.Method, "path", req.Request.URL.Path)
 
 	// Pass the request down and get a response
 	resp, err := c.proxier.Send(ctx, req)

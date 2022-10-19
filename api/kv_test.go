@@ -319,13 +319,66 @@ func TestExtractCustomMetadata(t *testing.T) {
 			},
 			expected: map[string]interface{}{"org": "eng"},
 		},
+		{
+			name: "a read response with no custom metadata from a pre-1.9 Vault server",
+			inputAPIResp: &Secret{
+				Data: map[string]interface{}{
+					"metadata": map[string]interface{}{},
+				},
+			},
+			expected: map[string]interface{}(nil),
+		},
+		{
+			name: "a write response with no custom metadata from a pre-1.9 Vault server",
+			inputAPIResp: &Secret{
+				Data: map[string]interface{}{},
+			},
+			expected: map[string]interface{}(nil),
+		},
+		{
+			name: "a read response with no custom metadata from a post-1.9 Vault server",
+			inputAPIResp: &Secret{
+				Data: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"custom_metadata": nil,
+					},
+				},
+			},
+			expected: map[string]interface{}(nil),
+		},
+		{
+			name: "a write response with no custom metadata from a post-1.9 Vault server",
+			inputAPIResp: &Secret{
+				Data: map[string]interface{}{
+					"custom_metadata": nil,
+				},
+			},
+			expected: map[string]interface{}(nil),
+		},
+		{
+			name: "a read response where custom metadata was deleted",
+			inputAPIResp: &Secret{
+				Data: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"custom_metadata": map[string]interface{}{},
+					},
+				},
+			},
+			expected: map[string]interface{}{},
+		},
+		{
+			name: "a write response where custom metadata was deleted",
+			inputAPIResp: &Secret{
+				Data: map[string]interface{}{
+					"custom_metadata": map[string]interface{}{},
+				},
+			},
+			expected: map[string]interface{}{},
+		},
 	}
 
 	for _, tc := range testCases {
-		cm, err := extractCustomMetadata(tc.inputAPIResp)
-		if err != nil {
-			t.Fatalf("err: %s", err)
-		}
+		cm := extractCustomMetadata(tc.inputAPIResp)
 
 		if !reflect.DeepEqual(cm, tc.expected) {
 			t.Fatalf("%s: got\n%#v\nexpected\n%#v\n", tc.name, cm, tc.expected)

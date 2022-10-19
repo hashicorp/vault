@@ -24,12 +24,12 @@ module('Integration | Component | calendar-widget', function (hooks) {
   test('it renders and can open the calendar view', async function (assert) {
     await render(hbs`
       <CalendarWidget
-        @arrayOfMonths={{arrayOfMonths}}
-        @endTimeDisplay={{concat "January " currentYear}}
-        @endTimeFromResponse={{endTimeFromResponse}}
-        @handleClientActivityQuery={{handleClientActivityQuery}}
-        @handleCurrentBillingPeriod={{handleCurrentBillingPeriod}}
-        @startTimeDisplay={{concat "February " previousYear}}
+        @arrayOfMonths={{this.arrayOfMonths}}
+        @endTimeDisplay={{concat "January " this.currentYear}}
+        @endTimeFromResponse={{this.endTimeFromResponse}}
+        @handleClientActivityQuery={{this.handleClientActivityQuery}}
+        @handleCurrentBillingPeriod={{this.handleCurrentBillingPeriod}}
+        @startTimeDisplay={{concat "February " this.previousYear}}
       />
     `);
 
@@ -40,12 +40,12 @@ module('Integration | Component | calendar-widget', function (hooks) {
   test('it does not allow a user to click to a future year but does allow a user to click to previous year', async function (assert) {
     await render(hbs`
       <CalendarWidget
-        @arrayOfMonths={{arrayOfMonths}}
-        @endTimeDisplay={{concat "March " currentYear}}
-        @endTimeFromResponse={{endTimeFromResponse}}
-        @handleClientActivityQuery={{handleClientActivityQuery}}
-        @handleCurrentBillingPeriod={{handleCurrentBillingPeriod}}
-        @startTimeDisplay={{concat "February " previousYear}}
+        @arrayOfMonths={{this.arrayOfMonths}}
+        @endTimeDisplay={{concat "March " this.currentYear}}
+        @endTimeFromResponse={{this.endTimeFromResponse}}
+        @handleClientActivityQuery={{this.handleClientActivityQuery}}
+        @handleCurrentBillingPeriod={{this.handleCurrentBillingPeriod}}
+        @startTimeDisplay={{concat "February " this.previousYear}}
       />
     `);
 
@@ -65,12 +65,12 @@ module('Integration | Component | calendar-widget', function (hooks) {
   test('it disables the current month', async function (assert) {
     await render(hbs`
       <CalendarWidget
-        @arrayOfMonths={{arrayOfMonths}}
-        @endTimeDisplay={{concat "January " currentYear}}
-        @endTimeFromResponse={{endTimeFromResponse}}
-        @handleClientActivityQuery={{handleClientActivityQuery}}
-        @handleCurrentBillingPeriod={{handleCurrentBillingPeriod}}
-        @startTimeDisplay={{concat "February " previousYear}}
+        @arrayOfMonths={{this.arrayOfMonths}}
+        @endTimeDisplay={{concat "January " this.currentYear}}
+        @endTimeFromResponse={{this.endTimeFromResponse}}
+        @handleClientActivityQuery={{this.handleClientActivityQuery}}
+        @handleCurrentBillingPeriod={{this.handleCurrentBillingPeriod}}
+        @startTimeDisplay={{concat "February " this.previousYear}}
       />
     `);
     await calendarDropdown.openCalendar();
@@ -86,12 +86,12 @@ module('Integration | Component | calendar-widget', function (hooks) {
   test('it allows you to reset the billing period', async function (assert) {
     await render(hbs`
     <CalendarWidget
-      @arrayOfMonths={{arrayOfMonths}}
-      @endTimeDisplay={{concat "January " currentYear}}
-      @endTimeFromResponse={{endTimeFromResponse}}
-      @handleClientActivityQuery={{handleClientActivityQuery}}
-      @handleCurrentBillingPeriod={{handleCurrentBillingPeriod}}
-      @startTimeDisplay={{concat "February " previousYear}}
+      @arrayOfMonths={{this.arrayOfMonths}}
+      @endTimeDisplay={{concat "January " this.currentYear}}
+      @endTimeFromResponse={{this.endTimeFromResponse}}
+      @handleClientActivityQuery={{this.handleClientActivityQuery}}
+      @handleCurrentBillingPeriod={{this.handleCurrentBillingPeriod}}
+      @startTimeDisplay={{concat "February " this.previousYear}}
     />
   `);
     await calendarDropdown.menuToggle();
@@ -102,12 +102,12 @@ module('Integration | Component | calendar-widget', function (hooks) {
   test('it passes the appropriate data to the handleCurrentBillingPeriod when a date is selected', async function (assert) {
     await render(hbs`
     <CalendarWidget
-      @arrayOfMonths={{arrayOfMonths}}
-      @endTimeDisplay={{concat "January " currentYear}}
-      @endTimeFromResponse={{endTimeFromResponse}}
-      @handleClientActivityQuery={{handleClientActivityQuery}}
-      @handleCurrentBillingPeriod={{handleCurrentBillingPeriod}}
-      @startTimeDisplay={{concat "February " previousYear}}
+      @arrayOfMonths={{this.arrayOfMonths}}
+      @endTimeDisplay={{concat "January " this.currentYear}}
+      @endTimeFromResponse={{this.endTimeFromResponse}}
+      @handleClientActivityQuery={{this.handleClientActivityQuery}}
+      @handleCurrentBillingPeriod={{this.handleCurrentBillingPeriod}}
+      @startTimeDisplay={{concat "February " this.previousYear}}
     />
   `);
     await calendarDropdown.openCalendar();
@@ -124,12 +124,12 @@ module('Integration | Component | calendar-widget', function (hooks) {
     this.set('endTimeFromResponse', [this.previousYear, 11]);
     await render(hbs`
     <CalendarWidget
-      @arrayOfMonths={{arrayOfMonths}}
-      @endTimeDisplay={{concat "December " previousYear}}
-      @endTimeFromResponse={{endTimeFromResponse}}
-      @handleClientActivityQuery={{handleClientActivityQuery}}
-      @handleCurrentBillingPeriod={{handleCurrentBillingPeriod}}
-      @startTimeDisplay={{"March 2020"}}
+      @arrayOfMonths={{this.arrayOfMonths}}
+      @endTimeDisplay={{concat "December " this.previousYear}}
+      @endTimeFromResponse={{this.endTimeFromResponse}}
+      @handleClientActivityQuery={{this.handleClientActivityQuery}}
+      @handleCurrentBillingPeriod={{this.handleCurrentBillingPeriod}}
+      @startTimeDisplay="March 2020"
     />
   `);
     await calendarDropdown.openCalendar();

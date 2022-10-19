@@ -16,9 +16,9 @@
           <p class="sub-text">
             {{@attr.options.subText}}
             {{#if @attr.options.docLink}}
-              <a href={{@attr.options.docLink}} target="_blank" rel="noopener noreferrer">
+              <DocLink @path={{@attr.options.docLink}}>
                 See our documentation
-              </a>
+              </DocLink>
               for help.
             {{/if}}
           </p>

@@ -95,8 +95,24 @@ You should set up a [Vault policy](https://learn.hashicorp.com/tutorials/vault/p
 
 ### Optional Azure-specific Configuration
 
-If a user is a member of more than 200 groups (directly or indirectly), extra configuration
-is required so that Vault can fetch the groups properly.
+If a user is a member of more than 200 groups (directly or indirectly), Azure will
+send `_claim_names` and `_claim_sources`. For example, returned claims might look like:
+
+```json
+{
+  "_claim_names": {
+    "groups": "src1"
+  },
+  "_claim_sources": {
+    "src1": {
+      "endpoint": "https://graph.windows.net...."
+    }
+  }
+}
+```
+
+The OIDC auth method role can be configured to include the user ID in the endpoint URL, 
+which will be used by Vault to retrieve the groups for the user:
 
 - In Azure, under the applications **API Permissions**, grant the following permissions:
   - Microsoft Graph API permission [Directory.Read.All](https://docs.microsoft.com/en-us/graph/permissions-reference#application-permissions-19)

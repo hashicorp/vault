@@ -32,7 +32,7 @@ func (c *KVMetadataPutCommand) Synopsis() string {
 
 func (c *KVMetadataPutCommand) Help() string {
 	helpText := `
-Usage: vault metadata kv put [options] KEY
+Usage: vault kv metadata put [options] KEY
 
   This command can be used to create a blank key in the key-value store or to
   update key configuration for a specified key.

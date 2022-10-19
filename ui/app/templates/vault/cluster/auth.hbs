@@ -27,9 +27,13 @@
           <button type="button" class="icon-button" {{on "click" (fn (mut this.mfaAuthData) null)}}>
             <Icon @name="arrow-left" @size="24" aria-label="Back to login" class="icon-blue" />
           </button>
+        {{else if this.waitingForOktaNumberChallenge}}
+          <button type="button" class="icon-button" {{on "click" (action "cancelAuthentication")}}>
+            <Icon @name="arrow-left" @size="24" aria-label="Back to login" class="icon-blue" />
+          </button>
         {{/if}}
         <h1 class="title is-3">
-          {{if this.mfaAuthData "Authenticate" "Sign in to Vault"}}
+          {{if (or this.mfaAuthData this.waitingForOktaNumberChallenge) "Authenticate" "Sign in to Vault"}}
         </h1>
       </div>
     {{/if}}
@@ -113,6 +117,10 @@
         @redirectTo={{this.redirectTo}}
         @selectedAuth={{this.authMethod}}
         @onSuccess={{action "onAuthResponse"}}
+        @setOktaNumberChallenge={{fn (mut this.waitingForOktaNumberChallenge)}}
+        @waitingForOktaNumberChallenge={{this.waitingForOktaNumberChallenge}}
+        @setCancellingAuth={{fn (mut this.cancelAuth)}}
+        @cancelAuthForOktaNumberChallenge={{this.cancelAuth}}
       />
     {{/if}}
   </Page.content>

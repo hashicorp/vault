@@ -47,15 +47,15 @@ var (
 // the test server. This must be done by the caller to avoid an import
 // cycle between the client and the testserver. Example usage:
 //
-//		client.Scheme = testConf.ClientScheme
-//		client.TokenFile = testConf.PathToTokenFile
-//		client.RootCAFile = testConf.PathToRootCAFile
-//		if err := os.Setenv(client.EnvVarKubernetesServiceHost, testConf.ServiceHost); err != nil {
-//			t.Fatal(err)
-//		}
-//		if err := os.Setenv(client.EnvVarKubernetesServicePort, testConf.ServicePort); err != nil {
-//			t.Fatal(err)
-//		}
+//	client.Scheme = testConf.ClientScheme
+//	client.TokenFile = testConf.PathToTokenFile
+//	client.RootCAFile = testConf.PathToRootCAFile
+//	if err := os.Setenv(client.EnvVarKubernetesServiceHost, testConf.ServiceHost); err != nil {
+//		t.Fatal(err)
+//	}
+//	if err := os.Setenv(client.EnvVarKubernetesServicePort, testConf.ServicePort); err != nil {
+//		t.Fatal(err)
+//	}
 type Conf struct {
 	ClientScheme, PathToTokenFile, PathToRootCAFile, ServiceHost, ServicePort string
 }

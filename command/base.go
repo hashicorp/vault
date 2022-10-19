@@ -40,19 +40,20 @@ type BaseCommand struct {
 	flags     *FlagSets
 	flagsOnce sync.Once
 
-	flagAddress        string
-	flagAgentAddress   string
-	flagCACert         string
-	flagCAPath         string
-	flagClientCert     string
-	flagClientKey      string
-	flagNamespace      string
-	flagNS             string
-	flagPolicyOverride bool
-	flagTLSServerName  string
-	flagTLSSkipVerify  bool
-	flagWrapTTL        time.Duration
-	flagUnlockKey      string
+	flagAddress          string
+	flagAgentAddress     string
+	flagCACert           string
+	flagCAPath           string
+	flagClientCert       string
+	flagClientKey        string
+	flagNamespace        string
+	flagNS               string
+	flagPolicyOverride   bool
+	flagTLSServerName    string
+	flagTLSSkipVerify    bool
+	flagDisableRedirects bool
+	flagWrapTTL          time.Duration
+	flagUnlockKey        string
 
 	flagFormat           string
 	flagField            string
@@ -428,6 +429,15 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			})
 
 			f.BoolVar(&BoolVar{
+				Name:    flagNameDisableRedirects,
+				Target:  &c.flagDisableRedirects,
+				Default: false,
+				EnvVar:  api.EnvVaultDisableRedirects,
+				Usage: "Disable the default client behavior, which honors a single " +
+					"redirect response from a request",
+			})
+
+			f.BoolVar(&BoolVar{
 				Name:    "policy-override",
 				Target:  &c.flagPolicyOverride,
 				Default: false,
@@ -589,7 +599,7 @@ func (f *FlagSets) Parse(args []string) error {
 	err := f.mainSet.Parse(args)
 
 	warnings := generateFlagWarnings(f.Args())
-	if warnings != "" {
+	if warnings != "" && Format(f.ui) == "table" {
 		f.ui.Warn(warnings)
 	}
 

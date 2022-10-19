@@ -57,7 +57,7 @@ func validateURLs(urls []string) string {
 	return ""
 }
 
-func getURLs(ctx context.Context, storage logical.Storage) (*certutil.URLEntries, error) {
+func getGlobalAIAURLs(ctx context.Context, storage logical.Storage) (*certutil.URLEntries, error) {
 	entry, err := storage.Get(ctx, "urls")
 	if err != nil {
 		return nil, err
@@ -98,7 +98,7 @@ func writeURLs(ctx context.Context, storage logical.Storage, entries *certutil.U
 }
 
 func (b *backend) pathReadURL(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	entries, err := getURLs(ctx, req.Storage)
+	entries, err := getGlobalAIAURLs(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func (b *backend) pathReadURL(ctx context.Context, req *logical.Request, _ *fram
 }
 
 func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	entries, err := getURLs(ctx, req.Storage)
+	entries, err := getGlobalAIAURLs(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -124,21 +124,21 @@ func (b *backend) pathWriteURL(ctx context.Context, req *logical.Request, data *
 		entries.IssuingCertificates = urlsInt.([]string)
 		if badURL := validateURLs(entries.IssuingCertificates); badURL != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"invalid URL found in issuing certificates: %s", badURL)), nil
+				"invalid URL found in Authority Information Access (AIA) parameter issuing_certificates: %s", badURL)), nil
 		}
 	}
 	if urlsInt, ok := data.GetOk("crl_distribution_points"); ok {
 		entries.CRLDistributionPoints = urlsInt.([]string)
 		if badURL := validateURLs(entries.CRLDistributionPoints); badURL != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"invalid URL found in CRL distribution points: %s", badURL)), nil
+				"invalid URL found in Authority Information Access (AIA) parameter crl_distribution_points: %s", badURL)), nil
 		}
 	}
 	if urlsInt, ok := data.GetOk("ocsp_servers"); ok {
 		entries.OCSPServers = urlsInt.([]string)
 		if badURL := validateURLs(entries.OCSPServers); badURL != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"invalid URL found in OCSP servers: %s", badURL)), nil
+				"invalid URL found in Authority Information Access (AIA) parameter ocsp_servers: %s", badURL)), nil
 		}
 	}
 

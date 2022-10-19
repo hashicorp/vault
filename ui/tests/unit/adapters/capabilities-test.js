@@ -15,8 +15,8 @@ module('Unit | Adapter | capabilities', function (hooks) {
     });
 
     adapter.findRecord(null, 'capabilities', 'foo');
-    assert.equal(url, '/v1/sys/capabilities-self', 'calls the correct URL');
+    assert.strictEqual(url, '/v1/sys/capabilities-self', 'calls the correct URL');
     assert.deepEqual({ paths: ['foo'] }, options.data, 'data params OK');
-    assert.equal(method, 'POST', 'method OK');
+    assert.strictEqual(method, 'POST', 'method OK');
   });
 });

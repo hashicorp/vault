@@ -22,7 +22,7 @@ module('Acceptance | unseal', function (hooks) {
   test('seal then unseal', async function (assert) {
     await visit('/vault/settings/seal');
 
-    assert.equal(currentURL(), '/vault/settings/seal');
+    assert.strictEqual(currentURL(), '/vault/settings/seal');
 
     // seal
     await click('[data-test-seal] button');
@@ -31,7 +31,7 @@ module('Acceptance | unseal', function (hooks) {
 
     await pollCluster(this.owner);
     await settled();
-    assert.equal(currentURL(), '/vault/unseal', 'vault is on the unseal page');
+    assert.strictEqual(currentURL(), '/vault/unseal', 'vault is on the unseal page');
 
     // unseal
     for (const key of unsealKeys) {
@@ -44,6 +44,6 @@ module('Acceptance | unseal', function (hooks) {
     }
 
     assert.dom('[data-test-cluster-status]').doesNotExist('ui does not show sealed warning');
-    assert.equal(currentRouteName(), 'vault.cluster.auth', 'vault is ready to authenticate');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.auth', 'vault is ready to authenticate');
   });
 });

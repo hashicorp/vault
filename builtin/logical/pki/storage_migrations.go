@@ -193,7 +193,7 @@ func getLegacyCertBundle(ctx context.Context, s logical.Storage) (*issuerEntry, 
 		SerialNumber:         cb.SerialNumber,
 		LeafNotAfterBehavior: certutil.ErrNotAfterBehavior,
 	}
-	issuer.Usage.ToggleUsage(IssuanceUsage, CRLSigningUsage)
+	issuer.Usage.ToggleUsage(AllIssuerUsages)
 
 	return issuer, cb, nil
 }
