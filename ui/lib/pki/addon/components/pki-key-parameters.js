@@ -39,7 +39,7 @@ export default class PkiKeyParameters extends Component {
     this.args.model.set('keyBits', Number(selection.target.value));
   }
 
-  @action onKeyTypeChange(name, selection) {
+  @action onSignatureBitsOrKeyTypeChange(name, selection) {
     // set the model for either signatureBits or keyType
     this.args.model.set(name, selection.target.value);
 

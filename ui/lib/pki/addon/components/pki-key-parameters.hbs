@@ -15,7 +15,6 @@
       />
       {{#each @model.fieldGroups as |fieldGroup|}}
         {{#each-in fieldGroup as |group fields|}}
-          {{! Key type and signature bits }}
           {{#if (eq group "Key parameters")}}
             {{#each fields as |attr|}}
               {{#if (eq attr.name "keyBits")}}
@@ -38,7 +37,6 @@
                     </div>
                   </div>
                 </div>
-                {{! Key type and Signature bits }}
               {{else}}
                 <div class="field">
                   <FormFieldLabel for={{attr.name}} @label={{attr.options.label}} />
@@ -47,7 +45,7 @@
                       <select
                         name={{attr.name}}
                         id={{attr.name}}
-                        onchange={{fn this.onKeyTypeChange attr.name}}
+                        onchange={{fn this.onSignatureBitsOrKeyTypeChange attr.name}}
                         data-test-input={{attr.name}}
                       >
                         {{#each (path-or-array attr.options.possibleValues @model) as |val|}}
