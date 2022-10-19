@@ -18,7 +18,8 @@ scenario "k8s" {
     image_tag = replace(var.vault_product_version, "+ent", "-ent")
 
     // The additional '-0' is required in the constraint since without it, the semver function will
-    // incorrectly resolve the wrong result for pre-release product versions, i.e. 1.11.1-dev1 or 1.11.4-rc1.
+    // only compare the non-pre-release parts (Major.Minor.Patch) of the version and the constraint,
+    // which can lead to unexpected results.
     version_includes_build_date = semverconstraint(var.vault_product_version, ">=1.11.0-0")
   }
 
