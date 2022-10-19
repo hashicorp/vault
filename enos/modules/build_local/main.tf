@@ -1,3 +1,11 @@
+terraform {
+  required_providers {
+    enos = {
+      source = "app.terraform.io/hashicorp-qti/enos"
+    }
+  }
+}
+
 variable "bundle_path" {
   type    = string
   default = "/tmp/vault.zip"
