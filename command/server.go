@@ -1691,6 +1691,11 @@ func (c *ServerCommand) Run(args []string) int {
 
 			core.ReloadReplicationCanaryWriteInterval()
 
+			// notify ServiceRegistration that a configuration reload has occurred
+			if sr := coreConfig.GetServiceRegistration(); sr != nil {
+				sr.NotifyConfigurationReload(config.ServiceRegistration.Config)
+			}
+
 		RUNRELOADFUNCS:
 			if err := c.Reload(c.reloadFuncsLock, c.reloadFuncs, c.flagConfigs, core); err != nil {
 				c.UI.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
