@@ -38,7 +38,8 @@
                     </div>
                   </div>
                 </div>
-              {{else if (eq attr.name "keyType")}}
+                {{! Key type and Signature bits }}
+              {{else}}
                 <div class="field">
                   <FormFieldLabel for={{attr.name}} @label={{attr.options.label}} />
                   <div class="control is-expanded">
@@ -46,7 +47,7 @@
                       <select
                         name={{attr.name}}
                         id={{attr.name}}
-                        onchange={{this.onKeyTypeChange}}
+                        onchange={{fn this.onKeyTypeChange attr.name}}
                         data-test-input={{attr.name}}
                       >
                         {{#each (path-or-array attr.options.possibleValues @model) as |val|}}
@@ -58,14 +59,6 @@
                     </div>
                   </div>
                 </div>
-              {{else}}
-                <FormField
-                  data-test-field={{true}}
-                  @attr={{attr}}
-                  @model={{@model}}
-                  @modelValidations={{this.modelValidations}}
-                  @showHelpText={{false}}
-                />
               {{/if}}
             {{/each}}
           {{/if}}
