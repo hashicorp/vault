@@ -30,6 +30,10 @@ module "build_local" {
   source = "./modules/build_local"
 }
 
+module "build_artifactory" {
+  source = "./modules/vault_artifactory_artifact"
+}
+
 module "create_vpc" {
   source = "app.terraform.io/hashicorp-qti/aws-infra/enos"
 
@@ -39,8 +43,8 @@ module "create_vpc" {
   ami_architectures = ["amd64", "arm64"]
 }
 
-module "get_local_version_from_make" {
-  source = "./modules/get_local_version_from_make"
+module "get_local_metadata" {
+  source = "./modules/get_local_metadata"
 }
 
 module "read_license" {
