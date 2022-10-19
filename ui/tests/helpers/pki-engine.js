@@ -19,23 +19,6 @@ export const SELECTORS = {
   roleCancelButton: '[data-test-pki-role-cancel]',
 };
 
-export function overrideCapabilities(requestPath, capabilitiesArray) {
-  // sample of capabilitiesArray: ['read', 'update']
-  return {
-    request_id: '40f7e44d-af5c-9b60-bd20-df72eb17e294',
-    lease_id: '',
-    renewable: false,
-    lease_duration: 0,
-    data: {
-      capabilities: capabilitiesArray,
-      [requestPath]: capabilitiesArray,
-    },
-    wrap_info: null,
-    warnings: null,
-    auth: null,
-  };
-}
-
 export async function clearRecord(store, modelType, id) {
   await store
     .findRecord(modelType, id)
