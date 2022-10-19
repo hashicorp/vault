@@ -42,7 +42,6 @@ func TestBackend_RoleCreate_DefaultUsernameTemplate(t *testing.T) {
 	}
 
 	roleData := map[string]interface{}{
-		"name": "foo",
 		"tags": "bar",
 	}
 	roleReq := &logical.Request{
@@ -56,7 +55,7 @@ func TestBackend_RoleCreate_DefaultUsernameTemplate(t *testing.T) {
 		t.Fatalf("bad: resp: %#v\nerr:%s", resp, err)
 	}
 	if resp != nil {
-		t.Fatal("expected a nil response")
+		t.Fatalf("expected a nil response: (%#v)", resp)
 	}
 
 	credsReq := &logical.Request{
@@ -114,11 +113,10 @@ func TestBackend_RoleCreate_CustomUsernameTemplate(t *testing.T) {
 		t.Fatalf("bad: resp: %#v\nerr:%s", resp, err)
 	}
 	if resp != nil {
-		t.Fatal("expected a nil response")
+		t.Fatalf("expected a nil response: (%#v)", resp)
 	}
 
 	roleData := map[string]interface{}{
-		"name": "foo",
 		"tags": "bar",
 	}
 	roleReq := &logical.Request{

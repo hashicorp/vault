@@ -81,6 +81,7 @@ func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 	}
 
 	data = map[string]interface{}{
+		"name":                "plugin-role-test",
 		"db_name":             "plugin-test",
 		"rotation_statements": testRoleStaticUpdate,
 		"username":            dbUser,
@@ -140,12 +141,10 @@ func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 	}
 
 	// Trigger rotation
-	data = map[string]interface{}{"name": "plugin-role-test"}
 	req = &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "rotate-role/plugin-role-test",
 		Storage:   config.StorageView,
-		Data:      data,
 	}
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
