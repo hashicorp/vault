@@ -96,4 +96,11 @@ type ServiceRegistration interface {
 	// the implementation's responsibility to retry updating state
 	// in the face of errors.
 	NotifyInitializedStateChange(isInitialized bool) error
+
+	// NotifyConfigurationReload is used by Core to notify that the Vault
+	// configuration has been reloaded.
+	// If errors are returned, Vault only logs a warning, so it is
+	// the implementation's responsibility to retry updating state
+	// in the face of errors.
+	NotifyConfigurationReload(conf map[string]string) error
 }

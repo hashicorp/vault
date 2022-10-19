@@ -64,6 +64,7 @@ var hostnameRegex = regexp.MustCompile(`^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*
 // Vault to Consul.
 type serviceRegistration struct {
 	Client *api.Client
+	config *api.Config
 
 	logger              log.Logger
 	serviceLock         sync.RWMutex
@@ -169,6 +170,7 @@ func NewServiceRegistration(conf map[string]string, logger log.Logger, state sr.
 	// Setup the backend
 	c := &serviceRegistration{
 		Client: client,
+		config: consulConf,
 
 		logger:              logger,
 		serviceName:         service,
@@ -317,6 +319,29 @@ func (c *serviceRegistration) NotifyInitializedStateChange(isInitialized bool) e
 		// NOTE: If this occurs Vault's initialized status could be out of
 		// sync with Consul until checkTimer expires.
 		c.logger.Warn("concurrent initialize state change notify dropped")
+	}
+
+	return nil
+}
+
+func (c *serviceRegistration) NotifyConfigurationReload(conf map[string]string) error {
+	c.serviceLock.RLock()
+	newToken, ok := conf["token"]
+	oldToken := c.config.Token
+	c.serviceLock.RUnlock()
+
+	if ok && oldToken != newToken {
+		c.serviceLock.Lock()
+		defer c.serviceLock.Unlock()
+		c.logger.Debug("service registration token change detected. reloading client")
+		c.config.Token = newToken
+		client, err := api.NewClient(c.config)
+		if err != nil {
+			return fmt.Errorf("client setup failed: %w", err)
+		}
+
+		c.Client = client
+		c.logger.Debug("client reloaded")
 	}
 
 	return nil
