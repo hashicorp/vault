@@ -38,6 +38,7 @@ FEATURES:
 * **Transform Key Import (BYOK)**: The transform secrets engine now supports importing keys for tokenization and FPE transformations
 * HCP (enterprise): Adding foundational support for self-managed vault nodes to securely communicate with [HashiCorp Cloud Platform](https://cloud.hashicorp.com) as an opt-in feature
 * ui: UI support for Okta Number Challenge. [[GH-15998](https://github.com/hashicorp/vault/pull/15998)]
+* **Plugin Versioning**: Vault supports registering, managing, and running plugins with semantic versions specified.
 
 IMPROVEMENTS:
 
