@@ -48,6 +48,8 @@
           {{/each}}
         {{else if (eq group "Key usage")}}
           <PkiKeyUsage @model={{@model}} @group={{group}} />
+        {{else if (eq group "Key parameters")}}
+          <PkiKeyParameters @model={{@model}} @group={{group}} />
         {{else}}
           {{! Groups hidden behind Toggles }}
           {{#let (camelize (concat "show" group)) as |prop|}}
@@ -77,7 +79,7 @@
                   {{#each fields as |attr|}}
                     <FormField
                       data-test-field={{true}}
-                      @attr={{if (eq attr.name "keyBits") @model.keyBitsConditional attr}}
+                      @attr={{attr}}
                       @model={{@model}}
                       @modelValidations={{@modelValidations}}
                       @showHelpText={{false}}
