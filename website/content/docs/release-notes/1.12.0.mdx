@@ -27,6 +27,8 @@ Some of these enhancements and changes in this release include the following:
 - **Redis Database Secrets Engine** is now available to manage static roles or generation of dynamic credentials, as well as root credential rotation on a stand-alone Redis server.
 - **AWS Elasticache Database Secrets Engine** is introduced to manage static credentials for AWS Elasticache instances. 
 
+~> **Vault Enterprise:** Use [Integrated Storage](/docs/configuration/storage/raft) or [Consul](/docs/configuration/storage/consul) as your Vault's storage backend. Vault Enterprise will no longer start up if configured to use a storage backend other than Integrated Storage or Consul. (See the [Upgrade Guide](/docs/upgrading/upgrade-to-1.12.x).)
+
 ## New Features
 
 This section describes the new features introduced in Vault 1.12.0.
