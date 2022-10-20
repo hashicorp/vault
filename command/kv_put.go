@@ -203,7 +203,7 @@ func (c *KVPutCommand) Run(args []string) int {
 	}
 
 	// If the response has only warnings, we still want to print output
-	if secret == nil || checkWarningResponse(secret) {
+	if secret == nil || secret.IsOnlyWarnings() {
 		// Don't output anything unless using the "table" format
 		if Format(c.UI) == "table" {
 			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", fullPath))

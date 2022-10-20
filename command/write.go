@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -148,7 +147,7 @@ func (c *WriteCommand) Run(args []string) int {
 	}
 
 	// If the response has only warnings, we still want to print output
-	hasWarnings := checkWarningResponse(secret)
+	hasWarnings := secret.IsOnlyWarnings()
 	if secret == nil || hasWarnings {
 		// Don't output anything unless using the "table" format
 		if Format(c.UI) == "table" {
@@ -180,21 +179,4 @@ func (c *WriteCommand) Run(args []string) int {
 	}
 
 	return OutputSecret(c.UI, secret)
-}
-
-// Checks for a response that only contains warnings and nothing else.
-func checkWarningResponse(secret *api.Secret) bool {
-	if secret != nil &&
-		len(secret.Warnings) > 0 &&
-		len(secret.Data) == 0 &&
-		secret.LeaseDuration == 0 &&
-		secret.Renewable == false &&
-		secret.LeaseID == "" &&
-		secret.Auth == nil &&
-		secret.WrapInfo == nil {
-
-		return true
-	}
-
-	return false
 }

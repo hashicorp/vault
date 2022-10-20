@@ -268,6 +268,24 @@ func (s *Secret) TokenTTL() (time.Duration, error) {
 	return ttl, nil
 }
 
+// IsOnlyWarnings return whether the secret is "essentially nil", other than
+// for it returning attached warnings.
+func (s *Secret) IsOnlyWarnings() bool {
+	if s != nil &&
+		len(s.Warnings) > 0 &&
+		len(s.Data) == 0 &&
+		s.LeaseDuration == 0 &&
+		s.LeaseID == "" &&
+		!s.Renewable &&
+		s.Auth == nil &&
+		s.WrapInfo == nil {
+
+		return true
+	}
+
+	return false
+}
+
 // SecretWrapInfo contains wrapping information if we have it. If what is
 // contained is an authentication token, the accessor for the token will be
 // available in WrappedAccessor.
