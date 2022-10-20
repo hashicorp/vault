@@ -42,13 +42,12 @@ module('Integration | Component | pki/role-form meep', function (hooks) {
     assert.dom(SELECTORS.san).exists('shows form-field group SAN');
     assert.dom(SELECTORS.additionalSubjectFields).exists('shows form-field group additional subject fields');
 
-    // clean up test state
     await clearRecord(this.store, 'pki/pki-role-engine', 'test-role');
   });
 
-  test('it should save a new pki role', async function (assert) {
-    assert.expect(9);
+  test('it should save a new pki role with various options selected', async function (assert) {
     // Key Usage, Key Params and Not Valid after options are tested in their respective component tests
+    assert.expect(9);
     this.server.post(`/${this.model.backend}/roles/test-role`, (schema, req) => {
       assert.ok(true, 'Request made to save role');
       const request = JSON.parse(req.requestBody);
@@ -105,8 +104,6 @@ module('Integration | Component | pki/role-form meep', function (hooks) {
       'some-serial-number'
     );
     await click(SELECTORS.roleCreateButton);
-
-    // clean up test state
     await clearRecord(this.store, 'pki/pki-role-engine', 'test-role');
   });
 

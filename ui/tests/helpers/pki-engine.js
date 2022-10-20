@@ -25,9 +25,7 @@ export async function clearRecord(store, modelType, id) {
     .then((model) => {
       deleteModelRecord(model);
     })
-    .catch(() => {
-      // swallow error
-    });
+    .catch(() => {});
 }
 
 const deleteModelRecord = async (model) => {
