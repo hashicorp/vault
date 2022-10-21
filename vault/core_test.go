@@ -171,7 +171,7 @@ func TestCore_UseSSCTokenToggleOn(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -226,7 +226,7 @@ func TestCore_UseNonSSCTokenToggleOff(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -559,7 +559,7 @@ func TestCore_HandleRequest_Lease(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -605,7 +605,7 @@ func TestCore_HandleRequest_Lease_MaxLength(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -651,7 +651,7 @@ func TestCore_HandleRequest_Lease_DefaultLength(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -848,7 +848,7 @@ func TestCore_HandleRequest_PermissionAllowed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("bad: %#v", resp)
 	}
 }
@@ -1058,7 +1058,8 @@ func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 	if len(noop.RespReq) != 2 || !reflect.DeepEqual(noop.RespReq[1], req) {
 		t.Fatalf("Bad: %#v", noop.RespReq[1])
 	}
-	if len(noop.Resp) != 2 || !reflect.DeepEqual(noop.Resp[1], resp) {
+	if len(noop.Resp) != 2 ||
+		(!reflect.DeepEqual(noop.Resp[1], resp) && !noop.Resp[1].IsOnlyWarnings()) {
 		t.Fatalf("Bad: %#v", noop.Resp[1])
 	}
 }
@@ -1140,7 +1141,8 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 	if len(noop.RespReq) != 2 || !reflect.DeepEqual(noop.RespReq[1], req) {
 		t.Fatalf("Bad: %#v", noop.RespReq[1])
 	}
-	if len(noop.Resp) != 2 || !reflect.DeepEqual(noop.Resp[1], resp) {
+	if len(noop.Resp) != 2 ||
+		(!reflect.DeepEqual(noop.Resp[1], resp) && !noop.Resp[1].IsOnlyWarnings()) {
 		t.Fatalf("Bad: %#v", noop.Resp[1])
 	}
 
@@ -2202,7 +2204,7 @@ func TestCore_RenewSameLease(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -2377,7 +2379,7 @@ path "secret/*" {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("bad: %#v", resp)
 	}
 

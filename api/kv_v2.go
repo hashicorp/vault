@@ -146,7 +146,7 @@ func (kv *KVv2) GetVersion(ctx context.Context, secretPath string, version int) 
 	if err != nil {
 		return nil, err
 	}
-	if secret == nil {
+	if secret == nil || secret.IsOnlyWarnings() {
 		return nil, fmt.Errorf("%w: for version %d at %s", ErrSecretNotFound, version, pathToRead)
 	}
 

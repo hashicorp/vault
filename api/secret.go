@@ -268,7 +268,7 @@ func (s *Secret) TokenTTL() (time.Duration, error) {
 	return ttl, nil
 }
 
-// IsOnlyWarnings return whether the secret is "essentially nil", other than
+// IsOnlyWarnings returns whether the secret is "essentially nil", other than
 // for it returning attached warnings.
 func (s *Secret) IsOnlyWarnings() bool {
 	if s != nil &&

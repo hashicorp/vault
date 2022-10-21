@@ -332,7 +332,7 @@ func TestIdentityStore_GroupAliases_CRUD(t *testing.T) {
 		t.Fatalf("bad: resp: %#v\nerr: %v\n", resp, err)
 	}
 
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("failed to delete group alias")
 	}
 }

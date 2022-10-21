@@ -139,7 +139,7 @@ func TestReadConfig_DefaultTemplate(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr:%s", resp, err)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatal("expected a nil response")
 	}
 
@@ -183,7 +183,7 @@ func TestReadConfig_CustomTemplate(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr:%s", resp, err)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatal("expected a nil response")
 	}
 

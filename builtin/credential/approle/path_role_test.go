@@ -2115,7 +2115,7 @@ func TestAppRole_RoleWithTokenTypeCRUD(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
-	if 0 == len(resp.Warnings) {
+	if len(resp.Warnings) == 0 {
 		t.Fatalf("bad:\nexpected warning in resp:%#v\n", resp.Warnings)
 	}
 
@@ -2215,7 +2215,7 @@ func TestAppRole_RoleWithTokenTypeCRUD(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("expected a nil response")
 	}
 }

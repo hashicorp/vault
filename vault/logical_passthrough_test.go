@@ -33,7 +33,7 @@ func TestPassthroughBackend_Write(t *testing.T) {
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
-		if resp != nil {
+		if resp != nil && !resp.IsOnlyWarnings() {
 			t.Fatalf("bad: %v", resp)
 		}
 

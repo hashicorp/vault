@@ -3171,7 +3171,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("expected a nil response")
 	}
 
@@ -3237,7 +3237,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
 
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("expected a nil response")
 	}
 
@@ -4020,7 +4020,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("expected a nil response")
 	}
 
@@ -4201,7 +4201,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("expected a nil response")
 	}
 
@@ -4348,7 +4348,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		req.Data = map[string]interface{}{
 			"increment": 300,
 		}
-		resp, err = core.HandleRequest(namespace.RootContext(nil), req)
+		_, err = core.HandleRequest(namespace.RootContext(nil), req)
 		if err == nil {
 			t.Fatalf("expected error")
 		}
@@ -4474,7 +4474,7 @@ func TestTokenStore_RoleTokenFields(t *testing.T) {
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
-		if resp != nil {
+		if resp != nil && !resp.IsOnlyWarnings() {
 			t.Fatalf("expected a nil response")
 		}
 
@@ -4586,8 +4586,8 @@ func TestTokenStore_RoleTokenFields(t *testing.T) {
 		if resp == nil {
 			t.Fatalf("expected a non-nil response")
 		}
-		if len(resp.Warnings) != 3 {
-			t.Fatalf("expected 3 warnings, got %#v", resp.Warnings)
+		if len(resp.Warnings) != 4 {
+			t.Fatalf("expected 4 warnings, got %#v", resp.Warnings)
 		}
 
 		req = logical.TestRequest(t, logical.ReadOperation, "roles/test")
@@ -4644,7 +4644,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("expected a nil response")
 	}
 
@@ -4900,7 +4900,7 @@ func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("expected a nil response")
 	}
 
@@ -4980,7 +4980,7 @@ func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("err: %v\nresp: %#v", err, resp)
 		}
-		if resp != nil {
+		if resp != nil && !resp.IsOnlyWarnings() {
 			t.Fatalf("expected a nil response")
 		}
 

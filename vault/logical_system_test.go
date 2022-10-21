@@ -1068,7 +1068,7 @@ func TestSystemBackend_leases(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -1118,7 +1118,7 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -1227,7 +1227,7 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -1278,7 +1278,7 @@ func TestSystemBackend_renew(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -1318,7 +1318,7 @@ func TestSystemBackend_renew(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -1450,7 +1450,7 @@ func TestSystemBackend_revoke(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -1604,7 +1604,7 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -1656,7 +1656,7 @@ func TestSystemBackend_revokePrefix_origUrl(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("bad: %#v", resp)
 	}
 

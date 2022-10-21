@@ -703,7 +703,7 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("failed to delete role entry")
 	}
 
@@ -713,7 +713,7 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatal("expected nil")
 	}
 }

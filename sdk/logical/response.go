@@ -108,22 +108,14 @@ func (r *Response) Error() error {
 	return nil
 }
 
-// IsOnlyWarnings return whether the secret is "essentially nil", other than
+// IsOnlyWarnings returns whether the secret is "essentially nil", other than
 // for it returning attached warnings.
 func (r *Response) IsOnlyWarnings() bool {
-	if r != nil &&
-		len(r.Warnings) > 0 &&
-		len(r.Data) == 0 &&
-		r.Redirect == "" &&
-		r.Headers == nil &&
-		r.Auth == nil &&
-		r.Secret == nil &&
-		r.WrapInfo == nil {
-
-		return true
-	}
-
-	return false
+	return r != nil &&
+		len(r.Warnings) > 0 && len(r.Data) == 0 &&
+		r.Redirect == "" && r.Headers == nil &&
+		r.Auth == nil && r.Secret == nil &&
+		r.WrapInfo == nil
 }
 
 // HelpResponse is used to format a help response

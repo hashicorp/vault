@@ -43,7 +43,7 @@ func TestRequestHandling_Wrapping(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -103,7 +103,7 @@ func TestRequestHandling_LoginWrapping(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -383,7 +383,7 @@ func TestRequestHandling_LoginMetric(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("bad: %#v", resp)
 	}
 
@@ -441,7 +441,7 @@ func TestRequestHandling_SecretLeaseMetric(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp != nil {
+	if resp != nil && !resp.IsOnlyWarnings() {
 		t.Fatalf("bad: %#v", resp)
 	}
 
