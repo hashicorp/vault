@@ -791,8 +791,6 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 	// can be understood by the UI
 	aliasesInvolvedInClashes := make([]aliasClashInformation, 0)
 
-	i.UpdateEntityWithMountInformation(toEntity)
-
 	// An error detailing if any alias clashes happen (shared mount accessor)
 	var aliasClashError error
 
@@ -813,8 +811,6 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 		if fromEntity.NamespaceID != toEntity.NamespaceID {
 			return errors.New("entity id to merge from does not belong to this namespace"), nil, nil
 		}
-
-		i.UpdateEntityWithMountInformation(fromEntity)
 
 		// If we're not resolving a conflict, we check to see if
 		// any aliases conflict between the toEntity and this fromEntity:
@@ -838,20 +834,36 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 							fmt.Errorf("mountAccessor: %s, toEntity ID: %s, fromEntity ID: %s, conflicting toEntity alias ID: %s, conflicting fromEntity alias ID: %s",
 								toAlias.MountAccessor, toEntity.ID, fromEntityID, toAlias.ID, fromAlias.ID))
 
+						var toAliasMountType string
+						var toAliasMountPath string
+						mountValidationRespToAlias := i.router.ValidateMountByAccessor(toAlias.MountAccessor)
+						if mountValidationRespToAlias != nil {
+							toAliasMountType = mountValidationRespToAlias.MountType
+							toAliasMountPath = mountValidationRespToAlias.MountPath
+						}
+
+						var fromAliasMountType string
+						var fromAliasMountPath string
+						mountValidationRespFromAlias := i.router.ValidateMountByAccessor(fromAlias.MountAccessor)
+						if mountValidationRespFromAlias != nil {
+							fromAliasMountType = mountValidationRespFromAlias.MountType
+							fromAliasMountPath = mountValidationRespFromAlias.MountPath
+						}
+
 						// Also add both to our summary of all clashes:
 						aliasesInvolvedInClashes = append(aliasesInvolvedInClashes, aliasClashInformation{
 							Entity:    toEntity.Name,
 							EntityId:  toEntity.ID,
 							Alias:     toAlias.Name,
-							Mount:     toAlias.MountType,
-							MountPath: toAlias.MountPath,
+							Mount:     toAliasMountType,
+							MountPath: toAliasMountPath,
 						})
 						aliasesInvolvedInClashes = append(aliasesInvolvedInClashes, aliasClashInformation{
 							Entity:    fromEntity.Name,
 							EntityId:  fromEntityID,
 							Alias:     fromAlias.Name,
-							Mount:     fromAlias.MountType,
-							MountPath: fromAlias.MountPath,
+							Mount:     fromAliasMountType,
+							MountPath: fromAliasMountPath,
 						})
 					}
 				}
