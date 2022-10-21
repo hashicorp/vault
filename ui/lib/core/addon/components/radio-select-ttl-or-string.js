@@ -30,14 +30,19 @@ export default class RadioSelectTtlOrString extends Component {
       this.args.model.set('ttl', '');
       this.ttlTime = ''; //clear out the form field
     }
-    if (selection === 'tll') {
+    if (selection === 'ttl') {
       this.args.model.set('notAfter', '');
       this.notAfter = ''; //clear out the form field
+      this.args.model.set('ttl', this.ttlTime);
     }
   }
 
   @action setAndBroadcastTtl(value) {
     let valueToSet = value.enabled === true ? `${value.seconds}s` : 0;
+    if (this.groupValue === 'specificDate') {
+      // do not save ttl on the model until the ttl radio button is selected
+      return;
+    }
     this.args.model.set('ttl', `${valueToSet}`);
   }
 
