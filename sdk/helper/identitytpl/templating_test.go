@@ -426,6 +426,7 @@ func TestPopulate_Basic(t *testing.T) {
 			Groups:            groups,
 			NamespaceID:       "root",
 			Now:               test.now,
+			TemplateFunctions: true,
 		})
 		if err != nil {
 			if test.err == nil {
@@ -539,10 +540,11 @@ func TestPopulate_FullObject(t *testing.T) {
 			}`
 
 	input := PopulateStringInput{
-		Mode:   JSONTemplating,
-		String: template,
-		Entity: testEntity,
-		Groups: testGroups,
+		Mode:              JSONTemplating,
+		String:            template,
+		Entity:            testEntity,
+		Groups:            testGroups,
+		TemplateFunctions: true,
 	}
 	_, out, err := PopulateString(input)
 	if err != nil {

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -24,9 +25,14 @@ const (
 	JSONTemplating
 )
 
+const (
+	pipelineChar = "|"
+)
+
 type PopulateStringInput struct {
 	String            string
 	ValidityCheckOnly bool
+	TemplateFunctions bool
 	Entity            *logical.Entity
 	Groups            []*logical.Group
 	NamespaceID       string
@@ -350,11 +356,17 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 		if p.Entity == nil {
 			return "", ErrNoEntityAttachedToToken
 		}
+		if p.TemplateFunctions {
+			return executeTemplateFunctions(input, "identity.entity.", performEntityTemplating)
+		}
 		return performEntityTemplating(strings.TrimPrefix(input, "identity.entity."))
 
 	case strings.HasPrefix(input, "identity.groups."):
 		if len(p.Groups) == 0 {
 			return "", ErrNoGroupsAttachedToToken
+		}
+		if p.TemplateFunctions {
+			return executeTemplateFunctions(input, "identity.groups.", performGroupsTemplating)
 		}
 		return performGroupsTemplating(strings.TrimPrefix(input, "identity.groups."))
 
@@ -363,4 +375,47 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 	}
 
 	return "", ErrTemplateValueNotFound
+}
+
+func executeTemplateFunctions(input, prefix string, tmplFunc func(string) (string, error)) (string, error) {
+	segments := strings.Split(input, pipelineChar)
+	templatedSegments := make([]string, 0, len(segments))
+	for _, segment := range segments {
+		segment = strings.TrimSpace(segment)
+
+		// If true, the segment is a function. Don't put quotes around it
+		// so that text/template executes it as a function.
+		if !strings.HasPrefix(segment, prefix) {
+			templatedSegments = append(templatedSegments, segment)
+			continue
+		}
+
+		s, err := tmplFunc(strings.TrimPrefix(segment, prefix))
+		if err != nil {
+			return "", err
+		}
+
+		templatedSegments = append(templatedSegments, strconv.Quote(s))
+	}
+	joinedSegments := strings.Join(templatedSegments, pipelineChar)
+
+	// Wrap the segments in a text/template to generate the final string
+	options := []template.Opt{
+		template.Template(fmt.Sprintf(`{{ %s }}`, joinedSegments)),
+		template.Function("uppercase", strings.ToUpper),
+		template.Function("lowercase", strings.ToLower),
+		template.Function("trim_prefix", strings.TrimPrefix),
+		template.Function("trim_suffix", strings.TrimPrefix),
+		template.Function("replace", strings.ReplaceAll),
+	}
+	tmpl, err := template.NewTemplate(options...)
+	if err != nil {
+		return "", err
+	}
+	out, err := tmpl.Generate(nil)
+	if err != nil {
+		return "", err
+	}
+
+	return out, nil
 }

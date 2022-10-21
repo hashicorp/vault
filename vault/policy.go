@@ -338,11 +338,12 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 		// Check the path
 		if performTemplating {
 			_, templated, err := identitytpl.PopulateString(identitytpl.PopulateStringInput{
-				Mode:        identitytpl.ACLTemplating,
-				String:      key,
-				Entity:      identity.ToSDKEntity(entity),
-				Groups:      identity.ToSDKGroups(groups),
-				NamespaceID: result.namespace.ID,
+				Mode:              identitytpl.ACLTemplating,
+				String:            key,
+				Entity:            identity.ToSDKEntity(entity),
+				Groups:            identity.ToSDKGroups(groups),
+				NamespaceID:       result.namespace.ID,
+				TemplateFunctions: true,
 			})
 			if err != nil {
 				continue
