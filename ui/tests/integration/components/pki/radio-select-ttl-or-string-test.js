@@ -20,7 +20,7 @@ module('Integration | Component | radio-select-ttl-or-string', function (hooks) 
     };
   });
 
-  test('it should render the component and default to show the TTL is selected', async function (assert) {
+  test('it should render the component and init with ttl selected', async function (assert) {
     assert.expect(3);
     await render(
       hbs`
