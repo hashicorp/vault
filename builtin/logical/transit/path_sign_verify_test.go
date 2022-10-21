@@ -950,6 +950,9 @@ func testTransit_SignVerify_RSA_PSS(t *testing.T, bits int) {
 
 	for hashAlgorithm := range keysutil.HashTypeMap {
 		t.Log("Hash algorithm:", hashAlgorithm)
+		if hashAlgorithm == "none" {
+			continue
+		}
 
 		for marshalingName := range keysutil.MarshalingTypeMap {
 			t.Log("\t", "Marshaling type:", marshalingName)

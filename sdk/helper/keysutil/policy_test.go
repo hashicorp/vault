@@ -953,6 +953,9 @@ func Test_RSA_PSS(t *testing.T) {
 		// 2. For each hash algorithm...
 		for hashAlgorithm, hashType := range HashTypeMap {
 			t.Log(tabs[1], "Hash algorithm:", hashAlgorithm)
+			if hashAlgorithm == "none" {
+				continue
+			}
 
 			// 3. For each marshaling type...
 			for marshalingName, marshalingType := range MarshalingTypeMap {
