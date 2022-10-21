@@ -56,10 +56,14 @@ jobs:
           if ${IS_ENT} == true; then
             echo "${{ secrets.VAULT_LICENSE }}" > ./enos/support/vault.hclic || true
             echo "edition=ent" >> $GITHUB_ENV
-            echo "edition set to ent"
+            echo "edition set to 'ent'"
+            echo "image_repo=hashicorp/vault-enterprise" >> $GITHUB_ENV
+            echo "image repo set to 'hashicorp/vault-enterprise'"
           else
             echo "edition=oss" >> $GITHUB_ENV
-            echo "edition set to oss"
+            echo "edition set to 'oss'"
+            echo "image_repo=hashicorp/vault" >> $GITHUB_ENV
+            echo "image repo set to 'hashicorp/vault'"
           fi
       - name: Run Enos scenario
         id: run
@@ -73,7 +77,7 @@ jobs:
           ENOS_VAR_vault_product_version: ${{ env.ARTIFACT_VERSION }}
           ENOS_VAR_vault_product_revision: ${{ env.ARTIFACT_REVISION }}
           ENOS_VAR_vault_docker_image_archive: ${{steps.download.outputs.download-path}}/${{ env.ARTIFACT_NAME }}
-          ENOS_VAR_vault_image_repository: hashicorp/vault
+          ENOS_VAR_vault_image_repository: ${{ env.image_repo }}
         run: |
           enos scenario run --timeout 10m0s --chdir ./enos/k8s edition:${{ env.edition }}
       - name: Retry Enos scenario
@@ -86,7 +90,7 @@ jobs:
           ENOS_VAR_vault_product_version: ${{ env.ARTIFACT_VERSION }}
           ENOS_VAR_vault_product_revision: ${{ env.ARTIFACT_REVISION }}
           ENOS_VAR_vault_docker_image_archive: ${{steps.download.outputs.download-path}}/${{ env.ARTIFACT_NAME }}
-          ENOS_VAR_vault_image_repository: hashicorp/vault
+          ENOS_VAR_vault_image_repository: ${{ env.image_repo }}
         run: |
           enos scenario run --timeout 10m0s --chdir ./enos/k8s edition:${{ env.edition }}
       - name: Destroy Enos scenario
@@ -98,7 +102,7 @@ jobs:
           ENOS_VAR_vault_product_version: ${{ env.ARTIFACT_VERSION }}
           ENOS_VAR_vault_product_revision: ${{ env.ARTIFACT_REVISION }}
           ENOS_VAR_vault_docker_image_archive: ${{steps.download.outputs.download-path}}
-          ENOS_VAR_vault_image_repository: hashicorp/vault
+          ENOS_VAR_vault_image_repository: ${{ env.image_repo }}
         run: |
           enos scenario destroy --timeout 10m0s --chdir ./enos/k8s edition:${{ env.edition }}
       - name: Cleanup Enos runtime directories
