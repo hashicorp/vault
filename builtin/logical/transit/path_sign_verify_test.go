@@ -154,7 +154,7 @@ func testTransit_SignVerify_ECDSA(t *testing.T, bits int) {
 		req.Path = "sign/foo" + postpath
 		resp, err := b.HandleRequest(context.Background(), req)
 		if err != nil && !errExpected {
-			t.Fatal(err)
+			t.Fatalf("request: %v\nerror: %v", req, err)
 		}
 		if resp == nil {
 			t.Fatal("expected non-nil response")
