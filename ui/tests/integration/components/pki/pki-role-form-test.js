@@ -18,7 +18,7 @@ module('Integration | Component | pki/role-form', function (hooks) {
   });
 
   test('it should render default fields and toggle groups', async function (assert) {
-    assert.expect(12);
+    assert.expect(13);
     await render(
       hbs`
       <PkiRoleForm
