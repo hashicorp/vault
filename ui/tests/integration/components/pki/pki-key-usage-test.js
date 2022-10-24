@@ -45,7 +45,7 @@ module('Integration | Component | pki-key-usage', function (hooks) {
     );
   });
 
-  test('meep it should set the model properties of key_usage and ext_key_usage based on the checkbox selections', async function (assert) {
+  test('it should set the model properties of key_usage and ext_key_usage based on the checkbox selections', async function (assert) {
     assert.expect(4);
     await render(
       hbs`
