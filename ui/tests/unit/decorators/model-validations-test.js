@@ -33,7 +33,7 @@ module('Unit | Decorators | ModelValidations', function (hooks) {
     try {
       createClass();
     } catch (e) {
-      assert.equal(e.message, 'Validations object must be provided to constructor for setup');
+      assert.strictEqual(e.message, 'Validations object must be provided to constructor for setup');
     }
   });
 
@@ -92,7 +92,7 @@ module('Unit | Decorators | ModelValidations', function (hooks) {
     };
     const fooClass = createClass(validations);
     const v1 = fooClass.validate();
-    assert.equal(
+    assert.strictEqual(
       v1.invalidFormMessage,
       'There are 2 errors with this form.',
       'error message says form as 2 errors'
@@ -100,7 +100,7 @@ module('Unit | Decorators | ModelValidations', function (hooks) {
 
     fooClass.integer = 9;
     const v2 = fooClass.validate();
-    assert.equal(
+    assert.strictEqual(
       v2.invalidFormMessage,
       'There is an error with this form.',
       'error message says form has an error'
@@ -108,6 +108,6 @@ module('Unit | Decorators | ModelValidations', function (hooks) {
 
     fooClass.foo = true;
     const v3 = fooClass.validate();
-    assert.equal(v3.invalidFormMessage, null, 'invalidFormMessage is null when form is valid');
+    assert.strictEqual(v3.invalidFormMessage, null, 'invalidFormMessage is null when form is valid');
   });
 });

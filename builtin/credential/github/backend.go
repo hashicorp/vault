@@ -2,6 +2,7 @@ package github
 
 import (
 	"context"
+	"net/url"
 
 	"github.com/google/go-github/github"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
@@ -69,7 +70,14 @@ func (b *backend) Client(token string) (*github.Client, error) {
 		tc = oauth2.NewClient(ctx, &tokenSource{Value: token})
 	}
 
-	return github.NewClient(tc), nil
+	client := github.NewClient(tc)
+	emptyUrl, err := url.Parse("")
+	if err != nil {
+		return nil, err
+	}
+	client.UploadURL = emptyUrl
+
+	return client, nil
 }
 
 // tokenSource is an oauth2.TokenSource implementation.

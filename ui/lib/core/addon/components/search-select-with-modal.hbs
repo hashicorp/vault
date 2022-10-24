@@ -2,12 +2,12 @@
   {{#if this.shouldUseFallback}}
     {{component
       @fallbackComponent
-      label=(or @label @subLabel)
+      label=@label
       subText=@subText
       onChange=@onChange
       inputValue=@inputValue
       helpText=@helpText
-      placeHolder=@placeHolder
+      placeholder=@placeholder
       id=@id
     }}
   {{else}}
@@ -75,7 +75,7 @@
   {{/if}}
   {{#if this.newModelRecord}}
     <Modal
-      @title="Create new {{@id}}"
+      @title="Create new {{singularize @id}}"
       @onClose={{action (mut this.showModal) false}}
       @isActive={{this.showModal}}
       @type="info"

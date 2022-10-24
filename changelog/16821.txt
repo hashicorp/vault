@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: redirect_to param forwards from auth route when authenticated
+```

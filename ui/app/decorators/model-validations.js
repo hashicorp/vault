@@ -22,7 +22,7 @@ import { get } from '@ember/object';
  * state represents the error state of the properties defined in the validations object
  * const { isValid, errors } = state[propertyKeyName];
  * isValid represents the validity of the property
- * errors will be populated with messages defined in the validations object when validations fail
+ * errors will be populated with messages defined in the validations object when validations fail. message must be a complete sentence (and include punctuation)
  * since a property can have multiple validations, errors is always returned as an array
  *
  *** basic example
@@ -30,7 +30,8 @@ import { get } from '@ember/object';
  * import Model from '@ember-data/model';
  * import withModelValidations from 'vault/decorators/model-validations';
  *
- * const validations = { foo: [{ type: 'presence', message: 'foo is a required field' }] };
+ * Notes: all messages need to have a period at the end of them.
+ * const validations = { foo: [{ type: 'presence', message: 'foo is a required field.' }] };
  * @withModelValidations(validations)
  * class SomeModel extends Model { foo = null; }
  *
@@ -42,7 +43,7 @@ import { get } from '@ember/object';
  *
  *** example using custom validator
  *
- * const validations = { foo: [{ validator: (model) => model.bar.includes('test') ? model.foo : false, message: 'foo is required if bar includes test' }] };
+ * const validations = { foo: [{ validator: (model) => model.bar.includes('test') ? model.foo : false, message: 'foo is required if bar includes test.' }] };
  * @withModelValidations(validations)
  * class SomeModel extends Model { foo = false; bar = ['foo', 'baz']; }
  *
@@ -50,7 +51,11 @@ import { get } from '@ember/object';
  * const { isValid, state } = model.validate();
  * -> isValid = false;
  * -> state.foo.isValid = false;
- * -> state.foo.errors = ['foo is required if bar includes test'];
+ * -> state.foo.errors = ['foo is required if bar includes test.'];
+ *
+ * *** example adding class in hbs file
+ * all form-validations need to have a red border around them. Add this by adding a conditional class 'has-error-border'
+ * class="input field {{if this.errors.name.errors 'has-error-border'}}"
  */
 
 export function withModelValidations(validations) {

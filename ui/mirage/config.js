@@ -1,6 +1,8 @@
 import ENV from 'vault/config/environment';
 import handlers from './handlers';
 
+// remember to export handler name from mirage/handlers/index.js file
+
 export default function () {
   this.namespace = 'v1';
 

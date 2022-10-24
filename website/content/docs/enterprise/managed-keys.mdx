@@ -13,15 +13,15 @@ external to Vault, when handling, storing, and interacting with
 private key material, or are required to do so by standards requirements.
 
 To satisfy these requirements, Vault has a centralized abstraction called
-*Managed Keys* that different secrets engines can plug into, allowing them to 
+*Managed Keys* that different secrets engines can plug into, allowing them to
 delegate these operations to a trusted external KMS.
 
 Minimally, a managed key consists of a named managed key entry managed by the
-[`sys/managed-key`](../../api-docs/system/managed-keys) API.  Besides a name,
+[`sys/managed-key`](/api-docs/system/managed-keys) API.  Besides a name,
 there are backend specific configurations to access the key in question.
 
 For PKCS#11 (HSM) backed managed keys, the managed key configuration must
-reference a [kms library stanza](../configuration/kms-library) which points
+reference a [kms library stanza](/docs/configuration/kms-library) which points
 to a PKCS#11 access library on the host machine.
 
 Note that a configured, named managed key corresponds to a single key within
@@ -37,8 +37,8 @@ as the Managed Key for which it intends to use.
 ## Backend Support
 
 Managed Keys were developed to support different types of external backends. At
-this time supported backends are PKCS#11, AWS KMS and Azure Key Vault.
-Support for additional integrations may be added in the future.
+this time supported backends are PKCS#11, AWS KMS, Azure Key Vault, and Google
+Cloud KMS. Support for additional integrations may be added in the future.
 
 ## Secret and Auth Engine Support
 

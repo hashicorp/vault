@@ -4,7 +4,7 @@ import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 
 const template = hbs`
-{{#if (is-empty-value inputValue hasDefault=defaultValue)}}
+{{#if (is-empty-value this.inputValue hasDefault=this.defaultValue)}}
 Empty
 {{else}}
 Full

@@ -14,6 +14,11 @@ func (c *SharedConfig) Merge(c2 *SharedConfig) *SharedConfig {
 		result.Listeners = append(result.Listeners, l)
 	}
 
+	result.HCPLinkConf = c.HCPLinkConf
+	if c2.HCPLinkConf != nil {
+		result.HCPLinkConf = c2.HCPLinkConf
+	}
+
 	result.Entropy = c.Entropy
 	if c2.Entropy != nil {
 		result.Entropy = c2.Entropy

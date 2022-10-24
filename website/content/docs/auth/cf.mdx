@@ -198,9 +198,13 @@ Specifically, the `vault` user created here will need to be able to perform the 
 Next, PCF often uses a self-signed certificate for TLS, which can be rejected at first
 with an error like:
 
-```
+<CodeBlockConfig hideClipboard>
+
+```plaintext
 x509: certificate signed by unknown authority
 ```
+
+</CodeBlockConfig>
 
 If you encounter this error, you will need to first gain a copy of the certificate that CF
 is using for the API via:
@@ -251,6 +255,29 @@ $ vault login -method=cf role=test-role
 
 For CF, we do also offer an agent that, once configured, can be used to obtain a Vault token on
 your behalf.
+
+### Enabling mutual TLS with the CF API
+
+The CF API can be configured to require mutual TLS with clients. This plugin supports mutual TLS by setting the
+`cf_api_mutual_tls_certificate` and `cf_api_mutual_tls_key` configuration properties.
+
+<CodeBlockConfig highlight="7-8">
+
+```shell-session
+$ vault write auth/cf/config \
+      identity_ca_certificates=@ca.crt \
+      cf_api_addr=https://api.dev.cfdev.sh \
+      cf_username=vault \
+      cf_password=pa55w0rd \
+      cf_api_trusted_certificates=@cfapi.crt \
+      cf_api_mutual_tls_certificate=@cfmutualtls.crt \
+      cf_api_mutual_tls_key=@cfmutualtls.key
+```
+
+</CodeBlockConfig>
+
+The provided certificate must be signed by a certificate authority trusted by the CF API. Obtaining such a certificate
+depends on the specifics of your deployment of Cloud Foundry.
 
 ### Maintenance
 

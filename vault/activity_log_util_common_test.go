@@ -125,4 +125,28 @@ func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) 
 	if monthRecord.NewClients.Counts.NonEntityClients != 4 {
 		t.Fatalf("wrong number of new non entity clients. Expected 4, got %d", monthRecord.NewClients.Counts.NonEntityClients)
 	}
+
+	// Attempt to compute current month when no records exist
+	endTime = time.Now().UTC()
+	startTime = timeutil.StartOfMonth(endTime)
+	emptyClientsMap := make(map[int64]*processMonth, 0)
+	monthRecord, err = a.computeCurrentMonthForBillingPeriodInternal(context.Background(), emptyClientsMap, mockHLLGetFunc, startTime, endTime)
+	if err != nil {
+		t.Fatalf("failed to compute empty current month, err: %v", err)
+	}
+
+	// We should have 0 entity clients, nonentity clients,new entity clients
+	// and new nonentity clients
+	if monthRecord.Counts.EntityClients != 0 {
+		t.Fatalf("wrong number of entity clients. Expected 0, got %d", monthRecord.Counts.EntityClients)
+	}
+	if monthRecord.Counts.NonEntityClients != 0 {
+		t.Fatalf("wrong number of non entity clients. Expected 0, got %d", monthRecord.Counts.NonEntityClients)
+	}
+	if monthRecord.NewClients.Counts.EntityClients != 0 {
+		t.Fatalf("wrong number of new entity clients. Expected 0, got %d", monthRecord.NewClients.Counts.EntityClients)
+	}
+	if monthRecord.NewClients.Counts.NonEntityClients != 0 {
+		t.Fatalf("wrong number of new non entity clients. Expected 0, got %d", monthRecord.NewClients.Counts.NonEntityClients)
+	}
 }

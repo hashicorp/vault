@@ -389,6 +389,8 @@ func TestPredict_Plugins(t *testing.T) {
 				"postgresql-database-plugin",
 				"rabbitmq",
 				"radius",
+				"redis-database-plugin",
+				"redis-elasticache-database-plugin",
 				"redshift-database-plugin",
 				"snowflake-database-plugin",
 				"ssh",
@@ -552,7 +554,80 @@ func TestPredict_Paths(t *testing.T) {
 				p := NewPredict()
 				p.client = client
 
-				act := p.paths(tc.path, tc.includeFiles)
+				act := p.paths("kv", "1", tc.path, tc.includeFiles)
+				if !reflect.DeepEqual(act, tc.exp) {
+					t.Errorf("expected %q to be %q", act, tc.exp)
+				}
+			})
+		}
+	})
+}
+
+func TestPredict_PathsKVv2(t *testing.T) {
+	t.Parallel()
+
+	client, closer := testVaultServerWithKVVersion(t, "2")
+	defer closer()
+
+	data := map[string]interface{}{"data": map[string]interface{}{"a": "b"}}
+	if _, err := client.Logical().Write("secret/data/bar", data); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.Logical().Write("secret/data/foo", data); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.Logical().Write("secret/data/zip/zap", data); err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		name         string
+		path         string
+		includeFiles bool
+		exp          []string
+	}{
+		{
+			"bad_path",
+			"nope/not/a/real/path/ever",
+			true,
+			[]string{"nope/not/a/real/path/ever"},
+		},
+		{
+			"good_path",
+			"secret/",
+			true,
+			[]string{"secret/bar", "secret/foo", "secret/zip/"},
+		},
+		{
+			"good_path_no_files",
+			"secret/",
+			false,
+			[]string{"secret/zip/"},
+		},
+		{
+			"partial_match",
+			"secret/z",
+			true,
+			[]string{"secret/zip/"},
+		},
+		{
+			"partial_match_no_files",
+			"secret/z",
+			false,
+			[]string{"secret/zip/"},
+		},
+	}
+
+	t.Run("group", func(t *testing.T) {
+		for _, tc := range cases {
+			tc := tc
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				p := NewPredict()
+				p.client = client
+
+				act := p.paths("kv", "2", tc.path, tc.includeFiles)
 				if !reflect.DeepEqual(act, tc.exp) {
 					t.Errorf("expected %q to be %q", act, tc.exp)
 				}

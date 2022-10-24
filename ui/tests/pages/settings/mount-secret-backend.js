@@ -5,7 +5,7 @@ import mountForm from 'vault/tests/pages/components/mount-backend-form';
 export default create({
   visit: visitable('/vault/settings/mount-secret-backend'),
   ...mountForm,
-  version: fillable('[data-test-input="options.version"]'),
+  version: fillable('[data-test-input="version"]'),
   setMaxVersion: fillable('[data-test-input="maxVersions"]'),
   enableMaxTtl: clickable('[data-test-toggle-input="Max Lease TTL"]'),
   maxTTLVal: fillable('[data-test-ttl-value="Max Lease TTL"]'),

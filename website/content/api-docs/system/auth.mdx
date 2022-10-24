@@ -30,18 +30,52 @@ $ curl \
 
 ```json
 {
-  "github/": {
-    "type": "github",
-    "description": "GitHub auth"
-  },
-  "token/": {
-    "config": {
-      "default_lease_ttl": 0,
-      "max_lease_ttl": 0
+  "request_id": "9bc0fab8-d65c-3961-afe6-d05f50c5fd22",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "github/": {
+      "accessor": "auth_github_badd7fd0",
+      "config": {
+        "default_lease_ttl": 0,
+        "force_no_cache": false,
+        "max_lease_ttl": 0,
+        "token_type": "default-service"
+      },
+      "deprecation_status": "supported",
+      "description": "",
+      "external_entropy_access": false,
+      "local": false,
+      "options": null,
+      "plugin_version": "",
+      "running_plugin_version": "v1.12.0+builtin.vault",
+      "running_sha256": "",
+      "seal_wrap": false,
+      "type": "github",
+      "uuid": "4b42d1a4-0a0d-3c88-ae90-997e0c8b41be"
     },
-    "description": "token based credentials",
-    "type": "token"
-  }
+    "token/": {
+      "accessor": "auth_token_bd90f507",
+      "config": {
+        "default_lease_ttl": 0,
+        "force_no_cache": false,
+        "max_lease_ttl": 0,
+        "token_type": "default-service"
+      },
+      "description": "token based credentials",
+      "external_entropy_access": false,
+      "local": false,
+      "options": null,
+      "plugin_version": "",
+      "running_plugin_version": "v1.12.0+builtin.vault",
+      "running_sha256": "",
+      "seal_wrap": false,
+      "type": "token",
+      "uuid": "e162baec-721b-7657-7913-c960df402f8a"
+    }
+  },
+  "warnings": null
 }
 ```
 
@@ -99,6 +133,11 @@ For example, enable the "foo" auth method will make it accessible at
   - `allowed_response_headers` `(array: [])` - List of headers to whitelist,
     allowing a plugin to include them in the response.
 
+  - `plugin_version` `(string: "")` – Specifies the semantic version of the plugin
+    to use, e.g. "v1.0.0". If unspecified, the server will select any matching
+    unversioned plugin that may have been registered, the latest versioned plugin
+    registered, or a built-in plugin in that order of precendence.
+
 Additionally, the following options are allowed in Vault open-source, but
 relevant functionality is only supported in Vault Enterprise:
 
@@ -145,9 +184,9 @@ $ curl \
 
 This endpoints returns the configuration of the auth method at the given path.
 
-| Method | Path             |
-| :----- | :--------------- |
-| `GET`  | `/sys/auth/path` |
+| Method | Path              |
+| :----- | :---------------- |
+| `GET`  | `/sys/auth/:path` |
 
 ### Sample Request
 
@@ -161,24 +200,10 @@ $ curl \
 
 ```json
 {
-  "uuid": "4b42d1a4-0a0d-3c88-ae90-997e0c8b41be",
-  "type": "github",
-  "accessor": "auth_github_badd7fd0",
-  "local": false,
-  "seal_wrap": false,
-  "external_entropy_access": false,
-  "options": null,
-  "config": {
-    "default_lease_ttl": 0,
-    "force_no_cache": false,
-    "max_lease_ttl": 0,
-    "token_type": "default-service"
-  },
-  "description": "",
   "request_id": "8d2a1e33-4c00-46a5-f50d-4dc5f5d96f12",
   "lease_id": "",
-  "renewable": false,
   "lease_duration": 0,
+  "renewable": false,
   "data": {
     "accessor": "auth_github_badd7fd0",
     "config": {
@@ -187,17 +212,19 @@ $ curl \
       "max_lease_ttl": 0,
       "token_type": "default-service"
     },
+    "deprecation_status": "supported",
     "description": "",
     "external_entropy_access": false,
     "local": false,
     "options": null,
+    "plugin_version": "",
+    "running_plugin_version": "v1.12.0+builtin.vault",
+    "running_sha256": "",
     "seal_wrap": false,
     "type": "github",
     "uuid": "4b42d1a4-0a0d-3c88-ae90-997e0c8b41be"
   },
-  "wrap_info": null,
-  "warnings": null,
-  "auth": null
+  "warnings": null
 }
 ```
 
@@ -315,6 +342,9 @@ can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
     tokens from this mount
   - `batch`: Override any auth method preference and always issue batch tokens
     from this mount
+
+- `plugin_version` `(string: "")` – Specifies the semantic version of the plugin
+  to use, e.g. "v1.0.0". Changes will not take effect until the mount is reloaded.
 
 ### Sample Payload
 

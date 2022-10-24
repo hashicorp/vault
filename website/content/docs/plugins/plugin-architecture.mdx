@@ -9,7 +9,7 @@ description: Learn about Vault's plugin architecture.
 Vault's external plugins are completely separate, standalone applications that Vault
 executes and communicates with over RPC. This means the plugin process does not
 share the same memory space as Vault and therefore can only access the
-interfaces and arguments given to it. This also means a crash in a plugin can not
+interfaces and arguments given to it. This also means a crash in a plugin cannot
 crash the entirety of Vault.
 
 It is possible to enable a custom plugin with a name that's identical to a
@@ -36,16 +36,16 @@ limited to:
 
 The lifecycle of plugin processes are managed automatically by Vault.
 Termination of these processes are typical in certain scenarios, such as the
-ones listed above. Vault will start plugin processes when needed, typically by
-lazily loading the plugin when a request that requires the plugin is received by
-Vault. A plugin process may be started or terminated through other internal
-processes within Vault as well. Since Vault manages and tracks the lifecycle of
-its plugins, these processes should not be terminated by anything other than
-Vault.
+ones listed above. Vault will start plugin processes when they are enabled. A
+plugin process may be started or terminated through other internal processes
+within Vault as well. Since Vault manages and tracks the lifecycle of its
+plugins, these processes should not be terminated by anything other than Vault.
+If a plugin process is shutdown out-of-band, the plugin process will be lazily
+loaded when a request that requires the plugin is received by Vault.
 
 ### External Plugin Scaling Characteristics
 
-External plugins are able to leverage [Performance Standbys](/docs/enterprise/performance-standby)
+External plugins can leverage [Performance Standbys](/docs/enterprise/performance-standby)
 without any explicit action by a plugin author. The default behavior of Vault
 Enterprise is to attempt to handle all requests, including requests to plugins,
 on performance standbys. If the plugin request makes any attempt to modify
@@ -56,15 +56,11 @@ without any effort on the plugin author's part.
 
 ## Plugin Communication
 
-Vault creates a mutually authenticated TLS connection for communication with
-the plugin's RPC server. Database secrets engines make use of the AutoMTLS
-feature of [go-plugin](https://www.github.com/hashicorp/go-plugin) which will
-automatically negotiate mTLS for transport authentication. For all other
-plugins, Vault passes a [wrapping token](/docs/concepts/response-wrapping) to
-the plugin process' environment. This token is single use and has a short TTL.
-Once unwrapped, it provides the plugin with a uniquely generated TLS
-certificate and private key for it to use to talk to the original Vault
-process.
+Vault communicates with external plugins over RPC. To secure this
+communication, Vault creates a mutually authenticated TLS connection with the
+plugin's RPC server. Plugins make use of the AutoMTLS feature of
+[go-plugin](https://www.github.com/hashicorp/go-plugin) which will
+automatically negotiate mutual TLS for transport authentication.
 
 The [`api_addr`](/docs/configuration#api_addr) must be set in order for the
 plugin process to establish communication with the Vault server during mount
@@ -147,19 +143,22 @@ on the upgrade procedure can be found in
 
 ## Plugin Multiplexing
 
-Database plugins can be made to implement plugin multiplexing,
-allowing a single plugin process to be used for multiple database
-connections. This single process, per database plugin, will be multiplexed
-across all Vault namespaces for mounts of this type. Multiplexing a plugin
-does not affect the current behavior of existing plugins.
+To avoid spawning multiple plugin processes for mounts of the same type,
+plugins can implement plugin multiplexing. This allows a single
+plugin process to be used for multiple mounts of a given type. This single
+process will be multiplexed across all Vault namespaces for mounts of this
+type. Multiplexing a plugin does not affect the current behavior of existing
+plugins.
 
 To enable multiplexing, the plugin must be compiled with the `ServeMultiplex`
-function call from Vault's `dbplugin` package. At this time, there is no
-opt-out capability for plugins that implement multiplexing. To use a
-non-multiplexed plugin, run an older version of the plugin, i.e., the
-plugin calls the `dbplugin.Serve` function. More details
-on implementing plugin multiplexing can be found in
-[Serving a Multiplexed Plugin](/docs/secrets/databases/custom#serving-a-plugin-with-multiplexing).
+function call from Vault's respective `plugin` or `dbplugin` SDK packages. At
+this time, there is no opt-out capability for plugins that implement
+multiplexing. To use a non-multiplexed plugin, run an older version of the
+plugin, i.e., the plugin calls the `Serve` function.
+
+More resources on implementing plugin multiplexing:
+* [Database secrets engines](/docs/secrets/databases/custom#serving-a-plugin-with-multiplexing)
+* [Secrets engines and auth methods](/docs/plugins/plugin-development)
 
 ## Troubleshooting
 

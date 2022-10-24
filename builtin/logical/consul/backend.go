@@ -7,6 +7,9 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// ReportedVersion is used to report a specific version to Vault.
+var ReportedVersion = ""
+
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
 	if err := b.Setup(ctx, conf); err != nil {
@@ -34,7 +37,8 @@ func Backend() *backend {
 		Secrets: []*framework.Secret{
 			secretToken(&b),
 		},
-		BackendType: logical.TypeLogical,
+		BackendType:    logical.TypeLogical,
+		RunningVersion: ReportedVersion,
 	}
 
 	return &b

@@ -674,6 +674,10 @@ If the region is specified as `auto`, the Vault CLI will determine the region ba
 on standard AWS credentials precedence as described earlier. Whichever method is used,
 be sure the designated region corresponds to that of the STS endpoint you're using.
 
+~> **Note:** If you are making use of AWS GovCloud and setting the `sts_endpoint`
+and `sts_region` role parameters to `us-gov-west-1` / `us-gov-east-1` then you must include
+the `region` argument in your login request with a matching value, i.e. `region=us-gov-west-1`.
+
 An example of how to generate the required request values for the `login` method
 can be found found in the [vault cli
 source code](https://github.com/hashicorp/vault/blob/main/builtin/credential/aws/cli.go).

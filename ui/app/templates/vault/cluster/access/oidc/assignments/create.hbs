@@ -1,0 +1,5 @@
+<Oidc::AssignmentForm
+  @model={{this.model}}
+  @onCancel={{transition-to "vault.cluster.access.oidc.assignments"}}
+  @onSave={{transition-to "vault.cluster.access.oidc.assignments.assignment.details" this.model.name}}
+/>

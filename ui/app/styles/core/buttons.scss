@@ -272,3 +272,12 @@ a.button.disabled {
   border: none;
   cursor: pointer;
 }
+.text-button {
+  padding: unset;
+  border: none;
+  background-color: inherit;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  cursor: pointer;
+}

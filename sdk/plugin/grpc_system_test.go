@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestSystem_GRPC_GRPC_impl(t *testing.T) {
@@ -104,10 +104,6 @@ func TestSystem_GRPC_replicationState(t *testing.T) {
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("expected: %v, got: %v", expected, actual)
 	}
-}
-
-func TestSystem_GRPC_responseWrapData(t *testing.T) {
-	t.SkipNow()
 }
 
 func TestSystem_GRPC_lookupPlugin(t *testing.T) {

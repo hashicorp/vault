@@ -46,11 +46,11 @@ type ConsulBackend struct {
 	client          *api.Client
 	path            string
 	kv              *api.KV
+	txn             *api.Txn
 	permitPool      *physical.PermitPool
 	consistencyMode string
-
-	sessionTTL   string
-	lockWaitTime time.Duration
+	sessionTTL      string
+	lockWaitTime    time.Duration
 }
 
 // NewConsulBackend constructs a Consul backend using the given API client
@@ -139,17 +139,19 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 		return nil, fmt.Errorf("client setup failed: %w", err)
 	}
 
-	// Setup the backend
+	// Set up the backend
 	c := &ConsulBackend{
 		path:            path,
 		client:          client,
 		kv:              client.KV(),
+		txn:             client.Txn(),
 		permitPool:      physical.NewPermitPool(maxParInt),
 		consistencyMode: consistencyMode,
 
 		sessionTTL:   sessionTTL,
 		lockWaitTime: lockWaitTime,
 	}
+
 	return c, nil
 }
 
@@ -222,55 +224,95 @@ func SetupSecureTLS(ctx context.Context, consulConf *api.Config, conf map[string
 	return nil
 }
 
-// Used to run multiple entries via a transaction
+// Transaction is used to run multiple entries via a transaction.
 func (c *ConsulBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
 	if len(txns) == 0 {
 		return nil
 	}
 	defer metrics.MeasureSince([]string{"consul", "transaction"}, time.Now())
 
-	ops := make([]*api.KVTxnOp, 0, len(txns))
-
-	for _, op := range txns {
-		cop := &api.KVTxnOp{
-			Key: c.path + op.Entry.Key,
-		}
-		switch op.Operation {
-		case physical.DeleteOperation:
-			cop.Verb = api.KVDelete
-		case physical.PutOperation:
-			cop.Verb = api.KVSet
-			cop.Value = op.Entry.Value
-		default:
-			return fmt.Errorf("%q is not a supported transaction operation", op.Operation)
+	ops := make([]*api.TxnOp, 0, len(txns))
+	for _, t := range txns {
+		o, err := c.makeApiTxn(t)
+		if err != nil {
+			return fmt.Errorf("error converting physical transactions into api transactions: %w", err)
 		}
 
-		ops = append(ops, cop)
+		ops = append(ops, o)
 	}
 
 	c.permitPool.Acquire()
 	defer c.permitPool.Release()
 
+	var retErr *multierror.Error
+	kvMap := make(map[string][]byte, 0)
+
 	queryOpts := &api.QueryOptions{}
 	queryOpts = queryOpts.WithContext(ctx)
 
-	ok, resp, _, err := c.kv.Txn(ops, queryOpts)
+	ok, resp, _, err := c.txn.Txn(ops, queryOpts)
 	if err != nil {
 		if strings.Contains(err.Error(), "is too large") {
 			return fmt.Errorf("%s: %w", physical.ErrValueTooLarge, err)
 		}
 		return err
 	}
+
 	if ok && len(resp.Errors) == 0 {
-		return nil
+		// Loop over results and cache them in a map. Note that we're only caching the first time we see a key,
+		// which _should_ correspond to a Get operation, since we expect those come first in our txns slice.
+		for _, txnr := range resp.Results {
+			if len(txnr.KV.Value) > 0 {
+				// We need to trim the Consul kv path (typically "vault/") from the key otherwise it won't
+				// match the transaction entries we have.
+				key := strings.TrimPrefix(txnr.KV.Key, c.path)
+				if _, found := kvMap[key]; !found {
+					kvMap[key] = txnr.KV.Value
+				}
+			}
+		}
 	}
 
-	var retErr *multierror.Error
-	for _, res := range resp.Errors {
-		retErr = multierror.Append(retErr, errors.New(res.What))
+	if len(resp.Errors) > 0 {
+		for _, res := range resp.Errors {
+			retErr = multierror.Append(retErr, errors.New(res.What))
+		}
 	}
 
-	return retErr
+	if retErr != nil {
+		return retErr
+	}
+
+	// Loop over our get transactions and populate any values found in our map cache.
+	for _, t := range txns {
+		if val, ok := kvMap[t.Entry.Key]; ok && t.Operation == physical.GetOperation {
+			newVal := make([]byte, len(val))
+			copy(newVal, val)
+			t.Entry.Value = newVal
+		}
+	}
+
+	return nil
+}
+
+func (c *ConsulBackend) makeApiTxn(txn *physical.TxnEntry) (*api.TxnOp, error) {
+	op := &api.KVTxnOp{
+		Key: c.path + txn.Entry.Key,
+	}
+	switch txn.Operation {
+	case physical.GetOperation:
+		// TODO: This is currently broken. Once Consul releases 1.14, this should be updated to use api.KVGetOrEmpty
+		op.Verb = api.KVGet
+	case physical.DeleteOperation:
+		op.Verb = api.KVDelete
+	case physical.PutOperation:
+		op.Verb = api.KVSet
+		op.Value = txn.Entry.Value
+	default:
+		return nil, fmt.Errorf("%q is not a supported transaction operation", txn.Operation)
+	}
+
+	return &api.TxnOp{KV: op}, nil
 }
 
 // Put is used to insert or update an entry
@@ -367,7 +409,7 @@ func (c *ConsulBackend) List(ctx context.Context, prefix string) ([]string, erro
 	return out, err
 }
 
-// Lock is used for mutual exclusion based on the given key.
+// LockWith is used for mutual exclusion based on the given key.
 func (c *ConsulBackend) LockWith(key, value string) (physical.Lock, error) {
 	// Create the lock
 	opts := &api.LockOptions{

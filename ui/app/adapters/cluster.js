@@ -107,7 +107,7 @@ export default ApplicationAdapter.extend({
   },
 
   authenticate({ backend, data }) {
-    const { role, jwt, token, password, username, path } = data;
+    const { role, jwt, token, password, username, path, nonce } = data;
     const url = this.urlForAuth(backend, username, path);
     const verb = backend === 'token' ? 'GET' : 'POST';
     let options = {
@@ -119,6 +119,8 @@ export default ApplicationAdapter.extend({
       };
     } else if (backend === 'jwt' || backend === 'oidc') {
       options.data = { role, jwt };
+    } else if (backend === 'okta') {
+      options.data = { password, nonce };
     } else {
       options.data = token ? { token, password } : { password };
     }

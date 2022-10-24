@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/database: Fix a bug where the secret engine would queue up a lot of WAL deletes during startup.
+```

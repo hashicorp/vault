@@ -201,6 +201,8 @@ initialization timeout imposed by the Extensions API when writing files to disk.
 | `VAULT_NAMESPACE`             | The namespace to use for pre-configured secrets. Ignored by proxy server                                                                                                        | No       | `education`         |
 | `VAULT_DEFAULT_CACHE_TTL`     | The time to live configuration (aka, TTL) of the cache used by proxy server. Must have a unit and be parsable as a time.Duration. Required for caching to be enabled.           | No       | `15m`               |
 | `VAULT_DEFAULT_CACHE_ENABLED` | Enable caching for all requests, without needing to set the X-Vault-Cache-Control header for each request. Must be set to a boolean value.                                      | No       | `true`              |
+| `VAULT_ASSUMED_ROLE_ARN`      | Valid ARN of an IAM role that can be assumed by the execution role assigned to your Lambda function.                                                                            | No       | `arn:aws:iam::123456789012:role/xaccounts3access`
+| `VAULT_LOG_LEVEL`             | Log verbosity level, one of TRACE, DEBUG, INFO, WARN, ERROR, OFF. Defaults to INFO.                                                                                             | No       | `DEBUG`
 
 ### AWS STS client configuration
 

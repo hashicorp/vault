@@ -1,6 +1,7 @@
 package keysutil
 
 import (
+	"crypto"
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
@@ -55,6 +56,18 @@ var (
 		HashTypeSHA3256: sha3.New256,
 		HashTypeSHA3384: sha3.New384,
 		HashTypeSHA3512: sha3.New512,
+	}
+
+	CryptoHashMap = map[HashType]crypto.Hash{
+		HashTypeSHA1:    crypto.SHA1,
+		HashTypeSHA2224: crypto.SHA224,
+		HashTypeSHA2256: crypto.SHA256,
+		HashTypeSHA2384: crypto.SHA384,
+		HashTypeSHA2512: crypto.SHA512,
+		HashTypeSHA3224: crypto.SHA3_224,
+		HashTypeSHA3256: crypto.SHA3_256,
+		HashTypeSHA3384: crypto.SHA3_384,
+		HashTypeSHA3512: crypto.SHA3_512,
 	}
 
 	MarshalingTypeMap = map[string]MarshalingType{

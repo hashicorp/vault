@@ -5,6 +5,7 @@ const API_PATHS = {
   access: {
     methods: 'sys/auth',
     mfa: 'identity/mfa/method',
+    oidc: 'identity/oidc/client',
     entities: 'identity/entity/id',
     groups: 'identity/group/id',
     leases: 'sys/leases/lookup',
@@ -44,6 +45,7 @@ const API_PATHS_TO_ROUTE_PARAMS = {
   'sys/namespaces': { route: 'vault.cluster.access.namespaces', models: [] },
   'sys/control-group/': { route: 'vault.cluster.access.control-groups', models: [] },
   'identity/mfa/method': { route: 'vault.cluster.access.mfa', models: [] },
+  'identity/oidc/client': { route: 'vault.cluster.access.oidc', models: [] },
 };
 
 /*

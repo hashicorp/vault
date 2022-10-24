@@ -64,6 +64,25 @@ var SignatureAlgorithmNames = map[string]x509.SignatureAlgorithm{
 	"ed25519":          x509.PureEd25519, // Duplicated for clarity; most won't expect the "Pure" prefix.
 }
 
+// Mapping of constant values<->constant names for SignatureAlgorithm
+var InvSignatureAlgorithmNames = map[x509.SignatureAlgorithm]string{
+	x509.SHA256WithRSA:    "SHA256WithRSA",
+	x509.SHA384WithRSA:    "SHA384WithRSA",
+	x509.SHA512WithRSA:    "SHA512WithRSA",
+	x509.ECDSAWithSHA256:  "ECDSAWithSHA256",
+	x509.ECDSAWithSHA384:  "ECDSAWithSHA384",
+	x509.ECDSAWithSHA512:  "ECDSAWithSHA512",
+	x509.SHA256WithRSAPSS: "SHA256WithRSAPSS",
+	x509.SHA384WithRSAPSS: "SHA384WithRSAPSS",
+	x509.SHA512WithRSAPSS: "SHA512WithRSAPSS",
+	x509.PureEd25519:      "Ed25519",
+}
+
+// OID for RFC 5280 Delta CRL Indicator CRL extension.
+//
+// > id-ce-deltaCRLIndicator OBJECT IDENTIFIER ::= { id-ce 27 }
+var DeltaCRLIndicatorOID = asn1.ObjectIdentifier([]int{2, 5, 29, 27})
+
 // GetHexFormatted returns the byte buffer formatted in hex with
 // the specified separator between bytes.
 func GetHexFormatted(buf []byte, sep string) string {
@@ -176,18 +195,21 @@ func ParsePKIJSON(input []byte) (*ParsedCertBundle, error) {
 }
 
 func ParseDERKey(privateKeyBytes []byte) (signer crypto.Signer, format BlockType, err error) {
-	if signer, err = x509.ParseECPrivateKey(privateKeyBytes); err == nil {
+	var firstError error
+	if signer, firstError = x509.ParseECPrivateKey(privateKeyBytes); firstError == nil {
 		format = ECBlock
 		return
 	}
 
-	if signer, err = x509.ParsePKCS1PrivateKey(privateKeyBytes); err == nil {
+	var secondError error
+	if signer, secondError = x509.ParsePKCS1PrivateKey(privateKeyBytes); secondError == nil {
 		format = PKCS1Block
 		return
 	}
 
+	var thirdError error
 	var rawKey interface{}
-	if rawKey, err = x509.ParsePKCS8PrivateKey(privateKeyBytes); err == nil {
+	if rawKey, thirdError = x509.ParsePKCS8PrivateKey(privateKeyBytes); thirdError == nil {
 		switch rawSigner := rawKey.(type) {
 		case *rsa.PrivateKey:
 			signer = rawSigner
@@ -203,7 +225,7 @@ func ParseDERKey(privateKeyBytes []byte) (signer crypto.Signer, format BlockType
 		return
 	}
 
-	return nil, UnknownBlock, err
+	return nil, UnknownBlock, fmt.Errorf("got errors attempting to parse DER private key:\n1. %v\n2. %v\n3. %v", firstError, secondError, thirdError)
 }
 
 func ParsePEMKey(keyPem string) (crypto.Signer, BlockType, error) {
@@ -781,7 +803,7 @@ func CreateCertificateWithKeyGenerator(data *CreationBundle, randReader io.Reade
 	return createCertificate(data, randReader, keyGenerator)
 }
 
-// Set correct correct RSA sig algo
+// Set correct RSA sig algo
 func certTemplateSetSigAlgo(certTemplate *x509.Certificate, data *CreationBundle) {
 	if data.Params.UsePSS {
 		switch data.Params.SignatureBits {
@@ -801,6 +823,35 @@ func certTemplateSetSigAlgo(certTemplate *x509.Certificate, data *CreationBundle
 		case 512:
 			certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
 		}
+	}
+}
+
+// selectSignatureAlgorithmForRSA returns the proper x509.SignatureAlgorithm based on various properties set in the
+// Creation Bundle parameter. This method will default to a SHA256 signature algorithm if the requested signature
+// bits is not set/unknown.
+func selectSignatureAlgorithmForRSA(data *CreationBundle) x509.SignatureAlgorithm {
+	if data.Params.UsePSS {
+		switch data.Params.SignatureBits {
+		case 256:
+			return x509.SHA256WithRSAPSS
+		case 384:
+			return x509.SHA384WithRSAPSS
+		case 512:
+			return x509.SHA512WithRSAPSS
+		default:
+			return x509.SHA256WithRSAPSS
+		}
+	}
+
+	switch data.Params.SignatureBits {
+	case 256:
+		return x509.SHA256WithRSA
+	case 384:
+		return x509.SHA384WithRSA
+	case 512:
+		return x509.SHA512WithRSA
+	default:
+		return x509.SHA256WithRSA
 	}
 }
 
@@ -870,7 +921,11 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 
 	var certBytes []byte
 	if data.SigningBundle != nil {
-		switch data.SigningBundle.PrivateKeyType {
+		privateKeyType := data.SigningBundle.PrivateKeyType
+		if privateKeyType == ManagedPrivateKey {
+			privateKeyType = GetPrivateKeyTypeFromSigner(data.SigningBundle.PrivateKey)
+		}
+		switch privateKeyType {
 		case RSAPrivateKey:
 			certTemplateSetSigAlgo(certTemplate, data)
 		case Ed25519PrivateKey:
@@ -978,7 +1033,10 @@ func selectSignatureAlgorithmForECDSA(pub crypto.PublicKey, signatureBits int) x
 	}
 }
 
-var oidExtensionBasicConstraints = []int{2, 5, 29, 19}
+var (
+	oidExtensionBasicConstraints = []int{2, 5, 29, 19}
+	oidExtensionSubjectAltName   = []int{2, 5, 29, 17}
+)
 
 // CreateCSR creates a CSR with the default rand.Reader to
 // generate a cert/keypair. This is currently only meant
@@ -1041,9 +1099,10 @@ func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Rea
 
 	switch data.Params.KeyType {
 	case "rsa":
-		csrTemplate.SignatureAlgorithm = x509.SHA256WithRSA
+		// use specified RSA algorithm defaulting to the appropriate SHA256 RSA signature type
+		csrTemplate.SignatureAlgorithm = selectSignatureAlgorithmForRSA(data)
 	case "ec":
-		csrTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
+		csrTemplate.SignatureAlgorithm = selectSignatureAlgorithmForECDSA(result.PrivateKey.Public(), data.Params.SignatureBits)
 	case "ed25519":
 		csrTemplate.SignatureAlgorithm = x509.PureEd25519
 	}
@@ -1057,6 +1116,10 @@ func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Rea
 	result.CSR, err = x509.ParseCertificateRequest(csr)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %v", err)}
+	}
+
+	if err = result.CSR.CheckSignature(); err != nil {
+		return nil, errors.New("failed signature validation for CSR")
 	}
 
 	return result, nil
@@ -1119,7 +1182,12 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		certTemplate.NotBefore = time.Now().Add(-1 * data.Params.NotBeforeDuration)
 	}
 
-	switch data.SigningBundle.PrivateKeyType {
+	privateKeyType := data.SigningBundle.PrivateKeyType
+	if privateKeyType == ManagedPrivateKey {
+		privateKeyType = GetPrivateKeyTypeFromSigner(data.SigningBundle.PrivateKey)
+	}
+
+	switch privateKeyType {
 	case RSAPrivateKey:
 		certTemplateSetSigAlgo(certTemplate, data)
 	case ECPrivateKey:
@@ -1143,7 +1211,7 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		certTemplate.URIs = data.CSR.URIs
 
 		for _, name := range data.CSR.Extensions {
-			if !name.Id.Equal(oidExtensionBasicConstraints) {
+			if !name.Id.Equal(oidExtensionBasicConstraints) && !(len(data.Params.OtherSANs) > 0 && name.Id.Equal(oidExtensionSubjectAltName)) {
 				certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, name)
 			}
 		}
@@ -1292,4 +1360,27 @@ func CreateKeyBundleWithKeyGenerator(keyType string, keyBits int, randReader io.
 		return result, err
 	}
 	return result, nil
+}
+
+// CreateDeltaCRLIndicatorExt allows creating correctly formed delta CRLs
+// that point back to the last complete CRL that they're based on.
+func CreateDeltaCRLIndicatorExt(completeCRLNumber int64) (pkix.Extension, error) {
+	bigNum := big.NewInt(completeCRLNumber)
+	bigNumValue, err := asn1.Marshal(bigNum)
+	if err != nil {
+		return pkix.Extension{}, fmt.Errorf("unable to marshal complete CRL number (%v): %v", completeCRLNumber, err)
+	}
+	return pkix.Extension{
+		Id: DeltaCRLIndicatorOID,
+		// > When a conforming CRL issuer generates a delta CRL, the delta
+		// > CRL MUST include a critical delta CRL indicator extension.
+		Critical: true,
+		// This extension only includes the complete CRL number:
+		//
+		// > BaseCRLNumber ::= CRLNumber
+		//
+		// But, this needs to be encoded as a big number for encoding/asn1
+		// to work properly.
+		Value: bigNumValue,
+	}, nil
 }

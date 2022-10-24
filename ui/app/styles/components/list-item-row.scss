@@ -22,6 +22,10 @@
     margin-left: auto;
     margin-right: auto;
   }
+
+  &.is-disabled {
+    opacity: 0.5;
+  }
 }
 
 a.list-item-row,
