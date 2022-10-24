@@ -47,7 +47,7 @@ module('Integration | Component | pki/role-form', function (hooks) {
   });
 
   test('it should save a new pki role with various options selected', async function (assert) {
-    // Key Usage, Key Params and Not Valid after options are tested in their respective component tests
+    // Key usage, Key params and Not valid after options are tested in their respective component tests
     assert.expect(9);
     this.server.post(`/${this.model.backend}/roles/test-role`, (schema, req) => {
       assert.ok(true, 'Request made to save role');
