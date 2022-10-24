@@ -6,7 +6,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { SELECTORS, clearRecord } from 'vault/tests/helpers/pki-engine';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
-module('Integration | Component | pki/role-form meep', function (hooks) {
+module('Integration | Component | pki/role-form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
   setupEngine(hooks, 'pki'); // https://github.com/ember-engines/ember-engines/pull/653
@@ -31,6 +31,7 @@ module('Integration | Component | pki/role-form meep', function (hooks) {
     );
     assert.dom(SELECTORS.issuerRef).exists('shows form-field issuer ref');
     assert.dom(SELECTORS.backdateValidity).exists('shows form-field backdate validity');
+    assert.dom(SELECTORS.customTtl).exists('shows custom yielded form field');
     assert.dom(SELECTORS.maxTtl).exists('shows form-field max ttl');
     assert.dom(SELECTORS.generateLease).exists('shows form-field generateLease');
     assert.dom(SELECTORS.noStore).exists('shows form-field no store');

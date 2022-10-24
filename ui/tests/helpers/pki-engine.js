@@ -4,6 +4,7 @@ export const SELECTORS = {
   // Pki role
   roleName: '[data-test-input="name"]',
   issuerRef: '[data-test-input="issuerRef"]',
+  customTtl: '[data-test-field="customTtl"]',
   backdateValidity: '[data-test-ttl-value="Backdate validity"]',
   maxTtl: '[data-test-toggle-label="Max TTL"]',
   generateLease: '[data-test-field="generateLease"]',
