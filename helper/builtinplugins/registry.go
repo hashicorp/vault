@@ -38,7 +38,6 @@ import (
 	logicalAws "github.com/hashicorp/vault/builtin/logical/aws"
 	logicalCass "github.com/hashicorp/vault/builtin/logical/cassandra"
 	logicalConsul "github.com/hashicorp/vault/builtin/logical/consul"
-	logicalMongo "github.com/hashicorp/vault/builtin/logical/mongodb"
 	logicalMssql "github.com/hashicorp/vault/builtin/logical/mssql"
 	logicalMysql "github.com/hashicorp/vault/builtin/logical/mysql"
 	logicalNomad "github.com/hashicorp/vault/builtin/logical/nomad"
@@ -147,15 +146,11 @@ func newRegistry() *registry {
 				Factory:           logicalCass.Factory,
 				DeprecationStatus: consts.PendingRemoval,
 			},
-			"consul":     {Factory: logicalConsul.Factory},
-			"gcp":        {Factory: logicalGcp.Factory},
-			"gcpkms":     {Factory: logicalGcpKms.Factory},
-			"kubernetes": {Factory: logicalKube.Factory},
-			"kv":         {Factory: logicalKv.Factory},
-			"mongodb": {
-				Factory:           logicalMongo.Factory,
-				DeprecationStatus: consts.PendingRemoval,
-			},
+			"consul":       {Factory: logicalConsul.Factory},
+			"gcp":          {Factory: logicalGcp.Factory},
+			"gcpkms":       {Factory: logicalGcpKms.Factory},
+			"kubernetes":   {Factory: logicalKube.Factory},
+			"kv":           {Factory: logicalKv.Factory},
 			"mongodbatlas": {Factory: logicalMongoAtlas.Factory},
 			"mssql": {
 				Factory:           logicalMssql.Factory,
