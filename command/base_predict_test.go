@@ -367,7 +367,6 @@ func TestPredict_Plugins(t *testing.T) {
 				"kubernetes",
 				"kv",
 				"ldap",
-				"mongodb",
 				"mongodb-database-plugin",
 				"mongodbatlas",
 				"mongodbatlas-database-plugin",
