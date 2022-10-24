@@ -50,6 +50,7 @@ Base64 encoded nonce value used during encryption. Must be provided if
 convergent encryption is enabled for this key and the key was generated with
 Vault 0.6.1. Not required for keys created in 0.6.2+.`,
 			},
+
 			"partial_failure_response_code": {
 				Type: framework.TypeInt,
 				Description: `
@@ -57,6 +58,17 @@ Ordinarily, if a batch item fails to decrypt due to a bad input, but other batch
 the HTTP response code is 400 (Bad Request).  Some applications may want to treat partial failures differently.
 Providing the parameter returns the given response code integer instead of a 400 in this case.  If all values fail
 HTTP 400 is still returned.`,
+			},
+
+			"associated_data": {
+				Type: framework.TypeString,
+				Description: `
+When using an AEAD cipher mode, such as AES-GCM, this parameter allows
+passing associated data (AD/AAD) into the encryption function; this data
+must be passed on subsequent decryption requests but can be transited in
+plaintext. On successful decryption, both the ciphertext and the associated
+data are attested not to have been tampered with.
+                `,
 			},
 		},
 
@@ -90,9 +102,10 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 
 		batchInputItems = make([]BatchRequestItem, 1)
 		batchInputItems[0] = BatchRequestItem{
-			Ciphertext: ciphertext,
-			Context:    d.Get("context").(string),
-			Nonce:      d.Get("nonce").(string),
+			Ciphertext:     ciphertext,
+			Context:        d.Get("context").(string),
+			Nonce:          d.Get("nonce").(string),
+			AssociatedData: d.Get("associated_data").(string),
 		}
 	}
 
@@ -155,7 +168,17 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 			continue
 		}
 
-		plaintext, err := p.Decrypt(item.DecodedContext, item.DecodedNonce, item.Ciphertext)
+		var factory interface{}
+		if item.AssociatedData != "" {
+			if !p.Type.AssociatedDataSupported() {
+				batchResponseItems[i].Error = fmt.Sprintf("'[%d].associated_data' provided for non-AEAD cipher suite %v", i, p.Type.String())
+				continue
+			}
+
+			factory = AssocDataFactory{item.AssociatedData}
+		}
+
+		plaintext, err := p.DecryptWithFactory(item.DecodedContext, item.DecodedNonce, item.Ciphertext, factory)
 		if err != nil {
 			switch err.(type) {
 			case errutil.InternalError:

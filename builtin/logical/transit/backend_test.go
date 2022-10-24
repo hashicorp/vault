@@ -1717,3 +1717,115 @@ func TestTransit_AutoRotateKeys(t *testing.T) {
 		)
 	}
 }
+
+func TestTransit_AEAD(t *testing.T) {
+	testTransit_AEAD(t, "aes128-gcm96")
+	testTransit_AEAD(t, "aes256-gcm96")
+	testTransit_AEAD(t, "chacha20-poly1305")
+}
+
+func testTransit_AEAD(t *testing.T, keyType string) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	keyReq := &logical.Request{
+		Path:      "keys/aead",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"type": keyType,
+		},
+		Storage: storage,
+	}
+
+	resp, err = b.HandleRequest(context.Background(), keyReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="                          // "the quick brown fox"
+	associated := "U3BoaW54IG9mIGJsYWNrIHF1YXJ0eiwganVkZ2UgbXkgdm93Lgo=" // "Sphinx of black quartz, judge my vow."
+
+	// Basic encrypt/decrypt should work.
+	encryptReq := &logical.Request{
+		Path:      "encrypt/aead",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"plaintext": plaintext,
+		},
+	}
+
+	resp, err = b.HandleRequest(context.Background(), encryptReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	ciphertext1 := resp.Data["ciphertext"].(string)
+
+	decryptReq := &logical.Request{
+		Path:      "decrypt/aead",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"ciphertext": ciphertext1,
+		},
+	}
+
+	resp, err = b.HandleRequest(context.Background(), decryptReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	decryptedPlaintext := resp.Data["plaintext"]
+
+	if plaintext != decryptedPlaintext {
+		t.Fatalf("bad: plaintext; expected: %q\nactual: %q", plaintext, decryptedPlaintext)
+	}
+
+	// Using associated as ciphertext should fail.
+	decryptReq.Data["ciphertext"] = associated
+	resp, err = b.HandleRequest(context.Background(), decryptReq)
+	if err == nil || (resp != nil && !resp.IsError()) {
+		t.Fatalf("bad expected error: err: %v\nresp: %#v", err, resp)
+	}
+
+	// Redoing the above with additional data should work.
+	encryptReq.Data["associated_data"] = associated
+	resp, err = b.HandleRequest(context.Background(), encryptReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	ciphertext2 := resp.Data["ciphertext"].(string)
+	decryptReq.Data["ciphertext"] = ciphertext2
+	decryptReq.Data["associated_data"] = associated
+
+	resp, err = b.HandleRequest(context.Background(), decryptReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v\nresp: %#v", err, resp)
+	}
+
+	decryptedPlaintext = resp.Data["plaintext"]
+	if plaintext != decryptedPlaintext {
+		t.Fatalf("bad: plaintext; expected: %q\nactual: %q", plaintext, decryptedPlaintext)
+	}
+
+	// Removing the associated_data should break the decryption.
+	decryptReq.Data = map[string]interface{}{
+		"ciphertext": ciphertext2,
+	}
+	resp, err = b.HandleRequest(context.Background(), decryptReq)
+	if err == nil || (resp != nil && !resp.IsError()) {
+		t.Fatalf("bad expected error: err: %v\nresp: %#v", err, resp)
+	}
+
+	// Using a valid ciphertext with associated_data should also break the
+	// decryption.
+	decryptReq.Data["ciphertext"] = ciphertext1
+	decryptReq.Data["associated_data"] = associated
+	resp, err = b.HandleRequest(context.Background(), decryptReq)
+	if err == nil || (resp != nil && !resp.IsError()) {
+		t.Fatalf("bad expected error: err: %v\nresp: %#v", err, resp)
+	}
+}
