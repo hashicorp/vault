@@ -237,6 +237,7 @@ func (c *LoginCommand) Run(args []string) int {
 		secret, err = c.validateMFA(secret.Auth.MFARequirement.MFARequestID, *interactiveMethodInfo)
 		if err != nil {
 			c.UI.Error(err.Error())
+			return 2
 		}
 	} else {
 		c.UI.Warn(wrapAtLength("A login request was issued that is subject to "+
