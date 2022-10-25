@@ -127,8 +127,9 @@ resource "aws_dynamodb_table" "dynamodb-table" {
   name           = "${var.dynamoTable}"
   read_capacity  = 1
   write_capacity = 1
-	hash_key       = "Path"
-	range_key      = "Key"
+  hash_key       = "Path"
+  range_key      = "Key"
+  
   attribute {
     name = "Path"
     type = "S"

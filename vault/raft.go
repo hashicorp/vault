@@ -920,7 +920,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 			// need to block until the node is unsealed, unless retry is set to
 			// false.
 			if c.seal.BarrierType() == wrapping.Shamir && !isRaftHAOnly {
-				c.raftInfo = raftInfo
+				c.raftInfo.Store(raftInfo)
 				if err := c.seal.SetBarrierConfig(ctx, &sealConfig); err != nil {
 					return err
 				}
@@ -930,7 +930,8 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				}
 
 				// Wait until unseal keys are supplied
-				c.raftInfo.joinInProgress = true
+				raftInfo.joinInProgress = true
+				c.raftInfo.Store(raftInfo)
 				if atomic.LoadUint32(c.postUnsealStarted) != 1 {
 					return errors.New("waiting for unseal keys to be supplied")
 				}
@@ -942,7 +943,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 
 			if c.seal.BarrierType() == wrapping.Shamir && !isRaftHAOnly {
 				// Reset the state
-				c.raftInfo = nil
+				c.raftInfo.Store((*raftInformation)(nil))
 
 				// In case of Shamir unsealing, inform the unseal process that raft join is completed
 				close(c.raftJoinDoneCh)
@@ -984,7 +985,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 					c.logger.Error("failed to parse addresses from auto-join metadata", "error", err)
 				}
 				for _, ip := range clusterIPs {
-					if strings.Count(ip, ":") >= 2 && !strings.HasPrefix(ip, "["){
+					if strings.Count(ip, ":") >= 2 && !strings.HasPrefix(ip, "[") {
 						// An IPv6 address in implicit form, however we need it in explicit form to use in a URL.
 						ip = fmt.Sprintf("[%s]", ip)
 					}
@@ -1211,7 +1212,7 @@ func (c *Core) RaftBootstrap(ctx context.Context, onInit bool) error {
 }
 
 func (c *Core) isRaftUnseal() bool {
-	return c.raftInfo != nil
+	return c.raftInfo.Load().(*raftInformation) != nil
 }
 
 type answerRespData struct {

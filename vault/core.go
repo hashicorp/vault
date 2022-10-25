@@ -242,8 +242,9 @@ type Core struct {
 	postUnsealStarted *uint32
 
 	// raftInfo will contain information required for this node to join as a
-	// peer to an existing raft cluster
-	raftInfo *raftInformation
+	// peer to an existing raft cluster. This is marked atomic to prevent data
+	// races and casted to raftInformation wherever it is used.
+	raftInfo *atomic.Value
 
 	// migrationInfo is used during (and possibly after) a seal migration.
 	// This contains information about the seal we are migrating *from*.  Even
@@ -828,6 +829,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		rawConfig:                      new(atomic.Value),
 		recoveryMode:                   conf.RecoveryMode,
 		postUnsealStarted:              new(uint32),
+		raftInfo:                       new(atomic.Value),
 		raftJoinDoneCh:                 make(chan struct{}),
 		clusterHeartbeatInterval:       clusterHeartbeatInterval,
 		activityLogConfig:              conf.ActivityLogConfig,
@@ -858,6 +860,8 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 	c.clusterAddr.Store(conf.ClusterAddr)
 	c.activeContextCancelFunc.Store((context.CancelFunc)(nil))
 	atomic.StoreInt64(c.keyRotateGracePeriod, int64(2*time.Minute))
+
+	c.raftInfo.Store((*raftInformation)(nil))
 
 	switch conf.ClusterCipherSuites {
 	case "tls13", "tls12":
@@ -1264,7 +1268,9 @@ func (c *Core) unsealWithRaft(combinedKey []byte) error {
 		}
 	}
 
-	switch c.raftInfo.joinInProgress {
+	raftInfo := c.raftInfo.Load().(*raftInformation)
+
+	switch raftInfo.joinInProgress {
 	case true:
 		// JoinRaftCluster is already trying to perform a join based on retry_join configuration.
 		// Inform that routine that unseal key validation is complete so that it can continue to
@@ -1278,11 +1284,11 @@ func (c *Core) unsealWithRaft(combinedKey []byte) error {
 	default:
 		// This is the case for manual raft join. Send the answer to the leader node and
 		// wait for data to start streaming in.
-		if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), c.raftInfo); err != nil {
+		if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), raftInfo); err != nil {
 			return err
 		}
 		// Reset the state
-		c.raftInfo = nil
+		c.raftInfo.Store((*raftInformation)(nil))
 	}
 
 	go func() {
@@ -1356,13 +1362,15 @@ func (c *Core) getUnsealKey(ctx context.Context, seal Seal) ([]byte, error) {
 	var config *SealConfig
 	var err error
 
+	raftInfo := c.raftInfo.Load().(*raftInformation)
+
 	switch {
 	case seal.RecoveryKeySupported():
 		config, err = seal.RecoveryConfig(ctx)
 	case c.isRaftUnseal():
 		// Ignore follower's seal config and refer to leader's barrier
 		// configuration.
-		config = c.raftInfo.leaderBarrierConfig
+		config = raftInfo.leaderBarrierConfig
 	default:
 		config, err = seal.BarrierConfig(ctx)
 	}
