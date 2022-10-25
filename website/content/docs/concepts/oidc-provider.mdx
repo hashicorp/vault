@@ -138,7 +138,7 @@ Confidential clients may use Proof Key for Code Exchange ([PKCE](https://datatra
 during the authorization code flow.
 
 Confidential clients must authenticate to the token endpoint using the
-`client_secret_basic` [client authentication method](https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication).
+`client_secret_basic` or `client_secret_post` [client authentication method](https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication).
 
 ##### Public
 
@@ -172,7 +172,7 @@ creation time will use the `default` key.
 
 The `default` key will have the following configuration:
 
-- `rotation_period` - `RS256`
+- `algorithm` - `RS256`
 - `allowed_client_ids` - `*`
 - `rotation_period` - `24h`
 - `verification_ttl` - `24h`
@@ -199,7 +199,7 @@ Each provider offers an unauthenticated endpoint that provides the public portio
 
 ### Authorization Endpoint
 
-Each provider offers an authenticated [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint). The authorization endpoint for each provider is added to Vault's [default policy](/docs/concepts/policies#default-policy) using the `identity/oidc/provider/+/authorize` path. The endpoint incorporates all required [authentication request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest) parameters as input. Additionally, the `state` parameter is required.
+Each provider offers an authenticated [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint). The authorization endpoint for each provider is added to Vault's [default policy](/docs/concepts/policies#default-policy) using the `identity/oidc/provider/+/authorize` path. The endpoint incorporates all required [authentication request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest) parameters as input.
 
 The endpoint [validates](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequestValidation) client requests and ensures that all required parameters are present and valid. The `redirect_uri` of the request is validated against the client's `redirect_uris`. The requesting Vault entity will be validated against the client's `assignments`. An appropriate [error code](https://openid.net/specs/openid-connect-core-1_0.html#AuthError) is returned for invalid requests.
 

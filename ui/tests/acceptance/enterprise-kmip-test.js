@@ -1,4 +1,4 @@
-import { currentURL, currentRouteName, settled, fillIn } from '@ember/test-helpers';
+import { currentURL, currentRouteName, settled, fillIn, waitUntil, find } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -132,6 +132,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     await credentialsPage.visitDetail({ backend: path, scope, role, serial });
     await settled();
+    await waitUntil(() => find('[data-test-confirm-action-trigger]'));
     assert.dom('[data-test-confirm-action-trigger]').exists('delete button exists');
     await credentialsPage.delete().confirmDelete();
     await settled();
@@ -241,6 +242,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     await rolesPage.visitDetail({ backend: path, scope, role });
     await settled();
+    await waitUntil(() => find('[data-test-kmip-link-edit-role]'));
     await rolesPage.detailEditLink();
     await settled();
     assert.equal(

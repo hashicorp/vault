@@ -191,6 +191,12 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 			issuers = append(issuers, pemBlockString)
 		case "CRL", "X509 CRL":
 			// Ignore any CRL entries.
+		case "EC PARAMS", "EC PARAMETERS":
+			// Ignore any EC parameter entries. This is an optional block
+			// that some implementations send, to ensure some semblance of
+			// compatibility with weird curves. Go doesn't support custom
+			// curves and 99% of software doesn't either, so discard them
+			// without parsing them.
 		default:
 			// Otherwise, treat them as keys.
 			keys = append(keys, pemBlockString)

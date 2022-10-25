@@ -146,7 +146,7 @@
     z-index: 201;
   }
 
-  &.active {
+  &.is-active {
     @include until($mobile) {
       box-shadow: 5px 0 10px rgba($black, 0.36);
       transform: translateX(0);

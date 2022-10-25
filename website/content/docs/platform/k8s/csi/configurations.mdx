@@ -97,6 +97,14 @@ structure is illustrated in the [examples](/docs/platform/k8s/csi/examples).
 - `vaultKubernetesMountPath` `(string: "kubernetes")` - The name of the auth mount used for login.
   At this time only the Kubernetes auth method is supported.
 
+- `audience` `(string: "")` - Specifies a custom audience for the requesting pod's service account token,
+  generated using the
+  [TokenRequest API](https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/token-request-v1/#TokenRequestSpec).
+  The resulting token is used to authenticate to Vault, so if you specify an
+  [audience](https://www.vaultproject.io/api-docs/auth/kubernetes#audience) for your Kubernetes auth
+  role, it must match the audience specified here. If not set, the token audiences will default to
+  the Kubernetes cluster's default API audiences.
+
 - `objects` `(array)` - An array of secrets to retrieve from Vault.
 
   - `objectName` `(string: "")` - The alias of the object which can be referenced within the secret provider class and
@@ -116,6 +124,8 @@ structure is illustrated in the [examples](/docs/platform/k8s/csi/examples).
     ```
 
   - `secretKey` `(string: "")` - The key in the Vault secret to extract. If omitted, the whole response from Vault will be written as JSON.
+
+  - `filePermission` `(integer: 0o644)` - The file permissions to set for this secret's file.
 
   - `secretArgs` `(map: {})` - Additional arguments to be sent to Vault for a specific secret. Arguments can vary
     for different secret engines. For example:

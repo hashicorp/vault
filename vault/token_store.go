@@ -71,8 +71,8 @@ const (
 	// any namespace information
 	TokenLength = 24
 
-	// MaxNsIdLength is the maximum namespace ID length (4 characters prepended by a ".")
-	MaxNsIdLength = 5
+	// MaxNsIdLength is the maximum namespace ID length (5 characters prepended by a ".")
+	MaxNsIdLength = 6
 
 	// TokenPrefixLength is the length of the new token prefixes ("hvs.", "hvb.",
 	// and "hvr.")
@@ -157,6 +157,70 @@ func (ts *TokenStore) paths() []*framework.Path {
 		{
 			Pattern: "create-orphan$",
 
+			Fields: map[string]*framework.FieldSchema{
+				"role_name": {
+					Type:        framework.TypeString,
+					Description: "Name of the role",
+				},
+				"display_name": {
+					Type:        framework.TypeString,
+					Description: "Name to associate with this token",
+				},
+				"explicit_max_ttl": {
+					Type:        framework.TypeString,
+					Description: "Explicit Max TTL of this token",
+				},
+				"entity_alias": {
+					Type:        framework.TypeString,
+					Description: "Name of the entity alias to associate with this token",
+				},
+				"num_uses": {
+					Type:        framework.TypeInt,
+					Description: "Max number of uses for this token",
+				},
+				"period": {
+					Type:        framework.TypeString,
+					Description: "Renew period",
+				},
+				"renewable": {
+					Type:        framework.TypeBool,
+					Description: "Allow token to be renewed past its initial TTL up to system/mount maximum TTL",
+				},
+				"ttl": {
+					Type:        framework.TypeString,
+					Description: "Time to live for this token",
+				},
+				"type": {
+					Type:        framework.TypeString,
+					Description: "Token type",
+				},
+				"no_default_policy": {
+					Type:        framework.TypeBool,
+					Description: "Do not include default policy for this token",
+				},
+				"id": {
+					Type:        framework.TypeString,
+					Description: "Value for the token",
+				},
+				"metadata": {
+					Type:        framework.TypeMap,
+					Description: "Arbitrary key=value metadata to associate with the token",
+				},
+				"no_parent": {
+					Type:        framework.TypeBool,
+					Description: "Create the token with no parent",
+				},
+				"policies": {
+					Type:        framework.TypeStringSlice,
+					Description: "List of policies for the token",
+				},
+				"format": {
+					Type:        framework.TypeString,
+					Query:       true,
+					Description: "Return json formatted output",
+				},
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: ts.handleCreateOrphan,
 			},
@@ -173,6 +237,63 @@ func (ts *TokenStore) paths() []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "Name of the role",
 				},
+				"display_name": {
+					Type:        framework.TypeString,
+					Description: "Name to associate with this token",
+				},
+				"explicit_max_ttl": {
+					Type:        framework.TypeString,
+					Description: "Explicit Max TTL of this token",
+				},
+				"entity_alias": {
+					Type:        framework.TypeString,
+					Description: "Name of the entity alias to associate with this token",
+				},
+				"num_uses": {
+					Type:        framework.TypeInt,
+					Description: "Max number of uses for this token",
+				},
+				"period": {
+					Type:        framework.TypeString,
+					Description: "Renew period",
+				},
+				"renewable": {
+					Type:        framework.TypeBool,
+					Description: "Allow token to be renewed past its initial TTL up to system/mount maximum TTL",
+				},
+				"ttl": {
+					Type:        framework.TypeString,
+					Description: "Time to live for this token",
+				},
+				"type": {
+					Type:        framework.TypeString,
+					Description: "Token type",
+				},
+				"no_default_policy": {
+					Type:        framework.TypeBool,
+					Description: "Do not include default policy for this token",
+				},
+				"id": {
+					Type:        framework.TypeString,
+					Description: "Value for the token",
+				},
+				"metadata": {
+					Type:        framework.TypeMap,
+					Description: "Arbitrary key=value metadata to associate with the token",
+				},
+				"no_parent": {
+					Type:        framework.TypeBool,
+					Description: "Create the token with no parent",
+				},
+				"policies": {
+					Type:        framework.TypeStringSlice,
+					Description: "List of policies for the token",
+				},
+				"format": {
+					Type:        framework.TypeString,
+					Query:       true,
+					Description: "Return json formatted output",
+				},
 			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -185,6 +306,66 @@ func (ts *TokenStore) paths() []*framework.Path {
 
 		{
 			Pattern: "create$",
+
+			Fields: map[string]*framework.FieldSchema{
+				"display_name": {
+					Type:        framework.TypeString,
+					Description: "Name to associate with this token",
+				},
+				"explicit_max_ttl": {
+					Type:        framework.TypeString,
+					Description: "Explicit Max TTL of this token",
+				},
+				"entity_alias": {
+					Type:        framework.TypeString,
+					Description: "Name of the entity alias to associate with this token",
+				},
+				"num_uses": {
+					Type:        framework.TypeInt,
+					Description: "Max number of uses for this token",
+				},
+				"period": {
+					Type:        framework.TypeString,
+					Description: "Renew period",
+				},
+				"renewable": {
+					Type:        framework.TypeBool,
+					Description: "Allow token to be renewed past its initial TTL up to system/mount maximum TTL",
+				},
+				"ttl": {
+					Type:        framework.TypeString,
+					Description: "Time to live for this token",
+				},
+				"type": {
+					Type:        framework.TypeString,
+					Description: "Token type",
+				},
+				"no_default_policy": {
+					Type:        framework.TypeBool,
+					Description: "Do not include default policy for this token",
+				},
+				"id": {
+					Type:        framework.TypeString,
+					Description: "Value for the token",
+				},
+				"metadata": {
+					Type:        framework.TypeMap,
+					Description: "Arbitrary key=value metadata to associate with the token",
+				},
+				"no_parent": {
+					Type:        framework.TypeBool,
+					Description: "Create the token with no parent",
+				},
+				"policies": {
+					Type:        framework.TypeStringSlice,
+					Description: "List of policies for the token",
+				},
+				"format": {
+					Type:        framework.TypeString,
+					Query:       true,
+					Description: "Return json formatted output",
+				},
+			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: ts.handleCreate,

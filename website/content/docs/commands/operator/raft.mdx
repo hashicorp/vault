@@ -83,6 +83,8 @@ The following flags are available for the `operator raft join` command.
 - `-retry` `(bool: false)` - Continuously retry joining the Raft cluster upon
   failures. The default is false.
 
+~> **Note:** Please be aware that the content (not the path to the file) of the certificate or key is expected for these parameters: `-leader-ca-cert`, `-leader-client-cert`, `-leader-client-key`.
+
 ## list-peers
 
 This command is used to list the full set of peers in the Raft cluster.

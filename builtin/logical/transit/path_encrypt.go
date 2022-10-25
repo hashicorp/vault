@@ -61,7 +61,7 @@ func (b *backend) pathEncrypt() *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
-				Description: "Name of the policy",
+				Description: "Name of the key",
 			},
 
 			"plaintext": {

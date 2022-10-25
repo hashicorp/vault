@@ -129,7 +129,7 @@ export default class SecretDeleteMenu extends Component {
       });
     } else {
       // if they do not have read access on the metadata endpoint we need to pull the version from modelForData so they can perform delete and undelete operations
-      // only perform if no access to metatdata otherwise it will only delete latest version for any deleteType === delete
+      // only perform if no access to metadata otherwise it will only delete latest version for any deleteType === delete
       let currentVersionForNoReadMetadata;
       if (!this.args.canReadSecretMetadata) {
         currentVersionForNoReadMetadata = this.args.modelForData?.version;

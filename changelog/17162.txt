@@ -1,0 +1,3 @@
+```release-note:bug
+auth/kubernetes: Restore support for JWT signature algorithm ES384 [[GH-160](https://github.com/hashicorp/vault-plugin-auth-kubernetes/pull/160)]
+```

@@ -31,7 +31,7 @@ There can be many different types of clients that authenticate and communicate w
 
 ## How do Clients work in Vault?
 
-When anything authenticates to Vault, be it a user, application, machine, etc., it is associated with a unique **entity** within the [Vault identity system](https://www.vaultproject.io/docs/secrets/identity). The name reported to the identity systems by the different types of authentication methods varies ([list below](#authentication-methods-and-how-they-re-counted-in-vault)), each entity is created or verified during authorization. There are scenarios where tokens can be created outside of the identity system, without an associated entity. In this scenario, these tokens are considered **clients** (for production usage, it should be rare to have any tokens created outside any identity systems).
+When anything authenticates to Vault, be it a user, application, machine, etc., it is associated with a unique **entity** within the [Vault identity system](/docs/secrets/identity). The name reported to the identity systems by the different types of authentication methods varies ([list below](#authentication-methods-and-how-they-re-counted-in-vault)), each entity is created or verified during authorization. There are scenarios where tokens can be created outside of the identity system, without an associated entity. In this scenario, these tokens are considered **clients** (for production usage, it should be rare to have any tokens created outside any identity systems).
 
 ## But wait, there’s more...
 
@@ -53,9 +53,9 @@ For more on managing access with identity, entities, and more, check out [Identi
 
 Using the identity system allows for Vault to make sure that entities aren’t counted more than once. Once you determine the identity and authentication method to be used for each, human, application, platform, and CI/CD pipeline, upon authentication for the first time in a billing period, Vault instantiates a unique entity. For example, say you have an application “AppX” that needs to get a secret from Vault using the AppRole method. Since AppX has an associated entity within Vault with associated policies, Vault knows every time that AppX is authenticating and authorizing, so AppX is only counted once.
 
-### Non-entity Tokens
+## Non-entity Tokens
 
-If you chose to use the [Token Auth Method](/docs/auth/token) without an identity, always assign each token to a role and entity alias. HashiCorp recommends creating a [Token Role](/api-docs/auth/token#create-update-token-role) first, with allowable entity aliases and issuing your token with the appropriate [role and entity alias name](/api-docs/auth/token#create-token). This is the name that will uniquely identify the client, no matter how many tokens are issued. See more on entity alias below.
+If you choose to use the [Token Auth Method](/docs/auth/token) without an identity, this will create a non-entity token. Starting with Vault 1.9, any number of non-entity tokens having the same namespace and set of policies assigned, count as one client. In earlier versions, every non-entity token counted as a separate client, which could rapidly drive up client count to unrealistic values. If you are using Vault 1.8 or earlier, and need to address this without upgrading, one option is to create a [Token Role](/api-docs/auth/token#create-update-token-role) first, with allowable entity aliases and create your token with the appropriate [role and entity alias name](/api-docs/auth/token#create-token). All tokens issued with the same entity alias name count as one client.
 
 ### Differences between a direct entity and a non-entity token
 
@@ -123,6 +123,10 @@ From a threat model and security assessment perspective, **_option 3_** above, w
 If someone goes wrong in **_option 1_** and you revoke access, all pipelines are affected. If something goes wrong in **_option 2_** and you revoke access to a pipeline, only that pipeline is affected, and you limit your security risk blast radius. If something goes wrong in **_option 3_** you can just revoke an app or service without affecting everything else. Please carefully consider your security options as you manage security in a dynamic world.
 
 From a Vault client perspective, **_option 1_** is one client, the Master CI/CD identity; **_option 2_** is one client for the Master CI/CD identity, and one client for each pipeline; **_option 3_** is one client for the Master CI/CD identity, one client for each pipeline, and one for each app, service deployed.
+
+### Onboarding Clients - Putting it all together
+
+The guide: [“Onboarding Applications to Vault Using Terraform: A Practical Guide“](https://www.hashicorp.com/blog/onboarding-applications-to-vault-using-terraform-a-practical-guide) is an example on how to build an automated HashiCorp Vault onboarding system with Terraform to accommodate Vault client using naming standards, ACL policy templates, namespaces, pre-created application entities, and workflows driven by VCS and CI/CD.
 
 ## Client Count
 

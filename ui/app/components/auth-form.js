@@ -260,10 +260,9 @@ export default Component.extend(DEFAULTS, {
       this.setProperties({
         error: null,
       });
-      // if callback from oidc or jwt we have a token at this point
-      let backend = ['oidc', 'jwt'].includes(this.providerName)
-        ? this.getAuthBackend('token')
-        : this.selectedAuthBackend || {};
+      // if callback from oidc we have a token at this point
+      let backend =
+        this.providerName === 'oidc' ? this.getAuthBackend('token') : this.selectedAuthBackend || {};
       let backendMeta = BACKENDS.find(
         (b) => (b.type || '').toLowerCase() === (backend.type || '').toLowerCase()
       );

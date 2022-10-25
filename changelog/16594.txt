@@ -1,0 +1,5 @@
+```release-note:improvement
+auth/kerberos: add `remove_instance_name` parameter to the login CLI and the 
+Kerberos config in Vault. This removes any instance names found in the keytab 
+service principal name.
+```

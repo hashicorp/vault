@@ -152,6 +152,11 @@ These are common configuration values that live within the `method` block:
   duration between retries, and **not** the duration that retries will be
   performed before giving up.
 
+- `exit_on_err` `(bool: false)` - When set to true, Vault Agent will exit if any 
+  errors occur during authentication. This configurable only affects login attempts 
+  for new tokens (either intial or expired tokens) and will not exit for errors on 
+  valid token renewals.
+
 - `config` `(object: required)` - Configuration of the method itself. See the
   sidebar for information about each method.
 

@@ -459,6 +459,12 @@ func TestKVGetCommand(t *testing.T) {
 			0,
 		},
 		{
+			"v2_mount_flag_syntax_leading_slash",
+			[]string{"-mount", "kv", "/read/foo"},
+			append(baseV2ExpectedFields, "foo"),
+			0,
+		},
+		{
 			"v2_not_found",
 			[]string{"kv/nope/not/once/never"},
 			[]string{"No value found at kv/data/nope/not/once/never"},
@@ -467,6 +473,12 @@ func TestKVGetCommand(t *testing.T) {
 		{
 			"v2_read",
 			[]string{"kv/read/foo"},
+			append(baseV2ExpectedFields, "foo"),
+			0,
+		},
+		{
+			"v2_read_leading_slash",
+			[]string{"/kv/read/foo"},
 			append(baseV2ExpectedFields, "foo"),
 			0,
 		},

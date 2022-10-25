@@ -145,10 +145,13 @@ $ curl \
     - 3072
     - 4096
 
-- `force_rw_session` `(string: "false")`: Force all operations to open up
+- `force_rw_session` `(string: "false")` - Force all operations to open up
   a read-write session to the HSM. This is a boolean expressed as a string (e.g.
   `"true"`). This key is mainly to work around a limitation within AWS's CloudHSM v5
   pkcs11 implementation.
+
+- `max_parallel` `(int: 1)` - The number of concurrent requests that may be in 
+  flight to the HSM at any given time.
 
 #### AWS KMS Parameters
 - `type` `(string: "awskms")` - To select an AWS KMS backend, the type parameter must be set to `awskms`.

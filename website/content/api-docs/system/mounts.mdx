@@ -199,7 +199,7 @@ $ curl \
 
 This endpoint disables the mount point specified in the URL.
 
-| Method   | Path                |
+| Method   | Path                |                    |
 | :------- | :------------------ | ------------------ |
 | `DELETE` | `/sys/mounts/:path` | `204 (empty body)` |
 
@@ -224,7 +224,7 @@ simple as increasing the timeout (in the event of timeout errors).
 
 For recovery situations where the secret was manually removed from the
 secrets backing service, one can force a secrets engine disable in Vault by
-performing a [force revoke](https://www.vaultproject.io/api/system/leases#revoke-force)
+performing a [force revoke](/api-docs/system/leases)
 on the mount prefix, followed by a secrets disable when that completes. 
 If the underlying secrets were not manually cleaned up, this method might result
 in dangling credentials. This is meant for extreme circumstances.
@@ -236,7 +236,6 @@ This endpoint returns the configuration of a specific secret engine.
 | Method | Path                |
 | :----- | :------------------ |
 | `GET`  | `/sys/mounts/:path` |
-
 
 ### Sample Request
 

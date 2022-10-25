@@ -116,6 +116,12 @@ type Path struct {
 	// DisplayAttrs provides hints for UI and documentation generators. They
 	// will be included in OpenAPI output if set.
 	DisplayAttrs *DisplayAttributes
+
+	// TakesArbitraryInput is used for endpoints that take arbitrary input, instead
+	// of or as well as their Fields. This is taken into account when printing
+	// warnings about ignored fields. If this is set, we will not warn when data is
+	// provided that is not part of the Fields declaration.
+	TakesArbitraryInput bool
 }
 
 // OperationHandler defines and describes a specific operation handler.

@@ -1410,12 +1410,12 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 
 	f, ok := c.logicalBackends[t]
 	if !ok {
-		plug, err := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeSecrets)
+		plug, err := c.pluginCatalog.Get(ctx, t, consts.PluginTypeSecrets)
 		if err != nil {
 			return nil, err
 		}
 		if plug == nil {
-			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, entry.Type)
+			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, t)
 		}
 
 		f = plugin.Factory
