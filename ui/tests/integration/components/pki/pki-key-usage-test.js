@@ -80,6 +80,6 @@ module('Integration | Component | pki-key-usage', function (hooks) {
       ['KeyAgreement', 'KeyEncipherment'],
       'removes digitalSignature from the model when unchecked.'
     );
-    assert.deepEqual(this.model.extKeyUsage, ['Any', 'ServerAuth'], ' adds new checkboxes to when checked');
+    assert.deepEqual(this.model.extKeyUsage, ['Any', 'ServerAuth'], 'adds new checkboxes to when checked');
   });
 });
