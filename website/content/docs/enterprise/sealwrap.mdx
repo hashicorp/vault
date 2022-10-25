@@ -72,6 +72,23 @@ In addition, it is possible to replicate from a Shamir-protected primary
 cluster to clusters that use HSMs when seal wrapping is required in downstream
 datacenters but not in the primary.
 
+## Wrapped Parameters
+
+Each plugin (whether secret or auth) maintains control over parameters it
+feels are best to Seal Wrap. These are usually just a few core values as
+Seal Wrapping does incur some performance overhead.
+
+Some examples of places where seal wrapping is used include:
+
+- The [LDAP](/docs/auth/ldap), [RADIUS](/docs/auth/radius),
+  [Okta](/docs/auth/okta), and [AWS](/docs/auth/aws) auth methods,
+  for storing their config.
+- [PKI](/docs/secrets/pki) for storing the issuers and their keys,
+- [SSH](/docs/secrets/ssh) for storing the CA's keys,
+- [KMIP](/docs/secrets/kmip) for storing managed objects (externally-provided
+  keys) and its CA keys.
+- [Transit](/docs/secrets/transit) for storing keys and their policy.
+
 ## FIPS Status
 
 See the [FIPS-specific Seal Wrap documentation](/docs/enterprise/fips/sealwrap)

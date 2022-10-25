@@ -568,13 +568,20 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 			if token == nil {
 				return logical.ErrorResponse("invalid token"), logical.ErrPermissionDenied
 			}
-			// We don't care if the token is an server side consistent token or not. Either way, we're going
+			// We don't care if the token is a server side consistent token or not. Either way, we're going
 			// to be returning it for these paths instead of the short token stored in vault.
 			requestBodyToken = token.(string)
 			if IsSSCToken(token.(string)) {
 				token, err = c.CheckSSCToken(ctx, token.(string), c.isLoginRequest(ctx, req), c.perfStandby)
+
+				// If we receive an error from CheckSSCToken, we can assume the token is bad somehow, and the client
+				// should receive a 403 bad token error like they do for all other invalid tokens, unless the error
+				// specifies that we should forward the request or retry the request.
 				if err != nil {
-					return nil, fmt.Errorf("server side consistent token check failed: %w", err)
+					if errors.Is(err, logical.ErrPerfStandbyPleaseForward) || errors.Is(err, logical.ErrMissingRequiredState) {
+						return nil, err
+					}
+					return logical.ErrorResponse("bad token"), logical.ErrPermissionDenied
 				}
 				req.Data["token"] = token
 			}
@@ -1798,8 +1805,14 @@ func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) err
 	req.InboundSSCToken = token
 	if IsSSCToken(token) {
 		token, err = c.CheckSSCToken(ctx, token, c.isLoginRequest(ctx, req), c.perfStandby)
+		// If we receive an error from CheckSSCToken, we can assume the token is bad somehow, and the client
+		// should receive a 403 bad token error like they do for all other invalid tokens, unless the error
+		// specifies that we should forward the request or retry the request.
 		if err != nil {
-			return err
+			if errors.Is(err, logical.ErrPerfStandbyPleaseForward) || errors.Is(err, logical.ErrMissingRequiredState) {
+				return err
+			}
+			return logical.ErrPermissionDenied
 		}
 	}
 	req.ClientToken = token

@@ -802,8 +802,8 @@ github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed h1:5upAirOpQc
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed/go.mod h1:tMWxXQ9wFIaZeTI9F+hmhFiGpFmhOHzyShyFUhRm0H4=
 github.com/hashicorp/cap v0.1.1 h1:GjO4+9+H0wv/89YoEsxeVc2jIizL19r5v5l2lpaH8Kg=
 github.com/hashicorp/cap v0.1.1/go.mod h1:VfBvK2ULRyqsuqAnjgZl7HJ7/CGMC7ro4H5eXiZuun8=
-github.com/hashicorp/consul-template v0.28.1-0.20220415203157-ebf2f3dfe745 h1:91lxOf6Uo92mXbCR7s9IcHk2iqOngdZrqsvH4gZHqcs=
-github.com/hashicorp/consul-template v0.28.1-0.20220415203157-ebf2f3dfe745/go.mod h1:324C5f8AHp6JqhyfZcX4JsguFdNkKIpZvjZyeCf5W4w=
+github.com/hashicorp/consul-template v0.28.3 h1:Q+xJJk9E3dyXCjoQpgabNT2vgVX1jHuYUa7BNZm46MU=
+github.com/hashicorp/consul-template v0.28.3/go.mod h1:324C5f8AHp6JqhyfZcX4JsguFdNkKIpZvjZyeCf5W4w=
 github.com/hashicorp/consul/api v1.4.0/go.mod h1:xc8u05kyMa3Wjr9eEAsIAo3dg8+LywT5E/Cl7cNS5nU=
 github.com/hashicorp/consul/api v1.12.0 h1:k3y1FYv6nuKyNTqj6w9gXOx5r5CfLj/k/euUeBXj1OY=
 github.com/hashicorp/consul/api v1.12.0/go.mod h1:6pVBMo0ebnYdt2S3H87XhekM/HHrUoTD2XXb/VrZVy0=
@@ -962,8 +962,8 @@ github.com/hashicorp/vault-plugin-auth-centrify v0.11.0 h1:W1Al8Kw4VvXm/mtDdzgBa
 github.com/hashicorp/vault-plugin-auth-centrify v0.11.0/go.mod h1:3fDbIVdwA/hkOVhwktKHDX5lo4DqIUUVbBdwQNNvxHw=
 github.com/hashicorp/vault-plugin-auth-cf v0.11.0 h1:W8KkpZv8AHM9eMYrTgCmc9aKac/KORzby7Go0I0MpQ8=
 github.com/hashicorp/vault-plugin-auth-cf v0.11.0/go.mod h1:4HM4amMEcCyoLZNNjyz5AYILIlhMLTErxrinM3Vopy4=
-github.com/hashicorp/vault-plugin-auth-gcp v0.12.1 h1:LOxL1IedHBEkgziRelh3yv8gIKognoyRDqTuhJFZsr4=
-github.com/hashicorp/vault-plugin-auth-gcp v0.12.1/go.mod h1:mNOajlE7KlNecnCqO1we+PG0/EIHgHMTuVhk/H2W+Tw=
+github.com/hashicorp/vault-plugin-auth-gcp v0.12.2 h1:P84dkVKna7snHSYnH8iBt6cbuTMuyYrvyV6Xpw2TDYU=
+github.com/hashicorp/vault-plugin-auth-gcp v0.12.2/go.mod h1:mNOajlE7KlNecnCqO1we+PG0/EIHgHMTuVhk/H2W+Tw=
 github.com/hashicorp/vault-plugin-auth-jwt v0.12.1 h1:F8aNPecN7Bihyndku9g1XrGOy4ioQM8JE+Uhg/e8nFY=
 github.com/hashicorp/vault-plugin-auth-jwt v0.12.1/go.mod h1:+WL5kaq/0L5OROsA31X15U8yTIX4GTEv1rTLA9d15eo=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.6.0 h1:5GiKYqA8NTW9QPA1gahok2CVTKwa50lccB30i3GLffk=
@@ -988,8 +988,8 @@ github.com/hashicorp/vault-plugin-secrets-alicloud v0.11.1 h1:vuenbRDeUV6Ghn4yFX
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.11.1/go.mod h1:F4KWrlCQZbhP2dFXCkRvbHX2J6CTydlaY0cH+OrLHCE=
 github.com/hashicorp/vault-plugin-secrets-azure v0.12.0 h1:B2rLk3JxIXSRhZb47DLHSxQfX3yVWDFE6dGGzT6QXaA=
 github.com/hashicorp/vault-plugin-secrets-azure v0.12.0/go.mod h1:Xw8CQPkyZSJRK9BXKBruf6kOO8rLyXEf40o19ClK9kY=
-github.com/hashicorp/vault-plugin-secrets-gcp v0.12.0 h1:CvkXkxrCSk5gGlDeCfQfrbGBrO2kQFDzVKawIHNMciY=
-github.com/hashicorp/vault-plugin-secrets-gcp v0.12.0/go.mod h1:ndpmRkIPHW5UYqv2nn2AJNVZsucJ8lY2bp5i5Ngvhuc=
+github.com/hashicorp/vault-plugin-secrets-gcp v0.12.1 h1:qeI9ZNdTHjnFUB5DLLwR8sWdhACpPl8A75Mph7auN/o=
+github.com/hashicorp/vault-plugin-secrets-gcp v0.12.1/go.mod h1:ndpmRkIPHW5UYqv2nn2AJNVZsucJ8lY2bp5i5Ngvhuc=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.11.0 h1:6MUiyfP5tKicVaYgu7Xi/LpCZh3QR8sjOlhpPKk5DzY=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.11.0/go.mod h1:6DPwGu8oGR1sZRpjwkcAnrQZWQuAJ/Ph+rQHfUo1Yf4=
 github.com/hashicorp/vault-plugin-secrets-kv v0.11.0 h1:xSvgh7ObLo3MhVzmGhOxiWND++cTP/QM2LxTmpYim/Q=

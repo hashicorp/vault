@@ -65,7 +65,7 @@ export default Certificate.extend({
     label: 'PEM bundle',
     editType: 'file',
   }),
-  permittedDnsNames: attr('string', {
+  permittedDnsDomains: attr('string', {
     label: 'Permitted DNS domains',
   }),
   privateKeyFormat: attr('string', {
@@ -119,7 +119,7 @@ export default Certificate.extend({
             'keyType',
             'keyBits',
             'maxPathLength',
-            'permittedDnsNames',
+            'permittedDnsDomains',
             'excludeCnFromSans',
             'ou',
             'organization',
