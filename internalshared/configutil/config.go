@@ -19,7 +19,8 @@ type SharedConfig struct {
 
 	EntSharedConfig
 
-	Listeners    []*Listener    `hcl:"-"`
+	Listeners []*Listener `hcl:"-"`
+
 	UserLockouts []*UserLockout `hcl:"-"`
 
 	Seals   []*KMS   `hcl:"-"`

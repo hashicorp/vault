@@ -166,17 +166,9 @@ func setMissingUserLockoutValuesInMap(userLockoutsMap map[string]*UserLockout) m
 
 // setNilValuesForRawUserLockoutFields sets nil values for user lockout Raw fields
 func setNilValuesForRawUserLockoutFields(userLockout *UserLockout) *UserLockout {
-	if userLockout.LockoutThresholdRaw != nil {
-		userLockout.LockoutThresholdRaw = nil
-	}
-	if userLockout.LockoutDurationRaw != nil {
-		userLockout.LockoutDurationRaw = nil
-	}
-	if userLockout.LockoutCounterResetRaw != nil {
-		userLockout.LockoutCounterResetRaw = nil
-	}
-	if userLockout.DisableLockoutRaw != nil {
-		userLockout.DisableLockoutRaw = nil
-	}
+	userLockout.LockoutThresholdRaw = nil
+	userLockout.LockoutDurationRaw = nil
+	userLockout.LockoutCounterResetRaw = nil
+	userLockout.DisableLockoutRaw = nil
 	return userLockout
 }
