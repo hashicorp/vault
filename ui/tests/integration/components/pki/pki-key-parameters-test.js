@@ -57,7 +57,7 @@ module('Integration | Component | pki-key-parameters', function (hooks) {
     assert.strictEqual(
       this.model.keyBits,
       256,
-      'dynamically sets the new selected value for key_bits on the model based on the selected of key_type.'
+      'dynamically sets the new selected value for key_bits on the model based on the selection of key_type.'
     );
 
     await fillIn(SELECTORS.keyType, 'ed25519');
@@ -69,7 +69,7 @@ module('Integration | Component | pki-key-parameters', function (hooks) {
     assert.strictEqual(
       this.model.keyBits,
       0,
-      'dynamically sets the new selected value for key_bits on the model based on the selected of key_type.'
+      'dynamically sets the new selected value for key_bits on the model based on the selection of key_type.'
     );
 
     await fillIn(SELECTORS.keyType, 'ec');
@@ -78,7 +78,7 @@ module('Integration | Component | pki-key-parameters', function (hooks) {
     assert.strictEqual(
       this.model.keyBits,
       384,
-      'dynamically sets the new selected value for key_bits on the model based on the selected of key_type.'
+      'dynamically sets the new selected value for key_bits on the model based on the selection of key_type.'
     );
 
     await fillIn(SELECTORS.signatureBits, '384');

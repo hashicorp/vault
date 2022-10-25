@@ -28,11 +28,11 @@ export default class RadioSelectTtlOrString extends Component {
     // Clear the previous selection if they have clicked the other radio button.
     if (selection === 'specificDate') {
       this.args.model.set('ttl', '');
-      this.ttlTime = ''; //clear out the form field
+      this.ttlTime = '';
     }
     if (selection === 'ttl') {
       this.args.model.set('notAfter', '');
-      this.notAfter = ''; //clear out the form field
+      this.notAfter = '';
       this.args.model.set('ttl', this.ttlTime);
     }
   }

@@ -28,16 +28,3 @@ export const SELECTORS = {
   roleCreateButton: '[data-test-pki-role-save]',
   roleCancelButton: '[data-test-pki-role-cancel]',
 };
-
-export async function clearRecord(store, modelType, id) {
-  await store
-    .findRecord(modelType, id)
-    .then((model) => {
-      deleteModelRecord(model);
-    })
-    .catch(() => {});
-}
-
-const deleteModelRecord = async (model) => {
-  await model.destroyRecord();
-};

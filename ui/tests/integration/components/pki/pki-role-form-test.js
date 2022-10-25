@@ -3,7 +3,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-import { SELECTORS, clearRecord } from 'vault/tests/helpers/pki-engine';
+import { SELECTORS } from 'vault/tests/helpers/pki-engine';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
 module('Integration | Component | pki/role-form', function (hooks) {
@@ -42,8 +42,6 @@ module('Integration | Component | pki/role-form', function (hooks) {
     assert.dom(SELECTORS.policyIdentifiers).exists('shows form-field group policy identifiers');
     assert.dom(SELECTORS.san).exists('shows form-field group SAN');
     assert.dom(SELECTORS.additionalSubjectFields).exists('shows form-field group additional subject fields');
-
-    await clearRecord(this.store, 'pki/pki-role-engine', 'test-role');
   });
 
   test('it should save a new pki role with various options selected', async function (assert) {
@@ -105,7 +103,6 @@ module('Integration | Component | pki/role-form', function (hooks) {
       'some-serial-number'
     );
     await click(SELECTORS.roleCreateButton);
-    await clearRecord(this.store, 'pki/pki-role-engine', 'test-role');
   });
 
   /* FUTURE TEST TODO:
