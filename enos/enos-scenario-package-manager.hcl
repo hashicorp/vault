@@ -1,12 +1,12 @@
 scenario "package_manager" {
   matrix {
-    arch    = ["amd64", "arm64"]
-    backend = ["consul", "raft"]
-    artifact_source   = ["local", "crt", "artifactory"]
-    consul_version = ["1.13.2"]
-    distro  = ["ubuntu", "rhel"]
-    edition = ["ent"]
-    seal    = ["awskms", "shamir"]
+    arch            = ["amd64", "arm64"]
+    backend         = ["consul", "raft"]
+    artifact_source = ["local", "crt", "artifactory"]
+    consul_version  = ["1.13.2"]
+    distro          = ["ubuntu", "rhel"]
+    edition         = ["ent"]
+    seal            = ["awskms", "shamir"]
   }
 
   terraform_cli = terraform_cli.default
@@ -49,21 +49,21 @@ scenario "package_manager" {
     module = "build_${matrix.artifact_source}"
 
     variables {
-      build_tags            = try(var.vault_local_build_tags, local.build_tags[matrix.edition])
-      bundle_path           = local.bundle_path
-      goarch                = matrix.arch
-      goos                  = "linux"
-      artifactory_host      = matrix.artifact_source == "artifactory" ? var.artifactory_host : null
-      artifactory_repo      = matrix.artifact_source == "artifactory" ? var.artifactory_repo : null
-      artifactory_username  = matrix.artifact_source == "artifactory" ? var.artifactory_username : null
-      artifactory_token     = matrix.artifact_source == "artifactory" ? var.artifactory_token : null
-      arch                  = matrix.artifact_source == "artifactory" ? matrix.arch : null
-      product_version = matrix.artifact_source == "artifactory" ? var.vault_product_version : null
-      artifact_type         = local.artifact_type
-      distro                = matrix.artifact_source == "artifactory" ? matrix.distro : null
-      edition               = matrix.artifact_source == "artifactory" ? matrix.edition : null
-      instance_type         = matrix.artifact_source == "artifactory" ? local.vault_instance_type : null
-      revision              = var.vault_revision
+      build_tags           = try(var.vault_local_build_tags, local.build_tags[matrix.edition])
+      bundle_path          = local.bundle_path
+      goarch               = matrix.arch
+      goos                 = "linux"
+      artifactory_host     = matrix.artifact_source == "artifactory" ? var.artifactory_host : null
+      artifactory_repo     = matrix.artifact_source == "artifactory" ? var.artifactory_repo : null
+      artifactory_username = matrix.artifact_source == "artifactory" ? var.artifactory_username : null
+      artifactory_token    = matrix.artifact_source == "artifactory" ? var.artifactory_token : null
+      arch                 = matrix.artifact_source == "artifactory" ? matrix.arch : null
+      product_version      = matrix.artifact_source == "artifactory" ? var.vault_product_version : null
+      artifact_type        = local.artifact_type
+      distro               = matrix.artifact_source == "artifactory" ? matrix.distro : null
+      edition              = matrix.artifact_source == "artifactory" ? matrix.edition : null
+      instance_type        = matrix.artifact_source == "artifactory" ? local.vault_instance_type : null
+      revision             = var.vault_revision
     }
   }
 
