@@ -8,7 +8,7 @@
     data-test-toggle-group={{@group}}
   />
   {{#if (get @model prop)}}
-    <div class="box is-tall is-marginless">
+    <div class="box is-tall is-marginless" data-test-surrounding-div={{@group}}>
       <FormFieldLabel
         for="keyUsageLabel"
         @label="Key usage"
