@@ -779,3 +779,172 @@ func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
 	}
 	t.Fatalf("did not complete before deadline, err: %v", err)
 }
+
+func CreateEntityAndAlias(t testing.T, client *api.Client, mountAccessor, entityName, aliasName string) (*api.Client, string, string) {
+	t.Helper()
+	_, err := client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("auth/userpass/users/%s", aliasName), map[string]interface{}{
+		"password": "testpassword",
+	})
+	if err != nil {
+		t.Fatalf("failed to configure userpass backend: %v", err)
+	}
+
+	userClient, err := client.Clone()
+	if err != nil {
+		t.Fatalf("failed to clone the client:%v", err)
+	}
+	userClient.SetToken(client.Token())
+
+	resp, err := client.Logical().WriteWithContext(context.Background(), "identity/entity", map[string]interface{}{
+		"name": entityName,
+	})
+	if err != nil {
+		t.Fatalf("failed to create an entity:%v", err)
+	}
+	entityID := resp.Data["id"].(string)
+
+	aliasResp, err := client.Logical().WriteWithContext(context.Background(), "identity/entity-alias", map[string]interface{}{
+		"name":           aliasName,
+		"canonical_id":   entityID,
+		"mount_accessor": mountAccessor,
+	})
+	if err != nil {
+		t.Fatalf("failed to create an entity alias:%v", err)
+	}
+
+	aliasID := aliasResp.Data["id"].(string)
+	if aliasID == "" {
+		t.Fatal("Alias ID not present in response")
+	}
+	return userClient, entityID, aliasID
+}
+
+func SetupAudit(t testing.T, client *api.Client) {
+	t.Helper()
+	// Enable the audit backend
+	if err := client.Sys().EnableAuditWithOptions("noop", &api.EnableAuditOptions{Type: "noop"}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func SetupTOTPMount(t testing.T, client *api.Client) {
+	t.Helper()
+	// Mount the TOTP backend
+	mountInfo := &api.MountInput{
+		Type: "totp",
+	}
+	if err := client.Sys().Mount("totp", mountInfo); err != nil {
+		t.Fatalf("failed to mount totp backend: %v", err)
+	}
+}
+
+func SetupTOTPSecretsEngine(t testing.T, client *api.Client, config map[string]interface{}) string {
+	t.Helper()
+	resp1, err := client.Logical().Write("identity/mfa/method/totp", config)
+
+	if err != nil || (resp1 == nil) {
+		t.Fatalf("bad: resp: %#v\n err: %v", resp1, err)
+	}
+
+	methodID := resp1.Data["method_id"].(string)
+	if methodID == "" {
+		t.Fatalf("method ID is empty")
+	}
+
+	// creating MFAEnforcementConfig
+	_, err = client.Logical().WriteWithContext(context.Background(), "identity/mfa/login-enforcement/randomName", map[string]interface{}{
+		"auth_method_types": []string{"userpass"},
+		"name":              "randomName",
+		"mfa_method_ids":    []string{methodID},
+	})
+	if err != nil {
+		t.Fatalf("failed to configure MFAEnforcementConfig: %v", err)
+	}
+
+	return methodID
+}
+
+func SetupUserpassMountAccessor(t testing.T, client *api.Client) string {
+	t.Helper()
+	var mountAccessor string
+	// Enable Userpass authentication
+	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	if err != nil {
+		t.Fatalf("failed to enable userpass auth: %v", err)
+	}
+
+	auths, err := client.Sys().ListAuthWithContext(context.Background())
+	if err != nil {
+		t.Fatalf("failed to list auth methods: %v", err)
+	}
+	if auths != nil && auths["userpass/"] != nil {
+		mountAccessor = auths["userpass/"].Accessor
+	} else {
+		t.Fatalf("failed to get userpass mount accessor")
+	}
+
+	return mountAccessor
+}
+
+func RegisterEntityInTOTPEngine(t testing.T, client *api.Client, entityID, methodID string) string {
+	t.Helper()
+	totpGenName := fmt.Sprintf("%s-%s", entityID, methodID)
+	secret, err := client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("identity/mfa/method/totp/admin-generate"), map[string]interface{}{
+		"entity_id": entityID,
+		"method_id": methodID,
+	})
+	if err != nil {
+		t.Fatalf("failed to generate a TOTP secret on an entity: %v", err)
+	}
+	totpURL := secret.Data["url"].(string)
+	if totpURL == "" {
+		t.Fatalf("failed to get TOTP url in secret response: %+v", secret)
+	}
+	_, err = client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("totp/keys/%s", totpGenName), map[string]interface{}{
+		"url": totpURL,
+	})
+	if err != nil {
+		t.Fatalf("failed to register a TOTP URL: %v", err)
+	}
+	return totpGenName
+}
+
+func GetTOTPCodeFromEngine(t testing.T, client *api.Client, enginePath string) string {
+	t.Helper()
+	totpPath := fmt.Sprintf("totp/code/%s", enginePath)
+	secret, err := client.Logical().ReadWithContext(context.Background(), totpPath)
+	if err != nil {
+		t.Fatalf("failed to create totp passcode: %v", err)
+	}
+	if secret == nil {
+		t.Fatalf("bad secret returned from %s", totpPath)
+	}
+	return secret.Data["code"].(string)
+}
+
+func SetupLoginMFATOTP(t testing.T, client *api.Client) (*api.Client, string, string) {
+	t.Helper()
+	SetupAudit(t, client)
+	SetupTOTPMount(t, client)
+	SetupLoginMFATOTP(t, client)
+	mountAccessor := SetupUserpassMountAccessor(t, client)
+
+	// Creating two users in the userpass auth mount
+	entityClient, entityID, _ := CreateEntityAndAlias(t, client, mountAccessor, "entity1", "testuser1")
+
+	totpConfig := map[string]interface{}{
+		"issuer":                  "yCorp",
+		"period":                  30,
+		"algorithm":               "SHA256",
+		"digits":                  6,
+		"skew":                    0,
+		"key_size":                20,
+		"qr_size":                 200,
+		"max_validation_attempts": 5,
+	}
+
+	methodID := SetupTOTPSecretsEngine(t, client, totpConfig)
+	return entityClient, entityID, methodID
+}
