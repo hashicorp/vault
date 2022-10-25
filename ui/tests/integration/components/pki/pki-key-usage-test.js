@@ -15,7 +15,7 @@ module('Integration | Component | pki-key-usage', function (hooks) {
     this.model.backend = 'pki';
   });
 
-  test('it should render the component when group is Key usage', async function (assert) {
+  test('it should render the component', async function (assert) {
     assert.expect(7);
     await render(
       hbs`
