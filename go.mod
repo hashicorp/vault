@@ -106,7 +106,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-couchbase v0.7.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.11.1
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.7.0
-	github.com/hashicorp/vault-plugin-database-snowflake v0.5.1
+	github.com/hashicorp/vault-plugin-database-snowflake v0.5.2
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.13.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.12.0

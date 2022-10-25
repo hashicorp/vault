@@ -149,6 +149,17 @@ type ControlGroup struct {
 	Factors []*ControlGroupFactor
 }
 
+func (c *ControlGroup) Clone() (*ControlGroup, error) {
+	clonedControlGroup, err := copystructure.Copy(c)
+	if err != nil {
+		return nil, err
+	}
+
+	cg := clonedControlGroup.(*ControlGroup)
+
+	return cg, nil
+}
+
 type ControlGroupFactor struct {
 	Name                   string
 	Identity               *IdentityFactor `hcl:"identity"`
