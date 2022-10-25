@@ -60,7 +60,7 @@ scenario "smoke" {
       artifactory_username  = matrix.artifact_source == "artifactory" ? var.artifactory_username : null
       artifactory_token     = matrix.artifact_source == "artifactory" ? var.artifactory_token : null
       arch                  = matrix.artifact_source == "artifactory" ? matrix.arch : null
-      vault_product_version = var.vault_product_version
+      product_version = var.vault_product_version
       artifact_type         = matrix.artifact_source == "artifactory" ? var.vault_artifact_type : null
       distro                = matrix.artifact_source == "artifactory" ? matrix.distro : null
       edition               = matrix.artifact_source == "artifactory" ? matrix.edition : null

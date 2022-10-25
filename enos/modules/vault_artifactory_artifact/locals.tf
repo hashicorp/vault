@@ -5,23 +5,23 @@ locals {
     amd64 = {
       ubuntu = {
         "oss"     = "-1_amd64.deb"
-        "ent"     = "+ent-1_amd64.deb"
-        "ent.hsm" = "+ent-1_amd64.deb"
+        "ent"     = "-1_amd64.deb"
+        "ent.hsm" = "-1_amd64.deb"
       }
       rhel = {
         "oss"     = "-1.x86_64.rpm"
-        "ent"     = "+ent-1.x86_64.rpm"
-        "ent.hsm" = "+ent-1.x86_64.rpm"
+        "ent"     = "-1.x86_64.rpm"
+        "ent.hsm" = "-1.x86_64.rpm"
       }
     }
     arm64 = {
       ubuntu = {
         "oss" = "-1_arm64.deb"
-        "ent" = "+ent-1_arm64.deb"
+        "ent" = "-1_arm64.deb"
       }
       rhel = {
         "oss" = "-1.aarch64.rpm"
-        "ent" = "+ent-1.aarch64.rpm"
+        "ent" = "-1.aarch64.rpm"
       }
     }
   }
@@ -46,12 +46,12 @@ locals {
   artifact_name_edition = {
     "oss"              = ""
     "ent"              = ""
-    "ent.hsm"          = "+ent.hsm"
-    "ent.fips1402"     = "+ent.fips1402"
-    "ent.hsm.fips1402" = "+ent.hsm.fips1402"
+    "ent.hsm"          = ".hsm"
+    "ent.fips1402"     = ".fips1402"
+    "ent.hsm.fips1402" = ".hsm.fips1402"
   }
 
   artifact_name_prefix    = var.artifact_type == "package" ? local.artifact_package_release_names[var.distro][var.edition] : "vault_"
   artifact_name_extension = var.artifact_type == "package" ? local.package_extensions[var.arch][var.distro][var.edition] : "${local.artifact_name_edition[var.edition]}_linux_${var.arch}.zip"
-  artifact_name           = var.artifact_type == "package" ? "${local.artifact_name_prefix}${replace(var.vault_product_version, "-", "~")}${local.artifact_name_extension}" : "${local.artifact_name_prefix}${var.vault_product_version}${local.artifact_name_extension}"
+  artifact_name           = var.artifact_type == "package" ? "${local.artifact_name_prefix}${replace(var.product_version, "-", "~")}${local.artifact_name_extension}" : "${local.artifact_name_prefix}${var.product_version}${local.artifact_name_extension}"
 }

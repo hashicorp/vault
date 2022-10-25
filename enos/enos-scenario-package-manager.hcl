@@ -3,7 +3,7 @@ scenario "package_manager" {
     arch    = ["amd64", "arm64"]
     backend = ["consul", "raft"]
     artifact_source   = ["local", "crt", "artifactory"]
-    // consul_version = ["1.12.3", "1.11.7", "1.10.12"]
+    consul_version = ["1.13.2"]
     distro  = ["ubuntu", "rhel"]
     edition = ["ent"]
     seal    = ["awskms", "shamir"]
@@ -18,6 +18,7 @@ scenario "package_manager" {
   ]
 
   locals {
+    artifact_type = "package"
     build_tags = {
       "ent" = ["enterprise", "ent"]
     }
@@ -27,7 +28,6 @@ scenario "package_manager" {
       rhel   = provider.enos.rhel
       ubuntu = provider.enos.ubuntu
     }
-    // revision                = matrix.artifact_source == "artifactory" ? matrix.edition == "oss" ? var.vault_oss_product_revision : var.vault_enterprise_product_revision : null
     install_artifactory_artifact = var.vault_revision != null && local.bundle_path == null
     tags = merge({
       "Project Name" : var.project_name
@@ -58,7 +58,8 @@ scenario "package_manager" {
       artifactory_username  = matrix.artifact_source == "artifactory" ? var.artifactory_username : null
       artifactory_token     = matrix.artifact_source == "artifactory" ? var.artifactory_token : null
       arch                  = matrix.artifact_source == "artifactory" ? matrix.arch : null
-      vault_product_version = matrix.artifact_source == "artifactory" ? var.vault_product_version : null
+      product_version = matrix.artifact_source == "artifactory" ? var.vault_product_version : null
+      artifact_type         = local.artifact_type
       distro                = matrix.artifact_source == "artifactory" ? matrix.distro : null
       edition               = matrix.artifact_source == "artifactory" ? matrix.edition : null
       instance_type         = matrix.artifact_source == "artifactory" ? local.vault_instance_type : null
@@ -109,10 +110,10 @@ scenario "package_manager" {
     variables {
       ami_id      = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
       common_tags = local.tags
-      // consul_release = {
-      //   edition = var.backend_edition
-      //   version = matrix.consul_version
-      // }
+      consul_release = {
+        edition = var.backend_edition
+        version = matrix.consul_version
+      }
       instance_type = var.backend_instance_type
       kms_key_arn   = step.create_vpc.kms_key_arn
       vpc_id        = step.create_vpc.vpc_id
@@ -158,7 +159,6 @@ scenario "package_manager" {
     }
 
     variables {
-      // vault_instances   = step.create_vault_cluster.vault_instances
       vault_install_dir = local.vault_install_dir[matrix.distro]
 
       vault_instances       = step.create_vault_cluster.vault_instances

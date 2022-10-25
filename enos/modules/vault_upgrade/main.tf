@@ -81,6 +81,7 @@ resource "enos_bundle_install" "upgrade_vault_binary" {
   for_each = local.instances
 
   destination = var.vault_install_dir
+  artifactory = var.vault_artifactory_release
   path        = var.vault_local_bundle_path
 
   transport = {
