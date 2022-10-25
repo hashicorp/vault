@@ -345,7 +345,65 @@ func (c *Client) performLdapFilterGroupsSearch(cfg *ConfigEntry, conn Connection
 		SizeLimit: math.MaxInt32,
 	})
 	if err != nil {
-		return nil, errwrap.Wrapf("LDAP search failed: {{err}}", err)
+		return nil, fmt.Errorf("LDAP search failed: %w", err)
+	}
+
+	return result.Entries, nil
+}
+
+func (c *Client) performLdapFilterGroupsSearchPaging(cfg *ConfigEntry, conn PagingConnection, userDN string, username string) ([]*ldap.Entry, error) {
+	if cfg.GroupFilter == "" {
+		c.Logger.Warn("groupfilter is empty, will not query server")
+		return make([]*ldap.Entry, 0), nil
+	}
+
+	if cfg.GroupDN == "" {
+		c.Logger.Warn("groupdn is empty, will not query server")
+		return make([]*ldap.Entry, 0), nil
+	}
+
+	// If groupfilter was defined, resolve it as a Go template and use the query for
+	// returning the user's groups
+	if c.Logger.IsDebug() {
+		c.Logger.Debug("compiling group filter", "group_filter", cfg.GroupFilter)
+	}
+
+	// Parse the configuration as a template.
+	// Example template "(&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))"
+	t, err := template.New("queryTemplate").Parse(cfg.GroupFilter)
+	if err != nil {
+		return nil, fmt.Errorf("LDAP search failed due to template compilation error: %w", err)
+	}
+
+	// Build context to pass to template - we will be exposing UserDn and Username.
+	context := struct {
+		UserDN   string
+		Username string
+	}{
+		ldap.EscapeFilter(userDN),
+		ldap.EscapeFilter(username),
+	}
+
+	var renderedQuery bytes.Buffer
+	if err := t.Execute(&renderedQuery, context); err != nil {
+		return nil, fmt.Errorf("LDAP search failed due to template parsing error: %w", err)
+	}
+
+	if c.Logger.IsDebug() {
+		c.Logger.Debug("searching", "groupdn", cfg.GroupDN, "rendered_query", renderedQuery.String())
+	}
+
+	result, err := conn.SearchWithPaging(&ldap.SearchRequest{
+		BaseDN: cfg.GroupDN,
+		Scope:  ldap.ScopeWholeSubtree,
+		Filter: renderedQuery.String(),
+		Attributes: []string{
+			cfg.GroupAttr,
+		},
+		SizeLimit: math.MaxInt32,
+	}, math.MaxInt32)
+	if err != nil {
+		return nil, fmt.Errorf("LDAP search failed: %w", err)
 	}
 
 	return result.Entries, nil
@@ -462,7 +520,11 @@ func (c *Client) GetLdapGroups(cfg *ConfigEntry, conn Connection, userDN string,
 	if cfg.UseTokenGroups {
 		entries, err = c.performLdapTokenGroupsSearch(cfg, conn, userDN)
 	} else {
-		entries, err = c.performLdapFilterGroupsSearch(cfg, conn, userDN, username)
+		if paging, ok := conn.(PagingConnection); ok {
+			entries, err = c.performLdapFilterGroupsSearchPaging(cfg, paging, userDN, username)
+		} else {
+			entries, err = c.performLdapFilterGroupsSearch(cfg, conn, userDN, username)
+		}
 	}
 	if err != nil {
 		return nil, err
