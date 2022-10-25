@@ -2,19 +2,16 @@ package mongodb
 
 import (
 	"context"
-	"crypto/tls"
-	"errors"
 	"fmt"
-	"net"
-	"net/url"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"os"
-	"strconv"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/vault/helper/testhelpers/docker"
-	"gopkg.in/mgo.v2"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	//"gopkg.in/mgo.v2"
 )
 
 // PrepareTestContainer calls PrepareTestContainerWithDatabase without a
@@ -44,23 +41,30 @@ func PrepareTestContainerWithDatabase(t *testing.T, version, dbName string) (fun
 		if dbName != "" {
 			connURL = fmt.Sprintf("%s/%s", connURL, dbName)
 		}
-		dialInfo, err := ParseMongoURL(connURL)
+		/*dialInfo, err := ParseMongoURL(connURL)
+		if err != nil {
+			return nil, err
+		}*/
+
+		//session, err := mgo.DialWithInfo(dialInfo)
+		ctx, _ = context.WithTimeout(context.Background(), 10*time.Second)
+		client, err := mongo.Connect(ctx, options.Client().ApplyURI(connURL))
 		if err != nil {
 			return nil, err
 		}
 
-		session, err := mgo.DialWithInfo(dialInfo)
+		err = client.Ping(ctx, readpref.Primary())
 		if err != nil {
 			return nil, err
 		}
-		defer session.Close()
+		//defer session.Close()
 
-		session.SetSyncTimeout(1 * time.Minute)
+		/*session.SetSyncTimeout(1 * time.Minute)
 		session.SetSocketTimeout(1 * time.Minute)
 		err = session.Ping()
 		if err != nil {
 			return nil, err
-		}
+		}*/
 
 		return docker.NewServiceURLParse(connURL)
 	})
@@ -72,7 +76,7 @@ func PrepareTestContainerWithDatabase(t *testing.T, version, dbName string) (fun
 }
 
 // ParseMongoURL will parse a connection string and return a configured dialer
-func ParseMongoURL(rawURL string) (*mgo.DialInfo, error) {
+/*func ParseMongoURL(rawURL string) (*mgo.DialInfo, error) {
 	url, err := url.Parse(rawURL)
 	if err != nil {
 		return nil, err
@@ -138,4 +142,4 @@ func ParseMongoURL(rawURL string) (*mgo.DialInfo, error) {
 	}
 
 	return &info, nil
-}
+}*/
