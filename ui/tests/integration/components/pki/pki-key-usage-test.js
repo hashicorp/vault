@@ -64,7 +64,7 @@ module('Integration | Component | pki-key-usage', function (hooks) {
       ['DigitalSignature', 'KeyAgreement', 'KeyEncipherment'],
       'sets the default values for key_usage on the model.'
     );
-    assert.deepEqual(
+    assert.strictEqual(
       this.model.extKeyUsage,
       undefined,
       'sets no default value set for ext_key_usage on load.'

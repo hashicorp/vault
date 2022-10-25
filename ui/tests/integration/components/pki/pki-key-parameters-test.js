@@ -47,10 +47,13 @@ module('Integration | Component | pki-key-parameters', function (hooks) {
   `,
       { owner: this.engine }
     );
-    assert.deepEqual(this.model.keyType, 'rsa', 'sets the default value for key_type on the model.');
-    assert.deepEqual(this.model.keyBits, 2048, 'sets the default value for key_bits on the model.');
-    assert.deepEqual(this.model.signatureBits, 0, 'sets the default value for signature_bits on the model.');
-
+    assert.strictEqual(this.model.keyType, 'rsa', 'sets the default value for key_type on the model.');
+    assert.strictEqual(this.model.keyBits, 2048, 'sets the default value for key_bits on the model.');
+    assert.strictEqual(
+      this.model.signatureBits,
+      0,
+      'sets the default value for signature_bits on the model.'
+    );
     await click(SELECTORS.keyParams);
     await fillIn(SELECTORS.keyType, 'ec');
     assert.strictEqual(this.model.keyType, 'ec', 'sets the new selected value for key_type on the model.');
