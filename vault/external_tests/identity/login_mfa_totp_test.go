@@ -88,7 +88,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 
 	totpConfig := map[string]interface{}{
 		"issuer":                  "yCorp",
-		"period":                  10,
+		"period":                  5,
 		"algorithm":               "SHA512",
 		"digits":                  6,
 		"skew":                    0,
