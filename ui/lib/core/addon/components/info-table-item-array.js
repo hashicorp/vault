@@ -56,7 +56,7 @@ export default class InfoTableItemArray extends Component {
   get displayArrayTruncated() {
     let { displayArray } = this.args;
     if (!displayArray) return null;
-    if ((displayArray.length >= 10) & !this.args.doNotTruncate) {
+    if (displayArray.length >= 10 && !this.args.doNotTruncate) {
       // if array greater than 10 in length only display the first 5
       return displayArray.slice(0, 5);
     }

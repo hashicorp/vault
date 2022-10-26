@@ -29,7 +29,7 @@ export const testAliasCRUD = async function (name, itemType, assert) {
 
   idRow = aliasShowPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
   aliasID = idRow.rowValue;
-  assert.equal(
+  assert.strictEqual(
     currentRouteName(),
     'vault.cluster.access.identity.aliases.show',
     'navigates to the correct route'
@@ -38,7 +38,7 @@ export const testAliasCRUD = async function (name, itemType, assert) {
 
   await aliasIndexPage.visit({ item_type: itemType });
   await settled();
-  assert.equal(
+  assert.strictEqual(
     aliasIndexPage.items.filterBy('name', name).length,
     1,
     `${itemType}: lists the entity in the entity list`
@@ -56,7 +56,11 @@ export const testAliasCRUD = async function (name, itemType, assert) {
     `${itemType}: shows flash message`
   );
 
-  assert.equal(aliasIndexPage.items.filterBy('id', aliasID).length, 0, `${itemType}: the row is deleted`);
+  assert.strictEqual(
+    aliasIndexPage.items.filterBy('id', aliasID).length,
+    0,
+    `${itemType}: the row is deleted`
+  );
 };
 
 export const testAliasDeleteFromForm = async function (name, itemType, assert) {
@@ -80,7 +84,7 @@ export const testAliasDeleteFromForm = async function (name, itemType, assert) {
   aliasID = idRow.rowValue;
   await aliasShowPage.edit();
   await settled();
-  assert.equal(
+  assert.strictEqual(
     currentRouteName(),
     'vault.cluster.access.identity.aliases.edit',
     `${itemType}: navigates to edit on create`
@@ -93,12 +97,12 @@ export const testAliasDeleteFromForm = async function (name, itemType, assert) {
     aliasIndexPage.flashMessage.latestMessage.startsWith('Successfully deleted'),
     `${itemType}: shows flash message`
   );
-  assert.equal(
+  assert.strictEqual(
     currentRouteName(),
     'vault.cluster.access.identity.aliases.index',
     `${itemType}: navigates to list page on delete`
   );
-  assert.equal(
+  assert.strictEqual(
     aliasIndexPage.items.filterBy('id', aliasID).length,
     0,
     `${itemType}: the row does not show in the list`

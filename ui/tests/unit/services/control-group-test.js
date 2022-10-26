@@ -40,6 +40,7 @@ module('Unit | Service | control group', function (hooks) {
     this.router.reopen({
       transitionTo: sinon.stub(),
       urlFor: sinon.stub().returns('/ui/vault/foo'),
+      currentURL: '/vault/secrets/kv/show/foo',
     });
   });
 
@@ -93,8 +94,8 @@ module('Unit | Service | control group', function (hooks) {
         return result.then(
           () => {},
           (err) => {
-            assert.equal(err.token, 'secret');
-            assert.equal(err.accessor, 'lookup');
+            assert.strictEqual(err.token, 'secret');
+            assert.strictEqual(err.accessor, 'lookup');
           }
         );
       },
@@ -112,27 +113,19 @@ module('Unit | Service | control group', function (hooks) {
     });
   });
 
-  test(`handleError: transitions to accessor when there is no transition passed in`, function (assert) {
-    let error = {
+  test(`handleError: transitions to accessor and stores control group token`, function (assert) {
+    const error = {
       accessor: '12345',
       token: 'token',
       creation_path: 'kv/',
       creation_time: new Date().toISOString(),
       ttl: 400,
     };
-    let url;
-    let expected = { ...error, uiParams: { url } };
-    let transition = {
-      to: {
-        name: 'vault.cluster.foo',
-      },
-    };
-    let service = this.owner.factoryFor('service:control-group').create({
-      urlFromTransition: sinon.spy(),
+    const expected = { ...error, uiParams: { url: '/vault/secrets/kv/show/foo' } };
+    const service = this.owner.factoryFor('service:control-group').create({
       storeControlGroupToken: sinon.spy(),
     });
-    service.handleError(error, transition);
-    assert.ok(service.urlFromTransition.calledWith(transition), 'calls urlFromTransition');
+    service.handleError(error);
     assert.ok(service.storeControlGroupToken.calledWith(expected), 'calls storeControlGroupToken');
     assert.ok(
       this.router.transitionTo.calledWith('vault.cluster.access.control-group-accessor', '12345'),
@@ -162,36 +155,11 @@ module('Unit | Service | control group', function (hooks) {
     assert.ok(contentString.content.includes('token'), 'contains token');
   });
 
-  test('urlFromTransition', function (assert) {
-    let transition = {
-      to: {
-        name: 'vault.cluster.foo',
-        params: { bar: '1' },
-        paramNames: ['bar'],
-        queryParams: {},
-        parent: {
-          name: 'vault.cluster',
-          params: { cluster_name: 'vault' },
-          paramNames: ['cluster_name'],
-          parent: {
-            name: 'vault',
-            params: {},
-            paramNames: [],
-          },
-        },
-      },
-    };
-    let expected = [transition.to.name, 'vault', '1', { queryParams: {} }];
-    let service = this.owner.lookup('service:control-group');
-    service.urlFromTransition(transition);
-    assert.ok(this.router.urlFor.calledWith(...expected), 'calls urlFor with expected args');
-  });
-
   test('storageKey', function (assert) {
     let accessor = '12345';
     let path = 'kv/foo/bar';
     let expectedKey = `${CONTROL_GROUP_PREFIX}${accessor}${TOKEN_SEPARATOR}${path}`;
-    assert.equal(storageKey(accessor, path), expectedKey, 'uses expected key');
+    assert.strictEqual(storageKey(accessor, path), expectedKey, 'uses expected key');
   });
 
   test('keyFromAccessor', function (assert) {
@@ -209,8 +177,8 @@ module('Unit | Service | control group', function (hooks) {
     store.setItem(expectedKey, data);
     store.setItem(`${CONTROL_GROUP_PREFIX}2345${TOKEN_SEPARATOR}${path}`, 'ok');
 
-    assert.equal(subject.keyFromAccessor(accessor), expectedKey, 'finds key given the accessor');
-    assert.equal(subject.keyFromAccessor('foo'), null, 'returns null if no key was found');
+    assert.strictEqual(subject.keyFromAccessor(accessor), expectedKey, 'finds key given the accessor');
+    assert.strictEqual(subject.keyFromAccessor('foo'), null, 'returns null if no key was found');
   });
 
   test('storeControlGroupToken', function (assert) {
@@ -245,7 +213,7 @@ module('Unit | Service | control group', function (hooks) {
     let expectedKey = `${CONTROL_GROUP_PREFIX}${accessor}${TOKEN_SEPARATOR}${path}`;
     store.setItem(expectedKey, { one: '2' });
     subject.deleteControlGroupToken(accessor);
-    assert.equal(Object.keys(store.items).length, 0, 'there are no keys stored in storage');
+    assert.strictEqual(Object.keys(store.items).length, 0, 'there are no keys stored in storage');
   });
 
   test('deleteTokens', function (assert) {
@@ -261,10 +229,10 @@ module('Unit | Service | control group', function (hooks) {
     store.setItem(keyOne, { one: '2' });
     store.setItem(keyTwo, { two: '2' });
     store.setItem('value', 'one');
-    assert.equal(Object.keys(store.items).length, 3, 'stores 3 values');
+    assert.strictEqual(Object.keys(store.items).length, 3, 'stores 3 values');
     subject.deleteTokens();
-    assert.equal(Object.keys(store.items).length, 1, 'removes tokens with control group prefix');
-    assert.equal(store.getItem('value'), 'one', 'keeps the non-prefixed value');
+    assert.strictEqual(Object.keys(store.items).length, 1, 'removes tokens with control group prefix');
+    assert.strictEqual(store.getItem('value'), 'one', 'keeps the non-prefixed value');
   });
 
   test('wrapInfoForAccessor', function (assert) {

@@ -50,6 +50,7 @@ export default class MountBackendForm extends Component {
     const type = this.args.mountType || 'auth';
     const modelType = type === 'secret' ? 'secret-engine' : 'auth-method';
     const model = this.store.createRecord(modelType);
+    model.set('config', this.store.createRecord('mount-config'));
     this.mountModel = model;
   }
 
@@ -94,7 +95,8 @@ export default class MountBackendForm extends Component {
 
   @task
   @waitFor
-  *mountBackend() {
+  *mountBackend(event) {
+    event.preventDefault();
     const mountModel = this.mountModel;
     const { type, path } = mountModel;
     // only submit form if validations pass

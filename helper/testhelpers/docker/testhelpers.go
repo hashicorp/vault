@@ -327,12 +327,18 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*ty
 }
 
 func (d *Runner) Stop(ctx context.Context, containerID string) error {
-	timeout := 5 * time.Second
-	if err := d.DockerAPI.ContainerStop(ctx, containerID, &timeout); err != nil {
-		return err
+	if d.RunOptions.NetworkID != "" {
+		if err := d.DockerAPI.NetworkDisconnect(ctx, d.RunOptions.NetworkID, containerID, true); err != nil {
+			return fmt.Errorf("error disconnecting network (%v): %v", d.RunOptions.NetworkID, err)
+		}
 	}
 
-	return d.DockerAPI.NetworkDisconnect(ctx, d.RunOptions.NetworkID, containerID, true)
+	timeout := 5 * time.Second
+	if err := d.DockerAPI.ContainerStop(ctx, containerID, &timeout); err != nil {
+		return fmt.Errorf("error stopping container: %v", err)
+	}
+
+	return nil
 }
 
 func (d *Runner) Restart(ctx context.Context, containerID string) error {
@@ -464,10 +470,14 @@ type PathContents interface {
 type FileContents struct {
 	Data []byte
 	Mode int64
+	UID  int
+	GID  int
 }
 
 func (b FileContents) UpdateHeader(header *tar.Header) error {
 	header.Mode = b.Mode
+	header.Uid = b.UID
+	header.Gid = b.GID
 	return nil
 }
 
@@ -486,6 +496,41 @@ type BuildContext map[string]PathContents
 
 func NewBuildContext() BuildContext {
 	return BuildContext{}
+}
+
+func BuildContextFromTarball(reader io.Reader) (BuildContext, error) {
+	archive := tar.NewReader(reader)
+	bCtx := NewBuildContext()
+
+	for true {
+		header, err := archive.Next()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+
+			return nil, fmt.Errorf("failed to parse provided tarball: %v", err)
+		}
+
+		data := make([]byte, int(header.Size))
+		read, err := archive.Read(data)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse read from provided tarball: %v", err)
+		}
+
+		if read != int(header.Size) {
+			return nil, fmt.Errorf("unexpectedly short read on tarball: %v of %v", read, header.Size)
+		}
+
+		bCtx[header.Name] = FileContents{
+			Data: data,
+			Mode: header.Mode,
+			UID:  header.Uid,
+			GID:  header.Gid,
+		}
+	}
+
+	return bCtx, nil
 }
 
 func (bCtx *BuildContext) ToTarball() (io.Reader, error) {
@@ -608,4 +653,32 @@ func (d *Runner) BuildImage(ctx context.Context, containerfile string, container
 	}
 
 	return output, nil
+}
+
+func (d *Runner) CopyTo(container string, destination string, contents BuildContext) error {
+	// XXX: currently we use the default options but we might want to allow
+	// modifying cfg.CopyUIDGID in the future.
+	var cfg types.CopyToContainerOptions
+
+	// Convert our provided contents to a tarball to ship up.
+	tar, err := contents.ToTarball()
+	if err != nil {
+		return fmt.Errorf("failed to build contents into tarball: %v", err)
+	}
+
+	return d.DockerAPI.CopyToContainer(context.Background(), container, destination, tar, cfg)
+}
+
+func (d *Runner) CopyFrom(container string, source string) (BuildContext, *types.ContainerPathStat, error) {
+	reader, stat, err := d.DockerAPI.CopyFromContainer(context.Background(), container, source)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to read %v from container: %v", source, err)
+	}
+
+	result, err := BuildContextFromTarball(reader)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to build archive from result: %v", err)
+	}
+
+	return result, &stat, nil
 }

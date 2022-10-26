@@ -13,7 +13,7 @@ export const testCRUD = async (name, itemType, assert) => {
     showPage.flashMessage.latestMessage.startsWith('Successfully saved'),
     `${itemType}: shows a flash message`
   );
-  assert.equal(
+  assert.strictEqual(
     currentRouteName(),
     'vault.cluster.access.identity.show',
     `${itemType}: navigates to show on create`
@@ -22,7 +22,7 @@ export const testCRUD = async (name, itemType, assert) => {
 
   await indexPage.visit({ item_type: itemType });
   await settled();
-  assert.equal(
+  assert.strictEqual(
     indexPage.items.filterBy('name', name).length,
     1,
     `${itemType}: lists the entity in the entity list`
@@ -37,7 +37,7 @@ export const testCRUD = async (name, itemType, assert) => {
     indexPage.flashMessage.latestMessage.startsWith('Successfully deleted'),
     `${itemType}: shows flash message`
   );
-  assert.equal(indexPage.items.filterBy('name', name).length, 0, `${itemType}: the row is deleted`);
+  assert.strictEqual(indexPage.items.filterBy('name', name).length, 0, `${itemType}: the row is deleted`);
 };
 
 export const testDeleteFromForm = async (name, itemType, assert) => {
@@ -55,7 +55,7 @@ export const testDeleteFromForm = async (name, itemType, assert) => {
   await click('[data-test-tab-subnav="metadata"]');
   assert.dom('.info-table-row').hasText('hello goodbye', 'Metadata shows on tab');
   await showPage.edit();
-  assert.equal(
+  assert.strictEqual(
     currentRouteName(),
     'vault.cluster.access.identity.edit',
     `${itemType}: navigates to edit on create`
@@ -69,12 +69,12 @@ export const testDeleteFromForm = async (name, itemType, assert) => {
     indexPage.flashMessage.latestMessage.startsWith('Successfully deleted'),
     `${itemType}: shows flash message`
   );
-  assert.equal(
+  assert.strictEqual(
     currentRouteName(),
     'vault.cluster.access.identity.index',
     `${itemType}: navigates to list page on delete`
   );
-  assert.equal(
+  assert.strictEqual(
     indexPage.items.filterBy('name', name).length,
     0,
     `${itemType}: the row does not show in the list`

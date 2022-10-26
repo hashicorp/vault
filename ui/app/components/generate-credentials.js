@@ -66,7 +66,9 @@ export default Component.extend({
   },
 
   willDestroy() {
-    this.model.unloadRecord();
+    if (!this.model.isDestroyed && !this.model.isDestroying) {
+      this.model.unloadRecord();
+    }
     this._super(...arguments);
   },
 

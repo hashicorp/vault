@@ -1698,6 +1698,10 @@
         "path": "upgrading/plugins"
       },
       {
+        "title": "Upgrade to 1.12.x",
+        "path": "upgrading/upgrade-to-1.12.x"
+      },
+      {
         "title": "Upgrade to 1.11.x",
         "path": "upgrading/upgrade-to-1.11.x"
       },

@@ -254,6 +254,26 @@ jobs:
             docker.io/hashicorp/${{env.repo}}:${{env.version}}
             public.ecr.aws/hashicorp/${{env.repo}}:${{env.version}}
 
+  enos-test-docker:
+    name: Enos Docker
+    # Only run the Enos workflow against branches that are created from the
+    # hashicorp/vault repository. This has the effect of limiting execution of
+    # Enos scenarios to branches that originate from authors that have write
+    # access to hashicorp/vault repository. This is required as Github Actions
+    # will not populate the required secrets for branches created by outside
+    # contributors in order to protect the secrets integrity.
+    if: "! github.event.pull_request.head.repo.fork"
+    needs:
+      - product-metadata
+      - build-docker
+    uses: ./.github/workflows/enos-run-k8s.yml
+    with:
+      artifact-build-date: "${{needs.product-metadata.outputs.build-date}}"
+      artifact-name: "${{github.event.repository.name}}_default_linux_amd64_${{needs.product-metadata.outputs.product-version}}_${{needs.product-metadata.outputs.product-revision}}.docker.tar"
+      artifact-revision: "${{needs.product-metadata.outputs.product-revision}}"
+      artifact-version: "${{needs.product-metadata.outputs.product-version}}"
+    secrets: inherit
+
   build-ubi:
     name: Red Hat UBI ${{ matrix.arch }} build
     needs:
@@ -275,7 +295,7 @@ jobs:
           target: ubi
           arch: ${{matrix.arch}}
           zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.product-metadata.outputs.product-version }}_linux_${{ matrix.arch }}.zip
-          redhat_tag: scan.connect.redhat.com/ospid-f0a92725-d8c6-4023-9a87-ba785b94c3fd/${{env.repo}}:${{env.version}}-ubi
+          redhat_tag: quay.io/redhat-isv-containers/5f89bb5e0b94cf64cfeb500a:${{env.version}}-ubi
 
   enos:
     name: Enos
@@ -294,5 +314,6 @@ jobs:
       artifact-build-date: "${{needs.product-metadata.outputs.build-date}}"
       artifact-name: "vault_${{ needs.product-metadata.outputs.product-version }}_linux_amd64.zip"
       artifact-revision: "${{needs.product-metadata.outputs.product-revision}}"
+      artifact-source: "crt"
       artifact-version: "${{needs.product-metadata.outputs.product-version}}"
     secrets: inherit

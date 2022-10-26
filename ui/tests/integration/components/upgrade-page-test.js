@@ -27,18 +27,18 @@ module('Integration | Component | upgrade page', function (hooks) {
 
   test('it renders with custom attributes', async function (assert) {
     await render(hbs`
-      {{upgrade-page title="Test Feature Title" featureName="Specific Feature Name" minimumEdition="Vault Enterprise Premium"}}
+      {{upgrade-page title="Test Feature Title" minimumEdition="Vault Enterprise Premium"}}
       <div id="modal-wormhole"></div>
     `);
 
     assert.dom('.page-header .title').hasText('Test Feature Title', 'renders custom page title');
     assert
       .dom('[data-test-empty-state-title]')
-      .hasText('Upgrade to use Specific Feature Name', 'renders custom title');
+      .hasText('Upgrade to use Test Feature Title', 'renders custom title');
     assert
       .dom('[data-test-empty-state-message]')
       .hasText(
-        'You will need Vault Enterprise Premium with Specific Feature Name included to use this feature.',
+        'You will need Vault Enterprise Premium with Test Feature Title included to use this feature.',
         'renders custom message'
       );
   });

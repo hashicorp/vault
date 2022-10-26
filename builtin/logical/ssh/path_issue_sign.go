@@ -176,18 +176,14 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, req *logic
 	parsedPrincipals := strutil.RemoveDuplicates(strutil.ParseStringSlice(validPrincipals, ","), false)
 	// Build list of allowed Principals from template and static principalsAllowedByRole
 	var allowedPrincipals []string
-	for _, principal := range strutil.RemoveDuplicates(strutil.ParseStringSlice(principalsAllowedByRole, ","), false) {
-		if enableTemplating {
-			rendered, err := b.renderPrincipal(principal, req)
-			if err != nil {
-				return nil, err
-			}
-			// Template returned a principal
-			allowedPrincipals = append(allowedPrincipals, rendered)
-		} else {
-			// Static principal
-			allowedPrincipals = append(allowedPrincipals, principal)
+	if enableTemplating {
+		rendered, err := b.renderPrincipal(principalsAllowedByRole, req)
+		if err != nil {
+			return nil, err
 		}
+		allowedPrincipals = strutil.RemoveDuplicates(strutil.ParseStringSlice(rendered, ","), false)
+	} else {
+		allowedPrincipals = strutil.RemoveDuplicates(strutil.ParseStringSlice(principalsAllowedByRole, ","), false)
 	}
 
 	switch {
