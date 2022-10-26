@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -138,6 +139,10 @@ func (c *WriteCommand) Run(args []string) int {
 	}
 
 	secret, err := client.Logical().Write(path, data)
+	return handleWriteSecretOutput(c.BaseCommand, path, secret, err)
+}
+
+func handleWriteSecretOutput(c *BaseCommand, path string, secret *api.Secret, err error) int {
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", path, err))
 		if secret != nil {

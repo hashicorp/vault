@@ -488,6 +488,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"patch": func() (cli.Command, error) {
+			return &PatchCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"path-help": func() (cli.Command, error) {
 			return &PathHelpCommand{
 				BaseCommand: getBaseCommand(),
