@@ -215,8 +215,8 @@ func startMongoWithTLS(t *testing.T, version string, confDir string) (retURL str
 		var err error
 		ctx, _ := context.WithTimeout(context.Background(), 1*time.Minute)
 		client, err := mongo.Connect(ctx, options.Client().ApplyURI(retURL))
-		if err != nil {
-			return err
+		if err = client.Disconnect(ctx); err != nil {
+			t.Fatal()
 		}
 		return client.Ping(ctx, readpref.Primary())
 	})
