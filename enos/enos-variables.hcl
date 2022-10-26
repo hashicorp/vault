@@ -91,11 +91,8 @@ variable "tfc_api_token" {
 }
 
 variable "vault_artifact_type" {
-  description = "The Vault artifact type"
+  description = "The Vault artifact type package or bundle"
   default     = "bundle"
-  validation {
-    condition = var.vault_artifact_type == "package" || var.vault_artifact_type == "bundle"
-  }
 }
 
 variable "vault_autopilot_initial_release" {

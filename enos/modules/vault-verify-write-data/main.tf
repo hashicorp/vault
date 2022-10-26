@@ -19,8 +19,6 @@ locals {
 resource "enos_remote_exec" "smoke-enable-secrets-kv" {
 
   content = templatefile("${path.module}/templates/smoke-enable-secrets-kv.sh", {
-    # Only enable the secrets engine on the first node
-    instance_id       = 0
     vault_install_dir = var.vault_install_dir,
     vault_token       = var.vault_root_token,
   })

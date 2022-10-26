@@ -3,10 +3,22 @@ scenario "smoke" {
     arch            = ["amd64", "arm64"]
     backend         = ["consul", "raft"]
     artifact_source = ["local", "crt", "artifactory"]
+    artifact_type   = ["bundle", "package"]
     consul_version  = ["1.13.2", "1.12.5", "1.11.10"]
     distro          = ["ubuntu", "rhel"]
     edition         = ["oss", "ent"]
     seal            = ["awskms", "shamir"]
+
+    # Packages are not offered for the oss edition
+    exclude {
+      edition       = ["oss"]
+      artifact_type = ["package"]
+    }
+    # Currently, artifact_source:crt only uses bundles in CI
+    exclude {
+      artifact_source = ["crt"]
+      artifact_type   = ["package"]
+    }
   }
 
   terraform_cli = terraform_cli.default
@@ -28,7 +40,6 @@ scenario "smoke" {
       rhel   = provider.enos.rhel
       ubuntu = provider.enos.ubuntu
     }
-    install_artifactory_artifact = local.bundle_path == null
     tags = merge({
       "Project Name" : var.project_name
       "Project" : "Enos",
@@ -40,6 +51,11 @@ scenario "smoke" {
     }
     vault_instance_type = coalesce(var.vault_instance_type, local.vault_instance_types[matrix.arch])
     vault_license_path  = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
+    vault_install_dir_packages = {
+      rhel   = "/bin"
+      ubuntu = "/usr/bin"
+    }
+    vault_install_dir = matrix.artifact_type == "bundle" ? var.vault_install_dir : local.vault_install_dir_packages[matrix.distro]
   }
 
   step "get_local_metadata" {
@@ -51,6 +67,7 @@ scenario "smoke" {
     module = "build_${matrix.artifact_source}"
 
     variables {
+<<<<<<< HEAD
       build_tags            = var.vault_local_build_tags != null ? var.vault_local_build_tags : local.build_tags[matrix.edition]
       bundle_path           = local.bundle_path
       goarch                = matrix.arch
@@ -66,6 +83,23 @@ scenario "smoke" {
       edition               = matrix.artifact_source == "artifactory" ? matrix.edition : null
       instance_type         = matrix.artifact_source == "artifactory" ? local.vault_instance_type : null
       revision              = var.vault_revision
+=======
+      build_tags           = try(var.vault_local_build_tags, local.build_tags[matrix.edition])
+      bundle_path          = local.bundle_path
+      goarch               = matrix.arch
+      goos                 = "linux"
+      artifactory_host     = matrix.artifact_source == "artifactory" ? var.artifactory_host : null
+      artifactory_repo     = matrix.artifact_source == "artifactory" ? var.artifactory_repo : null
+      artifactory_username = matrix.artifact_source == "artifactory" ? var.artifactory_username : null
+      artifactory_token    = matrix.artifact_source == "artifactory" ? var.artifactory_token : null
+      arch                 = matrix.artifact_source == "artifactory" ? matrix.arch : null
+      product_version      = var.vault_product_version
+      artifact_type        = matrix.artifact_type
+      distro               = matrix.artifact_source == "artifactory" ? matrix.distro : null
+      edition              = matrix.artifact_source == "artifactory" ? matrix.edition : null
+      instance_type        = matrix.artifact_source == "artifactory" ? local.vault_instance_type : null
+      revision             = var.vault_revision
+>>>>>>> 72eabfe30 (Integrate package testing as a matrix variant instead of a standalone scenario)
     }
   }
 
@@ -104,11 +138,11 @@ scenario "smoke" {
     depends_on = [step.create_vpc]
 
     providers = {
-      enos = provider.enos.ubuntu
+      enos = local.enos_provider[matrix.distro]
     }
 
     variables {
-      ami_id      = step.create_vpc.ami_ids["ubuntu"]["amd64"]
+      ami_id      = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
       common_tags = local.tags
       consul_release = {
         edition = var.backend_edition
@@ -141,17 +175,16 @@ scenario "smoke" {
       storage_backend           = matrix.backend
       unseal_method             = matrix.seal
       vault_local_artifact_path = local.bundle_path
-      vault_artifactory_release = local.install_artifactory_artifact ? step.build_vault.vault_artifactory_release : null
+      vault_install_dir         = local.vault_install_dir
+      vault_artifactory_release = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
       vault_license             = matrix.edition != "oss" ? step.read_license.license : null
       vpc_id                    = step.create_vpc.vpc_id
     }
   }
 
   step "verify_vault_version" {
-    module = module.vault_verify_version
-    depends_on = [
-      step.create_vault_cluster,
-    ]
+    module     = module.vault_verify_version
+    depends_on = [step.create_vault_cluster]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -160,6 +193,7 @@ scenario "smoke" {
     variables {
       vault_instances       = step.create_vault_cluster.vault_instances
       vault_edition         = matrix.edition
+      vault_install_dir     = local.vault_install_dir
       vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
       vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
       vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
@@ -168,35 +202,80 @@ scenario "smoke" {
   }
 
   step "verify_vault_unsealed" {
-    module = module.vault_verify_unsealed
-    depends_on = [
-      step.create_vault_cluster,
-    ]
+    module     = module.vault_verify_unsealed
+    depends_on = [step.create_vault_cluster]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
     variables {
-      vault_instances  = step.create_vault_cluster.vault_instances
-      vault_root_token = step.create_vault_cluster.vault_root_token
+      vault_install_dir = local.vault_install_dir
+      vault_instances   = step.create_vault_cluster.vault_instances
+      vault_root_token  = step.create_vault_cluster.vault_root_token
     }
   }
 
   step "verify_raft_auto_join_voter" {
-    skip_step = matrix.backend != "raft"
-    module    = module.vault_verify_raft_auto_join_voter
-    depends_on = [
-      step.create_vault_cluster,
-    ]
+    skip_step  = matrix.backend != "raft"
+    module     = module.vault_verify_raft_auto_join_voter
+    depends_on = [step.create_vault_cluster]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
     variables {
-      vault_instances  = step.create_vault_cluster.vault_instances
-      vault_root_token = step.create_vault_cluster.vault_root_token
+      vault_install_dir = local.vault_install_dir
+      vault_instances   = step.create_vault_cluster.vault_instances
+      vault_root_token  = step.create_vault_cluster.vault_root_token
+    }
+  }
+
+  step "verify_replication" {
+    skip_step  = matrix.artifact_type != "package"
+    module     = module.vault_verify_replication
+    depends_on = [step.create_vault_cluster]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_edition     = matrix.edition
+      vault_install_dir = local.vault_install_dir
+      vault_instances   = step.create_vault_cluster.vault_instances
+    }
+  }
+
+  step "verify_ui" {
+    skip_step  = matrix.artifact_type != "package"
+    module     = module.vault_verify_ui
+    depends_on = [step.create_vault_cluster]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_instances   = step.create_vault_cluster.vault_instances
+      vault_install_dir = local.vault_install_dir
+    }
+  }
+
+  step "verify_write_test_data" {
+    skip_step  = matrix.artifact_type != "package"
+    module     = module.vault_verify_write_test_data
+    depends_on = [step.create_vault_cluster]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_instances   = step.create_vault_cluster.vault_instances
+      vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.vault_root_token
     }
   }
 

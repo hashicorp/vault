@@ -4,23 +4,23 @@ locals {
   package_extensions = {
     amd64 = {
       ubuntu = {
-        "oss"     = "-1_amd64.deb"
+        # "oss"     = "-1_amd64.deb"
         "ent"     = "-1_amd64.deb"
         "ent.hsm" = "-1_amd64.deb"
       }
       rhel = {
-        "oss"     = "-1.x86_64.rpm"
+        # "oss"     = "-1.x86_64.rpm"
         "ent"     = "-1.x86_64.rpm"
         "ent.hsm" = "-1.x86_64.rpm"
       }
     }
     arm64 = {
       ubuntu = {
-        "oss" = "-1_arm64.deb"
+        # "oss" = "-1_arm64.deb"
         "ent" = "-1_arm64.deb"
       }
       rhel = {
-        "oss" = "-1.aarch64.rpm"
+        # "oss" = "-1.aarch64.rpm"
         "ent" = "-1.aarch64.rpm"
       }
     }
