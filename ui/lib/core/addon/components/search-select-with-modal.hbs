@@ -1,4 +1,4 @@
-<div {{did-insert this.fetchOptions}} ...attributes data-test-search-select-with-modal>
+<div {{did-insert (perform this.fetchOptions)}} ...attributes data-test-search-select-with-modal>
   {{#if this.shouldUseFallback}}
     {{component
       @fallbackComponent
@@ -22,14 +22,13 @@
     {{#if @subText}}
       <p class="sub-text">{{@subText}}</p>
     {{/if}}
-    {{! template-lint-configure simple-unless "warn" }}
-    {{#unless (gte this.selectedOptions.length @selectLimit)}}
+    {{#unless this.hidePowerSelect}}
       <PowerSelect
         @eventType="click"
         @placeholder={{@placeholder}}
         @searchEnabled={{true}}
         @search={{this.searchAndSuggest}}
-        @options={{this.allOptions}}
+        @options={{this.dropdownOptions}}
         @onChange={{this.selectOrCreate}}
         @placeholderComponent={{component "search-select-placeholder"}}
         @verticalPosition="below"

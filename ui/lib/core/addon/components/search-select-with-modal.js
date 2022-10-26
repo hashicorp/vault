@@ -2,8 +2,7 @@ import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { singularize } from 'ember-inflector';
-import { resolve } from 'rsvp';
+import { task } from 'ember-concurrency';
 import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-utils';
 
 /**
@@ -14,7 +13,7 @@ import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-ut
  * @example
  * <SearchSelectWithModal
  *         @id="assignments"
- *         @model="oidc/assignment"
+ *         @models={{array "oidc/assignment"}}
  *         @label="assignment name"
  *         @subText="Search for an existing assignment, or type a new name to create it."
  *         @inputValue={{map-by "id" @model.assignments}}
@@ -26,124 +25,130 @@ import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-ut
  *         @modalSubtext="Use assignment to specify which Vault entities and groups are allowed to authenticate."
  *       />
  *
- * @param {string} id - the model's attribute for the form field, will be interpolated into create new text: `Create new ${singularize(this.args.id)}`
- * @param {Array} model - model type to fetch from API (can only be a single model)
- * @param {string} label - Label that appears above the form field
+ // * component functionality
+ * @param {function} onChange - The onchange action for this form field. ** SEE UTIL ** search-select-has-many.js if selecting models from a hasMany relationship
+ * @param {array} [inputValue] - Array of strings corresponding to the input's initial value, e.g. an array of model ids that on edit will appear as selected items below the input
+ * @param {boolean} [shouldRenderName=false] - By default an item's id renders in the dropdown, `true` displays the name with its id in smaller text beside it *NOTE: the boolean flips automatically with 'identity' models
+ * @param {number} [selectLimit] - Sets select limit
+ * @param {array} [excludeOptions] - array of strings containing model ids to filter from the dropdown (ex: ['allow_all'])
+ 
+// * query params for dropdown items
+ * @param {array} models - model type to fetch from API (can only be a single model)
+ * @param {string} [backend] - name of the backend if the query for options needs additional information (eg. secret backend)
+ * @param {object} [queryObject] - object passed as query options to this.store.query(). NOTE: will override @backend
+ 
+ // * template only/display args
+ * @param {string} id - The name of the form field
+ * @param {string} [label] - Label appears above the form field
+ * @param {string} [labelClass] - overwrite default label size (14px) from class="is-label"
  * @param {string} [helpText] - Text to be displayed in the info tooltip for this form field
  * @param {string} [subText] - Text to be displayed below the label
+ * @param {string} fallbackComponent - name of component to be rendered if the API call 403s
  * @param {string} [placeholder] - placeholder text to override the default text of "Search"
- * @param {function} onChange - The onchange action for this form field. ** SEE UTIL ** search-select-has-many.js if selecting models from a hasMany relationship
- * @param {array} inputValue -  an array of strings -- array of ids for models.
- * @param {string} fallbackComponent - name of component to be rendered if the API returns a 403s
- * @param {boolean} [passObject=false] - When true, the onChange callback returns an array of objects with id (string) and isNew (boolean)
- * @param {number} [selectLimit] - A number that sets the limit to how many select options they can choose
- * @param {array} [excludeOptions] - array of strings containing model ids to filter from the dropdown (ex: ['allow_all'])
- * @param {function} search - *Advanced usage* - Customizes how the power-select component searches for matches -
- * see the power-select docs for more information.
- *
+ * @param {boolean} [displayInherit=false] - if you need the search select component to display inherit instead of box.
  */
 export default class SearchSelectWithModal extends Component {
   @service store;
-
-  @tracked selectedOptions = null; // list of selected options
-  @tracked allOptions = null; // all possible options
-  @tracked showModal = false;
-  @tracked newModelRecord = null;
   @tracked shouldUseFallback = false;
 
-  constructor() {
-    super(...arguments);
-    this.selectedOptions = this.inputValue;
-  }
+  @tracked selectedOptions = []; // list of selected options
+  @tracked dropdownOptions = []; // options that will render in dropdown, updates as selections are added/discarded
+  @tracked showModal = false;
+  @tracked newModelRecord = null;
 
-  get inputValue() {
-    return this.args.inputValue || [];
+  get hidePowerSelect() {
+    return this.selectedOptions.length >= this.args.selectLimit;
   }
 
   get shouldRenderName() {
-    return this.args.shouldRenderName || false;
+    return this.args.models?.some((model) => model.includes('identity')) || this.args.shouldRenderName
+      ? true
+      : false;
   }
 
-  get excludeOptions() {
-    return this.args.excludeOptions || null;
-  }
-
-  get passObject() {
-    return this.args.passObject || false;
-  }
-
-  @action
-  async fetchOptions() {
-    try {
-      let queryOptions = {};
-      let options = await this.store.query(this.args.model, queryOptions);
-      this.formatOptions(options);
-    } catch (err) {
-      if (err.httpStatus === 404) {
-        if (!this.allOptions) {
-          // If the call failed but the resource has items
-          // from a different namespace, this allows the
-          // selected items to display
-          this.allOptions = [];
-        }
-        return;
-      }
-      if (err.httpStatus === 403) {
-        this.shouldUseFallback = true;
-        return;
-      }
-      throw err;
-    }
-  }
-  formatOptions(options) {
-    options = options.toArray();
-    if (this.excludeOptions) {
-      options = options.filter((o) => !this.excludeOptions.includes(o.id));
-    }
-    options = options.map((option) => {
+  addSearchText(optionsToFormat) {
+    // maps over array models from query
+    return optionsToFormat.toArray().map((option) => {
       option.searchText = `${option.name} ${option.id}`;
       return option;
     });
-
-    if (this.selectedOptions.length > 0) {
-      this.selectedOptions = this.selectedOptions.map((option) => {
-        let matchingOption = options.findBy('id', option);
-        options.removeObject(matchingOption);
-        return {
-          id: option,
-          name: matchingOption ? matchingOption.name : option,
-          searchText: matchingOption ? matchingOption.searchText : option,
-        };
-      });
-    }
-    this.allOptions = options;
   }
 
+  formatInputAndUpdateDropdown(inputValues) {
+    // inputValues are initially an array of strings from @inputValue
+    // map over so selectedOptions are objects
+    return inputValues.map((option) => {
+      let matchingOption = this.dropdownOptions.findBy('id', option);
+      // remove any matches from dropdown list
+      this.dropdownOptions.removeObject(matchingOption);
+      return {
+        id: option,
+        name: matchingOption ? matchingOption.name : option,
+        searchText: matchingOption ? matchingOption.searchText : option,
+      };
+    });
+  }
+
+  @task
+  *fetchOptions() {
+    this.dropdownOptions = []; // reset dropdown anytime we re-fetch
+    if (!this.args.models) {
+      return;
+    }
+
+    for (let modelType of this.args.models) {
+      try {
+        let queryParams = {};
+        // fetch options from the store
+        let options = yield this.store.query(modelType, queryParams);
+        if (this.args.excludeOptions) {
+          options = options.filter((o) => !this.args.excludeOptions.includes(o.id));
+        }
+        // add to dropdown options
+        this.dropdownOptions = [...this.dropdownOptions, ...this.addSearchText(options)];
+      } catch (err) {
+        if (err.httpStatus === 404) {
+          // continue to query other models even if one 404s
+          // and so selectedOptions will be set after for loop
+          continue;
+        }
+        if (err.httpStatus === 403) {
+          this.shouldUseFallback = true;
+          return;
+        }
+        throw err;
+      }
+    }
+
+    // after all models are queried, set selectedOptions and remove matches from dropdown list
+    this.selectedOptions = this.args.inputValue
+      ? this.formatInputAndUpdateDropdown(this.args.inputValue)
+      : [];
+  }
+
+  @action
   handleChange() {
     if (this.selectedOptions.length && typeof this.selectedOptions.firstObject === 'object') {
-      if (this.passObject) {
-        this.args.onChange(
-          Array.from(this.selectedOptions, (option) => ({ id: option.id, isNew: !!option.new }))
-        );
-      } else {
-        this.args.onChange(Array.from(this.selectedOptions, (option) => option.id));
-      }
+      this.args.onChange(Array.from(this.selectedOptions, (option) => option.id));
     } else {
       this.args.onChange(this.selectedOptions);
     }
   }
-  shouldShowCreate(id, options) {
-    if (options && options.length && options.firstObject.groupName) {
-      return !options.some((group) => group.options.findBy('id', id));
+
+  shouldShowCreate(id, searchResults) {
+    if (searchResults && searchResults.length && searchResults.firstObject.groupName) {
+      return !searchResults.some((group) => group.options.findBy('id', id));
     }
     let existingOption =
-      this.allOptions && (this.allOptions.findBy('id', id) || this.allOptions.findBy('name', id));
+      this.dropdownOptions &&
+      (this.dropdownOptions.findBy('id', id) || this.dropdownOptions.findBy('name', id));
     return !existingOption;
   }
-  //----- adapted from ember-power-select-with-create
+
+  // ----- adapted from ember-power-select-with-create
   addCreateOption(term, results) {
     if (this.shouldShowCreate(term, results)) {
-      const name = `Click to create new ${singularize(this.args.id)}: ${term}`;
+      const name = `No results found for "${term}". Click here to create it.`;
       const suggestion = {
         __isSuggestion__: true,
         __value__: term,
@@ -153,37 +158,30 @@ export default class SearchSelectWithModal extends Component {
       results.unshift(suggestion);
     }
   }
+
   filter(options, searchText) {
     const matcher = (option, text) => defaultMatcher(option.searchText, text);
     return filterOptions(options || [], searchText, matcher);
   }
   // -----
-
   @action
   discardSelection(selected) {
     this.selectedOptions.removeObject(selected);
-    this.allOptions.pushObject(selected);
+    this.dropdownOptions.pushObject(selected);
     this.handleChange();
   }
+
   // ----- adapted from ember-power-select-with-create
   @action
-  searchAndSuggest(term, select) {
+  searchAndSuggest(term) {
     if (term.length === 0) {
-      return this.allOptions;
+      return this.dropdownOptions;
     }
-    if (this.search) {
-      return resolve(this.search(term, select)).then((results) => {
-        if (results.toArray) {
-          results = results.toArray();
-        }
-        this.addCreateOption(term, results);
-        return results;
-      });
-    }
-    const newOptions = this.filter(this.allOptions, term);
+    const newOptions = this.filter(this.dropdownOptions, term);
     this.addCreateOption(term, newOptions);
     return newOptions;
   }
+
   @action
   async selectOrCreate(selection) {
     // if creating we call handleChange in the resetModal action to ensure the model is valid and successfully created
@@ -192,12 +190,13 @@ export default class SearchSelectWithModal extends Component {
     if (selection && selection.__isSuggestion__) {
       const name = selection.__value__;
       this.showModal = true;
-      let createRecord = await this.store.createRecord(this.args.model);
+      let modelName = this.args.models.length === 1 ? this.args.models[0] : 'SOMETHING'; // TODO refactor to allow for multiple models
+      let createRecord = await this.store.createRecord(modelName);
       createRecord.name = name;
       this.newModelRecord = createRecord;
     } else {
       this.selectedOptions.pushObject(selection);
-      this.allOptions.removeObject(selection);
+      this.dropdownOptions.removeObject(selection);
       this.handleChange();
     }
   }

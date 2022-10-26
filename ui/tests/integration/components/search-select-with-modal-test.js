@@ -76,7 +76,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       @id="entity"
       @label="Entity ID"
       @subText="Search for an existing entity, or type a new name to create it."
-      @model="identity/entity"
+      @models={{array "identity/entity"}}
       @onChange={{this.onChange}}
       @fallbackComponent="string-list"
       @modalFormComponent="identity/edit-form"
@@ -101,7 +101,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       @id="entity"
       @label="entity"
       @subText="Search for an existing entity, or type a new name to create it."
-      @model="identity/entity"
+      @models={{array "identity/entity"}}
       @onChange={{this.onChange}}
       @fallbackComponent="string-list"
       @modalFormComponent="identity/edit-form"
@@ -115,14 +115,17 @@ module('Integration | Component | search select with modal', function (hooks) {
 
     await typeInSearch('e');
     assert.strictEqual(component.options.length, 3, 'dropdown renders all options plus add option');
-
     await typeInSearch('entity-1');
-    assert.strictEqual(component.options[0].text, 'entity-1-id', 'dropdown renders only matching option');
+    assert.strictEqual(
+      component.options[0].text,
+      'entity-1 entity-1-id',
+      'dropdown renders only matching option'
+    );
 
     await typeInSearch('entity-1-new');
     assert.strictEqual(
       component.options[0].text,
-      'Click to create new entity: entity-1-new',
+      'No results found for "entity-1-new". Click here to create it. No results found for "entity-1-new". Click here to create it.',
       'dropdown gives option to create new option'
     );
 
@@ -148,7 +151,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       @id="entity"
       @label="Entity ID"
       @subText="Search for an existing entity, or type a new name to create it."
-      @model="identity/entity"
+      @models={{array "identity/entity"}}
       @onChange={{this.onChange}}
       @fallbackComponent="string-list"
       @modalFormComponent="identity/edit-form"
