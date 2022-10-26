@@ -219,7 +219,9 @@ jobs:
           # has its own remote docker VM.
 
           make prep
-          mkdir -p test-results/go-test
+
+          # Permissions have changed inside docker containers; see hack note below.
+          mkdir --mode=777 -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
           # not what developers have in their environments and it could break some
@@ -239,6 +241,19 @@ jobs:
             # see "client version too new, max supported version 1.39" errors for
             # reasons unclear.
             export DOCKER_API_VERSION=1.39
+
+            # Hack: Docker permissions appear to have changed; let's explicitly
+            # chmod the docker certificate path to give other grouped users
+            # access.
+            #
+            # Notably, in this shell pipeline we see:
+            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+            #
+            # but inside the docker image below, we see:
+            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+            #
+            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+            chmod o+rx -R $DOCKER_CERT_PATH
 
             TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
             export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
@@ -459,7 +474,9 @@ jobs:
           # has its own remote docker VM.
 
           make prep
-          mkdir -p test-results/go-test
+
+          # Permissions have changed inside docker containers; see hack note below.
+          mkdir --mode=777 -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
           # not what developers have in their environments and it could break some
@@ -479,6 +496,19 @@ jobs:
             # see "client version too new, max supported version 1.39" errors for
             # reasons unclear.
             export DOCKER_API_VERSION=1.39
+
+            # Hack: Docker permissions appear to have changed; let's explicitly
+            # chmod the docker certificate path to give other grouped users
+            # access.
+            #
+            # Notably, in this shell pipeline we see:
+            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+            #
+            # but inside the docker image below, we see:
+            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+            #
+            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+            chmod o+rx -R $DOCKER_CERT_PATH
 
             TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
             export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
@@ -650,7 +680,9 @@ jobs:
           # has its own remote docker VM.
 
           make prep
-          mkdir -p test-results/go-test
+
+          # Permissions have changed inside docker containers; see hack note below.
+          mkdir --mode=777 -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
           # not what developers have in their environments and it could break some
@@ -670,6 +702,19 @@ jobs:
             # see "client version too new, max supported version 1.39" errors for
             # reasons unclear.
             export DOCKER_API_VERSION=1.39
+
+            # Hack: Docker permissions appear to have changed; let's explicitly
+            # chmod the docker certificate path to give other grouped users
+            # access.
+            #
+            # Notably, in this shell pipeline we see:
+            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+            #
+            # but inside the docker image below, we see:
+            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+            #
+            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+            chmod o+rx -R $DOCKER_CERT_PATH
 
             TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
             export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
@@ -951,7 +996,9 @@ jobs:
           # has its own remote docker VM.
 
           make prep
-          mkdir -p test-results/go-test
+
+          # Permissions have changed inside docker containers; see hack note below.
+          mkdir --mode=777 -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
           # not what developers have in their environments and it could break some
@@ -971,6 +1018,19 @@ jobs:
             # see "client version too new, max supported version 1.39" errors for
             # reasons unclear.
             export DOCKER_API_VERSION=1.39
+
+            # Hack: Docker permissions appear to have changed; let's explicitly
+            # chmod the docker certificate path to give other grouped users
+            # access.
+            #
+            # Notably, in this shell pipeline we see:
+            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+            #
+            # but inside the docker image below, we see:
+            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+            #
+            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+            chmod o+rx -R $DOCKER_CERT_PATH
 
             TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
             export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
