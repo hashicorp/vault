@@ -1,11 +1,11 @@
 scenario "autopilot" {
   matrix {
-    arch                    = ["amd64", "arm64"]
-    artifact_source         = ["local", "crt", "artifactory"]
-    distro                  = ["ubuntu", "rhel"]
-    edition                 = ["ent"]
-    seal                    = ["awskms", "shamir"]
-    undo_logs_status        = ["0", "1"]
+    arch             = ["amd64", "arm64"]
+    artifact_source  = ["local", "crt", "artifactory"]
+    distro           = ["ubuntu", "rhel"]
+    edition          = ["ent"]
+    seal             = ["awskms", "shamir"]
+    undo_logs_status = ["0", "1"]
   }
 
   terraform_cli = terraform_cli.default
@@ -36,8 +36,8 @@ scenario "autopilot" {
       amd64 = "t3a.small"
       arm64 = "t4g.small"
     }
-    vault_instance_type = coalesce(var.vault_instance_type, local.vault_instance_types[matrix.arch])
-    set_undo_logs_env_var = semverconstraint(local.vault_version, ">=1.12.0-0") ? semverconstraint(local.vault_version, "<1.13.0-0") : true : false
+    vault_instance_type   = coalesce(var.vault_instance_type, local.vault_instance_types[matrix.arch])
+    set_undo_logs_env_var = semverconstraint(local.vault_version, ">=1.12.0-0") && semverconstraint(local.vault_version, "<1.13.0-0") ? true : false
   }
 
   step "build_vault" {
@@ -225,7 +225,7 @@ scenario "autopilot" {
   }
 
   step "verify_undo_logs_status" {
-    skip_step  = semverconstraint(var.vault_product_version, "<1.12.0-0")
+    skip_step = semverconstraint(var.vault_product_version, "<1.12.0-0")
     module    = module.vault_verify_undo_logs
     depends_on = [
       step.upgrade_vault_cluster_with_autopilot,
