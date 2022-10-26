@@ -74,7 +74,11 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 
 	client := cluster.Cores[0].Client
 
-	testhelpers.SetupAudit(t, client)
+	// Enable the audit backend
+	if err := client.Sys().EnableAuditWithOptions("noop", &api.EnableAuditOptions{Type: "noop"}); err != nil {
+		t.Fatal(err)
+	}
+
 	testhelpers.SetupTOTPMount(t, client)
 	mountAccessor := testhelpers.SetupUserpassMountAccessor(t, client)
 

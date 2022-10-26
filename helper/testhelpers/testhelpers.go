@@ -818,14 +818,7 @@ func CreateEntityAndAlias(t testing.T, client *api.Client, mountAccessor, entity
 	return userClient, entityID, aliasID
 }
 
-func SetupAudit(t testing.T, client *api.Client) {
-	t.Helper()
-	// Enable the audit backend
-	if err := client.Sys().EnableAuditWithOptions("noop", &api.EnableAuditOptions{Type: "noop"}); err != nil {
-		t.Fatal(err)
-	}
-}
-
+// SetupTOTPMount enables the totp secrets engine by mounting it.
 func SetupTOTPMount(t testing.T, client *api.Client) {
 	t.Helper()
 	// Mount the TOTP backend
@@ -837,6 +830,7 @@ func SetupTOTPMount(t testing.T, client *api.Client) {
 	}
 }
 
+// SetupTOTPMethod configures the TOTP secrets engine with a provided config map.
 func SetupTOTPMethod(t testing.T, client *api.Client, config map[string]interface{}) string {
 	t.Helper()
 
@@ -854,6 +848,8 @@ func SetupTOTPMethod(t testing.T, client *api.Client, config map[string]interfac
 	return methodID
 }
 
+// SetupMFALoginEnforcement configures a single enforcement method with name
+// "randomName" using the provided config map.
 func SetupMFALoginEnforcement(t testing.T, client *api.Client, config map[string]interface{}) {
 	_, err := client.Logical().WriteWithContext(context.Background(), "identity/mfa/login-enforcement/randomName", config)
 	if err != nil {
@@ -861,6 +857,7 @@ func SetupMFALoginEnforcement(t testing.T, client *api.Client, config map[string
 	}
 }
 
+// SetupUserpassMountAccessor sets up userpass auth and returns its mount accessor.
 func SetupUserpassMountAccessor(t testing.T, client *api.Client) string {
 	t.Helper()
 	var mountAccessor string
@@ -885,6 +882,8 @@ func SetupUserpassMountAccessor(t testing.T, client *api.Client) string {
 	return mountAccessor
 }
 
+// RegisterEntityInTOTPEngine registers an entity with a methodID and returns
+// the generated name.
 func RegisterEntityInTOTPEngine(t testing.T, client *api.Client, entityID, methodID string) string {
 	t.Helper()
 	totpGenName := fmt.Sprintf("%s-%s", entityID, methodID)
@@ -917,6 +916,7 @@ func RegisterEntityInTOTPEngine(t testing.T, client *api.Client, entityID, metho
 	return totpGenName
 }
 
+// GetTOTPCodeFromEngine requests a TOTP code from the specified enginePath.
 func GetTOTPCodeFromEngine(t testing.T, client *api.Client, enginePath string) string {
 	t.Helper()
 	totpPath := fmt.Sprintf("totp/code/%s", enginePath)
@@ -930,6 +930,8 @@ func GetTOTPCodeFromEngine(t testing.T, client *api.Client, enginePath string) s
 	return secret.Data["code"].(string)
 }
 
+// SetupLoginMFATOTP setups up a TOTP MFA using some basic configuration and
+// returns all relevant information to the client.
 func SetupLoginMFATOTP(t testing.T, client *api.Client) (*api.Client, string, string) {
 	t.Helper()
 	// Mount the totp secrets engine
@@ -944,7 +946,7 @@ func SetupLoginMFATOTP(t testing.T, client *api.Client) (*api.Client, string, st
 	// Configure a default TOTP method
 	totpConfig := map[string]interface{}{
 		"issuer":                  "yCorp",
-		"period":                  30,
+		"period":                  5,
 		"algorithm":               "SHA256",
 		"digits":                  6,
 		"skew":                    0,

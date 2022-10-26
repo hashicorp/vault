@@ -481,12 +481,10 @@ func TestLoginCommand_Run(t *testing.T) {
 		cmd.client = userclient
 
 		_ = testhelpers.RegisterEntityInTOTPEngine(t, client, entityID, methodID)
-		// totpCode := testhelpers.GetTOTPCodeFromEngine(t, client, enginePath)
 
-		// login command bails early for test clients, so we have to explicitly set this
+		// clear the MFA creds just to be sure
 		cmd.client.SetMFACreds([]string{})
 
-		// testhelpers.SetupLoginMFATOTP(t, client)
 		code := cmd.Run([]string{
 			"-method", "userpass",
 			"username=testuser1",
