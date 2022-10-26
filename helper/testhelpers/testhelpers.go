@@ -780,6 +780,8 @@ func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
 	t.Fatalf("did not complete before deadline, err: %v", err)
 }
 
+// CreateEntityAndAlias clones an existing client and creates an entity/alias.
+// It returns the cloned client, entityID, and aliasID.
 func CreateEntityAndAlias(t testing.T, client *api.Client, mountAccessor, entityName, aliasName string) (*api.Client, string, string) {
 	t.Helper()
 	userClient, err := client.Clone()
@@ -851,6 +853,7 @@ func SetupTOTPMethod(t testing.T, client *api.Client, config map[string]interfac
 // SetupMFALoginEnforcement configures a single enforcement method with name
 // "randomName" using the provided config map.
 func SetupMFALoginEnforcement(t testing.T, client *api.Client, config map[string]interface{}) {
+	t.Helper()
 	_, err := client.Logical().WriteWithContext(context.Background(), "identity/mfa/login-enforcement/randomName", config)
 	if err != nil {
 		t.Fatalf("failed to configure MFAEnforcementConfig: %v", err)
