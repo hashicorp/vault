@@ -1,8 +1,12 @@
-import { click, fillIn, find, findAll, currentURL, waitUntil } from '@ember/test-helpers';
+import { click, fillIn, find, currentURL, waitUntil, currentRouteName } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/policies/index';
 import authPage from 'vault/tests/pages/auth';
+import { create } from 'ember-cli-page-object';
+import flashMessage from 'vault/tests/pages/components/flash-message';
+
+const flash = create(flashMessage);
 
 module('Acceptance | policies (old)', function (hooks) {
   setupApplicationTest(hooks);
@@ -20,24 +24,31 @@ module('Acceptance | policies (old)', function (hooks) {
     await page.visit({ type: 'acl' });
     // new policy creation
     await click('[data-test-policy-create-link]');
-
     await fillIn('[data-test-policy-input="name"]', policyName);
     await click('[data-test-policy-save]');
-    const errors = await waitUntil(() => findAll('[data-test-error]'));
-    assert.strictEqual(errors.length, 1, 'renders error messages on save');
+    assert
+      .dom(find('[data-test-error]'))
+      .hasText(`Error 'policy' parameter not supplied or empty`, 'renders error message on save');
     find('.CodeMirror').CodeMirror.setValue(policyString);
     await click('[data-test-policy-save]');
-
-    await waitUntil(() => currentURL() === `/vault/policy/acl/${encodeURIComponent(policyLower)}`);
     assert.strictEqual(
-      currentURL(),
-      `/vault/policy/acl/${encodeURIComponent(policyLower)}`,
+      currentRouteName(),
+      'vault.cluster.policy.show',
       'navigates to policy show on successful save'
     );
-    assert.dom('[data-test-policy-name]').hasText(policyLower, 'displays the policy name on the show page');
-    assert.dom('[data-test-flash-message].is-info').doesNotExist('no flash message is displayed on save');
-    await click('[data-test-policy-list-link]');
+    assert.strictEqual(
+      currentURL(),
+      `/vault/policy/acl/${encodeURIComponent(policyName)}`,
+      'url has policy name and type'
+    );
 
+    assert.dom('[data-test-policy-name]').hasText(policyLower, 'displays the policy name on the show page');
+    assert.strictEqual(
+      flash.latestMessage.trim(),
+      `ACL policy "${policyName}" was successfully created.`,
+      'renders success flash upon creation'
+    );
+    await click('[data-test-policy-list-link]');
     assert
       .dom(`[data-test-policy-link="${policyLower}"]`)
       .exists({ count: 1 }, 'new policy shown in the list');
