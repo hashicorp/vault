@@ -855,7 +855,11 @@ func SetupTOTPMethod(t testing.T, client *api.Client, config map[string]interfac
 // "randomName" using the provided config map.
 func SetupMFALoginEnforcement(t testing.T, client *api.Client, config map[string]interface{}) {
 	t.Helper()
-	_, err := client.Logical().WriteWithContext(context.Background(), "identity/mfa/login-enforcement/randomName", config)
+	enfName, ok := config["name"]
+	if !ok {
+		t.Fatalf("couldn't find name in login-enforcement config")
+	}
+	_, err := client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("identity/mfa/login-enforcement/%s", enfName), config)
 	if err != nil {
 		t.Fatalf("failed to configure MFAEnforcementConfig: %v", err)
 	}
