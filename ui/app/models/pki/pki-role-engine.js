@@ -22,8 +22,7 @@ export default class PkiRoleEngineModel extends Model {
   @attr('string', {
     label: 'Issuer reference',
     defaultValue: 'default',
-    subText:
-      'Specifies the issuer that will be used to create certificates with this role.  To find this, run [command]. By default, we will use the mounts default issuer.',
+    subText: `Specifies the issuer that will be used to create certificates with this role. To find this, run read -field=default pki_int/config/issuers in the console. By default, we will use the mounts default issuer.`,
   })
   issuerRef;
 
