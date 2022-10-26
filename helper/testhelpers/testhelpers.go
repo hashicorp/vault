@@ -820,7 +820,8 @@ func CreateEntityAndAlias(t testing.T, client *api.Client, mountAccessor, entity
 	return userClient, entityID, aliasID
 }
 
-// SetupTOTPMount enables the totp secrets engine by mounting it.
+// SetupTOTPMount enables the totp secrets engine by mounting it. This requires
+// that the test cluster has a totp backend available.
 func SetupTOTPMount(t testing.T, client *api.Client) {
 	t.Helper()
 	// Mount the TOTP backend
@@ -860,7 +861,9 @@ func SetupMFALoginEnforcement(t testing.T, client *api.Client, config map[string
 	}
 }
 
-// SetupUserpassMountAccessor sets up userpass auth and returns its mount accessor.
+// SetupUserpassMountAccessor sets up userpass auth and returns its mount
+// accessor. This requires that the test cluster has a "userpass" auth method
+// available.
 func SetupUserpassMountAccessor(t testing.T, client *api.Client) string {
 	t.Helper()
 	var mountAccessor string
