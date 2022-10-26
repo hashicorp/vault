@@ -146,7 +146,6 @@ scenario "autopilot" {
       step.create_vault_cluster,
       step.build_vault,
       step.create_autopilot_upgrade_storageconfig,
-      step.create_undo_logs_storageconfig,
     ]
 
     providers = {
