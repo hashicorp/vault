@@ -213,7 +213,7 @@ func startMongoWithTLS(t *testing.T, version string, confDir string) (retURL str
 	// exponential backoff-retry
 	err = pool.Retry(func() error {
 		var err error
-		ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, _ := context.WithTimeout(context.Background(), 1*time.Minute)
 		client, err := mongo.Connect(ctx, options.Client().ApplyURI(retURL))
 		if err != nil {
 			return err
