@@ -17,19 +17,11 @@
       "aws_region": "us-west-2"
     },
     {
-      "scenario": "autopilot distro:ubuntu seal:shamir arch:amd64 artifact_source:crt edition:ent undo_log_vault_version:0 undo_log_status:0",
+      "scenario": "autopilot distro:ubuntu seal:shamir arch:amd64 artifact_source:crt edition:ent undo_log_status:0",
       "aws_region": "us-west-1"
     },
     {
-      "scenario": "autopilot distro:ubuntu seal:shamir arch:amd64 artifact_source:crt edition:ent undo_log_vault_version:1.12.0 undo_log_status:0",
-      "aws_region": "us-west-1"
-    },
-    {
-      "scenario": "autopilot distro:ubuntu seal:shamir arch:amd64 artifact_source:crt edition:ent undo_log_vault_version:1.12.0 undo_log_status:1",
-      "aws_region": "us-west-1"
-    },
-    {
-      "scenario": "autopilot distro:ubuntu seal:shamir arch:amd64 artifact_source:crt edition:ent undo_log_vault_version:1.13.0 undo_log_status:1",
+      "scenario": "autopilot distro:ubuntu seal:shamir arch:amd64 artifact_source:crt edition:ent undo_log_status:1",
       "aws_region": "us-west-1"
     }
   ]

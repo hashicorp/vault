@@ -6,7 +6,6 @@ scenario "autopilot" {
     edition                 = ["ent"]
     seal                    = ["awskms", "shamir"]
     undo_logs_status        = ["0", "1"]
-    undo_logs_vault_version = ["0", "1.12.0", "1.13.0"]
   }
 
   terraform_cli = terraform_cli.default
@@ -38,6 +37,7 @@ scenario "autopilot" {
       arm64 = "t4g.small"
     }
     vault_instance_type = coalesce(var.vault_instance_type, local.vault_instance_types[matrix.arch])
+    set_undo_logs_env_var = semverconstraint(local.vault_version, ">=1.12.0-0) ? semverconstraint(local.vault_version, "<1.13.0-0) : true : false
   }
 
   step "build_vault" {
@@ -131,16 +131,8 @@ scenario "autopilot" {
     }
   }
 
-  step "create_undo_logs_storageconfig" {
-    module = module.autopilot_upgrade_storageconfig
-
-    variables {
-      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : matrix.undo_logs_vault_version
-    }
-  }
-
   step "set_undo_logs_env_var" {
-    skip_step = matrix.undo_logs_vault_version != "1.12.0"
+    skip_step = !local.set_undo_logs_env_var
     module    = module.set_undo_logs_env_var
 
     variables {
@@ -155,7 +147,6 @@ scenario "autopilot" {
       step.build_vault,
       step.create_autopilot_upgrade_storageconfig,
       step.create_undo_logs_storageconfig,
-      step.set_undo_logs_env_var,
     ]
 
     providers = {
@@ -169,7 +160,7 @@ scenario "autopilot" {
       instance_type               = local.vault_instance_type
       kms_key_arn                 = step.create_vpc.kms_key_arn
       storage_backend             = "raft"
-      storage_backend_addl_config = matrix.undo_logs_vault_version != "0" ? step.create_autopilot_upgrade_storageconfig.storage_addl_config : step.create_undo_logs_storageconfig.storage_addl_config
+      storage_backend_addl_config = step.create_autopilot_upgrade_storageconfig.storage_addl_config
       unseal_method               = matrix.seal
       vault_cluster_tag           = step.create_vault_cluster.vault_cluster_tag
       vault_init                  = false
@@ -234,7 +225,7 @@ scenario "autopilot" {
   }
 
   step "verify_undo_logs_status" {
-    skip_step = matrix.undo_logs_vault_version == "0"
+    skip_step  = semverconstraint(var.vault_product_version, "<1.12.0-0")
     module    = module.vault_verify_undo_logs
     depends_on = [
       step.upgrade_vault_cluster_with_autopilot,
