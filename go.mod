@@ -14,8 +14,6 @@ replace github.com/hashicorp/vault/sdk => ./sdk
 
 replace go.etcd.io/etcd/client/pkg/v3 v3.5.0 => go.etcd.io/etcd/client/pkg/v3 v3.0.0-20210928084031-3df272774672
 
-replace github.com/hashicorp/hcl => /Users/violet/Repositories/hcl
-
 require (
 	cloud.google.com/go/monitoring v1.2.0
 	cloud.google.com/go/spanner v1.5.1
@@ -99,7 +97,7 @@ require (
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/hashicorp/go-version v1.6.0
 	github.com/hashicorp/golang-lru v0.5.4
-	github.com/hashicorp/hcl v1.0.1-vault-3
+	github.com/hashicorp/hcl v1.0.1-vault-4
 	github.com/hashicorp/hcp-sdk-go v0.22.0
 	github.com/hashicorp/nomad/api v0.0.0-20220707195938-75f4c2237b28
 	github.com/hashicorp/raft v1.3.10
