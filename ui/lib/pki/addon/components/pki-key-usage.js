@@ -56,6 +56,8 @@ export default class PkiKeyUsage extends Component {
     this.extKeyUsageFields = {};
     Object.assign(this.keyUsageFields, KEY_USAGE_FIELDS);
     Object.assign(this.extKeyUsageFields, EXT_KEY_USAGE_FIELDS);
+    // set default of key_usage to the three params that are true by default.
+    this.args.model.set('keyUsage', ['DigitalSignature', 'KeyAgreement', 'KeyEncipherment']);
   }
 
   @action onStringListChange(value) {
