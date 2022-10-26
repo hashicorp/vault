@@ -284,12 +284,7 @@ func (c *BaseCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) (*api.
 		return nil, err
 	}
 
-	secret, err := client.Sys().MFAValidate(reqID, mfaPayload)
-	if err != nil {
-		return secret, err
-	}
-
-	return secret, nil
+	return client.Sys().MFAValidate(reqID, mfaPayload)
 }
 
 type FlagSetBit uint
