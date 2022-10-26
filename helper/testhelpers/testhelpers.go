@@ -782,13 +782,6 @@ func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
 
 func CreateEntityAndAlias(t testing.T, client *api.Client, mountAccessor, entityName, aliasName string) (*api.Client, string, string) {
 	t.Helper()
-	_, err := client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("auth/userpass/users/%s", aliasName), map[string]interface{}{
-		"password": "testpassword",
-	})
-	if err != nil {
-		t.Fatalf("failed to configure userpass backend: %v", err)
-	}
-
 	userClient, err := client.Clone()
 	if err != nil {
 		t.Fatalf("failed to clone the client:%v", err)
@@ -811,11 +804,17 @@ func CreateEntityAndAlias(t testing.T, client *api.Client, mountAccessor, entity
 	if err != nil {
 		t.Fatalf("failed to create an entity alias:%v", err)
 	}
-
 	aliasID := aliasResp.Data["id"].(string)
 	if aliasID == "" {
 		t.Fatal("Alias ID not present in response")
 	}
+	_, err = client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("auth/userpass/users/%s", aliasName), map[string]interface{}{
+		"password": "testpassword",
+	})
+	if err != nil {
+		t.Fatalf("failed to configure userpass backend: %v", err)
+	}
+
 	return userClient, entityID, aliasID
 }
 
@@ -838,8 +837,9 @@ func SetupTOTPMount(t testing.T, client *api.Client) {
 	}
 }
 
-func SetupTOTPSecretsEngine(t testing.T, client *api.Client, config map[string]interface{}) string {
+func SetupTOTPMethod(t testing.T, client *api.Client, config map[string]interface{}) string {
 	t.Helper()
+
 	resp1, err := client.Logical().Write("identity/mfa/method/totp", config)
 
 	if err != nil || (resp1 == nil) {
@@ -851,17 +851,14 @@ func SetupTOTPSecretsEngine(t testing.T, client *api.Client, config map[string]i
 		t.Fatalf("method ID is empty")
 	}
 
-	// creating MFAEnforcementConfig
-	_, err = client.Logical().WriteWithContext(context.Background(), "identity/mfa/login-enforcement/randomName", map[string]interface{}{
-		"auth_method_types": []string{"userpass"},
-		"name":              "randomName",
-		"mfa_method_ids":    []string{methodID},
-	})
+	return methodID
+}
+
+func SetupMFALoginEnforcement(t testing.T, client *api.Client, config map[string]interface{}) {
+	_, err := client.Logical().WriteWithContext(context.Background(), "identity/mfa/login-enforcement/randomName", config)
 	if err != nil {
 		t.Fatalf("failed to configure MFAEnforcementConfig: %v", err)
 	}
-
-	return methodID
 }
 
 func SetupUserpassMountAccessor(t testing.T, client *api.Client) string {
@@ -908,6 +905,15 @@ func RegisterEntityInTOTPEngine(t testing.T, client *api.Client, entityID, metho
 	if err != nil {
 		t.Fatalf("failed to register a TOTP URL: %v", err)
 	}
+	_, err = client.Logical().WriteWithContext(context.Background(), "identity/mfa/login-enforcement/randomName", map[string]interface{}{
+		"name":                "randomName",
+		"identity_entity_ids": []string{entityID},
+		"mfa_method_ids":      []string{methodID},
+	})
+	if err != nil {
+		t.Fatalf("failed to create login enforcement")
+	}
+
 	return totpGenName
 }
 
@@ -926,14 +932,16 @@ func GetTOTPCodeFromEngine(t testing.T, client *api.Client, enginePath string) s
 
 func SetupLoginMFATOTP(t testing.T, client *api.Client) (*api.Client, string, string) {
 	t.Helper()
-	SetupAudit(t, client)
+	// Mount the totp secrets engine
 	SetupTOTPMount(t, client)
-	SetupLoginMFATOTP(t, client)
+
+	// Create a mount accessor to associate with an entity
 	mountAccessor := SetupUserpassMountAccessor(t, client)
 
-	// Creating two users in the userpass auth mount
+	// Create a test entity and alias
 	entityClient, entityID, _ := CreateEntityAndAlias(t, client, mountAccessor, "entity1", "testuser1")
 
+	// Configure a default TOTP method
 	totpConfig := map[string]interface{}{
 		"issuer":                  "yCorp",
 		"period":                  30,
@@ -944,7 +952,15 @@ func SetupLoginMFATOTP(t testing.T, client *api.Client) (*api.Client, string, st
 		"qr_size":                 200,
 		"max_validation_attempts": 5,
 	}
+	methodID := SetupTOTPMethod(t, client, totpConfig)
 
-	methodID := SetupTOTPSecretsEngine(t, client, totpConfig)
+	// Configure a default login enforcement
+	enforcementConfig := map[string]interface{}{
+		"auth_method_types": []string{"userpass"},
+		"name":              "randomName",
+		"mfa_method_ids":    []string{methodID},
+	}
+
+	SetupMFALoginEnforcement(t, client, enforcementConfig)
 	return entityClient, entityID, methodID
 }

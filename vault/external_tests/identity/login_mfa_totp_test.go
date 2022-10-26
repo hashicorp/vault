@@ -93,11 +93,20 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 		"max_validation_attempts": 5,
 	}
 
-	methodID := testhelpers.SetupTOTPSecretsEngine(t, client, totpConfig)
+	methodID := testhelpers.SetupTOTPMethod(t, client, totpConfig)
 
 	// registering EntityIDs in the TOTP secret Engine for MethodID
 	enginePath1 := testhelpers.RegisterEntityInTOTPEngine(t, client, entityID1, methodID)
 	enginePath2 := testhelpers.RegisterEntityInTOTPEngine(t, client, entityID2, methodID)
+
+	// Configure a default login enforcement
+	enforcementConfig := map[string]interface{}{
+		"auth_method_types": []string{"userpass"},
+		"name":              "randomName",
+		"mfa_method_ids":    []string{methodID},
+	}
+
+	testhelpers.SetupMFALoginEnforcement(t, client, enforcementConfig)
 
 	// MFA single-phase login
 	totpPasscode1 := testhelpers.GetTOTPCodeFromEngine(t, client, enginePath1)
