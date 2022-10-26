@@ -140,7 +140,7 @@ scenario "autopilot" {
   }
 
   step "set_undo_logs_env_var" {
-    skip_step = matrix.undo_log_vault_version != "1.12.0"
+    skip_step = matrix.undo_logs_vault_version != "1.12.0"
     module    = module.set_undo_logs_env_var
 
     variables {
@@ -245,7 +245,7 @@ scenario "autopilot" {
     }
 
     variables {
-      vault_autopilot_upgrade_version = matrix.builder == "local" ? step.get_local_metadata.version : matrix.undo_log_vault_version
+      vault_autopilot_upgrade_version = matrix.builder == "local" ? step.get_local_metadata.version : matrix.undo_logs_vault_version
       vault_undo_logs_status          = matrix.undo_logs_status
       vault_instances                 = step.create_vault_cluster.vault_instances
       vault_root_token                = step.create_vault_cluster.vault_root_token
