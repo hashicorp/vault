@@ -162,7 +162,7 @@ func (c *WriteCommand) Run(args []string) int {
 			c.UI.Error(err.Error())
 			return 2
 		}
-	} else {
+	} else if c.getMFAValidationRequired(secret) {
 		c.UI.Warn(wrapAtLength("A login request was issued that is subject to "+
 			"MFA validation. Please make sure to validate the login by sending another "+
 			"request to sys/mfa/validate endpoint.") + "\n")

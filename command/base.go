@@ -219,6 +219,18 @@ func (c *BaseCommand) DefaultWrappingLookupFunc(operation, path string) string {
 	return api.DefaultWrappingLookupFunc(operation, path)
 }
 
+func (c *BaseCommand) getMFAValidationRequired(secret *api.Secret) bool {
+	if secret != nil && secret.Auth != nil && secret.Auth.MFARequirement != nil {
+		if c.flagMFA == nil && len(secret.Auth.MFARequirement.MFAConstraints) == 1 {
+			return true
+		} else if len(secret.Auth.MFARequirement.MFAConstraints) > 1 {
+			return true
+		}
+	}
+
+	return false
+}
+
 // getInteractiveMFAMethodInfo returns MFA method information only if operating
 // in interactive mode and one MFA method is configured.
 func (c *BaseCommand) getInteractiveMFAMethodInfo(secret *api.Secret) *MFAMethodInfo {
