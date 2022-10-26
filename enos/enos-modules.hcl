@@ -85,6 +85,14 @@ module "vault_verify_raft_auto_join_voter" {
   vault_instance_count = var.vault_instance_count
 }
 
+module "set_undo_logs_env_var" {
+  source = "./modules/set_undo_logs_env_var"
+}
+
+module "vault_verify_undo_logs" {
+  source = "./modules/vault_verify_undo_logs"
+}
+
 module "vault_verify_unsealed" {
   source = "./modules/vault_verify_unsealed"
 

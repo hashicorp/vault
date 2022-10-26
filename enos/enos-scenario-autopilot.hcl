@@ -1,10 +1,12 @@
 scenario "autopilot" {
   matrix {
-    arch            = ["amd64", "arm64"]
-    artifact_source = ["local", "crt", "artifactory"]
-    distro          = ["ubuntu", "rhel"]
-    edition         = ["ent"]
-    seal            = ["awskms", "shamir"]
+    arch                    = ["amd64", "arm64"]
+    artifact_source         = ["local", "crt", "artifactory"]
+    distro                  = ["ubuntu", "rhel"]
+    edition                 = ["ent"]
+    seal                    = ["awskms", "shamir"]
+    undo_logs_status        = ["0", "1"]
+    undo_logs_vault_version = ["0", "1.12.0", "1.13.0"]
   }
 
   terraform_cli = terraform_cli.default
@@ -129,12 +131,31 @@ scenario "autopilot" {
     }
   }
 
+  step "create_undo_logs_storageconfig" {
+    module = module.autopilot_upgrade_storageconfig
+
+    variables {
+      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : matrix.undo_logs_vault_version
+    }
+  }
+
+  step "set_undo_logs_env_var" {
+    skip_step = matrix.undo_log_vault_version != "1.12.0"
+    module    = module.set_undo_logs_env_var
+
+    variables {
+      undo_logs = matrix.undo_logs_status
+    }
+  }
+
   step "upgrade_vault_cluster_with_autopilot" {
     module = module.vault_cluster
     depends_on = [
       step.create_vault_cluster,
       step.build_vault,
       step.create_autopilot_upgrade_storageconfig,
+      step.create_undo_logs_storageconfig,
+      step.set_undo_logs_env_var,
     ]
 
     providers = {
@@ -148,7 +169,7 @@ scenario "autopilot" {
       instance_type               = local.vault_instance_type
       kms_key_arn                 = step.create_vpc.kms_key_arn
       storage_backend             = "raft"
-      storage_backend_addl_config = step.create_autopilot_upgrade_storageconfig.storage_addl_config
+      storage_backend_addl_config = matrix.undo_logs_vault_version != "0" ? step.create_autopilot_upgrade_storageconfig.storage_addl_config : step.create_undo_logs_storageconfig.storage_addl_config
       unseal_method               = matrix.seal
       vault_cluster_tag           = step.create_vault_cluster.vault_cluster_tag
       vault_init                  = false
@@ -209,6 +230,25 @@ scenario "autopilot" {
     variables {
       vault_instances  = step.create_vault_cluster.vault_instances
       vault_root_token = step.create_vault_cluster.vault_root_token
+    }
+  }
+
+  step "verify_undo_logs_status" {
+    skip_step = matrix.undo_logs_vault_version == "0"
+    module    = module.vault_verify_undo_logs
+    depends_on = [
+      step.upgrade_vault_cluster_with_autopilot,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vault_autopilot_upgrade_version = matrix.builder == "local" ? step.get_local_metadata.version : matrix.undo_log_vault_version
+      vault_undo_logs_status          = matrix.undo_logs_status
+      vault_instances                 = step.create_vault_cluster.vault_instances
+      vault_root_token                = step.create_vault_cluster.vault_root_token
     }
   }
 
