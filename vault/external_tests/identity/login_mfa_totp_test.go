@@ -88,7 +88,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 
 	totpConfig := map[string]interface{}{
 		"issuer":                  "yCorp",
-		"period":                  5,
+		"period":                  10,
 		"algorithm":               "SHA512",
 		"digits":                  6,
 		"skew":                    0,
@@ -177,7 +177,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 
 	// validation
 	// waiting for 5 seconds so that a fresh code could be generated
-	time.Sleep(5 * time.Second)
+	time.Sleep(10 * time.Second)
 	totpPasscode1 = testhelpers.GetTOTPCodeFromEngine(t, client, enginePath1)
 
 	secret, err = userClient1.Logical().WriteWithContext(context.Background(), "sys/mfa/validate", map[string]interface{}{
@@ -263,7 +263,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	doTwoPhaseLogin(t, userClient2, enginePath2, methodID, "testuser2")
 
 	// let's see if user1 is able to login after 5 seconds
-	time.Sleep(5 * time.Second)
+	time.Sleep(10 * time.Second)
 	doTwoPhaseLogin(t, userClient1, enginePath1, methodID, "testuser1")
 
 	// Destroy the secret so that the token can self generate
