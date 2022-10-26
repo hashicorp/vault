@@ -41,15 +41,15 @@ func PrepareTestContainerWithDatabase(t *testing.T, version, dbName string) (fun
 			connURL = fmt.Sprintf("%s/%s", connURL, dbName)
 		}
 
-		ctx, _ = context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, _ = context.WithTimeout(context.Background(), 1*time.Minute)
 		client, err := mongo.Connect(ctx, options.Client().ApplyURI(connURL))
 		if err != nil {
 			return nil, err
 		}
 
 		err = client.Ping(ctx, readpref.Primary())
-		if err != nil {
-			return nil, err
+		if err = client.Disconnect(ctx); err != nil {
+			t.Fatal()
 		}
 
 		return docker.NewServiceURLParse(connURL)
