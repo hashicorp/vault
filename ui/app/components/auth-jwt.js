@@ -18,6 +18,7 @@ export { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS, ERROR_JWT_LOGIN };
 export default Component.extend({
   store: service(),
   featureFlagService: service('featureFlag'),
+
   selectedAuthPath: null,
   selectedAuthType: null,
   roleName: null,
@@ -31,17 +32,14 @@ export default Component.extend({
 
   didReceiveAttrs() {
     this._super();
-    let { oldSelectedAuthPath, selectedAuthPath } = this;
-    let shouldDebounce = !oldSelectedAuthPath && !selectedAuthPath;
-    if (oldSelectedAuthPath !== selectedAuthPath) {
-      this.set('role', null);
-      this.onRoleName(this.roleName);
-      this.fetchRole.perform(null, { debounce: false });
-    } else if (shouldDebounce) {
-      this.fetchRole.perform(this.roleName);
+    const debounce = !this.oldSelectedAuthPath && !this.selectedAuthPath;
+
+    if (this.oldSelectedAuthPath !== this.selectedAuthPath || debounce) {
+      this.fetchRole.perform(this.roleName, { debounce });
     }
+
     this.set('errorMessage', null);
-    this.set('oldSelectedAuthPath', selectedAuthPath);
+    this.set('oldSelectedAuthPath', this.selectedAuthPath);
   },
 
   // Assumes authentication using OIDC until it's known that the mount is
@@ -177,6 +175,14 @@ export default Component.extend({
         e.preventDefault();
       }
       if (!this.isOIDC || !this.role || !this.role.authUrl) {
+        let message = this.errorMessage;
+        if (!this.role) {
+          message = 'Invalid role. Please try again.';
+        } else if (!this.role.authUrl) {
+          message =
+            'Missing auth_url. Please check that allowed_redirect_uris for the role include this mount path.';
+        }
+        this.onError(message);
         return;
       }
       try {

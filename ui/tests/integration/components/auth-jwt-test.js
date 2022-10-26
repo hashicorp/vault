@@ -73,30 +73,19 @@ module('Integration | Component | auth jwt', function (hooks) {
         return [200, { 'Content-Type': 'application/json' }, JSON.stringify(OIDC_AUTH_RESPONSE)];
       });
       this.post('/v1/auth/:path/oidc/auth_url', (request) => {
-        let body = JSON.parse(request.requestBody);
-        if (body.role === 'test') {
+        const { role } = JSON.parse(request.requestBody);
+        if (['test', 'okta', 'bar'].includes(role)) {
+          const auth_url = role === 'test' ? 'http://example.com' : role === 'okta' ? 'http://okta.com' : '';
           return [
             200,
             { 'Content-Type': 'application/json' },
             JSON.stringify({
-              data: {
-                auth_url: 'http://example.com',
-              },
+              data: { auth_url },
             }),
           ];
         }
-        if (body.role === 'okta') {
-          return [
-            200,
-            { 'Content-Type': 'application/json' },
-            JSON.stringify({
-              data: {
-                auth_url: 'http://okta.com',
-              },
-            }),
-          ];
-        }
-        return [400, { 'Content-Type': 'application/json' }, JSON.stringify({ errors: [ERROR_JWT_LOGIN] })];
+        const errors = role === 'foo' ? ['role "foo" could not be found'] : [ERROR_JWT_LOGIN];
+        return [400, { 'Content-Type': 'application/json' }, JSON.stringify({ errors })];
       });
     });
   });
@@ -239,5 +228,27 @@ module('Integration | Component | auth jwt', function (hooks) {
     cancelTimers();
     await settled();
     assert.notOk(this.handler.called, 'should not call the submit handler');
+  });
+
+  test('oidc: it should trigger error callback when role is not found', async function (assert) {
+    await renderIt(this, 'oidc');
+    await component.role('foo');
+    await component.login();
+    assert.strictEqual(
+      this.error,
+      'Invalid role. Please try again.',
+      'Error message is returned when role is not found'
+    );
+  });
+
+  test('oidc: it should trigger error callback when role is returned without auth_url', async function (assert) {
+    await renderIt(this, 'oidc');
+    await component.role('bar');
+    await component.login();
+    assert.strictEqual(
+      this.error,
+      'Missing auth_url. Please check that allowed_redirect_uris for the role include this mount path.',
+      'Error message is returned when role is returned without auth_url'
+    );
   });
 });

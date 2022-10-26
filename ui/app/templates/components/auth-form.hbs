@@ -1,5 +1,5 @@
 <div class="auth-form" data-test-auth-form>
-  {{#if (or (this.error) (and this.waitingForOktaNumberChallenge (not this.cancelAuthForOktaNumberChallenge)))}}
+  {{#if (and this.waitingForOktaNumberChallenge (not this.cancelAuthForOktaNumberChallenge))}}
     <OktaNumberChallenge
       @correctAnswer={{this.oktaNumberChallengeAnswer}}
       @hasError={{(not-eq this.error null)}}
