@@ -180,7 +180,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	time.Sleep(5 * time.Second)
 	totpPasscode1 = testhelpers.GetTOTPCodeFromEngine(t, client, enginePath1)
 
-	secret, err = client.Logical().WriteWithContext(context.Background(), "sys/mfa/validate", map[string]interface{}{
+	secret, err = userClient1.Logical().WriteWithContext(context.Background(), "sys/mfa/validate", map[string]interface{}{
 		"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
 		"mfa_payload": map[string][]string{
 			methodID: {totpPasscode1},
