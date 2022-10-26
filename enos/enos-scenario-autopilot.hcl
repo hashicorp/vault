@@ -37,7 +37,7 @@ scenario "autopilot" {
       arm64 = "t4g.small"
     }
     vault_instance_type   = coalesce(var.vault_instance_type, local.vault_instance_types[matrix.arch])
-    set_undo_logs_env_var = semverconstraint(local.vault_version, ">=1.12.0-0") && semverconstraint(local.vault_version, "<1.13.0-0") ? true : false
+    set_undo_logs_env_var = semverconstraint(var.vault_product_version, ">=1.12.0-0") && semverconstraint(var.vault_product_version, "<1.13.0-0") ? true : false
   }
 
   step "build_vault" {
