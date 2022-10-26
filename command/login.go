@@ -243,6 +243,9 @@ func (c *LoginCommand) Run(args []string) int {
 			return 2
 		}
 	} else if c.getMFAValidationRequired(secret) {
+		// Warn about existing login token, but return here, since the secret
+		// won't have any token information if further validation is required.
+		c.checkForAndWarnAboutLoginToken()
 		c.UI.Warn(wrapAtLength("A login request was issued that is subject to "+
 			"MFA validation. Please make sure to validate the login by sending another "+
 			"request to sys/mfa/validate endpoint.") + "\n")
