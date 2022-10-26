@@ -70,6 +70,7 @@ func (f *FSMEntry) String() string {
 // successful or not. EntryMap contains the keys/values from the Get operations.
 type FSMApplyResponse struct {
 	Success    bool
+	Error      error
 	EntrySlice []*FSMEntry
 }
 
@@ -590,32 +591,64 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 	// We will construct one slice per log, each slice containing another slice of results from our get ops
 	entrySlices := make([][]*FSMEntry, 0, numLogs)
 
+	// We're also going to return errors
+	entryErrors := make([]error, 0, numLogs)
+	numErrors := 0
+
+	createResponse := func(success bool, entrySlices [][]*FSMEntry, entryErrors []error) []interface{} {
+		resp := make([]interface{}, 0, numLogs)
+		for i := range logs {
+			fsmar := &FSMApplyResponse{
+				Success: success,
+			}
+
+			if success {
+				fsmar.EntrySlice = entrySlices[i]
+			} else {
+				if len(entryErrors) == numLogs {
+					fsmar.Error = entryErrors[i]
+				} else {
+					fsmar.Error = entryErrors[0]
+				}
+			}
+
+			resp = append(resp, fsmar)
+		}
+
+		return resp
+	}
+
 	// Do the unmarshalling first so we don't hold locks
 	var latestConfiguration *ConfigurationValue
 	commands := make([]interface{}, 0, numLogs)
-	for _, log := range logs {
-		switch log.Type {
+	for _, l := range logs {
+		switch l.Type {
 		case raft.LogCommand:
 			command := &LogData{}
-			err := proto.Unmarshal(log.Data, command)
+			err := proto.Unmarshal(l.Data, command)
 			if err != nil {
 				f.logger.Error("error proto unmarshaling log data", "error", err)
-				panic("error proto unmarshaling log data")
+				entryErrors = append(entryErrors, fmt.Errorf("error proto unmarshaling log data: %w", err))
+				numErrors++
 			}
 			commands = append(commands, command)
 		case raft.LogConfiguration:
-			configuration := raft.DecodeConfiguration(log.Data)
-			config := raftConfigurationToProtoConfiguration(log.Index, configuration)
-
+			configuration := raft.DecodeConfiguration(l.Data)
+			config := raftConfigurationToProtoConfiguration(l.Index, configuration)
 			commands = append(commands, config)
 
 			// Update the latest configuration the fsm has received; we will
 			// store this after it has been committed to storage.
 			latestConfiguration = config
-
 		default:
-			panic(fmt.Sprintf("got unexpected log type: %d", log.Type))
+			entryErrors = append(entryErrors, fmt.Errorf("got unexpected log type: %d", l.Type))
+			numErrors++
 		}
+	}
+
+	if numErrors > 0 {
+		resp := createResponse(false, nil, entryErrors)
+		return resp
 	}
 
 	// Only advance latest pointer if this log has a higher index value than
@@ -631,7 +664,11 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 		})
 		if err != nil {
 			f.logger.Error("unable to marshal latest index", "error", err)
-			panic("unable to marshal latest index")
+			// TODO: this is sub-optimal because it's going to return the same error numLogs times, because we need to return a slice of
+			// 	FSMApplyResponses that matches numLogs in length. But the error will only be true for one of those responses. Continuing to
+			//  panic here though also seems like a bad idea.
+			resp := createResponse(false, nil, []error{fmt.Errorf("unable to marshal latest index: %w", err)})
+			return resp
 		}
 	}
 
@@ -646,15 +683,16 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 		b := tx.Bucket(dataBucketName)
 		for _, commandRaw := range commands {
 			entrySlice := make([]*FSMEntry, 0)
+			var mErr *multierror.Error = nil
 			switch command := commandRaw.(type) {
 			case *LogData:
 				for _, op := range command.Operations {
-					var err error
+					var e error = nil
 					switch op.OpType {
 					case putOp:
-						err = b.Put([]byte(op.Key), op.Value)
+						e = b.Put([]byte(op.Key), op.Value)
 					case deleteOp:
-						err = b.Delete([]byte(op.Key))
+						e = b.Delete([]byte(op.Key))
 					case getOp:
 						fsmEntry := &FSMEntry{
 							Key: op.Key,
@@ -672,40 +710,47 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 							go f.restoreCb(context.Background())
 						}
 					default:
-						return fmt.Errorf("%q is not a supported transaction operation", op.OpType)
+						e = fmt.Errorf("%q is not a supported transaction operation", op.OpType)
 					}
-					if err != nil {
-						return err
+
+					if e != nil {
+						mErr = multierror.Append(mErr, e)
 					}
 				}
 
 			case *ConfigurationValue:
 				b := tx.Bucket(configBucketName)
-				configBytes, err := proto.Marshal(command)
-				if err != nil {
-					return err
+				configBytes, e := proto.Marshal(command)
+				if e != nil {
+					mErr = multierror.Append(mErr, e)
 				}
-				if err := b.Put(latestConfigKey, configBytes); err != nil {
-					return err
+				if e := b.Put(latestConfigKey, configBytes); e != nil {
+					mErr = multierror.Append(mErr, e)
 				}
 			}
 
+			entryErrors = append(entryErrors, mErr.ErrorOrNil())
 			entrySlices = append(entrySlices, entrySlice)
 		}
 
 		if len(logIndex) > 0 {
 			b := tx.Bucket(configBucketName)
-			err = b.Put(latestIndexKey, logIndex)
-			if err != nil {
-				return err
+			e := b.Put(latestIndexKey, logIndex)
+			if e != nil {
+				return e
 			}
 		}
 
 		return nil
 	})
+
 	if err != nil {
 		f.logger.Error("failed to store data", "error", err)
-		panic("failed to store data")
+		// TODO: this is sub-optimal because it's going to return the same error numLogs times, because we need to return a slice of
+		// 	FSMApplyResponses that matches numLogs in length. But the error will only be true for one of those responses. Continuing to
+		//  panic here though also seems like a bad idea.
+		resp := createResponse(false, nil, []error{fmt.Errorf("failed to store data: %w", err)})
+		return resp
 	}
 
 	// If we advanced the latest value, update the in-memory representation too.
@@ -727,6 +772,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 		resp[i] = &FSMApplyResponse{
 			Success:    true,
 			EntrySlice: entrySlices[i],
+			Error:      entryErrors[i],
 		}
 	}
 

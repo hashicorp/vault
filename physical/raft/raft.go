@@ -1641,7 +1641,9 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 	}
 
 	fsmar, ok := resp.(*FSMApplyResponse)
-	if !ok || !fsmar.Success {
+	if fsmar.Error != nil {
+		return fmt.Errorf("could not apply data: %w", fsmar.Error)
+	} else if !ok || !fsmar.Success {
 		return errors.New("could not apply data")
 	}
 
