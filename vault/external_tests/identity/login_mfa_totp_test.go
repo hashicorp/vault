@@ -8,6 +8,7 @@ import (
 	"time"
 
 	upAuth "github.com/hashicorp/vault/api/auth/userpass"
+	"github.com/hashicorp/vault/helper/testhelpers"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
@@ -18,70 +19,9 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func createEntityAndAlias(client *api.Client, mountAccessor, entityName, aliasName string, t *testing.T) (*api.Client, string, string) {
-	_, err := client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("auth/userpass/users/%s", aliasName), map[string]interface{}{
-		"password": "testpassword",
-	})
-	if err != nil {
-		t.Fatalf("failed to configure userpass backend: %v", err)
-	}
-
-	userClient, err := client.Clone()
-	if err != nil {
-		t.Fatalf("failed to clone the client:%v", err)
-	}
-	userClient.SetToken(client.Token())
-
-	resp, err := client.Logical().WriteWithContext(context.Background(), "identity/entity", map[string]interface{}{
-		"name": entityName,
-	})
-	if err != nil {
-		t.Fatalf("failed to create an entity:%v", err)
-	}
-	entityID := resp.Data["id"].(string)
-
-	aliasResp, err := client.Logical().WriteWithContext(context.Background(), "identity/entity-alias", map[string]interface{}{
-		"name":           aliasName,
-		"canonical_id":   entityID,
-		"mount_accessor": mountAccessor,
-	})
-	if err != nil {
-		t.Fatalf("failed to create an entity alias:%v", err)
-	}
-
-	aliasID := aliasResp.Data["id"].(string)
-	if aliasID == "" {
-		t.Fatal("Alias ID not present in response")
-	}
-	return userClient, entityID, aliasID
-}
-
-func registerEntityInTOTPEngine(client *api.Client, entityID, methodID string, t *testing.T) string {
-	totpGenName := fmt.Sprintf("%s-%s", entityID, methodID)
-	secret, err := client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("identity/mfa/method/totp/admin-generate"), map[string]interface{}{
-		"entity_id": entityID,
-		"method_id": methodID,
-	})
-	if err != nil {
-		t.Fatalf("failed to generate a TOTP secret on an entity: %v", err)
-	}
-	totpURL := secret.Data["url"].(string)
-
-	_, err = client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("totp/keys/%s", totpGenName), map[string]interface{}{
-		"url": totpURL,
-	})
-	if err != nil {
-		t.Fatalf("failed to register a TOTP URL: %v", err)
-	}
-	return totpGenName
-}
-
-func doTwoPhaseLogin(client *api.Client, totpCodePath, methodID, username string, t *testing.T) {
-	totpResp, err := client.Logical().ReadWithContext(context.Background(), totpCodePath)
-	if err != nil {
-		t.Fatalf("failed to create totp passcode: %v", err)
-	}
-	totpPasscode := totpResp.Data["code"].(string)
+func doTwoPhaseLogin(t *testing.T, client *api.Client, totpCodePath, methodID, username string) {
+	t.Helper()
+	totpPasscode := testhelpers.GetTOTPCodeFromEngine(t, client, totpCodePath)
 
 	upMethod, err := upAuth.NewUserpassAuth(username, &upAuth.Password{FromString: "testpassword"})
 
@@ -135,91 +75,48 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	// Enable the audit backend
-	err := client.Sys().EnableAuditWithOptions("noop", &api.EnableAuditOptions{Type: "noop"})
-	if err != nil {
+	if err := client.Sys().EnableAuditWithOptions("noop", &api.EnableAuditOptions{Type: "noop"}); err != nil {
 		t.Fatal(err)
 	}
 
-	// Mount the TOTP backend
-	mountInfo := &api.MountInput{
-		Type: "totp",
-	}
-	err = client.Sys().Mount("totp", mountInfo)
-	if err != nil {
-		t.Fatalf("failed to mount totp backend: %v", err)
-	}
-
-	// Enable Userpass authentication
-	err = client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
-		Type: "userpass",
-	})
-	if err != nil {
-		t.Fatalf("failed to enable userpass auth: %v", err)
-	}
-
-	auths, err := client.Sys().ListAuthWithContext(context.Background())
-	if err != nil {
-		t.Fatalf("bb")
-	}
-	var mountAccessor string
-	if auths != nil && auths["userpass/"] != nil {
-		mountAccessor = auths["userpass/"].Accessor
-	}
+	testhelpers.SetupTOTPMount(t, client)
+	mountAccessor := testhelpers.SetupUserpassMountAccessor(t, client)
 
 	// Creating two users in the userpass auth mount
-	userClient1, entityID1, _ := createEntityAndAlias(client, mountAccessor, "entity1", "testuser1", t)
-	userClient2, entityID2, _ := createEntityAndAlias(client, mountAccessor, "entity2", "testuser2", t)
+	userClient1, entityID1, _ := testhelpers.CreateEntityAndAlias(t, client, mountAccessor, "entity1", "testuser1")
+	userClient2, entityID2, _ := testhelpers.CreateEntityAndAlias(t, client, mountAccessor, "entity2", "testuser2")
 
-	// configure TOTP secret engine
-	var methodID string
-	// login MFA
-	{
-		// create a config
-		resp1, err := client.Logical().Write("identity/mfa/method/totp", map[string]interface{}{
-			"issuer":                  "yCorp",
-			"period":                  5,
-			"algorithm":               "SHA1",
-			"digits":                  6,
-			"skew":                    1,
-			"key_size":                10,
-			"qr_size":                 100,
-			"max_validation_attempts": 3,
-		})
-
-		if err != nil || (resp1 == nil) {
-			t.Fatalf("bad: resp: %#v\n err: %v", resp1, err)
-		}
-
-		methodID = resp1.Data["method_id"].(string)
-		if methodID == "" {
-			t.Fatalf("method ID is empty")
-		}
-
-		// creating MFAEnforcementConfig
-		_, err = client.Logical().WriteWithContext(context.Background(), "identity/mfa/login-enforcement/randomName", map[string]interface{}{
-			"auth_method_types": []string{"userpass"},
-			"name":              "randomName",
-			"mfa_method_ids":    []string{methodID},
-		})
-		if err != nil {
-			t.Fatalf("failed to configure MFAEnforcementConfig: %v", err)
-		}
+	totpConfig := map[string]interface{}{
+		"issuer":                  "yCorp",
+		"period":                  10,
+		"algorithm":               "SHA512",
+		"digits":                  6,
+		"skew":                    0,
+		"key_size":                20,
+		"qr_size":                 200,
+		"max_validation_attempts": 5,
 	}
+
+	methodID := testhelpers.SetupTOTPMethod(t, client, totpConfig)
 
 	// registering EntityIDs in the TOTP secret Engine for MethodID
-	totpEngineConfigName1 := registerEntityInTOTPEngine(client, entityID1, methodID, t)
-	totpEngineConfigName2 := registerEntityInTOTPEngine(client, entityID2, methodID, t)
+	enginePath1 := testhelpers.RegisterEntityInTOTPEngine(t, client, entityID1, methodID)
+	enginePath2 := testhelpers.RegisterEntityInTOTPEngine(t, client, entityID2, methodID)
+
+	// Configure a default login enforcement
+	enforcementConfig := map[string]interface{}{
+		"auth_method_types": []string{"userpass"},
+		"name":              "randomName",
+		"mfa_method_ids":    []string{methodID},
+	}
+
+	testhelpers.SetupMFALoginEnforcement(t, client, enforcementConfig)
 
 	// MFA single-phase login
-	totpCodePath1 := fmt.Sprintf("totp/code/%s", totpEngineConfigName1)
-	secret, err := client.Logical().ReadWithContext(context.Background(), totpCodePath1)
-	if err != nil {
-		t.Fatalf("failed to create totp passcode: %v", err)
-	}
-	totpPasscode1 := secret.Data["code"].(string)
+	totpPasscode1 := testhelpers.GetTOTPCodeFromEngine(t, client, enginePath1)
 
 	userClient1.AddHeader("X-Vault-MFA", fmt.Sprintf("%s:%s", methodID, totpPasscode1))
-	secret, err = userClient1.Logical().WriteWithContext(context.Background(), "auth/userpass/login/testuser1", map[string]interface{}{
+	secret, err := userClient1.Logical().WriteWithContext(context.Background(), "auth/userpass/login/testuser1", map[string]interface{}{
 		"password": "testpassword",
 	})
 	if err != nil {
@@ -280,13 +177,8 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 
 	// validation
 	// waiting for 5 seconds so that a fresh code could be generated
-	time.Sleep(5 * time.Second)
-	// getting a fresh totp passcode for the validation step
-	totpResp, err := client.Logical().ReadWithContext(context.Background(), totpCodePath1)
-	if err != nil {
-		t.Fatalf("failed to create totp passcode: %v", err)
-	}
-	totpPasscode1 = totpResp.Data["code"].(string)
+	time.Sleep(10 * time.Second)
+	totpPasscode1 = testhelpers.GetTOTPCodeFromEngine(t, client, enginePath1)
 
 	secret, err = userClient1.Logical().WriteWithContext(context.Background(), "sys/mfa/validate", map[string]interface{}{
 		"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
@@ -350,7 +242,9 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	}
 
 	var maxErr error
-	for i := 0; i < 4; i++ {
+	maxAttempts := 6
+	i := 0
+	for i = 0; i < maxAttempts; i++ {
 		_, maxErr = userClient1.Logical().WriteWithContext(context.Background(), "sys/mfa/validate", map[string]interface{}{
 			"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
 			"mfa_payload": map[string][]string{
@@ -361,18 +255,16 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 			t.Fatalf("MFA succeeded with an invalid passcode")
 		}
 	}
-	if !strings.Contains(maxErr.Error(), "maximum TOTP validation attempts 4 exceeded the allowed attempts 3") {
-		t.Fatalf("unexpected error message when exceeding max failed validation attempts")
+	if !strings.Contains(maxErr.Error(), "maximum TOTP validation attempts") {
+		t.Fatalf("unexpected error message when exceeding max failed validation attempts: %s", maxErr.Error())
 	}
 
 	// let's make sure the configID is not blocked for other users
-	totpCodePath2 := fmt.Sprintf("totp/code/%s", totpEngineConfigName2)
-	doTwoPhaseLogin(userClient2, totpCodePath2, methodID, "testuser2", t)
+	doTwoPhaseLogin(t, userClient2, enginePath2, methodID, "testuser2")
 
 	// let's see if user1 is able to login after 5 seconds
-	time.Sleep(5 * time.Second)
-	// getting a fresh totp passcode for the validation step
-	doTwoPhaseLogin(userClient1, totpCodePath1, methodID, "testuser1", t)
+	time.Sleep(10 * time.Second)
+	doTwoPhaseLogin(t, userClient1, enginePath1, methodID, "testuser1")
 
 	// Destroy the secret so that the token can self generate
 	_, err = client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("identity/mfa/method/totp/admin-destroy"), map[string]interface{}{
