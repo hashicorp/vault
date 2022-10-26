@@ -851,8 +851,8 @@ func SetupTOTPMethod(t testing.T, client *api.Client, config map[string]interfac
 	return methodID
 }
 
-// SetupMFALoginEnforcement configures a single enforcement method with name
-// "randomName" using the provided config map.
+// SetupMFALoginEnforcement configures a single enforcement method using the
+// provided config map. "name" field is required in the config map.
 func SetupMFALoginEnforcement(t testing.T, client *api.Client, config map[string]interface{}) {
 	t.Helper()
 	enfName, ok := config["name"]
