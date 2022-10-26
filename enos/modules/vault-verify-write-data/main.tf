@@ -17,17 +17,17 @@ locals {
 }
 
 resource "enos_remote_exec" "smoke-enable-secrets-kv" {
-  for_each = local.instances
 
   content = templatefile("${path.module}/templates/smoke-enable-secrets-kv.sh", {
-    instance_id       = each.key
+    # Only enable the secrets engine on the first node
+    instance_id       = 0
     vault_install_dir = var.vault_install_dir,
     vault_token       = var.vault_root_token,
   })
 
   transport = {
     ssh = {
-      host = each.value.public_ip
+      host = local.instances[0].public_ip
     }
   }
 }

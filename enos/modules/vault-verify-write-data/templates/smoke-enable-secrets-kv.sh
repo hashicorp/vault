@@ -29,11 +29,6 @@ function fail {
 binpath=${vault_install_dir}/vault
 instanceid=${instance_id}
 
-# Only enable the secrets engine on the first node
-if test $instanceid != '0'; then
-  exit 0
-fi
-
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
 export VAULT_ADDR='http://127.0.0.1:8200'
