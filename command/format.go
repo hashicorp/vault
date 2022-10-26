@@ -132,8 +132,7 @@ type RawFormatter struct{}
 func (r RawFormatter) Format(data interface{}) ([]byte, error) {
 	byte_data, ok := data.([]byte)
 	if !ok {
-		panic("backtrace")
-		return nil, fmt.Errorf("unable to type assert to []byte: %T", data)
+		return nil, fmt.Errorf("unable to type assert to []byte: %T; please share the command run", data)
 	}
 
 	return byte_data, nil
