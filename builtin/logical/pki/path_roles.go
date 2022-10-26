@@ -855,7 +855,8 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 		return nil, err
 	}
 	if oldEntry == nil {
-		return logical.ErrorResponse("Unable to fetch role entry to patch"), nil
+		// Patch without an existing role is the same as creating a new role.
+		return b.pathRoleCreate(ctx, req, data)
 	}
 
 	entry := &roleEntry{
