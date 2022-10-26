@@ -113,7 +113,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	testhelpers.SetupMFALoginEnforcement(t, client, enforcementConfig)
 
 	// MFA single-phase login
-	totpPasscode1 := testhelpers.GetTOTPCodeFromEngine(t, userClient1, enginePath1)
+	totpPasscode1 := testhelpers.GetTOTPCodeFromEngine(t, client, enginePath1)
 
 	userClient1.AddHeader("X-Vault-MFA", fmt.Sprintf("%s:%s", methodID, totpPasscode1))
 	secret, err := userClient1.Logical().WriteWithContext(context.Background(), "auth/userpass/login/testuser1", map[string]interface{}{
