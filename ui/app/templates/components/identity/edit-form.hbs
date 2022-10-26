@@ -24,7 +24,20 @@
       />
     {{/if}}
     {{#each this.model.fields as |attr|}}
-      <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
+      <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}}>
+        {{! TODO WIP }}
+        <SearchSelectWithModal
+          @id="policies"
+          @label="Policies"
+          @subText="Search for an existing policy, or type a new name to create it."
+          @model="policy/acl"
+          @inputValue={{@model.policies}}
+          @onChange={{this.handlePolicyCreate}}
+          @fallbackComponent="string-list"
+          @modalFormComponent="policy-form"
+          @modalSubtext="Somthing ehaweijfaw"
+        />
+      </FormField>
     {{/each}}
   </div>
 

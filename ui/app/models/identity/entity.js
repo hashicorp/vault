@@ -21,7 +21,7 @@ let Model = IdentityModel.extend({
   }),
   policies: attr({
     label: 'Policies',
-    editType: 'searchSelect',
+    editType: 'searchSelect', // TODO change to 'yield'
     isSectionHeader: true,
     fallbackComponent: 'string-list',
     models: ['policy/acl', 'policy/rgp'],
