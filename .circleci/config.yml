@@ -267,7 +267,7 @@ jobs:
 
             # Run tests
             test -d /tmp/go-cache && docker cp /tmp/go-cache ${CONTAINER_ID}:/tmp/gocache
-            docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+            docker exec ${CONTAINER_ID} sh -c 'mkdir -m 777 -p /home/circleci/go/src/github.com/hashicorp/vault/test-results/go-test/'
             docker cp . ${CONTAINER_ID}:/home/circleci/go/src/github.com/hashicorp/vault/
             docker cp $DOCKER_CERT_PATH/ ${CONTAINER_ID}:$DOCKER_CERT_PATH
 
@@ -507,7 +507,7 @@ jobs:
 
             # Run tests
             test -d /tmp/go-cache && docker cp /tmp/go-cache ${CONTAINER_ID}:/tmp/gocache
-            docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+            docker exec ${CONTAINER_ID} sh -c 'mkdir -m 777 -p /home/circleci/go/src/github.com/hashicorp/vault/test-results/go-test/'
             docker cp . ${CONTAINER_ID}:/home/circleci/go/src/github.com/hashicorp/vault/
             docker cp $DOCKER_CERT_PATH/ ${CONTAINER_ID}:$DOCKER_CERT_PATH
 
@@ -698,7 +698,7 @@ jobs:
 
             # Run tests
             test -d /tmp/go-cache && docker cp /tmp/go-cache ${CONTAINER_ID}:/tmp/gocache
-            docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+            docker exec ${CONTAINER_ID} sh -c 'mkdir -m 777 -p /home/circleci/go/src/github.com/hashicorp/vault/test-results/go-test/'
             docker cp . ${CONTAINER_ID}:/home/circleci/go/src/github.com/hashicorp/vault/
             docker cp $DOCKER_CERT_PATH/ ${CONTAINER_ID}:$DOCKER_CERT_PATH
 
@@ -999,7 +999,7 @@ jobs:
 
             # Run tests
             test -d /tmp/go-cache && docker cp /tmp/go-cache ${CONTAINER_ID}:/tmp/gocache
-            docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+            docker exec ${CONTAINER_ID} sh -c 'mkdir -m 777 -p /home/circleci/go/src/github.com/hashicorp/vault/test-results/go-test/'
             docker cp . ${CONTAINER_ID}:/home/circleci/go/src/github.com/hashicorp/vault/
             docker cp $DOCKER_CERT_PATH/ ${CONTAINER_ID}:$DOCKER_CERT_PATH
 

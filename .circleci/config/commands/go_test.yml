@@ -143,7 +143,7 @@ steps:
 
           # Run tests
           test -d << parameters.cache_dir >> && docker cp << parameters.cache_dir >> ${CONTAINER_ID}:/tmp/gocache
-          docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+          docker exec ${CONTAINER_ID} sh -c 'mkdir -m 777 -p /home/circleci/go/src/github.com/hashicorp/vault/test-results/go-test/'
           docker cp . ${CONTAINER_ID}:/home/circleci/go/src/github.com/hashicorp/vault/
           docker cp $DOCKER_CERT_PATH/ ${CONTAINER_ID}:$DOCKER_CERT_PATH
 
