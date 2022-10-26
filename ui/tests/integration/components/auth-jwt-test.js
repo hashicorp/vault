@@ -50,7 +50,6 @@ const renderIt = async (context, path = 'jwt') => {
       @selectedAuthPath={{this.selectedAuthPath}}
       @onError={{action (mut this.error)}}
       @onLoading={{action (mut this.isLoading)}}
-      @onToken={{action (mut this.token)}}
       @onNamespace={{action (mut this.namespace)}}
       @onSelectedAuth={{action (mut this.selectedAuth)}}
       @onSubmit={{action this.handler}}
@@ -198,8 +197,7 @@ module('Integration | Component | auth jwt', function (hooks) {
     });
     this.window.trigger('message', buildMessage());
     await settled();
-    assert.strictEqual(this.token, 'token', 'calls onToken with token');
-    assert.ok(this.handler.calledOnce, 'calls the onSubmit handler');
+    assert.ok(this.handler.withArgs(null, null, 'token').calledOnce, 'calls the onSubmit handler with token');
   });
 
   test('oidc: fails silently when event origin does not match window origin', async function (assert) {

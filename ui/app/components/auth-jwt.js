@@ -27,7 +27,6 @@ export default Component.extend({
   onRoleName() {},
   onLoading() {},
   onError() {},
-  onToken() {},
   onNamespace() {},
 
   didReceiveAttrs() {
@@ -163,9 +162,7 @@ export default Component.extend({
     } catch (e) {
       return this.handleOIDCError(e);
     }
-    let token = resp.auth.client_token;
-    this.onToken(token);
-    yield this.onSubmit();
+    yield this.onSubmit(null, null, resp.auth.client_token);
   }),
 
   actions: {

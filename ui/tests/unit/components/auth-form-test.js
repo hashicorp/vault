@@ -10,7 +10,6 @@ module('Unit | Component | auth-form', function (hooks) {
 
     const component = this.owner.lookup('component:auth-form');
     component.reopen({
-      token: 'foo-bar',
       methods: [], // eslint-disable-line
       // eslint-disable-next-line
       authenticate: {
@@ -38,7 +37,7 @@ module('Unit | Component | auth-form', function (hooks) {
     for (const type of ['oidc', 'jwt']) {
       component.set('selectedAuth', type);
       await settled();
-      await component.actions.doSubmit.apply(component, [undefined, event]);
+      await component.actions.doSubmit.apply(component, [undefined, event, 'foo-bar']);
     }
   });
 });
