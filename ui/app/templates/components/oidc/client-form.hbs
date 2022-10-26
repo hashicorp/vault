@@ -60,7 +60,7 @@
         @id="assignments"
         @label="Assignment name"
         @subText="Search for an existing assignment, or type a new name to create it."
-        @model="oidc/assignment"
+        @models={{array "oidc/assignment"}}
         @inputValue={{this.modelAssignments}}
         @onChange={{this.handleAssignmentSelection}}
         @excludeOptions={{array "allow_all"}}
