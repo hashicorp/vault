@@ -870,7 +870,6 @@ func SetupMFALoginEnforcement(t testing.T, client *api.Client, config map[string
 // available.
 func SetupUserpassMountAccessor(t testing.T, client *api.Client) string {
 	t.Helper()
-	var mountAccessor string
 	// Enable Userpass authentication
 	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
 		Type: "userpass",
@@ -883,13 +882,11 @@ func SetupUserpassMountAccessor(t testing.T, client *api.Client) string {
 	if err != nil {
 		t.Fatalf("failed to list auth methods: %v", err)
 	}
-	if auths != nil && auths["userpass/"] != nil {
-		mountAccessor = auths["userpass/"].Accessor
-	} else {
+	if auths == nil || auths["userpass/"] == nil {
 		t.Fatalf("failed to get userpass mount accessor")
 	}
 
-	return mountAccessor
+	return auths["userpass/"].Accessor
 }
 
 // RegisterEntityInTOTPEngine registers an entity with a methodID and returns
@@ -897,7 +894,7 @@ func SetupUserpassMountAccessor(t testing.T, client *api.Client) string {
 func RegisterEntityInTOTPEngine(t testing.T, client *api.Client, entityID, methodID string) string {
 	t.Helper()
 	totpGenName := fmt.Sprintf("%s-%s", entityID, methodID)
-	secret, err := client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("identity/mfa/method/totp/admin-generate"), map[string]interface{}{
+	secret, err := client.Logical().WriteWithContext(context.Background(), "identity/mfa/method/totp/admin-generate", map[string]interface{}{
 		"entity_id": entityID,
 		"method_id": methodID,
 	})
@@ -914,8 +911,9 @@ func RegisterEntityInTOTPEngine(t testing.T, client *api.Client, entityID, metho
 	if err != nil {
 		t.Fatalf("failed to register a TOTP URL: %v", err)
 	}
-	_, err = client.Logical().WriteWithContext(context.Background(), "identity/mfa/login-enforcement/randomName", map[string]interface{}{
-		"name":                "randomName",
+	enfPath := fmt.Sprintf("identity/mfa/login-enforcement/%s", methodID[0:4])
+	_, err = client.Logical().WriteWithContext(context.Background(), enfPath, map[string]interface{}{
+		"name":                methodID[0:4],
 		"identity_entity_ids": []string{entityID},
 		"mfa_method_ids":      []string{methodID},
 	})
@@ -934,7 +932,7 @@ func GetTOTPCodeFromEngine(t testing.T, client *api.Client, enginePath string) s
 	if err != nil {
 		t.Fatalf("failed to create totp passcode: %v", err)
 	}
-	if secret == nil {
+	if secret == nil || secret.Data == nil {
 		t.Fatalf("bad secret returned from %s", totpPath)
 	}
 	return secret.Data["code"].(string)
@@ -969,7 +967,7 @@ func SetupLoginMFATOTP(t testing.T, client *api.Client) (*api.Client, string, st
 	// Configure a default login enforcement
 	enforcementConfig := map[string]interface{}{
 		"auth_method_types": []string{"userpass"},
-		"name":              "randomName",
+		"name":              methodID[0:4],
 		"mfa_method_ids":    []string{methodID},
 	}
 
