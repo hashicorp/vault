@@ -3,7 +3,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
 
-import page from 'vault/tests/pages/policies/index';
+import page from 'vault/tests/pages/policies-index';
 import authPage from 'vault/tests/pages/auth';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 
@@ -29,8 +29,8 @@ module('Acceptance | policies/acl', function (hooks) {
     await settled();
     await page.findPolicyByName('default').click();
     await settled();
-    assert.strictEqual(currentRouteName(), 'vault.cluster.policy.show');
-    assert.strictEqual(currentURL(), '/vault/policy/acl/default');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.policies.policy.show');
+    assert.strictEqual(currentURL(), '/vault/policies/acl/default/show');
   });
 
   test('it allows deletion of policies with dots in names', async function (assert) {

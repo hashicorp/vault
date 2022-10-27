@@ -1,7 +1,7 @@
 import { click, fillIn, find, currentURL, waitUntil, currentRouteName } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import page from 'vault/tests/pages/policies/index';
+import page from 'vault/tests/pages/policies-index';
 import authPage from 'vault/tests/pages/auth';
 import { create } from 'ember-cli-page-object';
 import flashMessage from 'vault/tests/pages/components/flash-message';
@@ -33,12 +33,12 @@ module('Acceptance | policies (old)', function (hooks) {
     await click('[data-test-policy-save]');
     assert.strictEqual(
       currentRouteName(),
-      'vault.cluster.policy.show',
+      'vault.cluster.policies.policy.show',
       'navigates to policy show on successful save'
     );
     assert.strictEqual(
       currentURL(),
-      `/vault/policy/acl/${encodeURIComponent(policyName)}`,
+      `/vault/policies/acl/${encodeURIComponent(policyName)}/show`,
       'url has policy name and type'
     );
 
@@ -86,7 +86,7 @@ module('Acceptance | policies (old)', function (hooks) {
     find('.CodeMirror').CodeMirror.setValue(policyString);
     await click('[data-test-policy-save]');
     assert.ok(
-      await waitUntil(() => currentURL() === `/vault/policy/acl/${policyName}`),
+      await waitUntil(() => currentURL() === `/vault/policies/acl/${policyName}/show`),
       'navigates to policy show on successful save'
     );
     assert.dom('[data-test-policy-edit-toggle]').exists({ count: 1 }, 'shows the edit toggle');
