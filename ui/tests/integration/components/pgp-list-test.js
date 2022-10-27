@@ -17,7 +17,7 @@ module('Integration | Component | pgp list', function (hooks) {
 
   test('it renders', async function (assert) {
     this.set('listLength', 0);
-    await render(hbs`<PgpList @listLength={{listLength}} />`);
+    await render(hbs`<PgpList @listLength={{this.listLength}} />`);
     assert.dom('[data-test-empty-text]').exists('shows the empty state');
     this.set('listLength', 1);
     assert

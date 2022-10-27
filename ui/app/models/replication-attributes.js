@@ -1,9 +1,8 @@
+import Model, { attr } from '@ember-data/model';
 import { match, not } from '@ember/object/computed';
 import { computed } from '@ember/object';
-import { attr } from '@ember-data/model';
-import Fragment from 'ember-data-model-fragments/fragment';
 
-export default Fragment.extend({
+export default Model.extend({
   clusterId: attr('string'),
   clusterIdDisplay: computed('clusterId', 'mode', function () {
     const clusterId = this.clusterId;

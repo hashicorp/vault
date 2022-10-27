@@ -37,6 +37,23 @@ variable "vault_local_bundle_path" {
   description = "The path to the local Vault (vault.zip) bundle"
 }
 
+variable "vault_local_artifact_path" {
+  type        = string
+  description = "The path to a locally built vault artifact to install"
+  default     = null
+}
+
+variable "vault_artifactory_release" {
+  type = object({
+    username = string
+    token    = string
+    url      = string
+    sha256   = string
+  })
+  description = "Vault release version and edition to install from artifactory.hashicorp.engineering"
+  default     = null
+}
+
 variable "vault_seal_type" {
   type        = string
   description = "The Vault seal type"

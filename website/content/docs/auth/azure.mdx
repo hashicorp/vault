@@ -14,35 +14,43 @@ and expects a [JSON Web Token (JWT)](https://tools.ietf.org/html/rfc7519)
 signed by Azure Active Directory for the configured tenant.
 
 This method supports authentication for system-assigned and user-assigned
-managed identities. See [Azure Managed Service Identity (MSI)](https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/overview) for more information about these resources.
+managed identities. See [Azure Managed Service Identity (MSI)](https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/overview)
+for more information about these resources.
 
-~> System-assigned identities are unique to every virtual machine in Azure. If the
-virtual machines using Azure auth are recreated frequently, using system-assigned
-identities could result in a lot of Vault entities. For environments with high ephemeral
-workloads, user-assigned identities are recommended.
+This documentation assumes the Azure method is mounted at the `/auth/azure`
+path in Vault. Since it is possible to enable auth methods at any location,
+please update your API calls accordingly.
 
 ## Prerequisites:
 
-The following documentation assumes that the method has been
-[mounted](/docs/plugin) at `auth/azure`.
+The Azure auth method requires client credentials to access Azure APIs. The following
+are required to configure the auth method:
 
-- A configured [Azure AD application](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-integrating-applications) which is used as the resource for generating MSI access tokens.
-- Client credentials (shared secret) for accessing the Azure Resource Manager with read access to compute endpoints. See [Azure AD Service to Service Client Credentials](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-protocols-oauth-service-to-service)
+- A configured [Azure AD application](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-integrating-applications)
+  which is used as the resource for generating MSI access tokens.
+- Client credentials (shared secret) with read access to particular Azure Resource Manager
+  resources. See [Azure AD Service to Service Client Credentials](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-protocols-oauth-service-to-service).
 
-Required Azure API permissions to be granted to Vault user:
+If Vault is hosted on Azure, Vault can use MSI to access Azure instead of a shared secret.
+MSI must be [enabled](https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/qs-configure-portal-windows-vm)
+on the VMs hosting Vault.
 
-- `Microsoft.Compute/virtualMachines/*/read`
-- `Microsoft.Compute/virtualMachineScaleSets/*/read`
+The following Azure [role assignments](https://learn.microsoft.com/en-us/azure/role-based-access-control/overview#role-assignments)
+must be granted to the Azure AD application in order for the auth method to access Azure
+APIs during authentication.
 
-_NOTE:_ The above permissions are only required when the associated vm\* parameters are used on login. Please see the [API doc](https://www.vaultproject.io/api-docs/auth/azure#login) for more details.
+~> **Note:** The role assignments are only required when the
+[`vm_name`](/api-docs/auth/azure#vm_name) and [`vmss_name`](/api-docs/auth/azure#vmss_name)
+parameters are used on login.
 
-If Vault is hosted on Azure, Vault can use MSI to access Azure instead of a shared secret. MSI must be [enabled](https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/qs-configure-portal-windows-vm) on the VMs hosting Vault.
+| Azure Environment | Login Parameter | Azure API Permission |
+| ----------- | --------------- | -------------------- |
+| Virtual Machine | [`vm_name`](/api-docs/auth/azure#vm_name) | `Microsoft.Compute/virtualMachines/*/read` |
+| Virtual Machine Scale Set ([Uniform Orchestration][vmss-uniform]) | [`vmss_name`](/api-docs/auth/azure#vmss_name) | `Microsoft.Compute/virtualMachineScaleSets/*/read` |
+| Virtual Machine Scale Set ([Flexible Orchestration][vmss-flex]) | [`vmss_name`](/api-docs/auth/azure#vmss_name) | `Microsoft.Compute/virtualMachineScaleSets/*/read` `Microsoft.ManagedIdentity/userAssignedIdentities/*/read` |
 
-The next sections review how the authN/Z workflows work. If you
-have already reviewed these sections, here are some quick links to:
-
-- [Usage](/docs/secrets/azure#usage)
-- [API documentation](/api-docs/auth/azure) docs.
+[vmss-uniform]: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-orchestration-modes#scale-sets-with-uniform-orchestration
+[vmss-flex]: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-orchestration-modes#scale-sets-with-flexible-orchestration
 
 ## Authentication
 
@@ -173,29 +181,14 @@ tool.
        https://127.0.0.1:8200/v1/auth/azure/role/dev-role
    ```
 
-### Plugin Setup
+## Azure Managed Identities
 
-~> The following section is only relevant if you decide to enable the azure auth
-method as an external plugin. The azure plugin method is integrated into Vault as
-a builtin method by default.
-
-Assuming you have saved the binary `vault-plugin-auth-azure` to some folder and
-configured the [plugin directory](/docs/plugins/plugin-architecture#plugin-directory)
-for your server at `path/to/plugins`:
-
-1. Enable the plugin in the catalog:
-
-   ```text
-   $ vault write sys/plugins/catalog/auth/azure-auth \
-       command="vault-plugin-auth-azure" \
-       sha256="..."
-   ```
-
-1. Enable the azure auth method as a plugin:
-
-   ```text
-   $ vault auth enable -path=azure azure-auth
-   ```
+There are two types of [managed identities](https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview#managed-identity-types)
+in Azure: System-assigned and User-assigned. System-assigned identities are unique to
+every virtual machine in Azure. If the virtual machines using Azure auth are recreated
+frequently, using system-assigned identities could result in many Vault entities being
+created. For environments with high ephemeral workloads, user-assigned identities are
+recommended.
 
 ## Azure Debug Logs
 

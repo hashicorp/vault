@@ -86,12 +86,12 @@ module('Integration | Component | search select with modal', function (hooks) {
   `);
 
     assert.dom('[data-test-search-select-with-modal]').exists('the component renders');
-    assert.equal(component.labelText, 'Entity ID', 'label text is correct');
+    assert.strictEqual(component.labelText, 'Entity ID', 'label text is correct');
     assert.ok(component.hasTrigger, 'it renders the power select trigger');
-    assert.equal(component.selectedOptions.length, 0, 'there are no selected options');
+    assert.strictEqual(component.selectedOptions.length, 0, 'there are no selected options');
 
     await clickTrigger();
-    assert.equal(component.options.length, 2, 'dropdown renders passed in models as options');
+    assert.strictEqual(component.options.length, 2, 'dropdown renders passed in models as options');
   });
 
   test('it filters options and adds option to create new item', async function (assert) {
@@ -111,18 +111,18 @@ module('Integration | Component | search select with modal', function (hooks) {
   `);
 
     await clickTrigger();
-    assert.equal(component.options.length, 2, 'dropdown renders all options');
+    assert.strictEqual(component.options.length, 2, 'dropdown renders all options');
 
     await typeInSearch('e');
-    assert.equal(component.options.length, 3, 'dropdown renders all options plus add option');
+    assert.strictEqual(component.options.length, 3, 'dropdown renders all options plus add option');
 
     await typeInSearch('entity-1');
-    assert.equal(component.options[0].text, 'entity-1-id', 'dropdown renders only matching option');
+    assert.strictEqual(component.options[0].text, 'entity-1-id', 'dropdown renders only matching option');
 
     await typeInSearch('entity-1-new');
-    assert.equal(
+    assert.strictEqual(
       component.options[0].text,
-      'Create new entity: entity-1-new',
+      'Click to create new entity: entity-1-new',
       'dropdown gives option to create new option'
     );
 

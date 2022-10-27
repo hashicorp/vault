@@ -33,7 +33,7 @@ module('Integration | Component | clients/line-chart', function (hooks) {
   test('it renders', async function (assert) {
     await render(hbs`
     <div class="chart-container-wide">
-      <Clients::LineChart @dataset={{dataset}} @xKey={{xKey}} @yKey={{yKey}} />
+      <Clients::LineChart @dataset={{this.dataset}} @xKey={{this.xKey}} @yKey={{this.yKey}} />
       </div>
     `);
 
@@ -79,10 +79,10 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     await render(hbs`
     <div class="chart-container-wide">
       <Clients::LineChart 
-        @dataset={{dataset}} 
-        @upgradeData={{upgradeData}} 
-        @xKey={{xKey}} 
-        @yKey={{yKey}} 
+        @dataset={{this.dataset}} 
+        @upgradeData={{this.upgradeData}} 
+        @xKey={{this.xKey}} 
+        @yKey={{this.yKey}} 
       />
     </div>
     `);
@@ -137,8 +137,8 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     await render(hbs`
     <div class="chart-container-wide">
       <Clients::LineChart 
-        @dataset={{dataset}} 
-        @upgradeData={{upgradeData}}
+        @dataset={{this.dataset}} 
+        @upgradeData={{this.upgradeData}}
       />
     </div>
     `);
@@ -162,10 +162,10 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     await render(hbs`
     <div class="chart-container-wide">
     <Clients::LineChart 
-    @dataset={{dataset}} 
-    @upgradeData={{upgradeData}} 
-    @xKey={{xKey}} 
-    @yKey={{yKey}} 
+    @dataset={{this.dataset}} 
+    @upgradeData={{this.upgradeData}} 
+    @xKey={{this.xKey}} 
+    @yKey={{this.yKey}} 
     />
     </div>
     `);
@@ -180,10 +180,10 @@ module('Integration | Component | clients/line-chart', function (hooks) {
     await render(hbs`
     <div class="chart-container-wide">
     <Clients::LineChart 
-    @dataset={{dataset}} 
-    @upgradeData={{upgradeData}} 
-    @xKey={{xKey}} 
-    @yKey={{yKey}} 
+    @dataset={{this.dataset}} 
+    @upgradeData={{this.upgradeData}} 
+    @xKey={{this.xKey}} 
+    @yKey={{this.yKey}} 
     />
     </div>
     `);

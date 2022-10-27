@@ -28,6 +28,10 @@ export default class AutocompleteInput extends Component {
     this.inputElement = element.querySelector('.input');
   }
   @action
+  setDropdownAPI(dropdownAPI) {
+    this.dropdownAPI = dropdownAPI;
+  }
+  @action
   onInput(event) {
     const { options = [], optionsTrigger } = this.args;
     if (optionsTrigger && options.length) {

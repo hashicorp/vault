@@ -49,8 +49,9 @@ func verifyNamespace(*Core, *namespace.Namespace, *MountEntry) error { return ni
 func (c *Core) mountEntrySysView(entry *MountEntry) extendedSystemView {
 	return extendedSystemViewImpl{
 		dynamicSystemView{
-			core:       c,
-			mountEntry: entry,
+			core:        c,
+			mountEntry:  entry,
+			perfStandby: c.perfStandby,
 		},
 	}
 }

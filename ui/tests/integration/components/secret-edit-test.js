@@ -34,7 +34,7 @@ module('Integration | Component | secret edit', function (hooks) {
       },
     });
 
-    await render(hbs`{{secret-edit mode=mode model=model }}`);
+    await render(hbs`{{secret-edit mode=this.mode model=this.model }}`);
     assert.dom('[data-test-toggle-input="json"]').isDisabled();
   });
 
@@ -48,7 +48,7 @@ module('Integration | Component | secret edit', function (hooks) {
       },
     });
 
-    await render(hbs`{{secret-edit mode=mode model=model }}`);
+    await render(hbs`{{secret-edit mode=this.mode model=this.model }}`);
     assert.dom('[data-test-toggle-input="json"]').isNotDisabled();
   });
 
@@ -58,7 +58,7 @@ module('Integration | Component | secret edit', function (hooks) {
       secretData: null,
     });
 
-    await render(hbs`{{secret-edit mode=mode model=model preferAdvancedEdit=true }}`);
+    await render(hbs`{{secret-edit mode=this.mode model=this.model preferAdvancedEdit=true }}`);
 
     let instance = document.querySelector('.CodeMirror').CodeMirror;
     instance.setValue(JSON.stringify([{ foo: 'bar' }]));
@@ -76,7 +76,7 @@ module('Integration | Component | secret edit', function (hooks) {
         float: '1.234',
       },
     });
-    await render(hbs`<SecretEdit @mode={{mode}} @model={{model}} />`);
+    await render(hbs`<SecretEdit @mode={{this.mode}} @model={{this.model}} />`);
     assert.dom('[data-test-secret-save]').isNotDisabled();
   });
 
@@ -94,7 +94,7 @@ module('Integration | Component | secret edit', function (hooks) {
       canReadSecretData: true,
     });
 
-    await render(hbs`{{secret-edit mode=mode model=model preferAdvancedEdit=true }}`);
+    await render(hbs`{{secret-edit mode=this.mode model=this.model preferAdvancedEdit=true }}`);
 
     let instance = document.querySelector('.CodeMirror').CodeMirror;
     instance.setValue(JSON.stringify([{ foo: 'bar' }]));

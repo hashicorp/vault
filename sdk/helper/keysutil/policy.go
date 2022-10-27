@@ -62,6 +62,7 @@ const (
 	KeyType_ECDSA_P521
 	KeyType_AES128_GCM96
 	KeyType_RSA3072
+	KeyType_MANAGED_KEY
 	KeyType_HMAC
 )
 
@@ -73,6 +74,14 @@ const (
 	// DefaultVersionTemplate is used when no version template is provided.
 	DefaultVersionTemplate = "vault:v{{version}}:"
 )
+
+type AEADFactory interface {
+	GetAEAD(iv []byte) (cipher.AEAD, error)
+}
+
+type AssociatedDataFactory interface {
+	GetAssociatedData() ([]byte, error)
+}
 
 type RestoreInfo struct {
 	Time    time.Time `json:"time"`
@@ -137,6 +146,14 @@ func (kt KeyType) HashSignatureInput() bool {
 func (kt KeyType) DerivationSupported() bool {
 	switch kt {
 	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_ED25519:
+		return true
+	}
+	return false
+}
+
+func (kt KeyType) AssociatedDataSupported() bool {
+	switch kt {
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
 		return true
 	}
 	return false
@@ -402,6 +419,8 @@ type Policy struct {
 
 	// AllowImportedKeyRotation indicates whether an imported key may be rotated by Vault
 	AllowImportedKeyRotation bool
+
+	ManagedKeyName string `json:"managed_key_name,omitempty"`
 }
 
 func (p *Policy) Lock(exclusive bool) {
@@ -833,101 +852,14 @@ func (p *Policy) convergentVersion(ver int) int {
 }
 
 func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, error) {
-	if !p.Type.EncryptionSupported() {
-		return "", errutil.UserError{Err: fmt.Sprintf("message encryption not supported for key type %v", p.Type)}
-	}
-
-	// Decode the plaintext value
-	plaintext, err := base64.StdEncoding.DecodeString(value)
-	if err != nil {
-		return "", errutil.UserError{Err: err.Error()}
-	}
-
-	switch {
-	case ver == 0:
-		ver = p.LatestVersion
-	case ver < 0:
-		return "", errutil.UserError{Err: "requested version for encryption is negative"}
-	case ver > p.LatestVersion:
-		return "", errutil.UserError{Err: "requested version for encryption is higher than the latest key version"}
-	case ver < p.MinEncryptionVersion:
-		return "", errutil.UserError{Err: "requested version for encryption is less than the minimum encryption key version"}
-	}
-
-	var ciphertext []byte
-
-	switch p.Type {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
-		hmacKey := context
-
-		var encKey []byte
-		var deriveHMAC bool
-
-		encBytes := 32
-		hmacBytes := 0
-		if p.convergentVersion(ver) > 2 {
-			deriveHMAC = true
-			hmacBytes = 32
-		}
-		if p.Type == KeyType_AES128_GCM96 {
-			encBytes = 16
-		}
-
-		key, err := p.GetKey(context, ver, encBytes+hmacBytes)
-		if err != nil {
-			return "", err
-		}
-
-		if len(key) < encBytes+hmacBytes {
-			return "", errutil.InternalError{Err: "could not derive key, length too small"}
-		}
-
-		encKey = key[:encBytes]
-		if len(encKey) != encBytes {
-			return "", errutil.InternalError{Err: "could not derive enc key, length not correct"}
-		}
-		if deriveHMAC {
-			hmacKey = key[encBytes:]
-			if len(hmacKey) != hmacBytes {
-				return "", errutil.InternalError{Err: "could not derive hmac key, length not correct"}
-			}
-		}
-
-		ciphertext, err = p.SymmetricEncryptRaw(ver, encKey, plaintext,
-			SymmetricOpts{
-				Convergent: p.ConvergentEncryption,
-				HMACKey:    hmacKey,
-				Nonce:      nonce,
-			})
-
-		if err != nil {
-			return "", err
-		}
-	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
-		keyEntry, err := p.safeGetKeyEntry(ver)
-		if err != nil {
-			return "", err
-		}
-		key := keyEntry.RSAKey
-		ciphertext, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, &key.PublicKey, plaintext, nil)
-		if err != nil {
-			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA encrypt the plaintext: %v", err)}
-		}
-
-	default:
-		return "", errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
-	}
-
-	// Convert to base64
-	encoded := base64.StdEncoding.EncodeToString(ciphertext)
-
-	// Prepend some information
-	encoded = p.getVersionPrefix(ver) + encoded
-
-	return encoded, nil
+	return p.EncryptWithFactory(ver, context, nonce, value, nil)
 }
 
 func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
+	return p.DecryptWithFactory(context, nonce, value, nil)
+}
+
+func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factories ...interface{}) (string, error) {
 	if !p.Type.DecryptionSupported() {
 		return "", errutil.UserError{Err: fmt.Sprintf("message decryption not supported for key type %v", p.Type)}
 	}
@@ -995,11 +927,28 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 			return "", errutil.InternalError{Err: "could not derive enc key, length not correct"}
 		}
 
-		plain, err = p.SymmetricDecryptRaw(encKey, decoded,
-			SymmetricOpts{
-				Convergent:        p.ConvergentEncryption,
-				ConvergentVersion: p.ConvergentVersion,
-			})
+		symopts := SymmetricOpts{
+			Convergent:        p.ConvergentEncryption,
+			ConvergentVersion: p.ConvergentVersion,
+		}
+		for index, rawFactory := range factories {
+			if rawFactory == nil {
+				continue
+			}
+			switch factory := rawFactory.(type) {
+			case AEADFactory:
+				symopts.AEADFactory = factory
+			case AssociatedDataFactory:
+				symopts.AdditionalData, err = factory.GetAssociatedData()
+				if err != nil {
+					return "", errutil.InternalError{Err: fmt.Sprintf("unable to get associated_data/additional_data from factory[%d]: %v", index, err)}
+				}
+			default:
+				return "", errutil.InternalError{Err: fmt.Sprintf("unknown type of factory[%d]: %T", index, rawFactory)}
+			}
+		}
+
+		plain, err = p.SymmetricDecryptRaw(encKey, decoded, symopts)
 		if err != nil {
 			return "", err
 		}
@@ -1773,6 +1722,8 @@ type SymmetricOpts struct {
 	AdditionalData []byte
 	// The HMAC key, for generating IVs in convergent encryption
 	HMACKey []byte
+	// Allows an external provider of the AEAD, for e.g. managed keys
+	AEADFactory AEADFactory
 }
 
 // Symmetrically encrypt a plaintext given the convergence configuration and appropriate keys
@@ -1804,6 +1755,17 @@ func (p *Policy) SymmetricEncryptRaw(ver int, encKey, plaintext []byte, opts Sym
 		}
 
 		aead = cha
+	case KeyType_MANAGED_KEY:
+		if opts.Convergent || len(opts.Nonce) != 0 {
+			return nil, errutil.UserError{Err: "cannot use convergent encryption or provide a nonce to managed-key backed encryption"}
+		}
+		if opts.AEADFactory == nil {
+			return nil, errors.New("expected AEAD factory from managed key, none provided")
+		}
+		aead, err = opts.AEADFactory.GetAEAD(nonce)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if opts.Convergent {
@@ -1847,6 +1809,7 @@ func (p *Policy) SymmetricEncryptRaw(ver int, encKey, plaintext []byte, opts Sym
 // Symmetrically decrypt a ciphertext given the convergence configuration and appropriate keys
 func (p *Policy) SymmetricDecryptRaw(encKey, ciphertext []byte, opts SymmetricOpts) ([]byte, error) {
 	var aead cipher.AEAD
+	var err error
 	var nonce []byte
 
 	switch p.Type {
@@ -1872,6 +1835,11 @@ func (p *Policy) SymmetricDecryptRaw(encKey, ciphertext []byte, opts SymmetricOp
 		}
 
 		aead = cha
+	case KeyType_MANAGED_KEY:
+		aead, err = opts.AEADFactory.GetAEAD(nonce)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if len(ciphertext) < aead.NonceSize() {
@@ -1893,4 +1861,115 @@ func (p *Policy) SymmetricDecryptRaw(encKey, ciphertext []byte, opts SymmetricOp
 		return nil, errutil.UserError{Err: err.Error()}
 	}
 	return plain, nil
+}
+
+func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value string, factories ...interface{}) (string, error) {
+	if !p.Type.EncryptionSupported() {
+		return "", errutil.UserError{Err: fmt.Sprintf("message encryption not supported for key type %v", p.Type)}
+	}
+
+	// Decode the plaintext value
+	plaintext, err := base64.StdEncoding.DecodeString(value)
+	if err != nil {
+		return "", errutil.UserError{Err: err.Error()}
+	}
+
+	switch {
+	case ver == 0:
+		ver = p.LatestVersion
+	case ver < 0:
+		return "", errutil.UserError{Err: "requested version for encryption is negative"}
+	case ver > p.LatestVersion:
+		return "", errutil.UserError{Err: "requested version for encryption is higher than the latest key version"}
+	case ver < p.MinEncryptionVersion:
+		return "", errutil.UserError{Err: "requested version for encryption is less than the minimum encryption key version"}
+	}
+
+	var ciphertext []byte
+
+	switch p.Type {
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
+		hmacKey := context
+
+		var encKey []byte
+		var deriveHMAC bool
+
+		encBytes := 32
+		hmacBytes := 0
+		if p.convergentVersion(ver) > 2 {
+			deriveHMAC = true
+			hmacBytes = 32
+		}
+		if p.Type == KeyType_AES128_GCM96 {
+			encBytes = 16
+		}
+
+		key, err := p.GetKey(context, ver, encBytes+hmacBytes)
+		if err != nil {
+			return "", err
+		}
+
+		if len(key) < encBytes+hmacBytes {
+			return "", errutil.InternalError{Err: "could not derive key, length too small"}
+		}
+
+		encKey = key[:encBytes]
+		if len(encKey) != encBytes {
+			return "", errutil.InternalError{Err: "could not derive enc key, length not correct"}
+		}
+		if deriveHMAC {
+			hmacKey = key[encBytes:]
+			if len(hmacKey) != hmacBytes {
+				return "", errutil.InternalError{Err: "could not derive hmac key, length not correct"}
+			}
+		}
+
+		symopts := SymmetricOpts{
+			Convergent: p.ConvergentEncryption,
+			HMACKey:    hmacKey,
+			Nonce:      nonce,
+		}
+		for index, rawFactory := range factories {
+			if rawFactory == nil {
+				continue
+			}
+			switch factory := rawFactory.(type) {
+			case AEADFactory:
+				symopts.AEADFactory = factory
+			case AssociatedDataFactory:
+				symopts.AdditionalData, err = factory.GetAssociatedData()
+				if err != nil {
+					return "", errutil.InternalError{Err: fmt.Sprintf("unable to get associated_data/additional_data from factory[%d]: %v", index, err)}
+				}
+			default:
+				return "", errutil.InternalError{Err: fmt.Sprintf("unknown type of factory[%d]: %T", index, rawFactory)}
+			}
+		}
+
+		ciphertext, err = p.SymmetricEncryptRaw(ver, encKey, plaintext, symopts)
+		if err != nil {
+			return "", err
+		}
+	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+		keyEntry, err := p.safeGetKeyEntry(ver)
+		if err != nil {
+			return "", err
+		}
+		key := keyEntry.RSAKey
+		ciphertext, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, &key.PublicKey, plaintext, nil)
+		if err != nil {
+			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA encrypt the plaintext: %v", err)}
+		}
+
+	default:
+		return "", errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
+	}
+
+	// Convert to base64
+	encoded := base64.StdEncoding.EncodeToString(ciphertext)
+
+	// Prepend some information
+	encoded = p.getVersionPrefix(ver) + encoded
+
+	return encoded, nil
 }

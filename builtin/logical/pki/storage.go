@@ -702,6 +702,12 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 		return nil, false, errutil.UserError{Err: "Refusing to import non-CA certificate"}
 	}
 
+	// Ensure this certificate has a parsed public key. Otherwise, we've
+	// likely been given a bad certificate.
+	if issuerCert.PublicKeyAlgorithm == x509.UnknownPublicKeyAlgorithm || issuerCert.PublicKey == nil {
+		return nil, false, errutil.UserError{Err: "Refusing to import CA certificate with empty PublicKey. This usually means the SubjectPublicKeyInfo field has an OID not recognized by Go, such as 1.2.840.113549.1.1.10 for rsaPSS."}
+	}
+
 	// Before we can import a known issuer, we first need to know if the issuer
 	// exists in storage already. This means iterating through all known
 	// issuers and comparing their private value against this value.
@@ -1166,6 +1172,18 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 		result.AutoRebuild = defaultCrlConfig.AutoRebuild
 		result.AutoRebuildGracePeriod = defaultCrlConfig.AutoRebuildGracePeriod
 		result.Version = 1
+	}
+	if result.Version == 1 {
+		if result.DeltaRebuildInterval == "" {
+			result.DeltaRebuildInterval = defaultCrlConfig.DeltaRebuildInterval
+		}
+		result.Version = 2
+	}
+
+	// Depending on client version, it's possible that the expiry is unset.
+	// This sets the default value to prevent issues in downstream code.
+	if result.Expiry == "" {
+		result.Expiry = defaultCrlConfig.Expiry
 	}
 
 	return &result, nil

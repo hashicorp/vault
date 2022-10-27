@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/golang/protobuf/ptypes"
@@ -581,6 +582,55 @@ func TestGRPCServer_Close(t *testing.T) {
 	}
 }
 
+func TestGRPCServer_Version(t *testing.T) {
+	type testCase struct {
+		db           Database
+		expectedResp string
+		expectErr    bool
+		expectCode   codes.Code
+	}
+
+	tests := map[string]testCase{
+		"backend that does not implement version": {
+			db:           fakeDatabase{},
+			expectedResp: "",
+			expectErr:    false,
+			expectCode:   codes.OK,
+		},
+		"backend with version": {
+			db: fakeDatabaseWithVersion{
+				version: "v123",
+			},
+			expectedResp: "v123",
+			expectErr:    false,
+			expectCode:   codes.OK,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			idCtx, g := testGrpcServer(t, test.db)
+			resp, err := g.Version(idCtx, &logical.Empty{})
+
+			if test.expectErr && err == nil {
+				t.Fatalf("err expected, got nil")
+			}
+			if !test.expectErr && err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+
+			actualCode := status.Code(err)
+			if actualCode != test.expectCode {
+				t.Fatalf("Actual code: %s Expected code: %s", actualCode, test.expectCode)
+			}
+
+			if !reflect.DeepEqual(resp.PluginVersion, test.expectedResp) {
+				t.Fatalf("Actual response: %#v\nExpected response: %#v", resp, test.expectedResp)
+			}
+		})
+	}
+}
+
 // testGrpcServer is a test helper that returns a context with an ID set in its
 // metadata and a gRPCServer instance for a multiplexed plugin
 func testGrpcServer(t *testing.T, db Database) (context.Context, gRPCServer) {
@@ -747,3 +797,40 @@ func (f *recordingDatabase) Close() error {
 	}
 	return f.next.Close()
 }
+
+type fakeDatabaseWithVersion struct {
+	version string
+}
+
+func (e fakeDatabaseWithVersion) PluginVersion() logical.PluginVersion {
+	return logical.PluginVersion{Version: e.version}
+}
+
+func (e fakeDatabaseWithVersion) Initialize(_ context.Context, _ InitializeRequest) (InitializeResponse, error) {
+	return InitializeResponse{}, nil
+}
+
+func (e fakeDatabaseWithVersion) NewUser(_ context.Context, _ NewUserRequest) (NewUserResponse, error) {
+	return NewUserResponse{}, nil
+}
+
+func (e fakeDatabaseWithVersion) UpdateUser(_ context.Context, _ UpdateUserRequest) (UpdateUserResponse, error) {
+	return UpdateUserResponse{}, nil
+}
+
+func (e fakeDatabaseWithVersion) DeleteUser(_ context.Context, _ DeleteUserRequest) (DeleteUserResponse, error) {
+	return DeleteUserResponse{}, nil
+}
+
+func (e fakeDatabaseWithVersion) Type() (string, error) {
+	return "", nil
+}
+
+func (e fakeDatabaseWithVersion) Close() error {
+	return nil
+}
+
+var (
+	_ Database                = (*fakeDatabaseWithVersion)(nil)
+	_ logical.PluginVersioner = (*fakeDatabaseWithVersion)(nil)
+)

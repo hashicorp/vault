@@ -46,7 +46,7 @@ The website can be run locally through node.js or [Docker](https://www.docker.co
 
 ### With Docker
 
-Running the site locally is simple. Provided you have Docker installed, clone this repo, run `make`, and then visit `http://localhost:3000`.
+Running the site locally is simple. Provided you have the [latest version](https://docs.docker.com/engine/release-notes/) of Docker installed, clone this repo, run `make`, and then visit `http://localhost:3000`.
 
 The docker image is pre-built with all the website dependencies installed, which is what makes it so quick and simple, but also means if you need to change dependencies and test the changes within Docker, you'll need a new image. If this is something you need to do, you can run `make build-image` to generate a local Docker image with updated dependencies, then `make website-local` to use that image and preview.
 

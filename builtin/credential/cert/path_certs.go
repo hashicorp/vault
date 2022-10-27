@@ -4,10 +4,10 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
+	"github.com/hashicorp/go-sockaddr"
 	"strings"
 	"time"
 
-	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -429,61 +429,62 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 		return logical.ErrorResponse("failed to parse certificate"), nil
 	}
 
-	// If the certificate is not a CA cert, then ensure that x509.ExtKeyUsageClientAuth is set
-	if !parsed[0].IsCA && parsed[0].ExtKeyUsage != nil {
-		var clientAuth bool
-		for _, usage := range parsed[0].ExtKeyUsage {
-			if usage == x509.ExtKeyUsageClientAuth || usage == x509.ExtKeyUsageAny {
-				clientAuth = true
-				break
-			}
-		}
-		if !clientAuth {
-			return logical.ErrorResponse("non-CA certificates should have TLS client authentication set as an extended key usage"), nil
-		}
-	}
+	       // If the certificate is not a CA cert, then ensure that x509.ExtKeyUsageClientAuth is set
+		       if !parsed[0].IsCA && parsed[0].ExtKeyUsage != nil {
+		               var clientAuth bool
+		               for _, usage := range parsed[0].ExtKeyUsage {
+			                       if usage == x509.ExtKeyUsageClientAuth || usage == x509.ExtKeyUsageAny {
+				                               clientAuth = true
+				                               break
+				                       }
+			               }
+		               if !clientAuth {
+			                       return logical.ErrorResponse("nonCA certificates should have TLS client authentication set as an extended key usage"), nil
+			               }
+		       }
 
-	// Store it
-	entry, err := logical.StorageEntryJSON("cert/"+name, cert)
-	if err != nil {
-		return nil, err
-	}
-	if err := req.Storage.Put(ctx, entry); err != nil {
-		return nil, err
-	}
+		       // Store it
+			       entry, err := logical.StorageEntryJSON("cert/"+name, cert)
+	       if err != nil {
+		               return nil, err
+		       }
+	       if err := req.Storage.Put(ctx, entry); err != nil {
+		               return nil, err
+		       }
 
-	if len(resp.Warnings) == 0 {
-		return nil, nil
-	}
+		       if len(resp.Warnings) == 0 {
+		               return nil, nil
+		       }
 
-	return &resp, nil
-}
+		       return &resp, nil
+	}
 
 type CertEntry struct {
-	tokenutil.TokenParams
+	       tokenutil.TokenParams
 
-	Name                       string
-	Certificate                string
-	OcspCaCertificates         string
-	OcspEnabled                bool
-	OcspServersOverride        []string
-	OcspFailOpen               bool
-	OcspQueryAllServers        bool
-	DisplayName                string
-	Policies                   []string
-	TTL                        time.Duration
-	MaxTTL                     time.Duration
-	Period                     time.Duration
-	AllowedNames               []string
-	AllowedCommonNames         []string
-	AllowedDNSSANs             []string
-	AllowedEmailSANs           []string
-	AllowedURISANs             []string
-	AllowedOrganizationalUnits []string
-	RequiredExtensions         []string
-	AllowedMetadataExtensions  []string
-	BoundCIDRs                 []*sockaddr.SockAddrMarshaler
-}
+	       Name                       string
+	       Certificate                string
+	       DisplayName                string
+	       Policies                   []string
+	       TTL                        time.Duration
+	       MaxTTL                     time.Duration
+	       Period                     time.Duration
+	       AllowedNames               []string
+	       AllowedCommonNames         []string
+	       AllowedDNSSANs             []string
+	       AllowedEmailSANs           []string
+	       AllowedURISANs             []string
+	       AllowedOrganizationalUnits []string
+	       RequiredExtensions         []string
+	       AllowedMetadataExtensions  []string
+	       BoundCIDRs                 []*sockaddr.SockAddrMarshaler
+
+	       OcspCaCertificates         string
+	       OcspEnabled                bool
+	       OcspServersOverride        []string
+	       OcspFailOpen               bool
+	       OcspQueryAllServers        bool
+	}
 
 const pathCertHelpSyn = `
 Manage trusted certificates used for authentication.
@@ -496,4 +497,4 @@ that are allowed to authenticate.
 Deleting a certificate will not revoke auth for prior authenticated connections.
 To do this, do a revoke on "login". If you don't need to revoke login immediately,
 then the next renew will cause the lease to expire.
-`
+

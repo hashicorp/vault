@@ -68,6 +68,6 @@ module('Unit | Service | path-help', function (hooks) {
     const model = this.store.createRecord(modelType);
     model.set('mutableId', 'test');
     await model.save();
-    assert.equal(model.get('id'), 'test', 'model id is set to mutableId value on save success');
+    assert.strictEqual(model.get('id'), 'test', 'model id is set to mutableId value on save success');
   });
 });

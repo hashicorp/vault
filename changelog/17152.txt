@@ -1,0 +1,4 @@
+```release-note:feature
+**LDAP Secrets Engine**: Adds the `ldap` secrets engine with service account check-out 
+functionality for all supported schemas.
+```

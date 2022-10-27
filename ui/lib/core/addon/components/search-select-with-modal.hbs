@@ -2,12 +2,12 @@
   {{#if this.shouldUseFallback}}
     {{component
       @fallbackComponent
-      label=(or @label @subLabel)
+      label=@label
       subText=@subText
       onChange=@onChange
       inputValue=@inputValue
       helpText=@helpText
-      placeHolder=@placeHolder
+      placeholder=@placeholder
       id=@id
     }}
   {{else}}

@@ -9,6 +9,7 @@ import (
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -17,6 +18,8 @@ type databaseVersionWrapper struct {
 	v4 v4.Database
 	v5 v5.Database
 }
+
+var _ logical.PluginVersioner = databaseVersionWrapper{}
 
 // newDatabaseWrapper figures out which version of the database the pluginName is referring to and returns a wrapper object
 // that can be used to make operations on the underlying database plugin.
@@ -225,6 +228,21 @@ func (d databaseVersionWrapper) Close() error {
 
 	// v4 Database
 	return d.v4.Close()
+}
+
+func (d databaseVersionWrapper) PluginVersion() logical.PluginVersion {
+	// v5 Database
+	if d.isV5() {
+		if versioner, ok := d.v5.(logical.PluginVersioner); ok {
+			return versioner.PluginVersion()
+		}
+	}
+
+	// v4 Database
+	if versioner, ok := d.v4.(logical.PluginVersioner); ok {
+		return versioner.PluginVersion()
+	}
+	return logical.EmptyPluginVersion
 }
 
 func (d databaseVersionWrapper) isV5() bool {
