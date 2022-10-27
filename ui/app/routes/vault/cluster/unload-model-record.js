@@ -7,7 +7,7 @@ export default class UnloadModelRecord extends Route {
   @service store;
 
   unloadModel() {
-    let model = this.currentModel;
+    const model = this.currentModel;
     // error is thrown when you attempt to unload a record that is inFlight (isSaving)
     if (!model || !model.unloadRecord || model.isSaving) {
       return;
@@ -23,6 +23,10 @@ export default class UnloadModelRecord extends Route {
 
   @action
   willTransition(transition) {
+    if (transition.to.name.includes('edit')) {
+      // don't unload model if about to edit it
+      return true;
+    }
     if (this.currentModel.hasDirtyAttributes) {
       if (
         window.confirm(

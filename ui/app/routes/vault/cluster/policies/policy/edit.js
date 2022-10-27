@@ -1,3 +1,3 @@
-import Route from '@ember/routing/route';
+import UnloadModelRecord from 'vault/routes/vault/cluster/unload-model-record';
 
-export default class PolicyEditRoute extends Route {}
+export default class PolicyEditRoute extends UnloadModelRecord {}
