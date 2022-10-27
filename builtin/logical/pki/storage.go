@@ -1173,6 +1173,12 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 		result.AutoRebuildGracePeriod = defaultCrlConfig.AutoRebuildGracePeriod
 		result.Version = 1
 	}
+	if result.Version == 1 {
+		if result.DeltaRebuildInterval == "" {
+			result.DeltaRebuildInterval = defaultCrlConfig.DeltaRebuildInterval
+		}
+		result.Version = 2
+	}
 
 	return &result, nil
 }
