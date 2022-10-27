@@ -640,6 +640,10 @@
         "path": "commands/path-help"
       },
       {
+        "title": "<code>patch</code>",
+        "path": "commands/patch"
+      },
+      {
         "title": "<code>plugin</code>",
         "routes": [
           {
