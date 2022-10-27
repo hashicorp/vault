@@ -7,14 +7,14 @@ import trimRight from 'vault/utils/trim-right';
 
 /**
  * @module PolicyForm
- * PolicyForm components are used to display the create view for OIDC providers assignments.
+ * PolicyForm components are used to display the create and edit forms for all types of policies
  *
  * @example
- * ```js
- * <PolicyForm @model={this.model}
- * @onCancel={transition-to "vault.cluster.access.oidc.assignment"} @param1={{param1}}
- * @onSave={transition-to "vault.cluster.access.oidc.assignments.assignment.details" this.model.name}
- * />
+ *  <PolicyForm
+ *    @model={{this.model}}
+ *    @onSave={{transition-to "vault.cluster.policies.policy.show" this.model.policyType this.model.name}}
+ *    @onCancel={{transition-to "vault.cluster.policies.index"}}
+ *  />
  * ```
  * @callback onCancel
  * @callback onSave
