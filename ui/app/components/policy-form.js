@@ -69,6 +69,7 @@ export default class PolicyFormComponent extends Component {
   toggleFileUpload() {
     this.showFileUpload = !this.showFileUpload;
   }
+
   @action
   setPolicyFromFile(index, fileInfo) {
     let { value, fileName } = fileInfo;
