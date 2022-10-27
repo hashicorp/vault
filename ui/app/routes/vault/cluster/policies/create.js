@@ -1,12 +1,10 @@
+import UnloadModelRecord from 'vault/routes/vault/cluster/unload-model-record';
 import { inject as service } from '@ember/service';
-import Route from '@ember/routing/route';
-import UnloadModelRoute from 'vault/mixins/unload-model-route';
-import UnsavedModelRoute from 'vault/mixins/unsaved-model-route';
 
-export default Route.extend(UnloadModelRoute, UnsavedModelRoute, {
-  store: service(),
-  version: service(),
-  wizard: service(),
+export default class PoliciesCreateRoute extends UnloadModelRecord {
+  @service store;
+  @service version;
+  @service wizard;
 
   model() {
     let policyType = this.policyType();
@@ -21,14 +19,14 @@ export default Route.extend(UnloadModelRoute, UnsavedModelRoute, {
       return this.transitionTo('vault.cluster.policies', policyType);
     }
     return this.store.createRecord(`policy/${policyType}`, {});
-  },
+  }
 
   setupController(controller) {
-    this._super(...arguments);
+    super.setupController(...arguments);
     controller.set('policyType', this.policyType());
-  },
+  }
 
   policyType() {
     return this.paramsFor('vault.cluster.policies').type;
-  },
-});
+  }
+}
