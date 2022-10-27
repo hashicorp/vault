@@ -1180,6 +1180,12 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 		result.Version = 2
 	}
 
+	// Depending on client version, it's possible that the expiry is unset.
+	// This sets the default value to prevent issues in downstream code.
+	if result.Expiry == "" {
+		result.Expiry = defaultCrlConfig.Expiry
+	}
+
 	return &result, nil
 }
 
