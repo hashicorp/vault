@@ -2,6 +2,7 @@ package identity
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strings"
 	"testing"
@@ -82,19 +83,26 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	testhelpers.SetupTOTPMount(t, client)
 	mountAccessor := testhelpers.SetupUserpassMountAccessor(t, client)
 
+	// Get a random set of chars to seed our entity and alias names
+	userseed := base64.StdEncoding.EncodeToString([]byte("couple of test users"))
+	entity1 := userseed[0:3]
+	testuser1 := userseed[3:6]
+	entity2 := userseed[6:9]
+	testuser2 := userseed[9:12]
+
 	// Creating two users in the userpass auth mount
-	userClient1, entityID1, _ := testhelpers.CreateEntityAndAlias(t, client, mountAccessor, "entity1", "testuser1")
-	userClient2, entityID2, _ := testhelpers.CreateEntityAndAlias(t, client, mountAccessor, "entity2", "testuser2")
+	userClient1, entityID1, _ := testhelpers.CreateEntityAndAlias(t, client, mountAccessor, entity1, testuser1)
+	userClient2, entityID2, _ := testhelpers.CreateEntityAndAlias(t, client, mountAccessor, entity2, testuser2)
 
 	totpConfig := map[string]interface{}{
 		"issuer":                  "yCorp",
-		"period":                  10,
-		"algorithm":               "SHA512",
+		"period":                  5,
+		"algorithm":               "SHA1",
 		"digits":                  6,
-		"skew":                    0,
-		"key_size":                20,
-		"qr_size":                 200,
-		"max_validation_attempts": 5,
+		"skew":                    1,
+		"key_size":                10,
+		"qr_size":                 100,
+		"max_validation_attempts": 3,
 	}
 
 	methodID := testhelpers.SetupTOTPMethod(t, client, totpConfig)
@@ -106,27 +114,34 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	// Configure a default login enforcement
 	enforcementConfig := map[string]interface{}{
 		"auth_method_types": []string{"userpass"},
-		"name":              "randomName",
+		"name":              methodID[0:4],
 		"mfa_method_ids":    []string{methodID},
 	}
 
 	testhelpers.SetupMFALoginEnforcement(t, client, enforcementConfig)
 
-	// MFA single-phase login
-	totpPasscode1 := testhelpers.GetTOTPCodeFromEngine(t, client, enginePath1)
+	userpassPath := fmt.Sprintf("auth/userpass/login/%s", testuser1)
 
-	userClient1.AddHeader("X-Vault-MFA", fmt.Sprintf("%s:%s", methodID, totpPasscode1))
-	secret, err := userClient1.Logical().WriteWithContext(context.Background(), "auth/userpass/login/testuser1", map[string]interface{}{
-		"password": "testpassword",
+	// MFA single-phase login
+	time.Sleep(5 * time.Second)
+	var secret *api.Secret
+	testhelpers.RetryUntil(t, 20*time.Second, func() error {
+		var err error
+		totpPasscode := testhelpers.GetTOTPCodeFromEngine(t, client, enginePath1)
+
+		userClient1.AddHeader("X-Vault-MFA", fmt.Sprintf("%s:%s", methodID, totpPasscode))
+		secret, err = userClient1.Logical().WriteWithContext(context.Background(), userpassPath, map[string]interface{}{
+			"password": "testpassword",
+		})
+		if err != nil {
+			return fmt.Errorf("MFA failed: %w", err)
+		}
+		return nil
 	})
-	if err != nil {
-		t.Fatalf("MFA failed: %v", err)
-	}
 
 	userpassToken := secret.Auth.ClientToken
-
 	userClient1.SetToken(client.Token())
-	secret, err = userClient1.Logical().WriteWithContext(context.Background(), "auth/token/lookup", map[string]interface{}{
+	secret, err := userClient1.Logical().WriteWithContext(context.Background(), "auth/token/lookup", map[string]interface{}{
 		"token": userpassToken,
 	})
 	if err != nil {
@@ -142,7 +157,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	headers := userClient1.Headers()
 	headers.Del("X-Vault-MFA")
 	userClient1.SetHeaders(headers)
-	secret, err = userClient1.Logical().WriteWithContext(context.Background(), "auth/userpass/login/testuser1", map[string]interface{}{
+	secret, err = userClient1.Logical().WriteWithContext(context.Background(), userpassPath, map[string]interface{}{
 		"password": "testpassword",
 	})
 	if err != nil {
@@ -162,7 +177,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	if secret.Auth.MFARequirement.MFAConstraints == nil || len(secret.Auth.MFARequirement.MFAConstraints) == 0 {
 		t.Fatalf("MFAConstraints is nil or empty")
 	}
-	mfaConstraints, ok := secret.Auth.MFARequirement.MFAConstraints["randomName"]
+	mfaConstraints, ok := secret.Auth.MFARequirement.MFAConstraints[methodID[0:4]]
 	if !ok {
 		t.Fatalf("failed to find the mfaConstrains")
 	}
@@ -176,24 +191,26 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	}
 
 	// validation
-	// waiting for 5 seconds so that a fresh code could be generated
-	time.Sleep(10 * time.Second)
-	totpPasscode1 = testhelpers.GetTOTPCodeFromEngine(t, client, enginePath1)
+	time.Sleep(5 * time.Second)
+	var totpPasscode1 string
+	testhelpers.RetryUntil(t, 20*time.Second, func() error {
+		totpPasscode1 = testhelpers.GetTOTPCodeFromEngine(t, client, enginePath1)
 
-	secret, err = userClient1.Logical().WriteWithContext(context.Background(), "sys/mfa/validate", map[string]interface{}{
-		"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
-		"mfa_payload": map[string][]string{
-			methodID: {totpPasscode1},
-		},
+		secret, err = userClient1.Logical().WriteWithContext(context.Background(), "sys/mfa/validate", map[string]interface{}{
+			"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
+			"mfa_payload": map[string][]string{
+				methodID: {totpPasscode1},
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("MFA failed: %w", err)
+		}
+
+		return nil
 	})
-	if err != nil {
-		t.Fatalf("MFA failed: %v", err)
-	}
-
 	if secret.Auth == nil || secret.Auth.ClientToken == "" {
 		t.Fatalf("successful mfa validation did not return a client token")
 	}
-
 	if noop.Req == nil {
 		t.Fatalf("no request was logged in audit log")
 	}
@@ -209,7 +226,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	}
 
 	// check for login request expiration
-	secret, err = userClient1.Logical().WriteWithContext(context.Background(), "auth/userpass/login/testuser1", map[string]interface{}{
+	secret, err = userClient1.Logical().WriteWithContext(context.Background(), userpassPath, map[string]interface{}{
 		"password": "testpassword",
 	})
 	if err != nil {
@@ -230,11 +247,11 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 		t.Fatalf("MFA succeeded with an already used passcode")
 	}
 	if !strings.Contains(err.Error(), "code already used") {
-		t.Fatalf("expected error message to mention code already used")
+		t.Fatalf("got: %+v, expected: code already used", err.Error())
 	}
 
 	// check for reaching max failed validation requests
-	secret, err = userClient1.Logical().WriteWithContext(context.Background(), "auth/userpass/login/testuser1", map[string]interface{}{
+	secret, err = userClient1.Logical().WriteWithContext(context.Background(), userpassPath, map[string]interface{}{
 		"password": "testpassword",
 	})
 	if err != nil {
@@ -260,11 +277,11 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	}
 
 	// let's make sure the configID is not blocked for other users
-	doTwoPhaseLogin(t, userClient2, enginePath2, methodID, "testuser2")
+	doTwoPhaseLogin(t, userClient2, enginePath2, methodID, testuser2)
 
 	// let's see if user1 is able to login after 5 seconds
-	time.Sleep(10 * time.Second)
-	doTwoPhaseLogin(t, userClient1, enginePath1, methodID, "testuser1")
+	time.Sleep(5 * time.Second)
+	doTwoPhaseLogin(t, userClient1, enginePath1, methodID, testuser1)
 
 	// Destroy the secret so that the token can self generate
 	_, err = client.Logical().WriteWithContext(context.Background(), fmt.Sprintf("identity/mfa/method/totp/admin-destroy"), map[string]interface{}{
