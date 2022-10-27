@@ -109,7 +109,7 @@ server {
 
 	svc, err := runner.StartService(ctx, func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
 		// Nginx loads fast, we're too lazy to validate this properly.
-		time.Sleep(2 * time.Second)
+		time.Sleep(5 * time.Second)
 		return docker.NewServiceHostPort(host, port), nil
 	})
 	if err != nil {
