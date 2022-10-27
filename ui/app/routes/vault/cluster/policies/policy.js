@@ -1,5 +1,6 @@
 import UnloadModelRecord from 'vault/routes/vault/cluster/unload-model-record';
 import { inject as service } from '@ember/service';
+
 export default class PolicyRoute extends UnloadModelRecord {
   @service store;
 
@@ -14,14 +15,6 @@ export default class PolicyRoute extends UnloadModelRecord {
   model(params) {
     let type = this.policyType();
     return this.store.findRecord(`policy/${type}`, params.policy_name);
-  }
-
-  setupController(controller, model) {
-    controller.setProperties({
-      model: model.policy,
-      capabilities: model.capabilities,
-      policyType: this.policyType(),
-    });
   }
 
   policyType() {
