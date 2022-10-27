@@ -267,7 +267,7 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 
 	initReq := v5.InitializeRequest{
 		Config:           config.ConnectionDetails,
-		VerifyConnection: true,
+		VerifyConnection: false,
 	}
 	_, err = dbw.Initialize(ctx, initReq)
 	if err != nil {
