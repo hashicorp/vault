@@ -17,7 +17,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-uuid"
@@ -37,11 +37,13 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-// EnvVaultRaftNodeID is used to fetch the Raft node ID from the environment.
-const EnvVaultRaftNodeID = "VAULT_RAFT_NODE_ID"
+const (
+	// EnvVaultRaftNodeID is used to fetch the Raft node ID from the environment.
+	EnvVaultRaftNodeID = "VAULT_RAFT_NODE_ID"
 
-// EnvVaultRaftPath is used to fetch the path where Raft data is stored from the environment.
-const EnvVaultRaftPath = "VAULT_RAFT_PATH"
+	// EnvVaultRaftPath is used to fetch the path where Raft data is stored from the environment.
+	EnvVaultRaftPath = "VAULT_RAFT_PATH"
+)
 
 var getMmapFlags = func(string) int { return 0 }
 
@@ -169,6 +171,8 @@ type RaftBackend struct {
 
 	// redundancyZone specifies a redundancy zone for autopilot.
 	redundancyZone string
+
+	effectiveSDKVersion string
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -537,6 +541,12 @@ func (b *RaftBackend) Close() error {
 	return nil
 }
 
+func (b *RaftBackend) SetEffectiveSDKVersion(sdkVersion string) {
+	b.l.Lock()
+	b.effectiveSDKVersion = sdkVersion
+	b.l.Unlock()
+}
+
 func (b *RaftBackend) RedundancyZone() string {
 	b.l.RLock()
 	defer b.l.RUnlock()
@@ -571,9 +581,22 @@ func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
 	b.l.RLock()
 	logstoreStats := b.stableStore.(*raftboltdb.BoltStore).Stats()
 	fsmStats := b.fsm.db.Stats()
+	stats := b.raft.Stats()
 	b.l.RUnlock()
 	b.collectMetricsWithStats(logstoreStats, sink, "logstore")
 	b.collectMetricsWithStats(fsmStats, sink, "fsm")
+	labels := []metrics.Label{
+		{
+			Name:  "peer_id",
+			Value: b.localID,
+		},
+	}
+	for _, key := range []string{"term", "commit_index", "applied_index", "fsm_pending"} {
+		n, err := strconv.ParseUint(stats[key], 10, 64)
+		if err == nil {
+			sink.SetGaugeWithLabels([]string{"raft_storage", "stats", key}, float32(n), labels)
+		}
+	}
 }
 
 func (b *RaftBackend) collectMetricsWithStats(stats bolt.Stats, sink *metricsutil.ClusterMetricSink, database string) {
@@ -1508,6 +1531,8 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 		return err
 	}
 
+	txnMap := make(map[string]*physical.TxnEntry)
+
 	command := &LogData{
 		Operations: make([]*LogOperation, len(txns)),
 	}
@@ -1524,6 +1549,10 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 		case physical.DeleteOperation:
 			op.OpType = deleteOp
 			op.Key = txn.Entry.Key
+		case physical.GetOperation:
+			op.OpType = getOp
+			op.Key = txn.Entry.Key
+			txnMap[op.Key] = txn
 		default:
 			return fmt.Errorf("%q is not a supported transaction operation", txn.Operation)
 		}
@@ -1537,6 +1566,16 @@ func (b *RaftBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry
 	b.l.RLock()
 	err := b.applyLog(ctx, command)
 	b.l.RUnlock()
+
+	// loop over results and update pointers to get operations
+	for _, logOp := range command.Operations {
+		if logOp.OpType == getOp {
+			if txn, found := txnMap[logOp.Key]; found {
+				txn.Entry.Value = logOp.Value
+			}
+		}
+	}
+
 	return err
 }
 
@@ -1601,8 +1640,31 @@ func (b *RaftBackend) applyLog(ctx context.Context, command *LogData) error {
 		resp = chunkedSuccess.Response
 	}
 
-	if resp, ok := resp.(*FSMApplyResponse); !ok || !resp.Success {
+	fsmar, ok := resp.(*FSMApplyResponse)
+	if !ok || !fsmar.Success {
 		return errors.New("could not apply data")
+	}
+
+	// populate command with our results
+	if fsmar.EntrySlice == nil {
+		return errors.New("entries on FSM response were empty")
+	}
+
+	for i, logOp := range command.Operations {
+		if logOp.OpType == getOp {
+			fsmEntry := fsmar.EntrySlice[i]
+
+			// this should always be true because the entries in the slice were created in the same order as
+			// the command operations.
+			if logOp.Key == fsmEntry.Key {
+				if len(fsmEntry.Value) > 0 {
+					logOp.Value = fsmEntry.Value
+				}
+			} else {
+				// this shouldn't happen
+				return errors.New("entries in FSM response were out of order")
+			}
+		}
 	}
 
 	return nil
@@ -1801,7 +1863,7 @@ func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
 		return nil, errors.New("no seal access available")
 	}
 
-	var eblob wrapping.EncryptedBlobInfo
+	var eblob wrapping.BlobInfo
 	err := proto.Unmarshal(ct, &eblob)
 	if err != nil {
 		return nil, err

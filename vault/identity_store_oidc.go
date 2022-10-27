@@ -1774,7 +1774,7 @@ func (i *IdentityStore) expireOIDCPublicKeys(ctx context.Context, s logical.Stor
 				nextExpiration = k.ExpireAt
 			}
 
-			// Mark the KeyID as in use so it doesn't get deleted in the next step
+			// Mark the KeyId as in use so it doesn't get deleted in the next step
 			usedKeys = append(usedKeys, k.KeyID)
 		}
 
@@ -1916,7 +1916,7 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context) {
 		nextRun = now.Add(24 * time.Hour)
 		minJwksClientCacheDuration := time.Duration(math.MaxInt64)
 
-		for _, ns := range i.namespacer.ListNamespaces() {
+		for _, ns := range i.namespacer.ListNamespaces(true) {
 			nsPath := ns.Path
 
 			s := i.router.MatchingStorageByAPIPath(ctx, nsPath+"identity/oidc")

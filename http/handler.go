@@ -1148,9 +1148,9 @@ func parseMFAHeader(req *logical.Request) error {
 // maintain backwards compatibility, this will err on the side of JSON.
 // The request will be considered a form only if:
 //
-//   1. The content type is "application/x-www-form-urlencoded"
-//   2. The start of the request doesn't look like JSON. For this test we
-//      we expect the body to begin with { or [, ignoring leading whitespace.
+//  1. The content type is "application/x-www-form-urlencoded"
+//  2. The start of the request doesn't look like JSON. For this test we
+//     we expect the body to begin with { or [, ignoring leading whitespace.
 func isForm(head []byte, contentType string) bool {
 	contentType, _, err := mime.ParseMediaType(contentType)
 
@@ -1178,6 +1178,10 @@ func respondError(w http.ResponseWriter, status int, err error) {
 	logical.RespondError(w, status, err)
 }
 
+func respondErrorAndData(w http.ResponseWriter, status int, data interface{}, err error) {
+	logical.RespondErrorAndData(w, status, data, err)
+}
+
 func respondErrorCommon(w http.ResponseWriter, req *logical.Request, resp *logical.Response, err error) bool {
 	statusCode, newErr := logical.RespondErrorCommon(req, resp, err)
 	if newErr == nil && statusCode == 0 {
@@ -1193,6 +1197,12 @@ func respondErrorCommon(w http.ResponseWriter, req *logical.Request, resp *logic
 		return true
 	}
 
+	if resp != nil {
+		if data := resp.Data["data"]; data != nil {
+			respondErrorAndData(w, statusCode, data, newErr)
+			return true
+		}
+	}
 	respondError(w, statusCode, newErr)
 	return true
 }
@@ -1221,8 +1231,8 @@ func oidcPermissionDenied(path string, err error) bool {
 // permission denied errors (expired token) on resources protected
 // by OIDC access tokens. Currently, the UserInfo Endpoint is the only
 // protected resource. See the following specifications for details:
-//  - https://openid.net/specs/openid-connect-core-1_0.html#UserInfoError
-//  - https://datatracker.ietf.org/doc/html/rfc6750#section-3.1
+//   - https://openid.net/specs/openid-connect-core-1_0.html#UserInfoError
+//   - https://datatracker.ietf.org/doc/html/rfc6750#section-3.1
 func respondOIDCPermissionDenied(w http.ResponseWriter) {
 	errorCode := "invalid_token"
 	errorDescription := logical.ErrPermissionDenied.Error()

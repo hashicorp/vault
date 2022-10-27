@@ -64,7 +64,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     let backend = `transform-${Date.now()}`;
     await mountSecrets.enable('transform', backend);
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/list`,
       'mounts and redirects to the transformations list page'
@@ -85,7 +85,11 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     await settled();
     await transformationsPage.createLink({ backend });
     await settled();
-    assert.equal(currentURL(), `/vault/secrets/${backend}/create`, 'redirects to create transformation page');
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${backend}/create`,
+      'redirects to create transformation page'
+    );
     await transformationsPage.name(transformationName);
     await settled();
     assert.dom('[data-test-input="type"]').hasValue('fpe', 'Has type FPE by default');
@@ -98,7 +102,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     assert.dom('[data-test-input="tweak_source"]').doesNotExist('Does not show tweak source when masking');
     await clickTrigger('#template');
     await settled();
-    assert.equal(searchSelectComponent.options.length, 2, 'list shows two builtin options by default');
+    assert.strictEqual(searchSelectComponent.options.length, 2, 'list shows two builtin options by default');
     await selectChoose('#template', '.ember-power-select-option', 0);
     await settled();
 
@@ -110,13 +114,17 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     await settled();
     await transformationsPage.submit();
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/show/${transformationName}`,
       'redirects to show transformation page after submit'
     );
     await click(`[data-test-secret-breadcrumb="${backend}"]`);
-    assert.equal(currentURL(), `/vault/secrets/${backend}/list`, 'Links back to list view from breadcrumb');
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${backend}/list`,
+      'Links back to list view from breadcrumb'
+    );
   });
 
   test('it can create a role and add itself to the transformation attached', async function (assert) {
@@ -125,29 +133,33 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     // create transformation without role
     await newTransformation(backend, 'a-transformation', true);
     await click(`[data-test-secret-breadcrumb="${backend}"]`);
-    assert.equal(currentURL(), `/vault/secrets/${backend}/list`, 'Links back to list view from breadcrumb');
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${backend}/list`,
+      'Links back to list view from breadcrumb'
+    );
     await click('[data-test-secret-list-tab="Roles"]');
-    assert.equal(currentURL(), `/vault/secrets/${backend}/list?tab=role`, 'links to role list page');
+    assert.strictEqual(currentURL(), `/vault/secrets/${backend}/list?tab=role`, 'links to role list page');
     // create role with transformation attached
     await rolesPage.createLink();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/create?itemType=role`,
       'redirects to create role page'
     );
     await rolesPage.name(roleName);
     await clickTrigger('#transformations');
-    assert.equal(searchSelectComponent.options.length, 1, 'lists the transformation');
+    assert.strictEqual(searchSelectComponent.options.length, 1, 'lists the transformation');
     await selectChoose('#transformations', '.ember-power-select-option', 0);
     await rolesPage.submit();
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/show/role/${roleName}`,
       'redirects to show role page after submit'
     );
     await click(`[data-test-secret-breadcrumb="${backend}"]`);
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/list?tab=role`,
       'Links back to role list view from breadcrumb'
@@ -160,6 +172,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     let transformation = await newTransformation(backend, 'b-transformation', true);
     await newRole(backend, roleName);
     await transformationsPage.visitShow({ backend, id: transformation });
+    await settled();
     assert.dom('[data-test-row-value="Allowed roles"]').hasText(roleName);
   });
 
@@ -170,6 +183,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     let transformation = await newTransformation(backend, 'c-transformation', true);
     // create role
     await newRole(backend, roleName);
+    await settled();
     await transformationsPage.visitShow({ backend, id: transformation });
     assert.dom('[data-test-row-value="Allowed roles"]').hasText(roleName);
     // Edit transformation
@@ -177,7 +191,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     assert.dom('.modal.is-active').exists('Confirmation modal appears');
     await rolesPage.modalConfirm();
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/edit/${transformation}`,
       'Correctly links to edit page for secret'
@@ -189,7 +203,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     await transformationsPage.save();
     await settled();
     assert.dom('.flash-message.is-info').exists('Shows info message since role could not be updated');
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/show/${transformation}`,
       'Correctly links to show page for secret'
@@ -204,10 +218,14 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     let backend = await mount();
     await click('[data-test-secret-list-tab="Templates"]');
 
-    assert.equal(currentURL(), `/vault/secrets/${backend}/list?tab=template`, 'links to template list page');
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${backend}/list?tab=template`,
+      'links to template list page'
+    );
     await settled();
     await templatesPage.createLink();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/create?itemType=template`,
       'redirects to create template page'
@@ -221,14 +239,14 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     assert.dom('#alphabet .ember-power-select-trigger').doesNotExist('Alphabet input no longer searchable');
     await templatesPage.submit();
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/show/template/${templateName}`,
       'redirects to show template page after submit'
     );
     await templatesPage.editLink();
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/edit/template/${templateName}`,
       'Links to template edit page'
@@ -242,10 +260,14 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     let backend = await mount();
     await click('[data-test-secret-list-tab="Alphabets"]');
 
-    assert.equal(currentURL(), `/vault/secrets/${backend}/list?tab=alphabet`, 'links to alphabet list page');
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${backend}/list?tab=alphabet`,
+      'links to alphabet list page'
+    );
     await alphabetsPage.createLink();
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/create?itemType=alphabet`,
       'redirects to create alphabet page'
@@ -254,7 +276,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     await alphabetsPage.alphabet('aeiou');
     await alphabetsPage.submit();
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/show/alphabet/${alphabetName}`,
       'redirects to show alphabet page after submit'
@@ -263,7 +285,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     assert.dom('[data-test-row-value="Alphabet"]').hasText('aeiou');
     await alphabetsPage.editLink();
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/edit/alphabet/${alphabetName}`,
       'Links to alphabet edit page'

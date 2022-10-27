@@ -44,7 +44,7 @@ module('Integration | Component | auth-config-form options', function (hooks) {
     });
     sinon.spy(model.config, 'serialize');
     this.set('model', model);
-    await render(hbs`{{auth-config-form/options model=model}}`);
+    await render(hbs`{{auth-config-form/options model=this.model}}`);
     component.save();
     return settled().then(() => {
       assert.ok(model.config.serialize.calledOnce);

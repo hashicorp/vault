@@ -910,6 +910,34 @@ func TestNotAfterValues(t *testing.T) {
 	}
 }
 
+func TestSignatureAlgorithmRoundTripping(t *testing.T) {
+	for leftName, value := range SignatureAlgorithmNames {
+		if leftName == "pureed25519" && value == x509.PureEd25519 {
+			continue
+		}
+
+		rightName, present := InvSignatureAlgorithmNames[value]
+		if !present {
+			t.Fatalf("%v=%v is present in SignatureAlgorithmNames but not in InvSignatureAlgorithmNames", leftName, value)
+		}
+
+		if strings.ToLower(rightName) != leftName {
+			t.Fatalf("%v=%v is present in SignatureAlgorithmNames but inverse for %v has different name: %v", leftName, value, value, rightName)
+		}
+	}
+
+	for leftValue, name := range InvSignatureAlgorithmNames {
+		rightValue, present := SignatureAlgorithmNames[strings.ToLower(name)]
+		if !present {
+			t.Fatalf("%v=%v is present in InvSignatureAlgorithmNames but not in SignatureAlgorithmNames", leftValue, name)
+		}
+
+		if rightValue != leftValue {
+			t.Fatalf("%v=%v is present in InvSignatureAlgorithmNames but forwards for %v has different value: %v", leftValue, name, name, rightValue)
+		}
+	}
+}
+
 func genRsaKey(t *testing.T) *rsa.PrivateKey {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {

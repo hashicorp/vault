@@ -69,6 +69,15 @@ func (a *ActivityLog) StoreHyperlogLog(ctx context.Context, startTime time.Time,
 }
 
 func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Context, byMonth map[int64]*processMonth, hllGetFunc HLLGetter, startTime time.Time, endTime time.Time) (*activity.MonthRecord, error) {
+	if timeutil.IsCurrentMonth(startTime, time.Now().UTC()) {
+		monthlyComputation := a.transformMonthBreakdowns(byMonth)
+		if len(monthlyComputation) > 1 {
+			a.logger.Warn("monthly in-memory activitylog computation returned multiple months of data", "months returned", len(byMonth))
+		}
+		if len(monthlyComputation) > 0 {
+			return monthlyComputation[0], nil
+		}
+	}
 	// Fetch all hyperloglogs for months from startMonth to endMonth. If a month doesn't have an associated
 	// hll, warn and continue.
 
@@ -144,7 +153,6 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 	// the current month's entities minus the size of the initial billing period hll.
 	currentMonthNewEntities := billingPeriodHLLWithCurrentMonthEntityClients.Estimate() - billingPeriodHLL.Estimate()
 	currentMonthNewNonEntities := billingPeriodHLLWithCurrentMonthNonEntityClients.Estimate() - billingPeriodHLL.Estimate()
-
 	return &activity.MonthRecord{
 		Timestamp:  timeutil.StartOfMonth(endTime).UTC().Unix(),
 		NewClients: &activity.NewClientRecord{Counts: &activity.CountsRecord{EntityClients: int(currentMonthNewEntities), NonEntityClients: int(currentMonthNewNonEntities)}},

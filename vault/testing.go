@@ -39,13 +39,16 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	dbMysql "github.com/hashicorp/vault/plugins/database/mysql"
+	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
+	backendplugin "github.com/hashicorp/vault/sdk/plugin"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/copystructure"
@@ -222,6 +225,8 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 		conf.AuditBackends[k] = v
 	}
 
+	conf.ActivityLogConfig = opts.ActivityLogConfig
+
 	c, err := NewCore(conf)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -348,6 +353,10 @@ func TestCoreUnseal(core *Core, key []byte) (bool, error) {
 	return core.Unseal(key)
 }
 
+func TestCoreSeal(core *Core) error {
+	return core.sealInternal()
+}
+
 // TestCoreUnsealed returns a pure in-memory core that is already
 // initialized and unsealed.
 func TestCoreUnsealed(t testing.T) (*Core, [][]byte, string) {
@@ -356,16 +365,21 @@ func TestCoreUnsealed(t testing.T) (*Core, [][]byte, string) {
 	return testCoreUnsealed(t, core)
 }
 
+func SetupMetrics(conf *CoreConfig) *metrics.InmemSink {
+	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
+	conf.MetricSink = metricsutil.NewClusterMetricSink("test-cluster", inmemSink)
+	conf.MetricsHelper = metricsutil.NewMetricsHelper(inmemSink, false)
+	return inmemSink
+}
+
 func TestCoreUnsealedWithMetrics(t testing.T) (*Core, [][]byte, string, *metrics.InmemSink) {
 	t.Helper()
-	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
 	conf := &CoreConfig{
 		BuiltinRegistry: NewMockBuiltinRegistry(),
-		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
-		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
+	sink := SetupMetrics(conf)
 	core, keys, root := testCoreUnsealed(t, TestCoreWithSealAndUI(t, conf))
-	return core, keys, root, inmemSink
+	return core, keys, root, sink
 }
 
 // TestCoreUnsealedRaw returns a pure in-memory core that is already
@@ -386,19 +400,24 @@ func TestCoreUnsealedWithConfig(t testing.T, conf *CoreConfig) (*Core, [][]byte,
 
 func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
 	t.Helper()
+	token, keys := TestInitUnsealCore(t, core)
+
+	testCoreAddSecretMount(t, core, token)
+	return core, keys, token
+}
+
+func TestInitUnsealCore(t testing.T, core *Core) (string, [][]byte) {
 	keys, token := TestCoreInit(t, core)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
 		}
 	}
-
 	if core.Sealed() {
 		t.Fatal("should not be sealed")
 	}
 
-	testCoreAddSecretMount(t, core, token)
-	return core, keys, token
+	return token, keys
 }
 
 func testCoreAddSecretMount(t testing.T, core *Core, token string) {
@@ -489,12 +508,17 @@ func TestDynamicSystemView(c *Core, ns *namespace.Namespace) *dynamicSystemView 
 		me.namespace = ns
 	}
 
-	return &dynamicSystemView{c, me}
+	return &dynamicSystemView{c, me, c.perfStandby}
 }
 
 // TestAddTestPlugin registers the testFunc as part of the plugin command to the
 // plugin catalog. If provided, uses tmpDir as the plugin directory.
-func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.PluginType, testFunc string, env []string, tempDir string) {
+// NB: The test func you pass in MUST be in the same package as the parent test,
+// or the test func won't be compiled into the test binary being run and the output
+// will be something like:
+// stderr (ignored by go-plugin): "testing: warning: no tests to run"
+// stdout: "PASS"
+func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.PluginType, version string, testFunc string, env []string, tempDir string) {
 	file, err := os.Open(os.Args[0])
 	if err != nil {
 		t.Fatal(err)
@@ -556,10 +580,52 @@ func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.Plug
 	c.pluginCatalog.directory = fullPath
 
 	args := []string{fmt.Sprintf("--test.run=%s", testFunc)}
-	err = c.pluginCatalog.Set(context.Background(), name, pluginType, fileName, args, env, sum)
+	err = c.pluginCatalog.Set(context.Background(), name, pluginType, version, fileName, args, env, sum)
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+// TestRunTestPlugin runs the testFunc which has already been registered to the
+// plugin catalog and returns a pluginClient. This can be called after calling
+// TestAddTestPlugin.
+func TestRunTestPlugin(t testing.T, c *Core, pluginType consts.PluginType, pluginName string) *pluginClient {
+	t.Helper()
+	config := TestPluginClientConfig(c, pluginType, pluginName)
+	client, err := c.pluginCatalog.NewPluginClient(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return client
+}
+
+func TestPluginClientConfig(c *Core, pluginType consts.PluginType, pluginName string) pluginutil.PluginClientConfig {
+	switch pluginType {
+	case consts.PluginTypeCredential, consts.PluginTypeSecrets:
+		dsv := TestDynamicSystemView(c, nil)
+		return pluginutil.PluginClientConfig{
+			Name:            pluginName,
+			PluginType:      pluginType,
+			PluginSets:      backendplugin.PluginSet,
+			HandshakeConfig: backendplugin.HandshakeConfig,
+			Logger:          log.NewNullLogger(),
+			AutoMTLS:        true,
+			IsMetadataMode:  false,
+			Wrapper:         dsv,
+		}
+	case consts.PluginTypeDatabase:
+		return pluginutil.PluginClientConfig{
+			Name:            pluginName,
+			PluginType:      pluginType,
+			PluginSets:      v5.PluginSets,
+			HandshakeConfig: v5.HandshakeConfig,
+			Logger:          log.NewNullLogger(),
+			AutoMTLS:        true,
+			IsMetadataMode:  false,
+		}
+	}
+	return pluginutil.PluginClientConfig{}
 }
 
 var (
@@ -1151,8 +1217,10 @@ type TestClusterOptions struct {
 	LicensePrivateKey     ed25519.PrivateKey
 
 	// this stores the vault version that should be used for each core config
-	VersionMap        map[int]string
-	RedundancyZoneMap map[int]string
+	VersionMap             map[int]string
+	RedundancyZoneMap      map[int]string
+	KVVersion              string
+	EffectiveSDKVersionMap map[int]string
 }
 
 var DefaultNumCores = 3
@@ -1577,6 +1645,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.EnableResponseHeaderHostname = base.EnableResponseHeaderHostname
 		coreConfig.EnableResponseHeaderRaftNodeID = base.EnableResponseHeaderRaftNodeID
 
+		coreConfig.RollbackPeriod = base.RollbackPeriod
+
 		testApplyEntBaseConfig(coreConfig, base)
 	}
 	if coreConfig.ClusterName == "" {
@@ -1840,6 +1910,11 @@ func (testCluster *TestCluster) newCore(t testing.T, idx int, coreConfig *CoreCo
 	if coreConfig.Logger == nil || (opts != nil && opts.Logger != nil) {
 		localConfig.Logger = testCluster.Logger.Named(fmt.Sprintf("core%d", idx))
 	}
+
+	if opts != nil && opts.EffectiveSDKVersionMap != nil {
+		localConfig.EffectiveSDKVersion = opts.EffectiveSDKVersionMap[idx]
+	}
+
 	if opts != nil && opts.PhysicalFactory != nil {
 		pfc := opts.PhysicalFactoryConfig
 		if pfc == nil {
@@ -2029,6 +2104,11 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 
 	TestWaitActive(t, leader.Core)
 
+	kvVersion := "1"
+	if opts != nil {
+		kvVersion = opts.KVVersion
+	}
+
 	// Existing tests rely on this; we can make a toggle to disable it
 	// later if we want
 	kvReq := &logical.Request{
@@ -2040,7 +2120,7 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 			"path":        "secret/",
 			"description": "key/value secret storage",
 			"options": map[string]string{
-				"version": "1",
+				"version": kvVersion,
 			},
 		},
 	}
@@ -2232,7 +2312,9 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 			"mongodbatlas-database-plugin",
 			"mssql-database-plugin",
 			"postgresql-database-plugin",
+			"redis-elasticache-database-plugin",
 			"redshift-database-plugin",
+			"redis-database-plugin",
 			"snowflake-database-plugin",
 		}
 	case consts.PluginTypeCredential:
@@ -2244,7 +2326,20 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 }
 
 func (m *mockBuiltinRegistry) Contains(name string, pluginType consts.PluginType) bool {
+	for _, key := range m.Keys(pluginType) {
+		if key == name {
+			return true
+		}
+	}
 	return false
+}
+
+func (m *mockBuiltinRegistry) DeprecationStatus(name string, pluginType consts.PluginType) (consts.DeprecationStatus, bool) {
+	if m.Contains(name, pluginType) {
+		return consts.Supported, true
+	}
+
+	return consts.Unknown, false
 }
 
 type NoopAudit struct {
@@ -2346,4 +2441,38 @@ func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
 		time.Sleep(100 * time.Millisecond)
 	}
 	t.Fatalf("did not complete before deadline, err: %v", err)
+}
+
+// MakeTestPluginDir creates a temporary directory suitable for holding plugins.
+// This helper also resolves symlinks to make tests happy on OS X.
+func MakeTestPluginDir(t testing.T) (string, func(t testing.T)) {
+	if t != nil {
+		t.Helper()
+	}
+
+	dir, err := os.MkdirTemp("", "")
+	if err != nil {
+		if t == nil {
+			panic(err)
+		}
+		t.Fatal(err)
+	}
+
+	// OSX tempdir are /var, but actually symlinked to /private/var
+	dir, err = filepath.EvalSymlinks(dir)
+	if err != nil {
+		if t == nil {
+			panic(err)
+		}
+		t.Fatal(err)
+	}
+
+	return dir, func(t testing.T) {
+		if err := os.RemoveAll(dir); err != nil {
+			if t == nil {
+				panic(err)
+			}
+			t.Fatal(err)
+		}
+	}
 }

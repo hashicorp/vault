@@ -70,7 +70,7 @@ export default class DatabaseRoleEdit extends Component {
         try {
           this.router.transitionTo(LIST_ROOT_ROUTE, backend, { queryParams: { tab: 'role' } });
         } catch (e) {
-          console.debug(e);
+          console.debug(e); // eslint-disable-line
         }
       })
       .catch((e) => {
@@ -97,7 +97,7 @@ export default class DatabaseRoleEdit extends Component {
         try {
           this.router.transitionTo(SHOW_ROUTE, `role/${secretId}`);
         } catch (e) {
-          console.debug(e);
+          console.debug(e); // eslint-disable-line
         }
       })
       .catch((e) => {

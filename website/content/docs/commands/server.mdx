@@ -60,6 +60,14 @@ flags](/docs/commands) included on all commands.
   are "standard" and "json". This can also be specified via the
   VAULT_LOG_FORMAT environment variable.
 
+- `VAULT_ALLOW_PENDING_REMOVAL_MOUNTS` `(bool: false)` - (environment variable)
+Allow Vault to be started with builtin engines which have the `Pending Removal`
+deprecation state. This is a temporary stopgap in place in order to perform an
+upgrade and disable these engines. Once these engines are marked `Removed` (in
+the next major release of Vault), the environment variable will no longer work
+and a downgrade must be performed in order to remove the offending engines. For
+more information, see the [deprecation faq](/docs/deprecation/faq/#q-what-are-the-phases-of-deprecation).
+
 ### Dev Options
 
 - `-dev` `(bool: false)` - Enable development mode. In this mode, Vault runs

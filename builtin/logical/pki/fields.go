@@ -1,6 +1,10 @@
 package pki
 
-import "github.com/hashicorp/vault/sdk/framework"
+import (
+	"time"
+
+	"github.com/hashicorp/vault/sdk/framework"
+)
 
 const (
 	issuerRefParam = "issuer_ref"
@@ -139,6 +143,13 @@ be larger than the role max TTL.`,
 		Type: framework.TypeString,
 		Description: `Set the not after field of the certificate with specified date value.
 The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
+	}
+
+	fields["remove_roots_from_chain"] = &framework.FieldSchema{
+		Type:    framework.TypeBool,
+		Default: false,
+		Description: `Whether or not to remove self-signed CA certificates in the output
+of the ca_chain field.`,
 	}
 
 	fields = addIssuerRefField(fields)
@@ -414,5 +425,55 @@ for the configured default key, an identifier or the name assigned
 to the key.`,
 		Default: defaultRef,
 	}
+	return fields
+}
+
+func addTidyFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields["tidy_cert_store"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to enable tidying up
+the certificate store`,
+	}
+
+	fields["tidy_revocation_list"] = &framework.FieldSchema{
+		Type:        framework.TypeBool,
+		Description: `Deprecated; synonym for 'tidy_revoked_certs`,
+	}
+
+	fields["tidy_revoked_certs"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to expire all revoked
+and expired certificates, removing them both from the CRL and from storage. The
+CRL will be rotated if this causes any values to be removed.`,
+	}
+
+	fields["tidy_revoked_cert_issuer_associations"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to validate issuer associations
+on revocation entries. This helps increase the performance of CRL building
+and OCSP responses.`,
+	}
+
+	fields["safety_buffer"] = &framework.FieldSchema{
+		Type: framework.TypeDurationSecond,
+		Description: `The amount of extra time that must have passed
+beyond certificate expiration before it is removed
+from the backend storage and/or revocation list.
+Defaults to 72 hours.`,
+		Default: int(defaultTidyConfig.SafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
+	}
+
+	fields["pause_duration"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `The amount of time to wait between processing
+certificates. This allows operators to change the execution profile
+of tidy to take consume less resources by slowing down how long it
+takes to run. Note that the entire list of certificates will be
+stored in memory during the entire tidy operation, but resources to
+read/process/update existing entries will be spread out over a
+greater period of time. By default this is zero seconds.`,
+		Default: "0s",
+	}
+
 	return fields
 }

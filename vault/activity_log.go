@@ -161,7 +161,8 @@ type ActivityLog struct {
 
 	// channel closed when deletion at startup is done
 	// (for unit test robustness)
-	retentionDone chan struct{}
+	retentionDone         chan struct{}
+	computationWorkerDone chan struct{}
 
 	// for testing: is config currently being invalidated. protected by l
 	configInvalidationInProgress bool
@@ -1062,15 +1063,19 @@ func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup) error {
 		go manager.activeFragmentWorker(ctx)
 
 		// Check for any intent log, in the background
-		go manager.precomputedQueryWorker(ctx)
+		manager.computationWorkerDone = make(chan struct{})
+		go func() {
+			manager.precomputedQueryWorker(ctx)
+			close(manager.computationWorkerDone)
+		}()
 
 		// Catch up on garbage collection
 		// Signal when this is done so that unit tests can proceed.
 		manager.retentionDone = make(chan struct{})
-		go func() {
-			manager.retentionWorker(ctx, time.Now(), manager.retentionMonths)
+		go func(months int) {
+			manager.retentionWorker(ctx, time.Now(), months)
 			close(manager.retentionDone)
-		}()
+		}(manager.retentionMonths)
 	}
 
 	return nil
@@ -1198,6 +1203,11 @@ func (a *ActivityLog) activeFragmentWorker(ctx context.Context) {
 		endOfMonth.Stop()
 	}
 
+	endOfMonthChannel := endOfMonth.C
+	if a.core.activityLogConfig.DisableTimers {
+		endOfMonthChannel = nil
+	}
+
 	writeFunc := func() {
 		ctx, cancel := context.WithTimeout(ctx, activitySegmentWriteTimeout)
 		defer cancel()
@@ -1212,6 +1222,7 @@ func (a *ActivityLog) activeFragmentWorker(ctx context.Context) {
 	a.l.RLock()
 	doneCh := a.doneCh
 	a.l.RUnlock()
+
 	for {
 		select {
 		case <-doneCh:
@@ -1241,7 +1252,7 @@ func (a *ActivityLog) activeFragmentWorker(ctx context.Context) {
 
 			// Simpler, but ticker.Reset was introduced in go 1.15:
 			// ticker.Reset(activitySegmentInterval)
-		case currentTime := <-endOfMonth.C:
+		case currentTime := <-endOfMonthChannel:
 			err := a.HandleEndOfMonth(ctx, currentTime.UTC())
 			if err != nil {
 				a.logger.Error("failed to perform end of month rotation", "error", err)
@@ -1504,6 +1515,12 @@ func (a *ActivityLog) DefaultStartTime(endTime time.Time) time.Time {
 
 func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.Time, limitNamespaces int) (map[string]interface{}, error) {
 	var computePartial bool
+
+	// Change the start time to the beginning of the month, and the end time to be the end
+	// of the month.
+	startTime = timeutil.StartOfMonth(startTime)
+	endTime = timeutil.EndOfMonth(endTime)
+
 	// If the endTime of the query is the current month, request data from the queryStore
 	// with the endTime equal to the end of the last month, and add in the current month
 	// data.
@@ -1513,16 +1530,26 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 		computePartial = true
 	}
 
-	// From the precomputed queries stored in the queryStore (computed at the end of each month)
-	// get the query associated with the start and end time specified
-	pq, err := a.queryStore.Get(ctx, startTime, precomputedQueryEndTime)
-	if err != nil {
-		return nil, err
+	pq := &activity.PrecomputedQuery{}
+	if startTime.After(precomputedQueryEndTime) && timeutil.IsCurrentMonth(startTime, time.Now().UTC()) {
+		// We're only calculating the partial month client count. Skip the precomputation
+		// get call.
+		pq = &activity.PrecomputedQuery{
+			StartTime:  startTime,
+			EndTime:    endTime,
+			Namespaces: make([]*activity.NamespaceRecord, 0),
+			Months:     make([]*activity.MonthRecord, 0),
+		}
+	} else {
+		storedQuery, err := a.queryStore.Get(ctx, startTime, precomputedQueryEndTime)
+		if err != nil {
+			return nil, err
+		}
+		if storedQuery == nil {
+			return nil, nil
+		}
+		pq = storedQuery
 	}
-	if pq == nil {
-		return nil, nil
-	}
-
 	// Calculate the namespace response breakdowns and totals for entities and tokens from the initial
 	// namespace data.
 	totalEntities, totalTokens, byNamespaceResponse, err := a.calculateByNamespaceResponseForQuery(ctx, pq.Namespaces)
@@ -1569,6 +1596,21 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 		currentMonth, err := a.computeCurrentMonthForBillingPeriod(ctx, partialByMonth, startTime, endTime)
 		if err != nil {
 			return nil, err
+		}
+		// Add the namespace attribution for the current month to the newly computed current month value. Note
+		// that transformMonthBreakdowns calculates a superstruct of the required namespace struct due to its
+		// primary use-case being for precomputedQueryWorker, but we will reuse this code for brevity and extract
+		// the namespaces from it.
+		currentMonthNamespaceAttribution := a.transformMonthBreakdowns(partialByMonth)
+		// Ensure that there is only one element in this list -- if not, warn.
+		if len(currentMonthNamespaceAttribution) > 1 {
+			a.logger.Warn("more than one month worth of namespace and mount attribution calculated for "+
+				"current month values", "number of months", len(currentMonthNamespaceAttribution))
+		}
+		if len(currentMonthNamespaceAttribution) == 0 {
+			a.logger.Warn("no month data found, returning query with no namespace attribution for current month")
+		} else {
+			currentMonth.Namespaces = currentMonthNamespaceAttribution[0].Namespaces
 		}
 		pq.Months = append(pq.Months, currentMonth)
 		distinctEntitiesResponse += pq.Months[len(pq.Months)-1].NewClients.Counts.EntityClients
@@ -1619,7 +1661,7 @@ func modifyResponseMonths(months []*ResponseMonth, start time.Time, end time.Tim
 	if err != nil {
 		return months
 	}
-	for start.Before(firstMonth) {
+	for start.Before(firstMonth) && !timeutil.IsCurrentMonth(start, firstMonth) {
 		monthPlaceholder := &ResponseMonth{Timestamp: start.UTC().Format(time.RFC3339)}
 		modifiedResponseMonths = append(modifiedResponseMonths, monthPlaceholder)
 		start = timeutil.StartOfMonth(start.AddDate(0, 1, 0))
@@ -1630,7 +1672,7 @@ func modifyResponseMonths(months []*ResponseMonth, start time.Time, end time.Tim
 		return modifiedResponseMonths
 	}
 	lastMonth := timeutil.EndOfMonth(lastMonthStart)
-	for lastMonth.Before(end) {
+	for lastMonth.Before(end) && !timeutil.IsCurrentMonth(end, lastMonth) {
 		lastMonth = timeutil.StartOfMonth(lastMonth).AddDate(0, 1, 0)
 		monthPlaceholder := &ResponseMonth{Timestamp: lastMonth.UTC().Format(time.RFC3339)}
 		modifiedResponseMonths = append(modifiedResponseMonths, monthPlaceholder)
@@ -1700,6 +1742,11 @@ func (a *ActivityLog) HandleTokenUsage(ctx context.Context, entry *logical.Token
 
 	// Do not count root tokens in client count.
 	if entry.IsRoot() {
+		return
+	}
+
+	// Tokens created for the purpose of Link should bypass counting for billing purposes
+	if entry.InternalMeta != nil && entry.InternalMeta[IgnoreForBilling] == "true" {
 		return
 	}
 
@@ -2129,6 +2176,10 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 // We expect the return value won't be checked, so log errors as they occur
 // (but for unit testing having the error return should help.)
 func (a *ActivityLog) retentionWorker(ctx context.Context, currentTime time.Time, retentionMonths int) error {
+	if a.core.activityLogConfig.DisableTimers {
+		return nil
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 

@@ -31,12 +31,14 @@ import { action } from '@ember/object';
  */
 export default class ConfigureAwsSecretComponent extends Component {
   @action
-  saveRootCreds(data) {
+  saveRootCreds(data, event) {
+    event.preventDefault();
     this.args.saveAWSRoot(data);
   }
 
   @action
-  saveLease(data) {
+  saveLease(data, event) {
+    event.preventDefault();
     this.args.saveAWSLease(data);
   }
 }

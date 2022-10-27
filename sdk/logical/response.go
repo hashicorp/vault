@@ -92,7 +92,8 @@ func (r *Response) AddWarning(warning string) {
 
 // IsError returns true if this response seems to indicate an error.
 func (r *Response) IsError() bool {
-	return r != nil && r.Data != nil && len(r.Data) == 1 && r.Data["error"] != nil
+	// If the response data contains only an 'error' element, or an 'error' and a 'data' element only
+	return r != nil && r.Data != nil && r.Data["error"] != nil && (len(r.Data) == 1 || (r.Data["data"] != nil && len(r.Data) == 2))
 }
 
 func (r *Response) Error() error {

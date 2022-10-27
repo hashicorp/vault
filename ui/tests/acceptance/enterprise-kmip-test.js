@@ -86,7 +86,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     let path = `kmip-${Date.now()}`;
     await mountSecrets.enable('kmip', path);
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${path}/kmip/scopes`,
       'mounts and redirects to the kmip scopes page'
@@ -100,7 +100,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     await scopesPage.configurationLink();
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${path}/kmip/configuration`,
       'configuration navigates to the config page'
@@ -109,7 +109,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
 
     await scopesPage.configureLink();
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${path}/kmip/configure`,
       'configuration navigates to the configure page'
@@ -119,7 +119,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
 
     await scopesPage.submit();
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${path}/kmip/configuration`,
       'redirects to configuration page after saving config'
@@ -137,7 +137,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await credentialsPage.delete().confirmDelete();
     await settled();
 
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${path}/kmip/scopes/${scope}/roles/${role}/credentials`,
       'redirects to the credentials list'
@@ -151,7 +151,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     await scopesPage.createLink();
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${path}/kmip/scopes/create`,
       'navigates to the kmip scope create page'
@@ -162,12 +162,12 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     await scopesPage.submit();
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${path}/kmip/scopes`,
       'navigates to the kmip scopes page after create'
     );
-    assert.equal(scopesPage.listItemLinks.length, 1, 'renders a single scope');
+    assert.strictEqual(scopesPage.listItemLinks.length, 1, 'renders a single scope');
   });
 
   test('it can delete a scope from the list', async function (assert) {
@@ -181,7 +181,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     await scopesPage.confirmDelete();
     await settled();
-    assert.equal(scopesPage.listItemLinks.length, 0, 'no scopes');
+    assert.strictEqual(scopesPage.listItemLinks.length, 0, 'no scopes');
     assert.ok(scopesPage.isEmpty, 'renders the empty state');
   });
 
@@ -203,7 +203,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     assert.ok(rolesPage.isEmpty, 'renders the empty role page');
     await rolesPage.create();
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${path}/kmip/scopes/${scope}/roles/create`,
       'links to the role create form'
@@ -213,13 +213,13 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     await rolesPage.submit();
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${path}/kmip/scopes/${scope}/roles`,
       'redirects to roles list'
     );
 
-    assert.equal(rolesPage.listItemLinks.length, 1, 'renders a single role');
+    assert.strictEqual(rolesPage.listItemLinks.length, 1, 'renders a single role');
   });
 
   test('it can delete a role from the list', async function (assert) {
@@ -233,7 +233,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     await rolesPage.confirmDelete();
     await settled();
-    assert.equal(rolesPage.listItemLinks.length, 0, 'renders no roles');
+    assert.strictEqual(rolesPage.listItemLinks.length, 0, 'renders no roles');
     assert.ok(rolesPage.isEmpty, 'renders empty');
   });
 
@@ -245,21 +245,21 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await waitUntil(() => find('[data-test-kmip-link-edit-role]'));
     await rolesPage.detailEditLink();
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${path}/kmip/scopes/${scope}/roles/${role}/edit`,
       'navigates to role edit'
     );
     await rolesPage.cancelLink();
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${path}/kmip/scopes/${scope}/roles/${role}`,
       'cancel navigates to role show'
     );
     await rolesPage.delete().confirmDelete();
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${path}/kmip/scopes/${scope}/roles`,
       'redirects to the roles list'
@@ -275,21 +275,21 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     assert.ok(credentialsPage.isEmpty, 'renders empty creds page');
     await credentialsPage.generateCredentialsLink();
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentURL(),
       `/vault/secrets/${path}/kmip/scopes/${scope}/roles/${role}/credentials/generate`,
       'navigates to generate credentials'
     );
     await credentialsPage.submit();
     await settled();
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.secrets.backend.kmip.credentials.show',
       'generate redirects to the show page'
     );
     await credentialsPage.backToRoleLink();
     await settled();
-    assert.equal(credentialsPage.listItemLinks.length, 1, 'renders a single credential');
+    assert.strictEqual(credentialsPage.listItemLinks.length, 1, 'renders a single credential');
   });
 
   test('it can revoke a credential from the list', async function (assert) {
@@ -301,7 +301,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     await credentialsPage.delete().confirmDelete();
     await settled();
-    assert.equal(credentialsPage.listItemLinks.length, 0, 'renders no credentials');
+    assert.strictEqual(credentialsPage.listItemLinks.length, 0, 'renders no credentials');
     assert.ok(credentialsPage.isEmpty, 'renders empty');
   });
 });

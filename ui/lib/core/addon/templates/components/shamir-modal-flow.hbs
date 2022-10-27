@@ -75,7 +75,7 @@
         </button>
       </div>
     {{else if (and this.generateAction (not this.started))}}
-      <form {{action "startGenerate" (hash pgp_key=this.pgp_key) on="submit"}} id="shamir">
+      <form {{action "startGenerate" (hash pgp_key=this.pgp_key) on="submit"}} id="shamir" aria-label="shamir generate form">
         <MessageError @errors={{this.errors}} />
         {{#if (eq this.generateStep "chooseMethod")}}
           <div class="has-bottom-margin-m" data-test-shamir-modal-body>
@@ -124,7 +124,7 @@
           <div>
             <p class="has-bottom-margin-m">
               Below is the base-64 encoded PGP Key that will be used to encrypt the generated operation token. Next we'll
-              enter portions of the master key to generate an operation token. Click the "Generate operation token" button to
+              enter portions of the root key to generate an operation token. Click the "Generate operation token" button to
               proceed.
             </p>
             <h4 class="field-title has-bottom-padding-m is-fullwidth">
@@ -151,7 +151,7 @@
         {{/if}}
       </form>
     {{else}}
-      <form {{action "onSubmit" (hash key=this.key) on="submit"}} id="shamir">
+      <form {{action "onSubmit" (hash key=this.key) on="submit"}} id="shamir" aria-label="shamir form">
         <div class="has-bottom-margin-m">
           {{#if this.errors}}
             <div class="box is-shadowless is-marginless no-padding-top is-fullwidth">
@@ -175,13 +175,13 @@
               </div>
             {{/if}}
             <p>
-              Generate an operation token by entering a portion of the primary's master key. Once all portions are entered,
-              the generated token may be used to manage your secondary Disaster Recovery cluster.
+              Generate an operation token by entering a portion of the primary's root key. Once all portions are entered, the
+              generated token may be used to manage your secondary Disaster Recovery cluster.
             </p>
           </div>
           <div class="field">
             <label for="key" class="is-label">
-              Master Key Portion
+              root key Portion
             </label>
             <div class="control">
               <Input class="input" @type="password" name="key" @value={{this.key}} data-test-shamir-input={{true}} />

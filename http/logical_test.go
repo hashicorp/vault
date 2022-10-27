@@ -362,6 +362,85 @@ func TestLogical_ListSuffix(t *testing.T) {
 	}
 }
 
+func TestLogical_ListWithQueryParameters(t *testing.T) {
+	core, _, rootToken := vault.TestCoreUnsealed(t)
+
+	tests := []struct {
+		name          string
+		requestMethod string
+		url           string
+		expectedData  map[string]interface{}
+	}{
+		{
+			name:          "LIST request method parses query parameter",
+			requestMethod: "LIST",
+			url:           "http://127.0.0.1:8200/v1/secret/foo?key1=value1",
+			expectedData: map[string]interface{}{
+				"key1": "value1",
+			},
+		},
+		{
+			name:          "LIST request method parses query multiple parameters",
+			requestMethod: "LIST",
+			url:           "http://127.0.0.1:8200/v1/secret/foo?key1=value1&key2=value2",
+			expectedData: map[string]interface{}{
+				"key1": "value1",
+				"key2": "value2",
+			},
+		},
+		{
+			name:          "GET request method with list=true parses query parameter",
+			requestMethod: "GET",
+			url:           "http://127.0.0.1:8200/v1/secret/foo?list=true&key1=value1",
+			expectedData: map[string]interface{}{
+				"key1": "value1",
+			},
+		},
+		{
+			name:          "GET request method with list=true parses multiple query parameters",
+			requestMethod: "GET",
+			url:           "http://127.0.0.1:8200/v1/secret/foo?list=true&key1=value1&key2=value2",
+			expectedData: map[string]interface{}{
+				"key1": "value1",
+				"key2": "value2",
+			},
+		},
+		{
+			name:          "GET request method with alternate order list=true parses multiple query parameters",
+			requestMethod: "GET",
+			url:           "http://127.0.0.1:8200/v1/secret/foo?key1=value1&list=true&key2=value2",
+			expectedData: map[string]interface{}{
+				"key1": "value1",
+				"key2": "value2",
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req, _ := http.NewRequest(tc.requestMethod, tc.url, nil)
+			req = req.WithContext(namespace.RootContext(nil))
+			req.Header.Add(consts.AuthHeaderName, rootToken)
+
+			lreq, _, status, err := buildLogicalRequest(core, nil, req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if status != 0 {
+				t.Fatalf("got status %d", status)
+			}
+			if !strings.HasSuffix(lreq.Path, "/") {
+				t.Fatal("trailing slash not found on path")
+			}
+			if lreq.Operation != logical.ListOperation {
+				t.Fatalf("expected logical.ListOperation, got %v", lreq.Operation)
+			}
+			if !reflect.DeepEqual(tc.expectedData, lreq.Data) {
+				t.Fatalf("expected query parameter data %v, got %v", tc.expectedData, lreq.Data)
+			}
+		})
+	}
+}
+
 func TestLogical_RespondWithStatusCode(t *testing.T) {
 	resp := &logical.Response{
 		Data: map[string]interface{}{

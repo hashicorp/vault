@@ -222,7 +222,6 @@ func (l *deprecatedLoggerClient) Error(msg string, args ...interface{}) error {
 
 func (l *deprecatedLoggerClient) Fatal(msg string, args ...interface{}) {
 	// NOOP since it's not actually used within vault
-	return
 }
 
 func (l *deprecatedLoggerClient) Log(level int, msg string, args []interface{}) {

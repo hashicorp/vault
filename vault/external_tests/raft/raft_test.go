@@ -45,6 +45,7 @@ type RaftClusterOpts struct {
 	Seal                           vault.Seal
 	VersionMap                     map[int]string
 	RedundancyZoneMap              map[int]string
+	EffectiveSDKVersionMap         map[int]string
 }
 
 func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
@@ -70,6 +71,7 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 	opts.NumCores = ropts.NumCores
 	opts.VersionMap = ropts.VersionMap
 	opts.RedundancyZoneMap = ropts.RedundancyZoneMap
+	opts.EffectiveSDKVersionMap = ropts.EffectiveSDKVersionMap
 
 	teststorage.RaftBackendSetup(conf, &opts)
 
@@ -549,9 +551,13 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 	t.Parallel()
 
 	seal, setErr := vaultseal.NewToggleableTestSeal(nil)
+	autoSeal, err := vault.NewAutoSeal(seal)
+	if err != nil {
+		t.Fatal(err)
+	}
 	cluster := raftCluster(t, &RaftClusterOpts{
 		NumCores: 1,
-		Seal:     vault.NewAutoSeal(seal),
+		Seal:     autoSeal,
 	})
 	defer cluster.Cleanup()
 
@@ -582,7 +588,7 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 
 	setErr(errors.New("seal failure"))
 	// Take a snapshot
-	err := leaderClient.Sys().RaftSnapshot(w)
+	err = leaderClient.Sys().RaftSnapshot(w)
 	w.Close()
 	if err == nil || err != api.ErrIncompleteSnapshot {
 		t.Fatalf("expected err=%v, got: %v", api.ErrIncompleteSnapshot, err)

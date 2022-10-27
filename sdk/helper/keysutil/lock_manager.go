@@ -36,6 +36,9 @@ type PolicyRequest struct {
 	// The key type
 	KeyType KeyType
 
+	// The key size for variable key size algorithms
+	KeySize int
+
 	// Whether it should be derived
 	Derived bool
 
@@ -373,6 +376,11 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 				cleanup()
 				return nil, false, fmt.Errorf("key derivation and convergent encryption not supported for keys of type %v", req.KeyType)
 			}
+		case KeyType_HMAC:
+			if req.Derived || req.Convergent {
+				cleanup()
+				return nil, false, fmt.Errorf("key derivation and convergent encryption not supported for keys of type %v", req.KeyType)
+			}
 
 		default:
 			cleanup()
@@ -387,6 +395,7 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 			Exportable:           req.Exportable,
 			AllowPlaintextBackup: req.AllowPlaintextBackup,
 			AutoRotatePeriod:     req.AutoRotatePeriod,
+			KeySize:              req.KeySize,
 		}
 
 		if req.Derived {

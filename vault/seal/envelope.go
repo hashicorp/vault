@@ -5,11 +5,11 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 )
 
 type Envelope struct {
-	envelope *wrapping.Envelope
+	envelope *wrapping.EnvelopeInfo
 	once     sync.Once
 }
 
@@ -18,19 +18,19 @@ func NewEnvelope() *Envelope {
 }
 
 func (e *Envelope) init() {
-	e.envelope = new(wrapping.Envelope)
+	e.envelope = new(wrapping.EnvelopeInfo)
 }
 
 func (e *Envelope) Encrypt(plaintext, aad []byte) (*wrapping.EnvelopeInfo, error) {
 	defer metrics.MeasureSince([]string{"seal", "envelope", "encrypt"}, time.Now())
 	e.once.Do(e.init)
 
-	return e.envelope.Encrypt(plaintext, aad)
+	return wrapping.EnvelopeEncrypt(plaintext, wrapping.WithAad(aad))
 }
 
 func (e *Envelope) Decrypt(data *wrapping.EnvelopeInfo, aad []byte) ([]byte, error) {
 	defer metrics.MeasureSince([]string{"seal", "envelope", "decrypt"}, time.Now())
 	e.once.Do(e.init)
 
-	return e.envelope.Decrypt(data, aad)
+	return wrapping.EnvelopeDecrypt(data, wrapping.WithAad(aad))
 }

@@ -71,9 +71,15 @@ type Database interface {
 
 // PluginFactory is used to build plugin database types. It wraps the database
 // object in a logging and metrics middleware.
-func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRunnerUtil, logger log.Logger) (Database, error) {
+func PluginFactory(ctx context.Context, pluginName string, pluginVersion string, sys pluginutil.LookRunnerUtil, logger log.Logger) (Database, error) {
+	return PluginFactoryVersion(ctx, pluginName, "", sys, logger)
+}
+
+// PluginFactory is used to build plugin database types with a version specified.
+// It wraps the database object in a logging and metrics middleware.
+func PluginFactoryVersion(ctx context.Context, pluginName string, pluginVersion string, sys pluginutil.LookRunnerUtil, logger log.Logger) (Database, error) {
 	// Look for plugin in the plugin catalog
-	pluginRunner, err := sys.LookupPlugin(ctx, pluginName, consts.PluginTypeDatabase)
+	pluginRunner, err := sys.LookupPluginVersion(ctx, pluginName, consts.PluginTypeDatabase, pluginVersion)
 	if err != nil {
 		return nil, err
 	}

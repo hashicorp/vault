@@ -102,7 +102,7 @@
             @secret={{@model.id}}
             @mode="edit"
             @replace={{true}}
-            @queryParams={{query-params itemType="key"}}
+            @queryParams={{hash itemType="key"}}
             @data-test-edit-link={{true}}
           >
             Edit key
@@ -134,7 +134,7 @@
               <LinkTo
                 @route={{if this.isCreating @root.path "vault.cluster.secrets.backend.show"}}
                 @model={{if this.isCreating @root.model @model.id}}
-                @query={{unless this.isCreating (hash itemType="key")}}
+                @query={{unless this.isCreating (hash itemType="key") (hash itemType="")}}
                 @disabled={{this.savekey.isRunning}}
                 class="button"
                 data-test-keymgmt-key-cancel

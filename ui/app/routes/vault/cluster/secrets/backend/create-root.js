@@ -28,6 +28,7 @@ const transformModel = (queryParams) => {
 };
 
 export default EditBase.extend({
+  store: service(),
   wizard: service(),
 
   createModel(transition) {
