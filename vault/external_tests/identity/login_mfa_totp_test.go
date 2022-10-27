@@ -134,11 +134,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 
 	userpassToken := secret.Auth.ClientToken
 	userClient1.SetToken(client.Token())
-<<<<<<< HEAD
-	secret, err = userClient1.Logical().Write("auth/token/lookup", map[string]interface{}{
-=======
-	secret, err := userClient1.Logical().WriteWithContext(context.Background(), "auth/token/lookup", map[string]interface{}{
->>>>>>> 1075ac42d4 (Tweak totp test to fix race failures (#17692))
+	secret, err := userClient1.Logical().Write("auth/token/lookup", map[string]interface{}{
 		"token": userpassToken,
 	})
 	if err != nil {
@@ -154,11 +150,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	headers := userClient1.Headers()
 	headers.Del("X-Vault-MFA")
 	userClient1.SetHeaders(headers)
-<<<<<<< HEAD
-	secret, err = userClient1.Logical().Write("auth/userpass/login/testuser1", map[string]interface{}{
-=======
-	secret, err = userClient1.Logical().WriteWithContext(context.Background(), userpassPath, map[string]interface{}{
->>>>>>> 1075ac42d4 (Tweak totp test to fix race failures (#17692))
+	secret, err = userClient1.Logical().Write(userpassPath, map[string]interface{}{
 		"password": "testpassword",
 	})
 	if err != nil {
@@ -197,11 +189,12 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 	testhelpers.RetryUntil(t, 20*time.Second, func() error {
 		totpPasscode1 = testhelpers.GetTOTPCodeFromEngine(t, client, enginePath1)
 
-	secret, err = userClient1.Logical().Write("sys/mfa/validate", map[string]interface{}{
-		"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
-		"mfa_payload": map[string][]string{
-			methodID: {totpPasscode1},
-		},
+		secret, err = userClient1.Logical().Write("sys/mfa/validate", map[string]interface{}{
+			"mfa_request_id": secret.Auth.MFARequirement.MFARequestID,
+			"mfa_payload": map[string][]string{
+				methodID: {totpPasscode1},
+			},
+		})
 		if err != nil {
 			return fmt.Errorf("MFA failed: %w", err)
 		}

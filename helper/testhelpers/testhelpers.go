@@ -891,11 +891,7 @@ func SetupUserpassMountAccessor(t testing.T, client *api.Client) string {
 func RegisterEntityInTOTPEngine(t testing.T, client *api.Client, entityID, methodID string) string {
 	t.Helper()
 	totpGenName := fmt.Sprintf("%s-%s", entityID, methodID)
-<<<<<<< HEAD
-	secret, err := client.Logical().Write(fmt.Sprintf("identity/mfa/method/totp/admin-generate"), map[string]interface{}{
-=======
-	secret, err := client.Logical().WriteWithContext(context.Background(), "identity/mfa/method/totp/admin-generate", map[string]interface{}{
->>>>>>> 1075ac42d4 (Tweak totp test to fix race failures (#17692))
+	secret, err := client.Logical().Write("identity/mfa/method/totp/admin-generate", map[string]interface{}{
 		"entity_id": entityID,
 		"method_id": methodID,
 	})
@@ -912,14 +908,9 @@ func RegisterEntityInTOTPEngine(t testing.T, client *api.Client, entityID, metho
 	if err != nil {
 		t.Fatalf("failed to register a TOTP URL: %v", err)
 	}
-<<<<<<< HEAD
-	_, err = client.Logical().Write("identity/mfa/login-enforcement/randomName", map[string]interface{}{
-		"name":                "randomName",
-=======
 	enfPath := fmt.Sprintf("identity/mfa/login-enforcement/%s", methodID[0:4])
-	_, err = client.Logical().WriteWithContext(context.Background(), enfPath, map[string]interface{}{
+	_, err = client.Logical().Write(enfPath, map[string]interface{}{
 		"name":                methodID[0:4],
->>>>>>> 1075ac42d4 (Tweak totp test to fix race failures (#17692))
 		"identity_entity_ids": []string{entityID},
 		"mfa_method_ids":      []string{methodID},
 	})
