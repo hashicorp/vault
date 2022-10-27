@@ -14,7 +14,7 @@ const routeFor = function (type, mode, urls) {
   const MODES = {
     secrets: 'vault.cluster.secrets.backend',
     'secrets-cert': 'vault.cluster.secrets.backend',
-    'policy-show': 'vault.cluster.policy',
+    'policy-show': 'vault.cluster.policies.policy.show',
     'policy-list': 'vault.cluster.policies',
     leases: 'vault.cluster.access.leases',
   };

@@ -1,0 +1,53 @@
+<PageHeader as |p|>
+  <p.top>
+    <nav class="breadcrumb">
+      <li>
+        <LinkTo @route="vault.cluster.policies" @model={{this.model.policyType}} data-test-policy-list-link={{true}}>
+          <span class="sep">&#x0002f;</span>
+          {{uppercase this.model.policyType}}
+          policies
+        </LinkTo>
+      </li>
+    </nav>
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      {{this.model.id}}
+      {{#if this.model.enforcementLevel}}
+        <span class="tag is-medium" aria-label="Enforcement level: {{this.model.enforcementLevel}}">
+          {{this.model.enforcementLevel}}
+        </span>
+      {{/if}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+{{#if this.model.updatePath.isPending}}
+  <LayoutLoading />
+{{else}}
+  {{#if (and (not-eq this.model.id "root") (or this.model.canUpdate this.model.canDelete))}}
+    <Toolbar>
+      <ToolbarActions>
+        {{#if (and (not-eq this.model.id "default") this.model.canDelete)}}
+          <ConfirmAction
+            @buttonClasses="toolbar-link"
+            @confirmMessage="This may affect access to Vault data."
+            @onConfirmAction={{this.delete}}
+            data-test-policy-delete="true"
+          >
+            Delete
+          </ConfirmAction>
+          <div class="toolbar-separator"></div>
+        {{/if}}
+        <ToolbarLink @route="vault.cluster.policies.policy.show" @model={{this.model.id}} data-test-policy-edit-toggle>
+          Back to policy
+        </ToolbarLink>
+      </ToolbarActions>
+    </Toolbar>
+  {{/if}}
+
+  <PolicyForm
+    @model={{this.model}}
+    @onSave={{transition-to "vault.cluster.policies.policy.show" this.model.policyType this.model.name}}
+    @onCancel={{transition-to "vault.cluster.policies.policy.show" this.model.policyType this.model.name}}
+  />
+{{/if}}

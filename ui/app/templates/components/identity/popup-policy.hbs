@@ -1,13 +1,14 @@
+{{! TODO TEST }}
 <PopupMenu @name="policy-menu">
   <nav class="menu">
     <ul class="menu-list">
       <li class="action">
-        <LinkTo @route="vault.cluster.policy.show" @models={{array "acl" this.policyName}}>
+        <LinkTo @route="vault.cluster.policies.policy.show" @models={{array "acl" this.policyName}}>
           View Policy
         </LinkTo>
       </li>
       <li class="action">
-        <LinkTo @route="vault.cluster.policy.edit" @models={{array "acl" this.policyName}}>
+        <LinkTo @route="vault.cluster.policies.policy.edit" @models={{array "acl" this.policyName}}>
           Edit Policy
         </LinkTo>
       </li>

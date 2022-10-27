@@ -192,12 +192,11 @@ Router.map(function () {
         });
       });
       this.route('policies', { path: '/policies/:type' }, function () {
-        this.route('index', { path: '/' });
         this.route('create');
-      });
-      this.route('policy', { path: '/policy/:type' }, function () {
-        this.route('show', { path: '/:policy_name' });
-        this.route('edit', { path: '/:policy_name/edit' });
+        this.route('policy', { path: '/:policy_name' }, function () {
+          this.route('show');
+          this.route('edit');
+        });
       });
       this.route('replication-dr-promote', function () {
         this.route('details');

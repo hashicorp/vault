@@ -19,6 +19,6 @@
 
 <PolicyForm
   @model={{this.model}}
-  @onSave={{transition-to "vault.cluster.policy.show" this.model.policyType this.model.name}}
+  @onSave={{transition-to "vault.cluster.policies.policy.show" this.model.policyType this.model.name}}
   @onCancel={{transition-to "vault.cluster.policies.index"}}
 />

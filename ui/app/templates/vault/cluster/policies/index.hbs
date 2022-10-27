@@ -69,21 +69,16 @@
         </div>
       {{else}}
         <LinkedBlock
-          @params={{array "vault.cluster.policy.show" this.policyType item.id}}
+          @params={{array "vault.cluster.policies.policy.show" this.policyType item.id}}
           class="list-item-row"
           data-test-policy-link={{item.id}}
         >
-          <div class="columns is-mobile">
+          <div class="columns is-mobile" data-test-policy-item>
             <div class="column is-10">
-              <LinkTo
-                @route="vault.cluster.policy.show"
-                @models={{array this.policyType item.id}}
-                class="has-text-black has-text-weight-semibold"
-                data-test-policy-item={{true}}
-              >
-                <Icon @name="file" class="has-text-grey-light" />
-                <span class="is-underline" data-test-policy-name>{{item.id}}</span>
-              </LinkTo>
+              <Icon @name="file" class="has-text-grey-light" />
+              <span class="is-underline has-text-weight-semibold" data-test-policy-name>
+                {{item.id}}
+              </span>
             </div>
             <div class="column has-text-right">
               <PopupMenu name="policy-nav">
@@ -105,7 +100,7 @@
                         {{#if item.canRead}}
                           <li class="action">
                             <LinkTo
-                              @route="vault.cluster.policy.show"
+                              @route="vault.cluster.policies.policy.show"
                               @models={{array this.policyType item.id}}
                               data-test-policy-link="show"
                             >
@@ -116,7 +111,7 @@
                         {{#if item.canEdit}}
                           <li class="action">
                             <LinkTo
-                              @route="vault.cluster.policy.edit"
+                              @route="vault.cluster.policies.policy.edit"
                               @models={{array this.policyType item.id}}
                               data-test-policy-link="edit"
                             >

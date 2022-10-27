@@ -2,9 +2,9 @@
   <p.top>
     <nav class="breadcrumb">
       <li>
-        <LinkTo @route="vault.cluster.policies" @model={{this.policyType}} data-test-policy-list-link={{true}}>
+        <LinkTo @route="vault.cluster.policies" @model={{this.model.policyType}} data-test-policy-list-link={{true}}>
           <span class="sep">&#x0002f;</span>
-          {{uppercase this.policyType}}
+          {{uppercase this.model.policyType}}
           policies
         </LinkTo>
       </li>
@@ -25,12 +25,12 @@
   <ToolbarActions>
     <ToolbarDownloadButton
       @actionText="Download policy"
-      @extension={{if (eq this.policyType "acl") this.model.format "sentinel"}}
+      @extension={{if (eq this.model.policyType "acl") this.model.format "sentinel"}}
       @filename={{this.model.name}}
       @data={{this.model.policy}}
     />
-    {{#if (and (not-eq this.model.id "root") (or this.capabilities.canUpdate this.capabilities.canDelete))}}
-      <ToolbarLink @route="vault.cluster.policy.edit" @model={{this.model.id}} data-test-policy-edit-toggle>
+    {{#if (and (not-eq this.model.id "root") (or this.model.canUpdate this.model.canDelete))}}
+      <ToolbarLink @route="vault.cluster.policies.policy.edit" @model={{this.model.id}} data-test-policy-edit-toggle>
         Edit policy
       </ToolbarLink>
     {{/if}}
@@ -40,7 +40,7 @@
   <div class="field">
     <JsonEditor
       @title="Policy"
-      @subTitle={{if (eq this.policyType "acl") (concat this.uppercase this.model.format " format")}}
+      @subTitle={{if (eq this.model.policyType "acl") (concat this.uppercase this.model.format " format")}}
       @value={{this.model.policy}}
       @readOnly={{true}}
       @mode="ruby"

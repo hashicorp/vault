@@ -1,46 +1,59 @@
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-bottomless is-fullwidth is-marginless">
     <MessageError @errorMessage={{this.errorBanner}} />
-    <NamespaceReminder @mode="create" @noun="policy" />
-    <div class="field">
-      <label for="policy-name" class="is-label">Name</label>
-      <div class="control">
-        <Input
-          @type="text"
-          @value={{@model.name}}
-          id="policy-name"
-          class="input"
-          {{on "input" this.setModelName}}
-          data-test-policy-input="name"
-        />
+    <NamespaceReminder @mode={{if @model.isNew "create" "edit"}} @noun="policy" />
+    {{#if @model.isNew}}
+      <div class="field">
+        <label for="policy-name" class="is-label">Name</label>
+        <div class="control">
+          <Input
+            @type="text"
+            @value={{@model.name}}
+            id="policy-name"
+            class="input"
+            {{on "input" this.setModelName}}
+            data-test-policy-input="name"
+          />
+        </div>
       </div>
-    </div>
+    {{/if}}
     <div class="field">
-      <Toolbar>
-        <label class="is-label">Policy</label>
-        <ToolbarActions>
-          <div class="toolbar-separator"></div>
-          <div class="control is-flex">
-            <Input
-              id="fileUploadToggle"
-              @type="checkbox"
-              name="fileUploadToggle"
-              class="switch is-rounded is-success is-small"
-              @checked={{this.showFileUpload}}
-              {{on "change" this.toggleFileUpload}}
-              data-test-policy-edit-toggle={{true}}
-            />
-            <label for="fileUploadToggle">Upload file</label>
-          </div>
-        </ToolbarActions>
-      </Toolbar>
-      {{#if this.showFileUpload}}
-        <TextFile @inputOnly={{true}} @file={{this.file}} @onChange={{this.setPolicyFromFile}} />
+      {{#if @model.isNew}}
+        <Toolbar>
+          <label class="is-label">Policy</label>
+          <ToolbarActions>
+            <div class="toolbar-separator"></div>
+            <div class="control is-flex">
+              <Input
+                id="fileUploadToggle"
+                @type="checkbox"
+                name="fileUploadToggle"
+                class="switch is-rounded is-success is-small"
+                @checked={{this.showFileUpload}}
+                {{on "change" this.toggleFileUpload}}
+                data-test-policy-edit-toggle={{true}}
+              />
+              <label for="fileUploadToggle">Upload file</label>
+            </div>
+          </ToolbarActions>
+        </Toolbar>
+        {{#if this.showFileUpload}}
+          <TextFile @inputOnly={{true}} @file={{this.file}} @onChange={{this.setPolicyFromFile}} />
+        {{else}}
+          <JsonEditor
+            @title="Policy"
+            @helpText="You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field"
+            @showToolbar={{false}}
+            @value={{@model.policy}}
+            @valueUpdated={{action (mut @model.policy)}}
+            @mode="ruby"
+            @extraKeys={{hash Shift-Enter=(perform this.save)}}
+          />
+        {{/if}}
       {{else}}
         <JsonEditor
           @title="Policy"
           @helpText="You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field"
-          @showToolbar={{false}}
           @value={{@model.policy}}
           @valueUpdated={{action (mut @model.policy)}}
           @mode="ruby"
@@ -60,7 +73,7 @@
         disabled={{this.save.isRunning}}
         data-test-policy-save={{true}}
       >
-        Create policy
+        {{if @model.isNew "Create policy" "Save"}}
       </button>
       <button type="button" class="button has-left-margin-s" disabled={{this.save.isRunning}} {{on "click" this.cancel}}>
         Cancel

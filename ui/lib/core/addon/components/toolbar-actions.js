@@ -7,7 +7,7 @@
  * ```js
  * <Toolbar>
  *   <ToolbarActions>
- *     <ToolbarLink @route="vault.cluster.policy.edit">
+ *     <ToolbarLink @route="vault.cluster.policies.policy.edit">
  *       Edit policy
  *     </ToolbarLink>
  *   </ToolbarActions>

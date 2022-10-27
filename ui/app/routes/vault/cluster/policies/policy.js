@@ -1,10 +1,8 @@
-import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
-import UnloadModelRoute from 'vault/mixins/unload-model-route';
 import { inject as service } from '@ember/service';
 
-export default Route.extend(UnloadModelRoute, {
-  store: service(),
+export default class PolicyRoute extends Route {
+  @service store;
 
   beforeModel() {
     const params = this.paramsFor(this.routeName);
@@ -12,15 +10,12 @@ export default Route.extend(UnloadModelRoute, {
     if (policyType === 'acl' && params.policy_name === 'root') {
       return this.transitionTo('vault.cluster.policies', 'acl');
     }
-  },
+  }
 
   model(params) {
     let type = this.policyType();
-    return hash({
-      policy: this.store.findRecord(`policy/${type}`, params.policy_name),
-      capabilities: this.store.findRecord('capabilities', `sys/policies/${type}/${params.policy_name}`),
-    });
-  },
+    return this.store.findRecord(`policy/${type}`, params.policy_name);
+  }
 
   setupController(controller, model) {
     controller.setProperties({
@@ -28,9 +23,9 @@ export default Route.extend(UnloadModelRoute, {
       capabilities: model.capabilities,
       policyType: this.policyType(),
     });
-  },
+  }
 
   policyType() {
-    return this.paramsFor('vault.cluster.policy').type;
-  },
-});
+    return this.paramsFor('vault.cluster.policies').type;
+  }
+}
