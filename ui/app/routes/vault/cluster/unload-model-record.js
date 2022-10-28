@@ -16,6 +16,7 @@ export default class UnloadModelRecord extends Route {
     model.destroy();
   }
 
+  // TODO - still need?
   resetController(controller) {
     // it's important to unset the model on the controller since controllers are singletons
     controller.model = null;
@@ -23,10 +24,7 @@ export default class UnloadModelRecord extends Route {
 
   @action
   willTransition(transition) {
-    if (transition.to.name.includes('edit')) {
-      // don't unload model if about to edit it
-      return true;
-    }
+    if (!this.currentModel) return true;
     if (this.currentModel.hasDirtyAttributes) {
       if (
         window.confirm(
@@ -39,6 +37,10 @@ export default class UnloadModelRecord extends Route {
         transition.abort();
         return false;
       }
+    }
+    if (transition.to.name.includes('edit') || transition.from.name.includes('edit')) {
+      // don't unload model if about to edit it
+      return true;
     }
     this.unloadModel();
     return true;

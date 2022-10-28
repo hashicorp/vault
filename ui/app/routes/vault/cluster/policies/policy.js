@@ -1,7 +1,6 @@
-import UnloadModelRecord from 'vault/routes/vault/cluster/unload-model-record';
+import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-
-export default class PolicyRoute extends UnloadModelRecord {
+export default class PolicyRoute extends Route {
   @service store;
 
   beforeModel() {
