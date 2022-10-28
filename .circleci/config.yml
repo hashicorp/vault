@@ -227,7 +227,7 @@ jobs:
           make prep
 
           # Permissions have changed inside docker containers; see hack note below.
-          mkdir --mode=777 -p test-results/go-test
+          mkdir -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
           # not what developers have in their environments and it could break some
@@ -488,7 +488,7 @@ jobs:
           make prep
 
           # Permissions have changed inside docker containers; see hack note below.
-          mkdir --mode=777 -p test-results/go-test
+          mkdir -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
           # not what developers have in their environments and it could break some
@@ -700,7 +700,7 @@ jobs:
           make prep
 
           # Permissions have changed inside docker containers; see hack note below.
-          mkdir --mode=777 -p test-results/go-test
+          mkdir -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
           # not what developers have in their environments and it could break some
@@ -1022,7 +1022,7 @@ jobs:
           make prep
 
           # Permissions have changed inside docker containers; see hack note below.
-          mkdir --mode=777 -p test-results/go-test
+          mkdir -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
           # not what developers have in their environments and it could break some
