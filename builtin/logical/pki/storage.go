@@ -1173,6 +1173,18 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 		result.AutoRebuildGracePeriod = defaultCrlConfig.AutoRebuildGracePeriod
 		result.Version = 1
 	}
+	if result.Version == 1 {
+		if result.DeltaRebuildInterval == "" {
+			result.DeltaRebuildInterval = defaultCrlConfig.DeltaRebuildInterval
+		}
+		result.Version = 2
+	}
+
+	// Depending on client version, it's possible that the expiry is unset.
+	// This sets the default value to prevent issues in downstream code.
+	if result.Expiry == "" {
+		result.Expiry = defaultCrlConfig.Expiry
+	}
 
 	return &result, nil
 }

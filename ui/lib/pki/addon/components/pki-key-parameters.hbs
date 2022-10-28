@@ -49,7 +49,7 @@
                         data-test-input={{attr.name}}
                       >
                         {{#each (path-or-array attr.options.possibleValues @model) as |val|}}
-                          <option selected={{eq (get @model this.valuePath) (or val.value val)}} value={{or val.value val}}>
+                          <option selected={{eq (get @model this.valuePath) (or val.value val)}} value={{val.value}}>
                             {{or val.displayName val}}
                           </option>
                         {{/each}}

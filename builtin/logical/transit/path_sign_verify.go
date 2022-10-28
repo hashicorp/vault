@@ -61,6 +61,8 @@ type batchResponseVerifyItem struct {
 	err error
 }
 
+const defaultHashAlgorithm = "sha2-256"
+
 func (b *backend) pathSign() *framework.Path {
 	return &framework.Path{
 		Pattern: "sign/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("urlalgorithm"),
@@ -83,7 +85,7 @@ derivation is enabled; currently only available with ed25519 keys.`,
 
 			"hash_algorithm": {
 				Type:    framework.TypeString,
-				Default: "sha2-256",
+				Default: defaultHashAlgorithm,
 				Description: `Hash algorithm to use (POST body parameter). Valid values are:
 
 * sha1
@@ -95,14 +97,17 @@ derivation is enabled; currently only available with ed25519 keys.`,
 * sha3-256
 * sha3-384
 * sha3-512
+* none
 
 Defaults to "sha2-256". Not valid for all key types,
-including ed25519.`,
+including ed25519. Using none requires setting prehashed=true and
+signature_algorithm=pkcs1v15, yielding a PKCSv1_5_NoOID instead of
+the usual PKCSv1_5_DERnull signature.`,
 			},
 
 			"algorithm": {
 				Type:        framework.TypeString,
-				Default:     "sha2-256",
+				Default:     defaultHashAlgorithm,
 				Description: `Deprecated: use "hash_algorithm" instead.`,
 			},
 
@@ -189,7 +194,7 @@ derivation is enabled; currently only available with ed25519 keys.`,
 
 			"hash_algorithm": {
 				Type:    framework.TypeString,
-				Default: "sha2-256",
+				Default: defaultHashAlgorithm,
 				Description: `Hash algorithm to use (POST body parameter). Valid values are:
 
 * sha1
@@ -201,13 +206,15 @@ derivation is enabled; currently only available with ed25519 keys.`,
 * sha3-256
 * sha3-384
 * sha3-512
+* none
 
-Defaults to "sha2-256". Not valid for all key types.`,
+Defaults to "sha2-256". Not valid for all key types. See note about
+none on signing path.`,
 			},
 
 			"algorithm": {
 				Type:        framework.TypeString,
-				Default:     "sha2-256",
+				Default:     defaultHashAlgorithm,
 				Description: `Deprecated: use "hash_algorithm" instead.`,
 			},
 
@@ -280,6 +287,9 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		hashAlgorithmStr = d.Get("hash_algorithm").(string)
 		if hashAlgorithmStr == "" {
 			hashAlgorithmStr = d.Get("algorithm").(string)
+			if hashAlgorithmStr == "" {
+				hashAlgorithmStr = defaultHashAlgorithm
+			}
 		}
 	}
 
@@ -299,6 +309,10 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	saltLength, err := b.getSaltLength(d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+
+	if hashAlgorithm == keysutil.HashTypeNone && (!prehashed || sigAlgorithm != "pkcs1v15") {
+		return logical.ErrorResponse("hash_algorithm=none requires both prehashed=true and signature_algorithm=pkcs1v15"), logical.ErrInvalidRequest
 	}
 
 	// Get the policy
@@ -507,6 +521,9 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		hashAlgorithmStr = d.Get("hash_algorithm").(string)
 		if hashAlgorithmStr == "" {
 			hashAlgorithmStr = d.Get("algorithm").(string)
+			if hashAlgorithmStr == "" {
+				hashAlgorithmStr = defaultHashAlgorithm
+			}
 		}
 	}
 
@@ -526,6 +543,10 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	saltLength, err := b.getSaltLength(d)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+
+	if hashAlgorithm == keysutil.HashTypeNone && (!prehashed || sigAlgorithm != "pkcs1v15") {
+		return logical.ErrorResponse("hash_algorithm=none requires both prehashed=true and signature_algorithm=pkcs1v15"), logical.ErrInvalidRequest
 	}
 
 	// Get the policy

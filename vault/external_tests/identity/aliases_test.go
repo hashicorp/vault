@@ -12,6 +12,7 @@ import (
 	auth "github.com/hashicorp/vault/api/auth/userpass"
 	"github.com/hashicorp/vault/builtin/credential/github"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -301,7 +302,7 @@ func TestIdentityStore_MergeEntities_FailsDueToClash(t *testing.T) {
 		t.Fatal("did not find userpass accessor")
 	}
 
-	_, entityIdBob, aliasIdBob := createEntityAndAlias(client, mountAccessor, "bob-smith", "bob", t)
+	_, entityIdBob, aliasIdBob := testhelpers.CreateEntityAndAlias(t, client, mountAccessor, "bob-smith", "bob")
 
 	// Create userpass login for alice
 	_, err = client.Logical().Write("auth/userpass/users/alice", map[string]interface{}{
@@ -311,7 +312,7 @@ func TestIdentityStore_MergeEntities_FailsDueToClash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, entityIdAlice, aliasIdAlice := createEntityAndAlias(client, mountAccessor, "alice-smith", "alice", t)
+	_, entityIdAlice, aliasIdAlice := testhelpers.CreateEntityAndAlias(t, client, mountAccessor, "alice-smith", "alice")
 
 	// Perform entity merge
 	mergeResp, err := client.Logical().Write("identity/entity/merge", map[string]interface{}{
@@ -404,9 +405,9 @@ func TestIdentityStore_MergeEntities_FailsDueToClashInFromEntities(t *testing.T)
 		t.Fatal("did not find github accessor")
 	}
 
-	_, entityIdBob, _ := createEntityAndAlias(client, mountAccessor, "bob-smith", "bob", t)
-	_, entityIdAlice, _ := createEntityAndAlias(client, mountAccessorGitHub, "alice-smith", "alice", t)
-	_, entityIdClara, _ := createEntityAndAlias(client, mountAccessorGitHub, "clara-smith", "clara", t)
+	_, entityIdBob, _ := testhelpers.CreateEntityAndAlias(t, client, mountAccessor, "bob-smith", "bob")
+	_, entityIdAlice, _ := testhelpers.CreateEntityAndAlias(t, client, mountAccessorGitHub, "alice-smith", "alice")
+	_, entityIdClara, _ := testhelpers.CreateEntityAndAlias(t, client, mountAccessorGitHub, "clara-smith", "clara")
 
 	// Perform entity merge
 	mergeResp, err := client.Logical().Write("identity/entity/merge", map[string]interface{}{
@@ -491,7 +492,7 @@ func TestIdentityStore_MergeEntities_FailsDueToDoubleClash(t *testing.T) {
 		t.Fatal("did not find github accessor")
 	}
 
-	_, entityIdBob, aliasIdBob := createEntityAndAlias(client, mountAccessor, "bob-smith", "bob", t)
+	_, entityIdBob, aliasIdBob := testhelpers.CreateEntityAndAlias(t, client, mountAccessor, "bob-smith", "bob")
 
 	aliasResp, err := client.Logical().Write("identity/entity-alias", map[string]interface{}{
 		"name":           "bob-github",
@@ -515,8 +516,8 @@ func TestIdentityStore_MergeEntities_FailsDueToDoubleClash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, entityIdAlice, aliasIdAlice := createEntityAndAlias(client, mountAccessor, "alice-smith", "alice", t)
-	_, entityIdClara, aliasIdClara := createEntityAndAlias(client, mountAccessorGitHub, "clara-smith", "clara", t)
+	_, entityIdAlice, aliasIdAlice := testhelpers.CreateEntityAndAlias(t, client, mountAccessor, "alice-smith", "alice")
+	_, entityIdClara, aliasIdClara := testhelpers.CreateEntityAndAlias(t, client, mountAccessorGitHub, "clara-smith", "clara")
 
 	// Perform entity merge
 	mergeResp, err := client.Logical().Write("identity/entity/merge", map[string]interface{}{
@@ -602,7 +603,7 @@ func TestIdentityStore_MergeEntities_FailsDueToClashInFromEntities_CheckRawReque
 		t.Fatal("did not find userpass accessor")
 	}
 
-	_, entityIdBob, _ := createEntityAndAlias(client, mountAccessor, "bob-smith", "bob", t)
+	_, entityIdBob, _ := testhelpers.CreateEntityAndAlias(t, client, mountAccessor, "bob-smith", "bob")
 
 	// Create userpass login for alice
 	_, err = client.Logical().Write("auth/userpass/users/alice", map[string]interface{}{
@@ -612,7 +613,7 @@ func TestIdentityStore_MergeEntities_FailsDueToClashInFromEntities_CheckRawReque
 		t.Fatal(err)
 	}
 
-	_, entityIdAlice, _ := createEntityAndAlias(client, mountAccessor, "alice-smith", "alice", t)
+	_, entityIdAlice, _ := testhelpers.CreateEntityAndAlias(t, client, mountAccessor, "alice-smith", "alice")
 
 	// Perform entity merge as a Raw Request so we can investigate the response body
 	req := client.NewRequest("POST", "/v1/identity/entity/merge")
@@ -772,7 +773,7 @@ func TestIdentityStore_MergeEntities_SameMountAccessor_ThenUseAlias(t *testing.T
 		t.Fatal("did not find userpass accessor")
 	}
 
-	_, entityIdBob, aliasIdBob := createEntityAndAlias(client, mountAccessor, "bob-smith", "bob", t)
+	_, entityIdBob, aliasIdBob := testhelpers.CreateEntityAndAlias(t, client, mountAccessor, "bob-smith", "bob")
 
 	// Create userpass login for alice
 	_, err = client.Logical().Write("auth/userpass/users/alice", map[string]interface{}{
@@ -788,7 +789,7 @@ func TestIdentityStore_MergeEntities_SameMountAccessor_ThenUseAlias(t *testing.T
 		t.Fatal(err)
 	}
 
-	_, entityIdAlice, _ := createEntityAndAlias(client, mountAccessor, "alice-smith", "alice", t)
+	_, entityIdAlice, _ := testhelpers.CreateEntityAndAlias(t, client, mountAccessor, "alice-smith", "alice")
 
 	// Try and login with alias 2 (alice) pre-merge
 	userpassAuth, err := auth.NewUserpassAuth("alice", &auth.Password{FromString: "testpassword"})
@@ -909,7 +910,7 @@ func TestIdentityStore_MergeEntities_FailsDueToMultipleClashMergesAttempted(t *t
 		t.Fatal("did not find github accessor")
 	}
 
-	_, entityIdBob, _ := createEntityAndAlias(client, mountAccessor, "bob-smith", "bob", t)
+	_, entityIdBob, _ := testhelpers.CreateEntityAndAlias(t, client, mountAccessor, "bob-smith", "bob")
 	aliasResp, err := client.Logical().Write("identity/entity-alias", map[string]interface{}{
 		"name":           "bob-github",
 		"canonical_id":   entityIdBob,
@@ -932,8 +933,8 @@ func TestIdentityStore_MergeEntities_FailsDueToMultipleClashMergesAttempted(t *t
 		t.Fatal(err)
 	}
 
-	_, entityIdAlice, aliasIdAlice := createEntityAndAlias(client, mountAccessor, "alice-smith", "alice", t)
-	_, entityIdClara, aliasIdClara := createEntityAndAlias(client, mountAccessorGitHub, "clara-smith", "alice", t)
+	_, entityIdAlice, aliasIdAlice := testhelpers.CreateEntityAndAlias(t, client, mountAccessor, "alice-smith", "alice")
+	_, entityIdClara, aliasIdClara := testhelpers.CreateEntityAndAlias(t, client, mountAccessorGitHub, "clara-smith", "alice")
 
 	// Perform entity merge
 	mergeResp, err := client.Logical().Write("identity/entity/merge", map[string]interface{}{
