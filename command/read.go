@@ -59,7 +59,7 @@ func (c *ReadCommand) AutocompleteFlags() complete.Flags {
 func (c *ReadCommand) Run(args []string) int {
 	f := c.Flags()
 
-	if err := f.Parse(args); err != nil {
+	if err := f.Parse(args, ParseOptionAllowRawFormat(true)); err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}

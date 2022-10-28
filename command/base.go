@@ -582,9 +582,14 @@ func (f *FlagSets) Completions() complete.Flags {
 	return f.completions
 }
 
+type (
+	ParseOptions              interface{}
+	ParseOptionAllowRawFormat bool
+)
+
 // Parse parses the given flags, returning any errors.
 // Warnings, if any, regarding the arguments format are sent to stdout
-func (f *FlagSets) Parse(args []string) error {
+func (f *FlagSets) Parse(args []string, opts ...ParseOptions) error {
 	err := f.mainSet.Parse(args)
 
 	warnings := generateFlagWarnings(f.Args())
@@ -592,7 +597,12 @@ func (f *FlagSets) Parse(args []string) error {
 		f.ui.Warn(warnings)
 	}
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Now surface any other errors.
+	return generateFlagErrors(f, opts...)
 }
 
 // Parsed reports whether the command-line flags have been parsed.
