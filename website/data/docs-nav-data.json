@@ -655,12 +655,12 @@
         ]
       },
       {
-        "title": "<code>path-help</code>",
-        "path": "commands/path-help"
-      },
-      {
         "title": "<code>patch</code>",
         "path": "commands/patch"
+      },
+      {
+        "title": "<code>path-help</code>",
+        "path": "commands/path-help"
       },
       {
         "title": "<code>plugin</code>",
