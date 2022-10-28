@@ -147,8 +147,8 @@ jobs:
         version: 20.10.17
     - run:
         command: |
-          sudo groupmod --gid=1002 circleci && \
-          sudo usermod --uid=1001 --gid=circleci circleci
+          sudo groupmod --gid=${HOST_GID} circleci && \
+          sudo usermod --uid=${HOST_UID} --gid=circleci circleci
         name: Match user/group IDs to VM images for consistency
         no_output_timeout: 60m
     - add_ssh_keys:
@@ -410,8 +410,8 @@ jobs:
     - checkout
     - run:
         command: |
-          sudo groupmod --gid=1002 circleci && \
-          sudo usermod --uid=1001 --gid=circleci circleci
+          sudo groupmod --gid=${HOST_GID} circleci && \
+          sudo usermod --uid=${HOST_UID} --gid=circleci circleci
         name: Match user/group IDs to VM images for consistency
         no_output_timeout: 60m
     - add_ssh_keys:
@@ -623,8 +623,8 @@ jobs:
     - checkout
     - run:
         command: |
-          sudo groupmod --gid=1002 circleci && \
-          sudo usermod --uid=1001 --gid=circleci circleci
+          sudo groupmod --gid=${HOST_GID} circleci && \
+          sudo usermod --uid=${HOST_UID} --gid=circleci circleci
         name: Match user/group IDs to VM images for consistency
         no_output_timeout: 60m
     - add_ssh_keys:
@@ -945,8 +945,8 @@ jobs:
         version: 20.10.17
     - run:
         command: |
-          sudo groupmod --gid=1002 circleci && \
-          sudo usermod --uid=1001 --gid=circleci circleci
+          sudo groupmod --gid=${HOST_GID} circleci && \
+          sudo usermod --uid=${HOST_UID} --gid=circleci circleci
         name: Match user/group IDs to VM images for consistency
         no_output_timeout: 60m
     - add_ssh_keys:
