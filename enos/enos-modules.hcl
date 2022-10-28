@@ -47,6 +47,12 @@ module "get_local_metadata" {
   source = "./modules/get_local_metadata"
 }
 
+module "generate_secondary_token" {
+  source = "./modules/generate_secondary_token"
+
+  vault_install_dir = var.vault_install_dir
+}
+
 module "read_license" {
   source = "./modules/read_license"
 }
@@ -122,6 +128,31 @@ module "vault_verify_ui" {
 
 module "vault_verify_unsealed" {
   source = "./modules/vault_verify_unsealed"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
+
+module "vault_performance_replication_primary" {
+  source = "./modules/vault_performance_replication_primary"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_performance_replication_secondary" {
+  source = "./modules/vault_performance_replication_secondary"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_verify_performance_replication" {
+  source = "./modules/vault_verify_performance_replication"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_cluster_ips" {
+  source = "./modules/vault_cluster_ips"
 
   vault_install_dir    = var.vault_install_dir
   vault_instance_count = var.vault_instance_count
