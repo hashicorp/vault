@@ -21,9 +21,7 @@
     </h1>
   </p.levelLeft>
 </PageHeader>
-{{#if this.model.updatePath.isPending}}
-  <LayoutLoading />
-{{else}}
+{{#unless this.model.updatePath.isPending}}
   {{#if (and (not-eq this.model.id "root") (or this.model.canUpdate this.model.canDelete))}}
     <Toolbar>
       <ToolbarActions>
@@ -50,4 +48,4 @@
     @onSave={{transition-to "vault.cluster.policies.policy.show" this.model.policyType this.model.name}}
     @onCancel={{transition-to "vault.cluster.policies.policy.show" this.model.policyType this.model.name}}
   />
-{{/if}}
+{{/unless}}

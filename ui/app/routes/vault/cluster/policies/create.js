@@ -1,10 +1,11 @@
-import UnloadModelRecord from 'vault/routes/vault/cluster/unload-model-record';
+import UnloadModelRecord from 'vault/routes/vault/unload-model-record';
 import { inject as service } from '@ember/service';
 
 export default class PoliciesCreateRoute extends UnloadModelRecord {
   @service store;
   @service version;
   @service wizard;
+  alertUnsavedChanges = true;
 
   model() {
     let policyType = this.policyType();

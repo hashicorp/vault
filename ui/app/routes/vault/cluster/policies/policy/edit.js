@@ -1,3 +1,5 @@
-import UnloadModelRecord from 'vault/routes/vault/cluster/unload-model-record';
+import UnloadModelRecord from 'vault/routes/vault/unload-model-record';
 
-export default class PolicyEditRoute extends UnloadModelRecord {}
+export default class PolicyEditRoute extends UnloadModelRecord {
+  alertUnsavedChanges = true;
+}
