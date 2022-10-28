@@ -593,19 +593,19 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 	// Do the unmarshalling first so we don't hold locks
 	var latestConfiguration *ConfigurationValue
 	commands := make([]interface{}, 0, numLogs)
-	for _, log := range logs {
-		switch log.Type {
+	for _, l := range logs {
+		switch l.Type {
 		case raft.LogCommand:
 			command := &LogData{}
-			err := proto.Unmarshal(log.Data, command)
+			err := proto.Unmarshal(l.Data, command)
 			if err != nil {
 				f.logger.Error("error proto unmarshaling log data", "error", err)
 				panic("error proto unmarshaling log data")
 			}
 			commands = append(commands, command)
 		case raft.LogConfiguration:
-			configuration := raft.DecodeConfiguration(log.Data)
-			config := raftConfigurationToProtoConfiguration(log.Index, configuration)
+			configuration := raft.DecodeConfiguration(l.Data)
+			config := raftConfigurationToProtoConfiguration(l.Index, configuration)
 
 			commands = append(commands, config)
 
@@ -614,7 +614,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 			latestConfiguration = config
 
 		default:
-			panic(fmt.Sprintf("got unexpected log type: %d", log.Type))
+			panic(fmt.Sprintf("got unexpected log type: %d", l.Type))
 		}
 	}
 
@@ -672,7 +672,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 							go f.restoreCb(context.Background())
 						}
 					default:
-						return fmt.Errorf("%q is not a supported transaction operation", op.OpType)
+						f.logger.Error("unsupported transaction operation", "op", op.OpType)
 					}
 					if err != nil {
 						return err
