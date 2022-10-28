@@ -6,7 +6,7 @@ import RSVP from 'rsvp';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
 
 export default Route.extend(UnloadModelRoute, {
-  modelPath: 'model.model',
+  modelPath: 'model.model', // TODO (unload mixin): when removing mixin, remove prepended 'model'
   pathHelp: service('path-help'),
   store: service(),
 

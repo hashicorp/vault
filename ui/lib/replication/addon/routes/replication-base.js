@@ -7,6 +7,6 @@ export default Route.extend(UnloadModelRouteMixin, {
   store: service(),
   version: service(),
   rm: service('replication-mode'),
-  modelPath: 'model.config',
+  modelPath: 'model.config', // TODO (unload mixin): when removing mixin, remove prepended 'model'
   replicationMode: alias('rm.mode'),
 });

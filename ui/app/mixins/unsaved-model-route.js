@@ -1,4 +1,5 @@
 import Mixin from '@ember/object/mixin';
+// TODO (unload mixin): this mixin is combined into the UnloadModelRecord route, when replacing global search: 'TODO (unload mixin)'
 
 // this mixin relies on `unload-model-route` also being used
 export default Mixin.create({

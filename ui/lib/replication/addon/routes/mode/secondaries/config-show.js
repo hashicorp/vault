@@ -2,7 +2,7 @@ import { hash, resolve } from 'rsvp';
 import Base from '../../replication-base';
 
 export default Base.extend({
-  modelPath: 'model.config',
+  modelPath: 'model.config', // TODO (unload mixin): when removing mixin, remove prepended 'model'
 
   model(params) {
     const id = params.secondary_id;

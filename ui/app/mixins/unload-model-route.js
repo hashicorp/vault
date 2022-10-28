@@ -1,5 +1,6 @@
 import Mixin from '@ember/object/mixin';
 import removeRecord from 'vault/utils/remove-record';
+// TODO (unload mixin): replace this mixin with the UnloadModelRecord base route. global search: 'TODO (unload mixin)'
 
 // removes Ember Data records from the cache when the model
 // changes or you move away from the current route

@@ -5,7 +5,7 @@ import Base from '../../replication-base';
 export default Base.extend({
   flashMessages: service(),
 
-  modelPath: 'model.config',
+  modelPath: 'model.config', // TODO (unload mixin): when removing mixin, remove prepended 'model'
 
   findOrCreate(id) {
     const flash = this.flashMessages;
