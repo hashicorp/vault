@@ -235,8 +235,11 @@ func createRole(t *testing.T, roleName, awsAccountID string, policyARNs []string
               "Principal": {
                   "AWS": "arn:aws:iam::%s:root"
               },
-              "Action": "sts:AssumeRole"
-           }
+              "Action": [
+                  "sts:AssumeRole",
+                  "sts:SetSourceIdentity"
+              ]
+          }
       ]
 }
 `
@@ -655,17 +658,17 @@ func testAccStepRead(t *testing.T, path, name string, credentialTests []credenti
 	}
 }
 
-func testAccStepReadTTL(name string, maximumTTL time.Duration) logicaltest.TestStep {
+func testAccStepReadSTSResponse(name string, maximumTTL uint64) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "creds/" + name,
 		Check: func(resp *logical.Response) error {
-			if resp.Secret == nil {
-				return fmt.Errorf("bad: nil Secret returned")
+			if resp.Secret != nil {
+				return fmt.Errorf("bad: STS tokens should return a nil secret, received: %+v", resp.Secret)
 			}
-			ttl := resp.Secret.TTL
+			ttl := resp.Data["ttl"].(uint64)
 			if ttl > maximumTTL {
-				return fmt.Errorf("bad: ttl of %d greater than maximum of %d", ttl/time.Second, maximumTTL/time.Second)
+				return fmt.Errorf("bad: ttl of %d greater than maximum of %d", ttl, maximumTTL)
 			}
 			return nil
 		},
@@ -1316,7 +1319,7 @@ func TestAcceptanceBackend_RoleDefaultSTSTTL(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
-			testAccStepReadTTL("test", time.Duration(minAwsAssumeRoleDuration)*time.Second), // allow a little slack
+			testAccStepReadSTSResponse("test", uint64(minAwsAssumeRoleDuration)), // allow a little slack
 		},
 		Teardown: func() error {
 			return deleteTestRole(roleName)
