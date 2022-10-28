@@ -518,9 +518,10 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 					Target:     &c.flagFormat,
 					Default:    "table",
 					EnvVar:     EnvVaultFormat,
-					Completion: complete.PredictSet("table", "json", "yaml", "pretty"),
+					Completion: complete.PredictSet("table", "json", "yaml", "pretty", "raw"),
 					Usage: `Print the output in the given format. Valid formats
-						are "table", "json", "yaml", or "pretty".`,
+						are "table", "json", "yaml", or "pretty". "raw" is allowed
+						for 'vault read' operations only.`,
 				})
 			}
 
