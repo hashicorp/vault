@@ -8,52 +8,60 @@
     <Nav.main>
       <ul class="navbar-sections {{if (has-feature 'Namespaces') 'with-ns-picker'}}">
         {{#if (has-feature "Namespaces")}}
-
-          <NamespacePicker @class="navbar-item" @namespace={{this.namespaceQueryParam}} />
-
+          <li>
+            <NamespacePicker @class="navbar-item" @namespace={{this.namespaceQueryParam}} />
+          </li>
         {{/if}}
-        <LinkTo
-          @route="vault.cluster.secrets"
-          @current-when="vault.cluster.secrets vault.cluster.settings.mount-secret-backend vault.cluster.settings.configure-secret-backend"
-          {{on "click" Nav.closeDrawer}}
-          data-test-navbar-item="secrets"
-          class={{if (is-active-route "vault.cluster.secrets") "is-active"}}
-        >
-          Secrets
-        </LinkTo>
-        {{#if (has-permission "access")}}
+        <li>
           <LinkTo
-            @route={{get (route-params-for "access") "route"}}
-            @models={{get (route-params-for "access") "models"}}
-            @current-when="vault.cluster.access vault.cluster.settings.auth"
+            @route="vault.cluster.secrets"
+            @current-when="vault.cluster.secrets vault.cluster.settings.mount-secret-backend vault.cluster.settings.configure-secret-backend"
             {{on "click" Nav.closeDrawer}}
-            data-test-navbar-item="access"
-            class={{if (is-active-route "vault.cluster.access") "is-active"}}
+            data-test-navbar-item="secrets"
+            class={{if (is-active-route "vault.cluster.secrets") "is-active"}}
           >
-            Access
+            Secrets
           </LinkTo>
+        </li>
+        {{#if (has-permission "access")}}
+          <li>
+            <LinkTo
+              @route={{get (route-params-for "access") "route"}}
+              @models={{get (route-params-for "access") "models"}}
+              @current-when="vault.cluster.access vault.cluster.settings.auth"
+              {{on "click" Nav.closeDrawer}}
+              data-test-navbar-item="access"
+              class={{if (is-active-route "vault.cluster.access") "is-active"}}
+            >
+              Access
+            </LinkTo>
+          </li>
         {{/if}}
         {{#if (has-permission "policies")}}
-          <LinkTo
-            @route="vault.cluster.policies"
-            @models={{get (route-params-for "policies") "models"}}
-            @current-when="vault.cluster.policies"
-            {{on "click" Nav.closeDrawer}}
-            data-test-navbar-item="policies"
-            class={{if (is-active-route "vault.cluster.policies") "is-active"}}
-          >
-            Policies
-          </LinkTo>
+          <li>
+            <LinkTo
+              @route="vault.cluster.policies"
+              @models={{get (route-params-for "policies") "models"}}
+              @current-when="vault.cluster.policies"
+              {{on "click" Nav.closeDrawer}}
+              data-test-navbar-item="policies"
+              class={{if (is-active-route "vault.cluster.policies") "is-active"}}
+            >
+              Policies
+            </LinkTo>
+          </li>
         {{/if}}
         {{#if (has-permission "tools")}}
-          <LinkTo
-            @route="vault.cluster.tools.tool"
-            @models={{get (route-params-for "tools") "models"}}
-            {{on "click" Nav.closeDrawer}}
-            class={{if (is-active-route "vault.cluster.tools") "is-active"}}
-          >
-            Tools
-          </LinkTo>
+          <li>
+            <LinkTo
+              @route="vault.cluster.tools.tool"
+              @models={{get (route-params-for "tools") "models"}}
+              {{on "click" Nav.closeDrawer}}
+              class={{if (is-active-route "vault.cluster.tools") "is-active"}}
+            >
+              Tools
+            </LinkTo>
+          </li>
         {{/if}}
       </ul>
     </Nav.main>
