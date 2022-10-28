@@ -145,6 +145,12 @@ jobs:
     - setup_remote_docker:
         docker_layer_caching: true
         version: 20.10.17
+    - run:
+        command: |
+          sudo groupmod --gid=1002 circleci && \
+          sudo usermod --uid=1001 --gid=circleci circleci
+        name: Match user/group IDs to VM images for consistency
+        no_output_timeout: 60m
     - add_ssh_keys:
         fingerprints:
         - b8:e2:38:f8:5b:1b:82:f3:1f:23:fa:46:6e:95:e7:e9
@@ -401,6 +407,12 @@ jobs:
         name: Check branch name
         working_directory: ~/
     - checkout
+    - run:
+        command: |
+          sudo groupmod --gid=1002 circleci && \
+          sudo usermod --uid=1001 --gid=circleci circleci
+        name: Match user/group IDs to VM images for consistency
+        no_output_timeout: 60m
     - add_ssh_keys:
         fingerprints:
         - b8:e2:38:f8:5b:1b:82:f3:1f:23:fa:46:6e:95:e7:e9
@@ -607,6 +619,12 @@ jobs:
         name: Check branch name
         working_directory: ~/
     - checkout
+    - run:
+        command: |
+          sudo groupmod --gid=1002 circleci && \
+          sudo usermod --uid=1001 --gid=circleci circleci
+        name: Match user/group IDs to VM images for consistency
+        no_output_timeout: 60m
     - add_ssh_keys:
         fingerprints:
         - b8:e2:38:f8:5b:1b:82:f3:1f:23:fa:46:6e:95:e7:e9
@@ -922,6 +940,12 @@ jobs:
     - setup_remote_docker:
         docker_layer_caching: true
         version: 20.10.17
+    - run:
+        command: |
+          sudo groupmod --gid=1002 circleci && \
+          sudo usermod --uid=1001 --gid=circleci circleci
+        name: Match user/group IDs to VM images for consistency
+        no_output_timeout: 60m
     - add_ssh_keys:
         fingerprints:
         - b8:e2:38:f8:5b:1b:82:f3:1f:23:fa:46:6e:95:e7:e9

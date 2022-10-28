@@ -23,6 +23,12 @@ parameters:
     # Only supported for use_docker=false, and only other value allowed is 386
     default: amd64 # must be 386 or amd64
 steps:
+  - run:
+      name: Match user/group IDs to VM images for consistency
+      no_output_timeout: 60m
+      command: |
+        sudo groupmod --gid=1002 circleci && \
+        sudo usermod --uid=1001 --gid=circleci circleci
   - configure-git
   - run:
       name: Compute test cache key
