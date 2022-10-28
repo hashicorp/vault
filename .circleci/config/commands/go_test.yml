@@ -103,6 +103,7 @@ steps:
         make prep
 
         # Permissions have changed inside docker containers; see hack note below.
+        umask 044
         mkdir -p test-results/go-test
 
         # We don't want VAULT_LICENSE set when running Go tests, because that's
