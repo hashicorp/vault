@@ -666,11 +666,18 @@ func testAccStepReadSTSResponse(name string, maximumTTL uint64) logicaltest.Test
 			if resp.Secret != nil {
 				return fmt.Errorf("bad: STS tokens should return a nil secret, received: %+v", resp.Secret)
 			}
-			ttl := resp.Data["ttl"].(uint64)
-			if ttl > maximumTTL {
-				return fmt.Errorf("bad: ttl of %d greater than maximum of %d", ttl, maximumTTL)
+
+			if ttl, exists := resp.Data["ttl"]; exists {
+				ttlVal := ttl.(uint64)
+
+				if ttlVal > maximumTTL {
+					return fmt.Errorf("bad: ttl of %d greater than maximum of %d", ttl, maximumTTL)
+				}
+
+				return nil
 			}
-			return nil
+
+			return fmt.Errorf("response data missing ttl, received: %+v", resp.Data)
 		},
 	}
 }
