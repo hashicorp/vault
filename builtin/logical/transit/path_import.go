@@ -49,6 +49,11 @@ ephemeral AES key. Can be one of "SHA1", "SHA224", "SHA256" (default), "SHA384",
 				Description: `The base64-encoded ciphertext of the keys. The AES key should be encrypted using OAEP 
 with the wrapping key and then concatenated with the import key, wrapped by the AES key.`,
 			},
+			"public_key": {
+				Type: framework.TypeString,
+				// NOTE: Add description
+				Description: ``,
+			},
 			"allow_rotation": {
 				Type:        framework.TypeBool,
 				Description: "True if the imported key may be rotated within Vault; false otherwise.",
@@ -111,11 +116,22 @@ func (b *backend) pathImportVersion() *framework.Path {
 				Description: `The base64-encoded ciphertext of the keys. The AES key should be encrypted using OAEP 
 with the wrapping key and then concatenated with the import key, wrapped by the AES key.`,
 			},
+			"public_key": {
+				Type: framework.TypeString,
+				// NOTE: Add description
+				Description: ``,
+			},
 			"hash_function": {
 				Type:    framework.TypeString,
 				Default: "SHA256",
 				Description: `The hash function used as a random oracle in the OAEP wrapping of the user-generated,
 ephemeral AES key. Can be one of "SHA1", "SHA224", "SHA256" (default), "SHA384", or "SHA512"`,
+			},
+			"bump_version": {
+				Type:    framework.TypeBool,
+				Default: false,
+				// NOTE: Add description
+				Description: ``,
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -136,6 +152,7 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 	autoRotatePeriod := time.Second * time.Duration(d.Get("auto_rotate_period").(int))
 	ciphertextString := d.Get("ciphertext").(string)
 	allowRotation := d.Get("allow_rotation").(bool)
+	publicKeyString := d.Get("public_key").(string)
 
 	// Ensure the caller didn't supply "convergent_encryption" as a field, since it's not supported on import.
 	if _, ok := d.Raw["convergent_encryption"]; ok {
@@ -146,6 +163,16 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 		return nil, errors.New("allow_rotation must be set to true if auto-rotation is enabled")
 	}
 
+	// NOTE: Add description
+	isCiphertextSet := true
+	if !isFieldSet("ciphertext", d) {
+		isCiphertextSet = false
+		if !isFieldSet("public_key", d) {
+			// NOTE: Error desc
+			return nil, errors.New("one of the following fields, ciphertext xor public_key, has to be set")
+		}
+	}
+
 	polReq := keysutil.PolicyRequest{
 		Storage:                  req.Storage,
 		Name:                     name,
@@ -154,6 +181,7 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 		AllowPlaintextBackup:     allowPlaintextBackup,
 		AutoRotatePeriod:         autoRotatePeriod,
 		AllowImportedKeyRotation: allowRotation,
+		IsCiphertextSet:          isCiphertextSet,
 	}
 
 	switch strings.ToLower(keyType) {
@@ -183,34 +211,42 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type: %v", keyType)), logical.ErrInvalidRequest
 	}
 
-	hashFn, err := parseHashFn(hashFnStr)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-	}
-
-	p, _, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
-	if err != nil {
-		return nil, err
-	}
-
-	if p != nil {
-		if b.System().CachingDisabled() {
-			p.Unlock()
+	var key []byte
+	if isCiphertextSet {
+		hashFn, err := parseHashFn(hashFnStr)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 		}
-		return nil, errors.New("the import path cannot be used with an existing key; use import-version to rotate an existing imported key")
+
+		p, _, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
+		if err != nil {
+			return nil, err
+		}
+
+		if p != nil {
+			if b.System().CachingDisabled() {
+				p.Unlock()
+			}
+			return nil, errors.New("the import path cannot be used with an existing key; use import-version to rotate an existing imported key")
+		}
+
+		ciphertext, err := base64.StdEncoding.DecodeString(ciphertextString)
+		if err != nil {
+			return nil, err
+		}
+
+		key, err = b.decryptImportedKey(ctx, req.Storage, ciphertext, hashFn)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		if !polReq.KeyType.SupportsImportPublicKey() {
+			return nil, errors.New("provided type does not support public_key import")
+		}
+		key = []byte(publicKeyString)
 	}
 
-	ciphertext, err := base64.StdEncoding.DecodeString(ciphertextString)
-	if err != nil {
-		return nil, err
-	}
-
-	key, err := b.decryptImportedKey(ctx, req.Storage, ciphertext, hashFn)
-	if err != nil {
-		return nil, err
-	}
-
-	err = b.lm.ImportPolicy(ctx, polReq, key, b.GetRandomReader())
+	err := b.lm.ImportPolicy(ctx, polReq, key, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +297,8 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 	if err != nil {
 		return nil, err
 	}
-	err = p.Import(ctx, req.Storage, importKey, b.GetRandomReader())
+	// NOTE: Hardcoding value for now
+	err = p.Import(ctx, req.Storage, importKey, false, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
@@ -334,6 +371,15 @@ func parseHashFn(hashFn string) (hash.Hash, error) {
 	default:
 		return nil, fmt.Errorf("unknown hash function: %s", hashFn)
 	}
+}
+
+func isFieldSet(fieldName string, d *framework.FieldData) bool {
+	_, fieldSet := d.Raw[fieldName]
+	if !fieldSet {
+		return false
+	}
+
+	return true
 }
 
 const (
