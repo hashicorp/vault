@@ -229,6 +229,9 @@ type KeyEntry struct {
 	// This is deprecated (but still filled) in favor of the value above which
 	// is more precise
 	DeprecatedCreationTime int64 `json:"creation_time"`
+
+	// NOTE: Do we really need this field? If so, having it here or in Policy?
+	PublicKeyImported bool `json:"public_key_imported"`
 }
 
 // deprecatedKeyEntryMap is used to allow JSON marshal/unmarshal
@@ -1352,7 +1355,6 @@ func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, o
 
 func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte, isPrivateKey bool, randReader io.Reader) error {
 	now := time.Now()
-	LatestVersionStr := strconv.Itoa(p.LatestVersion)
 	entry := KeyEntry{
 		CreationTime:           now,
 		DeprecatedCreationTime: now.Unix(),
@@ -1403,11 +1405,6 @@ func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte
 			}
 		}
 
-
-		//isVersionPublicKeyImported, versionPresent := p.VersionPublicKeyImported[LatestVersionStr]
-        //if !versionPresent {
-            //isVersionPublicKeyImported = false
-        //}
 		switch parsedKey.(type) {
 		case *ecdsa.PrivateKey:
 			if p.Type != KeyType_ECDSA_P256 && p.Type != KeyType_ECDSA_P384 && p.Type != KeyType_ECDSA_P521 {
@@ -1514,18 +1511,16 @@ func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte
 
 	p.LatestVersion += 1
 
+	entry.PublicKeyImported = !isPrivateKey
+
 	if p.Keys == nil {
 		// This is an initial key rotation when generating a new policy. We
 		// don't need to call migrate here because if we've called getPolicy to
 		// get the policy in the first place it will have been run.
 		p.Keys = keyEntryMap{}
 	}
-	p.Keys[LatestVersionStr] = entry
 
-	if p.VersionPublicKeyImported == nil {
-		p.VersionPublicKeyImported = map[string]bool{}
-	}
-	p.VersionPublicKeyImported[LatestVersionStr] = !isPrivateKey
+	p.Keys[strconv.Itoa(p.LatestVersion)] = entry
 
 	// This ensures that with new key creations min decryption version is set
 	// to 1 rather than the int default of 0, since keys start at 1 (either
@@ -2044,4 +2039,27 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 	encoded = p.getVersionPrefix(ver) + encoded
 
 	return encoded, nil
+}
+
+func (p *Policy) UpdateKeyVersion(ctx context.Context, storage logical.Storage, key []byte, isPrivateKey bool, keyVersion int) error {
+	// NOTE: If we are simply adding a private counterpart, CreationTime shouldn't be updated
+	keyEntry, err := p.safeGetKeyEntry(keyVersion)
+	if err != nil {
+		return err
+	}
+
+	publicKeyImported := keyEntry.PublicKeyImported
+	if publicKeyImported && !isPrivateKey {
+		// NOTE: Description
+		return errors.New("cannot import a public key to a key version that already as a public key set")
+	}
+
+	if !publicKeyImported && isPrivateKey {
+		// NOTE: Description
+		return errors.New("cannot import a private key to a key version that already as a private key set")
+	}
+
+	// PASS
+
+	return nil
 }

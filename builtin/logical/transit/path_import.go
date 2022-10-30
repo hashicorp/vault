@@ -133,6 +133,11 @@ ephemeral AES key. Can be one of "SHA1", "SHA224", "SHA256" (default), "SHA384",
 				// NOTE: Add description
 				Description: ``,
 			},
+			"version": {
+				Type: framework.TypeInt,
+				Description: `Key version to be updated, if left empty 'Latest' version will be updated.
+If field to update has already been set, a new version will be created. If bump_version is set to True, this field is ignored`,
+			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathImportVersionWrite,
@@ -211,23 +216,23 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type: %v", keyType)), logical.ErrInvalidRequest
 	}
 
+	p, _, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
+	if err != nil {
+		return nil, err
+	}
+
+	if p != nil {
+		if b.System().CachingDisabled() {
+			p.Unlock()
+		}
+		return nil, errors.New("the import path cannot be used with an existing key; use import-version to rotate an existing imported key")
+	}
+
 	var key []byte
 	if isCiphertextSet {
 		hashFn, err := parseHashFn(hashFnStr)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-		}
-
-		p, _, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
-		if err != nil {
-			return nil, err
-		}
-
-		if p != nil {
-			if b.System().CachingDisabled() {
-				p.Unlock()
-			}
-			return nil, errors.New("the import path cannot be used with an existing key; use import-version to rotate an existing imported key")
 		}
 
 		ciphertext, err := base64.StdEncoding.DecodeString(ciphertextString)
@@ -246,7 +251,7 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 		key = []byte(publicKeyString)
 	}
 
-	err := b.lm.ImportPolicy(ctx, polReq, key, b.GetRandomReader())
+	err = b.lm.ImportPolicy(ctx, polReq, key, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
@@ -258,18 +263,25 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 	name := d.Get("name").(string)
 	hashFnStr := d.Get("hash_function").(string)
 	ciphertextString := d.Get("ciphertext").(string)
+	publicKeyString := d.Get("public_key").(string)
+	//bumpVersion := d.Get("bump_version").(string)
+
+	// NOTE: Add description
+	isCiphertextSet := true
+	if !isFieldSet("ciphertext", d) {
+		isCiphertextSet = false
+		if !isFieldSet("public_key", d) {
+			// NOTE: Error desc
+			return nil, errors.New("one of the following fields, ciphertext xor public_key, has to be set")
+		}
+	}
 
 	polReq := keysutil.PolicyRequest{
-		Storage: req.Storage,
-		Name:    name,
-		Upsert:  false,
+		Storage:         req.Storage,
+		Name:            name,
+		Upsert:          false,
+		IsCiphertextSet: isCiphertextSet,
 	}
-
-	hashFn, err := parseHashFn(hashFnStr)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-	}
-
 	p, _, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
 	if err != nil {
 		return nil, err
@@ -289,16 +301,34 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 	}
 	defer p.Unlock()
 
-	ciphertext, err := base64.StdEncoding.DecodeString(ciphertextString)
-	if err != nil {
-		return nil, err
+	// Get param version if set else LatestVersion
+	versionToUpdate := p.LatestVersion
+	if version, ok := d.Raw["version"]; ok {
+		versionToUpdate = version.(int)
 	}
-	importKey, err := b.decryptImportedKey(ctx, req.Storage, ciphertext, hashFn)
-	if err != nil {
-		return nil, err
+
+	var importKey []byte
+	if isCiphertextSet {
+		hashFn, err := parseHashFn(hashFnStr)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		}
+
+		ciphertext, err := base64.StdEncoding.DecodeString(ciphertextString)
+		if err != nil {
+			return nil, err
+		}
+		importKey, err = b.decryptImportedKey(ctx, req.Storage, ciphertext, hashFn)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// NOTE: If we have a public_key
+		importKey = []byte(publicKeyString)
 	}
-	// NOTE: Hardcoding value for now
-	err = p.Import(ctx, req.Storage, importKey, false, b.GetRandomReader())
+
+    // NOTE: We will call this if are bumping the version else we use the new method (UpdateKeyVersion)
+	err = p.Import(ctx, req.Storage, importKey, isCiphertextSet, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
