@@ -285,7 +285,7 @@ func (c *AuthTuneCommand) Run(args []string) int {
 			mountConfigInput.UserLockoutConfig.LockoutCounterResetDuration = ttlToAPI(c.flagUserLockoutCounterResetDuration)
 		}
 		if fl.Name == flagNameUserLockoutDisable {
-			mountConfigInput.UserLockoutConfig.DisableLockout = c.flagUserLockoutDisable
+			mountConfigInput.UserLockoutConfig.DisableLockout = &c.flagUserLockoutDisable
 		}
 
 		if fl.Name == flagNamePluginVersion {

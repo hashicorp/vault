@@ -64,6 +64,9 @@ func ParseUserLockouts(result *SharedConfig, list *ast.ObjectList) error {
 		}
 
 		// Lockout Parameters
+
+		// Not setting raw entries to nil here as soon as they are parsed
+		// as they are used to set the missing user lockout configuration values later.
 		{
 			if userLockoutConfig.LockoutThresholdRaw != nil {
 				userLockoutThresholdString := fmt.Sprintf("%v", userLockoutConfig.LockoutThresholdRaw)
@@ -100,6 +103,15 @@ func ParseUserLockouts(result *SharedConfig, list *ast.ObjectList) error {
 		userLockoutsMap[userLockoutConfig.Type] = &userLockoutConfig
 	}
 
+	// Use raw entries to set values for user lockout configurations fields
+	// that were not configured using config file.
+	// The raw entries would mean that the entry was configured by the user using the config file.
+	// If any of these fields are not configured using the config file (missing fields),
+	// we set values for these fields with defaults
+	// The issue with not being able to use non-raw entries is because of fields lockout threshold
+	// and disable lockout. We cannot differentiate using non-raw entries if the user configured these fields
+	// with values (0 and false) or if the the user did not configure these values in config file at all.
+	// The raw fields are set to nil after setting missing values in setNilValuesForRawUserLockoutFields function
 	userLockoutsMap = setMissingUserLockoutValuesInMap(userLockoutsMap)
 	for _, userLockoutValues := range userLockoutsMap {
 		result.UserLockouts = append(result.UserLockouts, userLockoutValues)
