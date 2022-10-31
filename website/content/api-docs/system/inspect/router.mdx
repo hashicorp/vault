@@ -1,0 +1,97 @@
+---
+layout: api
+page_title: /sys/internal/inspect/router - HTTP API
+description: >-
+  The '/sys/internal/inspect/router' endpoint focuses on viewing the contents of specific structures in the internal router subsystem.
+---
+
+# `/sys/raw`
+The `/sys/internal/inspect/router` is intended to inspect a specific internal subsytem for debugging purposes.
+It can be accessed with a root token or sudo priveleges.
+
+## Root
+
+This endpoint returns a list of router entries in the router's root tree.
+
+| Method | Path          |
+| :----- | :------------ |
+| `GET`  | `/sys/internal/inspect/router/root` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/internal/inspect/router/root
+```
+
+## Mount UUID Cache
+
+This endpoint returns a list of mount entries in the router's mount uuid cache.
+
+| Method | Path          |
+| :----- | :------------ |
+| `GET`  | `/sys/internal/inspect/router/uuid` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/internal/inspect/router/uuid
+```
+
+
+## Mount UUID Cache
+
+This endpoint returns a list of mount entries in the router's mount uuid cache.
+
+| Method | Path          |
+| :----- | :------------ |
+| `GET`  | `/sys/internal/inspect/router/uuid` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/internal/inspect/router/uuid
+```
+
+
+## Mount Accessor Cache
+
+This endpoint returns a list of mount entries in the router's mount accessor cache.
+
+| Method | Path          |
+| :----- | :------------ |
+| `GET`  | `/sys/internal/inspect/router/accessor` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/internal/inspect/router/accessor
+```
+
+
+## Storage Prefix Tree
+
+This endpoint returns a list of mount entries in the router's storage prefix tree.
+
+| Method | Path          |
+| :----- | :------------ |
+| `GET`  | `/sys/internal/inspect/router/stroage` |
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/internal/inspect/router/storage
+```
+
+
+
+
