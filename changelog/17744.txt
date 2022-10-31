@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/gcp: Upgrade github.com/hashicorp/vault-plugin-secrets-gcp.
+```
