@@ -466,7 +466,7 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 		}
 	}
 
-	// XXX / TODO: ascheel: incremented 20->25 due to CircleCI execution
+	// TODO: We incremented 20->25 due to CircleCI execution
 	// being slow and pausing this test. We might consider recording the
 	// actual issuance time of the cert and calculating the expected
 	// validity period +/- fuzz, but that'd require recording and passing
