@@ -10,13 +10,12 @@
 />
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink @params={{array "configuration.create.index"}}>
+    <ToolbarLink @route="configuration.create.index">
       Configure PKI
     </ToolbarLink>
   </ToolbarActions>
 </Toolbar>
 
-{{! ARG TODO: add conditional for empty state }}
 <EmptyState @title="PKI not configured" @message="This PKI mount hasn’t yet been configured with a certificate issuer.">
   <LinkTo @route="configuration.create.index" @model={{this.model}}>
     Configure PKI

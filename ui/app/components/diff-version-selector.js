@@ -3,6 +3,7 @@ import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
+import { htmlSafe } from '@ember/template';
 
 /**
  * @module DiffVersionSelector
@@ -57,10 +58,11 @@ export default class DiffVersionSelector extends Component {
     let delta = diffpatcher.diff(rightSideVersionData, leftSideVersionData);
     if (delta === undefined) {
       this.statesMatch = true;
-      this.visualDiff = JSON.stringify(leftSideVersionData, undefined, 2); // params: value, replacer (all properties included), space (white space and indentation, line break, etc.)
+      // params: value, replacer (all properties included), space (white space and indentation, line break, etc.)
+      this.visualDiff = htmlSafe(JSON.stringify(leftSideVersionData, undefined, 2));
     } else {
       this.statesMatch = false;
-      this.visualDiff = jsondiffpatch.formatters.html.format(delta, rightSideVersionData);
+      this.visualDiff = htmlSafe(jsondiffpatch.formatters.html.format(delta, rightSideVersionData));
     }
   }
 

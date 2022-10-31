@@ -96,38 +96,10 @@ export default Service.extend({
     return RSVP.reject(error);
   },
 
-  paramsFromTransition(transitionTo, params, queryParams) {
-    let returnedParams = params.slice();
-    let qps = queryParams;
-    transitionTo.paramNames.map((name) => {
-      let param = transitionTo.params[name];
-      if (param.length) {
-        // push on to the front of the array since were're started at the end
-        returnedParams.unshift(param);
-      }
-    });
-    qps = { ...queryParams, ...transitionTo.queryParams };
-    // if there's a parent transition, recurse to get its route params
-    if (transitionTo.parent) {
-      [returnedParams, qps] = this.paramsFromTransition(transitionTo.parent, returnedParams, qps);
-    }
-    return [returnedParams, qps];
-  },
-
-  urlFromTransition(transitionObj) {
-    let transition = transitionObj.to;
-    let [params, queryParams] = this.paramsFromTransition(transition, [], {});
-    let url = this.router.urlFor(transition.name, ...params, {
-      queryParams,
-    });
-    return url.replace('/ui', '');
-  },
-
-  handleError(error, transition) {
+  handleError(error) {
     let { accessor, token, creation_path, creation_time, ttl } = error;
-    let url = this.urlFromTransition(transition);
     let data = { accessor, token, creation_path, creation_time, ttl };
-    data.uiParams = { url };
+    data.uiParams = { url: this.router.currentURL };
     this.storeControlGroupToken(data);
     return this.router.transitionTo('vault.cluster.access.control-group-accessor', accessor);
   },

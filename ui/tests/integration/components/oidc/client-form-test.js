@@ -80,7 +80,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
       .dom('[data-test-oidc-client-title]')
       .hasText('Create application', 'Form title renders correct text');
     assert.dom(SELECTORS.clientSaveButton).hasText('Create', 'Save button has correct text');
-    assert.equal(findAll('[data-test-field]').length, 6, 'renders all attribute fields');
+    assert.strictEqual(findAll('[data-test-field]').length, 6, 'renders all attribute fields');
     assert.dom('input#allow-all').isChecked('Allow all radio button selected by default');
     assert.dom('[data-test-ttl-value="ID Token TTL"]').hasValue('1', 'ttl defaults to 24h');
     assert.dom('[data-test-ttl-value="Access Token TTL"]').hasValue('1', 'ttl defaults to 24h');
@@ -188,7 +188,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     await fillIn('[data-test-input="redirectUris"] [data-test-string-list-input="0"]', 'some-url.com');
     await click('[data-test-string-list-button="add"]');
     await click(SELECTORS.clientCancelButton);
-    assert.equal(this.model.redirectUris, undefined, 'Model attributes rolled back on cancel');
+    assert.strictEqual(this.model.redirectUris, undefined, 'Model attributes rolled back on cancel');
   });
 
   test('it should show create assignment modal', async function (assert) {

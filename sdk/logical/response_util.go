@@ -182,3 +182,23 @@ func RespondError(w http.ResponseWriter, status int, err error) {
 	enc := json.NewEncoder(w)
 	enc.Encode(resp)
 }
+
+func RespondErrorAndData(w http.ResponseWriter, status int, data interface{}, err error) {
+	AdjustErrorStatusCode(&status, err)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+
+	type ErrorAndDataResponse struct {
+		Errors []string    `json:"errors"`
+		Data   interface{} `json:"data""`
+	}
+	resp := &ErrorAndDataResponse{Errors: make([]string, 0, 1)}
+	if err != nil {
+		resp.Errors = append(resp.Errors, err.Error())
+	}
+	resp.Data = data
+
+	enc := json.NewEncoder(w)
+	enc.Encode(resp)
+}
