@@ -28,8 +28,8 @@ export default class PolicyFormComponent extends Component {
   @service wizard;
   @service flashMessages;
   @tracked errorBanner;
-  @tracked showFileUpload = false;
   @tracked file = null;
+  @tracked showFileUpload = false;
 
   @task
   *save(event) {
@@ -72,12 +72,12 @@ export default class PolicyFormComponent extends Component {
 
   @action
   setPolicyFromFile(index, fileInfo) {
-    let { value, fileName } = fileInfo;
-    let model = this.args.model;
+    const { value, fileName } = fileInfo;
+    const { model } = this.args;
     model.policy = value;
     if (!model.name) {
-      let trimmedFileName = trimRight(fileName, ['.json', '.txt', '.hcl', '.policy']);
-      model.name = trimmedFileName;
+      const trimmedFileName = trimRight(fileName, ['.json', '.txt', '.hcl', '.policy']);
+      model.name = trimmedFileName.toLowerCase();
     }
     this.showFileUpload = false;
   }
