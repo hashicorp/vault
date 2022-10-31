@@ -66,6 +66,25 @@ func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data
 	defer cancelFunc()
 
 	resp, err := c.readRawWithDataWithContext(ctx, path, data)
+	return c.ParseRawResponseAndCloseBody(resp, err)
+}
+
+func (c *Logical) ReadRaw(path string) (*Response, error) {
+	return c.ReadRawWithData(path, nil)
+}
+
+func (c *Logical) ReadRawWithData(path string, data map[string][]string) (*Response, error) {
+	return c.ReadRawWithDataWithContext(context.Background(), path, data)
+}
+
+func (c *Logical) ReadRawWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Response, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	return c.readRawWithDataWithContext(ctx, path, data)
+}
+
+func (c *Logical) ParseRawResponseAndCloseBody(resp *Response, err error) (*Secret, error) {
 	if resp != nil {
 		defer resp.Body.Close()
 	}
@@ -88,21 +107,6 @@ func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data
 	}
 
 	return ParseSecret(resp.Body)
-}
-
-func (c *Logical) ReadRaw(path string) (*Response, error) {
-	return c.ReadRawWithData(path, nil)
-}
-
-func (c *Logical) ReadRawWithData(path string, data map[string][]string) (*Response, error) {
-	return c.ReadRawWithDataWithContext(context.Background(), path, data)
-}
-
-func (c *Logical) ReadRawWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Response, error) {
-	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
-	defer cancelFunc()
-
-	return c.readRawWithDataWithContext(ctx, path, data)
 }
 
 func (c *Logical) readRawWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Response, error) {
