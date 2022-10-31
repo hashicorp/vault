@@ -220,8 +220,7 @@ jobs:
 
           make prep
 
-          # Permissions have changed inside docker containers; see hack note below.
-          mkdir --mode=777 -p test-results/go-test
+          mkdir -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
           # not what developers have in their environments and it could break some
@@ -241,19 +240,6 @@ jobs:
             # see "client version too new, max supported version 1.39" errors for
             # reasons unclear.
             export DOCKER_API_VERSION=1.39
-
-            # Hack: Docker permissions appear to have changed; let's explicitly
-            # chmod the docker certificate path to give other grouped users
-            # access.
-            #
-            # Notably, in this shell pipeline we see:
-            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
-            #
-            # but inside the docker image below, we see:
-            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
-            #
-            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
-            chmod o+rx -R $DOCKER_CERT_PATH
 
             TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
             export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
@@ -279,6 +265,33 @@ jobs:
               tail -f /dev/null)"
             mkdir workspace
             echo ${CONTAINER_ID} > workspace/container_id
+
+            # Hack: Docker permissions appear to have changed; let's explicitly
+            # add a new user/group with the correct host uid to the docker
+            # container, fixing all of these permissions issues correctly. We
+            # then have to run with this user consistently in the future.
+            #
+            # Notably, in this shell pipeline we see:
+            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+            #
+            # but inside the docker image below, we see:
+            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+            #
+            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+            export HOST_GID="$(id -g)"
+            export HOST_UID="$(id -u)"
+            export CONT_GID="$(docker exec ${CONTAINER_ID} sh -c 'id -g')"
+            export CONT_GNAME="$(docker exec ${CONTAINER_ID} sh -c 'id -g -n')"
+            export CONT_UID="$(docker exec ${CONTAINER_ID} sh -c 'id -u')"
+            if (( HOST_UID != CONT_UID )); then
+              # Only provision a group if necessary; otherwise reuse the
+              # existing one.
+              if (( HOST_GID != CONT_GID )); then
+                docker exec -e HOST_GID -e CONT_GNAME ${CONTAINER_ID} sh -c 'sudo groupmod -g $HOST_GID $CONT_GNAME'
+              fi
+
+              docker exec -e CONT_GNAME -e HOST_UID ${CONTAINER_ID} sh -c 'sudo usermod -a -G $CONT_GNAME -u $HOST_UID circleci'
+            fi
 
             # Run tests
             test -d /tmp/go-cache && docker cp /tmp/go-cache ${CONTAINER_ID}:/tmp/gocache
@@ -475,8 +488,7 @@ jobs:
 
           make prep
 
-          # Permissions have changed inside docker containers; see hack note below.
-          mkdir --mode=777 -p test-results/go-test
+          mkdir -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
           # not what developers have in their environments and it could break some
@@ -496,19 +508,6 @@ jobs:
             # see "client version too new, max supported version 1.39" errors for
             # reasons unclear.
             export DOCKER_API_VERSION=1.39
-
-            # Hack: Docker permissions appear to have changed; let's explicitly
-            # chmod the docker certificate path to give other grouped users
-            # access.
-            #
-            # Notably, in this shell pipeline we see:
-            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
-            #
-            # but inside the docker image below, we see:
-            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
-            #
-            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
-            chmod o+rx -R $DOCKER_CERT_PATH
 
             TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
             export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
@@ -534,6 +533,33 @@ jobs:
               tail -f /dev/null)"
             mkdir workspace
             echo ${CONTAINER_ID} > workspace/container_id
+
+            # Hack: Docker permissions appear to have changed; let's explicitly
+            # add a new user/group with the correct host uid to the docker
+            # container, fixing all of these permissions issues correctly. We
+            # then have to run with this user consistently in the future.
+            #
+            # Notably, in this shell pipeline we see:
+            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+            #
+            # but inside the docker image below, we see:
+            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+            #
+            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+            export HOST_GID="$(id -g)"
+            export HOST_UID="$(id -u)"
+            export CONT_GID="$(docker exec ${CONTAINER_ID} sh -c 'id -g')"
+            export CONT_GNAME="$(docker exec ${CONTAINER_ID} sh -c 'id -g -n')"
+            export CONT_UID="$(docker exec ${CONTAINER_ID} sh -c 'id -u')"
+            if (( HOST_UID != CONT_UID )); then
+              # Only provision a group if necessary; otherwise reuse the
+              # existing one.
+              if (( HOST_GID != CONT_GID )); then
+                docker exec -e HOST_GID -e CONT_GNAME ${CONTAINER_ID} sh -c 'sudo groupmod -g $HOST_GID $CONT_GNAME'
+              fi
+
+              docker exec -e CONT_GNAME -e HOST_UID ${CONTAINER_ID} sh -c 'sudo usermod -a -G $CONT_GNAME -u $HOST_UID circleci'
+            fi
 
             # Run tests
             test -d /tmp/go-cache && docker cp /tmp/go-cache ${CONTAINER_ID}:/tmp/gocache
@@ -681,8 +707,7 @@ jobs:
 
           make prep
 
-          # Permissions have changed inside docker containers; see hack note below.
-          mkdir --mode=777 -p test-results/go-test
+          mkdir -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
           # not what developers have in their environments and it could break some
@@ -702,19 +727,6 @@ jobs:
             # see "client version too new, max supported version 1.39" errors for
             # reasons unclear.
             export DOCKER_API_VERSION=1.39
-
-            # Hack: Docker permissions appear to have changed; let's explicitly
-            # chmod the docker certificate path to give other grouped users
-            # access.
-            #
-            # Notably, in this shell pipeline we see:
-            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
-            #
-            # but inside the docker image below, we see:
-            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
-            #
-            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
-            chmod o+rx -R $DOCKER_CERT_PATH
 
             TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
             export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
@@ -740,6 +752,33 @@ jobs:
               tail -f /dev/null)"
             mkdir workspace
             echo ${CONTAINER_ID} > workspace/container_id
+
+            # Hack: Docker permissions appear to have changed; let's explicitly
+            # add a new user/group with the correct host uid to the docker
+            # container, fixing all of these permissions issues correctly. We
+            # then have to run with this user consistently in the future.
+            #
+            # Notably, in this shell pipeline we see:
+            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+            #
+            # but inside the docker image below, we see:
+            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+            #
+            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+            export HOST_GID="$(id -g)"
+            export HOST_UID="$(id -u)"
+            export CONT_GID="$(docker exec ${CONTAINER_ID} sh -c 'id -g')"
+            export CONT_GNAME="$(docker exec ${CONTAINER_ID} sh -c 'id -g -n')"
+            export CONT_UID="$(docker exec ${CONTAINER_ID} sh -c 'id -u')"
+            if (( HOST_UID != CONT_UID )); then
+              # Only provision a group if necessary; otherwise reuse the
+              # existing one.
+              if (( HOST_GID != CONT_GID )); then
+                docker exec -e HOST_GID -e CONT_GNAME ${CONTAINER_ID} sh -c 'sudo groupmod -g $HOST_GID $CONT_GNAME'
+              fi
+
+              docker exec -e CONT_GNAME -e HOST_UID ${CONTAINER_ID} sh -c 'sudo usermod -a -G $CONT_GNAME -u $HOST_UID circleci'
+            fi
 
             # Run tests
             test -d /tmp/go-cache && docker cp /tmp/go-cache ${CONTAINER_ID}:/tmp/gocache
@@ -997,8 +1036,7 @@ jobs:
 
           make prep
 
-          # Permissions have changed inside docker containers; see hack note below.
-          mkdir --mode=777 -p test-results/go-test
+          mkdir -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
           # not what developers have in their environments and it could break some
@@ -1018,19 +1056,6 @@ jobs:
             # see "client version too new, max supported version 1.39" errors for
             # reasons unclear.
             export DOCKER_API_VERSION=1.39
-
-            # Hack: Docker permissions appear to have changed; let's explicitly
-            # chmod the docker certificate path to give other grouped users
-            # access.
-            #
-            # Notably, in this shell pipeline we see:
-            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
-            #
-            # but inside the docker image below, we see:
-            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
-            #
-            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
-            chmod o+rx -R $DOCKER_CERT_PATH
 
             TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
             export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
@@ -1056,6 +1081,33 @@ jobs:
               tail -f /dev/null)"
             mkdir workspace
             echo ${CONTAINER_ID} > workspace/container_id
+
+            # Hack: Docker permissions appear to have changed; let's explicitly
+            # add a new user/group with the correct host uid to the docker
+            # container, fixing all of these permissions issues correctly. We
+            # then have to run with this user consistently in the future.
+            #
+            # Notably, in this shell pipeline we see:
+            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+            #
+            # but inside the docker image below, we see:
+            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+            #
+            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+            export HOST_GID="$(id -g)"
+            export HOST_UID="$(id -u)"
+            export CONT_GID="$(docker exec ${CONTAINER_ID} sh -c 'id -g')"
+            export CONT_GNAME="$(docker exec ${CONTAINER_ID} sh -c 'id -g -n')"
+            export CONT_UID="$(docker exec ${CONTAINER_ID} sh -c 'id -u')"
+            if (( HOST_UID != CONT_UID )); then
+              # Only provision a group if necessary; otherwise reuse the
+              # existing one.
+              if (( HOST_GID != CONT_GID )); then
+                docker exec -e HOST_GID -e CONT_GNAME ${CONTAINER_ID} sh -c 'sudo groupmod -g $HOST_GID $CONT_GNAME'
+              fi
+
+              docker exec -e CONT_GNAME -e HOST_UID ${CONTAINER_ID} sh -c 'sudo usermod -a -G $CONT_GNAME -u $HOST_UID circleci'
+            fi
 
             # Run tests
             test -d /tmp/go-cache && docker cp /tmp/go-cache ${CONTAINER_ID}:/tmp/gocache
