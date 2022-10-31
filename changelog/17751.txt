@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/gcp: Upgrade github.com/hashicorp/vault-plugin-auth-gcp.
+```
