@@ -196,6 +196,7 @@ func (c *PKIHealthCheckCommand) Run(args []string) int {
 	mount := sanitizePath(args[0])
 	executor := healthcheck.NewExecutor(client, mount)
 	executor.AddCheck(healthcheck.NewCAValidityPeriodCheck())
+	executor.AddCheck(healthcheck.NewCRLValidityPeriodCheck())
 	if c.flagDefaultDisabled {
 		executor.DefaultEnabled = false
 	}
