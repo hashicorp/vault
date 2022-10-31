@@ -466,8 +466,13 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 		}
 	}
 
-	if math.Abs(float64(time.Now().Add(validity).Unix()-cert.NotAfter.Unix())) > 20 {
-		return nil, fmt.Errorf("certificate validity end: %s; expected within 20 seconds of %s", cert.NotAfter.Format(time.RFC3339), time.Now().Add(validity).Format(time.RFC3339))
+	// TODO: We incremented 20->25 due to CircleCI execution
+	// being slow and pausing this test. We might consider recording the
+	// actual issuance time of the cert and calculating the expected
+	// validity period +/- fuzz, but that'd require recording and passing
+	// through more information.
+	if math.Abs(float64(time.Now().Add(validity).Unix()-cert.NotAfter.Unix())) > 25 {
+		return nil, fmt.Errorf("certificate validity end: %s; expected within 25 seconds of %s", cert.NotAfter.Format(time.RFC3339), time.Now().Add(validity).Format(time.RFC3339))
 	}
 
 	return parsedCertBundle, nil
