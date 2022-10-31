@@ -1,12 +1,17 @@
 package command
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
-	"time"
 
+	"github.com/hashicorp/vault/command/healthcheck"
+
+	"github.com/ghodss/yaml"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
+	"github.com/ryanuber/columnize"
 )
 
 const (
@@ -19,15 +24,17 @@ const (
 	pkiRetInsufficientPermissions
 )
 
-const (
-	oneDay   = 24 * time.Hour
-	oneMonth = 30 * oneDay
-	oneYear  = 365 * oneDay
-)
-
 var (
 	_ cli.Command             = (*PKIHealthCheckCommand)(nil)
 	_ cli.CommandAutocomplete = (*PKIHealthCheckCommand)(nil)
+
+	// Ensure the above return codes match (outside of OK/Usage) the values in
+	// the healthcheck package.
+	_ = pkiRetInformational == int(healthcheck.ResultInformational)
+	_ = pkiRetWarning == int(healthcheck.ResultWarning)
+	_ = pkiRetCritical == int(healthcheck.ResultCritical)
+	_ = pkiRetInvalidVersion == int(healthcheck.ResultInvalidVersion)
+	_ = pkiRetInsufficientPermissions == int(healthcheck.ResultInsufficientPermissions)
 )
 
 type PKIHealthCheckCommand struct {
@@ -78,7 +85,7 @@ Usage: vault pki health-check [options] MOUNT
 }
 
 func (c *PKIHealthCheckCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
 	f := set.NewFlagSet("Command Options")
 
 	f.StringVar(&StringVar{
@@ -90,10 +97,11 @@ func (c *PKIHealthCheckCommand) Flags() *FlagSets {
 	})
 
 	f.StringVar(&StringVar{
-		Name:    "return-indicator",
-		Target:  &c.flagReturnIndicator,
-		Default: "default",
-		EnvVar:  "",
+		Name:       "return-indicator",
+		Target:     &c.flagReturnIndicator,
+		Default:    "default",
+		EnvVar:     "",
+		Completion: complete.PredictSet("default", "informational", "warning", "critical", "permission"),
 		Usage: `Behavior of the return value:
  - permission, for exiting with a non-zero code when the tool lacks
                permissions or has a version mismatch with the server;
@@ -124,10 +132,19 @@ default unless enabled by the configuration file explicitly.`,
 		Default: false,
 		EnvVar:  "",
 		Usage: `When specified, no health checks are run, but all known health
-checks are printed.`,
+checks are printed. Still requires a positional mount argument.`,
 	})
 
 	return set
+}
+
+func (c *PKIHealthCheckCommand) isValidRetIndicator() bool {
+	switch c.flagReturnIndicator {
+	case "", "default", "informational", "warning", "critical", "permission":
+		return true
+	default:
+		return false
+	}
 }
 
 func (c *PKIHealthCheckCommand) AutocompleteArgs() complete.Predictor {
@@ -141,6 +158,7 @@ func (c *PKIHealthCheckCommand) AutocompleteFlags() complete.Flags {
 }
 
 func (c *PKIHealthCheckCommand) Run(args []string) int {
+	// Parse and validate the arguments.
 	f := c.Flags()
 
 	if err := f.Parse(args); err != nil {
@@ -163,7 +181,151 @@ func (c *PKIHealthCheckCommand) Run(args []string) int {
 		return pkiRetUsage
 	}
 
-	// mount := sanitizePath(args[0])
+	if !c.isValidRetIndicator() {
+		c.UI.Error(fmt.Sprintf("Invalid flag -return-indicator=%v; known options are default, informational, warning, critical, and permission", c.flagReturnIndicator))
+		return pkiRetUsage
+	}
 
-	return 0
+	// Setup the client and the executor.
+	client, err := c.Client()
+	if err != nil {
+		c.UI.Error(err.Error())
+		return pkiRetUsage
+	}
+
+	mount := sanitizePath(args[0])
+	executor := healthcheck.NewExecutor(client, mount)
+	executor.AddCheck(healthcheck.NewCAValidityPeriodCheck())
+	if c.flagDefaultDisabled {
+		executor.DefaultEnabled = false
+	}
+
+	// Handle listing, if necessary.
+	if c.flagList {
+		c.UI.Output("Health Checks:")
+		for _, checker := range executor.Checkers {
+			c.UI.Output(" - " + checker.Name())
+		}
+
+		return pkiRetOK
+	}
+
+	// Handle config merging.
+	external_config := map[string]interface{}{}
+	if c.flagConfig != "" {
+		contents, err := os.ReadFile(c.flagConfig)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Failed to read configuration file %v: %v", c.flagConfig, err))
+			return pkiRetUsage
+		}
+
+		if err := json.Unmarshal(contents, &external_config); err != nil {
+			c.UI.Error(fmt.Sprintf("Failed to parse configuration file %v: %v", c.flagConfig, err))
+			return pkiRetUsage
+		}
+	}
+
+	if err := executor.BuildConfig(external_config); err != nil {
+		c.UI.Error(fmt.Sprintf("Failed to build health check configuration: %v", err))
+		return pkiRetUsage
+	}
+
+	// Run the health checks.
+	results, err := executor.Execute()
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Failed to run health check: %v", err))
+		return pkiRetUsage
+	}
+
+	// Display the output.
+	if err := c.outputResults(results); err != nil {
+		c.UI.Error(fmt.Sprintf("Failed to render results for display: %v", err))
+	}
+
+	// Select an appropriate return code.
+	return c.selectRetCode(results)
+}
+
+func (c *PKIHealthCheckCommand) outputResults(results map[string][]*healthcheck.Result) error {
+	switch Format(c.UI) {
+	case "", "table":
+		return c.outputResultsTable(results)
+	case "json":
+		return c.outputResultsJSON(results)
+	case "yaml":
+		return c.outputResultsYAML(results)
+	default:
+		return fmt.Errorf("unknown output format: %v", Format(c.UI))
+	}
+}
+
+func (c *PKIHealthCheckCommand) outputResultsTable(results map[string][]*healthcheck.Result) error {
+	for scanner, findings := range results {
+		c.UI.Output(scanner)
+		c.UI.Output(strings.Repeat("-", len(scanner)))
+		data := []string{"status" + hopeDelim + "endpoint" + hopeDelim + "message"}
+		for _, finding := range findings {
+			row := []string{
+				finding.StatusDisplay,
+				finding.Endpoint,
+				finding.Message,
+			}
+			data = append(data, strings.Join(row, hopeDelim))
+		}
+
+		c.UI.Output(tableOutput(data, &columnize.Config{
+			Delim: hopeDelim,
+		}))
+		c.UI.Output("\n")
+	}
+
+	return nil
+}
+
+func (c *PKIHealthCheckCommand) outputResultsJSON(results map[string][]*healthcheck.Result) error {
+	bytes, err := json.MarshalIndent(results, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	c.UI.Output(string(bytes))
+	return nil
+}
+
+func (c *PKIHealthCheckCommand) outputResultsYAML(results map[string][]*healthcheck.Result) error {
+	bytes, err := yaml.Marshal(results)
+	if err != nil {
+		return err
+	}
+
+	c.UI.Output(string(bytes))
+	return nil
+}
+
+func (c *PKIHealthCheckCommand) selectRetCode(results map[string][]*healthcheck.Result) int {
+	var highestResult healthcheck.ResultStatus = healthcheck.ResultNotApplicable
+	for _, findings := range results {
+		for _, finding := range findings {
+			if finding.Status > highestResult {
+				highestResult = finding.Status
+			}
+		}
+	}
+
+	cutOff := healthcheck.ResultInformational
+	switch c.flagReturnIndicator {
+	case "", "default", "informational":
+	case "permission":
+		cutOff = healthcheck.ResultInvalidVersion
+	case "critical":
+		cutOff = healthcheck.ResultCritical
+	case "warning":
+		cutOff = healthcheck.ResultWarning
+	}
+
+	if highestResult >= cutOff {
+		return int(highestResult)
+	}
+
+	return pkiRetOK
 }
