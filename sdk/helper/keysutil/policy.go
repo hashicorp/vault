@@ -2048,18 +2048,83 @@ func (p *Policy) UpdateKeyVersion(ctx context.Context, storage logical.Storage, 
 		return err
 	}
 
+	// Validations
+	if !p.Type.AssociatedDataSupported() {
+		return errors.New("provided type does not support version updates")
+	}
+
 	publicKeyImported := keyEntry.PublicKeyImported
 	if publicKeyImported && !isPrivateKey {
 		// NOTE: Description
 		return errors.New("cannot import a public key to a key version that already as a public key set")
 	}
 
-	if !publicKeyImported && isPrivateKey {
+	if !publicKeyImported {
 		// NOTE: Description
-		return errors.New("cannot import a private key to a key version that already as a private key set")
+		return errors.New("private key imported, cannot be updated or add a public key")
 	}
 
-	// PASS
+	// Parse key
+	parsedPrivateKey, err := x509.ParsePKCS8PrivateKey(key)
+	if err != nil {
+		return fmt.Errorf("error parsing asymmetric key: %s", err)
+	}
 
-	return nil
+	// Maybe put switch in `Import` in common function
+	switch parsedPrivateKey.(type) {
+	case *ecdsa.PrivateKey:
+		if p.Type != KeyType_ECDSA_P256 && p.Type != KeyType_ECDSA_P384 && p.Type != KeyType_ECDSA_P521 {
+			return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedPrivateKey)
+		}
+
+		ecdsaKey := parsedPrivateKey.(*ecdsa.PrivateKey)
+		curve := elliptic.P256()
+		if p.Type == KeyType_ECDSA_P384 {
+			curve = elliptic.P384()
+		} else if p.Type == KeyType_ECDSA_P521 {
+			curve = elliptic.P521()
+		}
+
+		if ecdsaKey.Curve != curve {
+			return fmt.Errorf("invalid curve: expected %s, got %s", curve.Params().Name, ecdsaKey.Curve.Params().Name)
+		}
+		// Is this going to work?
+		publicKey, err := x509.ParsePKIXPublicKey([]byte(keyEntry.FormattedPublicKey))
+		if err != nil {
+			return fmt.Errorf("failed to parse key entry public key: %v", err)
+		}
+		if !publicKey.(*ecdsa.PublicKey).Equal(ecdsaKey.PublicKey) {
+			// NOTE: Description
+			return fmt.Errorf("keys do not match")
+		}
+
+		// X and Y were filled when public key was imported
+		keyEntry.EC_D = ecdsaKey.D
+	case *rsa.PrivateKey:
+		if p.Type != KeyType_RSA2048 && p.Type != KeyType_RSA3072 && p.Type != KeyType_RSA4096 {
+			return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedPrivateKey)
+		}
+
+		keyBytes := 256
+		if p.Type == KeyType_RSA3072 {
+			keyBytes = 384
+		} else if p.Type == KeyType_RSA4096 {
+			keyBytes = 512
+		}
+		rsaKey := parsedPrivateKey.(*rsa.PrivateKey)
+		if rsaKey.Size() != keyBytes {
+			return fmt.Errorf("invalid key size: expected %d bytes, got %d bytes", keyBytes, rsaKey.Size())
+		}
+
+		if !rsaKey.PublicKey.Equal(keyEntry.RSAPublicKey) {
+			// NOTE: Description
+			return fmt.Errorf("keys do not match")
+		}
+
+		keyEntry.RSAKey = rsaKey
+	}
+
+	p.Keys[strconv.Itoa(keyVersion)] = keyEntry
+
+	return p.Persist(ctx, storage)
 }

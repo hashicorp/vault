@@ -264,7 +264,7 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 	hashFnStr := d.Get("hash_function").(string)
 	ciphertextString := d.Get("ciphertext").(string)
 	publicKeyString := d.Get("public_key").(string)
-	//bumpVersion := d.Get("bump_version").(string)
+	bumpVersion := d.Get("bump_version").(bool)
 
 	// NOTE: Add description
 	isCiphertextSet := true
@@ -327,8 +327,12 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 		importKey = []byte(publicKeyString)
 	}
 
-    // NOTE: We will call this if are bumping the version else we use the new method (UpdateKeyVersion)
-	err = p.Import(ctx, req.Storage, importKey, isCiphertextSet, b.GetRandomReader())
+	if bumpVersion {
+		err = p.UpdateKeyVersion(ctx, req.Storage, importKey, isCiphertextSet, versionToUpdate)
+	} else {
+		// NOTE: We will call this if are bumping the version else we use the new method (UpdateKeyVersion)
+		err = p.Import(ctx, req.Storage, importKey, isCiphertextSet, b.GetRandomReader())
+	}
 	if err != nil {
 		return nil, err
 	}
