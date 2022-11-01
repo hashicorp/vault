@@ -15,7 +15,7 @@ EXTERNAL_TOOLS=\
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 
 
-GO_VERSION_MIN=1.17.13
+GO_VERSION_MIN=$$(cat $(CURDIR)/.go_version)
 GO_CMD?=go
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
@@ -214,10 +214,10 @@ fmtcheck:
 fmt:
 	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -w
 
-semgrep: 
+semgrep:
 	semgrep --include '*.go' --exclude 'vendor' -a -f tools/semgrep .
 
-semgrep-ci: 
+semgrep-ci:
 	semgrep --error --include '*.go' --exclude 'vendor' -f tools/semgrep/ci .
 
 assetcheck:
