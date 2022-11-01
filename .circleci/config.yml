@@ -119,6 +119,7 @@ jobs:
         root: .
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.2
     - GO_TAGS: ''
     - GO_VERSION: 1.19.2
     - GOFUMPT_VERSION: 0.3.1
@@ -261,7 +262,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network ${TEST_DOCKER_NETWORK_NAME} \
-              docker.mirror.hashicorp.services/cimg/go:1.19.2 \
+              $GO_IMAGE \
               tail -f /dev/null)"
             mkdir workspace
             echo ${CONTAINER_ID} > workspace/container_id
@@ -351,7 +352,11 @@ jobs:
         path: /tmp/testlogs
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.2
     - GO_TAGS: ''
+    - GO_VERSION: 1.19.2
+    - GOFUMPT_VERSION: 0.3.1
+    - GOTESTSUM_VERSION: 0.5.2
   fmt:
     machine:
       image: ubuntu-2004:202201-02
@@ -391,6 +396,7 @@ jobs:
         name: make fmt
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.2
     - GO_TAGS: ''
     - GO_VERSION: 1.19.2
     - GOFUMPT_VERSION: 0.3.1
@@ -529,7 +535,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network ${TEST_DOCKER_NETWORK_NAME} \
-              docker.mirror.hashicorp.services/cimg/go:1.19.2 \
+              $GO_IMAGE \
               tail -f /dev/null)"
             mkdir workspace
             echo ${CONTAINER_ID} > workspace/container_id
@@ -613,7 +619,11 @@ jobs:
         path: /tmp/testlogs
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.2
     - GO_TAGS: ''
+    - GO_VERSION: 1.19.2
+    - GOFUMPT_VERSION: 0.3.1
+    - GOTESTSUM_VERSION: 0.5.2
   test-go:
     docker:
     - image: docker.mirror.hashicorp.services/cimg/go:1.19.2
@@ -748,7 +758,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network ${TEST_DOCKER_NETWORK_NAME} \
-              docker.mirror.hashicorp.services/cimg/go:1.19.2 \
+              $GO_IMAGE \
               tail -f /dev/null)"
             mkdir workspace
             echo ${CONTAINER_ID} > workspace/container_id
@@ -832,7 +842,11 @@ jobs:
         path: /tmp/testlogs
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.2
     - GO_TAGS: ''
+    - GO_VERSION: 1.19.2
+    - GOFUMPT_VERSION: 0.3.1
+    - GOTESTSUM_VERSION: 0.5.2
   semgrep:
     docker:
     - image: docker.mirror.hashicorp.services/returntocorp/semgrep:0.113.0
@@ -935,6 +949,7 @@ jobs:
         - /home/circleci/go/pkg/mod
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.2
     - GO_TAGS: ''
     - GO_VERSION: 1.19.2
     - GOFUMPT_VERSION: 0.3.1
@@ -1077,7 +1092,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network ${TEST_DOCKER_NETWORK_NAME} \
-              docker.mirror.hashicorp.services/cimg/go:1.19.2 \
+              $GO_IMAGE \
               tail -f /dev/null)"
             mkdir workspace
             echo ${CONTAINER_ID} > workspace/container_id
@@ -1167,7 +1182,11 @@ jobs:
         path: /tmp/testlogs
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
+    - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.2
     - GO_TAGS: ''
+    - GO_VERSION: 1.19.2
+    - GOFUMPT_VERSION: 0.3.1
+    - GOTESTSUM_VERSION: 0.5.2
 workflows:
   ci:
     jobs:
