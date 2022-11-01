@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -914,6 +915,10 @@ func testParseUserLockouts(t *testing.T) {
 	objList := list.Filter("user_lockout")
 	configutil.ParseUserLockouts(config.SharedConfig, objList)
 
+	sort.Slice(config.SharedConfig.UserLockouts[:], func(i, j int) bool {
+		return config.SharedConfig.UserLockouts[i].Type < config.SharedConfig.UserLockouts[j].Type
+	})
+
 	expected := &Config{
 		SharedConfig: &configutil.SharedConfig{
 			UserLockouts: []*configutil.UserLockout{
@@ -953,6 +958,10 @@ func testParseUserLockouts(t *testing.T) {
 			},
 		},
 	}
+
+	sort.Slice(expected.SharedConfig.UserLockouts[:], func(i, j int) bool {
+		return expected.SharedConfig.UserLockouts[i].Type < expected.SharedConfig.UserLockouts[j].Type
+	})
 	config.Prune()
 	require.Equal(t, config, *expected)
 }
