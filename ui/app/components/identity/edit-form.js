@@ -85,5 +85,8 @@ export default Component.extend({
         return this.onSave({ saveType: 'delete', model });
       });
     },
+    handlePolicySelection(selection) {
+      this.model.set('policies', selection);
+    },
   },
 });

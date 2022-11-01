@@ -12,7 +12,7 @@
     }}
   {{else}}
     {{#if @label}}
-      <label for={{@id}} class="is-label" data-test-field-label>
+      <label for={{@id}} class={{if @labelClass @labelClass "is-label"}} data-test-field-label>
         {{@label}}
         {{#if @helpText}}
           <InfoTooltip>{{@helpText}}</InfoTooltip>
@@ -72,7 +72,7 @@
     </ul>
 
   {{/if}}
-  {{#if this.newModelRecord}}
+  {{#if (or this.createdRecord this.modelData)}}
     <Modal
       @title="Create new {{singularize @id}}"
       @onClose={{action (mut this.showModal) false}}
@@ -81,9 +81,11 @@
       @showCloseButton={{false}}
     >
       <section class="modal-card-body">
-        <p class="has-bottom-margin-s" data-test-modal-subtext>
-          {{@modalSubtext}}
-        </p>
+        {{#if @modalSubtext}}
+          <p class="has-bottom-margin-s" data-test-modal-subtext>
+            {{@modalSubtext}}
+          </p>
+        {{/if}}
         {{#if (has-block)}}
           {{yield}}
         {{else}}
@@ -91,7 +93,8 @@
           {{! form must receive an @onSave and @onCancel arg that executes the callback}}
           {{component
             @modalFormComponent
-            model=this.newModelRecord
+            model=this.createdRecord
+            modelData=this.modelData
             onSave=this.resetModal
             onCancel=this.resetModal
             isInline=true

@@ -12,18 +12,18 @@ import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-ut
  * **!! NOTE: any form passed must be able to receive an @onSave and @onCancel arg so that the modal will close properly. See `oidc/client-form.hbs` that renders a modal for the `oidc/assignment-form.hbs` as an example.
  * @example
  * <SearchSelectWithModal
- *         @id="assignments"
- *         @models={{array "oidc/assignment"}}
- *         @label="assignment name"
- *         @subText="Search for an existing assignment, or type a new name to create it."
- *         @inputValue={{map-by "id" @model.assignments}}
- *         @onChange={{this.handleSearchSelect}}
- *         {{! since this is the "limited" radio select option we do not want to include 'allow_all' }}
- *         @excludeOptions={{array "allow_all"}}
- *         @fallbackComponent="string-list"
- *         @modalFormComponent="oidc/assignment-form"
- *         @modalSubtext="Use assignment to specify which Vault entities and groups are allowed to authenticate."
- *       />
+ *   @id="assignments"
+ *   @models={{array "oidc/assignment"}}
+ *   @label="assignment name"
+ *   @subText="Search for an existing assignment, or type a new name to create it."
+ *   @inputValue={{map-by "id" @model.assignments}}
+ *   @onChange={{this.handleSearchSelect}}
+ *   {{! since this is the "limited" radio select option we do not want to include 'allow_all' }}
+ *   @excludeOptions={{array "allow_all"}}
+ *   @fallbackComponent="string-list"
+ *   @modalFormComponent="oidc/assignment-form"
+ *   @modalSubtext="Use assignment to specify which Vault entities and groups are allowed to authenticate."
+ * />
  *
  // * component functionality
  * @param {function} onChange - The onchange action for this form field. ** SEE UTIL ** search-select-has-many.js if selecting models from a hasMany relationship
@@ -54,7 +54,8 @@ export default class SearchSelectWithModal extends Component {
   @tracked selectedOptions = []; // list of selected options
   @tracked dropdownOptions = []; // options that will render in dropdown, updates as selections are added/discarded
   @tracked showModal = false;
-  @tracked newModelRecord = null;
+  @tracked createdRecord = null;
+  @tracked modelData = null;
 
   get hidePowerSelect() {
     return this.selectedOptions.length >= this.args.selectLimit;
@@ -177,6 +178,9 @@ export default class SearchSelectWithModal extends Component {
     if (term.length === 0) {
       return this.dropdownOptions;
     }
+    if (this.args.models?.some((model) => model.includes('policy'))) {
+      term = term.toLowerCase();
+    }
     const newOptions = this.filter(this.dropdownOptions, term);
     this.addCreateOption(term, newOptions);
     return newOptions;
@@ -190,10 +194,12 @@ export default class SearchSelectWithModal extends Component {
     if (selection && selection.__isSuggestion__) {
       const name = selection.__value__;
       this.showModal = true;
-      let modelName = this.args.models.length === 1 ? this.args.models[0] : 'SOMETHING'; // TODO refactor to allow for multiple models
-      let createRecord = await this.store.createRecord(modelName);
-      createRecord.name = name;
-      this.newModelRecord = createRecord;
+      // if multiple models, parent handles creating the record so just pass modelData
+      const modelName = this.args.models.length === 1 ? this.args.models[0] : null;
+      this.createdRecord = modelName ? await this.store.createRecord(modelName) : null;
+      // pass either the created model OR modelData
+      if (this.createdRecord) this.createdRecord.name = name;
+      if (!this.createdRecord) this.modelData = { name };
     } else {
       this.selectedOptions.pushObject(selection);
       this.dropdownOptions.removeObject(selection);
@@ -210,6 +216,6 @@ export default class SearchSelectWithModal extends Component {
       this.selectedOptions.pushObject({ name, id: name });
       this.handleChange();
     }
-    this.newModelRecord = null;
+    this.createdRecord = null;
   }
 }
