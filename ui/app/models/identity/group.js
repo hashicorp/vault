@@ -34,11 +34,8 @@ export default IdentityModel.extend({
     editType: 'kv',
   }),
   policies: attr({
-    label: 'Policies',
-    editType: 'searchSelect',
+    editType: 'yield',
     isSectionHeader: true,
-    fallbackComponent: 'string-list',
-    models: ['policy/acl', 'policy/rgp'],
   }),
   memberGroupIds: attr({
     label: 'Member Group IDs',
