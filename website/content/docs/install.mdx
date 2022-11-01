@@ -75,8 +75,18 @@ To verify Vault is installed, run `vault -h` on your system. You should
 see the help output. If you are executing it from the command line, ensure it is
 on your `PATH` to avoid receiving an error that Vault is not found.
 
+Since `make` builds in the `bin` subdirectory, Vault should be present in `./bin/vault` 
+(assuming you ran `make` in the current directory). If you add that directory to your
+`PATH`, or install the Vault binary into your existing `PATH`, the following should work:
+
 ```shell-session
 $ vault -h
+```
+
+But you can also run the following without any `PATH` change:
+
+```shell-session
+$ ./bin/vault -h
 ```
 
 [learn-vault-install]: https://learn.hashicorp.com/vault/getting-started/install
