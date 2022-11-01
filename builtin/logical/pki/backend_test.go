@@ -5837,6 +5837,29 @@ EBuOIhCv6WiwVyGeTVynuHYkHyw3rIL/zU7N8+zIFV2G2M1UAv5D/eyh/74cr9Of
 	requireSuccessNonNilResponse(t, resp, err, "failed to issue PSS leaf")
 }
 
+func TestPKI_EmptyCRLConfigUpgraded(t *testing.T) {
+	t.Parallel()
+	b, s := createBackendWithStorage(t)
+
+	// Write an empty CRLConfig into storage.
+	crlConfigEntry, err := logical.StorageEntryJSON("config/crl", &crlConfig{})
+	require.NoError(t, err)
+	err = s.Put(ctx, crlConfigEntry)
+	require.NoError(t, err)
+
+	resp, err := CBRead(b, s, "config/crl")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.Equal(t, resp.Data["expiry"], defaultCrlConfig.Expiry)
+	require.Equal(t, resp.Data["disable"], defaultCrlConfig.Disable)
+	require.Equal(t, resp.Data["ocsp_disable"], defaultCrlConfig.OcspDisable)
+	require.Equal(t, resp.Data["auto_rebuild"], defaultCrlConfig.AutoRebuild)
+	require.Equal(t, resp.Data["auto_rebuild_grace_period"], defaultCrlConfig.AutoRebuildGracePeriod)
+	require.Equal(t, resp.Data["enable_delta"], defaultCrlConfig.EnableDelta)
+	require.Equal(t, resp.Data["delta_rebuild_interval"], defaultCrlConfig.DeltaRebuildInterval)
+}
+
 var (
 	initTest  sync.Once
 	rsaCAKey  string
