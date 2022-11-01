@@ -12,16 +12,11 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-      - name: Fetch go version used for circleci
-        id: getExecutorImage
-        uses: mikefarah/yq@master
-        with:
-          cmd: yq '.references.environment.GO_IMAGE' '.circleci/config/executors/@executors.yml'
       - name: Verify go versions in tree are consistent with one another
         run: |
           GOVER=$(cat .go-version)
           EXPECTED="docker.mirror.hashicorp.services/cimg/go:$GOVER"
-          GOT="${{ steps.getExecutorImage.outputs.result }}"
+          GOT=$(yq .references.environment.GO_IMAGE .circleci/config/executors/@executors.yml)
           if [ "$EXPECTED" != "$GOT" ]; then
             echo "version mismatch, .go-version has '$GOVER' and circleci config uses '$GOT'"
             exit 1
