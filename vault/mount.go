@@ -394,6 +394,16 @@ type APIMountConfig struct {
 	PluginName string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 }
 
+type FailedLoginUser struct {
+	aliasName     string
+	mountAccessor string
+}
+
+type FailedLoginInfo struct {
+	count               uint
+	lastFailedLoginTime int
+}
+
 // Clone returns a deep copy of the mount entry
 func (e *MountEntry) Clone() (*MountEntry, error) {
 	cp, err := copystructure.Copy(e)

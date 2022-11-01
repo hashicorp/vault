@@ -50,6 +50,19 @@ func getAuthRegisterFunc(c *Core) (RegisterAuthFunc, error) {
 	return c.RegisterAuth, nil
 }
 
+func getUserFailedLoginInfo(ctx context.Context, c *Core, userInfo FailedLoginUser) *FailedLoginInfo {
+	failedLoginInfo := c.GetUserFailedLoginInfo(ctx, userInfo)
+	return failedLoginInfo
+}
+
+func (c *Core) updateUserFailedLoginInfo(ctx context.Context, userInfo FailedLoginUser, failedLoginInfo FailedLoginInfo) error {
+	err := c.UpdateUserFailedLoginInfo(ctx, userInfo, failedLoginInfo)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func possiblyForwardAliasCreation(ctx context.Context, c *Core, inErr error, auth *logical.Auth, entity *identity.Entity) (*identity.Entity, bool, error) {
 	return entity, false, inErr
 }
