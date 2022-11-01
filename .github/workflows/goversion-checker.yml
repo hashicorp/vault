@@ -1,0 +1,29 @@
+name: Check Go version
+
+on:
+  pull_request:
+    types: [opened, synchronize, labeled, unlabeled]
+
+jobs:
+  go-version-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - name: Fetch go version used for circleci
+        id: getExecutorImage
+        uses: mikefarah/yq@master
+        with:
+          cmd: yq '.references.environment.GO_IMAGE' '.circleci/config/executors/@executors.yml'
+      - name: Verify go versions in tree are consistent with one another
+        run: |
+          # Check if there is a diff in the changelog directory.
+          GOVER=$(cat .go-version)
+          EXPECTED="docker.mirror.hashicorp.services/cimg/go:$GOVER"
+          GOT="${{ steps.getExecutorImage.outputs.result }}"
+          if [ "$EXPECTED" != "$GOT" ]; then
+            echo "version mismatch, .go-version has '$GOVER' and circleci config uses '$GOT'"
+            exit 1
+          fi
