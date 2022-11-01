@@ -20,9 +20,6 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/hashicorp/vault/helper/versions"
-	"golang.org/x/crypto/sha3"
-
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-memdb"
@@ -36,6 +33,7 @@ import (
 	"github.com/hashicorp/vault/helper/monitor"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/random"
+	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -44,6 +42,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/mapstructure"
+	"golang.org/x/crypto/sha3"
 )
 
 const (

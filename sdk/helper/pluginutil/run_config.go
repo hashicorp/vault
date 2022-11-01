@@ -45,7 +45,7 @@ func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error
 	if rc.MLock || (rc.Wrapper != nil && rc.Wrapper.MlockEnabled()) {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMlockEnabled, "true"))
 	}
-	version, err := rc.wrapper.VaultVersion(ctx)
+	version, err := rc.Wrapper.VaultVersion(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	systemd "github.com/coreos/go-systemd/daemon"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/vault/api"
