@@ -583,7 +583,6 @@ func TestOpenAPI_CustomDecoder(t *testing.T) {
 
 	docOrig := NewOASDocument("version")
 	err := documentPath(p, nil, "kv", false, logical.TypeLogical, docOrig)
-	err := documentPath(p, nil, logical.TypeLogical, docOrig)
 	if err != nil {
 		t.Fatal(err)
 	}
