@@ -70,7 +70,8 @@ export default IdentityModel.extend({
       return numEntities + numGroups > 0;
     }
   ),
-
+  policyPath: lazyCapabilities(apiPath`sys/policies`),
+  canCreatePolicies: alias('policyPath.canCreate'),
   alias: belongsTo('identity/group-alias', { async: false, readOnly: true }),
   updatePath: identityCapabilities(),
   canDelete: alias('updatePath.canDelete'),

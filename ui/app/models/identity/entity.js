@@ -4,6 +4,7 @@ import { alias } from '@ember/object/computed';
 import IdentityModel from './_base';
 import apiPath from 'vault/utils/api-path';
 import attachCapabilities from 'vault/lib/attach-capabilities';
+import lazyCapabilities from 'vault/macros/lazy-capabilities';
 
 let Model = IdentityModel.extend({
   formFields: computed(function () {
@@ -43,6 +44,8 @@ let Model = IdentityModel.extend({
   canEdit: alias('updatePath.canUpdate'),
   canRead: alias('updatePath.canRead'),
   canAddAlias: alias('aliasPath.canCreate'),
+  policyPath: lazyCapabilities(apiPath`sys/policies`),
+  canCreatePolicies: alias('policyPath.canCreate'),
 });
 
 export default attachCapabilities(Model, {

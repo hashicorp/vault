@@ -26,16 +26,29 @@
     {{#each this.model.fields as |attr|}}
       <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}}>
         <div class="form-section">
-          <SearchSelectWithModal
-            @id="policies"
-            @label="Policies"
-            @labelClass="title is-4"
-            @models={{array "policy/acl" "policy/rgp"}}
-            @inputValue={{@model.policies}}
-            @onChange={{action "handlePolicySelection"}}
-            @fallbackComponent="string-list"
-            @modalFormComponent="policy-form"
-          />
+          {{#if this.model.canCreatePolicies}}
+            <SearchSelectWithModal
+              @id="policies"
+              @label="Policies"
+              @labelClass="title is-4"
+              @models={{array "policy/acl" "policy/rgp"}}
+              @inputValue={{@model.policies}}
+              @onChange={{action "handlePolicySelection"}}
+              @fallbackComponent="string-list"
+              @modalFormComponent="policy-form"
+            />
+          {{else}}
+            <SearchSelect
+              @id="policies"
+              @label="Policies"
+              @labelClass="title is-4"
+              @models={{array "policy/acl" "policy/rgp"}}
+              @inputValue={{@model.policies}}
+              @onChange={{action "handlePolicySelection"}}
+              @fallbackComponent="string-list"
+              @disallowNewItems={{true}}
+            />
+          {{/if}}
         </div>
       </FormField>
     {{/each}}
