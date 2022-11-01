@@ -19,7 +19,6 @@ jobs:
           cmd: yq '.references.environment.GO_IMAGE' '.circleci/config/executors/@executors.yml'
       - name: Verify go versions in tree are consistent with one another
         run: |
-          # Check if there is a diff in the changelog directory.
           GOVER=$(cat .go-version)
           EXPECTED="docker.mirror.hashicorp.services/cimg/go:$GOVER"
           GOT="${{ steps.getExecutorImage.outputs.result }}"
