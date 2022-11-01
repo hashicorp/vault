@@ -192,7 +192,8 @@ This endpoint returns the configuration data for the plugin with the given name.
 - `type` `(string: <required>)` – Specifies the type of this plugin. May be
   "auth", "database", or "secret".
 
-- `version` `(string: "")` – The semantic version of the plugin to read.
+- `version` `(string: "")` – The semantic version of the plugin to read. Required
+  if the plugin was registered with a version.
 
 ### Sample Request
 
