@@ -17,7 +17,7 @@ This endpoint reloads mounted plugin backends.
 
 | Method | Path -                        |
 | :----- | :---------------------------- |
-| `PUT`  | `/sys/plugins/reload/backend` |
+| `POST` | `/sys/plugins/reload/backend` |
 
 ### Parameters
 
@@ -44,7 +44,7 @@ This endpoint reloads mounted plugin backends.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/plugins/reload/backend
 ```

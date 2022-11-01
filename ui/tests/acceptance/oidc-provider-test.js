@@ -6,8 +6,8 @@ import logout from 'vault/tests/pages/logout';
 import authForm from 'vault/tests/pages/components/auth-form';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
-import { visit, settled, currentURL, find } from '@ember/test-helpers';
-
+import { visit, settled, currentURL } from '@ember/test-helpers';
+import { clearRecord } from 'vault/tests/helpers/oidc-config';
 const consoleComponent = create(consoleClass);
 const authFormComponent = create(authForm);
 
@@ -66,7 +66,7 @@ const entityAlias = async function (entityId, accessor, groupId) {
   return consoleComponent.lastLogOutput.includes('Success');
 };
 const setupWebapp = async function (redirect) {
-  let webappName = `my-webapp-${new Date().getTime()}`;
+  let webappName = 'my-webapp';
   await consoleComponent.runCommands([
     `write identity/oidc/client/${webappName} redirect_uris="${redirect}" assignments="my-assignment" key="sigkey" id_token_ttl="30m" access_token_ttl="1h"`,
     `read -field=client_id identity/oidc/client/${webappName}`,
@@ -78,7 +78,7 @@ const setupWebapp = async function (redirect) {
   return output;
 };
 const setupProvider = async function (clientId) {
-  let providerName = `my-provider-${new Date().getTime()}`;
+  let providerName = `my-provider`;
   await consoleComponent.runCommands(
     `write identity/oidc/provider/${providerName} allowed_client_ids="${clientId}" scopes="user,groups"`
   );
@@ -125,6 +125,7 @@ module('Acceptance | oidc provider', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
+    this.store = await this.owner.lookup('service:store');
     await logout.visit();
     return authPage.login();
   });
@@ -154,12 +155,15 @@ module('Acceptance | oidc provider', function (hooks) {
     await authFormComponent.password(USER_PASSWORD);
     await authFormComponent.login();
     await settled();
-    assert.equal(currentURL(), url, 'URL is as expected after login');
+    assert.strictEqual(currentURL(), url, 'URL is as expected after login');
     assert.dom('[data-test-oidc-redirect]').exists('redirect text exists');
-    assert.ok(
-      find('[data-test-oidc-redirect]').textContent.includes(`${callback}?code=`),
-      'Successful redirect to callback'
-    );
+    assert
+      .dom('[data-test-oidc-redirect]')
+      .hasTextContaining(`${callback}?code=`, 'Successful redirect to callback');
+
+    //* clean up test state
+    await clearRecord(this.store, 'oidc/client', 'my-webapp');
+    await clearRecord(this.store, 'oidc/provider', 'my-provider');
   });
 
   test('OIDC Provider redirects to auth if current token and prompt = login', async function (assert) {
@@ -178,10 +182,13 @@ module('Acceptance | oidc provider', function (hooks) {
     await authFormComponent.password(USER_PASSWORD);
     await authFormComponent.login();
     await settled();
-    assert.ok(
-      find('[data-test-oidc-redirect]').textContent.includes(`${callback}?code=`),
-      'Successful redirect to callback'
-    );
+    assert
+      .dom('[data-test-oidc-redirect]')
+      .hasTextContaining(`${callback}?code=`, 'Successful redirect to callback');
+
+    //* clean up test state
+    await clearRecord(this.store, 'oidc/client', 'my-webapp');
+    await clearRecord(this.store, 'oidc/provider', 'my-provider');
   });
 
   test('OIDC Provider shows consent form when prompt = consent', async function (assert) {
@@ -199,5 +206,9 @@ module('Acceptance | oidc provider', function (hooks) {
       'Does not redirect to auth because user is already logged in'
     );
     assert.dom('[data-test-consent-form]').exists('Consent form exists');
+
+    //* clean up test state
+    await clearRecord(this.store, 'oidc/client', 'my-webapp');
+    await clearRecord(this.store, 'oidc/provider', 'my-provider');
   });
 });

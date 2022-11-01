@@ -1,4 +1,4 @@
-import { module, test } from 'qunit';
+import { module, test, skip } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
@@ -24,8 +24,8 @@ module('Integration | Component | shamir-modal-flow', function (hooks) {
         @fetchOnInit=true
         @generateAction=true
         @buttonText="My CTA"
-        @onClose={{onClose}}
-        @isActive={{isActive}}
+        @onClose={{this.onClose}}
+        @isActive={{this.isActive}}
       >
         <p>Inner content goes here</p>
       </ShamirModalFlow>
@@ -47,13 +47,13 @@ module('Integration | Component | shamir-modal-flow', function (hooks) {
         @fetchOnInit=true
         @generateAction=true
         @buttonText="Crazy CTA"
-        @onClose={{onClose}}
-        @isActive={{isActive}}
+        @onClose={{this.onClose}}
+        @isActive={{this.isActive}}
       >
         <p>Inner content goes here</p>
       </ShamirModalFlow>
     `);
-    assert.dom('[data-test-shamir-input]').exists('Asks for Master Key Portion');
+    assert.dom('[data-test-shamir-input]').exists('Asks for root key Portion');
     assert.dom('[data-test-shamir-modal-cancel-button]').hasText('Cancel', 'Shows cancel button');
   });
 
@@ -67,8 +67,8 @@ module('Integration | Component | shamir-modal-flow', function (hooks) {
         @fetchOnInit=true
         @generateAction=true
         @buttonText="Crazy CTA"
-        @onClose={{onClose}}
-        @isActive={{isActive}}
+        @onClose={{this.onClose}}
+        @isActive={{this.isActive}}
       >
         <p>Inner content goes here</p>
       </ShamirModalFlow>
@@ -76,10 +76,8 @@ module('Integration | Component | shamir-modal-flow', function (hooks) {
     assert.dom('[data-test-shamir-encoded-token]').hasText('my-encoded-token', 'Shows encoded token');
     assert.dom('[data-test-shamir-modal-cancel-button]').hasText('Close', 'Shows close button');
   });
-  /*
-  test('DR Secondary actions', async function (assert) {
+  skip('DR Secondary actions', async function () {
     // DR Secondaries cannot be tested yet, but once they can
     // we should add tests for Cancel button functionality
-  })
-  */
+  });
 });

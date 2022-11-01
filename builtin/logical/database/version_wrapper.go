@@ -2,15 +2,14 @@ package database
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/random"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -20,10 +19,12 @@ type databaseVersionWrapper struct {
 	v5 v5.Database
 }
 
+var _ logical.PluginVersioner = databaseVersionWrapper{}
+
 // newDatabaseWrapper figures out which version of the database the pluginName is referring to and returns a wrapper object
 // that can be used to make operations on the underlying database plugin.
-func newDatabaseWrapper(ctx context.Context, pluginName string, sys pluginutil.LookRunnerUtil, logger log.Logger) (dbw databaseVersionWrapper, err error) {
-	newDB, err := v5.PluginFactory(ctx, pluginName, sys, logger)
+func newDatabaseWrapper(ctx context.Context, pluginName string, pluginVersion string, sys pluginutil.LookRunnerUtil, logger log.Logger) (dbw databaseVersionWrapper, err error) {
+	newDB, err := v5.PluginFactoryVersion(ctx, pluginName, pluginVersion, sys, logger)
 	if err == nil {
 		dbw = databaseVersionWrapper{
 			v5: newDB,
@@ -34,7 +35,7 @@ func newDatabaseWrapper(ctx context.Context, pluginName string, sys pluginutil.L
 	merr := &multierror.Error{}
 	merr = multierror.Append(merr, err)
 
-	legacyDB, err := v4.PluginFactory(ctx, pluginName, sys, logger)
+	legacyDB, err := v4.PluginFactoryVersion(ctx, pluginName, pluginVersion, sys, logger)
 	if err == nil {
 		dbw = databaseVersionWrapper{
 			v4: legacyDB,
@@ -229,37 +230,19 @@ func (d databaseVersionWrapper) Close() error {
 	return d.v4.Close()
 }
 
-// /////////////////////////////////////////////////////////////////////////////////
-// Password generation
-// /////////////////////////////////////////////////////////////////////////////////
-
-type passwordGenerator interface {
-	GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error)
-}
-
-var defaultPasswordGenerator = random.DefaultStringGenerator
-
-// GeneratePassword either from the v4 database or by using the provided password policy. If using a v5 database
-// and no password policy is specified, this will have a reasonable default password generator.
-func (d databaseVersionWrapper) GeneratePassword(ctx context.Context, generator passwordGenerator, passwordPolicy string) (password string, err error) {
-	if !d.isV5() && !d.isV4() {
-		return "", fmt.Errorf("no underlying database specified")
-	}
-
-	// If using the legacy database, use GenerateCredentials instead of password policies
-	// This will keep the existing behavior even though passwords can be generated with a policy
-	if d.isV4() {
-		password, err := d.v4.GenerateCredentials(ctx)
-		if err != nil {
-			return "", err
+func (d databaseVersionWrapper) PluginVersion() logical.PluginVersion {
+	// v5 Database
+	if d.isV5() {
+		if versioner, ok := d.v5.(logical.PluginVersioner); ok {
+			return versioner.PluginVersion()
 		}
-		return password, nil
 	}
 
-	if passwordPolicy == "" {
-		return defaultPasswordGenerator.Generate(ctx, rand.Reader)
+	// v4 Database
+	if versioner, ok := d.v4.(logical.PluginVersioner); ok {
+		return versioner.PluginVersion()
 	}
-	return generator.GeneratePasswordFromPolicy(ctx, passwordPolicy)
+	return logical.EmptyPluginVersion
 }
 
 func (d databaseVersionWrapper) isV5() bool {

@@ -47,33 +47,26 @@
 {{#if this.showTabs}}
   <div class="tabs-container box is-bottomless is-fullwidth is-paddingless" data-test-tabs>
     <nav class="tabs">
-      {{#unless this.isSummaryDashboard}}
-        <ul>
-          {{! template-lint-configure no-unknown-arguments-for-builtin-components "warn" }}
-          <LinkTo @route="vault.cluster.replication-dr-promote.details" @tagName="li" @activeClass="is-active">
-            <LinkTo @route="vault.cluster.replication-dr-promote.details">
-              Details
-            </LinkTo>
-          </LinkTo>
-          <LinkTo
-            @route="vault.cluster.replication-dr-promote"
-            @tagName="li"
-            @activeClass="is-active"
-            @current-when="vault.cluster.replication-dr-promote.index"
-          >
-            <LinkTo @route="vault.cluster.replication-dr-promote">
-              Manage
-            </LinkTo>
-          </LinkTo>
-          {{! template-lint-configure no-unknown-arguments-for-builtin-components "on" }}
-        </ul>
-      {{else}}
+      {{#if this.isSummaryDashboard}}
         <ul>
           <li class="is-active">
             {{link-to-external "Summary" "replication"}}
           </li>
         </ul>
-      {{/unless}}
+      {{else}}
+        <ul>
+          <LinkTo @route="vault.cluster.replication-dr-promote.details" @activeClass="is-active">
+            Details
+          </LinkTo>
+          <LinkTo
+            @route="vault.cluster.replication-dr-promote"
+            @activeClass="is-active"
+            @current-when="vault.cluster.replication-dr-promote.index"
+          >
+            Manage
+          </LinkTo>
+        </ul>
+      {{/if}}
     </nav>
   </div>
 {{/if}}

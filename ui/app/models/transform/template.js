@@ -26,6 +26,7 @@ const M = Model.extend({
     subText:
       'Alphabet defines a set of characters (UTF-8) that is used for FPE to determine the validity of plaintext and ciphertext values. You can choose a built-in one, or create your own.',
     editType: 'searchSelect',
+    isSectionHeader: true,
     fallbackComponent: 'string-list',
     label: 'Alphabet',
     models: ['transform/alphabet'],

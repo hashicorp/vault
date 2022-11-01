@@ -39,8 +39,26 @@ func pathLogin(b *backend) *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation:         b.pathLogin,
 			logical.AliasLookaheadOperation: b.pathLoginAliasLookahead,
+			logical.ResolveRoleOperation:    b.pathLoginResolveRole,
 		},
 	}
+}
+
+func (b *backend) pathLoginResolveRole(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	var matched *ParsedCert
+	if verifyResp, resp, err := b.verifyCredentials(ctx, req, data); err != nil {
+		return nil, err
+	} else if resp != nil {
+		return resp, nil
+	} else {
+		matched = verifyResp
+	}
+
+	if matched == nil {
+		return logical.ErrorResponse("no certificate was matched by this request"), nil
+	}
+
+	return logical.ResolveRoleResponse(matched.Entry.Name)
 }
 
 func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -59,6 +77,18 @@ func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Requ
 }
 
 func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	config, err := b.Config(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	if b.crls == nil {
+		// Probably invalidated due to replication, but we need these to proceed
+		if err := b.populateCRLs(ctx, req.Storage); err != nil {
+			return nil, err
+		}
+	}
+
 	var matched *ParsedCert
 	if verifyResp, resp, err := b.verifyCredentials(ctx, req, data); err != nil {
 		return nil, err
@@ -114,6 +144,11 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 			Name: clientCerts[0].Subject.CommonName,
 		},
 	}
+
+	if config.EnableIdentityAliasMetadata {
+		auth.Alias.Metadata = metadata
+	}
+
 	matched.Entry.PopulateTokenAuth(auth)
 
 	return &logical.Response{
@@ -125,6 +160,12 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	config, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, err
+	}
+
+	if b.crls == nil {
+		if err := b.populateCRLs(ctx, req.Storage); err != nil {
+			return nil, err
+		}
 	}
 
 	if !config.DisableBinding {
@@ -512,6 +553,7 @@ func (b *backend) checkForChainInCRLs(chain []*x509.Certificate) bool {
 			badChain = true
 			break
 		}
+
 	}
 	return badChain
 }

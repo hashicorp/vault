@@ -366,7 +366,9 @@ func TestTransit_UpdateKeyConfigWithAutorotation(t *testing.T) {
 			_, err = client.Logical().Write(fmt.Sprintf("transit/keys/%s", keyName), map[string]interface{}{
 				"auto_rotate_period": test.initialAutoRotatePeriod,
 			})
-
+			if err != nil {
+				t.Fatal(err)
+			}
 			resp, err := client.Logical().Write(fmt.Sprintf("transit/keys/%s/config", keyName), map[string]interface{}{
 				"auto_rotate_period": test.newAutoRotatePeriod,
 			})

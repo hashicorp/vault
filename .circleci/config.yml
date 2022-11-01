@@ -7,7 +7,9 @@ version: 2
 jobs:
   install-ui-dependencies:
     docker:
-    - image: docker.mirror.hashicorp.services/node:14-buster
+    - environment:
+        JOBS: 2
+      image: docker.mirror.hashicorp.services/circleci/node:14-browsers
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
@@ -28,7 +30,9 @@ jobs:
         - ui/node_modules
   test-ui:
     docker:
-    - image: docker.mirror.hashicorp.services/node:14-buster
+    - environment:
+        JOBS: 2
+      image: docker.mirror.hashicorp.services/circleci/node:14-browsers
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     resource_class: xlarge
@@ -36,7 +40,7 @@ jobs:
     - run:
         command: |
           case "$CIRCLE_BRANCH" in
-          main|ui/*|release/*|merge*) ;;
+          main|ui/*|backport/ui/*|release/*|merge*) ;;
           *) # If the branch being tested doesn't match one of the above patterns,
              # we don't need to run test-ui and can abort the job.
              circleci-agent step halt
@@ -55,18 +59,6 @@ jobs:
         at: .
     - run:
         command: |
-          set -x
-
-          # Install Chrome
-          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub \
-            | apt-key add -
-          echo "deb http://dl.google.com/linux/chrome/deb/ stable main" \
-            | tee /etc/apt/sources.list.d/google-chrome.list
-          apt-get update
-          apt-get -y install google-chrome-stable
-          rm /etc/apt/sources.list.d/google-chrome.list
-          rm -rf /var/lib/apt/lists/* /var/cache/apt/*
-
           # Add ./bin to the PATH so vault binary can be run by Ember tests
           export PATH="${PWD}/bin:${PATH}"
 
@@ -79,27 +71,9 @@ jobs:
         path: ui/test-results
     - store_test_results:
         path: ui/test-results
-  test-ui-browserstack:
-    docker:
-    - image: docker.mirror.hashicorp.services/node:14-buster
-    shell: /usr/bin/env bash -euo pipefail -c
-    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
-    resource_class: xlarge
-    steps:
-    - checkout
-    - restore_cache:
-        key: yarn-lock-v7-{{ checksum "ui/yarn.lock" }}
-        name: Restore yarn cache
-    - attach_workspace:
-        at: .
-    - run:
-        command: |
-          # Add ./bin to the PATH so vault binary can be found.
-          export PATH="${PWD}"/bin:${PATH}
-          make test-ui-browserstack
-        name: Run Browserstack Tests
   build-go-dev:
-    machine: true
+    machine:
+      image: ubuntu-2004:202201-02
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
@@ -113,6 +87,7 @@ jobs:
           rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
           GOPATH="/home/circleci/go"
           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
+          mkdir $GOPATH/bin 2>/dev/null || { sudo mkdir $GOPATH/bin && sudo chmod 777 $GOPATH/bin; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
           echo "export GOPROXY=off" >> "$BASH_ENV"
@@ -125,7 +100,7 @@ jobs:
     - checkout
     - restore_cache:
         keys:
-        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - attach_workspace:
         at: .
@@ -145,28 +120,12 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.17.5
-    - GOFUMPT_VERSION: 0.2.1
+    - GO_VERSION: 1.19.2
+    - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
-  algolia-index:
-    docker:
-    - image: node:14
-    steps:
-    - checkout
-    - run:
-        command: |
-          if  [ "$CIRCLE_REPOSITORY_URL" != "git@github.com:hashicorp/vault.git" ]; then
-            echo "Not Vault OSS Repo, not indexing Algolia"
-            exit 0
-          fi
-          cd website/
-          npm install -g npm@latest
-          npm install
-          node scripts/index_search_content.js
-        name: Push content to Algolia Index
   test-go-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.5
+    - image: docker.mirror.hashicorp.services/cimg/go:1.19.2
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -185,10 +144,10 @@ jobs:
     - checkout
     - setup_remote_docker:
         docker_layer_caching: true
-        version: 18.09.3
+        version: 20.10.17
     - add_ssh_keys:
         fingerprints:
-        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+        - b8:e2:38:f8:5b:1b:82:f3:1f:23:fa:46:6e:95:e7:e9
     - run:
         command: |
           git config --global url."git@github.com:".insteadOf https://github.com/
@@ -201,7 +160,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
@@ -260,6 +219,7 @@ jobs:
           # has its own remote docker VM.
 
           make prep
+
           mkdir -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
@@ -272,7 +232,7 @@ jobs:
           export VAULT_LICENSE_CI="$VAULT_LICENSE"
           VAULT_LICENSE=
 
-          # Create a docker network for our testcontainer
+          # Create a docker network for our test container
           if [ $USE_DOCKER == 1 ]; then
             # Despite the fact that we're using a circleci image (thus getting the
             # version they chose for the docker cli) and that we're specifying a
@@ -281,15 +241,17 @@ jobs:
             # reasons unclear.
             export DOCKER_API_VERSION=1.39
 
-            export TEST_DOCKER_NETWORK_ID=$(docker network list -q -f 'name=vaulttest')
+            TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
+            export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
             if [ -z $TEST_DOCKER_NETWORK_ID ]; then
-              TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
+              docker network prune -f
+              TEST_DOCKER_NETWORK_ID=$(docker network create "${TEST_DOCKER_NETWORK_NAME}")
             fi
 
 
 
-            # Start a docker testcontainer to run the tests in
-            docker run -d \
+            # Start a docker test container to run the tests in
+            CONTAINER_ID="$(docker run -d \
               -e TEST_DOCKER_NETWORK_ID \
               -e GOPRIVATE \
               -e DOCKER_CERT_PATH \
@@ -298,19 +260,48 @@ jobs:
               -e DOCKER_TLS_VERIFY \
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
-              --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.5 \
-              tail -f /dev/null
+              --network ${TEST_DOCKER_NETWORK_NAME} \
+              docker.mirror.hashicorp.services/cimg/go:1.19.2 \
+              tail -f /dev/null)"
+            mkdir workspace
+            echo ${CONTAINER_ID} > workspace/container_id
+
+            # Hack: Docker permissions appear to have changed; let's explicitly
+            # add a new user/group with the correct host uid to the docker
+            # container, fixing all of these permissions issues correctly. We
+            # then have to run with this user consistently in the future.
+            #
+            # Notably, in this shell pipeline we see:
+            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+            #
+            # but inside the docker image below, we see:
+            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+            #
+            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+            export HOST_GID="$(id -g)"
+            export HOST_UID="$(id -u)"
+            export CONT_GID="$(docker exec ${CONTAINER_ID} sh -c 'id -g')"
+            export CONT_GNAME="$(docker exec ${CONTAINER_ID} sh -c 'id -g -n')"
+            export CONT_UID="$(docker exec ${CONTAINER_ID} sh -c 'id -u')"
+            if (( HOST_UID != CONT_UID )); then
+              # Only provision a group if necessary; otherwise reuse the
+              # existing one.
+              if (( HOST_GID != CONT_GID )); then
+                docker exec -e HOST_GID -e CONT_GNAME ${CONTAINER_ID} sh -c 'sudo groupmod -g $HOST_GID $CONT_GNAME'
+              fi
+
+              docker exec -e CONT_GNAME -e HOST_UID ${CONTAINER_ID} sh -c 'sudo usermod -a -G $CONT_GNAME -u $HOST_UID circleci'
+            fi
 
             # Run tests
-            test -d /tmp/go-cache && docker cp /tmp/go-cache testcontainer:/tmp/gocache
-            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
-            docker cp . testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/
-            docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
+            test -d /tmp/go-cache && docker cp /tmp/go-cache ${CONTAINER_ID}:/tmp/gocache
+            docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+            docker cp . ${CONTAINER_ID}:/home/circleci/go/src/github.com/hashicorp/vault/
+            docker cp $DOCKER_CERT_PATH/ ${CONTAINER_ID}:$DOCKER_CERT_PATH
 
             # Copy the downloaded modules inside the container.
-            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/pkg'
-            docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/home/circleci/go/pkg/mod
+            docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/pkg'
+            docker cp "$(go env GOPATH)/pkg/mod" ${CONTAINER_ID}:/home/circleci/go/pkg/mod
 
             docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
               -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
@@ -319,7 +310,7 @@ jobs:
               -e GOPROXY="off" \
               -e VAULT_LICENSE_CI \
               -e GOARCH=amd64 \
-              testcontainer \
+              ${CONTAINER_ID} \
                 gotestsum --format=short-verbose \
                   --junitfile test-results/go-test/results.xml \
                   --jsonfile test-results/go-test/results.json \
@@ -348,8 +339,8 @@ jobs:
         no_output_timeout: 60m
     - run:
         command: |
-          docker cp testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/test-results .
-          docker cp testcontainer:/tmp/gocache /tmp/go-cache
+          docker cp $(cat workspace/container_id):/home/circleci/go/src/github.com/hashicorp/vault/test-results .
+          docker cp $(cat workspace/container_id):/tmp/gocache /tmp/go-cache
         name: Copy test results
         when: always
     - store_artifacts:
@@ -362,7 +353,8 @@ jobs:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
   fmt:
-    machine: true
+    machine:
+      image: ubuntu-2004:202201-02
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
@@ -376,6 +368,7 @@ jobs:
           rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
           GOPATH="/home/circleci/go"
           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
+          mkdir $GOPATH/bin 2>/dev/null || { sudo mkdir $GOPATH/bin && sudo chmod 777 $GOPATH/bin; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
           echo "export GOPROXY=https://proxy.golang.org,direct" >> "$BASH_ENV"
@@ -388,6 +381,7 @@ jobs:
     - checkout
     - run:
         command: |
+          echo "Using gofumpt version ${GOFUMPT_VERSION}"
           go install "mvdan.cc/gofumpt@v${GOFUMPT_VERSION}"
           make fmt
           if ! git diff --exit-code; then
@@ -398,12 +392,12 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.17.5
-    - GOFUMPT_VERSION: 0.2.1
+    - GO_VERSION: 1.19.2
+    - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.5
+    - image: docker.mirror.hashicorp.services/cimg/go:1.19.2
     resource_class: xlarge
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -422,7 +416,7 @@ jobs:
     - checkout
     - add_ssh_keys:
         fingerprints:
-        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+        - b8:e2:38:f8:5b:1b:82:f3:1f:23:fa:46:6e:95:e7:e9
     - run:
         command: |
           git config --global url."git@github.com:".insteadOf https://github.com/
@@ -435,7 +429,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
@@ -493,6 +487,7 @@ jobs:
           # has its own remote docker VM.
 
           make prep
+
           mkdir -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
@@ -505,7 +500,7 @@ jobs:
           export VAULT_LICENSE_CI="$VAULT_LICENSE"
           VAULT_LICENSE=
 
-          # Create a docker network for our testcontainer
+          # Create a docker network for our test container
           if [ $USE_DOCKER == 1 ]; then
             # Despite the fact that we're using a circleci image (thus getting the
             # version they chose for the docker cli) and that we're specifying a
@@ -514,15 +509,17 @@ jobs:
             # reasons unclear.
             export DOCKER_API_VERSION=1.39
 
-            export TEST_DOCKER_NETWORK_ID=$(docker network list -q -f 'name=vaulttest')
+            TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
+            export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
             if [ -z $TEST_DOCKER_NETWORK_ID ]; then
-              TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
+              docker network prune -f
+              TEST_DOCKER_NETWORK_ID=$(docker network create "${TEST_DOCKER_NETWORK_NAME}")
             fi
 
 
 
-            # Start a docker testcontainer to run the tests in
-            docker run -d \
+            # Start a docker test container to run the tests in
+            CONTAINER_ID="$(docker run -d \
               -e TEST_DOCKER_NETWORK_ID \
               -e GOPRIVATE \
               -e DOCKER_CERT_PATH \
@@ -531,19 +528,48 @@ jobs:
               -e DOCKER_TLS_VERIFY \
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
-              --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.5 \
-              tail -f /dev/null
+              --network ${TEST_DOCKER_NETWORK_NAME} \
+              docker.mirror.hashicorp.services/cimg/go:1.19.2 \
+              tail -f /dev/null)"
+            mkdir workspace
+            echo ${CONTAINER_ID} > workspace/container_id
+
+            # Hack: Docker permissions appear to have changed; let's explicitly
+            # add a new user/group with the correct host uid to the docker
+            # container, fixing all of these permissions issues correctly. We
+            # then have to run with this user consistently in the future.
+            #
+            # Notably, in this shell pipeline we see:
+            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+            #
+            # but inside the docker image below, we see:
+            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+            #
+            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+            export HOST_GID="$(id -g)"
+            export HOST_UID="$(id -u)"
+            export CONT_GID="$(docker exec ${CONTAINER_ID} sh -c 'id -g')"
+            export CONT_GNAME="$(docker exec ${CONTAINER_ID} sh -c 'id -g -n')"
+            export CONT_UID="$(docker exec ${CONTAINER_ID} sh -c 'id -u')"
+            if (( HOST_UID != CONT_UID )); then
+              # Only provision a group if necessary; otherwise reuse the
+              # existing one.
+              if (( HOST_GID != CONT_GID )); then
+                docker exec -e HOST_GID -e CONT_GNAME ${CONTAINER_ID} sh -c 'sudo groupmod -g $HOST_GID $CONT_GNAME'
+              fi
+
+              docker exec -e CONT_GNAME -e HOST_UID ${CONTAINER_ID} sh -c 'sudo usermod -a -G $CONT_GNAME -u $HOST_UID circleci'
+            fi
 
             # Run tests
-            test -d /tmp/go-cache && docker cp /tmp/go-cache testcontainer:/tmp/gocache
-            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
-            docker cp . testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/
-            docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
+            test -d /tmp/go-cache && docker cp /tmp/go-cache ${CONTAINER_ID}:/tmp/gocache
+            docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+            docker cp . ${CONTAINER_ID}:/home/circleci/go/src/github.com/hashicorp/vault/
+            docker cp $DOCKER_CERT_PATH/ ${CONTAINER_ID}:$DOCKER_CERT_PATH
 
             # Copy the downloaded modules inside the container.
-            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/pkg'
-            docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/home/circleci/go/pkg/mod
+            docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/pkg'
+            docker cp "$(go env GOPATH)/pkg/mod" ${CONTAINER_ID}:/home/circleci/go/pkg/mod
 
             docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
               -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
@@ -552,7 +578,7 @@ jobs:
               -e GOPROXY="off" \
               -e VAULT_LICENSE_CI \
               -e GOARCH=amd64 \
-              testcontainer \
+              ${CONTAINER_ID} \
                 gotestsum --format=short-verbose \
                   --junitfile test-results/go-test/results.xml \
                   --jsonfile test-results/go-test/results.json \
@@ -588,32 +614,9 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-  website-docker-image:
-    docker:
-    - image: circleci/buildpack-deps
-    shell: /usr/bin/env bash -euo pipefail -c
-    steps:
-    - checkout
-    - setup_remote_docker
-    - run:
-        command: |
-          IMAGE_TAG="$(git rev-list -n1 HEAD -- website/Dockerfile website/package-lock.json)"
-          echo "Using $IMAGE_TAG"
-          if  [ "$CIRCLE_REPOSITORY_URL" != "git@github.com:hashicorp/vault.git" ]; then
-            echo "Not Vault OSS Repo, not building website docker image"
-          elif curl https://hub.docker.com/v2/repositories/hashicorp/vault-website/tags/$IMAGE_TAG -fsL > /dev/null; then
-              echo "Dependencies have not changed, not building a new website docker image."
-          else
-              cd website/
-              docker build -t hashicorp/vault-website:$IMAGE_TAG .
-              docker tag hashicorp/vault-website:$IMAGE_TAG hashicorp/vault-website:latest
-              docker login -u $WEBSITE_DOCKER_USER -p $WEBSITE_DOCKER_PASS
-              docker push hashicorp/vault-website
-          fi
-        name: Build Docker Image if Necessary
   test-go:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.5
+    - image: docker.mirror.hashicorp.services/cimg/go:1.19.2
     resource_class: large
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -632,7 +635,7 @@ jobs:
     - checkout
     - add_ssh_keys:
         fingerprints:
-        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+        - b8:e2:38:f8:5b:1b:82:f3:1f:23:fa:46:6e:95:e7:e9
     - run:
         command: |
           git config --global url."git@github.com:".insteadOf https://github.com/
@@ -645,7 +648,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
@@ -703,6 +706,7 @@ jobs:
           # has its own remote docker VM.
 
           make prep
+
           mkdir -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
@@ -715,7 +719,7 @@ jobs:
           export VAULT_LICENSE_CI="$VAULT_LICENSE"
           VAULT_LICENSE=
 
-          # Create a docker network for our testcontainer
+          # Create a docker network for our test container
           if [ $USE_DOCKER == 1 ]; then
             # Despite the fact that we're using a circleci image (thus getting the
             # version they chose for the docker cli) and that we're specifying a
@@ -724,15 +728,17 @@ jobs:
             # reasons unclear.
             export DOCKER_API_VERSION=1.39
 
-            export TEST_DOCKER_NETWORK_ID=$(docker network list -q -f 'name=vaulttest')
+            TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
+            export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
             if [ -z $TEST_DOCKER_NETWORK_ID ]; then
-              TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
+              docker network prune -f
+              TEST_DOCKER_NETWORK_ID=$(docker network create "${TEST_DOCKER_NETWORK_NAME}")
             fi
 
 
 
-            # Start a docker testcontainer to run the tests in
-            docker run -d \
+            # Start a docker test container to run the tests in
+            CONTAINER_ID="$(docker run -d \
               -e TEST_DOCKER_NETWORK_ID \
               -e GOPRIVATE \
               -e DOCKER_CERT_PATH \
@@ -741,19 +747,48 @@ jobs:
               -e DOCKER_TLS_VERIFY \
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
-              --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.5 \
-              tail -f /dev/null
+              --network ${TEST_DOCKER_NETWORK_NAME} \
+              docker.mirror.hashicorp.services/cimg/go:1.19.2 \
+              tail -f /dev/null)"
+            mkdir workspace
+            echo ${CONTAINER_ID} > workspace/container_id
+
+            # Hack: Docker permissions appear to have changed; let's explicitly
+            # add a new user/group with the correct host uid to the docker
+            # container, fixing all of these permissions issues correctly. We
+            # then have to run with this user consistently in the future.
+            #
+            # Notably, in this shell pipeline we see:
+            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+            #
+            # but inside the docker image below, we see:
+            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+            #
+            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+            export HOST_GID="$(id -g)"
+            export HOST_UID="$(id -u)"
+            export CONT_GID="$(docker exec ${CONTAINER_ID} sh -c 'id -g')"
+            export CONT_GNAME="$(docker exec ${CONTAINER_ID} sh -c 'id -g -n')"
+            export CONT_UID="$(docker exec ${CONTAINER_ID} sh -c 'id -u')"
+            if (( HOST_UID != CONT_UID )); then
+              # Only provision a group if necessary; otherwise reuse the
+              # existing one.
+              if (( HOST_GID != CONT_GID )); then
+                docker exec -e HOST_GID -e CONT_GNAME ${CONTAINER_ID} sh -c 'sudo groupmod -g $HOST_GID $CONT_GNAME'
+              fi
+
+              docker exec -e CONT_GNAME -e HOST_UID ${CONTAINER_ID} sh -c 'sudo usermod -a -G $CONT_GNAME -u $HOST_UID circleci'
+            fi
 
             # Run tests
-            test -d /tmp/go-cache && docker cp /tmp/go-cache testcontainer:/tmp/gocache
-            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
-            docker cp . testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/
-            docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
+            test -d /tmp/go-cache && docker cp /tmp/go-cache ${CONTAINER_ID}:/tmp/gocache
+            docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+            docker cp . ${CONTAINER_ID}:/home/circleci/go/src/github.com/hashicorp/vault/
+            docker cp $DOCKER_CERT_PATH/ ${CONTAINER_ID}:$DOCKER_CERT_PATH
 
             # Copy the downloaded modules inside the container.
-            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/pkg'
-            docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/home/circleci/go/pkg/mod
+            docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/pkg'
+            docker cp "$(go env GOPATH)/pkg/mod" ${CONTAINER_ID}:/home/circleci/go/pkg/mod
 
             docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
               -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
@@ -762,7 +797,7 @@ jobs:
               -e GOPROXY="off" \
               -e VAULT_LICENSE_CI \
               -e GOARCH=amd64 \
-              testcontainer \
+              ${CONTAINER_ID} \
                 gotestsum --format=short-verbose \
                   --junitfile test-results/go-test/results.xml \
                   --jsonfile test-results/go-test/results.json \
@@ -798,8 +833,21 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
+  semgrep:
+    docker:
+    - image: docker.mirror.hashicorp.services/returntocorp/semgrep:0.113.0
+    shell: /bin/sh
+    working_directory: /home/circleci/go/src/github.com/hashicorp/vault
+    steps:
+    - checkout
+    - attach_workspace:
+        at: .
+    - run:
+        command: "# Alpine images can't run the make file due to a bash requirement. Run\n# semgrep explicitly here. \nexport PATH=\"$HOME/.local/bin:$PATH\" \necho -n 'Semgrep Version: '\nsemgrep --version\nsemgrep --error --include '*.go' --exclude 'vendor' -f tools/semgrep/ci .\n"
+        name: Run Semgrep Rules
   pre-flight-checks:
-    machine: true
+    machine:
+      image: ubuntu-2004:202201-02
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
@@ -813,6 +861,7 @@ jobs:
           rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
           GOPATH="/home/circleci/go"
           mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
+          mkdir $GOPATH/bin 2>/dev/null || { sudo mkdir $GOPATH/bin && sudo chmod 777 $GOPATH/bin; }
           echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
           echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"
           echo "export GOPROXY=https://proxy.golang.org,direct" >> "$BASH_ENV"
@@ -843,21 +892,27 @@ jobs:
           BASE: https://github.com/CircleCI-Public/circleci-cli/releases/download
         name: Install CircleCI CLI
     - run:
-        command: make ci-verify
+        command: |
+          set -x
+          . $BASH_ENV
+          make ci-verify
+        name: Verify CircleCI
     - add_ssh_keys:
         fingerprints:
-        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+        - b8:e2:38:f8:5b:1b:82:f3:1f:23:fa:46:6e:95:e7:e9
     - run:
         command: |
           git config --global url."git@github.com:".insteadOf https://github.com/
     - restore_cache:
         keys:
-        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
-        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
-        - v1.4-{{checksum "go.sum"}}
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}
+        - v1.5-{{checksum "go.sum"}}
         name: Restore closest matching go modules cache
     - run:
         command: |
+          # set GOPATH explicitly to download to the right cache
+          export GOPATH=$HOME/go
           # go list ./... forces downloading some additional versions of modules that 'go mod
           # download' misses. We need this because we make use of go list itself during
           # code generation in later builds that rely on this module cache.
@@ -874,19 +929,19 @@ jobs:
           }
         name: Verify downloading modules did not modify any files
     - save_cache:
-        key: v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        key: v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Save go modules cache
         paths:
         - /home/circleci/go/pkg/mod
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.17.5
-    - GOFUMPT_VERSION: 0.2.1
+    - GO_VERSION: 1.19.2
+    - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.5
+    - image: docker.mirror.hashicorp.services/cimg/go:1.19.2
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -905,10 +960,10 @@ jobs:
     - checkout
     - setup_remote_docker:
         docker_layer_caching: true
-        version: 18.09.3
+        version: 20.10.17
     - add_ssh_keys:
         fingerprints:
-        - 0e:03:77:f4:e2:c3:56:c2:53:6a:03:e1:31:91:2f:06
+        - b8:e2:38:f8:5b:1b:82:f3:1f:23:fa:46:6e:95:e7:e9
     - run:
         command: |
           git config --global url."git@github.com:".insteadOf https://github.com/
@@ -921,7 +976,7 @@ jobs:
         - go-test-cache-date-v1-{{ checksum "/tmp/go-cache-key" }}
     - restore_cache:
         keys:
-        - v1.4-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
+        - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
         name: Restore exact go modules cache
     - run:
         command: |
@@ -980,6 +1035,7 @@ jobs:
           # has its own remote docker VM.
 
           make prep
+
           mkdir -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
@@ -992,7 +1048,7 @@ jobs:
           export VAULT_LICENSE_CI="$VAULT_LICENSE"
           VAULT_LICENSE=
 
-          # Create a docker network for our testcontainer
+          # Create a docker network for our test container
           if [ $USE_DOCKER == 1 ]; then
             # Despite the fact that we're using a circleci image (thus getting the
             # version they chose for the docker cli) and that we're specifying a
@@ -1001,15 +1057,17 @@ jobs:
             # reasons unclear.
             export DOCKER_API_VERSION=1.39
 
-            export TEST_DOCKER_NETWORK_ID=$(docker network list -q -f 'name=vaulttest')
+            TEST_DOCKER_NETWORK_NAME="${CIRCLE_WORKFLOW_JOB_ID}-${CIRCLE_NODE_INDEX}"
+            export TEST_DOCKER_NETWORK_ID=$(docker network list --quiet --no-trunc --filter="name=${TEST_DOCKER_NETWORK_NAME}")
             if [ -z $TEST_DOCKER_NETWORK_ID ]; then
-              TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
+              docker network prune -f
+              TEST_DOCKER_NETWORK_ID=$(docker network create "${TEST_DOCKER_NETWORK_NAME}")
             fi
 
 
 
-            # Start a docker testcontainer to run the tests in
-            docker run -d \
+            # Start a docker test container to run the tests in
+            CONTAINER_ID="$(docker run -d \
               -e TEST_DOCKER_NETWORK_ID \
               -e GOPRIVATE \
               -e DOCKER_CERT_PATH \
@@ -1018,19 +1076,48 @@ jobs:
               -e DOCKER_TLS_VERIFY \
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
-              --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.5 \
-              tail -f /dev/null
+              --network ${TEST_DOCKER_NETWORK_NAME} \
+              docker.mirror.hashicorp.services/cimg/go:1.19.2 \
+              tail -f /dev/null)"
+            mkdir workspace
+            echo ${CONTAINER_ID} > workspace/container_id
+
+            # Hack: Docker permissions appear to have changed; let's explicitly
+            # add a new user/group with the correct host uid to the docker
+            # container, fixing all of these permissions issues correctly. We
+            # then have to run with this user consistently in the future.
+            #
+            # Notably, in this shell pipeline we see:
+            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+            #
+            # but inside the docker image below, we see:
+            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+            #
+            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+            export HOST_GID="$(id -g)"
+            export HOST_UID="$(id -u)"
+            export CONT_GID="$(docker exec ${CONTAINER_ID} sh -c 'id -g')"
+            export CONT_GNAME="$(docker exec ${CONTAINER_ID} sh -c 'id -g -n')"
+            export CONT_UID="$(docker exec ${CONTAINER_ID} sh -c 'id -u')"
+            if (( HOST_UID != CONT_UID )); then
+              # Only provision a group if necessary; otherwise reuse the
+              # existing one.
+              if (( HOST_GID != CONT_GID )); then
+                docker exec -e HOST_GID -e CONT_GNAME ${CONTAINER_ID} sh -c 'sudo groupmod -g $HOST_GID $CONT_GNAME'
+              fi
+
+              docker exec -e CONT_GNAME -e HOST_UID ${CONTAINER_ID} sh -c 'sudo usermod -a -G $CONT_GNAME -u $HOST_UID circleci'
+            fi
 
             # Run tests
-            test -d /tmp/go-cache && docker cp /tmp/go-cache testcontainer:/tmp/gocache
-            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
-            docker cp . testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/
-            docker cp $DOCKER_CERT_PATH/ testcontainer:$DOCKER_CERT_PATH
+            test -d /tmp/go-cache && docker cp /tmp/go-cache ${CONTAINER_ID}:/tmp/gocache
+            docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/src/github.com/hashicorp/vault'
+            docker cp . ${CONTAINER_ID}:/home/circleci/go/src/github.com/hashicorp/vault/
+            docker cp $DOCKER_CERT_PATH/ ${CONTAINER_ID}:$DOCKER_CERT_PATH
 
             # Copy the downloaded modules inside the container.
-            docker exec testcontainer sh -c 'mkdir -p /home/circleci/go/pkg'
-            docker cp "$(go env GOPATH)/pkg/mod" testcontainer:/home/circleci/go/pkg/mod
+            docker exec ${CONTAINER_ID} sh -c 'mkdir -p /home/circleci/go/pkg'
+            docker cp "$(go env GOPATH)/pkg/mod" ${CONTAINER_ID}:/home/circleci/go/pkg/mod
 
             docker exec -w /home/circleci/go/src/github.com/hashicorp/vault/ \
               -e CIRCLECI -e VAULT_CI_GO_TEST_RACE \
@@ -1039,7 +1126,7 @@ jobs:
               -e GOPROXY="off" \
               -e VAULT_LICENSE_CI \
               -e GOARCH=amd64 \
-              testcontainer \
+              ${CONTAINER_ID} \
                 gotestsum --format=short-verbose \
                   --junitfile test-results/go-test/results.xml \
                   --jsonfile test-results/go-test/results.json \
@@ -1068,8 +1155,8 @@ jobs:
         no_output_timeout: 60m
     - run:
         command: |
-          docker cp testcontainer:/home/circleci/go/src/github.com/hashicorp/vault/test-results .
-          docker cp testcontainer:/tmp/gocache /tmp/go-cache
+          docker cp $(cat workspace/container_id):/home/circleci/go/src/github.com/hashicorp/vault/test-results .
+          docker cp $(cat workspace/container_id):/tmp/gocache /tmp/go-cache
         name: Copy test results
         when: always
     - store_artifacts:
@@ -1096,13 +1183,6 @@ workflows:
         requires:
         - install-ui-dependencies
         - build-go-dev
-    - test-ui-browserstack:
-        filters:
-          branches:
-            ignore: /pull\/[0-9]+/
-        requires:
-        - install-ui-dependencies
-        - build-go-dev
     - test-go:
         requires:
         - pre-flight-checks
@@ -1115,16 +1195,7 @@ workflows:
     - test-go-race-remote-docker:
         requires:
         - pre-flight-checks
-    - website-docker-image:
-        filters:
-          branches:
-            only:
-            - main
-        context: vault-docs
-    - algolia-index:
-        filters:
-          branches:
-            only:
-            - stable-website
-        context: vault-docs
+    - semgrep:
+        requires:
+        - pre-flight-checks
   version: 2

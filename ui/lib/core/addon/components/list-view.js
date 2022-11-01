@@ -1,7 +1,5 @@
-import Component from '@ember/component';
-import { computed } from '@ember/object';
+import Component from '@glimmer/component';
 import { pluralize } from 'ember-inflector';
-import layout from '../templates/components/list-view';
 
 /**
  * @module ListView
@@ -20,10 +18,11 @@ import layout from '../templates/components/list-view';
  * </ListView>
  * ```
  *
- * @param items=null {Array} - An array of items to render as a list
- * @param [itemNoun=null {String}] - A noun to use in the empty state of message and title.
- * @param [message=null {String}] - The message to display within the banner.
- * @yields Object with `item` that is the current item in the loop.
+ * @param {array} [items=null] - An Ember array of items (objects) to render as a list. Because it's an Ember array it has properties like length an meta on it.
+ * @param {string} [itemNoun=item] - A noun to use in the empty state of message and title.
+ * @param {string} [message=null] - The message to display within the banner.
+ * @param {string} [paginationRouteName=''] - The link used in the ListPagination component.
+ * @yields {object} Yields the current item in the loop.
  * @yields If there are no objects in items, then `empty` will be yielded - this is an instance of
  * the EmptyState component.
  * @yields If `item` or `empty` isn't present on the object, the component can still yield a block - this is
@@ -31,24 +30,23 @@ import layout from '../templates/components/list-view';
  * empty set.
  *
  */
-export default Component.extend({
-  layout,
-  tagName: '',
-  items: null,
-  itemNoun: 'item',
-  paginationRouteName: '',
-  showPagination: computed('items.met.{lastPage,total}', 'items.meta', 'paginationRouteName', function () {
-    let meta = this.items.meta;
-    return this.paginationRouteName && meta && meta.lastPage > 1 && meta.total > 0;
-  }),
+export default class ListView extends Component {
+  get itemNoun() {
+    return this.args.itemNoun || 'item';
+  }
 
-  emptyTitle: computed('itemNoun', function () {
+  get showPagination() {
+    let meta = this.args.items.meta;
+    return this.args.paginationRouteName && meta && meta.lastPage > 1 && meta.total > 0;
+  }
+
+  get emptyTitle() {
     let items = pluralize(this.itemNoun);
     return `No ${items} yet`;
-  }),
+  }
 
-  emptyMessage: computed('itemNoun', function () {
+  get emptyMessage() {
     let items = pluralize(this.itemNoun);
     return `Your ${items} will be listed here. Add your first ${this.itemNoun} to get started.`;
-  }),
-});
+  }
+}

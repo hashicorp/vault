@@ -14,35 +14,43 @@ and expects a [JSON Web Token (JWT)](https://tools.ietf.org/html/rfc7519)
 signed by Azure Active Directory for the configured tenant.
 
 This method supports authentication for system-assigned and user-assigned
-managed identities. See [Azure Managed Service Identity (MSI)](https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/overview) for more information about these resources.
+managed identities. See [Azure Managed Service Identity (MSI)](https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/overview)
+for more information about these resources.
 
-~> System-assigned identities are unique to every virtual machine in Azure. If the 
-virtual machines using Azure auth are recreated frequently, using system-assigned 
-identities could result in a lot of Vault entities. For environments with high ephemeral 
-workloads, user-assigned identities are recommended.
+This documentation assumes the Azure method is mounted at the `/auth/azure`
+path in Vault. Since it is possible to enable auth methods at any location,
+please update your API calls accordingly.
 
 ## Prerequisites:
 
-The following documentation assumes that the method has been
-[mounted](/docs/plugin) at `auth/azure`.
+The Azure auth method requires client credentials to access Azure APIs. The following
+are required to configure the auth method:
 
-- A configured [Azure AD application](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-integrating-applications) which is used as the resource for generating MSI access tokens.
-- Client credentials (shared secret) for accessing the Azure Resource Manager with read access to compute endpoints. See [Azure AD Service to Service Client Credentials](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-protocols-oauth-service-to-service)
+- A configured [Azure AD application](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-integrating-applications)
+  which is used as the resource for generating MSI access tokens.
+- Client credentials (shared secret) with read access to particular Azure Resource Manager
+  resources. See [Azure AD Service to Service Client Credentials](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-protocols-oauth-service-to-service).
 
-Required Azure API permissions to be granted to Vault user:
+If Vault is hosted on Azure, Vault can use MSI to access Azure instead of a shared secret.
+MSI must be [enabled](https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/qs-configure-portal-windows-vm)
+on the VMs hosting Vault.
 
-- `Microsoft.Compute/virtualMachines/*/read`
-- `Microsoft.Compute/virtualMachineScaleSets/*/read`
+The following Azure [role assignments](https://learn.microsoft.com/en-us/azure/role-based-access-control/overview#role-assignments)
+must be granted to the Azure AD application in order for the auth method to access Azure
+APIs during authentication.
 
-_NOTE:_ The above permissions are only required when the associated vm\* parameters are used on login. Please see the [API doc](https://www.vaultproject.io/api-docs/auth/azure#login) for more details.
+~> **Note:** The role assignments are only required when the
+[`vm_name`](/api-docs/auth/azure#vm_name) and [`vmss_name`](/api-docs/auth/azure#vmss_name)
+parameters are used on login.
 
-If Vault is hosted on Azure, Vault can use MSI to access Azure instead of a shared secret. MSI must be [enabled](https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/qs-configure-portal-windows-vm) on the VMs hosting Vault.
+| Azure Environment | Login Parameter | Azure API Permission |
+| ----------- | --------------- | -------------------- |
+| Virtual Machine | [`vm_name`](/api-docs/auth/azure#vm_name) | `Microsoft.Compute/virtualMachines/*/read` |
+| Virtual Machine Scale Set ([Uniform Orchestration][vmss-uniform]) | [`vmss_name`](/api-docs/auth/azure#vmss_name) | `Microsoft.Compute/virtualMachineScaleSets/*/read` |
+| Virtual Machine Scale Set ([Flexible Orchestration][vmss-flex]) | [`vmss_name`](/api-docs/auth/azure#vmss_name) | `Microsoft.Compute/virtualMachineScaleSets/*/read` `Microsoft.ManagedIdentity/userAssignedIdentities/*/read` |
 
-The next sections review how the authN/Z workflows work. If you
-have already reviewed these sections, here are some quick links to:
-
-- [Usage](/docs/secrets/azure#usage)
-- [API documentation](/api/auth/azure) docs.
+[vmss-uniform]: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-orchestration-modes#scale-sets-with-uniform-orchestration
+[vmss-flex]: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-orchestration-modes#scale-sets-with-flexible-orchestration
 
 ## Authentication
 
@@ -139,7 +147,7 @@ tool.
    authentication type, as well as overall constraints and configuration for
    the generated auth tokens.
 
-   For the complete list of role options, please see the [API documentation](/api/auth/azure).
+   For the complete list of role options, please see the [API documentation](/api-docs/auth/azure).
 
 ### Via the API
 
@@ -173,29 +181,14 @@ tool.
        https://127.0.0.1:8200/v1/auth/azure/role/dev-role
    ```
 
-### Plugin Setup
+## Azure Managed Identities
 
-~> The following section is only relevant if you decide to enable the azure auth
-method as an external plugin. The azure plugin method is integrated into Vault as
-a builtin method by default.
-
-Assuming you have saved the binary `vault-plugin-auth-azure` to some folder and
-configured the [plugin directory](/docs/internals/plugins#plugin-directory)
-for your server at `path/to/plugins`:
-
-1. Enable the plugin in the catalog:
-
-   ```text
-   $ vault write sys/plugins/catalog/auth/azure-auth \
-       command="vault-plugin-auth-azure" \
-       sha256="..."
-   ```
-
-1. Enable the azure auth method as a plugin:
-
-   ```text
-   $ vault auth enable -path=azure azure-auth
-   ```
+There are two types of [managed identities](https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview#managed-identity-types)
+in Azure: System-assigned and User-assigned. System-assigned identities are unique to
+every virtual machine in Azure. If the virtual machines using Azure auth are recreated
+frequently, using system-assigned identities could result in many Vault entities being
+created. For environments with high ephemeral workloads, user-assigned identities are
+recommended.
 
 ## Azure Debug Logs
 
@@ -211,16 +204,16 @@ AZURE_GO_SDK_LOG_LEVEL=DEBUG
 
 ## API
 
-The Azure Auth Plugin has a full HTTP API. Please see the [API documentation](/api/auth/azure) for more details.
+The Azure Auth Plugin has a full HTTP API. Please see the [API documentation](/api-docs/auth/azure) for more details.
 
 ## Code Example
 
-The following code snippet demonstrates the Azure auth method to authenticate
+The following example demonstrates the Azure auth method to authenticate
 with Vault.
 
-<CodeTabs heading="azure auth example">
+<CodeTabs>
 
-<CodeBlockConfig lineNumbers>
+<CodeBlockConfig>
 
 ```go
 package main
@@ -250,7 +243,7 @@ func getSecretWithAzureAuth() (string, error) {
 		return "", fmt.Errorf("unable to initialize Azure auth method: %w", err)
 	}
 
-	authInfo, err := client.Auth().Login(context.TODO(), azureAuth)
+	authInfo, err := client.Auth().Login(context.Background(), azureAuth)
 	if err != nil {
 		return "", fmt.Errorf("unable to login to Azure auth method: %w", err)
 	}
@@ -258,23 +251,17 @@ func getSecretWithAzureAuth() (string, error) {
 		return "", fmt.Errorf("no auth info was returned after login")
 	}
 
-	// get secret
-	secret, err := client.Logical().Read("kv-v2/data/creds")
+	// get secret from the default mount path for KV v2 in dev mode, "secret"
+	secret, err := client.KVv2("secret").Get(context.Background(), "creds")
 	if err != nil {
 		return "", fmt.Errorf("unable to read secret: %w", err)
 	}
 
-	data, ok := secret.Data["data"].(map[string]interface{})
-	if !ok {
-		return "", fmt.Errorf("data type assertion failed: %T %#v", secret.Data["data"], secret.Data["data"])
-	}
-
 	// data map can contain more than one key-value pair,
 	// in this case we're just grabbing one of them
-	key := "password"
-	value, ok := data[key].(string)
+	value, ok := secret.Data["password"].(string)
 	if !ok {
-		return "", fmt.Errorf("value type assertion failed: %T %#v", data[key], data[key])
+		return "", fmt.Errorf("value type assertion failed: %T %#v", secret.Data["password"], secret.Data["password"])
 	}
 
 	return value, nil
@@ -283,7 +270,7 @@ func getSecretWithAzureAuth() (string, error) {
 ```
 </CodeBlockConfig>
 
-<CodeBlockConfig lineNumbers>
+<CodeBlockConfig>
 
 ```cs
 using System;

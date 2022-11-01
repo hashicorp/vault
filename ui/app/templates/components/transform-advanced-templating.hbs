@@ -1,8 +1,8 @@
 <ToggleButton
-  @toggleAttr={{"showForm"}}
-  @toggleTarget={{this}}
+  @isOpen={{this.showForm}}
   @openLabel="Advanced templating"
   @closedLabel="Advanced templating"
+  @onClick={{fn (mut this.showForm)}}
   data-test-toggle-advanced={{true}}
 />
 

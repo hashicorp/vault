@@ -17,7 +17,7 @@ export default Route.extend({
     error(error, transition) {
       let controlGroup = this.controlGroup;
       if (error instanceof ControlGroupError) {
-        return controlGroup.handleError(error, transition);
+        return controlGroup.handleError(error);
       }
       if (error.path === '/v1/sys/wrapping/unwrap') {
         controlGroup.unmarkTokenForUnwrap();

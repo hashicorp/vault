@@ -82,6 +82,12 @@ $dark-gray: #535f73;
       color: lighten($dark-gray, 30%);
       pointer-events: none;
     }
+    &.is-selected-month {
+      background-color: lighten($dark-gray, 30%);
+      color: white;
+      text-align: center;
+      pointer-events: none;
+    }
   }
 }
 
@@ -106,7 +112,7 @@ $dark-gray: #535f73;
   display: grid;
   grid-template-columns: 110px 110px;
   grid-template-rows: repeat(2, 1fr);
-  grid-gap: 0.5rem;
+  grid-gap: 0.7rem;
   padding: 7px 28px 28px 28px;
 }
 

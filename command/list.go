@@ -42,7 +42,8 @@ Usage: vault list [options] PATH
 }
 
 func (c *ListCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat | FlagSetOutputDetailed)
+	return set
 }
 
 func (c *ListCommand) AutocompleteArgs() complete.Predictor {

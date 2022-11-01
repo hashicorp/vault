@@ -16,8 +16,10 @@ func pathFetchCA(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `ca(/pem)?`,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathFetchRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathFetchRead,
+			},
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
@@ -30,8 +32,10 @@ func pathFetchCAChain(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `(cert/)?ca_chain`,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathFetchRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathFetchRead,
+			},
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
@@ -42,10 +46,12 @@ func pathFetchCAChain(b *backend) *framework.Path {
 // Returns the CRL in raw format
 func pathFetchCRL(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `crl(/pem)?`,
+		Pattern: `crl(/pem|/delta(/pem)?)?`,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathFetchRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathFetchRead,
+			},
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
@@ -65,8 +71,10 @@ hyphen-separated octal`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathFetchRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathFetchRead,
+			},
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
@@ -87,8 +95,10 @@ hyphen-separated octal`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathFetchRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathFetchRead,
+			},
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
@@ -99,10 +109,12 @@ hyphen-separated octal`,
 // This returns the CRL in a non-raw format
 func pathFetchCRLViaCertPath(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `cert/crl`,
+		Pattern: `cert/(crl|delta-crl)`,
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathFetchRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathFetchRead,
+			},
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
@@ -115,8 +127,10 @@ func pathFetchListCerts(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "certs/?$",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathFetchCertList,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathFetchCertList,
+			},
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
@@ -124,7 +138,7 @@ func pathFetchListCerts(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathFetchCertList(ctx context.Context, req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
+func (b *backend) pathFetchCertList(ctx context.Context, req *logical.Request, _ *framework.FieldData) (response *logical.Response, retErr error) {
 	entries, err := req.Storage.List(ctx, "certs/")
 	if err != nil {
 		return nil, err
@@ -145,35 +159,63 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 	response = &logical.Response{
 		Data: map[string]interface{}{},
 	}
+	sc := b.makeStorageContext(ctx, req.Storage)
 
 	// Some of these need to return raw and some non-raw;
 	// this is basically handled by setting contentType or not.
 	// Errors don't cause an immediate exit, because the raw
 	// paths still need to return raw output.
 
+	modifiedCtx := &IfModifiedSinceHelper{
+		req:       req,
+		issuerRef: defaultRef,
+	}
 	switch {
-	case req.Path == "ca" || req.Path == "ca/pem":
+	case req.Path == "ca" || req.Path == "ca/pem" || req.Path == "cert/ca" || req.Path == "cert/ca/raw" || req.Path == "cert/ca/raw/pem":
+		modifiedCtx.reqType = ifModifiedCA
+		ret, err := sendNotModifiedResponseIfNecessary(modifiedCtx, sc, response)
+		if err != nil || ret {
+			retErr = err
+			goto reply
+		}
+
 		serial = "ca"
 		contentType = "application/pkix-cert"
-		if req.Path == "ca/pem" {
+		if req.Path == "ca/pem" || req.Path == "cert/ca/raw/pem" {
 			pemType = "CERTIFICATE"
 			contentType = "application/pem-certificate-chain"
+		} else if req.Path == "cert/ca" {
+			pemType = "CERTIFICATE"
+			contentType = ""
 		}
 	case req.Path == "ca_chain" || req.Path == "cert/ca_chain":
 		serial = "ca_chain"
 		if req.Path == "ca_chain" {
 			contentType = "application/pkix-cert"
 		}
-	case req.Path == "crl" || req.Path == "crl/pem":
-		serial = "crl"
+	case req.Path == "crl" || req.Path == "crl/pem" || req.Path == "crl/delta" || req.Path == "crl/delta/pem" || req.Path == "cert/crl" || req.Path == "cert/crl/raw" || req.Path == "cert/crl/raw/pem" || req.Path == "cert/delta-crl":
+		modifiedCtx.reqType = ifModifiedCRL
+		if strings.Contains(req.Path, "delta") {
+			modifiedCtx.reqType = ifModifiedDeltaCRL
+		}
+		ret, err := sendNotModifiedResponseIfNecessary(modifiedCtx, sc, response)
+		if err != nil || ret {
+			retErr = err
+			goto reply
+		}
+
+		serial = legacyCRLPath
+		if req.Path == "crl/delta" || req.Path == "crl/delta/pem" || req.Path == "cert/delta-crl" {
+			serial = deltaCRLPath
+		}
 		contentType = "application/pkix-crl"
-		if req.Path == "crl/pem" {
+		if req.Path == "crl/pem" || req.Path == "crl/delta/pem" {
 			pemType = "X509 CRL"
 			contentType = "application/x-pem-file"
+		} else if req.Path == "cert/crl" || req.Path == "cert/delta-crl" {
+			pemType = "X509 CRL"
+			contentType = ""
 		}
-	case req.Path == "cert/crl":
-		serial = "crl"
-		pemType = "X509 CRL"
 	case strings.HasSuffix(req.Path, "/pem") || strings.HasSuffix(req.Path, "/raw"):
 		serial = data.Get("serial").(string)
 		contentType = "application/pkix-cert"
@@ -190,8 +232,9 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		goto reply
 	}
 
-	if serial == "ca_chain" {
-		caInfo, err := fetchCAInfo(ctx, b, req)
+	// Prefer fetchCAInfo to fetchCertBySerial for CA certificates.
+	if serial == "ca_chain" || serial == "ca" {
+		caInfo, err := sc.fetchCAInfo(defaultRef, ReadOnlyUsage)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:
@@ -203,32 +246,37 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 			}
 		}
 
-		caChain := caInfo.GetCAChain()
-		var certStr string
-		for _, ca := range caChain {
-			block := pem.Block{
-				Type:  "CERTIFICATE",
-				Bytes: ca.Bytes,
+		if serial == "ca_chain" {
+			rawChain := caInfo.GetFullChain()
+			var chainStr string
+			for _, ca := range rawChain {
+				block := pem.Block{
+					Type:  "CERTIFICATE",
+					Bytes: ca.Bytes,
+				}
+				chainStr = strings.Join([]string{chainStr, strings.TrimSpace(string(pem.EncodeToMemory(&block)))}, "\n")
 			}
-			certStr = strings.Join([]string{certStr, strings.TrimSpace(string(pem.EncodeToMemory(&block)))}, "\n")
-		}
-		certificate = []byte(strings.TrimSpace(certStr))
+			fullChain = []byte(strings.TrimSpace(chainStr))
+			certificate = fullChain
+		} else if serial == "ca" {
+			certificate = caInfo.Certificate.Raw
 
-		rawChain := caInfo.GetFullChain()
-		var chainStr string
-		for _, ca := range rawChain {
-			block := pem.Block{
-				Type:  "CERTIFICATE",
-				Bytes: ca.Bytes,
+			if len(pemType) != 0 {
+				block := pem.Block{
+					Type:  pemType,
+					Bytes: certificate,
+				}
+
+				// This is convoluted on purpose to ensure that we don't have trailing
+				// newlines via various paths
+				certificate = []byte(strings.TrimSpace(string(pem.EncodeToMemory(&block))))
 			}
-			chainStr = strings.Join([]string{certStr, strings.TrimSpace(string(pem.EncodeToMemory(&block)))}, "\n")
 		}
-		fullChain = []byte(strings.TrimSpace(chainStr))
 
 		goto reply
 	}
 
-	certEntry, funcErr = fetchCertBySerial(ctx, req, req.Path, serial)
+	certEntry, funcErr = fetchCertBySerial(ctx, b, req, req.Path, serial)
 	if funcErr != nil {
 		switch funcErr.(type) {
 		case errutil.UserError:
@@ -256,7 +304,7 @@ func (b *backend) pathFetchRead(ctx context.Context, req *logical.Request, data 
 		certificate = []byte(strings.TrimSpace(string(pem.EncodeToMemory(&block))))
 	}
 
-	revokedEntry, funcErr = fetchCertBySerial(ctx, req, "revoked/", serial)
+	revokedEntry, funcErr = fetchCertBySerial(ctx, b, req, "revoked/", serial)
 	if funcErr != nil {
 		switch funcErr.(type) {
 		case errutil.UserError:
@@ -320,9 +368,11 @@ Fetch a CA, CRL, CA Chain, or non-revoked certificate.
 `
 
 const pathFetchHelpDesc = `
-This allows certificates to be fetched. If using the fetch/ prefix any non-revoked certificate can be fetched.
+This allows certificates to be fetched. Use /cert/:serial for JSON responses.
 
 Using "ca" or "crl" as the value fetches the appropriate information in DER encoding. Add "/pem" to either to get PEM encoding.
 
 Using "ca_chain" as the value fetches the certificate authority trust chain in PEM encoding.
+
+Otherwise, specify a serial number to fetch the specified certificate. Add "/raw" to get just the certificate in DER form, "/raw/pem" to get the PEM encoded certificate.
 `

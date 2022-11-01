@@ -1,0 +1,3 @@
+```release-note:feature
+**Mount Migration**: Vault supports moving secrets and auth mounts both within and across namespaces.
+```

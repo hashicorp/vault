@@ -8,7 +8,7 @@ import { tracked } from '@glimmer/tracking';
  *
  * @example
  * ```js
- * <DateDropdown @handleDateSelection={this.actionFromParent} @name={{"startTime"}}/>
+ * <DateDropdown @handleDateSelection={this.actionFromParent} @name={{"startTime"}} @submitText="Save"/>
  * ```
  * @param {function} handleDateSelection - is the action from the parent that the date picker triggers
  * @param {string} [name] - optional argument passed from date dropdown to parent function

@@ -29,7 +29,7 @@ export const expandOpenApiProps = function (props) {
       editType,
       helpText: description,
       possibleValues: prop['enum'],
-      fieldValue: isId ? 'id' : null,
+      fieldValue: isId ? 'mutableId' : null,
       fieldGroup: group || 'default',
       readOnly: isId,
       defaultValue: value || null,

@@ -86,6 +86,9 @@ func teardownMounts(t *testing.T, client *api.Client) {
 	if err := client.Sys().DisableAuth("userpass"); err != nil {
 		t.Fatal(err)
 	}
+	if err := client.Sys().DisableAuth("approle"); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func testRPS(reqFunc func(numSuccess, numFail *atomic.Int32), d time.Duration) (int32, int32, time.Duration) {

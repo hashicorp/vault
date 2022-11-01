@@ -42,6 +42,7 @@ const keyTypes = [
     type: 'chacha20-poly1305',
     convergent: true,
     supportsEncryption: true,
+    autoRotate: true,
   },
   {
     name: (ts) => `ecdsa-${ts}`,
@@ -84,6 +85,7 @@ const keyTypes = [
     type: `rsa-4096`,
     supportsSigning: true,
     supportsEncryption: true,
+    autoRotate: true,
   },
 ];
 
@@ -101,6 +103,9 @@ let generateTransitKey = async function (key, now) {
   }
   if (key.convergent) {
     await click('[data-test-transit-key-convergent-encryption]');
+  }
+  if (key.autoRotate) {
+    await click('[data-test-toggle-label="Auto-rotation period"]');
   }
   await click('[data-test-transit-key-create]');
   await settled(); // eslint-disable-line
@@ -137,7 +142,7 @@ const testConvergentEncryption = async function (assert, keyName) {
 
       assertAfterDecrypt: (key) => {
         assert.dom('.modal.is-active').exists(`${key}: Modal opens after decrypt`);
-        assert.equal(
+        assert.strictEqual(
           find('[data-test-encrypted-value="plaintext"]').innerText,
           'NaXud2QW7KjyK6Me9ggh+zmnCeBGdG93LQED49PtoOI=',
           `${key}: the ui shows the base64-encoded plaintext`
@@ -165,7 +170,7 @@ const testConvergentEncryption = async function (assert, keyName) {
       },
       assertAfterDecrypt: (key) => {
         assert.dom('.modal.is-active').exists(`${key}: Modal opens after decrypt`);
-        assert.equal(
+        assert.strictEqual(
           find('[data-test-encrypted-value="plaintext"]').innerText,
           'NaXud2QW7KjyK6Me9ggh+zmnCeBGdG93LQED49PtoOI=',
           `${key}: the ui shows the base64-encoded plaintext`
@@ -193,7 +198,7 @@ const testConvergentEncryption = async function (assert, keyName) {
       },
       assertAfterDecrypt: (key) => {
         assert.dom('.modal.is-active').exists(`${key}: Modal opens after decrypt`);
-        assert.equal(
+        assert.strictEqual(
           find('[data-test-encrypted-value="plaintext"]').innerText,
           encodeString('This is the secret'),
           `${key}: the ui decodes plaintext`
@@ -222,7 +227,7 @@ const testConvergentEncryption = async function (assert, keyName) {
       },
       assertAfterDecrypt: (key) => {
         assert.dom('.modal.is-active').exists(`${key}: Modal opens after decrypt`);
-        assert.equal(
+        assert.strictEqual(
           find('[data-test-encrypted-value="plaintext"]').innerText,
           encodeString('There are many secrets 🤐'),
           `${key}: the ui decodes plaintext`
@@ -253,7 +258,7 @@ const testConvergentEncryption = async function (assert, keyName) {
     }
     // store ciphertext for decryption step
     const copiedCiphertext = find('[data-test-encrypted-value="ciphertext"]').innerText;
-    await click('[data-test-modal-background]');
+    await click('.modal.is-active [data-test-modal-background]');
 
     assert.dom('.modal.is-active').doesNotExist(`${name}: Modal closes after background clicked`);
     await click('[data-test-transit-action-link="decrypt"]');
@@ -270,7 +275,7 @@ const testConvergentEncryption = async function (assert, keyName) {
       testCase.assertAfterDecrypt(keyName);
     }
 
-    await click('[data-test-modal-background]');
+    await click('.modal.is-active [data-test-modal-background]');
 
     assert.dom('.modal.is-active').doesNotExist(`${name}: Modal closes after background clicked`);
   }
@@ -294,12 +299,18 @@ module('Acceptance | transit', function (hooks) {
     await generateTransitKey(keyTypes[0], now);
     await secretListPage.secrets.objectAt(0).menuToggle();
     await settled();
-    assert.equal(secretListPage.menuItems.length, 2, 'shows 2 items in the menu');
+    assert.strictEqual(secretListPage.menuItems.length, 2, 'shows 2 items in the menu');
   });
   for (let key of keyTypes) {
     test(`transit backend: ${key.type}`, async function (assert) {
+      assert.expect(key.convergent ? 43 : 7);
       let name = await generateTransitKey(key, now);
       await visit(`vault/secrets/${path}/show/${name}`);
+
+      const expectedRotateValue = key.autoRotate ? '30 days' : 'Key will not be automatically rotated';
+      assert
+        .dom('[data-test-row-value="Auto-rotation period"]')
+        .hasText(expectedRotateValue, 'Has expected auto rotate value');
 
       await click('[data-test-transit-link="versions"]');
       // wait for capabilities
@@ -324,9 +335,8 @@ module('Acceptance | transit', function (hooks) {
       const keyAction = key.supportsEncryption ? 'encrypt' : 'sign';
       const actionTitle = find(`[data-test-transit-action-title=${keyAction}]`).innerText.toLowerCase();
 
-      assert.equal(
+      assert.true(
         actionTitle.includes(keyAction),
-        true,
         `shows a card with title that links to the ${name} transit action`
       );
 

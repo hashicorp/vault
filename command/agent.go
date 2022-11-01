@@ -16,8 +16,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/vault/helper/useragent"
-
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/vault/api"
@@ -43,6 +41,7 @@ import (
 	"github.com/hashicorp/vault/command/agent/template"
 	"github.com/hashicorp/vault/command/agent/winsvc"
 	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -128,9 +127,9 @@ func (c *AgentCommand) Flags() *FlagSets {
 		Target:     &c.flagLogLevel,
 		Default:    "info",
 		EnvVar:     "VAULT_LOG_LEVEL",
-		Completion: complete.PredictSet("trace", "debug", "info", "warn", "err"),
+		Completion: complete.PredictSet("trace", "debug", "info", "warn", "error"),
 		Usage: "Log verbosity level. Supported values (in order of detail) are " +
-			"\"trace\", \"debug\", \"info\", \"warn\", and \"err\".",
+			"\"trace\", \"debug\", \"info\", \"warn\", and \"error\".",
 	})
 
 	f.BoolVar(&BoolVar{
@@ -369,13 +368,28 @@ func (c *AgentCommand) Run(args []string) int {
 			client.SetNamespace(config.AutoAuth.Method.Namespace)
 		}
 		templateNamespace = client.Headers().Get(consts.NamespaceHeaderName)
+
+		sinkClient, err := client.CloneWithHeaders()
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error cloning client for file sink: %v", err))
+			return 1
+		}
+
+		if config.DisableIdleConnsAutoAuth {
+			sinkClient.SetMaxIdleConnections(-1)
+		}
+
+		if config.DisableKeepAlivesAutoAuth {
+			sinkClient.SetDisableKeepAlives(true)
+		}
+
 		for _, sc := range config.AutoAuth.Sinks {
 			switch sc.Type {
 			case "file":
 				config := &sink.SinkConfig{
 					Logger:    c.logger.Named("sink.file"),
 					Config:    sc.Config,
-					Client:    client,
+					Client:    sinkClient,
 					WrapTTL:   sc.WrapTTL,
 					DHType:    sc.DHType,
 					DeriveKey: sc.DeriveKey,
@@ -491,9 +505,23 @@ func (c *AgentCommand) Run(args []string) int {
 	if config.Cache != nil {
 		cacheLogger := c.logger.Named("cache")
 
+		proxyClient, err := client.CloneWithHeaders()
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error cloning client for caching: %v", err))
+			return 1
+		}
+
+		if config.DisableIdleConnsCaching {
+			proxyClient.SetMaxIdleConnections(-1)
+		}
+
+		if config.DisableKeepAlivesCaching {
+			proxyClient.SetDisableKeepAlives(true)
+		}
+
 		// Create the API proxier
 		apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
-			Client:                 client,
+			Client:                 proxyClient,
 			Logger:                 cacheLogger.Named("apiproxy"),
 			EnforceConsistency:     enforceConsistency,
 			WhenInconsistentAction: whenInconsistent,
@@ -506,7 +534,7 @@ func (c *AgentCommand) Run(args []string) int {
 		// Create the lease cache proxier and set its underlying proxier to
 		// the API proxier.
 		leaseCache, err = cache.NewLeaseCache(&cache.LeaseCacheConfig{
-			Client:      client,
+			Client:      proxyClient,
 			BaseContext: ctx,
 			Proxier:     apiProxy,
 			Logger:      cacheLogger.Named("leasecache"),
@@ -565,7 +593,7 @@ func (c *AgentCommand) Run(args []string) int {
 					c.UI.Warn(fmt.Sprintf("Failed to close persistent cache file after getting retrieval token: %s", err))
 				}
 
-				km, err := keymanager.NewPassthroughKeyManager(token)
+				km, err := keymanager.NewPassthroughKeyManager(ctx, token)
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("failed to configure persistence encryption for cache: %s", err))
 					return 1
@@ -629,7 +657,7 @@ func (c *AgentCommand) Run(args []string) int {
 					}
 				}
 			} else {
-				km, err := keymanager.NewPassthroughKeyManager(nil)
+				km, err := keymanager.NewPassthroughKeyManager(ctx, nil)
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("failed to configure persistence encryption for cache: %s", err))
 					return 1
@@ -647,7 +675,7 @@ func (c *AgentCommand) Run(args []string) int {
 				cacheLogger.Info("configured persistent storage", "path", config.Cache.Persist.Path)
 
 				// Stash the key material in bolt
-				token, err := km.RetrievalToken()
+				token, err := km.RetrievalToken(ctx)
 				if err != nil {
 					c.UI.Error(fmt.Sprintf("Error getting persistent key: %s", err))
 					return 1
@@ -716,7 +744,10 @@ func (c *AgentCommand) Run(args []string) int {
 
 			// Create a muxer and add paths relevant for the lease cache layer
 			mux := http.NewServeMux()
+			quitEnabled := lnConfig.AgentAPI != nil && lnConfig.AgentAPI.EnableQuit
+
 			mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
+			mux.Handle(consts.AgentPathQuit, c.handleQuit(quitEnabled))
 			mux.Handle(consts.AgentPathMetrics, c.handleMetrics())
 			mux.Handle("/", muxHandler)
 
@@ -771,6 +802,8 @@ func (c *AgentCommand) Run(args []string) int {
 			select {
 			case <-c.ShutdownCh:
 				c.UI.Output("==> Vault agent shutdown triggered")
+				// Notify systemd that the server is shutting down
+				c.notifySystemd(systemd.SdNotifyStopping)
 				// Let the lease cache know this is a shutdown; no need to evict
 				// everything
 				if leaseCache != nil {
@@ -778,6 +811,7 @@ func (c *AgentCommand) Run(args []string) int {
 				}
 				return nil
 			case <-ctx.Done():
+				c.notifySystemd(systemd.SdNotifyStopping)
 				return nil
 			case <-winsvc.ShutdownChannel():
 				return nil
@@ -788,19 +822,38 @@ func (c *AgentCommand) Run(args []string) int {
 	// Start auto-auth and sink servers
 	if method != nil {
 		enableTokenCh := len(config.Templates) > 0
+
+		// Auth Handler is going to set its own retry values, so we want to
+		// work on a copy of the client to not affect other subsystems.
+		ahClient, err := c.client.CloneWithHeaders()
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("Error cloning client for auth handler: %v", err))
+			return 1
+		}
+
+		if config.DisableIdleConnsAutoAuth {
+			ahClient.SetMaxIdleConnections(-1)
+		}
+
+		if config.DisableKeepAlivesAutoAuth {
+			ahClient.SetDisableKeepAlives(true)
+		}
+
 		ah := auth.NewAuthHandler(&auth.AuthHandlerConfig{
 			Logger:                       c.logger.Named("auth.handler"),
-			Client:                       c.client,
+			Client:                       ahClient,
 			WrapTTL:                      config.AutoAuth.Method.WrapTTL,
+			MinBackoff:                   config.AutoAuth.Method.MinBackoff,
 			MaxBackoff:                   config.AutoAuth.Method.MaxBackoff,
 			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
 			EnableTemplateTokenCh:        enableTokenCh,
 			Token:                        previousToken,
+			ExitOnError:                  config.AutoAuth.Method.ExitOnError,
 		})
 
 		ss := sink.NewSinkServer(&sink.SinkServerConfig{
 			Logger:        c.logger.Named("sink.server"),
-			Client:        client,
+			Client:        ahClient,
 			ExitAfterAuth: exitAfterAuth,
 		})
 
@@ -891,6 +944,9 @@ func (c *AgentCommand) Run(args []string) int {
 		return 1
 	}
 
+	// Notify systemd that the server is ready (if applicable)
+	c.notifySystemd(systemd.SdNotifyReady)
+
 	defer func() {
 		if err := c.removePidFile(config.PidFile); err != nil {
 			c.UI.Error(fmt.Sprintf("Error deleting the PID file: %s", err))
@@ -913,12 +969,25 @@ func verifyRequestHeader(handler http.Handler) http.Handler {
 		if val, ok := r.Header[consts.RequestHeaderName]; !ok || len(val) != 1 || val[0] != "true" {
 			logical.RespondError(w,
 				http.StatusPreconditionFailed,
-				fmt.Errorf("missing '%s' header", consts.RequestHeaderName))
+				fmt.Errorf("missing %q header", consts.RequestHeaderName))
 			return
 		}
 
 		handler.ServeHTTP(w, r)
 	})
+}
+
+func (c *AgentCommand) notifySystemd(status string) {
+	sent, err := systemd.SdNotify(false, status)
+	if err != nil {
+		c.logger.Error("error notifying systemd", "error", err)
+	} else {
+		if sent {
+			c.logger.Debug("sent systemd notification", "notification", status)
+		} else {
+			c.logger.Debug("would have sent systemd notification (systemd not present)", "notification", status)
+		}
+	}
 }
 
 func (c *AgentCommand) setStringFlag(f *FlagSets, configVal string, fVar *StringVar) {
@@ -977,7 +1046,7 @@ func (c *AgentCommand) storePidFile(pidPath string) error {
 	}
 
 	// Open the PID file
-	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
 	if err != nil {
 		return fmt.Errorf("could not open pid file: %w", err)
 	}
@@ -1046,5 +1115,24 @@ func (c *AgentCommand) handleMetrics() http.Handler {
 		default:
 			logical.RespondError(w, http.StatusInternalServerError, fmt.Errorf("wrong response returned"))
 		}
+	})
+}
+
+func (c *AgentCommand) handleQuit(enabled bool) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !enabled {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		switch r.Method {
+		case http.MethodPost:
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		c.logger.Debug("received quit request")
+		close(c.ShutdownCh)
 	})
 }

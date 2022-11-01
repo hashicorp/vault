@@ -16,7 +16,7 @@ const MODEL_TYPES = {
     backIsListLink: true,
   },
   'pki-issue': {
-    model: 'pki-certificate',
+    model: 'pki/cert',
     title: 'Issue Certificate',
   },
   'pki-sign': {
@@ -66,7 +66,9 @@ export default Component.extend({
   },
 
   willDestroy() {
-    this.model.unloadRecord();
+    if (!this.model.isDestroyed && !this.model.isDestroying) {
+      this.model.unloadRecord();
+    }
     this._super(...arguments);
   },
 

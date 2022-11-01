@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	log "github.com/hashicorp/go-hclog"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
@@ -89,7 +89,7 @@ func testCore_Init_Common(t *testing.T, c *Core, conf *CoreConfig, barrierConf, 
 		t.Fatalf("err: %v", err)
 	}
 
-	if c.seal.BarrierType() == wrapping.Shamir && len(res.SecretShares) != barrierConf.SecretShares {
+	if c.seal.BarrierType() == wrapping.WrapperTypeShamir && len(res.SecretShares) != barrierConf.SecretShares {
 		t.Fatalf("Bad: got\n%#v\nexpected conf matching\n%#v\n", *res, *barrierConf)
 	}
 	if recoveryConf != nil {

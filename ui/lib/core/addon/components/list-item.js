@@ -1,6 +1,7 @@
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { task } from 'ember-concurrency';
+import { computed } from '@ember/object';
 import layout from '../templates/components/list-item';
 
 export default Component.extend({
@@ -23,5 +24,10 @@ export default Component.extend({
       flash.danger(failureMessage + ' ' + errString);
       model.rollbackAttributes();
     }
+  }),
+  link: computed('linkParams.[]', function () {
+    if (!Array.isArray(this.linkParams) || !this.linkParams.length) return {};
+    const [route, ...models] = this.linkParams;
+    return { route, models };
   }),
 });

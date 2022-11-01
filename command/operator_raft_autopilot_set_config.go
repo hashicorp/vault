@@ -22,6 +22,7 @@ type OperatorRaftAutopilotSetConfigCommand struct {
 	flagMaxTrailingLogs                uint64
 	flagMinQuorum                      uint
 	flagServerStabilizationTime        time.Duration
+	flagDisableUpgradeMigration        BoolPtr
 }
 
 func (c *OperatorRaftAutopilotSetConfigCommand) Synopsis() string {
@@ -71,6 +72,11 @@ func (c *OperatorRaftAutopilotSetConfigCommand) Flags() *FlagSets {
 	f.DurationVar(&DurationVar{
 		Name:   "server-stabilization-time",
 		Target: &c.flagServerStabilizationTime,
+	})
+
+	f.BoolPtrVar(&BoolPtrVar{
+		Name:   "disable-upgrade-migration",
+		Target: &c.flagDisableUpgradeMigration,
 	})
 
 	return set
@@ -124,6 +130,9 @@ func (c *OperatorRaftAutopilotSetConfigCommand) Run(args []string) int {
 	}
 	if c.flagServerStabilizationTime > 0 {
 		data["server_stabilization_time"] = c.flagServerStabilizationTime.String()
+	}
+	if c.flagDisableUpgradeMigration.IsSet() {
+		data["disable_upgrade_migration"] = c.flagDisableUpgradeMigration.Get()
 	}
 
 	secret, err := client.Logical().Write("sys/storage/raft/autopilot/configuration", data)

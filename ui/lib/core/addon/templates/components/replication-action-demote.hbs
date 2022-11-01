@@ -29,7 +29,6 @@
   @confirmText={{this.model.replicationModeForDisplay}}
   @toConfirmMsg="demoting this cluster"
   @onConfirm={{action "onSubmit" "demote" this.model.replicationAttrs.modeForUrl}}
-  @testSelector="demote"
 >
   <p class="has-bottom-margin-m">
     {{#if (and (eq this.replicationMode "dr") (not this.model.performance.replicationDisabled))}}

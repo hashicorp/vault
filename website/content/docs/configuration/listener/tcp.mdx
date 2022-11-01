@@ -26,9 +26,9 @@ advertise the correct address to other nodes.
 As of version 1.9, Vault supports defining custom HTTP response headers for the root path (`/`) and also on API endpoints (`/v1/*`).
 The headers are defined based on the returned status code. For example, a user can define a list of
 custom response headers for the `200` status code, and another list of custom response headers for
-the `307` status code. There is a `"/sys/config/ui"` [API endpoint](/api/system/config-ui) which allows users
+the `307` status code. There is a `"/sys/config/ui"` [API endpoint](/api-docs/system/config-ui) which allows users
 to set `UI` specific custom headers. If a header is configured in a configuration file, it is not allowed
-to be reconfigured through the `"/sys/config/ui"` [API endpoint](/api/system/config-ui). In cases where a
+to be reconfigured through the `"/sys/config/ui"` [API endpoint](/api-docs/system/config-ui). In cases where a
 custom header value needs to be modified or the custom header needs to be removed, the Vault's configuration file
 needs to be modified accordingly, and a `SIGHUP` signal needs to be sent to the Vault process.
 
@@ -40,11 +40,11 @@ upon start up indicating the header with `X-Vault-` prefix is not accepted.
 ### Order of precedence
 
 If the same header is configured in both the configuration file and
-in the `"/sys/config/ui"` [API endpoint](/api/system/config-ui), the header in the configuration file takes precedence.
+in the `"/sys/config/ui"` [API endpoint](/api-docs/system/config-ui), the header in the configuration file takes precedence.
 For example, the `"Content-Security-Policy"` header is defined by default in the
-`"/sys/config/ui"` [API endpoint](/api/system/config-ui). If that header is also defined in the configuration file,
+`"/sys/config/ui"` [API endpoint](/api-docs/system/config-ui). If that header is also defined in the configuration file,
 the value in the configuration file is set in the response headers instead of the
-default value in the `"/sys/config/ui"` [API endpoint](/api/system/config-ui).
+default value in the `"/sys/config/ui"` [API endpoint](/api-docs/system/config-ui).
 
 ## `tcp` Listener Parameters
 
@@ -162,7 +162,7 @@ default value in the `"/sys/config/ui"` [API endpoint](/api/system/config-ui).
   authentication for this listener. The default behavior (when this is false)
   is for Vault to request client certificates when available.
 
-  ~> **Warning**: The `tls_disable_client_certs` and `tls_require_and verify_client_cert` fields in the listener stanza of the Vault server configuration are mutually exclusive fields. Please ensure they are not both set to true. TLS client verification remains optional with default settings and is not enforced.
+  ~> **Warning**: The `tls_disable_client_certs` and `tls_require_and_verify_client_cert` fields in the listener stanza of the Vault server configuration are mutually exclusive fields. Please ensure they are not both set to true. TLS client verification remains optional with default settings and is not enforced.
 
 - `x_forwarded_for_authorized_addrs` `(string: <required-to-enable>)` –
   Specifies the list of source IP CIDRs for which an X-Forwarded-For header
@@ -294,7 +294,7 @@ listener "tcp" {
     },
     "301" = {
       "Strict-Transport-Security" = ["max-age=31536000"],
-      “Content-Security-Policy" = ["connect-src https://clusterC.vault.external/"],
+      "Content-Security-Policy" = ["connect-src https://clusterC.vault.external/"],
     },
   }
 }

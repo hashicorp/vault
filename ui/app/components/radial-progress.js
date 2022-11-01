@@ -5,7 +5,7 @@ export default Component.extend({
   'data-test-radial-progress': true,
   tagName: 'svg',
   classNames: 'radial-progress',
-  attributeBindings: ['size:width', 'size:height', 'viewBox'],
+  attributeBindings: ['size:width', 'size:height', 'viewBox', 'data-test-radial-progress'],
   progressDecimal: null,
   size: 20,
   strokeWidth: 1,

@@ -2,15 +2,21 @@ package api
 
 import (
 	"context"
+	"net/http"
 	"time"
 )
 
 func (c *Sys) Leader() (*LeaderResponse, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/leader")
+	return c.LeaderWithContext(context.Background())
+}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
+func (c *Sys) LeaderWithContext(ctx context.Context) (*LeaderResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
-	resp, err := c.c.RawRequestWithContext(ctx, r)
+
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/leader")
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err != nil {
 		return nil, err
 	}

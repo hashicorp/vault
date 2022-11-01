@@ -192,6 +192,22 @@ The option `when_inconsistent` controls how stale reads are prevented:
   `X-Vault-Inconsistent: forward-active-node` header as described above under
   Conditional Forwarding
 
+## Vault 1.10 Mitigations
+
+In Vault 1.10, the token format has changed, where service tokens now employ server side consistency.
+This means that by default, requests made
+to nodes which cannot support read-after-write consistency due to
+not having the necessary WAL index to check Vault tokens locally will output
+a 412 status code. The Vault Go API automatically retries when receiving 412s, so
+unless there is a considerable replication delay, users will experience
+read-after-write consistency.
+
+The replication option [allow_forwarding_via_token](/docs/configuration/replication)
+can be used to enforce requests that would have returned 412s in the
+aforementioned way will be forwarded instead to the active node.
+
+Refer to the [Server Side Consistent Token FAQ](/docs/faq/ssct) for details.
+
 ## Client API helpers
 
 There are some new helpers in the `api` package to work with the new headers.

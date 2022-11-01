@@ -28,7 +28,7 @@ const (
 	// Present version of the sshRole struct; when adding a new field or are
 	// needing to perform a migration, increment this struct and read the note
 	// in checkUpgrade(...).
-	roleEntryVersion = 2
+	roleEntryVersion = 3
 )
 
 // Structure that represents a role in SSH backend. This is a common role structure
@@ -40,6 +40,7 @@ type sshRole struct {
 	KeyBits                    int               `mapstructure:"key_bits" json:"key_bits"`
 	AdminUser                  string            `mapstructure:"admin_user" json:"admin_user"`
 	DefaultUser                string            `mapstructure:"default_user" json:"default_user"`
+	DefaultUserTemplate        bool              `mapstructure:"default_user_template" json:"default_user_template"`
 	CIDRList                   string            `mapstructure:"cidr_list" json:"cidr_list"`
 	ExcludeCIDRList            string            `mapstructure:"exclude_cidr_list" json:"exclude_cidr_list"`
 	Port                       int               `mapstructure:"port" json:"port"`
@@ -47,6 +48,7 @@ type sshRole struct {
 	AllowedUsers               string            `mapstructure:"allowed_users" json:"allowed_users"`
 	AllowedUsersTemplate       bool              `mapstructure:"allowed_users_template" json:"allowed_users_template"`
 	AllowedDomains             string            `mapstructure:"allowed_domains" json:"allowed_domains"`
+	AllowedDomainsTemplate     bool              `mapstructure:"allowed_domains_template" json:"allowed_domains_template"`
 	KeyOptionSpecs             string            `mapstructure:"key_option_specs" json:"key_option_specs"`
 	MaxTTL                     string            `mapstructure:"max_ttl" json:"max_ttl"`
 	TTL                        string            `mapstructure:"ttl" json:"ttl"`
@@ -65,6 +67,7 @@ type sshRole struct {
 	AllowedUserKeyTypesLengths map[string][]int  `mapstructure:"allowed_user_key_types_lengths" json:"allowed_user_key_types_lengths"`
 	AlgorithmSigner            string            `mapstructure:"algorithm_signer" json:"algorithm_signer"`
 	Version                    int               `mapstructure:"role_version" json:"role_version"`
+	NotBeforeDuration          time.Duration     `mapstructure:"not_before_duration" json:"not_before_duration"`
 }
 
 func pathListRoles(b *backend) *framework.Path {
@@ -120,6 +123,15 @@ func pathRoles(b *backend) *framework.Path {
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Default Username",
 				},
+			},
+			"default_user_template": {
+				Type: framework.TypeBool,
+				Description: `
+				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
+				If set, Default user can be specified using identity template policies.
+				Non-templated users are also permitted.
+				`,
+				Default: false,
 			},
 			"cidr_list": {
 				Type: framework.TypeString,
@@ -211,6 +223,15 @@ func pathRoles(b *backend) *framework.Path {
 				If this option is not specified, client can request for a signed certificate for any
 				valid host. If only certain domains are allowed, then this list enforces it.
 				`,
+			},
+			"allowed_domains_template": {
+				Type: framework.TypeBool,
+				Description: `
+				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
+				If set, Allowed domains can be specified using identity template policies.
+				Non-templated domains are also permitted.
+				`,
+				Default: false,
 			},
 			"key_option_specs": {
 				Type: framework.TypeString,
@@ -361,6 +382,16 @@ func pathRoles(b *backend) *framework.Path {
 				`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Signing Algorithm",
+				},
+			},
+			"not_before_duration": {
+				Type:    framework.TypeDurationSecond,
+				Default: 30,
+				Description: `
+   				The duration that the SSH certificate should be backdated by at issuance.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Not before duration",
+					Value: 30,
 				},
 			},
 		},
@@ -546,7 +577,9 @@ func (b *backend) createCARole(allowedUsers, defaultUser, signer string, data *f
 		AllowedUsers:              allowedUsers,
 		AllowedUsersTemplate:      data.Get("allowed_users_template").(bool),
 		AllowedDomains:            data.Get("allowed_domains").(string),
+		AllowedDomainsTemplate:    data.Get("allowed_domains_template").(bool),
 		DefaultUser:               defaultUser,
+		DefaultUserTemplate:       data.Get("default_user_template").(bool),
 		AllowBareDomains:          data.Get("allow_bare_domains").(bool),
 		AllowSubdomains:           data.Get("allow_subdomains").(bool),
 		AllowUserKeyIDs:           data.Get("allow_user_key_ids").(bool),
@@ -555,6 +588,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser, signer string, data *f
 		KeyType:                   KeyTypeCA,
 		AlgorithmSigner:           signer,
 		Version:                   roleEntryVersion,
+		NotBeforeDuration:         time.Duration(data.Get("not_before_duration").(int)) * time.Second,
 	}
 
 	if !role.AllowUserCertificates && !role.AllowHostCertificates {
@@ -672,6 +706,12 @@ func (b *backend) checkUpgrade(ctx context.Context, s logical.Storage, n string,
 		err = nil
 	}
 
+	if result.Version < 3 {
+		modified = true
+		result.NotBeforeDuration = 30 * time.Second
+		result.Version = 3
+	}
+
 	// Add new migrations just before here.
 	//
 	// Condition copied from PKI builtin.
@@ -721,7 +761,9 @@ func (b *backend) parseRole(role *sshRole) (map[string]interface{}, error) {
 			"allowed_users":               role.AllowedUsers,
 			"allowed_users_template":      role.AllowedUsersTemplate,
 			"allowed_domains":             role.AllowedDomains,
+			"allowed_domains_template":    role.AllowedDomainsTemplate,
 			"default_user":                role.DefaultUser,
+			"default_user_template":       role.DefaultUserTemplate,
 			"ttl":                         int64(ttl.Seconds()),
 			"max_ttl":                     int64(maxTTL.Seconds()),
 			"allowed_critical_options":    role.AllowedCriticalOptions,
@@ -739,6 +781,7 @@ func (b *backend) parseRole(role *sshRole) (map[string]interface{}, error) {
 			"default_extensions_template": role.DefaultExtensionsTemplate,
 			"allowed_user_key_lengths":    role.AllowedUserKeyTypesLengths,
 			"algorithm_signer":            role.AlgorithmSigner,
+			"not_before_duration":         int64(role.NotBeforeDuration.Seconds()),
 		}
 	case KeyTypeDynamic:
 		result = map[string]interface{}{

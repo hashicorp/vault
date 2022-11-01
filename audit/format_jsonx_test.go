@@ -137,7 +137,7 @@ func TestFormatJSONx_formatRequest(t *testing.T) {
 
 		if !strings.HasSuffix(strings.TrimSpace(buf.String()), string(tc.ExpectedStr)) {
 			t.Fatalf(
-				"bad: %s\nResult:\n\n'%s'\n\nExpected:\n\n'%s'",
+				"bad: %s\nResult:\n\n%q\n\nExpected:\n\n%q",
 				name, strings.TrimSpace(buf.String()), string(tc.ExpectedStr))
 		}
 	}

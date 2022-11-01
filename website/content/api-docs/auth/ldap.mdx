@@ -6,6 +6,8 @@ description: This is the API documentation for the Vault LDAP auth method.
 
 # LDAP Auth Method (API)
 
+@include 'x509-sha1-deprecation.mdx'
+
 This is the API documentation for the Vault LDAP auth method. For
 general information about the usage and operation of the LDAP method, please
 see the [Vault LDAP method documentation](/docs/auth/ldap).
@@ -87,6 +89,8 @@ This endpoint configures the LDAP auth method.
   `groupfilter` in order to enumerate user group membership. Examples: for
   groupfilter queries returning _group_ objects, use: `cn`. For queries
   returning _user_ objects, use: `memberOf`. The default is `cn`.
+- `username_as_alias` `(bool: false)` - If set to true, forces the auth method
+  to use the username passed by the user as the alias name.
 
 @include 'tokenfields.mdx'
 
@@ -117,6 +121,7 @@ $ curl \
   "tls_max_version": "tls12",
   "tls_min_version": "tls12",
   "url": "ldaps://ldap.myorg.com:636",
+  "username_as_alias": false,
   "userattr": "samaccountname",
   "userdn": "ou=Users,dc=example,dc=com"
 }
@@ -160,6 +165,7 @@ $ curl \
     "tls_min_version": "tls12",
     "upndomain": "",
     "url": "ldaps://ldap.myorg.com:636",
+    "username_as_alias": false,
     "userattr": "samaccountname",
     "userdn": "ou=Users,dc=example,dc=com"
   },

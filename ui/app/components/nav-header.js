@@ -4,7 +4,9 @@ import { computed } from '@ember/object';
 
 export default Component.extend({
   router: service(),
+  currentCluster: service(),
   'data-test-navheader': true,
+  attributeBindings: ['data-test-navheader'],
   classNameBindings: 'consoleFullscreen:panel-fullscreen',
   tagName: 'header',
   navDrawerOpen: false,

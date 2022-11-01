@@ -320,7 +320,6 @@ func testParseEntropy(t *testing.T, oss bool) {
 		case err != test.outErr:
 			t.Fatalf("error mismatch: expected %#v got %#v", err, test.outErr)
 		case err == nil && config.Entropy != nil && *config.Entropy != test.outEntropy:
-			fmt.Printf("\n config.Entropy: %#v", config.Entropy)
 			t.Fatalf("entropy config mismatch: expected %#v got %#v", test.outEntropy, *config.Entropy)
 		}
 	}
@@ -476,6 +475,16 @@ func testLoadConfigFile(t *testing.T) {
 	}
 }
 
+func testUnknownFieldValidationStorageAndListener(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/storage-listener-config.json")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if len(config.UnusedKeys) != 0 {
+		t.Fatalf("unused keys for valid config are %+v\n", config.UnusedKeys)
+	}
+}
+
 func testUnknownFieldValidation(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/config.hcl")
 	if err != nil {
@@ -522,6 +531,37 @@ func testUnknownFieldValidation(t *testing.T) {
 		if !found {
 			t.Fatalf("could not find expected error: %v", ex.String())
 		}
+	}
+}
+
+// testUnknownFieldValidationJson tests that this valid json config does not result in
+// errors. Prior to VAULT-8519, it reported errors even with a valid config that was
+// parsed properly.
+func testUnknownFieldValidationJson(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config_small.json")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	errors := config.Validate("./test-fixtures/config_small.json")
+	if errors != nil {
+		t.Fatal(errors)
+	}
+}
+
+// testUnknownFieldValidationHcl tests that this valid hcl config does not result in
+// errors. Prior to VAULT-8519, the json version of this config reported errors even
+// with a valid config that was parsed properly.
+// In short, this ensures the same for HCL as we test in testUnknownFieldValidationJson
+func testUnknownFieldValidationHcl(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config_small.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	errors := config.Validate("./test-fixtures/config_small.hcl")
+	if errors != nil {
+		t.Fatal(errors)
 	}
 }
 
@@ -687,13 +727,15 @@ func testConfig_Sanitized(t *testing.T) {
 		"cluster_addr":                        "top_level_cluster_addr",
 		"cluster_cipher_suites":               "",
 		"cluster_name":                        "testcluster",
-		"default_lease_ttl":                   10 * time.Hour,
+		"default_lease_ttl":                   (365 * 24 * time.Hour) / time.Second,
 		"default_max_request_duration":        0 * time.Second,
 		"disable_cache":                       true,
 		"disable_clustering":                  false,
 		"disable_indexing":                    false,
 		"disable_mlock":                       true,
 		"disable_performance_standby":         false,
+		"plugin_file_uid":                     0,
+		"plugin_file_permissions":             0,
 		"disable_printable_check":             false,
 		"disable_sealwrap":                    true,
 		"raw_storage_endpoint":                true,
@@ -718,7 +760,7 @@ func testConfig_Sanitized(t *testing.T) {
 		},
 		"log_format":       "",
 		"log_level":        "",
-		"max_lease_ttl":    10 * time.Hour,
+		"max_lease_ttl":    (30 * 24 * time.Hour) / time.Second,
 		"pid_file":         "./pidfile",
 		"plugin_directory": "",
 		"seals": []interface{}{
@@ -780,22 +822,25 @@ func testConfig_Sanitized(t *testing.T) {
 func testParseListeners(t *testing.T) {
 	obj, _ := hcl.Parse(strings.TrimSpace(`
 listener "tcp" {
-	address = "127.0.0.1:443"
-	cluster_address = "127.0.0.1:8201"
-	tls_disable = false
-	tls_cert_file = "./certs/server.crt"
-	tls_key_file = "./certs/server.key"
-	tls_client_ca_file = "./certs/rootca.crt"
-	tls_min_version = "tls12"
-	tls_max_version = "tls13"
-	tls_require_and_verify_client_cert = true
-	tls_disable_client_certs = true
-    telemetry {
-      unauthenticated_metrics_access = true
-    }
-    profiling {
-      unauthenticated_pprof_access = true
-    }
+  address = "127.0.0.1:443"
+  cluster_address = "127.0.0.1:8201"
+  tls_disable = false
+  tls_cert_file = "./certs/server.crt"
+  tls_key_file = "./certs/server.key"
+  tls_client_ca_file = "./certs/rootca.crt"
+  tls_min_version = "tls12"
+  tls_max_version = "tls13"
+  tls_require_and_verify_client_cert = true
+  tls_disable_client_certs = true
+  telemetry {
+    unauthenticated_metrics_access = true
+  }
+  profiling {
+    unauthenticated_pprof_access = true
+  }
+  agent_api {
+    enable_quit = true
+  }
 }`))
 
 	config := Config{
@@ -833,6 +878,9 @@ listener "tcp" {
 					Profiling: configutil.ListenerProfiling{
 						UnauthenticatedPProfAccess: true,
 					},
+					AgentAPI: &configutil.AgentAPI{
+						EnableQuit: true,
+					},
 					CustomResponseHeaders: DefaultCustomHeaders,
 				},
 			},
@@ -849,6 +897,7 @@ func testParseSockaddrTemplate(t *testing.T) {
 api_addr = <<EOF
 {{- GetAllInterfaces | include "flags" "loopback" | include "type" "ipv4" | attr "address" -}}
 EOF
+
 listener "tcp" {
 	address = <<EOF
 {{- GetAllInterfaces | include "flags" "loopback" | include "type" "ipv4" | attr "address" -}}:443
@@ -875,6 +924,49 @@ EOF
 				},
 			},
 		},
+	}
+	config.Prune()
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
+func testParseStorageTemplate(t *testing.T) {
+	config, err := ParseConfig(`
+storage "consul" {
+
+	disable_registration = false
+	path = "tmp/"
+
+}
+ha_storage "consul" {
+	tls_skip_verify = true
+	scheme = "http"
+	max_parallel = 128
+}
+
+`, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &Config{
+		Storage: &Storage{
+			Type: "consul",
+			Config: map[string]string{
+				"disable_registration": "false",
+				"path":                 "tmp/",
+			},
+		},
+		HAStorage: &Storage{
+			Type: "consul",
+			Config: map[string]string{
+				"tls_skip_verify": "true",
+				"scheme":          "http",
+				"max_parallel":    "128",
+			},
+		},
+		SharedConfig: &configutil.SharedConfig{},
 	}
 	config.Prune()
 	if diff := deep.Equal(config, expected); diff != nil {
@@ -995,6 +1087,7 @@ func testLoadConfigFileLeaseMetrics(t *testing.T) {
 			Config: map[string]string{
 				"bar": "baz",
 			},
+
 			DisableClustering: true,
 		},
 

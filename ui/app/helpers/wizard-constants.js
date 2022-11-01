@@ -48,6 +48,7 @@ export const FEATURE_MACHINE_STEPS = {
       secret: 5,
     },
     role: 7,
+    provider: 8,
   },
   policies: 5,
   replication: 2,

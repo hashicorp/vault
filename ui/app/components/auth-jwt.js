@@ -1,5 +1,6 @@
 import Ember from 'ember';
 import { inject as service } from '@ember/service';
+// ARG NOTE: Once you remove outer-html after glimmerizing you can remove the outer-html component
 import Component from './outer-html';
 import { later } from '@ember/runloop';
 import { task, timeout, waitForEvent } from 'ember-concurrency';
@@ -17,6 +18,7 @@ export { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS, ERROR_JWT_LOGIN };
 export default Component.extend({
   store: service(),
   featureFlagService: service('featureFlag'),
+
   selectedAuthPath: null,
   selectedAuthType: null,
   roleName: null,
@@ -25,22 +27,18 @@ export default Component.extend({
   onRoleName() {},
   onLoading() {},
   onError() {},
-  onToken() {},
   onNamespace() {},
 
   didReceiveAttrs() {
     this._super();
-    let { oldSelectedAuthPath, selectedAuthPath } = this;
-    let shouldDebounce = !oldSelectedAuthPath && !selectedAuthPath;
-    if (oldSelectedAuthPath !== selectedAuthPath) {
-      this.set('role', null);
-      this.onRoleName(this.roleName);
-      this.fetchRole.perform(null, { debounce: false });
-    } else if (shouldDebounce) {
-      this.fetchRole.perform(this.roleName);
+    const debounce = !this.oldSelectedAuthPath && !this.selectedAuthPath;
+
+    if (this.oldSelectedAuthPath !== this.selectedAuthPath || debounce) {
+      this.fetchRole.perform(this.roleName, { debounce });
     }
+
     this.set('errorMessage', null);
-    this.set('oldSelectedAuthPath', selectedAuthPath);
+    this.set('oldSelectedAuthPath', this.selectedAuthPath);
   },
 
   // Assumes authentication using OIDC until it's known that the mount is
@@ -164,10 +162,7 @@ export default Component.extend({
     } catch (e) {
       return this.handleOIDCError(e);
     }
-    let token = resp.auth.client_token;
-    this.onSelectedAuth('token');
-    this.onToken(token);
-    yield this.onSubmit();
+    yield this.onSubmit(null, null, resp.auth.client_token);
   }),
 
   actions: {
@@ -177,10 +172,24 @@ export default Component.extend({
         e.preventDefault();
       }
       if (!this.isOIDC || !this.role || !this.role.authUrl) {
+        let message = this.errorMessage;
+        if (!this.role) {
+          message = 'Invalid role. Please try again.';
+        } else if (!this.role.authUrl) {
+          message =
+            'Missing auth_url. Please check that allowed_redirect_uris for the role include this mount path.';
+        }
+        this.onError(message);
         return;
       }
-
-      await this.fetchRole.perform(this.roleName, { debounce: false });
+      try {
+        await this.fetchRole.perform(this.roleName, { debounce: false });
+      } catch (error) {
+        // this task could be cancelled if the instances in didReceiveAttrs resolve after this was started
+        if (error?.name !== 'TaskCancelation') {
+          throw error;
+        }
+      }
       let win = this.getWindow();
 
       const POPUP_WIDTH = 500;

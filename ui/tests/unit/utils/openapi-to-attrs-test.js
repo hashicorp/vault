@@ -141,6 +141,7 @@ module('Unit | Util | OpenAPI Data Utilities', function () {
   const NEW_FIELDS = ['one', 'two', 'three'];
 
   test('it creates objects from OpenAPI schema props', function (assert) {
+    assert.expect(6);
     const generatedProps = expandOpenApiProps(OPENAPI_RESPONSE_PROPS);
     for (let propName in EXPANDED_PROPS) {
       assert.deepEqual(EXPANDED_PROPS[propName], generatedProps[propName], `correctly expands ${propName}`);
@@ -148,6 +149,7 @@ module('Unit | Util | OpenAPI Data Utilities', function () {
   });
 
   test('it combines OpenAPI props with existing model attrs', function (assert) {
+    assert.expect(3);
     const combined = combineAttributes(EXISTING_MODEL_ATTRS, EXPANDED_PROPS);
     for (let propName in EXISTING_MODEL_ATTRS) {
       assert.deepEqual(COMBINED_ATTRS[propName], combined[propName]);
@@ -155,6 +157,7 @@ module('Unit | Util | OpenAPI Data Utilities', function () {
   });
 
   test('it adds new fields from OpenAPI to fieldGroups except for exclusions', function (assert) {
+    assert.expect(3);
     let modelFieldGroups = [
       { default: ['name', 'awesomePeople'] },
       {
@@ -178,6 +181,7 @@ module('Unit | Util | OpenAPI Data Utilities', function () {
     }
   });
   test('it adds all new fields from OpenAPI to fieldGroups when excludedFields is empty', function (assert) {
+    assert.expect(3);
     let modelFieldGroups = [
       { default: ['name', 'awesomePeople'] },
       {
@@ -201,6 +205,7 @@ module('Unit | Util | OpenAPI Data Utilities', function () {
     }
   });
   test('it keeps fields the same when there are no brand new fields from OpenAPI', function (assert) {
+    assert.expect(3);
     let modelFieldGroups = [
       { default: ['name', 'awesomePeople', 'two', 'one', 'three'] },
       {

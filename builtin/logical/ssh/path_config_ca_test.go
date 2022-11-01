@@ -255,6 +255,7 @@ func TestSSH_ConfigCAKeyTypes(t *testing.T) {
 		"allowed_users":           "*",
 		"key_type":                "ca",
 		"ttl":                     "30s",
+		"not_before_duration":     "2h",
 	}
 	roleReq := &logical.Request{
 		Operation: logical.UpdateOperation,

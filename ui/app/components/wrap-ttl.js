@@ -32,8 +32,8 @@ export default Component.extend({
         label='Wrap response'
         helperTextDisabled='Will not wrap response'
         helperTextEnabled='Will wrap response with a lease of'
-        enableTTL=wrapResponse
-        initialValue=ttl
+        enableTTL=this.wrapResponse
+        initialValue=this.ttl
         onChange=(action 'changedValue')
       }}
     </div>

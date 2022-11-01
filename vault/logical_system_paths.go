@@ -288,6 +288,50 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 			},
 		},
+		{
+			Pattern: "loggers$",
+			Fields: map[string]*framework.FieldSchema{
+				"level": {
+					Type: framework.TypeString,
+					Description: "Log verbosity level. Supported values (in order of detail) are " +
+						"\"trace\", \"debug\", \"info\", \"warn\", and \"error\".",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleLoggersWrite,
+					Summary:  "Modify the log level for all existing loggers.",
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: b.handleLoggersDelete,
+					Summary:  "Revert the all loggers to use log level provided in config.",
+				},
+			},
+		},
+		{
+			Pattern: "loggers/" + framework.MatchAllRegex("name"),
+			Fields: map[string]*framework.FieldSchema{
+				"name": {
+					Type:        framework.TypeString,
+					Description: "The name of the logger to be modified.",
+				},
+				"level": {
+					Type: framework.TypeString,
+					Description: "Log verbosity level. Supported values (in order of detail) are " +
+						"\"trace\", \"debug\", \"info\", \"warn\", and \"error\".",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleLoggersByNameWrite,
+					Summary:  "Modify the log level of a single logger.",
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: b.handleLoggersByNameDelete,
+					Summary:  "Revert a single logger to use log level provided in config.",
+				},
+			},
+		},
 	}
 }
 
@@ -722,6 +766,10 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 				Type:        framework.TypeStringSlice,
 				Description: strings.TrimSpace(sysHelp["plugin-catalog_env"][0]),
 			},
+			"version": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -855,7 +903,7 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 		},
 
 		{
-			Pattern: "tools/random" + framework.OptionalParamRegex("urlbytes"),
+			Pattern: "tools/random(/" + framework.GenericNameRegex("source") + ")?" + framework.OptionalParamRegex("urlbytes"),
 			Fields: map[string]*framework.FieldSchema{
 				"urlbytes": {
 					Type:        framework.TypeString,
@@ -872,6 +920,12 @@ func (b *SystemBackend) toolsPaths() []*framework.Path {
 					Type:        framework.TypeString,
 					Default:     "base64",
 					Description: `Encoding format to use. Can be "hex" or "base64". Defaults to "base64".`,
+				},
+
+				"source": {
+					Type:        framework.TypeString,
+					Default:     "platform",
+					Description: `Which system to source random data from, ether "platform", "seal", or "all".`,
 				},
 			},
 
@@ -893,6 +947,12 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				"context": {
 					Type:        framework.TypeString,
 					Description: "Context string appended to every operationId",
+				},
+				"generic_mount_paths": {
+					Type:        framework.TypeBool,
+					Description: "Use generic mount paths",
+					Query:       true,
+					Default:     false,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -1382,6 +1442,12 @@ func (b *SystemBackend) monitorPath() *framework.Path {
 				Description: "Log level to view system logs at. Currently supported values are \"trace\", \"debug\", \"info\", \"warn\", \"error\".",
 				Query:       true,
 			},
+			"log_format": {
+				Type:        framework.TypeString,
+				Description: "Output format of logs. Supported values are \"standard\" and \"json\". The default is \"standard\".",
+				Query:       true,
+				Default:     "standard",
+			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation: b.handleMonitor,
@@ -1476,6 +1542,10 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["token_type"][0]),
 				},
+				"plugin_version": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
+				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
@@ -1533,6 +1603,10 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 				"options": {
 					Type:        framework.TypeKVPairs,
 					Description: strings.TrimSpace(sysHelp["auth_options"][0]),
+				},
+				"plugin_version": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -1733,6 +1807,8 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["wrap"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["wrap"][1]),
+
+			TakesArbitraryInput: true,
 		},
 
 		{
@@ -1849,6 +1925,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeCommaStringSlice,
 					Description: strings.TrimSpace(sysHelp["tune_allowed_managed_keys"][0]),
 				},
+				"plugin_version": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
+				},
 			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -1902,6 +1982,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 				"options": {
 					Type:        framework.TypeKVPairs,
 					Description: strings.TrimSpace(sysHelp["mount_options"][0]),
+				},
+				"plugin_version": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
 				},
 			},
 

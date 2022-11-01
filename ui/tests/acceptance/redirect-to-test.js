@@ -47,7 +47,7 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
     // normally we'd use the auth.logout helper to visit the route and reset the app, but in this case that
     // also routes us to the auth page, and then all of the transitions from the auth page get redirected back
     // to the auth page resulting in no redirect_to query param being set
-    sessionStorage.clear();
+    localStorage.clear();
   });
   test('redirect to a route after authentication', async function (assert) {
     let url = '/vault/secrets/secret/create';
@@ -59,7 +59,7 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
     // the login method on this page does another visit call that we don't want here
     await auth.tokenInput('root').submit();
     await settled();
-    assert.equal(currentURL(), url, 'navigates to the redirect_to url after auth');
+    assert.strictEqual(currentURL(), url, 'navigates to the redirect_to url after auth');
   });
 
   test('redirect from root does not include redirect_to', async function (assert) {
@@ -77,7 +77,7 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
     );
     await auth.tokenInput('root').submit();
     await settled();
-    assert.equal(currentURL(), url, 'navigates to the redirect_to with the query param after auth');
+    assert.strictEqual(currentURL(), url, 'navigates to the redirect_to with the query param after auth');
   });
 
   test('redirect to logout with wrapped token authenticates you', async function (assert) {
@@ -90,6 +90,6 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
     });
     await settled();
 
-    assert.equal(currentURL(), url, 'authenticates then navigates to the redirect_to url after auth');
+    assert.strictEqual(currentURL(), url, 'authenticates then navigates to the redirect_to url after auth');
   });
 });

@@ -8,6 +8,7 @@ import { waitFor } from '@ember/test-waiters';
 export default Component.extend({
   flashMessages: service(),
   'data-test-component': 'identity-edit-form',
+  attributeBindings: ['data-test-component'],
   model: null,
 
   // 'create', 'edit', 'merge'

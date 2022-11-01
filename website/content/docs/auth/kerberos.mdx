@@ -6,6 +6,8 @@ description: The Kerberos auth method allows automated authentication of Kerbero
 
 # Kerberos Auth Method
 
+@include 'x509-sha1-deprecation.mdx'
+
 The `kerberos` auth method provides an automated mechanism to retrieve
 a Vault token for Kerberos entities.
 
@@ -59,7 +61,7 @@ $ vault auth enable \
     kerberos
 ```
 
-- Create a `keytab` for the Kerberos plugin:
+- Create a `keytab` for the Kerberos plugin (this keytab is used by the Vault server itself, another keytab should be generated for login purposes):
 
 ```shell-session
 $ ktutil
@@ -162,6 +164,10 @@ $ vault login -method=kerberos \
   It includes a mechanism for tunneling pre-authentication exchanges using armoured
   KDC messages. FAST provides increased resistance to passive password guessing attacks.
   Some common Kerberos implementations do not support FAST negotiation.
+- `remove_instance_name` removes any instance names from a Kerberos service 
+  principal name when parsing the keytab file. For example when this is set to true, 
+  if a keytab has the service principal name `foo/localhost@example.com`, the CLI 
+  will strip the service principal name to just be `foo@example.com`.
 
 ## Troubleshooting
 
@@ -225,5 +231,5 @@ client.
 ## API
 
 The Kerberos auth method has a full HTTP API. Please see the
-[Kerberos auth method API](/api/auth/kerberos) for more
+[Kerberos auth method API](/api-docs/auth/kerberos) for more
 details.

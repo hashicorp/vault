@@ -70,7 +70,7 @@ export default class DatabaseRoleEdit extends Component {
         try {
           this.router.transitionTo(LIST_ROOT_ROUTE, backend, { queryParams: { tab: 'role' } });
         } catch (e) {
-          console.debug(e);
+          console.debug(e); // eslint-disable-line
         }
       })
       .catch((e) => {
@@ -97,7 +97,7 @@ export default class DatabaseRoleEdit extends Component {
         try {
           this.router.transitionTo(SHOW_ROUTE, `role/${secretId}`);
         } catch (e) {
-          console.debug(e);
+          console.debug(e); // eslint-disable-line
         }
       })
       .catch((e) => {
@@ -106,6 +106,19 @@ export default class DatabaseRoleEdit extends Component {
           errorMessage || 'Could not save the role. Please check Vault logs for more information.'
         );
         this.loading = false;
+      });
+  }
+  @action
+  rotateRoleCred(id) {
+    const backend = this.args.model?.backend;
+    let adapter = this.store.adapterFor('database/credential');
+    adapter
+      .rotateRoleCredentials(backend, id)
+      .then(() => {
+        this.flashMessages.success(`Success: Credentials for ${id} role were rotated`);
+      })
+      .catch((e) => {
+        this.flashMessages.danger(e.errors);
       });
   }
 }

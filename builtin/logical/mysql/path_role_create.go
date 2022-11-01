@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/logical"
-	_ "github.com/lib/pq"
 )
 
 func pathRoleCreate(b *backend) *framework.Path {
@@ -108,7 +107,7 @@ func (b *backend) pathRoleCreateRead(ctx context.Context, req *logical.Request, 
 			"name":     username,
 			"password": password,
 		}
-		if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+		if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 			return nil, err
 		}
 	}

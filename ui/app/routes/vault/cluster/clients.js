@@ -2,9 +2,11 @@ import Route from '@ember/routing/route';
 import RSVP from 'rsvp';
 import { action } from '@ember/object';
 import getStorage from 'vault/lib/token-storage';
-
+import { inject as service } from '@ember/service';
 const INPUTTED_START_DATE = 'vault:ui-inputted-start-date';
+
 export default class ClientsRoute extends Route {
+  @service store;
   async getVersionHistory() {
     try {
       let arrayOfModels = [];
@@ -12,20 +14,20 @@ export default class ClientsRoute extends Route {
       response.forEach((model) => {
         arrayOfModels.push({
           id: model.id,
-          perviousVersion: model.previousVersion,
+          previousVersion: model.previousVersion,
           timestampInstalled: model.timestampInstalled,
         });
       });
       return arrayOfModels;
     } catch (e) {
-      console.debug(e);
+      console.debug(e); // eslint-disable-line
       return [];
     }
   }
 
   async model() {
     let config = await this.store.queryRecord('clients/config', {}).catch((e) => {
-      console.debug(e);
+      console.debug(e); // eslint-disable-line
       // swallowing error so activity can show if no config permissions
       return {};
     });

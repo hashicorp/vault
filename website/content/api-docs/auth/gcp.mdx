@@ -29,19 +29,11 @@ to confirm signed JWTs passed in during login.
 
 ### Parameters
 
-- `credentials` `(string: "")` - A JSON string containing the contents
-  of a GCP credentials file. The credentials file must have the following
-  [permissions](https://cloud.google.com/compute/docs/access/iam):
-
-  ```
-  iam.serviceAccounts.get
-  iam.serviceAccountKeys.get
-  ```
-
-  If this value is empty, Vault will try to use [Application Default
-  Credentials][gcp-adc] from the machine on which the Vault server is running.
-
-  The project must have the `iam.googleapis.com` API [enabled](https://console.cloud.google.com/flows/enableapi?apiid=iam.googleapis.com).
+- `credentials` `(string: "")` - A JSON string containing the contents of a GCP
+  service account credentials file. The service account associated with the credentials
+  file must have the following [permissions](/docs/auth/gcp#required-gcp-permissions).
+  If this value is empty, Vault will try to use [Application Default Credentials][gcp-adc]
+  from the machine on which the Vault server is running.
 
 - `iam_alias` `(string: "role_id")` - Must be either `unique_id` or `role_id`.
   If `unique_id` is specified, the service account's unique ID will be used for
@@ -73,6 +65,21 @@ to confirm signed JWTs passed in during login.
   **Only select fields that will have a low rate of change** for your `gce_alias` because
   each change triggers a storage write and can have a performance impact at scale.
   Only used if role `type` is `gce`.
+
+- `custom_endpoint` `(map<string|string>: <optional>)` - Specifies overrides to
+  [service endpoints](https://cloud.google.com/apis/design/glossary#api_service_endpoint)
+  used when making API requests. This allows specific requests made during authentication
+  to target alternative service endpoints for use in [Private Google Access](https://cloud.google.com/vpc/docs/configure-private-google-access)
+  environments.
+
+  Overrides are set at the subdomain level using the following keys:
+  - `api` - Replaces the service endpoint used in API requests to `https://www.googleapis.com`.
+  - `iam` - Replaces the service endpoint used in API requests to `https://iam.googleapis.com`.
+  - `crm` - Replaces the service endpoint used in API requests to `https://cloudresourcemanager.googleapis.com`.
+  - `compute` - Replaces the service endpoint used in API requests to `https://compute.googleapis.com`.
+
+  The endpoint value provided for a given key has the form of `scheme://host:port`.
+  The `scheme://` and `:port` portions of the endpoint value are optional.
 
 ### Sample Payload
 

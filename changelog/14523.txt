@@ -1,0 +1,3 @@
+```release-note:bug
+cli: Fix panic caused by parsing key=value fields whose value is a single backslash
+```

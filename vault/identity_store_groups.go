@@ -181,7 +181,7 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 	// Update the policies if supplied
 	policiesRaw, ok := d.GetOk("policies")
 	if ok {
-		group.Policies = policiesRaw.([]string)
+		group.Policies = strutil.RemoveDuplicatesStable(policiesRaw.([]string), true)
 	}
 
 	if strutil.StrListContains(group.Policies, "root") {
@@ -255,6 +255,10 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 
 	err = i.sanitizeAndUpsertGroup(ctx, group, nil, memberGroupIDs)
 	if err != nil {
+		if errStr := err.Error(); strings.HasPrefix(errStr, errCycleDetectedPrefix) {
+			return logical.ErrorResponse(errStr), nil
+		}
+
 		return nil, err
 	}
 

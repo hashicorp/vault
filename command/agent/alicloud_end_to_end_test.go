@@ -190,7 +190,7 @@ func setAliCloudEnvCreds() error {
 	}
 	assumeRoleReq := sts.CreateAssumeRoleRequest()
 	assumeRoleReq.RoleArn = os.Getenv(envVarAlicloudRoleArn)
-	assumeRoleReq.RoleSessionName = strings.Replace(roleSessionName, "-", "", -1)
+	assumeRoleReq.RoleSessionName = strings.ReplaceAll(roleSessionName, "-", "")
 	assumeRoleResp, err := client.AssumeRole(assumeRoleReq)
 	if err != nil {
 		return err

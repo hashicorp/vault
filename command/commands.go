@@ -80,6 +80,8 @@ const (
 	// EnvVaultLicensePath is an env var used in Vault Enterprise to provide a
 	// path to a license file on disk
 	EnvVaultLicensePath = "VAULT_LICENSE_PATH"
+	// EnvVaultDetailed is to output detailed information (e.g., ListResponseWithInfo).
+	EnvVaultDetailed = `VAULT_DETAILED`
 
 	// DisableSSCTokens is an env var used to disable index bearing
 	// token functionality
@@ -122,6 +124,10 @@ const (
 	flagNameTokenType = "token-type"
 	// flagNameAllowedManagedKeys is the flag name used for auth/secrets enable
 	flagNameAllowedManagedKeys = "allowed-managed-keys"
+	// flagNamePluginVersion selects what version of a plugin should be used.
+	flagNamePluginVersion = "plugin-version"
+	// flagNameDisableRedirects is used to prevent the client from honoring a single redirect as a response to a request
+	flagNameDisableRedirects = "disable-redirects"
 )
 
 var (
@@ -345,6 +351,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"namespace patch": func() (cli.Command, error) {
+			return &NamespacePatchCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"namespace delete": func() (cli.Command, error) {
 			return &NamespaceDeleteCommand{
 				BaseCommand: getBaseCommand(),
@@ -474,6 +485,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"operator members": func() (cli.Command, error) {
 			return &OperatorMembersCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"patch": func() (cli.Command, error) {
+			return &PatchCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},

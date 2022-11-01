@@ -1,0 +1,15 @@
+```release-note:change
+physical/cockroachdb: Change underlying driver library from [lib/pq](https://github.com/lib/pq) to [pgx](https://github.com/jackc/pgx)
+```
+
+```release-note:change
+physical/postgres: Change underlying driver library from [lib/pq](https://github.com/lib/pq) to [pgx](https://github.com/jackc/pgx)
+```
+
+```release-note:change
+database/postgres: Change underlying driver library from [lib/pq](https://github.com/lib/pq) to [pgx](https://github.com/jackc/pgx)
+```
+
+```release-note:change
+database/redshift: Change underlying driver library from [lib/pq](https://github.com/lib/pq) to [pgx](https://github.com/jackc/pgx)
+```

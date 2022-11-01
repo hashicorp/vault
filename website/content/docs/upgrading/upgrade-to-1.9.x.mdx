@@ -38,14 +38,14 @@ token roles. When creating a role, the key parameter is required and the key
 must exist. Previously, it was possible to create a role and assign it a named
 key that did not yet exist despite the documentation stating otherwise.
 
-All calls to [create or update a role](https://www.vaultproject.io/api/secret/identity/tokens#create-or-update-a-role)
+All calls to [create or update a role](https://www.vaultproject.io/api-docs/secret/identity/tokens#create-or-update-a-role)
 must be checked to ensure that roles are not being created or updated with
 non-existent keys.
 
 ## SSH Role Parameter `allowed_extensions` Behavior Change
 
 Prior versions of Vault allowed clients to specify any extension when requesting
-SSH certificate [signing requests](https://www.vaultproject.io/api/secret/ssh#sign-ssh-key)
+SSH certificate [signing requests](https://www.vaultproject.io/api-docs/secret/ssh#sign-ssh-key)
 if their role had an `allowed_extensions` set to `""` or was missing.
 
 Now, Vault will reject a client request that specifies extensions if the role
@@ -97,7 +97,10 @@ See [this blog post](https://go.dev/blog/tls-cipher-suites) for more information
 
 @include 'pki-forwarding-bug.mdx'
 
+
 ## Known Issues
+
+@include 'raft-panic-old-tls-key.mdx'
 
 ### Identity Token Backend Key Rotations
 

@@ -1,6 +1,6 @@
 # Vault Website
 
-This subdirectory contains the entire source for the [Vault Website](https://vaultproject.io/). This is a [NextJS](https://nextjs.org/) project, which builds a static site from these source files.
+This subdirectory contains the content for the [Vault Website](https://vaultproject.io/).
 
 <!--
   This readme file contains several blocks of generated text, to make it easier to share common information
@@ -40,14 +40,13 @@ The website can be run locally through node.js or [Docker](https://www.docker.co
 
 > **Note:** If you are using a text editor that uses a "safe write" save style such as **vim** or **goland**, this can cause issues with the live reload in development. If you turn off safe write, this should solve the problem. In vim, this can be done by running `:set backupcopy=yes`. In goland, search the settings for "safe write" and turn that setting off.
 
-| :warning: WARNING :warning: |
-|:----------------------------|
+| :warning: WARNING :warning:                                                                                                                                                                                                                                                                                                                                                     |
+| :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | If you've previously run the website successfully using either the Docker or Node.js approach but are now facing some issue then try `docker rmi $(docker images -aq hashicorp-vault-website-local) && make build-image && make website-local` or `rm -rf node_modules`; failing that consider cloning this repository again and re-attempting the steps anew in a clean clone. |
-
 
 ### With Docker
 
-Running the site locally is simple. Provided you have Docker installed, clone this repo, run `make`, and then visit `http://localhost:3000`.
+Running the site locally is simple. Provided you have the [latest version](https://docs.docker.com/engine/release-notes/) of Docker installed, clone this repo, run `make`, and then visit `http://localhost:3000`.
 
 The docker image is pre-built with all the website dependencies installed, which is what makes it so quick and simple, but also means if you need to change dependencies and test the changes within Docker, you'll need a new image. If this is something you need to do, you can run `make build-image` to generate a local Docker image with updated dependencies, then `make website-local` to use that image and preview.
 
@@ -82,7 +81,6 @@ This file can be standard Markdown and also supports [YAML frontmatter](https://
 title: 'My Title'
 description: "A thorough, yet succinct description of the page's contents"
 ---
-
 ```
 
 The significant keys in the YAML frontmatter are:

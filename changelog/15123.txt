@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Fix some identity data races found by Go race detector (no known impact yet).
+```

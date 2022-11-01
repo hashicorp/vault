@@ -18,11 +18,16 @@
       @title="No data received"
       @message="Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes."
     />
+  {{else if (eq @model.monthly.id "no-data")}}
+    <EmptyState
+      @title="No data available"
+      @message="Tracking may be turned off. Check with your administrator or check back later."
+    />
   {{else}}
     <div class="is-subtitle-gray has-bottom-margin-m">
       FILTERS
       <Toolbar>
-        <ToolbarFilters>
+        <ToolbarFilters data-test-clients-filter-bar>
           <SearchSelect
             @id="namespace-search-select-monthly"
             @options={{this.namespaceArray}}
@@ -34,7 +39,7 @@
             @displayInherit={{true}}
             class="is-marginless"
           />
-          {{#if this.selectedNamespace}}
+          {{#if (not (is-empty this.authMethodOptions))}}
             <SearchSelect
               @id="auth-method-search-select"
               @options={{this.authMethodOptions}}
@@ -49,12 +54,12 @@
         </ToolbarFilters>
       </Toolbar>
     </div>
-    {{#if this.countsIncludeOlderData}}
+    {{#if this.upgradeDuringCurrentMonth}}
       <AlertBanner @type="warning" @title="Warning">
-        {{concat "You upgraded to Vault " this.firstUpgradeVersion " on " (date-format this.upgradeDate "MMMM d, yyyy.")}}
-        How we count clients changed in 1.9, so please keep that in mind when looking at the data below, and you can
+        {{this.upgradeVersionAndDate}}
+        {{this.versionSpecificText}}
         <DocLink @path="/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts">
-          read more here.
+          Learn more here.
         </DocLink>
       </AlertBanner>
     {{/if}}
@@ -66,10 +71,12 @@
       {{#if this.hasAttributionData}}
         <Clients::Attribution
           @chartLegend={{this.chartLegend}}
-          @totalClientsData={{this.totalClientsData}}
           @totalUsageCounts={{this.totalUsageCounts}}
+          @newUsageCounts={{this.newUsageCounts}}
+          @totalClientAttribution={{this.totalClientAttribution}}
           @selectedNamespace={{this.selectedNamespace}}
           @startTimeDisplay={{date-format this.responseTimestamp "MMMM yyyy"}}
+          @isCurrentMonth={{true}}
           @isDateRange={{false}}
           @timestamp={{this.responseTimestamp}}
         />

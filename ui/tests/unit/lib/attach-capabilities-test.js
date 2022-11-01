@@ -21,14 +21,14 @@ module('Unit | lib | attach capabilities', function (hooks) {
     });
     let relationship = mc.relationshipsByName.get('updatePath');
 
-    assert.equal(relationship.key, 'updatePath', 'has updatePath relationship');
-    assert.equal(relationship.kind, 'belongsTo', 'kind of relationship is belongsTo');
-    assert.equal(relationship.type, 'capabilities', 'updatePath is a related capabilities model');
+    assert.strictEqual(relationship.key, 'updatePath', 'has updatePath relationship');
+    assert.strictEqual(relationship.kind, 'belongsTo', 'kind of relationship is belongsTo');
+    assert.strictEqual(relationship.type, 'capabilities', 'updatePath is a related capabilities model');
 
     relationship = mc.relationshipsByName.get('deletePath');
-    assert.equal(relationship.key, 'deletePath', 'has deletePath relationship');
-    assert.equal(relationship.kind, 'belongsTo', 'kind of relationship is belongsTo');
-    assert.equal(relationship.type, 'capabilities', 'deletePath is a related capabilities model');
+    assert.strictEqual(relationship.key, 'deletePath', 'has deletePath relationship');
+    assert.strictEqual(relationship.kind, 'belongsTo', 'kind of relationship is belongsTo');
+    assert.strictEqual(relationship.type, 'capabilities', 'deletePath is a related capabilities model');
   });
 
   test('it adds a static method to the model class', function (assert) {
@@ -37,10 +37,8 @@ module('Unit | lib | attach capabilities', function (hooks) {
       updatePath: apiPath`update/{'id'}`,
       deletePath: apiPath`delete/{'id'}`,
     });
-    assert.ok(
-      !!mc.relatedCapabilities && typeof mc.relatedCapabilities === 'function',
-      'model class now has a relatedCapabilities static function'
-    );
+    const relatedCapabilities = !!mc.relatedCapabilities && typeof mc.relatedCapabilities === 'function';
+    assert.true(relatedCapabilities, 'model class now has a relatedCapabilities static function');
   });
 
   test('calling static method with single response JSON-API document adds expected relationships', function (assert) {
@@ -84,7 +82,7 @@ module('Unit | lib | attach capabilities', function (hooks) {
 
     mc.relatedCapabilities(jsonAPIDocSingle);
 
-    assert.equal(
+    assert.strictEqual(
       Object.keys(jsonAPIDocSingle.data.relationships).length,
       2,
       'document now has 2 relationships'

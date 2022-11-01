@@ -21,6 +21,8 @@ export const localIconMap = {
   radius: 'user',
   ssh: 'terminal-screen',
   totp: 'history',
+  duo: null,
+  pingid: null,
   transit: 'swap-horizontal',
   userpass: 'identity-user',
   stopwatch: 'clock',

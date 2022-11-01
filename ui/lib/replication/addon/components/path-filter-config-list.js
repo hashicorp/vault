@@ -6,6 +6,7 @@ import { task, timeout } from 'ember-concurrency';
 
 export default Component.extend({
   'data-test-component': 'path-filter-config',
+  attributeBindings: ['data-test-component'],
   namespace: service(),
   store: service(),
   config: null,
@@ -122,9 +123,17 @@ export default Component.extend({
   },
 
   actions: {
-    pathsChanged(paths) {
+    async pathsChanged(paths) {
       // set paths on the model
       set(this.config, 'paths', paths);
+
+      // if dropdown is empty or has options without groupName, re-fetch
+      if (
+        this.autoCompleteOptions.length === 0 ||
+        this.autoCompleteOptions.any((option) => !Object.keys(option).includes('groupName'))
+      ) {
+        await this.setAutoCompleteOptions.perform();
+      }
       if (paths.length) {
         // remove the selected item from the default list of options
         let filtered = this.filterOptions(this.autoCompleteOptions);

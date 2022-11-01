@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Warn on empty Subject field during issuer generation (root/generate and root/sign-intermediate).
+```

@@ -1,3 +1,6 @@
+import Component from '@glimmer/component';
+import { getStatementFields, getRoleFields } from '../utils/database-helpers';
+
 /**
  * @module DatabaseRoleSettingForm
  * DatabaseRoleSettingForm components are used to handle the role settings section on the database/role form
@@ -12,9 +15,6 @@
  * @param {string} [mode=create] - mode of the form (eg. create or edit)
  * @param {string} [dbType=default] - type of database, eg 'mongodb-database-plugin'
  */
-
-import Component from '@glimmer/component';
-import { getStatementFields, getRoleFields } from '../utils/database-helpers';
 
 export default class DatabaseRoleSettingForm extends Component {
   get settingFields() {

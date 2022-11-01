@@ -365,6 +365,7 @@ const (
 	ListOperation                     = "list"
 	HelpOperation                     = "help"
 	AliasLookaheadOperation           = "alias-lookahead"
+	ResolveRoleOperation              = "resolve-role"
 
 	// The operations below are called globally, the path is less relevant.
 	RevokeOperation   Operation = "revoke"
@@ -377,7 +378,6 @@ type MFACreds map[string][]string
 // InitializationRequest stores the parameters and context of an Initialize()
 // call being made to a logical.Backend.
 type InitializationRequest struct {
-
 	// Storage can be used to durably store and retrieve state.
 	Storage Storage
 }

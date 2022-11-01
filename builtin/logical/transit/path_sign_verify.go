@@ -2,8 +2,11 @@ package transit
 
 import (
 	"context"
+	"crypto/rsa"
 	"encoding/base64"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -58,6 +61,8 @@ type batchResponseVerifyItem struct {
 	err error
 }
 
+const defaultHashAlgorithm = "sha2-256"
+
 func (b *backend) pathSign() *framework.Path {
 	return &framework.Path{
 		Pattern: "sign/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("urlalgorithm"),
@@ -80,7 +85,7 @@ derivation is enabled; currently only available with ed25519 keys.`,
 
 			"hash_algorithm": {
 				Type:    framework.TypeString,
-				Default: "sha2-256",
+				Default: defaultHashAlgorithm,
 				Description: `Hash algorithm to use (POST body parameter). Valid values are:
 
 * sha1
@@ -92,14 +97,17 @@ derivation is enabled; currently only available with ed25519 keys.`,
 * sha3-256
 * sha3-384
 * sha3-512
+* none
 
 Defaults to "sha2-256". Not valid for all key types,
-including ed25519.`,
+including ed25519. Using none requires setting prehashed=true and
+signature_algorithm=pkcs1v15, yielding a PKCSv1_5_NoOID instead of
+the usual PKCSv1_5_DERnull signature.`,
 			},
 
 			"algorithm": {
 				Type:        framework.TypeString,
-				Default:     "sha2-256",
+				Default:     defaultHashAlgorithm,
 				Description: `Deprecated: use "hash_algorithm" instead.`,
 			},
 
@@ -130,6 +138,13 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 				Type:        framework.TypeString,
 				Default:     "asn1",
 				Description: `The method by which to marshal the signature. The default is 'asn1' which is used by openssl and X.509. It can also be set to 'jws' which is used for JWT signatures; setting it to this will also cause the encoding of the signature to be url-safe base64 instead of using standard base64 encoding. Currently only valid for ECDSA P-256 key types".`,
+			},
+
+			"salt_length": {
+				Type:    framework.TypeString,
+				Default: "auto",
+				Description: `The salt length used to sign. Currently only applies to the RSA PSS signature scheme.
+Options are 'auto' (the default used by Golang, causing the salt to be as large as possible when signing), 'hash' (causes the salt length to equal the length of the hash used in the signature), or an integer between the minimum and the maximum permissible salt lengths for the given RSA key size. Defaults to 'auto'.`,
 			},
 		},
 
@@ -179,7 +194,7 @@ derivation is enabled; currently only available with ed25519 keys.`,
 
 			"hash_algorithm": {
 				Type:    framework.TypeString,
-				Default: "sha2-256",
+				Default: defaultHashAlgorithm,
 				Description: `Hash algorithm to use (POST body parameter). Valid values are:
 
 * sha1
@@ -191,13 +206,15 @@ derivation is enabled; currently only available with ed25519 keys.`,
 * sha3-256
 * sha3-384
 * sha3-512
+* none
 
-Defaults to "sha2-256". Not valid for all key types.`,
+Defaults to "sha2-256". Not valid for all key types. See note about
+none on signing path.`,
 			},
 
 			"algorithm": {
 				Type:        framework.TypeString,
-				Default:     "sha2-256",
+				Default:     defaultHashAlgorithm,
 				Description: `Deprecated: use "hash_algorithm" instead.`,
 			},
 
@@ -217,6 +234,13 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 				Default:     "asn1",
 				Description: `The method by which to unmarshal the signature when verifying. The default is 'asn1' which is used by openssl and X.509; can also be set to 'jws' which is used for JWT signatures in which case the signature is also expected to be url-safe base64 encoding instead of standard base64 encoding. Currently only valid for ECDSA P-256 key types".`,
 			},
+
+			"salt_length": {
+				Type:    framework.TypeString,
+				Default: "auto",
+				Description: `The salt length used to sign. Currently only applies to the RSA PSS signature scheme.
+Options are 'auto' (the default used by Golang, causing the salt to be as large as possible when signing), 'hash' (causes the salt length to equal the length of the hash used in the signature), or an integer between the minimum and the maximum permissible salt lengths for the given RSA key size. Defaults to 'auto'.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -228,6 +252,33 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 	}
 }
 
+func (b *backend) getSaltLength(d *framework.FieldData) (int, error) {
+	rawSaltLength, ok := d.GetOk("salt_length")
+	// This should only happen when something is wrong with the schema,
+	// so this is a reasonable default.
+	if !ok {
+		return rsa.PSSSaltLengthAuto, nil
+	}
+
+	rawSaltLengthStr := rawSaltLength.(string)
+	lowerSaltLengthStr := strings.ToLower(rawSaltLengthStr)
+	switch lowerSaltLengthStr {
+	case "auto":
+		return rsa.PSSSaltLengthAuto, nil
+	case "hash":
+		return rsa.PSSSaltLengthEqualsHash, nil
+	default:
+		saltLengthInt, err := strconv.Atoi(lowerSaltLengthStr)
+		if err != nil {
+			return rsa.PSSSaltLengthEqualsHash - 1, fmt.Errorf("salt length neither 'auto', 'hash', nor an int: %s", rawSaltLength)
+		}
+		if saltLengthInt < rsa.PSSSaltLengthEqualsHash {
+			return rsa.PSSSaltLengthEqualsHash - 1, fmt.Errorf("salt length is invalid: %d", saltLengthInt)
+		}
+		return saltLengthInt, nil
+	}
+}
+
 func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	ver := d.Get("key_version").(int)
@@ -236,6 +287,9 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		hashAlgorithmStr = d.Get("hash_algorithm").(string)
 		if hashAlgorithmStr == "" {
 			hashAlgorithmStr = d.Get("algorithm").(string)
+			if hashAlgorithmStr == "" {
+				hashAlgorithmStr = defaultHashAlgorithm
+			}
 		}
 	}
 
@@ -252,6 +306,14 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 
 	prehashed := d.Get("prehashed").(bool)
 	sigAlgorithm := d.Get("signature_algorithm").(string)
+	saltLength, err := b.getSaltLength(d)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+
+	if hashAlgorithm == keysutil.HashTypeNone && (!prehashed || sigAlgorithm != "pkcs1v15") {
+		return logical.ErrorResponse("hash_algorithm=none requires both prehashed=true and signature_algorithm=pkcs1v15"), logical.ErrInvalidRequest
+	}
 
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
@@ -330,7 +392,12 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 			}
 		}
 
-		sig, err := p.Sign(ver, context, input, hashAlgorithm, sigAlgorithm, marshaling)
+		sig, err := p.SignWithOptions(ver, context, input, &keysutil.SigningOptions{
+			HashAlgorithm: hashAlgorithm,
+			Marshaling:    marshaling,
+			SaltLength:    saltLength,
+			SigAlgorithm:  sigAlgorithm,
+		})
 		if err != nil {
 			if batchInputRaw != nil {
 				response[i].Error = err.Error()
@@ -454,6 +521,9 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		hashAlgorithmStr = d.Get("hash_algorithm").(string)
 		if hashAlgorithmStr == "" {
 			hashAlgorithmStr = d.Get("algorithm").(string)
+			if hashAlgorithmStr == "" {
+				hashAlgorithmStr = defaultHashAlgorithm
+			}
 		}
 	}
 
@@ -470,6 +540,14 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 
 	prehashed := d.Get("prehashed").(bool)
 	sigAlgorithm := d.Get("signature_algorithm").(string)
+	saltLength, err := b.getSaltLength(d)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+
+	if hashAlgorithm == keysutil.HashTypeNone && (!prehashed || sigAlgorithm != "pkcs1v15") {
+		return logical.ErrorResponse("hash_algorithm=none requires both prehashed=true and signature_algorithm=pkcs1v15"), logical.ErrInvalidRequest
+	}
 
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
@@ -533,7 +611,12 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 			}
 		}
 
-		valid, err := p.VerifySignature(context, input, hashAlgorithm, sigAlgorithm, marshaling, sig)
+		valid, err := p.VerifySignatureWithOptions(context, input, sig, &keysutil.SigningOptions{
+			HashAlgorithm: hashAlgorithm,
+			Marshaling:    marshaling,
+			SaltLength:    saltLength,
+			SigAlgorithm:  sigAlgorithm,
+		})
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:

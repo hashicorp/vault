@@ -1,0 +1,3 @@
+```release-note:bug
+auth/approle: Add maximum length for input values that result in SHA56 HMAC calculation
+```

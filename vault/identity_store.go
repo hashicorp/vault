@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
+	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -112,6 +113,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 
 			return nil
 		},
+		RunningVersion: versions.DefaultBuiltinVersion,
 	}
 
 	iStore.oidcCache = newOIDCCache(cache.NoExpiration, cache.NoExpiration)
@@ -142,11 +144,39 @@ func (i *IdentityStore) paths() []*framework.Path {
 func mfaPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
+			Pattern: "mfa/method" + genericOptionalUUIDRegex("method_id"),
+			Fields: map[string]*framework.FieldSchema{
+				"method_id": {
+					Type:        framework.TypeString,
+					Description: `The unique identifier for this MFA method.`,
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.handleMFAMethodReadGlobal,
+					Summary:  "Read the current configuration for the given ID regardless of the MFA method type",
+				},
+			},
+		},
+		{
+			Pattern: "mfa/method/?$",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.handleMFAMethodListGlobal,
+					Summary:  "List MFA method configurations for all MFA methods",
+				},
+			},
+		},
+		{
 			Pattern: "mfa/method/totp" + genericOptionalUUIDRegex("method_id"),
 			Fields: map[string]*framework.FieldSchema{
 				"method_id": {
 					Type:        framework.TypeString,
 					Description: `The unique identifier for this MFA method.`,
+				},
+				"max_validation_attempts": {
+					Type:        framework.TypeInt,
+					Description: `Max number of allowed validation attempts.`,
 				},
 				"issuer": {
 					Type:        framework.TypeString,
@@ -185,7 +215,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodRead,
+					Callback: i.handleMFAMethodTOTPRead,
 					Summary:  "Read the current configuration for the given MFA method",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
@@ -193,7 +223,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Summary:  "Update or create a configuration for the given MFA method",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodDelete,
+					Callback: i.handleMFAMethodTOTPDelete,
 					Summary:  "Delete a configuration for the given MFA method",
 				},
 			},
@@ -213,11 +243,6 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 				"method_id": {
 					Type:        framework.TypeString,
 					Description: `The unique identifier for this MFA method.`,
-					Required:    true,
-				},
-				"entity_id": {
-					Type:        framework.TypeString,
-					Description: "Entity ID on which the generated secret needs to get stored.",
 					Required:    true,
 				},
 			},
@@ -277,13 +302,9 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: `The unique identifier for this MFA method.`,
 				},
-				"mount_accessor": {
-					Type:        framework.TypeString,
-					Description: `The mount to tie this method to for use in automatic mappings. The mapping will use the Name field of Aliases associated with this mount as the username in the mapping.`,
-				},
 				"username_format": {
 					Type:        framework.TypeString,
-					Description: `A format string for mapping Identity names to MFA method names. Values to subtitute should be placed in {{}}. For example, "{{alias.name}}@example.com". Currently-supported mappings: alias.name: The name returned by the mount configured via the mount_accessor parameter. If blank, the Alias's name field will be used as-is.`,
+					Description: `A template string for mapping Identity names to MFA method names. Values to substitute should be placed in {{}}. For example, "{{entity.name}}@example.com". If blank, the Entity's name field will be used as-is.`,
 				},
 				"org_name": {
 					Type:        framework.TypeString,
@@ -308,7 +329,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodRead,
+					Callback: i.handleMFAMethodOKTARead,
 					Summary:  "Read the current configuration for the given MFA method",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
@@ -316,7 +337,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Summary:  "Update or create a configuration for the given MFA method",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodDelete,
+					Callback: i.handleMFAMethodOKTADelete,
 					Summary:  "Delete a configuration for the given MFA method",
 				},
 			},
@@ -337,13 +358,9 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: `The unique identifier for this MFA method.`,
 				},
-				"mount_accessor": {
-					Type:        framework.TypeString,
-					Description: `The mount to tie this method to for use in automatic mappings. The mapping will use the Name field of Aliases associated with this mount as the username in the mapping.`,
-				},
 				"username_format": {
 					Type:        framework.TypeString,
-					Description: `A format string for mapping Identity names to MFA method names. Values to subtitute should be placed in {{}}. For example, "{{alias.name}}@example.com". Currently-supported mappings: alias.name: The name returned by the mount configured via the mount_accessor parameter If blank, the Alias's name field will be used as-is. `,
+					Description: `A template string for mapping Identity names to MFA method names. Values to subtitute should be placed in {{}}. For example, "{{alias.name}}@example.com". Currently-supported mappings: alias.name: The name returned by the mount configured via the mount_accessor parameter If blank, the Alias's name field will be used as-is. `,
 				},
 				"secret_key": {
 					Type:        framework.TypeString,
@@ -368,7 +385,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodRead,
+					Callback: i.handleMFAMethodDuoRead,
 					Summary:  "Read the current configuration for the given MFA method",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
@@ -376,7 +393,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Summary:  "Update or create a configuration for the given MFA method",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodDelete,
+					Callback: i.handleMFAMethodDUODelete,
 					Summary:  "Delete a configuration for the given MFA method",
 				},
 			},
@@ -397,13 +414,9 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: `The unique identifier for this MFA method.`,
 				},
-				"mount_accessor": {
-					Type:        framework.TypeString,
-					Description: `The mount to tie this method to for use in automatic mappings. The mapping will use the Name field of Aliases associated with this mount as the username in the mapping.`,
-				},
 				"username_format": {
 					Type:        framework.TypeString,
-					Description: `A format string for mapping Identity names to MFA method names. Values to subtitute should be placed in {{}}. For example, "{{alias.name}}@example.com". Currently-supported mappings: alias.name: The name returned by the mount configured via the mount_accessor parameter If blank, the Alias's name field will be used as-is. `,
+					Description: `A template string for mapping Identity names to MFA method names. Values to subtitute should be placed in {{}}. For example, "{{alias.name}}@example.com". Currently-supported mappings: alias.name: The name returned by the mount configured via the mount_accessor parameter If blank, the Alias's name field will be used as-is. `,
 				},
 				"settings_file_base64": {
 					Type:        framework.TypeString,
@@ -412,7 +425,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodRead,
+					Callback: i.handleMFAMethodPingIDRead,
 					Summary:  "Read the current configuration for the given MFA method",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
@@ -420,7 +433,7 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Summary:  "Update or create a configuration for the given MFA method",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
-					Callback: i.handleMFAMethodDelete,
+					Callback: i.handleMFAMethodPingIDDelete,
 					Summary:  "Delete a configuration for the given MFA method",
 				},
 			},
@@ -477,6 +490,11 @@ func mfaPaths(i *IdentityStore) []*framework.Path {
 					Callback: i.handleMFALoginEnforcementDelete,
 					Summary:  "Delete a login enforcement",
 				},
+			},
+		},
+		{
+			Pattern: "mfa/login-enforcement/?$",
+			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.handleMFALoginEnforcementList,
 					Summary:  "List login enforcements",
@@ -785,6 +803,10 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 				i.logger.Error("failed to fetch entity during local alias invalidation", "entity_id", alias.CanonicalID, "error", err)
 				return
 			}
+			if entity == nil {
+				i.logger.Error("failed to fetch entity during local alias invalidation, missing entity", "entity_id", alias.CanonicalID, "error", err)
+				continue
+			}
 
 			// Delete local aliases from the entity.
 			err = i.deleteAliasesInEntityInTxn(txn, entity, []*identity.Alias{alias})
@@ -1074,42 +1096,43 @@ func (i *IdentityStore) CreateEntity(ctx context.Context) (*identity.Entity, err
 			nsLabel,
 		})
 
-	return entity, nil
+	return entity.Clone()
 }
 
 // CreateOrFetchEntity creates a new entity. This is used by core to
 // associate each login attempt by an alias to a unified entity in Vault.
-func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.Alias) (*identity.Entity, error) {
+func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.Alias) (*identity.Entity, bool, error) {
 	defer metrics.MeasureSince([]string{"identity", "create_or_fetch_entity"}, time.Now())
 
 	var entity *identity.Entity
 	var err error
 	var update bool
+	var entityCreated bool
 
 	if alias == nil {
-		return nil, fmt.Errorf("alias is nil")
+		return nil, false, fmt.Errorf("alias is nil")
 	}
 
 	if alias.Name == "" {
-		return nil, fmt.Errorf("empty alias name")
+		return nil, false, fmt.Errorf("empty alias name")
 	}
 
 	mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor)
 	if mountValidationResp == nil {
-		return nil, fmt.Errorf("invalid mount accessor %q", alias.MountAccessor)
+		return nil, false, fmt.Errorf("invalid mount accessor %q", alias.MountAccessor)
 	}
 
 	if mountValidationResp.MountType != alias.MountType {
-		return nil, fmt.Errorf("mount accessor %q is not a mount of type %q", alias.MountAccessor, alias.MountType)
+		return nil, false, fmt.Errorf("mount accessor %q is not a mount of type %q", alias.MountAccessor, alias.MountType)
 	}
 
 	// Check if an entity already exists for the given alias
 	entity, err = i.entityByAliasFactors(alias.MountAccessor, alias.Name, true)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if entity != nil && changedAliasIndex(entity, alias) == -1 {
-		return entity, nil
+		return entity, false, nil
 	}
 
 	i.lock.Lock()
@@ -1122,12 +1145,12 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 	// Check if an entity was created before acquiring the lock
 	entity, err = i.entityByAliasFactorsInTxn(txn, alias.MountAccessor, alias.Name, true)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if entity != nil {
 		idx := changedAliasIndex(entity, alias)
 		if idx == -1 {
-			return entity, nil
+			return entity, false, nil
 		}
 		a := entity.Aliases[idx]
 		a.Metadata = alias.Metadata
@@ -1140,7 +1163,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 		entity = new(identity.Entity)
 		err = i.sanitizeEntity(ctx, entity)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 
 		// Create a new alias
@@ -1156,7 +1179,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 
 		err = i.sanitizeAlias(ctx, newAlias)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 
 		i.logger.Debug("creating a new entity", "alias", newAlias)
@@ -1182,16 +1205,18 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 				{"auth_method", newAlias.MountType},
 				{"mount_point", newAlias.MountPath},
 			})
+		entityCreated = true
 	}
 
 	// Update MemDB and persist entity object
 	err = i.upsertEntityInTxn(ctx, txn, entity, nil, true)
 	if err != nil {
-		return nil, err
+		return entity, entityCreated, err
 	}
 
 	txn.Commit()
-	return entity.Clone()
+	clonedEntity, err := entity.Clone()
+	return clonedEntity, entityCreated, err
 }
 
 // changedAliasIndex searches an entity for changed alias metadata.
@@ -1200,7 +1225,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 // names match or no metadata is different, -1 is returned.
 func changedAliasIndex(entity *identity.Entity, alias *logical.Alias) int {
 	for i, a := range entity.Aliases {
-		if a.Name == alias.Name && !strutil.EqualStringMaps(a.Metadata, alias.Metadata) {
+		if a.Name == alias.Name && a.MountAccessor == alias.MountAccessor && !strutil.EqualStringMaps(a.Metadata, alias.Metadata) {
 			return i
 		}
 	}

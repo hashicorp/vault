@@ -3,11 +3,12 @@
 
 const EmberApp = require('ember-cli/lib/broccoli/ember-app');
 const config = require('./config/environment')();
+const nodeSass = require('node-sass');
 
 const environment = EmberApp.env();
 const isProd = environment === 'production';
 const isTest = environment === 'test';
-const isCI = !!process.env.CI;
+// const isCI = !!process.env.CI;
 
 const appConfig = {
   'ember-service-worker': {
@@ -21,20 +22,16 @@ const appConfig = {
     sourceDirs: ['node_modules/@hashicorp/structure-icons/dist', 'public'],
     rootURL: '/ui/',
   },
+  fingerprint: {
+    exclude: ['images/'],
+  },
   assetLoader: {
     generateURI: function (filePath) {
       return `${config.rootURL.replace(/\/$/, '')}${filePath}`;
     },
   },
-  codemirror: {
-    modes: ['javascript', 'ruby'],
-    keyMaps: ['sublime'],
-  },
   babel: {
-    plugins: ['@babel/plugin-proposal-object-rest-spread', ['inline-json-import', {}]],
-  },
-  'ember-cli-babel': {
-    includePolyfill: isTest || isProd || isCI,
+    plugins: [['inline-json-import', {}]],
   },
   hinting: isTest,
   tests: isTest,
@@ -42,14 +39,14 @@ const appConfig = {
     enabled: !isProd,
   },
   sassOptions: {
+    implementation: nodeSass,
     sourceMap: false,
     onlyIncluded: true,
   },
   autoprefixer: {
     enabled: isTest || isProd,
     grid: true,
-    // TODO CBS: Remove IE
-    browsers: ['defaults', 'ie 11'],
+    browsers: ['defaults'],
   },
   autoImport: {
     forbidEval: true,
@@ -74,8 +71,7 @@ module.exports = function (defaults) {
 
   app.import('node_modules/jsonlint/lib/jsonlint.js');
   app.import('node_modules/codemirror/addon/lint/lint.css');
-  app.import('node_modules/codemirror/addon/lint/lint.js');
-  app.import('node_modules/codemirror/addon/lint/json-lint.js');
+  app.import('node_modules/codemirror/lib/codemirror.css');
   app.import('node_modules/text-encoder-lite/text-encoder-lite.js');
   app.import('node_modules/jsondiffpatch/dist/jsondiffpatch.umd.js');
   app.import('node_modules/jsondiffpatch/dist/formatters-styles/html.css');

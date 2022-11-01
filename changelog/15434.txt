@@ -1,0 +1,3 @@
+```release-note:improvement
+api: make ListPlugins parse only known plugin types
+```

@@ -54,6 +54,13 @@ type RateLimitQuota struct {
 	// MountPath is the path of the mount to which this quota is applicable
 	MountPath string `json:"mount_path"`
 
+	// Role is the role on an auth mount to apply the quota to upon /login requests
+	// Not applicable for use with path suffixes
+	Role string `json:"role"`
+
+	// PathSuffix is the path suffix to which this quota is applicable
+	PathSuffix string `json:"path_suffix"`
+
 	// Rate defines the number of requests allowed per Interval.
 	Rate float64 `json:"rate"`
 
@@ -81,7 +88,7 @@ type RateLimitQuota struct {
 // provided, which will default to 1s when initialized. An optional block
 // duration may be provided, where if set, when a client reaches the rate limit,
 // subsequent requests will fail until the block duration has passed.
-func NewRateLimitQuota(name, nsPath, mountPath string, rate float64, interval, block time.Duration) *RateLimitQuota {
+func NewRateLimitQuota(name, nsPath, mountPath, pathSuffix, role string, rate float64, interval, block time.Duration) *RateLimitQuota {
 	id, err := uuid.GenerateUUID()
 	if err != nil {
 		// Fall back to generating with a hash of the name, later in initialize
@@ -93,6 +100,8 @@ func NewRateLimitQuota(name, nsPath, mountPath string, rate float64, interval, b
 		Type:          TypeRateLimit,
 		NamespacePath: nsPath,
 		MountPath:     mountPath,
+		Role:          role,
+		PathSuffix:    pathSuffix,
 		Rate:          rate,
 		Interval:      interval,
 		BlockInterval: block,
@@ -106,8 +115,10 @@ func (q *RateLimitQuota) Clone() Quota {
 		ID:            q.ID,
 		Name:          q.Name,
 		MountPath:     q.MountPath,
+		Role:          q.Role,
 		Type:          q.Type,
 		NamespacePath: q.NamespacePath,
+		PathSuffix:    q.PathSuffix,
 		BlockInterval: q.BlockInterval,
 		Rate:          q.Rate,
 		Interval:      q.Interval,

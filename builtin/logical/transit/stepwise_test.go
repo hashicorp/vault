@@ -162,7 +162,8 @@ func testAccStepwiseReadPolicyWithVersions(t *testing.T, name string, expectNone
 }
 
 func testAccStepwiseEncryptContext(
-	t *testing.T, name, plaintext, context string, decryptData map[string]interface{}) stepwise.Step {
+	t *testing.T, name, plaintext, context string, decryptData map[string]interface{},
+) stepwise.Step {
 	return stepwise.Step{
 		Operation: stepwise.UpdateOperation,
 		Path:      "encrypt/" + name,
@@ -188,7 +189,8 @@ func testAccStepwiseEncryptContext(
 }
 
 func testAccStepwiseDecrypt(
-	t *testing.T, name, plaintext string, decryptData map[string]interface{}) stepwise.Step {
+	t *testing.T, name, plaintext string, decryptData map[string]interface{},
+) stepwise.Step {
 	return stepwise.Step{
 		Operation: stepwise.UpdateOperation,
 		Path:      "decrypt/" + name,

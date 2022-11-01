@@ -1,0 +1,3 @@
+```release-note:improvement
+cli: CLI commands will print a warning if flags will be ignored because they are passed after positional arguments.
+```

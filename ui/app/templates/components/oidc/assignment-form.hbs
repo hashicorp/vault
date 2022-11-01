@@ -1,0 +1,93 @@
+{{#unless @isInline}}
+  <PageHeader as |p|>
+    <p.top>
+      <nav class="breadcrumb" aria-label="breadcrumbs">
+        <ul>
+          <li>
+            <span class="sep">&#x0002f;</span>
+            {{#if @model.isNew}}
+              <LinkTo @route={{"vault.cluster.access.oidc.assignments"}}>
+                Assignments
+              </LinkTo>
+            {{else}}
+              {{! You're editing in this view }}
+              <LinkTo @route={{"vault.cluster.access.oidc.assignments.assignment.details"}} @model={{@model.name}}>
+                Details
+              </LinkTo>
+            {{/if}}
+          </li>
+        </ul>
+      </nav>
+    </p.top>
+    <p.levelLeft>
+      <h1 class="title is-3" data-test-oidc-assignment-title>
+        {{if @model.isNew "Create" "Edit"}}
+        assignment
+      </h1>
+    </p.levelLeft>
+  </PageHeader>
+{{/unless}}
+<form {{on "submit" (perform this.save)}}>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
+    <FormFieldLabel for="name" @label="Name" />
+    <input
+      autocomplete="off"
+      spellcheck="false"
+      value={{@model.name}}
+      disabled={{not @model.isNew}}
+      class="input field {{if this.modelValidations.name.errors 'has-error-border'}}"
+      {{on "input" this.handleOperation}}
+      data-test-input="name"
+    />
+    {{#if this.modelValidations.name.errors}}
+      <AlertInline @type="danger" @message={{join ", " this.modelValidations.name.errors}} />
+    {{/if}}
+    <SearchSelect
+      @id="entities"
+      @label="Entities"
+      @placeholder="Search"
+      @models={{array "identity/entity"}}
+      @inputValue={{@model.entityIds}}
+      @shouldRenderName={{true}}
+      @onChange={{this.onEntitiesSelect}}
+      @disallowNewItems={{true}}
+      @fallbackComponent="string-list"
+      data-test-search-select="entities"
+    />
+    <SearchSelect
+      @id="groups"
+      @label="Groups"
+      @placeholder="Search"
+      @models={{array "identity/group"}}
+      @inputValue={{@model.groupIds}}
+      @shouldRenderName={{true}}
+      @onChange={{this.onGroupsSelect}}
+      @disallowNewItems={{true}}
+      @fallbackComponent="string-list"
+      data-test-search-select="groups"
+    />
+  </div>
+  <div class="has-top-padding-s">
+    <button
+      type="submit"
+      class="button is-primary {{if this.save.isRunning 'is-loading'}}"
+      disabled={{this.save.isRunning}}
+      data-test-oidc-assignment-save
+    >
+      {{if @model.isNew "Create" "Update"}}
+    </button>
+    <button
+      type="button"
+      class="button has-left-margin-s"
+      disabled={{this.save.isRunning}}
+      {{on "click" this.cancel}}
+      data-test-oidc-assignment-cancel
+    >
+      Cancel
+    </button>
+    {{#if this.modelValidations.targets.errors}}
+      <AlertInline @type="danger" @message={{join ", " this.modelValidations.targets.errors}} @paddingTop={{true}} />
+    {{/if}}
+  </div>
+</form>

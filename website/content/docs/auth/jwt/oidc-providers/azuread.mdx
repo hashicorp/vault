@@ -1,0 +1,143 @@
+---
+layout: docs
+page_title: OIDC Provider Setup - Auth Methods - Azure Active Directory
+description: OIDC provider configuration for Azure Active Directory
+---
+
+## Azure Active Directory (AAD)
+
+~> **Note:** Azure Active Directory Applications that have custom signing keys as a result of using
+the [claims-mapping](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-claims-mapping)
+feature are currently not supported for OIDC authentication.
+
+Reference: [Azure Active Directory v2.0 and the OpenID Connect protocol](https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-protocols-oidc)
+
+1. Choose your Azure tenant.
+
+1. Go to **Azure Active Directory** and
+   [register an application](https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app)
+   for Vault.
+
+1. Add Redirect URIs with the "Web" type. You may include two redirect URIs,
+   one for CLI access another one for Vault UI access.
+  - `http://localhost:8250/oidc/callback`
+  - `https://hostname:port_number/ui/vault/auth/oidc/oidc/callback`
+
+1. Record the "Application (client) ID" as you will need it as the `oidc_client_id`.
+
+1. Under **Endpoints**, copy the OpenID Connect metadata document URL, omitting the `/well-known...` portion.
+  - The endpoint URL (`oidc_discovery_url`) will look like: https://login.microsoftonline.com/tenant-guid-dead-beef-aaaa-aaaa/v2.0
+
+1. Under **Certificates & secrets**,
+   [add a client secret](https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app#add-a-client-secret)
+   Record the secret's value as you will need it as the `oidc_client_secret` for Vault.
+
+### Connect AD group with Vault external group
+
+Reference: [Azure Active Directory with OIDC Auth Method and External Groups](https://learn.hashicorp.com/tutorials/vault/oidc-auth-azure)
+
+To connect the AD group with a [Vault external groups](/docs/secrets/identity#external-vs-internal-groups),
+you will need
+[Azure AD v2.0 endpoints](https://docs.microsoft.com/en-gb/azure/active-directory/develop/azure-ad-endpoint-comparison).
+You should set up a [Vault policy](https://learn.hashicorp.com/tutorials/vault/policies) for the Azure AD group to use.
+
+1. Go to **Azure Active Directory** and choose your Vault application.
+
+1. Go to **Token configuration** and **Add groups claim**. Select "All" or "SecurityGroup" based on
+   [which groups for a user](https://docs.microsoft.com/en-us/azure/active-directory/hybrid/how-to-connect-fed-group-claims)
+   you want returned in the claim.
+
+1. In Vault, enable the OIDC auth method.
+
+1. Configure the OIDC auth method with the `oidc_client_id` (application ID), `oidc_client_secret`
+   (client secret), and `oidc_discovery_url` (endpoint URL) you recorded from Azure.
+   ```shell
+   vault write auth/oidc/config \
+      oidc_client_id="your_client_id" \
+      oidc_client_secret="your_client_secret" \
+      default_role="your_default_role" \
+      oidc_discovery_url="https://login.microsoftonline.com/tenant_id/v2.0"
+   ```
+
+1. Configure the [OIDC Role](/api-docs/auth/jwt#create-role) with the following:
+  - `user_claim` should be `"sub"` or `"oid"` following the
+  [recommendation](https://docs.microsoft.com/en-us/azure/active-directory/develop/id-tokens#using-claims-to-reliably-identify-a-user-subject-and-object-id)
+  from Azure.
+  - `allowed_redirect_uris` should be the two redirect URIs for Vault CLI and UI access.
+  - `groups_claim` should be set to `"groups"`.
+  - `oidc_scopes` should be set to `"https://graph.microsoft.com/.default"`.
+   ```shell
+   vault write auth/oidc/role/your_default_role \
+      user_claim="sub" \
+      allowed_redirect_uris="http://localhost:8250/oidc/callback,https://online_version_hostname:port_number/ui/vault/auth/oidc/oidc/callback"  \
+      groups_claim="groups" \
+      oidc_scopes="https://graph.microsoft.com/.default" \
+      policies=default
+   ```
+
+1. In Vault, create the [external group](/api-docs/secret/identity/group).
+   Record the group ID as you will need it for the group alias.
+
+1. From Vault, retrieve the [OIDC accessor ID](/api-docs/system/auth#list-auth-methods)
+   from the OIDC auth method as you will need it for the group alias's `mount_accessor`.
+
+1. Go to the Azure AD Group you want to attach to Vault's external group. Record the `objectId`
+   as you will need it as the group alias name in Vault.
+
+1. In Vault, create a [group alias](/api-docs/secret/identity/group-alias)
+   for the external group and set the `objectId` as the group alias name.
+   ```shell
+   vault write identity/group-alias \
+      name="your_ad_group_object_id" \
+      mount_accessor="vault_oidc_accessor_id" \
+      canonical_id="vault_external_group_id"
+   ```
+
+### Optional Azure-specific Configuration
+
+If a user is a member of more than 200 groups (directly or indirectly), Azure will
+send `_claim_names` and `_claim_sources`. For example, returned claims might look like:
+
+```json
+{
+  "_claim_names": {
+    "groups": "src1"
+  },
+  "_claim_sources": {
+    "src1": {
+      "endpoint": "https://graph.windows.net...."
+    }
+  }
+}
+```
+
+The OIDC auth method role can be configured to include the user ID in the endpoint URL, 
+which will be used by Vault to retrieve the groups for the user:
+
+- In Azure, under the applications **API Permissions**, grant the following permissions:
+  - Microsoft Graph API permission [Directory.Read.All](https://docs.microsoft.com/en-us/graph/permissions-reference#application-permissions-19)
+
+- In Vault, set `"provider_config"` to Azure.
+  ```shell
+  vault write auth/oidc/config -<<"EOH"
+  {
+     "oidc_client_id": "your_client_id",
+     "oidc_client_secret": "your_client_secret",
+     "default_role": "your_default_role",
+     "oidc_discovery_url": "https://login.microsoftonline.com/tenant_id/v2.0",
+     "provider_config": {
+        "provider": "azure"
+     }
+  }
+  EOH
+  ```
+
+- In Vault, add `"profile"` to `oidc_scopes` so the user's id comes back on the JWT.
+  ```shell
+  vault write auth/oidc/role/your_default_role \
+   user_claim="email" \
+   allowed_redirect_uris="http://localhost:8250/oidc/callback,https://online_version_hostname:port_number/ui/vault/auth/oidc/oidc/callback"  \
+   groups_claim="groups" \
+   oidc_scopes="profile" \
+   policies="default"
+  ```

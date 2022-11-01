@@ -27,7 +27,7 @@ module('Integration | Component | identity/item details', function (hooks) {
     });
     sinon.spy(model, 'save');
     this.set('model', model);
-    await render(hbs`{{identity/item-details model=model}}`);
+    await render(hbs`{{identity/item-details model=this.model}}`);
     assert.dom('[data-test-disabled-warning]').exists();
     await component.enable();
 
@@ -40,7 +40,7 @@ module('Integration | Component | identity/item details', function (hooks) {
     });
 
     this.set('model', model);
-    await render(hbs`{{identity/item-details model=model}}`);
+    await render(hbs`{{identity/item-details model=this.model}}`);
     assert.dom('[data-test-disabled-warning]').exists('shows the warning banner');
     assert.dom('[data-test-enable]').doesNotExist('does not show the enable button');
   });
@@ -49,7 +49,7 @@ module('Integration | Component | identity/item details', function (hooks) {
     let model = EmberObject.create();
     this.set('model', model);
 
-    await render(hbs`{{identity/item-details model=model}}`);
+    await render(hbs`{{identity/item-details model=this.model}}`);
     assert.dom('[data-test-disabled-warning]').doesNotExist('does not show the warning banner');
   });
 });

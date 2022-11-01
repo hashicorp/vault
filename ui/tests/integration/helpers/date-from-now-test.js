@@ -10,7 +10,7 @@ module('Integration | Helper | date-from-now', function (hooks) {
 
   test('it works', function (assert) {
     let result = dateFromNow([1481022124443]);
-    assert.ok(typeof result === 'string', 'it is a string');
+    assert.strictEqual(typeof result, 'string', 'it is a string');
   });
 
   test('you can include a suffix', function (assert) {

@@ -1,0 +1,4 @@
+```release-note:improvement
+core: Vault now supports the PROXY protocol v2. Support for UNKNOWN connections
+has also been added to the PROXY protocol v1.
+```

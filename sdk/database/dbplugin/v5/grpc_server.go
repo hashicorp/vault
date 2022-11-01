@@ -2,15 +2,17 @@ package dbplugin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
+	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -18,6 +20,7 @@ var _ proto.DatabaseServer = &gRPCServer{}
 
 type gRPCServer struct {
 	proto.UnimplementedDatabaseServer
+	logical.UnimplementedPluginVersionServer
 
 	// holds the non-multiplexed Database
 	// when this is set the plugin does not support multiplexing
@@ -30,25 +33,6 @@ type gRPCServer struct {
 	sync.RWMutex
 }
 
-func getMultiplexIDFromContext(ctx context.Context) (string, error) {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return "", fmt.Errorf("missing plugin multiplexing metadata")
-	}
-
-	multiplexIDs := md[pluginutil.MultiplexingCtxKey]
-	if len(multiplexIDs) != 1 {
-		return "", fmt.Errorf("unexpected number of IDs in metadata: (%d)", len(multiplexIDs))
-	}
-
-	multiplexID := multiplexIDs[0]
-	if multiplexID == "" {
-		return "", fmt.Errorf("empty multiplex ID in metadata")
-	}
-
-	return multiplexID, nil
-}
-
 func (g *gRPCServer) getOrCreateDatabase(ctx context.Context) (Database, error) {
 	g.Lock()
 	defer g.Unlock()
@@ -57,15 +41,18 @@ func (g *gRPCServer) getOrCreateDatabase(ctx context.Context) (Database, error) 
 		return g.singleImpl, nil
 	}
 
-	id, err := getMultiplexIDFromContext(ctx)
+	id, err := pluginutil.GetMultiplexIDFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-
 	if db, ok := g.instances[id]; ok {
 		return db, nil
 	}
+	return g.createDatabase(id)
+}
 
+// must hold the g.Lock() to call this function
+func (g *gRPCServer) createDatabase(id string) (Database, error) {
 	db, err := g.factoryFunc()
 	if err != nil {
 		return nil, err
@@ -83,7 +70,7 @@ func (g *gRPCServer) getDatabaseInternal(ctx context.Context) (Database, error) 
 		return g.singleImpl, nil
 	}
 
-	id, err := getMultiplexIDFromContext(ctx)
+	id, err := pluginutil.GetMultiplexIDFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +146,9 @@ func (g *gRPCServer) NewUser(ctx context.Context, req *proto.NewUserRequest) (*p
 			DisplayName: req.GetUsernameConfig().GetDisplayName(),
 			RoleName:    req.GetUsernameConfig().GetRoleName(),
 		},
+		CredentialType:     CredentialType(req.GetCredentialType()),
 		Password:           req.GetPassword(),
+		PublicKey:          req.GetPublicKey(),
 		Expiration:         expiration,
 		Statements:         getStatementsFromProto(req.GetStatements()),
 		RollbackStatements: getStatementsFromProto(req.GetRollbackStatements()),
@@ -207,6 +196,14 @@ func getUpdateUserRequest(req *proto.UpdateUserRequest) (UpdateUserRequest, erro
 		}
 	}
 
+	var publicKey *ChangePublicKey
+	if req.GetPublicKey() != nil && len(req.GetPublicKey().GetNewPublicKey()) > 0 {
+		publicKey = &ChangePublicKey{
+			NewPublicKey: req.GetPublicKey().GetNewPublicKey(),
+			Statements:   getStatementsFromProto(req.GetPublicKey().GetStatements()),
+		}
+	}
+
 	var expiration *ChangeExpiration
 	if req.GetExpiration() != nil && req.GetExpiration().GetNewExpiration() != nil {
 		newExpiration, err := ptypes.Timestamp(req.GetExpiration().GetNewExpiration())
@@ -221,9 +218,11 @@ func getUpdateUserRequest(req *proto.UpdateUserRequest) (UpdateUserRequest, erro
 	}
 
 	dbReq := UpdateUserRequest{
-		Username:   req.GetUsername(),
-		Password:   password,
-		Expiration: expiration,
+		Username:       req.GetUsername(),
+		CredentialType: CredentialType(req.GetCredentialType()),
+		Password:       password,
+		PublicKey:      publicKey,
+		Expiration:     expiration,
 	}
 
 	if !hasChange(dbReq) {
@@ -235,6 +234,9 @@ func getUpdateUserRequest(req *proto.UpdateUserRequest) (UpdateUserRequest, erro
 
 func hasChange(dbReq UpdateUserRequest) bool {
 	if dbReq.Password != nil && dbReq.Password.NewPassword != "" {
+		return true
+	}
+	if dbReq.PublicKey != nil && len(dbReq.PublicKey.NewPublicKey) > 0 {
 		return true
 	}
 	if dbReq.Expiration != nil && !dbReq.Expiration.NewExpiration.IsZero() {
@@ -297,7 +299,7 @@ func (g *gRPCServer) Close(ctx context.Context, _ *proto.Empty) (*proto.Empty, e
 
 	if g.singleImpl == nil {
 		// only cleanup instances map when multiplexing is supported
-		id, err := getMultiplexIDFromContext(ctx)
+		id, err := pluginutil.GetMultiplexIDFromContext(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -305,6 +307,42 @@ func (g *gRPCServer) Close(ctx context.Context, _ *proto.Empty) (*proto.Empty, e
 	}
 
 	return &proto.Empty{}, nil
+}
+
+// getOrForceCreateDatabase will create a database even if the multiplexing ID is not present
+func (g *gRPCServer) getOrForceCreateDatabase(ctx context.Context) (Database, error) {
+	impl, err := g.getOrCreateDatabase(ctx)
+	if errors.Is(err, pluginutil.ErrNoMultiplexingIDFound) {
+		// if this is called without a multiplexing context, like from the plugin catalog directly,
+		// then we won't have a database ID, so let's generate a new database instance
+		id, err := base62.Random(10)
+		if err != nil {
+			return nil, err
+		}
+
+		g.Lock()
+		defer g.Unlock()
+		impl, err = g.createDatabase(id)
+		if err != nil {
+			return nil, err
+		}
+	} else if err != nil {
+		return nil, err
+	}
+	return impl, nil
+}
+
+// Version forwards the version request to the underlying Database implementation.
+func (g *gRPCServer) Version(ctx context.Context, _ *logical.Empty) (*logical.VersionReply, error) {
+	impl, err := g.getOrForceCreateDatabase(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if versioner, ok := impl.(logical.PluginVersioner); ok {
+		return &logical.VersionReply{PluginVersion: versioner.PluginVersion().Version}, nil
+	}
+	return &logical.VersionReply{}, nil
 }
 
 func getStatementsFromProto(protoStmts *proto.Statements) (statements Statements) {

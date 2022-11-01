@@ -1,0 +1,46 @@
+---
+layout: docs
+page_title: GitHub Actions
+description: >-
+  GitHub Actions
+---
+
+# GitHub Actions
+
+Workflows in GitHub Actions can make use of secrets stored in Vault by using a
+[`vault-action`](https://github.com/marketplace/actions/vault-secrets) step.
+
+## Example
+
+Here is an example `vault-action` step in a workflow:
+
+```yaml
+jobs:
+    build:
+        # ...
+        steps:
+            # ...
+            - name: Import Secrets
+              uses: hashicorp/vault-action@v2.4.0
+              with:
+                url: https://vault.example.com:8200
+                token: ${{ secrets.VAULT_TOKEN }}
+                caCertificate: ${{ secrets.VAULT_CA_CERT }}
+                secrets: |
+                    secret/data/ci/aws accessKey | AWS_ACCESS_KEY_ID ;
+                    secret/data/ci/aws secretKey | AWS_SECRET_ACCESS_KEY ;
+                    secret/data/ci npm_token
+```
+
+This example will authenticate to Vault instance at `https://vault.example.com:8200` with the GitHub secrets defined in
+`VAULT_TOKEN` and `VAULT_CA_CERT`, and will add environment variables available for next steps in the workflow:
+-  The secret at path `secret/data/ci/aws` with the key `accessKey` available in the environment variable `AWS_ACCESS_KEY_ID`
+-  The secret at path `secret/data/ci/aws` with the key `secretKey` available in the environment variable `AWS_SECRET_ACCESS_KEY`
+-  The secret at path `secret/data/ci` with the key `npm_token` available in the environment variable `NPM_TOKEN`
+
+## Further Information
+
+For more information on using the `vault-action` GitHub Action, visit:
+
+- [`vault-secrets` GitHub action documentation](https://github.com/marketplace/actions/vault-secrets)
+- [Vault GitHub actions tutorial](https://learn.hashicorp.com/tutorials/vault/github-actions)
