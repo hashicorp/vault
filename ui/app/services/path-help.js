@@ -93,7 +93,7 @@ export default Service.extend({
       })
       .catch((err) => {
         // TODO: we should handle the error better here
-        console.error(err);
+        console.error(err); // eslint-disable-line
       });
   },
 

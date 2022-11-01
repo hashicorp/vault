@@ -53,6 +53,7 @@ func coreInit(c *Core, conf *CoreConfig) error {
 	if !conf.DisableKeyEncodingChecks {
 		c.physical = physical.NewStorageEncoding(c.physical)
 	}
+
 	return nil
 }
 

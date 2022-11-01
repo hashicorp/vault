@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"path"
 	"strings"
 	"time"
 
@@ -33,7 +34,7 @@ func (c *KVMetadataPatchCommand) Synopsis() string {
 
 func (c *KVMetadataPatchCommand) Help() string {
 	helpText := `
-Usage: vault metadata kv patch [options] KEY
+Usage: vault kv metadata patch [options] KEY
 
   This command can be used to create a blank key in the key-value store or to
   update key configuration for a specified key.
@@ -159,7 +160,7 @@ func (c *KVMetadataPatchCommand) Run(args []string) int {
 
 	// If true, we're working with "-mount=secret foo" syntax.
 	// If false, we're using "secret/foo" syntax.
-	mountFlagSyntax := (c.flagMount != "")
+	mountFlagSyntax := c.flagMount != ""
 
 	var (
 		mountPath   string
@@ -171,11 +172,14 @@ func (c *KVMetadataPatchCommand) Run(args []string) int {
 	if mountFlagSyntax {
 		// In this case, this arg is the secret path (e.g. "foo").
 		partialPath = sanitizePath(args[0])
-		mountPath = sanitizePath(c.flagMount)
-		_, v2, err = isKVv2(mountPath, client)
+		mountPath, v2, err = isKVv2(sanitizePath(c.flagMount), client)
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2
+		}
+
+		if v2 {
+			partialPath = path.Join(mountPath, partialPath)
 		}
 	} else {
 		// In this case, this arg is a path-like combination of mountPath/secretPath.

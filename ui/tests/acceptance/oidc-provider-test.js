@@ -155,7 +155,7 @@ module('Acceptance | oidc provider', function (hooks) {
     await authFormComponent.password(USER_PASSWORD);
     await authFormComponent.login();
     await settled();
-    assert.equal(currentURL(), url, 'URL is as expected after login');
+    assert.strictEqual(currentURL(), url, 'URL is as expected after login');
     assert.dom('[data-test-oidc-redirect]').exists('redirect text exists');
     assert
       .dom('[data-test-oidc-redirect]')

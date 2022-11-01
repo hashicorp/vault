@@ -19,14 +19,14 @@ module('Integration | Component | Confirm', function (hooks) {
     await render(hbs`
       <Confirm as |c|>
         <c.Message
-          @id={{id}}
-          @title={{title}}
-          @triggerText={{triggerText}}
-          @message={{message}}
-          @onConfirm={{onConfirm}}
-          />
-        </Confirm>
-      `);
+          @id={{this.id}}
+          @title={{this.title}}
+          @triggerText={{this.triggerText}}
+          @message={{this.message}}
+          @onConfirm={{this.onConfirm}}
+        />
+      </Confirm>
+    `);
 
     assert.dom('.confirm-wrapper').exists();
     assert.dom('.confirm').containsText(this.triggerText);
@@ -36,14 +36,14 @@ module('Integration | Component | Confirm', function (hooks) {
     await render(hbs`
       <Confirm as |c|>
         <c.Message
-          @id={{id}}
-          @title={{title}}
-          @triggerText={{triggerText}}
-          @message={{message}}
-          @onConfirm={{onConfirm}}
-          />
-        </Confirm>
-      `);
+          @id={{this.id}}
+          @title={{this.title}}
+          @triggerText={{this.triggerText}}
+          @message={{this.message}}
+          @onConfirm={{this.onConfirm}}
+        />
+      </Confirm>
+    `);
     assert.dom('.confirm-overlay').doesNotContainText(this.message);
 
     await click('[data-test-confirm-action-trigger]');
@@ -56,14 +56,14 @@ module('Integration | Component | Confirm', function (hooks) {
     await render(hbs`
       <Confirm as |c|>
         <c.Message
-          @id={{id}}
-          @title={{title}}
-          @triggerText={{triggerText}}
-          @message={{message}}
-          @onConfirm={{onConfirm}}
-          />
-        </Confirm>
-      `);
+          @id={{this.id}}
+          @title={{this.title}}
+          @triggerText={{this.triggerText}}
+          @message={{this.message}}
+          @onConfirm={{this.onConfirm}}
+        />
+      </Confirm>
+    `);
     await click('[data-test-confirm-action-trigger]');
     await click('[data-test-confirm-button=true]');
 
@@ -74,20 +74,20 @@ module('Integration | Component | Confirm', function (hooks) {
     await render(hbs`
       <Confirm as |c|>
         <c.Message
-          @id={{id}}
-          @title={{title}}
-          @triggerText={{triggerText}}
-          @message={{message}}
-          @onConfirm={{onConfirm}}
-          />
+          @id={{this.id}}
+          @title={{this.title}}
+          @triggerText={{this.triggerText}}
+          @message={{this.message}}
+          @onConfirm={{this.onConfirm}}
+        />
         <c.Message
           @id='bar'
           @title='Wow'
           @message='Bazinga!'
-          @onConfirm={{onConfirm}}
-          />
-        </Confirm>
-      `);
+          @onConfirm={{this.onConfirm}}
+        />
+      </Confirm>
+    `);
 
     await click(`[data-test-confirm-action-trigger=${this.id}]`);
     assert.dom('.confirm-overlay').containsText(this.title);

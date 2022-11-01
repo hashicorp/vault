@@ -1,3 +1,3 @@
-import RoleSerializer from '../role';
+import ApplicationSerializer from '../application';
 
-export default class PkiRoleEngineSerializer extends RoleSerializer {}
+export default class PkiRoleEngineSerializer extends ApplicationSerializer {}

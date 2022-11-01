@@ -1,5 +1,5 @@
 <div class="auth-form" data-test-auth-form>
-  {{#if (or (this.error) (and this.waitingForOktaNumberChallenge (not this.cancelAuthForOktaNumberChallenge)))}}
+  {{#if (and this.waitingForOktaNumberChallenge (not this.cancelAuthForOktaNumberChallenge))}}
     <OktaNumberChallenge
       @correctAnswer={{this.oktaNumberChallengeAnswer}}
       @hasError={{(not-eq this.error null)}}
@@ -74,7 +74,6 @@
         <AuthJwt
           @onError={{action "handleError"}}
           @onLoading={{action (mut this.isLoading)}}
-          @onToken={{action (mut this.token)}}
           @namespace={{this.namespace}}
           @onNamespace={{action (mut this.namespace)}}
           @onSubmit={{action "doSubmit"}}
@@ -91,7 +90,7 @@
           />
         </AuthJwt>
       {{else}}
-        <form id="auth-form" onsubmit={{action "doSubmit"}}>
+        <form id="auth-form" onsubmit={{action "doSubmit" null}}>
           {{#if (eq this.providerName "github")}}
             <div class="field">
               <label for="token" class="is-label">GitHub token</label>

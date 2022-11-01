@@ -126,6 +126,14 @@ const (
 	flagNameAllowedManagedKeys = "allowed-managed-keys"
 	// flagNamePluginVersion selects what version of a plugin should be used.
 	flagNamePluginVersion = "plugin-version"
+	// flagNameUserLockoutThreshold is the flag name used for tuning the auth mount lockout threshold parameter
+	flagNameUserLockoutThreshold = "user-lockout-threshold"
+	// flagNameUserLockoutDuration is the flag name used for tuning the auth mount lockout duration parameter
+	flagNameUserLockoutDuration = "user-lockout-duration"
+	// flagNameUserLockoutCounterResetDuration is the flag name used for tuning the auth mount lockout counter reset parameter
+	flagNameUserLockoutCounterResetDuration = "user-lockout-counter-reset-duration"
+	// flagNameUserLockoutDisable is the flag name used for tuning the auth mount disable lockout parameter
+	flagNameUserLockoutDisable = "user-lockout-disable"
 	// flagNameDisableRedirects is used to prevent the client from honoring a single redirect as a response to a request
 	flagNameDisableRedirects = "disable-redirects"
 )
@@ -485,6 +493,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"operator members": func() (cli.Command, error) {
 			return &OperatorMembersCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"patch": func() (cli.Command, error) {
+			return &PatchCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},

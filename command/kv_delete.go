@@ -117,7 +117,7 @@ func (c *KVDeleteCommand) Run(args []string) int {
 
 	// If true, we're working with "-mount=secret foo" syntax.
 	// If false, we're using "secret/foo" syntax.
-	mountFlagSyntax := (c.flagMount != "")
+	mountFlagSyntax := c.flagMount != ""
 
 	var (
 		mountPath   string
@@ -129,11 +129,14 @@ func (c *KVDeleteCommand) Run(args []string) int {
 	if mountFlagSyntax {
 		// In this case, this arg is the secret path (e.g. "foo").
 		partialPath = sanitizePath(args[0])
-		mountPath = sanitizePath(c.flagMount)
-		_, v2, err = isKVv2(mountPath, client)
+		mountPath, v2, err = isKVv2(sanitizePath(c.flagMount), client)
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2
+		}
+
+		if v2 {
+			partialPath = path.Join(mountPath, partialPath)
 		}
 	} else {
 		// In this case, this arg is a path-like combination of mountPath/secretPath.

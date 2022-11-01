@@ -637,6 +637,8 @@ type Core struct {
 	// effectiveSDKVersion contains the SDK version that standby nodes should use when
 	// heartbeating with the active node. Default to the current SDK version.
 	effectiveSDKVersion string
+
+	rollbackPeriod time.Duration
 }
 
 func (c *Core) HAState() consts.HAState {
@@ -769,6 +771,8 @@ type CoreConfig struct {
 	DisableSSCTokens bool
 
 	EffectiveSDKVersion string
+
+	RollbackPeriod time.Duration
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -1043,6 +1047,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.reloadFuncs = make(map[string][]reloadutil.ReloadFunc)
 	c.reloadFuncsLock.Unlock()
 	conf.ReloadFuncs = &c.reloadFuncs
+
+	c.rollbackPeriod = conf.RollbackPeriod
+	if conf.RollbackPeriod == 0 {
+		c.rollbackPeriod = time.Minute
+	}
 
 	// All the things happening below this are not required in
 	// recovery mode

@@ -1,6 +1,5 @@
 import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
-import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { withModelValidations } from 'vault/decorators/model-validations';
 
 import fieldToAttrs from 'vault/utils/field-to-attrs';
@@ -13,6 +12,7 @@ const validations = {
 export default class PkiRoleEngineModel extends Model {
   @attr('string', { readOnly: true }) backend;
 
+  /* Overriding OpenApi default options */
   @attr('string', {
     label: 'Role name',
     fieldValue: 'name',
@@ -22,8 +22,7 @@ export default class PkiRoleEngineModel extends Model {
   @attr('string', {
     label: 'Issuer reference',
     defaultValue: 'default',
-    subText:
-      'Specifies the issuer that will be used to create certificates with this role.  To find this, run [command]. By default, we will use the mounts default issuer.',
+    subText: `Specifies the issuer that will be used to create certificates with this role. To find this, run read -field=default pki_int/config/issuers in the console. By default, we will use the mounts default issuer.`,
   })
   issuerRef;
 
@@ -41,7 +40,7 @@ export default class PkiRoleEngineModel extends Model {
       'Also called the not_before_duration property. Allows certificates to be valid for a certain time period before now. This is useful to correct clock misalignment on various systems when setting up your CA.',
     editType: 'ttl',
     hideToggle: true,
-    defaultValue: '30s', // type in API is duration which accepts both an integer and string e.g. 30 || '30s'
+    defaultValue: '30s', // The API type is "duration" which accepts both an integer and string e.g. 30 || '30s'
   })
   notBeforeDuration;
 
@@ -72,11 +71,161 @@ export default class PkiRoleEngineModel extends Model {
   noStore;
 
   @attr('boolean', {
-    label: 'Basic constraints valid for non CA.',
+    label: 'Basic constraints valid for non-CA',
     subText: 'Mark Basic Constraints valid when issuing non-CA certificates.',
     editType: 'boolean',
   })
   addBasicConstraints;
+  /* End of overriding default options */
+
+  /* Overriding OpenApi Domain handling options */
+  @attr({
+    label: 'Allowed domains',
+    subText: 'Specifies the domains this role is allowed to issue certificates for. Add one item per row.',
+    editType: 'stringArray',
+    hideFormSection: true,
+  })
+  allowedDomains;
+
+  @attr('boolean', {
+    label: 'Allow templates in allowed domains',
+  })
+  allowedDomainsTemplate;
+  /* End of overriding Domain handling options */
+
+  /* Overriding OpenApi Key parameters options */
+  @attr('string', {
+    label: 'Key type',
+    possibleValues: ['rsa', 'ec', 'ed25519', 'any'],
+    defaultValue: 'rsa',
+  })
+  keyType;
+
+  @attr('string', {
+    label: 'Key bits',
+    defaultValue: 2048,
+  })
+  keyBits; // keyBits is a conditional value based on keyType. The model param is handled in the pkiKeyParameters component.
+
+  @attr('number', {
+    label: 'Signature bits',
+    subText: `Only applicable for key_type 'RSA'. Ignore for other key types.`,
+    defaultValue: 0,
+    possibleValues: [
+      {
+        value: 0,
+        displayName: 'Defaults to 0',
+      },
+      {
+        value: 256,
+        displayName: '256 for SHA-2-256',
+      },
+      {
+        value: 384,
+        displayName: '384 for SHA-2-384',
+      },
+      {
+        value: 512,
+        displayName: '512 for SHA-2-5124',
+      },
+    ],
+  })
+  signatureBits;
+  /* End of overriding Key parameters options */
+
+  /* Overriding API Policy identifier option */
+  @attr({
+    label: 'Policy identifiers',
+    subText: 'A comma-separated string or list of policy object identifiers (OIDs). Add one per row. ',
+    editType: 'stringArray',
+    hideFormSection: true,
+  })
+  policyIdentifiers;
+  /* End of overriding Policy identifier options */
+
+  /* Overriding OpenApi SAN options */
+  @attr('boolean', {
+    label: 'Allow IP SANs',
+    subText: 'Specifies if clients can request IP Subject Alternative Names.',
+    editType: 'boolean',
+    defaultValue: true,
+  })
+  allowIpSans;
+
+  @attr({
+    label: 'URI Subject Alternative Names (URI SANs)',
+    subText: 'Defines allowed URI Subject Alternative Names. Add one item per row',
+    editType: 'stringArray',
+    docLink: '/docs/concepts/policies',
+    hideFormSection: true,
+  })
+  allowedUriSans;
+
+  @attr('boolean', {
+    label: 'Allow URI SANs template',
+    subText: 'If true, the URI SANs above may contain templates, as with ACL Path Templating.',
+    editType: 'boolean',
+    docLink: '/docs/concepts/policies',
+  })
+  allowUriSansTemplate;
+
+  @attr({
+    label: 'Other SANs',
+    subText: 'Defines allowed custom OID/UTF8-string SANs. Add one item per row.',
+    editType: 'stringArray',
+    hideFormSection: true,
+  })
+  allowedOtherSans;
+  /* End of overriding SAN options */
+
+  /* Overriding OpenApi Additional subject field options */
+  @attr({
+    label: 'Allowed serial numbers',
+    subText:
+      'A list of allowed serial numbers to be requested during certificate issuance. Shell-style globbing is supported. If empty, custom-specified serial numbers will be forbidden.',
+    editType: 'stringArray',
+    hideFormSection: true,
+  })
+  allowedSerialNumbers;
+
+  @attr('boolean', {
+    label: 'Require common name',
+    subText: 'If set to false, common name will be optional when generating a certificate.',
+    defaultValue: true,
+  })
+  requireCn;
+
+  @attr('boolean', {
+    label: 'Use CSR common name',
+    subText:
+      'When used with the CSR signing endpoint, the common name in the CSR will be used instead of taken from the JSON data.',
+    defaultValue: true,
+  })
+  useCsrCommonName;
+
+  @attr('boolean', {
+    label: 'Use CSR SANs',
+    subText:
+      'When used with the CSR signing endpoint, the subject alternate names in the CSR will be used instead of taken from the JSON data.',
+    defaultValue: true,
+  })
+  useCsrSans;
+
+  @attr({
+    label: 'Organization Units (OU)',
+    subText:
+      'A list of allowed serial numbers to be requested during certificate issuance. Shell-style globbing is supported. If empty, custom-specified serial numbers will be forbidden.',
+    hideFormSection: true,
+  })
+  ou;
+
+  @attr({ hideFormSection: true }) organization;
+  @attr({ hideFormSection: true }) country;
+  @attr({ hideFormSection: true }) locality;
+  @attr({ hideFormSection: true }) province;
+  @attr({ hideFormSection: true }) streetAddress;
+  @attr({ hideFormSection: true }) postalCode;
+  /* End of overriding Additional subject field options */
 
   // must be a getter so it can be added to the prototype needed in the pathHelp service on the line here: if (newModel.merged || modelProto.useOpenAPI !== true) {
   get useOpenAPI() {
@@ -85,6 +234,7 @@ export default class PkiRoleEngineModel extends Model {
   getHelpUrl(backend) {
     return `/v1/${backend}/roles/example?help=1`;
   }
+
   @lazyCapabilities(apiPath`${'backend'}/roles/${'id'}`, 'backend', 'id') updatePath;
   get canDelete() {
     return this.updatePath.get('canCreate');
@@ -110,18 +260,31 @@ export default class PkiRoleEngineModel extends Model {
     return this.signVerbatimPath.get('canUpdate');
   }
 
-  // Form Fields not hidden in toggle options
-  _attributeMeta = null;
-  get formFields() {
-    if (!this._attributeMeta) {
-      this._attributeMeta = expandAttributeMeta(this, ['name', 'clientType', 'redirectUris']);
-    }
-    return this._attributeMeta;
+  _fieldToAttrsGroups = null;
+
+  // Gets header/footer copy for specific toggle groups.
+  get fieldGroupsInfo() {
+    return {
+      'Domain handling': {
+        footer: {
+          text: 'These options can interact intricately with one another. For more information,',
+          docText: 'learn more here.',
+          docLink: '/api-docs/secret/pki#allowed_domains',
+        },
+      },
+      'Subject Alternative Name (SAN) Options': {
+        header: {
+          text: `Subject Alternative Names (SANs) are identities (domains, IP addresses, and URIs) Vault attaches to the requested certificates.`,
+        },
+      },
+      'Additional subject fields': {
+        header: {
+          text: `Additional identity metadata Vault can attach to the requested certificates.`,
+        },
+      },
+    };
   }
 
-  // Form fields hidden behind toggle options
-  _fieldToAttrsGroups = null;
-  // ARG TODO: I removed 'allowedDomains' but I'm fairly certain it needs to be somewhere. Confirm with design.
   get fieldGroups() {
     if (!this._fieldToAttrsGroups) {
       this._fieldToAttrsGroups = fieldToAttrs(this, [
@@ -140,34 +303,34 @@ export default class PkiRoleEngineModel extends Model {
         {
           'Domain handling': [
             'allowedDomains',
-            'allowedDomainTemplate',
+            'allowedDomainsTemplate',
             'allowBareDomains',
             'allowSubdomains',
             'allowGlobDomains',
             'allowWildcardCertificates',
-            'allowLocalhost',
+            'allowLocalhost', // default: true (returned true by OpenApi)
             'allowAnyName',
-            'enforceHostnames',
+            'enforceHostnames', // default: true (returned true by OpenApi)
           ],
         },
         {
           'Key parameters': ['keyType', 'keyBits', 'signatureBits'],
         },
         {
-          'Key usage': [
-            'DigitalSignature', // ARG TODO: capitalized in the docs, but should confirm
-            'KeyAgreement',
-            'KeyEncipherment',
-            'extKeyUsage', // ARG TODO: takes a list, but we have these as checkboxes from the options on the golang site: https://pkg.go.dev/crypto/x509#ExtKeyUsage
-          ],
+          'Key usage': ['keyUsage', 'extKeyUsage'],
         },
         { 'Policy identifiers': ['policyIdentifiers'] },
         {
-          'Subject Alternative Name (SAN) Options': ['allowIpSans', 'allowedUriSans', 'allowedOtherSans'],
+          'Subject Alternative Name (SAN) Options': [
+            'allowIpSans',
+            'allowedUriSans',
+            'allowUriSansTemplate',
+            'allowedOtherSans',
+          ],
         },
         {
           'Additional subject fields': [
-            'allowed_serial_numbers',
+            'allowedSerialNumbers',
             'requireCn',
             'useCsrCommonName',
             'useCsrSans',

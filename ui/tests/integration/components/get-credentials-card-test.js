@@ -77,7 +77,7 @@ module('Integration | Component | get-credentials-card', function (hooks) {
     assert
       .dom('[data-test-component="search-select"]')
       .doesNotExist('does not render search select component');
-    assert.equal(
+    assert.strictEqual(
       find('[data-test-search-roles] input').placeholder,
       'secret/',
       'renders placeholder text passed to search input'

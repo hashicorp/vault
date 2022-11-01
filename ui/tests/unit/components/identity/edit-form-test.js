@@ -63,7 +63,7 @@ module('Unit | Component | identity/edit-form', function (hooks) {
 
       component.set('mode', testCase.mode);
       component.set('model', model);
-      assert.equal(component.get('cancelLink'), testCase.expected, 'cancel link is correct');
+      assert.strictEqual(component.get('cancelLink'), testCase.expected, 'cancel link is correct');
     });
   });
 });

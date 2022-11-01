@@ -175,6 +175,18 @@ event "verify" {
   }
 }
 
+event "enos-verify-stable" {
+  depends = ["verify"]
+  action "enos-verify-stable" {
+    organization = "hashicorp"
+    repository = "vault"
+    workflow = "enos-verify-stable"
+  }
+
+  notification {
+    on = "fail"
+  }
+}
 ## These events are publish and post-publish events and should be added to the end of the file
 ## after the verify event stanza.
 
@@ -266,5 +278,18 @@ event "post-publish-website" {
 
   notification {
     on = "always"
+  }
+}
+
+event "update-ironbank" {
+  depends = ["post-publish-website"]
+  action "update-ironbank" {
+    organization = "hashicorp"
+    repository = "crt-workflows-common"
+    workflow = "update-ironbank"
+  }
+
+  notification {
+    on = "fail"
   }
 }

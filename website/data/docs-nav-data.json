@@ -655,6 +655,10 @@
         ]
       },
       {
+        "title": "<code>patch</code>",
+        "path": "commands/patch"
+      },
+      {
         "title": "<code>path-help</code>",
         "path": "commands/path-help"
       },
@@ -1696,6 +1700,10 @@
       {
         "title": "Upgrade Plugins",
         "path": "upgrading/plugins"
+      },
+      {
+        "title": "Upgrade to 1.12.x",
+        "path": "upgrading/upgrade-to-1.12.x"
       },
       {
         "title": "Upgrade to 1.11.x",

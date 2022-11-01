@@ -2,10 +2,12 @@ import { set } from '@ember/object';
 import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
-
 import utils from 'vault/lib/key-utils';
+import { inject as service } from '@ember/service';
 
 export default Route.extend(UnloadModelRoute, {
+  store: service(),
+
   beforeModel() {
     const { lease_id: leaseId } = this.paramsFor(this.routeName);
     const parentKey = utils.parentKeyForKey(leaseId);

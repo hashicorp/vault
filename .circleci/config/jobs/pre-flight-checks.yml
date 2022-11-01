@@ -1,10 +1,10 @@
 description: Ensure nothing obvious is broken, and pre-cache Go modules.
 executor: go-machine
 steps:
+  - checkout
   # Setup Go enabling the proxy for downloading modules.
   - setup-go:
       GOPROXY: https://proxy.golang.org,direct
-  - checkout
   - run:
       name: Install CircleCI CLI
       environment:

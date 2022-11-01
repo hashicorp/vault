@@ -466,8 +466,13 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 		}
 	}
 
-	if math.Abs(float64(time.Now().Add(validity).Unix()-cert.NotAfter.Unix())) > 20 {
-		return nil, fmt.Errorf("certificate validity end: %s; expected within 20 seconds of %s", cert.NotAfter.Format(time.RFC3339), time.Now().Add(validity).Format(time.RFC3339))
+	// TODO: We incremented 20->25 due to CircleCI execution
+	// being slow and pausing this test. We might consider recording the
+	// actual issuance time of the cert and calculating the expected
+	// validity period +/- fuzz, but that'd require recording and passing
+	// through more information.
+	if math.Abs(float64(time.Now().Add(validity).Unix()-cert.NotAfter.Unix())) > 25 {
+		return nil, fmt.Errorf("certificate validity end: %s; expected within 25 seconds of %s", cert.NotAfter.Format(time.RFC3339), time.Now().Add(validity).Format(time.RFC3339))
 	}
 
 	return parsedCertBundle, nil
@@ -5859,6 +5864,29 @@ EBuOIhCv6WiwVyGeTVynuHYkHyw3rIL/zU7N8+zIFV2G2M1UAv5D/eyh/74cr9Of
 		"use_pss":     "true",
 	})
 	requireSuccessNonNilResponse(t, resp, err, "failed to issue PSS leaf")
+}
+
+func TestPKI_EmptyCRLConfigUpgraded(t *testing.T) {
+	t.Parallel()
+	b, s := createBackendWithStorage(t)
+
+	// Write an empty CRLConfig into storage.
+	crlConfigEntry, err := logical.StorageEntryJSON("config/crl", &crlConfig{})
+	require.NoError(t, err)
+	err = s.Put(ctx, crlConfigEntry)
+	require.NoError(t, err)
+
+	resp, err := CBRead(b, s, "config/crl")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.Equal(t, resp.Data["expiry"], defaultCrlConfig.Expiry)
+	require.Equal(t, resp.Data["disable"], defaultCrlConfig.Disable)
+	require.Equal(t, resp.Data["ocsp_disable"], defaultCrlConfig.OcspDisable)
+	require.Equal(t, resp.Data["auto_rebuild"], defaultCrlConfig.AutoRebuild)
+	require.Equal(t, resp.Data["auto_rebuild_grace_period"], defaultCrlConfig.AutoRebuildGracePeriod)
+	require.Equal(t, resp.Data["enable_delta"], defaultCrlConfig.EnableDelta)
+	require.Equal(t, resp.Data["delta_rebuild_interval"], defaultCrlConfig.DeltaRebuildInterval)
 }
 
 var (
