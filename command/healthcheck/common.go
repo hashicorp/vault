@@ -140,7 +140,7 @@ func (e *Executor) FetchIfNotFetched(op logical.Operation, rawPath string) (*Pat
 	if present && byOp != nil {
 		result, present := byOp[op]
 		if present && result != nil {
-			return result, nil
+			return result, result.FetchSurfaceError()
 		}
 	}
 
@@ -170,14 +170,15 @@ func (e *Executor) FetchIfNotFetched(op logical.Operation, rawPath string) (*Pat
 		// Not all secrets will parse correctly. Sometimes we really want
 		// to fetch a raw endpoint, sometimes we're run with a bad mount
 		// or missing permissions.
-		secret, err := e.Client.Logical().ParseRawResponseAndCloseBody(response, err)
-		if err != nil {
-			ret.SecretParseError = err
+		secret, secretErr := e.Client.Logical().ParseRawResponseAndCloseBody(response, err)
+		if secretErr != nil {
+			ret.SecretParseError = secretErr
 		} else {
 			ret.Secret = secret
 		}
 	}
 
+	e.Resources[path][op] = ret
 	return ret, ret.FetchSurfaceError()
 }
 
