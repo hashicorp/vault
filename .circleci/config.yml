@@ -77,10 +77,13 @@ jobs:
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
+    - checkout
     - run:
         command: |
+          GO_VERSION=$(cat .go-version)
           [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
           # Install Go
+          cd ~
           curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
@@ -96,8 +99,6 @@ jobs:
           echo "$ go version"
           go version
         name: Setup Go
-        working_directory: ~/
-    - checkout
     - restore_cache:
         keys:
         - v1.5-{{checksum "go.sum"}}-{{checksum "sdk/go.sum"}}-{{checksum "api/go.sum"}}
@@ -121,7 +122,6 @@ jobs:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.2
     - GO_TAGS: ''
-    - GO_VERSION: 1.19.2
     - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-remote-docker:
@@ -354,7 +354,6 @@ jobs:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.2
     - GO_TAGS: ''
-    - GO_VERSION: 1.19.2
     - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   fmt:
@@ -363,10 +362,13 @@ jobs:
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
+    - checkout
     - run:
         command: |
+          GO_VERSION=$(cat .go-version)
           [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
           # Install Go
+          cd ~
           curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
@@ -382,8 +384,6 @@ jobs:
           echo "$ go version"
           go version
         name: Setup Go
-        working_directory: ~/
-    - checkout
     - run:
         command: |
           echo "Using gofumpt version ${GOFUMPT_VERSION}"
@@ -398,7 +398,6 @@ jobs:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.2
     - GO_TAGS: ''
-    - GO_VERSION: 1.19.2
     - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race:
@@ -621,7 +620,6 @@ jobs:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.2
     - GO_TAGS: ''
-    - GO_VERSION: 1.19.2
     - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go:
@@ -844,7 +842,6 @@ jobs:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.2
     - GO_TAGS: ''
-    - GO_VERSION: 1.19.2
     - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   semgrep:
@@ -865,10 +862,13 @@ jobs:
     shell: /usr/bin/env bash -euo pipefail -c
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     steps:
+    - checkout
     - run:
         command: |
+          GO_VERSION=$(cat .go-version)
           [ -n "$GO_VERSION" ] || { echo "You must set GO_VERSION"; exit 1; }
           # Install Go
+          cd ~
           curl -sSLO "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
@@ -884,8 +884,6 @@ jobs:
           echo "$ go version"
           go version
         name: Setup Go
-        working_directory: ~/
-    - checkout
     - run:
         command: |
           export CCI_PATH=/tmp/circleci-cli/$CIRCLECI_CLI_VERSION
@@ -951,7 +949,6 @@ jobs:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.2
     - GO_TAGS: ''
-    - GO_VERSION: 1.19.2
     - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
@@ -1184,7 +1181,6 @@ jobs:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_IMAGE: docker.mirror.hashicorp.services/cimg/go:1.19.2
     - GO_TAGS: ''
-    - GO_VERSION: 1.19.2
     - GOFUMPT_VERSION: 0.3.1
     - GOTESTSUM_VERSION: 0.5.2
 workflows:
