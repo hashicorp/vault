@@ -114,7 +114,7 @@ export default class SearchSelectWithModal extends Component {
           continue;
         }
         if (err.httpStatus === 403) {
-          if (this.dropdownOptions) continue;
+          if (this.dropdownOptions && this.args.models.length > 1) continue;
           this.shouldUseFallback = true;
           return;
         }
