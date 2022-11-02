@@ -134,6 +134,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathRotateDeltaCRL(&b),
 			pathRevoke(&b),
 			pathRevokeWithKey(&b),
+			pathListCertsRevoked(&b),
 			pathTidy(&b),
 			pathTidyCancel(&b),
 			pathTidyStatus(&b),
