@@ -470,11 +470,11 @@
         "routes": [
           {
             "title": "Overview",
-            "path": "system/internal/inspect"
+            "path": "system/inspect"
           },
           {
             "title": "<code>/sys/internal/inspect/router</code>",
-            "path": "sys/internal/inspect/router"
+            "path": "sys/inspect/router"
           }
         ]
       },
