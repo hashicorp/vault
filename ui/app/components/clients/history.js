@@ -2,7 +2,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { isAfter, isBefore, isSameDay, isSameMonth, format } from 'date-fns';
+import { isAfter, isBefore, isSameMonth, format } from 'date-fns';
 import getStorage from 'vault/lib/token-storage';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 
@@ -74,19 +74,11 @@ export default class History extends Component {
     // show banner if startTime returned from activity log (response) is after the queried startTime
     const activityStartDateObject = parseAPITimestamp(this.getActivityResponse.startTime);
     const queryStartDateObject = parseAPITimestamp(this.startMonthTimestamp);
-    const isLicenseStart = isSameDay(
-      queryStartDateObject,
-      parseAPITimestamp(this.args.model.licenseStartTimestamp)
-    );
 
     if (isAfter(activityStartDateObject, queryStartDateObject)) {
-      const message = isLicenseStart ? 'Your license start date is ' : 'You requested data from ';
-      return (
-        message +
-        `${parseAPITimestamp(this.startMonthTimestamp, 'MMMM yyyy')}. 
+      return `You requested data from ${parseAPITimestamp(this.startMonthTimestamp, 'MMMM yyyy')}. 
         We only have data from ${parseAPITimestamp(this.getActivityResponse.startTime, 'MMMM yyyy')}, 
-        and that is what is being shown here.`
-      );
+        and that is what is being shown here.`;
     } else {
       return null;
     }
@@ -289,7 +281,7 @@ export default class History extends Component {
           : ` to ${parseAPITimestamp(response.endTime, 'MMMM yyyy')}`;
         this.noActivityRange = `from ${parseAPITimestamp(response.startTime, 'MMMM yyyy')}` + endMonth;
       } else {
-        // TODO cmb - would like to remove using the byMonth timestamps and just rely on response to return start/end times
+        // TODO when API changes are made - would like to remove using the byMonth timestamps and rely on response's time params
         const { byMonth } = response;
         this.startMonthTimestamp = byMonth[0]?.timestamp || response.startTime;
         this.endMonthTimestamp = byMonth[byMonth.length - 1]?.timestamp || response.endTime;
