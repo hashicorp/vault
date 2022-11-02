@@ -168,14 +168,10 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 		return nil, errors.New("allow_rotation must be set to true if auto-rotation is enabled")
 	}
 
-	// NOTE: Add description
-	isCiphertextSet := true
-	if !isFieldSet("ciphertext", d) {
-		isCiphertextSet = false
-		if !isFieldSet("public_key", d) {
-			// NOTE: Error desc
-			return nil, errors.New("one of the following fields, ciphertext xor public_key, has to be set")
-		}
+	// Ensure that at least on `key` field has been set
+	isCiphertextSet, err := checkKeyFieldsSet(d)
+	if err != nil {
+		return nil, err
 	}
 
 	polReq := keysutil.PolicyRequest{
@@ -266,14 +262,9 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 	publicKeyString := d.Get("public_key").(string)
 	bumpVersion := d.Get("bump_version").(bool)
 
-	// NOTE: Add description
-	isCiphertextSet := true
-	if !isFieldSet("ciphertext", d) {
-		isCiphertextSet = false
-		if !isFieldSet("public_key", d) {
-			// NOTE: Error desc
-			return nil, errors.New("one of the following fields, ciphertext xor public_key, has to be set")
-		}
+	isCiphertextSet, err := checkKeyFieldsSet(d)
+	if err != nil {
+		return nil, err
 	}
 
 	polReq := keysutil.PolicyRequest{
@@ -407,6 +398,21 @@ func parseHashFn(hashFn string) (hash.Hash, error) {
 	}
 }
 
+// checkKeyFieldsSet: Desc
+func checkKeyFieldsSet(d *framework.FieldData) (bool, error) {
+	isCiphertextSet := true
+	if !isFieldSet("ciphertext", d) {
+		isCiphertextSet = false
+		if !isFieldSet("public_key", d) {
+			// NOTE: Error desc
+			return isCiphertextSet, errors.New("one of the following fields, ciphertext xor public_key, has to be set")
+		}
+	}
+
+	return isCiphertextSet, nil
+}
+
+// isFieldSet: Desc
 func isFieldSet(fieldName string, d *framework.FieldData) bool {
 	_, fieldSet := d.Raw[fieldName]
 	if !fieldSet {
