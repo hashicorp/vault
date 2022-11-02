@@ -218,5 +218,6 @@ export default class SearchSelectWithModal extends Component {
       this.handleChange();
     }
     this.createdRecord = null;
+    this.modelData = null;
   }
 }

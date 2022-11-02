@@ -95,6 +95,7 @@ main = rule when precond {
       const message = error.errors ? error.errors.join('. ') : error.message;
       this.errorBanner = message;
     }
+    this.cleanup();
   }
 
   @action
@@ -104,10 +105,7 @@ main = rule when precond {
 
   @action
   async setPolicyType(type) {
-    // cleanup record before creating a new one
-    if (this.createdModel) {
-      await this.store.unloadRecord(`policy/${type}`, this.createdModel.name);
-    }
+    if (this.createdModel) this.cleanup();
     this.createdModel = await this.store.createRecord(`policy/${type}`, {});
     this.createdModel.name = this.args.modelData.name;
   }
@@ -125,8 +123,13 @@ main = rule when precond {
 
   @action
   cancel() {
+    this.cleanup();
+    this.args.onCancel();
+  }
+
+  cleanup() {
     const method = this.model.isNew ? 'unloadRecord' : 'rollbackAttributes';
     this.model[method]();
-    this.args.onCancel();
+    if (this.createdModel) this.createdModel = null;
   }
 }
