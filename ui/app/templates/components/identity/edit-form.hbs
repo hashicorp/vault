@@ -36,6 +36,7 @@
               @onChange={{action "handlePolicySelection"}}
               @fallbackComponent="string-list"
               @modalFormComponent="policy-form"
+              @excludeOptions={{array "root"}}
             />
           {{else}}
             <SearchSelect
