@@ -1418,6 +1418,7 @@ func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte
 				curve = elliptic.P521()
 			}
 
+			// NOTE: Is there a better way to do this?
 			if isPrivateKey {
 				ecdsaKey := parsedKey.(*ecdsa.PrivateKey)
 
@@ -2025,14 +2026,13 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 }
 
 func (p *Policy) UpdateKeyVersion(ctx context.Context, storage logical.Storage, key []byte, isPrivateKey bool, keyVersion int) error {
-	// NOTE: If we are simply adding a private counterpart, CreationTime shouldn't be updated
 	keyEntry, err := p.safeGetKeyEntry(keyVersion)
 	if err != nil {
 		return err
 	}
 
 	// Validations
-	if !p.Type.AssociatedDataSupported() {
+	if !p.Type.SupportsImportPublicKey() {
 		return errors.New("provided type does not support version updates")
 	}
 
