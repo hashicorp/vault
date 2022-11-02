@@ -255,6 +255,10 @@ export default class History extends Component {
         this.activityQueryParams.start.timestamp = this.args.model.licenseStartTimestamp;
         this.activityQueryParams.end.timestamp = this.args.model.currentDate;
         break;
+      case 'currentMonth':
+        this.activityQueryParams.start.timestamp = this.args.model.currentDate;
+        this.activityQueryParams.end.timestamp = this.args.model.currentDate;
+        break;
       case 'startDate': // from "Edit billing start" modal
         this.activityQueryParams.start = { monthIdx, year };
         this.activityQueryParams.end.timestamp = this.args.model.currentDate;

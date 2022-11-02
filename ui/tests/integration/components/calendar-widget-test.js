@@ -135,6 +135,23 @@ module('Integration | Component | calendar-widget', function (hooks) {
     );
   });
 
+  test('it calls parent callback with correct arg when clicking "Current month"', async function (assert) {
+    await render(hbs`
+      <CalendarWidget
+        @startTimestamp={{this.startTimestamp}}
+        @endTimestamp={{this.endTimestamp}}
+        @selectMonth={{this.handleClientActivityQuery}}
+      />
+    `);
+    await calendarDropdown.menuToggle();
+    await calendarDropdown.clickCurrentMonth();
+    assert.propEqual(
+      this.handleClientActivityQuery.args[0][0],
+      { dateType: 'currentMonth' },
+      'it calls parent function with currentMoth dateType'
+    );
+  });
+
   test('it calls parent callback with correct arg when selecting a month', async function (assert) {
     await render(hbs`
       <CalendarWidget

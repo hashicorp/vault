@@ -89,9 +89,8 @@ class CalendarWidget extends Component {
   }
 
   @action
-  selectCurrentBillingPeriod(dropdown) {
-    // reset to initial start/end dates by sending 'reset' to parent callback
-    this.args.selectMonth({ dateType: 'reset' });
+  handleDateShortcut(dropdown, { target }) {
+    this.args.selectMonth({ dateType: target.name }); // send clicked shortcut to parent callback
     this.showCalendar = false;
     dropdown.close();
   }

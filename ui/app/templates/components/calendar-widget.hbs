@@ -17,10 +17,22 @@
       <ul class="menu-list">
         <li class="action">
           <button
+            data-test-current-month
+            class="link link-plain has-text-weight-semibold is-ghost"
+            type="button"
+            name="currentMonth"
+            {{on "click" (fn this.handleDateShortcut D.actions)}}
+          >
+            Current month
+          </button>
+        </li>
+        <li class="action">
+          <button
             data-test-current-billing-period
             class="link link-plain has-text-weight-semibold is-ghost"
             type="button"
-            {{on "click" (fn this.selectCurrentBillingPeriod D.actions)}}
+            name="reset"
+            {{on "click" (fn this.handleDateShortcut D.actions)}}
           >
             Current billing period
           </button>
