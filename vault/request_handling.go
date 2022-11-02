@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -1325,8 +1327,24 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		return nil, nil, ErrInternalError
 	}
 
+	// vault-8307 get the alias name and mount accessor
+	isUserLockoutDisabled, err := c.isUserLockoutDisabled(entry, req)
+	if err != nil {
+		return nil, nil, err
+	}
+	if !isUserLockoutDisabled {
+		loginUserInfo := c.getLoginUserInfo(entry, req)
+		fmt.Println(loginUserInfo.aliasName)
+		fmt.Println(loginUserInfo.mountAccessor)
+	}
+
+	// vault-8307 get the configuration values from mount accessor or configuration file
+
+	// vault-8307 check if the login request can be sent
+
 	// Route the request
 	resp, routeErr := c.doRouting(ctx, req)
+	// vault-8307 if routeErr has an error, update the userFailedLoginMap
 	if resp != nil {
 		// If wrapping is used, use the shortest between the request and response
 		var wrapTTL time.Duration
@@ -1715,6 +1733,91 @@ func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, re
 	)
 
 	return leaseGenerated, resp, nil
+}
+
+// getLoginUserInfo gets login user info to check details in failedUserLoginInfo map
+func (c *Core) getLoginUserInfo(mountEntry *MountEntry, req *logical.Request) (userInfo FailedLoginUser) {
+	var aliasName string
+	switch mountEntry.Type {
+	case "approle":
+		aliasNameRaw := req.Data["role_id"]
+		aliasName = fmt.Sprintf("%v", aliasNameRaw)
+	default:
+		splitPath := strings.Split(req.Path, "login/")
+		aliasName = splitPath[1]
+
+	}
+	userInfo.aliasName = aliasName
+	userInfo.mountAccessor = mountEntry.Accessor
+	return userInfo
+}
+
+// isUserLockoutDisabled checks if user lockouts feature to prevent brute forcing is disabled
+// Auth types userpass, ldap and approle support this feature
+// precedence: environment var setting >> auth tune setting >> config file setting >> default (enabled)
+func (c *Core) isUserLockoutDisabled(mountEntry *MountEntry, req *logical.Request) (disabled bool, err error) {
+	if !(mountEntry.Type == "userpass" || mountEntry.Type == "ldap" || mountEntry.Type == "approle") {
+		return true, nil
+	}
+	// check environment variable
+	var disableUserLockout bool
+	if disableUserLockoutEnv := os.Getenv(consts.VaultDisableUserLockout); disableUserLockoutEnv != "" {
+		var err error
+		disableUserLockout, err = strconv.ParseBool(disableUserLockoutEnv)
+		if err != nil {
+			return false, errors.New("Error parsing the environment variable VAULT_DISABLE_USER_LOCKOUT")
+		}
+	}
+	if disableUserLockout {
+		return true, nil
+	}
+
+	// read auth tune for mount entry
+	userLockoutConfig := mountEntry.Config.UserLockoutConfig
+	if userLockoutConfig != nil && userLockoutConfig.DisableLockout {
+		return true, nil
+	}
+
+	// read config for auth type
+	userLockoutConfiguration := c.getUserLockoutFromConfig(mountEntry.Type)
+	if userLockoutConfiguration.DisableLockout {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+// getUserLockoutFromConfig gets the userlockout configuration for given mount type from config file
+func (c *Core) getUserLockoutFromConfig(mountType string) UserLockoutConfig {
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return UserLockoutConfig{}
+	}
+	userlockouts := conf.(*server.Config).UserLockouts
+	if userlockouts == nil {
+		return UserLockoutConfig{}
+	}
+	var defaultUserLockoutConfig UserLockoutConfig
+	for _, userLockoutConfig := range userlockouts {
+		switch userLockoutConfig.Type {
+		case "all":
+			defaultUserLockoutConfig = UserLockoutConfig{
+				LockoutThreshold:    userLockoutConfig.LockoutThreshold,
+				LockoutDuration:     userLockoutConfig.LockoutDuration,
+				LockoutCounterReset: userLockoutConfig.LockoutCounterReset,
+				DisableLockout:      userLockoutConfig.DisableLockout,
+			}
+		case mountType:
+			return UserLockoutConfig{
+				LockoutThreshold:    userLockoutConfig.LockoutThreshold,
+				LockoutDuration:     userLockoutConfig.LockoutDuration,
+				LockoutCounterReset: userLockoutConfig.LockoutCounterReset,
+				DisableLockout:      userLockoutConfig.DisableLockout,
+			}
+
+		}
+	}
+	return defaultUserLockoutConfig
 }
 
 func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig) (*logical.MFAConstraintAny, error) {
