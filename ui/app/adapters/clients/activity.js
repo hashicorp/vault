@@ -11,8 +11,9 @@ export default class ActivityAdapter extends ApplicationAdapter {
       : formatRFC3339(new Date(start_time.year, start_time.monthIdx, 10));
 
     end_time = end_time.timestamp
-      ? end_time.timestamp // TODO: currently override backend returning end of month prior, return current month this behavior may change
+      ? end_time.timestamp
       : formatRFC3339(new Date(end_time.year, end_time.monthIdx, 20));
+
     return { start_time, end_time };
   }
 
@@ -27,7 +28,7 @@ export default class ActivityAdapter extends ApplicationAdapter {
         let response = resp || {};
         response.id = response.request_id || 'no-data';
         if (response.id === 'no-data') {
-          // add queryParams to relay date range that no data exists
+          // add queryParams to return user's queried date range without data
           response = { ...response, ...queryParams };
         }
         return response;

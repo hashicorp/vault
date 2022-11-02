@@ -64,9 +64,26 @@ export default class History extends Component {
   }
 
   get isDateRange() {
+    // TODO update when API consistently returns end_time param
+    // *BUG* if the queried start_time is last month and queried end_time is the current month
+    // the response returns an end_time of the month prior instead of the current month, as requested
+    // this means isSameMonth will return true which is incorrect because the activity data spans from last month to the current month
     return !isSameMonth(
       parseAPITimestamp(this.getActivityResponse.startTime),
-      parseAPITimestamp(this.getActivityResponse.endTime)
+      parseAPITimestamp(this.endMonthTimestamp) // TODO change to parseAPITimestamp(this.getActivityResponse.endTime)
+    );
+  }
+
+  get isCurrentMonth() {
+    return (
+      isSameMonth(
+        parseAPITimestamp(this.getActivityResponse.startTime),
+        parseAPITimestamp(this.args.model.currentDate)
+      ) &&
+      isSameMonth(
+        parseAPITimestamp(this.endMonthTimestamp), // TODO change to parseAPITimestamp(this.getActivityResponse.endTime)
+        parseAPITimestamp(this.args.model.currentDate)
+      )
     );
   }
 
@@ -285,7 +302,7 @@ export default class History extends Component {
           : ` to ${parseAPITimestamp(response.endTime, 'MMMM yyyy')}`;
         this.noActivityRange = `from ${parseAPITimestamp(response.startTime, 'MMMM yyyy')}` + endMonth;
       } else {
-        // TODO when API changes are made - would like to remove using the byMonth timestamps and rely on response's time params
+        // TODO when API changes are made - would like to remove using the "month" timestamps and rely on response's time params
         const { byMonth } = response;
         this.startMonthTimestamp = byMonth[0]?.timestamp || response.startTime;
         this.endMonthTimestamp = byMonth[byMonth.length - 1]?.timestamp || response.endTime;

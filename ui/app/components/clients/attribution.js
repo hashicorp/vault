@@ -31,7 +31,7 @@ import { inject as service } from '@ember/service';
  * @param {string} startTimeDisplay - string that displays as start date for CSV modal
  * @param {string} endTimeDisplay - string that displays as end date for CSV modal
  * @param {boolean} isDateRange - getter calculated in parent to relay if dataset is a date range or single month and display text accordingly
- * @param {boolean} isCurrentMonth - boolean to determine if rendered in current month tab or not
+ * @param {boolean} isCurrentMonth - boolean to determine if rendering data from current month
  * @param {string} timestamp -  ISO timestamp created in serializer to timestamp the response
  */
 
@@ -41,10 +41,6 @@ export default class Attribution extends Component {
 
   get hasCsvData() {
     return this.args.totalClientAttribution ? this.args.totalClientAttribution.length > 0 : false;
-  }
-
-  get isDateRange() {
-    return this.args.isDateRange;
   }
 
   get isSingleNamespace() {
@@ -75,7 +71,7 @@ export default class Attribution extends Component {
   }
 
   get chartText() {
-    let dateText = this.isDateRange ? 'date range' : 'month';
+    let dateText = this.args.isDateRange ? 'date range' : 'month';
     switch (this.isSingleNamespace) {
       case true:
         return {
@@ -174,7 +170,7 @@ export default class Attribution extends Component {
   }
 
   get getCsvFileName() {
-    let endRange = this.isDateRange ? `-${this.args.endTimeDisplay}` : '';
+    let endRange = this.args.isDateRange ? `-${this.args.endTimeDisplay}` : '';
     let csvDateRange = this.args.startTimeDisplay + endRange;
     return this.isSingleNamespace
       ? `clients_by_auth_method_${csvDateRange}`
