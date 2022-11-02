@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	backendplugin "github.com/hashicorp/vault/sdk/plugin"
+	"github.com/hashicorp/vault/version"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -55,7 +56,8 @@ type PluginCatalog struct {
 	externalPlugins map[externalPluginsKey]*externalPlugin
 	mlockPlugins    bool
 
-	lock sync.RWMutex
+	lock    sync.RWMutex
+	wrapper pluginutil.RunnerUtil
 }
 
 // Only plugins running with identical PluginRunner config can be multiplexed,
@@ -168,6 +170,7 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 		directory:       c.pluginDirectory,
 		logger:          c.logger,
 		mlockPlugins:    c.enableMlock,
+		wrapper:         logical.StaticSystemView{VersionString: version.GetVersion().Version},
 	}
 
 	// Run upgrade if untyped plugins exist
@@ -550,6 +553,7 @@ func (c *PluginCatalog) getBackendRunningVersion(ctx context.Context, pluginRunn
 		Logger:          log.NewNullLogger(),
 		IsMetadataMode:  false,
 		AutoMTLS:        true,
+		Wrapper:         c.wrapper,
 	}
 
 	var client logical.Backend
@@ -590,7 +594,7 @@ func (c *PluginCatalog) getBackendRunningVersion(ctx context.Context, pluginRunn
 	config.AutoMTLS = false
 	config.IsMetadataMode = true
 	// attempt to run as a v4 backend plugin
-	client, err = backendplugin.NewPluginClient(ctx, nil, pluginRunner, log.NewNullLogger(), true)
+	client, err = backendplugin.NewPluginClient(ctx, c.wrapper, pluginRunner, log.NewNullLogger(), true)
 	if err != nil {
 		merr = multierror.Append(merr, fmt.Errorf("failed to dispense v4 backend plugin: %w", err))
 		c.logger.Debug("failed to dispense v4 backend plugin", "name", pluginRunner.Name, "error", merr)
