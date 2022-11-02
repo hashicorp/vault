@@ -113,7 +113,7 @@ func rolePaths(b *backend) []*framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"role_name": {
 				Type:        framework.TypeString,
-				Description: "Name of the role.",
+				Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 			},
 			"bind_secret_id": {
 				Type:        framework.TypeBool,
@@ -196,7 +196,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -210,7 +210,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"policies": {
 					Type:        framework.TypeCommaStringSlice,
@@ -235,7 +235,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"bound_cidr_list": {
 					Type: framework.TypeCommaStringSlice,
@@ -256,7 +256,7 @@ of CIDR blocks. If set, specifies the blocks of IP addresses which can perform t
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"secret_id_bound_cidrs": {
 					Type: framework.TypeCommaStringSlice,
@@ -277,7 +277,7 @@ IP addresses which can perform the login operation.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"token_bound_cidrs": {
 					Type:        framework.TypeCommaStringSlice,
@@ -297,7 +297,7 @@ IP addresses which can perform the login operation.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"bind_secret_id": {
 					Type:        framework.TypeBool,
@@ -318,7 +318,7 @@ IP addresses which can perform the login operation.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"secret_id_num_uses": {
 					Type:        framework.TypeInt,
@@ -338,7 +338,7 @@ IP addresses which can perform the login operation.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"secret_id_ttl": {
 					Type: framework.TypeDurationSecond,
@@ -359,7 +359,7 @@ to 0, meaning no expiration.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"period": {
 					Type:        framework.TypeDurationSecond,
@@ -384,7 +384,7 @@ to 0, meaning no expiration.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"token_num_uses": {
 					Type:        framework.TypeInt,
@@ -404,7 +404,7 @@ to 0, meaning no expiration.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"token_ttl": {
 					Type:        framework.TypeDurationSecond,
@@ -424,7 +424,7 @@ to 0, meaning no expiration.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"token_max_ttl": {
 					Type:        framework.TypeDurationSecond,
@@ -444,7 +444,7 @@ to 0, meaning no expiration.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"role_id": {
 					Type:        framework.TypeString,
@@ -463,7 +463,7 @@ to 0, meaning no expiration.`,
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"metadata": {
 					Type: framework.TypeString,
@@ -504,7 +504,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"secret_id": {
 					Type:        framework.TypeString,
@@ -522,7 +522,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"secret_id": {
 					Type:        framework.TypeString,
@@ -541,7 +541,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"secret_id_accessor": {
 					Type:        framework.TypeString,
@@ -559,7 +559,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"secret_id_accessor": {
 					Type:        framework.TypeString,
@@ -578,7 +578,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": {
 					Type:        framework.TypeString,
-					Description: "Name of the role.",
+					Description: fmt.Sprintf("Name of the role. Must be less than %d bytes.", maxHmacInputLength),
 				},
 				"secret_id": {
 					Type:        framework.TypeString,
@@ -878,6 +878,10 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
+	}
+
+	if len(roleName) > maxHmacInputLength {
+		return logical.ErrorResponse(fmt.Sprintf("role_name is longer than maximum of %d bytes", maxHmacInputLength)), nil
 	}
 
 	lock := b.roleLock(roleName)
