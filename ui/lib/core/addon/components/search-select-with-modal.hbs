@@ -1,4 +1,10 @@
-<div {{did-insert (perform this.fetchOptions)}} ...attributes data-test-search-select-with-modal>
+<div
+  {{did-insert (perform this.fetchOptions)}}
+  id={{@id}}
+  class={{concat "field search-select" (if (eq @displayInherit true) " display-inherit")}}
+  data-test-search-select-with-modal
+  ...attributes
+>
   {{#if this.shouldUseFallback}}
     {{component
       @fallbackComponent
