@@ -401,10 +401,9 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 	}
 }
 
+// TestAppRoleLongRoleName tests that the creation of an approle is a maximum of 4096 bytes
 // Prior to VAULT-8518 being fixed, you were unable to delete an approle value longer than 1024 bytes
 // due to a restriction put into place by PR #14746, to prevent unbounded HMAC creation.
-// We now restrict the creation of an approle name to being maximum 4096 bytes.
-// This test validates this logic.
 func TestAppRoleLongRoleName(t *testing.T) {
 	approleName := strings.Repeat("a", 5000)
 
