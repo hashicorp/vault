@@ -64,6 +64,9 @@
       {{or @submitText "Submit"}}
     </button>
   {{/unless}}
+  {{#if this.invalidDate}}
+    <AlertInline @type="danger" @message={{this.invalidDate}} @paddingTop={{true}} @mimicRefresh={{true}} />
+  {{/if}}
 </div>
 {{#if @handleCancel}}
   <footer class="modal-card-foot modal-card-foot-outlined">

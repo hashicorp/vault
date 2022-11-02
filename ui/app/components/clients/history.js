@@ -2,7 +2,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { isAfter, isBefore, isSameDay, isSameMonth } from 'date-fns';
+import { isAfter, isBefore, isSameDay, isSameMonth, format } from 'date-fns';
 import getStorage from 'vault/lib/token-storage';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 
@@ -265,6 +265,7 @@ export default class History extends Component {
         break;
       case 'startDate': // from "Edit billing start" modal
         this.activityQueryParams.start = { monthIdx, year };
+        this.activityQueryParams.end.timestamp = this.args.model.currentDate;
         break;
       case 'endDate': // selected end date from calendar widget
         this.activityQueryParams.end = { monthIdx, year };
@@ -327,5 +328,15 @@ export default class History extends Component {
   @action
   setAuthMethod([authMount]) {
     this.selectedAuthMethod = authMount;
+  }
+
+  // validation function sent to <DateDropdown> selecting 'endDate'
+  @action
+  isEndBeforeStart(selection) {
+    let { start } = this.activityQueryParams;
+    start = start?.timestamp ? parseAPITimestamp(start.timestamp) : new Date(start.year, start.monthIdx);
+    return isBefore(selection, start) && !isSameMonth(start, selection)
+      ? `End date must be after ${format(start, 'MMMM yyyy')}`
+      : false;
   }
 }

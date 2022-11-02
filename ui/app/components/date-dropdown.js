@@ -15,6 +15,7 @@ import { ARRAY_OF_MONTHS } from 'core/utils/date-formatters';
  * @param {function} [handleCancel] - optional callback for cancel action, if exists then buttons appear modal style with a light gray background
  * @param {string} [dateType] - optional argument to give the selected month/year a type
  * @param {string} [submitText] - optional argument to change submit button text
+ * @param {function} [validateDate] - parent function to validate date selection, receives date object and returns an error message that's passed to the inline alert
  */
 export default class DateDropdown extends Component {
   currentDate = new Date();
@@ -27,6 +28,7 @@ export default class DateDropdown extends Component {
   @tracked disabledYear = null; // year as integer if current year should be disabled
   @tracked selectedMonth = null;
   @tracked selectedYear = null;
+  @tracked invalidDate = null;
 
   @action
   selectMonth(month, dropdown) {
@@ -46,6 +48,11 @@ export default class DateDropdown extends Component {
 
   @action
   handleSubmit() {
+    if (this.args.validateDate) {
+      this.invalidDate = null;
+      this.invalidDate = this.args.validateDate(new Date(this.selectedYear, this.selectedMonth.index));
+      if (this.invalidDate) return;
+    }
     const { index, name } = this.selectedMonth;
     this.args.handleSubmit({
       monthIdx: index,

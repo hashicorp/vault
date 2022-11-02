@@ -161,7 +161,12 @@
         @title={{concat "No data received " (if this.noActivityRange this.noActivityRange)}}
         @message="No data exists for that query period. Select a different billing start date above, or choose a different end date here:"
       >
-        <DateDropdown @handleSubmit={{this.handleClientActivityQuery}} @dateType="endDate" @submitText="View" />
+        <DateDropdown
+          @handleSubmit={{this.handleClientActivityQuery}}
+          @validateDate={{this.isEndBeforeStart}}
+          @dateType="endDate"
+          @submitText="View"
+        />
       </EmptyState>
     {{/if}}
   {{/if}}
