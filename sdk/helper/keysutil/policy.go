@@ -1405,92 +1405,7 @@ func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte
 			}
 		}
 
-		switch parsedKey.(type) {
-		case *ecdsa.PrivateKey, *ecdsa.PublicKey:
-			if p.Type != KeyType_ECDSA_P256 && p.Type != KeyType_ECDSA_P384 && p.Type != KeyType_ECDSA_P521 {
-				return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedKey)
-			}
-
-			curve := elliptic.P256()
-			if p.Type == KeyType_ECDSA_P384 {
-				curve = elliptic.P384()
-			} else if p.Type == KeyType_ECDSA_P521 {
-				curve = elliptic.P521()
-			}
-
-			// NOTE: Is there a better way to do this?
-			if isPrivateKey {
-				ecdsaKey := parsedKey.(*ecdsa.PrivateKey)
-
-				if ecdsaKey.Curve != curve {
-					return fmt.Errorf("invalid curve: expected %s, got %s", curve.Params().Name, ecdsaKey.Curve.Params().Name)
-				}
-
-				entry.EC_D = ecdsaKey.D
-				entry.EC_X = ecdsaKey.X
-				entry.EC_Y = ecdsaKey.Y
-
-				derBytes, err := x509.MarshalPKIXPublicKey(ecdsaKey.Public())
-				if err != nil {
-					return errwrap.Wrapf("error marshaling public key: {{err}}", err)
-				}
-				pemBlock := &pem.Block{
-					Type:  "PUBLIC KEY",
-					Bytes: derBytes,
-				}
-				pemBytes := pem.EncodeToMemory(pemBlock)
-				if pemBytes == nil || len(pemBytes) == 0 {
-					return fmt.Errorf("error PEM-encoding public key")
-				}
-				entry.FormattedPublicKey = string(pemBytes)
-			} else {
-				ecdsaKey := parsedKey.(*ecdsa.PublicKey)
-
-				if ecdsaKey.Curve != curve {
-					return fmt.Errorf("invalid curve: expected %s, got %s", curve.Params().Name, ecdsaKey.Curve.Params().Name)
-				}
-
-				entry.EC_X = ecdsaKey.X
-				entry.EC_Y = ecdsaKey.Y
-				entry.FormattedPublicKey = string(key)
-			}
-		case ed25519.PrivateKey:
-			if p.Type != KeyType_ED25519 {
-				return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedKey)
-			}
-			privateKey := parsedKey.(ed25519.PrivateKey)
-
-			entry.Key = privateKey
-			publicKey := privateKey.Public().(ed25519.PublicKey)
-			entry.FormattedPublicKey = base64.StdEncoding.EncodeToString(publicKey)
-		case *rsa.PrivateKey, *rsa.PublicKey:
-			if p.Type != KeyType_RSA2048 && p.Type != KeyType_RSA3072 && p.Type != KeyType_RSA4096 {
-				return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedKey)
-			}
-
-			keyBytes := 256
-			if p.Type == KeyType_RSA3072 {
-				keyBytes = 384
-			} else if p.Type == KeyType_RSA4096 {
-				keyBytes = 512
-			}
-			// NOTE: If for some reason we don't pass the `isPrivateKey`, we can use the keyTypes
-			if isPrivateKey {
-				rsaKey := parsedKey.(*rsa.PrivateKey)
-				if rsaKey.Size() != keyBytes {
-					return fmt.Errorf("invalid key size: expected %d bytes, got %d bytes", keyBytes, rsaKey.Size())
-				}
-				entry.RSAKey = rsaKey
-			} else {
-				rsaKey := parsedKey.(*rsa.PublicKey)
-				if rsaKey.Size() != keyBytes {
-					return fmt.Errorf("invalid key size: expected %d bytes, got %d bytes", keyBytes, rsaKey.Size())
-				}
-				entry.RSAPublicKey = rsaKey
-			}
-		default:
-			return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedKey)
-		}
+		p.parseKeyToKeyEntry(&entry, parsedKey, isPrivateKey)
 	}
 
 	p.LatestVersion += 1
@@ -2053,24 +1968,10 @@ func (p *Policy) UpdateKeyVersion(ctx context.Context, storage logical.Storage, 
 		return fmt.Errorf("error parsing asymmetric key: %s", err)
 	}
 
-	// Maybe put switch from `Import` in common function accessed by this and "Import"
+	// Check if key pair is valid, this reduces the need for duplicated code but moves the checks to after validating key pair
 	switch parsedPrivateKey.(type) {
 	case *ecdsa.PrivateKey:
-		if p.Type != KeyType_ECDSA_P256 && p.Type != KeyType_ECDSA_P384 && p.Type != KeyType_ECDSA_P521 {
-			return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedPrivateKey)
-		}
-
 		ecdsaKey := parsedPrivateKey.(*ecdsa.PrivateKey)
-		curve := elliptic.P256()
-		if p.Type == KeyType_ECDSA_P384 {
-			curve = elliptic.P384()
-		} else if p.Type == KeyType_ECDSA_P521 {
-			curve = elliptic.P521()
-		}
-
-		if ecdsaKey.Curve != curve {
-			return fmt.Errorf("invalid curve: expected %s, got %s", curve.Params().Name, ecdsaKey.Curve.Params().Name)
-		}
 		// Is this going to work?
 		publicKey, err := x509.ParsePKIXPublicKey([]byte(keyEntry.FormattedPublicKey))
 		if err != nil {
@@ -2080,12 +1981,93 @@ func (p *Policy) UpdateKeyVersion(ctx context.Context, storage logical.Storage, 
 			// NOTE: Description
 			return fmt.Errorf("keys do not match")
 		}
-
-		// X and Y were filled when public key was imported
-		keyEntry.EC_D = ecdsaKey.D
 	case *rsa.PrivateKey:
+		rsaKey := parsedPrivateKey.(*rsa.PrivateKey)
+		if !rsaKey.PublicKey.Equal(keyEntry.RSAPublicKey) {
+			// NOTE: Description
+			return fmt.Errorf("keys do not match")
+		}
+	}
+
+	err = p.parseKeyToKeyEntry(&keyEntry, parsedPrivateKey, isPrivateKey)
+	if err != nil {
+		return err
+	}
+
+	p.Keys[strconv.Itoa(keyVersion)] = keyEntry
+
+	return p.Persist(ctx, storage)
+}
+
+// NOTE: func name?/not a fan of changing input params
+func (p *Policy) parseKeyToKeyEntry(entry *KeyEntry, parsedKey any, isPrivateKey bool) error {
+	switch parsedKey.(type) {
+	case *ecdsa.PrivateKey, *ecdsa.PublicKey:
+		if p.Type != KeyType_ECDSA_P256 && p.Type != KeyType_ECDSA_P384 && p.Type != KeyType_ECDSA_P521 {
+			return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedKey)
+		}
+
+		curve := elliptic.P256()
+		if p.Type == KeyType_ECDSA_P384 {
+			curve = elliptic.P384()
+		} else if p.Type == KeyType_ECDSA_P521 {
+			curve = elliptic.P521()
+		}
+
+		var derBytes []byte
+		var err error
+		if isPrivateKey {
+			ecdsaKey := parsedKey.(*ecdsa.PrivateKey)
+
+			if ecdsaKey.Curve != curve {
+				return fmt.Errorf("invalid curve: expected %s, got %s", curve.Params().Name, ecdsaKey.Curve.Params().Name)
+			}
+
+			entry.EC_D = ecdsaKey.D
+			entry.EC_X = ecdsaKey.X
+			entry.EC_Y = ecdsaKey.Y
+
+			derBytes, err = x509.MarshalPKIXPublicKey(ecdsaKey.Public())
+			if err != nil {
+				return errwrap.Wrapf("error marshaling public key: {{err}}", err)
+			}
+		} else {
+			ecdsaKey := parsedKey.(*ecdsa.PublicKey)
+
+			if ecdsaKey.Curve != curve {
+				return fmt.Errorf("invalid curve: expected %s, got %s", curve.Params().Name, ecdsaKey.Curve.Params().Name)
+			}
+
+			entry.EC_X = ecdsaKey.X
+			entry.EC_Y = ecdsaKey.Y
+
+			derBytes, err = x509.MarshalPKIXPublicKey(ecdsaKey)
+			if err != nil {
+				return errwrap.Wrapf("error marshaling public key: {{err}}", err)
+			}
+		}
+
+		pemBlock := &pem.Block{
+			Type:  "PUBLIC KEY",
+			Bytes: derBytes,
+		}
+		pemBytes := pem.EncodeToMemory(pemBlock)
+		if pemBytes == nil || len(pemBytes) == 0 {
+			return fmt.Errorf("error PEM-encoding public key")
+		}
+		entry.FormattedPublicKey = string(pemBytes)
+	case ed25519.PrivateKey:
+		if p.Type != KeyType_ED25519 {
+			return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedKey)
+		}
+		privateKey := parsedKey.(ed25519.PrivateKey)
+
+		entry.Key = privateKey
+		publicKey := privateKey.Public().(ed25519.PublicKey)
+		entry.FormattedPublicKey = base64.StdEncoding.EncodeToString(publicKey)
+	case *rsa.PrivateKey, *rsa.PublicKey:
 		if p.Type != KeyType_RSA2048 && p.Type != KeyType_RSA3072 && p.Type != KeyType_RSA4096 {
-			return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedPrivateKey)
+			return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedKey)
 		}
 
 		keyBytes := 256
@@ -2094,20 +2076,23 @@ func (p *Policy) UpdateKeyVersion(ctx context.Context, storage logical.Storage, 
 		} else if p.Type == KeyType_RSA4096 {
 			keyBytes = 512
 		}
-		rsaKey := parsedPrivateKey.(*rsa.PrivateKey)
-		if rsaKey.Size() != keyBytes {
-			return fmt.Errorf("invalid key size: expected %d bytes, got %d bytes", keyBytes, rsaKey.Size())
+		// NOTE: If for some reason we don't pass the `isPrivateKey`, we can use the keyTypes
+		if isPrivateKey {
+			rsaKey := parsedKey.(*rsa.PrivateKey)
+			if rsaKey.Size() != keyBytes {
+				return fmt.Errorf("invalid key size: expected %d bytes, got %d bytes", keyBytes, rsaKey.Size())
+			}
+			entry.RSAKey = rsaKey
+		} else {
+			rsaKey := parsedKey.(*rsa.PublicKey)
+			if rsaKey.Size() != keyBytes {
+				return fmt.Errorf("invalid key size: expected %d bytes, got %d bytes", keyBytes, rsaKey.Size())
+			}
+			entry.RSAPublicKey = rsaKey
 		}
-
-		if !rsaKey.PublicKey.Equal(keyEntry.RSAPublicKey) {
-			// NOTE: Description
-			return fmt.Errorf("keys do not match")
-		}
-
-		keyEntry.RSAKey = rsaKey
+	default:
+		return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedKey)
 	}
 
-	p.Keys[strconv.Itoa(keyVersion)] = keyEntry
-
-	return p.Persist(ctx, storage)
+	return nil
 }
