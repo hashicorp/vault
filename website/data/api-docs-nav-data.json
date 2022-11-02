@@ -474,7 +474,7 @@
           },
           {
             "title": "<code>/sys/internal/inspect/router</code>",
-            "path": "sys/inspect/router"
+            "path": "system/inspect/router"
           }
         ]
       },
