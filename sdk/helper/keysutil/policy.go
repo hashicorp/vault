@@ -231,6 +231,7 @@ type KeyEntry struct {
 	DeprecatedCreationTime int64 `json:"creation_time"`
 
 	// NOTE: Do we really need this field? If so, having it here or in Policy?
+	// Useful for validation in operations in case we only have public key
 	PublicKeyImported bool `json:"public_key_imported"`
 }
 
@@ -1380,7 +1381,6 @@ func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte
 			p.KeySize = len(key)
 		}
 	} else {
-		// NOTE: Set this vars here for now
 		var parsedKey any
 		var err error
 		if isPrivateKey {
@@ -1406,12 +1406,11 @@ func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte
 		}
 
 		switch parsedKey.(type) {
-		case *ecdsa.PrivateKey:
+		case *ecdsa.PrivateKey, *ecdsa.PublicKey:
 			if p.Type != KeyType_ECDSA_P256 && p.Type != KeyType_ECDSA_P384 && p.Type != KeyType_ECDSA_P521 {
 				return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedKey)
 			}
 
-			ecdsaKey := parsedKey.(*ecdsa.PrivateKey)
 			curve := elliptic.P256()
 			if p.Type == KeyType_ECDSA_P384 {
 				curve = elliptic.P384()
@@ -1419,48 +1418,41 @@ func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte
 				curve = elliptic.P521()
 			}
 
-			if ecdsaKey.Curve != curve {
-				return fmt.Errorf("invalid curve: expected %s, got %s", curve.Params().Name, ecdsaKey.Curve.Params().Name)
-			}
+			if isPrivateKey {
+				ecdsaKey := parsedKey.(*ecdsa.PrivateKey)
 
-			entry.EC_D = ecdsaKey.D
-			entry.EC_X = ecdsaKey.X
-			entry.EC_Y = ecdsaKey.Y
-			derBytes, err := x509.MarshalPKIXPublicKey(ecdsaKey.Public())
-			if err != nil {
-				return errwrap.Wrapf("error marshaling public key: {{err}}", err)
-			}
-			pemBlock := &pem.Block{
-				Type:  "PUBLIC KEY",
-				Bytes: derBytes,
-			}
-			pemBytes := pem.EncodeToMemory(pemBlock)
-			if pemBytes == nil || len(pemBytes) == 0 {
-				return fmt.Errorf("error PEM-encoding public key")
-			}
-			entry.FormattedPublicKey = string(pemBytes)
-		case *ecdsa.PublicKey:
-			// NOTE: Create a case for public ecdsa for now
-			if p.Type != KeyType_ECDSA_P256 && p.Type != KeyType_ECDSA_P384 && p.Type != KeyType_ECDSA_P521 {
-				return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedKey)
-			}
+				if ecdsaKey.Curve != curve {
+					return fmt.Errorf("invalid curve: expected %s, got %s", curve.Params().Name, ecdsaKey.Curve.Params().Name)
+				}
 
-			ecdsaKey := parsedKey.(*ecdsa.PublicKey)
-			curve := elliptic.P256()
-			if p.Type == KeyType_ECDSA_P384 {
-				curve = elliptic.P384()
-			} else if p.Type == KeyType_ECDSA_P521 {
-				curve = elliptic.P521()
-			}
+				entry.EC_D = ecdsaKey.D
+				entry.EC_X = ecdsaKey.X
+				entry.EC_Y = ecdsaKey.Y
 
-			if ecdsaKey.Curve != curve {
-				return fmt.Errorf("invalid curve: expected %s, got %s", curve.Params().Name, ecdsaKey.Curve.Params().Name)
-			}
+				derBytes, err := x509.MarshalPKIXPublicKey(ecdsaKey.Public())
+				if err != nil {
+					return errwrap.Wrapf("error marshaling public key: {{err}}", err)
+				}
+				pemBlock := &pem.Block{
+					Type:  "PUBLIC KEY",
+					Bytes: derBytes,
+				}
+				pemBytes := pem.EncodeToMemory(pemBlock)
+				if pemBytes == nil || len(pemBytes) == 0 {
+					return fmt.Errorf("error PEM-encoding public key")
+				}
+				entry.FormattedPublicKey = string(pemBytes)
+			} else {
+				ecdsaKey := parsedKey.(*ecdsa.PublicKey)
 
-			//entry.EC_D = ecdsaKey.D
-			entry.EC_X = ecdsaKey.X
-			entry.EC_Y = ecdsaKey.Y
-			entry.FormattedPublicKey = string(key)
+				if ecdsaKey.Curve != curve {
+					return fmt.Errorf("invalid curve: expected %s, got %s", curve.Params().Name, ecdsaKey.Curve.Params().Name)
+				}
+
+				entry.EC_X = ecdsaKey.X
+				entry.EC_Y = ecdsaKey.Y
+				entry.FormattedPublicKey = string(key)
+			}
 		case ed25519.PrivateKey:
 			if p.Type != KeyType_ED25519 {
 				return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedKey)
@@ -1470,7 +1462,7 @@ func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte
 			entry.Key = privateKey
 			publicKey := privateKey.Public().(ed25519.PublicKey)
 			entry.FormattedPublicKey = base64.StdEncoding.EncodeToString(publicKey)
-		case *rsa.PrivateKey:
+		case *rsa.PrivateKey, *rsa.PublicKey:
 			if p.Type != KeyType_RSA2048 && p.Type != KeyType_RSA3072 && p.Type != KeyType_RSA4096 {
 				return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedKey)
 			}
@@ -1481,29 +1473,20 @@ func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte
 			} else if p.Type == KeyType_RSA4096 {
 				keyBytes = 512
 			}
-			rsaKey := parsedKey.(*rsa.PrivateKey)
-			if rsaKey.Size() != keyBytes {
-				return fmt.Errorf("invalid key size: expected %d bytes, got %d bytes", keyBytes, rsaKey.Size())
+			// NOTE: If for some reason we don't pass the `isPrivateKey`, we can use the keyTypes
+			if isPrivateKey {
+				rsaKey := parsedKey.(*rsa.PrivateKey)
+				if rsaKey.Size() != keyBytes {
+					return fmt.Errorf("invalid key size: expected %d bytes, got %d bytes", keyBytes, rsaKey.Size())
+				}
+				entry.RSAKey = rsaKey
+			} else {
+				rsaKey := parsedKey.(*rsa.PublicKey)
+				if rsaKey.Size() != keyBytes {
+					return fmt.Errorf("invalid key size: expected %d bytes, got %d bytes", keyBytes, rsaKey.Size())
+				}
+				entry.RSAPublicKey = rsaKey
 			}
-
-			entry.RSAKey = rsaKey
-		case *rsa.PublicKey:
-			if p.Type != KeyType_RSA2048 && p.Type != KeyType_RSA3072 && p.Type != KeyType_RSA4096 {
-				return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedKey)
-			}
-
-			keyBytes := 256
-			if p.Type == KeyType_RSA3072 {
-				keyBytes = 384
-			} else if p.Type == KeyType_RSA4096 {
-				keyBytes = 512
-			}
-			rsaKey := parsedKey.(*rsa.PublicKey)
-			if rsaKey.Size() != keyBytes {
-				return fmt.Errorf("invalid key size: expected %d bytes, got %d bytes", keyBytes, rsaKey.Size())
-			}
-
-			entry.RSAPublicKey = rsaKey
 		default:
 			return fmt.Errorf("invalid key type: expected %s, got %T", p.Type, parsedKey)
 		}
@@ -2070,7 +2053,7 @@ func (p *Policy) UpdateKeyVersion(ctx context.Context, storage logical.Storage, 
 		return fmt.Errorf("error parsing asymmetric key: %s", err)
 	}
 
-	// Maybe put switch in `Import` in common function
+	// Maybe put switch from `Import` in common function accessed by this and "Import"
 	switch parsedPrivateKey.(type) {
 	case *ecdsa.PrivateKey:
 		if p.Type != KeyType_ECDSA_P256 && p.Type != KeyType_ECDSA_P384 && p.Type != KeyType_ECDSA_P521 {
