@@ -43,7 +43,7 @@ func (sc *storageContext) rebuildIssuersChains(referenceCert *issuerEntry /* opt
 	// To begin, we fetch all known issuers from disk.
 	issuers, err := sc.listIssuers()
 	if err != nil {
-		return fmt.Errorf("unable to list issuers to build chain: %v", err)
+		return fmt.Errorf("unable to list issuers to build chain: %w", err)
 	}
 
 	// Fast path: no issuers means we can set the reference cert's value, if
@@ -138,7 +138,7 @@ func (sc *storageContext) rebuildIssuersChains(referenceCert *issuerEntry /* opt
 			// Otherwise, fetch it from disk.
 			stored, err = sc.fetchIssuerById(identifier)
 			if err != nil {
-				return fmt.Errorf("unable to fetch issuer %v to build chain: %v", identifier, err)
+				return fmt.Errorf("unable to fetch issuer %v to build chain: %w", identifier, err)
 			}
 		}
 
@@ -149,7 +149,7 @@ func (sc *storageContext) rebuildIssuersChains(referenceCert *issuerEntry /* opt
 		issuerIdEntryMap[identifier] = stored
 		cert, err := stored.GetCertificate()
 		if err != nil {
-			return fmt.Errorf("unable to parse issuer %v to certificate to build chain: %v", identifier, err)
+			return fmt.Errorf("unable to parse issuer %v to certificate to build chain: %w", identifier, err)
 		}
 
 		issuerIdCertMap[identifier] = cert
@@ -452,14 +452,14 @@ func (sc *storageContext) rebuildIssuersChains(referenceCert *issuerEntry /* opt
 		err := sc.writeIssuer(entry)
 		if err != nil {
 			pretty := prettyIssuer(issuerIdEntryMap, issuer)
-			return fmt.Errorf("failed to persist issuer (%v) chain to disk: %v", pretty, err)
+			return fmt.Errorf("failed to persist issuer (%v) chain to disk: %w", pretty, err)
 		}
 	}
 	if referenceCert != nil {
 		err := sc.writeIssuer(issuerIdEntryMap[referenceCert.ID])
 		if err != nil {
 			pretty := prettyIssuer(issuerIdEntryMap, referenceCert.ID)
-			return fmt.Errorf("failed to persist issuer (%v) chain to disk: %v", pretty, err)
+			return fmt.Errorf("failed to persist issuer (%v) chain to disk: %w", pretty, err)
 		}
 	}
 
