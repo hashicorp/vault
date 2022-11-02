@@ -137,7 +137,7 @@ func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), str
 	}
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		ContainerName: "openssh",
-		ImageRepo:     "linuxserver/openssh-server",
+		ImageRepo:     "docker.mirror.hashicorp.services/linuxserver/openssh-server",
 		ImageTag:      tag,
 		Env: []string{
 			"DOCKER_MODS=linuxserver/mods:openssh-server-openssh-client",
