@@ -601,9 +601,9 @@ func TestRunTestPlugin(t testing.T, c *Core, pluginType consts.PluginType, plugi
 }
 
 func TestPluginClientConfig(c *Core, pluginType consts.PluginType, pluginName string) pluginutil.PluginClientConfig {
+	dsv := TestDynamicSystemView(c, nil)
 	switch pluginType {
 	case consts.PluginTypeCredential, consts.PluginTypeSecrets:
-		dsv := TestDynamicSystemView(c, nil)
 		return pluginutil.PluginClientConfig{
 			Name:            pluginName,
 			PluginType:      pluginType,
@@ -623,6 +623,7 @@ func TestPluginClientConfig(c *Core, pluginType consts.PluginType, pluginName st
 			Logger:          log.NewNullLogger(),
 			AutoMTLS:        true,
 			IsMetadataMode:  false,
+			Wrapper:         dsv,
 		}
 	}
 	return pluginutil.PluginClientConfig{}
