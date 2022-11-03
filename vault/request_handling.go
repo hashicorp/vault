@@ -1327,20 +1327,29 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		return nil, nil, ErrInternalError
 	}
 
-	// vault-8307 get the alias name and mount accessor
+	// vault-8307
+	// check if user lockout feature is disabled
 	isUserLockoutDisabled, err := c.isUserLockoutDisabled(entry, req)
 	if err != nil {
 		return nil, nil, err
 	}
+
 	if !isUserLockoutDisabled {
-		loginUserInfo := c.getLoginUserInfo(entry, req)
-		fmt.Println(loginUserInfo.aliasName)
-		fmt.Println(loginUserInfo.mountAccessor)
+		isloginUserLocked, err := c.isUserLocked(ctx, entry, req)
+		if err != nil {
+			return nil, nil, err
+		}
+		if isloginUserLocked {
+			switch entry.Type {
+			case "userpass":
+				return nil, nil, fmt.Errorf("invalid username or password")
+			case "approle":
+				return nil, nil, fmt.Errorf("invalid role ID")
+			default: // ldap
+				return nil, nil, logical.ErrPermissionDenied
+			}
+		}
 	}
-
-	// vault-8307 get the configuration values from mount accessor or configuration file
-
-	// vault-8307 check if the login request can be sent
 
 	// Route the request
 	resp, routeErr := c.doRouting(ctx, req)
@@ -1787,7 +1796,87 @@ func (c *Core) isUserLockoutDisabled(mountEntry *MountEntry, req *logical.Reques
 	return false, nil
 }
 
+func (c *Core) isUserLocked(ctx context.Context, mountEntry *MountEntry, req *logical.Request) (locked bool, err error) {
+	loginUserInfoKey := c.getLoginUserInfo(mountEntry, req)
+	// get entry from userFailedLoginInfo map for the key
+	userFailedLoginInfo := getUserFailedLoginInfo(ctx, c, loginUserInfoKey)
+	userLockoutConfiguration := c.getUserLockoutConfiguration(mountEntry)
+	switch userFailedLoginInfo {
+	case nil:
+		// entry not found in userFailedLoginInfo map, check storage to re-verify
+		ns, err := namespace.FromContext(ctx)
+		if err != nil {
+			return false, fmt.Errorf("could not parse namespace from http context: %w", err)
+		}
+		storageUserLockoutPath := fmt.Sprintf("core/login/lockedUsers/%s/%s/%s>", ns.ID, loginUserInfoKey.mountAccessor, loginUserInfoKey.aliasName)
+		existingEntry, err := c.barrier.Get(ctx, storageUserLockoutPath)
+		if err != nil {
+			return false, err
+		}
+		var lastLoginTime int
+		if existingEntry != nil {
+			err = jsonutil.DecodeJSON(existingEntry.Value, &lastLoginTime)
+			if err != nil {
+				return false, err
+			}
+		}
+		if time.Now().Unix()-int64(lastLoginTime) < int64(userLockoutConfiguration.LockoutDuration) {
+			// user locked
+			return true, nil
+		}
+
+	default:
+		// entry found in userFailedLoginInfo map, check if the user is locked
+		isOverLockoutDuration := time.Now().Unix()-int64(userFailedLoginInfo.lastFailedLoginTime) >= int64(userLockoutConfiguration.LockoutDuration)
+		isCountOverLockoutThreshold := userFailedLoginInfo.count >= uint(userLockoutConfiguration.LockoutThreshold)
+
+		if isCountOverLockoutThreshold && !isOverLockoutDuration {
+			// user locked
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// getUserLockoutConfiguration gets the user lockout configuration for a mount entry
+// it checks the config file and auth tune values
+// precedence: auth tune >> config file values for auth type >> config file values for all type
+// >> default user lockout values
+// getUserLockoutFromConfig call in this function takes care of config file precedence
+func (c *Core) getUserLockoutConfiguration(mountEntry *MountEntry) (userLockoutConfig UserLockoutConfig) {
+	// get user configuration values from config file
+	userLockoutConfig = c.getUserLockoutFromConfig(mountEntry.Type)
+
+	authTuneUserLockoutConfig := mountEntry.Config.UserLockoutConfig
+	// if user lockout is not configured using auth tune, return values from config file
+	if authTuneUserLockoutConfig == nil {
+		return userLockoutConfig
+	}
+	// replace values in return with config file configuration
+	// for fields that are not configured using auth tune
+	if authTuneUserLockoutConfig.LockoutThreshold != 0 {
+		userLockoutConfig.LockoutThreshold = authTuneUserLockoutConfig.LockoutThreshold
+	}
+	if authTuneUserLockoutConfig.LockoutDuration != 0 {
+		userLockoutConfig.LockoutDuration = authTuneUserLockoutConfig.LockoutDuration
+	}
+	if authTuneUserLockoutConfig.LockoutCounterReset != 0 {
+		userLockoutConfig.LockoutCounterReset = authTuneUserLockoutConfig.LockoutCounterReset
+	}
+	if authTuneUserLockoutConfig.DisableLockout {
+		userLockoutConfig.DisableLockout = authTuneUserLockoutConfig.DisableLockout
+	}
+	return userLockoutConfig
+}
+
 // getUserLockoutFromConfig gets the userlockout configuration for given mount type from config file
+// it reads the user lockout configuration from server config
+// it has values for "all" type and any mountType that is configured using config file
+// "all" type values are updated in shared config with default values i.e; if "all" type is
+// not configured in config file, it is updated in shared config with default configuration
+// If "all" type is configured in config file, any missing fields are updated with default values
+// similarly missing values for a given mount type in config file are updated with "all" type
+// default values
 func (c *Core) getUserLockoutFromConfig(mountType string) UserLockoutConfig {
 	conf := c.rawConfig.Load()
 	if conf == nil {
