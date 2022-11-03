@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -890,6 +891,67 @@ listener "tcp" {
 	if diff := deep.Equal(config, *expected); diff != nil {
 		t.Fatal(diff)
 	}
+}
+
+func testParseUserLockouts(t *testing.T) {
+	obj, _ := hcl.Parse(strings.TrimSpace(`
+	user_lockout "all" {
+		lockout_duration = "40m"
+		lockout_counter_reset = "45m"
+		disable_lockout = "false"
+	}
+	  user_lockout "userpass" {
+	     lockout_threshold = "100"
+	     lockout_duration = "20m"
+	  }
+	  user_lockout "ldap" {
+		disable_lockout = "true"
+	 }`))
+
+	config := Config{
+		SharedConfig: &configutil.SharedConfig{},
+	}
+	list, _ := obj.Node.(*ast.ObjectList)
+	objList := list.Filter("user_lockout")
+	configutil.ParseUserLockouts(config.SharedConfig, objList)
+
+	sort.Slice(config.SharedConfig.UserLockouts[:], func(i, j int) bool {
+		return config.SharedConfig.UserLockouts[i].Type < config.SharedConfig.UserLockouts[j].Type
+	})
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			UserLockouts: []*configutil.UserLockout{
+				{
+					Type:                "all",
+					LockoutThreshold:    5,
+					LockoutDuration:     2400000000000,
+					LockoutCounterReset: 2700000000000,
+					DisableLockout:      false,
+				},
+				{
+					Type:                "userpass",
+					LockoutThreshold:    100,
+					LockoutDuration:     1200000000000,
+					LockoutCounterReset: 2700000000000,
+					DisableLockout:      false,
+				},
+				{
+					Type:                "ldap",
+					LockoutThreshold:    5,
+					LockoutDuration:     2400000000000,
+					LockoutCounterReset: 2700000000000,
+					DisableLockout:      true,
+				},
+			},
+		},
+	}
+
+	sort.Slice(expected.SharedConfig.UserLockouts[:], func(i, j int) bool {
+		return expected.SharedConfig.UserLockouts[i].Type < expected.SharedConfig.UserLockouts[j].Type
+	})
+	config.Prune()
+	require.Equal(t, config, *expected)
 }
 
 func testParseSockaddrTemplate(t *testing.T) {

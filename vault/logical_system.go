@@ -943,6 +943,15 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[st
 	if entry.Table == credentialTableType {
 		entryConfig["token_type"] = entry.Config.TokenType.String()
 	}
+	if entry.Config.UserLockoutConfig != nil {
+		userLockoutConfig := map[string]interface{}{
+			"user_lockout_counter_reset_duration": int64(entry.Config.UserLockoutConfig.LockoutCounterReset.Seconds()),
+			"user_lockout_threshold":              entry.Config.UserLockoutConfig.LockoutThreshold,
+			"user_lockout_duration":               int64(entry.Config.UserLockoutConfig.LockoutDuration.Seconds()),
+			"user_lockout_disable":                entry.Config.UserLockoutConfig.DisableLockout,
+		}
+		entryConfig["user_lockout_config"] = userLockoutConfig
+	}
 
 	// Add deprecation status only if it exists
 	builtinType := b.Core.builtinTypeFromMountEntry(ctx, entry)
@@ -1603,6 +1612,13 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 		resp.Data["allowed_managed_keys"] = rawVal.([]string)
 	}
 
+	if mountEntry.Config.UserLockoutConfig != nil {
+		resp.Data["user_lockout_counter_reset_duration"] = int64(mountEntry.Config.UserLockoutConfig.LockoutCounterReset.Seconds())
+		resp.Data["user_lockout_threshold"] = mountEntry.Config.UserLockoutConfig.LockoutThreshold
+		resp.Data["user_lockout_duration"] = int64(mountEntry.Config.UserLockoutConfig.LockoutDuration.Seconds())
+		resp.Data["user_lockout_disable"] = mountEntry.Config.UserLockoutConfig.DisableLockout
+	}
+
 	if len(mountEntry.Options) > 0 {
 		resp.Data["options"] = mountEntry.Options
 	}
@@ -1722,6 +1738,111 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
+	// user-lockout config
+	{
+		var apiuserLockoutConfig APIUserLockoutConfig
+
+		userLockoutConfigMap := data.Get("user_lockout_config").(map[string]interface{})
+		var err error
+		if userLockoutConfigMap != nil && len(userLockoutConfigMap) != 0 {
+			err := mapstructure.Decode(userLockoutConfigMap, &apiuserLockoutConfig)
+			if err != nil {
+				return logical.ErrorResponse(
+						"unable to convert given user lockout config information"),
+					logical.ErrInvalidRequest
+			}
+
+			// Supported auth methods for user lockout configuration: ldap, approle, userpass
+			switch strings.ToLower(mountEntry.Type) {
+			case "ldap", "approle", "userpass":
+			default:
+				return logical.ErrorResponse("tuning of user lockout configuration for auth type %q not allowed", mountEntry.Type),
+					logical.ErrInvalidRequest
+
+			}
+		}
+
+		if len(userLockoutConfigMap) > 0 && mountEntry.Config.UserLockoutConfig == nil {
+			mountEntry.Config.UserLockoutConfig = &UserLockoutConfig{}
+		}
+
+		var oldUserLockoutThreshold uint64
+		var newUserLockoutDuration, oldUserLockoutDuration time.Duration
+		var newUserLockoutCounterReset, oldUserLockoutCounterReset time.Duration
+		var oldUserLockoutDisable bool
+
+		if apiuserLockoutConfig.LockoutThreshold != "" {
+			userLockoutThreshold, err := strconv.ParseUint(apiuserLockoutConfig.LockoutThreshold, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("unable to parse user lockout threshold: %w", err)
+			}
+			oldUserLockoutThreshold = mountEntry.Config.UserLockoutConfig.LockoutThreshold
+			mountEntry.Config.UserLockoutConfig.LockoutThreshold = userLockoutThreshold
+		}
+
+		if apiuserLockoutConfig.LockoutDuration != "" {
+			oldUserLockoutDuration = mountEntry.Config.UserLockoutConfig.LockoutDuration
+			switch apiuserLockoutConfig.LockoutDuration {
+			case "":
+				newUserLockoutDuration = oldUserLockoutDuration
+			case "system":
+				newUserLockoutDuration = time.Duration(0)
+			default:
+				tmpUserLockoutDuration, err := parseutil.ParseDurationSecond(apiuserLockoutConfig.LockoutDuration)
+				if err != nil {
+					return handleError(err)
+				}
+				newUserLockoutDuration = tmpUserLockoutDuration
+
+			}
+			mountEntry.Config.UserLockoutConfig.LockoutDuration = newUserLockoutDuration
+		}
+
+		if apiuserLockoutConfig.LockoutCounterResetDuration != "" {
+			oldUserLockoutCounterReset = mountEntry.Config.UserLockoutConfig.LockoutCounterReset
+			switch apiuserLockoutConfig.LockoutCounterResetDuration {
+			case "":
+				newUserLockoutCounterReset = oldUserLockoutCounterReset
+			case "system":
+				newUserLockoutCounterReset = time.Duration(0)
+			default:
+				tmpUserLockoutCounterReset, err := parseutil.ParseDurationSecond(apiuserLockoutConfig.LockoutCounterResetDuration)
+				if err != nil {
+					return handleError(err)
+				}
+				newUserLockoutCounterReset = tmpUserLockoutCounterReset
+			}
+
+			mountEntry.Config.UserLockoutConfig.LockoutCounterReset = newUserLockoutCounterReset
+		}
+
+		if apiuserLockoutConfig.DisableLockout != nil {
+			oldUserLockoutDisable = mountEntry.Config.UserLockoutConfig.DisableLockout
+			userLockoutDisable := apiuserLockoutConfig.DisableLockout
+			mountEntry.Config.UserLockoutConfig.DisableLockout = *userLockoutDisable
+		}
+
+		// Update the mount table
+		if len(userLockoutConfigMap) > 0 {
+			switch {
+			case strings.HasPrefix(path, "auth/"):
+				err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+			default:
+				err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+			}
+			if err != nil {
+				mountEntry.Config.UserLockoutConfig.LockoutCounterReset = oldUserLockoutCounterReset
+				mountEntry.Config.UserLockoutConfig.LockoutThreshold = oldUserLockoutThreshold
+				mountEntry.Config.UserLockoutConfig.LockoutDuration = oldUserLockoutDuration
+				mountEntry.Config.UserLockoutConfig.DisableLockout = oldUserLockoutDisable
+				return handleError(err)
+			}
+			if b.Core.logger.IsInfo() {
+				b.Core.logger.Info("tuning of user_lockout_config successful", "path", path)
+			}
+		}
+
+	}
 	if rawVal, ok := data.GetOk("description"); ok {
 		description := rawVal.(string)
 
@@ -5018,6 +5139,10 @@ in the plugin catalog.`,
 
 	"tune_mount_options": {
 		`The options to pass into the backend. Should be a json object with string keys and values.`,
+	},
+
+	"tune_user_lockout_config": {
+		`The user lockout configuration to pass into the backend. Should be a json object with string keys and values.`,
 	},
 
 	"remount": {

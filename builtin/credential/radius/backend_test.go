@@ -57,7 +57,7 @@ client 128.0.0.0/1 {
 `
 
 	containerfile := `
-FROM jumanjiman/radiusd:latest
+FROM docker.mirror.hashicorp.services/jumanjiman/radiusd:latest
 
 COPY clients.conf /etc/raddb/clients.conf
 `

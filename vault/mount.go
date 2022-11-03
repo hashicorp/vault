@@ -351,11 +351,26 @@ type MountConfig struct {
 	AllowedResponseHeaders    []string              `json:"allowed_response_headers,omitempty" structs:"allowed_response_headers" mapstructure:"allowed_response_headers"`
 	TokenType                 logical.TokenType     `json:"token_type,omitempty" structs:"token_type" mapstructure:"token_type"`
 	AllowedManagedKeys        []string              `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
+	UserLockoutConfig         *UserLockoutConfig    `json:"user_lockout_config,omitempty" mapstructure:"user_lockout_config"`
 
 	// PluginName is the name of the plugin registered in the catalog.
 	//
 	// Deprecated: MountEntry.Type should be used instead for Vault 1.0.0 and beyond.
 	PluginName string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+}
+
+type UserLockoutConfig struct {
+	LockoutThreshold    uint64        `json:"lockout_threshold,omitempty" structs:"lockout_threshold" mapstructure:"lockout_threshold"`
+	LockoutDuration     time.Duration `json:"lockout_duration,omitempty" structs:"lockout_duration" mapstructure:"lockout_duration"`
+	LockoutCounterReset time.Duration `json:"lockout_counter_reset,omitempty" structs:"lockout_counter_reset" mapstructure:"lockout_counter_reset"`
+	DisableLockout      bool          `json:"disable_lockout,omitempty" structs:"disable_lockout" mapstructure:"disable_lockout"`
+}
+
+type APIUserLockoutConfig struct {
+	LockoutThreshold            string `json:"lockout_threshold,omitempty" structs:"lockout_threshold" mapstructure:"lockout_threshold"`
+	LockoutDuration             string `json:"lockout_duration,omitempty" structs:"lockout_duration" mapstructure:"lockout_duration"`
+	LockoutCounterResetDuration string `json:"lockout_counter_reset_duration,omitempty" structs:"lockout_counter_reset_duration" mapstructure:"lockout_counter_reset_duration"`
+	DisableLockout              *bool  `json:"lockout_disable,omitempty" structs:"lockout_disable" mapstructure:"lockout_disable"`
 }
 
 // APIMountConfig is an embedded struct of api.MountConfigInput
@@ -370,6 +385,7 @@ type APIMountConfig struct {
 	AllowedResponseHeaders    []string              `json:"allowed_response_headers,omitempty" structs:"allowed_response_headers" mapstructure:"allowed_response_headers"`
 	TokenType                 string                `json:"token_type" structs:"token_type" mapstructure:"token_type"`
 	AllowedManagedKeys        []string              `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
+	UserLockoutConfig         *UserLockoutConfig    `json:"user_lockout_config,omitempty" mapstructure:"user_lockout_config"`
 	PluginVersion             string                `json:"plugin_version,omitempty" mapstructure:"plugin_version"`
 
 	// PluginName is the name of the plugin registered in the catalog.
@@ -1275,8 +1291,8 @@ func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
 			entry.NamespaceID = namespace.RootNamespaceID
 			needPersist = true
 		}
-	}
 
+	}
 	// Done if we have restored the mount table and we don't need
 	// to persist
 	if !needPersist {

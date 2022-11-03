@@ -15,7 +15,7 @@ GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 SED?=$(shell command -v gsed || command -v sed)
 
 
-GO_VERSION_MIN=1.19.2
+GO_VERSION_MIN=$$(cat $(CURDIR)/.go_version)
 PROTOC_VERSION_MIN=3.21.7
 GO_CMD?=go
 CGO_ENABLED?=0
@@ -258,7 +258,7 @@ ci-verify:
 # This is used for release builds by .github/workflows/build.yml
 build:
 	@echo "--> Building Vault $(VAULT_VERSION)"
-	@go build -v -tags "$(GO_TAGS)" -ldflags " -X github.com/hashicorp/vault/version.GitCommit=$(VAULT_REVISION) -X github.com/hashicorp/vault/version.BuildDate=$(VAULT_BUILD_DATE)" -o dist/
+	@go build -v -tags "$(GO_TAGS)" -ldflags " -s -w -X github.com/hashicorp/vault/version.GitCommit=$(VAULT_REVISION) -X github.com/hashicorp/vault/version.BuildDate=$(VAULT_BUILD_DATE)" -o dist/
 
 .PHONY: version
 # This is used for release builds by .github/workflows/build.yml
