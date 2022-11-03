@@ -21,6 +21,8 @@ type SharedConfig struct {
 
 	Listeners []*Listener `hcl:"-"`
 
+	UserLockouts []*UserLockout `hcl:"-"`
+
 	Seals   []*KMS   `hcl:"-"`
 	Entropy *Entropy `hcl:"-"`
 
@@ -134,6 +136,13 @@ func ParseConfig(d string) (*SharedConfig, error) {
 		}
 	}
 
+	if o := list.Filter("user_lockout"); len(o.Items) > 0 {
+		result.found("user_lockout", "UserLockout")
+		if err := ParseUserLockouts(&result, o); err != nil {
+			return nil, fmt.Errorf("error parsing 'user_lockout': %w", err)
+		}
+	}
+
 	if o := list.Filter("telemetry"); len(o.Items) > 0 {
 		result.found("telemetry", "Telemetry")
 		if err := parseTelemetry(&result, o); err != nil {
@@ -192,6 +201,22 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 			sanitizedListeners = append(sanitizedListeners, cleanLn)
 		}
 		result["listeners"] = sanitizedListeners
+	}
+
+	// Sanitize user lockout stanza
+	if len(c.UserLockouts) != 0 {
+		var sanitizedUserLockouts []interface{}
+		for _, userlockout := range c.UserLockouts {
+			cleanUserLockout := map[string]interface{}{
+				"type":                  userlockout.Type,
+				"lockout_threshold":     userlockout.LockoutThreshold,
+				"lockout_duration":      userlockout.LockoutDuration,
+				"lockout_counter_reset": userlockout.LockoutCounterReset,
+				"disable_lockout":       userlockout.DisableLockout,
+			}
+			sanitizedUserLockouts = append(sanitizedUserLockouts, cleanUserLockout)
+		}
+		result["user_lockout_configs"] = sanitizedUserLockouts
 	}
 
 	// Sanitize seals stanza
