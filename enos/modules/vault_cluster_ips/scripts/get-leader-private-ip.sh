@@ -3,7 +3,6 @@
 set -e
 
 binpath=${vault_install_dir}/vault
-export VAULT_ADDR="http://localhost:8200"
 
 instances='${vault_instances}'
 

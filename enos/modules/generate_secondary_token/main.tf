@@ -25,18 +25,20 @@ variable "vault_root_token" {
   description = "The vault root token"
 }
 
+locals {
+  token_id        = random_uuid.token_id.id
+  secondary_token = enos_remote_exec.fetch_secondary_token.stdout
+}
 resource "random_uuid" "token_id" {}
 
 resource "enos_remote_exec" "fetch_secondary_token" {
   depends_on = [random_uuid.token_id]
   environment = {
-    VAULT_ADDR        = "http://127.0.0.1:8200"
-    VAULT_TOKEN       = var.vault_root_token
-    vault_install_dir = var.vault_install_dir
-    token_id          = random_uuid.token_id.id
+    VAULT_ADDR  = "http://127.0.0.1:8200"
+    VAULT_TOKEN = var.vault_root_token
   }
 
-  scripts = ["${path.module}/scripts/fetch_secondary_token.sh"]
+  inline = ["${var.vault_install_dir}/vault write sys/replication/performance/primary/secondary-token id=${local.token_id} |sed -n '/^wrapping_token:/p' |awk '{print $2}'"]
 
   transport = {
     ssh = {
@@ -46,5 +48,5 @@ resource "enos_remote_exec" "fetch_secondary_token" {
 }
 
 output "secondary_token" {
-  value = enos_remote_exec.fetch_secondary_token.stdout
+  value = local.secondary_token
 }

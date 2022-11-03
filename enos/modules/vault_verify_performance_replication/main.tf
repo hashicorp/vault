@@ -58,7 +58,7 @@ variable "wrapping_token" {
 }
 
 locals {
-  primary_replication_status = jsondecode(enos_remote_exec.verify_replication_on_primary.stdout)
+  primary_replication_status   = jsondecode(enos_remote_exec.verify_replication_on_primary.stdout)
   secondary_replication_status = jsondecode(enos_remote_exec.verify_replication_on_secondary.stdout)
 }
 resource "enos_remote_exec" "verify_replication_on_primary" {
