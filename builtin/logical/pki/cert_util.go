@@ -40,6 +40,16 @@ type inputBundle struct {
 	apiData *framework.FieldData
 }
 
+type caEntity struct {
+	// TODO: Have the associated keyEntry here as well.
+	issuer   issuerEntry
+	caBundle certutil.CAInfoBundle
+}
+
+func (cae caEntity) PrettyIssuerId() string {
+	return fmt.Sprintf("[id: '%s' name: '%s']", string(cae.issuer.ID), cae.issuer.Name)
+}
+
 var (
 	// labelRegex is a single label from a valid domain name and was extracted
 	// from hostnameRegex below for use in leftWildLabelRegex, without any
@@ -107,32 +117,41 @@ func (sc *storageContext) fetchCAInfo(issuerRef string, usage issuerUsage) (*cer
 // fetchCAInfoByIssuerId will fetch the CA info, will return an error if no ca info exists for the given issuerId.
 // This does support the loading using the legacyBundleShimID
 func (sc *storageContext) fetchCAInfoByIssuerId(issuerId issuerID, usage issuerUsage) (*certutil.CAInfoBundle, error) {
+	entity, err := sc.fetchCAEntityByIssuerId(issuerId, usage)
+	if err != nil {
+		return nil, err
+	}
+	return &entity.caBundle, nil
+}
+
+func (sc *storageContext) fetchCAEntityByIssuerId(issuerId issuerID, usage issuerUsage) (caEntity, error) {
+	var entity caEntity
 	entry, bundle, err := sc.fetchCertBundleByIssuerId(issuerId, true)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
-			return nil, err
+			return entity, err
 		case errutil.InternalError:
-			return nil, err
+			return entity, err
 		default:
-			return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching CA info: %v", err)}
+			return entity, errutil.InternalError{Err: fmt.Sprintf("error fetching CA info: %v", err)}
 		}
 	}
 
 	if err := entry.EnsureUsage(usage); err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error while attempting to use issuer %v: %v", issuerId, err)}
+		return entity, errutil.InternalError{Err: fmt.Sprintf("error while attempting to use issuer %v: %v", issuerId, err)}
 	}
 
 	parsedBundle, err := parseCABundle(sc.Context, sc.Backend, bundle)
 	if err != nil {
-		return nil, errutil.InternalError{Err: err.Error()}
+		return entity, errutil.InternalError{Err: err.Error()}
 	}
 
 	if parsedBundle.Certificate == nil {
-		return nil, errutil.InternalError{Err: "stored CA information not able to be parsed"}
+		return entity, errutil.InternalError{Err: "stored CA information not able to be parsed"}
 	}
 	if parsedBundle.PrivateKey == nil {
-		return nil, errutil.UserError{Err: fmt.Sprintf("unable to fetch corresponding key for issuer %v; unable to use this issuer for signing", issuerId)}
+		return entity, errutil.UserError{Err: fmt.Sprintf("unable to fetch corresponding key for issuer %v; unable to use this issuer for signing", issuerId)}
 	}
 
 	caInfo := &certutil.CAInfoBundle{
@@ -144,11 +163,14 @@ func (sc *storageContext) fetchCAInfoByIssuerId(issuerId issuerID, usage issuerU
 
 	entries, err := entry.GetAIAURLs(sc)
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
+		return entity, errutil.InternalError{Err: fmt.Sprintf("unable to fetch URL information: %v", err)}
 	}
 	caInfo.URLs = entries
 
-	return caInfo, nil
+	return caEntity{
+		issuer:   *entry,
+		caBundle: *caInfo,
+	}, nil
 }
 
 func fetchCertBySerialBigInt(ctx context.Context, b *backend, req *logical.Request, prefix string, serial *big.Int) (*logical.StorageEntry, error) {
