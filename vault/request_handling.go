@@ -1340,14 +1340,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			return nil, nil, err
 		}
 		if isloginUserLocked {
-			switch entry.Type {
-			case "userpass":
-				return nil, nil, fmt.Errorf("invalid username or password")
-			case "approle":
-				return nil, nil, fmt.Errorf("invalid role ID")
-			default: // ldap
-				return nil, nil, logical.ErrPermissionDenied
-			}
+			return nil, nil, logical.ErrPermissionDenied
 		}
 	}
 
@@ -1823,6 +1816,11 @@ func (c *Core) isUserLocked(ctx context.Context, mountEntry *MountEntry, req *lo
 		if time.Now().Unix()-int64(lastLoginTime) < int64(userLockoutConfiguration.LockoutDuration) {
 			// user locked
 			return true, nil
+		} else {
+			// user is not locked. Entry is stale, remove this from storage
+			if err := c.barrier.Delete(ctx, storageUserLockoutPath); err != nil {
+				c.logger.Error("failed to cleanup upgrade", "path", storageUserLockoutPath, "error", err)
+			}
 		}
 
 	default:
