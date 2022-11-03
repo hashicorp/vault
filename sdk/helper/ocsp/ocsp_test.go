@@ -11,9 +11,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-retryablehttp"
-	lru "github.com/hashicorp/golang-lru"
 	"io"
 	"io/ioutil"
 	"net"
@@ -22,6 +19,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-retryablehttp"
+	lru "github.com/hashicorp/golang-lru"
 	"golang.org/x/crypto/ocsp"
 )
 

@@ -13,11 +13,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-retryablehttp"
-	lru "github.com/hashicorp/golang-lru"
-	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"golang.org/x/crypto/ocsp"
 	"io"
 	"math/big"
 	"net"
@@ -27,6 +22,12 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-retryablehttp"
+	lru "github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"golang.org/x/crypto/ocsp"
 )
 
 // FailOpenMode is OCSP fail open mode. FailOpenTrue by default and may
@@ -147,13 +148,17 @@ func getOIDFromHashAlgorithm(target crypto.Hash) (asn1.ObjectIdentifier, error) 
 	return nil, fmt.Errorf("no valid OID is found for the hash algorithm: %v", target)
 }
 
+func (c *Client) ClearCache() {
+	c.ocspResponseCache.Purge()
+}
+
 func (c *Client) getHashAlgorithmFromOID(target pkix.AlgorithmIdentifier) crypto.Hash {
 	for hash, oid := range hashOIDs {
 		if oid.Equal(target.Algorithm) {
 			return hash
 		}
 	}
-	//no valid hash algorithm is found for the oid. Falling back to SHA1
+	// no valid hash algorithm is found for the oid. Falling back to SHA1
 	return crypto.SHA1
 }
 
@@ -453,7 +458,7 @@ func (c *Client) GetRevocationStatus(ctx context.Context, subject, issuer *x509.
 	var ret *ocspStatus
 	ocspRes := ocspResponses[0]
 	var firstError error
-	for i, _ := range ocspHosts {
+	for i := range ocspHosts {
 		if errors[i] != nil {
 			if firstError == nil {
 				firstError = errors[i]
@@ -785,6 +790,9 @@ func (c *Client) readOCSPCache(ctx context.Context, storage logical.Storage) err
 */
 
 func New(logFactory func() hclog.Logger, cacheSize int) *Client {
+	if cacheSize < 100 {
+		cacheSize = 100
+	}
 	cache, _ := lru.New2Q(cacheSize)
 	c := Client{
 		caRoot:            make(map[string]*x509.Certificate),

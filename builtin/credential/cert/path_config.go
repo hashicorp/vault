@@ -57,15 +57,9 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 		}
 		config.OcspCacheSize = cacheSize
 	}
-	entry, err := logical.StorageEntryJSON("config", config)
-	if err != nil {
+	if err := b.storeConfig(ctx, req.Storage, config); err != nil {
 		return nil, err
 	}
-
-	if err := req.Storage.Put(ctx, entry); err != nil {
-		return nil, err
-	}
-	b.updatedConfig(config)
 	return nil, nil
 }
 

@@ -10,8 +10,9 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/ocsp"
 	"strings"
+
+	"github.com/hashicorp/vault/sdk/helper/ocsp"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -587,12 +588,12 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 }
 
 func (b *backend) checkForCertInOCSP(ctx context.Context, clientCert *x509.Certificate, chain []*x509.Certificate, conf *ocsp.VerifyConfig) (bool, error) {
-	if !b.ocspEnabled || len(chain) < 2 {
+	if len(chain) < 2 {
 		return true, nil
 	}
 	b.ocspClientMutex.RLock()
 	defer b.ocspClientMutex.RUnlock()
-	err := b.ocspClient.VerifyLeafCertificate(ctx, clientCert, chain[0], conf)
+	err := b.ocspClient.VerifyLeafCertificate(ctx, clientCert, chain[len(chain)-1], conf)
 	if err != nil {
 		return false, nil
 	}

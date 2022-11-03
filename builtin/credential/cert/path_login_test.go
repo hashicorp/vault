@@ -4,20 +4,38 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	mathrand "math/rand"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+
+	"golang.org/x/crypto/ocsp"
+
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+const ocspPort = 31808
+
+var source InMemorySource
+
+func TestMain(m *testing.M) {
+	source = make(InMemorySource)
+	go func() {
+		http.ListenAndServe(fmt.Sprintf("localhost:%d", ocspPort), NewResponder(source, nil))
+	}()
+	m.Run()
+}
 
 func TestCert_RoleResolve(t *testing.T) {
 	certTemplate := &x509.Certificate{
@@ -52,7 +70,7 @@ func TestCert_RoleResolve(t *testing.T) {
 		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", allowed{dns: "example.com"}, false),
-			testAccStepLoginWithName(t, connState, "web"),
+			testAccStepLoginWithName(t, connState, "web", false),
 			testAccStepResolveRoleWithName(t, connState, "web"),
 		},
 	})
@@ -109,7 +127,7 @@ func TestCert_RoleResolveWithoutProvidingCertName(t *testing.T) {
 		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", allowed{dns: "example.com"}, false),
-			testAccStepLoginWithName(t, connState, "web"),
+			testAccStepLoginWithName(t, connState, "web", false),
 			testAccStepResolveRoleWithEmptyDataMap(t, connState, "web"),
 		},
 	})
@@ -192,8 +210,93 @@ func TestCert_RoleResolve_RoleDoesNotExist(t *testing.T) {
 		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "web", ca, "foo", allowed{dns: "example.com"}, false),
-			testAccStepLoginWithName(t, connState, "web"),
+			testAccStepLoginWithName(t, connState, "web", false),
 			testAccStepResolveRoleExpectRoleResolutionToFail(t, connState, "notweb"),
 		},
 	})
+}
+
+func TestCert_RoleResolveOCSP(t *testing.T) {
+	cases := []struct {
+		name        string
+		failOpen    bool
+		certStatus  int
+		errExpected bool
+	}{
+		{"failFalseGoodCert", false, ocsp.Good, false},
+		{"failFalseRevokedCert", false, ocsp.Revoked, true},
+		{"failFalseUnknownCert", false, ocsp.Unknown, true},
+		{"failTrueGoodCert", true, ocsp.Good, false},
+		{"failTrueRevokedCert", true, ocsp.Revoked, true},
+		{"failTrueUnknownCert", true, ocsp.Unknown, false},
+	}
+	certTemplate := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName: "example.com",
+		},
+		DNSNames:    []string{"example.com"},
+		IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+		ExtKeyUsage: []x509.ExtKeyUsage{
+			x509.ExtKeyUsageServerAuth,
+			x509.ExtKeyUsageClientAuth,
+		},
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement,
+		SerialNumber: big.NewInt(mathrand.Int63()),
+		NotBefore:    time.Now().Add(-30 * time.Second),
+		NotAfter:     time.Now().Add(262980 * time.Hour),
+		OCSPServer:   []string{fmt.Sprintf("http://localhost:%d", ocspPort)},
+	}
+	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate)
+	if tempDir != "" {
+		defer os.RemoveAll(tempDir)
+	}
+	if err != nil {
+		t.Fatalf("error testing connection state: %v", err)
+	}
+	ca, err := ioutil.ReadFile(filepath.Join(tempDir, "ca_cert.pem"))
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	issuer := parsePEM(ca)
+	pkf, err := ioutil.ReadFile(filepath.Join(tempDir, "ca_key.pem"))
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	pk, err := certutil.ParsePEMBundle(string(pkf))
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			resp, err := ocsp.CreateResponse(issuer[0], issuer[0], ocsp.Response{
+				Status:       c.certStatus,
+				SerialNumber: certTemplate.SerialNumber,
+				ProducedAt:   time.Now(),
+				ThisUpdate:   time.Now(),
+				NextUpdate:   time.Now().Add(time.Hour),
+			}, pk.PrivateKey)
+			if err != nil {
+				t.Fatal(err)
+			}
+			source[certTemplate.SerialNumber.String()] = resp
+
+			b := testFactory(t)
+			b.(*backend).ocspClient.ClearCache()
+			logicaltest.Test(t, logicaltest.TestCase{
+				CredentialBackend: b,
+				Steps: []logicaltest.TestStep{
+					testAccStepCertWithExtraParams(t, "web", ca, "foo", allowed{dns: "example.com"}, false,
+						map[string]interface{}{"ocsp_fail_open": c.failOpen}),
+					testAccStepLoginWithName(t, connState, "web", c.errExpected),
+					testAccStepResolveRoleWithName(t, connState, "web"),
+				},
+			})
+		})
+	}
+}
+
+func serialFromBigInt(serial *big.Int) string {
+	return strings.TrimSpace(certutil.GetHexFormatted(serial.Bytes(), ":"))
 }

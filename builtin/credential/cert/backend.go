@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/ocsp"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/ocsp"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -66,7 +66,6 @@ type backend struct {
 	MapCertId *framework.PathMap
 
 	crls            map[string]CRLInfo
-	ocspEnabled     bool
 	crlUpdateMutex  *sync.RWMutex
 	ocspClientMutex sync.RWMutex
 	ocspClient      *ocsp.Client
@@ -96,13 +95,7 @@ func (b *backend) initOCSPClient(cacheSize int) {
 func (b *backend) updatedConfig(config *config) error {
 	b.ocspClientMutex.Lock()
 	defer b.ocspClientMutex.Unlock()
-	if config != nil {
-		if b.ocspEnabled {
-			b.initOCSPClient(config.OcspCacheSize)
-		} else {
-			b.ocspClient = nil
-		}
-	}
+	b.initOCSPClient(config.OcspCacheSize)
 	b.configUpdated = false
 	return nil
 }
@@ -139,6 +132,19 @@ func (b *backend) updateCRLs(ctx context.Context, req *logical.Request) error {
 		}
 	}
 	return errs.ErrorOrNil()
+}
+
+func (b *backend) storeConfig(ctx context.Context, storage logical.Storage, config *config) error {
+	entry, err := logical.StorageEntryJSON("config", config)
+	if err != nil {
+		return err
+	}
+
+	if err := storage.Put(ctx, entry); err != nil {
+		return err
+	}
+	b.updatedConfig(config)
+	return nil
 }
 
 const backendHelp = `
