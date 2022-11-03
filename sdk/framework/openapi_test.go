@@ -644,7 +644,7 @@ func TestOpenAPI_CleanResponse(t *testing.T) {
 func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) {
 	t.Helper()
 
-	doc := NewOASDocument("version")
+	doc := NewOASDocument("dummyversion")
 	if err := documentPath(path, sp, "kv", false, logical.TypeLogical, doc); err != nil {
 		t.Fatal(err)
 	}
