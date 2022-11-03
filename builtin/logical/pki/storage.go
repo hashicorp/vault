@@ -1216,3 +1216,12 @@ func (sc *storageContext) writeAutoTidyConfig(config *tidyConfig) error {
 
 	return sc.Storage.Put(sc.Context, entry)
 }
+
+func (sc *storageContext) listRevokedCerts() ([]string, error) {
+	list, err := sc.Storage.List(sc.Context, revokedPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed listing revoked certs: %w", err)
+	}
+
+	return list, err
+}
