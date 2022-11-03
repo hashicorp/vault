@@ -263,7 +263,7 @@ build:
 .PHONY: version
 # This is used for release builds by .github/workflows/build.yml
 version:
-	@$(CURDIR)/scripts/version.sh sdk/version/version_base.go
+	@$(CURDIR)/scripts/version.sh vault/version/version_base.go
 
 .PHONY: build-date
 # This is used for release builds by .github/workflows/build.yml

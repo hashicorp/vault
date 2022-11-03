@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/version"
 )
 
 var (
