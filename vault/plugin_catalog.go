@@ -625,6 +625,7 @@ func (c *PluginCatalog) getDatabaseRunningVersion(ctx context.Context, pluginRun
 		Logger:          log.Default(),
 		IsMetadataMode:  true,
 		AutoMTLS:        true,
+		Wrapper:         c.wrapper,
 	}
 
 	// Attempt to run as database V5+ multiplexed plugin
@@ -655,7 +656,7 @@ func (c *PluginCatalog) getDatabaseRunningVersion(ctx context.Context, pluginRun
 	merr = multierror.Append(merr, fmt.Errorf("failed to load plugin as database v5: %w", err))
 
 	c.logger.Debug("attempting to load database plugin as v4", "name", pluginRunner.Name)
-	v4Client, err := v4.NewPluginClient(ctx, nil, pluginRunner, log.NewNullLogger(), true)
+	v4Client, err := v4.NewPluginClient(ctx, c.wrapper, pluginRunner, log.NewNullLogger(), true)
 	if err == nil {
 		// Close the client and cleanup the plugin process
 		defer func() {
