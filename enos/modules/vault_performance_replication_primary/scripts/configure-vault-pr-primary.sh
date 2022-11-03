@@ -11,9 +11,6 @@ fail() {
 
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
-export VAULT_ADDR='http://127.0.0.1:8200'
-export VAULT_TOKEN='${vault_token}'
-
 # Create superuser policy
 $binpath policy write superuser -<<EOF
 path "*" {

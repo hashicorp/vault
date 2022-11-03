@@ -37,14 +37,17 @@ variable "wrapping_token" {
   description = "The wrapping token created on primary cluster"
 }
 
+locals {
+  wrapping_token = var.wrapping_token
+}
+
 resource "enos_remote_exec" "configure_pr_secondary" {
-  content = templatefile("${path.module}/templates/configure-vault-pr-secondary.sh", {
-    vault_cluster_addr      = "${var.secondary_leader_private_ip}:${var.vault_cluster_addr_port}"
-    vault_install_dir       = var.vault_install_dir
-    vault_local_binary_path = "${var.vault_install_dir}/vault"
-    vault_token             = var.vault_root_token
-    wrapping_token          = var.wrapping_token
-  })
+  environment = {
+    VAULT_ADDR  = "http://127.0.0.1:8200"
+    VAULT_TOKEN = var.vault_root_token
+  }
+
+  inline = ["${var.vault_install_dir}/vault write sys/replication/performance/secondary/enable token=${local.wrapping_token}"]
 
   transport = {
     ssh = {
