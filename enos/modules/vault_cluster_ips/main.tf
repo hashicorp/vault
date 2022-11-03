@@ -44,48 +44,30 @@ locals {
       private_ip = values(var.vault_instances)[idx].private_ip
     }
   }
+  follower_public_ips = {
+    follower_public_ips = [
+      for k, v in values((tomap(local.instances))) :
+      tostring(v["private_ip"]) if v["private_ip"] != trimspace(enos_remote_exec.get_leader_private_ip.stdout)
+    ]
+  }
+  follower_private_ips = {
+    follower_private_ips = [
+      for k, v in values((tomap(local.instances))) :
+      tostring(v["private_ip"]) if v["private_ip"] != trimspace(enos_remote_exec.get_leader_private_ip.stdout)
+    ]
+  }
   vault_bin_path = "${var.vault_install_dir}/vault"
 }
 
-resource "enos_remote_exec" "get_leader_public_ip" {
-  content = templatefile("${path.module}/templates/get-leader-public-ip.sh", {
-    vault_install_dir = var.vault_install_dir,
-    vault_instances   = jsonencode(local.instances)
-  })
-
-  transport = {
-    ssh = {
-      host = local.instances[0].public_ip
-    }
-  }
-}
-
-output "leader_public_ip" {
-  value = trimspace(enos_remote_exec.get_leader_public_ip.stdout)
-}
-
-resource "enos_remote_exec" "get_follower_public_ips" {
-  content = templatefile("${path.module}/templates/get-follower-public-ips.sh", {
-    vault_install_dir = var.vault_install_dir,
-    vault_instances   = jsonencode(local.instances)
-  })
-
-  transport = {
-    ssh = {
-      host = local.instances[0].public_ip
-    }
-  }
-}
-
-output "follower_public_ips" {
-  value = trimspace(enos_remote_exec.get_follower_public_ips.stdout)
-}
-
 resource "enos_remote_exec" "get_leader_private_ip" {
-  content = templatefile("${path.module}/templates/get-leader-private-ip.sh", {
-    vault_install_dir = var.vault_install_dir,
+  environment = {
+    VAULT_ADDR        = "http://127.0.0.1:8200"
+    VAULT_TOKEN       = var.vault_root_token
+    vault_install_dir = var.vault_install_dir
     vault_instances   = jsonencode(local.instances)
-  })
+  }
+
+  scripts = ["${path.module}/scripts/get-leader-private-ip.sh"]
 
   transport = {
     ssh = {
@@ -98,19 +80,33 @@ output "leader_private_ip" {
   value = trimspace(enos_remote_exec.get_leader_private_ip.stdout)
 }
 
-resource "enos_remote_exec" "get_follower_private_ips" {
-  content = templatefile("${path.module}/templates/get-follower-private-ips.sh", {
-    vault_install_dir = var.vault_install_dir,
-    vault_instances   = jsonencode(local.instances)
-  })
+output "leader_public_ip" {
+  value = element([
+    for k, v in values((tomap(local.instances))) :
+    tostring(v["public_ip"]) if v["private_ip"] == trimspace(enos_remote_exec.get_leader_private_ip.stdout)
+  ], 0)
+}
 
-  transport = {
-    ssh = {
-      host = local.instances[0].public_ip
-    }
-  }
+output "follower_public_ips" {
+  value = tomap(local.follower_public_ips)
+}
+
+output "follower_public_ip_1" {
+  value = element(flatten(values(tomap(local.follower_public_ips))), 0)
+}
+
+output "follower_public_ip_2" {
+  value = element(flatten(values(tomap(local.follower_public_ips))), 1)
 }
 
 output "follower_private_ips" {
-  value = trimspace(enos_remote_exec.get_follower_private_ips.stdout)
+  value = tomap(local.follower_private_ips)
+}
+
+output "follower_private_ip_1" {
+  value = element(flatten(values(tomap(local.follower_private_ips))), 0)
+}
+
+output "follower_private_ip_2" {
+  value = element(flatten(values(tomap(local.follower_private_ips))), 1)
 }

@@ -3,6 +3,9 @@ terraform {
     enos = {
       source = "app.terraform.io/hashicorp-qti/enos"
     }
+    time = {
+      source = "hashicorp/time"
+    }
   }
 }
 
@@ -54,6 +57,10 @@ variable "wrapping_token" {
   default     = null
 }
 
+locals {
+  primary_replication_status = jsondecode(enos_remote_exec.verify_replication_on_primary.stdout)
+  secondary_replication_status = jsondecode(enos_remote_exec.verify_replication_on_secondary.stdout)
+}
 resource "enos_remote_exec" "verify_replication_on_primary" {
   environment = {
     VAULT_ADDR  = "http://127.0.0.1:8200"
@@ -70,10 +77,21 @@ resource "enos_remote_exec" "verify_replication_on_primary" {
 }
 
 output "primary_replication_status" {
-  value = enos_remote_exec.verify_replication_on_primary.stdout
+  value = local.primary_replication_status
+
+  precondition {
+    condition     = local.primary_replication_status.data.mode == "primary" && local.primary_replication_status.data.state != "idle"
+    error_message = "Vault primary cluster mode must be \"primary\" and state must not be \"idle\"."
+  }
+}
+
+resource "time_sleep" "wait_60_seconds" {
+  create_duration = "60s"
 }
 
 resource "enos_remote_exec" "verify_replication_on_secondary" {
+  # wait 60s before verifying the status on secondary
+  depends_on = [time_sleep.wait_60_seconds]
   environment = {
     VAULT_ADDR  = "http://127.0.0.1:8200"
     VAULT_TOKEN = var.secondary_vault_root_token
@@ -89,5 +107,10 @@ resource "enos_remote_exec" "verify_replication_on_secondary" {
 }
 
 output "secondary_replication_status" {
-  value = enos_remote_exec.verify_replication_on_secondary.stdout
+  value = local.secondary_replication_status
+
+  precondition {
+    condition     = local.secondary_replication_status.data.mode == "secondary" && local.secondary_replication_status.data.state != "idle"
+    error_message = "Vault secondary cluster mode must be \"secondary\" and state must not be \"idle\"."
+  }
 }
