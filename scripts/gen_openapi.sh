@@ -20,7 +20,7 @@ then
     exit 1
 fi
 
-vault server -dev -dev-root-token-id=root &
+../bin/vault server -dev -dev-root-token-id=root &
 sleep 2
 VAULT_PID=$!
 

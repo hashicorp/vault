@@ -263,16 +263,21 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 		// Body fields will be added to individual operations.
 		pathFields, bodyFields := splitFields(p.Fields, path)
 
+		// Add mount path as a parameter
 		if requestResponsePrefix != "system" && requestResponsePrefix != "identity" {
-			// Add mount path as a parameter
+			defaultMountPath := requestResponsePrefix
+			if requestResponsePrefix == "kv" {
+				defaultMountPath = "secret"
+			}
 			p := OASParameter{
 				Name:        "mountPath",
-				Description: "Path that the backend was mounted at",
+				Description: "Path where the backend was mounted; the endpoint path will be offset by the mount path",
 				In:          "path",
 				Schema: &OASSchema{
-					Type: "string",
+					Type:    "string",
+					Default: defaultMountPath,
 				},
-				Required: true,
+				Required: false,
 			}
 
 			pi.Parameters = append(pi.Parameters, p)
