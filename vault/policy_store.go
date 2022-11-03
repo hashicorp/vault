@@ -259,9 +259,13 @@ func (c *Core) setupPolicyStore(ctx context.Context) error {
 		return err
 	}
 
-	if c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary |
-		consts.ReplicationDRSecondary | consts.ReplicationPerformanceStandby) {
+	if c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary) {
 		// Policies will sync from the primary
+		return nil
+	}
+
+	if c.perfStandby {
+		// Policies will sync from the active
 		return nil
 	}
 
