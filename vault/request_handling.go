@@ -1346,7 +1346,17 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 	// Route the request
 	resp, routeErr := c.doRouting(ctx, req)
+
 	// vault-8307 if routeErr has an error, update the userFailedLoginMap
+	if routeErr != nil && routeErr == logical.ErrInvalidCredentials {
+		// login failed due to wrong credentials
+		err := c.failedUserLoginProcess(ctx, entry, req)
+		if err != nil {
+			return nil, nil, err
+		}
+		return nil, nil, resp.Error()
+	}
+
 	if resp != nil {
 		// If wrapping is used, use the shortest between the request and response
 		var wrapTTL time.Duration
@@ -1737,6 +1747,67 @@ func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, re
 	return leaseGenerated, resp, nil
 }
 
+func (c *Core) failedUserLoginProcess(ctx context.Context, mountEntry *MountEntry, req *logical.Request) error {
+	// get the userfailedLoginMap for the entry
+	loginUserInfoKey := c.getLoginUserInfo(mountEntry, req)
+	// get entry from userFailedLoginInfo map for the key
+	userFailedLoginInfo := getUserFailedLoginInfo(ctx, c, loginUserInfoKey)
+	// get the user lockout configuration
+	userLockoutConfiguration := c.getUserLockoutConfiguration(mountEntry)
+
+	var failedLoginInfo FailedLoginInfo
+	failedLoginInfo.lastFailedLoginTime = int(time.Now().Unix())
+
+	// set the count value for the entry
+	switch userFailedLoginInfo {
+	case nil: // entry does not exist in userfailedLoginMap
+		failedLoginInfo.count = 1
+	default:
+		failedLoginInfo.count = userFailedLoginInfo.count + 1
+
+		// if counter reset, set the count value to 1 as this gets counted as new entry
+		isLockoutCounterReset := time.Now().Unix()-int64(userFailedLoginInfo.lastFailedLoginTime) >= int64(userLockoutConfiguration.LockoutCounterReset)
+		if isLockoutCounterReset {
+			failedLoginInfo.count = 1
+		}
+	}
+
+	// update the userFailedLoginInfo map
+	err := c.updateUserFailedLoginInfo(ctx, loginUserInfoKey, failedLoginInfo)
+	if err != nil {
+		return err
+	}
+
+	// if count has reached threshold, create a storage entry which means the user got locked
+	if failedLoginInfo.count >= uint(userLockoutConfiguration.LockoutThreshold) {
+		// user locked
+		ns, err := namespace.FromContext(ctx)
+		if err != nil {
+			return fmt.Errorf("could not parse namespace from http context: %w", err)
+		}
+		storageUserLockoutPath := fmt.Sprintf("core/login/lockedUsers/%s/%s/%s>", ns.ID, loginUserInfoKey.mountAccessor, loginUserInfoKey.aliasName)
+		compressedBytes, err := jsonutil.EncodeJSONAndCompress(failedLoginInfo.lastFailedLoginTime, nil)
+		if err != nil {
+			c.logger.Error("failed to encode or compress failed login user entry", "error", err)
+			return err
+		}
+
+		// Create an entry
+		entry := &logical.StorageEntry{
+			Key:   storageUserLockoutPath,
+			Value: compressedBytes,
+		}
+
+		// Write to the physical backend
+		if err := c.barrier.Put(ctx, entry); err != nil {
+			c.logger.Error("failed to persist failed login user entry", "error", err)
+			return err
+		}
+
+	}
+	return nil
+}
+
 // getLoginUserInfo gets login user info to check details in failedUserLoginInfo map
 func (c *Core) getLoginUserInfo(mountEntry *MountEntry, req *logical.Request) (userInfo FailedLoginUser) {
 	var aliasName string
@@ -1807,12 +1878,16 @@ func (c *Core) isUserLocked(ctx context.Context, mountEntry *MountEntry, req *lo
 			return false, err
 		}
 		var lastLoginTime int
-		if existingEntry != nil {
-			err = jsonutil.DecodeJSON(existingEntry.Value, &lastLoginTime)
-			if err != nil {
-				return false, err
-			}
+		if existingEntry == nil {
+			// no entry, user is not locked
+			return false, nil
 		}
+		// storage entry for user found
+		err = jsonutil.DecodeJSON(existingEntry.Value, &lastLoginTime)
+		if err != nil {
+			return false, err
+		}
+
 		if time.Now().Unix()-int64(lastLoginTime) < int64(userLockoutConfiguration.LockoutDuration) {
 			// user locked
 			return true, nil
