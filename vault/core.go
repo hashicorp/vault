@@ -1299,13 +1299,13 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 }
 
 // unseal takes a key fragment and attempts to use it to unseal Vault.
-// Vault may remain unsealed afterwards even when no error is returned,
+// Vault may remain sealed afterwards even when no error is returned,
 // depending on whether enough key fragments were provided to meet the
 // target threshold.
 //
 // The provided key should be a recovery key fragment if the seal
 // is an autoseal, or a regular seal key fragment for shamir.  In
-// migration scenarios "seal" in the preceding sentance refers to
+// migration scenarios "seal" in the preceding sentence refers to
 // the migration seal in c.migrationInfo.seal.
 //
 // We use getUnsealKey to work out if we have enough fragments,
