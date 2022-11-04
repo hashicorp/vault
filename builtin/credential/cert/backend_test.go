@@ -1919,7 +1919,6 @@ func testAccStepCertWithExtraParams(t *testing.T, name string, cert []byte, poli
 		"required_extensions":          testData.ext,
 		"allowed_metadata_extensions":  testData.metadata_ext,
 		"lease":                        1000,
-		"ocsp_enabled":                 true,
 	}
 	for k, v := range extraParams {
 		data[k] = v

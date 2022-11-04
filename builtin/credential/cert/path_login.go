@@ -576,19 +576,22 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 				Certificates: parsed,
 			})
 		}
-		conf.OcspServersOverride = append(conf.OcspServersOverride, entry.OcspServersOverride...)
-		if entry.OcspFailOpen {
-			conf.OcspFailureMode = ocsp.FailOpenTrue
-		} else {
-			conf.OcspFailureMode = ocsp.FailOpenFalse
+		if entry.OcspEnabled {
+			conf.OcspEnabled = true
+			conf.OcspServersOverride = append(conf.OcspServersOverride, entry.OcspServersOverride...)
+			if entry.OcspFailOpen {
+				conf.OcspFailureMode = ocsp.FailOpenTrue
+			} else {
+				conf.OcspFailureMode = ocsp.FailOpenFalse
+			}
+			conf.QueryAllServers = conf.QueryAllServers || entry.OcspQueryAllServers
 		}
-		conf.QueryAllServers = conf.QueryAllServers || entry.OcspQueryAllServers
 	}
 	return
 }
 
 func (b *backend) checkForCertInOCSP(ctx context.Context, clientCert *x509.Certificate, chain []*x509.Certificate, conf *ocsp.VerifyConfig) (bool, error) {
-	if len(chain) < 2 {
+	if !conf.OcspEnabled || len(chain) < 2 {
 		return true, nil
 	}
 	b.ocspClientMutex.RLock()

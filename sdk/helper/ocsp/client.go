@@ -513,6 +513,7 @@ func isValidOCSPStatus(status ocspStatusCode) bool {
 }
 
 type VerifyConfig struct {
+	OcspEnabled         bool
 	ExtraCas            []*x509.Certificate
 	OcspServersOverride []string
 	OcspFailureMode     FailOpenMode

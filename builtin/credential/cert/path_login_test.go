@@ -1,6 +1,7 @@
 package cert
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -25,15 +26,26 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-const ocspPort = 31808
+var ocspPort int
 
 var source InMemorySource
 
 func TestMain(m *testing.M) {
 	source = make(InMemorySource)
+
+	listener, err := net.Listen("tcp", ":0")
+	if err != nil {
+		return
+	}
+	ocspPort = listener.Addr().(*net.TCPAddr).Port
+	srv := &http.Server{
+		Addr:    "localhost:0",
+		Handler: NewResponder(source, nil),
+	}
 	go func() {
-		http.ListenAndServe(fmt.Sprintf("localhost:%d", ocspPort), NewResponder(source, nil))
+		srv.Serve(listener)
 	}()
+	defer srv.Shutdown(context.Background())
 	m.Run()
 }
 
@@ -288,7 +300,7 @@ func TestCert_RoleResolveOCSP(t *testing.T) {
 				CredentialBackend: b,
 				Steps: []logicaltest.TestStep{
 					testAccStepCertWithExtraParams(t, "web", ca, "foo", allowed{dns: "example.com"}, false,
-						map[string]interface{}{"ocsp_fail_open": c.failOpen}),
+						map[string]interface{}{"ocsp_enabled": true, "ocsp_fail_open": c.failOpen}),
 					testAccStepLoginWithName(t, connState, "web", c.errExpected),
 					testAccStepResolveRoleWithName(t, connState, "web"),
 				},
