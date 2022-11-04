@@ -7,7 +7,7 @@ references:
     GO_IMAGE: &GO_IMAGE "docker.mirror.hashicorp.services/cimg/go:1.19.2"
 go-machine:
   machine:
-    image: ubuntu-2004:202201-02
+    image: ubuntu-2004:2022.10.1
   environment: *ENVIRONMENT
   shell: /usr/bin/env bash -euo pipefail -c
   working_directory: /home/circleci/go/src/github.com/hashicorp/vault
