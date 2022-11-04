@@ -83,6 +83,13 @@ module "vault_cluster" {
   vault_install_dir = var.vault_install_dir
 }
 
+module "vault_cluster_ips" {
+  source = "./modules/vault_cluster_ips"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
+
 module "vault_upgrade" {
   source = "./modules/vault_upgrade"
 
@@ -145,17 +152,16 @@ module "vault_performance_replication_secondary" {
   vault_install_dir = var.vault_install_dir
 }
 
-module "vault_verify_performance_replication" {
-  source = "./modules/vault_verify_performance_replication"
+module "vault_verify_replicated_data"{
+  source = "./modules/verify_replicated_data"
 
   vault_install_dir = var.vault_install_dir
 }
 
-module "vault_cluster_ips" {
-  source = "./modules/vault_cluster_ips"
+module "vault_verify_performance_replication" {
+  source = "./modules/vault_verify_performance_replication"
 
-  vault_install_dir    = var.vault_install_dir
-  vault_instance_count = var.vault_instance_count
+  vault_install_dir = var.vault_install_dir
 }
 
 module "vault_verify_version" {
@@ -165,8 +171,13 @@ module "vault_verify_version" {
   vault_instance_count = var.vault_instance_count
 }
 
+<<<<<<< HEAD
 module "vault_verify_write_test_data" {
   source = "./modules/vault-verify-write-data"
+=======
+module "vault_verify_write_data" {
+  source = "./modules/vault_verify_write_data"
+>>>>>>> 6b54aff1c3 (Add more steps for replication)
 
   vault_install_dir    = var.vault_install_dir
   vault_instance_count = var.vault_instance_count

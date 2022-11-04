@@ -3,9 +3,6 @@ terraform {
     enos = {
       source = "app.terraform.io/hashicorp-qti/enos"
     }
-    time = {
-      source = "hashicorp/time"
-    }
   }
 }
 
@@ -29,7 +26,6 @@ variable "primary_leader_private_ip" {
   type        = string
   description = "Vault primary cluster leader Private IP address"
 }
-
 
 variable "secondary_leader_public_ip" {
   type        = string
@@ -61,13 +57,15 @@ locals {
   primary_replication_status   = jsondecode(enos_remote_exec.verify_replication_on_primary.stdout)
   secondary_replication_status = jsondecode(enos_remote_exec.verify_replication_on_secondary.stdout)
 }
+
 resource "enos_remote_exec" "verify_replication_on_primary" {
   environment = {
-    VAULT_ADDR  = "http://127.0.0.1:8200"
-    VAULT_TOKEN = var.primary_vault_root_token
+    VAULT_ADDR        = "http://127.0.0.1:8200"
+    VAULT_TOKEN       = var.primary_vault_root_token
+    vault_install_dir = var.vault_install_dir
   }
 
-  inline = ["${var.vault_install_dir}/vault read -format=json sys/replication/performance/status"]
+  scripts = ["${path.module}/scripts/verify-performance-replication.sh"]
 
   transport = {
     ssh = {
@@ -85,24 +83,28 @@ output "primary_replication_status" {
   }
 }
 
-resource "time_sleep" "wait_60_seconds" {
-  create_duration = "60s"
-}
-
 resource "enos_remote_exec" "verify_replication_on_secondary" {
-  # wait 60s before verifying the status on secondary
-  depends_on = [time_sleep.wait_60_seconds]
   environment = {
-    VAULT_ADDR  = "http://127.0.0.1:8200"
-    VAULT_TOKEN = var.secondary_vault_root_token
+    VAULT_ADDR        = "http://127.0.0.1:8200"
+    VAULT_TOKEN       = var.secondary_vault_root_token
+    vault_install_dir = var.vault_install_dir
   }
 
-  inline = ["${var.vault_install_dir}/vault read -format=json sys/replication/performance/status"]
+  scripts = ["${path.module}/scripts/verify-performance-replication.sh"]
 
   transport = {
     ssh = {
       host = var.secondary_leader_public_ip
     }
+  }
+}
+
+output "known_primary_cluster_addrs" {
+  value = local.secondary_replication_status.data.known_primary_cluster_addrs
+
+  precondition {
+    condition     = contains(local.secondary_replication_status.data.known_primary_cluster_addrs, "https://${var.primary_leader_private_ip}:8201")
+    error_message = "Vault secondary cluster known_primary_cluster_addrs must include ${var.primary_leader_private_ip}."
   }
 }
 

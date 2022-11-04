@@ -14,7 +14,6 @@ scenario "replication" {
   terraform     = terraform.default
   providers = [
     provider.aws.default,
-    // provider.aws.west2,
     provider.enos.ubuntu,
     provider.enos.rhel
   ]
@@ -32,9 +31,6 @@ scenario "replication" {
       "Project" : "Enos",
       "Environment" : "ci"
     }, var.tags)
-    // install_dev_artifact         = local.artifact_path != null
-    // install_artifactory_artifact = local.revision != null && local.artifact_path == null
-    // install_release_artifact     = local.revision == null && local.artifact_path == null
     vault_instance_types = {
       amd64 = "t3a.small"
       arm64 = "t4g.small"
@@ -242,9 +238,26 @@ scenario "replication" {
     }
   }
 
+  step "verify_vault_primary_write_data" {
+    module     = module.vault_verify_write_data
+    depends_on = [step.get_primary_cluster_ips]
+
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      primary_leader_public_ip  = step.get_primary_cluster_ips.leader_public_ip
+      primary_leader_private_ip = step.get_primary_cluster_ips.leader_private_ip
+      vault_instances           = step.create_vault_primary_cluster.vault_instances
+      vault_root_token          = step.create_vault_primary_cluster.vault_root_token
+    }
+  }
+
   step "configure_performance_replication_primary" {
     module     = module.vault_performance_replication_primary
-    depends_on = [step.get_primary_cluster_ips]
+    depends_on = [step.verify_vault_primary_write_data]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -304,6 +317,67 @@ scenario "replication" {
       secondary_vault_root_token  = step.create_vault_secondary_cluster.vault_root_token
     }
   }
+
+  step "verify_pre_replicated_data" {
+    module     = module.vault_verify_replicated_data
+    // depends_on = [step.verify_performance_replication]
+    depends_on = [step.verify_vault_secondary_unsealed]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      secondary_leader_public_ip  = step.get_secondary_cluster_ips.leader_public_ip
+      secondary_leader_private_ip = step.get_secondary_cluster_ips.leader_private_ip
+      secondary_vault_root_token  = step.create_vault_secondary_cluster.vault_root_token
+    }
+  }
+
+  step "verify_replicated_data" {
+    module     = module.vault_verify_replicated_data
+    depends_on = [step.verify_performance_replication]
+    // depends_on = [step.verify_vault_secondary_unsealed]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      secondary_leader_public_ip  = step.get_secondary_cluster_ips.leader_public_ip
+      secondary_leader_private_ip = step.get_secondary_cluster_ips.leader_private_ip
+      secondary_vault_root_token  = step.create_vault_secondary_cluster.vault_root_token
+    }
+  }
+  // step "add_primary_cluster_node" {
+  //   module     = module.vault_cluster
+  //   depends_on = [step.verify_replicated_data]
+
+  //   providers = {
+  //     enos = local.enos_provider[matrix.distro]
+  //   }
+
+  //   variables {
+  //     ami_id                      = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
+  //     common_tags                 = local.tags
+  //     dependencies_to_install     = local.dependencies_to_install
+  //     instance_type               = local.vault_instance_type
+  //     kms_key_arn                 = step.create_vpc.kms_key_arn
+  //     storage_backend             = "raft"
+  //     storage_backend_addl_config = step.create_autopilot_upgrade_storageconfig.storage_addl_config
+  //     unseal_method               = matrix.seal
+  //     vault_cluster_tag           = step.create_vault_cluster.vault_cluster_tag
+  //     vault_init                  = false
+  //     vault_license               = step.read_license.license
+  //     vault_local_artifact_path   = local.bundle_path
+  //     vault_artifactory_release   = local.install_artifactory_artifact ? step.build_vault.vault_artifactory_release : null
+  //     vault_node_prefix           = "upgrade_node"
+  //     vault_root_token            = step.create_vault_cluster.vault_root_token
+  //     vault_unseal_when_no_init   = matrix.seal == "shamir"
+  //     vault_unseal_keys           = matrix.seal == "shamir" ? step.create_vault_cluster.vault_unseal_keys_hex : null
+  //     vpc_id                      = step.create_vpc.vpc_id
+  //   }
+  // }
 
   output "vault_primary_cluster_instance_ids" {
     description = "The Vault primary cluster instance IDs"
@@ -393,6 +467,11 @@ scenario "replication" {
   output "secondary_token" {
     description = "The secondary token created for replication"
     value       = step.generate_secondary_token.secondary_token
+  }
+
+  output "vault_replication_known_primary_cluster_addrs" {
+    description = "The Vault secondary cluster performance replication status"
+    value       = step.verify_performance_replication.known_primary_cluster_addrs
   }
 
   output "vault_secondary_performance_replication_status" {
