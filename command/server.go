@@ -202,12 +202,10 @@ func (c *ServerCommand) Flags() *FlagSets {
 	})
 
 	f.StringVar(&StringVar{
-		Name:    "log-format",
-		Target:  &c.flagLogFormat,
-		Default: notSetValue,
-		// EnvVar can't be just "VAULT_LOG_FORMAT", because more than one env var name is supported
-		// for backwards compatibility reasons.
-		// See github.com/hashicorp/vault/sdk/helper/logging.ParseEnvLogFormat()
+		Name:       "log-format",
+		Target:     &c.flagLogFormat,
+		Default:    notSetValue,
+		EnvVar:     "VAULT_LOG_FORMAT",
 		Completion: complete.PredictSet("standard", "json"),
 		Usage:      `Log format. Supported values are "standard" and "json".`,
 	})
