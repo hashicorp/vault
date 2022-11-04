@@ -50,9 +50,8 @@ func (sc *storageContext) updateDefaultIssuerId(id issuerID) error {
 		newDefault := id
 		now := time.Now().UTC()
 
-		err := sc.setIssuersConfig(&issuerConfigEntry{
-			DefaultIssuerId: newDefault,
-		})
+		config.DefaultIssuerId = newDefault
+		err := sc.setIssuersConfig(config)
 		if err != nil {
 			return err
 		}
