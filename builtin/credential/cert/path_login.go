@@ -83,7 +83,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 	if err != nil {
 		return nil, err
 	}
-	if b.configUpdated {
+	if b.configUpdated.Load() {
 		b.updatedConfig(config)
 	}
 
@@ -166,7 +166,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	if err != nil {
 		return nil, err
 	}
-	if b.configUpdated {
+	if b.configUpdated.Load() {
 		b.updatedConfig(config)
 	}
 

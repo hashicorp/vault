@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -69,7 +70,7 @@ type backend struct {
 	crlUpdateMutex  *sync.RWMutex
 	ocspClientMutex sync.RWMutex
 	ocspClient      *ocsp.Client
-	configUpdated   bool
+	configUpdated   atomic.Bool
 }
 
 func (b *backend) invalidate(_ context.Context, key string) {
@@ -79,10 +80,7 @@ func (b *backend) invalidate(_ context.Context, key string) {
 		defer b.crlUpdateMutex.Unlock()
 		b.crls = nil
 	case key == "config":
-		// Is this really necessary?
-		b.ocspClientMutex.Lock()
-		defer b.ocspClientMutex.Unlock()
-		b.configUpdated = true
+		b.configUpdated.Store(true)
 	}
 }
 
@@ -96,7 +94,7 @@ func (b *backend) updatedConfig(config *config) error {
 	b.ocspClientMutex.Lock()
 	defer b.ocspClientMutex.Unlock()
 	b.initOCSPClient(config.OcspCacheSize)
-	b.configUpdated = false
+	b.configUpdated.Store(false)
 	return nil
 }
 
