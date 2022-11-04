@@ -1,0 +1,3 @@
+```release-note:change
+logging: Removed legacy environment variable for log format, should use 'VAULT_LOG_FORMAT' instead
+```
