@@ -5,7 +5,6 @@ references:
     GOFUMPT_VERSION: 0.3.1 # Pin gofumpt to patch version (ex: 1.2.3)
     GO_TAGS: ""
     GO_IMAGE: &GO_IMAGE "docker.mirror.hashicorp.services/cimg/go:1.19.2"
-
 go-machine:
   machine:
     image: ubuntu-2004:202201-02
