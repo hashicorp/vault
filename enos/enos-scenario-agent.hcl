@@ -159,25 +159,22 @@ scenario "agent" {
     }
   }
 
+  step "verify_vault_agent_output" {
+    module = module.vault_verify_agent_output
+     depends_on = [
+       step.create_vault_cluster,
+       step.start_vault_agent,
+    ]
 
-  #TODO: Add a verify_vault_agent_output
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+     }
 
-    step "verify_vault_agent_output" {
-      module = module.vault_verify_agent_output
-      depends_on = [
-        step.create_vault_cluster,
-        step.start_vault_agent,
-      ]
-
-      providers = {
-        enos = local.enos_provider[matrix.distro]
-      }
-
-      variables {
-        vault_instances  = step.create_vault_cluster.vault_instances
-        vault_agent_template_destination = "/tmp/agent_output.txt"
-        vault_agent_expected_output = "orphan=true display_name=approle"
-      }
+    variables {
+       vault_instances  = step.create_vault_cluster.vault_instances
+      vault_agent_template_destination = "/tmp/agent_output.txt"
+      vault_agent_expected_output = "orphan=true display_name=approle"
+    }
   }
 
   output "vault_cluster_instance_ids" {
