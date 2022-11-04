@@ -279,6 +279,16 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		resp.AddWarning("Max path length of the generated certificate is zero. This certificate cannot be used to issue intermediate CA certificates.")
 	}
 
+	// Check whether we need to update our default issuer configuration.
+	config, err := sc.getIssuersConfig()
+	if err != nil {
+		resp.AddWarning("Unable to fetch default issuers configuration to update default issuer if necessary: " + err.Error())
+	} else if config.DefaultFollowsLatestIssuer {
+		if err := sc.updateDefaultIssuerId(myIssuer.ID); err != nil {
+			resp.AddWarning("Unable to update this new root as the default issuer: " + err.Error())
+		}
+	}
+
 	resp = addWarnings(resp, warnings)
 
 	return resp, nil
