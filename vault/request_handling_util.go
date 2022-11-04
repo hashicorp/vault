@@ -55,8 +55,8 @@ func getUserFailedLoginInfo(ctx context.Context, c *Core, userInfo FailedLoginUs
 	return failedLoginInfo
 }
 
-func (c *Core) updateUserFailedLoginInfo(ctx context.Context, userInfo FailedLoginUser, failedLoginInfo FailedLoginInfo) error {
-	err := c.UpdateUserFailedLoginInfo(ctx, userInfo, failedLoginInfo)
+func (c *Core) updateUserFailedLoginInfo(ctx context.Context, userInfo FailedLoginUser, failedLoginInfo *FailedLoginInfo, deleteEntry bool) error {
+	err := c.UpdateUserFailedLoginInfo(ctx, userInfo, failedLoginInfo, deleteEntry)
 	if err != nil {
 		return err
 	}
