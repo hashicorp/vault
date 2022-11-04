@@ -41,6 +41,11 @@ func NewVaultLogger(level log.Level) log.Logger {
 // NewVaultLoggerWithWriter creates a new logger with the specified level and
 // writer and a Vault formatter
 func NewVaultLoggerWithWriter(w io.Writer, level log.Level) log.Logger {
+	// If out is os.Stdout and Vault is being run as a Windows Service, writes will
+	// fail silently, which may inadvertently prevent writes to other writers.
+	// noErrorWriter is used as a wrapper to suppress any errors when writing to out.
+	w = noErrorWriter{w: w}
+
 	opts := &log.LoggerOptions{
 		Level:             level,
 		IndependentLevels: true,
@@ -48,6 +53,17 @@ func NewVaultLoggerWithWriter(w io.Writer, level log.Level) log.Logger {
 		JSONFormat:        ParseEnvLogFormat() == JSONFormat,
 	}
 	return log.New(opts)
+}
+
+// noErrorWriter is a wrapper to suppress errors when writing to w.
+type noErrorWriter struct {
+	w io.Writer
+}
+
+func (w noErrorWriter) Write(p []byte) (n int, err error) {
+	_, _ = w.w.Write(p)
+	// We purposely return n == len(p) as if write was successful
+	return len(p), nil
 }
 
 // ParseLogFormat parses the log format from the provided string.
