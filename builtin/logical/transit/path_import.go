@@ -241,7 +241,7 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 			return nil, err
 		}
 	} else {
-		if !polReq.KeyType.SupportsImportPublicKey() {
+		if !polReq.KeyType.ImportPublicKeySupported() {
 			return nil, errors.New("provided type does not support public_key import")
 		}
 		key = []byte(publicKeyString)

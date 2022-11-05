@@ -159,7 +159,7 @@ func (kt KeyType) AssociatedDataSupported() bool {
 	return false
 }
 
-func (kt KeyType) SupportsImportPublicKey() bool {
+func (kt KeyType) ImportPublicKeySupported() bool {
 	switch kt {
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
 		return true
@@ -974,6 +974,10 @@ func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factori
 			return "", err
 		}
 		key := keyEntry.RSAKey
+        if key == nil {
+            // What is the version being used?
+            return "", errutil.InternalError{Err: fmt.Sprintf("cannot decrypt ciphertext, key version %v does not have a private counterpart", p.LatestVersion)}
+        }
 		plain, err = rsa.DecryptOAEP(sha256.New(), rand.Reader, key, decoded, nil)
 		if err != nil {
 			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA decrypt the ciphertext: %v", err)}
@@ -1924,8 +1928,13 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 		if err != nil {
 			return "", err
 		}
-		key := keyEntry.RSAKey
-		ciphertext, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, &key.PublicKey, plaintext, nil)
+		var publicKey *rsa.PublicKey
+		if keyEntry.RSAKey != nil {
+			publicKey = &keyEntry.RSAKey.PublicKey
+		} else {
+			publicKey = keyEntry.RSAPublicKey
+		}
+		ciphertext, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, publicKey, plaintext, nil)
 		if err != nil {
 			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA encrypt the plaintext: %v", err)}
 		}
@@ -1950,7 +1959,7 @@ func (p *Policy) UpdateKeyVersion(ctx context.Context, storage logical.Storage, 
 	}
 
 	// Validations
-	if !p.Type.SupportsImportPublicKey() {
+	if !p.Type.ImportPublicKeySupported() {
 		return errors.New("provided type does not support version updates")
 	}
 
