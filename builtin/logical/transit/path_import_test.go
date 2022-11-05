@@ -389,6 +389,70 @@ func TestTransit_Import(t *testing.T) {
 			}
 		},
 	)
+
+	t.Run(
+		"import public key ed25519",
+		func(t *testing.T) {
+			keyType := "ed25519"
+			keyID, err := uuid.GenerateUUID()
+			if err != nil {
+				t.Fatalf("failed to generate key ID: %s", err)
+			}
+
+			// Get keys
+			privateKey := getKey(t, keyType)
+			publicKeyBytes, err := getPublicKeyBytes(privateKey.(ed25519.PrivateKey).Public())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Import key
+			req := &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/import", keyID),
+				Data: map[string]interface{}{
+					"public_key": publicKeyBytes,
+					"type":       keyType,
+				},
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err == nil {
+				t.Fatalf("invalid public_key import incorrectly succeeeded")
+			}
+		})
+
+	t.Run(
+		"import public key ecdsa",
+		func(t *testing.T) {
+			keyType := "ecdsa-p256"
+			keyID, err := uuid.GenerateUUID()
+			if err != nil {
+				t.Fatalf("failed to generate key ID: %s", err)
+			}
+
+			// Get keys
+			privateKey := getKey(t, keyType)
+			publicKeyBytes, err := getPublicKeyBytes(privateKey.(*ecdsa.PrivateKey).Public())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Import key
+			req := &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/import", keyID),
+				Data: map[string]interface{}{
+					"public_key": publicKeyBytes,
+					"type":       keyType,
+				},
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatalf("failed to import public key: %s", err)
+			}
+		})
 }
 
 func TestTransit_ImportVersion(t *testing.T) {
@@ -552,6 +616,7 @@ func TestTransit_ImportVersion(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			// Import RSA public key
 			req := &logical.Request{
 				Storage:   s,
@@ -564,7 +629,7 @@ func TestTransit_ImportVersion(t *testing.T) {
 			}
 			_, err = b.HandleRequest(context.Background(), req)
 			if err != nil {
-				t.Fatalf("failed to generate a key within transit: %s", err)
+				t.Fatalf("failed to import public key: %s", err)
 			}
 
 			// Update version - import RSA private key
