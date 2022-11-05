@@ -1405,7 +1405,10 @@ func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte
 			}
 		}
 
-		p.parseKeyToKeyEntry(&entry, parsedKey, isPrivateKey)
+		err = p.parseKeyToKeyEntry(&entry, parsedKey, isPrivateKey)
+		if err != nil {
+			return err
+		}
 	}
 
 	p.LatestVersion += 1

@@ -318,7 +318,7 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 		importKey = []byte(publicKeyString)
 	}
 
-	if bumpVersion {
+	if !bumpVersion {
 		err = p.UpdateKeyVersion(ctx, req.Storage, importKey, isCiphertextSet, versionToUpdate)
 	} else {
 		// NOTE: We will call this if are bumping the version else we use the new method (UpdateKeyVersion)

@@ -2,6 +2,7 @@ package transit
 
 import (
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
@@ -534,6 +535,52 @@ func TestTransit_ImportVersion(t *testing.T) {
 			}
 		},
 	)
+
+	t.Run(
+		"import rsa public key and update version with private counterpart",
+		func(t *testing.T) {
+			keyType := "rsa-2048"
+			keyID, err := uuid.GenerateUUID()
+			if err != nil {
+				t.Fatalf("failed to generate key ID: %s", err)
+			}
+
+			// Get keys
+			privateKey := getKey(t, keyType)
+			importBlob := wrapTargetKeyForImport(t, pubWrappingKey, privateKey, keyType, "SHA256")
+			publicKeyBytes, err := getPublicKeyBytes(privateKey.(*rsa.PrivateKey).Public())
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Import RSA public key
+			req := &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/import", keyID),
+				Data: map[string]interface{}{
+					"public_key": publicKeyBytes,
+					"type":       keyType,
+				},
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatalf("failed to generate a key within transit: %s", err)
+			}
+
+			// Update version - import RSA private key
+			req = &logical.Request{
+				Storage:   s,
+				Operation: logical.UpdateOperation,
+				Path:      fmt.Sprintf("keys/%s/import_version", keyID),
+				Data: map[string]interface{}{
+					"ciphertext": importBlob,
+				},
+			}
+			_, err = b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatalf("failed to update key: %s", err)
+			}
+		})
 }
 
 func wrapTargetKeyForImport(t *testing.T, wrappingKey *rsa.PublicKey, targetKey interface{}, targetKeyType string, hashFnName string) string {
@@ -623,4 +670,13 @@ func generateKey(keyType string) (interface{}, error) {
 	default:
 		return nil, fmt.Errorf("failed to generate unsupported key type: %s", keyType)
 	}
+}
+
+func getPublicKeyBytes(publicKey crypto.PublicKey) ([]byte, error) {
+	publicKeyBytes, err := x509.MarshalPKIXPublicKey(publicKey)
+	if err != nil {
+		return []byte(""), fmt.Errorf("failed to marshal public key: %s", err)
+	}
+
+	return publicKeyBytes, nil
 }
