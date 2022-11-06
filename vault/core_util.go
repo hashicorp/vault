@@ -4,7 +4,7 @@ package vault
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -65,7 +65,7 @@ func NewPolicyMFABackend(core *Core, logger hclog.Logger) *PolicyMFABackend { re
 
 func (c *Core) barrierViewForNamespace(namespaceId string) (*BarrierView, error) {
 	if namespaceId != namespace.RootNamespaceID {
-		return nil, fmt.Errorf("failed to find barrier view for non-root namespace")
+		return nil, errors.New("failed to find barrier view for non-root namespace")
 	}
 
 	return c.systemBarrierView, nil

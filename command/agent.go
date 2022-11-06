@@ -51,6 +51,7 @@ import (
 	"github.com/kr/pretty"
 	"github.com/mitchellh/cli"
 	"github.com/oklog/run"
+	"github.com/pkg/errors"
 	"github.com/posener/complete"
 	"google.golang.org/grpc/test/bufconn"
 )
@@ -1113,7 +1114,7 @@ func (c *AgentCommand) handleMetrics() http.Handler {
 			w.WriteHeader(status)
 			w.Write(v)
 		default:
-			logical.RespondError(w, http.StatusInternalServerError, fmt.Errorf("wrong response returned"))
+			logical.RespondError(w, http.StatusInternalServerError, errors.New("wrong response returned"))
 		}
 	})
 }

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-errors/errors"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	pwd "github.com/hashicorp/go-secure-stdlib/password"
 	"github.com/hashicorp/vault/api"
@@ -24,7 +25,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 
 	username, ok := m["username"]
 	if !ok {
-		return nil, fmt.Errorf("'username' var must be set")
+		return nil, errors.New("'username' var must be set")
 	}
 	password, ok := m["password"]
 	if !ok {
@@ -81,7 +82,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		return nil, err
 	}
 	if secret == nil {
-		return nil, fmt.Errorf("empty response from credential provider")
+		return nil, errors.New("empty response from credential provider")
 	}
 
 	return secret, nil

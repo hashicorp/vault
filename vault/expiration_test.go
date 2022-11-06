@@ -2783,7 +2783,7 @@ func badRenewFactory(ctx context.Context, conf *logical.BackendConfig) (logical.
 			{
 				Type: "badRenewBackend",
 				Revoke: func(context.Context, *logical.Request, *framework.FieldData) (*logical.Response, error) {
-					return nil, fmt.Errorf("always errors")
+					return nil, errors.New("always errors")
 				},
 			},
 		},
@@ -3027,7 +3027,7 @@ func TestExpiration_MarkIrrevocable(t *testing.T) {
 		t.Fatalf("lease not included in pending map")
 	}
 
-	irrevocableErr := fmt.Errorf("test irrevocable error")
+	irrevocableErr := errors.New("test irrevocable error")
 
 	exp.pendingLock.Lock()
 	exp.markLeaseIrrevocable(ctx, loadedLE, irrevocableErr)
@@ -3109,7 +3109,7 @@ func TestExpiration_FetchLeaseTimesIrrevocable(t *testing.T) {
 		t.Fatalf("error loading lease: %v", err)
 	}
 	exp.pendingLock.Lock()
-	exp.markLeaseIrrevocable(ctx, le, fmt.Errorf("test irrevocable error"))
+	exp.markLeaseIrrevocable(ctx, le, errors.New("test irrevocable error"))
 	exp.pendingLock.Unlock()
 
 	irrevocableLeaseTimes, err := exp.FetchLeaseTimes(ctx, leaseID)
@@ -3148,7 +3148,7 @@ func TestExpiration_StopClearsIrrevocableCache(t *testing.T) {
 	}
 
 	exp.pendingLock.Lock()
-	exp.markLeaseIrrevocable(ctx, le, fmt.Errorf("test irrevocable error"))
+	exp.markLeaseIrrevocable(ctx, le, errors.New("test irrevocable error"))
 	exp.pendingLock.Unlock()
 
 	err = c.stopExpiration()
@@ -3199,7 +3199,7 @@ func TestExpiration_errorIsUnrecoverable(t *testing.T) {
 			isUnrecoverable: false,
 		},
 		{
-			err:             fmt.Errorf("some other error"),
+			err:             errors.New("some other error"),
 			isUnrecoverable: false,
 		},
 	}
@@ -3253,7 +3253,7 @@ func TestExpiration_unrecoverableErrorMakesIrrevocable(t *testing.T) {
 			shouldBeIrrevocable: false,
 		},
 		{
-			err:                 fmt.Errorf("some random recoverable error"),
+			err:                 errors.New("some random recoverable error"),
 			job:                 makeJob(),
 			shouldBeIrrevocable: false,
 		},

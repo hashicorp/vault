@@ -636,7 +636,7 @@ func ParseConfig(d, source string) (*Config, error) {
 
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
-		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
+		return nil, errors.New("error parsing: file doesn't contain a root object")
 	}
 
 	// Look for storage but still support old backend

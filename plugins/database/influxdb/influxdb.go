@@ -2,6 +2,7 @@ package influxdb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -207,7 +208,7 @@ func (i *Influxdb) DeleteUser(ctx context.Context, req dbplugin.DeleteUserReques
 
 func (i *Influxdb) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) (dbplugin.UpdateUserResponse, error) {
 	if req.Password == nil && req.Expiration == nil {
-		return dbplugin.UpdateUserResponse{}, fmt.Errorf("no changes requested")
+		return dbplugin.UpdateUserResponse{}, errors.New("no changes requested")
 	}
 
 	i.Lock()

@@ -3,6 +3,7 @@ package postgresql
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -123,10 +124,10 @@ func (p *PostgreSQL) getConnection(ctx context.Context) (*sql.DB, error) {
 
 func (p *PostgreSQL) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) (dbplugin.UpdateUserResponse, error) {
 	if req.Username == "" {
-		return dbplugin.UpdateUserResponse{}, fmt.Errorf("missing username")
+		return dbplugin.UpdateUserResponse{}, errors.New("missing username")
 	}
 	if req.Password == nil && req.Expiration == nil {
-		return dbplugin.UpdateUserResponse{}, fmt.Errorf("no changes requested")
+		return dbplugin.UpdateUserResponse{}, errors.New("no changes requested")
 	}
 
 	merr := &multierror.Error{}
@@ -149,7 +150,7 @@ func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, ch
 
 	password := changePass.NewPassword
 	if password == "" {
-		return fmt.Errorf("missing password")
+		return errors.New("missing password")
 	}
 
 	p.Lock()

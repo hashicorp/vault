@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -82,7 +83,7 @@ func NewZooKeeperBackend(conf map[string]string, logger log.Logger) (physical.Ba
 	} else {
 		parsedSchemaAndOwner := strings.SplitN(schemaAndOwner, ":", 2)
 		if len(parsedSchemaAndOwner) != 2 {
-			return nil, fmt.Errorf("znode_owner expected format is 'schema:owner'")
+			return nil, errors.New("znode_owner expected format is 'schema:owner'")
 		} else {
 			schema = parsedSchemaAndOwner[0]
 			owner = parsedSchemaAndOwner[1]
@@ -91,7 +92,7 @@ func NewZooKeeperBackend(conf map[string]string, logger log.Logger) (physical.Ba
 			// Either 'owner' or 'schema' was set but not both - this seems like a failed attempt
 			// (e.g. ':MyUser' which omit the schema, or ':' omitting both)
 			if owner == "" || schema == "" {
-				return nil, fmt.Errorf("znode_owner expected format is 'schema:auth'")
+				return nil, errors.New("znode_owner expected format is 'schema:auth'")
 			}
 		}
 	}
@@ -111,7 +112,7 @@ func NewZooKeeperBackend(conf map[string]string, logger log.Logger) (physical.Ba
 	if useAddAuth {
 		parsedSchemaAndUser := strings.SplitN(schemaAndUser, ":", 2)
 		if len(parsedSchemaAndUser) != 2 {
-			return nil, fmt.Errorf("auth_info expected format is 'schema:auth'")
+			return nil, errors.New("auth_info expected format is 'schema:auth'")
 		} else {
 			schema = parsedSchemaAndUser[0]
 			owner = parsedSchemaAndUser[1]
@@ -120,7 +121,7 @@ func NewZooKeeperBackend(conf map[string]string, logger log.Logger) (physical.Ba
 			// Either 'owner' or 'schema' was set but not both - this seems like a failed attempt
 			// (e.g. ':MyUser' which omit the schema, or ':' omitting both)
 			if owner == "" || schema == "" {
-				return nil, fmt.Errorf("auth_info expected format is 'schema:auth'")
+				return nil, errors.New("auth_info expected format is 'schema:auth'")
 			}
 		}
 	}
@@ -254,7 +255,7 @@ func customTLSDial(conf map[string]string, machines string) zk.Dialer {
 
 		tlsMinVersion, ok := tlsutil.TLSLookup[tlsMinVersionStr]
 		if !ok {
-			return nil, fmt.Errorf("invalid 'tls_min_version'")
+			return nil, errors.New("invalid 'tls_min_version'")
 		}
 
 		tlsClientConfig := &tls.Config{
@@ -284,7 +285,7 @@ func customTLSDial(conf map[string]string, machines string) zk.Dialer {
 			}
 
 			if !caPool.AppendCertsFromPEM(data) {
-				return nil, fmt.Errorf("failed to parse ZK CA certificate")
+				return nil, errors.New("failed to parse ZK CA certificate")
 			}
 			tlsClientConfig.RootCAs = caPool
 		}
@@ -516,7 +517,7 @@ func (i *ZooKeeperHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) 
 	i.localLock.Lock()
 	defer i.localLock.Unlock()
 	if i.held {
-		return nil, fmt.Errorf("lock already held")
+		return nil, errors.New("lock already held")
 	}
 
 	// Attempt an async acquisition
@@ -547,7 +548,7 @@ func (i *ZooKeeperHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) 
 		return nil, fmt.Errorf("unable to watch HA lock: %w", err)
 	}
 	if i.value != string(currentVal) {
-		return nil, fmt.Errorf("lost HA lock immediately before watch")
+		return nil, errors.New("lost HA lock immediately before watch")
 	}
 	go i.monitorLock(lockeventCh, i.leaderCh)
 

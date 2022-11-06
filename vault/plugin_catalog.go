@@ -221,7 +221,7 @@ func (p *pluginClient) Reload() error {
 func (c *PluginCatalog) reloadExternalPlugin(key externalPluginsKey, id, path string) error {
 	extPlugin, ok := c.externalPlugins[key]
 	if !ok {
-		return fmt.Errorf("plugin client not found")
+		return errors.New("plugin client not found")
 	}
 	if !extPlugin.multiplexingSupport {
 		err := c.cleanupExternalPlugin(key, id, path)
@@ -257,7 +257,7 @@ func (p *pluginClient) Close() error {
 func (c *PluginCatalog) cleanupExternalPlugin(key externalPluginsKey, id, path string) error {
 	extPlugin, ok := c.externalPlugins[key]
 	if !ok {
-		return fmt.Errorf("plugin client not found")
+		return errors.New("plugin client not found")
 	}
 
 	pc, ok := extPlugin.connections[id]
@@ -315,10 +315,10 @@ func (c *PluginCatalog) NewPluginClient(ctx context.Context, config pluginutil.P
 	defer c.lock.Unlock()
 
 	if config.Name == "" {
-		return nil, fmt.Errorf("no name provided for plugin")
+		return nil, errors.New("no name provided for plugin")
 	}
 	if config.PluginType == consts.PluginTypeUnknown {
-		return nil, fmt.Errorf("no plugin type provided")
+		return nil, errors.New("no plugin type provided")
 	}
 
 	pluginRunner, err := c.get(ctx, config.Name, config.PluginType, config.Version)
@@ -326,7 +326,7 @@ func (c *PluginCatalog) NewPluginClient(ctx context.Context, config pluginutil.P
 		return nil, fmt.Errorf("failed to lookup plugin: %w", err)
 	}
 	if pluginRunner == nil {
-		return nil, fmt.Errorf("no plugin found")
+		return nil, errors.New("no plugin found")
 	}
 	pc, err := c.newPluginClient(ctx, pluginRunner, config)
 	return pc, err
@@ -336,7 +336,7 @@ func (c *PluginCatalog) NewPluginClient(ctx context.Context, config pluginutil.P
 // process. Callers should have the write lock held.
 func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (*pluginClient, error) {
 	if pluginRunner == nil {
-		return nil, fmt.Errorf("no plugin found")
+		return nil, errors.New("no plugin found")
 	}
 
 	key, err := makeExternalPluginsKey(pluginRunner)
@@ -393,7 +393,7 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 		}
 
 		if pc.client == nil {
-			return nil, fmt.Errorf("plugin client is nil")
+			return nil, errors.New("plugin client is nil")
 		}
 	}
 

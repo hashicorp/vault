@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/mitchellh/cli"
+	"github.com/pkg/errors"
 )
 
 func testOperatorDiagnoseCommand(tb testing.TB) *OperatorDiagnoseCommand {
@@ -542,7 +543,7 @@ func compareResult(exp *diagnose.Result, act *diagnose.Result) error {
 		for _, c := range act.Children {
 			errStrings = append(errStrings, fmt.Sprintf("%+v", c))
 		}
-		return fmt.Errorf(strings.Join(errStrings, ","))
+		return errors.New(strings.Join(errStrings, ","))
 	}
 
 	if len(exp.Children) > 0 {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/hmac"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -133,7 +134,7 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 	if key == nil {
 		p.Unlock()
-		return nil, fmt.Errorf("HMAC key value could not be computed")
+		return nil, errors.New("HMAC key value could not be computed")
 	}
 
 	hashAlgorithm, ok := keysutil.HashTypeMap[algorithm]
@@ -347,7 +348,7 @@ func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *f
 		}
 		if key == nil {
 			response[i].Error = ""
-			response[i].err = fmt.Errorf("HMAC key value could not be computed")
+			response[i].err = errors.New("HMAC key value could not be computed")
 			continue
 		}
 

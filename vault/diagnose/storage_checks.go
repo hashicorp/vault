@@ -2,6 +2,7 @@ package diagnose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -42,7 +43,7 @@ func EndToEndLatencyCheckRead(ctx context.Context, uuid string, b physical.Backe
 		return time.Duration(0), err
 	}
 	if val == nil {
-		return time.Duration(0), fmt.Errorf("No value found when reading generated data.")
+		return time.Duration(0), errors.New("No value found when reading generated data.")
 	}
 	if val.Key != uuid && string(val.Value) != secretVal {
 		return time.Duration(0), fmt.Errorf(wrongRWValsPrefix+"expecting %s as key and diagnose for value, but got %s, %s.", uuid, val.Key, val.Value)

@@ -327,7 +327,7 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 			return nil, errwrap.Wrapf("failed to parse client X509 key pair: {{err}}", err)
 		}
 	} else if cfg.ClientTLSCert != "" || cfg.ClientTLSKey != "" {
-		return nil, fmt.Errorf("both client_tls_cert and client_tls_key must be set")
+		return nil, errors.New("both client_tls_cert and client_tls_key must be set")
 	}
 
 	if _, ok := d.Raw["insecure_tls"]; ok || !hadExisting {
@@ -346,11 +346,11 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 		cfg.TLSMaxVersion = d.Get("tls_max_version").(string)
 		_, ok = tlsutil.TLSLookup[cfg.TLSMaxVersion]
 		if !ok {
-			return nil, fmt.Errorf("invalid 'tls_max_version'")
+			return nil, errors.New("invalid 'tls_max_version'")
 		}
 	}
 	if cfg.TLSMaxVersion < cfg.TLSMinVersion {
-		return nil, fmt.Errorf("'tls_max_version' must be greater than or equal to 'tls_min_version'")
+		return nil, errors.New("'tls_max_version' must be greater than or equal to 'tls_min_version'")
 	}
 
 	if _, ok := d.Raw["starttls"]; ok || !hadExisting {

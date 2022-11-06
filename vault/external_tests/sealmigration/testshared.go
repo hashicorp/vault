@@ -3,6 +3,7 @@ package sealmigration
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -468,7 +469,7 @@ func attemptUnsealMigrate(client *api.Client, keys [][]byte, transitServerAvaila
 			} else {
 				// The transit server is stopped.
 				if err == nil {
-					return fmt.Errorf("expected error due to transit server being stopped.")
+					return errors.New("expected error due to transit server being stopped.")
 				}
 			}
 			break

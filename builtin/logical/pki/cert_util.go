@@ -186,7 +186,7 @@ func fetchCertBySerial(ctx context.Context, b *backend, req *logical.Request, pr
 
 		if serial == deltaCRLPath {
 			if sc.Backend.useLegacyBundleCaStorage() {
-				return nil, fmt.Errorf("refusing to serve delta CRL with legacy CA bundle")
+				return nil, errors.New("refusing to serve delta CRL with legacy CA bundle")
 			}
 
 			path += deltaCRLPathSuffix
@@ -964,7 +964,7 @@ func (oraw *otherNameRaw) extractUTF8String() (*otherNameUtf8, error) {
 	if read && outTag == asn1.TagUTF8String {
 		return &otherNameUtf8{oid: oraw.TypeID.String(), value: string(val)}, nil
 	}
-	return nil, fmt.Errorf("no UTF-8 string found in OtherName")
+	return nil, errors.New("no UTF-8 string found in OtherName")
 }
 
 func (o otherNameUtf8) String() string {
@@ -1024,7 +1024,7 @@ func forEachSAN(extension []byte, callback func(tag int, data []byte) error) err
 	if err != nil {
 		return err
 	} else if len(rest) != 0 {
-		return fmt.Errorf("x509: trailing data after X.509 extension")
+		return errors.New("x509: trailing data after X.509 extension")
 	}
 	if !seq.IsCompound || seq.Tag != 16 || seq.Class != 0 {
 		return asn1.StructuralError{Msg: "bad SAN sequence"}
@@ -1450,7 +1450,7 @@ func convertRespToPKCS8(resp *logical.Response) error {
 	}
 	priv, ok := privRaw.(string)
 	if !ok {
-		return fmt.Errorf("error converting response to pkcs8: could not parse original value as string")
+		return errors.New("error converting response to pkcs8: could not parse original value as string")
 	}
 
 	privKeyTypeRaw, ok := resp.Data["private_key_type"]
@@ -1459,7 +1459,7 @@ func convertRespToPKCS8(resp *logical.Response) error {
 	}
 	privKeyType, ok := privKeyTypeRaw.(certutil.PrivateKeyType)
 	if !ok {
-		return fmt.Errorf("error converting response to pkcs8: could not parse original type value as string")
+		return errors.New("error converting response to pkcs8: could not parse original type value as string")
 	}
 
 	var keyData []byte

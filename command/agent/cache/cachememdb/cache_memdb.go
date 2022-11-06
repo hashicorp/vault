@@ -195,7 +195,7 @@ func (c *CacheMemDB) GetByPrefix(indexName string, indexValues ...interface{}) (
 		}
 		index, ok := obj.(*Index)
 		if !ok {
-			return nil, fmt.Errorf("failed to cast cached index")
+			return nil, errors.New("failed to cast cached index")
 		}
 
 		indexes = append(indexes, index)

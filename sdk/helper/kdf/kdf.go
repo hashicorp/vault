@@ -8,6 +8,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
 )
@@ -24,12 +25,12 @@ type PRF func([]byte, []byte) ([]byte, error)
 func CounterMode(prf PRF, prfLen uint32, key []byte, context []byte, bits uint32) ([]byte, error) {
 	// Ensure the PRF is byte aligned
 	if prfLen%8 != 0 {
-		return nil, fmt.Errorf("PRF must be byte aligned")
+		return nil, errors.New("PRF must be byte aligned")
 	}
 
 	// Ensure the bits required are byte aligned
 	if bits%8 != 0 {
-		return nil, fmt.Errorf("bits required must be byte aligned")
+		return nil, errors.New("bits required must be byte aligned")
 	}
 
 	// Determine the number of rounds required

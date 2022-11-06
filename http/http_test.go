@@ -3,6 +3,7 @@ package http
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -88,7 +89,7 @@ func testHttpData(t *testing.T, method string, token string, addr string, body i
 
 	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 		if disableRedirect {
-			return fmt.Errorf("checkRedirect disabled for test")
+			return errors.New("checkRedirect disabled for test")
 		}
 		if len(via) > defaultRedirectLimit {
 			return fmt.Errorf("%d consecutive requests(redirects)", len(via))

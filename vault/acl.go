@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -93,17 +94,17 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 			a.rgpPolicies = append(a.rgpPolicies, policy)
 			continue
 		default:
-			return nil, fmt.Errorf("unable to parse policy (wrong type)")
+			return nil, errors.New("unable to parse policy (wrong type)")
 		}
 
 		// Check if this is root
 		if policy.Name == "root" {
 			if ns.ID != namespace.RootNamespaceID {
-				return nil, fmt.Errorf("root policy is only allowed in root namespace")
+				return nil, errors.New("root policy is only allowed in root namespace")
 			}
 
 			if len(policies) != 1 {
-				return nil, fmt.Errorf("other policies present along with root")
+				return nil, errors.New("other policies present along with root")
 			}
 			a.root = true
 		}

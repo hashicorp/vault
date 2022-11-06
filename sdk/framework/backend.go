@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -328,7 +329,7 @@ func HandlePatchOperation(input *FieldData, resource map[string]interface{}, pre
 	var err error
 
 	if resource == nil {
-		return nil, fmt.Errorf("resource does not exist")
+		return nil, errors.New("resource does not exist")
 	}
 
 	inputMap := map[string]interface{}{}
@@ -562,21 +563,21 @@ func (b *Backend) handleRevokeRenew(ctx context.Context, req *logical.Request) (
 	}
 
 	if req.Secret == nil {
-		return nil, fmt.Errorf("request has no secret")
+		return nil, errors.New("request has no secret")
 	}
 
 	rawSecretType, ok := req.Secret.InternalData["secret_type"]
 	if !ok {
-		return nil, fmt.Errorf("secret is unsupported by this backend")
+		return nil, errors.New("secret is unsupported by this backend")
 	}
 	secretType, ok := rawSecretType.(string)
 	if !ok {
-		return nil, fmt.Errorf("secret is unsupported by this backend")
+		return nil, errors.New("secret is unsupported by this backend")
 	}
 
 	secret := b.Secret(secretType)
 	if secret == nil {
-		return nil, fmt.Errorf("secret is unsupported by this backend")
+		return nil, errors.New("secret is unsupported by this backend")
 	}
 
 	switch req.Operation {

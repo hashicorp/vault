@@ -3,6 +3,7 @@ package postgresql
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -41,11 +42,11 @@ func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d 
 	// Get the username from the internal data
 	usernameRaw, ok := req.Secret.InternalData["username"]
 	if !ok {
-		return nil, fmt.Errorf("secret is missing username internal data")
+		return nil, errors.New("secret is missing username internal data")
 	}
 	username, ok := usernameRaw.(string)
 	if !ok {
-		return nil, fmt.Errorf("usernameRaw is not a string")
+		return nil, errors.New("usernameRaw is not a string")
 	}
 	// Get our connection
 	db, err := b.DB(ctx, req.Storage)
@@ -98,11 +99,11 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	// Get the username from the internal data
 	usernameRaw, ok := req.Secret.InternalData["username"]
 	if !ok {
-		return nil, fmt.Errorf("secret is missing username internal data")
+		return nil, errors.New("secret is missing username internal data")
 	}
 	username, ok := usernameRaw.(string)
 	if !ok {
-		return nil, fmt.Errorf("usernameRaw is not a string")
+		return nil, errors.New("usernameRaw is not a string")
 	}
 	var revocationSQL string
 	var resp *logical.Response

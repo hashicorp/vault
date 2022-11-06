@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -99,12 +100,12 @@ func getSudoPathsFromSpec(client *api.Client) (map[string]struct{}, error) {
 
 	paths, ok := oasInfo["paths"]
 	if !ok {
-		return nil, fmt.Errorf("OpenAPI response did not include paths")
+		return nil, errors.New("OpenAPI response did not include paths")
 	}
 
 	pathsMap, ok := paths.(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("OpenAPI response did not return valid paths")
+		return nil, errors.New("OpenAPI response did not return valid paths")
 	}
 
 	sudoPaths := make(map[string]struct{})

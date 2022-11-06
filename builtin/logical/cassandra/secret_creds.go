@@ -2,6 +2,7 @@ package cassandra
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -35,11 +36,11 @@ func (b *backend) secretCredsRenew(ctx context.Context, req *logical.Request, d 
 	// Get the lease information
 	roleRaw, ok := req.Secret.InternalData["role"]
 	if !ok {
-		return nil, fmt.Errorf("secret is missing role internal data")
+		return nil, errors.New("secret is missing role internal data")
 	}
 	roleName, ok := roleRaw.(string)
 	if !ok {
-		return nil, fmt.Errorf("error converting role internal data to string")
+		return nil, errors.New("error converting role internal data to string")
 	}
 
 	role, err := getRole(ctx, req.Storage, roleName)
@@ -56,16 +57,16 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	// Get the username from the internal data
 	usernameRaw, ok := req.Secret.InternalData["username"]
 	if !ok {
-		return nil, fmt.Errorf("secret is missing username internal data")
+		return nil, errors.New("secret is missing username internal data")
 	}
 	username, ok := usernameRaw.(string)
 	if !ok {
-		return nil, fmt.Errorf("error converting username internal data to string")
+		return nil, errors.New("error converting username internal data to string")
 	}
 
 	session, err := b.DB(ctx, req.Storage)
 	if err != nil {
-		return nil, fmt.Errorf("error getting session")
+		return nil, errors.New("error getting session")
 	}
 
 	err = session.Query(fmt.Sprintf("DROP USER '%s'", username)).Exec()

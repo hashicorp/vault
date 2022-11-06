@@ -495,7 +495,7 @@ func (b *AESGCMBarrier) Unseal(ctx context.Context, key []byte) error {
 	// Unmarshal the barrier init
 	var init barrierInit
 	if err := jsonutil.DecodeJSON(plain, &init); err != nil {
-		return fmt.Errorf("failed to unmarshal barrier init file")
+		return errors.New("failed to unmarshal barrier init file")
 	}
 
 	// Setup a new keyring, this is for backwards compatibility
@@ -951,7 +951,7 @@ func (b *AESGCMBarrier) aeadFromKey(key []byte) (cipher.AEAD, error) {
 	// Create the GCM mode AEAD
 	gcm, err := cipher.NewGCM(aesCipher)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize GCM mode")
+		return nil, errors.New("failed to initialize GCM mode")
 	}
 	return gcm, nil
 }
@@ -1015,7 +1015,7 @@ func termLabel(term uint32) []metrics.Label {
 // decrypt is used to decrypt a value using the keyring
 func (b *AESGCMBarrier) decrypt(path string, gcm cipher.AEAD, cipher []byte) ([]byte, error) {
 	if len(cipher) < 5+gcm.NonceSize() {
-		return nil, fmt.Errorf("invalid cipher length")
+		return nil, errors.New("invalid cipher length")
 	}
 	// Capture the parts
 	nonce := cipher[5 : 5+gcm.NonceSize()]
@@ -1033,7 +1033,7 @@ func (b *AESGCMBarrier) decrypt(path string, gcm cipher.AEAD, cipher []byte) ([]
 		}
 		return gcm.Open(out, nonce, raw, aad)
 	default:
-		return nil, fmt.Errorf("version bytes mis-match")
+		return nil, errors.New("version bytes mis-match")
 	}
 }
 
@@ -1069,12 +1069,12 @@ func (b *AESGCMBarrier) Decrypt(_ context.Context, key string, ciphertext []byte
 	}
 
 	if len(ciphertext) == 0 {
-		return nil, fmt.Errorf("empty ciphertext")
+		return nil, errors.New("empty ciphertext")
 	}
 
 	// Verify the term
 	if len(ciphertext) < 4 {
-		return nil, fmt.Errorf("invalid ciphertext term")
+		return nil, errors.New("invalid ciphertext term")
 	}
 	term := binary.BigEndian.Uint32(ciphertext[:4])
 

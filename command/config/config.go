@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -81,7 +82,7 @@ func ParseConfig(contents string) (*DefaultConfig, error) {
 	// Top-level item should be the object list
 	list, ok := root.Node.(*ast.ObjectList)
 	if !ok {
-		return nil, fmt.Errorf("failed to parse config; does not contain a root object")
+		return nil, errors.New("failed to parse config; does not contain a root object")
 	}
 
 	valid := []string{

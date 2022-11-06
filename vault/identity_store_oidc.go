@@ -1051,7 +1051,7 @@ func (k *namedKey) generateAndSetNextKey(ctx context.Context, logger hclog.Logge
 
 func (k *namedKey) signPayload(payload []byte) (string, error) {
 	if k.SigningKey == nil {
-		return "", fmt.Errorf("signing key is nil; rotate the key and try again")
+		return "", errors.New("signing key is nil; rotate the key and try again")
 	}
 	signingKey := jose.SigningKey{Key: k.SigningKey, Algorithm: jose.SignatureAlgorithm(k.Algorithm)}
 	signer, err := jose.NewSigner(signingKey, &jose.SignerOptions{})

@@ -684,7 +684,7 @@ func (c *Core) raftReadTLSKeyring(ctx context.Context) (*raft.TLSKeyring, error)
 // error.
 func (c *Core) raftCreateTLSKeyring(ctx context.Context) (*raft.TLSKeyring, error) {
 	if raftBackend := c.getRaftBackend(); raftBackend == nil {
-		return nil, fmt.Errorf("raft backend not in use")
+		return nil, errors.New("raft backend not in use")
 	}
 
 	// Check if the keyring is already present
@@ -694,7 +694,7 @@ func (c *Core) raftCreateTLSKeyring(ctx context.Context) (*raft.TLSKeyring, erro
 	}
 
 	if raftTLSEntry != nil {
-		return nil, fmt.Errorf("TLS keyring already present")
+		return nil, errors.New("TLS keyring already present")
 	}
 
 	raftTLS, err := raft.GenerateTLSKey(c.secureRandomReader)
@@ -1148,7 +1148,7 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 				}
 			} else {
 				// Return an error so we can retry_join
-				err = fmt.Errorf("failed to get raft challenge")
+				err = errors.New("failed to get raft challenge")
 			}
 		}
 		return err

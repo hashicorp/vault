@@ -1,6 +1,7 @@
 package osutil
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -40,7 +41,7 @@ func FilePermissionsMatch(info fs.FileInfo, path string, permissions int) error 
 // OwnerPermissionsMatch checks if vault user is the owner and permissions are secure for input path
 func OwnerPermissionsMatch(path string, uid int, permissions int) error {
 	if path == "" {
-		return fmt.Errorf("could not verify permissions for path. No path provided ")
+		return errors.New("could not verify permissions for path. No path provided ")
 	}
 
 	info, err := os.Stat(path)

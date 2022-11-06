@@ -2,7 +2,7 @@ package pluginutil
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"reflect"
 	"testing"
 
@@ -93,17 +93,17 @@ func TestGetMultiplexIDFromContext(t *testing.T) {
 		"missing plugin multiplexing metadata": {
 			ctx:          context.Background(),
 			expectedResp: "",
-			expectedErr:  fmt.Errorf("missing plugin multiplexing metadata"),
+			expectedErr:  errors.New("missing plugin multiplexing metadata"),
 		},
 		"unexpected number of IDs in metadata": {
 			ctx:          idCtx(t, "12345", "67891"),
 			expectedResp: "",
-			expectedErr:  fmt.Errorf("unexpected number of IDs in metadata: (2)"),
+			expectedErr:  errors.New("unexpected number of IDs in metadata: (2)"),
 		},
 		"empty multiplex ID in metadata": {
 			ctx:          idCtx(t, ""),
 			expectedResp: "",
-			expectedErr:  fmt.Errorf("empty multiplex ID in metadata"),
+			expectedErr:  errors.New("empty multiplex ID in metadata"),
 		},
 		"happy path, id is returned from metadata": {
 			ctx:          idCtx(t, "12345"),

@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -38,7 +39,7 @@ func newPasswordGenerator(config map[string]interface{}) (passwordGenerator, err
 // Returns the generated password or an error.
 func (pg passwordGenerator) generate(ctx context.Context, b *databaseBackend, wrapper databaseVersionWrapper) (string, error) {
 	if !wrapper.isV5() && !wrapper.isV4() {
-		return "", fmt.Errorf("no underlying database specified")
+		return "", errors.New("no underlying database specified")
 	}
 
 	// The database plugin generates the password if its interface is v4

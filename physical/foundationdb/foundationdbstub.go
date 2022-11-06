@@ -3,7 +3,7 @@
 package foundationdb
 
 import (
-	"fmt"
+	"errors"
 
 	log "github.com/hashicorp/go-hclog"
 
@@ -11,5 +11,5 @@ import (
 )
 
 func NewFDBBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
-	return nil, fmt.Errorf("FoundationDB backend not available in this Vault build")
+	return nil, errors.New("FoundationDB backend not available in this Vault build")
 }

@@ -2,6 +2,7 @@ package roottoken
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/helper/xor"
@@ -11,9 +12,9 @@ import (
 // The OTP must have the same length as the token.
 func EncodeToken(token, otp string) (string, error) {
 	if len(token) == 0 {
-		return "", fmt.Errorf("no token provided")
+		return "", errors.New("no token provided")
 	} else if len(otp) == 0 {
-		return "", fmt.Errorf("no otp provided")
+		return "", errors.New("no otp provided")
 	}
 
 	// This function performs decoding checks so rather than decode the OTP,

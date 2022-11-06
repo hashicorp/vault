@@ -361,7 +361,7 @@ func (p *ParsedCertBundle) Verify() error {
 			return errwrap.Wrapf("could not compare public and private keys: {{err}}", err)
 		}
 		if !equal {
-			return fmt.Errorf("public key of certificate does not match private key")
+			return errors.New("public key of certificate does not match private key")
 		}
 	}
 
@@ -647,7 +647,7 @@ func (p *ParsedCertBundle) GetTLSConfig(usage TLSUsage) (*tls.Config, error) {
 		caPool := x509.NewCertPool()
 		ok := caPool.AppendCertsFromPEM([]byte(certBundle.CAChain[0]))
 		if !ok {
-			return nil, fmt.Errorf("could not append CA certificate")
+			return nil, errors.New("could not append CA certificate")
 		}
 
 		if usage&TLSServer > 0 {

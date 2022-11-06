@@ -505,7 +505,7 @@ func (p *Policy) handleArchiving(ctx context.Context, storage logical.Storage) e
 	case p.LatestVersion < 1:
 		return fmt.Errorf("latest version of %d is less than 1", p.LatestVersion)
 	case !keysContainsMinimum && p.ArchiveVersion != p.LatestVersion:
-		return fmt.Errorf("need to move keys from archive but archive version not up-to-date")
+		return errors.New("need to move keys from archive but archive version not up-to-date")
 	case p.ArchiveVersion > p.LatestVersion:
 		return fmt.Errorf("archive version of %d is greater than the latest version %d",
 			p.ArchiveVersion, p.LatestVersion)
@@ -973,7 +973,7 @@ func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factori
 func (p *Policy) HMACKey(version int) ([]byte, error) {
 	switch {
 	case version < 0:
-		return nil, fmt.Errorf("key version does not exist (cannot be negative)")
+		return nil, errors.New("key version does not exist (cannot be negative)")
 	case version > p.LatestVersion:
 		return nil, fmt.Errorf("key version does not exist; latest key version is %d", p.LatestVersion)
 	}
@@ -986,7 +986,7 @@ func (p *Policy) HMACKey(version int) ([]byte, error) {
 		return keyEntry.Key, nil
 	}
 	if keyEntry.HMACKey == nil {
-		return nil, fmt.Errorf("no HMAC key exists for that key version")
+		return nil, errors.New("no HMAC key exists for that key version")
 	}
 	return keyEntry.HMACKey, nil
 }
@@ -1411,7 +1411,7 @@ func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte
 			}
 			pemBytes := pem.EncodeToMemory(pemBlock)
 			if pemBytes == nil || len(pemBytes) == 0 {
-				return fmt.Errorf("error PEM-encoding public key")
+				return errors.New("error PEM-encoding public key")
 			}
 			entry.FormattedPublicKey = string(pemBytes)
 		case ed25519.PrivateKey:
@@ -1559,7 +1559,7 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 		}
 		pemBytes := pem.EncodeToMemory(pemBlock)
 		if pemBytes == nil || len(pemBytes) == 0 {
-			return fmt.Errorf("error PEM-encoding public key")
+			return errors.New("error PEM-encoding public key")
 		}
 		entry.FormattedPublicKey = string(pemBytes)
 
@@ -1627,11 +1627,11 @@ func (p *Policy) MigrateKeyToKeysMap() {
 // Backup should be called with an exclusive lock held on the policy
 func (p *Policy) Backup(ctx context.Context, storage logical.Storage) (out string, retErr error) {
 	if !p.Exportable {
-		return "", fmt.Errorf("exporting is disallowed on the policy")
+		return "", errors.New("exporting is disallowed on the policy")
 	}
 
 	if !p.AllowPlaintextBackup {
-		return "", fmt.Errorf("plaintext backup is disallowed on the policy")
+		return "", errors.New("plaintext backup is disallowed on the policy")
 	}
 
 	priorBackupInfo := p.BackupInfo

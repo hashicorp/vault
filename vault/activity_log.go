@@ -2555,7 +2555,7 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 	// For capacity reasons only allow a single in-process export at a time.
 	// TODO do we really need to do this?
 	if !a.inprocessExport.CAS(false, true) {
-		return fmt.Errorf("existing export in progress")
+		return errors.New("existing export in progress")
 	}
 	defer a.inprocessExport.Store(false)
 
@@ -2582,7 +2582,7 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 	}
 	if len(filteredList) == 0 {
 		a.logger.Info("no data to export", "start_time", startTime, "end_time", endTime)
-		return fmt.Errorf("no data to export in provided time range")
+		return errors.New("no data to export in provided time range")
 	}
 
 	actualStartTime := filteredList[len(filteredList)-1]

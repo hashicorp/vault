@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
-	"fmt"
+	"errors"
 
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -144,7 +144,7 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 	}
 
 	if ciphertext == "" {
-		return nil, fmt.Errorf("empty ciphertext returned")
+		return nil, errors.New("empty ciphertext returned")
 	}
 
 	keyVersion := ver

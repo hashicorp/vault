@@ -10,6 +10,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -419,7 +420,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 			Transport: transport,
 			CheckRedirect: func(*http.Request, []*http.Request) error {
 				// This can of course be overridden per-test by using its own client
-				return fmt.Errorf("redirects not allowed in these tests")
+				return errors.New("redirects not allowed in these tests")
 			},
 		}
 		config := api.DefaultConfig()
@@ -554,7 +555,7 @@ path "kv/ext/{{identity.entity.aliases.%s.metadata.2-1-1-1}}" {
 			Transport: transport,
 			CheckRedirect: func(*http.Request, []*http.Request) error {
 				// This can of course be overridden per-test by using its own client
-				return fmt.Errorf("redirects not allowed in these tests")
+				return errors.New("redirects not allowed in these tests")
 			},
 		}
 		config := api.DefaultConfig()
@@ -1843,13 +1844,13 @@ func testAccStepListCerts(
 			Path:      "certs",
 			Check: func(resp *logical.Response) error {
 				if resp == nil {
-					return fmt.Errorf("nil response")
+					return errors.New("nil response")
 				}
 				if resp.Data == nil {
-					return fmt.Errorf("nil data")
+					return errors.New("nil data")
 				}
 				if resp.Data["keys"] == interface{}(nil) {
-					return fmt.Errorf("nil keys")
+					return errors.New("nil keys")
 				}
 				keys := resp.Data["keys"].([]string)
 				if !reflect.DeepEqual(keys, certs) {
@@ -1862,13 +1863,13 @@ func testAccStepListCerts(
 			Path:      "certs/",
 			Check: func(resp *logical.Response) error {
 				if resp == nil {
-					return fmt.Errorf("nil response")
+					return errors.New("nil response")
 				}
 				if resp.Data == nil {
-					return fmt.Errorf("nil data")
+					return errors.New("nil data")
 				}
 				if resp.Data["keys"] == interface{}(nil) {
-					return fmt.Errorf("nil keys")
+					return errors.New("nil keys")
 				}
 				keys := resp.Data["keys"].([]string)
 				if !reflect.DeepEqual(keys, certs) {
@@ -1915,7 +1916,7 @@ func testAccStepCert(
 		},
 		Check: func(resp *logical.Response) error {
 			if resp == nil && expectError {
-				return fmt.Errorf("expected error but received nil")
+				return errors.New("expected error but received nil")
 			}
 			return nil
 		},

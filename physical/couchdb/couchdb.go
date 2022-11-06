@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -159,7 +160,7 @@ func buildCouchDBBackend(conf map[string]string, logger log.Logger) (*CouchDBBac
 		endpoint = conf["endpoint"]
 	}
 	if endpoint == "" {
-		return nil, fmt.Errorf("missing endpoint")
+		return nil, errors.New("missing endpoint")
 	}
 
 	username := os.Getenv("COUCHDB_USERNAME")

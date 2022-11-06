@@ -2,6 +2,7 @@ package aws
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -220,7 +221,7 @@ func getAccountID() (string, error) {
 		return "", err
 	}
 	if res == nil {
-		return "", fmt.Errorf("got nil response from GetCallerIdentity")
+		return "", errors.New("got nil response from GetCallerIdentity")
 	}
 
 	return *res.Account, nil
@@ -598,11 +599,11 @@ func testAccStepRotateRoot(oldAccessKey *awsAccessKey) logicaltest.TestStep {
 		Path:      "config/rotate-root",
 		Check: func(resp *logical.Response) error {
 			if resp == nil {
-				return fmt.Errorf("received nil response from config/rotate-root")
+				return errors.New("received nil response from config/rotate-root")
 			}
 			newAccessKeyID := resp.Data["access_key"].(string)
 			if newAccessKeyID == oldAccessKey.AccessKeyID {
-				return fmt.Errorf("rotate-root didn't rotate access key")
+				return errors.New("rotate-root didn't rotate access key")
 			}
 			awsConfig := &aws.Config{
 				Region:      aws.String("us-east-1"),
@@ -620,7 +621,7 @@ func testAccStepRotateRoot(oldAccessKey *awsAccessKey) logicaltest.TestStep {
 			svc := sts.New(sess)
 			params := &sts.GetCallerIdentityInput{}
 			if _, err := svc.GetCallerIdentity(params); err == nil {
-				return fmt.Errorf("bad: old credentials succeeded after rotate")
+				return errors.New("bad: old credentials succeeded after rotate")
 			}
 			if aerr, ok := err.(awserr.Error); ok {
 				if aerr.Code() != "InvalidClientTokenId" {
@@ -718,7 +719,7 @@ func describeAzsTestUnauthorized(accessKey, secretKey, token string) error {
 		_, err := client.DescribeAvailabilityZones(&ec2.DescribeAvailabilityZonesInput{})
 		// Need to make sure AWS authenticates the generated credentials but does not authorize the operation
 		if err == nil {
-			return fmt.Errorf("operation succeeded when expected failure")
+			return errors.New("operation succeeded when expected failure")
 		}
 		if aerr, ok := err.(awserr.Error); ok {
 			if aerr.Code() == "UnauthorizedOperation" {
@@ -946,7 +947,7 @@ func testAccStepReadRole(t *testing.T, name string, expected map[string]interfac
 				if expected == nil {
 					return nil
 				}
-				return fmt.Errorf("bad: nil response")
+				return errors.New("bad: nil response")
 			}
 			if !reflect.DeepEqual(resp.Data, expected) {
 				return fmt.Errorf("bad: got %#v\nexpected: %#v", resp.Data, expected)
@@ -1488,7 +1489,7 @@ func testAccStepReadIamTags(t *testing.T, name string, tags map[string]string) l
 					return nil
 				}
 
-				return fmt.Errorf("vault response not received")
+				return errors.New("vault response not received")
 			}
 
 			expected := map[string]interface{}{

@@ -2,6 +2,7 @@ package cassandra
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -39,7 +40,7 @@ func createSession(cfg *sessionConfig, s logical.Storage) (*gocql.Session, error
 		var tlsConfig *tls.Config
 		if len(cfg.Certificate) > 0 || len(cfg.IssuingCA) > 0 {
 			if len(cfg.Certificate) > 0 && len(cfg.PrivateKey) == 0 {
-				return nil, fmt.Errorf("found certificate for TLS authentication but no private key")
+				return nil, errors.New("found certificate for TLS authentication but no private key")
 			}
 
 			certBundle := &certutil.CertBundle{}
@@ -66,7 +67,7 @@ func createSession(cfg *sessionConfig, s logical.Storage) (*gocql.Session, error
 				var ok bool
 				tlsConfig.MinVersion, ok = tlsutil.TLSLookup[cfg.TLSMinVersion]
 				if !ok {
-					return nil, fmt.Errorf("invalid 'tls_min_version' in config")
+					return nil, errors.New("invalid 'tls_min_version' in config")
 				}
 			} else {
 				// MinVersion was not being set earlier. Reset it to

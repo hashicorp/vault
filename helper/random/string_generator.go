@@ -3,6 +3,7 @@ package random
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -98,7 +99,7 @@ LOOP:
 	for {
 		select {
 		case <-ctx.Done():
-			return "", fmt.Errorf("timed out generating string")
+			return "", errors.New("timed out generating string")
 		default:
 			str, err = g.generate(rng)
 			if err != nil {
@@ -142,13 +143,13 @@ const (
 // combine bytes into a larger integer using binary.BigEndian.Uint16() function.
 func randomRunes(rng io.Reader, charset []rune, length int) (candidate []rune, err error) {
 	if len(charset) == 0 {
-		return nil, fmt.Errorf("no charset specified")
+		return nil, errors.New("no charset specified")
 	}
 	if len(charset) > maxCharsetLen {
 		return nil, fmt.Errorf("charset is too long: limited to %d characters", math.MaxUint8)
 	}
 	if length <= 0 {
-		return nil, fmt.Errorf("unable to generate a zero or negative length runeset")
+		return nil, errors.New("unable to generate a zero or negative length runeset")
 	}
 
 	// This can't always select indexes from [0-maxCharsetLen) because it could introduce bias to the character selection.
@@ -224,7 +225,7 @@ func (g *StringGenerator) validateConfig() (err error) {
 	// Ensure the sum of minimum lengths in the rules doesn't exceed the length specified
 	minLen := getMinLength(g.Rules)
 	if g.Length <= 0 {
-		merr = multierror.Append(merr, fmt.Errorf("length must be > 0"))
+		merr = multierror.Append(merr, errors.New("length must be > 0"))
 	} else if g.Length < minLen {
 		merr = multierror.Append(merr, fmt.Errorf("specified rules require at least %d characters but %d is specified", minLen, g.Length))
 	}
@@ -235,11 +236,11 @@ func (g *StringGenerator) validateConfig() (err error) {
 		g.charset = getChars(g.Rules)
 	}
 	if len(g.charset) == 0 {
-		merr = multierror.Append(merr, fmt.Errorf("no charset specified"))
+		merr = multierror.Append(merr, errors.New("no charset specified"))
 	} else {
 		for _, r := range g.charset {
 			if !unicode.IsPrint(r) {
-				merr = multierror.Append(merr, fmt.Errorf("non-printable character in charset"))
+				merr = multierror.Append(merr, errors.New("non-printable character in charset"))
 				break
 			}
 		}

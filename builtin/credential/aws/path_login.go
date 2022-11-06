@@ -339,10 +339,10 @@ func (b *backend) pathLoginResolveRoleIam(ctx context.Context, req *logical.Requ
 // instance profile name
 func (b *backend) instanceIamRoleARN(iamClient *iam.IAM, instanceProfileName string) (string, error) {
 	if iamClient == nil {
-		return "", fmt.Errorf("nil iamClient")
+		return "", errors.New("nil iamClient")
 	}
 	if instanceProfileName == "" {
-		return "", fmt.Errorf("missing instance profile name")
+		return "", errors.New("missing instance profile name")
 	}
 
 	profile, err := iamClient.GetInstanceProfile(&iam.GetInstanceProfileInput{
@@ -352,19 +352,19 @@ func (b *backend) instanceIamRoleARN(iamClient *iam.IAM, instanceProfileName str
 		return "", awsutil.AppendAWSError(err)
 	}
 	if profile == nil {
-		return "", fmt.Errorf("nil output while getting instance profile details")
+		return "", errors.New("nil output while getting instance profile details")
 	}
 
 	if profile.InstanceProfile == nil {
-		return "", fmt.Errorf("nil instance profile in the output of instance profile details")
+		return "", errors.New("nil instance profile in the output of instance profile details")
 	}
 
 	if profile.InstanceProfile.Roles == nil || len(profile.InstanceProfile.Roles) != 1 {
-		return "", fmt.Errorf("invalid roles in the output of instance profile details")
+		return "", errors.New("invalid roles in the output of instance profile details")
 	}
 
 	if profile.InstanceProfile.Roles[0].Arn == nil {
-		return "", fmt.Errorf("nil role ARN in the output of instance profile details")
+		return "", errors.New("nil role ARN in the output of instance profile details")
 	}
 
 	return *profile.InstanceProfile.Roles[0].Arn, nil
@@ -389,22 +389,22 @@ func (b *backend) validateInstance(ctx context.Context, s logical.Storage, insta
 		return nil, errwrap.Wrap(errW, awsutil.CheckAWSError(err))
 	}
 	if status == nil {
-		return nil, fmt.Errorf("nil output from describe instances")
+		return nil, errors.New("nil output from describe instances")
 	}
 	if len(status.Reservations) == 0 {
-		return nil, fmt.Errorf("no reservations found in instance description")
+		return nil, errors.New("no reservations found in instance description")
 	}
 	if len(status.Reservations[0].Instances) == 0 {
-		return nil, fmt.Errorf("no instance details found in reservations")
+		return nil, errors.New("no instance details found in reservations")
 	}
 	if *status.Reservations[0].Instances[0].InstanceId != instanceID {
-		return nil, fmt.Errorf("expected instance ID not matching the instance ID in the instance description")
+		return nil, errors.New("expected instance ID not matching the instance ID in the instance description")
 	}
 	if status.Reservations[0].Instances[0].State == nil {
-		return nil, fmt.Errorf("instance state in instance description is nil")
+		return nil, errors.New("instance state in instance description is nil")
 	}
 	if *status.Reservations[0].Instances[0].State.Name != "running" {
-		return nil, fmt.Errorf("instance is not in 'running' state")
+		return nil, errors.New("instance is not in 'running' state")
 	}
 	return status.Reservations[0].Instances[0], nil
 }
@@ -415,7 +415,7 @@ func (b *backend) validateInstance(ctx context.Context, s logical.Storage, insta
 func validateMetadata(clientNonce, pendingTime string, storedIdentity *accessListIdentity, roleEntry *awsRoleEntry) error {
 	// For sanity
 	if !storedIdentity.DisallowReauthentication && storedIdentity.ClientNonce == "" {
-		return fmt.Errorf("client nonce missing in stored identity")
+		return errors.New("client nonce missing in stored identity")
 	}
 
 	// If reauthentication is disabled or if the nonce supplied matches a
@@ -423,7 +423,7 @@ func validateMetadata(clientNonce, pendingTime string, storedIdentity *accessLis
 	// authentication will not succeed.
 	if storedIdentity.DisallowReauthentication ||
 		subtle.ConstantTimeCompare([]byte(reauthenticationDisabledNonce), []byte(clientNonce)) == 1 {
-		return fmt.Errorf("reauthentication is disabled")
+		return errors.New("reauthentication is disabled")
 	}
 
 	givenPendingTime, err := time.Parse(time.RFC3339, pendingTime)
@@ -455,10 +455,10 @@ func validateMetadata(clientNonce, pendingTime string, storedIdentity *accessLis
 	// option should be used with caution.
 	if subtle.ConstantTimeCompare([]byte(clientNonce), []byte(storedIdentity.ClientNonce)) != 1 {
 		if !roleEntry.AllowInstanceMigration {
-			return fmt.Errorf("client nonce mismatch")
+			return errors.New("client nonce mismatch")
 		}
 		if roleEntry.AllowInstanceMigration && !givenPendingTime.After(storedPendingTime) {
-			return fmt.Errorf("client nonce mismatch and instance meta-data incorrect")
+			return errors.New("client nonce mismatch and instance meta-data incorrect")
 		}
 	}
 
@@ -466,7 +466,7 @@ func validateMetadata(clientNonce, pendingTime string, storedIdentity *accessLis
 	// before the 'pendingTime' that was used for previous login. This
 	// disallows old metadata documents from being used to perform login.
 	if givenPendingTime.Before(storedPendingTime) {
-		return fmt.Errorf("instance meta-data is older than the one used for previous login")
+		return errors.New("instance meta-data is older than the one used for previous login")
 	}
 	return nil
 }
@@ -476,11 +476,11 @@ func validateMetadata(clientNonce, pendingTime string, storedIdentity *accessLis
 // document.
 func (b *backend) verifyInstanceIdentitySignature(ctx context.Context, s logical.Storage, identityBytes, signatureBytes []byte) (*identityDocument, error) {
 	if len(identityBytes) == 0 {
-		return nil, fmt.Errorf("missing instance identity document")
+		return nil, errors.New("missing instance identity document")
 	}
 
 	if len(signatureBytes) == 0 {
-		return nil, fmt.Errorf("missing SHA256 RSA signature of the instance identity document")
+		return nil, errors.New("missing SHA256 RSA signature of the instance identity document")
 	}
 
 	// Get the public certificates that are used to verify the signature.
@@ -493,7 +493,7 @@ func (b *backend) verifyInstanceIdentitySignature(ctx context.Context, s logical
 		return nil, err
 	}
 	if publicCerts == nil || len(publicCerts) == 0 {
-		return nil, fmt.Errorf("certificates to verify the signature are not found")
+		return nil, errors.New("certificates to verify the signature are not found")
 	}
 
 	// Check if any of the certs registered at the backend can verify the
@@ -509,7 +509,7 @@ func (b *backend) verifyInstanceIdentitySignature(ctx context.Context, s logical
 		}
 	}
 
-	return nil, fmt.Errorf("instance identity verification using SHA256 RSA signature is unsuccessful")
+	return nil, errors.New("instance identity verification using SHA256 RSA signature is unsuccessful")
 }
 
 // Verifies the correctness of the authenticated attributes present in the PKCS#7
@@ -522,7 +522,7 @@ func (b *backend) parseIdentityDocument(ctx context.Context, s logical.Storage, 
 	// Decode the PEM encoded signature
 	pkcs7BER, pkcs7Rest := pem.Decode([]byte(pkcs7B64))
 	if len(pkcs7Rest) != 0 {
-		return nil, fmt.Errorf("failed to decode the PEM encoded PKCS#7 signature")
+		return nil, errors.New("failed to decode the PEM encoded PKCS#7 signature")
 	}
 
 	// Parse the signature from asn1 format into a struct
@@ -539,7 +539,7 @@ func (b *backend) parseIdentityDocument(ctx context.Context, s logical.Storage, 
 		return nil, err
 	}
 	if publicCerts == nil || len(publicCerts) == 0 {
-		return nil, fmt.Errorf("certificates to verify the signature are not found")
+		return nil, errors.New("certificates to verify the signature are not found")
 	}
 
 	// Before calling Verify() on the PKCS#7 struct, set the certificates to be used
@@ -554,7 +554,7 @@ func (b *backend) parseIdentityDocument(ctx context.Context, s logical.Storage, 
 
 	// Check if the signature has content inside of it
 	if len(pkcs7Data.Content) == 0 {
-		return nil, fmt.Errorf("instance identity document could not be found in the signature")
+		return nil, errors.New("instance identity document could not be found in the signature")
 	}
 
 	var identityDoc identityDocument
@@ -595,11 +595,11 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 ) {
 	switch {
 	case instance == nil:
-		return nil, fmt.Errorf("nil instance")
+		return nil, errors.New("nil instance")
 	case roleEntry == nil:
-		return nil, fmt.Errorf("nil roleEntry")
+		return nil, errors.New("nil roleEntry")
 	case identityDoc == nil:
-		return nil, fmt.Errorf("nil identityDoc")
+		return nil, errors.New("nil identityDoc")
 	}
 
 	// Verify that the instance ID matches one of the ones set by the role
@@ -624,7 +624,7 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 	// is ec2 or iam.
 	if len(roleEntry.BoundAmiIDs) > 0 {
 		if instance.ImageId == nil {
-			return nil, fmt.Errorf("AMI ID in the instance description is nil")
+			return nil, errors.New("AMI ID in the instance description is nil")
 		}
 		if !strutil.StrListContains(roleEntry.BoundAmiIDs, *instance.ImageId) {
 			return fmt.Errorf("AMI ID %q does not belong to role %q", *instance.ImageId, roleName), nil
@@ -634,7 +634,7 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 	// Validate the SubnetID if corresponding bound was set on the role
 	if len(roleEntry.BoundSubnetIDs) > 0 {
 		if instance.SubnetId == nil {
-			return nil, fmt.Errorf("subnet ID in the instance description is nil")
+			return nil, errors.New("subnet ID in the instance description is nil")
 		}
 		if !strutil.StrListContains(roleEntry.BoundSubnetIDs, *instance.SubnetId) {
 			return fmt.Errorf("subnet ID %q does not satisfy the constraint on role %q", *instance.SubnetId, roleName), nil
@@ -644,7 +644,7 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 	// Validate the VpcID if corresponding bound was set on the role
 	if len(roleEntry.BoundVpcIDs) > 0 {
 		if instance.VpcId == nil {
-			return nil, fmt.Errorf("VPC ID in the instance description is nil")
+			return nil, errors.New("VPC ID in the instance description is nil")
 		}
 		if !strutil.StrListContains(roleEntry.BoundVpcIDs, *instance.VpcId) {
 			return fmt.Errorf("VPC ID %q does not satisfy the constraint on role %q", *instance.VpcId, roleName), nil
@@ -656,10 +656,10 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 	// on the role
 	if len(roleEntry.BoundIamInstanceProfileARNs) > 0 {
 		if instance.IamInstanceProfile == nil {
-			return nil, fmt.Errorf("IAM instance profile in the instance description is nil")
+			return nil, errors.New("IAM instance profile in the instance description is nil")
 		}
 		if instance.IamInstanceProfile.Arn == nil {
-			return nil, fmt.Errorf("IAM instance profile ARN in the instance description is nil")
+			return nil, errors.New("IAM instance profile ARN in the instance description is nil")
 		}
 		iamInstanceProfileARN := *instance.IamInstanceProfile.Arn
 		matchesInstanceProfile := false
@@ -694,17 +694,17 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 	// the IAM role ARN specified as a constraint on the role.
 	if len(roleEntry.BoundIamRoleARNs) > 0 {
 		if instance.IamInstanceProfile == nil {
-			return nil, fmt.Errorf("IAM instance profile in the instance description is nil")
+			return nil, errors.New("IAM instance profile in the instance description is nil")
 		}
 		if instance.IamInstanceProfile.Arn == nil {
-			return nil, fmt.Errorf("IAM instance profile ARN in the instance description is nil")
+			return nil, errors.New("IAM instance profile ARN in the instance description is nil")
 		}
 
 		// Fetch the instance profile ARN from the instance description
 		iamInstanceProfileARN := *instance.IamInstanceProfile.Arn
 
 		if iamInstanceProfileARN == "" {
-			return nil, fmt.Errorf("IAM instance profile ARN in the instance description is empty")
+			return nil, errors.New("IAM instance profile ARN in the instance description is empty")
 		}
 
 		// Extract out the instance profile name from the instance
@@ -719,14 +719,14 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 		if err != nil {
 			return nil, fmt.Errorf("could not fetch IAM client: %w", err)
 		} else if iamClient == nil {
-			return nil, fmt.Errorf("received a nil iamClient")
+			return nil, errors.New("received a nil iamClient")
 		}
 		iamRoleARN, err := b.instanceIamRoleARN(iamClient, iamInstanceProfileEntity.FriendlyName)
 		if err != nil {
 			return nil, fmt.Errorf("IAM role ARN could not be fetched: %w", err)
 		}
 		if iamRoleARN == "" {
-			return nil, fmt.Errorf("IAM role ARN could not be fetched")
+			return nil, errors.New("IAM role ARN could not be fetched")
 		}
 
 		matchesInstanceRoleARN := false
@@ -892,7 +892,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 	// nonce to be associated for the instance ID.
 	if !clientNonceSupplied {
 		if clientNonce, err = uuid.GenerateUUID(); err != nil {
-			return nil, fmt.Errorf("failed to generate random nonce")
+			return nil, errors.New("failed to generate random nonce")
 		}
 	}
 
@@ -1035,10 +1035,10 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 // set off of the role tag, if certain criteria satisfies.
 func (b *backend) handleRoleTagLogin(ctx context.Context, s logical.Storage, roleName string, roleEntry *awsRoleEntry, instance *ec2.Instance) (*roleTagLoginResponse, error) {
 	if roleEntry == nil {
-		return nil, fmt.Errorf("nil role entry")
+		return nil, errors.New("nil role entry")
 	}
 	if instance == nil {
-		return nil, fmt.Errorf("nil instance")
+		return nil, errors.New("nil instance")
 	}
 
 	// Input validation on instance is not performed here considering
@@ -1073,12 +1073,12 @@ func (b *backend) handleRoleTagLogin(ctx context.Context, s logical.Storage, rol
 	// Check if the role name with which this login is being made is same
 	// as the role name embedded in the tag.
 	if rTag.Role != roleName {
-		return nil, fmt.Errorf("role on the tag is not matching the role supplied")
+		return nil, errors.New("role on the tag is not matching the role supplied")
 	}
 
 	// If instance_id was set on the role tag, check if the same instance is attempting to login
 	if rTag.InstanceID != "" && rTag.InstanceID != *instance.InstanceId {
-		return nil, fmt.Errorf("role tag is being used by an unauthorized instance")
+		return nil, errors.New("role tag is being used by an unauthorized instance")
 	}
 
 	// Check if the role tag is deny listed
@@ -1087,12 +1087,12 @@ func (b *backend) handleRoleTagLogin(ctx context.Context, s logical.Storage, rol
 		return nil, err
 	}
 	if denyListEntry != nil {
-		return nil, fmt.Errorf("role tag is deny listed")
+		return nil, errors.New("role tag is deny listed")
 	}
 
 	// Ensure that the policies on the RoleTag is a subset of policies on the role
 	if !strutil.StrListSubset(roleEntry.TokenPolicies, rTag.Policies) {
-		return nil, fmt.Errorf("policies on the role tag must be subset of policies on the role")
+		return nil, errors.New("policies on the role tag must be subset of policies on the role")
 	}
 
 	return &roleTagLoginResponse{
@@ -1131,14 +1131,14 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 		roleName = roleNameIfc.(string)
 	}
 	if roleName == "" {
-		return nil, fmt.Errorf("error retrieving role_name during renewal")
+		return nil, errors.New("error retrieving role_name during renewal")
 	}
 	roleEntry, err := b.role(ctx, req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
 	if roleEntry == nil {
-		return nil, fmt.Errorf("role entry not found")
+		return nil, errors.New("role entry not found")
 	}
 
 	// we don't really care what the inferred entity type was when the role was initially created. We
@@ -1278,7 +1278,7 @@ func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, _
 		return nil, err
 	}
 	if roleEntry == nil {
-		return nil, fmt.Errorf("role entry not found")
+		return nil, errors.New("role entry not found")
 	}
 
 	// If the login was made using the role tag, then max_ttl from tag
@@ -1561,7 +1561,7 @@ func parseIamArn(iamArn string) (*iamEntity, error) {
 		return nil, fmt.Errorf("unrecognized arn: contains %d colon-separated parts, expected 6", len(fullParts))
 	}
 	if fullParts[0] != "arn" {
-		return nil, fmt.Errorf("unrecognized arn: does not begin with \"arn:\"")
+		return nil, errors.New("unrecognized arn: does not begin with \"arn:\"")
 	}
 	// normally aws, but could be aws-cn or aws-us-gov
 	entity.Partition = fullParts[1]
@@ -1623,17 +1623,17 @@ func validateVaultHeaderValue(headers http.Header, _ *url.URL, requiredHeaderVal
 		authzHeader := strings.Join(authzHeaders, ",")
 		matches := re.FindSubmatch([]byte(authzHeader))
 		if len(matches) < 1 {
-			return fmt.Errorf("vault header wasn't signed")
+			return errors.New("vault header wasn't signed")
 		}
 		if len(matches) > 2 {
-			return fmt.Errorf("found multiple SignedHeaders components")
+			return errors.New("found multiple SignedHeaders components")
 		}
 		signedHeaders := string(matches[1])
 		return ensureHeaderIsSigned(signedHeaders, iamServerIdHeader)
 	}
 	// TODO: If we support GET requests, then we need to parse the X-Amz-SignedHeaders
 	// argument out of the query string and search in there for the header value
-	return fmt.Errorf("missing Authorization header")
+	return errors.New("missing Authorization header")
 }
 
 func buildHttpRequest(method, endpoint string, parsedUrl *url.URL, body string, headers http.Header) *http.Request {
@@ -1689,7 +1689,7 @@ func ensureHeaderIsSigned(signedHeaders, headerToSign string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("vault header wasn't signed")
+	return errors.New("vault header wasn't signed")
 }
 
 func parseGetCallerIdentityResponse(response string) (GetCallerIdentityResponse, error) {
@@ -1749,7 +1749,7 @@ func submitCallerIdentityRequest(ctx context.Context, maxRetries int, method, en
 	}
 	callerIdentityResponse, err := parseGetCallerIdentityResponse(string(responseBody))
 	if err != nil {
-		return nil, fmt.Errorf("error parsing STS response")
+		return nil, errors.New("error parsing STS response")
 	}
 	return &callerIdentityResponse.GetCallerIdentityResult[0], nil
 }
@@ -1837,7 +1837,7 @@ func (b *backend) fullArn(ctx context.Context, e *iamEntity, s logical.Storage) 
 			return "", fmt.Errorf("error fetching user %q: %w", e.FriendlyName, err)
 		}
 		if resp == nil {
-			return "", fmt.Errorf("nil response from GetUser")
+			return "", errors.New("nil response from GetUser")
 		}
 		return *(resp.User.Arn), nil
 	case "assumed-role":
@@ -1851,7 +1851,7 @@ func (b *backend) fullArn(ctx context.Context, e *iamEntity, s logical.Storage) 
 			return "", fmt.Errorf("error fetching role %q: %w", e.FriendlyName, err)
 		}
 		if resp == nil {
-			return "", fmt.Errorf("nil response form GetRole")
+			return "", errors.New("nil response form GetRole")
 		}
 		return *(resp.Role.Arn), nil
 	default:

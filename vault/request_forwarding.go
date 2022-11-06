@@ -7,7 +7,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
-	"fmt"
 	"math"
 	"net/http"
 	"net/url"
@@ -117,7 +116,7 @@ func (c *requestForwardingClusterClient) CACert(ctx context.Context) *x509.Certi
 func (rf *requestForwardingHandler) ServerLookup(ctx context.Context, clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
 	currCert := rf.core.localClusterCert.Load().([]byte)
 	if len(currCert) == 0 {
-		return nil, fmt.Errorf("got forwarding connection but no local cert")
+		return nil, errors.New("got forwarding connection but no local cert")
 	}
 
 	localCert := make([]byte, len(currCert))
@@ -135,7 +134,7 @@ func (rf *requestForwardingHandler) CALookup(ctx context.Context) ([]*x509.Certi
 	parsedCert := rf.core.localClusterParsedCert.Load().(*x509.Certificate)
 
 	if parsedCert == nil {
-		return nil, fmt.Errorf("forwarding connection client but no local cert")
+		return nil, errors.New("forwarding connection client but no local cert")
 	}
 
 	return []*x509.Certificate{parsedCert}, nil
@@ -351,17 +350,17 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 	freq, err := forwarding.GenerateForwardedRequest(req)
 	if err != nil {
 		c.logger.Error("error creating forwarding RPC request", "error", err)
-		return 0, nil, nil, fmt.Errorf("error creating forwarding RPC request")
+		return 0, nil, nil, errors.New("error creating forwarding RPC request")
 	}
 	if freq == nil {
 		c.logger.Error("got nil forwarding RPC request")
-		return 0, nil, nil, fmt.Errorf("got nil forwarding RPC request")
+		return 0, nil, nil, errors.New("got nil forwarding RPC request")
 	}
 	resp, err := c.rpcForwardingClient.ForwardRequest(req.Context(), freq)
 	if err != nil {
 		metrics.IncrCounter([]string{"ha", "rpc", "client", "forward", "errors"}, 1)
 		c.logger.Error("error during forwarded RPC request", "error", err)
-		return 0, nil, nil, fmt.Errorf("error during forwarding RPC request")
+		return 0, nil, nil, errors.New("error during forwarding RPC request")
 	}
 
 	var header http.Header

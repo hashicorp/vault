@@ -43,7 +43,7 @@ type MySQL struct {
 func New(defaultUsernameTemplate string) func() (interface{}, error) {
 	return func() (interface{}, error) {
 		if defaultUsernameTemplate == "" {
-			return nil, fmt.Errorf("missing default username template")
+			return nil, errors.New("missing default username template")
 		}
 		db := newMySQL(defaultUsernameTemplate)
 		// Wrap the plugin with middleware to sanitize errors
@@ -190,7 +190,7 @@ func (m *MySQL) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) 
 
 func (m *MySQL) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) (dbplugin.UpdateUserResponse, error) {
 	if req.Password == nil && req.Expiration == nil {
-		return dbplugin.UpdateUserResponse{}, fmt.Errorf("no change requested")
+		return dbplugin.UpdateUserResponse{}, errors.New("no change requested")
 	}
 
 	if req.Password != nil {

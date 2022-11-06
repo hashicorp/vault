@@ -2,7 +2,7 @@ package userpass
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -42,7 +42,7 @@ func (b *backend) pathUserPasswordUpdate(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 	if userEntry == nil {
-		return nil, fmt.Errorf("username does not exist")
+		return nil, errors.New("username does not exist")
 	}
 
 	userErr, intErr := b.updateUserPassword(req, d, userEntry)
@@ -59,7 +59,7 @@ func (b *backend) pathUserPasswordUpdate(ctx context.Context, req *logical.Reque
 func (b *backend) updateUserPassword(req *logical.Request, d *framework.FieldData, userEntry *UserEntry) (error, error) {
 	password := d.Get("password").(string)
 	if password == "" {
-		return fmt.Errorf("missing password"), nil
+		return errors.New("missing password"), nil
 	}
 	// Generate a hash of the password
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)

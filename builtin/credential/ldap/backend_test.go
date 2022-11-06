@@ -2,6 +2,7 @@ package ldap
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -911,7 +912,7 @@ func testAccStepConfigUrlWarningCheck(t *testing.T, cfg *ldaputil.ConfigEntry, o
 		},
 		Check: func(response *logical.Response) error {
 			if len(response.Warnings) == 0 {
-				return fmt.Errorf("expected warnings, got none")
+				return errors.New("expected warnings, got none")
 			}
 
 			if !strutil.StrListSubset(response.Warnings, warnings) {

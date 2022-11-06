@@ -1,6 +1,7 @@
 package token
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -48,7 +49,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 
 		if err != nil {
 			if err == password.ErrInterrupted {
-				return nil, fmt.Errorf("user interrupted")
+				return nil, errors.New("user interrupted")
 			}
 
 			return nil, fmt.Errorf("An error occurred attempting to "+
@@ -64,9 +65,10 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	token = strings.TrimSpace(token)
 
 	if token == "" {
-		return nil, fmt.Errorf(
+		return nil, errors.New(
 			"a token must be passed to auth, please view the help for more " +
 				"information")
+
 	}
 
 	// If the user declined verification, return now. Note that we will not have
@@ -89,7 +91,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		return nil, fmt.Errorf("error looking up token: %w", err)
 	}
 	if secret == nil {
-		return nil, fmt.Errorf("empty response from lookup-self")
+		return nil, errors.New("empty response from lookup-self")
 	}
 
 	// Return an auth struct that "looks" like the response from an auth method.

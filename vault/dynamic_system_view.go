@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -218,10 +219,10 @@ func (d dynamicSystemView) ResponseWrapData(ctx context.Context, data map[string
 
 func (d dynamicSystemView) NewPluginClient(ctx context.Context, config pluginutil.PluginClientConfig) (pluginutil.PluginClient, error) {
 	if d.core == nil {
-		return nil, fmt.Errorf("system view core is nil")
+		return nil, errors.New("system view core is nil")
 	}
 	if d.core.pluginCatalog == nil {
-		return nil, fmt.Errorf("system view core plugin catalog is nil")
+		return nil, errors.New("system view core plugin catalog is nil")
 	}
 
 	c, err := d.core.pluginCatalog.NewPluginClient(ctx, config)
@@ -242,10 +243,10 @@ func (d dynamicSystemView) LookupPlugin(ctx context.Context, name string, plugin
 // returns a PluginRunner or an error if no plugin was found.
 func (d dynamicSystemView) LookupPluginVersion(ctx context.Context, name string, pluginType consts.PluginType, version string) (*pluginutil.PluginRunner, error) {
 	if d.core == nil {
-		return nil, fmt.Errorf("system view core is nil")
+		return nil, errors.New("system view core is nil")
 	}
 	if d.core.pluginCatalog == nil {
-		return nil, fmt.Errorf("system view core plugin catalog is nil")
+		return nil, errors.New("system view core plugin catalog is nil")
 	}
 	r, err := d.core.pluginCatalog.Get(ctx, name, pluginType, version)
 	if err != nil {
@@ -266,10 +267,10 @@ func (d dynamicSystemView) LookupPluginVersion(ctx context.Context, name string,
 // typein the catalog, including any versioning information stored for them.
 func (d dynamicSystemView) ListVersionedPlugins(ctx context.Context, pluginType consts.PluginType) ([]pluginutil.VersionedPlugin, error) {
 	if d.core == nil {
-		return nil, fmt.Errorf("system view core is nil")
+		return nil, errors.New("system view core is nil")
 	}
 	if d.core.pluginCatalog == nil {
-		return nil, fmt.Errorf("system view core plugin catalog is nil")
+		return nil, errors.New("system view core plugin catalog is nil")
 	}
 	return d.core.pluginCatalog.ListVersionedPlugins(ctx, pluginType)
 }
@@ -287,10 +288,10 @@ func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) 
 	}
 
 	if d.core == nil {
-		return nil, fmt.Errorf("system view core is nil")
+		return nil, errors.New("system view core is nil")
 	}
 	if d.core.identityStore == nil {
-		return nil, fmt.Errorf("system view identity store is nil")
+		return nil, errors.New("system view identity store is nil")
 	}
 
 	// Retrieve the entity from MemDB
@@ -346,10 +347,10 @@ func (d dynamicSystemView) GroupsForEntity(entityID string) ([]*logical.Group, e
 	}
 
 	if d.core == nil {
-		return nil, fmt.Errorf("system view core is nil")
+		return nil, errors.New("system view core is nil")
 	}
 	if d.core.identityStore == nil {
-		return nil, fmt.Errorf("system view identity store is nil")
+		return nil, errors.New("system view identity store is nil")
 	}
 
 	groups, inheritedGroups, err := d.core.identityStore.groupsByEntityID(entityID)
@@ -383,7 +384,7 @@ func (d dynamicSystemView) PluginEnv(_ context.Context) (*logical.PluginEnvironm
 
 func (d dynamicSystemView) GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error) {
 	if policyName == "" {
-		return "", fmt.Errorf("missing password policy name")
+		return "", errors.New("missing password policy name")
 	}
 
 	// Ensure there's a timeout on the context of some sort
@@ -401,7 +402,7 @@ func (d dynamicSystemView) GeneratePasswordFromPolicy(ctx context.Context, polic
 	}
 
 	if policyCfg == nil {
-		return "", fmt.Errorf("no password policy found")
+		return "", errors.New("no password policy found")
 	}
 
 	passPolicy, err := random.ParsePolicy(policyCfg.HCLPolicy)

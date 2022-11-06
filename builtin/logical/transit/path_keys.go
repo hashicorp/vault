@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -200,7 +201,7 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		return nil, err
 	}
 	if p == nil {
-		return nil, fmt.Errorf("error generating key: returned policy was nil")
+		return nil, errors.New("error generating key: returned policy was nil")
 	}
 	if b.System().CachingDisabled() {
 		p.Unlock()
@@ -341,7 +342,7 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 						}
 						derived, err := p.GetKey(context, ver, 32)
 						if err != nil {
-							return nil, fmt.Errorf("failed to derive key to return public component")
+							return nil, errors.New("failed to derive key to return public component")
 						}
 						pubKey := ed25519.PrivateKey(derived).Public().(ed25519.PublicKey)
 						key.PublicKey = base64.StdEncoding.EncodeToString(pubKey)
@@ -370,7 +371,7 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 				}
 				pemBytes := pem.EncodeToMemory(pemBlock)
 				if pemBytes == nil || len(pemBytes) == 0 {
-					return nil, fmt.Errorf("failed to PEM-encode RSA public key")
+					return nil, errors.New("failed to PEM-encode RSA public key")
 				}
 				key.PublicKey = string(pemBytes)
 			}

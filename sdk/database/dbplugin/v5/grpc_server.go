@@ -79,7 +79,7 @@ func (g *gRPCServer) getDatabaseInternal(ctx context.Context) (Database, error) 
 		return db, nil
 	}
 
-	return nil, fmt.Errorf("no database instance found")
+	return nil, errors.New("no database instance found")
 }
 
 // getDatabase holds a read lock and returns the database
@@ -226,7 +226,7 @@ func getUpdateUserRequest(req *proto.UpdateUserRequest) (UpdateUserRequest, erro
 	}
 
 	if !hasChange(dbReq) {
-		return UpdateUserRequest{}, fmt.Errorf("update user request has no changes")
+		return UpdateUserRequest{}, errors.New("update user request has no changes")
 	}
 
 	return dbReq, nil

@@ -3,6 +3,7 @@ package hana
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -218,7 +219,7 @@ func (h *HANA) updateUserPassword(ctx context.Context, tx *sql.Tx, username stri
 	password := req.NewPassword
 
 	if username == "" || password == "" {
-		return fmt.Errorf("must provide both username and password")
+		return errors.New("must provide both username and password")
 	}
 
 	stmts := req.Statements.Commands
@@ -254,7 +255,7 @@ func (h *HANA) updateUserExpiration(ctx context.Context, tx *sql.Tx, username st
 	expirationStr := req.NewExpiration.String()
 
 	if username == "" || expirationStr == "" {
-		return fmt.Errorf("must provide both username and expiration")
+		return errors.New("must provide both username and expiration")
 	}
 
 	stmts := req.Statements.Commands

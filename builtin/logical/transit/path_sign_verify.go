@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rsa"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -404,7 +405,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 			}
 			response[i].err = err
 		} else if sig == nil {
-			response[i].err = fmt.Errorf("signature could not be computed")
+			response[i].err = errors.New("signature could not be computed")
 		} else {
 			keyVersion := ver
 			if keyVersion == 0 {

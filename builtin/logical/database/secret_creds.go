@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -28,7 +29,7 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 		// Get the username from the internal data
 		usernameRaw, ok := req.Secret.InternalData["username"]
 		if !ok {
-			return nil, fmt.Errorf("secret is missing username internal data")
+			return nil, errors.New("secret is missing username internal data")
 		}
 		username, ok := usernameRaw.(string)
 
@@ -92,7 +93,7 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 		// Get the username from the internal data
 		usernameRaw, ok := req.Secret.InternalData["username"]
 		if !ok {
-			return nil, fmt.Errorf("secret is missing username internal data")
+			return nil, errors.New("secret is missing username internal data")
 		}
 		username, ok := usernameRaw.(string)
 
@@ -100,7 +101,7 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 
 		roleNameRaw, ok := req.Secret.InternalData["role"]
 		if !ok {
-			return nil, fmt.Errorf("no role name was provided")
+			return nil, errors.New("no role name was provided")
 		}
 
 		var dbName string

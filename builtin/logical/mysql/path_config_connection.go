@@ -3,6 +3,7 @@ package mysql
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -52,7 +53,7 @@ This name is deprecated.`,
 func (b *backend) pathConnectionRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	entry, err := req.Storage.Get(ctx, "config/connection")
 	if err != nil {
-		return nil, fmt.Errorf("failed to read connection configuration")
+		return nil, errors.New("failed to read connection configuration")
 	}
 	if entry == nil {
 		return nil, nil

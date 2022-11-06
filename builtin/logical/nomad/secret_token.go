@@ -3,7 +3,6 @@ package nomad
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -49,12 +48,12 @@ func (b *backend) secretTokenRevoke(ctx context.Context, req *logical.Request, d
 	}
 
 	if c == nil {
-		return nil, fmt.Errorf("error getting Nomad client")
+		return nil, errors.New("error getting Nomad client")
 	}
 
 	accessorIDRaw, ok := req.Secret.InternalData["accessor_id"]
 	if !ok {
-		return nil, fmt.Errorf("accessor_id is missing on the lease")
+		return nil, errors.New("accessor_id is missing on the lease")
 	}
 	accessorID, ok := accessorIDRaw.(string)
 	if !ok {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -170,7 +171,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 	client := &http.Client{
 		Transport: transport,
 		CheckRedirect: func(*http.Request, []*http.Request) error {
-			return fmt.Errorf("redirects not allowed in this test")
+			return errors.New("redirects not allowed in this test")
 		},
 	}
 
@@ -243,7 +244,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 
 		doResp := func(resp *http.Response) (*api.Secret, error) {
 			if resp == nil {
-				return nil, fmt.Errorf("nil response")
+				return nil, errors.New("nil response")
 			}
 			defer resp.Body.Close()
 
@@ -329,7 +330,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 
 				latest := secret.Data["ciphertext"].(string)
 				if latest == "" {
-					panic(fmt.Errorf("bad ciphertext"))
+					panic(errors.New("bad ciphertext"))
 				}
 				latestEncryptedText[chosenKey] = secret.Data["ciphertext"].(string)
 
@@ -518,7 +519,7 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 		httpClient := &http.Client{
 			Transport: transport,
 			CheckRedirect: func(*http.Request, []*http.Request) error {
-				return fmt.Errorf("redirects not allowed in this test")
+				return errors.New("redirects not allowed in this test")
 			},
 		}
 		client, err := api.NewClient(&api.Config{

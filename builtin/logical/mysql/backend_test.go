@@ -2,6 +2,7 @@ package mysql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"reflect"
@@ -171,7 +172,7 @@ func testAccStepConfig(t *testing.T, d map[string]interface{}, expectError bool)
 		Check: func(resp *logical.Response) error {
 			if expectError {
 				if resp.Data == nil {
-					return fmt.Errorf("data is nil")
+					return errors.New("data is nil")
 				}
 				var e struct {
 					Error string `mapstructure:"error"`
@@ -180,7 +181,7 @@ func testAccStepConfig(t *testing.T, d map[string]interface{}, expectError bool)
 					return err
 				}
 				if len(e.Error) == 0 {
-					return fmt.Errorf("expected error, but write succeeded")
+					return errors.New("expected error, but write succeeded")
 				}
 				return nil
 			} else if resp != nil && resp.IsError() {

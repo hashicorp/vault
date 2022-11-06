@@ -2,7 +2,7 @@ package userpass
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"strings"
 	"time"
 
@@ -103,7 +103,7 @@ func (b *backend) userExistenceCheck(ctx context.Context, req *logical.Request, 
 
 func (b *backend) user(ctx context.Context, s logical.Storage, username string) (*UserEntry, error) {
 	if username == "" {
-		return nil, fmt.Errorf("missing username")
+		return nil, errors.New("missing username")
 	}
 
 	entry, err := s.Get(ctx, "user/"+strings.ToLower(username))

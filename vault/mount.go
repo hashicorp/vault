@@ -784,7 +784,7 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 	// Verify exact match of the route
 	match := c.router.MatchingMount(ctx, path)
 	if match == "" || ns.Path+path != match {
-		return fmt.Errorf("no matching mount")
+		return errors.New("no matching mount")
 	}
 
 	// Get the view for this backend
@@ -1321,7 +1321,7 @@ func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
 func (c *Core) persistMounts(ctx context.Context, table *MountTable, local *bool) error {
 	if table.Type != mountTableType {
 		c.logger.Error("given table to persist has wrong type", "actual_type", table.Type, "expected_type", mountTableType)
-		return fmt.Errorf("invalid table type given, not persisting")
+		return errors.New("invalid table type given, not persisting")
 	}
 
 	nonLocalMounts := &MountTable{
@@ -1335,7 +1335,7 @@ func (c *Core) persistMounts(ctx context.Context, table *MountTable, local *bool
 	for _, entry := range table.Entries {
 		if entry.Table != table.Type {
 			c.logger.Error("given entry to persist in mount table has wrong table value", "path", entry.Path, "entry_table_type", entry.Table, "actual_type", table.Type)
-			return fmt.Errorf("invalid mount entry found, not persisting")
+			return errors.New("invalid mount entry found, not persisting")
 		}
 
 		if entry.Local {

@@ -283,7 +283,7 @@ func (b *backend) decryptImportedKey(ctx context.Context, storage logical.Storag
 		return nil, err
 	}
 	if wrappingKey == nil {
-		return nil, fmt.Errorf("error importing key: wrapping key was nil")
+		return nil, errors.New("error importing key: wrapping key was nil")
 	}
 
 	privWrappingKey := wrappingKey.Keys[strconv.Itoa(wrappingKey.LatestVersion)].RSAKey

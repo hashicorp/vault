@@ -49,7 +49,7 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	if name == "" {
 		name = conf["container"]
 		if name == "" {
-			return nil, fmt.Errorf("'container' must be set")
+			return nil, errors.New("'container' must be set")
 		}
 	}
 
@@ -57,7 +57,7 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	if accountName == "" {
 		accountName = conf["accountName"]
 		if accountName == "" {
-			return nil, fmt.Errorf("'accountName' must be set")
+			return nil, errors.New("'accountName' must be set")
 		}
 	}
 
@@ -190,7 +190,7 @@ func (a *AzureBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"azure", "put"}, time.Now())
 
 	if len(entry.Value) >= MaxBlobSize {
-		return fmt.Errorf("value is bigger than the current supported limit of 4MBytes")
+		return errors.New("value is bigger than the current supported limit of 4MBytes")
 	}
 
 	a.permitPool.Acquire()

@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path"
 	"strings"
@@ -345,10 +346,10 @@ func (ps *PolicyStore) invalidate(ctx context.Context, name string, policyType P
 func (ps *PolicyStore) SetPolicy(ctx context.Context, p *Policy) error {
 	defer metrics.MeasureSince([]string{"policy", "set_policy"}, time.Now())
 	if p == nil {
-		return fmt.Errorf("nil policy passed in for storage")
+		return errors.New("nil policy passed in for storage")
 	}
 	if p.Name == "" {
-		return fmt.Errorf("policy name missing")
+		return errors.New("policy name missing")
 	}
 	// Policies are normalized to lower-case
 	p.Name = ps.sanitizeName(p.Name)
@@ -396,7 +397,7 @@ func (ps *PolicyStore) setPolicyInternal(ctx context.Context, p *Policy) error {
 			return fmt.Errorf("failed looking up conflicting policy: %w", err)
 		}
 		if rgp != nil {
-			return fmt.Errorf("cannot reuse policy names between ACLs and RGPs")
+			return errors.New("cannot reuse policy names between ACLs and RGPs")
 		}
 
 		if err := view.Put(ctx, entry); err != nil {
@@ -416,7 +417,7 @@ func (ps *PolicyStore) setPolicyInternal(ctx context.Context, p *Policy) error {
 			return fmt.Errorf("failed looking up conflicting policy: %w", err)
 		}
 		if acl != nil {
-			return fmt.Errorf("cannot reuse policy names between ACLs and RGPs")
+			return errors.New("cannot reuse policy names between ACLs and RGPs")
 		}
 
 		if err := ps.handleSentinelPolicy(ctx, p, view, entry); err != nil {
@@ -443,7 +444,7 @@ func (ps *PolicyStore) setPolicyInternal(ctx context.Context, p *Policy) error {
 		}
 
 	default:
-		return fmt.Errorf("unknown policy type, cannot set")
+		return errors.New("unknown policy type, cannot set")
 	}
 
 	return nil
@@ -689,7 +690,7 @@ func (ps *PolicyStore) switchedDeletePolicy(ctx context.Context, name string, po
 				return fmt.Errorf("cannot delete %q policy", name)
 			}
 			if name == "default" {
-				return fmt.Errorf("cannot delete default policy")
+				return errors.New("cannot delete default policy")
 			}
 		}
 

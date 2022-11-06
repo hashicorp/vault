@@ -687,7 +687,7 @@ func (c *SSHCommand) generateCredential(username, ip string) (*api.Secret, *SSHC
 		return nil, nil, errors.Wrap(err, "failed to get credentials")
 	}
 	if secret == nil || secret.Data == nil {
-		return nil, nil, fmt.Errorf("vault returned empty credentials")
+		return nil, nil, errors.New("vault returned empty credentials")
 	}
 
 	// Port comes back as a json.Number which mapstructure doesn't like, so
@@ -704,7 +704,7 @@ func (c *SSHCommand) generateCredential(username, ip string) (*api.Secret, *SSHC
 
 	// Check for an empty key response
 	if len(resp.Key) == 0 {
-		return nil, nil, fmt.Errorf("vault returned an invalid key")
+		return nil, nil, errors.New("vault returned an invalid key")
 	}
 
 	return secret, &resp, nil

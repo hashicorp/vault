@@ -2,6 +2,7 @@ package ssh
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -160,7 +161,7 @@ func (b *backend) pathCredsCreateWrite(ctx context.Context, req *logical.Request
 			"install_script":     role.InstallScript,
 		})
 	} else {
-		return nil, fmt.Errorf("key type unknown")
+		return nil, errors.New("key type unknown")
 	}
 
 	return result, nil
@@ -272,7 +273,7 @@ func validateIP(ip, roleName, cidrList, excludeCidrList string, zeroAddressRoles
 		return err
 	}
 	if !ipMatched {
-		return fmt.Errorf("IP does not belong to role")
+		return errors.New("IP does not belong to role")
 	}
 
 	if len(excludeCidrList) == 0 {
@@ -285,7 +286,7 @@ func validateIP(ip, roleName, cidrList, excludeCidrList string, zeroAddressRoles
 		return err
 	}
 	if ipMatched {
-		return fmt.Errorf("IP does not belong to role")
+		return errors.New("IP does not belong to role")
 	}
 
 	return nil
@@ -295,7 +296,7 @@ func validateIP(ip, roleName, cidrList, excludeCidrList string, zeroAddressRoles
 // allowed users registered which creation of role.
 func validateUsername(username, allowedUsers string) error {
 	if allowedUsers == "" {
-		return fmt.Errorf("username not in allowed users list")
+		return errors.New("username not in allowed users list")
 	}
 
 	// Role was explicitly configured to allow any username.
@@ -310,7 +311,7 @@ func validateUsername(username, allowedUsers string) error {
 		}
 	}
 
-	return fmt.Errorf("username not in allowed users list")
+	return errors.New("username not in allowed users list")
 }
 
 const pathCredsCreateHelpSyn = `

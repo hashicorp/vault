@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -35,7 +36,7 @@ type AuditedHeadersConfig struct {
 // add adds or overwrites a header in the config and updates the barrier view
 func (a *AuditedHeadersConfig) add(ctx context.Context, header string, hmac bool) error {
 	if header == "" {
-		return fmt.Errorf("header value cannot be empty")
+		return errors.New("header value cannot be empty")
 	}
 
 	// Grab a write lock
@@ -62,7 +63,7 @@ func (a *AuditedHeadersConfig) add(ctx context.Context, header string, hmac bool
 // remove deletes a header out of the header config and updates the barrier view
 func (a *AuditedHeadersConfig) remove(ctx context.Context, header string) error {
 	if header == "" {
-		return fmt.Errorf("header value cannot be empty")
+		return errors.New("header value cannot be empty")
 	}
 
 	// Grab a write lock

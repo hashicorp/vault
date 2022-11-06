@@ -3,6 +3,7 @@ package cassandra
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -60,7 +61,7 @@ func NewCassandraBackend(conf map[string]string, logger log.Logger) (physical.Ba
 		}
 
 		if explicitPort && p != port {
-			return nil, fmt.Errorf("all hosts must have the same port")
+			return nil, errors.New("all hosts must have the same port")
 		}
 		hosts[i], port = h, p
 		explicitPort = true
@@ -93,7 +94,7 @@ func NewCassandraBackend(conf map[string]string, logger log.Logger) (physical.Ba
 		case "LOCAL_ONE":
 			consistency = gocql.LocalOne
 		default:
-			return nil, fmt.Errorf("'consistency' must be one of {ANY, ONE, TWO, THREE, QUORUM, ALL, LOCAL_QUORUM, EACH_QUORUM, LOCAL_ONE}")
+			return nil, errors.New("'consistency' must be one of {ANY, ONE, TWO, THREE, QUORUM, ALL, LOCAL_QUORUM, EACH_QUORUM, LOCAL_ONE}")
 		}
 	}
 
@@ -105,7 +106,7 @@ func NewCassandraBackend(conf map[string]string, logger log.Logger) (physical.Ba
 	if retryCountStr, ok := conf["simple_retry_policy_retries"]; ok {
 		retryCount, err := strconv.Atoi(retryCountStr)
 		if err != nil || retryCount <= 0 {
-			return nil, fmt.Errorf("'simple_retry_policy_retries' must be a positive integer")
+			return nil, errors.New("'simple_retry_policy_retries' must be a positive integer")
 		}
 		cluster.RetryPolicy = &gocql.SimpleRetryPolicy{NumRetries: retryCount}
 	}
@@ -114,14 +115,14 @@ func NewCassandraBackend(conf map[string]string, logger log.Logger) (physical.Ba
 	if protoVersionStr, ok := conf["protocol_version"]; ok {
 		protoVersion, err := strconv.Atoi(protoVersionStr)
 		if err != nil {
-			return nil, fmt.Errorf("'protocol_version' must be an integer")
+			return nil, errors.New("'protocol_version' must be an integer")
 		}
 		cluster.ProtoVersion = protoVersion
 	}
 
 	if username, ok := conf["username"]; ok {
 		if cluster.ProtoVersion < 2 {
-			return nil, fmt.Errorf("authentication is not supported with protocol version < 2")
+			return nil, errors.New("authentication is not supported with protocol version < 2")
 		}
 		authenticator := gocql.PasswordAuthenticator{Username: username}
 		if password, ok := conf["password"]; ok {
@@ -133,7 +134,7 @@ func NewCassandraBackend(conf map[string]string, logger log.Logger) (physical.Ba
 	if initialConnectionTimeoutStr, ok := conf["initial_connection_timeout"]; ok {
 		initialConnectionTimeout, err := strconv.Atoi(initialConnectionTimeoutStr)
 		if err != nil || initialConnectionTimeout <= 0 {
-			return nil, fmt.Errorf("'initial_connection_timeout' must be a positive integer")
+			return nil, errors.New("'initial_connection_timeout' must be a positive integer")
 		}
 		cluster.ConnectTimeout = time.Duration(initialConnectionTimeout) * time.Second
 	}
@@ -141,7 +142,7 @@ func NewCassandraBackend(conf map[string]string, logger log.Logger) (physical.Ba
 	if connTimeoutStr, ok := conf["connection_timeout"]; ok {
 		connectionTimeout, err := strconv.Atoi(connTimeoutStr)
 		if err != nil || connectionTimeout <= 0 {
-			return nil, fmt.Errorf("'connection_timeout' must be a positive integer")
+			return nil, errors.New("'connection_timeout' must be a positive integer")
 		}
 		cluster.Timeout = time.Duration(connectionTimeout) * time.Second
 	}
@@ -173,7 +174,7 @@ func setupCassandraTLS(conf map[string]string, cluster *gocql.ClusterConfig) err
 
 	tlsOn, err := strconv.Atoi(tlsOnStr)
 	if err != nil {
-		return fmt.Errorf("'tls' must be an integer (0 or 1)")
+		return errors.New("'tls' must be an integer (0 or 1)")
 	}
 
 	if tlsOn == 0 {
@@ -212,7 +213,7 @@ func setupCassandraTLS(conf map[string]string, cluster *gocql.ClusterConfig) err
 	if tlsSkipVerifyStr, ok := conf["tls_skip_verify"]; ok {
 		tlsSkipVerify, err := strconv.Atoi(tlsSkipVerifyStr)
 		if err != nil {
-			return fmt.Errorf("'tls_skip_verify' must be an integer (0 or 1)")
+			return errors.New("'tls_skip_verify' must be an integer (0 or 1)")
 		}
 		if tlsSkipVerify == 0 {
 			tlsConfig.InsecureSkipVerify = false
@@ -232,7 +233,7 @@ func setupCassandraTLS(conf map[string]string, cluster *gocql.ClusterConfig) err
 		case "tls13":
 			tlsConfig.MinVersion = tls.VersionTLS13
 		default:
-			return fmt.Errorf("'tls_min_version' must be one of `tls10`, `tls11`, `tls12` or `tls13`")
+			return errors.New("'tls_min_version' must be one of `tls10`, `tls11`, `tls12` or `tls13`")
 		}
 	}
 

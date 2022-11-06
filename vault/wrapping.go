@@ -340,7 +340,7 @@ DONELISTHANDLING:
 // a JWT token.
 func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) (valid bool, err error) {
 	if req == nil {
-		return false, fmt.Errorf("invalid request")
+		return false, errors.New("invalid request")
 	}
 
 	if c.Sealed() {
@@ -386,9 +386,9 @@ func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) 
 	if req.Data != nil && req.Data["token"] != nil {
 		thirdParty = true
 		if tokenStr, ok := req.Data["token"].(string); !ok {
-			return false, fmt.Errorf("could not decode token in request body")
+			return false, errors.New("could not decode token in request body")
 		} else if tokenStr == "" {
-			return false, fmt.Errorf("empty token in request body")
+			return false, errors.New("empty token in request body")
 		} else {
 			token = tokenStr
 		}
@@ -434,7 +434,7 @@ func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) 
 	}
 
 	if token == "" {
-		return false, fmt.Errorf("token is empty")
+		return false, errors.New("token is empty")
 	}
 
 	te, err := c.tokenStore.Lookup(ctx, token)

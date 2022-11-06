@@ -2,7 +2,7 @@ package radius
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net"
 	"strconv"
 	"strings"
@@ -50,7 +50,7 @@ func pathLogin(b *backend) *framework.Path {
 func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := d.Get("username").(string)
 	if username == "" {
-		return nil, fmt.Errorf("missing username")
+		return nil, errors.New("missing username")
 	}
 
 	return &logical.Response{
@@ -156,7 +156,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	}
 
 	if !policyutil.EquivalentPolicies(finalPolicies, req.Auth.TokenPolicies) {
-		return nil, fmt.Errorf("policies have changed, not renewing")
+		return nil, errors.New("policies have changed, not renewing")
 	}
 
 	req.Auth.Period = cfg.TokenPeriod

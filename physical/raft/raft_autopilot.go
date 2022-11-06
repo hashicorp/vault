@@ -670,7 +670,7 @@ func (d *ReadableDuration) MarshalJSON() ([]byte, error) {
 
 func (d *ReadableDuration) UnmarshalJSON(raw []byte) (err error) {
 	if d == nil {
-		return fmt.Errorf("cannot unmarshal to nil pointer")
+		return errors.New("cannot unmarshal to nil pointer")
 	}
 
 	var dur time.Duration

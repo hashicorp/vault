@@ -111,7 +111,7 @@ func TestMigration(t *testing.T) {
 		cmd := new(OperatorMigrateCommand)
 
 		cfgName := filepath.Join(os.TempDir(), testhelpers.RandomWithPrefix("migrator"))
-		io.WriteFile(cfgName, []byte(`
+		os.WriteFile(cfgName, []byte(`
 storage_source "src_type" {
   path = "src_path"
 }
@@ -144,9 +144,8 @@ storage_destination "dest_type" {
 		}
 
 		verifyBad := func(cfg string) {
-			io.WriteFile(cfgName, []byte(cfg), 0o644)
-			_, err := cmd.loadMigratorConfig(cfgName)
-			if err == nil {
+			os.WriteFile(cfgName, []byte(cfg), 0o644)
+			if _, err := cmd.loadMigratorConfig(cfgName); err == nil {
 				t.Fatalf("expected error but none received from: %v", cfg)
 			}
 		}

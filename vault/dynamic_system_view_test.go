@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -255,7 +256,7 @@ func TestDynamicSystemView_GeneratePasswordFromPolicy_failed(t *testing.T) {
 		"error retrieving policy": {
 			policyName: "testpolicy",
 			getEntry:   nil,
-			getErr:     fmt.Errorf("a test error"),
+			getErr:     errors.New("a test error"),
 		},
 		"saved policy is malformed": {
 			policyName: "testpolicy",
@@ -308,13 +309,13 @@ func (b fakeBarrier) Get(context.Context, string) (*logical.StorageEntry, error)
 }
 
 func (b fakeBarrier) List(context.Context, string) ([]string, error) {
-	return nil, fmt.Errorf("not implemented")
+	return nil, errors.New("not implemented")
 }
 
 func (b fakeBarrier) Put(context.Context, *logical.StorageEntry) error {
-	return fmt.Errorf("not implemented")
+	return errors.New("not implemented")
 }
 
 func (b fakeBarrier) Delete(context.Context, string) error {
-	return fmt.Errorf("not implemented")
+	return errors.New("not implemented")
 }

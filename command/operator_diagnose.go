@@ -248,7 +248,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		return nil
 	})
 	if config == nil {
-		return fmt.Errorf("No vault server configuration found.")
+		return errors.New("No vault server configuration found.")
 	}
 
 	diagnose.Test(ctx, "Check Telemetry", func(ctx context.Context) (err error) {
@@ -295,7 +295,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		// Ensure that there is a storage stanza
 		if config.Storage == nil {
 			diagnose.Advise(ctx, "To learn how to specify a storage backend, see the Vault server configuration documentation.")
-			return fmt.Errorf("No storage stanza in Vault server configuration.")
+			return errors.New("No storage stanza in Vault server configuration.")
 		}
 
 		diagnose.Test(ctx, "Create Storage Backend", func(ctx context.Context) error {
@@ -305,7 +305,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			}
 			if b == nil {
 				diagnose.Advise(ctx, "To learn how to specify a storage backend, see the Vault server configuration documentation.")
-				return fmt.Errorf("Storage backend could not be initialized.")
+				return errors.New("Storage backend could not be initialized.")
 			}
 			backend = &b
 			return nil
@@ -314,7 +314,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		if backend == nil {
 			diagnose.Fail(ctx, "Diagnose could not initialize storage backend.")
 			span.End()
-			return fmt.Errorf("Diagnose could not initialize storage backend.")
+			return errors.New("Diagnose could not initialize storage backend.")
 		}
 
 		// Check for raft quorum status
@@ -323,7 +323,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			if path == "" {
 				path, ok := config.Storage.Config["path"]
 				if !ok {
-					diagnose.SpotError(ctx, "Check Raft Folder Permissions", fmt.Errorf("Storage folder path is required."))
+					diagnose.SpotError(ctx, "Check Raft Folder Permissions", errors.New("Storage folder path is required."))
 				}
 				diagnose.RaftFileChecks(ctx, path)
 			}
@@ -395,7 +395,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 	// Return from top-level span when backend is nil
 	if backend == nil {
-		return fmt.Errorf("Diagnose could not initialize storage backend.")
+		return errors.New("Diagnose could not initialize storage backend.")
 	}
 
 	var configSR sr.ServiceRegistration
@@ -599,7 +599,7 @@ SEALFAIL:
 	diagnose.Test(ctx, "Check Core Creation", func(ctx context.Context) error {
 		var newCoreError error
 		if coreConfig.RawConfig == nil {
-			return fmt.Errorf(CoreConfigUninitializedErr)
+			return errors.New(CoreConfigUninitializedErr)
 		}
 		core, newCoreError := vault.CreateCore(&coreConfig)
 		if newCoreError != nil {
@@ -615,7 +615,7 @@ SEALFAIL:
 	})
 
 	if vaultCore == nil {
-		return fmt.Errorf("Diagnose could not initialize the Vault core from the Vault server configuration.")
+		return errors.New("Diagnose could not initialize the Vault core from the Vault server configuration.")
 	}
 
 	licenseCtx, licenseSpan := diagnose.StartSpan(ctx, "Check For Autoloaded License")
@@ -673,7 +673,7 @@ SEALFAIL:
 	// decrypt a mock value. It will not call runUnseal.
 	diagnose.Test(ctx, "Check Autounseal Encryption", diagnose.WithTimeout(30*time.Second, func(ctx context.Context) error {
 		if barrierSeal == nil {
-			return fmt.Errorf("Diagnose could not create a barrier seal object.")
+			return errors.New("Diagnose could not create a barrier seal object.")
 		}
 		if barrierSeal.BarrierType() == wrapping.WrapperTypeShamir {
 			diagnose.Skipped(ctx, "Skipping barrier encryption test. Only supported for auto-unseal.")
@@ -681,7 +681,7 @@ SEALFAIL:
 		}
 		barrierUUID, err := uuid.GenerateUUID()
 		if err != nil {
-			return fmt.Errorf("Diagnose could not create unique UUID for unsealing.")
+			return errors.New("Diagnose could not create unique UUID for unsealing.")
 		}
 		barrierEncValue := "diagnose-" + barrierUUID
 		ciphertext, err := barrierWrapper.Encrypt(ctx, []byte(barrierEncValue), nil)
@@ -693,7 +693,7 @@ SEALFAIL:
 			return fmt.Errorf("Error decrypting with seal barrier: %w", err)
 		}
 		if string(plaintext) != barrierEncValue {
-			return fmt.Errorf("Barrier returned incorrect decrypted value for mock data.")
+			return errors.New("Barrier returned incorrect decrypted value for mock data.")
 		}
 		return nil
 	}))
@@ -706,7 +706,7 @@ SEALFAIL:
 	diagnose.Test(ctx, "Check Server Before Runtime", func(ctx context.Context) error {
 		for _, ln := range lns {
 			if ln.Config == nil {
-				return fmt.Errorf("Found no listener config after parsing the Vault configuration.")
+				return errors.New("Found no listener config after parsing the Vault configuration.")
 			}
 		}
 		return nil

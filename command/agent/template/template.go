@@ -274,7 +274,7 @@ func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctc
 	// Use the cache if available or fallback to the Vault server values.
 	if sc.AgentConfig.Cache != nil {
 		if sc.AgentConfig.Cache.InProcDialer == nil {
-			return nil, fmt.Errorf("missing in-process dialer configuration")
+			return nil, errors.New("missing in-process dialer configuration")
 		}
 		if conf.Vault.Transport == nil {
 			conf.Vault.Transport = &ctconfig.TransportConfig{}

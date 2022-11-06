@@ -30,7 +30,7 @@ func (pm PluginMultiplexingServerImpl) MultiplexingSupport(_ context.Context, _ 
 
 func MultiplexingSupported(ctx context.Context, cc grpc.ClientConnInterface, name string) (bool, error) {
 	if cc == nil {
-		return false, fmt.Errorf("client connection is nil")
+		return false, errors.New("client connection is nil")
 	}
 
 	out := strings.Split(os.Getenv(PluginMultiplexingOptOut), ",")
@@ -61,7 +61,7 @@ func MultiplexingSupported(ctx context.Context, cc grpc.ClientConnInterface, nam
 func GetMultiplexIDFromContext(ctx context.Context) (string, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return "", fmt.Errorf("missing plugin multiplexing metadata")
+		return "", errors.New("missing plugin multiplexing metadata")
 	}
 
 	multiplexIDs := md[MultiplexingCtxKey]
@@ -73,7 +73,7 @@ func GetMultiplexIDFromContext(ctx context.Context) (string, error) {
 
 	multiplexID := multiplexIDs[0]
 	if multiplexID == "" {
-		return "", fmt.Errorf("empty multiplex ID in metadata")
+		return "", errors.New("empty multiplex ID in metadata")
 	}
 
 	return multiplexID, nil

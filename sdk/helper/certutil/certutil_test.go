@@ -12,6 +12,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	mathrand "math/rand"
@@ -157,17 +158,17 @@ func TestCertBundleParsing(t *testing.T) {
 
 func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBundle) error {
 	if cbut == nil {
-		return fmt.Errorf("got nil bundle")
+		return errors.New("got nil bundle")
 	}
 	if pcbut == nil {
-		return fmt.Errorf("got nil parsed bundle")
+		return errors.New("got nil parsed bundle")
 	}
 
 	switch {
 	case pcbut.Certificate == nil:
-		return fmt.Errorf("parsed bundle has nil certificate")
+		return errors.New("parsed bundle has nil certificate")
 	case pcbut.PrivateKey == nil:
-		return fmt.Errorf("parsed bundle has nil private key")
+		return errors.New("parsed bundle has nil private key")
 	}
 
 	switch cbut.PrivateKey {
@@ -192,7 +193,7 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 			return fmt.Errorf("parsed bundle has wrong pkcs8 private key type: %v, should be 'ed25519' (%v)", pcbut.PrivateKeyType, ECPrivateKey)
 		}
 	default:
-		return fmt.Errorf("parsed bundle has unknown private key type")
+		return errors.New("parsed bundle has unknown private key type")
 	}
 
 	subjKeyID, err := GetSubjKeyID(pcbut.PrivateKey)
@@ -205,9 +206,9 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 
 	switch {
 	case len(pcbut.CAChain) > 0 && len(cbut.CAChain) == 0:
-		return fmt.Errorf("parsed bundle ca chain has certs when cert bundle does not")
+		return errors.New("parsed bundle ca chain has certs when cert bundle does not")
 	case len(pcbut.CAChain) == 0 && len(cbut.CAChain) > 0:
-		return fmt.Errorf("cert bundle ca chain has certs when parsed cert bundle does not")
+		return errors.New("cert bundle ca chain has certs when parsed cert bundle does not")
 	}
 
 	cb, err := pcbut.ToCertBundle()
@@ -217,39 +218,39 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 
 	switch {
 	case len(cb.Certificate) == 0:
-		return fmt.Errorf("bundle has nil certificate")
+		return errors.New("bundle has nil certificate")
 	case len(cb.PrivateKey) == 0:
-		return fmt.Errorf("bundle has nil private key")
+		return errors.New("bundle has nil private key")
 	case len(cb.CAChain[0]) == 0:
-		return fmt.Errorf("bundle has nil issuing CA")
+		return errors.New("bundle has nil issuing CA")
 	}
 
 	switch pcbut.PrivateKeyType {
 	case RSAPrivateKey:
 		if cb.PrivateKey != privRSAKeyPem && cb.PrivateKey != privRSA8KeyPem {
-			return fmt.Errorf("bundle private key does not match")
+			return errors.New("bundle private key does not match")
 		}
 	case ECPrivateKey:
 		if cb.PrivateKey != privECKeyPem && cb.PrivateKey != privEC8KeyPem {
-			return fmt.Errorf("bundle private key does not match")
+			return errors.New("bundle private key does not match")
 		}
 	case Ed25519PrivateKey:
 		if cb.PrivateKey != privEd255198KeyPem {
-			return fmt.Errorf("bundle private key does not match")
+			return errors.New("bundle private key does not match")
 		}
 	default:
-		return fmt.Errorf("certBundle has unknown private key type")
+		return errors.New("certBundle has unknown private key type")
 	}
 
 	if cb.SerialNumber != GetHexFormatted(pcbut.Certificate.SerialNumber.Bytes(), ":") {
-		return fmt.Errorf("bundle serial number does not match")
+		return errors.New("bundle serial number does not match")
 	}
 
 	switch {
 	case len(pcbut.CAChain) > 0 && len(cb.CAChain) == 0:
-		return fmt.Errorf("parsed bundle ca chain has certs when cert bundle does not")
+		return errors.New("parsed bundle ca chain has certs when cert bundle does not")
 	case len(pcbut.CAChain) == 0 && len(cb.CAChain) > 0:
-		return fmt.Errorf("cert bundle ca chain has certs when parsed cert bundle does not")
+		return errors.New("cert bundle ca chain has certs when parsed cert bundle does not")
 	case !reflect.DeepEqual(cbut.CAChain, cb.CAChain):
 		return fmt.Errorf("cert bundle ca chain does not match: %#v\n\n%#v", cbut.CAChain, cb.CAChain)
 	}
@@ -289,34 +290,34 @@ func TestCSRBundleConversion(t *testing.T) {
 
 func compareCSRBundleToParsedCSRBundle(csrbut *CSRBundle, pcsrbut *ParsedCSRBundle) error {
 	if csrbut == nil {
-		return fmt.Errorf("got nil bundle")
+		return errors.New("got nil bundle")
 	}
 	if pcsrbut == nil {
-		return fmt.Errorf("got nil parsed bundle")
+		return errors.New("got nil parsed bundle")
 	}
 
 	switch {
 	case pcsrbut.CSR == nil:
-		return fmt.Errorf("parsed bundle has nil csr")
+		return errors.New("parsed bundle has nil csr")
 	case pcsrbut.PrivateKey == nil:
-		return fmt.Errorf("parsed bundle has nil private key")
+		return errors.New("parsed bundle has nil private key")
 	}
 
 	switch csrbut.PrivateKey {
 	case privRSAKeyPem:
 		if pcsrbut.PrivateKeyType != RSAPrivateKey {
-			return fmt.Errorf("parsed bundle has wrong private key type")
+			return errors.New("parsed bundle has wrong private key type")
 		}
 	case privECKeyPem:
 		if pcsrbut.PrivateKeyType != ECPrivateKey {
-			return fmt.Errorf("parsed bundle has wrong private key type")
+			return errors.New("parsed bundle has wrong private key type")
 		}
 	case privEd255198KeyPem:
 		if pcsrbut.PrivateKeyType != Ed25519PrivateKey {
-			return fmt.Errorf("parsed bundle has wrong private key type")
+			return errors.New("parsed bundle has wrong private key type")
 		}
 	default:
-		return fmt.Errorf("parsed bundle has unknown private key type")
+		return errors.New("parsed bundle has unknown private key type")
 	}
 
 	csrb, err := pcsrbut.ToCSRBundle()
@@ -326,35 +327,35 @@ func compareCSRBundleToParsedCSRBundle(csrbut *CSRBundle, pcsrbut *ParsedCSRBund
 
 	switch {
 	case len(csrb.CSR) == 0:
-		return fmt.Errorf("bundle has nil certificate")
+		return errors.New("bundle has nil certificate")
 	case len(csrb.PrivateKey) == 0:
-		return fmt.Errorf("bundle has nil private key")
+		return errors.New("bundle has nil private key")
 	}
 
 	switch csrb.PrivateKeyType {
 	case "rsa":
 		if pcsrbut.PrivateKeyType != RSAPrivateKey {
-			return fmt.Errorf("bundle has wrong private key type")
+			return errors.New("bundle has wrong private key type")
 		}
 		if csrb.PrivateKey != privRSAKeyPem {
 			return fmt.Errorf("bundle rsa private key does not match\nGot\n%#v\nExpected\n%#v", csrb.PrivateKey, privRSAKeyPem)
 		}
 	case "ec":
 		if pcsrbut.PrivateKeyType != ECPrivateKey {
-			return fmt.Errorf("bundle has wrong private key type")
+			return errors.New("bundle has wrong private key type")
 		}
 		if csrb.PrivateKey != privECKeyPem {
-			return fmt.Errorf("bundle ec private key does not match")
+			return errors.New("bundle ec private key does not match")
 		}
 	case "ed25519":
 		if pcsrbut.PrivateKeyType != Ed25519PrivateKey {
-			return fmt.Errorf("bundle has wrong private key type")
+			return errors.New("bundle has wrong private key type")
 		}
 		if csrb.PrivateKey != privEd255198KeyPem {
-			return fmt.Errorf("bundle ed25519 private key does not match")
+			return errors.New("bundle ed25519 private key does not match")
 		}
 	default:
-		return fmt.Errorf("bundle has unknown private key type")
+		return errors.New("bundle has unknown private key type")
 	}
 
 	return nil

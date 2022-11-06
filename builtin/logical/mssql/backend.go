@@ -3,7 +3,7 @@ package mssql
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"errors"
 	"strings"
 	"sync"
 
@@ -80,7 +80,7 @@ func (b *backend) DB(ctx context.Context, s logical.Storage) (*sql.DB, error) {
 		return nil, err
 	}
 	if entry == nil {
-		return nil, fmt.Errorf("configure the DB connection with config/connection first")
+		return nil, errors.New("configure the DB connection with config/connection first")
 	}
 
 	var connConfig connectionConfig

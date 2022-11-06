@@ -2,6 +2,7 @@ package token
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -31,7 +32,7 @@ func ExternalTokenHelperPath(path string) (string, error) {
 	}
 
 	if _, err := os.Stat(path); err != nil {
-		return "", fmt.Errorf("unknown error getting the external helper path")
+		return "", errors.New("unknown error getting the external helper path")
 	}
 
 	return path, nil

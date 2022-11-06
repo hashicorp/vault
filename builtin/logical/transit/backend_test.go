@@ -4,6 +4,7 @@ import (
 	"context"
 	cryptoRand "crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -487,17 +488,17 @@ func testAccStepListPolicy(t *testing.T, name string, expectNone bool) logicalte
 		Path:      "keys",
 		Check: func(resp *logical.Response) error {
 			if resp == nil {
-				return fmt.Errorf("missing response")
+				return errors.New("missing response")
 			}
 			if expectNone {
 				keysRaw, ok := resp.Data["keys"]
 				if ok || keysRaw != nil {
-					return fmt.Errorf("response data when expecting none")
+					return errors.New("response data when expecting none")
 				}
 				return nil
 			}
 			if len(resp.Data) == 0 {
-				return fmt.Errorf("no data returned")
+				return errors.New("no data returned")
 			}
 
 			var d struct {
@@ -571,12 +572,12 @@ func testAccStepDeleteNotDisabledPolicy(t *testing.T, name string) logicaltest.T
 		ErrorOk:   true,
 		Check: func(resp *logical.Response) error {
 			if resp == nil {
-				return fmt.Errorf("got nil response instead of error")
+				return errors.New("got nil response instead of error")
 			}
 			if resp.IsError() {
 				return nil
 			}
-			return fmt.Errorf("expected error but did not get one")
+			return errors.New("expected error but did not get one")
 		},
 	}
 }
@@ -591,10 +592,10 @@ func testAccStepReadPolicyWithVersions(t *testing.T, name string, expectNone, de
 		Path:      "keys/" + name,
 		Check: func(resp *logical.Response) error {
 			if resp == nil && !expectNone {
-				return fmt.Errorf("missing response")
+				return errors.New("missing response")
 			} else if expectNone {
 				if resp != nil {
-					return fmt.Errorf("response when expecting none")
+					return errors.New("response when expecting none")
 				}
 				return nil
 			}
@@ -668,7 +669,7 @@ func testAccStepEncrypt(
 				return err
 			}
 			if d.Ciphertext == "" {
-				return fmt.Errorf("missing ciphertext")
+				return errors.New("missing ciphertext")
 			}
 			decryptData["ciphertext"] = d.Ciphertext
 			return nil
@@ -693,7 +694,7 @@ func testAccStepEncryptUpsert(
 				return err
 			}
 			if d.Ciphertext == "" {
-				return fmt.Errorf("missing ciphertext")
+				return errors.New("missing ciphertext")
 			}
 			decryptData["ciphertext"] = d.Ciphertext
 			return nil
@@ -719,7 +720,7 @@ func testAccStepEncryptContext(
 				return err
 			}
 			if d.Ciphertext == "" {
-				return fmt.Errorf("missing ciphertext")
+				return errors.New("missing ciphertext")
 			}
 			decryptData["ciphertext"] = d.Ciphertext
 			decryptData["context"] = base64.StdEncoding.EncodeToString([]byte(context))
@@ -772,7 +773,7 @@ func testAccStepRewrap(
 				return err
 			}
 			if d.Ciphertext == "" {
-				return fmt.Errorf("missing ciphertext")
+				return errors.New("missing ciphertext")
 			}
 			splitStrings := strings.Split(d.Ciphertext, ":")
 			verString := splitStrings[1][1:]
@@ -781,7 +782,7 @@ func testAccStepRewrap(
 				return fmt.Errorf("error pulling out version from verString %q, ciphertext was %s", verString, d.Ciphertext)
 			}
 			if ver != expectedVer {
-				return fmt.Errorf("did not get expected version")
+				return errors.New("did not get expected version")
 			}
 			decryptData["ciphertext"] = d.Ciphertext
 			return nil
@@ -807,7 +808,7 @@ func testAccStepEncryptVX(
 				return err
 			}
 			if d.Ciphertext == "" {
-				return fmt.Errorf("missing ciphertext")
+				return errors.New("missing ciphertext")
 			}
 			splitStrings := strings.Split(d.Ciphertext, ":")
 			splitStrings[1] = "v" + strconv.Itoa(ver)
@@ -846,7 +847,7 @@ func testAccStepDecryptExpectFailure(
 		ErrorOk:   true,
 		Check: func(resp *logical.Response) error {
 			if !resp.IsError() {
-				return fmt.Errorf("expected error")
+				return errors.New("expected error")
 			}
 			return nil
 		},
@@ -885,11 +886,11 @@ func testAccStepWriteDatakey(t *testing.T, name string,
 				return err
 			}
 			if noPlaintext && len(d.Plaintext) != 0 {
-				return fmt.Errorf("received plaintxt when we disabled it")
+				return errors.New("received plaintxt when we disabled it")
 			}
 			if !noPlaintext {
 				if len(d.Plaintext) == 0 {
-					return fmt.Errorf("did not get plaintext when we expected it")
+					return errors.New("did not get plaintext when we expected it")
 				}
 				dataKeyInfo["plaintext"] = d.Plaintext
 				plainBytes, err := base64.StdEncoding.DecodeString(d.Plaintext)
@@ -897,7 +898,7 @@ func testAccStepWriteDatakey(t *testing.T, name string,
 					return fmt.Errorf("could not base64 decode plaintext string %q", d.Plaintext)
 				}
 				if len(plainBytes)*8 != bits {
-					return fmt.Errorf("returned key does not have correct bit length")
+					return errors.New("returned key does not have correct bit length")
 				}
 			}
 			dataKeyInfo["ciphertext"] = d.Ciphertext

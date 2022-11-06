@@ -111,7 +111,7 @@ func getDigestOIDForSignatureAlgorithm(digestAlg x509.SignatureAlgorithm) (asn1.
 	case x509.SHA512WithRSA, x509.ECDSAWithSHA512:
 		return OIDDigestAlgorithmSHA512, nil
 	}
-	return nil, fmt.Errorf("pkcs7: cannot convert hash to oid, unknown hash algorithm")
+	return nil, errors.New("pkcs7: cannot convert hash to oid, unknown hash algorithm")
 }
 
 // getOIDForEncryptionAlgorithm takes the private key type of the signer and

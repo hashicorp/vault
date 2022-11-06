@@ -32,7 +32,7 @@ func RaftFileChecks(ctx context.Context, path string) {
 	}
 
 	if !IsDir(info) {
-		SpotError(ctx, ownershipTestName, fmt.Errorf("Error: Raft storage path variable does not point to a folder."))
+		SpotError(ctx, ownershipTestName, errors.New("Error: Raft storage path variable does not point to a folder."))
 	}
 
 	if !HasDB(path) {

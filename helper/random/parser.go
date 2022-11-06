@@ -1,6 +1,7 @@
 package random
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"unicode/utf8"
@@ -128,7 +129,7 @@ func getRuleInfo(rule map[string]interface{}) (data ruleInfo, err error) {
 		}
 
 		if len(slice) == 0 {
-			return data, fmt.Errorf("rule info cannot be empty")
+			return data, errors.New("rule info cannot be empty")
 		}
 
 		data = ruleInfo{
@@ -137,7 +138,7 @@ func getRuleInfo(rule map[string]interface{}) (data ruleInfo, err error) {
 		}
 		return data, nil
 	}
-	return data, fmt.Errorf("rule is empty")
+	return data, errors.New("rule is empty")
 }
 
 // stringToRunesFunc converts a string to a []rune for use in the mapstructure library
@@ -149,7 +150,7 @@ func stringToRunesFunc(from reflect.Kind, to reflect.Kind, data interface{}) (in
 	raw := data.(string)
 
 	if !utf8.ValidString(raw) {
-		return nil, fmt.Errorf("invalid UTF8 string")
+		return nil, errors.New("invalid UTF8 string")
 	}
 	return []rune(raw), nil
 }

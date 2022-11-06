@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -551,7 +552,7 @@ func TestStringGenerator_JSON(t *testing.T) {
 type badReader struct{}
 
 func (badReader) Read([]byte) (int, error) {
-	return 0, fmt.Errorf("test error")
+	return 0, errors.New("test error")
 }
 
 func TestValidate(t *testing.T) {

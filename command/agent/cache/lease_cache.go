@@ -134,7 +134,7 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 	}
 
 	if conf.Client == nil {
-		return nil, fmt.Errorf("nil API client")
+		return nil, errors.New("nil API client")
 	}
 
 	db, err := cachememdb.New()
@@ -743,11 +743,11 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 		}
 		tokenRaw, ok := jsonBody["token"]
 		if !ok {
-			return false, fmt.Errorf("failed to get token from request body")
+			return false, errors.New("failed to get token from request body")
 		}
 		token, ok := tokenRaw.(string)
 		if !ok {
-			return false, fmt.Errorf("expected token in the request body to be string")
+			return false, errors.New("expected token in the request body to be string")
 		}
 
 		// Clear the cache entry associated with the token and all the other
@@ -778,11 +778,11 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 		}
 		accessorRaw, ok := jsonBody["accessor"]
 		if !ok {
-			return false, fmt.Errorf("failed to get accessor from request body")
+			return false, errors.New("failed to get accessor from request body")
 		}
 		accessor, ok := accessorRaw.(string)
 		if !ok {
-			return false, fmt.Errorf("expected accessor in the request body to be string")
+			return false, errors.New("expected accessor in the request body to be string")
 		}
 
 		in := &cacheClearInput{
@@ -800,11 +800,11 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 		}
 		tokenRaw, ok := jsonBody["token"]
 		if !ok {
-			return false, fmt.Errorf("failed to get token from request body")
+			return false, errors.New("failed to get token from request body")
 		}
 		token, ok := tokenRaw.(string)
 		if !ok {
-			return false, fmt.Errorf("expected token in the request body to be string")
+			return false, errors.New("expected token in the request body to be string")
 		}
 
 		// Kill the lifetime watchers of all the leases attached to the revoked
@@ -855,11 +855,11 @@ func (c *LeaseCache) handleRevocationRequest(ctx context.Context, req *SendReque
 		}
 		leaseIDRaw, ok := jsonBody["lease_id"]
 		if !ok {
-			return false, fmt.Errorf("failed to get lease_id from request body")
+			return false, errors.New("failed to get lease_id from request body")
 		}
 		leaseID, ok := leaseIDRaw.(string)
 		if !ok {
-			return false, fmt.Errorf("expected lease_id the request body to be string")
+			return false, errors.New("expected lease_id the request body to be string")
 		}
 		in := &cacheClearInput{
 			Type:  "lease",

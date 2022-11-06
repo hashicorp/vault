@@ -1,6 +1,7 @@
 package template
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"text/template"
@@ -23,10 +24,10 @@ func Template(rawTemplate string) Opt {
 func Function(name string, f interface{}) Opt {
 	return func(up *StringTemplate) error {
 		if name == "" {
-			return fmt.Errorf("missing function name")
+			return errors.New("missing function name")
 		}
 		if f == nil {
-			return fmt.Errorf("missing function")
+			return errors.New("missing function")
 		}
 		up.funcMap[name] = f
 		return nil
@@ -123,7 +124,7 @@ func NewTemplate(opts ...Opt) (up StringTemplate, err error) {
 	}
 
 	if up.rawTemplate == "" {
-		return StringTemplate{}, fmt.Errorf("missing template")
+		return StringTemplate{}, errors.New("missing template")
 	}
 
 	tmpl, err := template.New("template").
@@ -140,7 +141,7 @@ func NewTemplate(opts ...Opt) (up StringTemplate, err error) {
 // Generate based on the provided template
 func (up StringTemplate) Generate(data interface{}) (string, error) {
 	if up.tmpl == nil || up.rawTemplate == "" {
-		return "", fmt.Errorf("failed to generate: template not initialized")
+		return "", errors.New("failed to generate: template not initialized")
 	}
 	str := &strings.Builder{}
 	err := up.tmpl.Execute(str, data)

@@ -2,7 +2,7 @@ package inmem
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"reflect"
 	"sort"
 	"testing"
@@ -32,21 +32,21 @@ func (f *faultyPseudo) Delete(ctx context.Context, key string) error {
 
 func (f *faultyPseudo) GetInternal(ctx context.Context, key string) (*physical.Entry, error) {
 	if _, ok := f.faultyPaths[key]; ok {
-		return nil, fmt.Errorf("fault")
+		return nil, errors.New("fault")
 	}
 	return f.underlying.GetInternal(context.Background(), key)
 }
 
 func (f *faultyPseudo) PutInternal(ctx context.Context, entry *physical.Entry) error {
 	if _, ok := f.faultyPaths[entry.Key]; ok {
-		return fmt.Errorf("fault")
+		return errors.New("fault")
 	}
 	return f.underlying.PutInternal(context.Background(), entry)
 }
 
 func (f *faultyPseudo) DeleteInternal(ctx context.Context, key string) error {
 	if _, ok := f.faultyPaths[key]; ok {
-		return fmt.Errorf("fault")
+		return errors.New("fault")
 	}
 	return f.underlying.DeleteInternal(context.Background(), key)
 }

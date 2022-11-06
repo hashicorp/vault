@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-errors/errors"
 	log "github.com/hashicorp/go-hclog"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -224,7 +225,7 @@ func testConfigRead(t *testing.T, token string, d map[string]interface{}) logica
 
 			for _, value := range resp.Data {
 				if value == token {
-					return fmt.Errorf("token should not be returned on a read request")
+					return errors.New("token should not be returned on a read request")
 				}
 			}
 

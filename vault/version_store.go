@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -70,7 +71,7 @@ func (c *Core) storeVersionEntry(ctx context.Context, vaultVersion *VaultVersion
 // upgrade timestamp from storage. The earliest version this can be is 1.9.0.
 func (c *Core) FindOldestVersionTimestamp() (string, time.Time, error) {
 	if c.versionHistory == nil {
-		return "", time.Time{}, fmt.Errorf("version history is not initialized")
+		return "", time.Time{}, errors.New("version history is not initialized")
 	}
 
 	oldestUpgradeTime := time.Now().UTC()
@@ -87,7 +88,7 @@ func (c *Core) FindOldestVersionTimestamp() (string, time.Time, error) {
 
 func (c *Core) FindNewestVersionTimestamp() (string, time.Time, error) {
 	if c.versionHistory == nil {
-		return "", time.Time{}, fmt.Errorf("version history is not initialized")
+		return "", time.Time{}, errors.New("version history is not initialized")
 	}
 
 	var newestUpgradeTime time.Time

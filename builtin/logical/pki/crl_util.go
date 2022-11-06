@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -516,7 +517,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		alreadyRevoked = true
 		err = revEntry.DecodeJSON(&revInfo)
 		if err != nil {
-			return nil, fmt.Errorf("error decoding existing revocation info")
+			return nil, errors.New("error decoding existing revocation info")
 		}
 	}
 
@@ -546,7 +547,7 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 			return nil, fmt.Errorf("error parsing certificate: %w", err)
 		}
 		if cert == nil {
-			return nil, fmt.Errorf("got a nil certificate")
+			return nil, errors.New("got a nil certificate")
 		}
 
 		// Add a little wiggle room because leases are stored with a second
@@ -574,13 +575,13 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 
 		revEntry, err = logical.StorageEntryJSON(revokedPath+normalizeSerial(serial), revInfo)
 		if err != nil {
-			return nil, fmt.Errorf("error creating revocation entry")
+			return nil, errors.New("error creating revocation entry")
 		}
 
 		certsCounted := b.certsCounted.Load()
 		err = req.Storage.Put(ctx, revEntry)
 		if err != nil {
-			return nil, fmt.Errorf("error saving revoked certificate to new location")
+			return nil, errors.New("error saving revoked certificate to new location")
 		}
 		b.incrementTotalRevokedCertificatesCount(certsCounted, revEntry.Key)
 	}
@@ -625,11 +626,11 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		var walInfo deltaWALInfo
 		walEntry, err := logical.StorageEntryJSON(deltaWALPath+normalizeSerial(serial), walInfo)
 		if err != nil {
-			return nil, fmt.Errorf("unable to create delta CRL WAL entry")
+			return nil, errors.New("unable to create delta CRL WAL entry")
 		}
 
 		if err = req.Storage.Put(ctx, walEntry); err != nil {
-			return nil, fmt.Errorf("error saving delta CRL WAL entry")
+			return nil, errors.New("error saving delta CRL WAL entry")
 		}
 
 		// In order for periodic delta rebuild to be mildly efficient, we
@@ -638,10 +639,10 @@ func revokeCert(ctx context.Context, b *backend, req *logical.Request, serial st
 		lastRevSerial := lastWALInfo{Serial: serial}
 		lastWALEntry, err := logical.StorageEntryJSON(deltaWALLastRevokedSerial, lastRevSerial)
 		if err != nil {
-			return nil, fmt.Errorf("unable to create last delta CRL WAL entry")
+			return nil, errors.New("unable to create last delta CRL WAL entry")
 		}
 		if err = req.Storage.Put(ctx, lastWALEntry); err != nil {
-			return nil, fmt.Errorf("error saving last delta CRL WAL entry")
+			return nil, errors.New("error saving last delta CRL WAL entry")
 		}
 	}
 

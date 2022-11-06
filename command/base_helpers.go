@@ -333,7 +333,7 @@ func generateFlagErrors(f *FlagSets, opts ...ParseOptions) error {
 		}
 
 		if !canUseRaw {
-			return fmt.Errorf("This command does not support the -format=raw option.")
+			return errors.New("This command does not support the -format=raw option.")
 		}
 	}
 

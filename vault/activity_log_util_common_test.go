@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -41,7 +42,7 @@ func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) 
 		if startTime.Equal(timeutil.MonthsPreviousTo(1, currMonthStart)) {
 			return monthOneHLL, nil
 		}
-		return nil, fmt.Errorf("bad start time")
+		return nil, errors.New("bad start time")
 	}
 
 	// Let's add 2 entities exclusive to month 1 (clients 0,1),

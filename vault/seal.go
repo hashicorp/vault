@@ -94,7 +94,7 @@ func (d *defaultSeal) SealWrapable() bool {
 
 func (d *defaultSeal) checkCore() error {
 	if d.core == nil {
-		return fmt.Errorf("seal does not have a core set")
+		return errors.New("seal does not have a core set")
 	}
 	return nil
 }
@@ -138,7 +138,7 @@ func (d *defaultSeal) RecoveryKeySupported() bool {
 
 func (d *defaultSeal) SetStoredKeys(ctx context.Context, keys [][]byte) error {
 	if d.LegacySeal() {
-		return fmt.Errorf("stored keys are not supported")
+		return errors.New("stored keys are not supported")
 	}
 	return writeStoredKeys(ctx, d.core.physical, d.access, keys)
 }
@@ -153,7 +153,7 @@ func (d *defaultSeal) LegacySeal() bool {
 
 func (d *defaultSeal) GetStoredKeys(ctx context.Context) ([][]byte, error) {
 	if d.LegacySeal() {
-		return nil, fmt.Errorf("stored keys are not supported")
+		return nil, errors.New("stored keys are not supported")
 	}
 	keys, err := readStoredKeys(ctx, d.core.physical, d.access)
 	return keys, err
@@ -262,26 +262,26 @@ func (d *defaultSeal) RecoveryType() string {
 }
 
 func (d *defaultSeal) RecoveryConfig(ctx context.Context) (*SealConfig, error) {
-	return nil, fmt.Errorf("recovery not supported")
+	return nil, errors.New("recovery not supported")
 }
 
 func (d *defaultSeal) RecoveryKey(ctx context.Context) ([]byte, error) {
-	return nil, fmt.Errorf("recovery not supported")
+	return nil, errors.New("recovery not supported")
 }
 
 func (d *defaultSeal) SetRecoveryConfig(ctx context.Context, config *SealConfig) error {
-	return fmt.Errorf("recovery not supported")
+	return errors.New("recovery not supported")
 }
 
 func (d *defaultSeal) SetCachedRecoveryConfig(config *SealConfig) {
 }
 
 func (d *defaultSeal) VerifyRecoveryKey(ctx context.Context, key []byte) error {
-	return fmt.Errorf("recovery not supported")
+	return errors.New("recovery not supported")
 }
 
 func (d *defaultSeal) SetRecoveryKey(ctx context.Context, key []byte) error {
-	return fmt.Errorf("recovery not supported")
+	return errors.New("recovery not supported")
 }
 
 // SealConfig is used to describe the seal configuration
@@ -338,28 +338,28 @@ type SealConfig struct {
 // Validate is used to sanity check the seal configuration
 func (s *SealConfig) Validate() error {
 	if s.SecretShares < 1 {
-		return fmt.Errorf("shares must be at least one")
+		return errors.New("shares must be at least one")
 	}
 	if s.SecretThreshold < 1 {
-		return fmt.Errorf("threshold must be at least one")
+		return errors.New("threshold must be at least one")
 	}
 	if s.SecretShares > 1 && s.SecretThreshold == 1 {
-		return fmt.Errorf("threshold must be greater than one for multiple shares")
+		return errors.New("threshold must be greater than one for multiple shares")
 	}
 	if s.SecretShares > 255 {
-		return fmt.Errorf("shares must be less than 256")
+		return errors.New("shares must be less than 256")
 	}
 	if s.SecretThreshold > 255 {
-		return fmt.Errorf("threshold must be less than 256")
+		return errors.New("threshold must be less than 256")
 	}
 	if s.SecretThreshold > s.SecretShares {
-		return fmt.Errorf("threshold cannot be larger than shares")
+		return errors.New("threshold cannot be larger than shares")
 	}
 	if s.StoredShares > 1 {
-		return fmt.Errorf("stored keys cannot be larger than 1")
+		return errors.New("stored keys cannot be larger than 1")
 	}
 	if len(s.PGPKeys) > 0 && len(s.PGPKeys) != s.SecretShares {
-		return fmt.Errorf("count mismatch between number of provided PGP keys and number of shares")
+		return errors.New("count mismatch between number of provided PGP keys and number of shares")
 	}
 	if len(s.PGPKeys) > 0 {
 		for _, keystring := range s.PGPKeys {
@@ -430,10 +430,10 @@ func (e *ErrDecrypt) Is(target error) bool {
 
 func writeStoredKeys(ctx context.Context, storage physical.Backend, encryptor *seal.Access, keys [][]byte) error {
 	if keys == nil {
-		return fmt.Errorf("keys were nil")
+		return errors.New("keys were nil")
 	}
 	if len(keys) == 0 {
-		return fmt.Errorf("no keys provided")
+		return errors.New("no keys provided")
 	}
 
 	buf, err := json.Marshal(keys)

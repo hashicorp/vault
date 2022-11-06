@@ -3,6 +3,7 @@ package alicloudoss
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -47,7 +48,7 @@ func NewAliCloudOSSBackend(conf map[string]string, logger log.Logger) (physical.
 	if endpoint == "" {
 		endpoint = conf["endpoint"]
 		if endpoint == "" {
-			return nil, fmt.Errorf("'endpoint' must be set")
+			return nil, errors.New("'endpoint' must be set")
 		}
 	}
 
@@ -55,7 +56,7 @@ func NewAliCloudOSSBackend(conf map[string]string, logger log.Logger) (physical.
 	if bucket == "" {
 		bucket = conf["bucket"]
 		if bucket == "" {
-			return nil, fmt.Errorf("'bucket' must be set")
+			return nil, errors.New("'bucket' must be set")
 		}
 	}
 
@@ -63,7 +64,7 @@ func NewAliCloudOSSBackend(conf map[string]string, logger log.Logger) (physical.
 	if accessKeyID == "" {
 		accessKeyID = conf["access_key"]
 		if accessKeyID == "" {
-			return nil, fmt.Errorf("'access_key' must be set")
+			return nil, errors.New("'access_key' must be set")
 		}
 	}
 
@@ -71,7 +72,7 @@ func NewAliCloudOSSBackend(conf map[string]string, logger log.Logger) (physical.
 	if accessKeySecret == "" {
 		accessKeySecret = conf["secret_key"]
 		if accessKeySecret == "" {
-			return nil, fmt.Errorf("'secret_key' must be set")
+			return nil, errors.New("'secret_key' must be set")
 		}
 	}
 

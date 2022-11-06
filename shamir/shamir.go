@@ -3,6 +3,7 @@ package shamir
 import (
 	"crypto/rand"
 	"crypto/subtle"
+	"errors"
 	"fmt"
 	mathrand "math/rand"
 	"time"
@@ -127,19 +128,19 @@ func add(a, b uint8) uint8 {
 func Split(secret []byte, parts, threshold int) ([][]byte, error) {
 	// Sanity check the input
 	if parts < threshold {
-		return nil, fmt.Errorf("parts cannot be less than threshold")
+		return nil, errors.New("parts cannot be less than threshold")
 	}
 	if parts > 255 {
-		return nil, fmt.Errorf("parts cannot exceed 255")
+		return nil, errors.New("parts cannot exceed 255")
 	}
 	if threshold < 2 {
-		return nil, fmt.Errorf("threshold must be at least 2")
+		return nil, errors.New("threshold must be at least 2")
 	}
 	if threshold > 255 {
-		return nil, fmt.Errorf("threshold cannot exceed 255")
+		return nil, errors.New("threshold cannot exceed 255")
 	}
 	if len(secret) == 0 {
-		return nil, fmt.Errorf("cannot split an empty secret")
+		return nil, errors.New("cannot split an empty secret")
 	}
 
 	// Generate random list of x coordinates
@@ -184,17 +185,17 @@ func Split(secret []byte, parts, threshold int) ([][]byte, error) {
 func Combine(parts [][]byte) ([]byte, error) {
 	// Verify enough parts provided
 	if len(parts) < 2 {
-		return nil, fmt.Errorf("less than two parts cannot be used to reconstruct the secret")
+		return nil, errors.New("less than two parts cannot be used to reconstruct the secret")
 	}
 
 	// Verify the parts are all the same length
 	firstPartLen := len(parts[0])
 	if firstPartLen < 2 {
-		return nil, fmt.Errorf("parts must be at least two bytes")
+		return nil, errors.New("parts must be at least two bytes")
 	}
 	for i := 1; i < len(parts); i++ {
 		if len(parts[i]) != firstPartLen {
-			return nil, fmt.Errorf("all parts must be the same length")
+			return nil, errors.New("all parts must be the same length")
 		}
 	}
 
@@ -211,7 +212,7 @@ func Combine(parts [][]byte) ([]byte, error) {
 	for i, part := range parts {
 		samp := part[firstPartLen-1]
 		if exists := checkMap[samp]; exists {
-			return nil, fmt.Errorf("duplicate part detected")
+			return nil, errors.New("duplicate part detected")
 		}
 		checkMap[samp] = true
 		x_samples[i] = samp

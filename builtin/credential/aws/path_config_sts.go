@@ -2,7 +2,7 @@ package awsauth
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -72,7 +72,7 @@ The Vault server must have permissions to assume this role.`,
 func (b *backend) pathConfigStsExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
 	accountID := data.Get("account_id").(string)
 	if accountID == "" {
-		return false, fmt.Errorf("missing account_id")
+		return false, errors.New("missing account_id")
 	}
 
 	entry, err := b.lockedAwsStsEntry(ctx, req.Storage, accountID)
@@ -99,11 +99,11 @@ func (b *backend) pathStsList(ctx context.Context, req *logical.Request, data *f
 // desired, use lockedSetAwsStsEntry instead
 func (b *backend) nonLockedSetAwsStsEntry(ctx context.Context, s logical.Storage, accountID string, stsEntry *awsStsEntry) error {
 	if accountID == "" {
-		return fmt.Errorf("missing AWS account ID")
+		return errors.New("missing AWS account ID")
 	}
 
 	if stsEntry == nil {
-		return fmt.Errorf("missing AWS STS Role ARN")
+		return errors.New("missing AWS STS Role ARN")
 	}
 
 	entry, err := logical.StorageEntryJSON("config/sts/"+accountID, stsEntry)
@@ -112,7 +112,7 @@ func (b *backend) nonLockedSetAwsStsEntry(ctx context.Context, s logical.Storage
 	}
 
 	if entry == nil {
-		return fmt.Errorf("failed to create storage entry for AWS STS configuration")
+		return errors.New("failed to create storage entry for AWS STS configuration")
 	}
 
 	return s.Put(ctx, entry)
@@ -122,11 +122,11 @@ func (b *backend) nonLockedSetAwsStsEntry(ctx context.Context, s logical.Storage
 // This method acquires the write lock before creating or updating the STS entry.
 func (b *backend) lockedSetAwsStsEntry(ctx context.Context, s logical.Storage, accountID string, stsEntry *awsStsEntry) error {
 	if accountID == "" {
-		return fmt.Errorf("missing AWS account ID")
+		return errors.New("missing AWS account ID")
 	}
 
 	if stsEntry == nil {
-		return fmt.Errorf("missing sts entry")
+		return errors.New("missing sts entry")
 	}
 
 	b.configMutex.Lock()

@@ -1,7 +1,7 @@
 package configutil
 
 import (
-	"fmt"
+	"errors"
 	"os"
 
 	"github.com/hashicorp/go-multierror"
@@ -24,7 +24,7 @@ type HCPLinkConfig struct {
 
 func parseCloud(result *SharedConfig, list *ast.ObjectList) error {
 	if len(list.Items) > 1 {
-		return fmt.Errorf("only one 'cloud' block is permitted")
+		return errors.New("only one 'cloud' block is permitted")
 	}
 
 	// Get our one item
@@ -48,12 +48,12 @@ func parseCloud(result *SharedConfig, list *ast.ObjectList) error {
 
 	// three pieces are necessary if the cloud stanza is configured
 	if result.HCPLinkConf.ResourceIDRaw == "" || result.HCPLinkConf.ClientID == "" || result.HCPLinkConf.ClientSecret == "" {
-		return multierror.Prefix(fmt.Errorf("failed to find the required cloud stanza configurations. all resource ID, client ID and client secret are required"), "cloud:")
+		return multierror.Prefix(errors.New("failed to find the required cloud stanza configurations. all resource ID, client ID and client secret are required"), "cloud:")
 	}
 
 	res, err := sdkResource.FromString(result.HCPLinkConf.ResourceIDRaw)
 	if err != nil {
-		return multierror.Prefix(fmt.Errorf("failed to parse resource_id for HCP Link"), "cloud:")
+		return multierror.Prefix(errors.New("failed to parse resource_id for HCP Link"), "cloud:")
 	}
 	result.HCPLinkConf.Resource = &res
 

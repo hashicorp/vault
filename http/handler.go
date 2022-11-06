@@ -381,7 +381,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		// in-flight requests, and use that to update the req data with clientID
 		inFlightReqID, err := uuid.GenerateUUID()
 		if err != nil {
-			respondError(nw, http.StatusInternalServerError, fmt.Errorf("failed to generate an identifier for the in-flight request"))
+			respondError(nw, http.StatusInternalServerError, errors.New("failed to generate an identifier for the in-flight request"))
 		}
 		// adding an entry to the context to enable updating in-flight
 		// data with ClientID in the logical layer
@@ -438,7 +438,7 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 				h.ServeHTTP(w, r)
 				return
 			}
-			respondError(w, http.StatusBadRequest, fmt.Errorf("missing x-forwarded-for header and configured to reject when not present"))
+			respondError(w, http.StatusBadRequest, errors.New("missing x-forwarded-for header and configured to reject when not present"))
 			return
 		}
 
@@ -480,7 +480,7 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 				h.ServeHTTP(w, r)
 				return
 			}
-			respondError(w, http.StatusBadRequest, fmt.Errorf("client address not authorized for x-forwarded-for and configured to reject connection"))
+			respondError(w, http.StatusBadRequest, errors.New("client address not authorized for x-forwarded-for and configured to reject connection"))
 			return
 		}
 
@@ -845,7 +845,7 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 			return
 		}
 		if leaderAddr == "" {
-			respondError(w, http.StatusInternalServerError, fmt.Errorf("local node not active but active cluster node not found"))
+			respondError(w, http.StatusInternalServerError, errors.New("local node not active but active cluster node not found"))
 			return
 		}
 
@@ -1078,7 +1078,7 @@ func requestWrapInfo(r *http.Request, req *logical.Request) (*logical.Request, e
 		return req, err
 	}
 	if int64(dur) < 0 {
-		return req, fmt.Errorf("requested wrap ttl cannot be negative")
+		return req, errors.New("requested wrap ttl cannot be negative")
 	}
 
 	req.WrapInfo = &logical.RequestWrapInfo{
@@ -1098,7 +1098,7 @@ func requestWrapInfo(r *http.Request, req *logical.Request) (*logical.Request, e
 // them with MFA method name as the index.
 func parseMFAHeader(req *logical.Request) error {
 	if req == nil {
-		return fmt.Errorf("request is nil")
+		return errors.New("request is nil")
 	}
 
 	if req.Headers == nil {

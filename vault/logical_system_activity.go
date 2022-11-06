@@ -2,7 +2,7 @@ package vault
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net/http"
 	"os"
 	"path"
@@ -155,7 +155,7 @@ func parseStartEndTimes(a *ActivityLog, d *framework.FieldData) (time.Time, time
 		startTime = startTime.UTC()
 	}
 	if startTime.After(endTime) {
-		return time.Time{}, time.Time{}, fmt.Errorf("start_time is later than end_time")
+		return time.Time{}, time.Time{}, errors.New("start_time is later than end_time")
 	}
 
 	return startTime, endTime, nil

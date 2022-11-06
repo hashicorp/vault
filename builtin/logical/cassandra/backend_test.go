@@ -2,6 +2,7 @@ package cassandra
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"testing"
@@ -140,7 +141,7 @@ func testAccStepReadRole(t *testing.T, name string, cql string) logicaltest.Test
 					return nil
 				}
 
-				return fmt.Errorf("response is nil")
+				return errors.New("response is nil")
 			}
 
 			var d struct {

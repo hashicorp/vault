@@ -572,7 +572,7 @@ func (c *serviceRegistration) fetchServiceTags(active, perfStandby, initialized 
 
 func (c *serviceRegistration) setRedirectAddr(addr string) (err error) {
 	if addr == "" {
-		return fmt.Errorf("redirect address must not be empty")
+		return errors.New("redirect address must not be empty")
 	}
 
 	url, err := url.Parse(addr)

@@ -2,7 +2,7 @@ package diagnose
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"time"
 
 	"github.com/hashicorp/vault/physical/raft"
@@ -40,11 +40,11 @@ func (m mockStorageBackend) storageLogicGeneralInternal(op string) error {
 		(m.callType == timeoutCallDelete && op == deleteOp) {
 		time.Sleep(2 * time.Second)
 	} else if m.callType == errCallWrite && op == writeOp {
-		return fmt.Errorf(storageErrStringWrite)
+		return errors.New(storageErrStringWrite)
 	} else if m.callType == errCallDelete && op == deleteOp {
-		return fmt.Errorf(storageErrStringDelete)
+		return errors.New(storageErrStringDelete)
 	} else if m.callType == errCallRead && op == readOp {
-		return fmt.Errorf(storageErrStringRead)
+		return errors.New(storageErrStringRead)
 	}
 
 	return nil
@@ -76,7 +76,7 @@ func (m mockStorageBackend) Delete(ctx context.Context, key string) error {
 
 // List is not used in a mock.
 func (m mockStorageBackend) List(ctx context.Context, prefix string) ([]string, error) {
-	return nil, fmt.Errorf("method not implemented")
+	return nil, errors.New("method not implemented")
 }
 
 func callTypeToOp(ctype string) string {
@@ -109,7 +109,7 @@ func (m mockStorageBackend) GetConfigurationOffline() (*raft.RaftConfigurationRe
 		threeServerList[2].Voter = false
 		return &raft.RaftConfigurationResponse{Servers: threeServerList}, nil
 	case 3:
-		return &raft.RaftConfigurationResponse{Servers: threeServerList}, fmt.Errorf("error: something bad")
+		return &raft.RaftConfigurationResponse{Servers: threeServerList}, errors.New("error: something bad")
 	}
 	return nil, nil
 }

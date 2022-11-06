@@ -3,6 +3,7 @@ package cockroachdb
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -53,7 +54,7 @@ func NewCockroachDBBackend(conf map[string]string, logger log.Logger) (physical.
 	// Get the CockroachDB credentials to perform read/write operations.
 	connURL, ok := conf["connection_url"]
 	if !ok || connURL == "" {
-		return nil, fmt.Errorf("missing connection_url")
+		return nil, errors.New("missing connection_url")
 	}
 
 	haEnabled := conf["ha_enabled"] == "true"
@@ -324,21 +325,21 @@ func validateDBTable(dbTable string) (err error) {
 
 	// Disallow SQL keywords as the table name
 	if sqlKeywords[strings.ToUpper(dbTable)] {
-		return fmt.Errorf("name must not be a SQL keyword")
+		return errors.New("name must not be a SQL keyword")
 	}
 
 	runes := []rune(dbTable)
 	for i, r := range runes {
 		if i == 0 && !unicode.IsLetter(r) && r != '_' {
-			return fmt.Errorf("must use a letter or an underscore as the first character")
+			return errors.New("must use a letter or an underscore as the first character")
 		}
 
 		if !unicode.IsLetter(r) && r != '_' && !unicode.IsDigit(r) && r != '$' {
-			return fmt.Errorf("must only contain letters, underscores, digits, and dollar signs")
+			return errors.New("must only contain letters, underscores, digits, and dollar signs")
 		}
 
 		if r == '`' || r == '\'' || r == '"' {
-			return fmt.Errorf("cannot contain backticks, single quotes, or double quotes")
+			return errors.New("cannot contain backticks, single quotes, or double quotes")
 		}
 	}
 

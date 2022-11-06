@@ -9,7 +9,6 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -64,7 +63,7 @@ func (b *backend) pathLoginResolveRole(ctx context.Context, req *logical.Request
 func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	clientCerts := req.Connection.ConnState.PeerCertificates
 	if len(clientCerts) == 0 {
-		return nil, fmt.Errorf("no client certificate found")
+		return nil, errors.New("no client certificate found")
 	}
 
 	return &logical.Response{
@@ -192,7 +191,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		// Certificate should not only match a registered certificate policy.
 		// Also, the identity of the certificate presented should match the identity of the certificate used during login
 		if req.Auth.InternalData["subject_key_id"] != skid && req.Auth.InternalData["authority_key_id"] != akid {
-			return nil, fmt.Errorf("client identity during renewal not matching client identity used during login")
+			return nil, errors.New("client identity during renewal not matching client identity used during login")
 		}
 
 	}
@@ -207,7 +206,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	}
 
 	if !policyutil.EquivalentPolicies(cert.TokenPolicies, req.Auth.TokenPolicies) {
-		return nil, fmt.Errorf("policies have changed, not renewing")
+		return nil, errors.New("policies have changed, not renewing")
 	}
 
 	resp := &logical.Response{Auth: req.Auth}

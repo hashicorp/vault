@@ -547,7 +547,7 @@ func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Req
 		return nil, fmt.Errorf("error signing self-issued certificate: %w", err)
 	}
 	if len(newCert) == 0 {
-		return nil, fmt.Errorf("nil cert was created when signing self-issued certificate")
+		return nil, errors.New("nil cert was created when signing self-issued certificate")
 	}
 	pemCert := pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE",

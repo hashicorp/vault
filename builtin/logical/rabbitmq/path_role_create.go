@@ -2,6 +2,7 @@ package rabbitmq
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 
@@ -95,7 +96,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 		Tags:     []string{role.Tags},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create a new user with the generated credentials")
+		return nil, errors.New("failed to create a new user with the generated credentials")
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {

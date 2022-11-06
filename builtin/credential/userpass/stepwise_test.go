@@ -1,6 +1,7 @@
 package userpass
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"testing"
@@ -61,7 +62,7 @@ func testAccStepwiseReadUser(t *testing.T, name string, policies string) stepwis
 					return nil
 				}
 
-				return fmt.Errorf("unexpected nil response")
+				return errors.New("unexpected nil response")
 			}
 
 			var d struct {

@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -906,7 +907,7 @@ func (i *IdentityStore) parseLocalAliases(entityID string) (*identity.LocalAlias
 
 func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *storagepacker.Item) (*identity.Entity, error) {
 	if item == nil {
-		return nil, fmt.Errorf("nil item")
+		return nil, errors.New("nil item")
 	}
 
 	persistNeeded := false
@@ -991,7 +992,7 @@ func (i *IdentityStore) parseEntityFromBucketItem(ctx context.Context, item *sto
 
 func (i *IdentityStore) parseCachedEntity(item *storagepacker.Item) (*identity.Entity, error) {
 	if item == nil {
-		return nil, fmt.Errorf("nil item")
+		return nil, errors.New("nil item")
 	}
 
 	var entity identity.Entity
@@ -1009,7 +1010,7 @@ func (i *IdentityStore) parseCachedEntity(item *storagepacker.Item) (*identity.E
 
 func (i *IdentityStore) parseGroupFromBucketItem(item *storagepacker.Item) (*identity.Group, error) {
 	if item == nil {
-		return nil, fmt.Errorf("nil item")
+		return nil, errors.New("nil item")
 	}
 
 	var group identity.Group
@@ -1029,11 +1030,11 @@ func (i *IdentityStore) parseGroupFromBucketItem(item *storagepacker.Item) (*ide
 // accessor and the alias name.
 func (i *IdentityStore) entityByAliasFactors(mountAccessor, aliasName string, clone bool) (*identity.Entity, error) {
 	if mountAccessor == "" {
-		return nil, fmt.Errorf("missing mount accessor")
+		return nil, errors.New("missing mount accessor")
 	}
 
 	if aliasName == "" {
-		return nil, fmt.Errorf("missing alias name")
+		return nil, errors.New("missing alias name")
 	}
 
 	txn := i.db.Txn(false)
@@ -1045,15 +1046,15 @@ func (i *IdentityStore) entityByAliasFactors(mountAccessor, aliasName string, cl
 // mount accessor and the alias name.
 func (i *IdentityStore) entityByAliasFactorsInTxn(txn *memdb.Txn, mountAccessor, aliasName string, clone bool) (*identity.Entity, error) {
 	if txn == nil {
-		return nil, fmt.Errorf("nil txn")
+		return nil, errors.New("nil txn")
 	}
 
 	if mountAccessor == "" {
-		return nil, fmt.Errorf("missing mount accessor")
+		return nil, errors.New("missing mount accessor")
 	}
 
 	if aliasName == "" {
-		return nil, fmt.Errorf("missing alias name")
+		return nil, errors.New("missing alias name")
 	}
 
 	alias, err := i.MemDBAliasByFactorsInTxn(txn, mountAccessor, aliasName, false, false)
@@ -1110,11 +1111,11 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 	var entityCreated bool
 
 	if alias == nil {
-		return nil, false, fmt.Errorf("alias is nil")
+		return nil, false, errors.New("alias is nil")
 	}
 
 	if alias.Name == "" {
-		return nil, false, fmt.Errorf("empty alias name")
+		return nil, false, errors.New("empty alias name")
 	}
 
 	mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor)

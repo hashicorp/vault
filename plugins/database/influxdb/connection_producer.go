@@ -3,6 +3,7 @@ package influxdb
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -66,11 +67,11 @@ func (i *influxdbConnectionProducer) Initialize(ctx context.Context, req dbplugi
 
 	switch {
 	case len(i.Host) == 0:
-		return dbplugin.InitializeResponse{}, fmt.Errorf("host cannot be empty")
+		return dbplugin.InitializeResponse{}, errors.New("host cannot be empty")
 	case len(i.Username) == 0:
-		return dbplugin.InitializeResponse{}, fmt.Errorf("username cannot be empty")
+		return dbplugin.InitializeResponse{}, errors.New("username cannot be empty")
 	case len(i.Password) == 0:
-		return dbplugin.InitializeResponse{}, fmt.Errorf("password cannot be empty")
+		return dbplugin.InitializeResponse{}, errors.New("password cannot be empty")
 	}
 
 	var certBundle *certutil.CertBundle
@@ -170,7 +171,7 @@ func (i *influxdbConnectionProducer) createClient() (influx.Client, error) {
 		tlsConfig := &tls.Config{}
 		if len(i.certificate) > 0 || len(i.issuingCA) > 0 {
 			if len(i.certificate) > 0 && len(i.privateKey) == 0 {
-				return nil, fmt.Errorf("found certificate for TLS authentication but no private key")
+				return nil, errors.New("found certificate for TLS authentication but no private key")
 			}
 
 			certBundle := &certutil.CertBundle{}
@@ -199,7 +200,7 @@ func (i *influxdbConnectionProducer) createClient() (influx.Client, error) {
 			var ok bool
 			tlsConfig.MinVersion, ok = tlsutil.TLSLookup[i.TLSMinVersion]
 			if !ok {
-				return nil, fmt.Errorf("invalid 'tls_min_version' in config")
+				return nil, errors.New("invalid 'tls_min_version' in config")
 			}
 		} else {
 			// MinVersion was not being set earlier. Reset it to
@@ -228,7 +229,7 @@ func (i *influxdbConnectionProducer) createClient() (influx.Client, error) {
 		return nil, fmt.Errorf("error getting if provided username is admin: %w", err)
 	}
 	if !isAdmin {
-		return nil, fmt.Errorf("the provided user is not an admin of the influxDB server")
+		return nil, errors.New("the provided user is not an admin of the influxDB server")
 	}
 
 	return cli, nil
@@ -249,7 +250,7 @@ func isUserAdmin(cli influx.Client, user string) (bool, error) {
 		return false, err
 	}
 	if response == nil {
-		return false, fmt.Errorf("empty response")
+		return false, errors.New("empty response")
 	}
 	if response.Error() != nil {
 		return false, response.Error()
@@ -263,5 +264,5 @@ func isUserAdmin(cli influx.Client, user string) (bool, error) {
 			}
 		}
 	}
-	return false, fmt.Errorf("the provided username is not a valid user in the influxdb")
+	return false, errors.New("the provided username is not a valid user in the influxdb")
 }

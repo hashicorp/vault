@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -98,7 +99,7 @@ func decoratePrefix(prefix string) ([]byte, error) {
 // decoratePrefix() function builds the path leading up to the leaf.
 func decoratePath(path string) ([]byte, error) {
 	if path == "" {
-		return nil, fmt.Errorf("Invalid empty path")
+		return nil, errors.New("Invalid empty path")
 	}
 
 	path = "/" + path
@@ -148,18 +149,18 @@ func NewFDBBackend(conf map[string]string, logger log.Logger) (physical.Backend,
 	tlsEnabled := hasCertFile && hasKeyFile && hasCAFile
 
 	if (hasCertFile || hasKeyFile || hasCAFile) && !tlsEnabled {
-		return nil, fmt.Errorf("FoundationDB TLS requires all 3 of tls_cert_file, tls_key_file, and tls_ca_file")
+		return nil, errors.New("FoundationDB TLS requires all 3 of tls_cert_file, tls_key_file, and tls_ca_file")
 	}
 
 	tlsVerifyPeers, ok := conf["tls_verify_peers"]
 	if !ok && tlsEnabled {
-		return nil, fmt.Errorf("Required option tls_verify_peers not set in configuration")
+		return nil, errors.New("Required option tls_verify_peers not set in configuration")
 	}
 
 	// FoundationDB API version
 	fdbApiVersionStr, ok := conf["api_version"]
 	if !ok {
-		return nil, fmt.Errorf("FoundationDB API version not specified")
+		return nil, errors.New("FoundationDB API version not specified")
 	}
 
 	fdbApiVersionInt, err := strconv.Atoi(fdbApiVersionStr)
@@ -177,7 +178,7 @@ func NewFDBBackend(conf map[string]string, logger log.Logger) (physical.Backend,
 	// FoundationDB cluster file
 	fdbClusterFile, ok := conf["cluster_file"]
 	if !ok {
-		return nil, fmt.Errorf("FoundationDB cluster file not specified")
+		return nil, errors.New("FoundationDB cluster file not specified")
 	}
 
 	haEnabled := false
@@ -310,7 +311,7 @@ func (f *FDBBackend) decDirsRefcount(tr fdb.Transaction, path string) error {
 
 		// The directory entry does not exist; this is not expected
 		if value == nil {
-			return fmt.Errorf("non-existent directory while decrementing directory refcount")
+			return errors.New("non-existent directory while decrementing directory refcount")
 		}
 
 		var count int64

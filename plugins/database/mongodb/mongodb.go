@@ -3,6 +3,7 @@ package mongodb
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -132,7 +133,7 @@ func (m *MongoDB) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbp
 	}
 
 	if len(mongoCS.Roles) == 0 {
-		return dbplugin.NewUserResponse{}, fmt.Errorf("roles array is required in creation statement")
+		return dbplugin.NewUserResponse{}, errors.New("roles array is required in creation statement")
 	}
 
 	createUserCmd := createUserCommand{

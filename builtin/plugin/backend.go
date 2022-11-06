@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/rpc"
 	"reflect"
@@ -18,8 +19,8 @@ import (
 )
 
 var (
-	ErrMismatchType  = fmt.Errorf("mismatch on mounted backend and plugin backend type")
-	ErrMismatchPaths = fmt.Errorf("mismatch on mounted backend and plugin backend special paths")
+	ErrMismatchType  = errors.New("mismatch on mounted backend and plugin backend type")
+	ErrMismatchPaths = errors.New("mismatch on mounted backend and plugin backend special paths")
 )
 
 // Factory returns a configured plugin logical.Backend.
@@ -27,7 +28,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	merr := &multierror.Error{}
 	_, ok := conf.Config["plugin_name"]
 	if !ok {
-		return nil, fmt.Errorf("plugin_name not provided")
+		return nil, errors.New("plugin_name not provided")
 	}
 	b, err := v5.Backend(ctx, conf)
 	if err == nil {

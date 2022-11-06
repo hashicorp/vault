@@ -555,7 +555,7 @@ func (l *DynamoDBLock) Lock(stopCh <-chan struct{}) (doneCh <-chan struct{}, ret
 	l.lock.Lock()
 	defer l.lock.Unlock()
 	if l.held {
-		return nil, fmt.Errorf("lock already held")
+		return nil, errors.New("lock already held")
 	}
 
 	done := make(chan struct{})

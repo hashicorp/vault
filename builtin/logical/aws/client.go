@@ -2,6 +2,7 @@ package aws
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -82,7 +83,7 @@ func nonCachedClientIAM(ctx context.Context, s logical.Storage, logger hclog.Log
 	}
 	client := iam.New(sess)
 	if client == nil {
-		return nil, fmt.Errorf("could not obtain iam client")
+		return nil, errors.New("could not obtain iam client")
 	}
 	return client, nil
 }
@@ -98,7 +99,7 @@ func nonCachedClientSTS(ctx context.Context, s logical.Storage, logger hclog.Log
 	}
 	client := sts.New(sess)
 	if client == nil {
-		return nil, fmt.Errorf("could not obtain sts client")
+		return nil, errors.New("could not obtain sts client")
 	}
 	return client, nil
 }

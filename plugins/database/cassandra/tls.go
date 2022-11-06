@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -19,7 +20,7 @@ func jsonBundleToTLSConfig(rawJSON string, tlsMinVersion uint16, serverName stri
 	}
 
 	if certBundle.IssuingCA != "" && len(certBundle.CAChain) > 0 {
-		return nil, fmt.Errorf("issuing_ca and ca_chain cannot both be specified")
+		return nil, errors.New("issuing_ca and ca_chain cannot both be specified")
 	}
 	if certBundle.IssuingCA != "" {
 		certBundle.CAChain = []string{certBundle.IssuingCA}
@@ -81,9 +82,9 @@ func pemBundleToTLSConfig(pemBundle string, tlsMinVersion uint16, serverName str
 
 func toClientTLSConfig(certificatePEM string, privateKeyPEM string, caChainPEMs []string, tlsMinVersion uint16, serverName string, insecureSkipVerify bool) (*tls.Config, error) {
 	if certificatePEM != "" && privateKeyPEM == "" {
-		return nil, fmt.Errorf("found certificate for client-side TLS authentication but no private key")
+		return nil, errors.New("found certificate for client-side TLS authentication but no private key")
 	} else if certificatePEM == "" && privateKeyPEM != "" {
-		return nil, fmt.Errorf("found private key for client-side TLS authentication but no certificate")
+		return nil, errors.New("found private key for client-side TLS authentication but no certificate")
 	}
 
 	var certificates []tls.Certificate
@@ -101,7 +102,7 @@ func toClientTLSConfig(certificatePEM string, privateKeyPEM string, caChainPEMs 
 		for _, caBlock := range caChainPEMs {
 			ok := rootCAs.AppendCertsFromPEM([]byte(caBlock))
 			if !ok {
-				return nil, fmt.Errorf("failed to add CA certificate to certificate pool: it may be malformed or empty")
+				return nil, errors.New("failed to add CA certificate to certificate pool: it may be malformed or empty")
 			}
 		}
 	}

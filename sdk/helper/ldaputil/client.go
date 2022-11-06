@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
 	"net"
@@ -50,7 +51,7 @@ func (c *Client) DialLDAP(cfg *ConfigEntry) (Connection, error) {
 				break
 			}
 			if conn == nil {
-				err = fmt.Errorf("empty connection after dialing")
+				err = errors.New("empty connection after dialing")
 				break
 			}
 			if cfg.StartTLS {
@@ -160,7 +161,7 @@ func (c *Client) GetUserBindDN(cfg *ConfigEntry, conn Connection, username strin
 			return bindDN, fmt.Errorf("LDAP search for binddn failed %w", err)
 		}
 		if len(result.Entries) != 1 {
-			return bindDN, fmt.Errorf("LDAP search for binddn 0 or not unique")
+			return bindDN, errors.New("LDAP search for binddn 0 or not unique")
 		}
 
 		bindDN = result.Entries[0].DN
@@ -239,11 +240,11 @@ func (c *Client) GetUserAliasAttributeValue(cfg *ConfigEntry, conn Connection, u
 			return aliasAttributeValue, fmt.Errorf("LDAP search for entity alias attribute failed: %w", err)
 		}
 		if len(result.Entries) != 1 {
-			return aliasAttributeValue, fmt.Errorf("LDAP search for entity alias attribute 0 or not unique")
+			return aliasAttributeValue, errors.New("LDAP search for entity alias attribute 0 or not unique")
 		}
 
 		if len(result.Entries[0].Attributes) != 1 {
-			return aliasAttributeValue, fmt.Errorf("LDAP attribute missing for entity alias mapping")
+			return aliasAttributeValue, errors.New("LDAP attribute missing for entity alias mapping")
 		}
 
 		if len(result.Entries[0].Attributes[0].Values) != 1 {
@@ -637,7 +638,7 @@ func getTLSConfig(cfg *ConfigEntry, host string) (*tls.Config, error) {
 	if cfg.TLSMinVersion != "" {
 		tlsMinVersion, ok := tlsutil.TLSLookup[cfg.TLSMinVersion]
 		if !ok {
-			return nil, fmt.Errorf("invalid 'tls_min_version' in config")
+			return nil, errors.New("invalid 'tls_min_version' in config")
 		}
 		tlsConfig.MinVersion = tlsMinVersion
 	}
@@ -645,7 +646,7 @@ func getTLSConfig(cfg *ConfigEntry, host string) (*tls.Config, error) {
 	if cfg.TLSMaxVersion != "" {
 		tlsMaxVersion, ok := tlsutil.TLSLookup[cfg.TLSMaxVersion]
 		if !ok {
-			return nil, fmt.Errorf("invalid 'tls_max_version' in config")
+			return nil, errors.New("invalid 'tls_max_version' in config")
 		}
 		tlsConfig.MaxVersion = tlsMaxVersion
 	}
@@ -657,7 +658,7 @@ func getTLSConfig(cfg *ConfigEntry, host string) (*tls.Config, error) {
 		caPool := x509.NewCertPool()
 		ok := caPool.AppendCertsFromPEM([]byte(cfg.Certificate))
 		if !ok {
-			return nil, fmt.Errorf("could not append CA certificate")
+			return nil, errors.New("could not append CA certificate")
 		}
 		tlsConfig.RootCAs = caPool
 	}
@@ -668,7 +669,7 @@ func getTLSConfig(cfg *ConfigEntry, host string) (*tls.Config, error) {
 		}
 		tlsConfig.Certificates = append(tlsConfig.Certificates, certificate)
 	} else if cfg.ClientTLSCert != "" || cfg.ClientTLSKey != "" {
-		return nil, fmt.Errorf("both client_tls_cert and client_tls_key must be set")
+		return nil, errors.New("both client_tls_cert and client_tls_key must be set")
 	}
 	return tlsConfig, nil
 }

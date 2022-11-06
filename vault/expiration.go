@@ -165,13 +165,13 @@ type revocationJob struct {
 
 func newRevocationJob(nsCtx context.Context, leaseID string, ns *namespace.Namespace, m *ExpirationManager) (*revocationJob, error) {
 	if leaseID == "" {
-		return nil, fmt.Errorf("cannot have empty lease id")
+		return nil, errors.New("cannot have empty lease id")
 	}
 	if m == nil {
-		return nil, fmt.Errorf("cannot have nil expiration manager")
+		return nil, errors.New("cannot have nil expiration manager")
 	}
 	if nsCtx == nil {
-		return nil, fmt.Errorf("cannot have nil namespace context.Context")
+		return nil, errors.New("cannot have nil namespace context.Context")
 	}
 
 	return &revocationJob{
@@ -1219,7 +1219,7 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 	sysViewCtx := namespace.ContextWithNamespace(ctx, le.namespace)
 	sysView := m.router.MatchingSystemView(sysViewCtx, le.Path)
 	if sysView == nil {
-		return nil, fmt.Errorf("unable to retrieve system view from router")
+		return nil, errors.New("unable to retrieve system view from router")
 	}
 
 	// Attempt to renew the entry
@@ -1368,7 +1368,7 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 	sysViewCtx := namespace.ContextWithNamespace(ctx, le.namespace)
 	sysView := m.router.MatchingSystemView(sysViewCtx, le.Path)
 	if sysView == nil {
-		return nil, fmt.Errorf("unable to retrieve system view from router")
+		return nil, errors.New("unable to retrieve system view from router")
 	}
 
 	ttl, warnings, err := framework.CalculateTTL(sysView, increment, resp.Auth.TTL, resp.Auth.Period, resp.Auth.MaxTTL, resp.Auth.ExplicitMaxTTL, le.IssueTime)
@@ -1419,7 +1419,7 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 
 	te := req.TokenEntry()
 	if te == nil {
-		return "", fmt.Errorf("cannot register a lease with an empty client token")
+		return "", errors.New("cannot register a lease with an empty client token")
 	}
 
 	// Ignore if there is no leased secret
@@ -1556,7 +1556,7 @@ func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenE
 	// Triggers failure of RegisterAuth. This should only be set and triggered
 	// by tests to simulate partial failure during a token creation request.
 	if m.testRegisterAuthFailure.Load() {
-		return fmt.Errorf("failing explicitly on RegisterAuth")
+		return errors.New("failing explicitly on RegisterAuth")
 	}
 
 	authExpirationTime := auth.ExpirationTime()
@@ -2162,7 +2162,7 @@ func (m *ExpirationManager) indexByToken(ctx context.Context, le *leaseEntry) (*
 	tokenView := m.tokenIndexView(tokenNS)
 	entry, err := tokenView.Get(ctx, key)
 	if err != nil {
-		return nil, fmt.Errorf("failed to look up secondary index entry")
+		return nil, errors.New("failed to look up secondary index entry")
 	}
 	return entry, nil
 }
@@ -2743,27 +2743,27 @@ func (le *leaseEntry) renewable() (bool, error) {
 	switch {
 	// If there is no entry, cannot review to renew
 	case le == nil:
-		return false, fmt.Errorf("lease not found")
+		return false, errors.New("lease not found")
 
 	case le.isIrrevocable():
-		return false, fmt.Errorf("lease is expired and has failed previous revocation attempts")
+		return false, errors.New("lease is expired and has failed previous revocation attempts")
 
 	case le.ExpireTime.IsZero():
-		return false, fmt.Errorf("lease is not renewable")
+		return false, errors.New("lease is not renewable")
 
 	case le.ClientTokenType == logical.TokenTypeBatch:
 		return false, nil
 
 	// Determine if the lease is expired
 	case le.ExpireTime.Before(time.Now()):
-		return false, fmt.Errorf("lease expired")
+		return false, errors.New("lease expired")
 
 	// Determine if the lease is renewable
 	case le.Secret != nil && !le.Secret.Renewable:
-		return false, fmt.Errorf("lease is not renewable")
+		return false, errors.New("lease is not renewable")
 
 	case le.Auth != nil && !le.Auth.Renewable:
-		return false, fmt.Errorf("lease is not renewable")
+		return false, errors.New("lease is not renewable")
 	}
 
 	return true, nil

@@ -637,10 +637,10 @@ var (
 // invoked before the test core is created.
 func AddTestCredentialBackend(name string, factory logical.Factory) error {
 	if name == "" {
-		return fmt.Errorf("missing backend name")
+		return errors.New("missing backend name")
 	}
 	if factory == nil {
-		return fmt.Errorf("missing backend factory function")
+		return errors.New("missing backend factory function")
 	}
 	testCredentialBackends[name] = factory
 	return nil
@@ -650,10 +650,10 @@ func AddTestCredentialBackend(name string, factory logical.Factory) error {
 // invoked before the test core is created.
 func AddTestLogicalBackend(name string, factory logical.Factory) error {
 	if name == "" {
-		return fmt.Errorf("missing backend name")
+		return errors.New("missing backend name")
 	}
 	if factory == nil {
-		return fmt.Errorf("missing backend factory function")
+		return errors.New("missing backend factory function")
 	}
 	testLogicalBackends[name] = factory
 	return nil
@@ -819,7 +819,7 @@ func (n *rawHTTP) Type() logical.BackendType {
 
 func GenerateRandBytes(length int) ([]byte, error) {
 	if length < 0 {
-		return nil, fmt.Errorf("length must be >= 0")
+		return nil, errors.New("length must be >= 0")
 	}
 
 	buf := make([]byte, length)
@@ -946,7 +946,7 @@ func (c *TestCluster) UnsealCoresWithError(useStoredKeys bool) error {
 
 	// Verify unsealed
 	if c.Cores[0].Sealed() {
-		return fmt.Errorf("should not be sealed")
+		return errors.New("should not be sealed")
 	}
 
 	if err := TestWaitActiveWithError(c.Cores[0].Core); err != nil {
@@ -1096,7 +1096,7 @@ func (c *TestCluster) ensureCoresSealed() error {
 		timeout := time.Now().Add(60 * time.Second)
 		for {
 			if time.Now().After(timeout) {
-				return fmt.Errorf("timeout waiting for core to seal")
+				return errors.New("timeout waiting for core to seal")
 			}
 			if core.Sealed() {
 				break
@@ -2214,7 +2214,7 @@ func (testCluster *TestCluster) getAPIClient(
 		Transport: transport,
 		CheckRedirect: func(*http.Request, []*http.Request) error {
 			// This can of course be overridden per-test by using its own client
-			return fmt.Errorf("redirects not allowed in these tests")
+			return errors.New("redirects not allowed in these tests")
 		},
 	}
 	config := api.DefaultConfig()

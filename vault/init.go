@@ -115,7 +115,7 @@ func (c *Core) InitializedLocally(ctx context.Context) (bool, error) {
 		return false, err
 	}
 	if sealConf == nil {
-		return false, fmt.Errorf("core: barrier reports initialized but no seal configuration found")
+		return false, errors.New("core: barrier reports initialized but no seal configuration found")
 	}
 
 	return true, nil
@@ -179,7 +179,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	// operators.
 	if c.SealAccess().StoredKeysSupported() == seal.StoredKeysSupportedGeneric {
 		if len(barrierConfig.PGPKeys) > 0 {
-			return nil, fmt.Errorf("PGP keys not supported when storing shares")
+			return nil, errors.New("PGP keys not supported when storing shares")
 		}
 		barrierConfig.SecretShares = 1
 		barrierConfig.SecretThreshold = 1
@@ -195,22 +195,22 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	}
 
 	if len(barrierConfig.PGPKeys) > 0 && len(barrierConfig.PGPKeys) != barrierConfig.SecretShares {
-		return nil, fmt.Errorf("incorrect number of PGP keys")
+		return nil, errors.New("incorrect number of PGP keys")
 	}
 
 	if c.SealAccess().RecoveryKeySupported() {
 		if len(recoveryConfig.PGPKeys) > 0 && len(recoveryConfig.PGPKeys) != recoveryConfig.SecretShares {
-			return nil, fmt.Errorf("incorrect number of PGP keys for recovery")
+			return nil, errors.New("incorrect number of PGP keys for recovery")
 		}
 	}
 
 	if c.seal.RecoveryKeySupported() {
 		if recoveryConfig == nil {
-			return nil, fmt.Errorf("recovery configuration must be supplied")
+			return nil, errors.New("recovery configuration must be supplied")
 		}
 
 		if recoveryConfig.SecretShares < 1 {
-			return nil, fmt.Errorf("recovery configuration must specify a positive number of shares")
+			return nil, errors.New("recovery configuration must specify a positive number of shares")
 		}
 
 		// Check if the seal configuration is valid

@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -70,7 +71,7 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 
 		rootUsername, ok := config.ConnectionDetails["username"].(string)
 		if !ok || rootUsername == "" {
-			return nil, fmt.Errorf("unable to rotate root credentials: no username in configuration")
+			return nil, errors.New("unable to rotate root credentials: no username in configuration")
 		}
 
 		dbi, err := b.GetConnection(ctx, req.Storage, name)

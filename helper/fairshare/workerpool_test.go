@@ -1,6 +1,7 @@
 package fairshare
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"sync"
@@ -347,7 +348,7 @@ func TestFairshare_dispatch(t *testing.T) {
 
 func TestFairshare_jobFailure(t *testing.T) {
 	numJobs := 10
-	testErr := fmt.Errorf("test error")
+	testErr := errors.New("test error")
 	var wg sync.WaitGroup
 
 	ex := func(_ string) error {

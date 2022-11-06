@@ -2,7 +2,7 @@ package userpass
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
@@ -46,7 +46,7 @@ func (b *backend) pathUserPoliciesUpdate(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 	if userEntry == nil {
-		return nil, fmt.Errorf("username does not exist")
+		return nil, errors.New("username does not exist")
 	}
 
 	policiesRaw, ok := d.GetOk("token_policies")

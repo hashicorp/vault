@@ -218,7 +218,7 @@ func (b *backend) pathConfigCAUpdate(ctx context.Context, req *logical.Request, 
 	}
 
 	if publicKey == "" || privateKey == "" {
-		return nil, fmt.Errorf("failed to generate or parse the keys")
+		return nil, errors.New("failed to generate or parse the keys")
 	}
 
 	publicKeyEntry, err := caKey(ctx, req.Storage, caPublicKey)

@@ -57,7 +57,7 @@ func (g generateStandardRootToken) generate(ctx context.Context, c *Core) (strin
 	}
 	if te == nil {
 		c.logger.Error("got nil token entry back from root generation")
-		return "", nil, fmt.Errorf("got nil token entry back from root generation")
+		return "", nil, errors.New("got nil token entry back from root generation")
 	}
 
 	cleanupFunc := func() {
@@ -136,7 +136,7 @@ func (c *Core) GenerateRootInit(otp, pgpKey string, strategy GenerateRootStrateg
 	case len(otp) > 0:
 		if (len(otp) != TokenLength+TokenPrefixLength && !c.DisableSSCTokens()) ||
 			(len(otp) != TokenLength+OldTokenPrefixLength && c.DisableSSCTokens()) {
-			return fmt.Errorf("OTP string is wrong length")
+			return errors.New("OTP string is wrong length")
 		}
 
 	case len(pgpKey) > 0:
@@ -145,12 +145,12 @@ func (c *Core) GenerateRootInit(otp, pgpKey string, strategy GenerateRootStrateg
 			return fmt.Errorf("error parsing PGP key: %w", err)
 		}
 		if len(fingerprints) != 1 || fingerprints[0] == "" {
-			return fmt.Errorf("could not acquire PGP key entity")
+			return errors.New("could not acquire PGP key entity")
 		}
 		fingerprint = fingerprints[0]
 
 	default:
-		return fmt.Errorf("otp or pgp_key parameter must be provided")
+		return errors.New("otp or pgp_key parameter must be provided")
 	}
 
 	c.stateLock.RLock()
@@ -174,7 +174,7 @@ func (c *Core) GenerateRootInit(otp, pgpKey string, strategy GenerateRootStrateg
 
 	// Prevent multiple concurrent root generations
 	if c.generateRootConfig != nil {
-		return fmt.Errorf("root generation already in progress")
+		return errors.New("root generation already in progress")
 	}
 
 	// Copy the configuration
@@ -261,7 +261,7 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 
 	// Ensure a generateRoot is in progress
 	if c.generateRootConfig == nil {
-		return nil, fmt.Errorf("no root generation in progress")
+		return nil, errors.New("no root generation in progress")
 	}
 
 	if nonce != c.generateRootConfig.Nonce {
@@ -269,13 +269,13 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 	}
 
 	if strategy != c.generateRootConfig.Strategy {
-		return nil, fmt.Errorf("incorrect strategy supplied; a generate root operation of another type is already in progress")
+		return nil, errors.New("incorrect strategy supplied; a generate root operation of another type is already in progress")
 	}
 
 	// Check if we already have this piece
 	for _, existing := range c.generateRootProgress {
 		if bytes.Equal(existing, key) {
-			return nil, fmt.Errorf("given key has already been provided during this generation operation")
+			return nil, errors.New("given key has already been provided during this generation operation")
 		}
 	}
 
@@ -329,7 +329,7 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 		_, tokenBytesArr, err = pgpkeys.EncryptShares([][]byte{[]byte(token)}, []string{c.generateRootConfig.PGPKey})
 		encodedToken = base64.StdEncoding.EncodeToString(tokenBytesArr[0])
 	default:
-		err = fmt.Errorf("unreachable condition")
+		err = errors.New("unreachable condition")
 	}
 
 	if err != nil {

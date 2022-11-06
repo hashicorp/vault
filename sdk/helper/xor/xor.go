@@ -2,6 +2,7 @@ package xor
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 )
 
@@ -31,7 +32,7 @@ func XORBase64(a, b string) ([]byte, error) {
 		return nil, fmt.Errorf("error decoding first base64 value: %w", err)
 	}
 	if aBytes == nil || len(aBytes) == 0 {
-		return nil, fmt.Errorf("decoded first base64 value is nil or empty")
+		return nil, errors.New("decoded first base64 value is nil or empty")
 	}
 
 	bBytes, err := base64.StdEncoding.DecodeString(b)
@@ -39,7 +40,7 @@ func XORBase64(a, b string) ([]byte, error) {
 		return nil, fmt.Errorf("error decoding second base64 value: %w", err)
 	}
 	if bBytes == nil || len(bBytes) == 0 {
-		return nil, fmt.Errorf("decoded second base64 value is nil or empty")
+		return nil, errors.New("decoded second base64 value is nil or empty")
 	}
 
 	return XORBytes(aBytes, bBytes)

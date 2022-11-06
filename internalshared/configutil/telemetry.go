@@ -171,7 +171,7 @@ func (t *Telemetry) GoString() string {
 
 func parseTelemetry(result *SharedConfig, list *ast.ObjectList) error {
 	if len(list.Items) > 1 {
-		return fmt.Errorf("only one 'telemetry' block is permitted")
+		return errors.New("only one 'telemetry' block is permitted")
 	}
 
 	// Get our one item
@@ -415,7 +415,7 @@ func parsePrefixFilter(prefixFilters []string) ([]string, []string, error) {
 
 	for _, rule := range prefixFilters {
 		if rule == "" {
-			return nil, nil, fmt.Errorf("Cannot have empty filter rule in prefix_filter")
+			return nil, nil, errors.New("Cannot have empty filter rule in prefix_filter")
 		}
 		switch rule[0] {
 		case '+':

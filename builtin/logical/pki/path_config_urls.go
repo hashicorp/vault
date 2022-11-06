@@ -2,6 +2,7 @@ package pki
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/asaskevich/govalidator"
@@ -86,7 +87,7 @@ func writeURLs(ctx context.Context, storage logical.Storage, entries *certutil.U
 		return err
 	}
 	if entry == nil {
-		return fmt.Errorf("unable to marshal entry into JSON")
+		return errors.New("unable to marshal entry into JSON")
 	}
 
 	err = storage.Put(ctx, entry)

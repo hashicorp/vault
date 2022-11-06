@@ -3,6 +3,7 @@ package pgpkeys
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -23,7 +24,7 @@ const (
 func FetchKeybasePubkeys(input []string) (map[string]string, error) {
 	client := cleanhttp.DefaultClient()
 	if client == nil {
-		return nil, fmt.Errorf("unable to create an http client")
+		return nil, errors.New("unable to create an http client")
 	}
 
 	if len(input) == 0 {

@@ -213,7 +213,7 @@ func validateDBTable(db, table string) (err error) {
 
 func validate(name string) (err error) {
 	if name == "" {
-		return fmt.Errorf("missing name")
+		return errors.New("missing name")
 	}
 	// From: https://dev.mysql.com/doc/refman/5.7/en/identifiers.html
 	// - Permitted characters in quoted identifiers include the full Unicode Basic Multilingual Plane (BMP), except U+0000:
@@ -226,21 +226,21 @@ func validate(name string) (err error) {
 	// We are explicitly excluding all space characters (it's easier to deal with)
 	// The name will be quoted, so the all-digit requirement doesn't apply
 	runes := []rune(name)
-	validationErr := fmt.Errorf("invalid character found: can only include printable, non-space characters between [0x0001-0xFFFF]")
+	validationErr := errors.New("invalid character found: can only include printable, non-space characters between [0x0001-0xFFFF]")
 	for _, r := range runes {
 		// U+0000 Explicitly disallowed
 		if r == 0x0000 {
-			return fmt.Errorf("invalid character: cannot include 0x0000")
+			return errors.New("invalid character: cannot include 0x0000")
 		}
 		// Cannot be above 0xFFFF
 		if r > 0xFFFF {
-			return fmt.Errorf("invalid character: cannot include any characters above 0xFFFF")
+			return errors.New("invalid character: cannot include any characters above 0xFFFF")
 		}
 		if r == '`' {
-			return fmt.Errorf("invalid character: cannot include '`' character")
+			return errors.New("invalid character: cannot include '`' character")
 		}
 		if r == '\'' || r == '"' {
-			return fmt.Errorf("invalid character: cannot include quotes")
+			return errors.New("invalid character: cannot include quotes")
 		}
 		// We are excluding non-printable characters (not mentioned in the docs)
 		if !unicode.IsPrint(r) {
@@ -267,11 +267,11 @@ func NewMySQLClient(conf map[string]string, logger log.Logger) (*sql.DB, error) 
 	// Get the MySQL credentials to perform read/write operations.
 	username, ok := conf["username"]
 	if !ok || username == "" {
-		return nil, fmt.Errorf("missing username")
+		return nil, errors.New("missing username")
 	}
 	password, ok := conf["password"]
 	if !ok || password == "" {
-		return nil, fmt.Errorf("missing password")
+		return nil, errors.New("missing password")
 	}
 
 	// Get or set MySQL server address. Defaults to localhost and default port(3306)
@@ -480,7 +480,7 @@ func (i *MySQLHALock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	i.localLock.Lock()
 	defer i.localLock.Unlock()
 	if i.held {
-		return nil, fmt.Errorf("lock already held")
+		return nil, errors.New("lock already held")
 	}
 
 	// Attempt an async acquisition

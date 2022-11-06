@@ -355,7 +355,7 @@ func processLimit(d *framework.FieldData) (bool, int, error) {
 		}
 
 		if limit < 1 {
-			return false, 0, fmt.Errorf("limit must be 'none' or a positive integer")
+			return false, 0, errors.New("limit must be 'none' or a positive integer")
 		}
 
 		maxResults = limit
@@ -791,7 +791,7 @@ func (b *SystemBackend) handleCapabilities(ctx context.Context, req *logical.Req
 		}
 	}
 	if token == "" {
-		return nil, fmt.Errorf("no token found")
+		return nil, errors.New("no token found")
 	}
 
 	ret := &logical.Response{
@@ -1258,7 +1258,7 @@ func handleErrorNoReadOnlyForward(
 	err error,
 ) (*logical.Response, error) {
 	if strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
-		return nil, fmt.Errorf("operation could not be completed as storage is read-only")
+		return nil, errors.New("operation could not be completed as storage is read-only")
 	}
 	switch err.(type) {
 	case logical.HTTPCodedError:
@@ -3561,11 +3561,11 @@ func (b *SystemBackend) responseWrappingUnwrap(ctx context.Context, te *logical.
 
 	responseRaw := cubbyResp.Data["response"]
 	if responseRaw == nil {
-		return "", fmt.Errorf("no response found inside the cubbyhole")
+		return "", errors.New("no response found inside the cubbyhole")
 	}
 	response, ok := responseRaw.(string)
 	if !ok {
-		return "", fmt.Errorf("could not decode response inside the cubbyhole")
+		return "", errors.New("could not decode response inside the cubbyhole")
 	}
 
 	return response, nil
@@ -3651,7 +3651,7 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 	defer mon.Stop()
 
 	if logCh == nil {
-		return nil, fmt.Errorf("error trying to start a monitor that's already been started")
+		return nil, errors.New("error trying to start a monitor that's already been started")
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -3888,7 +3888,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 	// Set the creation TTL on the request
 	creationTTLRaw := cubbyResp.Data["creation_ttl"]
 	if creationTTLRaw == nil {
-		return nil, fmt.Errorf("creation_ttl value in wrapping information was nil")
+		return nil, errors.New("creation_ttl value in wrapping information was nil")
 	}
 	creationTTL, err := cubbyResp.Data["creation_ttl"].(json.Number).Int64()
 	if err != nil {
@@ -3898,7 +3898,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 	// Get creation_path to return as the response later
 	creationPathRaw := cubbyResp.Data["creation_path"]
 	if creationPathRaw == nil {
-		return nil, fmt.Errorf("creation_path value in wrapping information was nil")
+		return nil, errors.New("creation_path value in wrapping information was nil")
 	}
 	creationPath := creationPathRaw.(string)
 
@@ -3925,7 +3925,7 @@ func (b *SystemBackend) handleWrappingRewrap(ctx context.Context, req *logical.R
 
 	response := cubbyResp.Data["response"]
 	if response == nil {
-		return nil, fmt.Errorf("no response found inside the cubbyhole")
+		return nil, errors.New("no response found inside the cubbyhole")
 	}
 
 	// Return response in "response"; wrapping code will detect the rewrap and
@@ -4594,7 +4594,7 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 			return nil, err
 		}
 		if cluster == nil {
-			return nil, fmt.Errorf("failed to fetch cluster details")
+			return nil, errors.New("failed to fetch cluster details")
 		}
 		clusterName = cluster.Name
 		clusterID = cluster.ID
@@ -4937,7 +4937,7 @@ func checkListingVisibility(visibility ListingVisibilityType) error {
 	case ListingVisibilityHidden:
 	case ListingVisibilityUnauth:
 	default:
-		return fmt.Errorf("invalid listing visibility type")
+		return errors.New("invalid listing visibility type")
 	}
 
 	return nil

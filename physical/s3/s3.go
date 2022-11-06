@@ -3,6 +3,7 @@ package s3
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -48,7 +49,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 	if bucket == "" {
 		bucket = conf["bucket"]
 		if bucket == "" {
-			return nil, fmt.Errorf("'bucket' must be set")
+			return nil, errors.New("'bucket' must be set")
 		}
 	}
 
@@ -216,7 +217,7 @@ func (s *S3Backend) Get(ctx context.Context, key string) (*physical.Entry, error
 		return nil, err
 	}
 	if resp == nil {
-		return nil, fmt.Errorf("got nil response from S3 but no error")
+		return nil, errors.New("got nil response from S3 but no error")
 	}
 
 	data := bytes.NewBuffer(nil)

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/asn1"
 	"encoding/pem"
-	"fmt"
+	"errors"
 	"strings"
 	"testing"
 )
@@ -77,7 +77,7 @@ func mustDecodePEM(data []byte) []byte {
 	var block *pem.Block
 	block, rest := pem.Decode(data)
 	if len(rest) != 0 {
-		panic(fmt.Errorf("unexpected remaining PEM block during decode"))
+		panic(errors.New("unexpected remaining PEM block during decode"))
 	}
 	return block.Bytes
 }

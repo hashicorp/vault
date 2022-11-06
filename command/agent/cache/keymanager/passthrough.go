@@ -3,6 +3,7 @@ package keymanager
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
@@ -61,7 +62,7 @@ func (w *PassthroughKeyManager) Wrapper() wrapping.Wrapper {
 // this key.
 func (w *PassthroughKeyManager) RetrievalToken(ctx context.Context) ([]byte, error) {
 	if w.wrapper == nil {
-		return nil, fmt.Errorf("unable to get wrapper for token retrieval")
+		return nil, errors.New("unable to get wrapper for token retrieval")
 	}
 
 	return w.wrapper.KeyBytes(ctx)

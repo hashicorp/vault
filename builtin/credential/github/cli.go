@@ -1,6 +1,7 @@
 package github
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -39,7 +40,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		fmt.Fprintf(stdout, "\n")
 		if err != nil {
 			if err == password.ErrInterrupted {
-				return nil, fmt.Errorf("user interrupted")
+				return nil, errors.New("user interrupted")
 			}
 
 			return nil, fmt.Errorf("An error occurred attempting to "+
@@ -59,7 +60,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		return nil, err
 	}
 	if secret == nil {
-		return nil, fmt.Errorf("empty response from credential provider")
+		return nil, errors.New("empty response from credential provider")
 	}
 
 	return secret, nil

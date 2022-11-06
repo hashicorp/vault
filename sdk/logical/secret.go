@@ -1,6 +1,9 @@
 package logical
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // Secret represents the secret part of a response.
 type Secret struct {
@@ -19,7 +22,7 @@ type Secret struct {
 
 func (s *Secret) Validate() error {
 	if s.TTL < 0 {
-		return fmt.Errorf("ttl duration must not be less than zero")
+		return errors.New("ttl duration must not be less than zero")
 	}
 
 	return nil

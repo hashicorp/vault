@@ -2,6 +2,7 @@ package consul
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/consul/api"
@@ -65,7 +66,7 @@ func (b *backend) readConfigAccess(ctx context.Context, storage logical.Storage)
 		return nil, nil, err
 	}
 	if entry == nil {
-		return nil, fmt.Errorf("access credentials for the backend itself haven't been configured; please configure them at the '/config/access' endpoint"), nil
+		return nil, errors.New("access credentials for the backend itself haven't been configured; please configure them at the '/config/access' endpoint"), nil
 	}
 
 	conf := &accessConfig{}
@@ -85,7 +86,7 @@ func (b *backend) pathConfigAccessRead(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse(userErr.Error()), nil
 	}
 	if conf == nil {
-		return nil, fmt.Errorf("no user error reported but consul access configuration not found")
+		return nil, errors.New("no user error reported but consul access configuration not found")
 	}
 
 	return &logical.Response{

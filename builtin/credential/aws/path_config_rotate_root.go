@@ -2,6 +2,7 @@ package awsauth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -102,13 +103,13 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		return nil, fmt.Errorf("error calling GetUser: %w", err)
 	}
 	if getUserRes == nil {
-		return nil, fmt.Errorf("nil response from GetUser")
+		return nil, errors.New("nil response from GetUser")
 	}
 	if getUserRes.User == nil {
-		return nil, fmt.Errorf("nil user returned from GetUser")
+		return nil, errors.New("nil user returned from GetUser")
 	}
 	if getUserRes.User.UserName == nil {
-		return nil, fmt.Errorf("nil UserName returned from GetUser")
+		return nil, errors.New("nil UserName returned from GetUser")
 	}
 
 	// Create the new access key and secret.
@@ -120,10 +121,10 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		return nil, fmt.Errorf("error calling CreateAccessKey: %w", err)
 	}
 	if createAccessKeyRes.AccessKey == nil {
-		return nil, fmt.Errorf("nil response from CreateAccessKey")
+		return nil, errors.New("nil response from CreateAccessKey")
 	}
 	if createAccessKeyRes.AccessKey.AccessKeyId == nil || createAccessKeyRes.AccessKey.SecretAccessKey == nil {
-		return nil, fmt.Errorf("nil AccessKeyId or SecretAccessKey returned from CreateAccessKey")
+		return nil, errors.New("nil AccessKeyId or SecretAccessKey returned from CreateAccessKey")
 	}
 
 	// We're about to attempt to store the newly created key and secret, but just in case we can't,

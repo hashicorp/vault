@@ -95,14 +95,14 @@ func newUserReqToProto(req NewUserRequest) (*proto.NewUserRequest, error) {
 	switch req.CredentialType {
 	case CredentialTypePassword:
 		if req.Password == "" {
-			return nil, fmt.Errorf("missing password credential")
+			return nil, errors.New("missing password credential")
 		}
 	case CredentialTypeRSAPrivateKey:
 		if len(req.PublicKey) == 0 {
-			return nil, fmt.Errorf("missing public key credential")
+			return nil, errors.New("missing public key credential")
 		}
 	default:
-		return nil, fmt.Errorf("unknown credential type")
+		return nil, errors.New("unknown credential type")
 	}
 
 	expiration, err := ptypes.TimestampProto(req.Expiration)
@@ -156,13 +156,13 @@ func (c gRPCClient) UpdateUser(ctx context.Context, req UpdateUserRequest) (Upda
 
 func updateUserReqToProto(req UpdateUserRequest) (*proto.UpdateUserRequest, error) {
 	if req.Username == "" {
-		return nil, fmt.Errorf("missing username")
+		return nil, errors.New("missing username")
 	}
 
 	if (req.Password == nil || req.Password.NewPassword == "") &&
 		(req.PublicKey == nil || len(req.PublicKey.NewPublicKey) == 0) &&
 		(req.Expiration == nil || req.Expiration.NewExpiration.IsZero()) {
-		return nil, fmt.Errorf("missing changes")
+		return nil, errors.New("missing changes")
 	}
 
 	expiration, err := expirationToProto(req.Expiration)
@@ -243,7 +243,7 @@ func (c gRPCClient) DeleteUser(ctx context.Context, req DeleteUserRequest) (Dele
 
 func deleteUserReqToProto(req DeleteUserRequest) (*proto.DeleteUserRequest, error) {
 	if req.Username == "" {
-		return nil, fmt.Errorf("missing username")
+		return nil, errors.New("missing username")
 	}
 
 	rpcReq := &proto.DeleteUserRequest{

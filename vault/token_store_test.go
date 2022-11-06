@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path"
 	"reflect"
@@ -5395,7 +5396,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	origDestroyCubbyhole := ts.cubbyholeDestroyer
 
 	ts.cubbyholeDestroyer = func(context.Context, *TokenStore, *logical.TokenEntry) error {
-		return fmt.Errorf("keep it frosty")
+		return errors.New("keep it frosty")
 	}
 
 	err = ts.revokeInternal(namespace.RootContext(nil), saltTut, false)
@@ -5415,7 +5416,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	// Check the race condition situation by making the process sleep
 	ts.cubbyholeDestroyer = func(context.Context, *TokenStore, *logical.TokenEntry) error {
 		time.Sleep(1 * time.Second)
-		return fmt.Errorf("keep it frosty")
+		return errors.New("keep it frosty")
 	}
 	cubbyFuncLock.Unlock()
 

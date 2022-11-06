@@ -1,7 +1,7 @@
 package http
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -40,7 +40,7 @@ func wrapCORSHandler(h http.Handler, core *vault.Core) http.Handler {
 
 		// Return a 403 if the origin is not allowed to make cross-origin requests.
 		if !corsConf.IsValidOrigin(origin) {
-			respondError(w, http.StatusForbidden, fmt.Errorf("origin not allowed"))
+			respondError(w, http.StatusForbidden, errors.New("origin not allowed"))
 			return
 		}
 

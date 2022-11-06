@@ -1,6 +1,7 @@
 package userpass
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -25,7 +26,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	}
 
 	if data.Username == "" {
-		return nil, fmt.Errorf("'username' must be specified")
+		return nil, errors.New("'username' must be specified")
 	}
 	if data.Password == "" {
 		fmt.Fprintf(os.Stderr, "Password (will be hidden): ")
@@ -50,7 +51,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		return nil, err
 	}
 	if secret == nil {
-		return nil, fmt.Errorf("empty response from credential provider")
+		return nil, errors.New("empty response from credential provider")
 	}
 
 	return secret, nil

@@ -238,7 +238,7 @@ func (b *backend) pathRoleExistenceCheck(ctx context.Context, req *logical.Reque
 // role fetches the role entry from cache, or loads from disk if necessary
 func (b *backend) role(ctx context.Context, s logical.Storage, roleName string) (*awsRoleEntry, error) {
 	if roleName == "" {
-		return nil, fmt.Errorf("missing role name")
+		return nil, errors.New("missing role name")
 	}
 
 	roleEntryRaw, found := b.roleCache.Get(roleName)
@@ -308,11 +308,11 @@ func (b *backend) setRole(ctx context.Context, s logical.Storage, roleName strin
 	roleEntry *awsRoleEntry,
 ) error {
 	if roleName == "" {
-		return fmt.Errorf("missing role name")
+		return errors.New("missing role name")
 	}
 
 	if roleEntry == nil {
-		return fmt.Errorf("nil role entry")
+		return errors.New("nil role entry")
 	}
 
 	entry, err := logical.StorageEntryJSON("role/"+strings.ToLower(roleName), roleEntry)
@@ -445,7 +445,7 @@ func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) 
 // (and thus needs to be persisted)
 func (b *backend) upgradeRole(ctx context.Context, s logical.Storage, roleEntry *awsRoleEntry) (bool, error) {
 	if roleEntry == nil {
-		return false, fmt.Errorf("received nil roleEntry")
+		return false, errors.New("received nil roleEntry")
 	}
 	upgraded := roleEntry.Version < currentRoleStorageVersion
 	switch roleEntry.Version {

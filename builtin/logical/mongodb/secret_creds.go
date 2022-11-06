@@ -2,7 +2,7 @@ package mongodb
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -51,21 +51,21 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 	// Get the username from the internal data
 	usernameRaw, ok := req.Secret.InternalData["username"]
 	if !ok {
-		return nil, fmt.Errorf("secret is missing username internal data")
+		return nil, errors.New("secret is missing username internal data")
 	}
 	username, ok := usernameRaw.(string)
 	if !ok {
-		return nil, fmt.Errorf("username internal data is not a string")
+		return nil, errors.New("username internal data is not a string")
 	}
 
 	// Get the db from the internal data
 	dbRaw, ok := req.Secret.InternalData["db"]
 	if !ok {
-		return nil, fmt.Errorf("secret is missing db internal data")
+		return nil, errors.New("secret is missing db internal data")
 	}
 	db, ok := dbRaw.(string)
 	if !ok {
-		return nil, fmt.Errorf("db internal data is not a string")
+		return nil, errors.New("db internal data is not a string")
 	}
 
 	// Get our connection

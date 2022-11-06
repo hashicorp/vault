@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -536,7 +537,7 @@ func (sc *storageContext) resolveKeyReference(reference string) (keyID, error) {
 			return keyID("config-error"), err
 		}
 		if len(config.DefaultKeyId) == 0 {
-			return KeyRefNotFound, fmt.Errorf("no default key currently configured")
+			return KeyRefNotFound, errors.New("no default key currently configured")
 		}
 
 		return config.DefaultKeyId, nil
@@ -943,7 +944,7 @@ func (sc *storageContext) resolveIssuerReference(reference string) (issuerID, er
 			return issuerID("config-error"), err
 		}
 		if len(config.DefaultIssuerId) == 0 {
-			return IssuerRefNotFound, fmt.Errorf("no default issuer currently configured")
+			return IssuerRefNotFound, errors.New("no default issuer currently configured")
 		}
 
 		return config.DefaultIssuerId, nil

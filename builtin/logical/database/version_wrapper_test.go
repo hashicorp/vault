@@ -2,7 +2,7 @@ package database
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -71,7 +71,7 @@ func TestInitDatabase_newDB(t *testing.T) {
 				VerifyConnection: true,
 			},
 			newInitResp:  v5.InitializeResponse{},
-			newInitErr:   fmt.Errorf("test error"),
+			newInitErr:   errors.New("test error"),
 			newInitCalls: 1,
 			expectedResp: v5.InitializeResponse{},
 			expectErr:    true,
@@ -142,7 +142,7 @@ func TestInitDatabase_legacyDB(t *testing.T) {
 				},
 				VerifyConnection: true,
 			},
-			initErr:      fmt.Errorf("test error"),
+			initErr:      errors.New("test error"),
 			initCalls:    1,
 			expectedResp: v5.InitializeResponse{},
 			expectErr:    true,
@@ -227,7 +227,7 @@ func TestNewUser_newDB(t *testing.T) {
 				Password: "new_password",
 			},
 
-			newUserErr:   fmt.Errorf("test error"),
+			newUserErr:   errors.New("test error"),
 			newUserCalls: 1,
 
 			expectedResp: v5.NewUserResponse{},
@@ -300,7 +300,7 @@ func TestNewUser_legacyDB(t *testing.T) {
 				Password: "new_password",
 			},
 
-			createUserErr:   fmt.Errorf("test error"),
+			createUserErr:   errors.New("test error"),
 			createUserCalls: 1,
 
 			expectedResp: v5.NewUserResponse{},
@@ -376,7 +376,7 @@ func TestUpdateUser_newDB(t *testing.T) {
 			req: v5.UpdateUserRequest{
 				Username: "existing_user",
 			},
-			updateUserErr:   fmt.Errorf("test error"),
+			updateUserErr:   errors.New("test error"),
 			updateUserCalls: 1,
 			expectErr:       true,
 		},
@@ -476,7 +476,7 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 			},
 			isRootUser: false,
 
-			setCredentialsErr:   fmt.Errorf("set credentials failed"),
+			setCredentialsErr:   errors.New("set credentials failed"),
 			setCredentialsCalls: 1,
 			rotateRootCalls:     0,
 			renewUserCalls:      0,
@@ -562,7 +562,7 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 			setCredentialsErr:   status.Error(codes.Unimplemented, "SetCredentials is not implemented"),
 			setCredentialsCalls: 1,
 
-			rotateRootErr:   fmt.Errorf("rotate root failed"),
+			rotateRootErr:   errors.New("rotate root failed"),
 			rotateRootCalls: 1,
 			renewUserCalls:  0,
 
@@ -600,7 +600,7 @@ func TestUpdateUser_legacyDB(t *testing.T) {
 			setCredentialsCalls: 0,
 			rotateRootCalls:     0,
 
-			renewUserErr:   fmt.Errorf("test error"),
+			renewUserErr:   errors.New("test error"),
 			renewUserCalls: 1,
 
 			expectedConfig: nil,
@@ -678,7 +678,7 @@ func TestDeleteUser_newDB(t *testing.T) {
 				Username: "existing_user",
 			},
 
-			deleteUserErr:   fmt.Errorf("test error"),
+			deleteUserErr:   errors.New("test error"),
 			deleteUserCalls: 1,
 
 			expectErr: true,
@@ -733,7 +733,7 @@ func TestDeleteUser_legacyDB(t *testing.T) {
 				Username: "existing_user",
 			},
 
-			revokeUserErr:   fmt.Errorf("test error"),
+			revokeUserErr:   errors.New("test error"),
 			revokeUserCalls: 1,
 
 			expectErr: true,
@@ -765,7 +765,7 @@ func TestDeleteUser_legacyDB(t *testing.T) {
 type badValue struct{}
 
 func (badValue) MarshalJSON() ([]byte, error) {
-	return nil, fmt.Errorf("this value cannot be marshalled to JSON")
+	return nil, errors.New("this value cannot be marshalled to JSON")
 }
 
 var _ logical.Storage = fakeStorage{}
@@ -815,7 +815,7 @@ func TestStoreConfig(t *testing.T) {
 					"foo": "bar",
 				},
 			},
-			putErr:    fmt.Errorf("failed to store config"),
+			putErr:    errors.New("failed to store config"),
 			expectErr: true,
 		},
 		"happy path": {

@@ -15,6 +15,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -243,7 +244,7 @@ func TestPKI_DeviceCert(t *testing.T) {
 	cert = parsedCertBundle.Certificate
 	notAfter = cert.NotAfter.Format(time.RFC3339)
 	if notAfter != "9999-12-31T23:59:59Z" {
-		t.Fatal(fmt.Errorf("not after from certificate  is not matching with input parameter"))
+		t.Fatal(errors.New("not after from certificate  is not matching with input parameter"))
 	}
 }
 
@@ -418,13 +419,13 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 
 	switch {
 	case parsedCertBundle.Certificate == nil:
-		return nil, fmt.Errorf("did not find a certificate in the cert bundle")
+		return nil, errors.New("did not find a certificate in the cert bundle")
 	case len(parsedCertBundle.CAChain) == 0 || parsedCertBundle.CAChain[0].Certificate == nil:
-		return nil, fmt.Errorf("did not find a CA in the cert bundle")
+		return nil, errors.New("did not find a CA in the cert bundle")
 	case parsedCertBundle.PrivateKey == nil:
-		return nil, fmt.Errorf("did not find a private key in the cert bundle")
+		return nil, errors.New("did not find a private key in the cert bundle")
 	case parsedCertBundle.PrivateKeyType == certutil.UnknownPrivateKey:
-		return nil, fmt.Errorf("could not figure out type of private key")
+		return nil, errors.New("could not figure out type of private key")
 	}
 
 	switch {
@@ -433,7 +434,7 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 	case parsedCertBundle.PrivateKeyType == certutil.RSAPrivateKey && keyType != "rsa":
 		fallthrough
 	case parsedCertBundle.PrivateKeyType == certutil.ECPrivateKey && keyType != "ec":
-		return nil, fmt.Errorf("given key type does not match type found in bundle")
+		return nil, errors.New("given key type does not match type found in bundle")
 	}
 
 	cert := parsedCertBundle.Certificate
@@ -450,19 +451,19 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 	switch extUsage {
 	case x509.ExtKeyUsageEmailProtection:
 		if cert.ExtKeyUsage[0] != x509.ExtKeyUsageEmailProtection {
-			return nil, fmt.Errorf("bad extended key usage")
+			return nil, errors.New("bad extended key usage")
 		}
 	case x509.ExtKeyUsageServerAuth:
 		if cert.ExtKeyUsage[0] != x509.ExtKeyUsageServerAuth {
-			return nil, fmt.Errorf("bad extended key usage")
+			return nil, errors.New("bad extended key usage")
 		}
 	case x509.ExtKeyUsageClientAuth:
 		if cert.ExtKeyUsage[0] != x509.ExtKeyUsageClientAuth {
-			return nil, fmt.Errorf("bad extended key usage")
+			return nil, errors.New("bad extended key usage")
 		}
 	case x509.ExtKeyUsageCodeSigning:
 		if cert.ExtKeyUsage[0] != x509.ExtKeyUsageCodeSigning {
-			return nil, fmt.Errorf("bad extended key usage")
+			return nil, errors.New("bad extended key usage")
 		}
 	}
 
@@ -523,7 +524,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			},
 			Check: func(resp *logical.Response) error {
 				if resp.Secret != nil && resp.Secret.LeaseID != "" {
-					return fmt.Errorf("root returned with a lease")
+					return errors.New("root returned with a lease")
 				}
 				return nil
 			},
@@ -544,7 +545,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			Path:      "config/urls",
 			Check: func(resp *logical.Response) error {
 				if resp.Data == nil {
-					return fmt.Errorf("no data returned")
+					return errors.New("no data returned")
 				}
 				var entries certutil.URLEntries
 				err := mapstructure.Decode(resp.Data, &entries)
@@ -571,7 +572,7 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			ErrorOk: true,
 			Check: func(resp *logical.Response) error {
 				if !resp.IsError() {
-					return fmt.Errorf("expected an error response but did not get one")
+					return errors.New("expected an error response but did not get one")
 				}
 				if !strings.Contains(resp.Data["error"].(string), "2048") {
 					return fmt.Errorf("received an error but not about a 1024-bit key, error was: %s", resp.Data["error"].(string))
@@ -596,10 +597,10 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			Check: func(resp *logical.Response) error {
 				certString := resp.Data["certificate"].(string)
 				if certString == "" {
-					return fmt.Errorf("no certificate returned")
+					return errors.New("no certificate returned")
 				}
 				if resp.Secret != nil && resp.Secret.LeaseID != "" {
-					return fmt.Errorf("signed intermediate returned with a lease")
+					return errors.New("signed intermediate returned with a lease")
 				}
 				certBytes, _ := base64.StdEncoding.DecodeString(certString)
 				certs, err := x509.ParseCertificates(certBytes)
@@ -649,10 +650,10 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			Check: func(resp *logical.Response) error {
 				certString := resp.Data["certificate"].(string)
 				if certString == "" {
-					return fmt.Errorf("no certificate returned")
+					return errors.New("no certificate returned")
 				}
 				if resp.Secret != nil && resp.Secret.LeaseID != "" {
-					return fmt.Errorf("signed intermediate returned with a lease")
+					return errors.New("signed intermediate returned with a lease")
 				}
 				certBytes, _ := base64.StdEncoding.DecodeString(certString)
 				certs, err := x509.ParseCertificates(certBytes)
@@ -773,7 +774,7 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			Check: func(resp *logical.Response) error {
 				certString := resp.Data["certificate"].(string)
 				if certString == "" {
-					return fmt.Errorf("no certificate returned")
+					return errors.New("no certificate returned")
 				}
 				certBytes, _ := base64.StdEncoding.DecodeString(certString)
 				certs, err := x509.ParseCertificates(certBytes)
@@ -789,7 +790,7 @@ func generateCSRSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 					return fmt.Errorf("max path length of %d does not match the requested of 3", cert.MaxPathLen)
 				}
 				if !cert.MaxPathLenZero {
-					return fmt.Errorf("max path length zero is not set")
+					return errors.New("max path length zero is not set")
 				}
 
 				// We need to set these as they are filled in with unparsed values in the final cert
@@ -901,7 +902,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		if resp.IsError() {
 			return nil
 		}
-		return fmt.Errorf("expected an error, but did not seem to get one")
+		return errors.New("expected an error, but did not seem to get one")
 	}
 
 	// Adds tests with the currently configured issue/role information
@@ -1705,17 +1706,17 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		Path:      "roles/",
 		Check: func(resp *logical.Response) error {
 			if resp.Data == nil {
-				return fmt.Errorf("nil data")
+				return errors.New("nil data")
 			}
 
 			keysRaw, ok := resp.Data["keys"]
 			if !ok {
-				return fmt.Errorf("no keys found")
+				return errors.New("no keys found")
 			}
 
 			keys, ok := keysRaw.([]string)
 			if !ok {
-				return fmt.Errorf("could not convert keys to a string list")
+				return errors.New("could not convert keys to a string list")
 			}
 
 			if len(keys) != 1 {
@@ -2316,7 +2317,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 
 	notAfter := cert.NotAfter.Format(time.RFC3339)
 	if notAfter != "9999-12-31T23:59:59Z" {
-		t.Fatal(fmt.Errorf("not after from certificate is not matching with input parameter"))
+		t.Fatal(errors.New("not after from certificate is not matching with input parameter"))
 	}
 
 	// now check that if we set generate-lease it takes it from the role and the TTLs match

@@ -3,7 +3,6 @@ package dbplugin
 import (
 	"context"
 	"errors"
-	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -684,11 +683,11 @@ func marshal(t *testing.T, m map[string]interface{}) *structpb.Struct {
 type badJSONValue struct{}
 
 func (badJSONValue) MarshalJSON() ([]byte, error) {
-	return nil, fmt.Errorf("this cannot be marshalled to JSON")
+	return nil, errors.New("this cannot be marshalled to JSON")
 }
 
 func (badJSONValue) UnmarshalJSON([]byte) error {
-	return fmt.Errorf("this cannot be unmarshalled from JSON")
+	return errors.New("this cannot be unmarshalled from JSON")
 }
 
 var _ Database = fakeDatabase{}

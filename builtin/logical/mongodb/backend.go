@@ -2,7 +2,7 @@ package mongodb
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"strings"
 	"sync"
 	"time"
@@ -76,7 +76,7 @@ func (b *backend) Session(ctx context.Context, s logical.Storage) (*mgo.Session,
 		return nil, err
 	}
 	if connConfigJSON == nil {
-		return nil, fmt.Errorf("configure the MongoDB connection with config/connection first")
+		return nil, errors.New("configure the MongoDB connection with config/connection first")
 	}
 
 	var connConfig connectionConfig

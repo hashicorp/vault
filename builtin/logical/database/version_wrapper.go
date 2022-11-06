@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	log "github.com/hashicorp/go-hclog"
@@ -51,7 +52,7 @@ func newDatabaseWrapper(ctx context.Context, pluginName string, pluginVersion st
 // Errors if the wrapper does not contain an underlying database.
 func (d databaseVersionWrapper) Initialize(ctx context.Context, req v5.InitializeRequest) (v5.InitializeResponse, error) {
 	if !d.isV5() && !d.isV4() {
-		return v5.InitializeResponse{}, fmt.Errorf("no underlying database specified")
+		return v5.InitializeResponse{}, errors.New("no underlying database specified")
 	}
 
 	// v5 Database
@@ -77,7 +78,7 @@ func (d databaseVersionWrapper) Initialize(ctx context.Context, req v5.Initializ
 // Errors if the wrapper does not contain an underlying database.
 func (d databaseVersionWrapper) NewUser(ctx context.Context, req v5.NewUserRequest) (resp v5.NewUserResponse, password string, err error) {
 	if !d.isV5() && !d.isV4() {
-		return v5.NewUserResponse{}, "", fmt.Errorf("no underlying database specified")
+		return v5.NewUserResponse{}, "", errors.New("no underlying database specified")
 	}
 
 	// v5 Database
@@ -111,7 +112,7 @@ func (d databaseVersionWrapper) NewUser(ctx context.Context, req v5.NewUserReque
 // Errors if the wrapper does not contain an underlying database.
 func (d databaseVersionWrapper) UpdateUser(ctx context.Context, req v5.UpdateUserRequest, isRootUser bool) (saveConfig map[string]interface{}, err error) {
 	if !d.isV5() && !d.isV4() {
-		return nil, fmt.Errorf("no underlying database specified")
+		return nil, errors.New("no underlying database specified")
 	}
 
 	// v5 Database
@@ -122,12 +123,12 @@ func (d databaseVersionWrapper) UpdateUser(ctx context.Context, req v5.UpdateUse
 
 	// v4 Database
 	if req.Password == nil && req.Expiration == nil {
-		return nil, fmt.Errorf("missing change to be sent to the database")
+		return nil, errors.New("missing change to be sent to the database")
 	}
 	if req.Password != nil && req.Expiration != nil {
 		// We could support this, but it would require handling partial
 		// errors which I'm punting on since we don't need it for now
-		return nil, fmt.Errorf("cannot specify both password and expiration change at the same time")
+		return nil, errors.New("cannot specify both password and expiration change at the same time")
 	}
 
 	// Change password
@@ -185,7 +186,7 @@ func (d databaseVersionWrapper) changeRootUserPasswordLegacy(ctx context.Context
 // DeleteUser in the underlying database. Errors if the wrapper does not contain an underlying database.
 func (d databaseVersionWrapper) DeleteUser(ctx context.Context, req v5.DeleteUserRequest) (v5.DeleteUserResponse, error) {
 	if !d.isV5() && !d.isV4() {
-		return v5.DeleteUserResponse{}, fmt.Errorf("no underlying database specified")
+		return v5.DeleteUserResponse{}, errors.New("no underlying database specified")
 	}
 
 	// v5 Database
@@ -204,7 +205,7 @@ func (d databaseVersionWrapper) DeleteUser(ctx context.Context, req v5.DeleteUse
 // Type of the underlying database. Errors if the wrapper does not contain an underlying database.
 func (d databaseVersionWrapper) Type() (string, error) {
 	if !d.isV5() && !d.isV4() {
-		return "", fmt.Errorf("no underlying database specified")
+		return "", errors.New("no underlying database specified")
 	}
 
 	// v5 Database
@@ -219,7 +220,7 @@ func (d databaseVersionWrapper) Type() (string, error) {
 // Close the underlying database. Errors if the wrapper does not contain an underlying database.
 func (d databaseVersionWrapper) Close() error {
 	if !d.isV5() && !d.isV4() {
-		return fmt.Errorf("no underlying database specified")
+		return errors.New("no underlying database specified")
 	}
 	// v5 Database
 	if d.isV5() {

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/pkg/errors"
 	"github.com/posener/complete"
 )
 
@@ -349,14 +350,14 @@ func (c *LoginCommand) Run(args []string) int {
 func (c *LoginCommand) extractToken(client *api.Client, secret *api.Secret, unwrap bool) (*api.Secret, bool, error) {
 	switch {
 	case secret == nil:
-		return nil, false, fmt.Errorf("empty response from auth helper")
+		return nil, false, errors.New("empty response from auth helper")
 
 	case secret.Auth != nil:
 		return secret, false, nil
 
 	case secret.WrapInfo != nil:
 		if secret.WrapInfo.WrappedAccessor == "" {
-			return nil, false, fmt.Errorf("wrapped response does not contain a token")
+			return nil, false, errors.New("wrapped response does not contain a token")
 		}
 
 		if !unwrap {
@@ -371,7 +372,7 @@ func (c *LoginCommand) extractToken(client *api.Client, secret *api.Secret, unwr
 		return c.extractToken(client, secret, unwrap)
 
 	default:
-		return nil, false, fmt.Errorf("no auth or wrapping info in response")
+		return nil, false, errors.New("no auth or wrapping info in response")
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -95,7 +96,7 @@ func (b *backend) pathRoleTagUpdate(ctx context.Context, req *logical.Request, d
 	// There should be a HMAC key present in the role entry
 	if roleEntry.HMACKey == "" {
 		// Not being able to find the HMACKey is an internal error
-		return nil, fmt.Errorf("failed to find the HMAC key")
+		return nil, errors.New("failed to find the HMAC key")
 	}
 
 	resp := &logical.Response{}
@@ -180,11 +181,11 @@ func (b *backend) pathRoleTagUpdate(ctx context.Context, req *logical.Request, d
 // and appends a HMAC of the plaintext value to it, before returning.
 func createRoleTagValue(rTag *roleTag, roleEntry *awsRoleEntry) (string, error) {
 	if rTag == nil {
-		return "", fmt.Errorf("nil role tag")
+		return "", errors.New("nil role tag")
 	}
 
 	if roleEntry == nil {
-		return "", fmt.Errorf("nil role entry")
+		return "", errors.New("nil role entry")
 	}
 
 	// Attach version, nonce, policies and maxTTL to the role tag value.
@@ -201,11 +202,11 @@ func createRoleTagValue(rTag *roleTag, roleEntry *awsRoleEntry) (string, error) 
 // a role tag value containing both the plaintext part and the HMAC part.
 func appendHMAC(rTagPlaintext string, roleEntry *awsRoleEntry) (string, error) {
 	if rTagPlaintext == "" {
-		return "", fmt.Errorf("empty role tag plaintext string")
+		return "", errors.New("empty role tag plaintext string")
 	}
 
 	if roleEntry == nil {
-		return "", fmt.Errorf("nil role entry")
+		return "", errors.New("nil role entry")
 	}
 
 	// Create the HMAC of the value
@@ -219,7 +220,7 @@ func appendHMAC(rTagPlaintext string, roleEntry *awsRoleEntry) (string, error) {
 
 	// This limit of 255 is enforced on the EC2 instance. Hence complying to that here.
 	if len(rTagValue) > 255 {
-		return "", fmt.Errorf("role tag 'value' exceeding the limit of 255 characters")
+		return "", errors.New("role tag 'value' exceeding the limit of 255 characters")
 	}
 
 	return rTagValue, nil
@@ -229,11 +230,11 @@ func appendHMAC(rTagPlaintext string, roleEntry *awsRoleEntry) (string, error) {
 // from it using the role specific HMAC key and compares it with the received HMAC.
 func verifyRoleTagValue(rTag *roleTag, roleEntry *awsRoleEntry) (bool, error) {
 	if rTag == nil {
-		return false, fmt.Errorf("nil role tag")
+		return false, errors.New("nil role tag")
 	}
 
 	if roleEntry == nil {
-		return false, fmt.Errorf("nil role entry")
+		return false, errors.New("nil role entry")
 	}
 
 	// Fetch the plaintext part of role tag
@@ -254,16 +255,16 @@ func verifyRoleTagValue(rTag *roleTag, roleEntry *awsRoleEntry) (bool, error) {
 // prepareRoleTagPlaintextValue builds the role tag value without the HMAC in it.
 func prepareRoleTagPlaintextValue(rTag *roleTag) (string, error) {
 	if rTag == nil {
-		return "", fmt.Errorf("nil role tag")
+		return "", errors.New("nil role tag")
 	}
 	if rTag.Version == "" {
-		return "", fmt.Errorf("missing version")
+		return "", errors.New("missing version")
 	}
 	if rTag.Nonce == "" {
-		return "", fmt.Errorf("missing nonce")
+		return "", errors.New("missing nonce")
 	}
 	if rTag.Role == "" {
-		return "", fmt.Errorf("missing role")
+		return "", errors.New("missing role")
 	}
 
 	// Attach Version, Nonce, Role, DisallowReauthentication and AllowInstanceMigration
@@ -295,7 +296,7 @@ func (b *backend) parseAndVerifyRoleTagValue(ctx context.Context, s logical.Stor
 
 	// Tag must contain version, nonce, policies and HMAC
 	if len(tagItems) < 4 {
-		return nil, fmt.Errorf("invalid tag")
+		return nil, errors.New("invalid tag")
 	}
 
 	rTag := &roleTag{}
@@ -309,7 +310,7 @@ func (b *backend) parseAndVerifyRoleTagValue(ctx context.Context, s logical.Stor
 	// Version will be the first element.
 	rTag.Version = tagItems[0]
 	if rTag.Version != roleTagVersion {
-		return nil, fmt.Errorf("invalid role tag version")
+		return nil, errors.New("invalid role tag version")
 	}
 
 	// Nonce will be the second element.
@@ -348,7 +349,7 @@ func (b *backend) parseAndVerifyRoleTagValue(ctx context.Context, s logical.Stor
 	}
 
 	if rTag.Role == "" {
-		return nil, fmt.Errorf("missing role name")
+		return nil, errors.New("missing role name")
 	}
 
 	roleEntry, err := b.role(ctx, s, rTag.Role)
@@ -365,7 +366,7 @@ func (b *backend) parseAndVerifyRoleTagValue(ctx context.Context, s logical.Stor
 		return nil, err
 	}
 	if !verified {
-		return nil, fmt.Errorf("role tag signature verification failed")
+		return nil, errors.New("role tag signature verification failed")
 	}
 
 	return rTag, nil
@@ -374,7 +375,7 @@ func (b *backend) parseAndVerifyRoleTagValue(ctx context.Context, s logical.Stor
 // Creates base64 encoded HMAC using a per-role key.
 func createRoleTagHMACBase64(key, value string) (string, error) {
 	if key == "" {
-		return "", fmt.Errorf("invalid HMAC key")
+		return "", errors.New("invalid HMAC key")
 	}
 	hm := hmac.New(sha256.New, []byte(key))
 	hm.Write([]byte(value))

@@ -343,7 +343,7 @@ func (b *backend) pathRolesWrite(ctx context.Context, req *logical.Request, d *f
 
 func (b *backend) roleRead(ctx context.Context, s logical.Storage, roleName string, shouldLock bool) (*awsRoleEntry, error) {
 	if roleName == "" {
-		return nil, fmt.Errorf("missing role name")
+		return nil, errors.New("missing role name")
 	}
 	if shouldLock {
 		b.roleMutex.RLock()
@@ -475,17 +475,17 @@ func validateAWSManagedPolicy(policyARN string) error {
 
 func setAwsRole(ctx context.Context, s logical.Storage, roleName string, roleEntry *awsRoleEntry) error {
 	if roleName == "" {
-		return fmt.Errorf("empty role name")
+		return errors.New("empty role name")
 	}
 	if roleEntry == nil {
-		return fmt.Errorf("nil roleEntry")
+		return errors.New("nil roleEntry")
 	}
 	entry, err := logical.StorageEntryJSON("role/"+roleName, roleEntry)
 	if err != nil {
 		return err
 	}
 	if entry == nil {
-		return fmt.Errorf("nil result when writing to storage")
+		return errors.New("nil result when writing to storage")
 	}
 	if err := s.Put(ctx, entry); err != nil {
 		return err
@@ -530,56 +530,56 @@ func (r *awsRoleEntry) toResponseData() map[string]interface{} {
 }
 
 func (r *awsRoleEntry) validate() error {
-	var errors *multierror.Error
+	var errs *multierror.Error
 
 	if len(r.CredentialTypes) == 0 {
-		errors = multierror.Append(errors, fmt.Errorf("did not supply credential_type"))
+		errs = multierror.Append(errs, errors.New("did not supply credential_type"))
 	}
 
 	allowedCredentialTypes := []string{iamUserCred, assumedRoleCred, federationTokenCred}
 	for _, credType := range r.CredentialTypes {
 		if !strutil.StrListContains(allowedCredentialTypes, credType) {
-			errors = multierror.Append(errors, fmt.Errorf("unrecognized credential type: %s", credType))
+			errs = multierror.Append(errs, fmt.Errorf("unrecognized credential type: %s", credType))
 		}
 	}
 
 	if r.DefaultSTSTTL != 0 && !strutil.StrListContains(r.CredentialTypes, assumedRoleCred) && !strutil.StrListContains(r.CredentialTypes, federationTokenCred) {
-		errors = multierror.Append(errors, fmt.Errorf("default_sts_ttl parameter only valid for %s and %s credential types", assumedRoleCred, federationTokenCred))
+		errs = multierror.Append(errs, fmt.Errorf("default_sts_ttl parameter only valid for %s and %s credential types", assumedRoleCred, federationTokenCred))
 	}
 
 	if r.MaxSTSTTL != 0 && !strutil.StrListContains(r.CredentialTypes, assumedRoleCred) && !strutil.StrListContains(r.CredentialTypes, federationTokenCred) {
-		errors = multierror.Append(errors, fmt.Errorf("max_sts_ttl parameter only valid for %s and %s credential types", assumedRoleCred, federationTokenCred))
+		errs = multierror.Append(errs, fmt.Errorf("max_sts_ttl parameter only valid for %s and %s credential types", assumedRoleCred, federationTokenCred))
 	}
 
 	if r.MaxSTSTTL > 0 &&
 		r.DefaultSTSTTL > 0 &&
 		r.DefaultSTSTTL > r.MaxSTSTTL {
-		errors = multierror.Append(errors, fmt.Errorf(`"default_sts_ttl" value must be less than or equal to "max_sts_ttl" value`))
+		errs = multierror.Append(errs, errors.New(`"default_sts_ttl" value must be less than or equal to "max_sts_ttl" value`))
 	}
 
 	if r.UserPath != "" {
 		if !strutil.StrListContains(r.CredentialTypes, iamUserCred) {
-			errors = multierror.Append(errors, fmt.Errorf("user_path parameter only valid for %s credential type", iamUserCred))
+			errs = multierror.Append(errs, fmt.Errorf("user_path parameter only valid for %s credential type", iamUserCred))
 		}
 		if !userPathRegex.MatchString(r.UserPath) {
-			errors = multierror.Append(errors, fmt.Errorf("The specified value for user_path is invalid. It must match %q regexp", userPathRegex.String()))
+			errs = multierror.Append(errs, fmt.Errorf("The specified value for user_path is invalid. It must match %q regexp", userPathRegex.String()))
 		}
 	}
 
 	if r.PermissionsBoundaryARN != "" {
 		if !strutil.StrListContains(r.CredentialTypes, iamUserCred) {
-			errors = multierror.Append(errors, fmt.Errorf("cannot supply permissions_boundary_arn when credential_type isn't %s", iamUserCred))
+			errs = multierror.Append(errs, fmt.Errorf("cannot supply permissions_boundary_arn when credential_type isn't %s", iamUserCred))
 		}
 		if err := validateAWSManagedPolicy(r.PermissionsBoundaryARN); err != nil {
-			errors = multierror.Append(fmt.Errorf("invalid permissions_boundary_arn parameter: %v", err))
+			errs = multierror.Append(fmt.Errorf("invalid permissions_boundary_arn parameter: %v", err))
 		}
 	}
 
 	if len(r.RoleArns) > 0 && !strutil.StrListContains(r.CredentialTypes, assumedRoleCred) {
-		errors = multierror.Append(errors, fmt.Errorf("cannot supply role_arns when credential_type isn't %s", assumedRoleCred))
+		errs = multierror.Append(errs, fmt.Errorf("cannot supply role_arns when credential_type isn't %s", assumedRoleCred))
 	}
 
-	return errors.ErrorOrNil()
+	return errs.ErrorOrNil()
 }
 
 func compactJSON(input string) (string, error) {

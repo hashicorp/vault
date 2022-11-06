@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"errors"
 	"fmt"
 
 	proto "github.com/golang/protobuf/proto"
@@ -9,7 +10,7 @@ import (
 
 func (g *Group) Clone() (*Group, error) {
 	if g == nil {
-		return nil, fmt.Errorf("nil group")
+		return nil, errors.New("nil group")
 	}
 
 	marshaledGroup, err := proto.Marshal(g)
@@ -28,7 +29,7 @@ func (g *Group) Clone() (*Group, error) {
 
 func (e *Entity) Clone() (*Entity, error) {
 	if e == nil {
-		return nil, fmt.Errorf("nil entity")
+		return nil, errors.New("nil entity")
 	}
 
 	marshaledEntity, err := proto.Marshal(e)
@@ -57,7 +58,7 @@ func (e *Entity) UpsertAlias(alias *Alias) {
 
 func (p *Alias) Clone() (*Alias, error) {
 	if p == nil {
-		return nil, fmt.Errorf("nil alias")
+		return nil, errors.New("nil alias")
 	}
 
 	marshaledAlias, err := proto.Marshal(p)

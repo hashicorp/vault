@@ -2,7 +2,7 @@ package consul
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -17,7 +17,7 @@ func (b *backend) client(ctx context.Context, s logical.Storage) (*api.Client, e
 		return nil, userErr, nil
 	}
 	if conf == nil {
-		return nil, nil, fmt.Errorf("no error received but no configuration found")
+		return nil, nil, errors.New("no error received but no configuration found")
 	}
 
 	consulConf := conf.NewConfig()

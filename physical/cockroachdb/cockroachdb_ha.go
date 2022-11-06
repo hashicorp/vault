@@ -2,6 +2,7 @@ package cockroachdb
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -190,7 +191,7 @@ func (l *CockroachDBLock) writeItem() (bool, error) {
 		return false, err
 	}
 	if sqlResult == nil {
-		return false, fmt.Errorf("empty SQL response received")
+		return false, errors.New("empty SQL response received")
 	}
 
 	ar, err := sqlResult.RowsAffected()

@@ -2,7 +2,7 @@ package aws
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -20,7 +20,7 @@ func (b *backend) walRollback(ctx context.Context, req *logical.Request, kind st
 
 	f, ok := walRollbackMap[kind]
 	if !ok {
-		return fmt.Errorf("unknown type to rollback")
+		return errors.New("unknown type to rollback")
 	}
 
 	return f(ctx, req, kind, data)

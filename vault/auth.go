@@ -82,7 +82,7 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 
 	// Ensure there is a name
 	if entry.Path == "/" {
-		return fmt.Errorf("backend path must be specified")
+		return errors.New("backend path must be specified")
 	}
 
 	c.authLock.Lock()
@@ -114,7 +114,7 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 
 	// Ensure the token backend is a singleton
 	if entry.Type == "token" {
-		return fmt.Errorf("token credential backend cannot be instantiated")
+		return errors.New("token credential backend cannot be instantiated")
 	}
 
 	// Check for conflicts according to the router
@@ -246,7 +246,7 @@ func (c *Core) disableCredential(ctx context.Context, path string) error {
 
 	// Ensure the token backend is not affected
 	if path == "token/" {
-		return fmt.Errorf("token credential backend cannot be disabled")
+		return errors.New("token credential backend cannot be disabled")
 	}
 
 	// Disable credential internally
@@ -273,7 +273,7 @@ func (c *Core) disableCredentialInternal(ctx context.Context, path string, updat
 	// Verify exact match of the route
 	match := c.router.MatchingMount(ctx, path)
 	if match == "" || ns.Path+path != match {
-		return fmt.Errorf("no matching mount")
+		return errors.New("no matching mount")
 	}
 
 	// Store the view for this backend
@@ -669,7 +669,7 @@ func (c *Core) loadCredentials(ctx context.Context) error {
 func (c *Core) persistAuth(ctx context.Context, table *MountTable, local *bool) error {
 	if table.Type != credentialTableType {
 		c.logger.Error("given table to persist has wrong type", "actual_type", table.Type, "expected_type", credentialTableType)
-		return fmt.Errorf("invalid table type given, not persisting")
+		return errors.New("invalid table type given, not persisting")
 	}
 
 	nonLocalAuth := &MountTable{
@@ -683,7 +683,7 @@ func (c *Core) persistAuth(ctx context.Context, table *MountTable, local *bool) 
 	for _, entry := range table.Entries {
 		if entry.Table != table.Type {
 			c.logger.Error("given entry to persist in auth table has wrong table value", "path", entry.Path, "entry_table_type", entry.Table, "actual_type", table.Type)
-			return fmt.Errorf("invalid auth entry found, not persisting")
+			return errors.New("invalid auth entry found, not persisting")
 		}
 
 		if entry.Local {

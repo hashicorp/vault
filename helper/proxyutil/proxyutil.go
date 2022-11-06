@@ -73,7 +73,7 @@ func WrapInProxyProto(listener net.Listener, config *ProxyProtoConfig) (net.List
 			},
 		}
 	default:
-		return listener, fmt.Errorf("unknown behavior type for proxy proto config")
+		return listener, errors.New("unknown behavior type for proxy proto config")
 	}
 
 	return newLn, nil

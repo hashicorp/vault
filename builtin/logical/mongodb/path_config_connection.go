@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -36,7 +37,7 @@ func pathConfigConnection(b *backend) *framework.Path {
 func (b *backend) pathConnectionRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	entry, err := req.Storage.Get(ctx, "config/connection")
 	if err != nil {
-		return nil, fmt.Errorf("failed to read connection configuration")
+		return nil, errors.New("failed to read connection configuration")
 	}
 	if entry == nil {
 		return nil, nil

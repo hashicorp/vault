@@ -2,6 +2,7 @@ package aws
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -33,7 +34,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		return nil, err
 	}
 	if client == nil {
-		return nil, fmt.Errorf("nil IAM client")
+		return nil, errors.New("nil IAM client")
 	}
 
 	b.clientMutex.Lock()
@@ -44,7 +45,7 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		return nil, err
 	}
 	if rawRootConfig == nil {
-		return nil, fmt.Errorf("no configuration found for config/root")
+		return nil, errors.New("no configuration found for config/root")
 	}
 	var config rootConfig
 	if err := rawRootConfig.DecodeJSON(&config); err != nil {
@@ -61,13 +62,13 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		return nil, fmt.Errorf("error calling GetUser: %w", err)
 	}
 	if getUserRes == nil {
-		return nil, fmt.Errorf("nil response from GetUser")
+		return nil, errors.New("nil response from GetUser")
 	}
 	if getUserRes.User == nil {
-		return nil, fmt.Errorf("nil user returned from GetUser")
+		return nil, errors.New("nil user returned from GetUser")
 	}
 	if getUserRes.User.UserName == nil {
-		return nil, fmt.Errorf("nil UserName returned from GetUser")
+		return nil, errors.New("nil UserName returned from GetUser")
 	}
 
 	createAccessKeyInput := iam.CreateAccessKeyInput{
@@ -78,10 +79,10 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		return nil, fmt.Errorf("error calling CreateAccessKey: %w", err)
 	}
 	if createAccessKeyRes.AccessKey == nil {
-		return nil, fmt.Errorf("nil response from CreateAccessKey")
+		return nil, errors.New("nil response from CreateAccessKey")
 	}
 	if createAccessKeyRes.AccessKey.AccessKeyId == nil || createAccessKeyRes.AccessKey.SecretAccessKey == nil {
-		return nil, fmt.Errorf("nil AccessKeyId or SecretAccessKey returned from CreateAccessKey")
+		return nil, errors.New("nil AccessKeyId or SecretAccessKey returned from CreateAccessKey")
 	}
 
 	oldAccessKey := config.AccessKey

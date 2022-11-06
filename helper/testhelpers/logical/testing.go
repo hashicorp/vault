@@ -3,6 +3,7 @@ package testing
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -433,7 +434,7 @@ func TestCheckMulti(fs ...TestCheckFunc) TestCheckFunc {
 func TestCheckAuth(policies []string) TestCheckFunc {
 	return func(resp *logical.Response) error {
 		if resp == nil || resp.Auth == nil {
-			return fmt.Errorf("no auth in response")
+			return errors.New("no auth in response")
 		}
 		expected := make([]string, len(policies))
 		copy(expected, policies)
@@ -454,7 +455,7 @@ func TestCheckAuth(policies []string) TestCheckFunc {
 func TestCheckAuthEntityId(entity_id *string) TestCheckFunc {
 	return func(resp *logical.Response) error {
 		if resp == nil || resp.Auth == nil {
-			return fmt.Errorf("no auth in response")
+			return errors.New("no auth in response")
 		}
 
 		if *entity_id == "" {
@@ -473,11 +474,11 @@ func TestCheckAuthEntityId(entity_id *string) TestCheckFunc {
 func TestCheckAuthEntityAliasMetadataName(key string, value string) TestCheckFunc {
 	return func(resp *logical.Response) error {
 		if resp == nil || resp.Auth == nil {
-			return fmt.Errorf("no auth in response")
+			return errors.New("no auth in response")
 		}
 
 		if key == "" || value == "" {
-			return fmt.Errorf("alias metadata key and value required")
+			return errors.New("alias metadata key and value required")
 		}
 
 		name, ok := resp.Auth.Alias.Metadata[key]
@@ -497,7 +498,7 @@ func TestCheckAuthEntityAliasMetadataName(key string, value string) TestCheckFun
 func TestCheckAuthDisplayName(n string) TestCheckFunc {
 	return func(resp *logical.Response) error {
 		if resp.Auth == nil {
-			return fmt.Errorf("no auth in response")
+			return errors.New("no auth in response")
 		}
 		if n != "" && resp.Auth.DisplayName != "mnt-"+n {
 			return fmt.Errorf("invalid display name: %#v", resp.Auth.DisplayName)
@@ -511,7 +512,7 @@ func TestCheckAuthDisplayName(n string) TestCheckFunc {
 func TestCheckError() TestCheckFunc {
 	return func(resp *logical.Response) error {
 		if !resp.IsError() {
-			return fmt.Errorf("response should be error")
+			return errors.New("response should be error")
 		}
 
 		return nil

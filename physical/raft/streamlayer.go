@@ -353,7 +353,7 @@ func (l *raftLayer) Accept() (net.Conn, error) {
 	case conn := <-l.connCh:
 		return conn, nil
 	case <-l.closeCh:
-		return nil, fmt.Errorf("Raft RPC layer closed")
+		return nil, errors.New("Raft RPC layer closed")
 	}
 }
 

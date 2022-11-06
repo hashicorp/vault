@@ -81,7 +81,7 @@ type BoltSnapshotSink struct {
 // on a base directory.
 func NewBoltSnapshotStore(base string, logger log.Logger, fsm *FSM) (*BoltSnapshotStore, error) {
 	if logger == nil {
-		return nil, fmt.Errorf("no logger provided")
+		return nil, errors.New("no logger provided")
 	}
 
 	// Ensure our path exists

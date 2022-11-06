@@ -3,6 +3,7 @@ package pki
 import (
 	"bytes"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"sort"
 
@@ -435,7 +436,7 @@ func (sc *storageContext) rebuildIssuersChains(referenceCert *issuerEntry /* opt
 		}
 	}
 	if len(msg) > 0 {
-		return fmt.Errorf(msg)
+		return errors.New(msg)
 	}
 
 	// Finally, write all issuers to disk.

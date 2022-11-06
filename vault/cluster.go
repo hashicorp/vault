@@ -103,19 +103,19 @@ func (c *Core) loadLocalClusterTLS(adv activeAdvertisement) (retErr error) {
 
 	case adv.ClusterKeyParams == nil:
 		c.logger.Error("no key params found loading local cluster TLS information")
-		return fmt.Errorf("no local cluster key params found")
+		return errors.New("no local cluster key params found")
 
 	case adv.ClusterKeyParams.X == nil, adv.ClusterKeyParams.Y == nil, adv.ClusterKeyParams.D == nil:
 		c.logger.Error("failed to parse local cluster key due to missing params")
-		return fmt.Errorf("failed to parse local cluster key")
+		return errors.New("failed to parse local cluster key")
 
 	case adv.ClusterKeyParams.Type != corePrivateKeyTypeP521:
 		c.logger.Error("unknown local cluster key type", "key_type", adv.ClusterKeyParams.Type)
-		return fmt.Errorf("failed to find valid local cluster key type")
+		return errors.New("failed to find valid local cluster key type")
 
 	case adv.ClusterCert == nil || len(adv.ClusterCert) == 0:
 		c.logger.Error("no local cluster cert found")
-		return fmt.Errorf("no local cluster cert found")
+		return errors.New("no local cluster cert found")
 
 	}
 
@@ -310,7 +310,7 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 
 	if c.clusterListenerAddrs == nil || len(c.clusterListenerAddrs) == 0 {
 		c.logger.Warn("clustering not disabled but no addresses to listen on")
-		return fmt.Errorf("cluster addresses not found")
+		return errors.New("cluster addresses not found")
 	}
 
 	c.logger.Debug("starting cluster listeners")

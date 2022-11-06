@@ -2,6 +2,7 @@ package ssh
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -64,7 +65,7 @@ func (b *backend) secretDynamicKeyRevoke(ctx context.Context, req *logical.Reque
 	// The last param 'false' indicates that the key should be uninstalled.
 	err = b.installPublicKeyInTarget(ctx, intSec.AdminUser, intSec.Username, intSec.IP, intSec.Port, hostKey.Key, intSec.DynamicPublicKey, intSec.InstallScript, false)
 	if err != nil {
-		return nil, fmt.Errorf("error removing public key from authorized_keys file in target")
+		return nil, errors.New("error removing public key from authorized_keys file in target")
 	}
 	return nil, nil
 }

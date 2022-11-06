@@ -95,12 +95,12 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 
 func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	if req.Auth == nil {
-		return nil, fmt.Errorf("request auth was nil")
+		return nil, errors.New("request auth was nil")
 	}
 
 	tokenRaw, ok := req.Auth.InternalData["token"]
 	if !ok {
-		return nil, fmt.Errorf("token created in previous version of Vault cannot be validated properly at renewal time")
+		return nil, errors.New("token created in previous version of Vault cannot be validated properly at renewal time")
 	}
 	token := tokenRaw.(string)
 
@@ -110,7 +110,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	}
 
 	if !policyutil.EquivalentPolicies(verifyResp.Policies, req.Auth.TokenPolicies) {
-		return nil, fmt.Errorf("policies do not match")
+		return nil, errors.New("policies do not match")
 	}
 
 	resp := &logical.Response{Auth: req.Auth}

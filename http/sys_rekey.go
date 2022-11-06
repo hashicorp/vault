@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/hashicorp/vault/helper/pgpkeys"
@@ -24,7 +23,7 @@ func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 		repState := core.ReplicationState()
 		if repState.HasState(consts.ReplicationPerformanceSecondary) {
 			respondError(w, http.StatusBadRequest,
-				fmt.Errorf("rekeying can only be performed on the primary cluster when replication is activated"))
+				errors.New("rekeying can only be performed on the primary cluster when replication is activated"))
 			return
 		}
 
@@ -33,7 +32,7 @@ func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 
 		switch {
 		case recovery && !core.SealAccess().RecoveryKeySupported():
-			respondError(w, http.StatusBadRequest, fmt.Errorf("recovery rekeying not supported"))
+			respondError(w, http.StatusBadRequest, errors.New("recovery rekeying not supported"))
 		case r.Method == "GET":
 			handleSysRekeyInitGet(ctx, core, recovery, w, r)
 		case r.Method == "POST" || r.Method == "PUT":
@@ -53,7 +52,7 @@ func handleSysRekeyInitGet(ctx context.Context, core *vault.Core, recovery bool,
 		return
 	}
 	if barrierConfig == nil {
-		respondError(w, http.StatusBadRequest, fmt.Errorf("server is not yet initialized"))
+		respondError(w, http.StatusBadRequest, errors.New("server is not yet initialized"))
 		return
 	}
 
@@ -114,12 +113,12 @@ func handleSysRekeyInitPut(ctx context.Context, core *vault.Core, recovery bool,
 	}
 
 	if req.Backup && len(req.PGPKeys) == 0 {
-		respondError(w, http.StatusBadRequest, fmt.Errorf("cannot request a backup of the new keys without providing PGP keys for encryption"))
+		respondError(w, http.StatusBadRequest, errors.New("cannot request a backup of the new keys without providing PGP keys for encryption"))
 		return
 	}
 
 	if len(req.PGPKeys) > 0 && len(req.PGPKeys) != req.SecretShares {
-		respondError(w, http.StatusBadRequest, fmt.Errorf("incorrect number of PGP keys for rekey"))
+		respondError(w, http.StatusBadRequest, errors.New("incorrect number of PGP keys for rekey"))
 		return
 	}
 
@@ -232,7 +231,7 @@ func handleSysRekeyVerify(core *vault.Core, recovery bool) http.Handler {
 		repState := core.ReplicationState()
 		if repState.HasState(consts.ReplicationPerformanceSecondary) {
 			respondError(w, http.StatusBadRequest,
-				fmt.Errorf("rekeying can only be performed on the primary cluster when replication is activated"))
+				errors.New("rekeying can only be performed on the primary cluster when replication is activated"))
 			return
 		}
 
@@ -241,7 +240,7 @@ func handleSysRekeyVerify(core *vault.Core, recovery bool) http.Handler {
 
 		switch {
 		case recovery && !core.SealAccess().RecoveryKeySupported():
-			respondError(w, http.StatusBadRequest, fmt.Errorf("recovery rekeying not supported"))
+			respondError(w, http.StatusBadRequest, errors.New("recovery rekeying not supported"))
 		case r.Method == "GET":
 			handleSysRekeyVerifyGet(ctx, core, recovery, w, r)
 		case r.Method == "POST" || r.Method == "PUT":
@@ -261,7 +260,7 @@ func handleSysRekeyVerifyGet(ctx context.Context, core *vault.Core, recovery boo
 		return
 	}
 	if barrierConfig == nil {
-		respondError(w, http.StatusBadRequest, fmt.Errorf("server is not yet initialized"))
+		respondError(w, http.StatusBadRequest, errors.New("server is not yet initialized"))
 		return
 	}
 

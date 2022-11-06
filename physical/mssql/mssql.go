@@ -3,6 +3,7 @@ package mssql
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -40,7 +41,7 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 
 	server, ok := conf["server"]
 	if !ok || server == "" {
-		return nil, fmt.Errorf("missing server")
+		return nil, errors.New("missing server")
 	}
 
 	port, ok := conf["port"]

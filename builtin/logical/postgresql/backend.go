@@ -3,7 +3,7 @@ package postgresql
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"errors"
 	"strings"
 	"sync"
 
@@ -86,7 +86,7 @@ func (b *backend) DB(ctx context.Context, s logical.Storage) (*sql.DB, error) {
 	}
 	if entry == nil {
 		return nil,
-			fmt.Errorf("configure the DB connection with config/connection first")
+			errors.New("configure the DB connection with config/connection first")
 	}
 
 	var connConfig connectionConfig

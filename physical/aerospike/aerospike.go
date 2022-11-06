@@ -3,6 +3,7 @@ package aerospike
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -106,7 +107,7 @@ func buildClientPolicy(conf map[string]string) (*aero.ClientPolicy, error) {
 		case "INTERNAL":
 			authMode = aero.AuthModeInternal
 		default:
-			return nil, fmt.Errorf("'auth_mode' must be one of {INTERNAL, EXTERNAL}")
+			return nil, errors.New("'auth_mode' must be one of {INTERNAL, EXTERNAL}")
 		}
 	}
 	policy.AuthMode = authMode
@@ -170,7 +171,7 @@ func (a *AerospikeBackend) Get(_ context.Context, key string) (*physical.Entry, 
 
 	value, ok := record.Bins[valueBin]
 	if !ok {
-		return nil, fmt.Errorf("Value bin was not found in the record")
+		return nil, errors.New("Value bin was not found in the record")
 	}
 
 	return &physical.Entry{
@@ -239,7 +240,7 @@ func parseHostList(list string) ([]*aero.Host, error) {
 			}
 			hostList = append(hostList, aero.NewHost(split[0], port))
 		default:
-			return nil, fmt.Errorf("Invalid 'hostlist' configuration")
+			return nil, errors.New("Invalid 'hostlist' configuration")
 		}
 	}
 	return hostList, nil

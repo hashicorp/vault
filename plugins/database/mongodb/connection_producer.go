@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -59,17 +60,17 @@ func (c *mongoDBConnectionProducer) loadConfig(cfg map[string]interface{}) error
 	}
 
 	if len(c.ConnectionURL) == 0 {
-		return fmt.Errorf("connection_url cannot be empty")
+		return errors.New("connection_url cannot be empty")
 	}
 
 	if c.SocketTimeout < 0 {
-		return fmt.Errorf("socket_timeout must be >= 0")
+		return errors.New("socket_timeout must be >= 0")
 	}
 	if c.ConnectTimeout < 0 {
-		return fmt.Errorf("connect_timeout must be >= 0")
+		return errors.New("connect_timeout must be >= 0")
 	}
 	if c.ServerSelectionTimeout < 0 {
-		return fmt.Errorf("server_selection_timeout must be >= 0")
+		return errors.New("server_selection_timeout must be >= 0")
 	}
 
 	opts, err := c.makeClientOpts()
@@ -111,10 +112,10 @@ func (c *mongoDBConnectionProducer) Connection(ctx context.Context) (*mongo.Clie
 
 func (c *mongoDBConnectionProducer) createClient(ctx context.Context) (client *mongo.Client, err error) {
 	if !c.Initialized {
-		return nil, fmt.Errorf("failed to create client: connection producer is not initialized")
+		return nil, errors.New("failed to create client: connection producer is not initialized")
 	}
 	if c.clientOptions == nil {
-		return nil, fmt.Errorf("missing client options")
+		return nil, errors.New("missing client options")
 	}
 	client, err = mongo.Connect(ctx, options.MergeClientOptions(options.Client().ApplyURI(c.getConnectionURL()), c.clientOptions))
 	if err != nil {
@@ -240,7 +241,7 @@ func (c *mongoDBConnectionProducer) getTLSAuth() (opts *options.ClientOptions, e
 
 		ok := tlsConfig.RootCAs.AppendCertsFromPEM(c.TLSCAData)
 		if !ok {
-			return nil, fmt.Errorf("failed to append CA to client options")
+			return nil, errors.New("failed to append CA to client options")
 		}
 	}
 
@@ -266,7 +267,7 @@ func (c *mongoDBConnectionProducer) timeoutOpts() (opts *options.ClientOptions, 
 	opts = options.Client()
 
 	if c.SocketTimeout < 0 {
-		return nil, fmt.Errorf("socket_timeout must be >= 0")
+		return nil, errors.New("socket_timeout must be >= 0")
 	}
 
 	if c.SocketTimeout == 0 {

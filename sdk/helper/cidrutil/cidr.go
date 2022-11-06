@@ -1,7 +1,7 @@
 package cidrutil
 
 import (
-	"fmt"
+	"errors"
 	"net"
 	"strings"
 
@@ -40,12 +40,12 @@ func RemoteAddrIsOk(remoteAddr string, boundCIDRs []*sockaddr.SockAddrMarshaler)
 // IPBelongsToCIDR checks if the given IP is encompassed by the given CIDR block
 func IPBelongsToCIDR(ipAddr string, cidr string) (bool, error) {
 	if ipAddr == "" {
-		return false, fmt.Errorf("missing IP address")
+		return false, errors.New("missing IP address")
 	}
 
 	ip := net.ParseIP(ipAddr)
 	if ip == nil {
-		return false, fmt.Errorf("invalid IP address")
+		return false, errors.New("invalid IP address")
 	}
 
 	_, ipnet, err := net.ParseCIDR(cidr)
@@ -64,15 +64,15 @@ func IPBelongsToCIDR(ipAddr string, cidr string) (bool, error) {
 // CIDR blocks
 func IPBelongsToCIDRBlocksSlice(ipAddr string, cidrs []string) (bool, error) {
 	if ipAddr == "" {
-		return false, fmt.Errorf("missing IP address")
+		return false, errors.New("missing IP address")
 	}
 
 	if len(cidrs) == 0 {
-		return false, fmt.Errorf("missing CIDR blocks to be checked against")
+		return false, errors.New("missing CIDR blocks to be checked against")
 	}
 
 	if ip := net.ParseIP(ipAddr); ip == nil {
-		return false, fmt.Errorf("invalid IP address")
+		return false, errors.New("invalid IP address")
 	}
 
 	for _, cidr := range cidrs {
@@ -94,10 +94,10 @@ func IPBelongsToCIDRBlocksSlice(ipAddr string, cidrs []string) (bool, error) {
 // of each is checked.
 func ValidateCIDRListString(cidrList string, separator string) (bool, error) {
 	if cidrList == "" {
-		return false, fmt.Errorf("missing CIDR list that needs validation")
+		return false, errors.New("missing CIDR list that needs validation")
 	}
 	if separator == "" {
-		return false, fmt.Errorf("missing separator")
+		return false, errors.New("missing separator")
 	}
 
 	return ValidateCIDRListSlice(strutil.ParseDedupLowercaseAndSortStrings(cidrList, separator))
@@ -106,7 +106,7 @@ func ValidateCIDRListString(cidrList string, separator string) (bool, error) {
 // ValidateCIDRListSlice checks if the given list of CIDR blocks are valid
 func ValidateCIDRListSlice(cidrBlocks []string) (bool, error) {
 	if len(cidrBlocks) == 0 {
-		return false, fmt.Errorf("missing CIDR blocks that needs validation")
+		return false, errors.New("missing CIDR blocks that needs validation")
 	}
 
 	for _, block := range cidrBlocks {
@@ -122,11 +122,11 @@ func ValidateCIDRListSlice(cidrBlocks []string) (bool, error) {
 // belonging to another CIDR block.
 func Subset(cidr1, cidr2 string) (bool, error) {
 	if cidr1 == "" {
-		return false, fmt.Errorf("missing CIDR to be checked against")
+		return false, errors.New("missing CIDR to be checked against")
 	}
 
 	if cidr2 == "" {
-		return false, fmt.Errorf("missing CIDR that needs to be checked")
+		return false, errors.New("missing CIDR that needs to be checked")
 	}
 
 	ip1, net1, err := net.ParseCIDR(cidr1)
@@ -144,7 +144,7 @@ func Subset(cidr1, cidr2 string) (bool, error) {
 
 	maskLen1, _ := net1.Mask.Size()
 	if !zeroAddr && maskLen1 == 0 {
-		return false, fmt.Errorf("CIDR to be checked against is not in its canonical form")
+		return false, errors.New("CIDR to be checked against is not in its canonical form")
 	}
 
 	ip2, net2, err := net.ParseCIDR(cidr2)
@@ -162,7 +162,7 @@ func Subset(cidr1, cidr2 string) (bool, error) {
 
 	maskLen2, _ := net2.Mask.Size()
 	if !zeroAddr && maskLen2 == 0 {
-		return false, fmt.Errorf("CIDR that needs to be checked is not in its canonical form")
+		return false, errors.New("CIDR that needs to be checked is not in its canonical form")
 	}
 
 	// If the mask length of the CIDR that needs to be checked is smaller
@@ -187,11 +187,11 @@ func Subset(cidr1, cidr2 string) (bool, error) {
 // parameter is the set of CIDR blocks that needs to be checked.
 func SubsetBlocks(cidrBlocks1, cidrBlocks2 []string) (bool, error) {
 	if len(cidrBlocks1) == 0 {
-		return false, fmt.Errorf("missing CIDR blocks to be checked against")
+		return false, errors.New("missing CIDR blocks to be checked against")
 	}
 
 	if len(cidrBlocks2) == 0 {
-		return false, fmt.Errorf("missing CIDR blocks that needs to be checked")
+		return false, errors.New("missing CIDR blocks that needs to be checked")
 	}
 
 	// Check if all the elements of cidrBlocks2 is a subset of at least one

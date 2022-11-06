@@ -6,7 +6,7 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
+	"errors"
 	"hash"
 
 	"github.com/hashicorp/errwrap"
@@ -108,7 +108,7 @@ func NewSalt(ctx context.Context, view logical.Storage, config *Config) (*Salt, 
 
 	if config.HMAC != nil {
 		if len(config.HMACType) == 0 {
-			return nil, fmt.Errorf("HMACType must be defined")
+			return nil, errors.New("HMACType must be defined")
 		}
 	}
 

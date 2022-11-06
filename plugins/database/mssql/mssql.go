@@ -331,7 +331,7 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 
 func (m *MSSQL) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) (dbplugin.UpdateUserResponse, error) {
 	if req.Password == nil && req.Expiration == nil {
-		return dbplugin.UpdateUserResponse{}, fmt.Errorf("no changes requested")
+		return dbplugin.UpdateUserResponse{}, errors.New("no changes requested")
 	}
 	if req.Password != nil {
 		err := m.updateUserPass(ctx, req.Username, req.Password)

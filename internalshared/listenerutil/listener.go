@@ -3,6 +3,7 @@ package listenerutil
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -127,7 +128,7 @@ PASSPHRASECORRECT:
 	}
 
 	if tlsConf.MaxVersion < tlsConf.MinVersion {
-		return nil, nil, fmt.Errorf("'tls_max_version' must be greater than or equal to 'tls_min_version'")
+		return nil, nil, errors.New("'tls_max_version' must be greater than or equal to 'tls_min_version'")
 	}
 
 	if len(l.TLSCipherSuites) > 0 {
@@ -171,7 +172,7 @@ Please see https://tools.ietf.org/html/rfc7540#appendix-A for further informatio
 			}
 
 			if !caPool.AppendCertsFromPEM(data) {
-				return nil, nil, fmt.Errorf("failed to parse CA certificate in tls_client_ca_file")
+				return nil, nil, errors.New("failed to parse CA certificate in tls_client_ca_file")
 			}
 			tlsConf.ClientCAs = caPool
 		}
@@ -179,7 +180,7 @@ Please see https://tools.ietf.org/html/rfc7540#appendix-A for further informatio
 
 	if l.TLSDisableClientCerts {
 		if l.TLSRequireAndVerifyClientCert {
-			return nil, nil, fmt.Errorf("'tls_disable_client_certs' and 'tls_require_and_verify_client_cert' are mutually exclusive")
+			return nil, nil, errors.New("'tls_disable_client_certs' and 'tls_require_and_verify_client_cert' are mutually exclusive")
 		}
 		tlsConf.ClientAuth = tls.NoClientCert
 	}

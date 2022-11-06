@@ -3,6 +3,7 @@ package pgpkeys
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
@@ -17,7 +18,7 @@ import (
 // thoroughly tested in the init and rekey command unit tests
 func EncryptShares(input [][]byte, pgpKeys []string) ([]string, [][]byte, error) {
 	if len(input) != len(pgpKeys) {
-		return nil, nil, fmt.Errorf("mismatch between number items to encrypt and number of PGP keys")
+		return nil, nil, errors.New("mismatch between number items to encrypt and number of PGP keys")
 	}
 	encryptedShares := make([][]byte, 0, len(pgpKeys))
 	entities, err := GetEntities(pgpKeys)

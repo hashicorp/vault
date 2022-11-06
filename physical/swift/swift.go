@@ -2,6 +2,7 @@ package swift
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -40,28 +41,28 @@ func NewSwiftBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	if username == "" {
 		username = conf["username"]
 		if username == "" {
-			return nil, fmt.Errorf("missing username")
+			return nil, errors.New("missing username")
 		}
 	}
 	password := os.Getenv("OS_PASSWORD")
 	if password == "" {
 		password = conf["password"]
 		if password == "" {
-			return nil, fmt.Errorf("missing password")
+			return nil, errors.New("missing password")
 		}
 	}
 	authUrl := os.Getenv("OS_AUTH_URL")
 	if authUrl == "" {
 		authUrl = conf["auth_url"]
 		if authUrl == "" {
-			return nil, fmt.Errorf("missing auth_url")
+			return nil, errors.New("missing auth_url")
 		}
 	}
 	container := os.Getenv("OS_CONTAINER")
 	if container == "" {
 		container = conf["container"]
 		if container == "" {
-			return nil, fmt.Errorf("missing container")
+			return nil, errors.New("missing container")
 		}
 	}
 	project := os.Getenv("OS_PROJECT_NAME")

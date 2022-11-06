@@ -296,7 +296,7 @@ func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, perform
 	// Top-level item should be the object list
 	list, ok := root.Node.(*ast.ObjectList)
 	if !ok {
-		return nil, fmt.Errorf("failed to parse policy: does not contain a root object")
+		return nil, errors.New("failed to parse policy: does not contain a root object")
 	}
 
 	// Check for invalid top-level keys

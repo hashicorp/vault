@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -59,7 +60,7 @@ func NewMonitor(buf int, logger log.InterceptLogger, opts *log.LoggerOptions) (M
 
 func newMonitor(buf int, logger log.InterceptLogger, opts *log.LoggerOptions) (*monitor, error) {
 	if buf <= 0 {
-		return nil, fmt.Errorf("buf must be greater than zero")
+		return nil, errors.New("buf must be greater than zero")
 	}
 
 	sw := &monitor{

@@ -3,6 +3,7 @@ package configutil
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -142,7 +143,7 @@ func ParseKMSes(d string) ([]*KMS, error) {
 
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
-		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
+		return nil, errors.New("error parsing: file doesn't contain a root object")
 	}
 
 	if o := list.Filter("seal"); len(o.Items) > 0 {
@@ -193,7 +194,7 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 		wrapper, kmsInfo, err = GetTransitKMSFunc(configKMS, opts...)
 
 	case wrapping.WrapperTypePkcs11:
-		return nil, fmt.Errorf("KMS type 'pkcs11' requires the Vault Enterprise HSM binary")
+		return nil, errors.New("KMS type 'pkcs11' requires the Vault Enterprise HSM binary")
 
 	default:
 		return nil, fmt.Errorf("Unknown KMS type %q", configKMS.Type)

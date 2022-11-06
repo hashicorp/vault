@@ -211,7 +211,7 @@ func LoadConfig(path string) (*Config, error) {
 
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
-		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
+		return nil, errors.New("error parsing: file doesn't contain a root object")
 	}
 
 	if err := parseAutoAuth(result, list); err != nil {
@@ -502,7 +502,7 @@ func parseAutoAuth(result *Config, list *ast.ObjectList) error {
 		return fmt.Errorf("error parsing 'method': %w", err)
 	}
 	if a.Method == nil {
-		return fmt.Errorf("no 'method' block found")
+		return errors.New("no 'method' block found")
 	}
 
 	if err := parseSinks(result, subList); err != nil {
@@ -511,11 +511,11 @@ func parseAutoAuth(result *Config, list *ast.ObjectList) error {
 
 	if result.AutoAuth.Method.WrapTTL > 0 {
 		if len(result.AutoAuth.Sinks) != 1 {
-			return fmt.Errorf("error parsing auto_auth: wrapping enabled on auth method and 0 or many sinks defined")
+			return errors.New("error parsing auto_auth: wrapping enabled on auth method and 0 or many sinks defined")
 		}
 
 		if result.AutoAuth.Sinks[0].WrapTTL > 0 {
-			return fmt.Errorf("error parsing auto_auth: wrapping enabled both on auth method and sink")
+			return errors.New("error parsing auto_auth: wrapping enabled both on auth method and sink")
 		}
 	}
 

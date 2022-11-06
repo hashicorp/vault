@@ -3,6 +3,7 @@ package storagepacker
 import (
 	"context"
 	"crypto/md5"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -42,7 +43,7 @@ func (s *StoragePacker) View() logical.Storage {
 // GetBucket returns a bucket for a given key
 func (s *StoragePacker) GetBucket(ctx context.Context, key string) (*Bucket, error) {
 	if key == "" {
-		return nil, fmt.Errorf("missing bucket key")
+		return nil, errors.New("missing bucket key")
 	}
 
 	lock := locksutil.LockForKey(s.storageLocks, key)
@@ -79,15 +80,15 @@ func (s *StoragePacker) GetBucket(ctx context.Context, key string) (*Bucket, err
 // if an item with a matching key is already present.
 func (s *Bucket) upsert(item *Item) error {
 	if s == nil {
-		return fmt.Errorf("nil storage bucket")
+		return errors.New("nil storage bucket")
 	}
 
 	if item == nil {
-		return fmt.Errorf("nil item")
+		return errors.New("nil item")
 	}
 
 	if item.ID == "" {
-		return fmt.Errorf("missing item ID")
+		return errors.New("missing item ID")
 	}
 
 	// Look for an item with matching key and don't modify the collection while
@@ -230,11 +231,11 @@ func (s *StoragePacker) DeleteMultipleItems(ctx context.Context, logger hclog.Lo
 func (s *StoragePacker) putBucket(ctx context.Context, bucket *Bucket) error {
 	defer metrics.MeasureSince([]string{"storage_packer", "put_bucket"}, time.Now())
 	if bucket == nil {
-		return fmt.Errorf("nil bucket entry")
+		return errors.New("nil bucket entry")
 	}
 
 	if bucket.Key == "" {
-		return fmt.Errorf("missing key")
+		return errors.New("missing key")
 	}
 
 	if !strings.HasPrefix(bucket.Key, s.viewPrefix) {
@@ -271,7 +272,7 @@ func (s *StoragePacker) GetItem(itemID string) (*Item, error) {
 	defer metrics.MeasureSince([]string{"storage_packer", "get_item"}, time.Now())
 
 	if itemID == "" {
-		return nil, fmt.Errorf("empty item ID")
+		return nil, errors.New("empty item ID")
 	}
 
 	bucketKey := s.BucketKey(itemID)
@@ -300,11 +301,11 @@ func (s *StoragePacker) PutItem(ctx context.Context, item *Item) error {
 	defer metrics.MeasureSince([]string{"storage_packer", "put_item"}, time.Now())
 
 	if item == nil {
-		return fmt.Errorf("nil item")
+		return errors.New("nil item")
 	}
 
 	if item.ID == "" {
-		return fmt.Errorf("missing ID in item")
+		return errors.New("missing ID in item")
 	}
 
 	var err error
@@ -359,7 +360,7 @@ func (s *StoragePacker) PutItem(ctx context.Context, item *Item) error {
 // NewStoragePacker creates a new storage packer for a given view
 func NewStoragePacker(view logical.Storage, logger log.Logger, viewPrefix string) (*StoragePacker, error) {
 	if view == nil {
-		return nil, fmt.Errorf("nil view")
+		return nil, errors.New("nil view")
 	}
 
 	if viewPrefix == "" {

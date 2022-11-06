@@ -8,6 +8,7 @@ import (
 	"crypto/subtle"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -201,7 +202,7 @@ func (b *backend) pathRevokeWriteHandleCertificate(ctx context.Context, req *log
 			// Here we refuse the import with an error because the two certs
 			// are unequal but we would've otherwise overwritten the existing
 			// copy.
-			return serial, false, nil, fmt.Errorf("certificate with same serial but unequal value already present in this cluster's storage; refusing to revoke")
+			return serial, false, nil, errors.New("certificate with same serial but unequal value already present in this cluster's storage; refusing to revoke")
 		} else {
 			// Otherwise, we can return without an error as we've already
 			// imported this certificate, likely when we issued it. We don't
@@ -253,7 +254,7 @@ func (b *backend) pathRevokeWriteHandleKey(ctx context.Context, req *logical.Req
 		// The only way to get here should be via the /revoke endpoint;
 		// validate the path one more time and return an error if necessary.
 		if req.Path != "revoke" {
-			return fmt.Errorf("must have private key to revoke via the /revoke-with-key path")
+			return errors.New("must have private key to revoke via the /revoke-with-key path")
 		}
 
 		// Otherwise, we don't need to validate the key and thus can return

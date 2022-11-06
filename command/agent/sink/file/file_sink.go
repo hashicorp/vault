@@ -51,7 +51,7 @@ func NewFileSink(conf *sink.SinkConfig) (sink.Sink, error) {
 		}
 
 		if !os.FileMode(mode).IsRegular() {
-			return nil, fmt.Errorf("file mode does not represent a regular file")
+			return nil, errors.New("file mode does not represent a regular file")
 		}
 
 		f.logger.Debug("overriding default file sink", "mode", mode)

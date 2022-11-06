@@ -2,6 +2,7 @@ package framework
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -24,13 +25,13 @@ func LeaseExtend(backendIncrement, backendMax time.Duration, systemView logical.
 			req.Secret.MaxTTL = backendMax
 			return &logical.Response{Secret: req.Secret}, nil
 		}
-		return nil, fmt.Errorf("no lease options for request")
+		return nil, errors.New("no lease options for request")
 	}
 }
 
 // CalculateTTL takes all the user-specified, backend, and system inputs and calculates
 // a TTL for a lease
-func CalculateTTL(sysView logical.SystemView, increment, backendTTL, period, backendMaxTTL, explicitMaxTTL time.Duration, startTime time.Time) (ttl time.Duration, warnings []string, errors error) {
+func CalculateTTL(sysView logical.SystemView, increment, backendTTL, period, backendMaxTTL, explicitMaxTTL time.Duration, startTime time.Time) (ttl time.Duration, warnings []string, err error) {
 	// Truncate all times to the second since that is the lowest precision for
 	// TTLs
 	now := time.Now().Truncate(time.Second)
@@ -53,7 +54,7 @@ func CalculateTTL(sysView logical.SystemView, increment, backendTTL, period, bac
 
 	// Should never happen, but guard anyways
 	if maxTTL <= 0 {
-		return 0, nil, fmt.Errorf("max TTL must be greater than zero")
+		return 0, nil, errors.New("max TTL must be greater than zero")
 	}
 
 	var maxValidTime time.Time
@@ -92,7 +93,7 @@ func CalculateTTL(sysView logical.SystemView, increment, backendTTL, period, bac
 		// If we are past the max TTL, we shouldn't be in this function...but
 		// fast path out if we are
 		if maxValidTTL <= 0 {
-			return 0, nil, fmt.Errorf("past the max TTL, cannot renew")
+			return 0, nil, errors.New("past the max TTL, cannot renew")
 		}
 
 		// If the proposed expiration is after the maximum TTL of the lease,
