@@ -3,8 +3,8 @@ package kv
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -147,7 +147,7 @@ func TestKV_Patch_Audit(t *testing.T) {
 		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
 	}
 
-	auditLogFile, err := ioutil.TempFile("", "httppatch")
+	auditLogFile, err := os.CreateTemp("", "httppatch")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -112,7 +112,7 @@ func (m *couchDBClient) get(key string) (*physical.Entry, error) {
 	} else if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("GET returned %q", resp.Status)
 	}
-	bs, err := ioutil.ReadAll(resp.Body)
+	bs, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +141,7 @@ func (m *couchDBClient) list(prefix string) ([]couchDBListItem, error) {
 	}
 	defer resp.Body.Close()
 
-	data, err := ioutil.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}

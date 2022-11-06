@@ -579,16 +579,13 @@ func TestRaft_Recovery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir1, raftState), "peers.json"), peersJSONBytes, 0o644)
-	if err != nil {
+	if err := os.WriteFile(filepath.Join(filepath.Join(dir1, raftState), "peers.json"), peersJSONBytes, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir2, raftState), "peers.json"), peersJSONBytes, 0o644)
-	if err != nil {
+	if err := os.WriteFile(filepath.Join(filepath.Join(dir2, raftState), "peers.json"), peersJSONBytes, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(filepath.Join(filepath.Join(dir4, raftState), "peers.json"), peersJSONBytes, 0o644)
-	if err != nil {
+	if err := os.WriteFile(filepath.Join(filepath.Join(dir4, raftState), "peers.json"), peersJSONBytes, 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -748,7 +745,7 @@ func BenchmarkDB_Snapshot(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			pe.Key = fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s-%d", testName, i))))
-			s.writeTo(ctx, discardCloser{Writer: ioutil.Discard}, discardCloser{Writer: ioutil.Discard})
+			s.writeTo(ctx, discardCloser{Writer: io.Discard}, discardCloser{Writer: io.Discard})
 		}
 	}
 

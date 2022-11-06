@@ -3,7 +3,7 @@ package plugin
 import (
 	"bufio"
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/rpc"
 	"strings"
 	"testing"
@@ -100,7 +100,7 @@ func TestLogger_isLevels(t *testing.T) {
 	client, server := plugin.TestRPCConn(t)
 	defer client.Close()
 
-	l := logging.NewVaultLoggerWithWriter(ioutil.Discard, hclog.Trace)
+	l := logging.NewVaultLoggerWithWriter(io.Discard, hclog.Trace)
 
 	server.RegisterName("Plugin", &LoggerServer{
 		logger: l,
@@ -144,7 +144,7 @@ func TestLogger_setLevel(t *testing.T) {
 	client, server := plugin.TestRPCConn(t)
 	defer client.Close()
 
-	l := hclog.New(&hclog.LoggerOptions{Output: ioutil.Discard})
+	l := hclog.New(&hclog.LoggerOptions{Output: io.Discard})
 
 	server.RegisterName("Plugin", &LoggerServer{
 		logger: l,

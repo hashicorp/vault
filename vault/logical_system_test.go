@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -3027,7 +3026,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	}
 
 	// Set a plugin
-	file, err := ioutil.TempFile(os.TempDir(), "temp")
+	file, err := os.CreateTemp(os.TempDir(), "temp")
 	if err != nil {
 		t.Fatal(err)
 	}

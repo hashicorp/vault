@@ -304,7 +304,7 @@ func (r roles) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
 func writeFile(t *testing.T, filename string, data []byte, perms os.FileMode) {
 	t.Helper()
 
-	err := ioutil.WriteFile(filename, data, perms)
+	err := os.WriteFile(filename, data, perms)
 	if err != nil {
 		t.Fatalf("Unable to write to file [%s]: %s", filename, err)
 	}

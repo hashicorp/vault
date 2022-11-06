@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -53,12 +53,12 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 		mountPath := strings.TrimPrefix(core.MatchingMount(r.Context(), path), ns.Path)
 
 		// Clone body, so we do not close the request body reader
-		bodyBytes, err := ioutil.ReadAll(r.Body)
+		bodyBytes, err := io.ReadAll(r.Body)
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, errors.New("failed to read request body"))
 			return
 		}
-		r.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+		r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
 		quotaResp, err := core.ApplyRateLimitQuota(r.Context(), &quotas.Request{
 			Type:          quotas.TypeRateLimit,

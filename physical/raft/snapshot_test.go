@@ -189,7 +189,7 @@ func TestRaft_Snapshot_Index(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	io.Copy(ioutil.Discard, reader)
+	io.Copy(io.Discard, reader)
 
 	if meta.Index != index.Index {
 		t.Fatalf("indexes did not match, got %d expected %d", meta.Index, index.Index)
@@ -214,7 +214,7 @@ func TestRaft_Snapshot_Index(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	io.Copy(ioutil.Discard, reader)
+	io.Copy(io.Discard, reader)
 
 	// Make sure the meta data has updated to the new values
 	if meta.Index != 203 {
@@ -492,7 +492,7 @@ func TestRaft_Snapshot_Take_Restore(t *testing.T) {
 		}
 	}
 
-	snapFile, cleanup, metadata, err := raft1.WriteSnapshotToTemp(ioutil.NopCloser(recorder.Body), nil)
+	snapFile, cleanup, metadata, err := raft1.WriteSnapshotToTemp(io.NopCloser(recorder.Body), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

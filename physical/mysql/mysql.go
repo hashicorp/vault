@@ -7,9 +7,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"net/url"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -756,7 +756,7 @@ func (i *MySQLLock) Unlock() error {
 func setupMySQLTLSConfig(tlsCaFile string) error {
 	rootCertPool := x509.NewCertPool()
 
-	pem, err := ioutil.ReadFile(tlsCaFile)
+	pem, err := os.ReadFile(tlsCaFile)
 	if err != nil {
 		return err
 	}

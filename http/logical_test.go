@@ -5,9 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -460,7 +460,7 @@ func TestLogical_RespondWithStatusCode(t *testing.T) {
 		t.Fatalf("Bad Status code: %d", w.Code)
 	}
 
-	bodyRaw, err := ioutil.ReadAll(w.Body)
+	bodyRaw, err := io.ReadAll(w.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -613,7 +613,7 @@ func TestLogical_AuditPort(t *testing.T) {
 		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
 	}
 
-	auditLogFile, err := ioutil.TempFile("", "auditport")
+	auditLogFile, err := os.CreateTemp("", "auditport")
 	if err != nil {
 		t.Fatal(err)
 	}

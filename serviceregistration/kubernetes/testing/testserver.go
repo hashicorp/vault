@@ -3,7 +3,6 @@ package testing
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -101,7 +100,7 @@ func Server(t *testing.T) (testState *State, testConf *Conf, closeFunc func()) {
 	}
 
 	// Plant our token in a place where it can be read for the config.
-	tmpToken, err := ioutil.TempFile("", "token")
+	tmpToken, err := os.CreateTemp("", "token")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +117,7 @@ func Server(t *testing.T) (testState *State, testConf *Conf, closeFunc func()) {
 	}
 	testConf.PathToTokenFile = tmpToken.Name()
 
-	tmpCACrt, err := ioutil.TempFile("", "ca.crt")
+	tmpCACrt, err := os.CreateTemp("", "ca.crt")
 	if err != nil {
 		closeFunc()
 		t.Fatal(err)
@@ -239,7 +238,7 @@ func parsePath(urlPath string) (namespace, podName string, err error) {
 }
 
 func readFile(fileName string) (string, error) {
-	b, err := ioutil.ReadFile(pathToFiles + fileName)
+	b, err := os.ReadFile(pathToFiles + fileName)
 	if err != nil {
 		return "", err
 	}

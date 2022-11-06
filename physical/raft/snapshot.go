@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -191,7 +190,7 @@ func (f *BoltSnapshotStore) openFromFSM() (*raft.SnapshotMeta, io.ReadCloser, er
 	}()
 
 	// Compute the size
-	n, err := io.Copy(ioutil.Discard, metaReadCloser)
+	n, err := io.Copy(io.Discard, metaReadCloser)
 	if err != nil {
 		f.logger.Error("failed to read state file", "error", err)
 		metaReadCloser.Close()
@@ -265,7 +264,7 @@ func (f *BoltSnapshotStore) openFromFile(id string) (*raft.SnapshotMeta, io.Read
 	filename := filepath.Join(f.path, id, databaseFilename)
 	installer := &boltSnapshotInstaller{
 		meta:       meta,
-		ReadCloser: ioutil.NopCloser(strings.NewReader(filename)),
+		ReadCloser: io.NopCloser(strings.NewReader(filename)),
 		filename:   filename,
 	}
 
@@ -274,7 +273,7 @@ func (f *BoltSnapshotStore) openFromFile(id string) (*raft.SnapshotMeta, io.Read
 
 // ReapSnapshots reaps all snapshots.
 func (f *BoltSnapshotStore) ReapSnapshots() error {
-	snapshots, err := ioutil.ReadDir(f.path)
+	snapshots, err := os.ReadDir(f.path)
 	switch {
 	case err == nil:
 	case os.IsNotExist(err):

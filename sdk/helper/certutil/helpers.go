@@ -17,7 +17,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/big"
 	"net"
 	"net/url"
@@ -1280,7 +1279,7 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 }
 
 func NewCertPool(reader io.Reader) (*x509.CertPool, error) {
-	pemBlock, err := ioutil.ReadAll(reader)
+	pemBlock, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}

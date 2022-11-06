@@ -3,7 +3,7 @@ package couchdb
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -134,7 +134,7 @@ func setupCouchDB(ctx context.Context, host string, port int) (docker.ServiceCon
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusCreated {
-			bs, _ := ioutil.ReadAll(resp.Body)
+			bs, _ := io.ReadAll(resp.Body)
 			return nil, fmt.Errorf("failed to create database: %s %s\n", resp.Status, string(bs))
 		}
 	}
@@ -153,7 +153,7 @@ func setupCouchDB(ctx context.Context, host string, port int) (docker.ServiceCon
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
-			bs, _ := ioutil.ReadAll(resp.Body)
+			bs, _ := io.ReadAll(resp.Body)
 			return nil, fmt.Errorf("Failed to create admin user: %s %s\n", resp.Status, string(bs))
 		}
 	}

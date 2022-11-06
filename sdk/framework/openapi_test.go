@@ -3,7 +3,7 @@ package framework
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -686,7 +686,7 @@ func getPathOp(pi *OASPathItem, op string) *OASOperation {
 }
 
 func expected(name string) string {
-	data, err := ioutil.ReadFile(filepath.Join("testdata", name+".json"))
+	data, err := os.ReadFile(filepath.Join("testdata", name+".json"))
 	if err != nil {
 		panic(err)
 	}

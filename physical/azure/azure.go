@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/url"
 	"os"
 	"sort"
@@ -231,7 +231,7 @@ func (a *AzureBackend) Get(ctx context.Context, key string) (*physical.Entry, er
 	reader := res.Body(azblob.RetryReaderOptions{})
 	defer reader.Close()
 
-	data, err := ioutil.ReadAll(reader)
+	data, err := io.ReadAll(reader)
 
 	ent := &physical.Entry{
 		Key:   key,

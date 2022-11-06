@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	osuser "os/user"
@@ -166,7 +165,7 @@ Please see https://tools.ietf.org/html/rfc7540#appendix-A for further informatio
 		tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
 		if l.TLSClientCAFile != "" {
 			caPool := x509.NewCertPool()
-			data, err := ioutil.ReadFile(l.TLSClientCAFile)
+			data, err := os.ReadFile(l.TLSClientCAFile)
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to read tls_client_ca_file: %w", err)
 			}

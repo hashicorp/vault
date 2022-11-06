@@ -6,8 +6,8 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -279,7 +279,7 @@ func customTLSDial(conf map[string]string, machines string) zk.Dialer {
 		if tlsCaFile, ok := conf["tls_ca_file"]; ok {
 			caPool := x509.NewCertPool()
 
-			data, err := ioutil.ReadFile(tlsCaFile)
+			data, err := os.ReadFile(tlsCaFile)
 			if err != nil {
 				return nil, fmt.Errorf("failed to read ZK CA file: %w", err)
 			}

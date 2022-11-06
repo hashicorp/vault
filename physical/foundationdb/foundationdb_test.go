@@ -5,7 +5,6 @@ package foundationdb
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -143,7 +142,7 @@ func prepareFoundationDBTestDirectory(t *testing.T, topDir string) (func(), stri
 		t.Fatalf("foundationdb: could not start container: %s", err)
 	}
 
-	tmpFile, err := ioutil.TempFile("", topDir)
+	tmpFile, err := os.CreateTemp("", topDir)
 	if err != nil {
 		t.Fatalf("foundationdb: could not create temporary file for cluster file: %s", err)
 	}

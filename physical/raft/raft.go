@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -323,7 +322,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 
 		// If not set in the config check the "node-id" file.
 		if len(localID) == 0 {
-			localIDRaw, err := ioutil.ReadFile(filepath.Join(path, "node-id"))
+			localIDRaw, err := os.ReadFile(filepath.Join(path, "node-id"))
 			switch {
 			case err == nil:
 				if len(localIDRaw) > 0 {
@@ -343,7 +342,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 				return nil, err
 			}
 
-			if err := ioutil.WriteFile(filepath.Join(path, "node-id"), []byte(id), 0o600); err != nil {
+			if err := os.WriteFile(filepath.Join(path, "node-id"), []byte(id), 0o600); err != nil {
 				return nil, err
 			}
 
