@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -80,7 +81,7 @@ vary. Defaults to "pkcs7".`,
 func (b *backend) pathConfigCertificateExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
 	certName := data.Get("cert_name").(string)
 	if certName == "" {
-		return false, fmt.Errorf("missing cert_name")
+		return false, errors.New("missing cert_name")
 	}
 
 	entry, err := b.lockedAWSPublicCertificateEntry(ctx, req.Storage, certName)
@@ -107,7 +108,7 @@ func decodePEMAndParseCertificate(certificate string) (*x509.Certificate, error)
 	// Decode the PEM block and error out if a block is not detected in the first attempt
 	decodedPublicCert, rest := pem.Decode([]byte(certificate))
 	if len(rest) != 0 {
-		return nil, fmt.Errorf("invalid certificate; should be one PEM block only")
+		return nil, errors.New("invalid certificate; should be one PEM block only")
 	}
 
 	// Check if the certificate can be parsed
@@ -116,7 +117,7 @@ func decodePEMAndParseCertificate(certificate string) (*x509.Certificate, error)
 		return nil, err
 	}
 	if publicCert == nil {
-		return nil, fmt.Errorf("invalid certificate; failed to parse certificate")
+		return nil, errors.New("invalid certificate; failed to parse certificate")
 	}
 	return publicCert, nil
 }
@@ -169,11 +170,11 @@ func (b *backend) awsPublicCertificates(ctx context.Context, s logical.Storage, 
 // entry.
 func (b *backend) lockedSetAWSPublicCertificateEntry(ctx context.Context, s logical.Storage, certName string, certEntry *awsPublicCert) error {
 	if certName == "" {
-		return fmt.Errorf("missing certificate name")
+		return errors.New("missing certificate name")
 	}
 
 	if certEntry == nil {
-		return fmt.Errorf("nil AWS public key certificate")
+		return errors.New("nil AWS public key certificate")
 	}
 
 	b.configMutex.Lock()
@@ -187,11 +188,11 @@ func (b *backend) lockedSetAWSPublicCertificateEntry(ctx context.Context, s logi
 // If locking is desired, use lockedSetAWSPublicCertificateEntry instead.
 func (b *backend) nonLockedSetAWSPublicCertificateEntry(ctx context.Context, s logical.Storage, certName string, certEntry *awsPublicCert) error {
 	if certName == "" {
-		return fmt.Errorf("missing certificate name")
+		return errors.New("missing certificate name")
 	}
 
 	if certEntry == nil {
-		return fmt.Errorf("nil AWS public key certificate")
+		return errors.New("nil AWS public key certificate")
 	}
 
 	entry, err := logical.StorageEntryJSON("config/certificate/"+certName, certEntry)
@@ -199,7 +200,7 @@ func (b *backend) nonLockedSetAWSPublicCertificateEntry(ctx context.Context, s l
 		return err
 	}
 	if entry == nil {
-		return fmt.Errorf("failed to create storage entry for AWS public key certificate")
+		return errors.New("failed to create storage entry for AWS public key certificate")
 	}
 
 	return s.Put(ctx, entry)

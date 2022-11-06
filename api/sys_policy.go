@@ -38,8 +38,7 @@ func (c *Sys) ListPoliciesWithContext(ctx context.Context) ([]string, error) {
 	}
 
 	var result []string
-	err = mapstructure.Decode(secret.Data["keys"], &result)
-	if err != nil {
+	if err := mapstructure.Decode(secret.Data["keys"], &result); err != nil {
 		return nil, err
 	}
 
@@ -79,7 +78,7 @@ func (c *Sys) GetPolicyWithContext(ctx context.Context, name string) (string, er
 		return policyRaw.(string), nil
 	}
 
-	return "", fmt.Errorf("no policy found in response")
+	return "", errors.New("no policy found in response")
 }
 
 func (c *Sys) PutPolicy(name, rules string) error {

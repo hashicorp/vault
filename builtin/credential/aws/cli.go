@@ -1,6 +1,7 @@
 package awsauth
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -59,7 +60,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		return nil, err
 	}
 	if loginData == nil {
-		return nil, fmt.Errorf("got nil response from GenerateLoginData")
+		return nil, errors.New("got nil response from GenerateLoginData")
 	}
 	loginData["role"] = role
 	path := fmt.Sprintf("auth/%s/login", mount)
@@ -68,7 +69,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		return nil, err
 	}
 	if secret == nil {
-		return nil, fmt.Errorf("empty response from credential provider")
+		return nil, errors.New("empty response from credential provider")
 	}
 
 	return secret, nil

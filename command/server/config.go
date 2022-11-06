@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -471,7 +470,7 @@ func CheckConfig(c *Config, e error) (*Config, error) {
 // LoadConfigFile loads the configuration from the given file.
 func LoadConfigFile(path string) (*Config, error) {
 	// Read the file
-	d, err := ioutil.ReadFile(path)
+	d, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}

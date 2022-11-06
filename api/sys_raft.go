@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"sync"
 	"time"
@@ -197,7 +196,7 @@ func (c *Sys) RaftSnapshotWithContext(ctx context.Context, snapWriter io.Writer)
 	dup := io.TeeReader(resp.Body, wPipe)
 	go func() {
 		defer func() {
-			io.Copy(ioutil.Discard, rPipe)
+			io.Copy(io.Discard, rPipe)
 			rPipe.Close()
 			wg.Done()
 		}()
@@ -208,17 +207,15 @@ func (c *Sys) RaftSnapshotWithContext(ctx context.Context, snapWriter io.Writer)
 		}
 
 		t := tar.NewReader(uncompressed)
-		var h *tar.Header
 		for {
-			h, err = t.Next()
+			h, err := t.Next()
 			if err != nil {
 				return
 			}
 			if h.Name != "SHA256SUMS.sealed" {
 				continue
 			}
-			var b []byte
-			b, err = ioutil.ReadAll(t)
+			b, err := io.ReadAll(t)
 			if err != nil || len(b) == 0 {
 				return
 			}

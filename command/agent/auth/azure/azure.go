@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
@@ -191,7 +191,7 @@ func getMetadataInfo(ctx context.Context, endpoint, resource, objectID, clientID
 	}
 
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("error reading metadata from %s: %w", endpoint, err)
 	}

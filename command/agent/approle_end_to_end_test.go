@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -148,7 +147,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 	}
 	roleID2 := resp.Data["role_id"].(string)
 
-	rolef, err := ioutil.TempFile("", "auth.role-id.test.")
+	rolef, err := os.CreateTemp("", "auth.role-id.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +156,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 	defer os.Remove(role)
 	t.Logf("input role_id_file_path: %s", role)
 	if bindSecretID {
-		secretf, err := ioutil.TempFile("", "auth.secret-id.test.")
+		secretf, err := os.CreateTemp("", "auth.secret-id.test.")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -170,7 +169,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 	}
 	// We close these right away because we're just basically testing
 	// permissions and finding a usable file name
-	ouf, err := ioutil.TempFile("", "auth.tokensink.test.")
+	ouf, err := os.CreateTemp("", "auth.tokensink.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,7 +186,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 	}
 	if !bindSecretID && !secretIDLess {
 		logger.Trace("agent is providing an invalid secret that should be ignored")
-		secretf, err := ioutil.TempFile("", "auth.secret-id.test.")
+		secretf, err := os.CreateTemp("", "auth.secret-id.test.")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -195,7 +194,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 		secretf.Close()
 		defer os.Remove(secretFromAgent)
 		// if the token is empty, auth.approle would fail reporting the error
-		if err := ioutil.WriteFile(secretFromAgent, []byte("wrong-secret"), 0o600); err != nil {
+		if err := os.WriteFile(secretFromAgent, []byte("wrong-secret"), 0o600); err != nil {
 			t.Fatal(err)
 		} else {
 			logger.Trace("wrote secret_id_file_path with wrong-secret", "path", secretFromAgent)
@@ -282,14 +281,14 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 		t.Fatal("expected notexist err")
 	}
 
-	if err := ioutil.WriteFile(role, []byte(roleID1), 0o600); err != nil {
+	if err := os.WriteFile(role, []byte(roleID1), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test role 1", "path", role)
 	}
 
 	if bindSecretID {
-		if err := ioutil.WriteFile(secret, []byte(secretID1), 0o600); err != nil {
+		if err := os.WriteFile(secret, []byte(secretID1), 0o600); err != nil {
 			t.Fatal(err)
 		} else {
 			logger.Trace("wrote test secret 1", "path", secret)
@@ -307,7 +306,7 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 				}
 				return ""
 			}
-			val, err := ioutil.ReadFile(out)
+			val, err := os.ReadFile(out)
 			if err == nil {
 				os.Remove(out)
 				if len(val) == 0 {
@@ -361,14 +360,14 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 	}
 
 	// Write new values
-	if err := ioutil.WriteFile(role, []byte(roleID2), 0o600); err != nil {
+	if err := os.WriteFile(role, []byte(roleID2), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test role 2", "path", role)
 	}
 
 	if bindSecretID {
-		if err := ioutil.WriteFile(secret, []byte(secretID2), 0o600); err != nil {
+		if err := os.WriteFile(secret, []byte(secretID2), 0o600); err != nil {
 			t.Fatal(err)
 		} else {
 			logger.Trace("wrote test secret 2", "path", secret)
@@ -536,7 +535,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 	}
 	roleID1 := resp.Data["role_id"].(string)
 
-	rolef, err := ioutil.TempFile("", "auth.role-id.test.")
+	rolef, err := os.CreateTemp("", "auth.role-id.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -546,7 +545,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 	t.Logf("input role_id_file_path: %s", role)
 
 	if bindSecretID {
-		secretf, err := ioutil.TempFile("", "auth.secret-id.test.")
+		secretf, err := os.CreateTemp("", "auth.secret-id.test.")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -560,7 +559,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 
 	// We close these right away because we're just basically testing
 	// permissions and finding a usable file name
-	ouf, err := ioutil.TempFile("", "auth.tokensink.test.")
+	ouf, err := os.CreateTemp("", "auth.tokensink.test.")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -577,7 +576,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 	}
 	if !bindSecretID && !secretIDLess {
 		logger.Trace("agent is providing an invalid secret that should be ignored")
-		secretf, err := ioutil.TempFile("", "auth.secret-id.test.")
+		secretf, err := os.CreateTemp("", "auth.secret-id.test.")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -585,7 +584,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 		secretf.Close()
 		defer os.Remove(secretFromAgent)
 		// if the token is empty, auth.approle would fail reporting the error
-		if err := ioutil.WriteFile(secretFromAgent, []byte("wrong-secret"), 0o600); err != nil {
+		if err := os.WriteFile(secretFromAgent, []byte("wrong-secret"), 0o600); err != nil {
 			t.Fatal(err)
 		} else {
 			logger.Trace("wrote secret_id_file_path with wrong-secret", "path", secretFromAgent)
@@ -672,7 +671,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 		t.Fatal("expected notexist err")
 	}
 
-	if err := ioutil.WriteFile(role, []byte(roleID1), 0o600); err != nil {
+	if err := os.WriteFile(role, []byte(roleID1), 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote test role 1", "path", role)
@@ -681,7 +680,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 	if bindSecretID {
 		logger.Trace("WRITING TO auth.secret-id.test.", "secret", secret, "secretID1", secretID1)
 
-		if err := ioutil.WriteFile(secret, []byte(secretID1), 0o600); err != nil {
+		if err := os.WriteFile(secret, []byte(secretID1), 0o600); err != nil {
 			t.Fatal(err)
 		} else {
 			logger.Trace("wrote test secret 1", "path", secret)
@@ -699,7 +698,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 				}
 				return ""
 			}
-			val, err := ioutil.ReadFile(out)
+			val, err := os.ReadFile(out)
 			if err == nil {
 				os.Remove(out)
 				if len(val) == 0 {
@@ -761,7 +760,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 			t.Fatal(err)
 		}
 		secretID2 := resp.WrapInfo.Token
-		if err := ioutil.WriteFile(secret, []byte(secretID2), 0o600); err != nil {
+		if err := os.WriteFile(secret, []byte(secretID2), 0o600); err != nil {
 			t.Fatal(err)
 		} else {
 			logger.Trace("wrote test secret 2", "path", secret)

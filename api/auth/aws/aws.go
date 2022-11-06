@@ -3,6 +3,7 @@ package aws
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -98,7 +99,7 @@ func (a *AWSAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, e
 		}
 		metadataSvc := ec2metadata.New(sess)
 		if !metadataSvc.Available() {
-			return nil, fmt.Errorf("metadata service not available")
+			return nil, errors.New("metadata service not available")
 		}
 
 		if a.signatureType == pkcs7Type {
@@ -156,8 +157,7 @@ func (a *AWSAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, e
 			// the env vars above will take precedence if they are set, as
 			// they will be added to the ChainProvider stack first
 			var hasCredsFile bool
-			credsFilePath := os.Getenv("AWS_SHARED_CREDENTIALS_FILE")
-			if credsFilePath != "" {
+			if credsFilePath := os.Getenv("AWS_SHARED_CREDENTIALS_FILE"); credsFilePath != "" {
 				hasCredsFile = true
 				credsConfig.Filename = credsFilePath
 			}
@@ -167,11 +167,10 @@ func (a *AWSAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, e
 				return nil, err
 			}
 			if creds == nil {
-				return nil, fmt.Errorf("could not compile valid credential providers from static config, environment, shared, or instance metadata")
+				return nil, errors.New("could not compile valid credential providers from static config, environment, shared, or instance metadata")
 			}
 
-			_, err = creds.Get()
-			if err != nil {
+			if _, err := creds.Get(); err != nil {
 				return nil, fmt.Errorf("failed to retrieve credentials from credential chain: %w", err)
 			}
 

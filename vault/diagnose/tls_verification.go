@@ -7,7 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 	"time"
 
@@ -121,7 +121,7 @@ func TLSCertCheck(certpath string) ([]string, error) {
 	}
 
 	// Check for TLS Errors
-	if err = TLSErrorChecks(leafCerts, interCerts, rootCerts); err != nil {
+	if err := TLSErrorChecks(leafCerts, interCerts, rootCerts); err != nil {
 		return warnings, err
 	}
 	return warnings, err
@@ -132,7 +132,7 @@ func ParseTLSInformation(certFilePath string) ([]*x509.Certificate, []*x509.Cert
 	leafCerts := []*x509.Certificate{}
 	interCerts := []*x509.Certificate{}
 	rootCerts := []*x509.Certificate{}
-	data, err := ioutil.ReadFile(certFilePath)
+	data, err := os.ReadFile(certFilePath)
 	if err != nil {
 		return leafCerts, interCerts, rootCerts, fmt.Errorf("Failed to read certificate file: %w.", err)
 	}

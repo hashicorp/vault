@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -51,10 +52,9 @@ func TestDefaultConfig_envvar(t *testing.T) {
 }
 
 func TestClientDefaultHttpClient(t *testing.T) {
-	_, err := NewClient(&Config{
+	if _, err := NewClient(&Config{
 		HttpClient: http.DefaultClient,
-	})
-	if err != nil {
+	}); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -316,7 +316,7 @@ func TestDefaulRetryPolicy(t *testing.T) {
 		expectErr error
 	}{
 		"retry on error": {
-			err:    fmt.Errorf("error"),
+			err:    errors.New("error"),
 			expect: true,
 		},
 		"don't retry connection failures": {

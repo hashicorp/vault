@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 )
 
@@ -29,7 +30,7 @@ func (c *Client) Auth() *Auth {
 // automatically renewing the token.
 func (a *Auth) Login(ctx context.Context, authMethod AuthMethod) (*Secret, error) {
 	if authMethod == nil {
-		return nil, fmt.Errorf("no auth method provided for login")
+		return nil, errors.New("no auth method provided for login")
 	}
 	return a.login(ctx, authMethod)
 }
@@ -60,7 +61,7 @@ func (a *Auth) MFALogin(ctx context.Context, authMethod AuthMethod, creds ...str
 // automatically renewing the token.
 func (a *Auth) MFAValidate(ctx context.Context, mfaSecret *Secret, payload map[string]interface{}) (*Secret, error) {
 	if mfaSecret == nil || mfaSecret.Auth == nil || mfaSecret.Auth.MFARequirement == nil {
-		return nil, fmt.Errorf("secret does not contain MFARequirements")
+		return nil, errors.New("secret does not contain MFARequirements")
 	}
 
 	s, err := a.c.Sys().MFAValidateWithContext(ctx, mfaSecret.Auth.MFARequirement.GetMFARequestID(), payload)
@@ -92,7 +93,7 @@ func (a *Auth) twoPhaseMFALogin(ctx context.Context, authMethod AuthMethod) (*Se
 		if s != nil {
 			s.Warnings = append(s.Warnings, "expected secret to contain MFARequirements")
 		}
-		return s, fmt.Errorf("assumed two-phase MFA login, returned secret is missing MFARequirements")
+		return s, errors.New("assumed two-phase MFA login, returned secret is missing MFARequirements")
 	}
 
 	return s, nil
@@ -103,7 +104,7 @@ func (a *Auth) checkAndSetToken(s *Secret) (*Secret, error) {
 		if s != nil {
 			s.Warnings = append(s.Warnings, "expected secret to contain ClientToken")
 		}
-		return s, fmt.Errorf("response did not return ClientToken, client token not set")
+		return s, errors.New("response did not return ClientToken, client token not set")
 	}
 
 	a.c.SetToken(s.Auth.ClientToken)

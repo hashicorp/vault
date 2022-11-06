@@ -1,7 +1,6 @@
 package token
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -18,7 +17,7 @@ func TestCommand(t *testing.T) {
 }
 
 func TestInternalHelperFilePerms(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", t.Name())
+	tmpDir, err := os.MkdirTemp("", t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}

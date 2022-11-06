@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 )
@@ -38,7 +39,7 @@ func (c *Sys) MFAValidateWithContext(ctx context.Context, requestID string, payl
 	}
 
 	if secret == nil {
-		return nil, fmt.Errorf("data from server response is empty")
+		return nil, errors.New("data from server response is empty")
 	}
 
 	return secret, nil

@@ -3,6 +3,7 @@ package socket
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -18,15 +19,15 @@ import (
 
 func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, error) {
 	if conf.SaltConfig == nil {
-		return nil, fmt.Errorf("nil salt config")
+		return nil, errors.New("nil salt config")
 	}
 	if conf.SaltView == nil {
-		return nil, fmt.Errorf("nil salt view")
+		return nil, errors.New("nil salt view")
 	}
 
 	address, ok := conf.Config["address"]
 	if !ok {
-		return nil, fmt.Errorf("address is required")
+		return nil, errors.New("address is required")
 	}
 
 	socketType, ok := conf.Config["socket_type"]

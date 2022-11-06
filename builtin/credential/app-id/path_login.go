@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"crypto/subtle"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -67,7 +68,7 @@ func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Requ
 	appId := data.Get("app_id").(string)
 
 	if appId == "" {
-		return nil, fmt.Errorf("missing app_id")
+		return nil, errors.New("missing app_id")
 	}
 
 	return &logical.Response{
@@ -143,7 +144,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, err
 	}
 	if !policyutil.EquivalentPolicies(mapPolicies, req.Auth.TokenPolicies) {
-		return nil, fmt.Errorf("policies do not match")
+		return nil, errors.New("policies do not match")
 	}
 
 	return &logical.Response{Auth: req.Auth}, nil
@@ -187,7 +188,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, a
 
 	apps, ok := appsRaw.(string)
 	if !ok {
-		return "", nil, fmt.Errorf("mapping is not a string")
+		return "", nil, errors.New("mapping is not a string")
 	}
 
 	// Verify that the app is in the list

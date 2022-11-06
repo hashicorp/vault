@@ -2,7 +2,6 @@ package api
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -127,7 +126,7 @@ func TestLifetimeWatcher(t *testing.T) {
 			renew: func(_ string, _ int) (*Secret, error) {
 				if caseOneErrorCount == 0 {
 					caseOneErrorCount++
-					return nil, fmt.Errorf("renew failure")
+					return nil, errors.New("renew failure")
 				}
 				return renewedSecret, nil
 			},
@@ -144,7 +143,7 @@ func TestLifetimeWatcher(t *testing.T) {
 					return renewedSecret, nil
 				}
 				caseManyErrorsCount++
-				return nil, fmt.Errorf("renew failure")
+				return nil, errors.New("renew failure")
 			},
 			expectError:   nil,
 			expectRenewal: true,
@@ -155,7 +154,7 @@ func TestLifetimeWatcher(t *testing.T) {
 			leaseDurationSeconds: 15,
 			incrementSeconds:     15,
 			renew: func(_ string, _ int) (*Secret, error) {
-				return nil, fmt.Errorf("renew failure")
+				return nil, errors.New("renew failure")
 			},
 			expectError:   nil,
 			expectRenewal: false,

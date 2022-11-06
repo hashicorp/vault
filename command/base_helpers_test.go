@@ -3,7 +3,6 @@ package command
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -54,7 +53,7 @@ func TestParseArgsData(t *testing.T) {
 	t.Run("file_full", func(t *testing.T) {
 		t.Parallel()
 
-		f, err := ioutil.TempFile("", "vault")
+		f, err := os.CreateTemp("", "vault")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -75,7 +74,7 @@ func TestParseArgsData(t *testing.T) {
 	t.Run("file_value", func(t *testing.T) {
 		t.Parallel()
 
-		f, err := ioutil.TempFile("", "vault")
+		f, err := os.CreateTemp("", "vault")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -166,7 +165,7 @@ func TestParseFlagFile(t *testing.T) {
 	t.Parallel()
 
 	content := "some raw content"
-	tmpFile, err := ioutil.TempFile(os.TempDir(), "TestParseFlagFile")
+	tmpFile, err := os.CreateTemp(os.TempDir(), "TestParseFlagFile")
 	if err != nil {
 		t.Fatalf("failed to create temporary file: %v", err)
 	}

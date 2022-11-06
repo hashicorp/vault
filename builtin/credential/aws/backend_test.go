@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -1492,7 +1492,7 @@ func buildCallerIdentityLoginData(request *http.Request, roleName string) (map[s
 	if err != nil {
 		return nil, err
 	}
-	requestBody, err := ioutil.ReadAll(request.Body)
+	requestBody, err := io.ReadAll(request.Body)
 	if err != nil {
 		return nil, err
 	}

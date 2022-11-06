@@ -3,7 +3,7 @@ package fairshare
 import (
 	"container/list"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math"
 	"sync"
 	"time"
@@ -47,7 +47,7 @@ type JobManager struct {
 // NewJobManager creates a job manager, with an optional name
 func NewJobManager(name string, numWorkers int, l log.Logger, metricSink *metricsutil.ClusterMetricSink) *JobManager {
 	if l == nil {
-		l = logging.NewVaultLoggerWithWriter(ioutil.Discard, log.NoLevel)
+		l = logging.NewVaultLoggerWithWriter(io.Discard, log.NoLevel)
 	}
 	if name == "" {
 		guid, err := uuid.GenerateUUID()

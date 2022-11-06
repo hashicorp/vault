@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -120,7 +119,7 @@ func (k *kubernetesMethod) readJWT() (string, error) {
 	}
 	defer data.Close()
 
-	contentBytes, err := ioutil.ReadAll(data)
+	contentBytes, err := io.ReadAll(data)
 	if err != nil {
 		return "", err
 	}

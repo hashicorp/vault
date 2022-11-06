@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -289,7 +290,7 @@ func (c *Config) configureTLS(t *TLSConfig) error {
 		c.curlClientCert = t.ClientCert
 		c.curlClientKey = t.ClientKey
 	case t.ClientCert != "" || t.ClientKey != "":
-		return fmt.Errorf("both client cert and client key must be provided")
+		return errors.New("both client cert and client key must be provided")
 	}
 
 	if t.CACert != "" || len(t.CACertBytes) != 0 || t.CAPath != "" {
@@ -514,7 +515,7 @@ func (c *Config) ParseAddress(address string) (*url.URL, error) {
 			u.Host = socket
 			u.Path = ""
 		} else {
-			return nil, fmt.Errorf("attempting to specify unix:// address with non-transport transport")
+			return nil, errors.New("attempting to specify unix:// address with non-transport transport")
 		}
 	} else if strings.HasPrefix(c.Address, "unix://") {
 		// When the address being set does not begin with unix:// but the previous
@@ -568,7 +569,7 @@ type Client struct {
 func NewClient(c *Config) (*Client, error) {
 	def := DefaultConfig()
 	if def == nil {
-		return nil, fmt.Errorf("could not create/read default configuration")
+		return nil, errors.New("could not create/read default configuration")
 	}
 	if def.Error != nil {
 		return nil, errwrap.Wrapf("error encountered setting up default configuration: {{err}}", def.Error)
@@ -1005,11 +1006,9 @@ func (c *Client) Headers() http.Header {
 		return nil
 	}
 
-	ret := make(http.Header)
+	ret := make(http.Header, len(c.headers))
 	for k, v := range c.headers {
-		for _, val := range v {
-			ret[k] = append(ret[k], val)
-		}
+		ret[k] = append(ret[k], v...)
 	}
 
 	return ret
@@ -1330,7 +1329,7 @@ START:
 		return nil, err
 	}
 	if req == nil {
-		return nil, fmt.Errorf("nil request created")
+		return nil, errors.New("nil request created")
 	}
 
 	if outputCurlString {
@@ -1396,7 +1395,7 @@ START:
 
 		// Ensure a protocol downgrade doesn't happen
 		if req.URL.Scheme == "https" && respLoc.Scheme != "https" {
-			return result, fmt.Errorf("redirect would cause protocol downgrade")
+			return result, errors.New("redirect would cause protocol downgrade")
 		}
 
 		// Update the request
@@ -1466,10 +1465,10 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 
 	// OutputCurlString and OutputPolicy logic rely on the request type to be retryable.Request
 	if outputCurlString {
-		return nil, fmt.Errorf("output-curl-string is not implemented for this request")
+		return nil, errors.New("output-curl-string is not implemented for this request")
 	}
 	if outputPolicy {
-		return nil, fmt.Errorf("output-policy is not implemented for this request")
+		return nil, errors.New("output-policy is not implemented for this request")
 	}
 
 	req.URL.User = r.URL.User
@@ -1524,12 +1523,12 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 		// Parse the updated location
 		respLoc, err := resp.Location()
 		if err != nil {
-			return result, fmt.Errorf("redirect failed: %s", err)
+			return result, fmt.Errorf("redirect failed: %w", err)
 		}
 
 		// Ensure a protocol downgrade doesn't happen
 		if req.URL.Scheme == "https" && respLoc.Scheme != "https" {
-			return result, fmt.Errorf("redirect would cause protocol downgrade")
+			return result, errors.New("redirect would cause protocol downgrade")
 		}
 
 		// Update the request
@@ -1537,13 +1536,13 @@ func (c *Client) httpRequestWithContext(ctx context.Context, r *Request) (*Respo
 
 		// Reset the request body if any
 		if err := r.ResetJSONBody(); err != nil {
-			return result, fmt.Errorf("redirect failed: %s", err)
+			return result, fmt.Errorf("redirect failed: %w", err)
 		}
 
 		// Retry the request
 		resp, err = httpClient.Do(req)
 		if err != nil {
-			return result, fmt.Errorf("redirect failed: %s", err)
+			return result, fmt.Errorf("redirect failed: %w", err)
 		}
 	}
 
@@ -1627,7 +1626,7 @@ func compareReplicationStates(s1, s2 string) (int, error) {
 	}
 
 	if w1.ClusterID != w2.ClusterID {
-		return 0, fmt.Errorf("can't compare replication states with different ClusterIDs")
+		return 0, errors.New("can't compare replication states with different ClusterIDs")
 	}
 
 	switch {
@@ -1677,7 +1676,7 @@ func ParseReplicationState(raw string, hmacKey []byte) (*logical.WALState, error
 
 	lastIndex := strings.LastIndexByte(s, ':')
 	if lastIndex == -1 {
-		return nil, fmt.Errorf("invalid full state header format")
+		return nil, errors.New("invalid full state header format")
 	}
 	state, stateHMACRaw := s[:lastIndex], s[lastIndex+1:]
 	stateHMAC, err := hex.DecodeString(stateHMACRaw)
@@ -1689,13 +1688,13 @@ func ParseReplicationState(raw string, hmacKey []byte) (*logical.WALState, error
 		hm := hmac.New(sha256.New, hmacKey)
 		hm.Write([]byte(state))
 		if !hmac.Equal(hm.Sum(nil), stateHMAC) {
-			return nil, fmt.Errorf("invalid state header HMAC (mismatch)")
+			return nil, errors.New("invalid state header HMAC (mismatch)")
 		}
 	}
 
 	pieces := strings.Split(state, ":")
 	if len(pieces) != 4 || pieces[0] != "v1" || pieces[1] == "" {
-		return nil, fmt.Errorf("invalid state header format")
+		return nil, errors.New("invalid state header format")
 	}
 	localIndex, err := strconv.ParseUint(pieces[2], 10, 64)
 	if err != nil {
@@ -1789,7 +1788,7 @@ func validateToken(t string) error {
 		return !unicode.IsPrint(c)
 	})
 	if idx != -1 {
-		return fmt.Errorf("configured Vault token contains non-printable characters and cannot be used")
+		return errors.New("configured Vault token contains non-printable characters and cannot be used")
 	}
 	return nil
 }

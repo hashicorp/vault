@@ -11,7 +11,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
@@ -108,7 +107,7 @@ func TestServer_ReloadListener(t *testing.T) {
 	wd, _ := os.Getwd()
 	wd += "/server/test-fixtures/reload/"
 
-	td, err := ioutil.TempDir("", "vault-test-")
+	td, err := os.MkdirTemp("", "vault-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,15 +115,15 @@ func TestServer_ReloadListener(t *testing.T) {
 
 	wg := &sync.WaitGroup{}
 	// Setup initial certs
-	inBytes, _ := ioutil.ReadFile(wd + "reload_foo.pem")
-	ioutil.WriteFile(td+"/reload_cert.pem", inBytes, 0o777)
-	inBytes, _ = ioutil.ReadFile(wd + "reload_foo.key")
-	ioutil.WriteFile(td+"/reload_key.pem", inBytes, 0o777)
+	inBytes, _ := os.ReadFile(wd + "reload_foo.pem")
+	os.WriteFile(td+"/reload_cert.pem", inBytes, 0o777)
+	inBytes, _ = os.ReadFile(wd + "reload_foo.key")
+	os.WriteFile(td+"/reload_key.pem", inBytes, 0o777)
 
 	relhcl := strings.ReplaceAll(reloadHCL, "TMPDIR", td)
-	ioutil.WriteFile(td+"/reload.hcl", []byte(relhcl), 0o777)
+	os.WriteFile(td+"/reload.hcl", []byte(relhcl), 0o777)
 
-	inBytes, _ = ioutil.ReadFile(wd + "reload_ca.pem")
+	inBytes, _ = os.ReadFile(wd + "reload_ca.pem")
 	certPool := x509.NewCertPool()
 	ok := certPool.AppendCertsFromPEM(inBytes)
 	if !ok {
@@ -173,11 +172,11 @@ func TestServer_ReloadListener(t *testing.T) {
 	}
 
 	relhcl = strings.ReplaceAll(reloadHCL, "TMPDIR", td)
-	inBytes, _ = ioutil.ReadFile(wd + "reload_bar.pem")
-	ioutil.WriteFile(td+"/reload_cert.pem", inBytes, 0o777)
-	inBytes, _ = ioutil.ReadFile(wd + "reload_bar.key")
-	ioutil.WriteFile(td+"/reload_key.pem", inBytes, 0o777)
-	ioutil.WriteFile(td+"/reload.hcl", []byte(relhcl), 0o777)
+	inBytes, _ = os.ReadFile(wd + "reload_bar.pem")
+	os.WriteFile(td+"/reload_cert.pem", inBytes, 0o777)
+	inBytes, _ = os.ReadFile(wd + "reload_bar.key")
+	os.WriteFile(td+"/reload_key.pem", inBytes, 0o777)
+	os.WriteFile(td+"/reload.hcl", []byte(relhcl), 0o777)
 
 	cmd.SighupCh <- struct{}{}
 	select {
@@ -270,7 +269,7 @@ func TestServer(t *testing.T) {
 			t.Parallel()
 
 			ui, cmd := testServerCommand(t)
-			f, err := ioutil.TempFile("", "")
+			f, err := os.CreateTemp("", "")
 			if err != nil {
 				t.Fatalf("error creating temp dir: %v", err)
 			}

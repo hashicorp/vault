@@ -307,7 +307,7 @@ func (kv *KVv2) Patch(ctx context.Context, secretPath string, newData map[string
 		if k == "method" {
 			patchMethod, ok = v.(string)
 			if !ok {
-				return nil, fmt.Errorf("unsupported type provided for option value; value for patch method should be string \"rw\" or \"patch\"")
+				return nil, errors.New("unsupported type provided for option value; value for patch method should be string \"rw\" or \"patch\"")
 			}
 		}
 	}
@@ -324,7 +324,7 @@ func (kv *KVv2) Patch(ctx context.Context, secretPath string, newData map[string
 	case "":
 		kvs, err = mergePatch(ctx, kv.c, kv.mountPath, secretPath, newData, opts...)
 	default:
-		return nil, fmt.Errorf("unsupported patch method provided; value for patch method should be string \"rw\" or \"patch\"")
+		return nil, errors.New("unsupported patch method provided; value for patch method should be string \"rw\" or \"patch\"")
 	}
 	if err != nil {
 		return nil, fmt.Errorf("unable to perform patch: %w", err)
@@ -347,8 +347,7 @@ func (kv *KVv2) PatchMetadata(ctx context.Context, secretPath string, metadata K
 		return fmt.Errorf("unable to create map for JSON merge patch request: %w", err)
 	}
 
-	_, err = kv.c.Logical().JSONMergePatch(ctx, pathToWriteTo, md)
-	if err != nil {
+	if _, err := kv.c.Logical().JSONMergePatch(ctx, pathToWriteTo, md); err != nil {
 		return fmt.Errorf("error patching metadata at %s: %w", pathToWriteTo, err)
 	}
 
@@ -360,8 +359,7 @@ func (kv *KVv2) PatchMetadata(ctx context.Context, secretPath string, metadata K
 func (kv *KVv2) Delete(ctx context.Context, secretPath string) error {
 	pathToDelete := fmt.Sprintf("%s/data/%s", kv.mountPath, secretPath)
 
-	_, err := kv.c.Logical().DeleteWithContext(ctx, pathToDelete)
-	if err != nil {
+	if _, err := kv.c.Logical().DeleteWithContext(ctx, pathToDelete); err != nil {
 		return fmt.Errorf("error deleting secret at %s: %w", pathToDelete, err)
 	}
 
@@ -378,15 +376,14 @@ func (kv *KVv2) DeleteVersions(ctx context.Context, secretPath string, versions 
 		return nil
 	}
 
-	var versionsToDelete []string
+	versionsToDelete := make([]string, 0, len(versions))
 	for _, version := range versions {
 		versionsToDelete = append(versionsToDelete, strconv.Itoa(version))
 	}
 	versionsMap := map[string]interface{}{
 		"versions": versionsToDelete,
 	}
-	_, err := kv.c.Logical().WriteWithContext(ctx, pathToDelete, versionsMap)
-	if err != nil {
+	if _, err := kv.c.Logical().WriteWithContext(ctx, pathToDelete, versionsMap); err != nil {
 		return fmt.Errorf("error deleting secret at %s: %w", pathToDelete, err)
 	}
 
@@ -398,8 +395,7 @@ func (kv *KVv2) DeleteVersions(ctx context.Context, secretPath string, versions 
 func (kv *KVv2) DeleteMetadata(ctx context.Context, secretPath string) error {
 	pathToDelete := fmt.Sprintf("%s/metadata/%s", kv.mountPath, secretPath)
 
-	_, err := kv.c.Logical().DeleteWithContext(ctx, pathToDelete)
-	if err != nil {
+	if _, err := kv.c.Logical().DeleteWithContext(ctx, pathToDelete); err != nil {
 		return fmt.Errorf("error deleting secret metadata at %s: %w", pathToDelete, err)
 	}
 
@@ -417,8 +413,7 @@ func (kv *KVv2) Undelete(ctx context.Context, secretPath string, versions []int)
 		"versions": versions,
 	}
 
-	_, err := kv.c.Logical().WriteWithContext(ctx, pathToUndelete, data)
-	if err != nil {
+	if _, err := kv.c.Logical().WriteWithContext(ctx, pathToUndelete, data); err != nil {
 		return fmt.Errorf("error undeleting secret metadata at %s: %w", pathToUndelete, err)
 	}
 
@@ -437,8 +432,7 @@ func (kv *KVv2) Destroy(ctx context.Context, secretPath string, versions []int) 
 		"versions": versions,
 	}
 
-	_, err := kv.c.Logical().WriteWithContext(ctx, pathToDestroy, data)
-	if err != nil {
+	if _, err := kv.c.Logical().WriteWithContext(ctx, pathToDestroy, data); err != nil {
 		return fmt.Errorf("error destroying secret metadata at %s: %w", pathToDestroy, err)
 	}
 
@@ -462,7 +456,7 @@ func (kv *KVv2) Rollback(ctx context.Context, secretPath string, toVersion int) 
 
 	// Verify metadata found
 	if latest.VersionMetadata == nil {
-		return nil, fmt.Errorf("no metadata found; rollback can only be used on existing data")
+		return nil, errors.New("no metadata found; rollback can only be used on existing data")
 	}
 
 	// Now run it again and read the version we want to roll back to
@@ -471,8 +465,7 @@ func (kv *KVv2) Rollback(ctx context.Context, secretPath string, toVersion int) 
 		return nil, fmt.Errorf("unable to get previous version %d of secret: %w", toVersion, err)
 	}
 
-	err = validateRollbackVersion(rollbackVersion)
-	if err != nil {
+	if err := validateRollbackVersion(rollbackVersion); err != nil {
 		return nil, fmt.Errorf("invalid rollback version %d: %w", toVersion, err)
 	}
 
@@ -513,7 +506,7 @@ func extractDataAndVersionMetadata(secret *Secret) (*KVSecret, error) {
 	if secret.Data != nil {
 		dataInterface, ok := secret.Data["data"]
 		if !ok {
-			return nil, fmt.Errorf("missing expected 'data' element")
+			return nil, errors.New("missing expected 'data' element")
 		}
 
 		if dataInterface != nil {
@@ -569,8 +562,7 @@ func extractVersionMetadata(secret *Secret) (*KVVersionMetadata, error) {
 		return nil, fmt.Errorf("error setting up decoder for API response: %w", err)
 	}
 
-	err = d.Decode(metadataMap)
-	if err != nil {
+	if err := d.Decode(metadataMap); err != nil {
 		return nil, fmt.Errorf("error decoding metadata from API response into VersionMetadata: %w", err)
 	}
 
@@ -627,26 +619,26 @@ func extractFullMetadata(secret *Secret) (*KVMetadata, error) {
 func validateRollbackVersion(rollbackVersion *KVSecret) error {
 	// Make sure a value already exists
 	if rollbackVersion == nil || rollbackVersion.Data == nil {
-		return fmt.Errorf("no secret found")
+		return errors.New("no secret found")
 	}
 
 	// Verify metadata found
 	if rollbackVersion.VersionMetadata == nil {
-		return fmt.Errorf("no version metadata found; rollback only works on existing data")
+		return errors.New("no version metadata found; rollback only works on existing data")
 	}
 
 	// Verify it hasn't been deleted
 	if !rollbackVersion.VersionMetadata.DeletionTime.IsZero() {
-		return fmt.Errorf("cannot roll back to a version that has been deleted")
+		return errors.New("cannot roll back to a version that has been deleted")
 	}
 
 	if rollbackVersion.VersionMetadata.Destroyed {
-		return fmt.Errorf("cannot roll back to a version that has been destroyed")
+		return errors.New("cannot roll back to a version that has been destroyed")
 	}
 
 	// Verify old data found
 	if rollbackVersion.Data == nil {
-		return fmt.Errorf("no data found; rollback only works on existing data")
+		return errors.New("no data found; rollback only works on existing data")
 	}
 
 	return nil

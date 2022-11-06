@@ -4,8 +4,8 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 
@@ -138,7 +138,7 @@ func (c *SSHHelperConfig) NewClient() (*Client, error) {
 // Vault address is a required parameter.
 // Mount point defaults to "ssh".
 func LoadSSHHelperConfig(path string) (*SSHHelperConfig, error) {
-	contents, err := ioutil.ReadFile(path)
+	contents, err := os.ReadFile(path)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, multierror.Prefix(err, "ssh_helper:")
 	}
@@ -155,7 +155,7 @@ func ParseSSHHelperConfig(contents string) (*SSHHelperConfig, error) {
 
 	list, ok := root.Node.(*ast.ObjectList)
 	if !ok {
-		return nil, fmt.Errorf("error parsing config: file doesn't contain a root object")
+		return nil, errors.New("error parsing config: file doesn't contain a root object")
 	}
 
 	valid := []string{
@@ -180,7 +180,7 @@ func ParseSSHHelperConfig(contents string) (*SSHHelperConfig, error) {
 	}
 
 	if c.VaultAddr == "" {
-		return nil, fmt.Errorf(`missing config "vault_addr"`)
+		return nil, errors.New(`missing config "vault_addr"`)
 	}
 	return &c, nil
 }
@@ -239,8 +239,7 @@ func (c *SSHHelper) VerifyWithContext(ctx context.Context, otp string) (*SSHVeri
 	}
 
 	var verifyResp SSHVerifyResponse
-	err = mapstructure.Decode(secret.Data, &verifyResp)
-	if err != nil {
+	if err := mapstructure.Decode(secret.Data, &verifyResp); err != nil {
 		return nil, err
 	}
 	return &verifyResp, nil

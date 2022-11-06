@@ -9,7 +9,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -1740,7 +1740,7 @@ func submitCallerIdentityRequest(ctx context.Context, maxRetries int, method, en
 	}
 
 	// we check for status code afterwards to also print out response body
-	responseBody, err := ioutil.ReadAll(response.Body)
+	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
 		return nil, err
 	}

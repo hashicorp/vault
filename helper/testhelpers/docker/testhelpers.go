@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"strconv"
@@ -165,7 +164,7 @@ func (d *Runner) StartNewService(ctx context.Context, addSuffix, forceLocalAddr 
 				Details:    true,
 			})
 			if err == nil {
-				b, err := ioutil.ReadAll(rc)
+				b, err := io.ReadAll(rc)
 				if err != nil {
 					d.RunOptions.LogConsumer(fmt.Sprintf("error reading container logs, err=%v, read: %s", err, string(b)))
 				} else {
@@ -279,7 +278,7 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*ty
 	}
 	resp, _ := d.DockerAPI.ImageCreate(ctx, cfg.Image, opts)
 	if resp != nil {
-		_, _ = ioutil.ReadAll(resp)
+		_, _ = io.ReadAll(resp)
 	}
 
 	c, err := d.DockerAPI.ContainerCreate(ctx, cfg, hostConfig, netConfig, nil, cfg.Hostname)

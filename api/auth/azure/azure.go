@@ -3,8 +3,9 @@ package azure
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -64,7 +65,7 @@ const (
 // Supported options: WithMountPath, WithResource
 func NewAzureAuth(roleName string, opts ...LoginOption) (*AzureAuth, error) {
 	if roleName == "" {
-		return nil, fmt.Errorf("no role name provided for login")
+		return nil, errors.New("no role name provided for login")
 	}
 
 	a := &AzureAuth{
@@ -77,8 +78,7 @@ func NewAzureAuth(roleName string, opts ...LoginOption) (*AzureAuth, error) {
 	for _, opt := range opts {
 		// Call the option giving the instantiated
 		// *AzureAuth as the argument
-		err := opt(a)
-		if err != nil {
+		if err := opt(a); err != nil {
 			return nil, fmt.Errorf("error with login option: %w", err)
 		}
 	}
@@ -172,23 +172,21 @@ func (a *AzureAuth) getJWT() (string, error) {
 	}
 	defer resp.Body.Close()
 
-	responseBytes, err := ioutil.ReadAll(resp.Body)
+	responseBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("error reading response body from Azure token endpoint: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		var errResp errorJSON
-		err = json.Unmarshal(responseBytes, &errResp)
-		if err != nil {
-			return "", fmt.Errorf("received error message but was unable to unmarshal its contents")
+		if err := json.Unmarshal(responseBytes, &errResp); err != nil {
+			return "", errors.New("received error message but was unable to unmarshal its contents")
 		}
 		return "", fmt.Errorf("%s error from Azure token endpoint: %s", errResp.Error, errResp.ErrorDescription)
 	}
 
 	var r responseJSON
-	err = json.Unmarshal(responseBytes, &r)
-	if err != nil {
+	if err := json.Unmarshal(responseBytes, &r); err != nil {
 		return "", fmt.Errorf("error unmarshaling response from Azure token endpoint: %w", err)
 	}
 
@@ -219,23 +217,21 @@ func getMetadata() (metadataJSON, error) {
 	}
 	defer resp.Body.Close()
 
-	responseBytes, err := ioutil.ReadAll(resp.Body)
+	responseBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return metadataJSON{}, fmt.Errorf("error reading response body from metadata endpoint: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		var errResp errorJSON
-		_ = json.Unmarshal(responseBytes, &errResp)
-		if err != nil {
-			return metadataJSON{}, fmt.Errorf("received error message but was unable to unmarshal its contents")
+		if err := json.Unmarshal(responseBytes, &errResp); err != nil {
+			return metadataJSON{}, errors.New("received error message but was unable to unmarshal its contents")
 		}
 		return metadataJSON{}, fmt.Errorf("%s error from metadata endpoint: %s", errResp.Error, errResp.ErrorDescription)
 	}
 
 	var r metadataJSON
-	err = json.Unmarshal(responseBytes, &r)
-	if err != nil {
+	if err := json.Unmarshal(responseBytes, &r); err != nil {
 		return metadataJSON{}, fmt.Errorf("error unmarshaling the response from metadata endpoint: %w", err)
 	}
 

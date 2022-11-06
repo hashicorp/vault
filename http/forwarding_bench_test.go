@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
@@ -31,7 +30,7 @@ func BenchmarkHTTP_Forwarding_Stress(b *testing.B) {
 
 	cluster := vault.NewTestCluster(benchhelpers.TBtoT(b), coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
-		Logger:      logging.NewVaultLoggerWithWriter(ioutil.Discard, log.Error),
+		Logger:      logging.NewVaultLoggerWithWriter(io.Discard, log.Error),
 	})
 	cluster.Start()
 	defer cluster.Cleanup()

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"strings"
@@ -169,11 +168,11 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	if fi.IsDir() {
-		return nil, fmt.Errorf("location is a directory, not a file")
+		return nil, errors.New("location is a directory, not a file")
 	}
 
 	// Read the file
-	d, err := ioutil.ReadFile(path)
+	d, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -233,15 +232,15 @@ func LoadConfig(path string) (*Config, error) {
 
 	if result.Cache != nil {
 		if len(result.Listeners) < 1 && len(result.Templates) < 1 {
-			return nil, fmt.Errorf("enabling the cache requires at least 1 template or 1 listener to be defined")
+			return nil, errors.New("enabling the cache requires at least 1 template or 1 listener to be defined")
 		}
 
 		if result.Cache.UseAutoAuthToken {
 			if result.AutoAuth == nil {
-				return nil, fmt.Errorf("cache.use_auto_auth_token is true but auto_auth not configured")
+				return nil, errors.New("cache.use_auto_auth_token is true but auto_auth not configured")
 			}
 			if result.AutoAuth.Method.WrapTTL > 0 {
-				return nil, fmt.Errorf("cache.use_auto_auth_token is true and auto_auth uses wrapping")
+				return nil, errors.New("cache.use_auto_auth_token is true and auto_auth uses wrapping")
 			}
 		}
 	}
@@ -250,12 +249,11 @@ func LoadConfig(path string) (*Config, error) {
 		if len(result.AutoAuth.Sinks) == 0 &&
 			(result.Cache == nil || !result.Cache.UseAutoAuthToken) &&
 			len(result.Templates) == 0 {
-			return nil, fmt.Errorf("auto_auth requires at least one sink or at least one template or cache.use_auto_auth_token=true")
+			return nil, errors.New("auto_auth requires at least one sink or at least one template or cache.use_auto_auth_token=true")
 		}
 	}
 
-	err = parseVault(result, list)
-	if err != nil {
+	if err := parseVault(result, list); err != nil {
 		return nil, fmt.Errorf("error parsing 'vault':%w", err)
 	}
 
@@ -277,7 +275,7 @@ func LoadConfig(path string) (*Config, error) {
 	if disableIdleConnsEnv := os.Getenv(DisableIdleConnsEnv); disableIdleConnsEnv != "" {
 		result.DisableIdleConns, err = parseutil.ParseCommaStringSlice(strings.ToLower(disableIdleConnsEnv))
 		if err != nil {
-			return nil, fmt.Errorf("error parsing environment variable %s: %v", DisableIdleConnsEnv, err)
+			return nil, fmt.Errorf("error parsing environment variable %s: %w", DisableIdleConnsEnv, err)
 		}
 	}
 
@@ -299,7 +297,7 @@ func LoadConfig(path string) (*Config, error) {
 	if disableKeepAlivesEnv := os.Getenv(DisableKeepAlivesEnv); disableKeepAlivesEnv != "" {
 		result.DisableKeepAlives, err = parseutil.ParseCommaStringSlice(strings.ToLower(disableKeepAlivesEnv))
 		if err != nil {
-			return nil, fmt.Errorf("error parsing environment variable %s: %v", DisableKeepAlivesEnv, err)
+			return nil, fmt.Errorf("error parsing environment variable %s: %w", DisableKeepAlivesEnv, err)
 		}
 	}
 
@@ -377,8 +375,7 @@ func parseRetry(result *Config, list *ast.ObjectList) error {
 	item := retryList.Items[0]
 
 	var r Retry
-	err := hcl.DecodeObject(&r, item.Val)
-	if err != nil {
+	if err := hcl.DecodeObject(&r, item.Val); err != nil {
 		return err
 	}
 

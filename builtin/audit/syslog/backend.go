@@ -3,6 +3,7 @@ package syslog
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -15,10 +16,10 @@ import (
 
 func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, error) {
 	if conf.SaltConfig == nil {
-		return nil, fmt.Errorf("nil salt config")
+		return nil, errors.New("nil salt config")
 	}
 	if conf.SaltView == nil {
-		return nil, fmt.Errorf("nil salt view")
+		return nil, errors.New("nil salt view")
 	}
 
 	// Get facility or default to AUTH

@@ -2,6 +2,7 @@ package approle
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -45,7 +46,7 @@ func pathLogin(b *backend) *framework.Path {
 func (b *backend) pathLoginUpdateAliasLookahead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleID := strings.TrimSpace(data.Get("role_id").(string))
 	if roleID == "" {
-		return nil, fmt.Errorf("missing role_id")
+		return nil, errors.New("missing role_id")
 	}
 
 	return &logical.Response{
@@ -210,7 +211,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 			// source IP complies to it
 			if len(entry.CIDRList) != 0 {
 				if req.Connection == nil || req.Connection.RemoteAddr == "" {
-					return nil, fmt.Errorf("failed to get connection information")
+					return nil, errors.New("failed to get connection information")
 				}
 
 				belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, entry.CIDRList)
@@ -285,7 +286,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 			// source IP complies to it
 			if len(entry.CIDRList) != 0 {
 				if req.Connection == nil || req.Connection.RemoteAddr == "" {
-					return nil, fmt.Errorf("failed to get connection information")
+					return nil, errors.New("failed to get connection information")
 				}
 
 				belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, entry.CIDRList)
@@ -305,7 +306,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 
 	if len(role.SecretIDBoundCIDRs) != 0 {
 		if req.Connection == nil || req.Connection.RemoteAddr == "" {
-			return nil, fmt.Errorf("failed to get connection information")
+			return nil, errors.New("failed to get connection information")
 		}
 		belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, role.SecretIDBoundCIDRs)
 		if err != nil || !belongs {
@@ -360,7 +361,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := req.Auth.InternalData["role_name"].(string)
 	if roleName == "" {
-		return nil, fmt.Errorf("failed to fetch role_name during renewal")
+		return nil, errors.New("failed to fetch role_name during renewal")
 	}
 
 	lock := b.roleLock(roleName)

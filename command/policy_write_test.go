@@ -3,7 +3,6 @@ package command
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"strings"
@@ -92,7 +91,7 @@ func TestPolicyWriteCommand_Run(t *testing.T) {
 		t.Parallel()
 
 		policy := testPolicyWritePolicyContents(t)
-		f, err := ioutil.TempFile("", "vault-policy-write")
+		f, err := os.CreateTemp("", "vault-policy-write")
 		if err != nil {
 			t.Fatal(err)
 		}

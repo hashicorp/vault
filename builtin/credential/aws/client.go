@@ -2,6 +2,7 @@ package awsauth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -64,7 +65,7 @@ func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, reg
 		return nil, err
 	}
 	if creds == nil {
-		return nil, fmt.Errorf("could not compile valid credential providers from static config, environment, shared, or instance metadata")
+		return nil, errors.New("could not compile valid credential providers from static config, environment, shared, or instance metadata")
 	}
 
 	// Create a config that can be used to make the API calls.
@@ -87,12 +88,12 @@ func (b *backend) getClientConfig(ctx context.Context, s logical.Storage, region
 		return nil, err
 	}
 	if config == nil {
-		return nil, fmt.Errorf("could not compile valid credentials through the default provider chain")
+		return nil, errors.New("could not compile valid credentials through the default provider chain")
 	}
 
 	stsConfig, err := b.getRawClientConfig(ctx, s, region, "sts")
 	if stsConfig == nil {
-		return nil, fmt.Errorf("could not configure STS client")
+		return nil, errors.New("could not configure STS client")
 	}
 	if err != nil {
 		return nil, err
@@ -124,7 +125,7 @@ func (b *backend) getClientConfig(ctx context.Context, s logical.Storage, region
 				return nil, fmt.Errorf("unable to fetch current caller: %w", err)
 			}
 			if identity == nil {
-				return nil, fmt.Errorf("got nil result from GetCallerIdentity")
+				return nil, errors.New("got nil result from GetCallerIdentity")
 			}
 			b.defaultAWSAccountID = *identity.Account
 		}
@@ -222,7 +223,7 @@ func (b *backend) clientEC2(ctx context.Context, s logical.Storage, region, acco
 	}
 
 	if awsConfig == nil {
-		return nil, fmt.Errorf("could not retrieve valid assumed credentials")
+		return nil, errors.New("could not retrieve valid assumed credentials")
 	}
 
 	// Create a new EC2 client object, cache it and return the same
@@ -232,7 +233,7 @@ func (b *backend) clientEC2(ctx context.Context, s logical.Storage, region, acco
 	}
 	client := ec2.New(sess)
 	if client == nil {
-		return nil, fmt.Errorf("could not obtain ec2 client")
+		return nil, errors.New("could not obtain ec2 client")
 	}
 	if _, ok := b.EC2ClientsMap[region]; !ok {
 		b.EC2ClientsMap[region] = map[string]*ec2.EC2{stsRole: client}
@@ -282,7 +283,7 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, acco
 	}
 
 	if awsConfig == nil {
-		return nil, fmt.Errorf("could not retrieve valid assumed credentials")
+		return nil, errors.New("could not retrieve valid assumed credentials")
 	}
 
 	// Create a new IAM client object, cache it and return the same
@@ -292,7 +293,7 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, acco
 	}
 	client := iam.New(sess)
 	if client == nil {
-		return nil, fmt.Errorf("could not obtain iam client")
+		return nil, errors.New("could not obtain iam client")
 	}
 	if _, ok := b.IAMClientsMap[region]; !ok {
 		b.IAMClientsMap[region] = map[string]*iam.IAM{stsRole: client}

@@ -2,6 +2,7 @@ package awsauth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -314,7 +315,7 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 			return "", awsutil.AppendAWSError(err)
 		}
 		if userInfo == nil {
-			return "", fmt.Errorf("got nil result from GetUser")
+			return "", errors.New("got nil result from GetUser")
 		}
 		return *userInfo.User.UserId, nil
 	case "role":
@@ -323,7 +324,7 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 			return "", awsutil.AppendAWSError(err)
 		}
 		if roleInfo == nil {
-			return "", fmt.Errorf("got nil result from GetRole")
+			return "", errors.New("got nil result from GetRole")
 		}
 		return *roleInfo.Role.RoleId, nil
 	case "instance-profile":
@@ -332,7 +333,7 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 			return "", awsutil.AppendAWSError(err)
 		}
 		if profileInfo == nil {
-			return "", fmt.Errorf("got nil result from GetInstanceProfile")
+			return "", errors.New("got nil result from GetInstanceProfile")
 		}
 		return *profileInfo.InstanceProfile.InstanceProfileId, nil
 	default:

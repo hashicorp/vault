@@ -3,7 +3,6 @@ package token
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"runtime"
 	"strings"
@@ -70,7 +69,7 @@ func helperPath(s ...string) string {
 func helperEnv() []string {
 	var env []string
 
-	tf, err := ioutil.TempFile("", "vault")
+	tf, err := os.CreateTemp("", "vault")
 	if err != nil {
 		panic(err)
 	}

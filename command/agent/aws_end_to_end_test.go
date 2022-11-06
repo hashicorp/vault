@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -124,7 +123,7 @@ func TestAWSEndToEnd(t *testing.T) {
 		}
 	}()
 
-	tmpFile, err := ioutil.TempFile("", "auth.tokensink.test.")
+	tmpFile, err := os.CreateTemp("", "auth.tokensink.test.")
 	if err != nil {
 		t.Fatal(err)
 	}

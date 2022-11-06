@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,9 +15,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
-const (
-	wrappedResponseLocation = "cubbyhole/response"
-)
+const wrappedResponseLocation = "cubbyhole/response"
 
 var (
 	// The default TTL that will be used with `sys/wrapping/wrap`, can be
@@ -69,14 +68,13 @@ func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data
 	if resp != nil {
 		defer resp.Body.Close()
 	}
-	if resp != nil && resp.StatusCode == 404 {
-		secret, parseErr := ParseSecret(resp.Body)
-		switch parseErr {
-		case nil:
-		case io.EOF:
-			return nil, nil
-		default:
-			return nil, parseErr
+	if resp != nil && resp.StatusCode == http.StatusNotFound {
+		secret, err := ParseSecret(resp.Body)
+		if err != nil {
+			if err == io.EOF {
+				return nil, nil
+			}
+			return nil, err
 		}
 		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
 			return secret, nil
@@ -143,14 +141,13 @@ func (c *Logical) ListWithContext(ctx context.Context, path string) (*Secret, er
 	if resp != nil {
 		defer resp.Body.Close()
 	}
-	if resp != nil && resp.StatusCode == 404 {
-		secret, parseErr := ParseSecret(resp.Body)
-		switch parseErr {
-		case nil:
-		case io.EOF:
-			return nil, nil
-		default:
-			return nil, parseErr
+	if resp != nil && resp.StatusCode == http.StatusNotFound {
+		secret, err := ParseSecret(resp.Body)
+		if err != nil {
+			if err == io.EOF {
+				return nil, nil
+			}
+			return nil, err
 		}
 		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
 			return secret, nil
@@ -206,14 +203,13 @@ func (c *Logical) write(ctx context.Context, path string, request *Request) (*Se
 	if resp != nil {
 		defer resp.Body.Close()
 	}
-	if resp != nil && resp.StatusCode == 404 {
-		secret, parseErr := ParseSecret(resp.Body)
-		switch parseErr {
-		case nil:
-		case io.EOF:
-			return nil, nil
-		default:
-			return nil, parseErr
+	if resp != nil && resp.StatusCode == http.StatusNotFound {
+		secret, err := ParseSecret(resp.Body)
+		if err != nil {
+			if err == io.EOF {
+				return nil, nil
+			}
+			return nil, err
 		}
 		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
 			return secret, err
@@ -262,14 +258,13 @@ func (c *Logical) DeleteWithDataWithContext(ctx context.Context, path string, da
 	if resp != nil {
 		defer resp.Body.Close()
 	}
-	if resp != nil && resp.StatusCode == 404 {
-		secret, parseErr := ParseSecret(resp.Body)
-		switch parseErr {
-		case nil:
-		case io.EOF:
-			return nil, nil
-		default:
-			return nil, parseErr
+	if resp != nil && resp.StatusCode == http.StatusNotFound {
+		secret, err := ParseSecret(resp.Body)
+		if err != nil {
+			if err == io.EOF {
+				return nil, nil
+			}
+			return nil, err
 		}
 		if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
 			return secret, err
@@ -311,7 +306,7 @@ func (c *Logical) UnwrapWithContext(ctx context.Context, wrappingToken string) (
 	if resp != nil {
 		defer resp.Body.Close()
 	}
-	if resp == nil || resp.StatusCode != 404 {
+	if resp == nil || resp.StatusCode != http.StatusNotFound {
 		if err != nil {
 			return nil, err
 		}
@@ -322,13 +317,12 @@ func (c *Logical) UnwrapWithContext(ctx context.Context, wrappingToken string) (
 	}
 
 	// In the 404 case this may actually be a wrapped 404 error
-	secret, parseErr := ParseSecret(resp.Body)
-	switch parseErr {
-	case nil:
-	case io.EOF:
-		return nil, nil
-	default:
-		return nil, parseErr
+	secret, err := ParseSecret(resp.Body)
+	if err != nil {
+		if err == io.EOF {
+			return nil, nil
+		}
+		return nil, err
 	}
 	if secret != nil && (len(secret.Warnings) > 0 || len(secret.Data) > 0) {
 		return secret, nil
@@ -350,10 +344,10 @@ func (c *Logical) UnwrapWithContext(ctx context.Context, wrappingToken string) (
 		return nil, fmt.Errorf("no value found at %q", wrappedResponseLocation)
 	}
 	if secret.Data == nil {
-		return nil, fmt.Errorf("\"data\" not found in wrapping response")
+		return nil, errors.New("\"data\" not found in wrapping response")
 	}
 	if _, ok := secret.Data["response"]; !ok {
-		return nil, fmt.Errorf("\"response\" not found in wrapping response \"data\" map")
+		return nil, errors.New("\"response\" not found in wrapping response \"data\" map")
 	}
 
 	wrappedSecret := new(Secret)

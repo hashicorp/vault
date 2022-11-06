@@ -2,6 +2,7 @@ package approle
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -38,9 +39,7 @@ type SecretID struct {
 
 type LoginOption func(a *AppRoleAuth) error
 
-const (
-	defaultMountPath = "approle"
-)
+const defaultMountPath = "approle"
 
 // NewAppRoleAuth initializes a new AppRole auth method interface to be
 // passed as a parameter to the client.Auth().Login method.
@@ -55,15 +54,14 @@ const (
 // Supported options: WithMountPath, WithWrappingToken
 func NewAppRoleAuth(roleID string, secretID *SecretID, opts ...LoginOption) (*AppRoleAuth, error) {
 	if roleID == "" {
-		return nil, fmt.Errorf("no role ID provided for login")
+		return nil, errors.New("no role ID provided for login")
 	}
 
 	if secretID == nil {
-		return nil, fmt.Errorf("no secret ID provided for login")
+		return nil, errors.New("no secret ID provided for login")
 	}
 
-	err := secretID.validate()
-	if err != nil {
+	if err := secretID.validate(); err != nil {
 		return nil, fmt.Errorf("invalid secret ID: %w", err)
 	}
 
@@ -89,8 +87,7 @@ func NewAppRoleAuth(roleID string, secretID *SecretID, opts ...LoginOption) (*Ap
 	for _, opt := range opts {
 		// Call the option giving the instantiated
 		// *AppRoleAuth as the argument
-		err := opt(a)
-		if err != nil {
+		if err := opt(a); err != nil {
 			return nil, fmt.Errorf("error with login option: %w", err)
 		}
 	}
@@ -181,24 +178,24 @@ func (a *AppRoleAuth) readSecretIDFromFile() (string, error) {
 
 func (secretID *SecretID) validate() error {
 	if secretID.FromFile == "" && secretID.FromEnv == "" && secretID.FromString == "" {
-		return fmt.Errorf("secret ID for AppRole must be provided with a source file, environment variable, or plaintext string")
+		return errors.New("secret ID for AppRole must be provided with a source file, environment variable, or plaintext string")
 	}
 
 	if secretID.FromFile != "" {
 		if secretID.FromEnv != "" || secretID.FromString != "" {
-			return fmt.Errorf("only one source for the secret ID should be specified")
+			return errors.New("only one source for the secret ID should be specified")
 		}
 	}
 
 	if secretID.FromEnv != "" {
 		if secretID.FromFile != "" || secretID.FromString != "" {
-			return fmt.Errorf("only one source for the secret ID should be specified")
+			return errors.New("only one source for the secret ID should be specified")
 		}
 	}
 
 	if secretID.FromString != "" {
 		if secretID.FromFile != "" || secretID.FromEnv != "" {
-			return fmt.Errorf("only one source for the secret ID should be specified")
+			return errors.New("only one source for the secret ID should be specified")
 		}
 	}
 	return nil

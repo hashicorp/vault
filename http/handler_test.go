@@ -5,7 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/textproto"
@@ -315,7 +315,7 @@ func TestHandler_InFlightRequest(t *testing.T) {
 	var actual map[string]interface{}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
-	if actual == nil || len(actual) == 0 {
+	if len(actual) == 0 {
 		t.Fatal("expected to get at least one in-flight request, got nil or zero length map")
 	}
 	for _, v := range actual {
@@ -853,7 +853,7 @@ func TestHandler_Parse_Form(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Body = ioutil.NopCloser(strings.NewReader(values.Encode()))
+	req.Body = io.NopCloser(strings.NewReader(values.Encode()))
 	req.Header.Set("x-vault-token", cluster.RootToken)
 	req.Header.Set("content-type", "application/x-www-form-urlencoded")
 	resp, err := c.Do(req)

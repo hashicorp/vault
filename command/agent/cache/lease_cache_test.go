@@ -3,7 +3,6 @@ package cache
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -702,7 +701,7 @@ func setupBoltStorage(t *testing.T) (tempCacheDir string, boltStorage *cachebolt
 	km, err := keymanager.NewPassthroughKeyManager(context.Background(), nil)
 	require.NoError(t, err)
 
-	tempCacheDir, err = ioutil.TempDir("", "agent-cache-test")
+	tempCacheDir, err = os.MkdirTemp("", "agent-cache-test")
 	require.NoError(t, err)
 	boltStorage, err = cacheboltdb.NewBoltStorage(&cacheboltdb.BoltStorageConfig{
 		Path:    tempCacheDir,

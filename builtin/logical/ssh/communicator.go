@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -296,7 +295,7 @@ func scpUploadFile(dst string, src io.Reader, w io.Writer, r *bufio.Reader, fi *
 	} else {
 		// Create a temporary file where we can copy the contents of the src
 		// so that we can determine the length, since SCP is length-prefixed.
-		tf, err := ioutil.TempFile("", "vault-ssh-upload")
+		tf, err := os.CreateTemp("", "vault-ssh-upload")
 		if err != nil {
 			return fmt.Errorf("error creating temporary file for upload: %w", err)
 		}

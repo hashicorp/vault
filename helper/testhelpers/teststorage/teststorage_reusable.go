@@ -2,7 +2,6 @@ package teststorage
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -157,7 +156,7 @@ func MakeReusableRaftHAStorage(t testing.T, logger hclog.Logger, numCores int, b
 }
 
 func makeRaftDir(t testing.T) string {
-	raftDir, err := ioutil.TempDir("", "vault-raft-")
+	raftDir, err := os.MkdirTemp("", "vault-raft-")
 	if err != nil {
 		t.Fatal(err)
 	}

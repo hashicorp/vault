@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"net"
 	"os"
@@ -38,14 +37,14 @@ func TestTCPListener_tls(t *testing.T) {
 	wd, _ := os.Getwd()
 	wd += "/test-fixtures/reload/"
 
-	td, err := ioutil.TempDir("", fmt.Sprintf("vault-test-%d", rand.New(rand.NewSource(time.Now().Unix())).Int63()))
+	td, err := os.MkdirTemp("", fmt.Sprintf("vault-test-%d", rand.New(rand.NewSource(time.Now().Unix())).Int63()))
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(td)
 
 	// Setup initial certs
-	inBytes, _ := ioutil.ReadFile(wd + "reload_ca.pem")
+	inBytes, _ := os.ReadFile(wd + "reload_ca.pem")
 	certPool := x509.NewCertPool()
 	ok := certPool.AppendCertsFromPEM(inBytes)
 	if !ok {
@@ -119,14 +118,14 @@ func TestTCPListener_tls13(t *testing.T) {
 	wd, _ := os.Getwd()
 	wd += "/test-fixtures/reload/"
 
-	td, err := ioutil.TempDir("", fmt.Sprintf("vault-test-%d", rand.New(rand.NewSource(time.Now().Unix())).Int63()))
+	td, err := os.MkdirTemp("", fmt.Sprintf("vault-test-%d", rand.New(rand.NewSource(time.Now().Unix())).Int63()))
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(td)
 
 	// Setup initial certs
-	inBytes, _ := ioutil.ReadFile(wd + "reload_ca.pem")
+	inBytes, _ := os.ReadFile(wd + "reload_ca.pem")
 	certPool := x509.NewCertPool()
 	ok := certPool.AppendCertsFromPEM(inBytes)
 	if !ok {

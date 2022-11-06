@@ -3,8 +3,9 @@ package gcp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -40,7 +41,7 @@ const (
 // Supported options: WithMountPath, WithIAMAuth, WithGCEAuth
 func NewGCPAuth(roleName string, opts ...LoginOption) (*GCPAuth, error) {
 	if roleName == "" {
-		return nil, fmt.Errorf("no role name provided for login")
+		return nil, errors.New("no role name provided for login")
 	}
 
 	a := &GCPAuth{
@@ -53,8 +54,7 @@ func NewGCPAuth(roleName string, opts ...LoginOption) (*GCPAuth, error) {
 	for _, opt := range opts {
 		// Call the option giving the instantiated
 		// *GCPAuth as the argument
-		err := opt(a)
-		if err != nil {
+		if err := opt(a); err != nil {
 			return nil, fmt.Errorf("error with login option: %w", err)
 		}
 	}
@@ -156,7 +156,7 @@ func (a *GCPAuth) signJWT() (*credentialspb.SignJwtResponse, error) {
 
 func (a *GCPAuth) getJWTFromMetadataService(vaultAddress string) (string, error) {
 	if !metadata.OnGCE() {
-		return "", fmt.Errorf("GCE metadata service not available")
+		return "", errors.New("GCE metadata service not available")
 	}
 
 	// build request to metadata server
@@ -178,11 +178,11 @@ func (a *GCPAuth) getJWTFromMetadataService(vaultAddress string) (string, error)
 	defer resp.Body.Close()
 
 	// get jwt from response
-	body, err := ioutil.ReadAll(resp.Body)
-	jwt := string(body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("error reading response from metadata service: %w", err)
 	}
+	jwt := string(body)
 
 	return jwt, nil
 }

@@ -3,7 +3,6 @@ package cacheboltdb
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -31,7 +30,7 @@ func getTestKeyManager(t *testing.T) keymanager.KeyManager {
 func TestBolt_SetGet(t *testing.T) {
 	ctx := context.Background()
 
-	path, err := ioutil.TempDir("", "bolt-test")
+	path, err := os.MkdirTemp("", "bolt-test")
 	require.NoError(t, err)
 	defer os.RemoveAll(path)
 
@@ -57,7 +56,7 @@ func TestBolt_SetGet(t *testing.T) {
 func TestBoltDelete(t *testing.T) {
 	ctx := context.Background()
 
-	path, err := ioutil.TempDir("", "bolt-test")
+	path, err := os.MkdirTemp("", "bolt-test")
 	require.NoError(t, err)
 	defer os.RemoveAll(path)
 
@@ -89,7 +88,7 @@ func TestBoltDelete(t *testing.T) {
 func TestBoltClear(t *testing.T) {
 	ctx := context.Background()
 
-	path, err := ioutil.TempDir("", "bolt-test")
+	path, err := os.MkdirTemp("", "bolt-test")
 	require.NoError(t, err)
 	defer os.RemoveAll(path)
 
@@ -137,7 +136,7 @@ func TestBoltClear(t *testing.T) {
 func TestBoltSetAutoAuthToken(t *testing.T) {
 	ctx := context.Background()
 
-	path, err := ioutil.TempDir("", "bolt-test")
+	path, err := os.MkdirTemp("", "bolt-test")
 	require.NoError(t, err)
 	defer os.RemoveAll(path)
 
@@ -207,11 +206,11 @@ func TestDBFileExists(t *testing.T) {
 			var tmpPath string
 			var err error
 			if tc.mkDir {
-				tmpPath, err = ioutil.TempDir("", "test-db-path")
+				tmpPath, err = os.MkdirTemp("", "test-db-path")
 				require.NoError(t, err)
 			}
 			if tc.createFile {
-				err = ioutil.WriteFile(path.Join(tmpPath, DatabaseFileName), []byte("test-db-path"), 0o600)
+				err = os.WriteFile(path.Join(tmpPath, DatabaseFileName), []byte("test-db-path"), 0o600)
 				require.NoError(t, err)
 			}
 			exists, err := DBFileExists(tmpPath)
@@ -241,7 +240,7 @@ func Test_SetGetRetrievalToken(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			path, err := ioutil.TempDir("", "bolt-test")
+			path, err := os.MkdirTemp("", "bolt-test")
 			require.NoError(t, err)
 			defer os.RemoveAll(path)
 
@@ -267,7 +266,7 @@ func Test_SetGetRetrievalToken(t *testing.T) {
 func TestBolt_MigrateFromV1ToV2Schema(t *testing.T) {
 	ctx := context.Background()
 
-	path, err := ioutil.TempDir("", "bolt-test")
+	path, err := os.MkdirTemp("", "bolt-test")
 	require.NoError(t, err)
 	defer os.RemoveAll(path)
 
@@ -339,7 +338,7 @@ func TestBolt_MigrateFromV1ToV2Schema(t *testing.T) {
 func TestBolt_MigrateFromInvalidToV2Schema(t *testing.T) {
 	ctx := context.Background()
 
-	path, err := ioutil.TempDir("", "bolt-test")
+	path, err := os.MkdirTemp("", "bolt-test")
 	require.NoError(t, err)
 	defer os.RemoveAll(path)
 

@@ -625,7 +625,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 func (b *backend) pathRoleExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
-		return false, fmt.Errorf("missing role_name")
+		return false, errors.New("missing role_name")
 	}
 
 	lock := b.roleLock(roleName)
@@ -711,7 +711,7 @@ func (b *backend) pathRoleSecretIDList(ctx context.Context, req *logical.Request
 			return nil, err
 		} else if entry == nil {
 			secretIDLock.RUnlock()
-			return nil, fmt.Errorf("storage entry for SecretID is present but no content found at the index")
+			return nil, errors.New("storage entry for SecretID is present but no content found at the index")
 		} else if err := entry.DecodeJSON(&result); err != nil {
 			secretIDLock.RUnlock()
 			return nil, err
@@ -727,7 +727,7 @@ func (b *backend) pathRoleSecretIDList(ctx context.Context, req *logical.Request
 // enabled.
 func validateRoleConstraints(role *roleStorageEntry) error {
 	if role == nil {
-		return fmt.Errorf("nil role")
+		return errors.New("nil role")
 	}
 
 	// At least one constraint should be enabled on the role
@@ -737,7 +737,7 @@ func validateRoleConstraints(role *roleStorageEntry) error {
 	case len(role.SecretIDBoundCIDRs) != 0:
 	case len(role.TokenBoundCIDRs) != 0:
 	default:
-		return fmt.Errorf("at least one constraint should be enabled on the role")
+		return errors.New("at least one constraint should be enabled on the role")
 	}
 
 	return nil
@@ -747,11 +747,11 @@ func validateRoleConstraints(role *roleStorageEntry) error {
 // name.
 func (b *backend) setRoleEntry(ctx context.Context, s logical.Storage, roleName string, role *roleStorageEntry, previousRoleID string) error {
 	if roleName == "" {
-		return fmt.Errorf("missing role name")
+		return errors.New("missing role name")
 	}
 
 	if role == nil {
-		return fmt.Errorf("nil role")
+		return errors.New("nil role")
 	}
 
 	// Check if role constraints are properly set
@@ -776,7 +776,7 @@ func (b *backend) setRoleEntry(ctx context.Context, s logical.Storage, roleName 
 
 	// If the entry exists, make sure that it belongs to the current role
 	if roleIDIndex != nil && roleIDIndex.Name != roleName {
-		return fmt.Errorf("role_id already in use")
+		return errors.New("role_id already in use")
 	}
 
 	// When role_id is getting updated, delete the old index before
@@ -807,7 +807,7 @@ func (b *backend) setRoleEntry(ctx context.Context, s logical.Storage, roleName 
 // roleEntry reads the role from storage
 func (b *backend) roleEntry(ctx context.Context, s logical.Storage, roleName string) (*roleStorageEntry, error) {
 	if roleName == "" {
-		return nil, fmt.Errorf("missing role_name")
+		return nil, errors.New("missing role_name")
 	}
 
 	var role roleStorageEntry
@@ -2469,7 +2469,7 @@ func (b *backend) setRoleIDEntry(ctx context.Context, s logical.Storage, roleID 
 // roleIDEntry is used to read the storage entry that maps RoleID to Role
 func (b *backend) roleIDEntry(ctx context.Context, s logical.Storage, roleID string) (*roleIDStorageEntry, error) {
 	if roleID == "" {
-		return nil, fmt.Errorf("missing role id")
+		return nil, errors.New("missing role id")
 	}
 
 	lock := b.roleIDLock(roleID)
@@ -2499,7 +2499,7 @@ func (b *backend) roleIDEntry(ctx context.Context, s logical.Storage, roleID str
 // RoleID to the Role itself.
 func (b *backend) roleIDEntryDelete(ctx context.Context, s logical.Storage, roleID string) error {
 	if roleID == "" {
-		return fmt.Errorf("missing role id")
+		return errors.New("missing role id")
 	}
 
 	lock := b.roleIDLock(roleID)

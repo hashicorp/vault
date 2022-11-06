@@ -3,6 +3,7 @@ package file
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -19,17 +20,17 @@ import (
 
 func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, error) {
 	if conf.SaltConfig == nil {
-		return nil, fmt.Errorf("nil salt config")
+		return nil, errors.New("nil salt config")
 	}
 	if conf.SaltView == nil {
-		return nil, fmt.Errorf("nil salt view")
+		return nil, errors.New("nil salt view")
 	}
 
 	path, ok := conf.Config["file_path"]
 	if !ok {
 		path, ok = conf.Config["path"]
 		if !ok {
-			return nil, fmt.Errorf("file_path is required")
+			return nil, errors.New("file_path is required")
 		}
 	}
 

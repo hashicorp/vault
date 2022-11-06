@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"strings"
 	"time"
 
@@ -282,7 +282,7 @@ func humanDurationInt(i interface{}) interface{} {
 func parseFlagFile(raw string) (string, error) {
 	// check if the provided argument should be read from file
 	if len(raw) > 0 && raw[0] == '@' {
-		contents, err := ioutil.ReadFile(raw[1:])
+		contents, err := os.ReadFile(raw[1:])
 		if err != nil {
 			return "", fmt.Errorf("error reading file: %w", err)
 		}

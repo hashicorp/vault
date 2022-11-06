@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -1076,7 +1075,7 @@ func getServiceAccountJWT(tokenFile string) (string, error) {
 	if len(tokenFile) == 0 {
 		tokenFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 	}
-	token, err := ioutil.ReadFile(tokenFile)
+	token, err := os.ReadFile(tokenFile)
 	if err != nil {
 		return "", err
 	}

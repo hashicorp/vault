@@ -6,7 +6,6 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -61,7 +60,7 @@ func GetTestJWT(t *testing.T) (string, *ecdsa.PrivateKey) {
 }
 
 func readToken(fileName string) (*logical.HTTPWrapInfo, error) {
-	b, err := ioutil.ReadFile(fileName)
+	b, err := os.ReadFile(fileName)
 	if err != nil {
 		return nil, err
 	}

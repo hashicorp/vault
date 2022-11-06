@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"time"
 
@@ -98,7 +99,7 @@ const maxHmacInputLength = 4096
 // a hex encoded string.
 func createHMAC(key, value string) (string, error) {
 	if key == "" {
-		return "", fmt.Errorf("invalid HMAC key")
+		return "", errors.New("invalid HMAC key")
 	}
 
 	if len(value) > maxHmacInputLength {
@@ -148,11 +149,11 @@ func decodeSecretIDStorageEntry(entry *logical.StorageEntry) (*secretIDStorageEn
 // the storage entry. Locks need to be acquired before calling this method.
 func (b *backend) nonLockedSecretIDStorageEntry(ctx context.Context, s logical.Storage, roleSecretIDPrefix, roleNameHMAC, secretIDHMAC string) (*secretIDStorageEntry, error) {
 	if secretIDHMAC == "" {
-		return nil, fmt.Errorf("missing secret ID HMAC")
+		return nil, errors.New("missing secret ID HMAC")
 	}
 
 	if roleNameHMAC == "" {
-		return nil, fmt.Errorf("missing role name HMAC")
+		return nil, errors.New("missing role name HMAC")
 	}
 
 	// Prepare the storage index at which the secret ID will be stored
@@ -201,18 +202,18 @@ func (b *backend) nonLockedSecretIDStorageEntry(ctx context.Context, s logical.S
 // this method.
 func (b *backend) nonLockedSetSecretIDStorageEntry(ctx context.Context, s logical.Storage, roleSecretIDPrefix, roleNameHMAC, secretIDHMAC string, secretEntry *secretIDStorageEntry) error {
 	if roleSecretIDPrefix == "" {
-		return fmt.Errorf("missing secret ID prefix")
+		return errors.New("missing secret ID prefix")
 	}
 	if secretIDHMAC == "" {
-		return fmt.Errorf("missing secret ID HMAC")
+		return errors.New("missing secret ID HMAC")
 	}
 
 	if roleNameHMAC == "" {
-		return fmt.Errorf("missing role name HMAC")
+		return errors.New("missing role name HMAC")
 	}
 
 	if secretEntry == nil {
-		return fmt.Errorf("nil secret entry")
+		return errors.New("nil secret entry")
 	}
 
 	entryIndex := fmt.Sprintf("%s%s/%s", roleSecretIDPrefix, roleNameHMAC, secretIDHMAC)
@@ -247,7 +248,7 @@ func (b *backend) registerSecretIDEntry(ctx context.Context, s logical.Storage, 
 	}
 	if entry != nil {
 		lock.RUnlock()
-		return nil, fmt.Errorf("SecretID is already registered")
+		return nil, errors.New("SecretID is already registered")
 	}
 
 	// If there isn't an entry for the secretID already, switch the read lock
@@ -262,7 +263,7 @@ func (b *backend) registerSecretIDEntry(ctx context.Context, s logical.Storage, 
 		return nil, err
 	}
 	if entry != nil {
-		return nil, fmt.Errorf("SecretID is already registered")
+		return nil, errors.New("SecretID is already registered")
 	}
 
 	//
@@ -308,10 +309,8 @@ func (b *backend) deriveSecretIDTTL(secretIDTTL time.Duration) time.Duration {
 // accessor to a secret_id.
 func (b *backend) secretIDAccessorEntry(ctx context.Context, s logical.Storage, secretIDAccessor, roleSecretIDPrefix string) (*secretIDAccessorStorageEntry, error) {
 	if secretIDAccessor == "" {
-		return nil, fmt.Errorf("missing secretIDAccessor")
+		return nil, errors.New("missing secretIDAccessor")
 	}
-
-	var result secretIDAccessorStorageEntry
 
 	// Create index entry, mapping the accessor to the token ID
 	salt, err := b.Salt(ctx)
@@ -327,6 +326,8 @@ func (b *backend) secretIDAccessorEntry(ctx context.Context, s logical.Storage, 
 	accessorLock := b.secretIDAccessorLock(secretIDAccessor)
 	accessorLock.RLock()
 	defer accessorLock.RUnlock()
+
+	var result secretIDAccessorStorageEntry
 
 	if entry, err := s.Get(ctx, entryIndex); err != nil {
 		return nil, err

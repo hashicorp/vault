@@ -2,6 +2,7 @@ package userpass
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -33,9 +34,7 @@ var _ api.AuthMethod = (*UserpassAuth)(nil)
 
 type LoginOption func(a *UserpassAuth) error
 
-const (
-	defaultMountPath = "userpass"
-)
+const defaultMountPath = "userpass"
 
 // NewUserpassAuth initializes a new Userpass auth method interface to be
 // passed as a parameter to the client.Auth().Login method.
@@ -43,11 +42,11 @@ const (
 // Supported options: WithMountPath
 func NewUserpassAuth(username string, password *Password, opts ...LoginOption) (*UserpassAuth, error) {
 	if username == "" {
-		return nil, fmt.Errorf("no user name provided for login")
+		return nil, errors.New("no user name provided for login")
 	}
 
 	if password == nil {
-		return nil, fmt.Errorf("no password provided for login")
+		return nil, errors.New("no password provided for login")
 	}
 
 	err := password.validate()
@@ -103,7 +102,7 @@ func (a *UserpassAuth) Login(ctx context.Context, client *api.Client) (*api.Secr
 	} else if a.passwordEnv != "" {
 		passwordValue := os.Getenv(a.passwordEnv)
 		if passwordValue == "" {
-			return nil, fmt.Errorf("password was specified with an environment variable with an empty value")
+			return nil, errors.New("password was specified with an environment variable with an empty value")
 		}
 		loginData["password"] = passwordValue
 	} else {
@@ -146,24 +145,24 @@ func (a *UserpassAuth) readPasswordFromFile() (string, error) {
 
 func (password *Password) validate() error {
 	if password.FromFile == "" && password.FromEnv == "" && password.FromString == "" {
-		return fmt.Errorf("password for Userpass auth must be provided with a source file, environment variable, or plaintext string")
+		return errors.New("password for Userpass auth must be provided with a source file, environment variable, or plaintext string")
 	}
 
 	if password.FromFile != "" {
 		if password.FromEnv != "" || password.FromString != "" {
-			return fmt.Errorf("only one source for the password should be specified")
+			return errors.New("only one source for the password should be specified")
 		}
 	}
 
 	if password.FromEnv != "" {
 		if password.FromFile != "" || password.FromString != "" {
-			return fmt.Errorf("only one source for the password should be specified")
+			return errors.New("only one source for the password should be specified")
 		}
 	}
 
 	if password.FromString != "" {
 		if password.FromFile != "" || password.FromEnv != "" {
-			return fmt.Errorf("only one source for the password should be specified")
+			return errors.New("only one source for the password should be specified")
 		}
 	}
 	return nil

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -89,7 +88,7 @@ func NewApproleAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 
 func (a *approleMethod) Authenticate(ctx context.Context, client *api.Client) (string, http.Header, map[string]interface{}, error) {
 	if _, err := os.Stat(a.roleIDFilePath); err == nil {
-		roleID, err := ioutil.ReadFile(a.roleIDFilePath)
+		roleID, err := os.ReadFile(a.roleIDFilePath)
 		if err != nil {
 			if a.cachedRoleID == "" {
 				return "", nil, nil, fmt.Errorf("error reading role ID file and no cached role ID known: %w", err)
@@ -117,7 +116,7 @@ func (a *approleMethod) Authenticate(ctx context.Context, client *api.Client) (s
 	}
 
 	if _, err := os.Stat(a.secretIDFilePath); err == nil {
-		secretID, err := ioutil.ReadFile(a.secretIDFilePath)
+		secretID, err := os.ReadFile(a.secretIDFilePath)
 		if err != nil {
 			if a.cachedSecretID == "" {
 				return "", nil, nil, fmt.Errorf("error reading secret ID file and no cached secret ID known: %w", err)
